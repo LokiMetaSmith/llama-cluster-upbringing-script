@@ -10,6 +10,6 @@ COPY hostfile /app
 
 RUN make CC=mpicc CXX=mpicxx LLAMA_MPI=1
 
-ENTRYPOINT ["mpirun", "-hostfile", "hostfile", "-n", "2", "./main", "-m", "./models/ggml-vocal.bin", "-n", "128" ] 
+ENTRYPOINT ["tail", "-f", "/dev/null"]
 
-#ENTRYPOINT ["tail", "-f", "/dev/null"]
+#ENTRYPOINT ["mpirun", "-hostfile", "hostfile", "-n", "2", "./main", "-m", "./models/ggml-vocal.bin", "-n", "128" ] 
