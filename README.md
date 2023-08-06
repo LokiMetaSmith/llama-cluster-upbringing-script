@@ -16,4 +16,4 @@ docker run -itd gpt-mpi
 //Get Container ID or Name
 docker ps -a
 //Execute a command
-docker container exec mpirun -hostfile hostfile -n 3 ./main -m ./models/ggml-vocal.bin -p "Whats the meaning of life?" -n 512
+docker container exec container_name-or-ID mpirun -hostfile hostfile -n 3 ./main -m ./models/ggml-vocal.bin -p "Whats the meaning of life?" -n 512
