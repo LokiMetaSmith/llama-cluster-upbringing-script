@@ -5,7 +5,7 @@ sudo apt install openssh-server ntpdate slurm-wlm git -y
 #sudo mkdir /clusterfs
 #sudo chown nobody.nogroup -R /clusterfs
 #sudo chmod 777 -R /clusterfs
-sudo apt install nfs-kernel-server nfs-common -y
+sudo apt install nfs-kernel-server nfs-common python3-pip -y
 sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenmpi3 -y
 cd /home/user/
 git clone https://github.com/ggerganov/llama.cpp.git
