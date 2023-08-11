@@ -21,6 +21,14 @@ make CC=mpicc CXX=mpicxx LLAMA_MPI=1 -j
 #echo "AID-E-1:/home/user/llama.cpp/models /home/user/llama.cpp/models nfs defaults 0 0" | sudo tee -a /etc/fstab
 #fi
 #sudo -u munge ${sbindir}/mungekey --verbose
+
+cd /home/user/
+sudo apt-get install libsdl2-dev -y
+git clone https://github.com/ggerganov/whisper.cpp.git
+cd whisper.cpp/
+bash ./models/download-ggml-model.sh base.en
+make main stream command talk talk-llama
+
 cd /home/user/
 sudo cp cgroup.conf cgroup_allowed_devices_file.conf slurm.conf /etc/slurm
 sudo cp munge.key /etc/munge/munge.key
