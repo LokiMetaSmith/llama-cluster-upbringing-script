@@ -12,8 +12,12 @@ git clone https://github.com/ggerganov/llama.cpp.git
 cd llama.cpp/
 git fetch
 git pull
+
 #slight cludge, ideally use venv for cleaner python install
 python3.11 -m pip install -r requirements.txt
+sudo apt install -y build-essential python3-dev python3-setuptools python3-pip python3-smbus libncursesw5-dev libgdbm-dev libc6-dev zlib1g-dev libsqlite3-dev tk-dev libssl-dev openssl libffi-dev
+pip install piper-tts -y
+
 make CC=mpicc CXX=mpicxx LLAMA_MPI=1 -j
 #if [[  strcmp( $ ( tail -n 1 /etc/fstab ) , "AID-E-1:/home/user/llama.cpp/models /home/user/llama.cpp/models nfs defaults 0 0" ) ]]; then
 #echo "nfs already added"
