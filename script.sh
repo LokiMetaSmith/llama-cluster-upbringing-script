@@ -1,8 +1,8 @@
-sudo apt purge raspi-firmware
+sudo apt purge raspi-firmware -y
 sudo rm -rf /etc/kernel/postinst.d/z50-raspi-firmware
 sudo rm -rf /etc/initramfs/post-update.d/z50-raspi-firmware
-sudo apt update
-sudo apt dist-upgrade
+sudo apt update -y
+sudo apt dist-upgrade -y
 sudo apt install openssh-server ntpdate slurm-wlm git -y
 #sudo mkdir /clusterfs
 #sudo chown nobody.nogroup -R /clusterfs
