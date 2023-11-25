@@ -46,6 +46,8 @@ make main stream command talk talk-llama
 #see https://stackoverflow.com/questions/62503731/invalid-mit-magic-cookie-1-key-when-locally-running-mpi-application-or-starting
 export HWLOC_COMPONENTS="-gl"
 
+#for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
+
 cd /home/user/
 sudo cp cgroup.conf cgroup_allowed_devices_file.conf slurm.conf /etc/slurm
 sudo cp munge.key /etc/munge/munge.key
