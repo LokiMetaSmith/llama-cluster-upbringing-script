@@ -15,6 +15,9 @@ cd llama.cpp/
 git fetch
 git pull
 
+#add ssh key
+cat id_rsa.pub >> ~/.ssh/authorized_keys
+
 #slight cludge, ideally use venv for cleaner python install
 python3.11 -m pip install -r requirements.txt
 sudo apt install -y build-essential python3-venv python3-dev python3-setuptools python3-pip python3-smbus libncursesw5-dev libgdbm-dev libc6-dev zlib1g-dev libsqlite3-dev tk-dev libssl-dev openssl libffi-dev
