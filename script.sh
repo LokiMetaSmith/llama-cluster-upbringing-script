@@ -21,8 +21,10 @@ sudo apt install -y build-essential python3-venv python3-dev python3-setuptools 
 sudo apt install -y avahi-daemon bash-completion nano vim less tmux
 
 #install ansible
-pip3 install ansible-core -y
+#pip3 install ansible-core -y
 sudo apt install ansible
+sudo mkdir /etc/ansible/hosts
+sudo cp inventory.yaml /etc/ansible/hosts
 
 #installs for talk
 pip install piper-tts -y
