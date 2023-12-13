@@ -22,6 +22,7 @@ sudo apt install -y avahi-daemon bash-completion nano vim less tmux
 
 #install ansible
 pip3 install ansible-core -y
+sudo apt install ansible
 
 #installs for talk
 pip install piper-tts -y
