@@ -1,0 +1,5 @@
+- name: Run a script on remote nodes
+  hosts: all
+  tasks:
+    - name: Execute the script
+      ansible.builtin.script: ~/etc/ansible/scripts/run.sh
