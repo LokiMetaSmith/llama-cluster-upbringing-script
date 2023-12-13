@@ -450,3 +450,166 @@ cd whisper.cpp/
 ./stream -m ./models/ggml-base.en.bin -t 2 --step 5000 --length 50000
 cd whisper.cpp/
 ./stream -m ./models/ggml-base.en.bin -t 2 --step 5000 --length 50000
+
+
+    1  sftp user@AID-E-1
+    2  chmod 777 script.sh
+    3  ls
+    4  ./script.sh 
+    5  cd /etc/initramfs/post-update.d/
+    6  ls
+    7  sudo rm z50-raspi-firmware 
+    8  ls
+    9  cd ..
+   10  ls
+   11  cd ..
+   12  ls
+   13  lscd ~
+   14  cd ~
+   15  ls
+   16  nano script.sh 
+   17  ./script.sh 
+   18  ls
+   19  cat scrip
+   20  cat script.sh 
+   21  rm script.sh 
+   22  sftp user@AID-E-1
+   23  ls
+   24  sftp user@AID-E-1
+   25  ./script.sh
+   26  nano script.sh 
+   27  ls
+   28  rm script.sh 
+   29  cat munge.key 
+   30  ls
+   31  sftp user@AID-E-1
+   32  cat script.sh 
+   33  ./script.sh 
+   34  sinfo -N
+   35  ls
+   36  cat cgroup.conf
+   37  ls
+   38  cat slurm.conf
+   39  sinfo
+   40  cd llama.cpp/
+   41  ls
+   42  cd models/
+   43  ls
+   44  sudo mount -a
+   45  ls
+   46  cd ..
+   47  sudo mount -a
+   48  ls models/
+   49  ls
+   50  git fetch
+   51  cd ..
+   52  ls
+   53  cat script.sh 
+   54  ./script.sh 
+   55  ls
+   56  ls llama.cpp/models/
+   57  sudo apt install nfs-common -y
+   58  cat /etc/fstab
+   59  nano script.
+   60  nano script.sh 
+   61  sudo echo "AID-E-1:/home/user/llama.cpp/models /home/user/llama.cpp/models nfs defaults 0 0"  >> /etc/fstab
+   62  sudo echo "AID-E-1:/home/user/llama.cpp/models /home/user/llama.cpp/models nfs defaults 0 0" sudo  >> /etc/fstab
+   63  sudo -w echo "AID-E-1:/home/user/llama.cpp/models /home/user/llama.cpp/models nfs defaults 0 0"  >> /etc/fstab
+   64  cat /etc/fstab
+   65  blkid
+   66  sudo blkid
+   67  cat /etc/fstab
+   68  sudo blkid | sudo tee /etc/fstab
+   69  cat /etc/fstab
+   70  echo "AID-E-1:/home/user/llama.cpp/models /home/user/llama.cpp/models nfs defaults 0 0"  | tee -a /etc/fstab
+   71  echo "AID-E-1:/home/user/llama.cpp/models /home/user/llama.cpp/models nfs defaults 0 0"  |sudo tee -a /etc/fstab
+   72  cat /etc/fstab
+   73  sudo nano /etc/fstab
+   74  cat /etc/fstab
+   75  sudo reboot now
+   76  ls
+   77  ls llama.cpp/models/
+   78  sudo apt install
+   79  sudo cat /etc/fstab
+   80  sudo apt install nfs-common -y
+   81  sudo mount -a
+   82  ls
+   83  srun hostname
+   84  ls
+   85  cat script
+   86  cat script.sh 
+   87  sudo apt install
+   88  sudo reboot now
+   89  cd llama
+   90  ls llama.cpp/models/
+   91  mpirun -np 4 benchmark-matmult
+   92  mpirun -np 3 benchmark-matmult
+   93  mpirun -np 2 benchmark-matmult
+   94  cd llama.cpp/
+   95  git pull
+   96  git status
+   97  make CC=mpicc CXX=mpicxx LLAMA_MPI=1
+   98  time ./main -m ./models/llama-2-13b-chat.ggmlv3.q4_0.bin -p "I believe the meaning of life is" -n 32 -t 2
+   99  cd /home/user/
+  100  sudo apt-get install libsdl2-dev -y
+  101  git clone https://github.com/ggerganov/whisper.cpp.git
+  102  cd whisper.cpp/
+  103  bash ./models/download-ggml-model.sh base.en
+  104  make main stream command talk talk-llama
+  105  curl -fsSL https://get.docker.com -o get-docker.sh
+  106  sudo sh ./get-docker.sh --dry-run
+  107  docker --version
+  108  sudo sh ./get-docker.sh
+  109  sudo shutdown now
+  110  ls
+  111  cat get-docker.sh 
+  112  ls
+  113  cat cgroup_allowed_devices_file.conf 
+  114  cat cgroup.conf 
+  115  ls
+  116  cd templates/
+  117  ls
+  118  cat script.sh 
+  119  cd ..
+  120  ls
+  121  cd downloads/
+  122  ls
+  123  cd ..
+  124  ls
+  125  cd /
+  126  ls
+  127  cd etc
+  128  cd munge/
+  129  ls
+  130  cd munge/
+  131  cat munge/
+  132  sudo cd munge
+  133  ls munge/
+  134  sudo ls munge/
+  135  sudo cat munge/munge.key
+  136  cd ~
+  137  ls
+  138  scp ./munge.key loki@pop-os:~/
+  139  ls
+  140  cd llama.cpp/
+  141  ls
+  142  cd ..
+  143  ls
+  144  cd  llama.cpp/
+  145  sudo ls
+  146  sudo ls /models
+  147  sudo ls /model
+  148  sudo ls /models
+  149  sudo ls -A /models
+  150  sudo ls -A 
+  151  sudo ls -lA 
+  152  exit
+  153  ls
+  154  cd /etc/
+  155  ls
+  156  cd munge/
+  157  sudo sh 
+  158  ls
+  159  cd ~
+  160  ls
+  161  cat slurm.conf
