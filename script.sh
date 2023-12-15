@@ -16,6 +16,7 @@ git fetch
 git pull
 
 #add ssh key
+cd /home/user/.ssh
 cat id_rsa.pub >> ~/.ssh/authorized_keys
 
 #slight cludge, ideally use venv for cleaner python install
