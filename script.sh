@@ -26,14 +26,21 @@ sudo apt install -y avahi-daemon bash-completion nano vim less tmux
 #install ansible
 #pip3 install ansible-core -y
 sudo apt install ansible
+sudo mkdir /etc/ansible
 sudo mkdir /etc/ansible/hosts
+sudo mkdir /etc/ansible/playbook
+sudo mkdir /etc/ansible/scripts
+
+cd /home/user/llama-cluster-upbringing-script
 sudo cp inventory.yaml /etc/ansible/hosts
+sudo cp playbook.yaml /etc/ansible/playbook
+sudo cp run.sh /etc/ansible/scripts
 
 #installs for talk
 pip install piper-tts -y
 sudo apt-get install -y ca-certificates curl gnupg
 sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg -y
 NODE_MAJOR=20
 echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
 #curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - &&\
@@ -58,9 +65,7 @@ make main stream command talk talk-llama
 #see https://stackoverflow.com/questions/62503731/invalid-mit-magic-cookie-1-key-when-locally-running-mpi-application-or-starting
 export HWLOC_COMPONENTS="-gl"
 
-#for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
-
-cd /home/user/
+cd /home/user/llama-cluster-upbringing-script
 sudo cp cgroup.conf cgroup_allowed_devices_file.conf slurm.conf /etc/slurm
 sudo cp munge.key /etc/munge/munge.key
 sudo chown munge /etc/munge/munge.key
