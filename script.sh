@@ -39,7 +39,11 @@ sudo cp playbook.yaml /etc/ansible/playbook
 sudo cp run.sh /etc/ansible/scripts
 
 #installs for talk
-pip install piper-tts -y
+python3 -m venv ~/.local --system-site-packages
+~/.local/bin/pip install piper-tts -y 
+#probably need to add this bit to startup
+source ~/.local/bin/activate
+
 sudo apt-get install -y ca-certificates curl gnupg
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg -y
