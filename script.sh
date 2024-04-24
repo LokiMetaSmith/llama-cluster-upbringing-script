@@ -16,6 +16,11 @@ cd llama.cpp/
 git fetch
 git pull
 
+#install visuals
+sudo apt install lolcat figlet
+mkdir ~/.local/share/fonts/
+git clone https://github.com/xero/figlet-fonts.git ~/.local/share/fonts/
+
 #add ssh key
 cd /home/user/.ssh
 cat id_rsa.pub >> ~/.ssh/authorized_keys
