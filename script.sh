@@ -15,7 +15,7 @@ git clone https://github.com/ggerganov/llama.cpp.git
 cd llama.cpp/
 git fetch
 git pull
-echo lolscript.sh >> .bash_aliases
+echo lolbanner.sh >> .bash_aliases
 
 
 #install visuals
