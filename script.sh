@@ -15,6 +15,8 @@ git clone https://github.com/ggerganov/llama.cpp.git
 cd llama.cpp/
 git fetch
 git pull
+echo lolscript.sh >> .bash_aliases
+
 
 #install visuals
 sudo apt install lolcat figlet
