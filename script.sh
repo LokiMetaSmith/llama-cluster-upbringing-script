@@ -17,6 +17,8 @@ git fetch
 git pull
 echo lolbanner.sh >> .bash_aliases
 
+git lfs install
+git clone https://huggingface.co/rhasspy/piper-voices ~/models/voices
 
 #install visuals
 sudo apt install lolcat figlet
@@ -68,6 +70,7 @@ make CC=mpicc CXX=mpicxx LLAMA_MPI=1 -j
 #fi
 #sudo -u munge ${sbindir}/mungekey --verbose
 
+#install Whipsper.cpp
 cd /home/user/
 sudo apt-get install libsdl2-dev -y
 git clone https://github.com/ggerganov/whisper.cpp.git
