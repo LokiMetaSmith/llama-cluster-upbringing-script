@@ -24,6 +24,7 @@ git clone https://huggingface.co/rhasspy/piper-voices ~/models/voices
 sudo apt install lolcat figlet
 mkdir ~/.local/share/fonts/
 git clone https://github.com/xero/figlet-fonts.git ~/.local/share/fonts/
+sudo apt install hollywood
 
 #add ssh key
 cd /home/user/.ssh
