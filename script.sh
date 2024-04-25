@@ -26,6 +26,11 @@ sudo apt install lolcat figlet
 mkdir ~/.local/share/fonts/
 git clone https://github.com/xero/figlet-fonts.git ~/.local/share/fonts/
 sudo apt install hollywood
+sudo apt install sl 
+sudo apt install fortune 
+sudo apt install cowsay 
+sudo apt install toilet
+
 
 git clone https://github.com/bartobri/no-more-secrets.git 
 cd ./no-more-secrets
