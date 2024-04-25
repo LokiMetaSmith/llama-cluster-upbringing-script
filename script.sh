@@ -30,6 +30,8 @@ sudo apt install sl
 sudo apt install fortune 
 sudo apt install cowsay 
 sudo apt install toilet
+sudo apt install cmatrix
+
 
 
 git clone https://github.com/bartobri/no-more-secrets.git 
