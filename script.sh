@@ -97,6 +97,20 @@ make main stream command talk talk-llama
 export HWLOC_COMPONENTS="-gl"
 
 cd /home/user/llama-cluster-upbringing-script
+
+#per  https://github.com/dun/munge/blob/master/QUICKSTART
+#A
+sudo chmod 0700 /etc/munge
+sudo chown munge /etc/munge
+#B
+sudo chmod 0711 /var/lib/munge
+sudo chown munge /var/lib/munge
+#C
+sudo chmod 0700 /var/log/munge
+sudo chown munge /var/log/munge
+#D
+sudo chmod 0755 /run/munge
+sudo chown munge /run/munge
 sudo cp cgroup.conf cgroup_allowed_devices_file.conf slurm.conf /etc/slurm
 sudo cp munge.key /etc/munge/munge.key
 sudo chown munge /etc/munge/munge.key
