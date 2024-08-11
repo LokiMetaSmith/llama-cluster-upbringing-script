@@ -3,11 +3,14 @@ sudo rm -rf /etc/kernel/postinst.d/z50-raspi-firmware
 sudo rm -rf /etc/initramfs/post-update.d/z50-raspi-firmware
 sudo apt update -y
 sudo apt dist-upgrade -y
-sudo apt install openssh-server ntpdate slurm-wlm slurmdbd git -y
+
+sudo apt install openssh-server ntpdate slurm-wlm slurmdbd git cmake -y
+
 #sudo mkdir /clusterfs
 #sudo chown nobody.nogroup -R /clusterfs
 #sudo chmod 777 -R /clusterfs
 sudo apt install nfs-kernel-server nfs-common python3-full python3-pip -y
+
 #libraries for compiling openmpi support
 sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenmpi3 -y
 cd /home/user/
@@ -32,6 +35,7 @@ sudo apt install cowsay
 sudo apt install toilet
 sudo apt install cmatrix
 
+#install sillytavern or koboltcpp or similar frontend
 
 
 git clone https://github.com/bartobri/no-more-secrets.git 
