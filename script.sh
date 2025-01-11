@@ -1,26 +1,47 @@
 sudo apt purge raspi-firmware -y
 sudo rm -rf /etc/kernel/postinst.d/z50-raspi-firmware
 sudo rm -rf /etc/initramfs/post-update.d/z50-raspi-firmware
-sudo apt update -y
-sudo apt dist-upgrade -y
+sudo apt update -yq
+sudo apt dist-upgrade -fyq
 
-sudo apt install openssh-server ntpdate slurm-wlm slurmdbd git cmake -y
+sudo apt install openssh-server ntpdate git cmake -y
 
 #sudo mkdir /clusterfs
 #sudo chown nobody.nogroup -R /clusterfs
 #sudo chmod 777 -R /clusterfs
 sudo apt install nfs-kernel-server nfs-common python3-full python3-pip -y
 
-#libraries for compiling openmpi support
-sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenmpi3 -y
+# pull llama.cpp and compile, build everything
 cd /home/user/
 git clone https://github.com/ggerganov/llama.cpp.git
 cd llama.cpp/
 git fetch
 git pull
+
+cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON
+cmake --build build --config Release  -j
+
+# Copy compiled tools
+#COPY --from=builder /app/llama.cpp/build/src/*.so /usr/lib/x86_64-linux-gnu
+#COPY --from=builder /app/llama.cpp/build/ggml/src/*.so /usr/lib/x86_64-linux-gnu
+#COPY --from=builder /app/llama.cpp/build/ggml/src/ggml-rpc/*.so /usr/lib/x86_64-linux-gnu
+#COPY --from=builder /app/llama.cpp/build/bin/rpc-server .
+#COPY --from=builder /app/llama.cpp/build/bin/llama-cli .
+#COPY --from=builder /app/llama.cpp/build/bin/llama-embedding .
+#COPY --from=builder /app/llama.cpp/build/bin/llama-server .
+
+
+#if [[  strcmp( $ ( tail -n 1 /etc/fstab ) , "AID-E-1:/home/user/llama.cpp/models /home/user/llama.cpp/models nfs defaults 0 0" ) ]]; then
+#echo "nfs already added"
+#else
+#echo "AID-E-1:/home/user/llama.cpp/models /home/user/llama.cpp/models nfs defaults 0 0" | sudo tee -a /etc/fstab
+#fi
+
+
+#adding lolbanner.sh aliaces
 echo lolbanner.sh >> .bash_aliases
 
-git lfs install
+git lfs install 
 git clone https://huggingface.co/rhasspy/piper-voices ~/models/voices
 
 #install visuals
@@ -81,13 +102,6 @@ echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.co
 sudo apt-get update
 sudo apt-get install -y nodejs
 
-make CC=mpicc CXX=mpicxx LLAMA_MPI=1 -j
-#if [[  strcmp( $ ( tail -n 1 /etc/fstab ) , "AID-E-1:/home/user/llama.cpp/models /home/user/llama.cpp/models nfs defaults 0 0" ) ]]; then
-#echo "nfs already added"
-#else
-#echo "AID-E-1:/home/user/llama.cpp/models /home/user/llama.cpp/models nfs defaults 0 0" | sudo tee -a /etc/fstab
-#fi
-#sudo -u munge ${sbindir}/mungekey --verbose
 
 #install Whipsper.cpp
 cd /home/user/
@@ -102,30 +116,5 @@ export HWLOC_COMPONENTS="-gl"
 
 cd /home/user/llama-cluster-upbringing-script
 
-#per  https://github.com/dun/munge/blob/master/QUICKSTART
-#A
-sudo chmod 0700 /etc/munge
-sudo chown munge /etc/munge
-#B
-sudo chmod 0711 /var/lib/munge
-sudo chown munge /var/lib/munge
-#C
-sudo chmod 0700 /var/log/munge
-sudo chown munge /var/log/munge
-#D
-sudo chmod 0755 /run/munge
-sudo chown munge /run/munge
-sudo cp cgroup.conf cgroup_allowed_devices_file.conf slurm.conf /etc/slurm
-sudo cp munge.key /etc/munge/munge.key
-sudo chown munge /etc/munge/munge.key
-sudo systemctl enable munge
-sudo systemctl start munge
-systemctl status munge -l
-sudo systemctl enable slurmd
-sudo systemctl start slurmd
-systemctl status slurmd -l
-sudo systemctl enable slurmctld
-sudo systemctl start slurmctld
-systemctl status slurmctld -l
-sudo cat /var/log/slurm/slurmctld.log
+
 
