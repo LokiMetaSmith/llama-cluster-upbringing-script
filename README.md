@@ -64,6 +64,38 @@ Once the `setup_distributed_llama.sh` script completes successfully, the compile
 
 **For detailed instructions** on model conversion, configuring and running a cluster with multiple workers, and other advanced usage, please refer to the official documentation within the `distributed-llama-repo` directory (look for a README or other documentation files) or visit the project's GitHub page: https://github.com/b4rtaz/distributed-llama.
 
+### Running `llama-server` with RPC using `run.sh`
+
+The `run.sh` script has been updated to facilitate running `llama-server` with RPC enabled. This allows for distributing the workload across multiple machines.
+
+**Configuration:**
+
+The `run.sh` script contains a commented-out command for `llama-server`. Before running it, you need to configure several placeholder variables:
+
+*   `MODEL_PATH`: Path to your GGUF model file.
+    *   Example: `MODEL_PATH="models/L3.3-Q4_K_M.gguf"`
+*   `RPC_HOSTS`: Comma-separated list of your RPC server addresses and ports. These are the machines that will participate in the distributed inference.
+    *   Example: `RPC_HOSTS="192.168.1.19:50052,192.168.1.15:50052"`
+*   `CONTEXT_SIZE`: The size of the prompt context window.
+    *   Example: `CONTEXT_SIZE=16384`
+*   `N_GPU_LAYERS`: The number of model layers to offload to the GPU(s).
+    *   Example: `N_GPU_LAYERS=200`
+*   `OTHER_ARGS`: Any other additional arguments you want to pass to `llama-server`.
+    *   Example: `OTHER_ARGS="--flash-attn --split-mode row --threads 12 --tensor-split 13,13,24"`
+
+**How to Run:**
+
+1.  **Edit `run.sh`**: Open the `run.sh` script in a text editor.
+2.  **Set Variables**: Locate the commented-out `llama-server` section and update the placeholder variables (`MODEL_PATH`, `RPC_HOSTS`, `CONTEXT_SIZE`, `N_GPU_LAYERS`, `OTHER_ARGS`) with your specific configuration.
+3.  **Uncomment Command**: Uncomment the line that starts with `llama-server -m "$MODEL_PATH" ...`
+4.  **Make `run.sh` executable**: If you haven't already, run `chmod +x run.sh`.
+5.  **Execute the script**:
+    ```bash
+    ./run.sh
+    ```
+
+This will start the `llama-server` with your specified configuration, enabling distributed inference via RPC. The script also reminds you to edit it if the default commented command is detected.
+
 For the docker config image
 //Create the Image
 docker buildx build . -t gpt-mpi:latest
