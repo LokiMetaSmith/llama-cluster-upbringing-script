@@ -114,6 +114,54 @@ make main stream command talk talk-llama
 #see https://stackoverflow.com/questions/62503731/invalid-mit-magic-cookie-1-key-when-locally-running-mpi-application-or-starting
 export HWLOC_COMPONENTS="-gl"
 
+# Install Paddler
+echo "Installing Paddler..."
+# Define Paddler version - check https://github.com/distantmagic/paddler/releases for the latest version
+PADDLER_VERSION="v1.2.0"
+PADDLER_ARCHIVE="paddler-${PADDLER_VERSION}-linux-amd64.tar.gz"
+PADDLER_URL="https://github.com/distantmagic/paddler/releases/download/${PADDLER_VERSION}/${PADDLER_ARCHIVE}"
+
+# Download Paddler
+cd /tmp # Work in a temporary directory
+echo "Downloading Paddler from ${PADDLER_URL}"
+if ! wget -q "${PADDLER_URL}"; then
+    echo "Error: Failed to download Paddler. Please check the URL or network connection."
+    # Optionally, try with curl as a fallback or instruct user
+    # if ! curl -sLO "${PADDLER_URL}"; then
+    #    echo "Error: Failed to download Paddler with curl as well."
+    # fi
+else
+    echo "Paddler downloaded successfully."
+
+    # Extract Paddler
+    echo "Extracting Paddler..."
+    if ! tar -xzf "${PADDLER_ARCHIVE}"; then
+        echo "Error: Failed to extract Paddler archive."
+    else
+        echo "Paddler extracted successfully."
+
+        # Make executable and move to PATH
+        if [ -f "./paddler" ]; then
+            echo "Making Paddler executable..."
+            chmod +x ./paddler
+            echo "Moving Paddler to /usr/local/bin..."
+            if sudo mv ./paddler /usr/local/bin/; then
+                echo "Paddler installed successfully to /usr/local/bin/paddler"
+                echo "You can verify by running: paddler --version"
+            else
+                echo "Error: Failed to move Paddler to /usr/local/bin. sudo permissions might be required or /usr/local/bin not writable."
+            fi
+        else
+            echo "Error: paddler executable not found after extraction."
+        fi
+    fi
+
+    # Clean up downloaded archive
+    echo "Cleaning up downloaded archive..."
+    rm -f "${PADDLER_ARCHIVE}"
+fi
+# End of Paddler Installation
+
 cd /home/user/llama-cluster-upbringing-script
 
 
