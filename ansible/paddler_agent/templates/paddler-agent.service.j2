@@ -1,0 +1,26 @@
+[Unit]
+Description=Paddler Agent for llama.cpp
+After=network.target llama-cpp.service
+# Assuming llama.cpp service is named llama-cpp.service or similar
+# Adjust 'After' if your llama.cpp service has a different name or if not managed by systemd
+
+[Service]
+ExecStart=/usr/local/bin/paddler agent --name "{{ paddler_agent_name }}" \
+    --external-llamacpp-addr "{{ paddler_agent_external_llamacpp_addr }}" \
+    --local-llamacpp-addr "{{ paddler_agent_local_llamacpp_addr }}" \
+    {% if paddler_agent_local_llamacpp_api_key is defined and paddler_agent_local_llamacpp_api_key != "" %}
+    --local-llamacpp-api-key "{{ paddler_agent_local_llamacpp_api_key }}" \
+    {% endif %}
+    --management-addr "{{ paddler_agent_management_addr }}"
+
+User={{ paddler_agent_user | default('llamauser') }}
+Group={{ paddler_agent_group | default('llamauser') }}
+WorkingDirectory={{ paddler_agent_working_directory | default('/home/' + (paddler_agent_user | default('llamauser'))) }}
+Restart=on-failure
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
