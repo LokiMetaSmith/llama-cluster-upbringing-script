@@ -92,6 +92,8 @@ This document outlines the action plan for refactoring the project to use a mode
   - **Verification:**
     - Run the `pipecat` application.
     - The logs should show "Observation: I see..." messages when objects are detected by the webcam.
-- [ ] **Update Documentation for Vision Capabilities:**
-  - [ ] Add a section to `README.md` explaining the new vision feature.
-  - [ ] Document any new configuration options or dependencies.
+- [x] **Update Documentation for Vision Capabilities:**
+  - [x] Add a section to `README.md` explaining the new vision feature.
+  - [x] Document any new configuration options or dependencies.
+  - **Verification:**
+    - The `README.md` contains a new section on Vision Capabilities.

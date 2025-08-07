@@ -150,6 +150,27 @@ nomad job logs <job_name>
 ```
 
 ## 7. Performance Tuning
-- **Model Selection:** The `prima.cpp` Nomad job is configured to use a placeholder model path. You will need to edit `/home/user/primacpp.nomad` on the master node to point to the GGUF model you want to use. Smaller models (3B, 7B) are recommended.
+- **Model Selection:** The `prima.cpp` Nomad job is configured to use a placeholder model path. You will need to edit `/home/user/primacpp.noma`d on the master node to point to the GGUF model you want to use. Smaller models (3B, 7B) are recommended.
 - **Network:** Wired gigabit ethernet is strongly recommended over Wi-Fi for reduced latency.
 - **VAD Tuning:** The `RealtimeSTT` sensitivity can be tuned in `app.py` for better performance in noisy environments.
+
+## 8. Vision Capabilities
+
+This agent has the ability to "see" its environment using a webcam. A vision service runs in parallel with the conversational pipeline, providing real-time observations to the LLM.
+
+### 8.1. How it Works
+- The `pipecat` application includes a `YOLOv8Detector` service.
+- This service uses `OpenCV` to capture frames from a webcam.
+- It runs a YOLOv8 object detection model on each frame.
+- When the set of detected objects changes, it generates a text-based observation (e.g., "Observation: I see a person and a cup.") and sends it to the LLM.
+- This allows the agent to have a continuous, real-time awareness of its surroundings.
+
+### 8.2. Hardware Requirements
+- A USB webcam must be connected to the node where the `pipecat-app` job is running. By default, this will be one of the nodes in the cluster, managed by Nomad.
+
+### 8.3. Verification
+To see the vision system in action, you can view the logs of the `pipecat-app` job:
+```bash
+nomad job logs pipecat-app
+```
+When objects are detected by the webcam, you will see log messages from the `YOLOv8Detector` service, including the "Observation: ..." text that is being sent to the LLM.
