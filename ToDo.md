@@ -66,12 +66,12 @@ This document outlines the action plan for refactoring the project to use a mode
     - `nomad job status pipecatapp` should show the job as 'running'.
 
 ## Phase 4: Integration, Testing, and Documentation
-- [ ] **Update `README.md`:**
-  - [ ] Update the `README.md` to document the new, Nomad-based deployment process.
-  - [ ] Explain how to configure the `inventory.yaml` for the Nomad cluster.
-  - [ ] Explain how to run the Ansible playbook to provision the cluster.
-  - [ ] Explain how to deploy the `prima.cpp` and `pipecat` Nomad jobs.
-- [ ] **Testing:**
-  - [ ] Thoroughly test the end-to-end pipeline on the cluster.
-  - [ ] Benchmark the performance (tokens/sec, time-to-first-token).
-  - [ ] Tune the parameters as described in the report.
+- [x] **Update `README.md`:**
+  - [x] Update the `README.md` to document the new, Nomad-based deployment process.
+  - [x] Explain how to configure the `inventory.yaml` for the Nomad cluster.
+  - [x] Explain how to run the Ansible playbook to provision the cluster.
+  - [x] Explain how to deploy the `prima.cpp` and `pipecat` Nomad jobs.
+- [x] **Testing:**
+  - [x] Thoroughly test the end-to-end pipeline on the cluster.
+  - [x] Benchmark the performance (tokens/sec, time-to-first-token).
+  - [x] Tune the parameters as described in the report.
