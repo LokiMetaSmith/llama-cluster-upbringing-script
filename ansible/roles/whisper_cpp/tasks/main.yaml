@@ -1,0 +1,24 @@
+---
+- name: Install libsdl2-dev
+  apt:
+    name: libsdl2-dev
+    state: present
+
+- name: Clone whisper.cpp repository
+  git:
+    repo: 'https://github.com/ggerganov/whisper.cpp.git'
+    dest: /home/user/whisper.cpp
+    version: master
+    update: yes
+
+- name: Download whisper.cpp model
+  command: bash ./models/download-ggml-model.sh base.en
+  args:
+    chdir: /home/user/whisper.cpp
+    creates: /home/user/whisper.cpp/models/ggml-base.en.bin
+
+- name: Build whisper.cpp
+  command: make main stream command talk talk-llama
+  args:
+    chdir: /home/user/whisper.cpp
+    creates: /home/user/whisper.cpp/main
