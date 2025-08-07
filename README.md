@@ -174,3 +174,45 @@ To see the vision system in action, you can view the logs of the `pipecat-app` j
 nomad job logs pipecat-app
 ```
 When objects are detected by the webcam, you will see log messages from the `YOLOv8Detector` service, including the "Observation: ..." text that is being sent to the LLM.
+
+## 9. Benchmarking
+
+The application includes a built-in benchmarking mode to measure pipeline performance.
+
+### 9.1. Enabling Benchmarking
+To enable benchmarking, you need to set the `BENCHMARK_MODE` environment variable when running the `pipecat-app` job. You can do this by modifying the `pipecatapp.nomad` job file.
+
+1.  **Edit `/home/user/pipecatapp.nomad`** on the master node.
+2.  **Add the `env` stanza** to the `task` block:
+    ```hcl
+    task "pipecat-task" {
+      driver = "exec"
+
+      config {
+        command = "python3"
+        args    = ["/home/user/app.py"]
+      }
+
+      env {
+        BENCHMARK_MODE = "true"
+      }
+    }
+    ```
+3.  **Run the job:** `nomad job run /home/user/pipecatapp.nomad`
+
+### 9.2. Interpreting the Results
+When benchmarking is enabled, a performance report will be printed to the job logs after each conversational turn. You can view the logs with `nomad job logs pipecat-app`.
+
+The report will look like this:
+```
+--- BENCHMARK RESULTS ---
+STT Latency: 0.5123s
+LLM Time to First Token: 0.2345s
+TTS Time to First Audio: 0.4567s
+Total Pipeline Latency: 1.2035s
+-------------------------
+```
+- **STT Latency:** Time from the user stopping speaking to the final transcript being generated.
+- **LLM Time to First Token (TTFT):** Time from the end of the STT to the first word from the LLM.
+- **TTS Time to First Audio (TTFA):** Time from the first word of the LLM to the first chunk of synthesized audio.
+- **Total Pipeline Latency:** The full end-to-end time from the user stopping speaking to the agent starting to speak. This is the most important metric for perceived responsiveness.

@@ -3,8 +3,9 @@ import logging
 import cv2
 import torch
 from ultralytics import YOLO
+import time
 
-from pipecat.frames.frames import AudioFrame, EndFrame, TextFrame, VisionImageFrame
+from pipecat.frames.frames import AudioFrame, EndFrame, TextFrame, VisionImageFrame, UserStartedSpeakingFrame, UserStoppedSpeakingFrame, TranscriptionFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
@@ -18,6 +19,47 @@ import soundfile as sf
 import os
 
 logging.basicConfig(level=logging.DEBUG)
+
+class BenchmarkCollector(FrameProcessor):
+    def __init__(self):
+        super().__init__()
+        self.start_time = 0
+        self.stt_end_time = 0
+        self.llm_first_token_time = 0
+        self.tts_first_audio_time = 0
+
+    async def process_frame(self, frame, direction):
+        if isinstance(frame, UserStoppedSpeakingFrame):
+            self.start_time = time.time()
+        elif isinstance(frame, TranscriptionFrame):
+            self.stt_end_time = time.time()
+        elif isinstance(frame, TextFrame) and self.llm_first_token_time == 0:
+            self.llm_first_token_time = time.time()
+        elif isinstance(frame, AudioFrame) and self.tts_first_audio_time == 0:
+            self.tts_first_audio_time = time.time()
+            self.log_benchmarks()
+            self.reset()
+
+        await self.push_frame(frame, direction)
+
+    def log_benchmarks(self):
+        stt_latency = self.stt_end_time - self.start_time
+        llm_ttft = self.llm_first_token_time - self.stt_end_time
+        tts_ttfa = self.tts_first_audio_time - self.llm_first_token_time
+        total_latency = self.tts_first_audio_time - self.start_time
+
+        logging.info("--- BENCHMARK RESULTS ---")
+        logging.info(f"STT Latency: {stt_latency:.4f}s")
+        logging.info(f"LLM Time to First Token: {llm_ttft:.4f}s")
+        logging.info(f"TTS Time to First Audio: {tts_ttfa:.4f}s")
+        logging.info(f"Total Pipeline Latency: {total_latency:.4f}s")
+        logging.info("-------------------------")
+
+    def reset(self):
+        self.start_time = 0
+        self.stt_end_time = 0
+        self.llm_first_token_time = 0
+        self.tts_first_audio_time = 0
 
 class KittenTTSService(FrameProcessor):
     def __init__(self, model_name="KittenML/kitten-tts-nano-0.1"):
@@ -76,13 +118,18 @@ async def main():
     yolo = YOLOv8Detector()
 
     # Main conversational pipeline
-    main_pipeline = Pipeline([
+    pipeline_steps = [
         transport.input(),
         stt,
         llm,
         tts,
         transport.output()
-    ])
+    ]
+
+    if os.getenv("BENCHMARK_MODE", "false").lower() == "true":
+        pipeline_steps.insert(1, BenchmarkCollector())
+
+    main_pipeline = Pipeline(pipeline_steps)
 
     # Vision pipeline
     vision_pipeline = Pipeline([
