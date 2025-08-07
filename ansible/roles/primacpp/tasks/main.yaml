@@ -1,0 +1,33 @@
+---
+- name: Install prima.cpp dependencies
+  apt:
+    name:
+      - fio
+      - libzmq3-dev
+      - g++
+      - highs
+    state: present
+
+- name: Clone prima.cpp repository
+  git:
+    repo: "{{ primacpp_git_repo }}"
+    dest: "{{ primacpp_install_dir }}"
+    version: master
+    update: yes
+
+- name: Configure prima.cpp build
+  command: cmake -B build
+  args:
+    chdir: "{{ primacpp_install_dir }}"
+  when: "'worker_nodes' in group_names and 'controller_nodes' not in group_names"
+
+- name: Configure prima.cpp build with HiGHS
+  command: cmake -B build -DUSE_HIGHS=1
+  args:
+    chdir: "{{ primacpp_install_dir }}"
+  when: "'controller_nodes' in group_names"
+
+- name: Build prima.cpp
+  command: cmake --build build --config Release -j
+  args:
+    chdir: "{{ primacpp_install_dir }}"

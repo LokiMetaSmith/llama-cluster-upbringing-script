@@ -9,4 +9,5 @@
     - whisper_cpp
     - python_deps
     - paddler
+    - primacpp
     - desktop_extras
