@@ -42,19 +42,28 @@ This document outlines the action plan for refactoring the project to use a mode
     - The OpenAI-compatible API should be accessible at the specified port.
 
 ## Phase 3: Conversational AI Pipeline with pipecat
-- [ ] **Create a `pipecat_app` Ansible Role:**
-  - [ ] Create a new Ansible role named `pipecatapp`.
-  - [ ] This role will install the necessary python dependencies for the `pipecat` application, including `pipecat-ai`, `RealtimeSTT`, `faster-whisper`, `MeloTTS`, etc. This will be managed via a `requirements.txt` file.
-- [ ] **Develop the `pipecat` Application:**
-  - [ ] Create a Python application (`app.py`) that uses the `pipecat` framework.
-  - [ ] This application will define the conversational pipeline:
-    - [ ] `RealtimeSTT` for speech-to-text.
-    - [ ] `OpenAILLMService` configured to point to the `prima.cpp` Nomad service.
-    - [ ] `MeloTTS` for text-to-speech.
-  - [ ] It will implement the interruptible logic as described in the report.
-- [ ] **Create a Nomad Job for the `pipecat` Application:**
-  - [ ] Create a Nomad job file (e.g., `pipecatapp.nomad`) to run the `pipecat` application.
-  - [ ] This job will use the `exec` driver to run the python application.
+- [x] **Create a `pipecat_app` Ansible Role:**
+  - [x] Create a new Ansible role named `pipecatapp`.
+  - [x] This role will install the necessary python dependencies for the `pipecat` application, including `pipecat-ai`, `RealtimeSTT`, `faster-whisper`, `MeloTTS`, etc. This will be managed via a `requirements.txt` file.
+  - **Verification:**
+    - `ansible-playbook playbook.yaml --limit worker_nodes`
+    - SSH into target machine.
+    - `pip3 list` should show the installed packages.
+- [x] **Develop the `pipecat` Application:**
+  - [x] Create a Python application (`app.py`) that uses the `pipecat` framework.
+  - [x] This application will define the conversational pipeline:
+    - [x] `RealtimeSTT` for speech-to-text.
+    - [x] `OpenAILLMService` configured to point to the `prima.cpp` Nomad service.
+    - [x] `MeloTTS` for text-to-speech.
+  - [x] It will implement the interruptible logic as described in the report.
+  - **Verification:**
+    - `python3 /home/user/app.py` should run without errors.
+- [x] **Create a Nomad Job for the `pipecat` Application:**
+  - [x] Create a Nomad job file (e.g., `pipecatapp.nomad`) to run the `pipecat` application.
+  - [x] This job will use the `exec` driver to run the python application.
+  - **Verification:**
+    - `nomad job run pipecatapp.nomad`
+    - `nomad job status pipecatapp` should show the job as 'running'.
 
 ## Phase 4: Integration, Testing, and Documentation
 - [ ] **Update `README.md`:**

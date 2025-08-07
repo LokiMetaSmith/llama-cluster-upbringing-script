@@ -1,0 +1,6 @@
+pipecat-ai
+RealtimeSTT
+faster-whisper
+MeloTTS
+torch
+torchaudio
