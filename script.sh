@@ -90,6 +90,7 @@ sudo cp run.sh /etc/ansible/scripts
 #installs for talk
 python3 -m venv ~/.local --system-site-packages
 ~/.local/bin/pip install piper-tts -y 
+~/.local/bin/pip install https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-none-any.whl
 #probably need to add this bit to startup
 source ~/.local/bin/activate
 
