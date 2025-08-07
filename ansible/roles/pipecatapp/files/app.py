@@ -4,7 +4,7 @@ import cv2
 import torch
 from ultralytics import YOLO
 
-from pipecat.frames.frames import EndFrame, TextFrame, VisionImageFrame
+from pipecat.frames.frames import AudioFrame, EndFrame, TextFrame, VisionImageFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
@@ -13,8 +13,24 @@ from pipecat.services.deepgram import DeepgramSTTService
 from pipecat.services.elevenlabs import ElevenLabsTTSService
 from pipecat.services.openai import OpenAILLMService
 from pipecat.transports.local.local import LocalTransport
+from kittentts import KittenTTS as KittenTTSModel
+import soundfile as sf
+import os
 
 logging.basicConfig(level=logging.DEBUG)
+
+class KittenTTSService(FrameProcessor):
+    def __init__(self, model_name="KittenML/kitten-tts-nano-0.1"):
+        super().__init__()
+        self.model = KittenTTSModel(model_name)
+
+    async def process_frame(self, frame, direction):
+        if not isinstance(frame, TextFrame):
+            await self.push_frame(frame, direction)
+            return
+
+        audio = self.model.generate(frame.text, voice='expr-voice-2-f')
+        await self.push_frame(AudioFrame(audio.tobytes(), 24000, 1))
 
 class YOLOv8Detector(FrameProcessor):
     def __init__(self, model_name="yolov8n.pt"):
@@ -50,9 +66,13 @@ async def main():
         api_key="dummy",
         model="dummy"
     )
-    tts = ElevenLabsTTSService(
-        voice_id="21m00Tcm4TlvDq8ikWAM" # A default voice
-    )
+    tts_service_name = os.getenv("TTS_SERVICE", "elevenlabs")
+    if tts_service_name == "kittentts":
+        tts = KittenTTSService()
+    else:
+        tts = ElevenLabsTTSService(
+            voice_id="21m00Tcm4TlvDq8ikWAM" # A default voice
+        )
     yolo = YOLOv8Detector()
 
     # Main conversational pipeline

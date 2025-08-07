@@ -6,3 +6,5 @@ torch
 torchaudio
 ultralytics
 opencv-python-headless
+kittentts
+soundfile
