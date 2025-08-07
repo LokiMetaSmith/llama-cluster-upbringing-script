@@ -4,3 +4,5 @@ faster-whisper
 MeloTTS
 torch
 torchaudio
+ultralytics
+opencv-python-headless

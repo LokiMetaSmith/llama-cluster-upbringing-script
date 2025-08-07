@@ -10,4 +10,5 @@
     - python_deps
     - paddler
     - primacpp
+    - vision
     - desktop_extras
