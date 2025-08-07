@@ -31,3 +31,9 @@
   command: cmake --build build --config Release -j
   args:
     chdir: "{{ primacpp_install_dir }}"
+
+- name: Copy prima.cpp Nomad job file
+  template:
+    src: ../../jobs/primacpp.nomad
+    dest: /home/user/primacpp.nomad
+  when: "'controller_nodes' in group_names"

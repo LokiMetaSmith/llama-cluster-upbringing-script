@@ -22,20 +22,20 @@ This document outlines the action plan for refactoring the project to use a mode
     - `nomad node status` on a server node should show all client nodes as 'ready'.
 
 ## Phase 2: Distributed LLM with prima.cpp
-- [ ] **Create a `prima.cpp` Ansible Role:**
-  - [ ] Create a new Ansible role named `primacpp`.
-  - [ ] This role will install the necessary dependencies for `prima.cpp` (`fio`, `libzmq3-dev`, `HiGHS`).
-  - [ ] It will clone the `prima.cpp` repository from GitHub.
-  - [ ] It will compile `prima.cpp`, with a conditional flag to compile the master node with `USE_HIGHS=1`.
+- [x] **Create a `prima.cpp` Ansible Role:**
+  - [x] Create a new Ansible role named `primacpp`.
+  - [x] This role will install the necessary dependencies for `prima.cpp` (`fio`, `libzmq3-dev`, `HiGHS`).
+  - [x] It will clone the `prima.cpp` repository from GitHub.
+  - [x] It will compile `prima.cpp`, with a conditional flag to compile the master node with `USE_HIGHS=1`.
   - **Verification:**
     - `ansible-playbook playbook.yaml --limit worker_nodes`
     - SSH into target machine.
     - `ls /home/user/prima.cpp/` should show the compiled binaries.
-- [ ] **Create a Nomad Job for `prima.cpp`:**
-  - [ ] Create a Nomad job file (e.g., `primacpp.nomad`) that defines how to run the `prima.cpp` cluster.
-  - [ ] This job will use a `raw_exec` driver to run the `llama-cli` binary.
-  - [ ] It will use Nomad's service discovery to pass the IP addresses of the master and next nodes to the `llama-cli` command.
-  - [ ] It will also configure the `llama-server` to expose the OpenAI-compatible API.
+- [x] **Create a Nomad Job for `prima.cpp`:**
+  - [x] Create a Nomad job file (e.g., `primacpp.nomad`) that defines how to run the `prima.cpp` cluster.
+  - [x] This job will use a `raw_exec` driver to run the `llama-cli` binary.
+  - [x] It will use Nomad's service discovery to pass the IP addresses of the master and next nodes to the `llama-cli` command.
+  - [x] It will also configure the `llama-server` to expose the OpenAI-compatible API.
   - **Verification:**
     - `nomad job run primacpp.nomad`
     - `nomad job status primacpp` should show the job as 'running'.
