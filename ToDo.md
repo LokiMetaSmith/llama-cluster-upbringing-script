@@ -75,3 +75,23 @@ This document outlines the action plan for refactoring the project to use a mode
   - [x] Thoroughly test the end-to-end pipeline on the cluster.
   - [x] Benchmark the performance (tokens/sec, time-to-first-token).
   - [x] Tune the parameters as described in the report.
+
+## Phase 5: Vision Integration
+- [x] **Create a `vision` Ansible Role:**
+  - [x] Create a new Ansible role named `vision`.
+  - [x] This role will install the necessary system dependencies for video processing.
+  - [x] It will update the `requirements.txt` to include `ultralytics` and `opencv-python-headless`.
+  - **Verification:**
+    - `ansible-playbook playbook.yaml --limit worker_nodes`
+    - SSH into target machine.
+    - `pip3 list | grep ultralytics` should show the package.
+- [x] **Develop the Vision Service:**
+  - [x] Create a custom `pipecat` service (`YOLOv8Detector`) in `app.py`.
+  - [x] This service will capture video, run YOLOv8, and inject text observations into the pipeline.
+  - [x] Integrate the service into the main pipeline to run in parallel.
+  - **Verification:**
+    - Run the `pipecat` application.
+    - The logs should show "Observation: I see..." messages when objects are detected by the webcam.
+- [ ] **Update Documentation for Vision Capabilities:**
+  - [ ] Add a section to `README.md` explaining the new vision feature.
+  - [ ] Document any new configuration options or dependencies.
