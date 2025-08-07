@@ -23,24 +23,22 @@ This section describes how to prepare a new machine to be added to the cluster. 
 - During the installation, create a standard user (e.g., `user`).
 - When prompted for software selection, deselect "Debian desktop environment" and select only "SSH server" and "standard system utilities".
 
-### 2.2. Set a Static IP Address
-Your cluster nodes must have static IP addresses. After the installation, log in as root and configure the network interface. For example, to set a static IP for `eth0`:
+### 2.2. Run the Initial Setup Script
+After installing Debian, log in as the user you created. Then, clone this repository and run the initial setup script. This script will configure the hostname, set up a static IP address, and ensure the SSH server is running.
 
-1.  Edit `/etc/network/interfaces` to look like this (adjust for your network):
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/KittenML/KittenTTS.git
+    cd KittenTTS/initial-setup
     ```
-    auto eth0
-    iface eth0 inet static
-        address 192.168.1.101
-        netmask 255.255.255.0
-        gateway 192.168.1.1
+2.  **Configure the setup:**
+    Edit the `setup.conf` file and set the `HOSTNAME`, `STATIC_IP`, `NETMASK`, `GATEWAY`, and `INTERFACE` variables for the specific machine.
+3.  **Run the script:**
+    ```bash
+    sudo bash setup.sh
     ```
-2.  Restart the networking service: `systemctl restart networking`
-
-### 2.3. Set the Hostname
-Each machine must have a unique hostname. A recommended convention is `aide-01`, `aide-02`, etc.
-
-- Set the hostname: `hostnamectl set-hostname aide-01`
-- Edit `/etc/hosts` and ensure it maps the new hostname to `127.0.0.1`.
+4.  **Reboot:**
+    After the script finishes, reboot the machine: `sudo reboot`
 
 ## 3. Control Node and Ansible Setup
 
