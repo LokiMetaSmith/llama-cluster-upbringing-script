@@ -1,3 +1,10 @@
-AIDE0:
-  hosts:
-    AID-E-1:
+all:
+  children:
+    controller_nodes:
+      hosts:
+        AID-E-1:
+    worker_nodes:
+      hosts:
+        AID-E-1:
+  vars:
+    ansible_user: user
