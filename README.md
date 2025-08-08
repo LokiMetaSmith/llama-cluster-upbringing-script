@@ -98,7 +98,8 @@ Once the `pipecat-app` job is running, you can access the UI by navigating to th
 ## 7. Testing and Verification
 - **Check Cluster Status:** `nomad node status`
 - **Check Job Status:** `nomad job status`
-- **View Logs:** `nomad job logs <job_name>` (e.g., `pipecat-app`, `prima-cluster`) or use the Mission Control Web UI.
+- **View Logs:** `nomad job logs <job_name>` (e.g., `pipecatapp`, `prima-cluster`) or use the Mission Control Web UI.
+- **Manual Test Scripts:** A set of scripts for manual testing of individual components is available in the `testing/` directory.
 
 ## 8. Performance Tuning & Service Selection
 - **Model Selection:** The `prima.cpp` and `llamacpp-rpc` Nomad jobs are configured to use a placeholder model path. You will need to edit the job files to point to the GGUF model you want to use. Smaller models (3B, 7B) are recommended for better performance.
