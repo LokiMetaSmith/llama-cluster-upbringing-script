@@ -74,6 +74,21 @@ class KittenTTSService(FrameProcessor):
         audio = self.model.generate(frame.text, voice='expr-voice-2-f')
         await self.push_frame(AudioFrame(audio.tobytes(), 24000, 1))
 
+class TwinService(FrameProcessor):
+    def __init__(self):
+        super().__init__()
+        # In the future, we will initialize memory and tools here.
+
+    async def process_frame(self, frame, direction):
+        if not isinstance(frame, TranscriptionFrame):
+            await self.push_frame(frame, direction)
+            return
+
+        # For now, just pass the transcription through.
+        # In the future, we will do memory retrieval and tool use here.
+        logging.info(f"TwinService received transcription: {frame.text}")
+        await self.push_frame(TextFrame(frame.text))
+
 class YOLOv8Detector(FrameProcessor):
     def __init__(self, model_name="yolov8n.pt"):
         super().__init__()
@@ -116,11 +131,13 @@ async def main():
             voice_id="21m00Tcm4TlvDq8ikWAM" # A default voice
         )
     yolo = YOLOv8Detector()
+    twin = TwinService()
 
     # Main conversational pipeline
     pipeline_steps = [
         transport.input(),
         stt,
+        twin,
         llm,
         tts,
         transport.output()
