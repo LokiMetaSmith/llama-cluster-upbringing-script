@@ -97,3 +97,19 @@ This document outlines the action plan for refactoring the project to use a mode
   - [x] Document any new configuration options or dependencies.
   - **Verification:**
     - The `README.md` contains a new section on Vision Capabilities.
+
+## Phase 6: Agent Embodiment with TwinService
+- [ ] **Create `TwinService`:**
+  - [ ] Create a new `FrameProcessor` class in `app.py` called `TwinService`.
+  - [ ] This service will act as the "brain" of the agent, sitting between the STT and LLM services.
+- [ ] **Implement Memory:**
+  - [ ] Create a simple file-based vector store for long-term memory.
+  - [ ] The `TwinService` will perform a semantic search on this memory to retrieve context for the LLM prompt.
+  - [ ] The `TwinService` will update the memory with a summary of each interaction.
+- [ ] **Implement Tool Use:**
+  - [ ] The `TwinService` will parse the user's request to see if it's a command for a tool.
+  - [ ] It will integrate the existing `YOLOv8Detector` as a tool that can be queried for a description of the current scene.
+- [ ] **Integrate into Pipeline:**
+  - [ ] Modify the main `pipecat` pipeline to be `STT -> TwinService -> LLM -> TTS`.
+- [ ] **Update Documentation:**
+  - [ ] Update the `README.md` to explain the new agentic capabilities.
