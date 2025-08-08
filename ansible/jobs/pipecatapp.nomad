@@ -5,6 +5,12 @@ job "pipecat-app" {
   group "pipecat-group" {
     count = 1
 
+    network {
+      port "http" {
+        to = 8000
+      }
+    }
+
     task "pipecat-task" {
       driver = "exec"
 

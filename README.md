@@ -66,23 +66,39 @@ The agent can use tools to perform actions and gather information. The `TwinServ
   - **Security Warning:** This is a very powerful tool. The credentials are not stored in the code but must be provided by the LLM. For this to work, the user running the agent must have an SSH key configured that allows passwordless access to the target machine. Exercise caution when enabling the LLM to use this tool.
   - **Example:** "Use ssh to run 'ls -l' on host 192.168.1.102 with user 'admin'."
 
-## 6. Testing and Verification
+## 6. Mission Control Web UI
+This project includes a web-based dashboard for real-time display and debugging.
+
+### 6.1. Accessing the UI
+Once the `pipecat-app` job is running, you can access the UI by navigating to the IP address of any node in your cluster on port 8000. For example: `http://192.168.1.101:8000`.
+
+### 6.2. Features
+- **Live Terminal:** The main feature is a retro-style web terminal that provides a live stream of the agent's logs.
+- **LLM-Driven Visualizations:** The agent can use the terminal to display information in creative ways. For example, status updates may be rendered as large, colorful banners using `figlet` and `lolcat` style effects.
+- **Status API:** An API endpoint at `/api/status` provides the real-time status of the agent's pipelines.
+
+## 7. Testing and Verification
 - **Check Cluster Status:** `nomad node status`
 - **Check Job Status:** `nomad job status`
-- **View Logs:** `nomad job logs <job_name>` (e.g., `pipecat-app`, `prima-cluster`)
+- **View Logs:** `nomad job logs <job_name>` (e.g., `pipecat-app`, `prima-cluster`) or use the Mission Control Web UI.
 
-## 7. Benchmarking
+## 8. Performance Tuning
+- **Model Selection:** The `prima.cpp` Nomad job is configured to use a placeholder model path. You will need to edit `/home/user/primacpp.nomad` on the master node to point to the GGUF model you want to use. Smaller models (3B, 7B) are recommended.
+- **Network:** Wired gigabit ethernet is strongly recommended over Wi-Fi for reduced latency.
+- **VAD Tuning:** The `RealtimeSTT` sensitivity can be tuned in `app.py` for better performance in noisy environments.
+
+## 9. Benchmarking
 This project includes two types of benchmarks.
 
-### 7.1. Real-Time Latency Benchmark
+### 9.1. Real-Time Latency Benchmark
 Measures the end-to-end latency of a live conversation. Enable it by setting `BENCHMARK_MODE = "true"` in the `env` section of the `pipecatapp.nomad` job file. Results are printed to the job logs.
 
-### 7.2. Standardized Performance Benchmark
+### 9.2. Standardized Performance Benchmark
 Uses `llama-bench` to measure the raw inference speed (tokens/sec) of the deployed LLM backend.
 1. Ensure an LLM backend is running.
 2. Edit `/home/user/benchmark.nomad` to point to the GGUF model you want to test.
 3. Run the job: `nomad job run /home/user/benchmark.nomad`
 4. View results in the job logs: `nomad job logs llama-benchmark`
 
-## 8. Advanced Development: Prompt Evolution
+## 10. Advanced Development: Prompt Evolution
 For advanced users, this project includes a workflow for automatically improving the agent's core prompt using evolutionary algorithms. See `prompt_engineering/PROMPT_ENGINEERING.md` for details.

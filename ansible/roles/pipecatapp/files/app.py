@@ -24,8 +24,18 @@ from memory import MemoryStore
 from tools.ssh_tool import SSH_Tool
 from tools.mcp_tool import MCP_Tool
 import inspect
+import web_server
+import uvicorn
+import threading
 
-logging.basicConfig(level=logging.DEBUG)
+# Custom logging handler to broadcast logs to the web UI
+class WebSocketLogHandler(logging.Handler):
+    def emit(self, record):
+        log_entry = self.format(record)
+        asyncio.run(web_server.manager.broadcast(json.dumps({"type": "log", "data": log_entry})))
+
+logger = logging.getLogger()
+logger.addHandler(WebSocketLogHandler())
 
 class BenchmarkCollector(FrameProcessor):
     def __init__(self):
@@ -194,6 +204,11 @@ class YOLOv8Detector(FrameProcessor):
 async def main():
     transport = LocalTransport()
 
+    # Start the web server in a separate thread
+    config = uvicorn.Config(web_server.app, host="0.0.0.0", port=8000, log_level="info")
+    server = uvicorn.Server(config)
+    threading.Thread(target=server.run).start()
+
     stt = DeepgramSTTService()
     llm = OpenAILLMService(
         base_url="http://localhost:8080/v1", # This should point to the prima.cpp service
@@ -211,6 +226,7 @@ async def main():
 
     yolo = YOLOv8Detector()
     twin = TwinService(llm=llm, yolo_detector=yolo, runner=runner)
+    web_server.twin_service_instance = twin
 
     # Main conversational pipeline
     pipeline_steps = [

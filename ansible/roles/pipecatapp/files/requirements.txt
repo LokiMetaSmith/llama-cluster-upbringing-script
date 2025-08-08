@@ -11,3 +11,6 @@ soundfile
 sentence-transformers
 faiss-cpu
 paramiko
+fastapi
+uvicorn
+websockets
