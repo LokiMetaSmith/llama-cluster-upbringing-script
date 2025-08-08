@@ -1,0 +1,17 @@
+option domain-name "server.local";
+option domain-name-servers ns1.server.local, ns2.server.local;
+
+default-lease-time 600;
+max-lease-time 7200;
+
+ddns-update-style none;
+
+authoritative;
+
+log-facility local7;
+
+subnet 192.168.1.0 netmask 255.255.255.0 {
+  range 192.168.1.200 192.168.1.250;
+  option routers 192.168.1.1;
+  filename "pxelinux.0";
+}
