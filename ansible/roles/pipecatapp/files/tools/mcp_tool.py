@@ -1,13 +1,24 @@
 class MCP_Tool:
-    def __init__(self, twin_service):
+    def __init__(self, twin_service, runner):
         self.twin_service = twin_service
+        self.runner = runner
         self.description = "Master Control Program for agent introspection and self-control."
         self.name = "mcp_tool"
 
     def get_status(self):
-        """Returns the current status of the agent's pipelines."""
-        # This is a placeholder. A real implementation would query the runner.
-        return "All systems nominal. Main, Vision, and Interrupt pipelines are active."
+        """Returns the current status of the agent's running pipelines."""
+        if not self.runner:
+            return "Error: PipelineRunner not available."
+
+        tasks = self.runner.get_tasks()
+        if not tasks:
+            return "No active pipelines."
+
+        status_report = "Current pipeline status:\n"
+        for task in tasks:
+            status_report += f"- Task {task.get_name()}: {task.get_state().value}\n"
+
+        return status_report
 
     def get_memory_summary(self):
         """Returns a summary of the agent's memory."""

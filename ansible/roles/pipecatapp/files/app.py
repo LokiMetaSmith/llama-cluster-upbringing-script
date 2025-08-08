@@ -84,15 +84,16 @@ class KittenTTSService(FrameProcessor):
 import json
 
 class TwinService(FrameProcessor):
-    def __init__(self, llm, yolo_detector):
+    def __init__(self, llm, yolo_detector, runner):
         super().__init__()
         self.llm = llm
         self.yolo_detector = yolo_detector
+        self.runner = runner
         self.short_term_memory = []
         self.long_term_memory = MemoryStore()
         self.tools = {
             "ssh": SSH_Tool(),
-            "mcp": MCP_Tool(self),
+            "mcp": MCP_Tool(self, self.runner),
             "vision": self.yolo_detector,
         }
 
@@ -206,8 +207,10 @@ async def main():
         tts = ElevenLabsTTSService(
             voice_id="21m00Tcm4TlvDq8ikWAM" # A default voice
         )
+    runner = PipelineRunner()
+
     yolo = YOLOv8Detector()
-    twin = TwinService(llm=llm, yolo_detector=yolo)
+    twin = TwinService(llm=llm, yolo_detector=yolo, runner=runner)
 
     # Main conversational pipeline
     pipeline_steps = [
@@ -239,8 +242,6 @@ async def main():
         stt,
         PipelineTask(handle_interrupt)
     ])
-
-    runner = PipelineRunner()
 
     await runner.run(
         [main_task, PipelineTask(vision_pipeline), PipelineTask(interrupt_pipeline)]
