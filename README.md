@@ -188,10 +188,12 @@ When objects are detected by the webcam, you will see log messages from the `YOL
 
 ## 9. Benchmarking
 
-The application includes a built-in benchmarking mode to measure pipeline performance.
+This project includes two types of benchmarks to measure performance.
 
-### 9.1. Enabling Benchmarking
-To enable benchmarking, you need to set the `BENCHMARK_MODE` environment variable when running the `pipecat-app` job. You can do this by modifying the `pipecatapp.nomad` job file.
+### 9.1. Real-Time Latency Benchmark
+This benchmark measures the end-to-end latency of a live conversation. It is useful for understanding the perceived responsiveness of the agent.
+
+To enable this benchmark, you need to set the `BENCHMARK_MODE` environment variable when running the `pipecat-app` job. You can do this by modifying the `pipecatapp.nomad` job file.
 
 1.  **Edit `/home/user/pipecatapp.nomad`** on the master node.
 2.  **Add the `env` stanza** to the `task` block:
@@ -227,3 +229,19 @@ Total Pipeline Latency: 1.2035s
 - **LLM Time to First Token (TTFT):** Time from the end of the STT to the first word from the LLM.
 - **TTS Time to First Audio (TTFA):** Time from the first word of the LLM to the first chunk of synthesized audio.
 - **Total Pipeline Latency:** The full end-to-end time from the user stopping speaking to the agent starting to speak. This is the most important metric for perceived responsiveness.
+
+### 9.3. Standardized Performance Benchmark
+This benchmark uses the `llama-bench` tool to measure the raw inference speed of the deployed LLM backend in tokens per second. This is useful for comparing the performance of different models or backends (`prima.cpp` vs. `llama.cpp` RPC) under a consistent load.
+
+1.  **Ensure an LLM backend is running** (see Section 5).
+2.  **Edit `/home/user/benchmark.nomad`** on the master node to point to the GGUF model you want to test.
+3.  **Run the benchmark job:**
+    ```bash
+    nomad job run /home/user/benchmark.nomad
+    ```
+4.  **View the results:**
+    The benchmark results will be printed to the job's logs.
+    ```bash
+    nomad job logs llama-benchmark
+    ```
+    Look for the "tokens per second" metrics in the `llama-bench` output.

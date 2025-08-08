@@ -21,3 +21,9 @@
     src: ../../jobs/llamacpp-rpc.nomad
     dest: /home/user/llamacpp-rpc.nomad
   when: "'controller_nodes' in group_names"
+
+- name: Copy benchmark Nomad job file
+  template:
+    src: ../../jobs/benchmark.nomad
+    dest: /home/user/benchmark.nomad
+  when: "'controller_nodes' in group_names"
