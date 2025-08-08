@@ -14,6 +14,7 @@ from pipecat.services.deepgram import DeepgramSTTService
 from pipecat.services.elevenlabs import ElevenLabsTTSService
 from pipecat.services.openai import OpenAILLMService
 from pipecat.transports.local.local import LocalTransport
+from RealtimeSTT import AudioToText
 from kittentts import KittenTTS as KittenTTSModel
 import soundfile as sf
 import os
@@ -78,6 +79,21 @@ class BenchmarkCollector(FrameProcessor):
         self.stt_end_time = 0
         self.llm_first_token_time = 0
         self.tts_first_audio_time = 0
+
+class FasterWhisperSTTService(FrameProcessor):
+    def __init__(self, model="tiny.en"):
+        super().__init__()
+        self.model = model
+        self.audio_to_text = AudioToText(model=self.model, language="en")
+
+    async def process_frame(self, frame, direction):
+        if not isinstance(frame, AudioFrame):
+            await self.push_frame(frame, direction)
+            return
+
+        text = self.audio_to_text.transcribe(frame.audio)
+        if text:
+            await self.push_frame(TranscriptionFrame(text))
 
 class KittenTTSService(FrameProcessor):
     def __init__(self, model_name="KittenML/kitten-tts-nano-0.1"):
@@ -264,7 +280,12 @@ async def main():
     server = uvicorn.Server(config)
     threading.Thread(target=server.run).start()
 
-    stt = DeepgramSTTService()
+    stt_service_name = os.getenv("STT_SERVICE", "deepgram")
+    if stt_service_name == "faster-whisper":
+        stt = FasterWhisperSTTService()
+    else:
+        stt = DeepgramSTTService()
+
     llm = OpenAILLMService(
         base_url="http://localhost:8080/v1", # This should point to the prima.cpp service
         api_key="dummy",

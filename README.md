@@ -100,10 +100,13 @@ Once the `pipecat-app` job is running, you can access the UI by navigating to th
 - **Check Job Status:** `nomad job status`
 - **View Logs:** `nomad job logs <job_name>` (e.g., `pipecat-app`, `prima-cluster`) or use the Mission Control Web UI.
 
-## 8. Performance Tuning
-- **Model Selection:** The `prima.cpp` Nomad job is configured to use a placeholder model path. You will need to edit `/home/user/primacpp.nomad` on the master node to point to the GGUF model you want to use. Smaller models (3B, 7B) are recommended.
+## 8. Performance Tuning & Service Selection
+- **Model Selection:** The `prima.cpp` and `llamacpp-rpc` Nomad jobs are configured to use a placeholder model path. You will need to edit the job files to point to the GGUF model you want to use. Smaller models (3B, 7B) are recommended for better performance.
 - **Network:** Wired gigabit ethernet is strongly recommended over Wi-Fi for reduced latency.
 - **VAD Tuning:** The `RealtimeSTT` sensitivity can be tuned in `app.py` for better performance in noisy environments.
+- **STT/TTS Service Selection:** You can choose which Speech-to-Text and Text-to-Speech services to use by setting environment variables in the `pipecatapp.nomad` job file.
+  - `STT_SERVICE`: Set to `faster-whisper` for high-performance local transcription, or `deepgram` (default) to use the Deepgram API.
+  - `TTS_SERVICE`: Set to `kittentts` for a fast, local TTS, or `elevenlabs` (default) to use the ElevenLabs API.
 
 ## 9. Benchmarking
 This project includes two types of benchmarks.
