@@ -1,0 +1,19 @@
+data_dir = "{{ consul_data_dir }}"
+bind_addr = "{{ ansible_default_ipv4.address }}"
+client_addr = "0.0.0.0"
+
+# Enable the UI
+ui_config {
+  enabled = true
+}
+
+# For a server, we need to specify the bootstrap_expect
+{% if "'controller_nodes' in group_names" %}
+server = true
+bootstrap_expect = 3
+{% else %}
+server = false
+{% endif %}
+
+# Retry joining the cluster
+retry_join = ["{{ hostvars[groups['controller_nodes'][0]]['ansible_host'] }}"]

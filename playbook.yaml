@@ -3,6 +3,7 @@
   become: yes
   roles:
     - common
+    - consul
     - nomad
     - nfs
     - llama_cpp
