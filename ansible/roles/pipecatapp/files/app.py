@@ -17,6 +17,9 @@ from pipecat.transports.local.local import LocalTransport
 from kittentts import KittenTTS as KittenTTSModel
 import soundfile as sf
 import os
+from sentence_transformers import SentenceTransformer
+import faiss
+import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -75,19 +78,64 @@ class KittenTTSService(FrameProcessor):
         await self.push_frame(AudioFrame(audio.tobytes(), 24000, 1))
 
 class TwinService(FrameProcessor):
-    def __init__(self):
+    def __init__(self, memory_file="long_term_memory.faiss"):
         super().__init__()
-        # In the future, we will initialize memory and tools here.
+        self.short_term_memory = []
+        self.memory_file = memory_file
+        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.dimension = self.embedding_model.get_sentence_embedding_dimension()
+
+        # Load long-term memory if it exists
+        if os.path.exists(self.memory_file):
+            self.long_term_memory = faiss.read_index(self.memory_file)
+            # We need a way to map faiss indices back to text. For simplicity, we'll skip this for now.
+        else:
+            self.long_term_memory = faiss.IndexFlatL2(self.dimension)
+
+    def search_memory(self, text, k=3):
+        if self.long_term_memory.ntotal == 0:
+            return []
+
+        embedding = self.embedding_model.encode([text])
+        distances, indices = self.long_term_memory.search(embedding, k)
+        # This is where we would map indices back to text.
+        # For now, we'll just return placeholder memories.
+        return [f"Retrieved memory {i}" for i in indices[0]]
 
     async def process_frame(self, frame, direction):
         if not isinstance(frame, TranscriptionFrame):
             await self.push_frame(frame, direction)
             return
 
-        # For now, just pass the transcription through.
-        # In the future, we will do memory retrieval and tool use here.
-        logging.info(f"TwinService received transcription: {frame.text}")
-        await self.push_frame(TextFrame(frame.text))
+        user_text = frame.text
+        logging.info(f"TwinService received: {user_text}")
+
+        # 1. Search long-term memory
+        retrieved_memories = self.search_memory(user_text)
+
+        # 2. Get short-term memory
+        short_term_context = "\n".join(self.short_term_memory)
+
+        # 3. Construct the prompt
+        prompt = f"""
+        Short-term conversation history:
+        {short_term_context}
+
+        Relevant long-term memories:
+        {retrieved_memories}
+
+        Current user query: {user_text}
+        """
+
+        logging.info(f"Constructed prompt for LLM: {prompt}")
+        await self.push_frame(TextFrame(prompt))
+
+        # 4. Update short-term memory
+        self.short_term_memory.append(f"User: {user_text}")
+        # We need a way to get the assistant's response to add it to memory.
+        # This will be handled in a future step.
+        if len(self.short_term_memory) > 10:
+            self.short_term_memory.pop(0)
 
 class YOLOv8Detector(FrameProcessor):
     def __init__(self, model_name="yolov8n.pt"):

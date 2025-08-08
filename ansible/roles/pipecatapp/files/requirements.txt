@@ -8,3 +8,5 @@ ultralytics
 opencv-python-headless
 kittentts
 soundfile
+sentence-transformers
+faiss-cpu
