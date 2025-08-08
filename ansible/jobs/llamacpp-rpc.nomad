@@ -1,7 +1,9 @@
 job "llamacpp-rpc-{{ meta.JOB_NAME | default \"default\" }}" {
   datacenters = ["dc1"]
+  namespace   = "{{ meta.NAMESPACE | default \"default\" }}"
 
   meta {
+    NAMESPACE         = "default"
     JOB_NAME          = "default"
     API_SERVICE_NAME  = "llama-api-default"
     RPC_SERVICE_NAME  = "llama-rpc-worker-default"

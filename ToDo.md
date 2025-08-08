@@ -70,11 +70,11 @@ This document outlines the action plan for refactoring the project to use a mode
     - [x] Update Nomad jobs to register services with Consul.
 - [x] **Implement Dynamic Service Discovery:**
     - [x] Refactor `TwinService` to query Consul for expert service locations.
-- [ ] **Implement Nomad Namespaces:**
-    - [ ] Update the `nomad` Ansible role to enable namespaces.
-    - [ ] Update Nomad jobs to use namespaces.
-- [ ] **Update Documentation:**
-    - [ ] Update `README.md` to document the new Consul and Namespace features.
+- [x] **Implement Nomad Namespaces:**
+    - [x] Update the `nomad` Ansible role to enable namespaces.
+    - [x] Update Nomad jobs to use namespaces.
+- [x] **Update Documentation:**
+    - [x] Update `README.md` to document the new Consul and Namespace features.
 
 ---
 

@@ -1,8 +1,10 @@
 job "prima-cluster-{{ meta.JOB_NAME | default \"default\" }}" {
   datacenters = ["dc1"]
   type        = "service"
+  namespace   = "{{ meta.NAMESPACE | default \"default\" }}"
 
   meta {
+    NAMESPACE     = "default"
     JOB_NAME      = "default"
     SERVICE_NAME  = "prima-master-default"
     MODEL_PATH    = "/path/to/your/default/model.gguf"

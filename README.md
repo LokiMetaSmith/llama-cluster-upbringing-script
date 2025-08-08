@@ -70,15 +70,19 @@ The agent can use tools to perform actions and gather information. The `TwinServ
 The agent is designed to function as a "Mixture of Experts." The primary LLM acts as a router, classifying the user's query and routing it to a specialized backend if appropriate.
 
 - **How it Works:** The `TwinService` prompt instructs the router LLM to first decide if a query is general, technical, or creative. If it's technical, for example, the router's job is to call the `route_to_coding_expert` tool. The `TwinService` then sends the query to a separate LLM cluster that is running a coding-specific model.
-- **Configuration:** To use this feature, you must deploy multiple LLM backends, each with a unique service name.
-  - Edit and run the parameterized Nomad jobs (e.g., `primacpp.nomad`) with different `-meta` flags:
+- **Configuration:** To use this feature, you must deploy multiple LLM backends into their own isolated namespaces.
+  - Edit and run the parameterized Nomad jobs (e.g., `primacpp.nomad`) with different `-meta` flags and the `-namespace` flag:
     ```bash
+    # Create the namespaces
+    nomad namespace apply general
+    nomad namespace apply coding
+
     # Deploy a general-purpose model
-    nomad job run -meta="JOB_NAME=general,SERVICE_NAME=llama-api-general,MODEL_PATH=/path/to/general.gguf" /home/user/primacpp.nomad
+    nomad job run -namespace=general -meta="JOB_NAME=general,SERVICE_NAME=llama-api-general,MODEL_PATH=/path/to/general.gguf" /home/user/primacpp.nomad
     # Deploy a coding model
-    nomad job run -meta="JOB_NAME=coding,SERVICE_NAME=llama-api-coding,MODEL_PATH=/path/to/coding.gguf" /home/user/primacpp.nomad
+    nomad job run -namespace=coding -meta="JOB_NAME=coding,SERVICE_NAME=llama-api-coding,MODEL_PATH=/path/to/coding.gguf" /home/user/primacpp.nomad
     ```
-  - The expert services are currently hardcoded in `app.py` but can be configured to match your deployments.
+  - The `TwinService` discovers these experts across all namespaces using Consul.
 
 ## 6. Mission Control Web UI
 This project includes a web-based dashboard for real-time display and debugging.
