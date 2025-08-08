@@ -84,6 +84,9 @@ The agent is designed to function as a "Mixture of Experts." The primary LLM act
     ```
   - The `TwinService` discovers these experts across all namespaces using Consul.
 
+### 5.4. Configuring Agent Personas
+The personality and instructions for the main router agent and each expert agent are defined in simple text files located in the `ansible/roles/pipecatapp/files/prompts/` directory. You can edit these files to customize the behavior of each agent. For example, you can edit `coding_expert.txt` to give it a different programming specialty.
+
 ## 6. Mission Control Web UI
 This project includes a web-based dashboard for real-time display and debugging.
 

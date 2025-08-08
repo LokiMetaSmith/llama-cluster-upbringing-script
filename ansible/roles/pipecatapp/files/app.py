@@ -140,24 +140,28 @@ class TwinService(FrameProcessor):
             logging.error(f"Could not connect to Consul: {e}")
             return []
 
-    def get_tools_prompt(self):
-        prompt = "You are a router. Your job is to classify the user's query and route it to the appropriate expert or tool. You have access to the following tools and experts:\n"
-        # Add regular tools
+    def get_system_prompt(self, expert_name="router"):
+        prompt_file = f"ansible/roles/pipecatapp/files/prompts/{expert_name}.txt"
+        try:
+            with open(prompt_file, "r") as f:
+                base_prompt = f.read()
+        except FileNotFoundError:
+            base_prompt = "You are a helpful AI assistant."
+
+        tools_prompt = "You have access to the following tools:\n"
         for tool_name, tool in self.tools.items():
             if tool_name == "vision":
-                prompt += f'- {{"tool": "vision.get_observation"}}: Get a real-time description of what is visible in the webcam.\n'
+                tools_prompt += f'- {{"tool": "vision.get_observation"}}: Get a real-time description of what is visible in the webcam.\n'
             else:
                 for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
                     if not method_name.startswith('_'):
-                        prompt += f'- {{"tool": "{tool.name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
+                        tools_prompt += f'- {{"tool": "{tool.name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
 
-        # Add discovered expert routing tools
         for service_name in self.get_discovered_experts():
             expert_name = service_name.replace("llama-api-", "")
-            prompt += f'- {{"tool": "route_to_expert", "args": {{"expert": "{expert_name}", "query": "<user_query>"}}}}: Use this for queries related to {expert_name}.\n'
+            tools_prompt += f'- {{"tool": "route_to_expert", "args": {{"expert": "{expert_name}", "query": "<user_query>"}}}}: Use this for queries related to {expert_name}.\n'
 
-        prompt += "\nIf the query doesn't fit a specific expert or tool, handle it yourself. Otherwise, respond with a JSON object with the 'tool' and 'args' keys."
-        return prompt
+        return f"{base_prompt}\n\n{tools_prompt}\n\nIf the query doesn't fit a specific expert or tool, handle it yourself. Otherwise, respond with a JSON object with the 'tool' and 'args' keys."
 
     async def get_expert_service(self, expert_name):
         service_name = f"llama-api-{expert_name}"
@@ -188,10 +192,10 @@ class TwinService(FrameProcessor):
 
         retrieved_memories = self.long_term_memory.search(user_text)
         short_term_context = "\n".join(self.short_term_memory)
-        tools_prompt = self.get_tools_prompt()
+        system_prompt = self.get_system_prompt("router")
 
         prompt = f"""
-        {tools_prompt}
+        {system_prompt}
         Short-term conversation history:
         {short_term_context}
         Relevant long-term memories:
@@ -211,7 +215,9 @@ class TwinService(FrameProcessor):
                 expert_llm = await self.get_expert_service(expert_name)
                 if expert_llm:
                     logging.info(f"Routing to {expert_name} with query: {query}")
-                    expert_response = await expert_llm.process_text(query)
+                    expert_prompt = self.get_system_prompt(expert_name)
+                    final_expert_prompt = f"{expert_prompt}\n\nUser query: {query}"
+                    expert_response = await expert_llm.process_text(final_expert_prompt)
                     await self.push_frame(TextFrame(expert_response))
                     self.short_term_memory.append(f"Assistant ({expert_name}): {expert_response}")
                 else:
