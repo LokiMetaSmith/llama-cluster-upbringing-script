@@ -50,22 +50,22 @@ This document outlines the action plan for refactoring the project to use a mode
   - [x] Add `ssh_tool` and `mcp_tool`.
 - [x] **Integrate into Pipeline:**
   - [x] Modify the main `pipecat` pipeline to be `STT -> TwinService -> TTS`.
-- [ ] **Update Documentation:**
-  - [ ] Update the `README.md` to explain the new agentic capabilities.
+- [x] **Update Documentation:**
+  - [x] Update the `README.md` to explain the new agentic capabilities.
 
 ## Phase 7: Self-Reflection and Growth with OpenEvolve
-- [ ] **Create `prompt_engineering` Directory:**
-  - [ ] Create a new top-level directory `prompt_engineering`.
-  - [ ] Add a `requirements-dev.txt` file with the `openevolve` dependency.
-- [ ] **Create Evaluation Suite:**
-  - [ ] Create a directory `prompt_engineering/evaluation_suite`.
-  - [ ] Create YAML-based test cases for evaluating prompt performance.
-- [ ] **Create `evaluator.py`:**
-  - [ ] Create the fitness function script that runs the test suite against a candidate prompt.
-- [ ] **Create `evolve.py`:**
-  - [ ] Create the main script to run the `openevolve` process.
-- [ ] **Update Documentation:**
-  - [ ] Create a new `PROMPT_ENGINEERING.md` file to document the workflow.
+- [x] **Create `prompt_engineering` Directory:**
+  - [x] Create a new top-level directory `prompt_engineering`.
+  - [x] Add a `requirements-dev.txt` file with the `openevolve` dependency.
+- [x] **Create Evaluation Suite:**
+  - [x] Create a directory `prompt_engineering/evaluation_suite`.
+  - [x] Create YAML-based test cases for evaluating prompt performance.
+- [x] **Create `evaluator.py`:**
+  - [x] Create the fitness function script that runs the test suite against a candidate prompt.
+- [x] **Create `evolve.py`:**
+  - [x] Create the main script to run the `openevolve` process.
+- [x] **Update Documentation:**
+  - [x] Create a new `PROMPT_ENGINEERING.md` file to document the workflow.
 
 ---
 
