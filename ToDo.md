@@ -103,7 +103,7 @@ This document outlines the action plan for refactoring the project to use a mode
   - [x] Create a new `FrameProcessor` class in `app.py` called `TwinService`.
   - [x] This service will act as the "brain" of the agent, sitting between the STT and LLM services.
 - [x] **Implement Memory:**
-  - [x] Create a simple file-based vector store for long-term memory.
+  - [x] Create a `MemoryStore` class to manage a file-based vector store.
   - [x] The `TwinService` will perform a semantic search on this memory to retrieve context for the LLM prompt.
   - [x] The `TwinService` will update the memory with a summary of each interaction.
 - [x] **Implement Tool Use:**

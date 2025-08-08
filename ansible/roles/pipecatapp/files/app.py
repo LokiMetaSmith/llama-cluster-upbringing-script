@@ -20,6 +20,7 @@ import os
 from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
+from memory import MemoryStore
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -80,26 +81,12 @@ class KittenTTSService(FrameProcessor):
 import json
 
 class TwinService(FrameProcessor):
-    def __init__(self, llm, yolo_detector, memory_file="long_term_memory.faiss"):
+    def __init__(self, llm, yolo_detector):
         super().__init__()
         self.llm = llm
         self.yolo_detector = yolo_detector
         self.short_term_memory = []
-        self.memory_file = memory_file
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        self.dimension = self.embedding_model.get_sentence_embedding_dimension()
-
-        if os.path.exists(self.memory_file):
-            self.long_term_memory = faiss.read_index(self.memory_file)
-        else:
-            self.long_term_memory = faiss.IndexFlatL2(self.dimension)
-
-    def search_memory(self, text, k=3):
-        if self.long_term_memory.ntotal == 0:
-            return []
-        embedding = self.embedding_model.encode([text])
-        _, indices = self.long_term_memory.search(embedding, k)
-        return [f"Retrieved memory {i}" for i in indices[0]]
+        self.long_term_memory = MemoryStore()
 
     def get_tools_prompt(self):
         return """
@@ -117,7 +104,7 @@ class TwinService(FrameProcessor):
         user_text = frame.text
         logging.info(f"TwinService received: {user_text}")
 
-        retrieved_memories = self.search_memory(user_text)
+        retrieved_memories = self.long_term_memory.search(user_text)
         short_term_context = "\n".join(self.short_term_memory)
         tools_prompt = self.get_tools_prompt()
 
