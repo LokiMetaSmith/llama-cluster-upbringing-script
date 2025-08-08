@@ -40,6 +40,10 @@ EOH
         name = meta.SERVICE_NAME
         port = "8080"
 
+        connect {
+          sidecar_service {}
+        }
+
         check {
           type     = "tcp"
           interval = "10s"

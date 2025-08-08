@@ -21,6 +21,7 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 from memory import MemoryStore
+import requests
 from tools.ssh_tool import SSH_Tool
 from tools.mcp_tool import MCP_Tool
 import inspect
@@ -102,18 +103,26 @@ class TwinService(FrameProcessor):
         self.short_term_memory = []
         self.long_term_memory = MemoryStore()
 
-        # Define the expert LLM services
-        # In a real scenario, the base_url would be discovered via Nomad service discovery
-        self.experts = {
-            "coding_expert": OpenAILLMService(base_url="http://localhost:8081/v1", api_key="dummy", model="codellama"),
-            "creative_expert": OpenAILLMService(base_url="http://localhost:8082/v1", api_key="dummy", model="mistral"),
-        }
+        self.consul_http_addr = os.getenv("CONSUL_HTTP_ADDR", "http://localhost:8500")
+        self.experts = {} # Experts will be discovered dynamically
 
         self.tools = {
             "ssh": SSH_Tool(),
             "mcp": MCP_Tool(self, self.runner),
             "vision": self.yolo_detector,
         }
+
+    def get_discovered_experts(self):
+        try:
+            response = requests.get(f"{self.consul_http_addr}/v1/catalog/services")
+            response.raise_for_status()
+            services = response.json()
+            # Filter for services that match our expert pattern, e.g., "llama-api-"
+            expert_names = [name for name in services.keys() if name.startswith("llama-api-")]
+            return expert_names
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Could not connect to Consul: {e}")
+            return []
 
     def get_tools_prompt(self):
         prompt = "You are a router. Your job is to classify the user's query and route it to the appropriate expert or tool. You have access to the following tools and experts:\n"
@@ -126,12 +135,32 @@ class TwinService(FrameProcessor):
                     if not method_name.startswith('_'):
                         prompt += f'- {{"tool": "{tool.name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
 
-        # Add expert routing tools
-        for expert_name in self.experts.keys():
-            prompt += f'- {{"tool": "route_to_expert", "args": {{"expert": "{expert_name}", "query": "<user_query>"}}}}: Use this for queries related to {expert_name.replace("_", " ")}.\n'
+        # Add discovered expert routing tools
+        for service_name in self.get_discovered_experts():
+            expert_name = service_name.replace("llama-api-", "")
+            prompt += f'- {{"tool": "route_to_expert", "args": {{"expert": "{expert_name}", "query": "<user_query>"}}}}: Use this for queries related to {expert_name}.\n'
 
         prompt += "\nIf the query doesn't fit a specific expert or tool, handle it yourself. Otherwise, respond with a JSON object with the 'tool' and 'args' keys."
         return prompt
+
+    async def get_expert_service(self, expert_name):
+        service_name = f"llama-api-{expert_name}"
+        try:
+            response = requests.get(f"{self.consul_http_addr}/v1/health/service/{service_name}")
+            response.raise_for_status()
+            services = response.json()
+            if not services:
+                return None
+
+            # Get the first healthy service instance
+            address = services[0]['Service']['Address']
+            port = services[0]['Service']['Port']
+            base_url = f"http://{address}:{port}/v1"
+
+            return OpenAILLMService(base_url=base_url, api_key="dummy", model=expert_name)
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Could not get address for expert {expert_name}: {e}")
+            return None
 
     async def process_frame(self, frame, direction):
         if not isinstance(frame, TranscriptionFrame):
@@ -163,14 +192,14 @@ class TwinService(FrameProcessor):
             if tool_parts[0] == "route_to_expert":
                 expert_name = tool_call["args"]["expert"]
                 query = tool_call["args"]["query"]
-                if expert_name in self.experts:
+                expert_llm = await self.get_expert_service(expert_name)
+                if expert_llm:
                     logging.info(f"Routing to {expert_name} with query: {query}")
-                    expert_llm = self.experts[expert_name]
                     expert_response = await expert_llm.process_text(query)
                     await self.push_frame(TextFrame(expert_response))
                     self.short_term_memory.append(f"Assistant ({expert_name}): {expert_response}")
                 else:
-                    final_response = await self.router_llm.process_text(user_text)
+                    final_response = await self.router_llm.process_text(f"I could not find the {expert_name} expert. Please try again later.")
                     await self.push_frame(TextFrame(final_response))
             elif tool_parts[0] in self.tools:
                 tool_name = tool_parts[0]

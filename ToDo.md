@@ -65,11 +65,11 @@ This document outlines the action plan for refactoring the project to use a mode
     - [x] Update `README.md` to explain the MoE architecture.
 
 ## Phase 9: Advanced MoE Architecture
-- [ ] **Integrate Consul:**
-    - [ ] Create a new `consul` Ansible role to install and configure Consul.
-    - [ ] Update Nomad jobs to register services with Consul.
-- [ ] **Implement Dynamic Service Discovery:**
-    - [ ] Refactor `TwinService` to query Consul for expert service locations.
+- [x] **Integrate Consul:**
+    - [x] Create a new `consul` Ansible role to install and configure Consul.
+    - [x] Update Nomad jobs to register services with Consul.
+- [x] **Implement Dynamic Service Discovery:**
+    - [x] Refactor `TwinService` to query Consul for expert service locations.
 - [ ] **Implement Nomad Namespaces:**
     - [ ] Update the `nomad` Ansible role to enable namespaces.
     - [ ] Update Nomad jobs to use namespaces.

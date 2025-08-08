@@ -38,6 +38,10 @@ EOH
         name = meta.API_SERVICE_NAME
         port = "http"
 
+        connect {
+          sidecar_service {}
+        }
+
         check {
           type     = "tcp"
           interval = "10s"
@@ -65,6 +69,10 @@ EOH
       service {
         name = meta.RPC_SERVICE_NAME
         port = "rpc"
+
+        connect {
+          sidecar_service {}
+        }
       }
     }
   }
