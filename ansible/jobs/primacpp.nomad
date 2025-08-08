@@ -1,9 +1,16 @@
-job "prima-cluster" {
+job "prima-cluster-{{ meta.JOB_NAME | default \"default\" }}" {
   datacenters = ["dc1"]
   type        = "service"
 
+  meta {
+    JOB_NAME      = "default"
+    SERVICE_NAME  = "prima-master-default"
+    MODEL_PATH    = "/path/to/your/default/model.gguf"
+    NODE_COUNT    = "1"
+  }
+
   group "prima-nodes" {
-    count = 1
+    count = meta.NODE_COUNT
 
     task "prima-cli" {
       driver = "raw_exec"
@@ -11,12 +18,12 @@ job "prima-cluster" {
       template {
         data = <<EOH
 #!/bin/bash
-MASTER_IP=$(nomad service discover -address-type=ipv4 prima-master | head -n 1)
-NEXT_IP=$(nomad service discover -address-type=ipv4 prima-master | head -n 1) # Simplified for single node
+MASTER_IP=$(nomad service discover -address-type=ipv4 {{ meta.SERVICE_NAME }} | head -n 1)
+NEXT_IP=$(nomad service discover -address-type=ipv4 {{ meta.SERVICE_NAME }} | head -n 1) # Simplified for single node
 
 /home/user/prima.cpp/build/bin/llama-cli \
-  --model /path/to/your/model.gguf \
-  --world 1 \
+  --model {{ meta.MODEL_PATH }} \
+  --world {{ meta.NODE_COUNT }} \
   --rank ${NOMAD_ALLOC_INDEX} \
   --master $MASTER_IP \
   --next $NEXT_IP
@@ -30,7 +37,7 @@ EOH
       }
 
       service {
-        name = "prima-master"
+        name = meta.SERVICE_NAME
         port = "8080"
 
         check {

@@ -36,7 +36,7 @@ This document outlines the action plan for refactoring the project to use a mode
 - [x] **Create a `vision` Ansible Role:**
   - [x] Create a new Ansible role named `vision` for video processing dependencies.
 - [x] **Develop the Vision Service:**
-  - [x] Create a custom `pipecat` service (`YOLOv8Detector`) in `app.py`.
+  - [x] Create a custom `pipecatapp` service (`YOLOv8Detector`) in `app.py`.
 - [x] **Update Documentation for Vision Capabilities:**
   - [x] Add a section to `README.md` explaining the new vision feature.
 
@@ -66,6 +66,15 @@ This document outlines the action plan for refactoring the project to use a mode
   - [x] Create the main script to run the `openevolve` process.
 - [x] **Update Documentation:**
   - [x] Create a new `PROMPT_ENGINEERING.md` file to document the workflow.
+
+## Phase 8: Mixture of Experts (MoE) Architecture
+- [x] **Parameterize Nomad Jobs:**
+    - [x] Refactor `primacpp.nomad` and `llamacpp-rpc.nomad` to use `meta` variables for job names, service names, and model paths.
+- [ ] **Implement MoE Routing in `TwinService`:**
+    - [ ] Add logic to the `TwinService` to classify user queries.
+    - [ ] Create new tools (e.g., `ask_coding_expert`) that route requests to the appropriate specialized LLM cluster.
+- [ ] **Update Documentation:**
+    - [ ] Update `README.md` to explain the MoE architecture, how to configure it in `inventory.yaml`, and how to deploy multiple expert clusters into different Nomad Namespaces.
 
 ---
 

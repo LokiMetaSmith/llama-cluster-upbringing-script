@@ -1,5 +1,13 @@
-job "llamacpp-rpc" {
+job "llamacpp-rpc-{{ meta.JOB_NAME | default \"default\" }}" {
   datacenters = ["dc1"]
+
+  meta {
+    JOB_NAME          = "default"
+    API_SERVICE_NAME  = "llama-api-default"
+    RPC_SERVICE_NAME  = "llama-rpc-worker-default"
+    MODEL_PATH        = "/path/to/your/default/model.gguf"
+    WORKER_COUNT      = "2"
+  }
 
   group "master" {
     count = 1
@@ -10,12 +18,12 @@ job "llamacpp-rpc" {
       template {
         data = <<EOH
 #!/bin/bash
-WORKER_IPS=$(nomad service discover -address-type=ipv4 llama-rpc-worker | tr '\n' ',' | sed 's/,$//')
+WORKER_IPS=$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME }} | tr '\n' ',' | sed 's/,$//')
 
 /home/user/llama.cpp/build/bin/llama-server \
-  --model /path/to/your/model.gguf \
+  --model {{ meta.MODEL_PATH }} \
   --host 0.0.0.0 \
-  --port 8080 \
+  --port {{ env "NOMAD_PORT_http" }} \
   --rpc-servers $WORKER_IPS
 EOH
         destination = "local/run_master.sh"
@@ -27,8 +35,8 @@ EOH
       }
 
       service {
-        name = "llama-api"
-        port = "8080"
+        name = meta.API_SERVICE_NAME
+        port = "http"
 
         check {
           type     = "tcp"
@@ -40,7 +48,7 @@ EOH
   }
 
   group "workers" {
-    count = 2 # Should be (number of nodes) - 1
+    count = meta.WORKER_COUNT
 
     task "llama-worker" {
       driver = "exec"
@@ -48,15 +56,15 @@ EOH
       config {
         command = "/home/user/llama.cpp/build/bin/llama-server"
         args = [
-          "--model", "/path/to/your/model.gguf",
+          "--model", meta.MODEL_PATH,
           "--host", "0.0.0.0",
-          "--port", "8081", # Use a different port for workers
+          "--port", env.NOMAD_PORT_rpc,
         ]
       }
 
       service {
-        name = "llama-rpc-worker"
-        port = "8081"
+        name = meta.RPC_SERVICE_NAME
+        port = "rpc"
       }
     }
   }
