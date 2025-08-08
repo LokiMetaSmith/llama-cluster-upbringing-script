@@ -21,6 +21,9 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 from memory import MemoryStore
+from tools.ssh_tool import SSH_Tool
+from tools.mcp_tool import MCP_Tool
+import inspect
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -87,14 +90,23 @@ class TwinService(FrameProcessor):
         self.yolo_detector = yolo_detector
         self.short_term_memory = []
         self.long_term_memory = MemoryStore()
+        self.tools = {
+            "ssh": SSH_Tool(),
+            "mcp": MCP_Tool(self),
+            "vision": self.yolo_detector,
+        }
 
     def get_tools_prompt(self):
-        return """
-        You have access to the following tools:
-        - {"tool": "describe_scene"}: Use this tool to get a real-time description of what is visible in the webcam.
-
-        To use a tool, respond with a JSON object with the "tool" key.
-        """
+        prompt = "You have access to the following tools:\n"
+        for tool_name, tool in self.tools.items():
+            if tool_name == "vision":
+                prompt += f'- {{"tool": "vision.get_observation"}}: {tool.get_observation.__doc__}\n'
+            else:
+                for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
+                    if not method_name.startswith('_'):
+                        prompt += f'- {{"tool": "{tool.name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
+        prompt += "\nTo use a tool, respond with a JSON object with the 'tool' and 'args' keys."
+        return prompt
 
     async def process_frame(self, frame, direction):
         if not isinstance(frame, TranscriptionFrame):
@@ -119,24 +131,27 @@ class TwinService(FrameProcessor):
 
         logging.info(f"Constructed prompt for LLM: {prompt}")
 
-        # First LLM call to check for tool use
         llm_response_text = await self.llm.process_text(prompt)
 
         try:
             tool_call = json.loads(llm_response_text)
-            if tool_call.get("tool") == "describe_scene":
-                logging.info("LLM requested to use describe_scene tool.")
-                observation = self.yolo_detector.get_observation()
+            tool_name, method_name = tool_call.get("tool", "").split('.')
+            args = tool_call.get("args", {})
 
-                # Second LLM call with tool result
-                final_prompt = f"The result of describing the scene is: {observation}. Now, answer the user's original question based on this."
+            if tool_name in self.tools:
+                tool = self.tools[tool_name]
+                method = getattr(tool, method_name)
+                logging.info(f"LLM requested to use tool: {tool_name}.{method_name} with args: {args}")
+                result = method(**args)
+
+                final_prompt = f"The result of using the tool {tool_name}.{method_name} is: {result}. Now, answer the user's original question based on this."
                 final_response = await self.llm.process_text(final_prompt)
                 await self.push_frame(TextFrame(final_response))
                 self.short_term_memory.append(f"Assistant: {final_response}")
             else:
                 await self.push_frame(TextFrame(llm_response_text))
                 self.short_term_memory.append(f"Assistant: {llm_response_text}")
-        except (json.JSONDecodeError, TypeError):
+        except Exception:
             await self.push_frame(TextFrame(llm_response_text))
             self.short_term_memory.append(f"Assistant: {llm_response_text}")
 

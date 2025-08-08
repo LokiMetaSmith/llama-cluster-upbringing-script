@@ -10,3 +10,4 @@ kittentts
 soundfile
 sentence-transformers
 faiss-cpu
+paramiko

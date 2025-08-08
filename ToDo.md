@@ -109,6 +109,7 @@ This document outlines the action plan for refactoring the project to use a mode
 - [x] **Implement Tool Use:**
   - [x] The `TwinService` will parse the user's request to see if it's a command for a tool.
   - [x] It will integrate the existing `YOLOv8Detector` as a tool that can be queried for a description of the current scene.
+  - [x] It will have a framework for adding new tools like `ssh_tool` and `mcp_tool`.
 - [x] **Integrate into Pipeline:**
   - [x] Modify the main `pipecat` pipeline to be `STT -> TwinService -> TTS`.
 - [ ] **Update Documentation:**
