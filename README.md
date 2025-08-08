@@ -165,9 +165,24 @@ nomad job logs <job_name>
 - **Network:** Wired gigabit ethernet is strongly recommended over Wi-Fi for reduced latency.
 - **VAD Tuning:** The `RealtimeSTT` sensitivity can be tuned in `app.py` for better performance in noisy environments.
 
-## 8. Vision Capabilities
+## 8. Agent Architecture: The TwinService
 
-This agent has the ability to "see" its environment using a webcam. A vision service runs in parallel with the conversational pipeline, providing real-time observations to the LLM.
+The core of this application is the `TwinService`, a custom `pipecat` service that acts as the agent's "brain". It sits between the Speech-to-Text (STT) and Text-to-Speech (TTS) services and orchestrates the agent's response. This is where the agent's memory and tool-use capabilities are implemented.
+
+### 8.1. Memory
+The agent has both short-term and long-term memory.
+- **Short-Term Memory:** The agent remembers the last 10 conversational turns.
+- **Long-Term Memory:** The agent uses a FAISS vector store to remember key information from past conversations. When you speak, the agent searches its memory for relevant context to better understand your request.
+
+### 8.2. Tool Use
+The agent can use tools to interact with its environment. Currently, the only tool is the vision system.
+- The `TwinService` instructs the LLM that it can use a tool called `describe_scene`.
+- If you ask "what do you see?", the LLM will decide to use this tool.
+- The `TwinService` then gets the latest observation from the `YOLOv8Detector` and feeds it back to the LLM to generate a response.
+
+## 9. Vision Capabilities
+
+The agent's vision is provided by the `YOLOv8Detector` service, which runs in parallel to the main conversation.
 
 ### 8.1. How it Works
 - The `pipecat` application includes a `YOLOv8Detector` service.

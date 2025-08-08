@@ -99,17 +99,17 @@ This document outlines the action plan for refactoring the project to use a mode
     - The `README.md` contains a new section on Vision Capabilities.
 
 ## Phase 6: Agent Embodiment with TwinService
-- [ ] **Create `TwinService`:**
-  - [ ] Create a new `FrameProcessor` class in `app.py` called `TwinService`.
-  - [ ] This service will act as the "brain" of the agent, sitting between the STT and LLM services.
-- [ ] **Implement Memory:**
-  - [ ] Create a simple file-based vector store for long-term memory.
-  - [ ] The `TwinService` will perform a semantic search on this memory to retrieve context for the LLM prompt.
-  - [ ] The `TwinService` will update the memory with a summary of each interaction.
-- [ ] **Implement Tool Use:**
-  - [ ] The `TwinService` will parse the user's request to see if it's a command for a tool.
-  - [ ] It will integrate the existing `YOLOv8Detector` as a tool that can be queried for a description of the current scene.
-- [ ] **Integrate into Pipeline:**
-  - [ ] Modify the main `pipecat` pipeline to be `STT -> TwinService -> LLM -> TTS`.
+- [x] **Create `TwinService`:**
+  - [x] Create a new `FrameProcessor` class in `app.py` called `TwinService`.
+  - [x] This service will act as the "brain" of the agent, sitting between the STT and LLM services.
+- [x] **Implement Memory:**
+  - [x] Create a simple file-based vector store for long-term memory.
+  - [x] The `TwinService` will perform a semantic search on this memory to retrieve context for the LLM prompt.
+  - [x] The `TwinService` will update the memory with a summary of each interaction.
+- [x] **Implement Tool Use:**
+  - [x] The `TwinService` will parse the user's request to see if it's a command for a tool.
+  - [x] It will integrate the existing `YOLOv8Detector` as a tool that can be queried for a description of the current scene.
+- [x] **Integrate into Pipeline:**
+  - [x] Modify the main `pipecat` pipeline to be `STT -> TwinService -> TTS`.
 - [ ] **Update Documentation:**
   - [ ] Update the `README.md` to explain the new agentic capabilities.

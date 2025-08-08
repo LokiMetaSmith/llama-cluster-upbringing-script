@@ -77,30 +77,37 @@ class KittenTTSService(FrameProcessor):
         audio = self.model.generate(frame.text, voice='expr-voice-2-f')
         await self.push_frame(AudioFrame(audio.tobytes(), 24000, 1))
 
+import json
+
 class TwinService(FrameProcessor):
-    def __init__(self, memory_file="long_term_memory.faiss"):
+    def __init__(self, llm, yolo_detector, memory_file="long_term_memory.faiss"):
         super().__init__()
+        self.llm = llm
+        self.yolo_detector = yolo_detector
         self.short_term_memory = []
         self.memory_file = memory_file
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         self.dimension = self.embedding_model.get_sentence_embedding_dimension()
 
-        # Load long-term memory if it exists
         if os.path.exists(self.memory_file):
             self.long_term_memory = faiss.read_index(self.memory_file)
-            # We need a way to map faiss indices back to text. For simplicity, we'll skip this for now.
         else:
             self.long_term_memory = faiss.IndexFlatL2(self.dimension)
 
     def search_memory(self, text, k=3):
         if self.long_term_memory.ntotal == 0:
             return []
-
         embedding = self.embedding_model.encode([text])
-        distances, indices = self.long_term_memory.search(embedding, k)
-        # This is where we would map indices back to text.
-        # For now, we'll just return placeholder memories.
+        _, indices = self.long_term_memory.search(embedding, k)
         return [f"Retrieved memory {i}" for i in indices[0]]
+
+    def get_tools_prompt(self):
+        return """
+        You have access to the following tools:
+        - {"tool": "describe_scene"}: Use this tool to get a real-time description of what is visible in the webcam.
+
+        To use a tool, respond with a JSON object with the "tool" key.
+        """
 
     async def process_frame(self, frame, direction):
         if not isinstance(frame, TranscriptionFrame):
@@ -110,30 +117,43 @@ class TwinService(FrameProcessor):
         user_text = frame.text
         logging.info(f"TwinService received: {user_text}")
 
-        # 1. Search long-term memory
         retrieved_memories = self.search_memory(user_text)
-
-        # 2. Get short-term memory
         short_term_context = "\n".join(self.short_term_memory)
+        tools_prompt = self.get_tools_prompt()
 
-        # 3. Construct the prompt
         prompt = f"""
+        {tools_prompt}
         Short-term conversation history:
         {short_term_context}
-
         Relevant long-term memories:
         {retrieved_memories}
-
         Current user query: {user_text}
         """
 
         logging.info(f"Constructed prompt for LLM: {prompt}")
-        await self.push_frame(TextFrame(prompt))
 
-        # 4. Update short-term memory
+        # First LLM call to check for tool use
+        llm_response_text = await self.llm.process_text(prompt)
+
+        try:
+            tool_call = json.loads(llm_response_text)
+            if tool_call.get("tool") == "describe_scene":
+                logging.info("LLM requested to use describe_scene tool.")
+                observation = self.yolo_detector.get_observation()
+
+                # Second LLM call with tool result
+                final_prompt = f"The result of describing the scene is: {observation}. Now, answer the user's original question based on this."
+                final_response = await self.llm.process_text(final_prompt)
+                await self.push_frame(TextFrame(final_response))
+                self.short_term_memory.append(f"Assistant: {final_response}")
+            else:
+                await self.push_frame(TextFrame(llm_response_text))
+                self.short_term_memory.append(f"Assistant: {llm_response_text}")
+        except (json.JSONDecodeError, TypeError):
+            await self.push_frame(TextFrame(llm_response_text))
+            self.short_term_memory.append(f"Assistant: {llm_response_text}")
+
         self.short_term_memory.append(f"User: {user_text}")
-        # We need a way to get the assistant's response to add it to memory.
-        # This will be handled in a future step.
         if len(self.short_term_memory) > 10:
             self.short_term_memory.pop(0)
 
@@ -141,6 +161,7 @@ class YOLOv8Detector(FrameProcessor):
     def __init__(self, model_name="yolov8n.pt"):
         super().__init__()
         self.model = YOLO(model_name)
+        self.latest_observation = "I don't see anything."
         self.last_detected_objects = set()
 
     async def process_frame(self, frame, direction):
@@ -159,8 +180,13 @@ class YOLOv8Detector(FrameProcessor):
         if detected_objects != self.last_detected_objects:
             self.last_detected_objects = detected_objects
             if detected_objects:
-                observation = f"Observation: I see {', '.join(detected_objects)}."
-                await self.push_frame(TextFrame(observation))
+                self.latest_observation = f"I see {', '.join(detected_objects)}."
+            else:
+                self.latest_observation = "I don't see anything."
+            logging.info(f"YOLOv8Detector updated observation: {self.latest_observation}")
+
+    def get_observation(self):
+        return self.latest_observation
 
 async def main():
     transport = LocalTransport()
@@ -179,14 +205,13 @@ async def main():
             voice_id="21m00Tcm4TlvDq8ikWAM" # A default voice
         )
     yolo = YOLOv8Detector()
-    twin = TwinService()
+    twin = TwinService(llm=llm, yolo_detector=yolo)
 
     # Main conversational pipeline
     pipeline_steps = [
         transport.input(),
         stt,
         twin,
-        llm,
         tts,
         transport.output()
     ]
@@ -196,11 +221,8 @@ async def main():
 
     main_pipeline = Pipeline(pipeline_steps)
 
-    # Vision pipeline
-    vision_pipeline = Pipeline([
-        yolo,
-        llm
-    ])
+    # Vision pipeline (runs in parallel to update the detector's state)
+    vision_pipeline = Pipeline([yolo])
 
     main_task = PipelineTask(main_pipeline)
 
