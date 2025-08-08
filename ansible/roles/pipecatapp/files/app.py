@@ -96,11 +96,19 @@ import json
 class TwinService(FrameProcessor):
     def __init__(self, llm, yolo_detector, runner):
         super().__init__()
-        self.llm = llm
+        self.router_llm = llm # The main LLM acts as a router
         self.yolo_detector = yolo_detector
         self.runner = runner
         self.short_term_memory = []
         self.long_term_memory = MemoryStore()
+
+        # Define the expert LLM services
+        # In a real scenario, the base_url would be discovered via Nomad service discovery
+        self.experts = {
+            "coding_expert": OpenAILLMService(base_url="http://localhost:8081/v1", api_key="dummy", model="codellama"),
+            "creative_expert": OpenAILLMService(base_url="http://localhost:8082/v1", api_key="dummy", model="mistral"),
+        }
+
         self.tools = {
             "ssh": SSH_Tool(),
             "mcp": MCP_Tool(self, self.runner),
@@ -108,15 +116,21 @@ class TwinService(FrameProcessor):
         }
 
     def get_tools_prompt(self):
-        prompt = "You have access to the following tools:\n"
+        prompt = "You are a router. Your job is to classify the user's query and route it to the appropriate expert or tool. You have access to the following tools and experts:\n"
+        # Add regular tools
         for tool_name, tool in self.tools.items():
             if tool_name == "vision":
-                prompt += f'- {{"tool": "vision.get_observation"}}: {tool.get_observation.__doc__}\n'
+                prompt += f'- {{"tool": "vision.get_observation"}}: Get a real-time description of what is visible in the webcam.\n'
             else:
                 for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
                     if not method_name.startswith('_'):
                         prompt += f'- {{"tool": "{tool.name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
-        prompt += "\nTo use a tool, respond with a JSON object with the 'tool' and 'args' keys."
+
+        # Add expert routing tools
+        for expert_name in self.experts.keys():
+            prompt += f'- {{"tool": "route_to_expert", "args": {{"expert": "{expert_name}", "query": "<user_query>"}}}}: Use this for queries related to {expert_name.replace("_", " ")}.\n'
+
+        prompt += "\nIf the query doesn't fit a specific expert or tool, handle it yourself. Otherwise, respond with a JSON object with the 'tool' and 'args' keys."
         return prompt
 
     async def process_frame(self, frame, direction):
@@ -140,23 +154,35 @@ class TwinService(FrameProcessor):
         Current user query: {user_text}
         """
 
-        logging.info(f"Constructed prompt for LLM: {prompt}")
-
-        llm_response_text = await self.llm.process_text(prompt)
+        llm_response_text = await self.router_llm.process_text(prompt)
 
         try:
             tool_call = json.loads(llm_response_text)
-            tool_name, method_name = tool_call.get("tool", "").split('.')
-            args = tool_call.get("args", {})
+            tool_parts = tool_call.get("tool", "").split('.')
 
-            if tool_name in self.tools:
+            if tool_parts[0] == "route_to_expert":
+                expert_name = tool_call["args"]["expert"]
+                query = tool_call["args"]["query"]
+                if expert_name in self.experts:
+                    logging.info(f"Routing to {expert_name} with query: {query}")
+                    expert_llm = self.experts[expert_name]
+                    expert_response = await expert_llm.process_text(query)
+                    await self.push_frame(TextFrame(expert_response))
+                    self.short_term_memory.append(f"Assistant ({expert_name}): {expert_response}")
+                else:
+                    final_response = await self.router_llm.process_text(user_text)
+                    await self.push_frame(TextFrame(final_response))
+            elif tool_parts[0] in self.tools:
+                tool_name = tool_parts[0]
+                method_name = tool_parts[1]
+                args = tool_call.get("args", {})
                 tool = self.tools[tool_name]
                 method = getattr(tool, method_name)
                 logging.info(f"LLM requested to use tool: {tool_name}.{method_name} with args: {args}")
                 result = method(**args)
 
                 final_prompt = f"The result of using the tool {tool_name}.{method_name} is: {result}. Now, answer the user's original question based on this."
-                final_response = await self.llm.process_text(final_prompt)
+                final_response = await self.router_llm.process_text(final_prompt)
                 await self.push_frame(TextFrame(final_response))
                 self.short_term_memory.append(f"Assistant: {final_response}")
             else:

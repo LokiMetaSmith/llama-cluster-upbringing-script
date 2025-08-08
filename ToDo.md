@@ -70,9 +70,9 @@ This document outlines the action plan for refactoring the project to use a mode
 ## Phase 8: Mixture of Experts (MoE) Architecture
 - [x] **Parameterize Nomad Jobs:**
     - [x] Refactor `primacpp.nomad` and `llamacpp-rpc.nomad` to use `meta` variables for job names, service names, and model paths.
-- [ ] **Implement MoE Routing in `TwinService`:**
-    - [ ] Add logic to the `TwinService` to classify user queries.
-    - [ ] Create new tools (e.g., `ask_coding_expert`) that route requests to the appropriate specialized LLM cluster.
+- [x] **Implement MoE Routing in `TwinService`:**
+    - [x] Add logic to the `TwinService` to classify user queries.
+    - [x] Create new tools (e.g., `ask_coding_expert`) that route requests to the appropriate specialized LLM cluster.
 - [ ] **Update Documentation:**
     - [ ] Update `README.md` to explain the MoE architecture, how to configure it in `inventory.yaml`, and how to deploy multiple expert clusters into different Nomad Namespaces.
 

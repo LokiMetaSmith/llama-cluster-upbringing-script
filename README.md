@@ -66,6 +66,20 @@ The agent can use tools to perform actions and gather information. The `TwinServ
   - **Security Warning:** This is a very powerful tool. The credentials are not stored in the code but must be provided by the LLM. For this to work, the user running the agent must have an SSH key configured that allows passwordless access to the target machine. Exercise caution when enabling the LLM to use this tool.
   - **Example:** "Use ssh to run 'ls -l' on host 192.168.1.102 with user 'admin'."
 
+### 5.3. Mixture of Experts (MoE) Routing
+The agent is designed to function as a "Mixture of Experts." The primary LLM acts as a router, classifying the user's query and routing it to a specialized backend if appropriate.
+
+- **How it Works:** The `TwinService` prompt instructs the router LLM to first decide if a query is general, technical, or creative. If it's technical, for example, the router's job is to call the `route_to_coding_expert` tool. The `TwinService` then sends the query to a separate LLM cluster that is running a coding-specific model.
+- **Configuration:** To use this feature, you must deploy multiple LLM backends, each with a unique service name.
+  - Edit and run the parameterized Nomad jobs (e.g., `primacpp.nomad`) with different `-meta` flags:
+    ```bash
+    # Deploy a general-purpose model
+    nomad job run -meta="JOB_NAME=general,SERVICE_NAME=llama-api-general,MODEL_PATH=/path/to/general.gguf" /home/user/primacpp.nomad
+    # Deploy a coding model
+    nomad job run -meta="JOB_NAME=coding,SERVICE_NAME=llama-api-coding,MODEL_PATH=/path/to/coding.gguf" /home/user/primacpp.nomad
+    ```
+  - The expert services are currently hardcoded in `app.py` but can be configured to match your deployments.
+
 ## 6. Mission Control Web UI
 This project includes a web-based dashboard for real-time display and debugging.
 
