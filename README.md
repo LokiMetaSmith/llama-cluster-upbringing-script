@@ -114,16 +114,27 @@ This will run all the necessary Ansible roles to install and configure Nomad, `p
 
 ## 5. Deploy the AI Services
 
-Once the Ansible playbook has completed successfully, your cluster is ready. The final step is to deploy the AI services using Nomad.
+Once the Ansible playbook has completed successfully, your cluster is ready. You can now deploy the AI services using Nomad. This project supports two different distributed LLM backends. You should only run **one** of them at a time.
 
 From your control node (or any node in the cluster where you have access to the `nomad` CLI):
 
-### 5.1. Deploy the `prima.cpp` LLM Cluster
+### 5.1. Option 1: Deploy with `prima.cpp` (Recommended)
+`prima.cpp` is a state-of-the-art implementation designed specifically for heterogeneous, low-resource clusters. It uses advanced techniques like piped-ring parallelism and disk offloading to maximize performance. This is the recommended backend for most use cases.
+
 ```bash
 nomad job run /home/user/primacpp.nomad
 ```
 
-### 5.2. Deploy the `pipecat` Voice Agent
+### 5.2. Option 2: Deploy with `llama.cpp` RPC
+This uses the native RPC functionality built into `llama.cpp`. It's a simpler, more traditional client-server model.
+
+```bash
+nomad job run /home/user/llamacpp-rpc.nomad
+```
+
+### 5.3. Deploy the `pipecat` Voice Agent
+After choosing and deploying one of the LLM backends above, you can deploy the main voice agent application. It will automatically connect to whichever backend is running.
+
 ```bash
 nomad job run /home/user/pipecatapp.nomad
 ```

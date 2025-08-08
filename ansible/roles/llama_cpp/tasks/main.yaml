@@ -15,3 +15,9 @@
   command: cmake --build build --config Release -j
   args:
     chdir: /home/user/llama.cpp
+
+- name: Copy llama.cpp RPC Nomad job file
+  template:
+    src: ../../jobs/llamacpp-rpc.nomad
+    dest: /home/user/llamacpp-rpc.nomad
+  when: "'controller_nodes' in group_names"
