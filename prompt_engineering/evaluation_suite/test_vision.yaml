@@ -1,0 +1,4 @@
+- name: "Test Vision Tool"
+  query: "What do you see?"
+  expected_tool_call: "vision.get_observation"
+  expected_output_contains: "I see"

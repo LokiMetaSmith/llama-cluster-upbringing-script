@@ -1,0 +1,12 @@
+---
+- name: restart dhcpd
+  systemd:
+    name: isc-dhcp-server
+    state: restarted
+  become: yes
+
+- name: restart nfs
+  systemd:
+    name: nfs-kernel-server
+    state: restarted
+  become: yes

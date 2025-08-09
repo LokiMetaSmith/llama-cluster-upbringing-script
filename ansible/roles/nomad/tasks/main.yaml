@@ -1,0 +1,71 @@
+---
+- name: Install unzip
+  apt:
+    name: unzip
+    state: present
+
+- name: Download Nomad
+  get_url:
+    url: "{{ nomad_zip_url }}"
+    dest: "/tmp/nomad.zip"
+    mode: '0644'
+
+- name: Unzip Nomad
+  unarchive:
+    src: "/tmp/nomad.zip"
+    dest: "/tmp"
+    remote_src: yes
+    creates: /tmp/nomad
+
+- name: Move Nomad to /usr/local/bin
+  copy:
+    src: /tmp/nomad
+    dest: /usr/local/bin/nomad
+    remote_src: yes
+    mode: '0755'
+  become: yes
+
+- name: Create Nomad data directory
+  file:
+    path: "{{ nomad_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create Nomad config directory
+  file:
+    path: "{{ nomad_config_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy Nomad config
+  template:
+    src: nomad.hcl.j2
+    dest: "{{ nomad_config_dir }}/nomad.hcl"
+  notify: restart nomad
+
+- name: Copy Nomad client config
+  template:
+    src: client.hcl.j2
+    dest: "{{ nomad_config_dir }}/client.hcl"
+  when: "'worker_nodes' in group_names"
+  notify: restart nomad
+
+- name: Copy Nomad server config
+  template:
+    src: server.hcl.j2
+    dest: "{{ nomad_config_dir }}/server.hcl"
+  when: "'controller_nodes' in group_names"
+  notify: restart nomad
+
+- name: Copy Nomad systemd service file
+  template:
+    src: nomad.service.j2
+    dest: /etc/systemd/system/nomad.service
+  notify: restart nomad
+
+- name: Start and enable Nomad service
+  systemd:
+    name: nomad
+    state: started
+    enabled: yes
+    daemon_reload: yes

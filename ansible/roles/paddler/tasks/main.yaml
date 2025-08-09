@@ -1,0 +1,27 @@
+---
+- name: Set paddler version and archive name
+  set_fact:
+    paddler_version: "v1.2.0"
+    paddler_archive: "paddler-{{ paddler_version }}-linux-amd64.tar.gz"
+    paddler_url: "https://github.com/distantmagic/paddler/releases/download/{{ paddler_version }}/{{ paddler_archive }}"
+
+- name: Download Paddler
+  get_url:
+    url: "{{ paddler_url }}"
+    dest: "/tmp/{{ paddler_archive }}"
+    mode: '0644'
+
+- name: Extract Paddler
+  unarchive:
+    src: "/tmp/{{ paddler_archive }}"
+    dest: "/tmp"
+    remote_src: yes
+    creates: /tmp/paddler
+
+- name: Move Paddler to /usr/local/bin
+  copy:
+    src: /tmp/paddler
+    dest: /usr/local/bin/paddler
+    remote_src: yes
+    mode: '0755'
+  become: yes

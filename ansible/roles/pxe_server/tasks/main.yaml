@@ -1,0 +1,48 @@
+---
+- name: Install PXE boot dependencies
+  apt:
+    name:
+      - isc-dhcp-server
+      - tftpd-hpa
+      - nfs-kernel-server
+    state: present
+  become: yes
+
+- name: Create TFTP root directory
+  file:
+    path: "{{ tftp_root }}"
+    state: directory
+  become: yes
+
+- name: Download and extract Debian netboot files
+  unarchive:
+    src: "{{ netboot_url }}"
+    dest: "{{ tftp_root }}"
+    remote_src: yes
+  become: yes
+
+- name: Copy DHCP config
+  template:
+    src: dhcpd.conf.j2
+    dest: /etc/dhcp/dhcpd.conf
+  notify: restart dhcpd
+  become: yes
+
+- name: Copy preseed file
+  template:
+    src: preseed.cfg.j2
+    dest: "{{ tftp_root }}/preseed.cfg"
+  become: yes
+
+- name: Create NFS root directory
+  file:
+    path: "{{ nfs_root }}"
+    state: directory
+  become: yes
+
+- name: Add NFS export
+  lineinfile:
+    path: /etc/exports
+    line: "{{ nfs_root }} *(ro,sync,no_subtree_check)"
+  notify: restart nfs
+  become: yes

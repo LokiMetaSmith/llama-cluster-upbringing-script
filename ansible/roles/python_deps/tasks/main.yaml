@@ -1,0 +1,16 @@
+---
+- name: Create a virtual environment
+  command: python3 -m venv /home/user/.local --system-site-packages
+  args:
+    creates: /home/user/.local/bin/pip
+
+- name: Copy requirements.txt
+  copy:
+    src: requirements.txt
+    dest: /home/user/requirements.txt
+
+- name: Install python dependencies
+  pip:
+    requirements: /home/user/requirements.txt
+    virtualenv: /home/user/.local
+    virtualenv_command: /usr/bin/python3 -m venv

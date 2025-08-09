@@ -1,61 +1,16 @@
-# This playbook orchestrates the setup of Paddler (balancer and agents)
-# and the execution of the main application script (e.g., llama.cpp server).
-
-# It assumes you have an Ansible inventory (e.g., /etc/ansible/hosts/inventory.yaml)
-# with host groups like 'controller_nodes' (for the balancer) and 'worker_nodes'
-# (for llama.cpp instances and paddler agents).
-
-- name: Setup Paddler Balancer
-  hosts: controller_nodes # Target for the Paddler Balancer node(s).
-                          # Should typically be a single host or a HA setup if Paddler supports it.
-  become: true            # Most tasks within paddler_balancer.yaml require root privileges (e.g., systemd).
-  tasks:
-    - name: Include Paddler Balancer tasks
-      ansible.builtin.include_tasks: ansible/paddler_balancer/tasks/paddler_balancer.yaml
-      # This will run tasks defined in paddler_balancer.yaml, such as:
-      # - Ensuring user/group for paddler.
-      # - Creating working directory.
-      # - Templating and starting the paddler-balancer systemd service.
-      # Variables for this role are in ansible/paddler_balancer/defaults/main.yaml
-
-- name: Setup Paddler Agents
-  hosts: worker_nodes     # Target for nodes that will run llama.cpp instances and Paddler Agents.
-  become: true            # Tasks for agent setup (systemd service) require root.
-  tasks:
-    - name: Include Paddler Agent tasks
-      ansible.builtin.include_tasks: ansible/paddler_agent/tasks/paddler_agent.yaml
-      # This will run tasks defined in paddler_agent.yaml, such as:
-      # - Templating and starting the paddler-agent systemd service.
-      # The agent configuration depends on 'paddler_balancer_host' (from defaults or inventory)
-      # to connect to the balancer's management interface.
-      # Variables for this role are in ansible/paddler_agent/defaults/main.yaml
-
-- name: Run main execution script (e.g., llama-server via run.sh)
-  hosts: worker_nodes     # This play targets worker nodes, assuming run.sh starts llama.cpp/llama-server.
-                          # The original run.sh was modified to be a placeholder for llama-server with RPC.
-  # become: true          # Uncomment if the script itself requires sudo for its operations.
-                          # The script.sh which *copies* run.sh uses sudo, but run.sh itself might not need it.
-  tasks:
-    - name: Execute the main run script
-      ansible.builtin.script: /etc/ansible/scripts/run.sh # This path is where script.sh copies run.sh to.
-      # Note on execution order:
-      # - Paddler agents are typically started *after* the llama.cpp server they manage is running
-      #   or at least configured to run. The paddler-agent.service template has an
-      #   `After=llama-cpp.service` (or similar) directive.
-      # - The `run.sh` script, as modified, only echoes setup instructions for llama-server
-      #   and doesn't actually start it. Users need to manually edit and uncomment the command.
-      # - If `run.sh` were to actually start llama-server, and if llama-server is managed by systemd
-      #   (e.g., as `llama-cpp.service`), then the paddler-agent service would correctly start after it.
-      # - If `run.sh` is a one-off script to start llama-server directly (not via systemd),
-      #   consider the timing. The current `paddler_agent.yaml` includes a debug message
-      #   reminding to start llama.cpp with --slots.
-      args:
-        chdir: /home/user # Or appropriate directory from which run.sh should be executed.
-                          # This was not specified but often scripts have implicit CWD assumptions.
-                          # The run.sh script as it is does not seem CWD sensitive.
-      register: run_sh_output
-
-    - name: Display output of run.sh
-      ansible.builtin.debug:
-        var: run_sh_output.stdout_lines
-      when: run_sh_output.stdout_lines is defined and run_sh_output.stdout_lines | length > 0
+---
+- hosts: all
+  become: yes
+  roles:
+    - common
+    - consul
+    - nomad
+    - nfs
+    - llama_cpp
+    - whisper_cpp
+    - python_deps
+    - paddler
+    - primacpp
+    - vision
+    - docker
+    - desktop_extras

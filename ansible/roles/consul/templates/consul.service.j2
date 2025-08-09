@@ -1,0 +1,14 @@
+[Unit]
+Description=Consul
+Documentation=https://www.consul.io/docs/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/consul agent -config-dir={{ consul_config_dir }}
+KillMode=process
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

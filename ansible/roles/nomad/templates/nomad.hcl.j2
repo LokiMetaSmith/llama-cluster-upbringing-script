@@ -1,0 +1,17 @@
+data_dir  = "{{ nomad_data_dir }}"
+bind_addr = "{{ ansible_default_ipv4.address }}"
+
+advertise {
+  http = "{{ ansible_default_ipv4.address }}"
+  rpc  = "{{ ansible_default_ipv4.address }}"
+  serf = "{{ ansible_default_ipv4.address }}"
+}
+
+server {
+  enabled = true
+  bootstrap_expect = 3
+}
+
+namespace "default" {
+  description = "Default shared namespace"
+}

@@ -1,0 +1,6 @@
+---
+- name: Install vision dependencies
+  apt:
+    name:
+      - libgl1-mesa-glx
+    state: present

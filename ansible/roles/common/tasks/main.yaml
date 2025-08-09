@@ -1,0 +1,20 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Upgrade all packages to the latest version
+  apt:
+    upgrade: dist
+
+- name: Install common packages
+  apt:
+    name:
+      - openssh-server
+      - ntpdate
+      - git
+      - cmake
+      - python3-full
+      - python3-pip
+    state: present

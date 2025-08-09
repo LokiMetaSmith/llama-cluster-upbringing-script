@@ -1,0 +1,28 @@
+---
+- name: Install python3 and python3-pip
+  apt:
+    name:
+      - python3
+      - python3-pip
+    state: present
+
+- name: Copy requirements.txt
+  copy:
+    src: requirements.txt
+    dest: /home/user/requirements.txt
+
+- name: Install python dependencies
+  pip:
+    requirements: /home/user/requirements.txt
+    executable: pip3
+
+- name: Copy pipecat app
+  copy:
+    src: app.py
+    dest: /home/user/app.py
+
+- name: Copy pipecat Nomad job file
+  template:
+    src: ../../jobs/pipecatapp.nomad
+    dest: /home/user/pipecatapp.nomad
+  when: "'controller_nodes' in group_names"

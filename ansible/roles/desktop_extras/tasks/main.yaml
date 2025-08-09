@@ -1,0 +1,40 @@
+---
+- name: Install desktop extras packages
+  apt:
+    name:
+      - lolcat
+      - figlet
+      - hollywood
+      - sl
+      - fortune
+      - cowsay
+      - toilet
+      - cmatrix
+    state: present
+
+- name: Clone figlet-fonts repository
+  git:
+    repo: 'https://github.com/xero/figlet-fonts.git'
+    dest: /home/user/.local/share/fonts
+    version: master
+    update: yes
+
+- name: Clone no-more-secrets repository
+  git:
+    repo: 'https://github.com/bartobri/no-more-secrets.git'
+    dest: /home/user/no-more-secrets
+    version: master
+    update: yes
+
+- name: Build no-more-secrets
+  command: make nms
+  args:
+    chdir: /home/user/no-more-secrets
+    creates: /home/user/no-more-secrets/nms
+
+- name: Install no-more-secrets
+  command: make install
+  args:
+    chdir: /home/user/no-more-secrets
+    creates: /usr/local/bin/nms
+  become: yes
