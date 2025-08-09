@@ -67,7 +67,7 @@ The agent can use tools to perform actions and gather information. The `TwinServ
   - **Example:** "Use ssh to run 'ls -l' on host 192.168.1.102 with user 'admin'."
 - **Code Runner (`code_runner.run_python_code`)**
   - **Description:** Executes a block of Python code in a secure, sandboxed Docker container and returns the output.
-  - **Requires:** Docker to be installed on the node running the `pipecat-app` job.
+  - **Note:** The Docker engine is installed automatically by the Ansible playbook.
   - **Example:** "Use the code runner to calculate the 100th Fibonacci number."
 
 ### 5.3. Mixture of Experts (MoE) Routing
