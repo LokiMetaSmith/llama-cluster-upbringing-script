@@ -25,6 +25,7 @@ from memory import MemoryStore
 import requests
 from tools.ssh_tool import SSH_Tool
 from tools.mcp_tool import MCP_Tool
+from tools.code_runner_tool import CodeRunnerTool
 import inspect
 import web_server
 import uvicorn
@@ -126,6 +127,7 @@ class TwinService(FrameProcessor):
             "ssh": SSH_Tool(),
             "mcp": MCP_Tool(self, self.runner),
             "vision": self.yolo_detector,
+            "code_runner": CodeRunnerTool(),
         }
 
     def get_discovered_experts(self):

@@ -1,56 +1,32 @@
-# ToDo: Architecting a Responsive, Distributed Conversational AI Pipeline
+# Project Summary: Architecting a Responsive, Distributed Conversational AI Pipeline
 
-This document outlines the action plan for refactoring the project to use a modern, distributed architecture based on the technical report. All phases are now complete.
+This document summarizes the final architecture and key features of the project.
 
-## Phase 1: Cluster Orchestration with Nomad
-- [x] **Create a Nomad Ansible Role:**
-- [x] **Update the Main Playbook:**
+## Final Architecture
 
-## Phase 2: Distributed LLM with prima.cpp
-- [x] **Create a `prima.cpp` Ansible Role:**
-- [x] **Create a Nomad Job for `prima.cpp`:**
+The project has evolved from a single setup script into a sophisticated, multi-layered system for deploying a stateful, embodied AI agent on a cluster of legacy computers.
 
-## Phase 3: Conversational AI Pipeline with pipecat
-- [x] **Create a `pipecat_app` Ansible Role:**
-- [x] **Develop the `pipecat` Application:**
-- [x] **Create a Nomad Job for the `pipecat` Application:**
+- **Provisioning Layer:** [Ansible](https://www.ansible.com/) is used for the complete, automated setup of all nodes.
+- **Orchestration Layer:** [HashiCorp Nomad](https://www.nomadproject.io/) is used to schedule and manage all application services.
+- **Service Discovery Layer:** [HashiCorp Consul](https://www.consul.io/) is integrated with Nomad to provide dynamic service discovery.
+- **Application Layer:** The core of the agent is a Python application built on the [pipecat](https://github.com/pipecat-ai/pipecat) real-time streaming framework.
 
-## Phase 4: Integration, Testing, and Documentation
-- [x] **Update `README.md`:**
-- [x] **Testing:**
+## Key Implemented Features
 
-## Phase 5: Vision Integration
-- [x] **Create a `vision` Ansible Role:**
-- [x] **Develop the Vision Service:**
-- [x] **Update Documentation for Vision Capabilities:**
-
-## Phase 6: Agent Embodiment with TwinService
-- [x] **Create `TwinService`:**
-- [x] **Implement Memory:**
-- [x] **Implement Tool Use:**
-- [x] **Integrate into Pipeline:**
-- [x] **Update Documentation:**
-
-## Phase 7: Self-Reflection and Growth with OpenEvolve
-- [x] **Create `prompt_engineering` Directory:**
-- [x] **Create Evaluation Suite & Scripts:**
-- [x] **Update Documentation:**
-
-## Phase 8: Mixture of Experts (MoE) Architecture
-- [x] **Parameterize Nomad Jobs:**
-- [x] **Implement MoE Routing in `TwinService`:**
-- [x] **Update Documentation:**
-
-## Phase 9: Advanced MoE Architecture
-- [x] **Integrate Consul:**
-- [x] **Implement Dynamic Service Discovery:**
-- [x] **Implement Nomad Namespaces:**
-- [x] **Update Documentation:**
-
-## Phase 10: Zero-Touch Provisioning with PXE
-- [x] **Create `pxe_server` Ansible Role:**
-- [x] **Create Preseed and DHCP Configuration:**
-- [x] **Update Documentation:**
+- **Phase 1-4: Foundational Setup:** Deployed a robust, multi-service architecture using Ansible and Nomad.
+- **Phase 5: Vision Integration:** Added a `YOLOv8Detector` service, giving the agent the ability to "see".
+- **Phase 6: Agent Embodiment:**
+    - Created the `TwinService`, the agent's "brain."
+    - Implemented both short-term and long-term memory.
+    - Implemented a tool-use framework with `vision`, `ssh`, and `mcp` tools.
+- **Phase 7: Self-Reflection and Growth:**
+    - Created an offline workflow using `openevolve` to automatically improve the agent's core prompt.
+- **Phase 8-9: Advanced MoE Architecture:**
+    - Implemented a Mixture of Experts architecture with dynamic routing using Consul and isolation with Nomad Namespaces.
+- **Phase 10: Zero-Touch Provisioning:**
+    - Created a `pxe_server` Ansible role to fully automate the installation of Debian on new, bare-metal machines.
+- **Phase 11: Code Execution:**
+    - Implemented a `CodeRunnerTool` that allows the agent to write and execute Python code in a secure, sandboxed Docker container.
 
 ---
 
@@ -60,6 +36,7 @@ This document outlines the action plan for refactoring the project to use a mode
 - **[physiii/twin](https://github.com/physiii/twin):** The agent embodiment framework that inspired the `TwinService`.
 - **[codelion/openevolve](https://github.com/codelion/openevolve):** The AlphaEvolve implementation for prompt engineering.
 - **[geerlingguy/beowulf-ai-cluster](https://github.com/geerlingguy/beowulf-ai-cluster):** The Ansible benchmarking project.
+- **[instavm/coderunner-ui](https://github.com/instavm/coderunner-ui):** The code execution UI that inspired the `CodeRunnerTool`.
 - **[HashiCorp Consul](https://www.consul.io/):** The service networking solution.
 - **[Nomad Namespaces](https://developer.hashicorp.com/nomad/docs/namespaces):** Documentation for Nomad's multi-tenancy features.
 - **[Debian Preseed](https://wiki.debian.org/DebianInstaller/Preseed):** Documentation for automating the Debian installer.

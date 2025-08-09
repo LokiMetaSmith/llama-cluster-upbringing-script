@@ -65,6 +65,10 @@ The agent can use tools to perform actions and gather information. The `TwinServ
   - **Description:** Executes a command on a remote machine via SSH.
   - **Security Warning:** This is a very powerful tool. The credentials are not stored in the code but must be provided by the LLM. For this to work, the user running the agent must have an SSH key configured that allows passwordless access to the target machine. Exercise caution when enabling the LLM to use this tool.
   - **Example:** "Use ssh to run 'ls -l' on host 192.168.1.102 with user 'admin'."
+- **Code Runner (`code_runner.run_python_code`)**
+  - **Description:** Executes a block of Python code in a secure, sandboxed Docker container and returns the output.
+  - **Requires:** Docker to be installed on the node running the `pipecat-app` job.
+  - **Example:** "Use the code runner to calculate the 100th Fibonacci number."
 
 ### 5.3. Mixture of Experts (MoE) Routing
 The agent is designed to function as a "Mixture of Experts." The primary LLM acts as a router, classifying the user's query and routing it to a specialized backend if appropriate.

@@ -15,3 +15,4 @@ fastapi
 uvicorn
 websockets
 requests
+docker
