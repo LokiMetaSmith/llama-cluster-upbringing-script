@@ -83,6 +83,9 @@ The agent can use tools to perform actions and gather information. The `TwinServ
   - **Description:** Executes a block of Python code in a secure, sandboxed Docker container and returns the output.
   - **Note:** The Docker engine is installed automatically by the Ansible playbook.
   - **Example:** "Use the code runner to calculate the 100th Fibonacci number."
+- **Web Browser (`web_browser.goto`, `web_browser.get_page_content`, etc.)**
+  - **Description:** A tool for browsing the web.
+  - **Examples:** "Use the web browser to go to google.com and tell me the content of the page."
 
 ### 5.3. Mixture of Experts (MoE) Routing
 The agent is designed to function as a "Mixture of Experts." The primary LLM acts as a router, classifying the user's query and routing it to a specialized backend if appropriate.

@@ -27,6 +27,8 @@ The project has evolved from a single setup script into a sophisticated, multi-l
     - Created a `pxe_server` Ansible role to fully automate the installation of Debian on new, bare-metal machines.
 - **Phase 11: Code Execution:**
     - Implemented a `CodeRunnerTool` that allows the agent to write and execute Python code in a secure, sandboxed Docker container.
+- **Phase 12: Web Browsing:**
+    - Implemented a `WebBrowserTool` using Playwright that allows the agent to browse the web to answer questions.
 
 ---
 
