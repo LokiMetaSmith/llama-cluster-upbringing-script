@@ -1,0 +1,14 @@
+---
+- name: Install KittenTTS and dependencies
+  pip:
+    name:
+      - num2words
+      - spacy
+      - espeakng_loader
+      - misaki[en]>=0.9.4
+      - onnxruntime
+      - soundfile
+      - numpy
+      - huggingface_hub
+      - https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-none-any.whl
+    state: present

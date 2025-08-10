@@ -6,10 +6,9 @@
   become: yes
 
 - name: Download Consul
-  get_url:
-    url: "{{ consul_zip_url }}"
-    dest: "/tmp/consul.zip"
-    mode: '0644'
+  command: "curl -L -o /tmp/consul.zip {{ consul_zip_url }}"
+  args:
+    creates: /tmp/consul.zip
 
 - name: Unzip Consul
   unarchive:

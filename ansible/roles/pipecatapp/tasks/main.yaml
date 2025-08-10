@@ -26,3 +26,8 @@
     src: ../../jobs/pipecatapp.nomad
     dest: /home/user/pipecatapp.nomad
   when: "'controller_nodes' in group_names"
+
+- name: Install Playwright browsers
+  command: python3 -m playwright install
+  become: yes
+  become_user: "{{ ansible_user }}"
