@@ -10,6 +10,7 @@
     - whisper_cpp
     - python_deps
     - paddler
+    - provisioning_api
     - primacpp
     - vision
     - docker

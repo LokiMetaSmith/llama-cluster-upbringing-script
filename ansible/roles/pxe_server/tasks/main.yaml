@@ -5,6 +5,7 @@
       - isc-dhcp-server
       - tftpd-hpa
       - nfs-kernel-server
+      - nginx
     state: present
   become: yes
 
@@ -21,6 +22,18 @@
     remote_src: yes
   become: yes
 
+- name: Download iPXE BIOS bootloader
+  get_url:
+    url: http://boot.ipxe.org/undionly.kpxe
+    dest: "{{ tftp_root }}/undionly.kpxe"
+  become: yes
+
+- name: Download iPXE UEFI bootloader
+  get_url:
+    url: http://boot.ipxe.org/ipxe.efi
+    dest: "{{ tftp_root }}/ipxe.efi"
+  become: yes
+
 - name: Copy DHCP config
   template:
     src: dhcpd.conf.j2
@@ -28,10 +41,35 @@
   notify: restart dhcpd
   become: yes
 
-- name: Copy preseed file
+- name: Copy preseed file to TFTP root (for legacy compatibility if needed)
   template:
     src: preseed.cfg.j2
     dest: "{{ tftp_root }}/preseed.cfg"
+  become: yes
+
+- name: Create web root directory
+  file:
+    path: /var/www/html
+    state: directory
+  become: yes
+
+- name: Symlink Debian installer files to web root
+  file:
+    src: "{{ tftp_root }}/debian-installer/amd64/"
+    dest: /var/www/html/debian
+    state: link
+  become: yes
+
+- name: Copy preseed file to web root
+  template:
+    src: preseed.cfg.j2
+    dest: /var/www/html/preseed.cfg
+  become: yes
+
+- name: Copy iPXE boot script to web root
+  template:
+    src: boot.ipxe.j2
+    dest: /var/www/html/boot.ipxe
   become: yes
 
 - name: Create NFS root directory

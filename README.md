@@ -1,6 +1,6 @@
 # Distributed Conversational AI Pipeline for Legacy CPU Clusters
 
-This project provides a complete solution for deploying a high-performance, low-latency conversational AI pipeline on a cluster of legacy, resource-constrained desktop computers. It uses Ansible for automated provisioning, Nomad for cluster orchestration, and a state-of-the-art AI stack to create a responsive, streaming, and embodied voice agent.
+This project provides a complete solution for deploying a high-performance, low-latency conversational AI pipeline on a cluster of legacy, resource-constrained desktop computers. It uses Ansible for automated provisioning, Nomad for cluster orchestration, and a state-of-the-art AI stack to create a responsive, streaming, and embodied voice agent. For a detailed technical description of the system's layers, see the [Holistic Project Architecture](ARCHITECTURE.md) document.
 
 ## 1. System Requirements
 - **Cluster Nodes:** 3 to 20 legacy desktop computers (Intel Core 2 Duo or similar, 8GB RAM, SSD recommended).
@@ -8,12 +8,26 @@ This project provides a complete solution for deploying a high-performance, low-
 - **Recommended OS:** Debian 12 (Bookworm), minimal install with SSH server.
 
 ## 2. Initial Machine Setup
-This must be done for **every node** in the cluster.
-1.  **Install Debian 12.**
-2.  **Clone this repository** and enter the `initial-setup` directory.
-3.  **Configure `setup.conf`** with the machine's desired `HOSTNAME` and static IP address details.
-4.  **Run the script:** `sudo bash setup.sh`
+
+Setting up a new cluster involves two main methods: a one-time manual setup for the first node, and a fully automated setup for all subsequent nodes.
+
+### 2.1. Manual Setup (First Node / PXE Server)
+
+The first node in your cluster requires a manual OS installation. This node will later be configured by Ansible to act as the PXE/iPXE boot server for all other nodes.
+
+1.  **Install Debian 12:** Perform a standard, minimal installation of Debian 12 with an SSH server.
+2.  **Clone this repository:** `git clone <repo_url>`
+3.  **Configure Initial Settings:** Enter the `initial-setup` directory and edit the `setup.conf` file. You must provide the machine's desired `HOSTNAME`, a static IP address, and the `CONTROL_NODE_IP` (which should be the static IP of this same machine, as it will become the control node).
+4.  **Run Setup Script:** Execute the script with root privileges: `sudo bash setup.sh`
 5.  **Reboot.**
+
+After rebooting, this node is ready for Ansible provisioning (see Section 3). It should be designated as both a `controller_node` and your `pxe_server` in the Ansible inventory.
+
+### 2.2. Automated Setup (All Other Nodes)
+
+Once your first node has been provisioned by Ansible and the `pxe_server` role has been applied to it, you can automatically install Debian on all other bare-metal machines in your cluster.
+
+This system uses an advanced iPXE-over-HTTP method that is significantly faster and more reliable than traditional PXE. For detailed instructions on how to apply the Ansible role and prepare the client machines for network booting, see the **[iPXE Boot Server Setup Guide](PXE_BOOT_SETUP.md)**.
 
 ## 3. Control Node & Ansible Provisioning
 1.  **On your control node, install Ansible and Git:** `sudo apt install ansible git -y`
@@ -101,6 +115,26 @@ Once the `pipecat-app` job is running, you can access the UI by navigating to th
 - **Live Terminal:** The main feature is a retro-style web terminal that provides a live stream of the agent's logs.
 - **LLM-Driven Visualizations:** The agent can use the terminal to display information in creative ways. For example, status updates may be rendered as large, colorful banners using `figlet` and `lolcat` style effects.
 - **Status API:** An API endpoint at `/api/status` provides the real-time status of the agent's pipelines.
+
+### 6.3. Advanced Features
+The Mission Control UI and the agent have several advanced features for power users.
+
+#### Debug Mode
+To get more detailed insight into the agent's operations, you can enable Debug Mode.
+- **How to Enable:** In the `pipecatapp.nomad` job file, set the `DEBUG_MODE` environment variable to `"true"`.
+- **Functionality:** When enabled, the agent will produce verbose logs for every tool call, including the result returned by the tool. This is useful for debugging tool behavior.
+
+#### Interactive Action Approval
+For enhanced safety, you can run the agent in a mode that requires manual approval for sensitive actions.
+- **How to Enable:** In the `pipecatapp.nomad` job file, set the `APPROVAL_MODE` environment variable to `"true"`.
+- **Functionality:** When enabled, any attempt to use a sensitive tool (like `ssh` or `code_runner`) will pause execution. A prompt will appear in the web UI with details of the action. You must click "Approve" for the action to proceed. If you click "Deny", the action is cancelled, and the agent will respond that it was not permitted to perform the action.
+
+#### State Management
+You can save and load the agent's complete memory state (both short-term and long-term) directly from the web UI.
+- **How to Use:**
+  1.  In the header of the Mission Control UI, enter a name for your session in the "Enter save name..." input box.
+  2.  Click **"Save State"** to create a snapshot of the agent's current memory. The state will be saved on the server in the `saved_states/` directory.
+  3.  To restore a previous session, enter the name of the saved state and click **"Load State"**. This will replace the agent's current memory with the saved version.
 
 ## 7. Testing and Verification
 - **Check Cluster Status:** `nomad node status`

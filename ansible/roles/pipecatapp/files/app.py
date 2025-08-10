@@ -28,8 +28,10 @@ from tools.mcp_tool import MCP_Tool
 from tools.code_runner_tool import CodeRunnerTool
 import inspect
 import web_server
+from web_server import approval_queue
 import uvicorn
 import threading
+import shutil
 
 # Custom logging handler to broadcast logs to the web UI
 class WebSocketLogHandler(logging.Handler):
@@ -112,11 +114,14 @@ class KittenTTSService(FrameProcessor):
 import json
 
 class TwinService(FrameProcessor):
-    def __init__(self, llm, yolo_detector, runner):
+    def __init__(self, llm, yolo_detector, runner, debug_mode=False, approval_mode=False, approval_queue=None):
         super().__init__()
         self.router_llm = llm # The main LLM acts as a router
         self.yolo_detector = yolo_detector
         self.runner = runner
+        self.debug_mode = debug_mode
+        self.approval_mode = approval_mode
+        self.approval_queue = approval_queue
         self.short_term_memory = []
         self.long_term_memory = MemoryStore()
 
@@ -184,6 +189,70 @@ class TwinService(FrameProcessor):
             logging.error(f"Could not get address for expert {expert_name}: {e}")
             return None
 
+    async def _request_approval(self, tool_call_info: dict) -> bool:
+        """Send a request for approval to the UI and wait for a response."""
+        request_id = str(time.time())
+        approval_request = {
+            "type": "approval_request",
+            "data": {
+                "request_id": request_id,
+                "tool_call": tool_call_info
+            }
+        }
+        await web_server.manager.broadcast(json.dumps(approval_request))
+
+        # Wait for a response from the queue
+        while True:
+            response = await self.approval_queue.get()
+            if response.get("data", {}).get("request_id") == request_id:
+                approved = response.get("data", {}).get("approved", False)
+                logging.info(f"Received approval response: {'Approved' if approved else 'Denied'}")
+                return approved
+
+    def save_state(self, save_name: str) -> str:
+        """Saves the current agent state to a named snapshot."""
+        try:
+            state_dir = os.path.join("saved_states", save_name)
+            os.makedirs(state_dir, exist_ok=True)
+
+            # Save long-term memory files
+            shutil.copy("long_term_memory.faiss", os.path.join(state_dir, "long_term_memory.faiss"))
+            shutil.copy("long_term_memory.json", os.path.join(state_dir, "long_term_memory.json"))
+
+            # Save short-term memory
+            with open(os.path.join(state_dir, "short_term_memory.json"), "w") as f:
+                json.dump(self.short_term_memory, f)
+
+            logging.info(f"Successfully saved state to '{save_name}'")
+            return f"Successfully saved state to '{save_name}'"
+        except Exception as e:
+            logging.error(f"Failed to save state '{save_name}': {e}")
+            return f"Error saving state: {e}"
+
+    def load_state(self, save_name: str) -> str:
+        """Loads agent state from a named snapshot."""
+        try:
+            state_dir = os.path.join("saved_states", save_name)
+            if not os.path.isdir(state_dir):
+                return f"Error: Save state '{save_name}' not found."
+
+            # Load long-term memory files
+            shutil.copy(os.path.join(state_dir, "long_term_memory.faiss"), "long_term_memory.faiss")
+            shutil.copy(os.path.join(state_dir, "long_term_memory.json"), "long_term_memory.json")
+
+            # Load short-term memory
+            with open(os.path.join(state_dir, "short_term_memory.json"), "r") as f:
+                self.short_term_memory = json.load(f)
+
+            # Re-initialize the memory store to load the new files
+            self.long_term_memory = MemoryStore()
+
+            logging.info(f"Successfully loaded state from '{save_name}'")
+            return f"Successfully loaded state from '{save_name}'"
+        except Exception as e:
+            logging.error(f"Failed to load state '{save_name}': {e}")
+            return f"Error loading state: {e}"
+
     async def process_frame(self, frame, direction):
         if not isinstance(frame, TranscriptionFrame):
             await self.push_frame(frame, direction)
@@ -231,8 +300,25 @@ class TwinService(FrameProcessor):
                 args = tool_call.get("args", {})
                 tool = self.tools[tool_name]
                 method = getattr(tool, method_name)
+
+                sensitive_tools = ["ssh", "code_runner"]
+                if self.approval_mode and tool_name in sensitive_tools:
+                    logging.info(f"Requesting approval for sensitive tool: {tool_name}")
+                    approved = await self._request_approval(tool_call)
+                    if not approved:
+                        logging.warning(f"Execution of tool {tool_name} denied by user.")
+                        await self.push_frame(TextFrame(f"Action denied. I cannot use the {tool_name} tool."))
+                        # We need to make sure the user's text is re-added to memory to avoid losing context
+                        self.short_term_memory.append(f"User: {user_text}")
+                        if len(self.short_term_memory) > 10:
+                            self.short_term_memory.pop(0)
+                        return
+
                 logging.info(f"LLM requested to use tool: {tool_name}.{method_name} with args: {args}")
                 result = method(**args)
+
+                if self.debug_mode:
+                    logging.debug(f"Tool {tool_name}.{method_name} returned: {result}")
 
                 final_prompt = f"The result of using the tool {tool_name}.{method_name} is: {result}. Now, answer the user's original question based on this."
                 final_response = await self.router_llm.process_text(final_prompt)
@@ -309,7 +395,14 @@ async def main():
     runner = PipelineRunner()
 
     yolo = YOLOv8Detector()
-    twin = TwinService(llm=llm, yolo_detector=yolo, runner=runner)
+    twin = TwinService(
+        llm=llm,
+        yolo_detector=yolo,
+        runner=runner,
+        debug_mode=debug_mode,
+        approval_mode=approval_mode,
+        approval_queue=approval_queue
+    )
     web_server.twin_service_instance = twin
 
     # Main conversational pipeline
@@ -320,6 +413,15 @@ async def main():
         tts,
         transport.output()
     ]
+
+    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
+    if debug_mode:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug("Debug mode enabled.")
+
+    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
+    if approval_mode:
+        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
 
     if os.getenv("BENCHMARK_MODE", "false").lower() == "true":
         pipeline_steps.insert(1, BenchmarkCollector())
