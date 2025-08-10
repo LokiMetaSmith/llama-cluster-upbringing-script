@@ -1,9 +1,14 @@
-from fastapi import FastAPI, WebSocket
-from fastapi.responses import HTMLResponse
-from typing import List
+from fastapi import FastAPI, WebSocket, Body
+from fastapi.responses import HTMLResponse, JSONResponse
+from typing import List, Dict
 import asyncio
+from asyncio import Queue
+import json
 
 app = FastAPI()
+
+# Create a queue to communicate between the web server and the TwinService
+approval_queue = Queue()
 
 class ConnectionManager:
     def __init__(self):
@@ -27,9 +32,11 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            # We are not expecting messages from the client, just broadcasting to it.
-            # This loop keeps the connection open.
-            await asyncio.sleep(1)
+            data = await websocket.receive_text()
+            # Assuming the data is JSON
+            message = json.loads(data)
+            if message.get("type") == "approval_response":
+                await approval_queue.put(message)
     except Exception:
         manager.disconnect(websocket)
 
@@ -52,6 +59,26 @@ async def get_status():
         if mcp:
             return {"status": mcp.get_status()}
     return {"status": "Agent not fully initialized."}
+
+@app.post("/api/state/save")
+async def save_state_endpoint(payload: Dict = Body(...)):
+    save_name = payload.get("save_name")
+    if not save_name:
+        return JSONResponse(status_code=400, content={"message": "save_name is required"})
+    if twin_service_instance:
+        result = twin_service_instance.save_state(save_name)
+        return {"message": result}
+    return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
+
+@app.post("/api/state/load")
+async def load_state_endpoint(payload: Dict = Body(...)):
+    save_name = payload.get("save_name")
+    if not save_name:
+        return JSONResponse(status_code=400, content={"message": "save_name is required"})
+    if twin_service_instance:
+        result = twin_service_instance.load_state(save_name)
+        return {"message": result}
+    return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
 # We will need a way to get the server to run.
 # This will be handled in the main app.py
