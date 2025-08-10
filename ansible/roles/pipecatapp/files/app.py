@@ -26,6 +26,7 @@ import requests
 from tools.ssh_tool import SSH_Tool
 from tools.mcp_tool import MCP_Tool
 from tools.code_runner_tool import CodeRunnerTool
+from tools.web_browser_tool import WebBrowserTool
 import inspect
 import web_server
 import uvicorn
@@ -128,6 +129,7 @@ class TwinService(FrameProcessor):
             "mcp": MCP_Tool(self, self.runner),
             "vision": self.yolo_detector,
             "code_runner": CodeRunnerTool(),
+            "web_browser": WebBrowserTool(),
         }
 
     def get_discovered_experts(self):

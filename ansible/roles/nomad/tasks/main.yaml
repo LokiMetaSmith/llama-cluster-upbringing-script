@@ -5,10 +5,9 @@
     state: present
 
 - name: Download Nomad
-  get_url:
-    url: "{{ nomad_zip_url }}"
-    dest: "/tmp/nomad.zip"
-    mode: '0644'
+  command: "curl -L -o /tmp/nomad.zip {{ nomad_zip_url }}"
+  args:
+    creates: /tmp/nomad.zip
 
 - name: Unzip Nomad
   unarchive:

@@ -16,3 +16,4 @@ uvicorn
 websockets
 requests
 docker
+playwright
