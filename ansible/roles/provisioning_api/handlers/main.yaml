@@ -1,0 +1,6 @@
+---
+- name: restart provisioning-api
+  systemd:
+    name: provisioning-api
+    state: restarted
+  become: yes

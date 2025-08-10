@@ -8,12 +8,26 @@ This project provides a complete solution for deploying a high-performance, low-
 - **Recommended OS:** Debian 12 (Bookworm), minimal install with SSH server.
 
 ## 2. Initial Machine Setup
-This must be done for **every node** in the cluster.
-1.  **Install Debian 12.**
-2.  **Clone this repository** and enter the `initial-setup` directory.
-3.  **Configure `setup.conf`** with the machine's desired `HOSTNAME` and static IP address details.
-4.  **Run the script:** `sudo bash setup.sh`
+
+Setting up a new cluster involves two main methods: a one-time manual setup for the first node, and a fully automated setup for all subsequent nodes.
+
+### 2.1. Manual Setup (First Node / PXE Server)
+
+The first node in your cluster requires a manual OS installation. This node will later be configured by Ansible to act as the PXE/iPXE boot server for all other nodes.
+
+1.  **Install Debian 12:** Perform a standard, minimal installation of Debian 12 with an SSH server.
+2.  **Clone this repository:** `git clone <repo_url>`
+3.  **Configure Initial Settings:** Enter the `initial-setup` directory and edit the `setup.conf` file. You must provide the machine's desired `HOSTNAME`, a static IP address, and the `CONTROL_NODE_IP` (which should be the static IP of this same machine, as it will become the control node).
+4.  **Run Setup Script:** Execute the script with root privileges: `sudo bash setup.sh`
 5.  **Reboot.**
+
+After rebooting, this node is ready for Ansible provisioning (see Section 3). It should be designated as both a `controller_node` and your `pxe_server` in the Ansible inventory.
+
+### 2.2. Automated Setup (All Other Nodes)
+
+Once your first node has been provisioned by Ansible and the `pxe_server` role has been applied to it, you can automatically install Debian on all other bare-metal machines in your cluster.
+
+This system uses an advanced iPXE-over-HTTP method that is significantly faster and more reliable than traditional PXE. For detailed instructions on how to apply the Ansible role and prepare the client machines for network booting, see the **[iPXE Boot Server Setup Guide](PXE_BOOT_SETUP.md)**.
 
 ## 3. Control Node & Ansible Provisioning
 1.  **On your control node, install Ansible and Git:** `sudo apt install ansible git -y`

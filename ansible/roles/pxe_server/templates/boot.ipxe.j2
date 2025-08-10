@@ -1,0 +1,13 @@
+#!ipxe
+
+echo iPXE boot script loaded
+
+set base-url http://{{ ansible_default_ipv4.address }}/debian
+kernel ${base-url}/linux
+initrd ${base-url}/initrd.gz
+
+# The preseed file is now served over HTTP as well
+# The 'auto=true' and 'priority=critical' flags automate the installer
+# The preseed/url points to our file, also served via HTTP
+imgargs linux auto=true priority=critical preseed/url=http://{{ ansible_default_ipv4.address }}/preseed.cfg --
+boot

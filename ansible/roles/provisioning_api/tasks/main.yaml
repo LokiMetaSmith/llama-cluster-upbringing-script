@@ -1,0 +1,41 @@
+---
+- name: Install API dependencies
+  pip:
+    name:
+      - fastapi
+      - uvicorn
+      - python-dotenv
+      - pyyaml
+    state: present
+  become: yes
+  when: inventory_hostname in groups['controller_nodes']
+
+- name: Create provisioning API directory
+  file:
+    path: /opt/provisioning_api
+    state: directory
+  become: yes
+  when: inventory_hostname in groups['controller_nodes']
+
+- name: Copy provisioning API script
+  copy:
+    src: provisioning_api.py
+    dest: /opt/provisioning_api/provisioning_api.py
+  become: yes
+  when: inventory_hostname in groups['controller_nodes']
+
+- name: Copy systemd service file
+  template:
+    src: provisioning-api.service.j2
+    dest: /etc/systemd/system/provisioning-api.service
+  notify: restart provisioning-api
+  become: yes
+  when: inventory_hostname in groups['controller_nodes']
+
+- name: Enable and start provisioning API service
+  systemd:
+    name: provisioning-api
+    enabled: yes
+    state: started
+  become: yes
+  when: inventory_hostname in groups['controller_nodes']
