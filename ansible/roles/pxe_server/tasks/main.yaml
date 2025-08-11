@@ -4,7 +4,6 @@
     name:
       - isc-dhcp-server
       - tftpd-hpa
-      - nfs-kernel-server
       - nginx
     state: present
   become: yes
@@ -72,15 +71,3 @@
     dest: /var/www/html/boot.ipxe
   become: yes
 
-- name: Create NFS root directory
-  file:
-    path: "{{ nfs_root }}"
-    state: directory
-  become: yes
-
-- name: Add NFS export
-  lineinfile:
-    path: /etc/exports
-    line: "{{ nfs_root }} *(ro,sync,no_subtree_check)"
-  notify: restart nfs
-  become: yes
