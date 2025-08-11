@@ -38,7 +38,7 @@ fi
 for module in "$MODULE_DIR"/*.sh; do
     if [ -f "$module" ]; then
         log "Running module: $(basename "$module")"
-        bash "$module"
+        source "$module"
         log "Finished module: $(basename "$module")"
     fi
 done
