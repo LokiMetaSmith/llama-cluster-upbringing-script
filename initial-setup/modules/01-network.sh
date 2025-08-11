@@ -1,15 +1,17 @@
 #!/bin/bash
 
-echo "Configuring network..."
+log "Configuring network..."
 
 # Check if the IP is already configured
 if ip addr show "$INTERFACE" | grep -q "$STATIC_IP"; then
-    echo "Static IP $STATIC_IP is already configured on $INTERFACE."
+    log "Static IP $STATIC_IP is already configured on $INTERFACE."
     exit 0
 fi
 
 # Backup the original interfaces file
-cp /etc/network/interfaces /etc/network/interfaces.bak
+if [ -f /etc/network/interfaces ]; then
+    cp /etc/network/interfaces /etc/network/interfaces.bak
+fi
 
 # Create the new interfaces file
 cat > /etc/network/interfaces <<EOL
@@ -20,7 +22,13 @@ iface $INTERFACE inet static
     gateway $GATEWAY
 EOL
 
-echo "Static IP configured. Restarting networking service..."
-systemctl restart networking
+log "Static IP configured. Restarting networking service..."
+if systemctl list-units --type=service | grep -q 'networking.service'; then
+    systemctl restart networking
+elif systemctl list-units --type=service | grep -q 'systemd-networkd.service'; then
+    systemctl restart systemd-networkd
+else
+    log "Could not find networking.service or systemd-networkd.service to restart."
+fi
 
-echo "Network configuration complete."
+log "Network configuration complete."
