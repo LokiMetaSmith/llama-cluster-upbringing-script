@@ -43,6 +43,17 @@ class WebSocketLogHandler(logging.Handler):
 logger = logging.getLogger()
 logger.addHandler(WebSocketLogHandler())
 
+# Custom frame processor to broadcast conversation to the web UI
+class UILogger(FrameProcessor):
+    def __init__(self, sender: str):
+        super().__init__()
+        self.sender = sender
+
+    async def process_frame(self, frame, direction):
+        if isinstance(frame, (TranscriptionFrame, TextFrame)):
+            await web_server.manager.broadcast(json.dumps({"type": self.sender, "data": frame.text}))
+        await self.push_frame(frame, direction)
+
 class BenchmarkCollector(FrameProcessor):
     def __init__(self):
         super().__init__()
@@ -411,7 +422,9 @@ async def main():
     pipeline_steps = [
         transport.input(),
         stt,
+        UILogger(sender="user"),
         twin,
+        UILogger(sender="agent"),
         tts,
         transport.output()
     ]

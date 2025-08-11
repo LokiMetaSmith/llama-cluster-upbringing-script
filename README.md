@@ -33,9 +33,9 @@ This system uses an advanced iPXE-over-HTTP method that is significantly faster 
 1.  **On your control node, install Ansible and Git:** `sudo apt install ansible git -y`
 2.  **Clone this repository.**
 3.  **Configure SSH:** Generate an SSH key (`ssh-keygen`) and distribute it to all cluster nodes (`ssh-copy-id user@<node_ip>`).
-4.  **Configure Ansible Inventory:** Edit `inventory.yaml` to list your nodes.
-    - The `controller_nodes` group must contain **exactly 3 nodes** to act as Nomad servers.
-    - All nodes (including controllers) must be in the `worker_nodes` group.
+4.  **Configure Ansible Inventory (`inventory.yaml`):** Edit the `inventory.yaml` file to define your cluster's hosts. This file tells Ansible which machines to connect to.
+    - Create a *host group* named `controller_nodes`. This group must contain exactly 3 nodes that will act as Nomad servers. **Note:** This is a host group in the inventory, not an Ansible role.
+    - Create a *host group* named `worker_nodes` that contains all nodes in the cluster (including the controllers).
 5.  **Provision the Cluster:** Run `ansible-playbook playbook.yaml`. This will install and configure all required software on all nodes.
 
 ## 4. Deploying the AI Services with Nomad
