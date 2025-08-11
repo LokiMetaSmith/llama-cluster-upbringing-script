@@ -1,16 +1,19 @@
 #!/bin/bash
 
-echo "Configuring hostname..."
+log "Configuring hostname..."
 
 # Check if the hostname is already set
-if [ "$(hostname)" == "$HOSTNAME" ]; then
-    echo "Hostname is already set to $HOSTNAME."
-    exit 0
+if [ "$(/bin/hostname)" == "$HOSTNAME" ]; then
+    log "Hostname is already set to $HOSTNAME."
+else
+    /bin/hostnamectl set-hostname "$HOSTNAME"
 fi
 
-hostnamectl set-hostname "$HOSTNAME"
-
 # Update /etc/hosts
-sed -i "s/127.0.1.1.*/127.0.1.1\t$HOSTNAME/g" /etc/hosts
+if grep -q "127.0.1.1" /etc/hosts; then
+    sed -i "s/127.0.1.1.*/127.0.1.1\t$HOSTNAME/g" /etc/hosts
+else
+    echo -e "127.0.1.1\t$HOSTNAME" >> /etc/hosts
+fi
 
-echo "Hostname set to $HOSTNAME."
+log "Hostname set to $HOSTNAME."

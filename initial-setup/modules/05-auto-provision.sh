@@ -13,7 +13,7 @@ cat > /usr/local/bin/call-home.sh << 'EOF'
 # This script runs once on first boot to trigger Ansible provisioning.
 
 # Find the IP address of this machine
-IP_ADDRESS=$(hostname -I | awk '{print $1}')
+IP_ADDRESS=$(/bin/hostname -I | awk '{print $1}')
 CONTROL_NODE_IP="{{ CONTROL_NODE_IP_PLACEHOLDER }}"
 
 echo "Attempting to call home to control node at ${CONTROL_NODE_IP}..."
@@ -27,7 +27,7 @@ for i in {1..30}; do
     if [ $? -eq 0 ]; then
         echo "Successfully called home. Provisioning should begin shortly."
         # Disable the service to prevent it from running again
-        systemctl disable call-home.service
+        /bin/systemctl disable call-home.service
         rm /usr/local/bin/call-home.sh
         exit 0
     fi
@@ -59,6 +59,6 @@ WantedBy=multi-user.target
 EOF
 
 # Enable the service
-systemctl enable call-home.service
+/bin/systemctl enable call-home.service
 
 log "Auto-provisioning service created and enabled. Node will call home on next boot."
