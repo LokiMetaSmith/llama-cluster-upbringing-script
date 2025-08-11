@@ -80,6 +80,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (type === "log") {
             logToTerminal(data);
+        } else if (type === "user") {
+            logToTerminal(`<strong>You:</strong> ${data}`, "user-message");
+        } else if (type === "agent") {
+            logToTerminal(`<strong>Agent:</strong> ${data}`, "agent-message");
         } else if (type === "display") {
             renderEffect(data.text, data.effect);
         } else if (type === "approval_request") {
