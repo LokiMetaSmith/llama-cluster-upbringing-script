@@ -1,7 +1,7 @@
 ---
 - name: Set paddler version
   set_fact:
-    paddler_version: "v1.2.0"
+    paddler_version: "v1.2.1-rc1"
 
 - name: Set paddler archive name
   set_fact:
