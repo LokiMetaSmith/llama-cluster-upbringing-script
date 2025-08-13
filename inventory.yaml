@@ -2,9 +2,9 @@ all:
   children:
     controller_nodes:
       hosts:
-        AID-E-1:
+        localhost:
     worker_nodes:
       hosts:
-        AID-E-1:
+        localhost:
   vars:
-    ansible_user: user
+    ansible_user: jules
