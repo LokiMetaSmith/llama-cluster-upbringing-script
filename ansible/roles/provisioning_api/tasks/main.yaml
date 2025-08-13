@@ -7,7 +7,7 @@
       - python-dotenv
       - pyyaml
     state: present
-  become: yes
+    virtualenv: /home/user/.local
   when: inventory_hostname in groups['controller_nodes']
 
 - name: Create provisioning API directory
