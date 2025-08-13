@@ -3,8 +3,10 @@ all:
     controller_nodes:
       hosts:
         localhost:
+        AID-E-24:
     worker_nodes:
       hosts:
         localhost:
+        AID-E-24:
   vars:
-    ansible_user: jules
+    ansible_user: user
