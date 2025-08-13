@@ -1,8 +1,14 @@
 ---
-- name: Set paddler version and archive name
+- name: Set paddler version
   set_fact:
     paddler_version: "v1.2.0"
+
+- name: Set paddler archive name
+  set_fact:
     paddler_archive: "paddler-{{ paddler_version }}-linux-amd64.tar.gz"
+
+- name: Set paddler URL
+  set_fact:
     paddler_url: "https://github.com/distantmagic/paddler/releases/download/{{ paddler_version }}/{{ paddler_archive }}"
 
 - name: Download Paddler

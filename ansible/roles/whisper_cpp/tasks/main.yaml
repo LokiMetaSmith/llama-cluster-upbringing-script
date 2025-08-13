@@ -17,8 +17,12 @@
     chdir: /home/user/whisper.cpp
     creates: /home/user/whisper.cpp/models/ggml-base.en.bin
 
-- name: Build whisper.cpp
-  command: make main stream command talk talk-llama
+- name: Configure whisper.cpp build
+  command: cmake -B build
   args:
     chdir: /home/user/whisper.cpp
-    creates: /home/user/whisper.cpp/main
+
+- name: Build whisper.cpp
+  command: cmake --build build --config Release -j
+  args:
+    chdir: /home/user/whisper.cpp

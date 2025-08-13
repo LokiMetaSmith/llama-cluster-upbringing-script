@@ -4,9 +4,11 @@ all:
       hosts:
         localhost:
         AID-E-24:
+          ansible_host: 127.0.0.1
     worker_nodes:
       hosts:
         localhost:
-        AID-E-24:
+          ansible_host: 127.0.0.1
+          AID-E-24:
   vars:
     ansible_user: user

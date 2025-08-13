@@ -7,3 +7,7 @@
 - [ ] Web UI: Display a cartoon robot face (ASCII art) in the web UI.
 
 All major features are implemented. Please see the README.md for a complete list of features and usage instructions.
+
+## For Future Review
+
+- [ ] Review `llama.cpp` optimization guide for server performance tuning: https://blog.steelph0enix.dev/posts/llama-cpp-guide/#llamacpp-server-settings
