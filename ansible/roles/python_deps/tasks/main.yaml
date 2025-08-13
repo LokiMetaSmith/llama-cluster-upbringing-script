@@ -1,16 +1,27 @@
 ---
-- name: Create a virtual environment
+- name: Create a virtual environment as root
   command: python3 -m venv /home/user/.local --system-site-packages
   args:
     creates: /home/user/.local/bin/pip
+  become: yes
 
 - name: Copy requirements.txt
   copy:
     src: requirements.txt
     dest: /home/user/requirements.txt
+  become: yes
 
-- name: Install python dependencies
+- name: Install python dependencies as root
   pip:
     requirements: /home/user/requirements.txt
     virtualenv: /home/user/.local
-    virtualenv_command: /usr/bin/python3 -m venv
+  become: yes
+
+- name: Set ownership of virtual environment to user
+  file:
+    path: /home/user/.local
+    state: directory
+    owner: user
+    group: user
+    recurse: yes
+  become: yes
