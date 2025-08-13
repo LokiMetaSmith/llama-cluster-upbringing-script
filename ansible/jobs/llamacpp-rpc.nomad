@@ -1,6 +1,6 @@
-job "llamacpp-rpc-{{ meta.JOB_NAME | default \"default\" }}" {
+job "llamacpp-rpc-{{ meta.JOB_NAME | default('default') }}" {
   datacenters = ["dc1"]
-  namespace   = "{{ meta.NAMESPACE | default \"default\" }}"
+  namespace   = "{{ meta.NAMESPACE | default('default') }}"
 
   meta {
     NAMESPACE         = "default"
@@ -20,13 +20,9 @@ job "llamacpp-rpc-{{ meta.JOB_NAME | default \"default\" }}" {
       template {
         data = <<EOH
 #!/bin/bash
-WORKER_IPS=$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME }} | tr '\n' ',' | sed 's/,$//')
+WORKER_IPS=$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME | default('llama-rpc-worker-default') }} | tr '\n' ',' | sed 's/,$//')
 
-/home/user/llama.cpp/build/bin/llama-server \
-  --model {{ meta.MODEL_PATH }} \
-  --host 0.0.0.0 \
-  --port {{ env "NOMAD_PORT_http" }} \
-  --rpc-servers $WORKER_IPS
+/home/user/llama.cpp/build/bin/llama-server --model {{ meta.MODEL_PATH | default('/path/to/your/default/model.gguf') }} --host 0.0.0.0 --port {{ '{{ env "NOMAD_PORT_http" }}' }} --rpc-servers $WORKER_IPS
 EOH
         destination = "local/run_master.sh"
         perms       = "0755"
@@ -37,7 +33,7 @@ EOH
       }
 
       service {
-        name = meta.API_SERVICE_NAME
+        name = "{{ meta.API_SERVICE_NAME | default('llama-api-default') }}"
         port = "http"
 
         connect {
@@ -54,7 +50,7 @@ EOH
   }
 
   group "workers" {
-    count = meta.WORKER_COUNT
+    count = "{{ meta.WORKER_COUNT | default('2') }}"
 
     task "llama-worker" {
       driver = "exec"
@@ -62,14 +58,14 @@ EOH
       config {
         command = "/home/user/llama.cpp/build/bin/llama-server"
         args = [
-          "--model", meta.MODEL_PATH,
+          "--model", "{{ meta.MODEL_PATH | default('/path/to/your/default/model.gguf') }}",
           "--host", "0.0.0.0",
-          "--port", env.NOMAD_PORT_rpc,
+          "--port", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}",
         ]
       }
 
       service {
-        name = meta.RPC_SERVICE_NAME
+        name = "{{ meta.RPC_SERVICE_NAME | default('llama-rpc-worker-default') }}"
         port = "rpc"
 
         connect {
