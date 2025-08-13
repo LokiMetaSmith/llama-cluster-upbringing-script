@@ -21,7 +21,7 @@ if groups "$USERNAME" | grep -q '\bsudo\b'; then
     log "User $USERNAME is already in the sudo group."
 else
     log "Adding user $USERNAME to the sudo group..."
-    usermod -aG sudo "$USERNAME"
+    /usr/sbin/usermod -aG sudo "$USERNAME"
     log "User $USERNAME added to the sudo group."
 fi
 

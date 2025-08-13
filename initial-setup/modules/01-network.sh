@@ -5,7 +5,7 @@ log "Configuring network..."
 # Check if the IP is already configured
 if ip addr show "$INTERFACE" | grep -q "$STATIC_IP"; then
     log "Static IP $STATIC_IP is already configured on $INTERFACE."
-    exit 0
+    return 0 # Use return instead of exit in a sourced script
 fi
 
 # Backup the original interfaces file

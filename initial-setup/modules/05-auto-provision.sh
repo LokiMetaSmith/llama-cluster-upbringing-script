@@ -4,7 +4,7 @@ log "Setting up auto-provisioning 'call home' service..."
 
 if [ -z "${CONTROL_NODE_IP:-}" ]; then
     log "CONTROL_NODE_IP not set in setup.conf. Skipping auto-provisioning setup."
-    exit 0
+    return 0
 fi
 
 # Create the call-home script
