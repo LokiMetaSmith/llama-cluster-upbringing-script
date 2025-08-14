@@ -4,11 +4,13 @@
     name:
       - python3-venv
       - python3-dev
+      - python3.12-dev
+      - python3.12-venv
     state: present
   become: yes
 
-- name: Create a virtual environment with system python
-  command: python3 -m venv /home/{{ ansible_user }}/.local
+- name: Create a virtual environment with python3.12
+  command: python3.12 -m venv /home/{{ ansible_user }}/.local
   args:
     creates: /home/{{ ansible_user }}/.local/bin/pip
   become: yes
