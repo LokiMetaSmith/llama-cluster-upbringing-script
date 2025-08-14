@@ -1,4 +1,16 @@
 ---
+- name: Install prerequisites for adding apt repositories
+  apt:
+    name: software-properties-common
+    state: present
+  become: yes
+
+- name: Add deadsnakes PPA for recent Python versions
+  apt_repository:
+    repo: 'ppa:deadsnakes/ppa'
+    state: present
+  become: yes
+
 - name: Install python venv and dev packages
   apt:
     name:
