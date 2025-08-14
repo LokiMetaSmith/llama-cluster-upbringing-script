@@ -12,7 +12,7 @@
   apt:
     name:
       - openssh-server
-      - ntpdate
+      - chrony
       - git
       - cmake
       - python3-full
