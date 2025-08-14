@@ -1,14 +1,6 @@
 ---
-- name: Install python3.12 venv package
-  apt:
-    name:
-      - python3.12-venv
-      - python3.12-dev
-    state: present
-  become: yes
-
-- name: Create a virtual environment with python3.12
-  command: python3.12 -m venv /home/{{ ansible_user }}/.local
+- name: Create a virtual environment
+  command: python3 -m venv /home/{{ ansible_user }}/.local
   args:
     creates: /home/{{ ansible_user }}/.local/bin/pip
   become: yes
