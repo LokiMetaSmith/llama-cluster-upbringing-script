@@ -15,6 +15,7 @@
       - chrony
       - git
       - cmake
+      - curl
       - python3-full
       - python3-pip
       - libcurl4-openssl-dev
