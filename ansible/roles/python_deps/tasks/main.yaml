@@ -1,5 +1,13 @@
 ---
-- name: Create a virtual environment
+- name: Install python venv and dev packages
+  apt:
+    name:
+      - python3-venv
+      - python3-dev
+    state: present
+  become: yes
+
+- name: Create a virtual environment with system python
   command: python3 -m venv /home/{{ ansible_user }}/.local
   args:
     creates: /home/{{ ansible_user }}/.local/bin/pip
