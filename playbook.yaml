@@ -9,10 +9,10 @@
     - llama_cpp
     - whisper_cpp
     - python_deps
-    - paddler
+    # - paddler
     - provisioning_api
-    - primacpp
-    - vision
+    # - primacpp
+    # - vision
     - docker
-    - desktop_extras
+    # - desktop_extras
     - kittentts

@@ -1,27 +1,27 @@
 ---
 - name: Create a virtual environment as root
-  command: python3 -m venv /home/user/.local --system-site-packages
+  command: python3 -m venv /home/{{ ansible_user }}/.local --system-site-packages
   args:
-    creates: /home/user/.local/bin/pip
+    creates: /home/{{ ansible_user }}/.local/bin/pip
   become: yes
 
 - name: Copy requirements.txt
   copy:
     src: requirements.txt
-    dest: /home/user/requirements.txt
+    dest: /home/{{ ansible_user }}/requirements.txt
   become: yes
 
 - name: Install python dependencies as root
   pip:
-    requirements: /home/user/requirements.txt
-    virtualenv: /home/user/.local
+    requirements: /home/{{ ansible_user }}/requirements.txt
+    virtualenv: /home/{{ ansible_user }}/.local
   become: yes
 
 - name: Set ownership of virtual environment to user
   file:
-    path: /home/user/.local
+    path: /home/{{ ansible_user }}/.local
     state: directory
-    owner: user
-    group: user
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     recurse: yes
   become: yes
