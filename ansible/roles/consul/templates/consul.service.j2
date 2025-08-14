@@ -5,6 +5,7 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
+Environment="HOME=/root"
 ExecStart=/usr/local/bin/consul agent -config-dir={{ consul_config_dir }}
 KillMode=process
 Restart=on-failure
