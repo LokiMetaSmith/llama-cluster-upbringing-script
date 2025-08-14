@@ -1,52 +1,63 @@
 ---
-- name: Install prerequisite packages
+# tasks file for docker
+
+- name: Install prerequisite packages for Docker
+  become: yes
   apt:
     name:
       - ca-certificates
       - curl
       - gnupg
     state: present
-  become: yes
+    update_cache: yes
 
 - name: Create directory for Docker GPG key
+  become: yes
   file:
     path: /etc/apt/keyrings
     state: directory
     mode: '0755'
-  become: yes
 
 - name: Add Docker's official GPG key
+  become: yes
   get_url:
     url: https://download.docker.com/linux/debian/gpg
     dest: /etc/apt/keyrings/docker.asc
     mode: '0644'
-    force: yes
-  become: yes
+    force: true
+  register: add_gpg_key
 
 - name: Add Docker repository
-  apt_repository:
-    repo: "deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
-    state: present
   become: yes
+  apt_repository:
+    repo: >
+      deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc]
+      https://download.docker.com/linux/debian
+      {{ ansible_distribution_release }} stable
+    state: present
+    filename: docker
+  register: add_repo
 
-- name: Update apt cache
+- name: Update apt cache if repo was added
+  become: yes
   apt:
     update_cache: yes
-  become: yes
+  when: add_repo.changed
 
 - name: Install Docker Engine
+  become: yes
   apt:
     name:
       - docker-ce
       - docker-ce-cli
       - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
     state: present
-    update_cache: yes
-  become: yes
 
-- name: Add user to docker group
-  user:
-    name: "{{ ansible_user }}"
-    groups: docker
-    append: yes
+- name: Ensure Docker service is running and enabled on boot
   become: yes
+  service:
+    name: docker
+    state: started
+    enabled: yes
