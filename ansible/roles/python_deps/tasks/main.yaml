@@ -1,29 +1,31 @@
 ---
-- name: 1. Clean up duplicate entry in sources.list
-  become: yes
-  ansible.builtin.lineinfile:
-    path: /etc/apt/sources.list
-    # This line is redundant, so we remove it
-    line: 'deb http://deb.debian.org/debian/ trixie main non-free-firmware'
-    state: absent
-
-- name: 2. Ensure the complete sources.list entry is present
-  become: yes
-  ansible.builtin.lineinfile:
-    path: /etc/apt/sources.list
-    # This is the comprehensive line we want to keep
-    line: 'deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware'
-    state: present
-
-- name: 3. Update apt cache
+- name: 1. Update apt package cache
   become: yes
   apt:
     update_cache: yes
-    cache_valid_time: 3600
+    cache_valid_time: 3600 # Cache is valid for 1 hour
 
-- name: 4. Install package using a direct command (workaround)
+- name: 2. Install Python 3.12 packages from official Debian repos
   become: yes
-  ansible.builtin.command: apt-get install -y software-properties-common
+  apt:
+    name:
+      - python3.12
+      - python3.12-dev
+      - python3.12-venv
+      - python3-pip
+    state: present
+
+# --- The rest of your user-specific tasks ---
+# These should now work correctly.
+
+- name: 3. Create a virtual environment with python3.12
+  command: python3.12 -m venv /home/{{ ansible_user }}/.local
   args:
-    # This makes the task idempotent. It won't run if the package is already installed.
-    creates: /usr/bin/add-apt-repository
+    creates: /home/{{ ansible_user }}/.local/bin/pip
+  become: no # Run as the user
+
+- name: 4. Install python dependencies into the virtual environment
+  pip:
+    requirements: "{{ role_path }}/files/requirements.txt"
+    executable: /home/{{ ansible_user }}/.local/bin/pip
+  become: no # Run as the user
