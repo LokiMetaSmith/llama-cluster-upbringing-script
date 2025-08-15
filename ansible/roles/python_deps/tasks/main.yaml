@@ -1,16 +1,26 @@
 ---
-- name: Ensure Debian sources list is complete
+- name: 1. Read the contents of sources.list for debugging
   become: yes
-  ansible.builtin.lineinfile:
-    path: /etc/apt/sources.list
-    regexp: '^deb http://deb.debian.org/debian trixie'
-    line: 'deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware'
-    state: present
+  ansible.builtin.command: cat /etc/apt/sources.list
+  register: sources_list_content
+  changed_when: false
 
-- name: Install prerequisites for adding apt repositories
+- name: 2. Display the contents of sources.list
+  ansible.builtin.debug:
+    var: sources_list_content.stdout_lines
+
+- name: 3. Forcibly run 'apt-get update' and capture all output
+  become: yes
+  ansible.builtin.command: apt-get update
+  register: apt_update_output
+  failed_when: false # Continue even if this command reports an error
+
+- name: 4. Display the FULL output of the apt-get update command
+  ansible.builtin.debug:
+    var: apt_update_output
+
+- name: 5. Attempt to install the package one last time
   become: yes
   apt:
     name: software-properties-common
     state: present
-    update_cache: yes
-    cache_valid_time: 3600 # Cache is considered valid for 1 hour
