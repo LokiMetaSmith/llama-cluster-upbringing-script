@@ -1,4 +1,5 @@
 ---
+# These tasks require root, so 'become: yes' is correct
 - name: Install prerequisites for adding apt repositories
   apt:
     name: software-properties-common
@@ -22,23 +23,17 @@
     state: present
   become: yes
 
+# --- User-specific tasks ---
+# These tasks should run as the user, so we remove 'become: yes'
+
 - name: Create a virtual environment with python3.12
   command: python3.12 -m venv /home/{{ ansible_user }}/.local
   args:
     creates: /home/{{ ansible_user }}/.local/bin/pip
-  become: yes
+  # 'become: yes' is removed
 
 - name: Install python dependencies into the virtual environment
   pip:
     requirements: "{{ role_path }}/files/requirements.txt"
     executable: /home/{{ ansible_user }}/.local/bin/pip
-  become: yes
-
-- name: Set ownership of virtual environment to user
-  file:
-    path: /home/{{ ansible_user }}/.local
-    state: directory
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    recurse: yes
-  become: yes
+  # 'become: yes' is removed
