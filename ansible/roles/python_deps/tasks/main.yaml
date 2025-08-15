@@ -10,6 +10,8 @@
   apt_repository:
     repo: 'ppa:deadsnakes/ppa'
     state: present
+    update_cache: yes
+    cache_valid_time: 3600 # Optional: Avoids updating too frequently
   become: yes
 
 - name: Install python venv and dev packages
