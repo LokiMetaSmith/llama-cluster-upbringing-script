@@ -3,6 +3,7 @@
   apt:
     name: software-properties-common
     state: present
+    update_cache: yes
   become: yes
 
 - name: Add deadsnakes PPA for recent Python versions
