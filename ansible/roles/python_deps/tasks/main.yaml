@@ -6,8 +6,9 @@
     regexp: '^deb http://deb.debian.org/debian trixie'
     line: 'deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware'
     state: present
-    update_cache: yes
-    cache_valid_time: 3600 # Optional: Avoids updating too frequently
+  register: sources_list_status
+
+- name: Update apt cache if sources.list changed
   become: yes
   apt:
     update_cache: yes
@@ -18,4 +19,4 @@
   apt:
     name: software-properties-common
     state: present
-    update_cache: yes # Keep this here as a safety net
+    update_cache: yes # Safety net update
