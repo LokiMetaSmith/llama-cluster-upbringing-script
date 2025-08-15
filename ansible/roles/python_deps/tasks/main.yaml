@@ -1,39 +1,22 @@
 ---
-# These tasks require root, so 'become: yes' is correct
+- name: Ensure Debian sources list is complete
+  become: yes
+  ansible.builtin.lineinfile:
+    path: /etc/apt/sources.list
+    regexp: '^deb http://deb.debian.org/debian trixie'
+    line: 'deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware'
+    state: present
+  register: sources_list_status
+
+- name: Update apt cache if sources.list changed
+  become: yes
+  apt:
+    update_cache: yes
+  when: sources_list_status.changed
+
 - name: Install prerequisites for adding apt repositories
+  become: yes
   apt:
     name: software-properties-common
     state: present
-    update_cache: yes
-  become: yes
-
-- name: Add deadsnakes PPA for recent Python versions
-  apt_repository:
-    repo: 'ppa:deadsnakes/ppa'
-    state: present
-  become: yes
-
-- name: Install python venv and dev packages
-  apt:
-    name:
-      - python3-venv
-      - python3-dev
-      - python3.12-dev
-      - python3.12-venv
-    state: present
-  become: yes
-
-# --- User-specific tasks ---
-# These tasks should run as the user, so we remove 'become: yes'
-
-- name: Create a virtual environment with python3.12
-  command: python3.12 -m venv /home/{{ ansible_user }}/.local
-  args:
-    creates: /home/{{ ansible_user }}/.local/bin/pip
-  # 'become: yes' is removed
-
-- name: Install python dependencies into the virtual environment
-  pip:
-    requirements: "{{ role_path }}/files/requirements.txt"
-    executable: /home/{{ ansible_user }}/.local/bin/pip
-  # 'become: yes' is removed
+    update_cache: yes # Keep this here as a safety net
