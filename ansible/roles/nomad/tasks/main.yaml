@@ -42,29 +42,8 @@
     dest: "{{ nomad_config_dir }}/nomad.hcl"
   notify: restart nomad
 
-- name: Copy Nomad client config
-  template:
-    src: client.hcl.j2
-    dest: "{{ nomad_config_dir }}/client.hcl"
-  when: "'worker_nodes' in group_names"
-  notify: restart nomad
-
-- name: Copy Nomad server config
-  template:
-    src: server.hcl.j2
-    dest: "{{ nomad_config_dir }}/server.hcl"
-  when: "'controller_nodes' in group_names"
-  notify: restart nomad
-
 - name: Copy Nomad systemd service file
   template:
     src: nomad.service.j2
     dest: /etc/systemd/system/nomad.service
   notify: restart nomad
-
-- name: Start and enable Nomad service
-  systemd:
-    name: nomad
-    state: started
-    enabled: yes
-    daemon_reload: yes
