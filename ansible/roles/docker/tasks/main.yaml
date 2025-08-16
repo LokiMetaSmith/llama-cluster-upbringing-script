@@ -55,10 +55,4 @@
       - docker-compose-plugin
       - fuse-overlayfs
     state: present
-
-- name: Ensure Docker service is running and enabled on boot
-  become: yes
-  service:
-    name: docker
-    state: started
-    enabled: yes
+  notify: Restart docker
