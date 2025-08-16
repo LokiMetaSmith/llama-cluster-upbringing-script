@@ -36,7 +36,12 @@ This system uses an advanced iPXE-over-HTTP method that is significantly faster 
 4.  **Configure Ansible Inventory (`inventory.yaml`):** Edit the `inventory.yaml` file to define your cluster's hosts. This file tells Ansible which machines to connect to.
     - Create a *host group* named `controller_nodes`. This group must contain exactly 3 nodes that will act as Nomad servers. **Note:** This is a host group in the inventory, not an Ansible role.
     - Create a *host group* named `worker_nodes` that contains all nodes in the cluster (including the controllers).
-5.  **Provision the Cluster:** Run `ansible-playbook playbook.yaml`. This will install and configure all required software on all nodes.
+5.  **Run the Playbook:**
+    To provision the cluster, run the following command from the root of this repository. This will install and configure all required software on all nodes.
+    ```bash
+    ansible-playbook -i inventory.yaml playbook.yaml --ask-become-pass
+    ```
+    - **`--ask-become-pass`**: This flag is important. It will prompt you for your `sudo` password, which Ansible needs to perform administrative tasks on the cluster nodes. Run this command as your regular user, not as root.
 
 ## 4. Deploying the AI Services with Nomad
 After provisioning, deploy the services from your control node.
