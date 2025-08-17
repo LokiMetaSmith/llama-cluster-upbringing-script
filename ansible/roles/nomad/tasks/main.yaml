@@ -36,10 +36,18 @@
     state: directory
     mode: '0755'
 
-- name: Copy Nomad config
+- name: Copy Nomad server config
   template:
-    src: nomad.hcl.j2
+    src: nomad.hcl.server.j2
     dest: "{{ nomad_config_dir }}/nomad.hcl"
+  when: inventory_hostname in groups['controller_nodes']
+  notify: restart nomad
+
+- name: Copy Nomad client config
+  template:
+    src: nomad.hcl.client.j2
+    dest: "{{ nomad_config_dir }}/nomad.hcl"
+  when: inventory_hostname not in groups['controller_nodes']
   notify: restart nomad
 
 - name: Copy Nomad systemd service file
