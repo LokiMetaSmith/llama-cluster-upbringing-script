@@ -36,24 +36,18 @@
     state: directory
     mode: '0755'
 
-- name: Copy Nomad config
+- name: Copy Nomad server config
   template:
-    src: nomad.hcl.j2
+    src: nomad.hcl.server.j2
     dest: "{{ nomad_config_dir }}/nomad.hcl"
+  when: inventory_hostname in groups['controller_nodes']
   notify: restart nomad
 
 - name: Copy Nomad client config
   template:
-    src: client.hcl.j2
-    dest: "{{ nomad_config_dir }}/client.hcl"
-  when: "'worker_nodes' in group_names"
-  notify: restart nomad
-
-- name: Copy Nomad server config
-  template:
-    src: server.hcl.j2
-    dest: "{{ nomad_config_dir }}/server.hcl"
-  when: "'controller_nodes' in group_names"
+    src: nomad.hcl.client.j2
+    dest: "{{ nomad_config_dir }}/nomad.hcl"
+  when: inventory_hostname not in groups['controller_nodes']
   notify: restart nomad
 
 - name: Copy Nomad systemd service file
@@ -61,10 +55,3 @@
     src: nomad.service.j2
     dest: /etc/systemd/system/nomad.service
   notify: restart nomad
-
-- name: Start and enable Nomad service
-  systemd:
-    name: nomad
-    state: started
-    enabled: yes
-    daemon_reload: yes
