@@ -10,5 +10,7 @@ all:
         localhost:
           ansible_connection: local
           ansible_host: 127.0.0.1
+        AID-E-23:
+          ansible_host: AID-E-23
   vars:
     ansible_user: user
