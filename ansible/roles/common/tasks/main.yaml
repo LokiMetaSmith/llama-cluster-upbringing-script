@@ -20,3 +20,21 @@
       - python3-pip
       - libcurl4-openssl-dev
     state: present
+
+- name: Find the default gateway interface
+  shell: "ip route | grep default | awk '{print $5}'"
+  register: default_gw_interface
+  changed_when: false
+  check_mode: no
+  when: ansible_host != '127.0.0.1'
+
+- name: Disable any non-gateway interfaces that have an IP
+  community.general.nmcli:
+    conn: "{{ item.device }}"
+    state: disconnected
+  loop: "{{ ansible_interfaces }}"
+  when:
+    - ansible_host != '127.0.0.1'
+    - item.ipv4 is defined
+    - item.device != default_gw_interface.stdout
+    - item.device != 'lo'
