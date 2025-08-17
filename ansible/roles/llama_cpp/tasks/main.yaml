@@ -1,7 +1,7 @@
 ---
 - name: Clone llama.cpp repository
   git:
-    repo: 'https://github.com/ggerganov/llama.cpp.git'
+    repo: 'https://github.com/ggml-org/llama.cpp.git'
     dest: /home/user/llama.cpp
     version: master
     update: yes
