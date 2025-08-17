@@ -5,25 +5,27 @@
     update_cache: yes
     cache_valid_time: 3600 # Cache is valid for 1 hour
 
-- name: 2. Install default Python dev and venv packages
+- name: 2. Install Python 3.12 packages from official Debian repos
   become: yes
   apt:
     name:
-      # On modern Debian, we install the generic packages, which correspond
-      # to the system's default Python version (which is 3.12 for you).
-      - python3-dev
-      - python3-venv
+      - python3.12
+      - python3.12-dev
+      - python3.12-venv
       - python3-pip
     state: present
 
-- name: 3. Create a virtual environment using the default python3
-  become: no # Run as the user
-  command: python3 -m venv /home/{{ ansible_user }}/.local
+# --- The rest of your user-specific tasks ---
+# These should now work correctly.
+
+- name: 3. Create a virtual environment with python3.12
+  command: python3.12 -m venv /home/{{ ansible_user }}/.local
   args:
     creates: /home/{{ ansible_user }}/.local/bin/pip
+  become: no # Run as the user
 
 - name: 4. Install python dependencies into the virtual environment
-  become: no # Run as the user
   pip:
     requirements: "{{ role_path }}/files/requirements.txt"
     executable: /home/{{ ansible_user }}/.local/bin/pip
+  become: no # Run as the user
