@@ -105,3 +105,45 @@ By combining these benchmarks with system monitoring tools, you can get a comple
 *   **Test Different Models:** Run the `llama-bench` benchmark against various models (e.g., a 3B parameter model vs. a 7B one). This will show you how well your hardware scales to handle more complex models.
 *   **Monitor System Resources:** While a benchmark is running, log in to your cluster nodes and use command-line tools like `htop` or `top`. This will give you a real-time view of CPU and memory usage, showing you exactly how much load the AI workload is placing on your machines.
 *   **Compare Backends:** Run the same `llama-bench` test against both the `prima.cpp` and `llamacpp-rpc` backends (running them one at a time). This will give you concrete data on which inference engine performs better on your specific hardware setup.
+
+---
+
+## 4. Verifying Cluster Health
+
+After provisioning a new node or restarting the cluster, it's important to verify that all services are running correctly.
+
+### Check Consul Status
+
+This command asks the Consul service for a list of all members in the service mesh.
+
+```bash
+consul members
+```
+
+You should see a list of all the nodes in your cluster with a status of "alive".
+
+**Example Output:**
+```
+Node      Address            Status  Type    Build   Protocol  DC   Partition  Segment
+AID-E-24  192.168.1.30:8301  alive   server  1.18.1  2         dc1  default    <all>
+AID-E-23  192.168.1.188:8301  alive   client  1.18.1  2         dc1  default    <all>
+```
+
+### Check Nomad Status
+
+This command asks the Nomad service for the status of the nodes it's managing.
+
+```bash
+nomad node status
+```
+
+This should show you all the nodes that have successfully joined the Nomad cluster with a status of "ready".
+
+**Example Output:**
+```
+ID        DC   Name      Class   Drain  Eligibility  Status
+1c3af54a  dc1  AID-E-24  <none>  false  eligible     ready
+a4f8e6c1  dc1  AID-E-23  <none>  false  eligible     ready
+```
+
+If both of these commands show a healthy status for all your nodes, your cluster is up and running correctly.
