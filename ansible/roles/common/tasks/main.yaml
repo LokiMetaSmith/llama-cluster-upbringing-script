@@ -21,6 +21,20 @@
       - libcurl4-openssl-dev
     state: present
 
+- name: Prefer IPv4 over IPv6 for outbound connections
+  lineinfile:
+    path: /etc/gai.conf
+    regexp: '^#precedence ::ffff:0:0/96  100'
+    line: 'precedence ::ffff:0:0/96  100'
+    backrefs: yes
+  when: ansible_host != '127.0.0.1'
+
+- name: Manage /etc/hosts file on controller for name resolution
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+  when: ansible_host == '127.0.0.1'
+
 - name: Find the default gateway interface
   shell: "ip route | grep default | awk '{print $5}'"
   register: default_gw_interface
