@@ -45,12 +45,9 @@
     - item.device != default_gw_interface.stdout
     - item.device != 'lo'
 
-- name: Disable system power saving states
-  systemd:
-    name: "{{ item }}"
-    masked: yes
-  loop:
-    - sleep.target
-    - suspend.target
-    - hibernate.target
-    - hybrid-sleep.target
+- name: Prevent system sleep but allow screen blanking
+  lineinfile:
+    path: /etc/systemd/logind.conf
+    regexp: '^#?IdleAction=.*'
+    line: 'IdleAction=lock'
+  notify: restart systemd-logind
