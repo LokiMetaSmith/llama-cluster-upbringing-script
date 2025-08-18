@@ -7,8 +7,16 @@
     - /etc/nomad.d/client.hcl
     - /etc/nomad.d/server.hcl
 
+- name: Create Nomad config directory
+  ansible.builtin.file:
+    path: /etc/nomad.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
 - name: Deploy the consolidated Nomad configuration from template
-  template:
+  ansible.builtin.template:
     src: nomad.hcl.j2
     dest: /etc/nomad.d/nomad.hcl
     owner: root
