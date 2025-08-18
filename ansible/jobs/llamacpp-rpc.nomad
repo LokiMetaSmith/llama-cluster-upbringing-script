@@ -14,6 +14,20 @@ job "llamacpp-rpc-{{ meta.JOB_NAME | default('default') }}" {
   group "master" {
     count = 1
 
+    network {
+      port "http" {}
+    }
+
+    service {
+      name     = "{{ meta.API_SERVICE_NAME | default('llama-api-default') }}"
+      provider = "consul"
+      port     = "http"
+
+      connect {
+        sidecar_service {}
+      }
+    }
+
     task "llama-master" {
       driver = "exec"
 
@@ -22,7 +36,7 @@ job "llamacpp-rpc-{{ meta.JOB_NAME | default('default') }}" {
 #!/bin/bash
 WORKER_IPS=$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME | default('llama-rpc-worker-default') }} | tr '\n' ',' | sed 's/,$//')
 
-/home/user/llama.cpp/build/bin/llama-server --model {{ meta.MODEL_PATH | default('/path/to/your/default/model.gguf') }} --host 0.0.0.0 --port {{ '{{ env "NOMAD_PORT_http" }}' }} --rpc-servers $WORKER_IPS
+/home/user/llama.cpp/build/bin/llama-server --model {{ meta.MODEL_PATH | default('/path/to/your/default/model.gguf') }} --host 0.0.0.0 --port {{ env "NOMAD_PORT_http" }} --rpc-servers $WORKER_IPS
 EOH
         destination = "local/run_master.sh"
         perms       = "0755"
@@ -31,26 +45,25 @@ EOH
       config {
         command = "local/run_master.sh"
       }
-
-      service {
-        name = "{{ meta.API_SERVICE_NAME | default('llama-api-default') }}"
-        port = "http"
-
-        connect {
-          sidecar_service {}
-        }
-
-        check {
-          type     = "tcp"
-          interval = "10s"
-          timeout  = "2s"
-        }
-      }
     }
   }
 
   group "workers" {
     count = "{{ meta.WORKER_COUNT | default('2') }}"
+
+    network {
+      port "rpc" {}
+    }
+
+    service {
+      name     = "{{ meta.RPC_SERVICE_NAME | default('llama-rpc-worker-default') }}"
+      provider = "consul"
+      port     = "rpc"
+
+      connect {
+        sidecar_service {}
+      }
+    }
 
     task "llama-worker" {
       driver = "exec"
@@ -60,17 +73,8 @@ EOH
         args = [
           "--model", "{{ meta.MODEL_PATH | default('/path/to/your/default/model.gguf') }}",
           "--host", "0.0.0.0",
-          "--port", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}",
+          "--port", "{{ env \"NOMAD_PORT_rpc\" }}",
         ]
-      }
-
-      service {
-        name = "{{ meta.RPC_SERVICE_NAME | default('llama-rpc-worker-default') }}"
-        port = "rpc"
-
-        connect {
-          sidecar_service {}
-        }
       }
     }
   }
