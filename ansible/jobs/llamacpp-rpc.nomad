@@ -36,7 +36,7 @@ job "llamacpp-rpc-{{ meta.JOB_NAME | default('default') }}" {
 #!/bin/bash
 WORKER_IPS=$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME | default('llama-rpc-worker-default') }} | tr '\n' ',' | sed 's/,$//')
 
-/home/user/llama.cpp/build/bin/llama-server --model {{ meta.MODEL_PATH | default('/path/to/your/default/model.gguf') }} --host 0.0.0.0 --port {{ env "NOMAD_PORT_http" }} --rpc-servers $WORKER_IPS
+/home/user/llama.cpp/build/bin/llama-server --model {{ meta.MODEL_PATH | default('/path/to/your/default/model.gguf') }} --host 0.0.0.0 --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} --rpc-servers $WORKER_IPS
 EOH
         destination = "local/run_master.sh"
         perms       = "0755"
@@ -73,7 +73,7 @@ EOH
         args = [
           "--model", "{{ meta.MODEL_PATH | default('/path/to/your/default/model.gguf') }}",
           "--host", "0.0.0.0",
-          "--port", "{{ env \"NOMAD_PORT_rpc\" }}",
+          "--port", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}",
         ]
       }
     }
