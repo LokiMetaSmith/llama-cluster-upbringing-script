@@ -1,0 +1,25 @@
+# Main data directory
+data_dir  = "/opt/nomad"
+
+# Listen on all network interfaces for API calls
+bind_addr = "0.0.0.0"
+
+# Tell other nodes how to reach this one.
+# This IP should be set in your Ansible inventory.
+advertise {
+  http = "{{ advertise_ip }}"
+  rpc  = "{{ advertise_ip }}"
+  serf = "{{ advertise_ip }}"
+}
+
+# Configure this node as a server
+server {
+  enabled          = true
+  # Set to 1 for a single-server cluster
+  bootstrap_expect = 1
+}
+
+# Configure this node as a client
+client {
+  enabled = true
+}

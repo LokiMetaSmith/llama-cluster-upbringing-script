@@ -1,58 +1,22 @@
 ---
-# tasks file for docker
+- name: Check if Docker is already installed
+  stat:
+    path: /usr/bin/docker
+  register: docker_stat_result
 
-- name: Install prerequisite packages for Docker
-  become: yes
-  apt:
-    name:
-      - ca-certificates
-      - curl
-      - gnupg
-    state: present
-    update_cache: yes
-
-- name: Create directory for Docker GPG key
-  become: yes
-  file:
-    path: /etc/apt/keyrings
-    state: directory
+- name: Download the official Docker installation script
+  when: not docker_stat_result.stat.exists
+  get_url:
+    url: https://get.docker.com
+    dest: /tmp/get-docker.sh
     mode: '0755'
 
-- name: Add Docker's official GPG key
-  become: yes
-  get_url:
-    url: https://download.docker.com/linux/debian/gpg
-    dest: /etc/apt/keyrings/docker.asc
-    mode: '0644'
-    force: true
-  register: add_gpg_key
+- name: Run the Docker installation script
+  when: not docker_stat_result.stat.exists
+  command: /tmp/get-docker.sh
 
-- name: Add Docker repository
-  become: yes
-  apt_repository:
-    repo: >
-      deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc]
-      https://download.docker.com/linux/debian
-      {{ ansible_distribution_release }} stable
-    state: present
-    filename: docker
-  register: add_repo
-
-- name: Update apt cache if repo was added
-  become: yes
-  apt:
-    update_cache: yes
-  when: add_repo.changed
-
-- name: Install Docker Engine
-  become: yes
-  apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-buildx-plugin
-      - docker-compose-plugin
-      - fuse-overlayfs
-    state: present
-  notify: Restart docker
+- name: Ensure Docker service is started and enabled
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
