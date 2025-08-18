@@ -14,6 +14,20 @@ job "prima-cluster-{{ meta.JOB_NAME | default \"default\" }}" {
   group "prima-nodes" {
     count = meta.NODE_COUNT
 
+    network {
+      port "http" {}
+    }
+
+    service {
+      name     = meta.SERVICE_NAME
+      provider = "consul"
+      port     = "http"
+
+      connect {
+        sidecar_service {}
+      }
+    }
+
     task "prima-cli" {
       driver = "raw_exec"
 
@@ -36,21 +50,6 @@ EOH
 
       config {
         command = "local/run.sh"
-      }
-
-      service {
-        name = meta.SERVICE_NAME
-        port = "8080"
-
-        connect {
-          sidecar_service {}
-        }
-
-        check {
-          type     = "tcp"
-          interval = "10s"
-          timeout  = "2s"
-        }
       }
     }
   }
