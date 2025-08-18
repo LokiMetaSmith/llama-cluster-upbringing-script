@@ -7,11 +7,11 @@ This directory contains a script for manually preparing a new worker node to be 
 Use this script if:
 - You are adding a new worker node to an existing cluster.
 - You cannot or do not want to use the PXE boot server to install the operating system.
-- You have already performed a minimal installation of Debian 12 (Bookworm) on the new machine.
+- You have already performed a minimal installation of Debian Trixie on the new machine.
 
 ## Steps
 
-1.  **Perform a minimal installation of Debian 12 (Bookworm)** on your new machine. Ensure you create a standard non-root user (e.g., `user`).
+1.  **Perform a minimal installation of Debian Trixie** on your new machine. Ensure you create a standard non-root user (e.g., `user`).
 2.  **Log in as root** on the new machine.
 3.  **Copy the `setup.sh` script** from this directory to the new machine (e.g., using `scp`).
 4.  **Make the script executable:**

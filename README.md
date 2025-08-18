@@ -5,7 +5,7 @@ This project provides a complete solution for deploying a high-performance, low-
 ## 1. System Requirements
 - **Cluster Nodes:** 3 to 20 legacy desktop computers (Intel Core 2 Duo or similar, 8GB RAM, SSD recommended).
 - **Control Node:** A machine to run Ansible for provisioning.
-- **Recommended OS:** Debian 12 (Bookworm), minimal install with SSH server.
+- **Recommended OS:** Debian Trixie, minimal install with SSH server.
 
 ## 2. Initial Machine Setup
 
@@ -15,7 +15,7 @@ Setting up a new cluster involves two main methods: a one-time manual setup for 
 
 The first node in your cluster requires a manual OS installation. This node will later be configured by Ansible to act as the PXE/iPXE boot server for all other nodes.
 
-1.  **Install Debian 12:** Perform a standard, minimal installation of Debian 12 with an SSH server.
+1.  **Install Debian Trixie:** Perform a standard, minimal installation of Debian Trixie with an SSH server.
 2.  **Clone this repository:** `git clone <repo_url>`
 3.  **Configure Initial Settings:** Enter the `initial-setup` directory and edit the `setup.conf` file. You must provide the machine's desired `HOSTNAME`, a static IP address, and the `CONTROL_NODE_IP` (which should be the static IP of this same machine, as it will become the control node).
 4.  **Run Setup Script:** Execute the script with root privileges: `sudo bash setup.sh`
