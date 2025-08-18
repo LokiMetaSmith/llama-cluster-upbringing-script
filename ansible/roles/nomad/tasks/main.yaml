@@ -1,57 +1,39 @@
 ---
-- name: Install unzip
-  apt:
-    name: unzip
-    state: present
+- name: Ensure old, conflicting Nomad config files are removed
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/nomad.d/client.hcl
+    - /etc/nomad.d/server.hcl
 
-- name: Download Nomad
-  command: "curl -L -o /tmp/nomad.zip {{ nomad_zip_url }}"
-  args:
-    creates: /tmp/nomad.zip
+- name: Deploy the consolidated Nomad configuration from template
+  template:
+    src: nomad.hcl.j2
+    dest: /etc/nomad.d/nomad.hcl
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Nomad
 
-- name: Unzip Nomad
-  unarchive:
-    src: "/tmp/nomad.zip"
-    dest: "/tmp"
-    remote_src: yes
-    creates: /tmp/nomad
+- name: Create systemd override directory for Nomad service
+  file:
+    path: /etc/systemd/system/nomad.service.d
+    state: directory
 
-- name: Move Nomad to /usr/local/bin
+- name: Add override to enforce startup order
   copy:
-    src: /tmp/nomad
-    dest: /usr/local/bin/nomad
-    remote_src: yes
+    dest: /etc/systemd/system/nomad.service.d/override.conf
+    content: |
+      [Unit]
+      Wants=consul.service docker.service
+      After=consul.service docker.service
+  notify: Reload systemd
+
+- name: Set NOMAD_ADDR environment variable for all users
+  copy:
+    dest: /etc/profile.d/nomad.sh
     mode: '0755'
-  become: yes
-
-- name: Create Nomad data directory
-  file:
-    path: "{{ nomad_data_dir }}"
-    state: directory
-    mode: '0755'
-
-- name: Create Nomad config directory
-  file:
-    path: "{{ nomad_config_dir }}"
-    state: directory
-    mode: '0755'
-
-- name: Copy Nomad server config
-  template:
-    src: nomad.hcl.server.j2
-    dest: "{{ nomad_config_dir }}/nomad.hcl"
-  when: inventory_hostname in groups['controller_nodes']
-  notify: restart nomad
-
-- name: Copy Nomad client config
-  template:
-    src: nomad.hcl.client.j2
-    dest: "{{ nomad_config_dir }}/nomad.hcl"
-  when: inventory_hostname not in groups['controller_nodes']
-  notify: restart nomad
-
-- name: Copy Nomad systemd service file
-  template:
-    src: nomad.service.j2
-    dest: /etc/systemd/system/nomad.service
-  notify: restart nomad
+    content: |
+      #!/bin/sh
+      export NOMAD_ADDR="http://127.0.0.1:4646"

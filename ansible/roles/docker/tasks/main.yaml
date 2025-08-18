@@ -1,50 +1,21 @@
 ---
-- name: Stop and disable existing Docker services if they exist
-  become: yes
-  systemd:
-    name: "{{ item }}"
-    state: stopped
-    enabled: no
-  loop:
-    - docker.service
-    - docker.socket
-    - containerd.service
-  ignore_errors: yes
+- name: Check if Docker is already installed
+  stat:
+    path: /usr/bin/docker
+  register: docker_stat_result
 
-- name: Purge existing Docker and containerd packages
-  become: yes
-  apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-buildx-plugin
-      - docker-compose-plugin
-      - docker-ce-rootless-extras
-    state: absent
-    purge: yes
-
-- name: Clean up old Docker data directories
-  become: yes
-  file:
-    path: "{{ item }}"
-    state: absent
-  loop:
-    - /var/lib/docker
-    - /var/lib/containerd
-
-- name: Download Docker installation script
+- name: Download the official Docker installation script
+  when: not docker_stat_result.stat.exists
   get_url:
     url: https://get.docker.com
     dest: /tmp/get-docker.sh
     mode: '0755'
 
-- name: Install Docker using the official script
-  become: yes
-  command: sh /tmp/get-docker.sh
+- name: Run the Docker installation script
+  when: not docker_stat_result.stat.exists
+  command: /tmp/get-docker.sh
 
-- name: Ensure Docker service is running and enabled on boot
-  become: yes
+- name: Ensure Docker service is started and enabled
   systemd:
     name: docker
     state: started
