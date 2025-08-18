@@ -2,17 +2,11 @@
 - hosts: all
   become: yes
   roles:
-    - common
     - consul
+    - docker
     - nomad
-    - nfs
+    - common
+    - python_deps
     - llama_cpp
     - whisper_cpp
-    - python_deps
-    # - paddler
     - provisioning_api
-    # - primacpp
-    # - vision
-    - docker
-    # - desktop_extras
-    # - kittentts
