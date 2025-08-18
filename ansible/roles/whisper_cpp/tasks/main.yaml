@@ -6,10 +6,11 @@
 
 - name: Clone whisper.cpp repository
   git:
-    repo: 'https://github.com/ggerganov/whisper.cpp.git'
+    repo: 'https://github.com/ggml-org/whisper.cpp.git'
     dest: /home/user/whisper.cpp
     version: master
     update: yes
+    force: yes
 
 - name: Download whisper.cpp model
   command: bash ./models/download-ggml-model.sh base.en

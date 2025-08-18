@@ -5,6 +5,7 @@
     dest: /home/user/llama.cpp
     version: master
     update: yes
+    force: yes
 
 - name: Configure llama.cpp build
   command: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON
