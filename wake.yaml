@@ -1,0 +1,12 @@
+---
+- name: Wake up all cluster nodes
+  hosts: all
+  gather_facts: no
+  connection: local
+
+  tasks:
+    - name: Send Wake-on-LAN magic packet
+      community.general.wakeonlan:
+        mac: "{{ mac_address }}"
+      delegate_to: localhost
+      when: mac_address is defined
