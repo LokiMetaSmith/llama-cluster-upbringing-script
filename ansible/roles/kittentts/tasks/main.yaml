@@ -1,6 +1,10 @@
----
-- name: Install KittenTTS and dependencies
-  pip:
+- name: Create a virtual environment for KittenTTS
+  ansible.builtin.command:
+    cmd: python3 -m venv /home/user/kittentts_venv
+    creates: /home/user/kittentts_venv/bin/pip # Makes this task idempotent
+
+- name: Install KittenTTS and dependencies into the virtual environment
+  ansible.builtin.pip:
     name:
       - num2words
       - spacy
@@ -12,4 +16,5 @@
       - huggingface_hub
       - https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-none-any.whl
     state: present
-    virtualenv: /home/user/.local
+    # This is the key: point to the pip inside the NEW venv
+    executable: /home/user/kittentts_venv/bin/pip3
