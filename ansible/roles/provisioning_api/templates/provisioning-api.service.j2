@@ -1,6 +1,8 @@
 [Unit]
 Description=Provisioning API Service
-After=network.target
+# Make it wait for the network and Consul to be ready
+After=network-online.target consul.service
+Wants=network-online.target consul.service
 
 [Service]
 User=root
