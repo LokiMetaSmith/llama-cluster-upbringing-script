@@ -40,6 +40,6 @@ all:
         AID-E-12:
           ansible_host: AID-E-12
   vars:
-    ansible_user: user
+ #  ansible_user: user # will specify specific user settings elsewhere
 
 
