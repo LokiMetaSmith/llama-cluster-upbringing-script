@@ -4,6 +4,10 @@
   become: no # We are already root
 
   tasks:
+    - name: Ensure the sudo package is installed
+      ansible.builtin.apt:
+        name: sudo
+        state: present
     - name: Ensure the sudo group exists
       ansible.builtin.group:
         name: sudo
@@ -24,7 +28,7 @@
         validate: 'visudo -cf %s'
         mode: '0440'
 
----
+
 - name: Play 2 - Configure Nodes as 'user'
   hosts: all
   remote_user: user
