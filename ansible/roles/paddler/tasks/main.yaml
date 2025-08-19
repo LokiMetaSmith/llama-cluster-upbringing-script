@@ -1,32 +1,26 @@
 ---
-- name: Set paddler version
+- name: Set Paddler version and architecture
   set_fact:
-    paddler_version: "v1.2.1-rc1"
+    paddler_version: "v2.1.0"
+    # Note: Choose the libc version appropriate for your systems.
+    # libc2.35 is a safe choice for broad compatibility.
+    paddler_binary: "paddler-bin-linux-libc2.35-amd64"
 
-- name: Set paddler archive name
+- name: Set Paddler URL
   set_fact:
-    paddler_archive: "paddler-{{ paddler_version }}-linux-amd64.tar.gz"
+    paddler_url: "https://github.com/distantmagic/paddler/releases/download/{{ paddler_version }}/{{ paddler_binary }}"
 
-- name: Set paddler URL
-  set_fact:
-    paddler_url: "https://github.com/distantmagic/paddler/releases/download/{{ paddler_version }}/{{ paddler_archive }}"
-
-- name: Download Paddler
+- name: Download Paddler binary
   get_url:
     url: "{{ paddler_url }}"
-    dest: "/tmp/{{ paddler_archive }}"
-    mode: '0644'
+    dest: "/tmp/{{ paddler_binary }}"
+    mode: '0755' # Set executable permissions immediately on download
 
-- name: Extract Paddler
-  unarchive:
-    src: "/tmp/{{ paddler_archive }}"
-    dest: "/tmp"
-    remote_src: yes
-    creates: /tmp/paddler
+# The 'unarchive' task is no longer needed as the file is a binary.
 
-- name: Move Paddler to /usr/local/bin
+- name: Move and rename Paddler to /usr/local/bin
   copy:
-    src: /tmp/paddler
+    src: "/tmp/{{ paddler_binary }}"
     dest: /usr/local/bin/paddler
     remote_src: yes
     mode: '0755'
