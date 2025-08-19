@@ -2,15 +2,44 @@ all:
   children:
     controller_nodes:
       hosts:
-        localhost:
+        AID-E-24:
           ansible_connection: local
           ansible_host: 127.0.0.1
+        AID-E-2:
+          ansible_host: AID-E-2
+        AID-E-3:
+          ansible_host: AID-E-3
+
     worker_nodes:
       hosts:
-        localhost:
+        AID-E-24:
           ansible_connection: local
           ansible_host: 127.0.0.1
         AID-E-23:
           ansible_host: AID-E-23
+        AID-E-5:
+          ansible_host: AID-E-5
+        AID-E-2:
+          ansible_host: AID-E-2
+        AID-E-3:
+          ansible_host: AID-E-3
+        AID-E-4:
+          ansible_host: AID-E-4
+        AID-E-6:
+          ansible_host: AID-E-6
+        AID-E-7:
+          ansible_host: AID-E-7
+        AID-E-8:
+          ansible_host: AID-E-8
+        AID-E-9:
+          ansible_host: AID-E-9
+        AID-E-10:
+          ansible_host: AID-E-10
+        AID-E-11:
+          ansible_host: AID-E-11
+        AID-E-12:
+          ansible_host: AID-E-12
   vars:
     ansible_user: user
+
+
