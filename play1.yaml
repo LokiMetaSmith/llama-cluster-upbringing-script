@@ -1,0 +1,25 @@
+- name: Play 1 - Bootstrap New Nodes as 'root'
+  hosts: all
+  remote_user: root
+  become: no # We are already root
+
+  tasks:
+    - name: Ensure the sudo group exists
+      ansible.builtin.group:
+        name: sudo
+        state: present
+
+    - name: Create the 'user' account with sudo access
+      ansible.builtin.user:
+        name: user
+        shell: /bin/bash
+        groups: sudo
+        append: yes
+
+    - name: Allow 'user' to have passwordless sudo access
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/ansible-user-nopasswd
+        line: "user ALL=(ALL) NOPASSWD: ALL"
+        create: yes
+        validate: 'visudo -cf %s'
+        mode: '0440'

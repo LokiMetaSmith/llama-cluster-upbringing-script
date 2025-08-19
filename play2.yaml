@@ -1,0 +1,29 @@
+- name: Play 2 - Configure Nodes as 'user'
+  hosts: all
+  remote_user: user
+  become: yes # Now we use the sudo privileges we just created
+
+  roles:
+    - common
+    - consul
+    - docker
+    - nomad
+    - python_deps
+    - llama_cpp
+    - whisper_cpp
+    - provisioning_api
+    - desktop_extras
+    - kittentts
+    - paddler
+    - pipecatapp
+    - primacpp
+    - vision
+
+  post_tasks:
+    - name: Discover and save the MAC address for future use
+      ansible.builtin.blockinfile:
+        path: "host_vars/{{ inventory_hostname }}.yaml"
+        create: yes
+        block: |
+          mac_address: "{{ ansible_default_ipv4.macaddress }}"
+      delegate_to: localhost
