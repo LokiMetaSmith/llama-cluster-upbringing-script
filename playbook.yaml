@@ -1,6 +1,5 @@
 - name: Play 1 - Bootstrap New Nodes as 'root'
   hosts: all:!localhost
-  remote_user:  "{{ ansible_user }}" # Connects as the user you specify on the command line
   become: yes # We are already root
 
   tasks:
