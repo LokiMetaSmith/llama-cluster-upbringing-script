@@ -1,7 +1,7 @@
 pipecat-ai
 RealtimeSTT
 faster-whisper
-MeloTTS
+git+https://github.com/myshell-ai/MeloTTS.git
 torch
 torchaudio
 ultralytics
