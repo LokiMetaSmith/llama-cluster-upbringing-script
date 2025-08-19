@@ -1,0 +1,25 @@
+- name: Bootstrap a new node with a sudo user
+  hosts: all # Or target a specific group of new machines
+  become: no # We are already connecting as root
+  remote_user: root
+
+  tasks:
+    - name: Ensure the sudo group exists
+      ansible.builtin.group:
+        name: sudo
+        state: present
+
+    - name: Create the 'user' account
+      ansible.builtin.user:
+        name: user
+        shell: /bin/bash
+        groups: sudo
+        append: yes # Add user to the sudo group
+
+    - name: Allow 'user' to have passwordless sudo access
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/user-nopasswd
+        line: "user ALL=(ALL) NOPASSWD: ALL"
+        create: yes
+        validate: 'visudo -cf %s'
+        mode: '0440'
