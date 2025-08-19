@@ -1,0 +1,26 @@
+- name: Check the status of all nodes and wake them if down
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Attempt to connect to the host
+      ansible.builtin.ping:
+      register: ping_result
+      ignore_unreachable: true
+
+    - name: Send Wake-on-LAN packet if host is down
+      community.general.wakeonlan:
+        mac: "{{ mac_address }}"
+        broadcast: 192.168.1.255 #<-- Optional: Use your network's broadcast IP
+      delegate_to: localhost
+      when: ping_result.unreachable is defined and ping_result.unreachable
+
+    - name: Report status for reachable hosts
+      ansible.builtin.debug:
+        msg: "✅ {{ inventory_hostname }} is UP"
+      when: ping_result.unreachable is not defined
+
+    - name: Report status for unreachable hosts
+      ansible.builtin.debug:
+        msg: "❌ {{ inventory_hostname }} is DOWN (Wake-on-LAN packet sent)"
+      when: ping_result.unreachable is defined and ping_result.unreachable
