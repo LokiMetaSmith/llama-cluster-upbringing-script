@@ -43,7 +43,11 @@
     - llama_cpp
     - whisper_cpp
     - provisioning_api
-
+    - desktop_extras
+    - paddler
+    - pipecatapp
+    - vision
+    
   post_tasks:
     - name: Discover and save the MAC address for future use
       ansible.builtin.blockinfile:
