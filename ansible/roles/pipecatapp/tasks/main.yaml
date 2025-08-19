@@ -15,7 +15,16 @@
   copy:
     src: requirements.txt
     dest: /home/user/requirements.txt
-
+    
+- name: Install MeCab system dependencies
+  ansible.builtin.apt:
+    name:
+      - mecab
+      - libmecab-dev
+      - mecab-ipadic-utf8
+    state: present
+  become: yes
+  
 - name: Install python dependencies into the virtual environment
   pip:
     requirements: /home/user/requirements.txt
