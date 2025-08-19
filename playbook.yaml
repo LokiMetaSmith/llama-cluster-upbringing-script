@@ -1,5 +1,12 @@
-
- name: Check the status of all nodes and wake them if down
+- name: Discover and save the MAC address for future use
+  ansible.builtin.blockinfile:
+    path: "host_vars/{{ inventory_hostname }}.yaml"
+    create: yes
+    block: |
+      mac_address: "{{ ansible_default_ipv4.macaddress }}"
+  delegate_to: localhost
+---
+- name: Check the status of all nodes and wake them if down
   hosts: all
   gather_facts: false
 
