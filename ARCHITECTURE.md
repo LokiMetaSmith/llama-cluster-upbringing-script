@@ -15,7 +15,7 @@ This layer is responsible for taking bare-metal machines and installing a fully 
   2. The DHCP server answers and provides the iPXE bootloader (`.kpxe` or `.efi`) from the TFTP server.
   3. iPXE loads, then makes a new DHCP request. This time, it's served a URL to an iPXE script from the Nginx web server.
   4. The iPXE script instructs the client to download the Debian kernel, initrd, and a preseed file over fast HTTP, beginning a fully automated installation.
-- **Outcome:** A new machine is automatically installed with Debian 12 and is ready for the next layer of configuration.
+- **Outcome:** A new machine is automatically installed with Debian 13 and is ready for the next layer of configuration.
 
 ## Layer 2: System Configuration (Ansible)
 
