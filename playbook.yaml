@@ -1,13 +1,14 @@
 - name: Play 1 - Bootstrap New Nodes as 'root'
-  hosts: all
-  remote_user: root
-  become: no # We are already root
+  hosts: all:!localhost
+  remote_user:  "{{ ansible_user }}" # Connects as the user you specify on the command line
+  become: yes # We are already root
 
   tasks:
     - name: Ensure the sudo package is installed
       ansible.builtin.apt:
         name: sudo
         state: present
+        
     - name: Ensure the sudo group exists
       ansible.builtin.group:
         name: sudo
