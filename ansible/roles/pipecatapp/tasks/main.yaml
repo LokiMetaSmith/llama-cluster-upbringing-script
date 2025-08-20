@@ -11,6 +11,13 @@
     cmd: python3 -m venv /home/user/pipecat_venv
     creates: /home/user/pipecat_venv/bin/pip #<-- This makes the task idempotent
 
+
+- name: Create a persistent temporary directory for pip builds
+  ansible.builtin.file:
+    path: /var/tmp/ansible_pip_build
+    state: directory
+    mode: '0777' # Make it world-writable like /tmp
+    
 - name: Copy requirements.txt
   copy:
     src: requirements.txt
@@ -26,10 +33,15 @@
   become: yes
   
 - name: Install python dependencies into the virtual environment
-  pip:
+  ansible.builtin.pip:
     requirements: /home/user/requirements.txt
+    executable: /home/user/pipecatapp_venv/bin/pip3
+    environment:
+      TMPDIR: /var/tmp/ansible_pip_build
+  #pip:
+    #requirements: /home/user/requirements.txt
     # This is the key: point to the pip inside your venv
-    executable: /home/user/pipecat_venv/bin/pip3
+    #executable: /home/user/pipecat_venv/bin/pip3
 
 - name: Copy pipecat app
   copy:
