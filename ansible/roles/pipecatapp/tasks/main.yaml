@@ -27,12 +27,13 @@
     src: requirements.txt
     dest: /home/user/requirements.txt
     
-- name: Install MeCab system dependencies
+- name: Install system dependencies for Python packages
   ansible.builtin.apt:
     name:
       - mecab
       - libmecab-dev
       - mecab-ipadic-utf8
+      - portaudio19-dev
     state: present
   become: yes
 
