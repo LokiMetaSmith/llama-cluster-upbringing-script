@@ -12,8 +12,8 @@
     # This path MUST match the 'executable' path in the task below
     cmd: python3 -m venv /home/user/pipecatapp_venv
     creates: /home/user/pipecatapp_venv/bin/pip
-  become: yes
-  become_user: "{{ ansible_user }}"
+  become: no
+  #become_user: "{{ ansible_user }}"
 
 
 - name: Create a persistent temporary directory for pip builds
