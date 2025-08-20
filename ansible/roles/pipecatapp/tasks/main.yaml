@@ -31,13 +31,15 @@
       - mecab-ipadic-utf8
     state: present
   become: yes
-  
-- name: Install python dependencies into the virtual environment
-  ansible.builtin.pip:
-    requirements: /home/user/requirements.txt
-    executable: /home/user/pipecatapp_venv/bin/pip3
-    environment:
-      TMPDIR: /var/tmp/ansible_pip_build
+
+- name: Install python dependencies with a custom temp directory
+  block:
+    - name: Install python dependencies into the virtual environment
+      ansible.builtin.pip:
+        requirements: /home/user/requirements.txt
+        executable: /home/user/pipecatapp_venv/bin/pip3
+  environment:
+    TMPDIR: /var/tmp/ansible_pip_build
   #pip:
     #requirements: /home/user/requirements.txt
     # This is the key: point to the pip inside your venv
