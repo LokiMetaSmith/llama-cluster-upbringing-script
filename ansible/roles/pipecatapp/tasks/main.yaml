@@ -65,5 +65,4 @@
   command:
     # Use the python from the venv to run the command
     cmd: /home/user/pipecat_venv/bin/python3 -m playwright install
-  become: yes
-  become_user: "{{ ansible_user }}"
+  become: no
