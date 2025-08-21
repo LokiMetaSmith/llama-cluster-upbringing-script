@@ -34,8 +34,25 @@
       - libmecab-dev
       - mecab-ipadic-utf8
       - portaudio19-dev
+      - rustc
+      - cargo
+      - build-essential
     state: present
   become: yes
+
+- name: Upgrade pip and install build tools in venv
+  ansible.builtin.pip:
+    name:
+      - pip
+      - setuptools
+    state: latest
+    executable: /home/user/pipecatapp_venv/bin/pip3
+
+- name: Install Cython in venv
+  ansible.builtin.pip:
+    name: cython
+    state: present
+    executable: /home/user/pipecatapp_venv/bin/pip3
 
 - name: Install python dependencies with a custom temp directory
   block:
@@ -64,5 +81,5 @@
 - name: Install Playwright browsers using the virtual environment's python
   command:
     # Use the python from the venv to run the command
-    cmd: /home/user/pipecat_venv/bin/python3 -m playwright install
+    cmd: /home/user/pipecatapp_venv/bin/python3 -m playwright install
   become: no

@@ -17,3 +17,4 @@ websockets
 requests
 docker
 playwright
+fugashi-plus
