@@ -3,55 +3,54 @@
     name:
       - python3
       - python3-pip
-      - python3-venv #<-- Make sure venv is installed
+      - python3-venv
     state: present
   become: yes
 
-- name: Create a virtual environment for the application
+- name: Install system dependencies for Python packages
+  ansible.builtin.apt:
+    name:
+      # General build tools
+      - build-essential
+      - python3-dev
+      # For PyAudio (from RealtimeSTT)
+      - portaudio19-dev
+      # For fugashi/MeloTTS
+      - mecab
+      - libmecab-dev
+      - mecab-ipadic-utf8
+      # For tokenizers (from transformers)
+      - rustc
+      - cargo
+    state: present
+  become: yes
+
+- name: Create a virtual environment for the pipecat app
   ansible.builtin.command:
-    # This path MUST match the 'executable' path in the task below
     cmd: python3 -m venv /home/user/pipecatapp_venv
     creates: /home/user/pipecatapp_venv/bin/pip
   become: no
-  #become_user: "{{ ansible_user }}"
-
 
 - name: Create a persistent temporary directory for pip builds
   ansible.builtin.file:
     path: /var/tmp/ansible_pip_build
     state: directory
-    mode: '0777' # Make it world-writable like /tmp
-    
-- name: Copy requirements.txt
-  copy:
-    src: requirements.txt
-    dest: /home/user/requirements.txt
-    
-- name: Install system dependencies for Python packages
-  ansible.builtin.apt:
-    name:
-      - mecab
-      - libmecab-dev
-      - mecab-ipadic-utf8
-      - portaudio19-dev
-      - rustc
-      - cargo
-      - build-essential
-    state: present
+    mode: '0777'
   become: yes
 
-- name: Upgrade pip and install build tools in venv
+- name: Copy requirements.txt to remote host
+  ansible.builtin.copy:
+    src: requirements.txt
+    dest: /home/user/requirements.txt
+
+- name: Install/Upgrade base python packages in venv
   ansible.builtin.pip:
     name:
       - pip
       - setuptools
+      - wheel
+      - cython
     state: latest
-    executable: /home/user/pipecatapp_venv/bin/pip3
-
-- name: Install Cython in venv
-  ansible.builtin.pip:
-    name: cython
-    state: present
     executable: /home/user/pipecatapp_venv/bin/pip3
 
 - name: Install python dependencies with a custom temp directory
@@ -62,24 +61,19 @@
         executable: /home/user/pipecatapp_venv/bin/pip3
   environment:
     TMPDIR: /var/tmp/ansible_pip_build
-  #pip:
-    #requirements: /home/user/requirements.txt
-    # This is the key: point to the pip inside your venv
-    #executable: /home/user/pipecat_venv/bin/pip3
 
 - name: Copy pipecat app
-  copy:
+  ansible.builtin.copy:
     src: app.py
     dest: /home/user/app.py
 
-- name: Copy pipecat Nomad job file
-  template:
+- name: Copy pipecatapp Nomad job file
+  ansible.builtin.template:
     src: ../../jobs/pipecatapp.nomad
     dest: /home/user/pipecatapp.nomad
   when: "'controller_nodes' in group_names"
 
 - name: Install Playwright browsers using the virtual environment's python
-  command:
-    # Use the python from the venv to run the command
+  ansible.builtin.command:
     cmd: /home/user/pipecatapp_venv/bin/python3 -m playwright install
   become: no
