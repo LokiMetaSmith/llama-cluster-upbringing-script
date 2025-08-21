@@ -18,3 +18,5 @@ requests
 docker
 playwright
 fugashi-plus
+transformers
+tokenizers
