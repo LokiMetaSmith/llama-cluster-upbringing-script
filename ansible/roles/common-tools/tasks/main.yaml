@@ -1,0 +1,20 @@
+---
+- name: Install common command-line tools
+  ansible.builtin.apt:
+    name:
+      - mosh
+      - tmux
+      - htop
+      - ncdu
+      - sysbench
+      - fio
+      - iperf3
+    state: present
+  become: yes
+
+- name: Ensure Mosh is allowed through the firewall
+  ansible.builtin.ufw:
+    rule: allow
+    port: '60000:61000'
+    proto: udp
+  become: yes
