@@ -1,6 +1,15 @@
 ---
+- name: Install build dependencies for llama.cpp
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - git
+      - cmake
+    state: present
+  become: yes
+
 - name: Clone llama.cpp repository
-  git:
+  ansible.builtin.git:
     repo: 'https://github.com/ggml-org/llama.cpp.git'
     dest: /home/user/llama.cpp
     version: master
@@ -8,23 +17,35 @@
     force: yes
 
 - name: Configure llama.cpp build
-  command: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON
+  ansible.builtin.command:
+    cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON
   args:
     chdir: /home/user/llama.cpp
+    creates: /home/user/llama.cpp/build/Makefile
 
 - name: Build llama.cpp
-  command: cmake --build build --config Release -j
+  ansible.builtin.command:
+    cmd: cmake --build build --config Release -j
   args:
     chdir: /home/user/llama.cpp
+    creates: /home/user/llama.cpp/build/bin/llama-server
 
 - name: Copy llama.cpp RPC Nomad job file
-  template:
+  ansible.builtin.template:
     src: ../../jobs/llamacpp-rpc.nomad
     dest: /home/user/llamacpp-rpc.nomad
   when: "'controller_nodes' in group_names"
+  vars:
+    meta:
+      NAMESPACE: "default"
+      JOB_NAME: "Llama-3-8B-Instruct"
+      API_SERVICE_NAME: "llama-api-Llama-3-8B-Instruct"
+      RPC_SERVICE_NAME: "llama-rpc-worker-Llama-3-8B-Instruct"
+      MODEL_PATH: "/models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf"
+      WORKER_COUNT: "2"
 
 - name: Copy benchmark Nomad job file
-  template:
+  ansible.builtin.template:
     src: ../../jobs/benchmark.nomad
     dest: /home/user/benchmark.nomad
   when: "'controller_nodes' in group_names"
