@@ -13,15 +13,16 @@
       # General build tools
       - build-essential
       - python3-dev
+      # For tokenizers (from transformers)
+      - rustc
+      - cargo
       # For PyAudio (from RealtimeSTT)
       - portaudio19-dev
       # For fugashi/MeloTTS
       - mecab
       - libmecab-dev
       - mecab-ipadic-utf8
-      # For tokenizers (from transformers)
-      - rustc
-      - cargo
+
     state: present
   become: yes
 
