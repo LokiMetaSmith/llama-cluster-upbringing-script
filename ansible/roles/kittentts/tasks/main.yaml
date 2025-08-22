@@ -25,7 +25,7 @@
     version: master
   become: yes
 
-- name: Add pyenv to system profile
+- name: Add pyenv to system profile for interactive shells
   ansible.builtin.copy:
     dest: /etc/profile.d/pyenv.sh
     mode: '0755'
@@ -36,11 +36,13 @@
       eval "$(pyenv init --path)"
   become: yes
 
-- name: Install Python 3.10.13 with pyenv
+- name: Install Python 3.10.13 with pyenv into the correct system location
   ansible.builtin.command:
     cmd: /opt/pyenv/bin/pyenv install 3.10.13
     creates: /opt/pyenv/versions/3.10.13/bin/python
   become: yes
+  environment:
+    PYENV_ROOT: /opt/pyenv
 
 - name: Create a virtual environment for KittenTTS with Python 3.10
   ansible.builtin.command:
