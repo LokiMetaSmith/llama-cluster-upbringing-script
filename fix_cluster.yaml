@@ -3,17 +3,26 @@
   hosts: controller_nodes
   become: yes
   gather_facts: no
+  ignore_unreachable: yes
 
   tasks:
     - name: Stop Nomad service
       ansible.builtin.service:
         name: nomad
         state: stopped
+      register: stop_nomad_service
+      failed_when:
+        - stop_nomad_service.failed == true
+        - '"Could not find the requested service" not in stop_nomad_service.msg'
 
     - name: Stop Consul service
       ansible.builtin.service:
         name: consul
         state: stopped
+      register: stop_consul_service
+      failed_when:
+        - stop_consul_service.failed == true
+        - '"Could not find the requested service" not in stop_consul_service.msg'
 
     - name: Remove Nomad data directory to reset state
       ansible.builtin.file:
@@ -29,8 +38,16 @@
       ansible.builtin.service:
         name: consul
         state: started
+      register: start_consul_service
+      failed_when:
+        - start_consul_service.failed == true
+        - '"Could not find the requested service" not in start_consul_service.msg'
 
     - name: Start Nomad service
       ansible.builtin.service:
         name: nomad
         state: started
+      register: start_nomad_service
+      failed_when:
+        - start_nomad_service.failed == true
+        - '"Could not find the requested service" not in start_nomad_service.msg'
