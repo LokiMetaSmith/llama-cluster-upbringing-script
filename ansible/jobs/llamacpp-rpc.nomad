@@ -3,23 +3,24 @@ job "llamacpp-rpc-{{ meta.JOB_NAME | default('default') }}" {
   namespace   = "{{ meta.NAMESPACE | default('default') }}"
 
   meta {
-    NAMESPACE         = "default"
-    JOB_NAME          = "default"
-    API_SERVICE_NAME  = "llama-api-default"
-    RPC_SERVICE_NAME  = "llama-rpc-worker-default"
-    MODEL_PATH        = "/path/to/your/default/model.gguf"
-    WORKER_COUNT      = "2"
+    NAMESPACE        = "default"
+    JOB_NAME         = "Llama-3-8B-Instruct"
+    API_SERVICE_NAME = "llama-api-Llama-3-8B-Instruct"
+    RPC_SERVICE_NAME = "llama-rpc-worker-Llama-3-8B-Instruct"
+    MODEL_PATH       = "/models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf"
+    WORKER_COUNT     = "2"
   }
 
   group "master" {
     count = 1
 
     network {
+      mode = "bridge"
       port "http" {}
     }
 
     service {
-      name     = "{{ meta.API_SERVICE_NAME | default('llama-api-default') }}"
+      name     = "{{ meta.API_SERVICE_NAME }}"
       provider = "consul"
       port     = "http"
 
@@ -34,9 +35,15 @@ job "llamacpp-rpc-{{ meta.JOB_NAME | default('default') }}" {
       template {
         data = <<EOH
 #!/bin/bash
-WORKER_IPS=$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME | default('llama-rpc-worker-default') }} | tr '\n' ',' | sed 's/,$//')
+# Discover the IP addresses and ports of the worker services
+WORKER_IPS=$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME }} | tr '\n' ',' | sed 's/,$//')
 
-/home/user/llama.cpp/build/bin/llama-server --model {{ meta.MODEL_PATH | default('/path/to/your/default/model.gguf') }} --host 0.0.0.0 --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} --rpc-servers $WORKER_IPS
+# Launch the llama-server with the discovered worker IPs
+/home/user/llama.cpp/build/bin/llama-server \
+  --model {{ meta.MODEL_PATH }} \
+  --host 0.0.0.0 \
+  --port {{ env "NOMAD_PORT_http" }} \
+  --rpc-servers $WORKER_IPS
 EOH
         destination = "local/run_master.sh"
         perms       = "0755"
@@ -45,18 +52,31 @@ EOH
       config {
         command = "local/run_master.sh"
       }
+
+      volume_mount {
+        volume      = "models"
+        destination = "/models"
+        read_only   = true
+      }
+    }
+
+    volume "models" {
+      type      = "host"
+      read_only = true
+      source    = "models"
     }
   }
 
   group "workers" {
-    count = "{{ meta.WORKER_COUNT | default('2') }}"
+    count = {{ meta.WORKER_COUNT }}
 
     network {
+      mode = "bridge"
       port "rpc" {}
     }
 
     service {
-      name     = "{{ meta.RPC_SERVICE_NAME | default('llama-rpc-worker-default') }}"
+      name     = "{{ meta.RPC_SERVICE_NAME }}"
       provider = "consul"
       port     = "rpc"
 
@@ -71,11 +91,23 @@ EOH
       config {
         command = "/home/user/llama.cpp/build/bin/llama-server"
         args = [
-          "--model", "{{ meta.MODEL_PATH | default('/path/to/your/default/model.gguf') }}",
+          "--model", "{{ meta.MODEL_PATH }}",
           "--host", "0.0.0.0",
-          "--port", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}",
+          "--port", "{{ env \"NOMAD_PORT_rpc\" }}",
         ]
       }
+
+      volume_mount {
+        volume      = "models"
+        destination = "/models"
+        read_only   = true
+      }
+    }
+
+    volume "models" {
+      type      = "host"
+      read_only = true
+      source    = "models"
     }
   }
 }
