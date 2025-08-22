@@ -1,6 +1,7 @@
 ---
 - name: Install vision dependencies
-  apt:
+  ansible.builtin.apt:
     name:
-      - libgl1-mesa-glx
+      - libgl1
     state: present
+  become: yes
