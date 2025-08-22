@@ -31,8 +31,10 @@
       ansible.builtin.service:
         name: consul
         state: started
+      ignore_errors: yes
 
     - name: Start Nomad service
       ansible.builtin.service:
         name: nomad
         state: started
+      ignore_errors: yes
