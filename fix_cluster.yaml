@@ -1,0 +1,36 @@
+---
+- name: Recover Nomad and Consul Cluster State
+  hosts: controller_nodes
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: Stop Nomad service
+      ansible.builtin.service:
+        name: nomad
+        state: stopped
+
+    - name: Stop Consul service
+      ansible.builtin.service:
+        name: consul
+        state: stopped
+
+    - name: Remove Nomad data directory to reset state
+      ansible.builtin.file:
+        path: /opt/nomad/data
+        state: absent
+
+    - name: Remove Consul data directory to reset state
+      ansible.builtin.file:
+        path: /opt/consul/data
+        state: absent
+
+    - name: Start Consul service
+      ansible.builtin.service:
+        name: consul
+        state: started
+
+    - name: Start Nomad service
+      ansible.builtin.service:
+        name: nomad
+        state: started
