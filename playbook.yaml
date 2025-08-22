@@ -47,6 +47,7 @@
     - paddler
     - pipecatapp
     - vision
+    - kittentts
     
   post_tasks:
     - name: Discover and save the MAC address for future use

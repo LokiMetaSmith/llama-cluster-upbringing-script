@@ -6,7 +6,6 @@ torch
 torchaudio
 ultralytics
 opencv-python-headless
-kittentts
 soundfile
 sentence-transformers
 faiss-cpu
@@ -18,4 +17,3 @@ requests
 docker
 playwright
 fugashi-plus
-tokenizers>=0.15.2

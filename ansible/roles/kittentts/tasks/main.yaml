@@ -1,9 +1,54 @@
-- name: Create a virtual environment for KittenTTS
-  ansible.builtin.command:
-    cmd: python3 -m venv /home/user/kittentts_venv
-    creates: /home/user/kittentts_venv/bin/pip # Makes this task idempotent
+- name: Install dependencies for building Python
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - libssl-dev
+      - zlib1g-dev
+      - libbz2-dev
+      - libreadline-dev
+      - libsqlite3-dev
+      - curl
+      - libncursesw5-dev
+      - xz-utils
+      - tk-dev
+      - libxml2-dev
+      - libxmlsec1-dev
+      - libffi-dev
+      - liblzma-dev
+    state: present
+  become: yes
 
-- name: Install KittenTTS and dependencies into the virtual environment
+- name: Install pyenv system-wide
+  ansible.builtin.git:
+    repo: 'https://github.com/pyenv/pyenv.git'
+    dest: /opt/pyenv
+    version: master
+  become: yes
+
+- name: Add pyenv to system profile
+  ansible.builtin.copy:
+    dest: /etc/profile.d/pyenv.sh
+    mode: '0755'
+    content: |
+      #!/bin/sh
+      export PYENV_ROOT="/opt/pyenv"
+      export PATH="$PYENV_ROOT/bin:$PATH"
+      eval "$(pyenv init --path)"
+  become: yes
+
+- name: Install Python 3.10.13 with pyenv
+  ansible.builtin.command:
+    cmd: /opt/pyenv/bin/pyenv install 3.10.13
+    creates: /opt/pyenv/versions/3.10.13/bin/python
+  become: yes
+
+- name: Create a virtual environment for KittenTTS with Python 3.10
+  ansible.builtin.command:
+    cmd: /opt/pyenv/versions/3.10.13/bin/python -m venv /home/user/kittentts_venv
+    creates: /home/user/kittentts_venv/bin/pip
+  become: no
+
+- name: Install KittenTTS dependencies into its dedicated venv
   ansible.builtin.pip:
     name:
       - num2words
@@ -16,5 +61,4 @@
       - huggingface_hub
       - https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-none-any.whl
     state: present
-    # This is the key: point to the pip inside the NEW venv
     executable: /home/user/kittentts_venv/bin/pip3
