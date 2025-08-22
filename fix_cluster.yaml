@@ -9,11 +9,13 @@
       ansible.builtin.service:
         name: nomad
         state: stopped
+      ignore_errors: yes
 
     - name: Stop Consul service
       ansible.builtin.service:
         name: consul
         state: stopped
+      ignore_errors: yes
 
     - name: Remove Nomad data directory to reset state
       ansible.builtin.file:
