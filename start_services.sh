@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # This script starts the necessary Nomad jobs for the AI digital twin application.
-# It should be run from the root of the llama-cluster-upbringing-script project directory.
+# It should be run from the user's home directory on a controller node.
 
 set -e
 
 echo "🚀 Starting the distributed Llama C++ RPC service..."
-nomad job run ansible/jobs/llamacpp-rpc.nomad
+nomad job run /home/user/llamacpp-rpc.nomad
 
 echo "🚀 Starting the Pipecat application service..."
-nomad job run ansible/jobs/pipecatapp.nomad
+nomad job run /home/user/pipecatapp.nomad
 
 echo "✅ All services have been submitted to Nomad."
 echo "Use 'nomad status' to monitor their deployment."
