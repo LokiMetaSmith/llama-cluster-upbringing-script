@@ -36,6 +36,7 @@
 
   roles:
     - common
+    - common-tools
     - consul
     - docker
     - nomad
