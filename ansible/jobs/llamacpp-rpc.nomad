@@ -42,7 +42,7 @@ WORKER_IPS=$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME 
 /home/user/llama.cpp/build/bin/llama-server \
   --model {{ meta.MODEL_PATH }} \
   --host 0.0.0.0 \
-  --port {{ env "NOMAD_PORT_http" }} \
+  --port {% raw %}{{ env "NOMAD_PORT_http" }}{% endraw %} \
   --rpc-servers $WORKER_IPS
 EOH
         destination = "local/run_master.sh"
@@ -93,7 +93,7 @@ EOH
         args = [
           "--model", "{{ meta.MODEL_PATH }}",
           "--host", "0.0.0.0",
-          "--port", "{{ env \"NOMAD_PORT_rpc\" }}",
+          "--port", "{% raw %}{{ env \"NOMAD_PORT_rpc\" }}{% endraw %}",
         ]
       }
 
