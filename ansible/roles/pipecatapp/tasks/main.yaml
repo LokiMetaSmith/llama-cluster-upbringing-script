@@ -13,16 +13,15 @@
       # General build tools
       - build-essential
       - python3-dev
-      # For tokenizers (from transformers)
-      - rustc
-      - cargo
       # For PyAudio (from RealtimeSTT)
       - portaudio19-dev
-      # For fugashi/MeloTTS
+      # fugashi-plus should handle MeCab, but these are here just in case.
       - mecab
       - libmecab-dev
       - mecab-ipadic-utf8
-
+      # For tokenizers (from transformers)
+      - rustc
+      - cargo
     state: present
   become: yes
 
@@ -43,6 +42,13 @@
   ansible.builtin.copy:
     src: requirements.txt
     dest: /home/user/requirements.txt
+
+- name: Configure git to use anonymous protocol for GitHub
+  ansible.builtin.git_config:
+    name: url.https://github.com/.insteadOf
+    scope: system
+    value: git://github.com/
+  become: yes
 
 - name: Install/Upgrade base python packages in venv
   ansible.builtin.pip:
