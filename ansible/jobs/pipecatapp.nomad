@@ -6,8 +6,19 @@ job "pipecat-app" {
     count = 1
 
     network {
+      mode = "bridge"
       port "http" {
         to = 8000
+      }
+    }
+
+    service {
+      name = "pipecat-app-http"
+      port = "http"
+      provider = "consul"
+
+      connect {
+        sidecar_service {}
       }
     }
 
@@ -15,8 +26,13 @@ job "pipecat-app" {
       driver = "exec"
 
       config {
-        command = "python3"
+        command = "/home/user/pipecatapp_venv/bin/python3"
         args    = ["/home/user/app.py"]
+      }
+
+      resources {
+        cpu    = 1000 # 1 GHz
+        memory = 4096 # 4 GB
       }
     }
   }
