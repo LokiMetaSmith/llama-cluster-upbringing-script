@@ -9,6 +9,7 @@
       - sysbench
       - fio
       - iperf3
+      - ufw
     state: present
   become: yes
 
