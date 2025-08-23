@@ -13,7 +13,7 @@
       register: stop_nomad_service
       failed_when:
         - stop_nomad_service.failed == true
-        - '"Could not find the requested service" not in stop_nomad_service.msg'
+        - not stop_nomad_service.msg.startswith('Could not find the requested service')
 
     - name: Stop Consul service
       ansible.builtin.service:
@@ -22,7 +22,7 @@
       register: stop_consul_service
       failed_when:
         - stop_consul_service.failed == true
-        - '"Could not find the requested service" not in stop_consul_service.msg'
+        - not stop_consul_service.msg.startswith('Could not find the requested service')
 
     - name: Remove Nomad data directory to reset state
       ansible.builtin.file:
@@ -41,7 +41,7 @@
       register: start_consul_service
       failed_when:
         - start_consul_service.failed == true
-        - '"Could not find the requested service" not in start_consul_service.msg'
+        - not start_consul_service.msg.startswith('Could not find the requested service')
 
     - name: Start Nomad service
       ansible.builtin.service:
@@ -50,4 +50,4 @@
       register: start_nomad_service
       failed_when:
         - start_nomad_service.failed == true
-        - '"Could not find the requested service" not in start_nomad_service.msg'
+        - not start_nomad_service.msg.startswith('Could not find the requested service')
