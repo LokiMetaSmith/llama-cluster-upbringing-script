@@ -25,11 +25,18 @@
     state: present
   become: yes
 
+- name: Create pipecatapp application directory
+  ansible.builtin.file:
+    path: /opt/pipecatapp
+    state: directory
+    mode: '0755'
+  become: yes
+
 - name: Create a virtual environment for the pipecat app
   ansible.builtin.command:
-    cmd: python3 -m venv /home/user/pipecatapp_venv
-    creates: /home/user/pipecatapp_venv/bin/pip
-  become: no
+    cmd: python3 -m venv /opt/pipecatapp/venv
+    creates: /opt/pipecatapp/venv/bin/pip
+  become: yes
 
 - name: Create a persistent temporary directory for pip builds
   ansible.builtin.file:
@@ -41,7 +48,8 @@
 - name: Copy requirements.txt to remote host
   ansible.builtin.copy:
     src: requirements.txt
-    dest: /home/user/requirements.txt
+    dest: /opt/pipecatapp/requirements.txt
+  become: yes
 
 - name: Configure git to use anonymous protocol for GitHub
   ansible.builtin.git_config:
@@ -58,29 +66,38 @@
       - wheel
       - cython
     state: latest
-    executable: /home/user/pipecatapp_venv/bin/pip3
+    executable: /opt/pipecatapp/venv/bin/pip3
+  become: yes
 
 - name: Install python dependencies with a custom temp directory
   block:
     - name: Install python dependencies into the virtual environment
       ansible.builtin.pip:
-        requirements: /home/user/requirements.txt
-        executable: /home/user/pipecatapp_venv/bin/pip3
+        requirements: /opt/pipecatapp/requirements.txt
+        executable: /opt/pipecatapp/venv/bin/pip3
   environment:
     TMPDIR: /var/tmp/ansible_pip_build
+  become: yes
+
+- name: Clean up pip build directory
+  ansible.builtin.file:
+    path: /var/tmp/ansible_pip_build
+    state: absent
+  become: yes
 
 - name: Copy pipecat app
   ansible.builtin.copy:
     src: app.py
-    dest: /home/user/app.py
+    dest: /opt/pipecatapp/app.py
+  become: yes
 
 - name: Copy pipecatapp Nomad job file
   ansible.builtin.template:
     src: ../../jobs/pipecatapp.nomad
-    dest: /home/user/pipecatapp.nomad
+    dest: /opt/nomad/jobs/pipecatapp.nomad
   when: "'controller_nodes' in group_names"
 
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
-    cmd: /home/user/pipecatapp_venv/bin/python3 -m playwright install
-  become: no
+    cmd: /opt/pipecatapp/venv/bin/python3 -m playwright install
+  become: yes

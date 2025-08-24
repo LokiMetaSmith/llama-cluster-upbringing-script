@@ -1,6 +1,6 @@
 ---
 - name: Install desktop extras packages
-  apt:
+  ansible.builtin.apt:
     name:
       - lolcat
       - figlet
@@ -10,31 +10,47 @@
       - cowsay
       - toilet
       - cmatrix
+      - make
     state: present
+  become: yes
 
 - name: Clone figlet-fonts repository
-  git:
+  ansible.builtin.git:
     repo: 'https://github.com/xero/figlet-fonts.git'
     dest: /home/user/.local/share/fonts
     version: master
     update: yes
 
+- name: Create a temporary build directory for no-more-secrets
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: nms-build
+  register: nms_build_dir
+
 - name: Clone no-more-secrets repository
-  git:
+  ansible.builtin.git:
     repo: 'https://github.com/bartobri/no-more-secrets.git'
-    dest: /home/user/no-more-secrets
+    dest: "{{ nms_build_dir.path }}"
     version: master
     update: yes
 
 - name: Build no-more-secrets
-  command: make nms
+  ansible.builtin.command:
+    cmd: make nms
   args:
-    chdir: /home/user/no-more-secrets
-    creates: /home/user/no-more-secrets/nms
+    chdir: "{{ nms_build_dir.path }}"
+    creates: "{{ nms_build_dir.path }}/nms"
 
 - name: Install no-more-secrets
-  command: make install
+  ansible.builtin.command:
+    cmd: make install
   args:
-    chdir: /home/user/no-more-secrets
+    chdir: "{{ nms_build_dir.path }}"
     creates: /usr/local/bin/nms
   become: yes
+
+- name: Clean up no-more-secrets build directory
+  ansible.builtin.file:
+    path: "{{ nms_build_dir.path }}"
+    state: absent
+  when: nms_build_dir.path is defined
