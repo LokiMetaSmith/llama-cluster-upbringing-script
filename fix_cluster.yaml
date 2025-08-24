@@ -2,10 +2,35 @@
 - name: Recover Nomad and Consul Cluster State
   hosts: controller_nodes
   become: yes
-  gather_facts: no
+  gather_facts: yes
   ignore_unreachable: yes
 
   tasks:
+    - name: Ensure smartmontools is installed
+      ansible.builtin.apt:
+        name: smartmontools
+        state: present
+
+    - name: Find block devices
+      ansible.builtin.set_fact:
+        block_devices: "{{ ansible_devices.keys() | select('match', '^(s|xv)d[a-z]+$') | list }}"
+      when: ansible_devices is defined
+
+    - name: Check SMART health for each block device
+      ansible.builtin.command:
+        cmd: "smartctl -H /dev/{{ item }}"
+      loop: "{{ block_devices | default([]) }}"
+      register: smart_health
+      changed_when: false
+      failed_when: "'FAILED!' in smart_health.stdout or 'PASSED' not in smart_health.stdout"
+
+    - name: Check available disk space on root filesystem
+      ansible.builtin.command:
+        cmd: "df --output=pcent / | tail -n 1 | tr -d ' %'"
+      register: disk_space
+      changed_when: false
+      failed_when: "disk_space.stdout | int > 90"
+
     - name: Stop Nomad service
       ansible.builtin.service:
         name: nomad
