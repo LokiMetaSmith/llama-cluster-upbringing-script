@@ -1,29 +1,73 @@
 ---
-- name: Install libsdl2-dev
-  apt:
-    name: libsdl2-dev
+- name: Install build dependencies for whisper.cpp
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - git
+      - cmake
+      - libsdl2-dev
     state: present
+  become: yes
+
+- name: Create build directory for whisper.cpp
+  ansible.builtin.file:
+    path: /opt/whisper.cpp-build
+    state: directory
+    mode: '0755'
+  become: yes
 
 - name: Clone whisper.cpp repository
-  git:
+  ansible.builtin.git:
     repo: 'https://github.com/ggml-org/whisper.cpp.git'
-    dest: /home/user/whisper.cpp
+    dest: /opt/whisper.cpp-build
     version: master
     update: yes
     force: yes
+  become: yes
 
 - name: Download whisper.cpp model
-  command: bash ./models/download-ggml-model.sh base.en
+  ansible.builtin.command:
+    cmd: bash ./models/download-ggml-model.sh base.en
   args:
-    chdir: /home/user/whisper.cpp
-    creates: /home/user/whisper.cpp/models/ggml-base.en.bin
+    chdir: /opt/whisper.cpp-build
+    creates: /opt/whisper.cpp-build/models/ggml-base.en.bin
+  become: yes
 
 - name: Configure whisper.cpp build
-  command: cmake -B build
+  ansible.builtin.command:
+    cmd: cmake -B build
   args:
-    chdir: /home/user/whisper.cpp
+    chdir: /opt/whisper.cpp-build
+    creates: /opt/whisper.cpp-build/build/Makefile
+  become: yes
 
 - name: Build whisper.cpp
-  command: cmake --build build --config Release -j
+  ansible.builtin.command:
+    cmd: cmake --build build --config Release -j
   args:
-    chdir: /home/user/whisper.cpp
+    chdir: /opt/whisper.cpp-build
+    creates: /opt/whisper.cpp-build/build/bin/main # Assuming 'main' is one of the binaries
+  become: yes
+
+- name: Find compiled binaries
+  ansible.builtin.find:
+    paths: /opt/whisper.cpp-build/build/bin
+    patterns: '*'
+    file_type: file
+  register: whisper_binaries
+  become: yes
+
+- name: Install whisper.cpp binaries
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "/usr/local/bin/{{ item.path | basename }}"
+    mode: '0755'
+    remote_src: yes
+  loop: "{{ whisper_binaries.files }}"
+  become: yes
+
+- name: Clean up whisper.cpp build directory
+  ansible.builtin.file:
+    path: /opt/whisper.cpp-build
+    state: absent
+  become: yes

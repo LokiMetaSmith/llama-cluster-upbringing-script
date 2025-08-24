@@ -8,32 +8,63 @@
     state: present
   become: yes
 
+- name: Create build directory for llama.cpp
+  ansible.builtin.file:
+    path: /opt/llama.cpp-build
+    state: directory
+    mode: '0755'
+  become: yes
+
 - name: Clone llama.cpp repository
   ansible.builtin.git:
     repo: 'https://github.com/ggml-org/llama.cpp.git'
-    dest: /home/user/llama.cpp
+    dest: /opt/llama.cpp-build
     version: master
     update: yes
     force: yes
+  become: yes
 
 - name: Configure llama.cpp build
   ansible.builtin.command:
     cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON
   args:
-    chdir: /home/user/llama.cpp
-    creates: /home/user/llama.cpp/build/Makefile
+    chdir: /opt/llama.cpp-build
+    creates: /opt/llama.cpp-build/build/Makefile
+  become: yes
 
 - name: Build llama.cpp
   ansible.builtin.command:
     cmd: cmake --build build --config Release -j
   args:
-    chdir: /home/user/llama.cpp
-    creates: /home/user/llama.cpp/build/bin/llama-server
+    chdir: /opt/llama.cpp-build
+    creates: /opt/llama.cpp-build/build/bin/llama-server
+  become: yes
+
+- name: Install llama-server binary
+  ansible.builtin.copy:
+    src: /opt/llama.cpp-build/build/bin/llama-server
+    dest: /usr/local/bin/llama-server
+    mode: '0755'
+    remote_src: yes
+  become: yes
+
+- name: Clean up llama.cpp build directory
+  ansible.builtin.file:
+    path: /opt/llama.cpp-build
+    state: absent
+  become: yes
+
+- name: Create Nomad jobs directory
+  ansible.builtin.file:
+    path: /opt/nomad/jobs
+    state: directory
+    mode: '0755'
+  become: yes
 
 - name: Copy llama.cpp RPC Nomad job file
   ansible.builtin.template:
     src: ../../jobs/llamacpp-rpc.nomad
-    dest: /home/user/llamacpp-rpc.nomad
+    dest: /opt/nomad/jobs/llamacpp-rpc.nomad
   when: "'controller_nodes' in group_names"
   vars:
     meta:
@@ -47,5 +78,5 @@
 - name: Copy benchmark Nomad job file
   ansible.builtin.template:
     src: ../../jobs/benchmark.nomad
-    dest: /home/user/benchmark.nomad
+    dest: /opt/nomad/jobs/benchmark.nomad
   when: "'controller_nodes' in group_names"

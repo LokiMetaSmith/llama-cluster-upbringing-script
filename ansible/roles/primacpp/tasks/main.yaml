@@ -1,39 +1,83 @@
 ---
 - name: Install prima.cpp dependencies
-  apt:
+  ansible.builtin.apt:
     name:
       - fio
       - libzmq3-dev
       - g++
       - highs
+      - cmake
+      - git
+      - build-essential
     state: present
+  become: yes
+
+- name: Create build directory for prima.cpp
+  ansible.builtin.file:
+    path: "{{ primacpp_install_dir }}"
+    state: directory
+    mode: '0755'
+  become: yes
 
 - name: Clone prima.cpp repository
-  git:
+  ansible.builtin.git:
     repo: "{{ primacpp_git_repo }}"
     dest: "{{ primacpp_install_dir }}"
     version: master
     update: yes
+  become: yes
 
 - name: Configure prima.cpp build
-  command: cmake -B build
+  ansible.builtin.command:
+    cmd: cmake -B build
   args:
     chdir: "{{ primacpp_install_dir }}"
+    creates: "{{ primacpp_install_dir }}/build/Makefile"
   when: "'worker_nodes' in group_names and 'controller_nodes' not in group_names"
+  become: yes
 
 - name: Configure prima.cpp build with HiGHS
-  command: cmake -B build -DUSE_HIGHS=1
+  ansible.builtin.command:
+    cmd: cmake -B build -DUSE_HIGHS=1
   args:
     chdir: "{{ primacpp_install_dir }}"
+    creates: "{{ primacpp_install_dir }}/build/Makefile"
   when: "'controller_nodes' in group_names"
+  become: yes
 
 - name: Build prima.cpp
-  command: cmake --build build --config Release -j
+  ansible.builtin.command:
+    cmd: cmake --build build --config Release -j
   args:
     chdir: "{{ primacpp_install_dir }}"
+    creates: "{{ primacpp_install_dir }}/build/bin/primaserver" # Assuming 'primaserver' is a binary
+  become: yes
+
+- name: Find compiled binaries
+  ansible.builtin.find:
+    paths: "{{ primacpp_install_dir }}/build/bin"
+    patterns: '*'
+    file_type: file
+  register: primacpp_binaries
+  become: yes
+
+- name: Install prima.cpp binaries
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "/usr/local/bin/{{ item.path | basename }}"
+    mode: '0755'
+    remote_src: yes
+  loop: "{{ primacpp_binaries.files }}"
+  become: yes
+
+- name: Clean up prima.cpp build directory
+  ansible.builtin.file:
+    path: "{{ primacpp_install_dir }}"
+    state: absent
+  become: yes
 
 - name: Copy prima.cpp Nomad job file
-  template:
+  ansible.builtin.template:
     src: ../../jobs/primacpp.nomad
-    dest: /home/user/primacpp.nomad
+    dest: /opt/nomad/jobs/primacpp.nomad
   when: "'controller_nodes' in group_names"
