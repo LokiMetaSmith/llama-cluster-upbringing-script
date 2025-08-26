@@ -10,9 +10,12 @@ all:
           ansible_host: AID-E-2
           mac_address: "00:25:ab:79:fd:b6"
         AID-E-3:
-          ansible_host: AID-E-3
+          ansible_host: AID-E-25
           mac_address: "ac:fd:ce:2e:b6:11"
-
+        AID-E-3:
+          ansible_host: AID-E-25
+          mac_address: 
+          
     worker_nodes:
       hosts:
         AID-E-24:
@@ -31,5 +34,7 @@ all:
         AID-E-3:
           ansible_host: AID-E-3
           mac_address: "ac:fd:ce:2e:b6:11"
+        AID-E-25:
+          ansible_host: AID-E-25
   vars:
 #  ansible_user: user # will specify specific user settings elsewhere
