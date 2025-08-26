@@ -8,6 +8,27 @@
     # which is the standard for this project.
     target_user: "user"
   tasks:
+    - name: Wait for a Consul leader to be elected
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8500/v1/status/leader"
+        return_content: yes
+      register: consul_leader_status
+      until: consul_leader_status.content != '""' and consul_leader_status.status == 200
+      retries: 12 # Wait for up to 60 seconds
+      delay: 5
+      ignore_errors: yes # We handle the failure manually in the next task
+
+    - name: Fail gracefully if no Consul leader is found
+      ansible.builtin.fail:
+        msg: |
+          Consul cluster has no leader after waiting for 60 seconds.
+          The playbook cannot continue without a functioning Consul cluster.
+          Please check the status of your Consul server nodes to ensure they are running and can communicate.
+          Common reasons for this are:
+          1. Not enough server nodes are running to form a quorum.
+          2. A network partition is preventing communication between servers.
+      when: consul_leader_status.failed or consul_leader_status.content == '""'
+
     - name: Ensure .ssh directory exists for target user
       ansible.builtin.file:
         path: "/home/{{ target_user }}/.ssh"
@@ -21,14 +42,14 @@
         url: "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse"
         return_content: yes
       register: consul_kv_response
-      until: consul_kv_response.status == 200
-      retries: 5
-      delay: 5
+      # We don't need retries here anymore because the leader check passed
+      # but we should still check the status
+      failed_when: consul_kv_response.status != 200
 
     - name: Decode and assemble public keys
       ansible.builtin.set_fact:
         authorized_keys_content: "{{ consul_kv_response.json | community.general.json_query('[].Value') | map('b64decode') | join('\n') }}\n"
-      when: consul_kv_response.status == 200
+      when: consul_kv_response.status == 200 and consul_kv_response.json is defined
 
     - name: Populate authorized_keys with keys from Consul
       ansible.builtin.copy:
@@ -37,7 +58,7 @@
         mode: '0600'
         owner: "{{ target_user }}"
         group: "{{ target_user }}"
-      when: consul_kv_response.status == 200
+      when: authorized_keys_content is defined
 
 - name: Play 1 - Bootstrap New Nodes as 'root'
   hosts: all:!localhost
