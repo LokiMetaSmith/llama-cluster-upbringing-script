@@ -12,7 +12,7 @@ all:
         AID-E-3:
           ansible_host: AID-E-25
           mac_address: "ac:fd:ce:2e:b6:11"
-        AID-E-3:
+        AID-E-25:
           ansible_host: AID-E-25
           mac_address: 
           
