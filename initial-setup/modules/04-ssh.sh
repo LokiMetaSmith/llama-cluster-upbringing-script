@@ -53,44 +53,54 @@ done
 log "Publishing public key to Consul for host: $HOSTNAME"
 curl -s -X PUT -d "$PUB_KEY_CONTENT" "http://127.0.0.1:8500/v1/kv/ssh-keys/$HOSTNAME"
 
-# --- Create Authorized Keys Sync Script ---
+# --- Create Idempotent Authorized Keys Sync Script ---
 SYNC_SCRIPT_PATH="/usr/local/bin/update-ssh-authorized-keys.sh"
-cat > "$SYNC_SCRIPT_PATH" << EOF
+cat > "$SYNC_SCRIPT_PATH" << 'EOF'
 #!/bin/bash
-# This script syncs SSH public keys from the Consul KV store to the user's authorized_keys file.
+# This script idempotently syncs SSH public keys from the Consul KV store.
+# It only writes to the authorized_keys file if there are actual changes.
+
+log_sync() {
+    echo "[SSH-Sync] $1"
+}
 
 # The USERNAME is set in /etc/environment by a previous script, but we can default to 'user'
-if [ -z "\$USERNAME" ]; then
+if [ -z "$USERNAME" ]; then
     USERNAME="user"
 fi
 
-USER_HOME="/home/\$USERNAME"
-AUTHORIZED_KEYS_FILE="\$USER_HOME/.ssh/authorized_keys"
-TEMP_KEYS_FILE=\$(mktemp)
+USER_HOME="/home/$USERNAME"
+AUTHORIZED_KEYS_FILE="$USER_HOME/.ssh/authorized_keys"
+TEMP_KEYS_FILE=$(mktemp)
 
 # Ensure the .ssh directory exists
-mkdir -p "\$USER_HOME/.ssh"
-chown "\$USERNAME":"\$USERNAME" "\$USER_HOME/.ssh"
-chmod 700 "\$USER_HOME/.ssh"
+mkdir -p "$USER_HOME/.ssh"
+chown "$USERNAME":"$USERNAME" "$USER_HOME/.ssh"
+chmod 700 "$USER_HOME/.ssh"
 
-# Fetch all keys from Consul. The response is JSON.
-# jq is used to extract the 'Value' field, which is base64 encoded.
-# The -r flag removes quotes, and the .[] iterates over the array.
-# The base64 decode and append dance ensures keys are correctly formatted.
+# Fetch all keys from Consul and decode them into a temporary file.
 curl -s "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse" | jq -r '.[].Value' | while read -r val; do
-    echo "\$val" | base64 -d >> "\$TEMP_KEYS_FILE"
-    echo >> "\$TEMP_KEYS_FILE" # Ensure a newline after each key
+    echo "$val" | base64 -d >> "$TEMP_KEYS_FILE"
+    echo >> "$TEMP_KEYS_FILE" # Ensure a newline after each key
 done
 
-# Atomically replace the old authorized_keys file with the new one.
-# This is safer than appending, as it handles key removal gracefully.
-mv "\$TEMP_KEYS_FILE" "\$AUTHORIZED_KEYS_FILE"
-
-# Set correct ownership and permissions
-chown "\$USERNAME":"\$USERNAME" "\$AUTHORIZED_KEYS_FILE"
-chmod 600 "\$AUTHORIZED_KEYS_FILE"
-
-log "SSH authorized keys have been updated from Consul."
+# Check if the authorized_keys file exists. If not, we must create it.
+if [ ! -f "$AUTHORIZED_KEYS_FILE" ]; then
+    log_sync "Authorized keys file does not exist. Creating it."
+    mv "$TEMP_KEYS_FILE" "$AUTHORIZED_KEYS_FILE"
+    chown "$USERNAME":"$USERNAME" "$AUTHORIZED_KEYS_FILE"
+    chmod 600 "$AUTHORIZED_KEYS_FILE"
+    log_sync "SSH authorized keys created."
+# Compare the new keys with the existing ones. Only write if they are different.
+elif ! diff -q "$AUTHORIZED_KEYS_FILE" "$TEMP_KEYS_FILE" >/dev/null; then
+    log_sync "SSH key changes detected in Consul. Updating local file."
+    mv "$TEMP_KEYS_FILE" "$AUTHORIZED_KEYS_FILE"
+    chmod 600 "$AUTHORIZED_KEYS_FILE" # Ensure permissions are correct
+    log_sync "SSH authorized keys updated."
+else
+    # The files are the same, no need to do anything. Clean up the temp file.
+    rm "$TEMP_KEYS_FILE"
+fi
 EOF
 
 chmod +x "$SYNC_SCRIPT_PATH"
@@ -100,6 +110,7 @@ log "Performing initial SSH key sync..."
 bash "$SYNC_SCRIPT_PATH"
 
 # Set up cron job to run the sync script every 5 minutes for the user
-(crontab -u "$USERNAME" -l 2>/dev/null; echo "*/5 * * * * $SYNC_SCRIPT_PATH") | crontab -u "$USERNAME" -
+# The definition of 'log' is not available to the cron job, so we redirect output
+(crontab -u "$USERNAME" -l 2>/dev/null; echo "*/5 * * * * $SYNC_SCRIPT_PATH >> /var/log/ssh-key-sync.log 2>&1") | crontab -u "$USERNAME" -
 
-log "Advanced SSH configuration complete. A cron job will keep keys synced."
+log "Advanced SSH configuration complete. A cron job will keep keys synced idempotently."

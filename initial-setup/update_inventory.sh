@@ -28,7 +28,8 @@ done
 
 # Fetch all nodes from the Consul catalog. These are the workers.
 # The '.[] | .Address' jq filter extracts the Address field from each object in the JSON array.
-ALL_NODES=$(curl -s http://127.0.0.1:8500/v1/catalog/nodes | jq -r '.[] | .Address')
+# We pipe to 'sort -u' to ensure the list is unique, preventing duplicate hosts.
+ALL_NODES=$(curl -s http://127.0.0.1:8500/v1/catalog/nodes | jq -r '.[] | .Address' | sort -u)
 if [ -z "$ALL_NODES" ]; then
     log "Could not fetch nodes from Consul. Aborting."
     exit 1
@@ -37,7 +38,7 @@ fi
 # Fetch the nodes running the 'nomad' service. These are the controllers.
 # The filter is similar, but it targets the 'Address' field for the 'nomad' service.
 # The README specifies that controller_nodes are also part of worker_nodes. This logic holds.
-CONTROLLER_NODES=$(curl -s http://127.0.0.1:8500/v1/catalog/service/nomad | jq -r '.[].Address')
+CONTROLLER_NODES=$(curl -s http://127.0.0.1:8500/v1/catalog/service/nomad | jq -r '.[].Address' | sort -u)
 if [ -z "$CONTROLLER_NODES" ]; then
     log "Could not fetch controller nodes (nomad service) from Consul. Using all nodes as workers only."
 fi

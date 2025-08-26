@@ -7,6 +7,11 @@
       ansible.builtin.apt:
         name: sudo
         state: present
+
+    - name: Ensure the rsync package is installed
+      ansible.builtin.apt:
+        name: rsync
+        state: present
         
     - name: Ensure the sudo group exists
       ansible.builtin.group:
@@ -35,6 +40,15 @@
   become: yes # Now we use the sudo privileges we just created
 
   pre_tasks:
+    - name: Bootstrap SSH trust by pre-syncing keys on the controller
+      ansible.builtin.command: /usr/local/bin/update-ssh-authorized-keys.sh
+      delegate_to: localhost
+      run_once: true
+      changed_when: false
+
+    - name: Check connectivity to all nodes
+      ansible.builtin.ping:
+
     - name: Distribute control repository to all nodes
       ansible.posix.synchronize:
         src: "{{ playbook_dir }}/"
@@ -67,3 +81,7 @@
           mac_address: "{{ ansible_default_ipv4.macaddress }}"
       delegate_to: localhost
 
+    - name: Force a final synchronization of SSH keys
+      ansible.builtin.command: /usr/local/bin/update-ssh-authorized-keys.sh
+      register: sync_result
+      changed_when: "'updated' in sync_result.stdout"
