@@ -26,8 +26,8 @@
 
 - name: Play 2 - Recover Nomad and Consul Cluster State
   # This play will only run if suitable controller candidates were found in Play 1.
+  # If the 'new_controller_nodes' list is empty, Ansible will gracefully skip this play.
   hosts: "{{ new_controller_nodes }}"
-  when: new_controller_nodes is defined and new_controller_nodes | length > 0
   become: yes
   gather_facts: no # Facts were gathered in the previous play
   ignore_unreachable: no # We expect the chosen host(s) to be reachable.
