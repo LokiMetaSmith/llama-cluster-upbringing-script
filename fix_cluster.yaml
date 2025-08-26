@@ -14,7 +14,7 @@
 
     - name: Create a list of all suitable controller candidates
       ansible.builtin.set_fact:
-        controller_candidates: "{{ query('inventory_hostnames', 'all') | select('extract', hostvars, 'is_controller_candidate') | list }}"
+        controller_candidates: "{{ hostvars.values() | selectattr('is_controller_candidate', 'defined') | selectattr('is_controller_candidate', 'equalto', true) | map(attribute='inventory_hostname') | list }}"
       delegate_to: localhost
       run_once: true
 
