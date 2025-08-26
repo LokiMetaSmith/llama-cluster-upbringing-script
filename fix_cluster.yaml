@@ -3,6 +3,12 @@
   gather_facts: yes
   ignore_unreachable: yes
   tasks:
+    - name: Initialize the list of new controller nodes
+      ansible.builtin.set_fact:
+        new_controller_nodes: []
+      delegate_to: localhost
+      run_once: true
+
     - name: Check if host is a suitable controller candidate
       ansible.builtin.set_fact:
         is_controller_candidate: true
