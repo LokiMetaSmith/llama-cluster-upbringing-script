@@ -40,6 +40,12 @@
   become: yes # Now we use the sudo privileges we just created
 
   pre_tasks:
+    - name: Bootstrap SSH trust by pre-syncing keys on the controller
+      ansible.builtin.command: /usr/local/bin/update-ssh-authorized-keys.sh
+      delegate_to: localhost
+      run_once: true
+      changed_when: false
+
     - name: Check connectivity to all nodes
       ansible.builtin.ping:
 
