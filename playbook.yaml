@@ -2,10 +2,42 @@
   hosts: localhost
   connection: local
   gather_facts: no
+  vars:
+    # This ensures we are targeting the correct user's home directory, even if
+    # the playbook is run with a different local user. It defaults to 'user'
+    # which is the standard for this project.
+    target_user: "user"
   tasks:
-    - name: Bootstrap SSH trust by pre-syncing keys on the controller
-      ansible.builtin.command: /usr/local/bin/update-ssh-authorized-keys.sh
-      changed_when: false
+    - name: Ensure .ssh directory exists for target user
+      ansible.builtin.file:
+        path: "/home/{{ target_user }}/.ssh"
+        state: directory
+        mode: '0700'
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+
+    - name: Fetch public keys from Consul KV store
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse"
+        return_content: yes
+      register: consul_kv_response
+      until: consul_kv_response.status == 200
+      retries: 5
+      delay: 5
+
+    - name: Decode and assemble public keys
+      ansible.builtin.set_fact:
+        authorized_keys_content: "{{ consul_kv_response.json | community.general.json_query('[].Value') | map('b64decode') | join('\n') }}\n"
+      when: consul_kv_response.status == 200
+
+    - name: Populate authorized_keys with keys from Consul
+      ansible.builtin.copy:
+        content: "{{ authorized_keys_content | default('') }}"
+        dest: "/home/{{ target_user }}/.ssh/authorized_keys"
+        mode: '0600'
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+      when: consul_kv_response.status == 200
 
 - name: Play 1 - Bootstrap New Nodes as 'root'
   hosts: all:!localhost
