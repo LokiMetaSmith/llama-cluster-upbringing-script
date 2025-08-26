@@ -40,6 +40,9 @@
   become: yes # Now we use the sudo privileges we just created
 
   pre_tasks:
+    - name: Check connectivity to all nodes
+      ansible.builtin.ping:
+
     - name: Distribute control repository to all nodes
       ansible.posix.synchronize:
         src: "{{ playbook_dir }}/"
