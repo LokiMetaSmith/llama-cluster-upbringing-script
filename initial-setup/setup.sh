@@ -43,5 +43,8 @@ for module in "$MODULE_DIR"/*.sh; do
     fi
 done
 
+log "Generating dynamic inventory..."
+bash "$SCRIPT_DIR/update_inventory.sh"
+
 log "Initial machine setup complete."
 log "Please reboot the machine for all changes to take effect."
