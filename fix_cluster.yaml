@@ -3,12 +3,6 @@
   gather_facts: yes
   ignore_unreachable: yes
   tasks:
-    - name: Initialize the list of new controller nodes
-      ansible.builtin.set_fact:
-        new_controller_nodes: []
-      delegate_to: localhost
-      run_once: true
-
     - name: Check if host is a suitable controller candidate
       ansible.builtin.set_fact:
         is_controller_candidate: true
@@ -18,33 +12,29 @@
         - ansible_memtotal_mb is defined
         - ansible_memtotal_mb >= 8000
 
-    - name: Create a list of all suitable controller candidates
-      ansible.builtin.set_fact:
-        controller_candidates: "{{ hostvars.values() | selectattr('is_controller_candidate', 'defined') | selectattr('is_controller_candidate', 'equalto', true) | map(attribute='inventory_hostname') | list }}"
+    - name: Add suitable candidates to the 'new_controllers' group
+      ansible.builtin.add_host:
+        name: "{{ item }}"
+        groups: new_controllers
       delegate_to: localhost
       run_once: true
-
-    - name: Select up to 3 candidates for the new control plane
-      ansible.builtin.set_fact:
-        new_controller_nodes: "{{ controller_candidates[:3] }}"
-      delegate_to: localhost
-      run_once: true
+      loop: "{{ hostvars.values() | selectattr('is_controller_candidate', 'defined') | map(attribute='inventory_hostname') | list | first(3) }}"
 
 - name: Play 2 - Recover Nomad and Consul Cluster State
-  # This play will only run if suitable controller candidates were found in Play 1.
-  # If the 'new_controller_nodes' list is empty, Ansible will gracefully skip this play.
-  hosts: "{{ new_controller_nodes }}"
+  # This play will only run if suitable controller candidates were found and added
+  # to the 'new_controllers' group in Play 1.
+  hosts: new_controllers
   become: yes
   gather_facts: no # Facts were gathered in the previous play
   ignore_unreachable: no # We expect the chosen host(s) to be reachable.
 
   tasks:
-    - name: Add the selected hosts to the controller_nodes group in memory
+    - name: Add the selected hosts to the 'controller_nodes' group as well
+      # This is needed so that templates using groups['controller_nodes'] render correctly.
       ansible.builtin.add_host:
         name: "{{ item }}"
         groups: controller_nodes
-      loop: "{{ new_controller_nodes }}"
-      when: new_controller_nodes is defined
+      loop: "{{ groups['new_controllers'] }}"
 
     - name: Ensure smartmontools is installed
       ansible.builtin.apt:
