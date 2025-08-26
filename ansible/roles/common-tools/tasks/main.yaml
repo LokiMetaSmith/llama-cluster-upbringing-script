@@ -10,6 +10,8 @@
       - fio
       - iperf3
       - ufw
+      - figlet
+      - lolcat
     state: present
   become: yes
 
