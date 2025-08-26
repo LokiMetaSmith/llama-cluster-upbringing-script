@@ -1,11 +1,40 @@
----
-- name: Recover Nomad and Consul Cluster State
-  hosts: controller_nodes
-  become: yes
+- name: Play 1 - Dynamically Select a New Control Plane Node
+  hosts: all
   gather_facts: yes
   ignore_unreachable: yes
+  tasks:
+    - name: Check if host is a suitable controller candidate
+      ansible.builtin.set_fact:
+        is_controller_candidate: true
+      when:
+        - ansible_processor_vcpus is defined
+        - ansible_processor_vcpus >= 2
+        - ansible_memtotal_mb is defined
+        - ansible_memtotal_mb >= 8000
+
+    - name: Select the first available candidate as the new controller
+      ansible.builtin.set_fact:
+        new_controller_host: "{{ item }}"
+      delegate_to: localhost
+      run_once: true
+      loop: "{{ query('inventory_hostnames', 'all') }}"
+      when: hostvars[item].is_controller_candidate is defined and hostvars[item].is_controller_candidate
+
+- name: Play 2 - Recover Nomad and Consul Cluster State
+  # Run on the newly selected controller if one was found, otherwise fall back
+  # to the statically defined controller_nodes group.
+  hosts: "{{ new_controller_host | default('controller_nodes') }}"
+  become: yes
+  gather_facts: yes
+  ignore_unreachable: no # We expect the chosen host to be reachable.
 
   tasks:
+    - name: Add the selected host to the controller_nodes group in memory
+      ansible.builtin.add_host:
+        name: "{{ new_controller_host }}"
+        groups: controller_nodes
+      when: new_controller_host is defined
+
     - name: Ensure smartmontools is installed
       ansible.builtin.apt:
         name: smartmontools
@@ -59,10 +88,19 @@
         path: /opt/consul/data
         state: absent
 
+    - name: Re-apply Consul role to configure as a server
+      ansible.builtin.include_role:
+        name: consul
+
+    - name: Re-apply Nomad role to configure as a server
+      ansible.builtin.include_role:
+        name: nomad
+
     - name: Start Consul service
       ansible.builtin.service:
         name: consul
         state: started
+        enabled: yes
       register: start_consul_service
       failed_when:
         - start_consul_service.failed == true
@@ -72,6 +110,7 @@
       ansible.builtin.service:
         name: nomad
         state: started
+        enabled: yes
       register: start_nomad_service
       failed_when:
         - start_nomad_service.failed == true
