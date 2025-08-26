@@ -1,4 +1,4 @@
-- name: Play 1 - Dynamically Select a New Control Plane Node
+- name: Play 1 - Dynamically Select New Control Plane Nodes
   hosts: all
   gather_facts: yes
   ignore_unreachable: yes
@@ -12,28 +12,33 @@
         - ansible_memtotal_mb is defined
         - ansible_memtotal_mb >= 8000
 
-    - name: Select the first available candidate as the new controller
+    - name: Create a list of all suitable controller candidates
       ansible.builtin.set_fact:
-        new_controller_host: "{{ item }}"
+        controller_candidates: "{{ query('inventory_hostnames', 'all') | select('extract', hostvars, 'is_controller_candidate') | list }}"
       delegate_to: localhost
       run_once: true
-      loop: "{{ query('inventory_hostnames', 'all') }}"
-      when: hostvars[item].is_controller_candidate is defined and hostvars[item].is_controller_candidate
+
+    - name: Select up to 3 candidates for the new control plane
+      ansible.builtin.set_fact:
+        new_controller_nodes: "{{ controller_candidates[:3] }}"
+      delegate_to: localhost
+      run_once: true
 
 - name: Play 2 - Recover Nomad and Consul Cluster State
-  # Run on the newly selected controller if one was found, otherwise fall back
+  # Run on the newly selected controller(s) if any were found, otherwise fall back
   # to the statically defined controller_nodes group.
-  hosts: "{{ new_controller_host | default('controller_nodes') }}"
+  hosts: "{{ new_controller_nodes | default('controller_nodes') }}"
   become: yes
-  gather_facts: yes
-  ignore_unreachable: no # We expect the chosen host to be reachable.
+  gather_facts: no # Facts were gathered in the previous play
+  ignore_unreachable: no # We expect the chosen host(s) to be reachable.
 
   tasks:
-    - name: Add the selected host to the controller_nodes group in memory
+    - name: Add the selected hosts to the controller_nodes group in memory
       ansible.builtin.add_host:
-        name: "{{ new_controller_host }}"
+        name: "{{ item }}"
         groups: controller_nodes
-      when: new_controller_host is defined
+      loop: "{{ new_controller_nodes }}"
+      when: new_controller_nodes is defined
 
     - name: Ensure smartmontools is installed
       ansible.builtin.apt:
