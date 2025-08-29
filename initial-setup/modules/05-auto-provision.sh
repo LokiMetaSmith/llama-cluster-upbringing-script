@@ -12,20 +12,23 @@ cat > /usr/local/bin/call-home.sh << 'EOF'
 #!/bin/bash
 # This script runs once on first boot to trigger Ansible provisioning.
 
-# Find the IP address of this machine
+# Find the IP address and hostname of this machine
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
+HOSTNAME=$(hostname -s)
 CONTROL_NODE_IP="{{ CONTROL_NODE_IP_PLACEHOLDER }}"
 
 echo "Attempting to call home to control node at ${CONTROL_NODE_IP}..."
 
 # Try to call home for up to 5 minutes
 for i in {1..30}; do
-    curl -s -X POST -H "Content-Type: application/json" \
-        -d "{\"ip_address\": \"${IP_ADDRESS}\"}" \
-        "http://${CONTROL_NODE_IP}:8001/api/ready-for-provisioning"
+    response=$(curl -s -w "%{http_code}" -X POST -H "Content-Type: application/json" \
+        -d "{\"ip_address\": \"${IP_ADDRESS}\", \"hostname\": \"${HOSTNAME}\"}" \
+        "http://${CONTROL_NODE_IP}:8001/api/ready-for-provisioning")
 
-    if [ $? -eq 0 ]; then
-        echo "Successfully called home. Provisioning should begin shortly."
+    http_code="${response: -3}"
+
+    if [ "$http_code" -eq 202 ]; then
+        echo "Successfully called home. Request accepted by provisioning API."
         # Disable the service to prevent it from running again
         systemctl disable call-home.service
         rm /usr/local/bin/call-home.sh
