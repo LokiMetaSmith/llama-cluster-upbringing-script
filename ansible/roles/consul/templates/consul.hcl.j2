@@ -10,7 +10,15 @@ ui_config {
 # For a server, we need to specify the bootstrap_expect
 {% if "'controller_nodes' in group_names" %}
 server = true
+# In a single-node setup (like when using the bootstrap.sh script),
+# the inventory will only contain one host. In this case, we must set
+# bootstrap_expect to 1 to allow the server to elect itself as leader.
+# For multi-node setups, we expect a quorum of controller nodes.
+{% if ansible_play_hosts_all | length == 1 %}
+bootstrap_expect = 1
+{% else %}
 bootstrap_expect = {{ groups['controller_nodes'] | length }}
+{% endif %}
 {% else %}
 server = false
 {% endif %}
