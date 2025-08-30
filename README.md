@@ -61,8 +61,12 @@ For advanced use cases, such as the Mixture-of-Experts (MoE) routing described i
   # First, create a new namespace for the expert
   nomad namespace apply coding
 
-  # Deploy the job to the new namespace
-  nomad job run -namespace=coding -meta="JOB_NAME=coding,SERVICE_NAME=llama-api-coding,MODEL_PATH=/path/to/coding.gguf" /home/user/primacpp.nomad
+  # Deploy the job to the new namespace, passing variables with -var
+  nomad job run -namespace=coding \
+    -var "job_name=prima-coding-expert" \
+    -var "service_name=llama-api-coding" \
+    -var "model_path=/path/to/coding.gguf" \
+    /home/user/primacpp.nomad
   ```
 The `TwinService` will automatically discover these new experts via Consul and make them available for routing.
 
@@ -104,17 +108,26 @@ The agent can use tools to perform actions and gather information. The `TwinServ
 The agent is designed to function as a "Mixture of Experts." The primary LLM acts as a router, classifying the user's query and routing it to a specialized backend if appropriate.
 
 - **How it Works:** The `TwinService` prompt instructs the router LLM to first decide if a query is general, technical, or creative. If it's technical, for example, the router's job is to call the `route_to_coding_expert` tool. The `TwinService` then sends the query to a separate LLM cluster that is running a coding-specific model.
-- **Configuration:** To use this feature, you must deploy multiple LLM backends into their own isolated namespaces.
-  - Edit and run the parameterized Nomad jobs (e.g., `primacpp.nomad`) with different `-meta` flags and the `-namespace` flag:
+- **Configuration:** To use this feature, you must deploy multiple LLM backends into their own isolated namespaces using the `-var` flag to customize them.
+  - **Example:**
     ```bash
     # Create the namespaces
     nomad namespace apply general
     nomad namespace apply coding
 
     # Deploy a general-purpose model
-    nomad job run -namespace=general -meta="JOB_NAME=general,SERVICE_NAME=llama-api-general,MODEL_PATH=/path/to/general.gguf" /home/user/primacpp.nomad
+    nomad job run -namespace=general \
+      -var "job_name=prima-general-expert" \
+      -var "service_name=llama-api-general" \
+      -var "model_path=/path/to/general.gguf" \
+      /home/user/primacpp.nomad
+
     # Deploy a coding model
-    nomad job run -namespace=coding -meta="JOB_NAME=coding,SERVICE_NAME=llama-api-coding,MODEL_PATH=/path/to/coding.gguf" /home/user/primacpp.nomad
+    nomad job run -namespace=coding \
+      -var "job_name=prima-coding-expert" \
+      -var "service_name=llama-api-coding" \
+      -var "model_path=/path/to/coding.gguf" \
+      /home/user/primacpp.nomad
     ```
   - The `TwinService` discovers these experts across all namespaces using Consul.
 
@@ -175,9 +188,11 @@ Measures the end-to-end latency of a live conversation. Enable it by setting `BE
 ### 9.2. Standardized Performance Benchmark
 Uses `llama-bench` to measure the raw inference speed (tokens/sec) of the deployed LLM backend.
 1. Ensure an LLM backend is running.
-2. Edit `/home/user/benchmark.nomad` to point to the GGUF model you want to test.
-3. Run the job: `nomad job run /home/user/benchmark.nomad`
-4. View results in the job logs: `nomad job logs llama-benchmark`
+2. Run the benchmark job, passing the path to your desired GGUF model using the `-var` flag:
+   ```bash
+   nomad job run -var "model_path=/path/to/your/model.gguf" /home/user/benchmark.nomad
+   ```
+3. View results in the job logs: `nomad job logs llama-benchmark`
 
 ## 10. Advanced Development: Prompt Evolution
 For advanced users, this project includes a workflow for automatically improving the agent's core prompt using evolutionary algorithms. See `prompt_engineering/PROMPT_ENGINEERING.md` for details.
