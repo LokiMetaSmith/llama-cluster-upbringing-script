@@ -25,11 +25,16 @@ This layer takes the base Debian installs and configures them into a functional,
 - **Implementation:** The root `playbook.yaml` and the roles within the `ansible/roles/` directory define the entire cluster configuration.
 - **Key Components:**
   - **Roles:** The playbook is composed of modular roles for each piece of software (`common`, `docker`, `consul`, `nomad`, etc.).
-  - **Auto-Provisioning API:** A new role, `provisioning_api`, deploys a small FastAPI web service onto the control node. This service listens for "call home" messages from newly installed nodes, automatically adds them to the Ansible inventory, and triggers a provisioning run against them. This enables a fully automated, zero-touch provisioning workflow for the cluster after the first node is set up.
+  - **Auto-Provisioning API:** The `provisioning_api` role deploys a robust FastAPI web service on the control node. This service acts as the entrypoint for new nodes joining the cluster. It provides a secure endpoint for nodes to "call home" to, and it is responsible for orchestrating the provisioning process. Key features include:
+    - **Asynchronous Job Handling:** It runs long `ansible-playbook` jobs in the background, preventing API timeouts.
+    - **Status Tracking:** It provides API endpoints to monitor the status of ongoing and completed provisioning jobs.
+    - **Failure Logging:** If a provisioning run fails, it automatically captures the error log and appends it to a `TODO.md` file for administrative review.
+    - **Race Condition Prevention:** It uses file locking to ensure the integrity of the inventory file when multiple nodes call home simultaneously.
+  - **Agent Bootstrapping:** A new role, `bootstrap_agent`, runs at the end of the initial playbook run. Its sole purpose is to perform the "Day 2" setup of the primary control node, automatically deploying the `llamacpp-rpc` and `pipecatapp` Nomad jobs. This action transforms the freshly provisioned control node into a fully autonomous AI agent, ready to manage the cluster.
 - **Workflow:**
-  1. An administrator manually sets up the first control node.
-  2. The `initial-setup.sh` script on a newly PXE-booted client runs a "call home" script on its first boot.
-  3. The `provisioning_api` on the control node catches this call, updates its inventory, and automatically runs `ansible-playbook` on the new node.
+  1. An administrator manually sets up the first control node and runs the main Ansible playbook. This playbook installs the `provisioning_api` and runs the `bootstrap_agent` role to make the node self-aware.
+  2. A new, PXE-booted client runs a "call home" script on its first boot, sending its hostname and IP address to the `provisioning_api`.
+  3. The API validates the request, safely updates the Ansible inventory file, and triggers an asynchronous `ansible-playbook` run targeting the new node.
 - **Outcome:** All nodes in the cluster are automatically and consistently configured with all necessary dependencies, ready to run application workloads.
 
 ## Layer 3: Application Orchestration (Nomad & Consul)
@@ -39,9 +44,10 @@ This layer is responsible for deploying, managing, and scaling the various servi
 - **Technology:** [HashiCorp Nomad](https://www.nomadproject.io/) for orchestration and [HashiCorp Consul](https://www.consul.io/) for service discovery.
 - **Implementation:** Services are defined as declarative job files (e.g., `pipecatapp.nomad`, `primacpp.nomad`).
 - **Workflow:**
-  1. The administrator uses the `nomad job run` command to submit job files to the Nomad cluster.
-  2. Nomad schedules the jobs on available worker nodes.
-  3. **Service Discovery:** As jobs start, they automatically register with Consul. For example, the `TwinService` can dynamically discover all available "expert" LLM backends by querying Consul for services tagged with a specific pattern.
+  1. The `bootstrap_agent` Ansible role automatically deploys the core `llamacpp-rpc` and `pipecatapp` jobs to Nomad on the primary control node.
+  2. For advanced use cases, an administrator can still manually deploy additional jobs (e.g., specialized experts) using the `nomad job run` command.
+  3. Nomad schedules all jobs on available worker nodes based on their resource requirements.
+  4. **Service Discovery:** As jobs start, they automatically register with Consul. For example, the `TwinService` can dynamically discover all available "expert" LLM backends by querying Consul for services tagged with a specific pattern.
 - **Outcome:** All microservices are running, monitored, and can find each other dynamically on the network.
 
 ## Layer 4: The AI Application Stack
@@ -53,7 +59,7 @@ This layer contains the core Python application that constitutes the agent itsel
 - **Core Components:**
   - **`TwinService`:** The agent's "brain," implemented as a `pipecat` `FrameProcessor`. It handles conversation, memory, and tool use.
   - **Memory:** A dual-component memory system with short-term conversational history and a long-term FAISS vector store for semantic search.
-  - **Tools:** The `TwinService` can use a variety of tools, including `ssh`, a sandboxed `code_runner`, and `vision`.
+  - **Tools:** The `TwinService` can use a variety of tools, including `ssh`, a sandboxed `code_runner`, `vision`, and most importantly, `ansible`. The `ansible` tool allows the agent to call back to the Ansible control plane, enabling it to provision new nodes or reconfigure the cluster in response to conversational commands.
   - **Mixture of Experts (MoE) Routing:** The `TwinService` can act as a router, forwarding queries to specialized LLM backends discovered via Consul.
 - **Newly Implemented Features:**
   - **Debug Mode:** Enables verbose logging of tool inputs and outputs.

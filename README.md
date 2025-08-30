@@ -32,35 +32,39 @@ This system uses an advanced iPXE-over-HTTP method that is significantly faster 
 ## 3. Control Node & Ansible Provisioning
 1.  **On your control node, install Ansible and Git:** `sudo apt install ansible git -y`
 2.  **Clone this repository.**
-3.  **Configure SSH:** Generate an SSH key (`ssh-keygen`) and distribute it to all cluster nodes (`ssh-copy-id user@<node_ip>`).
-4.  **Configure Ansible Inventory (`inventory.yaml`):** Edit the `inventory.yaml` file to define your cluster's hosts. This file tells Ansible which machines to connect to.
-    - Create a *host group* named `controller_nodes`. This group must contain exactly 3 nodes that will act as Nomad servers. **Note:** This is a host group in the inventory, not an Ansible role.
-    - Create a *host group* named `worker_nodes` that contains all nodes in the cluster (including the controllers).
-5.  **Run the Playbook:**
-    To provision the cluster, run the following command from the root of this repository. This will install and configure all required software on all nodes.
+3.  **Configure Initial Inventory (`inventory.yaml`):** Edit the `inventory.yaml` file to define your *initial* controller nodes. While new worker nodes will be added to the cluster automatically, you must define the initial seed nodes for the control plane here.
+    - Create a *host group* named `controller_nodes`. This group must contain at least one node that will act as the primary control node and Nomad server.
+    - Create an empty *host group* named `worker_nodes`. This group will be populated automatically as new nodes join the cluster.
+4.  **Run the Main Playbook:**
+    Run the following command from the root of this repository. This will configure the initial control node(s) and prepare the cluster for auto-expansion.
     ```bash
     ansible-playbook -i inventory.yaml playbook.yaml --ask-become-pass
     ```
-    - **`--ask-become-pass`**: This flag is important. It will prompt you for your `sudo` password, which Ansible needs to perform administrative tasks on the cluster nodes. Run this command as your regular user, not as root.
+    - **`--ask-become-pass`**: This flag is important. It will prompt you for your `sudo` password, which Ansible needs to perform administrative tasks.
+    - **What this does:** This playbook not only configures the cluster services (Consul, Nomad, etc.) but also automatically bootstraps the primary control node into a fully autonomous AI agent by deploying the necessary AI services.
 
-## 4. Deploying the AI Services with Nomad
-After provisioning, deploy the services from your control node.
+## 4. AI Service Deployment
+The system is designed to be self-bootstrapping. Once the main Ansible playbook has been run on the primary control node, the AI agent is deployed automatically.
 
-### 4.1. Choose and Deploy an LLM Backend (Run ONE only)
-- **Option A: `prima.cpp` (Recommended):** State-of-the-art for heterogeneous clusters.
+### 4.1. Automated Agent Deployment
+The `bootstrap_agent` role in the Ansible playbook handles the automatic deployment of the core AI services on the primary control node. This includes:
+- **`llama.cpp` RPC Service:** The primary LLM backend for the agent.
+- **`pipecat` Voice Agent:** The main application that orchestrates the agent's logic, memory, and tool use.
+
+You can monitor the status of these services by running `nomad job status` on the control node.
+
+### 4.2. Advanced: Deploying Additional AI Experts
+For advanced use cases, such as the Mixture-of-Experts (MoE) routing described in the Agent Architecture section, you may want to deploy additional, specialized LLM backends. You can do this manually using the Nomad CLI.
+
+- **Example: Deploying a `prima.cpp` cluster for coding tasks:**
   ```bash
-  nomad job run /home/user/primacpp.nomad
-  ```
-- **Option B: `llama.cpp` RPC:** Simpler, traditional client-server model.
-  ```bash
-  nomad job run /home/user/llamacpp-rpc.nomad
-  ```
+  # First, create a new namespace for the expert
+  nomad namespace apply coding
 
-### 4.2. Deploy the Voice Agent
-This deploys the main `pipecat` application, which will automatically connect to your chosen LLM backend.
-```bash
-nomad job run /home/user/pipecatapp.nomad
-```
+  # Deploy the job to the new namespace
+  nomad job run -namespace=coding -meta="JOB_NAME=coding,SERVICE_NAME=llama-api-coding,MODEL_PATH=/path/to/coding.gguf" /home/user/primacpp.nomad
+  ```
+The `TwinService` will automatically discover these new experts via Consul and make them available for routing.
 
 ## 5. Agent Architecture: The `TwinService`
 The core of this application is the `TwinService`, a custom service that acts as the agent's "brain." It orchestrates the agent's responses, memory, and tool use.
@@ -88,6 +92,10 @@ The agent can use tools to perform actions and gather information. The `TwinServ
   - **Description:** Executes a block of Python code in a secure, sandboxed Docker container and returns the output.
   - **Note:** The Docker engine is installed automatically by the Ansible playbook.
   - **Example:** "Use the code runner to calculate the 100th Fibonacci number."
+- **Ansible (`ansible.run_playbook`)**
+  - **Description:** Runs an Ansible playbook to provision or manage nodes in the cluster. This is the primary tool for cluster self-management and expansion.
+  - **Security Warning:** This is an extremely powerful tool that can make significant changes to the cluster. It is marked as a sensitive tool and requires user approval in the web UI if `APPROVAL_MODE` is enabled.
+  - **Example:** "Use ansible to run the main playbook and limit it to the host 'AID-E-26'."
 - **Web Browser (`web_browser.goto`, `web_browser.get_page_content`, etc.)**
   - **Description:** A tool for browsing the web.
   - **Examples:** "Use the web browser to go to google.com and tell me the content of the page."
