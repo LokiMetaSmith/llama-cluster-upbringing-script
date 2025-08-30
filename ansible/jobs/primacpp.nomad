@@ -1,25 +1,40 @@
-job "prima-cluster-{{ meta.JOB_NAME | default \"default\" }}" {
+variable "job_name" {
+  type        = string
+  description = "A unique name for the job."
+  default     = "prima-cluster"
+}
+
+variable "service_name" {
+  type        = string
+  description = "The name of the Consul service for the prima master."
+  default     = "prima-master"
+}
+
+variable "model_path" {
+  type        = string
+  description = "The absolute path to the GGUF model file."
+  default     = "/path/to/default/model.gguf"
+}
+
+variable "node_count" {
+  type        = number
+  description = "The number of nodes to run in the prima.cpp cluster."
+  default     = 1
+}
+
+job "${var.job_name}" {
   datacenters = ["dc1"]
   type        = "service"
-  namespace   = "{{ meta.NAMESPACE | default \"default\" }}"
-
-  meta {
-    NAMESPACE     = "default"
-    JOB_NAME      = "default"
-    SERVICE_NAME  = "prima-master-default"
-    MODEL_PATH    = "/path/to/your/default/model.gguf"
-    NODE_COUNT    = "1"
-  }
 
   group "prima-nodes" {
-    count = meta.NODE_COUNT
+    count = var.node_count
 
     network {
       port "http" {}
     }
 
     service {
-      name     = meta.SERVICE_NAME
+      name     = var.service_name
       provider = "consul"
       port     = "http"
 
@@ -34,14 +49,14 @@ job "prima-cluster-{{ meta.JOB_NAME | default \"default\" }}" {
       template {
         data = <<EOH
 #!/bin/bash
-MASTER_IP=$(nomad service discover -address-type=ipv4 {{ meta.SERVICE_NAME }} | head -n 1)
-NEXT_IP=$(nomad service discover -address-type=ipv4 {{ meta.SERVICE_NAME }} | head -n 1) # Simplified for single node
+MASTER_IP=$(nomad service discover -address-type=ipv4 ${var.service_name} | head -n 1)
+NEXT_IP=$(nomad service discover -address-type=ipv4 ${var.service_name} | head -n 1) # Simplified for single node
 
-/home/user/prima.cpp/build/bin/llama-cli \
-  --model {{ meta.MODEL_PATH }} \
-  --world {{ meta.NODE_COUNT }} \
-  --rank ${NOMAD_ALLOC_INDEX} \
-  --master $MASTER_IP \
+/home/user/prima.cpp/build/bin/llama-cli \\
+  --model ${var.model_path} \\
+  --world ${var.node_count} \\
+  --rank ${NOMAD_ALLOC_INDEX} \\
+  --master $MASTER_IP \\
   --next $NEXT_IP
 EOH
         destination = "local/run.sh"
