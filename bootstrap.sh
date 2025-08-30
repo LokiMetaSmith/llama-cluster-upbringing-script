@@ -22,6 +22,9 @@ fi
 echo "Running the Ansible playbook for local setup..."
 echo "You will be prompted for your sudo password."
 
-ansible-playbook -i local_inventory.ini playbook.yaml --ask-become-pass
+# We set ANSIBLE_INVENTORY_IGNORE_PATTERNS to prevent Ansible from automatically
+# loading the multi-node inventory.yaml defined in ansible.cfg. This ensures
+# that only our local_inventory.ini is used for this bootstrap process.
+ANSIBLE_INVENTORY_IGNORE_PATTERNS=inventory.yaml ansible-playbook -i local_inventory.ini playbook.yaml --ask-become-pass
 
 echo "Bootstrap complete."
