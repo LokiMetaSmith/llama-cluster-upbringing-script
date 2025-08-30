@@ -29,13 +29,29 @@ Once your first node has been provisioned by Ansible and the `pxe_server` role h
 
 This system uses an advanced iPXE-over-HTTP method that is significantly faster and more reliable than traditional PXE. For detailed instructions on how to apply the Ansible role and prepare the client machines for network booting, see the **[iPXE Boot Server Setup Guide](PXE_BOOT_SETUP.md)**.
 
-## 3. Control Node & Ansible Provisioning
+## 3. Easy Bootstrap (Single-Server Setup)
+
+For development, testing, or bootstrapping the very first node of a new cluster, you can use the provided bootstrap script. This is the recommended method for getting started.
+
 1.  **On your control node, install Ansible and Git:** `sudo apt install ansible git -y`
 2.  **Clone this repository.**
-3.  **Configure Initial Inventory (`inventory.yaml`):** Edit the `inventory.yaml` file to define your *initial* controller nodes. While new worker nodes will be added to the cluster automatically, you must define the initial seed nodes for the control plane here.
+3.  **Run the Bootstrap Script:**
+    This script handles all the necessary steps to configure the local machine as a fully-functional, standalone agent and control node.
+    ```bash
+    ./bootstrap.sh
+    ```
+    - **What this does:** The script invokes Ansible with a special inventory file (`local_inventory.ini`) that targets only the local machine. It installs and configures all necessary system components (Consul, Nomad, Docker) and deploys the AI agent services.
+    - You will be prompted for your `sudo` password, as the script needs administrative privileges to install and configure software.
+
+This single node is now ready to be used as a standalone conversational AI agent. It can also serve as the primary "seed" node for a larger cluster. To expand your cluster, see the advanced guide below.
+
+## 4. Advanced: Multi-Node Cluster Provisioning
+If you are setting up a multi-node cluster, you will need to work with the Ansible inventory directly.
+
+1.  **Configure Initial Inventory (`inventory.yaml`):** Edit the `inventory.yaml` file to define your *initial* controller nodes. While new worker nodes will be added to the cluster automatically, you must define the initial seed nodes for the control plane here.
     - Create a *host group* named `controller_nodes`. This group must contain at least one node that will act as the primary control node and Nomad server.
     - Create an empty *host group* named `worker_nodes`. This group will be populated automatically as new nodes join the cluster.
-4.  **Run the Main Playbook:**
+2.  **Run the Main Playbook:**
     Run the following command from the root of this repository. This will configure the initial control node(s) and prepare the cluster for auto-expansion.
     ```bash
     ansible-playbook -i inventory.yaml playbook.yaml --ask-become-pass
