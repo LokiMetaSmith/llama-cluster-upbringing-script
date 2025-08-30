@@ -5,8 +5,10 @@ ff02::2         ip6-allrouters
 
 # --- Ansible Managed Block ---
 # The following hosts are managed by Ansible. Do not edit directly.
+{% if 'worker_nodes' in groups %}
 {% for host in groups['worker_nodes'] %}
 {% if host != 'localhost' %}
 {{ hostvars[host]['ansible_host'] }} {{ host }}
 {% endif %}
 {% endfor %}
+{% endif %}
