@@ -27,6 +27,7 @@ from tools.ssh_tool import SSH_Tool
 from tools.mcp_tool import MCP_Tool
 from tools.code_runner_tool import CodeRunnerTool
 from tools.web_browser_tool import WebBrowserTool
+from tools.ansible_tool import Ansible_Tool
 import inspect
 import web_server
 from web_server import approval_queue
@@ -146,6 +147,7 @@ class TwinService(FrameProcessor):
             "vision": self.yolo_detector,
             "code_runner": CodeRunnerTool(),
             "web_browser": WebBrowserTool(),
+            "ansible": Ansible_Tool(),
         }
 
     def get_discovered_experts(self):
@@ -314,7 +316,7 @@ class TwinService(FrameProcessor):
                 tool = self.tools[tool_name]
                 method = getattr(tool, method_name)
 
-                sensitive_tools = ["ssh", "code_runner"]
+                sensitive_tools = ["ssh", "code_runner", "ansible"]
                 if self.approval_mode and tool_name in sensitive_tools:
                     logging.info(f"Requesting approval for sensitive tool: {tool_name}")
                     approved = await self._request_approval(tool_call)

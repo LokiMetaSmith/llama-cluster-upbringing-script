@@ -1,0 +1,50 @@
+---
+# tasks file for bootstrap_agent
+
+- name: Wait for Nomad API to be ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:4646/v1/agent/self"
+    return_content: yes
+  register: nomad_status
+  until: nomad_status.status == 200
+  retries: 12 # Wait up to 60 seconds
+  delay: 5
+  when: ansible_connection == "local"
+  ignore_errors: yes # Fail gracefully in the next task
+
+- name: Fail if Nomad agent is not ready
+  ansible.builtin.fail:
+    msg: "The Nomad agent at http://127.0.0.1:4646 is not ready after waiting. Cannot deploy agent services."
+  when: ansible_connection == "local" and nomad_status.status != 200
+
+- name: Deploy llama.cpp RPC service to Nomad
+  ansible.builtin.command:
+    cmd: "nomad job run {{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad"
+  register: llama_job_run
+  changed_when: "'Job registration successful' in llama_job_run.stdout"
+  when: ansible_connection == "local"
+
+- name: Wait for llama.cpp service to be healthy in Consul
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/health/service/llama-cpp-rpc"
+    method: GET
+    return_content: yes
+    status_code: 200
+  register: service_health
+  until: "service_health.json is defined and service_health.json | length > 0 and (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length) == (service_health.json[0].Checks | length)"
+  retries: 30 # Wait up to 5 minutes
+  delay: 10
+  when: ansible_connection == "local"
+  ignore_errors: yes # Fail gracefully in the next task
+
+- name: Fail if llama.cpp service did not become healthy
+  ansible.builtin.fail:
+    msg: "The llama-cpp-rpc service did not become healthy in Consul after waiting. Cannot deploy pipecat app."
+  when: ansible_connection == "local" and (service_health.json is not defined or service_health.json | length == 0 or (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length) != (service_health.json[0].Checks | length))
+
+- name: Deploy pipecat app service to Nomad
+  ansible.builtin.command:
+    cmd: "nomad job run {{ playbook_dir }}/ansible/jobs/pipecatapp.nomad"
+  register: pipecat_job_run
+  changed_when: "'Job registration successful' in pipecat_job_run.stdout"
+  when: ansible_connection == "local"
