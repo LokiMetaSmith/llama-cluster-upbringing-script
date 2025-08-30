@@ -127,6 +127,7 @@
     - pipecatapp
     - vision
    # - kittentts
+    - bootstrap_agent
     
   post_tasks:
     - name: Discover and save the MAC address for future use
