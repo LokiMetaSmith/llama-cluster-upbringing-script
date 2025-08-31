@@ -1,6 +1,5 @@
 ---
-- name: Restart docker
-  become: yes
-  service:
+- name: restart docker
+  systemd:
     name: docker
     state: restarted
