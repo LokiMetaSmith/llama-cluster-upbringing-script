@@ -72,7 +72,7 @@ EOH
 
     network {
       mode = "bridge"
-      port = "rpc" {}
+      port "rpc" {}
     }
 
     service {
