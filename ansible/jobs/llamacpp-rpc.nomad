@@ -3,12 +3,12 @@ job "llamacpp-rpc-{{ meta.JOB_NAME | default('default') }}" {
   namespace   = "{{ meta.NAMESPACE | default('default') }}"
 
   meta {
-    NAMESPACE        = "default"
-    JOB_NAME         = "Llama-3-8B-Instruct"
-    API_SERVICE_NAME = "llama-api-Llama-3-8B-Instruct"
-    RPC_SERVICE_NAME = "llama-rpc-worker-Llama-3-8B-Instruct"
-    MODEL_PATH       = "/models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf"
-    WORKER_COUNT     = "2"
+    NAMESPACE        = "{{ meta.NAMESPACE }}"
+    JOB_NAME         = "{{ meta.JOB_NAME }}"
+    API_SERVICE_NAME = "{{ meta.API_SERVICE_NAME }}"
+    RPC_SERVICE_NAME = "{{ meta.RPC_SERVICE_NAME }}"
+    MODEL_PATH       = "{{ meta.MODEL_PATH }}"
+    WORKER_COUNT     = "{{ meta.WORKER_COUNT }}"
   }
 
   group "master" {
