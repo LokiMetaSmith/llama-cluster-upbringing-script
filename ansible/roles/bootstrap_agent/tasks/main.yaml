@@ -17,21 +17,40 @@
     msg: "The Nomad agent at http://127.0.0.1:4646 is not ready after waiting. Cannot deploy agent services."
   when: ansible_connection == "local" and nomad_status.status != 200
 
-- name: Deploy llama.cpp RPC service to Nomad
-  ansible.builtin.command:
-    cmd: "nomad job run {{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad"
-  register: llama_job_run
-  changed_when: "'Job registration successful' in llama_job_run.stdout"
+- name: Set path for rendered Nomad job file
+  ansible.builtin.set_fact:
+    rendered_nomad_job_path: "/tmp/llamacpp-rpc-rendered.nomad"
   when: ansible_connection == "local"
 
-- name: Wait for llama.cpp service to be healthy in Consul
+- name: Render the llama.cpp Nomad job from template
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad"
+    dest: "{{ rendered_nomad_job_path }}"
+    mode: '0644'
+  when: ansible_connection == "local"
+
+- name: Deploy rendered llama.cpp RPC service to Nomad
+  ansible.builtin.command:
+    cmd: "nomad job run {{ rendered_nomad_job_path }}"
+  register: llama_job_run
+  changed_when: "'Job registration successful' in llama_job_run.stdout"
+  failed_when: llama_job_run.rc != 0 and 'already running' not in llama_job_run.stderr
+  when: ansible_connection == "local"
+
+- name: Clean up temporary rendered job file
+  ansible.builtin.file:
+    path: "{{ rendered_nomad_job_path }}"
+    state: absent
+  when: ansible_connection == "local"
+
+- name: Wait for llama.cpp API service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/llama-cpp-rpc"
+    url: "http://127.0.0.1:8500/v1/health/service/llama-api-Llama-3-8B-Instruct"
     method: GET
     return_content: yes
     status_code: 200
   register: service_health
-  until: "service_health.json is defined and service_health.json | length > 0 and (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length) == (service_health.json[0].Checks | length)"
+  until: "service_health.json is defined and service_health.json | length > 0 and (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length) > 0"
   retries: 30 # Wait up to 5 minutes
   delay: 10
   when: ansible_connection == "local"
@@ -39,8 +58,8 @@
 
 - name: Fail if llama.cpp service did not become healthy
   ansible.builtin.fail:
-    msg: "The llama-cpp-rpc service did not become healthy in Consul after waiting. Cannot deploy pipecat app."
-  when: ansible_connection == "local" and (service_health.json is not defined or service_health.json | length == 0 or (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length) != (service_health.json[0].Checks | length))
+    msg: "The llama-api-Llama-3-8B-Instruct service did not become healthy in Consul after waiting. Cannot deploy pipecat app."
+  when: ansible_connection == "local" and (service_health.json is not defined or service_health.json | length == 0 or not (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length > 0))
 
 - name: Deploy pipecat app service to Nomad
   ansible.builtin.command:
