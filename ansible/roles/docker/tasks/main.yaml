@@ -1,32 +1,70 @@
 ---
-# tasks file for docker
+- name: Check if Docker is already installed and running correctly
+  block:
+    - name: Check for docker binary
+      ansible.builtin.stat:
+        path: /usr/bin/docker
+      register: docker_stat_result
+    - name: Check docker service status if binary exists
+      ansible.builtin.service_facts:
+      when: docker_stat_result.stat.exists
+  rescue:
+    # This block will run if service_facts fails, which can happen if
+    # docker is installed but badly broken. We'll force a reinstall.
+    - name: Force reinstallation for broken Docker install
+      ansible.builtin.set_fact:
+        docker_is_broken: true
 
-- name: Create the Docker configuration directory
-  ansible.builtin.file:
-    path: /etc/docker
-    state: directory
-    mode: '0755'
-  become: true
+# This block runs only if docker is not installed, or if the service check failed.
+- when: not docker_stat_result.stat.exists or docker_is_broken is defined or ansible_facts.services['docker.service'] is not defined or ansible_facts.services['docker.service'].state != 'running'
+  block:
+    - name: Purge any conflicting Docker and containerd packages
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-doc
+          - docker-compose
+          - podman-docker
+          - containerd
+          - runc
+        state: absent
+        purge: yes
+      become: true
 
-- name: Place the Docker daemon configuration file
-  ansible.builtin.template:
-    src: daemon.json.j2
-    dest: /etc/docker/daemon.json
-    mode: '0644'
-  become: true
-  notify: Restart Docker
+    - name: Remove leftover Docker data directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/lib/docker
+        - /var/lib/containerd
+      become: true
 
-- name: Download the get-docker.sh script
-  ansible.builtin.get_url:
-    url: https://get.docker.com
-    dest: /tmp/get-docker.sh
-    mode: '0755'
+    - name: Ensure /etc/docker directory exists
+      ansible.builtin.file:
+        path: /etc/docker
+        state: directory
+        mode: '0755'
+      become: true
 
-- name: Run the Docker installation script
-  ansible.builtin.shell:
-    cmd: /tmp/get-docker.sh
-    creates: /usr/bin/docker
-  become: true
+    - name: Place the Docker daemon configuration file
+      ansible.builtin.template:
+        src: daemon.json.j2
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+      become: true
+      notify: Restart Docker
+
+    - name: Download the get-docker.sh script
+      ansible.builtin.get_url:
+        url: https://get.docker.com
+        dest: /tmp/get-docker.sh
+        mode: '0755'
+
+    - name: Run the Docker installation script
+      ansible.builtin.shell:
+        cmd: /tmp/get-docker.sh
+      become: true
 
 - name: Add user to the 'docker' group for rootless execution
   ansible.builtin.user:
