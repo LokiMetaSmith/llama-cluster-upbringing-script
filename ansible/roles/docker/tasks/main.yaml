@@ -1,31 +1,43 @@
 ---
-- name: Check if Docker is already installed
-  stat:
-    path: /usr/bin/docker
-  register: docker_stat_result
+# tasks file for docker
 
-- name: Download the official Docker installation script
-  when: not docker_stat_result.stat.exists
-  get_url:
+- name: Create the Docker configuration directory
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Place the Docker daemon configuration file
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: '0644'
+  become: true
+  notify: Restart Docker
+
+- name: Download the get-docker.sh script
+  ansible.builtin.get_url:
     url: https://get.docker.com
     dest: /tmp/get-docker.sh
     mode: '0755'
 
 - name: Run the Docker installation script
-  when: not docker_stat_result.stat.exists
-  command: /tmp/get-docker.sh
+  ansible.builtin.shell:
+    cmd: /tmp/get-docker.sh
+    creates: /usr/bin/docker
+  become: true
 
-- name: Configure Docker to use the systemd cgroup driver
-  copy:
-    dest: /etc/docker/daemon.json
-    content: |
-      {
-        "exec-opts": ["native.cgroupdriver=systemd"]
-      }
-  notify: restart docker
+- name: Add user to the 'docker' group for rootless execution
+  ansible.builtin.user:
+    name: "{{ ansible_user_id }}"
+    groups: docker
+    append: yes
+  become: true
 
 - name: Ensure Docker service is started and enabled
-  systemd:
+  ansible.builtin.systemd:
     name: docker
     state: started
     enabled: yes
+  become: true
