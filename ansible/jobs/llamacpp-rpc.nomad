@@ -24,9 +24,6 @@ job "llamacpp-rpc-{{ meta.JOB_NAME | default('default') }}" {
       provider = "consul"
       port     = "http"
 
-      connect {
-        sidecar_service {}
-      }
     }
 
     task "llama-master" {
@@ -80,9 +77,6 @@ EOH
       provider = "consul"
       port     = "rpc"
 
-      connect {
-        sidecar_service {}
-      }
     }
 
     task "llama-worker" {
