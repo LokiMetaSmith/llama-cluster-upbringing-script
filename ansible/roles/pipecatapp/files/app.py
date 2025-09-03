@@ -28,6 +28,7 @@ from tools.mcp_tool import MCP_Tool
 from tools.code_runner_tool import CodeRunnerTool
 from tools.web_browser_tool import WebBrowserTool
 from tools.ansible_tool import Ansible_Tool
+from tools.power_tool import Power_Tool
 import inspect
 import web_server
 from web_server import approval_queue
@@ -148,6 +149,7 @@ class TwinService(FrameProcessor):
             "code_runner": CodeRunnerTool(),
             "web_browser": WebBrowserTool(),
             "ansible": Ansible_Tool(),
+            "power": Power_Tool(),
         }
 
     def get_discovered_experts(self):

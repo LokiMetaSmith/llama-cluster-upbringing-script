@@ -1,0 +1,13 @@
+[Unit]
+Description=Power Agent for Service Sleep/Wake
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/power_manager/power_agent.py
+WorkingDirectory=/opt/power_manager
+Restart=on-failure
+User=root # eBPF programs often require root privileges to load
+
+[Install]
+WantedBy=multi-user.target
