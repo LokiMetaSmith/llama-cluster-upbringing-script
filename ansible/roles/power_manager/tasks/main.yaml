@@ -1,0 +1,74 @@
+---
+# tasks file for power_manager
+
+- name: Install eBPF and BCC dependencies
+  become: yes
+  ansible.builtin.apt:
+    name:
+      - clang
+      - llvm
+      - libbpf-dev
+      - linux-headers-{{ ansible_kernel }}
+      - python3-bpfcc # This provides the bcc Python library
+    state: present
+    update_cache: yes
+
+- name: Create directory for the power agent
+  become: yes
+  ansible.builtin.file:
+    path: /opt/power_manager
+    state: directory
+    mode: '0755'
+
+- name: Copy power agent and eBPF source to the node
+  become: yes
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/opt/power_manager/{{ item }}"
+    mode: '0755'
+  loop:
+    - power_agent.py
+    - traffic_monitor.c
+
+- name: Create initial power agent config file
+  become: yes
+  ansible.builtin.copy:
+    content: |
+      {
+          "monitored_services": {
+              "8000": {
+                  "job_name": "pipecatapp",
+                  "job_file_path": "/opt/cluster-infra/ansible/jobs/pipecatapp.nomad",
+                  "idle_threshold_seconds": 300
+              }
+          }
+      }
+    dest: /opt/power_manager/config.json
+    mode: '0644'
+
+- name: Create systemd service for the power agent
+  become: yes
+  ansible.builtin.template:
+    src: power-agent.service.j2
+    dest: /etc/systemd/system/power-agent.service
+    mode: '0644'
+  notify: restart power agent
+
+- name: Mark Consul health check packets
+  become: yes
+  ansible.builtin.iptables:
+    chain: PREROUTING
+    table: mangle
+    protocol: tcp
+    source: '127.0.0.1' # Assuming local consul agent
+    jump: MARK
+    set_mark: '0x1'
+    comment: "Mark packets from local Consul agent for health checks"
+
+- name: Enable and start the power agent service
+  become: yes
+  ansible.builtin.systemd:
+    name: power-agent
+    enabled: yes
+    state: started
+    daemon_reload: yes
