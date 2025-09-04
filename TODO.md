@@ -11,3 +11,4 @@ All major features are implemented. Please see the README.md for a complete list
 ## For Future Review
 
 - [ ] Review `llama.cpp` optimization guide for server performance tuning: https://blog.steelph0enix.dev/posts/llama-cpp-guide/#llamacpp-server-settings
+- [ ] Investigate re-enabling Consul Connect (`sidecar_service`) for Nomad jobs once the base cluster is stable. This was disabled to resolve initial scheduling failures in the bootstrap environment.
