@@ -17,9 +17,6 @@ job "pipecat-app" {
       port = "http"
       provider = "consul"
 
-      connect {
-        sidecar_service {}
-      }
     }
 
     task "pipecat-task" {
