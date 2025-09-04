@@ -22,4 +22,9 @@ server {
 # Configure this node as a client
 client {
   enabled = true
+
+  host_volume "models" {
+    path      = "/models"
+    read_only = true
+  }
 }
