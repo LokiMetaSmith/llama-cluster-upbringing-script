@@ -45,7 +45,7 @@
 
 - name: Wait for llama.cpp API service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/llama-api-Llama-3-8B-Instruct"
+    url: "http://127.0.0.1:8500/v1/health/service/{{ meta.API_SERVICE_NAME }}"
     method: GET
     return_content: yes
     status_code: 200
