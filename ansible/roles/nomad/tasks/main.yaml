@@ -24,6 +24,14 @@
     mode: '0644'
   notify: Restart Nomad
 
+- name: Copy Nomad systemd service file
+  ansible.builtin.template:
+    src: nomad.service.j2
+    dest: /etc/systemd/system/nomad.service
+    mode: '0644'
+  become: yes
+  notify: Restart Nomad
+
 - name: Create systemd override directory for Nomad service
   file:
     path: /etc/systemd/system/nomad.service.d
