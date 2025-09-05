@@ -12,3 +12,4 @@ All major features are implemented. Please see the README.md for a complete list
 
 - [ ] Review `llama.cpp` optimization guide for server performance tuning: https://blog.steelph0enix.dev/posts/llama-cpp-guide/#llamacpp-server-settings
 - [ ] Investigate re-enabling Consul Connect (`sidecar_service`) for Nomad jobs once the base cluster is stable. This was disabled to resolve initial scheduling failures in the bootstrap environment.
+- [ ] Consider adding a pre-flight check to detect a read-only filesystem. Investigate if a safe, non-destructive diagnostic can be run automatically. (Note: Direct filesystem repair tools like e2fsck are likely too dangerous to automate).
