@@ -1,4 +1,25 @@
 ---
+- name: Download Nomad
+  ansible.builtin.get_url:
+    url: "{{ nomad_zip_url }}"
+    dest: "/tmp/nomad.zip"
+    mode: '0644'
+
+- name: Unzip Nomad
+  ansible.builtin.unarchive:
+    src: "/tmp/nomad.zip"
+    dest: "/tmp"
+    remote_src: yes
+    creates: /tmp/nomad
+
+- name: Move Nomad to /usr/local/bin
+  ansible.builtin.copy:
+    src: /tmp/nomad
+    dest: /usr/local/bin/nomad
+    remote_src: yes
+    mode: '0755'
+  become: yes
+
 - name: Ensure old, conflicting Nomad config files are removed
   file:
     path: "{{ item }}"
