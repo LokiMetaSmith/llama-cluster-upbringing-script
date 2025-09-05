@@ -17,7 +17,21 @@ document.addEventListener("DOMContentLoaded", function() {
     const loadStateBtn = document.getElementById("load-state-btn");
     const statusLight = document.getElementById("status-light");
 
+    function displayWelcomeArt() {
+        const art = `
+  ___
+ / _ \\
+| | | |
+| |_| |
+ \\___/
+ [o o]
+  \\_/
+`;
+        logToTerminal(`<pre>${art}</pre>`);
+    }
+
     ws.onopen = function() {
+        displayWelcomeArt();
         logToTerminal("--- Connection established with Agent ---");
         statusLight.style.backgroundColor = "#0f0"; // Green
     };
