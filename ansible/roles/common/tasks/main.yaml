@@ -19,6 +19,7 @@
       - python3-full
       - python3-pip
       - libcurl4-openssl-dev
+      - rsync
     state: present
 
 - name: Manage /etc/hosts file on controller for name resolution

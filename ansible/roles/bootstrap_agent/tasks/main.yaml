@@ -1,6 +1,9 @@
 ---
 # tasks file for bootstrap_agent
 
+- name: Force all pending handlers to run now
+  meta: flush_handlers
+
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
     url: "http://127.0.0.1:4646/v1/agent/self"
