@@ -45,10 +45,3 @@
     content: |
       #!/bin/sh
       export NOMAD_ADDR="http://127.0.0.1:4646"
-
-- name: Force restart of Nomad service to apply configuration
-  ansible.builtin.systemd:
-    name: nomad
-    state: restarted
-    enabled: yes
-  become: yes
