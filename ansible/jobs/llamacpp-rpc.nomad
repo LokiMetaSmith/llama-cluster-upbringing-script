@@ -60,7 +60,7 @@ EOH
     volume "models" {
       type      = "host"
       read_only = true
-      source    = "/opt/nomad/models"
+      source    = "models"
     }
   }
 
@@ -101,7 +101,7 @@ EOH
     volume "models" {
       type      = "host"
       read_only = true
-      source    = "/opt/nomad/models"
+      source    = "models"
     }
   }
 }
