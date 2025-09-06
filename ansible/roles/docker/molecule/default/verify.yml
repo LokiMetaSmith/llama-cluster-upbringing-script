@@ -1,0 +1,29 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check if Docker is installed
+      package:
+        name: docker-ce
+        state: present
+      check_mode: true
+      register: docker_pkg
+
+    - name: Assert that the docker package is installed
+      assert:
+        that:
+          - not docker_pkg.changed
+
+    - name: Check if docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: true
+      check_mode: true
+      register: docker_service
+
+    - name: Assert that the docker service is running and enabled
+      assert:
+        that:
+          - not docker_service.changed
