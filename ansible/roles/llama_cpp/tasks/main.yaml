@@ -73,15 +73,15 @@
 
 - name: Create models directory on host
   ansible.builtin.file:
-    path: /models
+    path: /opt/nomad/models
     state: directory
     mode: '0755'
   become: yes
 
-- name: Download Llama 3 model
+- name: Download Phi-3 Mini model
   ansible.builtin.get_url:
-    url: "https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
-    dest: "/models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf"
+    url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
+    dest: "/opt/nomad/models/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
     mode: '0644'
   become: yes
 
@@ -92,7 +92,7 @@
       JOB_NAME: "llama-3-8b-instruct"
       API_SERVICE_NAME: "llama-api-llama-3-8b-instruct"
       RPC_SERVICE_NAME: "llama-rpc-worker-llama-3-8b-instruct"
-      MODEL_PATH: "/models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf"
+      MODEL_PATH: "/opt/nomad/models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf"
       WORKER_COUNT: 2
   when: "'controller_nodes' in group_names"
 
