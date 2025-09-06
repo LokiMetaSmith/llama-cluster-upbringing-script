@@ -454,7 +454,15 @@ async def main():
         tts,
         transport.output()
     ]
+    # Set Debug  mode for troubleshooting and examining state
+    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
+    if debug_mode:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug("Debug mode enabled.")
 
+    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
+    if approval_mode:
+        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
     if os.getenv("BENCHMARK_MODE", "false").lower() == "true":
         pipeline_steps.insert(1, BenchmarkCollector())
 
