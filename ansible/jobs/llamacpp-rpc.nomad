@@ -36,7 +36,7 @@ job "llamacpp-rpc-{{ meta.JOB_NAME | default('default') }}" {
 WORKER_IPS=$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME }} | tr '\n' ',' | sed 's/,$//')
 
 # Launch the llama-server with the discovered worker IPs
-/home/user/llama.cpp/build/bin/llama-server \
+/usr/local/bin/llama-server \
   --model {{ meta.MODEL_PATH }} \
   --host 0.0.0.0 \
   --port {% raw %}{{ env "NOMAD_PORT_http" }}{% endraw %} \
@@ -60,7 +60,7 @@ EOH
     volume "models" {
       type      = "host"
       read_only = true
-      source    = "models"
+      source    = "/models"
     }
   }
 
@@ -83,7 +83,7 @@ EOH
       driver = "exec"
 
       config {
-        command = "/home/user/llama.cpp/build/bin/llama-server"
+        command = "/usr/local/bin/llama-server"
         args = [
           "--model", "{{ meta.MODEL_PATH }}",
           "--host", "0.0.0.0",
@@ -101,7 +101,7 @@ EOH
     volume "models" {
       type      = "host"
       read_only = true
-      source    = "models"
+      source    = "/models"
     }
   }
 }
