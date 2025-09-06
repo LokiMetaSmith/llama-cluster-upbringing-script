@@ -5,44 +5,20 @@
     dest: "/tmp/nomad.zip"
     mode: '0644'
 
-- name: Create a temporary directory for unzipping Nomad
-  ansible.builtin.tempfile:
-    state: directory
-    suffix: nomad-unzip
-  register: temp_unzip_dir
-
-- name: Unzip Nomad archive
+- name: Unzip Nomad
   ansible.builtin.unarchive:
     src: "/tmp/nomad.zip"
-    dest: "{{ temp_unzip_dir.path }}"
+    dest: "/tmp"
     remote_src: yes
+    creates: /tmp/nomad
 
-- name: Find the Nomad binary in the unzipped directory
-  ansible.builtin.find:
-    paths: "{{ temp_unzip_dir.path }}"
-    patterns: "nomad"
-    recurse: yes
-    file_type: file
-  register: nomad_binary_find
-
-- name: Fail if Nomad binary is not found
-  ansible.builtin.fail:
-    msg: "The 'nomad' executable was not found in the downloaded archive."
-  when: nomad_binary_find.matched == 0
-
-- name: Move Nomad binary to /usr/local/bin
+- name: Move Nomad to /usr/local/bin
   ansible.builtin.copy:
-    src: "{{ nomad_binary_find.files[0].path }}"
+    src: /tmp/nomad
     dest: /usr/local/bin/nomad
     remote_src: yes
     mode: '0755'
   become: yes
-
-- name: Clean up temporary unzip directory
-  ansible.builtin.file:
-    path: "{{ temp_unzip_dir.path }}"
-    state: absent
-  when: temp_unzip_dir.path is defined
 
 - name: Ensure old, conflicting Nomad config files are removed
   file:
