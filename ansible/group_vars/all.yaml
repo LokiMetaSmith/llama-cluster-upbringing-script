@@ -1,9 +1,0 @@
----
-# Global variables for all hosts
-meta:
-  NAMESPACE: "default"
-  JOB_NAME: "phi-3-mini-instruct"
-  API_SERVICE_NAME: "llama-api-phi-3-mini-instruct"
-  RPC_SERVICE_NAME: "llama-rpc-worker-phi-3-mini-instruct"
-  MODEL_PATH: "/opt/nomad/models/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
-  WORKER_COUNT: "1"
