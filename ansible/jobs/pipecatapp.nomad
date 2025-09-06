@@ -30,6 +30,8 @@ job "pipecat-app" {
       env {
         # Set to "true" to enable the summarizer tool
         USE_SUMMARIZER = "false"
+        # Selects the vision model. Options: "yolo", "moondream"
+        VISION_MODEL = "yolo"
       }
 
       resources {
