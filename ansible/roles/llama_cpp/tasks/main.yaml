@@ -48,6 +48,16 @@
     remote_src: yes
   become: yes
 
+- name: Verify llama-server binary installation
+  ansible.builtin.stat:
+    path: /usr/local/bin/llama-server
+  register: llama_server_stat
+
+- name: Fail if llama-server is not installed or not executable
+  ansible.builtin.fail:
+    msg: "llama-server was not found at /usr/local/bin/llama-server or is not executable."
+  when: not llama_server_stat.stat.exists or not llama_server_stat.stat.executable
+
 - name: Clean up llama.cpp build directory
   ansible.builtin.file:
     path: /opt/llama.cpp-build
