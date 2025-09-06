@@ -85,12 +85,8 @@
     mode: '0644'
   become: yes
 
-- name: Copy llama.cpp RPC Nomad job file
-  ansible.builtin.template:
-    src: ../../jobs/llamacpp-rpc.nomad
-    dest: /opt/nomad/jobs/llamacpp-rpc.nomad
-  when: "'controller_nodes' in group_names"
-  vars:
+- name: Set llama.cpp RPC job facts
+  ansible.builtin.set_fact:
     meta:
       NAMESPACE: "default"
       JOB_NAME: "llama-3-8b-instruct"
@@ -98,6 +94,13 @@
       RPC_SERVICE_NAME: "llama-rpc-worker-llama-3-8b-instruct"
       MODEL_PATH: "/models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf"
       WORKER_COUNT: 2
+  when: "'controller_nodes' in group_names"
+
+- name: Copy llama.cpp RPC Nomad job file
+  ansible.builtin.template:
+    src: ../../jobs/llamacpp-rpc.nomad
+    dest: /opt/nomad/jobs/llamacpp-rpc.nomad
+  when: "'controller_nodes' in group_names"
 
 - name: Copy benchmark Nomad job file
   ansible.builtin.template:
