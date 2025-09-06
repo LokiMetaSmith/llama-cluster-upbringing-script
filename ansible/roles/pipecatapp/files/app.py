@@ -29,6 +29,7 @@ from tools.code_runner_tool import CodeRunnerTool
 from tools.web_browser_tool import WebBrowserTool
 from tools.ansible_tool import Ansible_Tool
 from tools.power_tool import Power_Tool
+from tools.summarizer_tool import SummarizerTool
 import inspect
 import web_server
 from web_server import approval_queue
@@ -152,6 +153,10 @@ class TwinService(FrameProcessor):
             "power": Power_Tool(),
         }
 
+        if os.getenv("USE_SUMMARIZER", "false").lower() == "true":
+            self.tools["summarizer"] = SummarizerTool(self)
+            logging.info("Summarizer tool enabled.")
+
     def get_discovered_experts(self):
         try:
             response = requests.get(f"{self.consul_http_addr}/v1/catalog/services")
@@ -179,7 +184,7 @@ class TwinService(FrameProcessor):
             else:
                 for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
                     if not method_name.startswith('_'):
-                        tools_prompt += f'- {{"tool": "{tool.name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
+                        tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
 
         for service_name in self.get_discovered_experts():
             expert_name = service_name.replace("llama-api-", "")

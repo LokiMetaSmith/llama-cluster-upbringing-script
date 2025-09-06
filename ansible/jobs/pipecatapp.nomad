@@ -27,6 +27,11 @@ job "pipecat-app" {
         args    = ["/home/user/app.py"]
       }
 
+      env {
+        # Set to "true" to enable the summarizer tool
+        USE_SUMMARIZER = "false"
+      }
+
       resources {
         cpu    = 1000 # 1 GHz
         memory = 4096 # 4 GB
