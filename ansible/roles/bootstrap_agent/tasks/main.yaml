@@ -32,6 +32,17 @@
     mode: '0644'
   when: ansible_connection == "local"
 
+- name: Verify that the /models directory exists
+  ansible.builtin.stat:
+    path: /opt/nomad/models
+  register: models_dir_stat
+  when: ansible_connection == "local"
+
+- name: Fail if /models directory does not exist
+  ansible.builtin.fail:
+    msg: "The /models directory does not exist on the host. This is required for the Nomad job to mount the models."
+  when: (ansible_connection == "local") and (not models_dir_stat.stat.isdir is defined or not models_dir_stat.stat.isdir)
+
 - name: Deploy rendered llama.cpp RPC service to Nomad
   ansible.builtin.command:
     cmd: "nomad job run {{ rendered_nomad_job_path }}"
@@ -61,7 +72,7 @@
 
 - name: Fail if llama.cpp service did not become healthy
   ansible.builtin.fail:
-    msg: "The llama-api-Llama-3-8B-Instruct service did not become healthy in Consul after waiting. Cannot deploy pipecat app."
+    msg: "The {{ meta.API_SERVICE_NAME }} service did not become healthy in Consul after waiting. Cannot deploy pipecat app."
   when: ansible_connection == "local" and (service_health.json is not defined or service_health.json | length == 0 or not (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length > 0))
 
 - name: Deploy pipecat app service to Nomad
