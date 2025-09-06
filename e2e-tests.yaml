@@ -1,0 +1,48 @@
+---
+- name: E2E Cluster Health Check
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check that Consul is running and has a leader
+      uri:
+        url: "http://{{ ansible_host }}:8500/v1/status/leader"
+        return_content: yes
+      register: consul_leader
+      failed_when: consul_leader.content == '""'
+
+    - name: Check that Nomad is running and has a leader
+      uri:
+        url: "http://{{ ansible_host }}:4646/v1/status/leader"
+        return_content: yes
+      register: nomad_leader
+      failed_when: nomad_leader.content == '""'
+
+    - name: Check that the pipecat application is running
+      uri:
+        url: "http://{{ ansible_host }}:8000/api/status" # Assuming your app has a status endpoint
+        return_content: yes
+      register: pipecat_status
+      failed_when: "'running' not in pipecat_status.content"
+
+- name: Llama.cpp Benchmark as an E2E Test
+  hosts: controller_nodes
+  tasks:
+    - name: Run the llama-benchmark Nomad job
+      command: nomad job run ansible/jobs/benchmark.nomad
+      register: benchmark_run
+
+    - name: Wait for the benchmark job to complete
+      command: nomad job status llama-benchmark
+      register: benchmark_status
+      until: "'dead' in benchmark_status.stdout"
+      retries: 20
+      delay: 10
+
+    - name: Get benchmark logs
+      command: nomad job logs llama-benchmark
+      register: benchmark_logs
+
+    - name: Assert that the benchmark produced a result
+      assert:
+        that:
+          - "'tokens/s' in benchmark_logs.stdout"

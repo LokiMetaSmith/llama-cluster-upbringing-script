@@ -1,0 +1,20 @@
+---
+driver:
+  name: podman
+platforms:
+  - name: instance
+    image: docker.io/geerlingguy/docker-ubuntu2204-ansible
+    pre_build_image: true
+    privileged: true
+    volume_mounts:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+    command: "/sbin/init"
+provisioner:
+  name: ansible
+  inventory:
+    host_vars:
+      instance:
+        ansible_python_interpreter: /usr/bin/python3
+  config_options:
+    defaults:
+      roles_path: "/app/ansible/roles"
