@@ -194,6 +194,7 @@ You can save and load the agent's complete memory state (both short-term and lon
 - **STT/TTS Service Selection:** You can choose which Speech-to-Text and Text-to-Speech services to use by setting environment variables in the `pipecatapp.nomad` job file.
   - `STT_SERVICE`: Set to `faster-whisper` for high-performance local transcription, or `deepgram` (default) to use the Deepgram API.
   - `TTS_SERVICE`: Set to `kittentts` for a fast, local TTS, or `elevenlabs` (default) to use the ElevenLabs API.
+  - `EMBEDDING_MODEL_NAME`: Selects the sentence transformer model for the agent's long-term memory. Defaults to `all-MiniLM-L6-v2`. A good alternative is `google/embeddinggemma-300m`.
 
 ## 9. Benchmarking
 This project includes two types of benchmarks.
