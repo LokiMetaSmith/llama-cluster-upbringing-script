@@ -27,6 +27,13 @@ job "pipecat-app" {
         args    = ["/home/user/app.py"]
       }
 
+      env {
+        # Set to "true" to enable the summarizer tool
+        USE_SUMMARIZER = "false"
+        # Selects the vision model. Options: "yolo", "moondream"
+        VISION_MODEL = "yolo"
+      }
+
       resources {
         cpu    = 1000 # 1 GHz
         memory = 4096 # 4 GB

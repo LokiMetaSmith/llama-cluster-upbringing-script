@@ -16,4 +16,8 @@ requests
 docker
 playwright
 fugashi-plus
-
+einops
+accelerate
+huggingface-hub
+pyvips-binary
+pyvips

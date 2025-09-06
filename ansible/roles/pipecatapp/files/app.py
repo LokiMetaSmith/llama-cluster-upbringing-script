@@ -29,6 +29,8 @@ from tools.code_runner_tool import CodeRunnerTool
 from tools.web_browser_tool import WebBrowserTool
 from tools.ansible_tool import Ansible_Tool
 from tools.power_tool import Power_Tool
+from tools.summarizer_tool import SummarizerTool
+from moondream_detector import MoondreamDetector
 import inspect
 import web_server
 from web_server import approval_queue
@@ -128,10 +130,10 @@ class KittenTTSService(FrameProcessor):
 import json
 
 class TwinService(FrameProcessor):
-    def __init__(self, llm, yolo_detector, runner, debug_mode=False, approval_mode=False, approval_queue=None):
+    def __init__(self, llm, vision_detector, runner, debug_mode=False, approval_mode=False, approval_queue=None):
         super().__init__()
         self.router_llm = llm # The main LLM acts as a router
-        self.yolo_detector = yolo_detector
+        self.vision_detector = vision_detector
         self.runner = runner
         self.debug_mode = debug_mode
         self.approval_mode = approval_mode
@@ -145,12 +147,16 @@ class TwinService(FrameProcessor):
         self.tools = {
             "ssh": SSH_Tool(),
             "mcp": MCP_Tool(self, self.runner),
-            "vision": self.yolo_detector,
+            "vision": self.vision_detector,
             "code_runner": CodeRunnerTool(),
             "web_browser": WebBrowserTool(),
             "ansible": Ansible_Tool(),
             "power": Power_Tool(),
         }
+
+        if os.getenv("USE_SUMMARIZER", "false").lower() == "true":
+            self.tools["summarizer"] = SummarizerTool(self)
+            logging.info("Summarizer tool enabled.")
 
     def get_discovered_experts(self):
         try:
@@ -179,7 +185,7 @@ class TwinService(FrameProcessor):
             else:
                 for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
                     if not method_name.startswith('_'):
-                        tools_prompt += f'- {{"tool": "{tool.name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
+                        tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
 
         for service_name in self.get_discovered_experts():
             expert_name = service_name.replace("llama-api-", "")
@@ -411,10 +417,26 @@ async def main():
         )
     runner = PipelineRunner()
 
-    yolo = YOLOv8Detector()
+    vision_model_name = os.getenv("VISION_MODEL", "yolo")
+    if vision_model_name == "moondream":
+        vision_detector = MoondreamDetector()
+        logging.info("Using Moondream for vision.")
+    else:
+        vision_detector = YOLOv8Detector()
+        logging.info("Using YOLOv8 for vision.")
+
+    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
+    if debug_mode:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug("Debug mode enabled.")
+
+    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
+    if approval_mode:
+        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
+
     twin = TwinService(
         llm=llm,
-        yolo_detector=yolo,
+        vision_detector=vision_detector,
         runner=runner,
         debug_mode=debug_mode,
         approval_mode=approval_mode,
@@ -433,22 +455,13 @@ async def main():
         transport.output()
     ]
 
-    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-    if debug_mode:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logging.debug("Debug mode enabled.")
-
-    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
-    if approval_mode:
-        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
-
     if os.getenv("BENCHMARK_MODE", "false").lower() == "true":
         pipeline_steps.insert(1, BenchmarkCollector())
 
     main_pipeline = Pipeline(pipeline_steps)
 
     # Vision pipeline (runs in parallel to update the detector's state)
-    vision_pipeline = Pipeline([yolo])
+    vision_pipeline = Pipeline([vision_detector])
 
     main_task = PipelineTask(main_pipeline)
 
