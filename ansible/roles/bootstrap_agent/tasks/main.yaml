@@ -32,47 +32,8 @@
   when: (ansible_connection == "local") and (not models_dir_stat.stat.isdir is defined or not models_dir_stat.stat.isdir)
 
 - name: Deploy and wait for llama.cpp models
-  ansible.builtin.block:
-    - name: Set path for rendered Nomad job file
-      ansible.builtin.set_fact:
-        rendered_nomad_job_path: "/tmp/llamacpp-rpc-{{ item.JOB_NAME }}.nomad"
-
-    - name: Render the llama.cpp Nomad job from template
-      ansible.builtin.template:
-        src: "{{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad"
-        dest: "{{ rendered_nomad_job_path }}"
-        mode: '0644'
-      vars:
-        meta: "{{ item }}"
-
-    - name: Deploy rendered llama.cpp RPC service to Nomad
-      ansible.builtin.command:
-        cmd: "nomad job run {{ rendered_nomad_job_path }}"
-      register: llama_job_run
-      changed_when: "'Job registration successful' in llama_job_run.stdout"
-      failed_when: llama_job_run.rc != 0 and 'already running' not in llama_job_run.stderr
-
-    - name: Clean up temporary rendered job file
-      ansible.builtin.file:
-        path: "{{ rendered_nomad_job_path }}"
-        state: absent
-
-    - name: Wait for llama.cpp API service to be healthy in Consul
-      ansible.builtin.uri:
-        url: "http://127.0.0.1:8500/v1/health/service/{{ item.API_SERVICE_NAME }}"
-        method: GET
-        return_content: yes
-        status_code: 200
-      register: service_health
-      until: "service_health.json is defined and service_health.json | length > 0 and (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length) > 0"
-      retries: 30 # Wait up to 5 minutes
-      delay: 10
-      ignore_errors: yes # Fail gracefully in the next task
-
-    - name: Fail if llama.cpp service did not become healthy
-      ansible.builtin.fail:
-        msg: "The {{ item.API_SERVICE_NAME }} service did not become healthy in Consul after waiting. Cannot deploy pipecat app."
-      when: service_health.json is not defined or service_health.json | length == 0 or not (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length > 0)
+  ansible.builtin.include_tasks:
+    file: deploy_llama_cpp_model.yaml
   loop: "{{ llama_cpp_models }}"
   when: ansible_connection == "local"
 
