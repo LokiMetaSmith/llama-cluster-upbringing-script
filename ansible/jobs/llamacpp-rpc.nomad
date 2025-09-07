@@ -43,7 +43,7 @@ WORKER_IPS=$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME 
 
 # Launch the llama-server with the discovered worker IPs
 /usr/local/bin/llama-server \
-  --model {{ meta.MODEL_PATH }} \
+  --model "/models/{{ meta.MODEL_FILENAME }}" \
   --host 0.0.0.0 \
   --port {% raw %}{{ env "NOMAD_PORT_http" }}{% endraw %} \
   --rpc-servers $WORKER_IPS
@@ -54,6 +54,11 @@ EOH
 
       config {
         command = "local/run_master.sh"
+      }
+
+      resources {
+        cpu    = 1000
+        memory = {{ meta.MEMORY_MB | default(2048) }}
       }
 
       volume_mount {
@@ -91,10 +96,15 @@ EOH
       config {
         command = "/usr/local/bin/llama-server"
         args = [
-          "--model", "{{ meta.MODEL_PATH }}",
+          "--model", "/models/{{ meta.MODEL_FILENAME }}",
           "--host", "0.0.0.0",
           "--port", "{% raw %}{{ env \"NOMAD_PORT_rpc\" }}{% endraw %}",
         ]
+      }
+
+      resources {
+        cpu    = 1000
+        memory = {{ meta.MEMORY_MB | default(2048) }}
       }
 
       volume_mount {
