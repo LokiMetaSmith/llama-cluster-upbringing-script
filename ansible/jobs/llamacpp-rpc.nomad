@@ -32,6 +32,12 @@ job "llamacpp-rpc-{{ meta.JOB_NAME | default('default') }}" {
       template {
         data = <<EOH
 #!/bin/bash
+# Wait until at least one worker service is available
+while [ -z "$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME }} 2>/dev/null)" ]; do
+  echo "Waiting for worker services to become available in Consul..."
+  sleep 5
+done
+
 # Discover the IP addresses and ports of the worker services
 WORKER_IPS=$(nomad service discover -address-type=ipv4 {{ meta.RPC_SERVICE_NAME }} | tr '\n' ',' | sed 's/,$//')
 
