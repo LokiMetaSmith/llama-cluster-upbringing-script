@@ -92,11 +92,6 @@
     mode: '0644'
   become: yes
 
-- name: Copy llama.cpp RPC Nomad job file
-  ansible.builtin.template:
-    src: ../../jobs/llamacpp-rpc.nomad
-    dest: /opt/nomad/jobs/llamacpp-rpc.nomad
-  when: "'controller_nodes' in group_names"
 
 - name: Copy benchmark Nomad job file
   ansible.builtin.template:
