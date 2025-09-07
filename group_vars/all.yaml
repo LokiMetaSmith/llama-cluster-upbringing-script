@@ -11,6 +11,7 @@ llama_cpp_models:
     API_SERVICE_NAME: "llama-api-Llama-3-8B-Instruct"
     RPC_SERVICE_NAME: "llama-rpc-worker-Llama-3-8B-Instruct"
     MODEL_PATH: "/opt/nomad/models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
+    MODEL_FILENAME: "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
     WORKER_COUNT: "1"
     MEMORY_MB: 8192
 
@@ -19,5 +20,6 @@ llama_cpp_models:
     API_SERVICE_NAME: "llama-api-phi-3-mini-instruct"
     RPC_SERVICE_NAME: "llama-rpc-worker-phi-3-mini-instruct"
     MODEL_PATH: "/opt/nomad/models/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
+    MODEL_FILENAME: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
     WORKER_COUNT: "1"
     MEMORY_MB: 4096
