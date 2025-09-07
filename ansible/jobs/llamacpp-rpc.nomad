@@ -56,6 +56,11 @@ EOH
         command = "local/run_master.sh"
       }
 
+      resources {
+        cpu    = 1000
+        memory = {{ meta.MEMORY_MB | default(2048) }}
+      }
+
       volume_mount {
         volume      = "models"
         destination = "/models"
@@ -95,6 +100,11 @@ EOH
           "--host", "0.0.0.0",
           "--port", "{% raw %}{{ env \"NOMAD_PORT_rpc\" }}{% endraw %}",
         ]
+      }
+
+      resources {
+        cpu    = 1000
+        memory = {{ meta.MEMORY_MB | default(2048) }}
       }
 
       volume_mount {
