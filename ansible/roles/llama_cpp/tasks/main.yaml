@@ -85,6 +85,13 @@
     mode: '0644'
   become: yes
 
+- name: Download Llama-3-8B-Instruct model
+  ansible.builtin.get_url:
+    url: "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF-v2/resolve/main/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
+    dest: "/opt/nomad/models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
+    mode: '0644'
+  become: yes
+
 - name: Copy llama.cpp RPC Nomad job file
   ansible.builtin.template:
     src: ../../jobs/llamacpp-rpc.nomad
