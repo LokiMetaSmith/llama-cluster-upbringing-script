@@ -32,6 +32,8 @@ job "pipecat-app" {
         USE_SUMMARIZER = "false"
         # Selects the vision model. Options: "yolo", "moondream"
         VISION_MODEL = "yolo"
+        # Selects the sentence embedding model.
+        EMBEDDING_MODEL_NAME = "google/embeddinggemma-300m"
       }
 
       resources {

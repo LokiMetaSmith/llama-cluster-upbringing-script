@@ -5,7 +5,8 @@ from sentence_transformers import SentenceTransformer
 import os
 
 class MemoryStore:
-    def __init__(self, embedding_model_name='all-MiniLM-L6-v2', index_file="long_term_memory.faiss", store_file="long_term_memory.json"):
+    def __init__(self, index_file="long_term_memory.faiss", store_file="long_term_memory.json"):
+        embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME", 'all-MiniLM-L6-v2')
         self.embedding_model = SentenceTransformer(embedding_model_name)
         self.dimension = self.embedding_model.get_sentence_embedding_dimension()
         self.index_file = index_file
