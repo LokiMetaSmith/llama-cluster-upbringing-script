@@ -6,6 +6,8 @@
     mode: '0644'
   loop: "{{ llm_models }}"
   become: yes
+  loop_control:
+    loop_var: item
 
 - name: Download all Speech-to-Text models
   ansible.builtin.get_url:
@@ -14,6 +16,8 @@
     mode: '0644'
   loop: "{{ stt_models }}"
   become: yes
+  loop_control:
+    loop_var: item
 
 - name: Download all Text-to-Speech models
   ansible.builtin.get_url:
@@ -22,6 +26,8 @@
     mode: '0644'
   loop: "{{ tts_models }}"
   become: yes
+  loop_control:
+    loop_var: item
 
 - name: Download all Vision models (URL-based)
   ansible.builtin.get_url:
@@ -30,15 +36,23 @@
     mode: '0644'
   loop: "{{ vision_models | selectattr('url', 'defined') | list }}"
   become: yes
+  loop_control:
+    loop_var: item
 
 - name: Download all Vision models (Hub-based)
-  ansible.builtin.script:
-    cmd: "/home/{{ target_user }}/.local/bin/python3 download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/vision/{{ item.name }}"
+  ansible.builtin.script: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/vision/{{ item.name }}"
+  args:
+    executable: "/home/{{ target_user }}/.local/bin/python3"
   loop: "{{ vision_models | selectattr('repo_id', 'defined') | list }}"
   become: yes
+  loop_control:
+    loop_var: item
 
 - name: Download all Embedding models (Hub-based)
-  ansible.builtin.script:
-    cmd: "/home/{{ target_user }}/.local/bin/python3 download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/embedding/{{ item.name }}"
+  ansible.builtin.script: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/embedding/{{ item.name }}"
+  args:
+    executable: "/home/{{ target_user }}/.local/bin/python3"
   loop: "{{ embedding_models | selectattr('repo_id', 'defined') | list }}"
   become: yes
+  loop_control:
+    loop_var: item
