@@ -68,7 +68,7 @@
 
 - name: Add user to the 'docker' group for rootless execution
   ansible.builtin.user:
-    name: "{{ ansible_user_id }}"
+    name: "{{ target_user }}"
     groups: docker
     append: yes
   become: true

@@ -1,4 +1,6 @@
 ---
+target_user: user
+
 # This variable dynamically determines the IP address for Nomad to advertise.
 # It prefers the first non-loopback IPv6 address if available,
 # otherwise it falls back to the default IPv4 address.

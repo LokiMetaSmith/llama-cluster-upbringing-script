@@ -18,25 +18,25 @@
         name: sudo
         state: present
 
-    - name: Create the 'user' account with sudo access
+    - name: Create the '{{ target_user }}' account with sudo access
       ansible.builtin.user:
-        name: user
+        name: "{{ target_user }}"
         shell: /bin/bash
         groups: sudo
         append: yes
 
-    - name: Allow 'user' to have passwordless sudo access
+    - name: Allow '{{ target_user }}' to have passwordless sudo access
       ansible.builtin.lineinfile:
-        path: /etc/sudoers.d/ansible-user-nopasswd
-        line: "user ALL=(ALL) NOPASSWD: ALL"
+        path: "/etc/sudoers.d/ansible-{{ target_user }}-nopasswd"
+        line: "{{ target_user }} ALL=(ALL) NOPASSWD: ALL"
         create: yes
         validate: 'visudo -cf %s'
         mode: '0440'
 
 
-- name: Play 2 - Configure Nodes as 'user'
+- name: Play 2 - Configure Nodes as '{{ target_user }}'
   hosts: all
-  remote_user: user
+  remote_user: "{{ target_user }}"
   become: yes # Now we use the sudo privileges we just created
 
   pre_tasks:
@@ -123,8 +123,6 @@
   connection: local
   become: no
   gather_facts: no
-  vars:
-    target_user: "user"
   tasks:
     - name: Check if the Consul service is running
       ansible.builtin.systemd:
