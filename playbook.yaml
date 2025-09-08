@@ -45,6 +45,7 @@
         cmd: "ansible-galaxy collection install community.general"
       delegate_to: localhost
       run_once: true
+      become: yes
       changed_when: false # The command itself reports changes, no need for Ansible to guess
 
     - name: Check connectivity to all nodes
