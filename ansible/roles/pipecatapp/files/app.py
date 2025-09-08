@@ -114,19 +114,6 @@ class FasterWhisperSTTService(FrameProcessor):
         if text:
             await self.push_frame(TranscriptionFrame(text))
 
-class KittenTTSService(FrameProcessor):
-    def __init__(self, model_name="KittenML/kitten-tts-nano-0.1"):
-        super().__init__()
-        self.model = KittenTTSModel(model_name)
-
-    async def process_frame(self, frame, direction):
-        if not isinstance(frame, TextFrame):
-            await self.push_frame(frame, direction)
-            return
-
-        audio = self.model.generate(frame.text, voice='expr-voice-2-f')
-        await self.push_frame(AudioFrame(audio.tobytes(), 24000, 1))
-
 import json
 
 class TwinService(FrameProcessor):
@@ -359,9 +346,11 @@ class TwinService(FrameProcessor):
             self.short_term_memory.pop(0)
 
 class YOLOv8Detector(FrameProcessor):
-    def __init__(self, model_name="yolov8n.pt"):
+    def __init__(self):
         super().__init__()
-        self.model = YOLO(model_name)
+        # The model is now managed by Ansible and placed in a predictable location.
+        model_path = "/opt/nomad/models/vision/yolov8n.pt"
+        self.model = YOLO(model_path)
         self.latest_observation = "I don't see anything."
         self.last_detected_objects = set()
 
@@ -408,22 +397,15 @@ async def main():
         api_key="dummy",
         model="dummy"
     )
-    tts_service_name = os.getenv("TTS_SERVICE", "elevenlabs")
-    if tts_service_name == "kittentts":
-        tts = KittenTTSService()
-    else:
-        tts = ElevenLabsTTSService(
-            voice_id="21m00Tcm4TlvDq8ikWAM" # A default voice
-        )
+    # TODO: Add Piper TTS service implementation
+    tts = ElevenLabsTTSService(
+        voice_id="21m00Tcm4TlvDq8ikWAM" # A default voice
+    )
     runner = PipelineRunner()
 
-    vision_model_name = os.getenv("VISION_MODEL", "yolo")
-    if vision_model_name == "moondream":
-        vision_detector = MoondreamDetector()
-        logging.info("Using Moondream for vision.")
-    else:
-        vision_detector = YOLOv8Detector()
-        logging.info("Using YOLOv8 for vision.")
+    # TODO: Implement failover or selection logic for vision models
+    vision_detector = YOLOv8Detector()
+    logging.info("Using YOLOv8 for vision.")
 
     debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
     if debug_mode:

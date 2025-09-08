@@ -71,26 +71,10 @@
     mode: '0755'
   become: yes
 
-- name: Create models directory on host
-  ansible.builtin.file:
-    path: /opt/nomad/models
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Download Phi-3 Mini model
-  ansible.builtin.get_url:
-    url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
-    dest: "/opt/nomad/models/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
-    mode: '0644'
-  become: yes
-
-- name: Download Llama-3-8B-Instruct model
-  ansible.builtin.get_url:
-    url: "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF-v2/resolve/main/Meta-Llama-3-8B-Instruct-v2.Q4_K_M.gguf"
-    dest: "/opt/nomad/models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
-    mode: '0644'
-  become: yes
+# Note: The creation of the /opt/nomad/models directory and the downloading
+# of models are now handled by the 'common' and 'download_models' roles respectively.
+# The tasks below are preserved in case this role needs to be run standalone in the future,
+# but they are now redundant in the main playbook flow.
 
 
 - name: Copy benchmark Nomad job file

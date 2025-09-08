@@ -52,3 +52,16 @@
     regexp: '^#?IdleAction=.*'
     line: 'IdleAction=lock'
   notify: restart systemd-logind
+
+- name: Create unified model directory structure
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /opt/nomad/models/llm
+    - /opt/nomad/models/stt
+    - /opt/nomad/models/tts
+    - /opt/nomad/models/embedding
+    - /opt/nomad/models/vision
+  become: yes
