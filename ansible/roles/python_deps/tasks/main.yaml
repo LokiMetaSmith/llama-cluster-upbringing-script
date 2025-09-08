@@ -14,20 +14,20 @@
       - python3-pip
     state: present
 
-- name: 3. Create a virtual environment for the 'user' account
-  command: python3 -m venv /home/user/.local
+- name: 3. Create a virtual environment for the target user
+  command: "python3 -m venv /home/{{ target_user }}/.local"
   args:
-    creates: /home/user/.local/bin/pip
+    creates: "/home/{{ target_user }}/.local/bin/pip"
   become: no # Run as the user
 
 - name: 4. Copy requirements.txt to remote host
   copy:
     src: requirements.txt
-    dest: /tmp/requirements.txt
+    dest: "/home/{{ target_user }}/requirements.txt"
   become: no
 
 - name: 5. Install python dependencies into the virtual environment
   pip:
-    requirements: /tmp/requirements.txt
-    executable: /home/user/.local/bin/pip
+    requirements: "/home/{{ target_user }}/requirements.txt"
+    executable: "/home/{{ target_user }}/.local/bin/pip"
   become: no # Run as the user
