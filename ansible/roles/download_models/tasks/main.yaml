@@ -1,0 +1,46 @@
+---
+- name: Download all LLM models
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "/opt/nomad/models/llm/{{ item.filename }}"
+    mode: '0644'
+  loop: "{{ llm_models }}"
+  become: yes
+
+- name: Download all Speech-to-Text models
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "/opt/nomad/models/stt/{{ item.filename }}"
+    mode: '0644'
+  loop: "{{ stt_models }}"
+  become: yes
+
+- name: Download all Text-to-Speech models
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "/opt/nomad/models/tts/{{ item.filename }}"
+    mode: '0644'
+  loop: "{{ tts_models }}"
+  become: yes
+
+- name: Download all Vision models (URL-based)
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "/opt/nomad/models/vision/{{ item.filename }}"
+    mode: '0644'
+  loop: "{{ vision_models | selectattr('url', 'defined') | list }}"
+  become: yes
+
+- name: Download all Vision models (Hub-based)
+  community.general.huggingface_hub:
+    repo_id: "{{ item.repo_id }}"
+    dest: "/opt/nomad/models/vision/{{ item.name }}"
+  loop: "{{ vision_models | selectattr('repo_id', 'defined') | list }}"
+  become: yes
+
+- name: Download all Embedding models (Hub-based)
+  community.general.huggingface_hub:
+    repo_id: "{{ item.repo_id }}"
+    dest: "/opt/nomad/models/embedding/{{ item.name }}"
+  loop: "{{ embedding_models | selectattr('repo_id', 'defined') | list }}"
+  become: yes

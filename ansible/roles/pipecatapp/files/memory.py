@@ -6,8 +6,9 @@ import os
 
 class MemoryStore:
     def __init__(self, index_file="long_term_memory.faiss", store_file="long_term_memory.json"):
-        embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME", 'all-MiniLM-L6-v2')
-        self.embedding_model = SentenceTransformer(embedding_model_name)
+        # The embedding model is now managed by Ansible and placed in a predictable location.
+        embedding_model_path = "/opt/nomad/models/embedding/embedding-gemma-300m"
+        self.embedding_model = SentenceTransformer(embedding_model_path)
         self.dimension = self.embedding_model.get_sentence_embedding_dimension()
         self.index_file = index_file
         self.store_file = store_file

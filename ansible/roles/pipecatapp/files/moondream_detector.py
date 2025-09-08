@@ -5,11 +5,12 @@ from pipecat.processors.frame_processor import FrameProcessor
 from pipecat.frames.frames import VisionImageFrame
 
 class MoondreamDetector(FrameProcessor):
-    def __init__(self, model_name="vikhyatk/moondream2", revision="2025-01-09"):
+    def __init__(self):
         super().__init__()
+        # The model is now managed by Ansible and placed in a predictable location.
+        model_path = "/opt/nomad/models/vision/moondream2"
         self.model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            revision=revision,
+            model_path,
             trust_remote_code=True,
             torch_dtype=torch.float16,
             # Use CUDA if available, otherwise CPU

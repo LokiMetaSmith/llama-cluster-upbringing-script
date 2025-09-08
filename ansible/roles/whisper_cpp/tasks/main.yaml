@@ -25,13 +25,7 @@
     force: yes
   become: yes
 
-- name: Download whisper.cpp model
-  ansible.builtin.command:
-    cmd: bash ./models/download-ggml-model.sh base.en
-  args:
-    chdir: /opt/whisper.cpp-build
-    creates: /opt/whisper.cpp-build/models/ggml-base.en.bin
-  become: yes
+# The whisper.cpp model is now downloaded by the central 'download_models' role.
 
 - name: Configure whisper.cpp build
   ansible.builtin.command:
@@ -65,6 +59,7 @@
     remote_src: yes
   loop: "{{ whisper_binaries.files }}"
   become: yes
+
 
 - name: Clean up whisper.cpp build directory
   ansible.builtin.file:

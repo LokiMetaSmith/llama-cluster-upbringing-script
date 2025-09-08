@@ -1,0 +1,43 @@
+---
+# This file centralizes the configuration for all AI models used in the project.
+
+# Large Language Models, in order of preference for failover
+llm_models:
+  - name: "Llama-3-8B-Instruct"
+    url: "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF-v2/resolve/main/Meta-Llama-3-8B-Instruct-v2.Q4_K_M.gguf"
+    filename: "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
+    memory_mb: 8192
+  - name: "phi-3-mini-instruct"
+    url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
+    filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
+    memory_mb: 4096
+
+# Speech-to-Text models
+stt_models:
+  - name: "whisper-base.en"
+    url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
+    filename: "ggml-base.en.bin"
+
+# Text-to-Speech models (Piper)
+tts_models:
+  - name: "en_US-l2arctic-medium"
+    url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx"
+    filename: "en_US-l2arctic-medium.onnx"
+  - name: "en_US-l2arctic-medium-config"
+    url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx.json"
+    filename: "en_US-l2arctic-medium.onnx.json"
+
+# Embedding models
+embedding_models:
+  - name: "embedding-gemma-300m"
+    repo_id: "google/embedding-gemma-300m"
+    # This model will be downloaded using the huggingface_hub module, which handles the whole repository.
+
+# Vision models
+vision_models:
+  - name: "yolov8n"
+    url: "https://github.com/ultralytics/assets/releases/download/v8.1.0/yolov8n.pt"
+    filename: "yolov8n.pt"
+  - name: "moondream2"
+    repo_id: "vikhyatk/moondream2"
+    # This model will be downloaded using the huggingface_hub module.
