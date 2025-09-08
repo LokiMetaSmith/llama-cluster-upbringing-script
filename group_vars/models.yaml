@@ -29,8 +29,8 @@ tts_models:
 
 # Embedding models
 embedding_models:
-  - name: "embedding-gemma-300m"
-    repo_id: "google/embedding-gemma-300m"
+  - name: "bge-large-en-v1.5"
+    repo_id: "BAAI/bge-large-en-v1.5"
     # This model will be downloaded using the huggingface_hub module, which handles the whole repository.
 
 # Vision models
