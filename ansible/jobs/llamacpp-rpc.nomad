@@ -30,8 +30,8 @@ while [ -z "$(nomad service discover -address-type=ipv4 llama-cpp-rpc-worker 2>/
   sleep 5
 done
 
-# Discover the IP addresses and ports of the worker services
 WORKER_IPS=$(nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr '\n' ',' | sed 's/,$//')
+HEALTH_CHECK_URL="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
 
 # Loop through the provided models and try to start the server
 {% raw %}{% for model in llm_models_var %}{% endraw %}
@@ -43,15 +43,30 @@ WORKER_IPS=$(nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr
     --rpc-servers $WORKER_IPS &
 
   SERVER_PID=$!
-  sleep 15 # Give the server time to start or fail
 
-  # Check if the process is still running
-  if ps -p $SERVER_PID > /dev/null; then
-    echo "Successfully started llama-server with model: {{ model.name }}"
+  echo "Server process started with PID $SERVER_PID. Waiting for it to become healthy..."
+
+  # Health check loop
+  HEALTHY=false
+  for i in $(seq 1 12); do
+    sleep 10
+    if curl -s --fail $HEALTH_CHECK_URL > /dev/null; then
+      echo "Server is healthy with model {{ model.name }}!"
+      HEALTHY=true
+      break
+    else
+      echo "Health check failed (attempt $i/12)..."
+    fi
+  done
+
+  if [ "$HEALTHY" = true ]; then
+    echo "Successfully started and health-checked llama-server with model: {{ model.name }}"
     wait $SERVER_PID # Keep the script running with the successful server
     exit 0
   else
-    echo "Failed to start llama-server with model: {{ model.name }}. Trying next model."
+    echo "Server failed to become healthy with model: {{ model.name }}. Killing process and trying next model."
+    kill $SERVER_PID
+    wait $SERVER_PID 2>/dev/null
   fi
 {% raw %}{% endfor %}{% endraw %}
 
@@ -132,6 +147,4 @@ EOH
 
   # All groups in this job will implicitly use the "models" volume
   # by referencing it in their task's volume_mount block.
-  # Oh wait, there is no volume_mount block in the new version.
-  # Let me add it back.
 }
