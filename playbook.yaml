@@ -1,5 +1,5 @@
 - name: Play 1 - Bootstrap New Nodes as 'root'
-  hosts: all:!localhost
+  hosts: all
   become: yes # We are already root
 
   tasks:
