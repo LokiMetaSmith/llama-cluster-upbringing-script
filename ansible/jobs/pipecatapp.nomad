@@ -23,7 +23,7 @@ job "pipecat-app" {
       driver = "exec"
 
       config {
-        command = "/home/user/pipecatapp_venv/bin/python3"
+        command = "/home/user/.local/bin/python3"
         args    = ["/home/user/app.py"]
       }
 

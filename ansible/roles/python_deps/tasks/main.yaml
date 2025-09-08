@@ -14,10 +14,10 @@
       - python3-pip
     state: present
 
-- name: 3. Create a virtual environment using the default python3
-  command: python3 -m venv /home/{{ ansible_user }}/.local
+- name: 3. Create a virtual environment for the 'user' account
+  command: python3 -m venv /home/user/.local
   args:
-    creates: /home/{{ ansible_user }}/.local/bin/pip
+    creates: /home/user/.local/bin/pip
   become: no # Run as the user
 
 - name: 4. Copy requirements.txt to remote host
@@ -29,5 +29,5 @@
 - name: 5. Install python dependencies into the virtual environment
   pip:
     requirements: /tmp/requirements.txt
-    executable: /home/{{ ansible_user }}/.local/bin/pip
+    executable: /home/user/.local/bin/pip
   become: no # Run as the user
