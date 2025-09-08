@@ -5,3 +5,4 @@ torchaudio
 --extra-index-url https://pypi.org/simple
 piper-tts
 kittentts
+huggingface-hub

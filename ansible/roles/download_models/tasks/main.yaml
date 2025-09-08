@@ -32,15 +32,13 @@
   become: yes
 
 - name: Download all Vision models (Hub-based)
-  community.general.huggingface_hub:
-    repo_id: "{{ item.repo_id }}"
-    dest: "/opt/nomad/models/vision/{{ item.name }}"
+  ansible.builtin.script:
+    cmd: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/vision/{{ item.name }}"
   loop: "{{ vision_models | selectattr('repo_id', 'defined') | list }}"
   become: yes
 
 - name: Download all Embedding models (Hub-based)
-  community.general.huggingface_hub:
-    repo_id: "{{ item.repo_id }}"
-    dest: "/opt/nomad/models/embedding/{{ item.name }}"
+  ansible.builtin.script:
+    cmd: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/embedding/{{ item.name }}"
   loop: "{{ embedding_models | selectattr('repo_id', 'defined') | list }}"
   become: yes
