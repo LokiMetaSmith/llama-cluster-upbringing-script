@@ -33,12 +33,12 @@
 
 - name: Download all Vision models (Hub-based)
   ansible.builtin.script:
-    cmd: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/vision/{{ item.name }}"
+    cmd: "/home/{{ target_user }}/.local/bin/python3 download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/vision/{{ item.name }}"
   loop: "{{ vision_models | selectattr('repo_id', 'defined') | list }}"
   become: yes
 
 - name: Download all Embedding models (Hub-based)
   ansible.builtin.script:
-    cmd: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/embedding/{{ item.name }}"
+    cmd: "/home/{{ target_user }}/.local/bin/python3 download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/embedding/{{ item.name }}"
   loop: "{{ embedding_models | selectattr('repo_id', 'defined') | list }}"
   become: yes
