@@ -47,8 +47,8 @@
 
 - name: Copy requirements.txt to remote host
   ansible.builtin.copy:
-    src: requirements.txt
-    dest: /opt/pipecatapp/requirements.txt
+  src: "{{ playbook_dir }}/ansible/roles/python_deps/files/requirements.txt"    
+  dest: /opt/pipecatapp/requirements.txt
   become: yes
 
 - name: Configure git to use anonymous protocol for GitHub
