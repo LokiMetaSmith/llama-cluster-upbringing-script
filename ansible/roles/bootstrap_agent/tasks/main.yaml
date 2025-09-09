@@ -2,15 +2,18 @@
 # tasks file for bootstrap_agent
 
 - name: Check Nomad service status
-  ansible.builtin.service:
-    name: nomad
-    state: started
-  register: nomad_service_status
-  until: nomad_service_status.state == 'running'
-  retries: 5
-  delay: 2
+  ansible.builtin.service_facts:
+  register: nomad_service_facts
   when: ansible_connection == "local"
-  ignore_errors: yes
+
+- name: Wait for Nomad to be active
+  ansible.builtin.assert:
+    that:
+      - "nomad_service_facts.ansible_facts.services['nomad.service'].state == 'running'"
+  retries: 12
+  delay: 5
+  when: ansible_connection == "local"
+  ignore_errors: yes # Fail gracefully in the next task
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
