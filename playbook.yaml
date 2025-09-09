@@ -106,7 +106,14 @@
         # - kittentts
         - bootstrap_agent
         - power_manager
-    
+ 
+    - name: Flush handlers to ensure all services are started
+      meta: flush_handlers
+
+    - name: Bootstrap the agent
+      include_role:
+        name: bootstrap_agent   
+        
   post_tasks:
     - name: Discover and save the MAC address for future use
       ansible.builtin.blockinfile:
