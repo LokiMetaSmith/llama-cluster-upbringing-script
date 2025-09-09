@@ -13,15 +13,16 @@ server = true
 # In a single-node setup (like when using the bootstrap.sh script),
 # the inventory will only contain one host. In this case, we must set
 # bootstrap_expect to 1 to allow the server to elect itself as leader.
-# For multi-node setups, we expect a quorum of controller nodes.
 {% if ansible_play_hosts_all | length == 1 %}
 bootstrap_expect = 1
+# A single server bootstraps itself and does not need to join anything.
 {% else %}
+# For multi-node setups, we expect a quorum of controller nodes.
 bootstrap_expect = {{ groups['controller_nodes'] | length }}
+retry_join = ["{{ hostvars[groups['controller_nodes'][0]]['ansible_host'] }}"]
 {% endif %}
 {% else %}
+# This is a client node, so it should try to join the controller.
 server = false
-{% endif %}
-
-# Retry joining the cluster
 retry_join = ["{{ hostvars[groups['controller_nodes'][0]]['ansible_host'] }}"]
+{% endif %}
