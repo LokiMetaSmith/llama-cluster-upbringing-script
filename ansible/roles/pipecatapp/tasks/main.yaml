@@ -46,12 +46,6 @@
     mode: '0777'
   become: yes
 
-- name: Copy requirements.txt to remote host
-  ansible.builtin.copy:
-    src: requirements.txt
-    dest: /opt/pipecatapp/requirements.txt
-  become: yes
-
 - name: Configure git to use anonymous protocol for GitHub
   ansible.builtin.git_config:
     name: url.https://github.com/.insteadOf
@@ -74,7 +68,7 @@
   block:
     - name: Install python dependencies into the virtual environment
       ansible.builtin.pip:
-        requirements: /opt/pipecatapp/requirements.txt
+        requirements: /home/{{ target_user }}/requirements.txt # Use the file from python_deps
         executable: /opt/pipecatapp/venv/bin/pip3
   environment:
     TMPDIR: /var/tmp/ansible_pip_build
