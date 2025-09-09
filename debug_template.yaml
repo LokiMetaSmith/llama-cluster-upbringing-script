@@ -1,0 +1,28 @@
+#Now, whenever you edit ansible/jobs/llamacpp-rpc.nomad, you can run this fast playbook to see the result:
+
+# '''Bash'''
+# ansible-playbook debug_template.yaml
+# '''
+# This will create a new file, rendered_llamacpp_job.nomad, in your project directory.
+# You can then test this rendered file directly with Nomad to check for HCL parsing errors:
+
+# '''Bash'''
+# nomad job run rendered_llamacpp_job.nomad
+# '''
+# This gives you a tight feedback loop for fixing the template without waiting for the full bootstrap script.
+
+---
+- name: Debug and Render Nomad Template
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - group_vars/models.yaml
+
+  tasks:
+    - name: Render the llama.cpp Nomad job from template
+      ansible.builtin.template:
+        src: ansible/jobs/llamacpp-rpc.nomad
+        dest: ./rendered_llamacpp_job.nomad
+        mode: '0644'
