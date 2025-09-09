@@ -37,7 +37,7 @@
     - name: Render the llama.cpp Nomad job from template
       ansible.builtin.template:
         # Source: The Jinja2 template file for the Nomad job.
-        src: ansible/jobs/llamacpac-rpc.nomad
+        src: ansible/jobs/llamacpp-rpc.nomad
         # Destination: The output file. This will be a pure, valid HCL file
         # that you can test directly with the `nomad` command.
         dest: ./rendered_llamacpp_job.nomad
