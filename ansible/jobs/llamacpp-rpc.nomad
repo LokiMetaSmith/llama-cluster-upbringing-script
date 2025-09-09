@@ -34,7 +34,7 @@ WORKER_IPS=$(nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr
 HEALTH_CHECK_URL="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
 
 # Loop through the provided models and try to start the server
-{% raw %}{% for model in llm_models_var %}{% endraw %}
+{% for model in llm_models_var %}
   echo "Attempting to start llama-server with model: {{ model.name }}"
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
@@ -43,7 +43,6 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
     --rpc-servers $WORKER_IPS &
 
   SERVER_PID=$!
-
   echo "Server process started with PID $SERVER_PID. Waiting for it to become healthy..."
 
   # Health check loop
@@ -68,7 +67,7 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
     kill $SERVER_PID
     wait $SERVER_PID 2>/dev/null
   fi
-{% raw %}{% endfor %}{% endraw %}
+{% endfor %}
 
 echo "All models failed to start. Exiting."
 exit 1
@@ -121,7 +120,7 @@ EOH
         args = [
           "--model", "/opt/nomad/models/llm/{{ llm_models_var[0].filename }}",
           "--host", "0.0.0.0",
-          "--port", "{% raw %}{{ env \"NOMAD_PORT_rpc\" }}{% endraw %}",
+          "--port", "{{ env \"NOMAD_PORT_rpc\" }}",
         ]
       }
 
