@@ -20,6 +20,9 @@
   vars_files:
     - group_vars/models.yaml
 
+vars:
+    llm_models_var: "{{ llm_models }}"
+
   tasks:
     - name: Render the llama.cpp Nomad job from template
       ansible.builtin.template:
