@@ -112,3 +112,43 @@ EOH
       name     = "llama-cpp-rpc-worker"
       provider = "consul"
       port     = "rpc"
+    }
+
+    volume "models" {
+      type      = "host"
+      read_only = true
+      source    = "/opt/nomad/models"
+    }
+
+    task "llama-worker" {
+      driver = "exec"
+
+      template {
+        data = <<EOH
+#!/bin/bash
+/usr/local/bin/llama-server \
+  --model "/opt/nomad/models/llm/{{ llm_models_var[0].filename }}" \
+  --host 0.0.0.0 \
+  --port {{ `{{ env "NOMAD_PORT_rpc" }}` }}
+EOH
+        destination = "local/run_worker.sh"
+        perms       = "0755"
+      }
+
+      config {
+        command = "local/run_worker.sh"
+      }
+
+      resources {
+        cpu    = 1000
+        memory = {{ llm_models_var[0].memory_mb | default(2048) }}
+      }
+
+      volume_mount {
+        volume      = "models"
+        destination = "/opt/nomad/models"
+        read_only   = true
+      }
+    }
+  }
+}
