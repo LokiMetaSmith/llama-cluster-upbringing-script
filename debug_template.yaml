@@ -1,3 +1,4 @@
+---
 # Now, whenever you edit ansible/jobs/llamacpp-rpc.nomad, you can run this fast playbook to see the result:
 # '''Bash'''
 # ansible-playbook debug_template.yaml
@@ -9,7 +10,6 @@
 # '''
 # This gives you a tight feedback loop for fixing the template without waiting for the full bootstrap script.
 
----
 - name: Debug and Render Nomad Template
   hosts: localhost
   connection: local
