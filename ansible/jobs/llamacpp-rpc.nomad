@@ -113,15 +113,21 @@ EOH
     task "llama-worker" {
       driver = "exec"
 
+      template {
+        data = <<EOH
+#!/bin/bash
+/usr/local/bin/llama-server \
+  --model "/opt/nomad/models/llm/{{ llm_models_var[0].filename }}" \
+  --host 0.0.0.0 \
+  --port {{ env "NOMAD_PORT_rpc" }}
+EOH
+        destination = "local/run_worker.sh"
+        perms       = "0755"
+      }
+
+
       config {
-        # The worker will load the primary model. The master will delegate tasks
-        # for any loaded model, but the worker itself needs a default model to load.
-        command = "/usr/local/bin/llama-server"
-        args = [
-          "--model", "/opt/nomad/models/llm/{{ llm_models_var[0].filename }}",
-          "--host", "0.0.0.0",
-          "--port", "{{ env \"NOMAD_PORT_rpc\" }}",
-        ]
+        command = "local/run_worker.sh"
       }
 
       resources {
