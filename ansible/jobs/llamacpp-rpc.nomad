@@ -89,7 +89,7 @@ EOH
       resources {
         # Use the memory of the primary model for the master
         cpu    = 1000
-        memory = {{ llm_models_var[0].memory_mb  }}
+        memory = "{{ llm_models_var[0].memory_mb  }}"
       }
 
       volume_mount {
@@ -134,7 +134,7 @@ EOH
 
       resources {
         cpu    = 1000
-        memory = {{ llm_models_var[0].memory_mb }}
+        memory = "{{ llm_models_var[0].memory_mb }}"
       }
 
       volume_mount {
