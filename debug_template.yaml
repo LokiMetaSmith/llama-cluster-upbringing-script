@@ -1,29 +1,45 @@
 ---
-# Now, whenever you edit ansible/jobs/llamacpp-rpc.nomad, you can run this fast playbook to see the result:
-# '''Bash'''
-# ansible-playbook debug_template.yaml
-# '''
-# This will create a new file, rendered_llamacpp_job.nomad, in your project directory.
-# You can then test this rendered file directly with Nomad to check for HCL parsing errors:
-# '''Bash'''
-# nomad job run rendered_llamacpp_job.nomad
-# '''
-# This gives you a tight feedback loop for fixing the template without waiting for the full bootstrap script.
-
+# -----------------------------------------------------------------------------
+# Ansible Playbook: Debug Nomad Template
+#
+# Purpose:
+# This playbook provides a fast way to render a single Nomad job file from its
+# Jinja2 template. It's designed for quick debugging and validation of the
+# template without running the entire, time-consuming main bootstrap script.
+#
+# How it Works:
+# 1. It loads the necessary model definitions from `group_vars/models.yaml`.
+# 2. It defines the `llm_models_var` variable, which the Nomad template expects.
+# 3. It uses the `ansible.builtin.template` module to process
+#    `ansible/jobs/llamacpp-rpc.nomad` and saves the output to a new file named
+#    `rendered_llamacpp_job.nomad` in the project's root directory.
+#
+# -----------------------------------------------------------------------------
 - name: Debug and Render Nomad Template
+  # This playbook runs only on the local machine where you are running Ansible.
   hosts: localhost
   connection: local
   gather_facts: no
 
+  # Load the file containing the definitions for all AI models.
+  # This is necessary because the Nomad template refers to these variables.
   vars_files:
     - group_vars/models.yaml
 
-vars:
+  # Define the `llm_models_var` variable.
+  # The main playbook creates this variable in the `vars` section of a role,
+  # but for this standalone debug playbook, we define it here directly.
+  # It simply takes the content of the `llm_models` variable loaded from the file.
+  vars:
     llm_models_var: "{{ llm_models }}"
 
   tasks:
     - name: Render the llama.cpp Nomad job from template
       ansible.builtin.template:
-        src: ansible/jobs/llamacpp-rpc.nomad
+        # Source: The Jinja2 template file for the Nomad job.
+        src: ansible/jobs/llamacpac-rpc.nomad
+        # Destination: The output file. This will be a pure, valid HCL file
+        # that you can test directly with the `nomad` command.
         dest: ./rendered_llamacpp_job.nomad
+        # Set standard file permissions for the rendered file.
         mode: '0644'
