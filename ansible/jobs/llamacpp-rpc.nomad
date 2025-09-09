@@ -16,6 +16,12 @@ job "llamacpp-rpc" {
       port     = "http"
     }
 
+    volume "models" {
+      type      = "host"
+      read_only = true
+      source    = "/opt/nomad/models"
+    }
+
     task "llama-master" {
       driver = "exec"
 
@@ -31,7 +37,7 @@ while [ -z "$(nomad service discover -address-type=ipv4 llama-cpp-rpc-worker 2>/
 done
 
 WORKER_IPS=$(nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr '\n' ',' | sed 's/,$//')
-HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
+HEALTH_CHECK_URL="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
 
 # Loop through the provided models and try to start the server
 {% for model in llm_models_var %}
@@ -39,7 +45,7 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
-    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
+    --port {{ env "NOMAD_PORT_http" }} \
     --rpc-servers $WORKER_IPS &
 
   SERVER_PID=$!
@@ -94,8 +100,6 @@ EOH
     }
   }
 
-  # Note: This is a simplification. All workers will have the same resource profile
-  # as the primary LLM. A more advanced setup would have a separate group per model.
   group "workers" {
     count = {{ llm_models_var[0].WORKER_COUNT | default(1) }}
 
@@ -110,16 +114,29 @@ EOH
       port     = "rpc"
     }
 
+    volume "models" {
+      type      = "host"
+      read_only = true
+      source    = "/opt/nomad/models"
+    }
+
     task "llama-worker" {
       driver = "exec"
 
+      template {
+        data = <<EOH
+#!/bin/bash
+/usr/local/bin/llama-server \
+  --model "/opt/nomad/models/llm/{{ llm_models_var[0].filename }}" \
+  --host 0.0.0.0 \
+  --port {{ env "NOMAD_PORT_rpc" }}
+EOH
+        destination = "local/run_worker.sh"
+        perms       = "0755"
+      }
+
       config {
-        command = "/usr/local/bin/llama-server"
-        args = [
-          "--model", "/opt/nomad/models/llm/{{ llm_models_var[0].filename }}",
-          "--host", "0.0.0.0",
-          "--port", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}",
-        ]
+        command = "local/run_worker.sh"
       }
 
       resources {
@@ -134,14 +151,4 @@ EOH
       }
     }
   }
-
-  # Common volume for all groups
-  volume "models" {
-    type      = "host"
-    read_only = true
-    source    = "/opt/nomad/models"
-  }
-
-  # All groups in this job will implicitly use the "models" volume
-  # by referencing it in their task's volume_mount block.
 }
