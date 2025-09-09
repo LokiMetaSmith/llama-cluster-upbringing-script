@@ -37,7 +37,7 @@ while [ -z "$(nomad service discover -address-type=ipv4 llama-cpp-rpc-worker 2>/
 done
 
 WORKER_IPS=$(nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr '\n' ',' | sed 's/,$//')
-HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
+HEALTH_CHECK_URL="http://127.0.0.1:{{ `{{ env "NOMAD_PORT_http" }}` }}/health"
 
 # Loop through the provided models and try to start the server
 {% for model in llm_models_var %}
@@ -45,7 +45,7 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
-    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
+    --port {{ `{{ env "NOMAD_PORT_http" }}` }} \
     --rpc-servers $WORKER_IPS &
 
   SERVER_PID=$!
@@ -101,7 +101,7 @@ EOH
   }
 
   group "workers" {
-    count = {{ llm_models_var[0].WORKER_COUNT | default(1) }}
+    count = {% raw %}{{ llm_models_var[0].WORKER_COUNT | default(1) }}{% endraw %}
 
     network {
       mode = "bridge"
@@ -112,43 +112,3 @@ EOH
       name     = "llama-cpp-rpc-worker"
       provider = "consul"
       port     = "rpc"
-    }
-
-    volume "models" {
-      type      = "host"
-      read_only = true
-      source    = "/opt/nomad/models"
-    }
-
-    task "llama-worker" {
-      driver = "exec"
-
-      template {
-        data = <<EOH
-#!/bin/bash
-/usr/local/bin/llama-server \
-  --model "/opt/nomad/models/llm/{{ llm_models_var[0].filename }}" \
-  --host 0.0.0.0 \
-  --port {{ '{{' }} env "NOMAD_PORT_rpc" {{ '}}' }}
-EOH
-        destination = "local/run_worker.sh"
-        perms       = "0755"
-      }
-
-      config {
-        command = "local/run_worker.sh"
-      }
-
-      resources {
-        cpu    = 1000
-        memory = {{ llm_models_var[0].memory_mb | default(2048) }}
-      }
-
-      volume_mount {
-        volume      = "models"
-        destination = "/opt/nomad/models"
-        read_only   = true
-      }
-    }
-  }
-}
