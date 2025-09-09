@@ -21,7 +21,7 @@
     - group_vars/models.yaml
 
 vars:
-    llm_models_var: "{{ llm_models }}"
+    - llm_models_var: "{{ llm_models }}"
 
   tasks:
     - name: Render the llama.cpp Nomad job from template
