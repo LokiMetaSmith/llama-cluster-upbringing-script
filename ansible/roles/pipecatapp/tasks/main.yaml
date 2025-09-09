@@ -1,3 +1,4 @@
+---
 - name: Install python3, pip, and venv system packages
   ansible.builtin.apt:
     name:
@@ -45,12 +46,6 @@
     mode: '0777'
   become: yes
 
-- name: Copy requirements.txt to remote host
-  ansible.builtin.copy:
-  src: "{{ playbook_dir }}/ansible/roles/python_deps/files/requirements.txt"    
-  dest: /opt/pipecatapp/requirements.txt
-  become: yes
-
 - name: Configure git to use anonymous protocol for GitHub
   ansible.builtin.git_config:
     name: url.https://github.com/.insteadOf
@@ -85,10 +80,13 @@
     state: absent
   become: yes
 
-- name: Copy pipecat app
+- name: Copy pipecat app and its requirements
   ansible.builtin.copy:
-    src: app.py
-    dest: /opt/pipecatapp/app.py
+    src: "{{ item }}"
+    dest: "/opt/pipecatapp/{{ item }}"
+  loop:
+    - app.py
+    - requirements.txt
   become: yes
 
 - name: Copy pipecatapp Nomad job file
