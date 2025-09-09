@@ -1,0 +1,11 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# Always use LF line endings for text files in the repository.
+*.sh text eol=lf
+*.py text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.nomad text eol=lf
+*.j2 text eol=lf
