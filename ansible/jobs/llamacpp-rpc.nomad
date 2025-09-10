@@ -16,6 +16,13 @@ job "llamacpp-rpc" {
       port     = "http"
     }
 
+    check {
+        type     = "http"
+        path     = "/health"
+        interval = "10s"
+        timeout  = "2s"
+    }
+
     volume "models" {
       type      = "host"
       read_only = true
