@@ -15,11 +15,13 @@ job "llamacpp-rpc" {
       provider = "consul"
       port     = "http"
 
+
       check {
           type     = "http"
           path     = "/health"
           interval = "10s"
           timeout  = "2s"
+
       }
     }
 
