@@ -12,6 +12,12 @@ advertise {
   serf = "{{ advertise_ip }}"
 }
 
+# Integrate with Consul for service discovery
+consul {
+  address = "127.0.0.1:8500"
+  checks_use_advertise = true
+}
+
 # Configure this node as a server
 server {
   enabled          = true
