@@ -14,13 +14,14 @@ job "llamacpp-rpc" {
       name     = "llama-cpp-api"
       provider = "consul"
       port     = "http"
-    }
+    
 
-    check {
+      check {
         type     = "http"
         path     = "/health"
         interval = "10s"
         timeout  = "2s"
+      }
     }
 
     volume "models" {
