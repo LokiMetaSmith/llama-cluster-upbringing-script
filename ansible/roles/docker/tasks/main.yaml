@@ -73,7 +73,7 @@
     append: yes
   become: true
   
- name: Add root user to the 'docker' group
+- name: Add root user to the 'docker' group
   ansible.builtin.user:
     name: root
     groups: docker
