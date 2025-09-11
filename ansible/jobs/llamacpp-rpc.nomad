@@ -18,7 +18,7 @@ job "llamacpp-rpc" {
 
       check {
           type     = "http"
-          path     = "/health"
+          path     = "/"
           interval = "10s"
           timeout  = "2s"
 
@@ -46,7 +46,7 @@ while [ -z "$(nomad service discover -address-type=ipv4 llama-cpp-rpc-worker 2>/
 done
 
 WORKER_IPS=$(nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr '\n' ',' | sed 's/,$//')
-HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
+HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/"
 
 # Loop through the provided models and try to start the server
 {% for model in llm_models_var %}
