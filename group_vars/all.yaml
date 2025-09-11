@@ -4,6 +4,6 @@ target_user: user
 # This variable dynamically determines the IP address for Nomad to advertise.
 # It prefers the first non-loopback IPv6 address if available,
 # otherwise it falls back to the default IPv4 address.
-advertise_ip: "{{ ansible_all_ipv6_addresses[0] | default(ansible_default_ipv4.address) }}"
+advertise_ip: "{{ (ansible_all_ipv6_addresses | reject('equalto', '::1') | list | first) | default(ansible_default_ipv4.address) }}"
 
 # Model definitions have been moved to group_vars/models.yaml
