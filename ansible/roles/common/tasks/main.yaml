@@ -59,9 +59,9 @@
     state: directory
     mode: '0755'
   loop:
-    - /opt/nomad/models/llm
-    - /opt/nomad/models/stt
-    - /opt/nomad/models/tts
-    - /opt/nomad/models/embedding
-    - /opt/nomad/models/vision
+    - "{{ nomad_models_dir }}/llm"
+    - "{{ nomad_models_dir }}/stt"
+    - "{{ nomad_models_dir }}/tts"
+    - "{{ nomad_models_dir }}/embedding"
+    - "{{ nomad_models_dir }}/vision"
   become: yes

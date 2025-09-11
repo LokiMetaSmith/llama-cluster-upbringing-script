@@ -30,7 +30,7 @@ client {
   enabled = true
 
   host_volume "models" {
-    path      = "/opt/nomad/models"
+    path      = "{{ nomad_models_dir }}"
     read_only = true
   }
 }
