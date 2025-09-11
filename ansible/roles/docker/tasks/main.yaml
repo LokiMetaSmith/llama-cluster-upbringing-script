@@ -72,6 +72,13 @@
     groups: docker
     append: yes
   become: true
+  
+ name: Add root user to the 'docker' group
+  ansible.builtin.user:
+    name: root
+    groups: docker
+    append: yes
+  become: true
 
 - name: Ensure Docker service is started and enabled
   ansible.builtin.systemd:
