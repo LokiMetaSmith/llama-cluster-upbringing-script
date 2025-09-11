@@ -82,17 +82,19 @@
 
     - name: Run roles that depend on Consul
       include_role:
-        name: "{{ item }}"
+        name: "{{ role_name }}"
       loop:
         - docker
         - nomad
+      loop_control:
+        loop_var: role_name
 
     - name: Flush handlers to ensure Nomad service is started
       meta: flush_handlers
 
     - name: Run remaining roles
       include_role:
-        name: "{{ item }}"
+        name: "{{ role_name }}"
       loop:
         - python_deps
         - download_models
@@ -106,6 +108,8 @@
         # - kittentts
         - bootstrap_agent
         - power_manager
+      loop_control:
+        loop_var: role_name
  
     - name: Flush handlers to ensure all services are started
       meta: flush_handlers

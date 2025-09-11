@@ -22,11 +22,13 @@
 
 - name: Ensure old, conflicting Nomad config files are removed
   file:
-    path: "{{ item }}"
+    path: "{{ config_file }}"
     state: absent
   loop:
     - /etc/nomad.d/client.hcl
     - /etc/nomad.d/server.hcl
+  loop_control:
+    loop_var: config_file
 
 - name: Create Nomad config directory
   ansible.builtin.file:

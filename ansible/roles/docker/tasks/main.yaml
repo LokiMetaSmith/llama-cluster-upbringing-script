@@ -33,12 +33,14 @@
 
     - name: Remove leftover Docker data directories
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: "{{ docker_dir }}"
         state: absent
       loop:
         - /var/lib/docker
         - /var/lib/containerd
       become: true
+      loop_control:
+        loop_var: docker_dir
 
     - name: Ensure /etc/docker directory exists
       ansible.builtin.file:
