@@ -65,7 +65,7 @@
       [Unit]
       Wants=consul.service docker.service
       After=consul.service docker.service
-  notify: Reload systemd
+  notify: Restart Nomad
 
 - name: Set NOMAD_ADDR environment variable for all users
   copy:
