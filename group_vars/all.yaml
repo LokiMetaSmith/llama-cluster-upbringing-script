@@ -6,4 +6,6 @@ target_user: user
 # otherwise it falls back to the default IPv4 address.
 advertise_ip: "{{ (ansible_all_ipv6_addresses | reject('equalto', '::1') | list | first) | default(ansible_default_ipv4.address) }}"
 
+nomad_models_dir: "/opt/nomad/models"
+
 # Model definitions have been moved to group_vars/models.yaml

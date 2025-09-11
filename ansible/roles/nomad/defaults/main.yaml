@@ -2,6 +2,5 @@
 nomad_version: "1.7.7"
 nomad_zip_url: "https://releases.hashicorp.com/nomad/{{ nomad_version }}/nomad_{{ nomad_version }}_linux_amd64.zip"
 nomad_data_dir: "/opt/nomad"
-nomad_models_dir: "/opt/nomad/models"
 nomad_config_dir: "/etc/nomad.d"
 nomad_bootstrap_expect: 1
