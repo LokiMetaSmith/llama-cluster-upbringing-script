@@ -42,6 +42,18 @@
     var: llama_server_log.stdout_lines
   when: llama_server_log.stdout is defined and llama_server_log.stdout != ""
 
+- name: Read master script log if health check failed
+  ansible.builtin.command:
+    cmd: "cat /tmp/master-script.log"
+  register: master_script_log
+  changed_when: false
+  when: service_health.json is not defined or service_health.json | length == 0 or not (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length > 0)
+
+- name: Display master script log
+  ansible.builtin.debug:
+    var: master_script_log.stdout_lines
+  when: master_script_log.stdout is defined and master_script_log.stdout != ""
+
 - name: Fail if llama.cpp service did not become healthy
   ansible.builtin.fail:
     msg: "The llama.cpp API service did not become healthy in Consul after waiting. Cannot deploy pipecat app."

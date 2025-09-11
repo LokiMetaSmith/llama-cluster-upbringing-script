@@ -37,15 +37,22 @@ job "llamacpp-rpc" {
       template {
         data = <<EOH
 #!/bin/bash
-set -e
+exec > /tmp/master-script.log 2>&1
+set -x
+
+echo "Starting run_master.sh script..."
 
 # Wait until at least one worker service is available
+echo "Waiting for worker services to become available in Consul..."
 while [ -z "$(/usr/local/bin/nomad service discover -address-type=ipv4 llama-cpp-rpc-worker 2>/dev/null)" ]; do
-  echo "Waiting for worker services to become available in Consul..."
+  echo "Still waiting for worker services..."
   sleep 5
 done
+echo "Worker services are available."
 
+echo "Discovering worker IPs..."
 WORKER_IPS=$(/usr/local/bin/nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr '\n' ',' | sed 's/,$//')
+echo "Worker IPs: $WORKER_IPS"
 HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/"
 
 # Loop through the provided models and try to start the server
