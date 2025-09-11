@@ -53,12 +53,14 @@
 
 - name: Install whisper.cpp binaries
   ansible.builtin.copy:
-    src: "{{ item.path }}"
-    dest: "/usr/local/bin/{{ item.path | basename }}"
+    src: "{{ binary_file.path }}"
+    dest: "/usr/local/bin/{{ binary_file.path | basename }}"
     mode: '0755'
     remote_src: yes
   loop: "{{ whisper_binaries.files }}"
   become: yes
+  loop_control:
+    loop_var: binary_file
 
 
 - name: Clean up whisper.cpp build directory
