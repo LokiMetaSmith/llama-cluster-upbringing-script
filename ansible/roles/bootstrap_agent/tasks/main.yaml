@@ -96,7 +96,23 @@
         success_msg: "Nomad cluster has reached expected size."
       ignore_errors: true   # warn but don’t fail hard
   when: ansible_connection != "local"
+- name: Get Nomad peer status for summary
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:4646/v1/status/peers"
+    return_content: yes
+  register: nomad_peers_summary
+  when: ansible_connection == "local"
 
+- name: Set summary variable for local connection
+  ansible.builtin.set_fact:
+    nomad_peers: "{{ nomad_peers_summary }}"
+  when: ansible_connection == "local"
+
+- name: Print Nomad cluster members summary
+  ansible.builtin.debug:
+    msg: >
+      Current cluster members ({{ nomad_peers.json | length }}/{{ expected_cluster_size }}):
+      {{ nomad_peers.json | join(', ') }}
 # ============================
 # Universal Cluster Summary (always run)
 # ============================
@@ -104,6 +120,7 @@
 - name: Gather current Nomad peers (always run, pretty)
   ansible.builtin.uri:
     url: "http://{{ inventory_hostname }}:4646/v1/status/peers"
+#    url: "http://127.0.0.1:4646/v1/status/peers"
     return_content: yes
   register: nomad_peers_summary
   failed_when: false
