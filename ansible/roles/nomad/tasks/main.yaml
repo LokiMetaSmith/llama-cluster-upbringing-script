@@ -45,7 +45,6 @@
     owner: root
     group: root
     mode: '0644'
-  notify: Restart Nomad
 
 - name: Copy Nomad systemd service file
   ansible.builtin.template:
@@ -53,7 +52,6 @@
     dest: /etc/systemd/system/nomad.service
     mode: '0644'
   become: yes
-  notify: Restart Nomad
 
 - name: Create systemd override directory for Nomad service
   file:
@@ -67,7 +65,6 @@
       [Unit]
       Wants=consul.service docker.service
       After=consul.service docker.service
-  notify: Restart Nomad
 
 - name: Set NOMAD_ADDR environment variable for all users
   copy:
@@ -76,3 +73,11 @@
     content: |
       #!/bin/sh
       export NOMAD_ADDR="http://127.0.0.1:4646"
+
+- name: Start and enable Nomad service
+  ansible.builtin.systemd:
+    name: nomad
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  become: yes
