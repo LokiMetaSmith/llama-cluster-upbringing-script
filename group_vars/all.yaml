@@ -1,5 +1,5 @@
 ---
-target_user: user
+expected_cluster_size: "{{ groups['workers'] | length }}"
 
 # This variable dynamically determines the IP address for Nomad to advertise.
 # It prefers the first non-loopback IPv6 address if available,
