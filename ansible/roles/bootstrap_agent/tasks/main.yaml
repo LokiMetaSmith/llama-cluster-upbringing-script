@@ -101,7 +101,7 @@
 # Universal Cluster Summary (always run)
 # ============================
 
-- name: Gather current Nomad peers (always run)
+- name: Gather current Nomad peers (always run, pretty)
   ansible.builtin.uri:
     url: "http://{{ inventory_hostname }}:4646/v1/status/peers"
     return_content: yes
@@ -112,5 +112,5 @@
 - name: Print Nomad cluster members summary (always run)
   ansible.builtin.debug:
     msg: >
-      Current cluster members ({{ nomad_peers_summary.json | default([]) | length }}/{{ expected_cluster_size | default('unknown') }}):
-      {{ nomad_peers_summary.json | default([]) | join(', ') }}
+      Current Nomad cluster members ({{ nomad_peers_summary.json | default([]) | length }}/{{ expected_cluster_size | default('unknown') }}):
+      {{ nomad_peers_summary.json | default([]) | join(', ') | to_nice_yaml}}
