@@ -4,52 +4,113 @@
 - name: Force all pending handlers to run now
   meta: flush_handlers
 
-- name: Wait for Nomad API port to be open
-  ansible.builtin.wait_for:
-    port: 4646
-    delay: 5
-    timeout: 60
+# ============================
+# Bootstrap Mode (single node)
+# ============================
+- block:
+    - name: Wait for Nomad service to become active (bootstrap single node)
+      ansible.builtin.command: systemctl is-active --quiet nomad
+      register: nomad_service_status
+      until: nomad_service_status.rc == 0
+      retries: 12
+      delay: 5
+      changed_when: false
+
+    - name: Wait for Nomad API port to be open
+      ansible.builtin.wait_for:
+        port: 4646
+        delay: 5
+        timeout: 60
+      when: ansible_connection == "local"
+
+    - name: Wait for Nomad API to be ready
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:4646/v1/status/leader"
+        return_content: yes
+      register: nomad_status
+      until: nomad_status.status == 200 and nomad_status.content != '""'
+      retries: 12 # Wait up to 60 seconds
+      delay: 5
+      ignore_errors: yes # Fail gracefully in the next task
+
+    - name: Debug Nomad API response if failure occurs
+      ansible.builtin.debug:
+        var: nomad_status
+      when: nomad_status.status != 200
+
+    - name: Fail if Nomad agent is not ready
+      ansible.builtin.fail:
+        msg: "The Nomad agent at http://127.0.0.1:4646 is not ready after waiting. Cannot deploy agent services."
+      when: (nomad_status.status != 200 or nomad_status.content == '""')
+
+    - name: Verify that the models directory exists
+      ansible.builtin.stat:
+        path: "{{ nomad_models_dir }}"
+      register: models_dir_stat
+
+    - name: Fail if /models directory does not exist
+      ansible.builtin.fail:
+        msg: "The /models directory does not exist on the host. This is required for the Nomad job to mount the models."
+      when: not models_dir_stat.stat.isdir is defined or not models_dir_stat.stat.isdir
+
+    - name: Deploy and wait for llama.cpp service
+      ansible.builtin.include_tasks:
+        file: deploy_llama_cpp_model.yaml
+
+    - name: Deploy pipecat app service to Nomad
+      community.general.nomad_job:
+        state: present
+        src: "{{ playbook_dir }}/ansible/jobs/pipecatapp.nomad"
   when: ansible_connection == "local"
 
-- name: Wait for Nomad API to be ready
+# ============================
+# Cluster Mode (multi-node)
+# ============================
+
+- block:
+    - name: Wait for Nomad service to become active (multi-node)
+      ansible.builtin.command: systemctl is-active --quiet nomad
+      register: nomad_service_status
+      until: nomad_service_status.rc == 0
+      retries: 12
+      delay: 5
+      changed_when: false
+
+    - name: Wait for at least 1 Nomad peer
+      ansible.builtin.uri:
+        url: "http://{{ inventory_hostname }}:4646/v1/status/peers"
+        return_content: yes
+      register: nomad_peers
+      until: nomad_peers.json | length >= 1
+      retries: 20
+      delay: 6
+      changed_when: false
+
+    - name: Check if full cluster size reached
+      ansible.builtin.assert:
+        that:
+          - nomad_peers.json | length >= expected_cluster_size
+        fail_msg: >
+          Cluster has not reached expected size ({{ nomad_peers.json | length }}/{{ expected_cluster_size }}).
+          Some nodes may still be booting (e.g. PXE workers).
+        success_msg: "Nomad cluster has reached expected size."
+      ignore_errors: true   # warn but don’t fail hard
+  when: ansible_connection != "local"
+
+# ============================
+# Universal Cluster Summary (always run)
+# ============================
+
+- name: Gather current Nomad peers (always run)
   ansible.builtin.uri:
-    url: "http://127.0.0.1:4646/v1/status/leader"
+    url: "http://{{ inventory_hostname }}:4646/v1/status/peers"
     return_content: yes
-  register: nomad_status
-  until: nomad_status.status == 200 and nomad_status.content != '""'
-  retries: 12 # Wait up to 60 seconds
-  delay: 5
-  when: ansible_connection == "local"
-  ignore_errors: yes # Fail gracefully in the next task
+  register: nomad_peers_summary
+  failed_when: false
+  changed_when: false
 
-- name: Debug Nomad API response if failure occurs
+- name: Print Nomad cluster members summary (always run)
   ansible.builtin.debug:
-    var: nomad_status
-  when: ansible_connection == "local" and nomad_status.status != 200
-
-- name: Fail if Nomad agent is not ready
-  ansible.builtin.fail:
-    msg: "The Nomad agent at http://127.0.0.1:4646 is not ready after waiting. Cannot deploy agent services."
-  when: ansible_connection == "local" and (nomad_status.status != 200 or nomad_status.content == '""')
-
-- name: Verify that the models directory exists
-  ansible.builtin.stat:
-    path: "{{ nomad_models_dir }}"
-  register: models_dir_stat
-  when: ansible_connection == "local"
-
-- name: Fail if /models directory does not exist
-  ansible.builtin.fail:
-    msg: "The /models directory does not exist on the host. This is required for the Nomad job to mount the models."
-  when: (ansible_connection == "local") and (not models_dir_stat.stat.isdir is defined or not models_dir_stat.stat.isdir)
-
-- name: Deploy and wait for llama.cpp service
-  ansible.builtin.include_tasks:
-    file: deploy_llama_cpp_model.yaml
-  when: ansible_connection == "local"
-
-- name: Deploy pipecat app service to Nomad
-  community.general.nomad_job:
-    state: present
-    src: "{{ playbook_dir }}/ansible/jobs/pipecatapp.nomad"
-  when: ansible_connection == "local"
+    msg: >
+      Current cluster members ({{ nomad_peers_summary.json | default([]) | length }}/{{ expected_cluster_size | default('unknown') }}):
+      {{ nomad_peers_summary.json | default([]) | join(', ') }}
