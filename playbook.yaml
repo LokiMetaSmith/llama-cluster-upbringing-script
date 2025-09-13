@@ -119,6 +119,24 @@
         name: bootstrap_agent   
         
   post_tasks:
+    - name: Check status of pipecat-app job
+      ansible.builtin.command: nomad job status pipecat-app
+      register: pipecat_job_status
+      ignore_errors: true
+
+    - name: Display pipecat-app job status
+      ansible.builtin.debug:
+        var: pipecat_job_status.stdout_lines
+
+    - name: Get logs for pipecat-app job
+      ansible.builtin.command: nomad job logs pipecat-app
+      register: pipecat_job_logs
+      ignore_errors: true
+
+    - name: Display pipecat-app job logs
+      ansible.builtin.debug:
+        var: pipecat_job_logs.stdout_lines
+
     - name: Discover and save the MAC address for future use
       ansible.builtin.blockinfile:
         path: "host_vars/{{ inventory_hostname }}.yaml"
