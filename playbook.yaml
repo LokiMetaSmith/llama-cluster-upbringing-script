@@ -119,6 +119,16 @@
         name: bootstrap_agent   
         
   post_tasks:
+    - name: Get Nomad node status
+      ansible.builtin.command:
+        cmd: nomad node status -self
+      register: nomad_node_status
+      ignore_errors: true
+
+    - name: Display Nomad node status
+      ansible.builtin.debug:
+        var: nomad_node_status.stdout_lines
+
     - name: Discover and save the MAC address for future use
       ansible.builtin.blockinfile:
         path: "host_vars/{{ inventory_hostname }}.yaml"
