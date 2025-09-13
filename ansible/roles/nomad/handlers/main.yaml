@@ -1,1 +1,6 @@
 ---
+
+- name: Restart nomad
+  service:
+    name: nomad
+    state: restarted
