@@ -59,6 +59,12 @@
   register: nomad_peers_summary
   when: ansible_connection == "local"
 
+- name: Set expected cluster size
+  ansible.builtin.set_fact:
+    expected_cluster_size: "{{ groups['workers'] | default([]) | length }}"
+
+- name: Force all pending handlers to run now
+  meta: flush_handlers
 - name: Set summary variable for local connection
   ansible.builtin.set_fact:
     nomad_peers: "{{ nomad_peers_summary }}"
