@@ -83,7 +83,8 @@
 
 - name: Download CNI plugins tarball
   get_url:
-    url: "https://github.com/containernetworking/plugins/releases/download/v1.5.0/cni-plugins-linux-amd64-v1.5.0.tgz"
+    url: "{{ cni_url }}"
+#    url: "https://github.com/containernetworking/plugins/releases/download/v1.5.0/cni-plugins-linux-amd64-v1.5.0.tgz"
     dest: /tmp/cni-plugins.tgz
     mode: '0644'
 
