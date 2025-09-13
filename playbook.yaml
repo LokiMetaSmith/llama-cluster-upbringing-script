@@ -119,15 +119,27 @@
         name: bootstrap_agent   
         
   post_tasks:
-    - name: Get Nomad node status
+    - name: Check Nomad service status
       ansible.builtin.command:
-        cmd: nomad node status -self
-      register: nomad_node_status
+        cmd: systemctl status nomad.service --no-pager
+      register: nomad_service_status
       ignore_errors: true
+      changed_when: false
 
-    - name: Display Nomad node status
+    - name: Display Nomad service status
       ansible.builtin.debug:
-        var: nomad_node_status.stdout_lines
+        var: nomad_service_status.stdout_lines
+
+    - name: Get Nomad service logs
+      ansible.builtin.command:
+        cmd: journalctl -u nomad.service --no-pager -n 50
+      register: nomad_service_logs
+      ignore_errors: true
+      changed_when: false
+
+    - name: Display Nomad service logs
+      ansible.builtin.debug:
+        var: nomad_service_logs.stdout_lines
 
     - name: Discover and save the MAC address for future use
       ansible.builtin.blockinfile:
