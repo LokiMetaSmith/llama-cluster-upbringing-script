@@ -16,6 +16,13 @@ job "pipecat-app" {
       name = "pipecat-app-http"
       port = "http"
       provider = "consul"
+    
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "10s"
+        timeout  = "2s"
+      }
 
     }
 
