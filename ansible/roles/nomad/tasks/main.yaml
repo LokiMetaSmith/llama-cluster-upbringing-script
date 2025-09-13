@@ -73,7 +73,27 @@
     content: |
       #!/bin/sh
       export NOMAD_ADDR="http://127.0.0.1:4646"
+      
+# Ensure CNI plugins are installed for Nomad networking
+- name: Ensure CNI plugin directory exists
+  file:
+    path: /opt/cni/bin
+    state: directory
+    mode: '0755'
 
+- name: Download CNI plugins tarball
+  get_url:
+    url: "https://github.com/containernetworking/plugins/releases/download/v1.5.0/cni-plugins-linux-amd64-v1.5.0.tgz"
+    dest: /tmp/cni-plugins.tgz
+    mode: '0644'
+
+- name: Extract CNI plugins into /opt/cni/bin
+  unarchive:
+    src: /tmp/cni-plugins.tgz
+    dest: /opt/cni/bin
+    remote_src: yes
+    extra_opts: [--strip-components=0]
+    
 - name: Start and enable Nomad service
   ansible.builtin.systemd:
     name: nomad
