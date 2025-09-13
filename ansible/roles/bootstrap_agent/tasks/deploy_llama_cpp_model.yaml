@@ -18,43 +18,47 @@
     path: "/tmp/llamacpp-rpc.nomad"
     state: absent
 
-- name: Wait for llama.cpp API service to be healthy in Consul
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/llama-cpp-api"
-    method: GET
-    return_content: yes
-    status_code: 200
-  register: service_health
-  until: "service_health.json is defined and service_health.json | length > 0 and (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length) > 0"
-  retries: 30 # Wait up to 5 minutes
-  delay: 10
-  ignore_errors: yes # Fail gracefully in the next task
+- name: Wait for llama.cpp to start and be healthy in Consul (live tail)
+  block:
+    - name: Ensure a temporary file exists to track last log line read
+      ansible.builtin.file:
+        path: /tmp/llama-tail-pos
+        state: touch
 
-- name: Read llama.cpp server log if health check failed
-  ansible.builtin.command:
-    cmd: "cat /tmp/llama-server.log"
-  register: llama_server_log
-  changed_when: false
-  when: service_health.json is not defined or service_health.json | length == 0 or not (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length > 0)
+    - name: Tail llama.cpp log incrementally
+      ansible.builtin.shell: |
+        if [ -f /tmp/llama-server.log ]; then
+          last=$(cat /tmp/llama-tail-pos)
+          total=$(wc -l < /tmp/llama-server.log)
+          if [ "$total" -gt "$last" ]; then
+            tail -n +$((last+1)) /tmp/llama-server.log
+            echo "$total" > /tmp/llama-tail-pos
+          fi
+        else
+          echo "Log not yet created"
+        fi
+      register: llama_log
+      changed_when: false
+      failed_when: false
 
-- name: Display llama.cpp server log
-  ansible.builtin.debug:
-    var: llama_server_log.stdout_lines
-  when: llama_server_log.stdout is defined and llama_server_log.stdout != ""
+    - name: Debug new log lines
+      debug:
+        msg: "{{ llama_log.stdout_lines }}"
 
-- name: Read master script log if health check failed
-  ansible.builtin.command:
-    cmd: "cat /tmp/master-script.log"
-  register: master_script_log
-  changed_when: false
-  when: service_health.json is not defined or service_health.json | length == 0 or not (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length > 0)
+    - name: Check llama.cpp API service health in Consul
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8500/v1/health/service/llama-cpp-api
+        return_content: yes
+      register: llama_health
+      changed_when: false
+      failed_when: false
 
-- name: Display master script log
-  ansible.builtin.debug:
-    var: master_script_log.stdout_lines
-  when: master_script_log.stdout is defined and master_script_log.stdout != ""
+    - name: Debug current health status
+      debug:
+        var: llama_health.json
 
-- name: Fail if llama.cpp service did not become healthy
-  ansible.builtin.fail:
-    msg: "The llama.cpp API service did not become healthy in Consul after waiting. Cannot deploy pipecat app."
-  when: service_health.json is not defined or service_health.json | length == 0 or not (service_health.json[0].Checks | selectattr('Status', 'equalto', 'passing') | list | length > 0)
+  until: >
+    llama_health.json | selectattr('Checks', 'defined')
+    | selectattr('Status', 'equalto', 'passing') | list | length > 0
+  retries: 60
+  delay: 5
