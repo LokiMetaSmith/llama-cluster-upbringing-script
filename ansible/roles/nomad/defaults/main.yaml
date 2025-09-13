@@ -4,3 +4,6 @@ nomad_zip_url: "https://releases.hashicorp.com/nomad/{{ nomad_version }}/nomad_{
 nomad_data_dir: "/opt/nomad"
 nomad_config_dir: "/etc/nomad.d"
 nomad_bootstrap_expect: 1
+cni_version: "v1.5.0"
+cni_url: "https://github.com/containernetworking/plugins/releases/download/{{ cni_version }}/cni-plugins-linux-amd64-{{ cni_version }}.tgz"
+
