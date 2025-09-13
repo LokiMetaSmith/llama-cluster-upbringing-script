@@ -1,0 +1,45 @@
+#!/bin/bash
+# This script idempotently syncs SSH public keys from the Consul KV store.
+# It only writes to the authorized_keys file if there are actual changes.
+
+log_sync() {
+    echo "[SSH-Sync] $1"
+}
+
+# The USERNAME is set in /etc/environment by a previous script, but we can default to 'user'
+if [ -z "$USERNAME" ]; then
+    USERNAME="user"
+fi
+
+USER_HOME="/home/$USERNAME"
+AUTHORIZED_KEYS_FILE="$USER_HOME/.ssh/authorized_keys"
+TEMP_KEYS_FILE=$(mktemp)
+
+# Ensure the .ssh directory exists
+mkdir -p "$USER_HOME/.ssh"
+chown "$USERNAME":"$USERNAME" "$USER_HOME/.ssh"
+chmod 700 "$USER_HOME/.ssh"
+
+# Fetch all keys from Consul and decode them into a temporary file.
+curl -s "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse" | jq -r '.[].Value' | while read -r val; do
+    echo "$val" | base64 -d >> "$TEMP_KEYS_FILE"
+    echo >> "$TEMP_KEYS_FILE" # Ensure a newline after each key
+done
+
+# Check if the authorized_keys file exists. If not, we must create it.
+if [ ! -f "$AUTHORIZED_KEYS_FILE" ]; then
+    log_sync "Authorized keys file does not exist. Creating it."
+    mv "$TEMP_KEYS_FILE" "$AUTHORIZED_KEYS_FILE"
+    chown "$USERNAME":"$USERNAME" "$AUTHORIZED_KEYS_FILE"
+    chmod 600 "$AUTHORIZED_KEYS_FILE"
+    log_sync "SSH authorized keys created."
+# Compare the new keys with the existing ones. Only write if they are different.
+elif ! diff -q "$AUTHORIZED_KEYS_FILE" "$TEMP_KEYS_FILE" >/dev/null; then
+    log_sync "SSH key changes detected in Consul. Updating local file."
+    mv "$TEMP_KEYS_FILE" "$AUTHORIZED_KEYS_FILE"
+    chmod 600 "$AUTHORIZED_KEYS_FILE" # Ensure permissions are correct
+    log_sync "SSH authorized keys updated."
+else
+    # The files are the same, no need to do anything. Clean up the temp file.
+    rm "$TEMP_KEYS_FILE"
+fi

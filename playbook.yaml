@@ -127,11 +127,6 @@
           mac_address: "{{ ansible_default_ipv4.macaddress }}"
       delegate_to: localhost
 
-    - name: Force a final synchronization of SSH keys
-      ansible.builtin.command: /usr/local/bin/update-ssh-authorized-keys.sh
-      register: sync_result
-      changed_when: "'updated' in sync_result.stdout"
-
 - name: Play 3 - Final Verification
   hosts: localhost
   connection: local

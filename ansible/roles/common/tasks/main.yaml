@@ -65,3 +65,15 @@
     - "{{ nomad_models_dir }}/embedding"
     - "{{ nomad_models_dir }}/vision"
   become: yes
+
+- name: Deploy SSH authorized keys sync script
+  ansible.builtin.template:
+    src: update-ssh-authorized-keys.sh.j2
+    dest: /usr/local/bin/update-ssh-authorized-keys.sh
+    mode: '0755'
+  register: sync_script
+
+- name: Perform initial SSH key sync
+  ansible.builtin.command:
+    cmd: /usr/local/bin/update-ssh-authorized-keys.sh
+  when: sync_script.changed
