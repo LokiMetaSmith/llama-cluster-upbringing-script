@@ -18,7 +18,7 @@ job "llamacpp-rpc" {
 
       check {
           type     = "http"
-          path     = "/"
+          path     = "/health"
           interval = "10s"
           timeout  = "2s"
 
@@ -37,20 +37,16 @@ job "llamacpp-rpc" {
       template {
         data = <<EOH
 #!/bin/bash
-echo "Starting run_master.sh script..." >> /tmp/master-script.log
+set -e
 
 # Wait until at least one worker service is available
-echo "Waiting for worker services to become available in Consul..." >> /tmp/master-script.log
 while [ -z "$(/usr/local/bin/nomad service discover -address-type=ipv4 llama-cpp-rpc-worker 2>/dev/null)" ]; do
-  echo "Still waiting for worker services..." >> /tmp/master-script.log
+  echo "Waiting for worker services to become available in Consul..."
   sleep 5
 done
-echo "Worker services are available." >> /tmp/master-script.log
 
-echo "Discovering worker IPs..." >> /tmp/master-script.log
 WORKER_IPS=$(/usr/local/bin/nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr '\n' ',' | sed 's/,$//')
-echo "Worker IPs: $WORKER_IPS" >> /tmp/master-script.log
-HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/"
+HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
 
 # Loop through the provided models and try to start the server
 {% for model in llm_models_var %}
@@ -59,7 +55,7 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/"
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
     --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
-    --rpc-servers $WORKER_IPS > /tmp/llama-server.log 2>&1 &
+    --rpc-servers $WORKER_IPS &
 
   SERVER_PID=$!
   echo "Server process started with PID $SERVER_PID. Waiting for it to become healthy..."

@@ -54,16 +54,21 @@
     mode: '0644'
   notify: restart power agent
 
+- name: Check if iptables rule exists
+  become: yes
+  ansible.builtin.command:
+    cmd: "iptables -t mangle -C PREROUTING -s 127.0.0.1 -p tcp -j MARK --set-mark 0x1"
+  register: iptables_check
+  changed_when: false
+  failed_when: false
+
 - name: Mark Consul health check packets
   become: yes
-  ansible.builtin.iptables:
-    chain: PREROUTING
-    table: mangle
-    protocol: tcp
-    source: '127.0.0.1' # Assuming local consul agent
-    jump: MARK
-    set_mark: '0x1'
-    comment: "Mark packets from local Consul agent for health checks"
+  ansible.builtin.command:
+    cmd: "iptables -t mangle -A PREROUTING -s 127.0.0.1 -p tcp -j MARK --set-mark 0x1 -m comment --comment \"Mark packets from local Consul agent for health checks\""
+  when: iptables_check.rc != 0
+  vars:
+    ansible_warning: "This task uses the 'command' module to run iptables because the 'ansible.builtin.iptables' module does not support the 'MARK' target with '--set-mark'."
 
 - name: Enable and start the power agent service
   become: yes
