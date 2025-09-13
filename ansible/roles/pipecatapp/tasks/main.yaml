@@ -91,15 +91,10 @@
     dest: /opt/pipecatapp/app.py
   become: yes
 
-- name: Debug group_names
-  ansible.builtin.debug:
-    var: group_names
-
 - name: Copy pipecatapp Nomad job file
   ansible.builtin.template:
     src: ../../jobs/pipecatapp.nomad
     dest: /opt/nomad/jobs/pipecatapp.nomad
-  when: "'controller_nodes' in group_names"
 
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
