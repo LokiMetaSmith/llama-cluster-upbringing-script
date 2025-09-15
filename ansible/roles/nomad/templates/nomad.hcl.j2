@@ -22,10 +22,6 @@ consul {
 server {
   enabled          = true
 
-#  host_volume "models" {
-#    path      = "{{ nomad_models_dir }}"
-#    read_only = true
-#  }
 
   # Set to 1 for a single-server cluster
   bootstrap_expect = 1
