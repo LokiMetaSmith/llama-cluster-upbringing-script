@@ -7,9 +7,9 @@ bind_addr = "0.0.0.0"
 # Tell other nodes how to reach this one.
 # This IP should be set in your Ansible inventory.
 advertise {
-  http = "{{ advertise_ip }}"
-  rpc  = "{{ advertise_ip }}"
-  serf = "{{ advertise_ip }}"
+  http = "{{ ansible_default_ipv4.address }}"
+  rpc  = "{{ ansible_default_ipv4.address }}"
+  serf = "{{ ansible_default_ipv4.address }}"
 }
 
 # Integrate with Consul for service discovery
