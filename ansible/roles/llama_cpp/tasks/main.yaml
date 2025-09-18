@@ -71,6 +71,14 @@
     state: directory
     mode: '0755'
   become: yes
+  
+- name: Copy llamacpp-rpc Nomad job file
+  ansible.builtin.template:
+    src: ../../jobs/llamacpp-rpc.nomad
+    dest: /opt/nomad/jobs/llamacpp-rpc.nomad
+  vars:
+    # This ensures the template can access the model variables
+    llm_models_var: "{{ llm_models }}"
 
 # Note: The creation of the /opt/nomad/models directory and the downloading
 # of models are now handled by the 'common' and 'download_models' roles respectively.
