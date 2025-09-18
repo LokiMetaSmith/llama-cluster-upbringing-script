@@ -69,6 +69,10 @@ The `bootstrap_agent` role in the Ansible playbook handles the automatic deploym
 
 You can monitor the status of these services by running `nomad job status` on the control node.
 
+Use the provided script to submit the core AI jobs to Nomad:
+```bash
+./start_services.sh
+
 ### 4.2. Advanced: Deploying Additional AI Experts
 For advanced use cases, such as the Mixture-of-Experts (MoE) routing described in the Agent Architecture section, you may want to deploy additional, specialized LLM backends. You can do this manually using the Nomad CLI.
 
