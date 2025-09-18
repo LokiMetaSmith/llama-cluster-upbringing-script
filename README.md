@@ -72,16 +72,19 @@ You can monitor the status of these services by running `nomad job status` on th
 Use the provided script to submit the core AI jobs to Nomad:
 ```bash
 ./start_services.sh
+```
 
 ### 4.2. Advanced: Deploying Additional AI Experts
 For advanced use cases, such as the Mixture-of-Experts (MoE) routing described in the Agent Architecture section, you may want to deploy additional, specialized LLM backends. You can do this manually using the Nomad CLI.
 
 - **Example: Deploying a `prima.cpp` cluster for coding tasks:**
-  ```bash
-  # First, create a new namespace for the expert
-  nomad namespace apply coding
 
-  # Deploy the job to the new namespace, passing variables with -var
+  ##### First, create a new namespace for the expert
+  ```bash
+  nomad namespace apply coding
+  ```
+  ##### Deploy the job to the new namespace, passing variables with -var
+  ```bash
   nomad job run -namespace=coding \
     -var "job_name=prima-coding-expert" \
     -var "service_name=llama-api-coding" \
@@ -89,6 +92,20 @@ For advanced use cases, such as the Mixture-of-Experts (MoE) routing described i
     /home/user/primacpp.nomad
   ```
 The `TwinService` will automatically discover these new experts via Consul and make them available for routing.
+
+### 4.3. Resetting and Restarting
+If you make a change to a job file or need to restart the services from a clean state, it's best to purge the old jobs before running the start script again.
+
+#### Stop and purge the old jobs
+```bash
+nomad job stop -purge llamacpp-rpc
+nomad job stop -purge pipecatapp
+```
+
+#### Start the services with the new configuration
+```bash
+./start_services.sh
+```
 
 ## 5. Agent Architecture: The `TwinService`
 The core of this application is the `TwinService`, a custom service that acts as the agent's "brain." It orchestrates the agent's responses, memory, and tool use.
