@@ -25,11 +25,7 @@ job "llamacpp-rpc" {
       }
     }
 
-    volume "models" {
-      type      = "host"
-      read_only = true
-      source    = "/opt/nomad/models"
-    }
+
 
     task "llama-master" {
       driver = "exec"
