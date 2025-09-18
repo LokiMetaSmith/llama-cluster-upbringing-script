@@ -6,10 +6,10 @@
 set -e
 
 echo "🚀 Starting the distributed Llama C++ RPC service..."
-nomad job run /opt/cluster-infra/ansible/jobs/llamacpp-rpc.nomad
+nomad job run /opt/nomad/jobs/llamacpp-rpc.nomad
 
 echo "🚀 Starting the Pipecat application service..."
-nomad job run /opt/cluster-infra/ansible/jobs/pipecatapp.nomad
+nomad job run /opt/nomad/jobs/pipecatapp.nomad
 
 echo "✅ All services have been submitted to Nomad."
 echo "Use 'nomad status' to monitor their deployment."
