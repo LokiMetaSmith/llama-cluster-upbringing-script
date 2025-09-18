@@ -5,6 +5,13 @@ job "llamacpp-rpc" {
   group "master" {
     count = 1
 
+    # This block defines the volume for this task group.
+    volume "models" {
+      type      = "host"
+      read_only = true
+      source    = "models"
+    }
+
     network {
       mode = "bridge"
       port "http" {}
@@ -111,6 +118,12 @@ EOH
 
   group "workers" {
     count = {% if llm_models_var[0].WORKER_COUNT is defined %}{{ llm_models_var[0].WORKER_COUNT }}{% else %}1{% endif %}
+
+   volume "models" {
+      type      = "host"
+      read_only = true
+      source    = "models"
+    }
 
     network {
       mode = "bridge"
