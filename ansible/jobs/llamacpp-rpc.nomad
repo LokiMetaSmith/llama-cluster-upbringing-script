@@ -127,12 +127,6 @@ EOH
       port     = "rpc"
     }
 
-    volume "models" {
-      type      = "host"
-      read_only = true
-      source    = "/opt/nomad/models"
-    }
-
     task "llama-worker" {
       driver = "exec"
 
