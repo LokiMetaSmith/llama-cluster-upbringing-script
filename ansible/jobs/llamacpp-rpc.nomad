@@ -53,7 +53,7 @@ echo "Worker services are available." >> /tmp/master-script.log
 echo "Discovering worker IPs..." >> /tmp/master-script.log
 WORKER_IPS=$(/usr/local/bin/nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr '\n' ',' | sed 's/,$//')
 echo "Worker IPs: $WORKER_IPS" >> /tmp/master-script.log
-HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/"
+HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
 
 # Loop through the provided models and try to start the server
 {% for model in llm_models_var %}
