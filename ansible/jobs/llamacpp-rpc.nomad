@@ -49,6 +49,8 @@ echo "Discovering worker IPs..." >> /tmp/master-script.log
 WORKER_IPS=$(/usr/local/bin/nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr '\n' ',' | sed 's/,$//')
 echo "Worker IPs: $WORKER_IPS" >> /tmp/master-script.log
 HEALTH_CHECK_URL="http://127.0.0.1:{{ `{{ env "NOMAD_PORT_http" }}` }}/health"
+#HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
+
 
 # Loop through the provided models and try to start the server
 {% for model in llm_models_var %}
@@ -56,6 +58,7 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ `{{ env "NOMAD_PORT_http" }}` }}/health"
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
+#    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --port {{ `{{ env "NOMAD_PORT_http" }}` }} \
     --rpc-servers $WORKER_IPS > /tmp/llama-server.log 2>&1 &
 
@@ -139,6 +142,7 @@ EOH
 /usr/local/bin/llama-server \
   --model "/opt/nomad/models/llm/{{ llm_models_var[0].filename }}" \
   --host 0.0.0.0 \
+#  --port {{ '{{' }} env "NOMAD_PORT_rpc" {{ '}}' }}
   --port {{ `{{ env "NOMAD_PORT_rpc" }}` }}
 EOH
         destination = "local/run_worker.sh"
