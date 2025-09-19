@@ -21,16 +21,13 @@
       loop: "{{ hostvars.values() | selectattr('is_controller_candidate', 'defined') | map(attribute='inventory_hostname') | list | first(3) }}"
 
 - name: Play 2 - Recover Nomad and Consul Cluster State
-  # This play will only run if suitable controller candidates were found and added
-  # to the 'new_controllers' group in Play 1.
   hosts: new_controllers
   become: yes
-  gather_facts: no # Facts were gathered in the previous play
-  ignore_unreachable: no # We expect the chosen host(s) to be reachable.
+  gather_facts: no
+  ignore_unreachable: no
 
   tasks:
     - name: Add the selected hosts to the 'controller_nodes' group as well
-      # This is needed so that templates using groups['controller_nodes'] render correctly.
       ansible.builtin.add_host:
         name: "{{ item }}"
         groups: controller_nodes
@@ -61,58 +58,25 @@
       changed_when: false
       failed_when: "disk_space.stdout | int > 90"
 
-    - name: Stop Nomad service
+    - name: Stop Nomad and Consul services
       ansible.builtin.service:
-        name: nomad
+        name: "{{ item }}"
         state: stopped
-      register: stop_nomad_service
-      failed_when:
-        - stop_nomad_service.failed == true
-        - not stop_nomad_service.msg.startswith('Could not find the requested service')
+      loop:
+        - nomad
+        - consul
 
-    - name: Stop Consul service
-      ansible.builtin.service:
-        name: consul
-        state: stopped
-      register: stop_consul_service
-      failed_when:
-        - stop_consul_service.failed == true
-        - not stop_consul_service.msg.startswith('Could not find the requested service')
-
-    - name: Remove Nomad data directory to reset state
+    - name: Remove Nomad and Consul data directories to reset state
       ansible.builtin.file:
-        path: /opt/nomad/data
+        path: "{{ item }}"
         state: absent
+      loop:
+        - /opt/nomad/data
+        - /opt/consul/data
 
-    - name: Remove Consul data directory to reset state
-      ansible.builtin.file:
-        path: /opt/consul/data
-        state: absent
-
-    - name: Re-apply Consul role to configure as a server
+    - name: Re-apply Consul and Nomad roles
       ansible.builtin.include_role:
-        name: consul
-
-    - name: Re-apply Nomad role to configure as a server
-      ansible.builtin.include_role:
-        name: nomad
-
-    - name: Start Consul service
-      ansible.builtin.service:
-        name: consul
-        state: started
-        enabled: yes
-      register: start_consul_service
-      failed_when:
-        - start_consul_service.failed == true
-        - not start_consul_service.msg.startswith('Could not find the requested service')
-
-    - name: Start Nomad service
-      ansible.builtin.service:
-        name: nomad
-        state: started
-        enabled: yes
-      register: start_nomad_service
-      failed_when:
-        - start_nomad_service.failed == true
-        - not start_nomad_service.msg.startswith('Could not find the requested service')
+        name: "{{ item }}"
+      loop:
+        - consul
+        - nomad
