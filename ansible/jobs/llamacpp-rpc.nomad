@@ -48,13 +48,21 @@ job "{{ var.job_name }}" {
     task "llama-server" {
       driver = "exec"
 
+      template {
+        data = <<EOH
+#!/bin/bash
+set -e
+/usr/local/bin/llama-server \
+  --model "{{ var.model_path }}" \
+  --host 0.0.0.0 \
+  --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}
+EOH
+        destination = "local/run.sh"
+        perms       = "0755"
+      }
+
       config {
-        command = "/usr/local/bin/llama-server"
-        args = [
-          "--model", "{{ var.model_path }}",
-          "--host", "0.0.0.0",
-          "--port", "{{ env `NOMAD_PORT_http` }}",
-        ]
+        command = "local/run.sh"
       }
 
       resources {
