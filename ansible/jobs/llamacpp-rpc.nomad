@@ -25,9 +25,9 @@ job "llamacpp-rpc" {
 
       check {
           type     = "http"
-          path     = "/"
-          interval = "10s"
-          timeout  = "2s"
+          path     = "/health"
+          interval = "15s"
+          timeout  = "5s"
 
       }
     }
