@@ -1,12 +1,11 @@
 ---
-- name: Install build dependencies for llama.cpp
+- name: Install build and runtime dependencies for llama.cpp
   ansible.builtin.apt:
     name:
       - build-essential
       - git
       - cmake
       - libssl-dev
-      - libstdc++6
     state: present
   become: yes
 
@@ -26,7 +25,7 @@
     force: yes
   become: yes
 
-- name: Configure llama.cpp build
+- name: Configure llama.cpp build with RPC and shared libraries
   ansible.builtin.command:
     cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON -DBUILD_SHARED_LIBS=ON
   args:
@@ -41,7 +40,7 @@
     chdir: /opt/llama.cpp-build
     creates: /opt/llama.cpp-build/build/bin/llama-server
   become: yes
-  
+
 - name: Find all compiled binaries and libraries
   ansible.builtin.find:
     paths: "/opt/llama.cpp-build/build/bin"
@@ -49,29 +48,26 @@
     file_type: any
   register: llama_artifacts
   become: yes
-  
-- name: Install binaries to /usr/local/bin
+
+- name: Install all compiled artifacts to /usr/local/bin
   ansible.builtin.copy:
     src: "{{ item.path }}"
     dest: "/usr/local/bin/{{ item.path | basename }}"
     mode: '0755'
     remote_src: yes
-  loop: "{{ llama_artifacts.files | selectattr('isreg') | list }}"
-  become: yes
-
-- name: Install shared libraries to /usr/local/lib
-  ansible.builtin.copy:
-    src: "{{ item.path }}"
-    dest: "/usr/local/lib/{{ item.path | basename }}"
-    mode: '0755'
-    remote_src: yes
-  loop: "{{ llama_artifacts.files | selectattr('islnk') | list }}"
+  loop: "{{ llama_artifacts.files }}"
   become: yes
 
 - name: Update the shared library cache
   ansible.builtin.command:
     cmd: ldconfig
   become: yes
+
+# --- CORRECTED VERIFICATION BLOCK ---
+- name: Verify llama-server binary installation
+  ansible.builtin.stat:
+    path: /usr/local/bin/llama-server
+  register: llama_server_stat
 
 - name: Fail if llama-server is not installed or not executable
   ansible.builtin.fail:
@@ -90,20 +86,13 @@
     state: directory
     mode: '0755'
   become: yes
-  
+
 - name: Copy llamacpp-rpc Nomad job file
   ansible.builtin.template:
     src: ../../jobs/llamacpp-rpc.nomad
     dest: /opt/nomad/jobs/llamacpp-rpc.nomad
   vars:
-    # This ensures the template can access the model variables
     llm_models_var: "{{ llm_models }}"
-
-# Note: The creation of the /opt/nomad/models directory and the downloading
-# of models are now handled by the 'common' and 'download_models' roles respectively.
-# The tasks below are preserved in case this role needs to be run standalone in the future,
-# but they are now redundant in the main playbook flow.
-
 
 - name: Copy benchmark Nomad job file
   ansible.builtin.template:
