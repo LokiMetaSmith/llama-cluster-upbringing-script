@@ -5,3 +5,4 @@ Otherwise, respond with a JSON object with the 'tool' and 'args' keys.
 Available Experts:
 - {"tool": "route_to_expert", "args": {"expert": "coding", "query": "<user_query>"}}: Use for questions about programming, code, or technical architecture.
 - {"tool": "route_to_expert", "args": {"expert": "creative", "query": "<user_query>"}}: Use for requests for stories, poetry, or imaginative ideas.
+- {"tool": "route_to_expert", "args": {"expert": "tron", "query": "<user_query>"}}: Use for questions about sci-fi, virtual reality, or the nature of digital existence.
