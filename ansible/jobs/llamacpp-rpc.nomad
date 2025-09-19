@@ -5,7 +5,6 @@ job "llamacpp-rpc" {
   group "master" {
     count = 1
 
-    # This block makes the "models" host volume available to this group.
     volume "models" {
       type      = "host"
       source    = "models"
@@ -49,7 +48,7 @@ echo "Worker services are available." >> /tmp/master-script.log
 echo "Discovering worker IPs..." >> /tmp/master-script.log
 WORKER_IPS=$(/usr/local/bin/nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr '\n' ',' | sed 's/,$//')
 echo "Worker IPs: $WORKER_IPS" >> /tmp/master-script.log
-HEALTH_CHECK_URL="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
+HEALTH_CHECK_URL="http://127.0.0.1:{{ `{{ env "NOMAD_PORT_http" }}` }}/health"
 
 # Loop through the provided models and try to start the server
 {% for model in llm_models_var %}
@@ -57,7 +56,7 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
-    --port {{ env "NOMAD_PORT_http" }} \
+    --port {{ `{{ env "NOMAD_PORT_http" }}` }} \
     --rpc-servers $WORKER_IPS > /tmp/llama-server.log 2>&1 &
 
   SERVER_PID=$!
@@ -114,7 +113,6 @@ EOH
   group "workers" {
     count = {% if llm_models_var[0].WORKER_COUNT is defined %}{{ llm_models_var[0].WORKER_COUNT }}{% else %}1{% endif %}
 
-    # This block makes the "models" host volume available to this group.
     volume "models" {
       type      = "host"
       source    = "models"
@@ -141,7 +139,7 @@ EOH
 /usr/local/bin/llama-server \
   --model "/opt/nomad/models/llm/{{ llm_models_var[0].filename }}" \
   --host 0.0.0.0 \
-  --port {{ env "NOMAD_PORT_rpc" }}
+  --port {{ `{{ env "NOMAD_PORT_rpc" }}` }}
 EOH
         destination = "local/run_worker.sh"
         perms       = "0755"
