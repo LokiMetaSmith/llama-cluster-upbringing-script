@@ -18,7 +18,9 @@
         groups: new_controllers
       delegate_to: localhost
       run_once: true
-      loop: "{{ hostvars.values() | selectattr('is_controller_candidate', 'defined') | map(attribute='inventory_hostname') | list | first(3) }}"
+      # --- CORRECTED LINE ---
+      # Use list slicing to select the first 3 items
+      loop: "{{ (hostvars.values() | selectattr('is_controller_candidate', 'defined') | map(attribute='inventory_hostname') | list)[:3] }}"
 
 - name: Play 2 - Recover Nomad and Consul Cluster State
   hosts: new_controllers
@@ -58,25 +60,58 @@
       changed_when: false
       failed_when: "disk_space.stdout | int > 90"
 
-    - name: Stop Nomad and Consul services
+    - name: Stop Nomad service
       ansible.builtin.service:
-        name: "{{ item }}"
+        name: nomad
         state: stopped
-      loop:
-        - nomad
-        - consul
+      register: stop_nomad_service
+      failed_when:
+        - stop_nomad_service.failed == true
+        - not stop_nomad_service.msg.startswith('Could not find the requested service')
 
-    - name: Remove Nomad and Consul data directories to reset state
+    - name: Stop Consul service
+      ansible.builtin.service:
+        name: consul
+        state: stopped
+      register: stop_consul_service
+      failed_when:
+        - stop_consul_service.failed == true
+        - not stop_consul_service.msg.startswith('Could not find the requested service')
+
+    - name: Remove Nomad data directory to reset state
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: /opt/nomad/data
         state: absent
-      loop:
-        - /opt/nomad/data
-        - /opt/consul/data
 
-    - name: Re-apply Consul and Nomad roles
+    - name: Remove Consul data directory to reset state
+      ansible.builtin.file:
+        path: /opt/consul/data
+        state: absent
+
+    - name: Re-apply Consul role to configure as a server
       ansible.builtin.include_role:
-        name: "{{ item }}"
-      loop:
-        - consul
-        - nomad
+        name: consul
+
+    - name: Re-apply Nomad role to configure as a server
+      ansible.builtin.include_role:
+        name: nomad
+
+    - name: Start Consul service
+      ansible.builtin.service:
+        name: consul
+        state: started
+        enabled: yes
+      register: start_consul_service
+      failed_when:
+        - start_consul_service.failed == true
+        - not start_consul_service.msg.startswith('Could not find the requested service')
+
+    - name: Start Nomad service
+      ansible.builtin.service:
+        name: nomad
+        state: started
+        enabled: yes
+      register: start_nomad_service
+      failed_when:
+        - start_nomad_service.failed == true
+        - not start_nomad_service.msg.startswith('Could not find the requested service')
