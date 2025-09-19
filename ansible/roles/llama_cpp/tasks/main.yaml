@@ -6,6 +6,7 @@
       - git
       - cmake
       - libssl-dev
+      - libstdc++6
     state: present
   become: yes
 
