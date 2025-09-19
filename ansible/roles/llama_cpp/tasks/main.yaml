@@ -28,7 +28,7 @@
 
 - name: Configure llama.cpp build
   ansible.builtin.command:
-    cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON
+    cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON -DBUILD_SHARED_LIBS=ON
   args:
     chdir: /opt/llama.cpp-build
     creates: /opt/llama.cpp-build/build/Makefile
@@ -41,19 +41,37 @@
     chdir: /opt/llama.cpp-build
     creates: /opt/llama.cpp-build/build/bin/llama-server
   become: yes
-
-- name: Install llama-server binary
+  
+- name: Find all compiled binaries and libraries
+  ansible.builtin.find:
+    paths: "/opt/llama.cpp-build/build/bin"
+    patterns: '*'
+    file_type: any
+  register: llama_artifacts
+  become: yes
+  
+- name: Install binaries to /usr/local/bin
   ansible.builtin.copy:
-    src: /opt/llama.cpp-build/build/bin/llama-server
-    dest: /usr/local/bin/llama-server
+    src: "{{ item.path }}"
+    dest: "/usr/local/bin/{{ item.path | basename }}"
     mode: '0755'
     remote_src: yes
+  loop: "{{ llama_artifacts.files | selectattr('isreg') | list }}"
   become: yes
 
-- name: Verify llama-server binary installation
-  ansible.builtin.stat:
-    path: /usr/local/bin/llama-server
-  register: llama_server_stat
+- name: Install shared libraries to /usr/local/lib
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "/usr/local/lib/{{ item.path | basename }}"
+    mode: '0755'
+    remote_src: yes
+  loop: "{{ llama_artifacts.files | selectattr('islnk') | list }}"
+  become: yes
+
+- name: Update the shared library cache
+  ansible.builtin.command:
+    cmd: ldconfig
+  become: yes
 
 - name: Fail if llama-server is not installed or not executable
   ansible.builtin.fail:
