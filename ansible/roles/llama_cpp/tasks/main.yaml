@@ -65,8 +65,9 @@
     dest: "/usr/local/lib/{{ item.path | basename }}"
     mode: '0755'
     remote_src: yes
-  loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\\\.so$') | list }}"  become: yes
-
+  loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\\\.so$') | list }}"
+  become: yes
+  
 - name: Update the shared library cache
   ansible.builtin.command:
     cmd: ldconfig
