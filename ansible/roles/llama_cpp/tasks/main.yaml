@@ -98,12 +98,17 @@
     mode: '0755'
   become: yes
 
-- name: Copy llamacpp-rpc Nomad job file
-  ansible.builtin.template:
+- name: Copy llamacpp-rpc Nomad job file for RPC workers
+  ansible.builtin.copy:
     src: ../../jobs/llamacpp-rpc.nomad
     dest: /opt/nomad/jobs/llamacpp-rpc.nomad
-  vars:
-    llm_models_var: "{{ llm_models }}"
+    mode: '0644'
+
+- name: Copy llamacpp-server Nomad job file for standalone experts
+  ansible.builtin.copy:
+    src: ../../jobs/llamacpp-server.nomad
+    dest: /opt/nomad/jobs/llamacpp-server.nomad
+    mode: '0644'
 
 - name: Copy benchmark Nomad job file
   ansible.builtin.template:
