@@ -234,3 +234,48 @@ Uses `llama-bench` to measure the raw inference speed (tokens/sec) of the deploy
 
 ## 10. Advanced Development: Prompt Evolution
 For advanced users, this project includes a workflow for automatically improving the agent's core prompt using evolutionary algorithms. See `prompt_engineering/PROMPT_ENGINEERING.md` for details.
+
+## 11. Acknowledgements and Inspirations
+
+This project stands on the shoulders of giants. We are deeply grateful to the open-source community and the many creative projects that have inspired our work.
+
+### Foundational & Core Technologies
+
+These are the open-source projects that form the technical backbone of your work.
+
+* **pipecat-ai**: A real-time, streaming conversational AI framework. It is the core of your agent's application layer.
+    * **Git Repo**: `https://github.com/pipecat-ai/pipecat`
+* **prima.cpp**: The distributed LLM inference engine that your project uses for its Mixture-of-Experts architecture.
+    * **Git Repo**: `https://github.com/gitalbenar/prima.cpp`
+
+### DIY Voice Assistant & Hardware Projects
+
+These projects are excellent references for running a voice assistant on custom, self-hosted hardware.
+
+* **Home Assistant**: The largest open-source ecosystem for DIY smart home and voice control. Their work on fully local, on-premise voice assistants is highly relevant.
+    * **Website**: `https://www.home-assistant.io/voice_control/`
+    * **Git Repo**: `https://github.com/home-assistant/core`
+* **Rasa**: A powerful, open-source framework for building conversational AI. While often used for enterprise chatbots, its sophisticated dialogue management and NLU components are a great source of inspiration for structuring complex conversations.
+    * **Website**: `https://rasa.com/`
+    * **Git Repo**: `https://github.com/RasaHQ/rasa`
+
+### Embodied AI & Interactive Control Frameworks
+
+These projects focus on the core of your AID-E concept: AI agents that can perceive and interact with their environment.
+
+* **AllenAct & AI2-THOR**: From the Allen Institute for AI (AI2), AllenAct is a framework for training embodied AI agents, often used with the AI2-THOR simulation environment.
+    * **Website**: `https://allenact.org/`
+    * **Git Repo**: `https://github.com/allenai/allenact`
+* **LEGENT**: An open-source platform from Tsinghua University for developing robots that can "chat, see, and act" in both virtual and real worlds.
+    * **Git Repo**: `https://github.com/thunlp/LEGENT`
+
+### Creative & Interactive AI Art Installations
+
+These projects are leading examples of using AI as a medium for creating immersive and thought-provoking art.
+
+* **Refik Anadol Studio**: The creators of "Unsupervised" at MoMA, their work is a masterclass in using data to create dynamic, generative art.
+    * **Website**: `https://refikanadol.com/`
+* **"The Laughing Room" by Jonny Sun**: An interactive art installation that is conceptually very similar to your project—an AI that controls a physical space in response to human interaction.
+    * **Project Page**: `https://arts.mit.edu/the-laughing-room/`
+* **"The Pool" by Jen Lewin**: A large-scale, interactive installation that creates a collaborative experience for multiple users, which is relevant to how multiple "intruders" might interact with AID-E.
+    * **Website**: `https://www.jenlewin.com/`
