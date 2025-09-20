@@ -75,25 +75,23 @@ Use the provided script to submit the core AI jobs to Nomad:
 ```
 
 ### 4.2. Advanced: Deploying Additional AI Experts
-The true power of this architecture is the ability to deploy multiple, specialized AI experts that the main `pipecat` agent can route queries to. With the new unified `prima-expert.nomad` job template, deploying a new expert is handled through a dedicated Ansible playbook.
+For advanced use cases, such as the Mixture-of-Experts (MoE) routing described in the Agent Architecture section, you may want to deploy additional, specialized LLM backends. You can do this manually using the Nomad CLI.
 
-1.  **Define a Model List for Your Expert:**
-    First, open `group_vars/models.yaml` and create a new list of models for your expert. For example, to create a `creative-writing` expert, you could add:
-    ```yaml
-    creative_writing_models:
-      - name: "phi-3-mini-instruct"
-        # ... other model details
-    ```
+- **Example: Deploying a `prima.cpp` cluster for coding tasks:**
 
-2.  **Deploy the Expert with Ansible:**
-    Use the `deploy_expert.yaml` playbook to render the Nomad job with your custom parameters and launch it. You pass variables on the command line using the `-e` flag.
-
-    - **Example: Deploying a `creative-writing` expert to the `creative` namespace:**
-      ```bash
-      ansible-playbook deploy_expert.yaml -e "job_name=creative-expert service_name=prima-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
-      ```
-
-The `TwinService` in the `pipecat-app` will automatically discover any service registered in Consul with the `prima-api-` prefix and make it available for routing.
+  ##### First, create a new namespace for the expert
+  ```bash
+  nomad namespace apply coding
+  ```
+  ##### Deploy the job to the new namespace, passing variables with -var
+  ```bash
+  nomad job run -namespace=coding \
+    -var "job_name=prima-coding-expert" \
+    -var "service_name=llama-api-coding" \
+    -var "model_path=/path/to/coding.gguf" \
+    /home/user/primacpp.nomad
+  ```
+The `TwinService` will automatically discover these new experts via Consul and make them available for routing.
 
 ### 4.3. Resetting and Restarting
 If you make a change to a job file or need to restart the services from a clean state, it's best to purge the old jobs before running the start script again.
@@ -144,10 +142,31 @@ The agent can use tools to perform actions and gather information. The `TwinServ
   - **Examples:** "Use the web browser to go to google.com and tell me the content of the page."
 
 ### 5.3. Mixture of Experts (MoE) Routing
-The agent is designed to function as a "Mixture of Experts." The primary `pipecat` agent acts as a router, classifying the user's query and routing it to a specialized backend expert if appropriate.
+The agent is designed to function as a "Mixture of Experts." The primary LLM acts as a router, classifying the user's query and routing it to a specialized backend if appropriate.
 
-- **How it Works:** The `TwinService` prompt instructs the main agent to first classify the user's query. If it determines the query is best handled by a specialist (e.g., a 'coding' expert), it uses the `route_to_expert` tool. This tool call is intercepted by the `TwinService`, which then forwards the query to the appropriate expert's API endpoint.
-- **Configuration:** Deploying these specialized experts is done using the `deploy_expert.yaml` Ansible playbook. For detailed instructions, see the **[Deploying Additional AI Experts](#42-advanced-deploying-additional-ai-experts)** section above.
+- **How it Works:** The `TwinService` prompt instructs the router LLM to first decide if a query is general, technical, or creative. If it's technical, for example, the router's job is to call the `route_to_coding_expert` tool. The `TwinService` then sends the query to a separate LLM cluster that is running a coding-specific model.
+- **Configuration:** To use this feature, you must deploy multiple LLM backends into their own isolated namespaces using the `-var` flag to customize them.
+  - **Example:**
+    ```bash
+    # Create the namespaces
+    nomad namespace apply general
+    nomad namespace apply coding
+
+    # Deploy a general-purpose model
+    nomad job run -namespace=general \
+      -var "job_name=prima-general-expert" \
+      -var "service_name=llama-api-general" \
+      -var "model_path=/path/to/general.gguf" \
+      /home/user/primacpp.nomad
+
+    # Deploy a coding model
+    nomad job run -namespace=coding \
+      -var "job_name=prima-coding-expert" \
+      -var "service_name=llama-api-coding" \
+      -var "model_path=/path/to/coding.gguf" \
+      /home/user/primacpp.nomad
+    ```
+  - The `TwinService` discovers these experts across all namespaces using Consul.
 
 ### 5.4. Configuring Agent Personas
 The personality and instructions for the main router agent and each expert agent are defined in simple text files located in the `ansible/roles/pipecatapp/files/prompts/` directory. You can edit these files to customize the behavior of each agent. For example, you can edit `coding_expert.txt` to give it a different programming specialty.
