@@ -54,7 +54,7 @@ WORKER_IPS=$(curl -s "http://127.0.0.1:8500/v1/health/service/llama-cpp-rpc-work
 echo "Discovered Worker IPs: $WORKER_IPS"
 
 # The '{{ env ... }}' syntax is evaluated by Nomad's template engine at runtime
-HEALTH_CHECK_URL="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
+HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
 
 # This templating loop is processed by an external tool (e.g., Ansible/Terraform)
 # before the job is submitted to Nomad.
@@ -65,7 +65,7 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
-    --port {{ env "NOMAD_PORT_http" }} \
+    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --rpc-servers "$WORKER_IPS" &
 
   SERVER_PID=$!
