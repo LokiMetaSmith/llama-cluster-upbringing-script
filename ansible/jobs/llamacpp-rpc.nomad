@@ -35,37 +35,47 @@ job "llamacpp-rpc" {
       template {
         data = <<EOH
 #!/bin/bash
-echo "Starting run_master.sh script..." >> /tmp/master-script.log
+# --- Corrected and Improved Script ---
 
-# Wait until at least one worker service is available
-echo "Waiting for worker services to become available in Consul..." >> /tmp/master-script.log
-while [ -z "$(/usr/local/bin/nomad service discover -address-type=ipv4 llama-cpp-rpc-worker 2>/dev/null)" ]; do
-  echo "Still waiting for worker services..." >> /tmp/master-script.log
+# It's better to log to stdout/stderr for Nomad to capture logs
+echo "Starting run_master.sh script..."
+
+# Wait until at least one worker service is healthy and registered in Consul
+echo "Waiting for worker services to become available in Consul..."
+while [ -z "$(curl -s "http://127.0.0.1:8500/v1/health/service/llama-cpp-rpc-worker?passing" | jq '.[0]')" ]; do
+  echo "Still waiting for a healthy worker service..."
   sleep 5
 done
-echo "Worker services are available." >> /tmp/master-script.log
+echo "Worker services are available."
 
-echo "Discovering worker IPs..." >> /tmp/master-script.log
-WORKER_IPS=$(/usr/local/bin/nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr '\n' ',' | sed 's/,$//')
-echo "Worker IPs: $WORKER_IPS" >> /tmp/master-script.log
-HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
+echo "Discovering worker IPs from Consul..."
+# Use curl and jq to get a comma-separated list of healthy worker IPs
+WORKER_IPS=$(curl -s "http://127.0.0.1:8500/v1/health/service/llama-cpp-rpc-worker?passing" | jq -r '.[].Service.Address' | tr '\n' ',' | sed 's/,$//')
+echo "Discovered Worker IPs: $WORKER_IPS"
 
-# Loop through the provided models and try to start the server
+# The '{{ env ... }}' syntax is evaluated by Nomad's template engine at runtime
+HEALTH_CHECK_URL="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
+
+# This templating loop is processed by an external tool (e.g., Ansible/Terraform)
+# before the job is submitted to Nomad.
 {% for model in llm_models_var %}
   echo "Attempting to start llama-server with model: {{ model.name }}"
+
+  # Start the server in the background, logging to stdout/stderr
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
-    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
-    --rpc-servers $WORKER_IPS >&2 &
+    --port {{ env "NOMAD_PORT_http" }} \
+    --rpc-servers "$WORKER_IPS" &
 
   SERVER_PID=$!
   echo "Server process started with PID $SERVER_PID. Waiting for it to become healthy..."
 
   # Health check loop
   HEALTHY=false
-  for i in $(seq 1 12); do
+  for i in {1..12}; do
     sleep 10
+    # Use curl's exit code to check health. -s for silent, --fail for error codes.
     if curl -s --fail $HEALTH_CHECK_URL > /dev/null; then
       echo "Server is healthy with model {{ model.name }}!"
       HEALTHY=true
@@ -76,12 +86,14 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
   done
 
   if [ "$HEALTHY" = true ]; then
-    echo "Successfully started and health-checked llama-server with model: {{ model.name }}"
-    wait $SERVER_PID # Keep the script running with the successful server
+    echo "Successfully started llama-server with model: {{ model.name }}"
+    # This wait command keeps the Nomad task running by waiting for the server process to exit.
+    wait $SERVER_PID
     exit 0
   else
-    echo "Server failed to become healthy with model: {{ model.name }}. Killing process and trying next model."
+    echo "Server failed to become healthy with model: {{ model.name }}. Killing process PID $SERVER_PID..."
     kill $SERVER_PID
+    # Wait for the process to be fully cleaned up before trying the next model
     wait $SERVER_PID 2>/dev/null
   fi
 {% endfor %}
