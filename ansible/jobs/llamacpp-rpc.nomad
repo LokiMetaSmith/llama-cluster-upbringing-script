@@ -12,11 +12,8 @@ variable "model_path" {
   type = string
 }
 
-job "{{ var.job_name }}" {
+job "{{ '{{' }} var.job_name {{ '}}' }}" {
   datacenters = ["dc1"]
-  # The user wants to run these in different namespaces
-  # The namespace will be passed in via the command line, so I don't need to specify it here.
-  # I'll leave it out so it defaults to the namespace from the `nomad job run` command.
 
   group "expert" {
     count = 1
@@ -33,7 +30,7 @@ job "{{ var.job_name }}" {
     }
 
     service {
-      name     = "{{ var.service_name }}"
+      name     = "{{ '{{' }} var.service_name {{ '}}' }}"
       provider = "consul"
       port     = "http"
 
@@ -53,7 +50,7 @@ job "{{ var.job_name }}" {
 #!/bin/bash
 set -e
 /usr/local/bin/llama-server \
-  --model "{{ var.model_path }}" \
+  --model "{{ '{{' }} var.model_path {{ '}}' }}" \
   --host 0.0.0.0 \
   --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}
 EOH
