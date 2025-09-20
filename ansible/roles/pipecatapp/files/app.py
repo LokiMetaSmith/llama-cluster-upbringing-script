@@ -30,10 +30,6 @@ from tools.web_browser_tool import WebBrowserTool
 from tools.ansible_tool import Ansible_Tool
 from tools.power_tool import Power_Tool
 from tools.summarizer_tool import SummarizerTool
-from tools.lighting_tool import LightingTool
-from tools.sound_tool import SoundTool
-from tools.sensors_tool import SensorsTool
-from tools.comms_tool import CommsTool
 from moondream_detector import MoondreamDetector
 import inspect
 import web_server
@@ -135,9 +131,6 @@ class TwinService(FrameProcessor):
         self.consul_http_addr = os.getenv("CONSUL_HTTP_ADDR", "http://localhost:8500")
         self.experts = {} # Experts will be discovered dynamically
 
-        # The keys in this dictionary are the tool names.
-        # The tool runner will parse calls like "tool_name.method_name"
-        # and use the tool_name to look up the tool object here.
         self.tools = {
             "ssh": SSH_Tool(),
             "mcp": MCP_Tool(self, self.runner),
@@ -146,10 +139,6 @@ class TwinService(FrameProcessor):
             "web_browser": WebBrowserTool(),
             "ansible": Ansible_Tool(),
             "power": Power_Tool(),
-            "lighting": LightingTool(),
-            "sound": SoundTool(),
-            "sensors": SensorsTool(),
-            "comms": CommsTool(),
         }
 
         if os.getenv("USE_SUMMARIZER", "false").lower() == "true":
@@ -175,10 +164,6 @@ class TwinService(FrameProcessor):
                 base_prompt = f.read()
         except FileNotFoundError:
             base_prompt = "You are a helpful AI assistant."
-
-        # The AID-E persona is self-contained and includes its own tool descriptions.
-        if expert_name == "aide_persona":
-            return base_prompt
 
         tools_prompt = "You have access to the following tools:\n"
         for tool_name, tool in self.tools.items():
@@ -288,8 +273,7 @@ class TwinService(FrameProcessor):
 
         retrieved_memories = self.long_term_memory.search(user_text)
         short_term_context = "\n".join(self.short_term_memory)
-        persona_name = os.getenv("PERSONA_NAME", "aide_persona")
-        system_prompt = self.get_system_prompt(persona_name)
+        system_prompt = self.get_system_prompt("router")
 
         prompt = f"""
         {system_prompt}
