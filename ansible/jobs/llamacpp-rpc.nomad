@@ -111,7 +111,7 @@ EOH
 
       resources {
         cpu    = 1000
-        memory = {{ (llm_models_var | map(attribute='memory_mb') | max) | default(2048) }}
+        memory = {% if (llm_models_var | map(attribute='memory_mb') | list | length > 0) %}{{ llm_models_var | map(attribute='memory_mb') | max }}{% else %}2048{% endif %}
       }
 
       volume_mount {
@@ -163,7 +163,7 @@ EOH
 
       resources {
         cpu    = 1000
-        memory = {{ (llm_models_var | map(attribute='memory_mb') | max) | default(2048) }}
+        memory = {% if (llm_models_var | map(attribute='memory_mb') | list | length > 0) %}{{ llm_models_var | map(attribute='memory_mb') | max }}{% else %}2048{% endif %}
       }
 
       volume_mount {
