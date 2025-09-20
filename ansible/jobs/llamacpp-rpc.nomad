@@ -57,7 +57,7 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
     --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
-    --rpc-servers $WORKER_IPS > /tmp/llama-server.log 2>&1 &
+    --rpc-servers $WORKER_IPS >&2 &
 
   SERVER_PID=$!
   echo "Server process started with PID $SERVER_PID. Waiting for it to become healthy..."
