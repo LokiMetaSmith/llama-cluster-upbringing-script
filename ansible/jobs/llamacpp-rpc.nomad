@@ -99,8 +99,7 @@ EOH
 
       resources {
         cpu    = 1000
-        memory = {% if llm_models_var[0].memory_mb is defined %}{{ llm_models_var[0].memory_mb }}{% else %}2048{% endif %}
-
+        memory = {{ (llm_models_var | map(attribute='memory_mb') | max) | default(2048) }}
       }
 
       volume_mount {
@@ -152,8 +151,7 @@ EOH
 
       resources {
         cpu    = 1000
-        memory = {% if llm_models_var[0].memory_mb is defined %}{{ llm_models_var[0].memory_mb }}{% else %}2048{% endif %}
-
+        memory = {{ (llm_models_var | map(attribute='memory_mb') | max) | default(2048) }}
       }
 
       volume_mount {
