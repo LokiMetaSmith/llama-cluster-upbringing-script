@@ -1,7 +1,7 @@
 ---
 - name: Aggregate all unique LLM models from different expert lists
   ansible.builtin.set_fact:
-    unique_llm_models: >
+    unique_llm_models_yaml: |
       {% set processed_urls = [] %}
       {% set unique_models = [] %}
       {% for model in main_expert_models + coding_expert_models %}
@@ -10,7 +10,7 @@
           {% set _ = processed_urls.append(model.url) %}
         {% endif %}
       {% endfor %}
-      {{ unique_models }}
+      {{ unique_models | to_nice_yaml }}
   become: yes
 
 - name: Download all unique LLM models
@@ -18,7 +18,7 @@
     url: "{{ item.url }}"
     dest: "/opt/nomad/models/llm/{{ item.filename }}"
     mode: '0644'
-  loop: "{{ unique_llm_models }}"
+  loop: "{{ unique_llm_models_yaml | from_yaml }}"
   become: yes
   loop_control:
     loop_var: item
