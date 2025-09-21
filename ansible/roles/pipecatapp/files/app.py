@@ -97,6 +97,10 @@ class BenchmarkCollector(FrameProcessor):
         self.llm_first_token_time = 0
         self.tts_first_audio_time = 0
 
+from piper.voice import Piper
+import io
+import wave
+
 class FasterWhisperSTTService(FrameProcessor):
     def __init__(self, model="tiny.en"):
         super().__init__()
@@ -111,6 +115,39 @@ class FasterWhisperSTTService(FrameProcessor):
         text = self.audio_to_text.transcribe(frame.audio)
         if text:
             await self.push_frame(TranscriptionFrame(text))
+
+class PiperTTSService(FrameProcessor):
+    """A FrameProcessor that uses a local Piper model for Text-to-Speech."""
+    def __init__(self, model_name="en_US-l2arctic-medium"):
+        super().__init__()
+        model_path = f"/opt/nomad/models/tts/{model_name}.onnx"
+        config_path = f"{model_path}.json"
+
+        logging.info(f"Loading Piper TTS model from: {model_path}")
+
+        self.voice = Piper.load(model_path, config_path=config_path)
+        self.sample_rate = self.voice.config.sample_rate
+        logging.info(f"Piper TTS model loaded with sample rate: {self.sample_rate}")
+
+    async def process_frame(self, frame, direction):
+        if not isinstance(frame, TextFrame):
+            await self.push_frame(frame, direction)
+            return
+
+        logging.info(f"PiperTTS synthesizing audio for: '{frame.text}'")
+
+        # Synthesize audio to an in-memory WAV stream
+        audio_stream = io.BytesIO()
+        self.voice.synthesize(frame.text, audio_stream)
+        audio_stream.seek(0)
+
+        # Read the raw audio bytes from the WAV stream
+        with wave.open(audio_stream, 'rb') as wf:
+            # Ensure the WAV file has the correct sample rate, etc.
+            # For now, we assume it matches what pipecat expects.
+            audio_bytes = wf.readframes(wf.getnframes())
+
+        await self.push_frame(AudioFrame(audio_bytes))
 
 import json
 
@@ -395,11 +432,10 @@ async def main():
         api_key="dummy",
         model="dummy"
     )
-    # TODO: Add Piper TTS service implementation
-    # You would replace the ElevenLabsTTSService with the appropriate local TTS service from the pipecat-ai library once it's fully implemented.
-    #//tts = ElevenLabsTTSService(
-    # //   voice_id="21m00Tcm4TlvDq8ikWAM" # A default voice
-    #//)
+
+    # Use the local Piper TTS service
+    tts = PiperTTSService()
+
     runner = PipelineRunner()
 
     # TODO: Implement failover or selection logic for vision models
