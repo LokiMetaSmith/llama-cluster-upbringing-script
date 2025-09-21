@@ -30,14 +30,25 @@ stt_models:
     url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
     filename: "ggml-base.en.bin"
 
-# Text-to-Speech models (Piper)
-tts_models:
+# A list of voices for the PiperTTSService to use, in order of preference.
+tts_voices:
   - name: "en_US-l2arctic-medium"
-    url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx"
+    model: "en_US-l2arctic-medium.onnx"
+    config: "en_US-l2arctic-medium.onnx.json"
+  - name: "en_US-lessac-low"
+    model: "en_US-lessac-low.onnx"
+    config: "en_US-lessac-low.onnx.json"
+
+# A flat list of all files that need to be downloaded for TTS.
+piper_voice_files:
+  - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx"
     filename: "en_US-l2arctic-medium.onnx"
-  - name: "en_US-l2arctic-medium-config"
-    url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx.json"
+  - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx.json"
     filename: "en_US-l2arctic-medium.onnx.json"
+  - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/low/en_US-lessac-low.onnx"
+    filename: "en_US-lessac-low.onnx"
+  - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/low/en_US-lessac-low.onnx.json"
+    filename: "en_US-lessac-low.onnx.json"
 
 # Embedding models
 embedding_models:

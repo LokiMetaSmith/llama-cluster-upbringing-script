@@ -85,6 +85,13 @@
     state: absent
   become: yes
 
+- name: Create pipecat configuration file
+  ansible.builtin.template:
+    src: pipecat_config.json.j2
+    dest: /opt/pipecatapp/pipecat_config.json
+    mode: '0644'
+  become: yes
+
 - name: Copy pipecat app
   ansible.builtin.copy:
     src: app.py

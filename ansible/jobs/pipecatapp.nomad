@@ -36,7 +36,7 @@ job "pipecat-app" {
       # --- CORRECTED SECTION ---
       # All environment variables must be in a single "env" block.
       env {
-        # Set to "faster-whisper" to use the local STT service
+
         # The vision and embedding models are now hardcoded in the application
         # to load from the unified /opt/nomad/models directory.
         STT_SERVICE = "faster-whisper"
