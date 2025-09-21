@@ -11,10 +11,7 @@
     namespace: "default"
     model_list: "{{ main_expert_models }}"
     worker_count: 1
-    
-  vars_files:
-    - group_vars/models.yaml
-  
+
   tasks:
     - name: "Render the Prima Expert job template with custom variables"
       ansible.builtin.template:
