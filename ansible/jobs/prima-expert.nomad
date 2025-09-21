@@ -28,6 +28,7 @@ job "{{ job_name | default('prima-expert') }}" {
         path     = "/health"
         interval = "15s"
         timeout  = "5s"
+        initial_delay = "60s"  # <-- The required fix
       }
     }
 
