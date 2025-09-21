@@ -1,64 +1,36 @@
-- name: Render the llama.cpp Nomad job from template
+- name: Render the Prima Expert Nomad job from template for bootstrap
   ansible.builtin.template:
-    src: "{{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad"
-    dest: "/tmp/llamacpp-rpc.nomad"
+    src: "{{ playbook_dir }}/ansible/jobs/prima-expert.nomad"
+    dest: "/tmp/prima-expert-main.nomad"
     mode: '0644'
   vars:
-    llm_models_var: "{{ llm_models }}"
+    job_name: "prima-expert-main"
+    service_name: "prima-api-main"
+    namespace: "default"
+    model_list: "{{ main_expert_models }}"
+    worker_count: 1
 
-- name: Deploy rendered llama.cpp RPC service to Nomad
+- name: Deploy the main Prima Expert service to Nomad
   ansible.builtin.command:
-    cmd: "nomad job run -detach /tmp/llamacpp-rpc.nomad"
+    cmd: "nomad job run -detach /tmp/prima-expert-main.nomad"
   register: llama_job_run
-  changed_when: "'submitted successfully' in llama_job_run.stdout"
+  changed_when: "'Eval ID' in llama_job_run.stdout"
   failed_when: llama_job_run.rc != 0 and 'already running' not in llama_job_run.stderr
 
 - name: Clean up temporary rendered job file
   ansible.builtin.file:
-    path: "/tmp/llamacpp-rpc.nomad"
+    path: "/tmp/prima-expert-main.nomad"
     state: absent
 
-- name: Wait for llama.cpp to start and be healthy in Consul (live tail)
-  block:
-    - name: Ensure a temporary file exists to track last log line read
-      ansible.builtin.file:
-        path: /tmp/llama-tail-pos
-        state: touch
-
-    - name: Tail llama.cpp log incrementally
-      ansible.builtin.shell: |
-        if [ -f /tmp/llama-server.log ]; then
-          last=$(cat /tmp/llama-tail-pos)
-          total=$(wc -l < /tmp/llama-server.log)
-          if [ "$total" -gt "$last" ]; then
-            tail -n +$((last+1)) /tmp/llama-server.log
-            echo "$total" > /tmp/llama-tail-pos
-          fi
-        else
-          echo "Log not yet created"
-        fi
-      register: llama_log
-      changed_when: false
-      failed_when: false
-
-    - name: Debug new log lines
-      debug:
-        msg: "{{ llama_log.stdout_lines }}"
-
-    - name: Check llama.cpp API service health in Consul
-      ansible.builtin.uri:
-        url: http://127.0.0.1:8500/v1/health/service/llama-cpp-api
-        return_content: yes
-      register: llama_health
-      changed_when: false
-      failed_when: false
-
-    - name: Debug current health status
-      debug:
-        var: llama_health.json
-
+- name: Wait for the main expert service to be healthy in Consul
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/health/service/prima-api-main"
+    return_content: yes
+  register: expert_health
   until: >
-    llama_health.json | selectattr('Checks', 'defined')
+    expert_health.json is defined and
+    expert_health.json | selectattr('Checks', 'defined')
     | selectattr('Status', 'equalto', 'passing') | list | length > 0
   retries: 60
-  delay: 5
+  delay: 10
+  changed_when: false

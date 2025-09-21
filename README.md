@@ -57,21 +57,21 @@ If you are setting up a multi-node cluster, you will need to work with the Ansib
     ansible-playbook -i inventory.yaml playbook.yaml --ask-become-pass
     ```
     - **`--ask-become-pass`**: This flag is important. It will prompt you for your `sudo` password, which Ansible needs to perform administrative tasks.
-    - **What this does:** This playbook not only configures the cluster services (Consul, Nomad, etc.) but also automatically bootstraps the primary control node into a fully autonomous AI agent by deploying the necessary AI services.
+    - **What this does:** This playbook not only aconfigures the cluster services (Consul, Nomad, etc.) but also automatically bootstraps the primary control node into a fully autonomous AI agent by deploying the necessary AI services.
 
 ## 4. AI Service Deployment
-The system is designed to be self-bootstrapping. Once the main Ansible playbook has been run on the primary control node, the AI agent is deployed automatically.
+The system is designed to be self-bootstrapping. The `bootstrap.sh` script (or the main `playbook.yaml`) handles the deployment of the core AI services on the primary control node. This includes a default instance of the `prima-expert` job and the `pipecat` voice agent.
 
-### 4.1. Automated Agent Deployment
-The `bootstrap_agent` role in the Ansible playbook handles the automatic deployment of the core AI services on the primary control node. This includes:
-- **`llama.cpp` RPC Service:** The primary LLM backend for the agent.
-- **`pipecat` Voice Agent:** The main application that orchestrates the agent's logic, memory, and tool use.
-
-You can monitor the status of these services by running `nomad job status` on the control node.
-
+### 4.1. Starting and Stopping Services
 Use the provided script to submit the core AI jobs to Nomad:
 ```bash
 ./start_services.sh
+```
+
+If you make a change to a job file or need to restart the services from a clean state, it's best to purge the old jobs before running the start script again.
+```bash
+nomad job stop -purge prima-expert-main
+nomad job stop -purge pipecat-app
 ```
 
 ### 4.2. Advanced: Deploying Additional AI Experts
@@ -93,21 +93,7 @@ The true power of this architecture is the ability to deploy multiple, specializ
       ansible-playbook deploy_expert.yaml -e "job_name=creative-expert service_name=prima-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
       ```
 
-The `TwinService` in the `pipecat-app` will automatically discover any service registered in Consul with the `prima-api-` prefix and make it available for routing.
-
-### 4.3. Resetting and Restarting
-If you make a change to a job file or need to restart the services from a clean state, it's best to purge the old jobs before running the start script again.
-
-#### Stop and purge the old jobs
-```bash
-nomad job stop -purge llamacpp-rpc
-nomad job stop -purge pipecatapp
-```
-
-#### Start the services with the new configuration
-```bash
-./start_services.sh
-```
+The `TwinService` in the `pipecatapp` will automatically discover any service registered in Consul with the `prima-api-` prefix and make it available for routing.
 
 ## 5. Agent Architecture: The `TwinService`
 The core of this application is the `TwinService`, a custom service that acts as the agent's "brain." It orchestrates the agent's responses, memory, and tool use.
@@ -121,27 +107,11 @@ The agent can use tools to perform actions and gather information. The `TwinServ
 
 #### Available Tools:
 - **Vision (`vision.get_observation`)**
-  - **Description:** Gets a real-time description of what is visible in the webcam.
-  - **Requires:** A USB webcam connected to the node running the `pipecat-app` job.
-  - **Example:** "What do you see?"
-- **Master Control Program (`mcp.get_status`, `mcp.get_memory_summary`, etc.)**
-  - **Description:** A tool for introspection and self-control.
-  - **Examples:** "MCP, what is your status?", "Summarize your memory."
+- **Master Control Program (`mcp.get_status`, etc.)**
 - **SSH (`ssh.run_command`)**
-  - **Description:** Executes a command on a remote machine via SSH.
-  - **Security Warning:** This is a very powerful tool. The credentials are not stored in the code but must be provided by the LLM. For this to work, the user running the agent must have an SSH key configured that allows passwordless access to the target machine. Exercise caution when enabling the LLM to use this tool.
-  - **Example:** "Use ssh to run 'ls -l' on host 192.168.1.102 with user 'admin'."
 - **Code Runner (`code_runner.run_python_code`)**
-  - **Description:** Executes a block of Python code in a secure, sandboxed Docker container and returns the output.
-  - **Note:** The Docker engine is installed automatically by the Ansible playbook.
-  - **Example:** "Use the code runner to calculate the 100th Fibonacci number."
 - **Ansible (`ansible.run_playbook`)**
-  - **Description:** Runs an Ansible playbook to provision or manage nodes in the cluster. This is the primary tool for cluster self-management and expansion.
-  - **Security Warning:** This is an extremely powerful tool that can make significant changes to the cluster. It is marked as a sensitive tool and requires user approval in the web UI if `APPROVAL_MODE` is enabled.
-  - **Example:** "Use ansible to run the main playbook and limit it to the host 'AID-E-26'."
-- **Web Browser (`web_browser.goto`, `web_browser.get_page_content`, etc.)**
-  - **Description:** A tool for browsing the web.
-  - **Examples:** "Use the web browser to go to google.com and tell me the content of the page."
+- **Web Browser (`web_browser.goto`, etc.)**
 
 ### 5.3. Mixture of Experts (MoE) Routing
 The agent is designed to function as a "Mixture of Experts." The primary `pipecat` agent acts as a router, classifying the user's query and routing it to a specialized backend expert if appropriate.
@@ -153,50 +123,19 @@ The agent is designed to function as a "Mixture of Experts." The primary `pipeca
 The personality and instructions for the main router agent and each expert agent are defined in simple text files located in the `ansible/roles/pipecatapp/files/prompts/` directory. You can edit these files to customize the behavior of each agent. For example, you can edit `coding_expert.txt` to give it a different programming specialty.
 
 ## 6. Mission Control Web UI
-This project includes a web-based dashboard for real-time display and debugging.
-
-### 6.1. Accessing the UI
-Once the `pipecat-app` job is running, you can access the UI by navigating to the IP address of any node in your cluster on port 8000. For example: `http://192.168.1.101:8000`.
-
-### 6.2. Features
-- **Live Terminal:** The main feature is a retro-style web terminal that provides a live stream of the agent's logs.
-- **LLM-Driven Visualizations:** The agent can use the terminal to display information in creative ways. For example, status updates may be rendered as large, colorful banners using `figlet` and `lolcat` style effects.
-- **Status API:** An API endpoint at `/api/status` provides the real-time status of the agent's pipelines.
-
-### 6.3. Advanced Features
-The Mission Control UI and the agent have several advanced features for power users.
-
-#### Debug Mode
-To get more detailed insight into the agent's operations, you can enable Debug Mode.
-- **How to Enable:** In the `pipecatapp.nomad` job file, set the `DEBUG_MODE` environment variable to `"true"`.
-- **Functionality:** When enabled, the agent will produce verbose logs for every tool call, including the result returned by the tool. This is useful for debugging tool behavior.
-
-#### Interactive Action Approval
-For enhanced safety, you can run the agent in a mode that requires manual approval for sensitive actions.
-- **How to Enable:** In the `pipecatapp.nomad` job file, set the `APPROVAL_MODE` environment variable to `"true"`.
-- **Functionality:** When enabled, any attempt to use a sensitive tool (like `ssh` or `code_runner`) will pause execution. A prompt will appear in the web UI with details of the action. You must click "Approve" for the action to proceed. If you click "Deny", the action is cancelled, and the agent will respond that it was not permitted to perform the action.
-
-#### State Management
-You can save and load the agent's complete memory state (both short-term and long-term) directly from the web UI.
-- **How to Use:**
-  1.  In the header of the Mission Control UI, enter a name for your session in the "Enter save name..." input box.
-  2.  Click **"Save State"** to create a snapshot of the agent's current memory. The state will be saved on the server in the `saved_states/` directory.
-  3.  To restore a previous session, enter the name of the saved state and click **"Load State"**. This will replace the agent's current memory with the saved version.
+This project includes a web-based dashboard for real-time display and debugging. To access it, navigate to the IP address of any node in your cluster on port 8000 (e.g., `http://192.168.1.101:8000`).
 
 ## 7. Testing and Verification
 - **Check Cluster Status:** `nomad node status`
 - **Check Job Status:** `nomad job status`
-- **View Logs:** `nomad job logs <job_name>` (e.g., `pipecatapp`, `prima-cluster`) or use the Mission Control Web UI.
+- **View Logs:** `nomad alloc logs <allocation_id>` or use the Mission Control Web UI.
 - **Manual Test Scripts:** A set of scripts for manual testing of individual components is available in the `testing/` directory.
 
 ## 8. Performance Tuning & Service Selection
-- **Model Selection:** The `prima.cpp` and `llamacpp-rpc` Nomad jobs are configured to use a placeholder model path. You will need to edit the job files to point to the GGUF model you want to use. Smaller models (3B, 7B) are recommended for better performance.
+- **Model Selection:** The `prima-expert.nomad` job is configured via Ansible variables in `group_vars/models.yaml`. You can define different model lists for different experts.
 - **Network:** Wired gigabit ethernet is strongly recommended over Wi-Fi for reduced latency.
 - **VAD Tuning:** The `RealtimeSTT` sensitivity can be tuned in `app.py` for better performance in noisy environments.
 - **STT/TTS Service Selection:** You can choose which Speech-to-Text and Text-to-Speech services to use by setting environment variables in the `pipecatapp.nomad` job file.
-  - `STT_SERVICE`: Set to `faster-whisper` for high-performance local transcription, or `deepgram` (default) to use the Deepgram API.
-  - `TTS_SERVICE`: Set to `kittentts` for a fast, local TTS, or `elevenlabs` (default) to use the ElevenLabs API.
-  - `EMBEDDING_MODEL_NAME`: Selects the sentence transformer model for the agent's long-term memory. Defaults to `all-MiniLM-L6-v2`. A good alternative is `google/embeddinggemma-300m`.
 
 ## 9. Benchmarking
 This project includes two types of benchmarks.
@@ -205,13 +144,11 @@ This project includes two types of benchmarks.
 Measures the end-to-end latency of a live conversation. Enable it by setting `BENCHMARK_MODE = "true"` in the `env` section of the `pipecatapp.nomad` job file. Results are printed to the job logs.
 
 ### 9.2. Standardized Performance Benchmark
-Uses `llama-bench` to measure the raw inference speed (tokens/sec) of the deployed LLM backend.
-1. Ensure an LLM backend is running.
-2. Run the benchmark job, passing the path to your desired GGUF model using the `-var` flag:
-   ```bash
-   nomad job run -var "model_path=/path/to/your/model.gguf" /home/user/benchmark.nomad
-   ```
-3. View results in the job logs: `nomad job logs llama-benchmark`
+Uses `llama-bench` to measure the raw inference speed (tokens/sec) of the deployed LLM backend. Run the `benchmark.nomad` job to test the performance of the default model.
+```bash
+nomad job run /opt/nomad/jobs/benchmark.nomad
+```
+View results in the job logs: `nomad job logs llama-benchmark`
 
 ## 10. Advanced Development: Prompt Evolution
 For advanced users, this project includes a workflow for automatically improving the agent's core prompt using evolutionary algorithms. See `prompt_engineering/PROMPT_ENGINEERING.md` for details.

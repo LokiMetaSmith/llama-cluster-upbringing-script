@@ -107,6 +107,7 @@ EOH
 
       resources {
         cpu    = 1000
+
         {%- set max_mem = [2048] -%}
         {%- for model in model_list -%}
           {%- if model.memory_mb is defined and model.memory_mb > max_mem[0] -%}

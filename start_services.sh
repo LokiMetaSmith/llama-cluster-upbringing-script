@@ -5,8 +5,8 @@
 
 set -e
 
-echo "🚀 Starting the Prima Expert main service..."
-# Note: The file is prima-expert.nomad, but the job name inside is prima-expert-main
+echo "🚀 Starting the main Prima Expert service..."
+
 nomad job run /opt/nomad/jobs/prima-expert.nomad
 
 echo "🚀 Starting the Pipecat application service..."
