@@ -39,11 +39,12 @@ job "pipecat-app" {
         USE_SUMMARIZER = "false"
         # The vision and embedding models are now hardcoded in the application
         # to load from the unified /opt/nomad/models directory.
+        STT_SERVICE = "faster-whisper"
       }
 
       resources {
         cpu    = 1000 # 1 GHz
-        memory = 1024 # 1 GB
+        memory = 4096 # 4 GB
       }
     }
   }
