@@ -5,8 +5,8 @@
 
 set -e
 
-echo "🚀 Starting the distributed Llama C++ RPC service..."
-nomad job run /opt/nomad/jobs/llamacpp-rpc.nomad
+echo "🚀 Starting the main Prima Expert service..."
+nomad job run /opt/nomad/jobs/prima-expert.nomad
 
 echo "🚀 Starting the Pipecat application service..."
 nomad job run /opt/nomad/jobs/pipecatapp.nomad

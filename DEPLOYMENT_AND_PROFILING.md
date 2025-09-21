@@ -4,34 +4,13 @@ This guide provides step-by-step instructions for deploying the various AI servi
 
 ## 1. Deploying Core Services
 
-After the Ansible provisioning is complete, your cluster is ready to run the AI services. The following Nomad jobs have been copied to `/home/user/` on your control node.
+After the Ansible provisioning is complete (`bootstrap.sh` or the main playbook), your cluster is ready. The core services are deployed automatically by the `bootstrap_agent` role.
 
-### Step 1.1: Choose and Deploy ONE Language Model Backend
+### Step 1.1: Verify Service Deployment
 
-The heart of the AI pipeline is the Large Language Model (LLM). You have two options for the backend service. You should only run **one** of these at a time.
-
-*   **Option A: `prima.cpp` (Recommended)**
-    This is a state-of-the-art inference engine designed for heterogeneous clusters. It can efficiently distribute the workload across multiple nodes.
-    ```bash
-    nomad job run /home/user/primacpp.nomad
-    ```
-
-*   **Option B: `llama.cpp` RPC**
-    This is a simpler, more traditional client-server model for the LLM.
-    ```bash
-    nomad job run /home/user/llamacpp-rpc.nomad
-    ```
-    **Note:** Before running, you may need to edit the job file to specify the path to the GGUF model you wish to use.
-
-### Step 1.2: Deploy the Main Voice Agent (`pipecat`)
-
-Once your chosen LLM backend is running, deploy the main voice agent application. It will automatically discover and connect to the LLM service using Consul.
-
-```bash
-nomad job run /home/user/pipecatapp.nomad
-```
-
-### Step 1.3: Verifying Deployment
+The bootstrap process deploys two main jobs to the `default` namespace:
+- **`prima-expert-main`**: The default, distributed LLM expert service.
+- **`pipecat-app`**: The main voice agent application.
 
 You can check the status of your newly deployed jobs at any time:
 ```bash
@@ -39,10 +18,12 @@ nomad job status
 ```
 This command will show you if the jobs are running, pending, or have failed. To see detailed logs for a specific job, use:
 ```bash
-nomad job logs <job_name>
+nomad alloc logs <allocation_id>
 # Example:
-# nomad job logs pipecatapp
+# nomad job allocs prima-expert-main
+# nomad alloc logs <id_from_previous_command>
 ```
+If both jobs show a `running` status, your core services are up.
 
 ---
 

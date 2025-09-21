@@ -1,45 +1,45 @@
 ---
 # -----------------------------------------------------------------------------
-# Ansible Playbook: Debug Nomad Template
+# Ansible Playbook: Debug Prima Expert Template
 #
 # Purpose:
-# This playbook provides a fast way to render a single Nomad job file from its
-# Jinja2 template. It's designed for quick debugging and validation of the
-# template without running the entire, time-consuming main bootstrap script.
+# This playbook provides a fast way to render the main `prima-expert.nomad`
+# job file from its Jinja2 template. It's designed for quick debugging and
+# validation of the template without running the entire main bootstrap script.
 #
 # How it Works:
 # 1. It loads the necessary model definitions from `group_vars/models.yaml`.
-# 2. It defines the `llm_models_var` variable, which the Nomad template expects.
+# 2. It defines the variables (`job_name`, `model_list`, etc.) that the
+#    Nomad template expects.
 # 3. It uses the `ansible.builtin.template` module to process
-#    `ansible/jobs/llamacpp-rpc.nomad` and saves the output to a new file named
-#    `rendered_llamacpp_job.nomad` in the project's root directory.
+#    `ansible/jobs/prima-expert.nomad` and saves the output to a new file named
+#    `rendered_prima_expert_job.nomad` in the project's root directory.
 #
 # -----------------------------------------------------------------------------
-- name: Debug and Render Nomad Template
-  # This playbook runs only on the local machine where you are running Ansible.
+- name: Debug and Render Prima Expert Nomad Template
   hosts: localhost
   connection: local
   gather_facts: no
 
-  # Load the file containing the definitions for all AI models.
-  # This is necessary because the Nomad template refers to these variables.
   vars_files:
     - group_vars/models.yaml
 
-  # Define the `llm_models_var` variable.
-  # The main playbook creates this variable in the `vars` section of a role,
-  # but for this standalone debug playbook, we define it here directly.
-  # It simply takes the content of the `llm_models` variable loaded from the file.
+  # Define the variables that the prima-expert.nomad template expects.
+  # This simulates how the main `llama_cpp` role would deploy the default expert.
   vars:
-    llm_models_var: "{{ llm_models }}"
+    job_name: "prima-expert-main"
+    service_name: "prima-api-main"
+    namespace: "default"
+    model_list: "{{ main_expert_models }}"
+    worker_count: 1
 
   tasks:
-    - name: Render the llama.cpp Nomad job from template
+    - name: Render the Prima Expert Nomad job from template
       ansible.builtin.template:
         # Source: The Jinja2 template file for the Nomad job.
-        src: ansible/jobs/llamacpp-rpc.nomad
+        src: ansible/jobs/prima-expert.nomad
         # Destination: The output file. This will be a pure, valid HCL file
         # that you can test directly with the `nomad` command.
-        dest: ./rendered_llamacpp_job.nomad
+        dest: ./rendered_prima_expert_job.nomad
         # Set standard file permissions for the rendered file.
         mode: '0644'
