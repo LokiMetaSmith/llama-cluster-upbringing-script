@@ -14,8 +14,6 @@ from pipecat.services.deepgram import DeepgramSTTService
 from pipecat.services.elevenlabs import ElevenLabsTTSService
 from pipecat.services.openai import OpenAILLMService
 from pipecat.transports.local.local import LocalTransport
-from RealtimeSTT import AudioToText
-from kittentts import KittenTTS as KittenTTSModel
 import soundfile as sf
 import os
 from sentence_transformers import SentenceTransformer
@@ -434,8 +432,10 @@ async def main():
         api_key="dummy",
         model="dummy"
     )
+
     # Use the local Piper TTS service
     tts = PiperTTSService()
+
     runner = PipelineRunner()
 
     # TODO: Implement failover or selection logic for vision models
