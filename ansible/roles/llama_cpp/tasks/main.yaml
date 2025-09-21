@@ -7,6 +7,7 @@
       - cmake
       - libssl-dev
       - libcurl4-openssl-dev
+      - libstdc++6
     state: present
   become: yes
 
@@ -56,7 +57,6 @@
     dest: "/usr/local/bin/{{ item.path | basename }}"
     mode: '0755'
     remote_src: yes
-  # Use rejectattr to exclude shared libraries
   loop: "{{ llama_artifacts.files | rejectattr('path', 'match', '.*\\.so$') | list }}"
   become: yes
 
@@ -66,7 +66,6 @@
     dest: "/usr/local/lib/{{ item.path | basename }}"
     mode: '0755'
     remote_src: yes
-  # Use selectattr to include only shared libraries
   loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
   become: yes
 
@@ -74,16 +73,6 @@
   ansible.builtin.command:
     cmd: ldconfig
   become: yes
-
-- name: Verify llama-server binary installation
-  ansible.builtin.stat:
-    path: /usr/local/bin/llama-server
-  register: llama_server_stat
-
-- name: Fail if llama-server is not installed or not executable
-  ansible.builtin.fail:
-    msg: "llama-server was not found at /usr/local/bin/llama-server or is not executable."
-  when: not llama_server_stat.stat.exists or not llama_server_stat.stat.executable
 
 - name: Clean up llama.cpp build directory
   ansible.builtin.file:
@@ -98,12 +87,17 @@
     mode: '0755'
   become: yes
 
-- name: Copy llamacpp-rpc Nomad job file
+- name: Deploy Prima Expert Nomad job template
   ansible.builtin.template:
-    src: ../../jobs/llamacpp-rpc.nomad
-    dest: /opt/nomad/jobs/llamacpp-rpc.nomad
+    src: ../../jobs/prima-expert.nomad
+    dest: /opt/nomad/jobs/prima-expert.nomad
+    mode: '0644'
   vars:
-    llm_models_var: "{{ llm_models }}"
+    job_name: "prima-expert-main"
+    service_name: "prima-api-main"
+    namespace: "default"
+    model_list: "{{ main_expert_models }}"
+    worker_count: 1
 
 - name: Copy benchmark Nomad job file
   ansible.builtin.template:
