@@ -115,6 +115,7 @@ EOH
           {%- endif -%}
         {%- endfor -%}
         memory = {{ max_mem[0] }}
+
       }
 
       volume_mount {
