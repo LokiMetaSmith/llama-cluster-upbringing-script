@@ -14,6 +14,8 @@ from pipecat.services.deepgram import DeepgramSTTService
 from pipecat.services.elevenlabs import ElevenLabsTTSService
 from pipecat.services.openai import OpenAILLMService
 from pipecat.transports.local.local import LocalTransport
+from RealtimeSTT import AudioToText
+from kittentts import KittenTTS as KittenTTSModel
 import soundfile as sf
 import os
 from sentence_transformers import SentenceTransformer
@@ -118,20 +120,40 @@ class FasterWhisperSTTService(FrameProcessor):
 
 class PiperTTSService(FrameProcessor):
     """A FrameProcessor that uses a local Piper model for Text-to-Speech."""
-    def __init__(self, model_name="en_US-l2arctic-medium"):
+    def __init__(self, voices=None):
         super().__init__()
-        model_path = f"/opt/nomad/models/tts/{model_name}.onnx"
-        config_path = f"{model_path}.json"
+        self.voice = None
 
-        logging.info(f"Loading Piper TTS model from: {model_path}")
+        if not voices:
+            logging.error("PiperTTSService: No voices configured.")
+            return
 
-        self.voice = Piper.load(model_path, config_path=config_path)
-        self.sample_rate = self.voice.config.sample_rate
-        logging.info(f"Piper TTS model loaded with sample rate: {self.sample_rate}")
+        for voice_config in voices:
+            try:
+                model_path = f"/opt/nomad/models/tts/{voice_config['model']}"
+                config_path = f"/opt/nomad/models/tts/{voice_config['config']}"
+
+                logging.info(f"Attempting to load Piper TTS model: {voice_config['name']}")
+
+                loaded_voice = Piper.load(model_path, config_path=config_path)
+                self.voice = loaded_voice
+                self.sample_rate = self.voice.config.sample_rate
+
+                logging.info(f"Successfully loaded Piper TTS model '{voice_config['name']}' with sample rate: {self.sample_rate}")
+                break # Stop on first successful load
+            except Exception as e:
+                logging.warning(f"Failed to load Piper TTS model '{voice_config['name']}': {e}")
+
+        if not self.voice:
+            logging.error("Failed to load any Piper TTS models. TTS will be silent.")
 
     async def process_frame(self, frame, direction):
         if not isinstance(frame, TextFrame):
             await self.push_frame(frame, direction)
+            return
+
+        if not self.voice:
+            logging.warning("PiperTTSService: No voice loaded, cannot synthesize audio.")
             return
 
         logging.info(f"PiperTTS synthesizing audio for: '{frame.text}'")
@@ -421,6 +443,16 @@ async def main():
     server = uvicorn.Server(config)
     threading.Thread(target=server.run).start()
 
+    # Load configuration from the JSON file created by Ansible
+    pipecat_config = {}
+    try:
+        with open("/opt/pipecatapp/pipecat_config.json", "r") as f:
+            pipecat_config = json.load(f)
+    except FileNotFoundError:
+        logging.warning("pipecat_config.json not found, using defaults.")
+
+    tts_voices = pipecat_config.get("tts_voices", [])
+
     stt_service_name = os.getenv("STT_SERVICE", "deepgram")
     if stt_service_name == "faster-whisper":
         stt = FasterWhisperSTTService()
@@ -432,10 +464,8 @@ async def main():
         api_key="dummy",
         model="dummy"
     )
-
-    # Use the local Piper TTS service
-    tts = PiperTTSService()
-
+    # Use the local Piper TTS service with the configured voices
+    tts = PiperTTSService(voices=tts_voices)
     runner = PipelineRunner()
 
     # TODO: Implement failover or selection logic for vision models

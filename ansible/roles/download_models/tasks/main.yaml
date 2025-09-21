@@ -19,12 +19,12 @@
   loop_control:
     loop_var: item
 
-- name: Download all Text-to-Speech models
+- name: Download all Text-to-Speech model files
   ansible.builtin.get_url:
     url: "{{ item.url }}"
     dest: "/opt/nomad/models/tts/{{ item.filename }}"
     mode: '0644'
-  loop: "{{ tts_models }}"
+  loop: "{{ piper_voice_files }}"
   become: yes
   loop_control:
     loop_var: item
