@@ -37,6 +37,7 @@ job "pipecat-app" {
       env {
         # Set to "true" to enable the summarizer tool
         USE_SUMMARIZER = "false"
+        STT_SERVICE = "faster-whisper"
         # The vision and embedding models are now hardcoded in the application
         # to load from the unified /opt/nomad/models directory.
       }
