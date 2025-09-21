@@ -13,8 +13,8 @@ job "pipecat-app" {
     }
 
     service {
-      name     = "pipecat-app-http"
-      port     = "http"
+      name = "pipecat-app-http"
+      port = "http"
       provider = "consul"
 
       check {
@@ -23,6 +23,7 @@ job "pipecat-app" {
         interval = "10s"
         timeout  = "2s"
       }
+
     }
 
     task "pipecat-task" {
@@ -33,22 +34,17 @@ job "pipecat-app" {
         args    = ["/opt/pipecatapp/app.py"]
       }
 
-      # --- CORRECTED SECTION ---
-      # All environment variables must be in a single "env" block.
       env {
-
+        # Set to "true" to enable the summarizer tool
+        USE_SUMMARIZER = "false"
         # The vision and embedding models are now hardcoded in the application
         # to load from the unified /opt/nomad/models directory.
         STT_SERVICE = "faster-whisper"
-
-        # Set to "true" to enable the summarizer tool
-        USE_SUMMARIZER     = "false"
       }
-      # --- END CORRECTED SECTION ---
 
       resources {
         cpu    = 1000 # 1 GHz
-        memory = 1024 # 1 GB
+        memory = 4096 # 4 GB
       }
     }
   }
