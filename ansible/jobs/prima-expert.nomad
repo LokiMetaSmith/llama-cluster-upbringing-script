@@ -28,6 +28,7 @@ job "{{ job_name | default('prima-expert') }}" {
         path     = "/health"
         interval = "15s"
         timeout  = "5s"
+        initial_delay = "60s"  # <-- The required fix
       }
     }
 
@@ -106,7 +107,16 @@ EOH
 
       resources {
         cpu    = 1000
-        memory = 8192 # Hardcoded for simplicity and stability
+
+        {%- set max_mem = [2048] -%}
+        {%- for model in model_list -%}
+          {%- if model.memory_mb is defined and model.memory_mb > max_mem[0] -%}
+            {%- set _ = max_mem.pop() -%}
+            {%- set _ = max_mem.append(model.memory_mb) -%}
+          {%- endif -%}
+        {%- endfor -%}
+        memory = {{ max_mem[0] }}
+
       }
 
       volume_mount {

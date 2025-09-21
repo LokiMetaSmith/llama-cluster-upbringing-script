@@ -6,6 +6,7 @@
 set -e
 
 echo "🚀 Starting the main Prima Expert service..."
+
 nomad job run /opt/nomad/jobs/prima-expert.nomad
 
 echo "🚀 Starting the Pipecat application service..."
