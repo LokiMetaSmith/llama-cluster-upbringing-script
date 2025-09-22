@@ -34,6 +34,6 @@ echo "Purge complete."
 echo "Running the Ansible playbook for local setup..."
 echo "You will be prompted for your sudo password."
 
-ansible-playbook -i local_inventory.ini playbook.yaml --ask-become-pass -vvv
+ansible-playbook -i local_inventory.ini playbook.yaml --ask-become-pass -vvv > playbook_output.log 2>&1
 
 echo "Bootstrap complete."
