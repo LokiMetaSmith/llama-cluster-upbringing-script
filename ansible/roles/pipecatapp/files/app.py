@@ -463,14 +463,12 @@ async def main():
         logging.warning("pipecat_config.json not found, using defaults.")
 
     tts_voices = pipecat_config.get("tts_voices", [])
-# need to find alternative sst service providers
-    stt_service_name = none
+    stt_service_name = os.getenv("STT_SERVICE")
     if stt_service_name == "faster-whisper":
         stt = FasterWhisperSTTService()
         logging.info("Using local FasterWhisper for STT.")
     else:
-        stt = none
-        logging.info("no app selected for STT.")
+        raise RuntimeError(f"STT_SERVICE environment variable not set to a valid value. Got '{stt_service_name}'")
 
 
     llm = OpenAILLMService(
