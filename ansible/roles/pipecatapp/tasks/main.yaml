@@ -108,17 +108,27 @@
     cmd: /opt/pipecatapp/venv/bin/python3 -m playwright install
   become: yes
 
+- name: Install systemd service for starting Nomad jobs on boot
+  ansible.builtin.template:
+    src: prima-services.service.j2
+    dest: /etc/systemd/system/prima-services.service
+    mode: '0644'
+  become: yes
+  notify:
+    - Reload systemd
+    - Enable and start prima-services
+
+- name: Run pipecat-app job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
+  when: pipecat_job_status.rc != 0
+
 - name: Check if pipecat-app job is running
   ansible.builtin.command:
     cmd: nomad job status pipecat-app
   register: pipecat_job_status
   changed_when: false
   ignore_errors: true
-
-- name: Run pipecat-app job
-  ansible.builtin.command:
-    cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
-  when: pipecat_job_status.rc != 0
 
 - name: Ensure start_services.sh is executable
   ansible.builtin.file:
@@ -129,15 +139,7 @@
     state: file
   become: yes
 
-- name: Install systemd service for starting Nomad jobs on boot
-  ansible.builtin.template:
-    src: prima-services.service.j2
-    dest: /etc/systemd/system/prima-services.service
-    mode: '0644'
-  become: yes
-  notify:
-    - Reload systemd
-    - Enable and start prima-services
+
 
 - name: Flush handlers to ensure service is enabled and started
   ansible.builtin.meta: flush_handlers
