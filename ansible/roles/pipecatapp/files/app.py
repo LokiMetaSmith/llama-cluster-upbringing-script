@@ -15,7 +15,7 @@ from pipecat.services.elevenlabs import ElevenLabsTTSService
 from pipecat.services.openai import OpenAILLMService
 from pipecat.transports.local.local import LocalTransport
 from RealtimeSTT import AudioToText
-from kittentts import KittenTTS as KittenTTSModel
+from pipecat.services.piper import PiperTTSService 
 import soundfile as sf
 import os
 from sentence_transformers import SentenceTransformer
