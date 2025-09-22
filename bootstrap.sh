@@ -18,6 +18,18 @@ then
     exit 1
 fi
 
+# --- ADDED SECTION ---
+# Purge any existing jobs to ensure a clean deployment.
+echo "Purging any old Nomad jobs that will be deployed..."
+
+# The '|| true' part ensures that the script won't stop with an error
+# if the jobs don't exist yet (e.g., on a brand new setup).
+nomad job stop -purge prima-expert-main || true
+nomad job stop -purge pipecat-app || true
+
+echo "Purge complete."
+# --- END ADDED SECTION ---
+
 # Run the Ansible playbook with the local inventory
 echo "Running the Ansible playbook for local setup..."
 echo "You will be prompted for your sudo password."
