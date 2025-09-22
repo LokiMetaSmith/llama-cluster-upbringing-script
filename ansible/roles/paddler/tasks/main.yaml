@@ -18,10 +18,25 @@
 
 # The 'unarchive' task is no longer needed as the file is a binary.
 
-- name: Move and rename Paddler to /usr/local/bin
-  copy:
+- name: Create Paddler installation directory
+  ansible.builtin.file:
+    path: /opt/paddler/bin
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Move and rename Paddler to /opt/paddler/bin
+  ansible.builtin.copy:
     src: "/tmp/{{ paddler_binary }}"
-    dest: /usr/local/bin/paddler
+    dest: /opt/paddler/bin/paddler
     remote_src: yes
     mode: '0755'
+  become: yes
+
+- name: Create symbolic link in /usr/local/bin
+  ansible.builtin.file:
+    src: /opt/paddler/bin/paddler
+    dest: /usr/local/bin/paddler
+    state: link
+    force: yes
   become: yes
