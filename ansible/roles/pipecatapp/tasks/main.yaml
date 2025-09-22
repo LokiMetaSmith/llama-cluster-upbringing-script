@@ -24,7 +24,18 @@
       - cargo
     state: present
   become: yes
-
+  
+- name: Install system dependencies for Playwright
+  become: yes
+  ansible.builtin.apt:
+    name:
+      - libevent-2.1-7t64
+      - libgstreamer-plugins-bad1.0-0
+      - libflite1
+      - libavif16
+      - gstreamer1.0-libav
+    state: present
+    
 - name: Create pipecatapp application directory
   ansible.builtin.file:
     path: /opt/pipecatapp
