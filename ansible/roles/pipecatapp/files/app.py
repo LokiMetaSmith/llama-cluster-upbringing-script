@@ -4,25 +4,40 @@ import cv2
 import torch
 from ultralytics import YOLO
 import time
+import json
+import io
+import wave
+import os
+import shutil
+import inspect
+import threading
 
-from pipecat.frames.frames import AudioFrame, EndFrame, TextFrame, VisionImageFrame, UserStartedSpeakingFrame, UserStoppedSpeakingFrame, TranscriptionFrame
+from pipecat.frames.frames import (
+    AudioFrame,
+    EndFrame,
+    TextFrame,
+    VisionImageFrame,
+    UserStartedSpeakingFrame,
+    UserStoppedSpeakingFrame,
+    TranscriptionFrame,
+)
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
-from pipecat.services.deepgram import DeepgramSTTService
-from pipecat.services.elevenlabs import ElevenLabsTTSService
 from pipecat.services.openai import OpenAILLMService
 from pipecat.transports.local.local import LocalTransport
 from RealtimeSTT import AudioToText
+
 from pipecat.services.piper import PiperTTSService 
 import soundfile as sf
-import os
+import requests
 from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 from memory import MemoryStore
-import requests
+import web_server
+from web_server import approval_queue
 from tools.ssh_tool import SSH_Tool
 from tools.mcp_tool import MCP_Tool
 from tools.code_runner_tool import CodeRunnerTool
@@ -31,12 +46,8 @@ from tools.ansible_tool import Ansible_Tool
 from tools.power_tool import Power_Tool
 from tools.summarizer_tool import SummarizerTool
 from moondream_detector import MoondreamDetector
-import inspect
-import web_server
-from web_server import approval_queue
+
 import uvicorn
-import threading
-import shutil
 
 # Custom logging handler to broadcast logs to the web UI
 class WebSocketLogHandler(logging.Handler):
@@ -100,8 +111,9 @@ class BenchmarkCollector(FrameProcessor):
         self.tts_first_audio_time = 0
 
 from piper.voice import Piper
-import io
-import wave
+
+# (Your existing WebSocketLogHandler, UILogger, and BenchmarkCollector classes remain here)
+# ...
 
 class FasterWhisperSTTService(FrameProcessor):
     def __init__(self, model="tiny.en"):
@@ -171,7 +183,6 @@ class PiperTTSService(FrameProcessor):
 
         await self.push_frame(AudioFrame(audio_bytes))
 
-import json
 
 class TwinService(FrameProcessor):
     def __init__(self, llm, vision_detector, runner, debug_mode=False, approval_mode=False, approval_queue=None):
@@ -452,18 +463,23 @@ async def main():
         logging.warning("pipecat_config.json not found, using defaults.")
 
     tts_voices = pipecat_config.get("tts_voices", [])
-
-    stt_service_name = os.getenv("STT_SERVICE", "deepgram")
+# need to find alternative sst service providers
+    stt_service_name = none
     if stt_service_name == "faster-whisper":
         stt = FasterWhisperSTTService()
+        logging.info("Using local FasterWhisper for STT.")
     else:
-        stt = DeepgramSTTService()
+        stt = none
+        logging.info("no app selected for STT.")
+
 
     llm = OpenAILLMService(
         base_url="http://localhost:8080/v1", # This should point to the prima.cpp service
         api_key="dummy",
         model="dummy"
     )
+
+    # --- FINAL FIX FOR TTS ---
     # Use the local Piper TTS service with the configured voices
     tts = PiperTTSService(voices=tts_voices)
     runner = PipelineRunner()
@@ -491,7 +507,6 @@ async def main():
     )
     web_server.twin_service_instance = twin
 
-    # Main conversational pipeline
     pipeline_steps = [
         transport.input(),
         stt,
