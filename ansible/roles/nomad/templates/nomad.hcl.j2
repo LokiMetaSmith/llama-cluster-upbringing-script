@@ -35,4 +35,10 @@ client {
     path      = "{{ nomad_models_dir }}"
     read_only = true
   }
+  
+  plugin "exec" {
+    config {
+      enabled = true
+    }
+  }
 }
