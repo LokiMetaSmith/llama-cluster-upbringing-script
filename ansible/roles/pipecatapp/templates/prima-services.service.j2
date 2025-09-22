@@ -1,0 +1,14 @@
+[Unit]
+Description=Start Prima AI Services on Boot
+After=network.target nomad.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/cluster-infra/start_services.sh
+RemainAfterExit=true
+StandardOutput=journal
+StandardError=journal
+User={{ target_user }}
+
+[Install]
+WantedBy=multi-user.target
