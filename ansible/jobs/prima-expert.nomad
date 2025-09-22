@@ -42,15 +42,23 @@ echo "Starting master server for expert: {{ job_name | default('prima-expert') }
 
 # Discover worker services via Consul
 echo "Discovering worker services from Consul..."
-WORKER_IPS=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '.[].Service.Address' | tr '\n' ',' | sed 's/,$//')
-echo "Discovered Worker IPs: $WORKER_IPS"
+WORKER_IPS=""
+for i in {1..12}; do
+  WORKER_IPS=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '.[].Service.Address' | tr '\n' ',' | sed 's/,$//')
+  if [ -n "$WORKER_IPS" ]; then
+    echo "Discovered Worker IPs: $WORKER_IPS"
+    break
+  fi
+  echo "No workers found yet, retrying in 10 seconds... (attempt $i/12)"
+  sleep 10
+done
 
 RPC_ARGS=""
 if [ -n "$WORKER_IPS" ]; then
   echo "Workers found. Configuring RPC."
   RPC_ARGS="--rpc-servers $WORKER_IPS"
 else
-  echo "No workers found. Starting in standalone mode."
+  echo "No workers found after waiting. Starting in standalone mode."
 fi
 
 HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
