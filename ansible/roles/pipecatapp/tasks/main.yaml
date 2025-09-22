@@ -120,6 +120,15 @@
     cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
   when: pipecat_job_status.rc != 0
 
+- name: Ensure start_services.sh is executable
+  ansible.builtin.file:
+    path: /opt/cluster-infra/start_services.sh
+    mode: '0755'
+    owner: root
+    group: root
+    state: file
+  become: yes
+
 - name: Install systemd service for starting Nomad jobs on boot
   ansible.builtin.template:
     src: prima-services.service.j2
