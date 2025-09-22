@@ -27,7 +27,7 @@ job "pipecat-app" {
     }
 
     task "pipecat-task" {
-      driver = "exec"
+      driver = "raw_exec"
 
       config {
         command = "/opt/pipecatapp/venv/bin/python3"
