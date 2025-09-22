@@ -60,6 +60,11 @@ async def get_status():
             return {"status": mcp.get_status()}
     return {"status": "Agent not fully initialized."}
 
+@app.get("/health")
+async def get_health():
+    """A simple health check endpoint that returns a 200 OK status."""
+    return {"status": "ok"}
+
 @app.post("/api/state/save")
 async def save_state_endpoint(payload: Dict = Body(...)):
     save_name = payload.get("save_name")
