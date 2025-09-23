@@ -4,6 +4,7 @@
     url: "{{ nomad_zip_url }}"
     dest: "/tmp/nomad.zip"
     mode: '0644'
+    timeout: 30
 
 - name: Unzip Nomad
   ansible.builtin.unarchive:
@@ -21,14 +22,13 @@
   become: yes
 
 - name: Ensure old, conflicting Nomad config files are removed
-  file:
-    path: "{{ config_file }}"
+  ansible.builtin.file:
+    path: "{{ item }}"
     state: absent
   loop:
     - /etc/nomad.d/client.hcl
     - /etc/nomad.d/server.hcl
-  loop_control:
-    loop_var: config_file
+  become: yes
 
 - name: Create Nomad config directory
   ansible.builtin.file:
@@ -37,6 +37,7 @@
     owner: root
     group: root
     mode: '0755'
+  become: yes
 
 - name: Deploy the client Nomad configuration from template
   ansible.builtin.template:
@@ -45,6 +46,7 @@
     owner: root
     group: root
     mode: '0644'
+  become: yes
 
 - name: Copy Nomad systemd service file
   ansible.builtin.template:
@@ -54,47 +56,50 @@
   become: yes
 
 - name: Create systemd override directory for Nomad service
-  file:
+  ansible.builtin.file:
     path: /etc/systemd/system/nomad.service.d
     state: directory
+  become: yes
 
 - name: Add override to enforce startup order
-  copy:
+  ansible.builtin.copy:
     dest: /etc/systemd/system/nomad.service.d/override.conf
     content: |
       [Unit]
       Wants=consul.service docker.service
       After=consul.service docker.service
+  become: yes
 
 - name: Set NOMAD_ADDR environment variable for all users
-  copy:
+  ansible.builtin.copy:
     dest: /etc/profile.d/nomad.sh
     mode: '0755'
     content: |
       #!/bin/sh
       export NOMAD_ADDR="http://127.0.0.1:4646"
-      
-# Ensure CNI plugins are installed for Nomad networking
+  become: yes
+
 - name: Ensure CNI plugin directory exists
-  file:
+  ansible.builtin.file:
     path: /opt/cni/bin
     state: directory
     mode: '0755'
+  become: yes
 
 - name: Download CNI plugins tarball
-  get_url:
+  ansible.builtin.get_url:
     url: "{{ cni_url }}"
-#    url: "https://github.com/containernetworking/plugins/releases/download/v1.5.0/cni-plugins-linux-amd64-v1.5.0.tgz"
     dest: /tmp/cni-plugins.tgz
     mode: '0644'
+    timeout: 30
 
 - name: Extract CNI plugins into /opt/cni/bin
-  unarchive:
+  ansible.builtin.unarchive:
     src: /tmp/cni-plugins.tgz
     dest: /opt/cni/bin
     remote_src: yes
-    extra_opts: [--strip-components=0]
-    
+  become: yes
+
 - name: Start and enable Nomad service
   ansible.builtin.systemd:
     name: nomad
@@ -102,3 +107,37 @@
     enabled: yes
     daemon_reload: yes
   become: yes
+  async: 45
+  poll: 5
+  register: nomad_service_start
+  ignore_errors: true # Continue to the debug steps even if this fails
+
+- name: Check Nomad service status if start task failed
+  when: nomad_service_start.failed
+  block:
+    - name: Get Nomad service status
+      ansible.builtin.command: systemctl status nomad --no-pager
+      register: nomad_status
+      failed_when: false
+      changed_when: false
+      become: yes
+
+    - name: Display Nomad service status
+      ansible.builtin.debug:
+        var: nomad_status.stdout_lines
+
+    - name: Get last 50 lines of Nomad logs
+      ansible.builtin.command: journalctl -u nomad --no-pager -n 50
+      register: nomad_logs
+      failed_when: false
+      changed_when: false
+      become: yes
+
+    - name: Display Nomad logs and fail
+      ansible.builtin.fail:
+        msg: |
+          Nomad service failed to start. Please check the logs above for errors.
+          Common issues are misconfigured client.hcl, networking problems,
+          or failed dependencies like Consul or Docker.
+          Logs:
+          {{ nomad_logs.stdout }}
