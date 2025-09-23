@@ -47,6 +47,8 @@
     group: root
     mode: '0644'
   become: yes
+  notify:
+   - Restart nomad
 
 - name: Copy Nomad systemd service file
   ansible.builtin.template:
