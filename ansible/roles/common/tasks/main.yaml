@@ -52,30 +52,23 @@
     regexp: '^#?IdleAction=.*'
     line: 'IdleAction=lock'
   notify: restart systemd-logind
-  
-- name: Debug nomad_models_dir
-  ansible.builtin.debug:
-    var: nomad_models_dir
-    
-- name: Create parent directory for all models
-  ansible.builtin.file:
-    path: "{{ nomad_models_dir }}"
-    state: directory
-    mode: '0755'
-  become: yes
 
+# --- CORRECTED SECTION ---
+# This task now creates the parent directory as well as the subdirectories.
 - name: Create unified model directory structure
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
   loop:
+    - "{{ nomad_models_dir }}"
     - "{{ nomad_models_dir }}/llm"
     - "{{ nomad_models_dir }}/stt"
     - "{{ nomad_models_dir }}/tts"
     - "{{ nomad_models_dir }}/embedding"
     - "{{ nomad_models_dir }}/vision"
   become: yes
+# --- END CORRECTED SECTION ---
 
 - name: Deploy SSH authorized keys sync script
   ansible.builtin.template:
