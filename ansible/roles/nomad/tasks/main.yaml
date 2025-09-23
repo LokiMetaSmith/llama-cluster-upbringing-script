@@ -21,7 +21,7 @@
     mode: '0755'
   become: yes
   
- name: Stop Nomad service to prevent data corruption
+- name: Stop Nomad service to prevent data corruption
   ansible.builtin.systemd:
     name: nomad
     state: stopped
