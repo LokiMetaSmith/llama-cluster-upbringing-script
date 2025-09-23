@@ -1,4 +1,4 @@
-# FILE: your_playbook.yml
+# FILE: ansible/roles/pipecatapp/tasks/main.yaml
 ---
 - name: Install python3, pip, and venv system packages
   ansible.builtin.apt:
@@ -9,7 +9,6 @@
     state: present
     update_cache: yes
     cache_valid_time: 3600
-    timeout: 60 # ADDED TIMEOUT
   become: yes
 
 - name: Install system dependencies for Python packages
@@ -24,7 +23,6 @@
       - rustc
       - cargo
     state: present
-    timeout: 180 # ADDED TIMEOUT
   become: yes
 
 - name: Install system dependencies for Playwright
@@ -36,7 +34,6 @@
       - libavif16
       - gstreamer1.0-libav
     state: present
-    timeout: 180 # ADDED TIMEOUT
   become: yes
 
 - name: Create pipecatapp application directory
@@ -83,7 +80,6 @@
     executable: /opt/pipecatapp/venv/bin/pip3
   become: yes
 
-# MODIFIED THIS TASK
 - name: Install python dependencies into the virtual environment
   ansible.builtin.pip:
     requirements: /opt/pipecatapp/requirements.txt
@@ -119,7 +115,6 @@
     src: ../../jobs/pipecatapp.nomad
     dest: /opt/nomad/jobs/pipecatapp.nomad
 
-# MODIFIED THIS TASK
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
     cmd: /opt/pipecatapp/venv/bin/python3 -m playwright install
