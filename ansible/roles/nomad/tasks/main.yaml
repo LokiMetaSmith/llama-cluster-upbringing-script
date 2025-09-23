@@ -38,10 +38,10 @@
     group: root
     mode: '0755'
 
-- name: Deploy the consolidated Nomad configuration from template
+- name: Deploy the client Nomad configuration from template
   ansible.builtin.template:
-    src: nomad.hcl.j2
-    dest: /etc/nomad.d/nomad.hcl
+    src: nomad.hcl.client.j2
+    dest: /etc/nomad.d/client.hcl
     owner: root
     group: root
     mode: '0644'
