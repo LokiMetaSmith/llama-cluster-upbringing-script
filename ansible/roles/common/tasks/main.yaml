@@ -53,6 +53,10 @@
     line: 'IdleAction=lock'
   notify: restart systemd-logind
   
+- name: Debug nomad_models_dir
+  ansible.builtin.debug:
+    var: nomad_models_dir
+    
 - name: Create parent directory for all models
   ansible.builtin.file:
     path: "{{ nomad_models_dir }}"
