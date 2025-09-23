@@ -99,6 +99,24 @@
     mode: '0755'
   become: yes
 
+- name: Ensure Nomad data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /opt/nomad/alloc
+    - /opt/nomad/client
+    - /opt/nomad/plugins
+  become: yes
+
+- name: Ensure Nomad models host volume directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_models_dir }}" # This variable is defined in group_vars/all.yaml
+    state: directory
+    mode: '0755'
+  become: yes
+
 - name: Deploy the client Nomad configuration from template
   ansible.builtin.template:
     src: nomad.hcl.client.j2
