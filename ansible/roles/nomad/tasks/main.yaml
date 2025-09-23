@@ -43,7 +43,7 @@
     - /etc/nomad.d/server.hcl
   become: yes
 
- name: Recreate Nomad data directory
+- name: Recreate Nomad data directory
   ansible.builtin.file:
     path: "{{ nomad_data_dir }}"
     state: directory
