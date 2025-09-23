@@ -13,6 +13,44 @@
     remote_src: yes
     creates: /tmp/nomad
 
+- name: Get version of the existing Nomad binary
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad --version
+  register: existing_nomad_version
+  changed_when: false
+  ignore_errors: true
+
+- name: Get version of the new Nomad binary
+  ansible.builtin.command:
+    cmd: /tmp/nomad --version
+  register: new_nomad_version
+  changed_when: false
+
+- name: Reset Nomad state if version has changed
+  when: >
+    existing_nomad_version.stdout is defined and
+    new_nomad_version.stdout is defined and
+    existing_nomad_version.stdout != new_nomad_version.stdout
+  block:
+    - name: Stop Nomad service
+      ansible.builtin.systemd:
+        name: nomad
+        state: stopped
+      become: yes
+      ignore_errors: yes
+
+    - name: Clear old Nomad server state
+      ansible.builtin.file:
+        path: "{{ nomad_data_dir }}/server"
+        state: absent
+      become: yes
+
+    - name: Clear old Nomad client state
+      ansible.builtin.file:
+        path: "{{ nomad_data_dir }}/client"
+        state: absent
+      become: yes
+
 - name: Move Nomad to /usr/local/bin
   ansible.builtin.copy:
     src: /tmp/nomad
@@ -47,6 +85,8 @@
     group: root
     mode: '0644'
   become: yes
+  notify:
+    - Restart nomad
 
 - name: Copy Nomad systemd service file
   ansible.builtin.template:
@@ -99,6 +139,16 @@
     dest: /opt/cni/bin
     remote_src: yes
   become: yes
+
+- name: Debug directory listing before service start in nomad role
+  ansible.builtin.command:
+    cmd: ls -la /opt/nomad
+  register: ls_output_nomad
+  changed_when: false
+
+- name: Display directory listing from nomad role
+  ansible.builtin.debug:
+    var: ls_output_nomad.stdout_lines
 
 - name: Start and enable Nomad service
   ansible.builtin.systemd:

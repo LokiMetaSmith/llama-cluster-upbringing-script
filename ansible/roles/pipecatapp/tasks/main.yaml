@@ -9,7 +9,6 @@
     state: present
     update_cache: yes
     cache_valid_time: 3600
-    timeout: 60 # ADDED TIMEOUT
   become: yes
 
 - name: Install system dependencies for Python packages
@@ -24,7 +23,6 @@
       - rustc
       - cargo
     state: present
-    timeout: 180 # ADDED TIMEOUT
   become: yes
 
 - name: Install system dependencies for Playwright
@@ -36,7 +34,6 @@
       - libavif16
       - gstreamer1.0-libav
     state: present
-    timeout: 180 # ADDED TIMEOUT
   become: yes
 
 - name: Create pipecatapp application directory
