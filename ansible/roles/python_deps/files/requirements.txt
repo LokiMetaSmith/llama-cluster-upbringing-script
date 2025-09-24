@@ -26,6 +26,7 @@ playwright
 pyvips
 pyvips-binary
 RealtimeSTT
+webrtcvad
 requests
 sentence-transformers
 soundfile
