@@ -27,7 +27,7 @@ from pipecat.pipeline.task import PipelineTask
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.services.openai import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport
-from RealtimeSTT import AudioToText
+from RealtimeSTT import AudioToTextRecorder
 
 import soundfile as sf
 import requests
@@ -115,19 +115,21 @@ from piper.voice import Piper
 # ...
 
 class FasterWhisperSTTService(FrameProcessor):
-    def __init__(self, model="tiny.en"):
+    def __init__(self, model="tiny.en", language="en"):
         super().__init__()
-        self.model = model
-        self.audio_to_text = AudioToText(model=self.model, language="en")
+        self.recorder = AudioToTextRecorder(model=model, language=language)
 
     async def process_frame(self, frame, direction):
         if not isinstance(frame, AudioRawFrame):
             await self.push_frame(frame, direction)
             return
 
-        text = self.audio_to_text.transcribe(frame.audio)
+        text = await self.transcribe(frame.audio)
         if text:
             await self.push_frame(TranscriptionFrame(text))
+
+    async def transcribe(self, audio_bytes):
+        return self.recorder.transcribe(audio_bytes)
 
 class PiperTTSService(FrameProcessor):
     """A FrameProcessor that uses a local Piper model for Text-to-Speech."""
