@@ -16,7 +16,7 @@ from pipecat.frames.frames import (
     AudioRawFrame,
     EndFrame,
     TextFrame,
-    VisionImageFrame,
+    VisionImageRawFrame,
     UserStartedSpeakingFrame,
     UserStoppedSpeakingFrame,
     TranscriptionFrame,
@@ -423,7 +423,7 @@ class YOLOv8Detector(FrameProcessor):
         self.last_detected_objects = set()
 
     async def process_frame(self, frame, direction):
-        if not isinstance(frame, VisionImageFrame):
+        if not isinstance(frame, VisionImageRawFrame):
             await self.push_frame(frame, direction)
             return
 
