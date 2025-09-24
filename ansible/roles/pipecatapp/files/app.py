@@ -13,7 +13,7 @@ import inspect
 import threading
 
 from pipecat.frames.frames import (
-    AudioFrame,
+    AudioRawFrame,
     EndFrame,
     TextFrame,
     VisionImageFrame,
@@ -84,7 +84,7 @@ class BenchmarkCollector(FrameProcessor):
             self.stt_end_time = time.time()
         elif isinstance(frame, TextFrame) and self.llm_first_token_time == 0:
             self.llm_first_token_time = time.time()
-        elif isinstance(frame, AudioFrame) and self.tts_first_audio_time == 0:
+        elif isinstance(frame, AudioRawFrame) and self.tts_first_audio_time == 0:
             self.tts_first_audio_time = time.time()
             self.log_benchmarks()
             self.reset()
@@ -122,7 +122,7 @@ class FasterWhisperSTTService(FrameProcessor):
         self.audio_to_text = AudioToText(model=self.model, language="en")
 
     async def process_frame(self, frame, direction):
-        if not isinstance(frame, AudioFrame):
+        if not isinstance(frame, AudioRawFrame):
             await self.push_frame(frame, direction)
             return
 
@@ -181,7 +181,7 @@ class PiperTTSService(FrameProcessor):
             # For now, we assume it matches what pipecat expects.
             audio_bytes = wf.readframes(wf.getnframes())
 
-        await self.push_frame(AudioFrame(audio_bytes))
+        await self.push_frame(AudioRawFrame(audio_bytes))
 
 
 class TwinService(FrameProcessor):
