@@ -53,10 +53,6 @@
     line: 'IdleAction=lock'
   notify: restart systemd-logind
 
-- name: Debug nomad_models_dir
-  ansible.builtin.debug:
-    var: nomad_models_dir
-
 - name: Create parent directory for all models
   ansible.builtin.file:
     path: "{{ nomad_models_dir }}"
@@ -76,16 +72,6 @@
     - "{{ nomad_models_dir }}/embedding"
     - "{{ nomad_models_dir }}/vision"
   become: yes
-
-- name: Debug directory listing after creation in common role
-  ansible.builtin.command:
-    cmd: ls -la /opt/nomad
-  register: ls_output_common
-  changed_when: false
-
-- name: Display directory listing from common role
-  ansible.builtin.debug:
-    var: ls_output_common.stdout_lines
 
 - name: Deploy SSH authorized keys sync script
   ansible.builtin.template:

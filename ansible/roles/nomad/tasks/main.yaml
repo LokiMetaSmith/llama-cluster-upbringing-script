@@ -140,16 +140,6 @@
     remote_src: yes
   become: yes
 
-- name: Debug directory listing before service start in nomad role
-  ansible.builtin.command:
-    cmd: ls -la /opt/nomad
-  register: ls_output_nomad
-  changed_when: false
-
-- name: Display directory listing from nomad role
-  ansible.builtin.debug:
-    var: ls_output_nomad.stdout_lines
-
 - name: Start and enable Nomad service
   ansible.builtin.systemd:
     name: nomad
