@@ -53,8 +53,13 @@
     line: 'IdleAction=lock'
   notify: restart systemd-logind
 
-# --- CORRECTED SECTION ---
-# This task now creates the parent directory as well as the subdirectories.
+- name: Create parent directory for all models
+  ansible.builtin.file:
+    path: "{{ nomad_models_dir }}"
+    state: directory
+    mode: '0755'
+  become: yes
+
 - name: Create unified model directory structure
   ansible.builtin.file:
     path: "{{ item }}"
