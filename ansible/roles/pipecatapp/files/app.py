@@ -26,7 +26,7 @@ from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.services.openai import OpenAILLMService
-from pipecat.transports.local.local import LocalTransport
+from pipecat.transports.local_transport import LocalTransport
 from RealtimeSTT import AudioToText
 
 from pipecat.services.piper import PiperTTSService 
