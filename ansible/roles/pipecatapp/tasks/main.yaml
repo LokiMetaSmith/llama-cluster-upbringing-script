@@ -1,4 +1,4 @@
-# FILE: ansible/roles/pipecatapp/tasks/main.yaml
+# FILE: your_playbook.yml
 ---
 - name: Install python3, pip, and venv system packages
   ansible.builtin.apt:
@@ -80,6 +80,7 @@
     executable: /opt/pipecatapp/venv/bin/pip3
   become: yes
 
+# MODIFIED THIS TASK
 - name: Install python dependencies into the virtual environment
   ansible.builtin.pip:
     requirements: /opt/pipecatapp/requirements.txt
@@ -115,6 +116,7 @@
     src: ../../jobs/pipecatapp.nomad
     dest: /opt/nomad/jobs/pipecatapp.nomad
 
+# MODIFIED THIS TASK
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
     cmd: /opt/pipecatapp/venv/bin/python3 -m playwright install
