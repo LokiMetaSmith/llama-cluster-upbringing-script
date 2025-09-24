@@ -58,6 +58,19 @@
     remote_src: yes
     mode: '0755'
   become: yes
+  
+- name: Stop Nomad service to prevent data corruption
+  ansible.builtin.systemd:
+    name: nomad
+    state: stopped
+  become: yes
+  ignore_errors: yes # The service may not exist on the first run
+
+- name: Clear old Nomad state to ensure a clean start
+  ansible.builtin.file:
+    path: "{{ nomad_data_dir }}"
+    state: absent
+  become: yes
 
 - name: Ensure old, conflicting Nomad config files are removed
   ansible.builtin.file:
@@ -68,12 +81,39 @@
     - /etc/nomad.d/server.hcl
   become: yes
 
+- name: Recreate Nomad data directory
+  ansible.builtin.file:
+    path: "{{ nomad_data_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
 - name: Create Nomad config directory
   ansible.builtin.file:
     path: /etc/nomad.d
     state: directory
     owner: root
     group: root
+    mode: '0755'
+  become: yes
+
+- name: Ensure Nomad data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /opt/nomad/alloc
+    - /opt/nomad/client
+    - /opt/nomad/plugins
+  become: yes
+
+- name: Ensure Nomad models host volume directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_models_dir }}" # This variable is defined in group_vars/all.yaml
+    state: directory
     mode: '0755'
   become: yes
 
@@ -86,7 +126,9 @@
     mode: '0644'
   become: yes
   notify:
-    - Restart nomad
+
+   - Restart nomad
+
 
 - name: Copy Nomad systemd service file
   ansible.builtin.template:
