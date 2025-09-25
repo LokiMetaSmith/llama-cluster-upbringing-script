@@ -123,6 +123,12 @@
     dest: /opt/pipecatapp/web_server.py
   become: yes
 
+- name: Copy static assets
+  ansible.builtin.copy:
+    src: static
+    dest: /opt/pipecatapp/
+  become: yes
+
 - name: Copy pipecatapp Nomad job file
   ansible.builtin.template:
     src: ../../jobs/pipecatapp.nomad
