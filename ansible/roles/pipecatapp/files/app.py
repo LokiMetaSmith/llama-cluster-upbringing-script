@@ -109,8 +109,6 @@ class BenchmarkCollector(FrameProcessor):
         self.llm_first_token_time = 0
         self.tts_first_audio_time = 0
 
-from piper.voice import Piper
-
 # (Your existing WebSocketLogHandler, UILogger, and BenchmarkCollector classes remain here)
 # ...
 
