@@ -115,7 +115,7 @@ class BenchmarkCollector(FrameProcessor):
 class FasterWhisperSTTService(FrameProcessor):
     def __init__(self, model_path, language="en"):
         super().__init__()
-        self.recorder = AudioToTextRecorder(model=model_path, language=language, local_files_only=True)
+        self.recorder = AudioToTextRecorder(model=model_path, language=language)
 
     async def process_frame(self, frame, direction):
         if not isinstance(frame, AudioRawFrame):
