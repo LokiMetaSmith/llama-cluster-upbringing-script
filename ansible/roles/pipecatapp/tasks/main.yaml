@@ -157,7 +157,7 @@
 
 - name: Create VAD model directory
   ansible.builtin.file:
-    path: /opt/pipecatapp/.cache/torch/hub/snakers4_silero-vad_master
+    path: /root/.cache/torch/hub/snakers4_silero-vad_master
     state: directory
     mode: '0755'
   become: yes
@@ -165,7 +165,7 @@
 - name: Clone silero-vad model
   ansible.builtin.git:
     repo: 'https://github.com/snakers4/silero-vad.git'
-    dest: /opt/pipecatapp/.cache/torch/hub/snakers4_silero-vad_master
+    dest: /root/.cache/torch/hub/snakers4_silero-vad_master
     version: master
   become: yes
 
