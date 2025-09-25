@@ -40,16 +40,22 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception:
         manager.disconnect(websocket)
 
+import os
 from fastapi.staticfiles import StaticFiles
 
 # This will be set by the main application
 twin_service_instance = None
 
-app.mount("/static", StaticFiles(directory="ansible/roles/pipecatapp/files/static"), name="static")
+# Get the absolute path to the directory containing this script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+static_dir = os.path.join(script_dir, "static")
+index_html_path = os.path.join(static_dir, "index.html")
+
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.get("/")
 async def get():
-    with open("ansible/roles/pipecatapp/files/static/index.html") as f:
+    with open(index_html_path) as f:
         return HTMLResponse(f.read())
 
 @app.get("/api/status")
