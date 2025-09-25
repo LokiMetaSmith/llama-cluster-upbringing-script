@@ -2,7 +2,7 @@ from transformers import AutoModelForCausalLM
 from PIL import Image
 import torch
 from pipecat.processors.frame_processor import FrameProcessor
-from pipecat.frames.frames import VisionImageFrame
+from pipecat.frames.frames import VisionImageRawFrame
 
 class MoondreamDetector(FrameProcessor):
     def __init__(self):
@@ -20,7 +20,7 @@ class MoondreamDetector(FrameProcessor):
         print("MoondreamDetector initialized.")
 
     async def process_frame(self, frame, direction):
-        if not isinstance(frame, VisionImageFrame):
+        if not isinstance(frame, VisionImageRawFrame):
             await self.push_frame(frame, direction)
             return
 
