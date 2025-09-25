@@ -1,5 +1,6 @@
 import asyncio
 import logging
+logging.warning("--- JULES: EXECUTING LATEST APP.PY ---")
 import cv2
 import torch
 from ultralytics import YOLO
