@@ -2,21 +2,40 @@ import subprocess
 import os
 
 class Ansible_Tool:
+    """A tool for running Ansible playbooks to configure and manage the cluster.
+
+    This class provides a method to execute `ansible-playbook` commands from
+    within the agent's environment. It assumes that the Ansible project is
+    located at a predefined path (`/opt/cluster-infra`).
+
+    Attributes:
+        description (str): A brief description of the tool's purpose.
+        name (str): The name of the tool.
+        project_root (str): The absolute path to the Ansible project directory.
+    """
     def __init__(self):
+        """Initializes the Ansible_Tool."""
         self.description = "Run an Ansible playbook to configure and manage the cluster."
         self.name = "ansible_tool"
         # The main playbook synchronizes the repo to /opt/cluster-infra on all nodes.
         self.project_root = "/opt/cluster-infra"
 
-    def run_playbook(self, playbook='playbook.yaml', limit=None, tags=None, extra_vars=None):
-        """
-        Runs an Ansible playbook to provision or manage nodes in the cluster.
+    def run_playbook(self, playbook: str = 'playbook.yaml', limit: str = None, tags: str = None, extra_vars: dict = None) -> str:
+        """Runs an Ansible playbook to provision or manage nodes in the cluster.
 
-        :param playbook: The name of the playbook file to run, relative to the project root. Defaults to 'playbook.yaml'.
-        :param limit: A host pattern to limit the playbook run to. For example, 'new_node_hostname'.
-        :param tags: A comma-separated list of tags to run, to execute specific parts of the playbook.
-        :param extra_vars: A dictionary of extra variables to pass to the playbook.
-        :return: A string containing the output of the playbook run, or an error message.
+        Args:
+            playbook (str, optional): The name of the playbook file to run,
+                relative to the project root. Defaults to 'playbook.yaml'.
+            limit (str, optional): A host pattern to limit the playbook run to.
+                For example, 'new_node_hostname'. Defaults to None.
+            tags (str, optional): A comma-separated list of tags to run, to
+                execute specific parts of the playbook. Defaults to None.
+            extra_vars (dict, optional): A dictionary of extra variables to
+                pass to the playbook. Defaults to None.
+
+        Returns:
+            str: A string containing the output of the playbook run, or an
+                error message if the run fails or times out.
         """
         playbook_path = os.path.join(self.project_root, playbook)
         if not os.path.exists(playbook_path):

@@ -50,7 +50,18 @@ import uvicorn
 
 # Custom logging handler to broadcast logs to the web UI
 class WebSocketLogHandler(logging.Handler):
+    """A custom logging handler that broadcasts log records to the web UI.
+
+    This handler integrates with the application's WebSocket manager to send
+    formatted log messages to all connected web clients, enabling real-time
+    log monitoring from the browser.
+    """
     def emit(self, record):
+        """Formats and broadcasts a log record.
+
+        Args:
+            record: The log record to be emitted.
+        """
         log_entry = self.format(record)
         asyncio.run(web_server.manager.broadcast(json.dumps({"type": "log", "data": log_entry})))
 
@@ -59,24 +70,60 @@ logger.addHandler(WebSocketLogHandler())
 
 # Custom frame processor to broadcast conversation to the web UI
 class UILogger(FrameProcessor):
+    """A Pipecat frame processor to broadcast conversation text to the web UI.
+
+    This processor intercepts transcription and text frames to send their
+    contents to the web UI, allowing real-time display of the conversation.
+
+    Attributes:
+        sender (str): A label to identify the origin of the message (e.g., "user" or "agent").
+    """
     def __init__(self, sender: str):
+        """Initializes the UILogger.
+
+        Args:
+            sender (str): The identifier for the message sender (e.g., "user", "agent").
+        """
         super().__init__()
         self.sender = sender
 
     async def process_frame(self, frame, direction):
+        """Processes incoming frames and broadcasts text-based ones to the UI.
+
+        Args:
+            frame: The frame to process.
+            direction: The direction of the frame in the pipeline.
+        """
         if isinstance(frame, (TranscriptionFrame, TextFrame)):
             await web_server.manager.broadcast(json.dumps({"type": self.sender, "data": frame.text}))
         await self.push_frame(frame, direction)
 
 class BenchmarkCollector(FrameProcessor):
+    """A Pipecat frame processor for measuring and logging pipeline latency.
+
+    This processor captures timestamps at key stages of the conversational AI
+    pipeline (user speech end, STT transcription, LLM first token, TTS first
+
+    audio) to calculate and log performance metrics.
+
+    Attributes:
+        start_time (float): Timestamp when the user stops speaking.
+        stt_end_time (float): Timestamp when transcription is received.
+        llm_first_token_time (float): Timestamp of the first LLM text token.
+        tts_first_audio_time (float): Timestamp of the first TTS audio frame.
+    """
     def __init__(self):
+        """Initializes the BenchmarkCollector."""
         super().__init__()
-        self.start_time = 0
-        self.stt_end_time = 0
-        self.llm_first_token_time = 0
-        self.tts_first_audio_time = 0
+        self.reset()
 
     async def process_frame(self, frame, direction):
+        """Captures timestamps as specific frames pass through the pipeline.
+
+        Args:
+            frame: The frame being processed.
+            direction: The direction of the frame in the pipeline.
+        """
         if isinstance(frame, UserStoppedSpeakingFrame):
             self.start_time = time.time()
         elif isinstance(frame, TranscriptionFrame):
@@ -91,6 +138,7 @@ class BenchmarkCollector(FrameProcessor):
         await self.push_frame(frame, direction)
 
     def log_benchmarks(self):
+        """Calculates and logs the latency benchmarks."""
         stt_latency = self.stt_end_time - self.start_time
         llm_ttft = self.llm_first_token_time - self.stt_end_time
         tts_ttfa = self.tts_first_audio_time - self.llm_first_token_time
@@ -104,20 +152,38 @@ class BenchmarkCollector(FrameProcessor):
         logging.info("-------------------------")
 
     def reset(self):
+        """Resets all timestamps to zero for the next measurement."""
         self.start_time = 0
         self.stt_end_time = 0
         self.llm_first_token_time = 0
         self.tts_first_audio_time = 0
 
-# (Your existing WebSocketLogHandler, UILogger, and BenchmarkCollector classes remain here)
-# ...
-
 class FasterWhisperSTTService(FrameProcessor):
+    """A Pipecat FrameProcessor for Speech-to-Text using RealtimeSTT and FasterWhisper.
+
+    This class wraps the AudioToTextRecorder from RealtimeSTT to provide a
+    streaming STT service within the Pipecat pipeline.
+
+    Attributes:
+        recorder: An instance of `AudioToTextRecorder` for transcription.
+    """
     def __init__(self, model_path, language="en"):
+        """Initializes the FasterWhisperSTTService.
+
+        Args:
+            model_path (str): The path to the FasterWhisper model directory.
+            language (str, optional): The language for transcription. Defaults to "en".
+        """
         super().__init__()
         self.recorder = AudioToTextRecorder(model=model_path, language=language, local_files_only=True)
 
     async def process_frame(self, frame, direction):
+        """Processes audio frames, transcribes them, and pushes TranscriptionFrames.
+
+        Args:
+            frame: The frame to process.
+            direction: The direction of the frame in the pipeline.
+        """
         if not isinstance(frame, AudioRawFrame):
             await self.push_frame(frame, direction)
             return
@@ -126,18 +192,46 @@ class FasterWhisperSTTService(FrameProcessor):
         if text:
             await self.push_frame(TranscriptionFrame(text))
 
-    async def transcribe(self, audio_bytes):
+    async def transcribe(self, audio_bytes: bytes) -> str:
+        """Transcribes a chunk of audio bytes.
+
+        Args:
+            audio_bytes (bytes): The raw audio data to transcribe.
+
+        Returns:
+            str: The transcribed text.
+        """
         return self.recorder.transcribe(audio_bytes)
 
 class PiperTTSService(FrameProcessor):
-    """A FrameProcessor that uses a local Piper model for Text-to-Speech."""
+    """A FrameProcessor that uses a local Piper model for Text-to-Speech.
+
+    This service converts TextFrames into AudioRawFrames by synthesizing speech
+    using a Piper TTS model.
+
+    Attributes:
+        voice (PiperVoice): The loaded Piper voice model for synthesis.
+        sample_rate (int): The sample rate of the synthesized audio.
+    """
 
     def __init__(self, model_path: str, config_path: str):
+        """Initializes the PiperTTSService.
+
+        Args:
+            model_path (str): The file path to the Piper .onnx model.
+            config_path (str): The file path to the Piper .json config.
+        """
         super().__init__()
         self.voice = PiperVoice.from_files(model_path, config_path)
         self.sample_rate = self.voice.config.sample_rate
 
     async def process_frame(self, frame, direction):
+        """Processes TextFrames to synthesize audio and pushes AudioRawFrames.
+
+        Args:
+            frame: The frame to process.
+            direction: The direction of the frame in the pipeline.
+        """
         if not isinstance(frame, TextFrame):
             await self.push_frame(frame, direction)
             return
@@ -157,7 +251,36 @@ class PiperTTSService(FrameProcessor):
 
 
 class TwinService(FrameProcessor):
+    """The core logic unit ("brain") of the conversational AI agent.
+
+    This service orchestrates the agent's behavior by processing user input,
+    managing memory, using tools, routing to specialized experts, and generating
+    responses. It acts as a central hub in the Pipecat pipeline.
+
+    Attributes:
+        router_llm: The primary LLM service used for routing and general conversation.
+        vision_detector: The service responsible for visual perception.
+        runner: The PipelineRunner instance, used for managing pipeline tasks.
+        debug_mode (bool): If True, enables verbose logging.
+        approval_mode (bool): If True, requires user approval for sensitive tool actions.
+        approval_queue: A queue for receiving approval status from the UI.
+        short_term_memory (list): A list storing the recent conversation history.
+        long_term_memory (MemoryStore): A vector store for long-term knowledge.
+        consul_http_addr (str): The address of the Consul agent for service discovery.
+        experts (dict): A dictionary to cache discovered expert services.
+        tools (dict): A dictionary of available tools for the agent.
+    """
     def __init__(self, llm, vision_detector, runner, debug_mode=False, approval_mode=False, approval_queue=None):
+        """Initializes the TwinService.
+
+        Args:
+            llm: The primary LLM service.
+            vision_detector: The vision processing service.
+            runner: The Pipecat PipelineRunner.
+            debug_mode (bool): Enables or disables debug logging.
+            approval_mode (bool): Enables or disables the need for user approval.
+            approval_queue: The queue for UI approval messages.
+        """
         super().__init__()
         self.router_llm = llm # The main LLM acts as a router
         self.vision_detector = vision_detector
@@ -185,7 +308,15 @@ class TwinService(FrameProcessor):
             self.tools["summarizer"] = SummarizerTool(self)
             logging.info("Summarizer tool enabled.")
 
-    def get_discovered_experts(self):
+    def get_discovered_experts(self) -> list[str]:
+        """Discovers available 'expert' services registered in Consul.
+
+        It queries the Consul catalog for services prefixed with "llama-api-"
+        and returns a list of their names.
+
+        Returns:
+            list[str]: A list of discovered expert service names.
+        """
         try:
             response = requests.get(f"{self.consul_http_addr}/v1/catalog/services")
             response.raise_for_status()
@@ -197,7 +328,19 @@ class TwinService(FrameProcessor):
             logging.error(f"Could not connect to Consul: {e}")
             return []
 
-    def get_system_prompt(self, expert_name="router"):
+    def get_system_prompt(self, expert_name: str = "router") -> str:
+        """Constructs the system prompt for a given agent or expert.
+
+        The prompt is assembled from a base prompt file and a dynamically
+        generated list of available tools and experts.
+
+        Args:
+            expert_name (str, optional): The name of the expert to get the
+                prompt for. Defaults to "router".
+
+        Returns:
+            str: The fully constructed system prompt.
+        """
         prompt_file = f"ansible/roles/pipecatapp/files/prompts/{expert_name}.txt"
         try:
             with open(prompt_file, "r") as f:
@@ -220,7 +363,15 @@ class TwinService(FrameProcessor):
 
         return f"{base_prompt}\n\n{tools_prompt}\n\nIf the query doesn't fit a specific expert or tool, handle it yourself. Otherwise, respond with a JSON object with the 'tool' and 'args' keys."
 
-    async def get_expert_service(self, expert_name):
+    async def get_expert_service(self, expert_name: str):
+        """Retrieves a healthy instance of an expert LLM service from Consul.
+
+        Args:
+            expert_name (str): The name of the expert (e.g., "coding").
+
+        Returns:
+            An OpenAILLMService instance if a healthy service is found, otherwise None.
+        """
         service_name = f"llama-api-{expert_name}"
         try:
             response = requests.get(f"{self.consul_http_addr}/v1/health/service/{service_name}")
@@ -240,7 +391,14 @@ class TwinService(FrameProcessor):
             return None
 
     async def _request_approval(self, tool_call_info: dict) -> bool:
-        """Send a request for approval to the UI and wait for a response."""
+        """Sends a tool use request to the UI for approval and waits for a response.
+
+        Args:
+            tool_call_info (dict): A dictionary describing the tool call.
+
+        Returns:
+            bool: True if the action is approved, False otherwise.
+        """
         request_id = str(time.time())
         approval_request = {
             "type": "approval_request",
@@ -260,7 +418,16 @@ class TwinService(FrameProcessor):
                 return approved
 
     def save_state(self, save_name: str) -> str:
-        """Saves the current agent state to a named snapshot."""
+        """Saves the current agent state to a named snapshot.
+
+        This includes the short-term and long-term memory.
+
+        Args:
+            save_name (str): The name for the saved state snapshot.
+
+        Returns:
+            str: A message indicating success or failure.
+        """
         try:
             state_dir = os.path.join("saved_states", save_name)
             os.makedirs(state_dir, exist_ok=True)
@@ -280,7 +447,16 @@ class TwinService(FrameProcessor):
             return f"Error saving state: {e}"
 
     def load_state(self, save_name: str) -> str:
-        """Loads agent state from a named snapshot."""
+        """Loads agent state from a named snapshot.
+
+        This restores the short-term and long-term memory from a saved state.
+
+        Args:
+            save_name (str): The name of the state snapshot to load.
+
+        Returns:
+            str: A message indicating success or failure.
+        """
         try:
             state_dir = os.path.join("saved_states", save_name)
             if not os.path.isdir(state_dir):
@@ -304,6 +480,16 @@ class TwinService(FrameProcessor):
             return f"Error loading state: {e}"
 
     async def process_frame(self, frame, direction):
+        """The main processing loop for the agent's logic.
+
+        This method is called for each frame in the pipeline. It handles
+        TranscriptionFrames by generating a response, which may involve
+        memory retrieval, tool use, or routing to an expert.
+
+        Args:
+            frame: The frame to process.
+            direction: The direction of the frame in the pipeline.
+        """
         if not isinstance(frame, TranscriptionFrame):
             await self.push_frame(frame, direction)
             return
@@ -386,7 +572,20 @@ class TwinService(FrameProcessor):
             self.short_term_memory.pop(0)
 
 class YOLOv8Detector(FrameProcessor):
+    """A Pipecat FrameProcessor for real-time object detection using YOLOv8.
+
+    This class processes VisionImageRawFrames, runs object detection on them
+    using a YOLOv8 model, and maintains the latest observation as a text
+    description.
+
+    Attributes:
+        model: The loaded YOLO model object.
+        latest_observation (str): A human-readable string of the latest detected objects.
+        last_detected_objects (set): A set of object names from the last frame to
+            avoid redundant logging.
+    """
     def __init__(self):
+        """Initializes the YOLOv8Detector and loads the model."""
         super().__init__()
         # The model is now managed by Ansible and placed in a predictable location.
         model_path = "/opt/nomad/models/vision/yolov8n.pt"
@@ -395,6 +594,12 @@ class YOLOv8Detector(FrameProcessor):
         self.last_detected_objects = set()
 
     async def process_frame(self, frame, direction):
+        """Processes a vision frame to detect objects.
+
+        Args:
+            frame: The frame to process.
+            direction: The direction of the frame in the pipeline.
+        """
         if not isinstance(frame, VisionImageRawFrame):
             await self.push_frame(frame, direction)
             return
@@ -415,10 +620,25 @@ class YOLOv8Detector(FrameProcessor):
                 self.latest_observation = "I don't see anything."
             logging.info(f"YOLOv8Detector updated observation: {self.latest_observation}")
 
-    def get_observation(self):
+    def get_observation(self) -> str:
+        """Returns the latest observation from the vision detector.
+
+        This method is intended to be called by other services (like the
+        TwinService's vision tool) to get the current state of what the
+        agent "sees."
+
+        Returns:
+            str: A text description of the detected objects.
+        """
         return self.latest_observation
 
 async def main():
+    """The main entry point for the conversational AI application.
+
+    This function initializes all components, including the web server,
+    transport layers, and Pipecat pipelines (main, vision, and interrupt).
+    It then starts the PipelineRunner to run all pipelines concurrently.
+    """
     transport_params = LocalAudioTransportParams(
         audio_in_enabled=True,
         audio_out_enabled=True,
