@@ -59,10 +59,39 @@ If you are setting up a multi-node cluster, you will need to work with the Ansib
     - **`--ask-become-pass`**: This flag is important. It will prompt you for your `sudo` password, which Ansible needs to perform administrative tasks.
     - **What this does:** This playbook not only aconfigures the cluster services (Consul, Nomad, etc.) but also automatically bootstraps the primary control node into a fully autonomous AI agent by deploying the necessary AI services.
 
-## 4. AI Service Deployment
+## 5. Agent Architecture: The `TwinService`
+The core of this application is the `TwinService`, a custom service that acts as the agent's "brain." It orchestrates the agent's responses, memory, and tool use.
+
+### 5.1. Memory
+- **Short-Term:** Remembers the last 10 conversational turns in a simple list.
+- **Long-Term:** Uses a FAISS vector store (`long_term_memory.faiss`) to remember key facts. It performs a semantic search over this memory to retrieve relevant context for new conversations.
+
+### 5.2. Tool Use
+The agent can use tools to perform actions and gather information. The `TwinService` dynamically provides the list of available tools to the LLM in its prompt, enabling the LLM to decide which tool to use based on the user's query.
+
+#### Available Tools:
+- **Vision (`vision.get_observation`)**: Gets a real-time description of what is visible in the webcam, powered by the Moondream2 model.
+- **Master Control Program (`mcp.*`)**: Provides agent introspection and self-control, allowing it to check pipeline status (`get_status`) and manage memory (`get_memory_summary`, `clear_short_term_memory`).
+- **SSH (`ssh.run_command`)**: Executes a command on a remote machine via SSH, using key-based or password authentication.
+- **Code Runner (`code_runner.run_python_code`)**: Executes Python code in a secure, sandboxed Docker container.
+- **Ansible (`ansible.run_playbook`)**: Runs an Ansible playbook to configure and manage the cluster.
+- **Web Browser (`web_browser.*`)**: Provides a full web browser (via Playwright) for navigating (`goto`), reading (`get_page_content`), and interacting with websites (`click`, `type`).
+- **Power (`power.set_idle_threshold`)**: Controls the cluster's power management policies by setting service idle thresholds.
+- **Summarizer (`summarizer.get_summary`)**: Performs an extractive summary of the conversation to find the most relevant points related to a query.
+
+### 5.3. Mixture of Experts (MoE) Routing
+The agent is designed to function as a "Mixture of Experts." The primary `pipecat` agent acts as a router, classifying the user's query and routing it to a specialized backend expert if appropriate.
+
+- **How it Works:** The `TwinService` prompt instructs the main agent to first classify the user's query. If it determines the query is best handled by a specialist (e.g., a 'coding' expert), it uses the `route_to_expert` tool. This tool call is intercepted by the `TwinService`, which then discovers the expert's API endpoint via Consul and forwards the query.
+- **Configuration:** Deploying these specialized experts is done using the `deploy_expert.yaml` Ansible playbook. For detailed instructions, see the [Advanced AI Service Deployment](#6.2-advanced-deploying-additional-ai-experts) section below.
+
+### 5.4. Configuring Agent Personas
+The personality and instructions for the main router agent and each expert agent are defined in simple text files located in the `ansible/roles/pipecatapp/files/prompts/` directory. You can edit these files to customize the behavior of each agent. For example, you can edit `coding_expert.txt` to give it a different programming specialty.
+
+## 6. AI Service Deployment
 The system is designed to be self-bootstrapping. The `bootstrap.sh` script (or the main `playbook.yaml`) handles the deployment of the core AI services on the primary control node. This includes a default instance of the `prima-expert` job and the `pipecat` voice agent.
 
-### 4.1. Starting and Stopping Services
+### 6.1. Starting and Stopping Services
 Use the provided script to submit the core AI jobs to Nomad:
 ```bash
 ./start_services.sh
@@ -74,7 +103,7 @@ nomad job stop -purge prima-expert-main
 nomad job stop -purge pipecat-app
 ```
 
-### 4.2. Advanced: Deploying Additional AI Experts
+### 6.2. Advanced: Deploying Additional AI Experts
 The true power of this architecture is the ability to deploy multiple, specialized AI experts that the main `pipecat` agent can route queries to. With the new unified `prima-expert.nomad` job template, deploying a new expert is handled through a dedicated Ansible playbook.
 
 1.  **Define a Model List for Your Expert:**
@@ -95,60 +124,44 @@ The true power of this architecture is the ability to deploy multiple, specializ
 
 The `TwinService` in the `pipecatapp` will automatically discover any service registered in Consul with the `prima-api-` prefix and make it available for routing.
 
-## 5. Agent Architecture: The `TwinService`
-The core of this application is the `TwinService`, a custom service that acts as the agent's "brain." It orchestrates the agent's responses, memory, and tool use.
+## 7. Advanced System Features
 
-### 5.1. Memory
-- **Short-Term:** Remembers the last 10 conversational turns.
-- **Long-Term:** Uses a FAISS vector store (`long_term_memory.faiss`) to remember key facts. It performs a semantic search over this memory to retrieve relevant context for new conversations.
+### 7.1. Power Management
+To optimize resource usage on legacy hardware, this project includes an intelligent power management system.
+- **How it Works:** A Python service, `power_agent.py`, uses an eBPF program (`traffic_monitor.c`) to monitor network traffic to specific services at the kernel level with minimal overhead.
+- **Sleep/Wake:** If a monitored service is idle for a configurable period, the power agent automatically stops the corresponding Nomad job. When new traffic is detected, the agent restarts the job.
+- **Configuration:** The agent can configure this behavior using the `power.set_idle_threshold` tool.
 
-### 5.2. Tool Use
-The agent can use tools to perform actions and gather information. The `TwinService` dynamically provides the list of available tools to the LLM in its prompt, enabling the LLM to decide which tool to use based on the user's query.
+### 7.2. Mission Control Web UI
+This project includes a web-based dashboard for real-time display and debugging. To access it, navigate to the IP address of any node in your cluster on port 8000 (e.g., `http://192.168.1.101:8000`). The UI provides:
+- Real-time conversation logs.
+- A request-approval interface for sensitive tool actions.
+- The ability to save and load the agent's memory state.
 
-#### Available Tools:
-- **Vision (`vision.get_observation`)**
-- **Master Control Program (`mcp.get_status`, etc.)**
-- **SSH (`ssh.run_command`)**
-- **Code Runner (`code_runner.run_python_code`)**
-- **Ansible (`ansible.run_playbook`)**
-- **Web Browser (`web_browser.goto`, etc.)**
-
-### 5.3. Mixture of Experts (MoE) Routing
-The agent is designed to function as a "Mixture of Experts." The primary `pipecat` agent acts as a router, classifying the user's query and routing it to a specialized backend expert if appropriate.
-
-- **How it Works:** The `TwinService` prompt instructs the main agent to first classify the user's query. If it determines the query is best handled by a specialist (e.g., a 'coding' expert), it uses the `route_to_expert` tool. This tool call is intercepted by the `TwinService`, which then forwards the query to the appropriate expert's API endpoint.
-- **Configuration:** Deploying these specialized experts is done using the `deploy_expert.yaml` Ansible playbook. For detailed instructions, see the **[Deploying Additional AI Experts](#42-advanced-deploying-additional-ai-experts)** section above.
-
-### 5.4. Configuring Agent Personas
-The personality and instructions for the main router agent and each expert agent are defined in simple text files located in the `ansible/roles/pipecatapp/files/prompts/` directory. You can edit these files to customize the behavior of each agent. For example, you can edit `coding_expert.txt` to give it a different programming specialty.
-
-## 6. Mission Control Web UI
-This project includes a web-based dashboard for real-time display and debugging. To access it, navigate to the IP address of any node in your cluster on port 8000 (e.g., `http://192.168.1.101:8000`).
-
-## 7. Testing and Verification
+## 8. Testing and Verification
 - **Check Cluster Status:** `nomad node status`
 - **Check Job Status:** `nomad job status`
 - **View Logs:** `nomad alloc logs <allocation_id>` or use the Mission Control Web UI.
 - **Manual Test Scripts:** A set of scripts for manual testing of individual components is available in the `testing/` directory.
 
-## 8. Performance Tuning & Service Selection
+## 9. Performance Tuning & Service Selection
 - **Model Selection:** The `prima-expert.nomad` job is configured via Ansible variables in `group_vars/models.yaml`. You can define different model lists for different experts.
 - **Network:** Wired gigabit ethernet is strongly recommended over Wi-Fi for reduced latency.
 - **VAD Tuning:** The `RealtimeSTT` sensitivity can be tuned in `app.py` for better performance in noisy environments.
 - **STT/TTS Service Selection:** You can choose which Speech-to-Text and Text-to-Speech services to use by setting environment variables in the `pipecatapp.nomad` job file.
 
-## 9. Benchmarking
+## 10. Benchmarking
 This project includes two types of benchmarks.
 
-### 9.1. Real-Time Latency Benchmark
+### 10.1. Real-Time Latency Benchmark
 Measures the end-to-end latency of a live conversation. Enable it by setting `BENCHMARK_MODE = "true"` in the `env` section of the `pipecatapp.nomad` job file. Results are printed to the job logs.
 
-### 9.2. Standardized Performance Benchmark
+### 10.2. Standardized Performance Benchmark
 Uses `llama-bench` to measure the raw inference speed (tokens/sec) of the deployed LLM backend. Run the `benchmark.nomad` job to test the performance of the default model.
 ```bash
 nomad job run /opt/nomad/jobs/benchmark.nomad
 ```
 View results in the job logs: `nomad job logs llama-benchmark`
 
-## 10. Advanced Development: Prompt Evolution
+## 11. Advanced Development: Prompt Evolution
 For advanced users, this project includes a workflow for automatically improving the agent's core prompt using evolutionary algorithms. See `prompt_engineering/PROMPT_ENGINEERING.md` for details.

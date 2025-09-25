@@ -2,18 +2,36 @@ import json
 import os
 
 class Power_Tool:
+    """A tool to control the power management policies of the cluster.
+
+    This tool allows the agent to modify the configuration file used by the
+    power manager service, enabling dynamic control over settings like service
+    idle thresholds for sleep.
+
+    Attributes:
+        description (str): A brief description of the tool's purpose.
+        name (str): The name of the tool.
+        config_path (str): The absolute path to the power manager's JSON config file.
+    """
     def __init__(self):
+        """Initializes the Power_Tool."""
         self.description = "Control the power management policies of the cluster."
         self.name = "power_tool"
         self.config_path = "/opt/power_manager/config.json"
 
     def set_idle_threshold(self, service_port: int, idle_seconds: int) -> str:
-        """
-        Sets the idle time in seconds before a service is put to sleep.
+        """Sets the idle time in seconds before a service is put to sleep.
 
-        :param service_port: The port of the service to configure.
-        :param idle_seconds: The number of seconds of inactivity before sleeping.
-        :return: A confirmation or error message.
+        This method modifies the power manager's configuration file to set the
+        inactivity threshold for a specific service, identified by its port.
+
+        Args:
+            service_port (int): The port of the service to configure.
+            idle_seconds (int): The number of seconds of inactivity before the
+                service is considered idle and can be put to sleep.
+
+        Returns:
+            str: A confirmation message on success, or an error message on failure.
         """
         if not os.path.exists(os.path.dirname(self.config_path)):
             return f"Error: Power manager config directory not found at {os.path.dirname(self.config_path)}"
