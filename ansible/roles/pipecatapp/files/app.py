@@ -111,6 +111,23 @@ class BenchmarkCollector(FrameProcessor):
         self.llm_first_token_time = 0
         self.tts_first_audio_time = 0
 
+class FasterWhisperSTTService(FrameProcessor):
+    def __init__(self, model="tiny.en", language="en"):
+        super().__init__()
+        self.recorder = AudioToTextRecorder(model=model, language=language)
+
+    async def process_frame(self, frame, direction):
+        if not isinstance(frame, AudioRawFrame):
+            await self.push_frame(frame, direction)
+            return
+
+        text = await self.transcribe(frame.audio)
+        if text:
+            await self.push_frame(TranscriptionFrame(text))
+
+    async def transcribe(self, audio_bytes):
+        return self.recorder.transcribe(audio_bytes)
+
 class PiperTTSService(FrameProcessor):
     """A FrameProcessor that uses a local Piper model for Text-to-Speech."""
 
