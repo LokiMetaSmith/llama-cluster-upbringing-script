@@ -135,6 +135,12 @@
     dest: /opt/pipecatapp/
   become: yes
 
+- name: Copy moondream_detector module
+  ansible.builtin.copy:
+    src: moondream_detector.py
+    dest: /opt/pipecatapp/moondream_detector.py
+  become: yes
+
 - name: Copy pipecatapp Nomad job file
   ansible.builtin.template:
     src: ../../jobs/pipecatapp.nomad
