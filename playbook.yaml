@@ -113,10 +113,6 @@
  
     - name: Flush handlers to ensure all services are started
       meta: flush_handlers
-
-    - name: Bootstrap the agent
-      include_role:
-        name: bootstrap_agent   
         
   post_tasks:
     - name: Read rendered Nomad config file
