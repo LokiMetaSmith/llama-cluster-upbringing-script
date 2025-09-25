@@ -1,6 +1,5 @@
 import asyncio
 import logging
-logging.warning("--- JULES: EXECUTING LATEST APP.PY ---")
 import cv2
 import torch
 from ultralytics import YOLO
@@ -29,8 +28,7 @@ from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
 from RealtimeSTT import AudioToTextRecorder
-from piper import PiperVoice
-
+from piper.voice import PiperVoice
 import soundfile as sf
 import requests
 from sentence_transformers import SentenceTransformer
@@ -111,6 +109,11 @@ class BenchmarkCollector(FrameProcessor):
         self.llm_first_token_time = 0
         self.tts_first_audio_time = 0
 
+from piper.voice import Piper
+
+# (Your existing WebSocketLogHandler, UILogger, and BenchmarkCollector classes remain here)
+# ...
+
 class FasterWhisperSTTService(FrameProcessor):
     def __init__(self, model_path, language="en"):
         super().__init__()
@@ -127,6 +130,33 @@ class FasterWhisperSTTService(FrameProcessor):
 
     async def transcribe(self, audio_bytes):
         return self.recorder.transcribe(audio_bytes)
+
+class PiperTTSService(FrameProcessor):
+    """A FrameProcessor that uses a local Piper model for Text-to-Speech."""
+
+    def __init__(self, model_path: str, config_path: str):
+        super().__init__()
+        self.voice = PiperVoice.from_files(model_path, config_path)
+        self.sample_rate = self.voice.config.sample_rate
+
+    async def process_frame(self, frame, direction):
+        if not isinstance(frame, TextFrame):
+            await self.push_frame(frame, direction)
+            return
+
+        logging.info(f"PiperTTS synthesizing audio for: '{frame.text}'")
+
+        # Synthesize audio to an in-memory WAV stream
+        audio_stream = io.BytesIO()
+        self.voice.synthesize(frame.text, audio_stream)
+        audio_stream.seek(0)
+
+        # Read the raw audio bytes from the WAV stream
+        with wave.open(audio_stream, "rb") as wf:
+            audio_bytes = wf.readframes(wf.getnframes())
+
+        await self.push_frame(AudioRawFrame(audio_bytes))
+
 
 class TwinService(FrameProcessor):
     def __init__(self, llm, vision_detector, runner, debug_mode=False, approval_mode=False, approval_queue=None):

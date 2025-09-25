@@ -1,34 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Agent Mission Control</title>
-    <link rel="stylesheet" href="https://unpkg.com/terminal.css@0.7.2/dist/terminal.min.css" />
-    <style>
-        body {
-            background-color: #222;
-            color: #eee;
-        }
-        .terminal-container {
-            width: 95%;
-            height: 90vh;
-            margin: auto;
-        }
-    </style>
+    <title>Pipecat App</title>
 </head>
 <body>
-    <div class="terminal-container">
-        <div class="terminal-header" style="display: flex; justify-content: space-between; padding: 5px;">
-            <div id="status-light" style="width: 20px; height: 20px; border-radius: 50%; background-color: #f00;"></div>
-            <div>
-                <input type="text" id="save-name-input" placeholder="Enter save name..." style="width: 150px;">
-                <button id="save-state-btn">Save State</button>
-                <button id="load-state-btn">Load State</button>
-            </div>
-        </div>
-        <div id="terminal" style="height: calc(100% - 30px); overflow-y: scroll;"></div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/figlet/lib/figlet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lolcatjs/dist/lolcat.js"></script>
-    <script src="terminal.js"></script>
+    <h1>Pipecat App</h1>
+    <div id="logs"></div>
+    <script>
+        var ws = new WebSocket("ws://localhost:8000/ws");
+        ws.onmessage = function(event) {
+            var logs = document.getElementById('logs')
+            var message = document.createElement('p')
+            var content = document.createTextNode(event.data)
+            message.appendChild(content)
+            logs.appendChild(message)
+        };
+    </script>
 </body>
 </html>
