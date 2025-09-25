@@ -129,6 +129,12 @@
     dest: /opt/pipecatapp/
   become: yes
 
+- name: Copy tools directory
+  ansible.builtin.copy:
+    src: tools
+    dest: /opt/pipecatapp/
+  become: yes
+
 - name: Copy pipecatapp Nomad job file
   ansible.builtin.template:
     src: ../../jobs/pipecatapp.nomad
