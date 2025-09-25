@@ -117,6 +117,12 @@
     dest: /opt/pipecatapp/memory.py
   become: yes
 
+- name: Copy web_server module
+  ansible.builtin.copy:
+    src: web_server.py
+    dest: /opt/pipecatapp/web_server.py
+  become: yes
+
 - name: Copy pipecatapp Nomad job file
   ansible.builtin.template:
     src: ../../jobs/pipecatapp.nomad
