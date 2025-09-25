@@ -28,6 +28,7 @@ from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport
 from RealtimeSTT import AudioToTextRecorder
+from piper import PiperVoice
 
 import soundfile as sf
 import requests
@@ -109,64 +110,17 @@ class BenchmarkCollector(FrameProcessor):
         self.llm_first_token_time = 0
         self.tts_first_audio_time = 0
 
-from piper.voice import Piper
-
-# (Your existing WebSocketLogHandler, UILogger, and BenchmarkCollector classes remain here)
-# ...
-
-class FasterWhisperSTTService(FrameProcessor):
-    def __init__(self, model="tiny.en", language="en"):
-        super().__init__()
-        self.recorder = AudioToTextRecorder(model=model, language=language)
-
-    async def process_frame(self, frame, direction):
-        if not isinstance(frame, AudioRawFrame):
-            await self.push_frame(frame, direction)
-            return
-
-        text = await self.transcribe(frame.audio)
-        if text:
-            await self.push_frame(TranscriptionFrame(text))
-
-    async def transcribe(self, audio_bytes):
-        return self.recorder.transcribe(audio_bytes)
-
 class PiperTTSService(FrameProcessor):
     """A FrameProcessor that uses a local Piper model for Text-to-Speech."""
-    def __init__(self, voices=None):
+
+    def __init__(self, model_path: str, config_path: str):
         super().__init__()
-        self.voice = None
-
-        if not voices:
-            logging.error("PiperTTSService: No voices configured.")
-            return
-
-        for voice_config in voices:
-            try:
-                model_path = f"/opt/nomad/models/tts/{voice_config['model']}"
-                config_path = f"/opt/nomad/models/tts/{voice_config['config']}"
-
-                logging.info(f"Attempting to load Piper TTS model: {voice_config['name']}")
-
-                loaded_voice = Piper.load(model_path, config_path=config_path)
-                self.voice = loaded_voice
-                self.sample_rate = self.voice.config.sample_rate
-
-                logging.info(f"Successfully loaded Piper TTS model '{voice_config['name']}' with sample rate: {self.sample_rate}")
-                break # Stop on first successful load
-            except Exception as e:
-                logging.warning(f"Failed to load Piper TTS model '{voice_config['name']}': {e}")
-
-        if not self.voice:
-            logging.error("Failed to load any Piper TTS models. TTS will be silent.")
+        self.voice = PiperVoice.from_files(model_path, config_path)
+        self.sample_rate = self.voice.config.sample_rate
 
     async def process_frame(self, frame, direction):
         if not isinstance(frame, TextFrame):
             await self.push_frame(frame, direction)
-            return
-
-        if not self.voice:
-            logging.warning("PiperTTSService: No voice loaded, cannot synthesize audio.")
             return
 
         logging.info(f"PiperTTS synthesizing audio for: '{frame.text}'")
@@ -177,9 +131,7 @@ class PiperTTSService(FrameProcessor):
         audio_stream.seek(0)
 
         # Read the raw audio bytes from the WAV stream
-        with wave.open(audio_stream, 'rb') as wf:
-            # Ensure the WAV file has the correct sample rate, etc.
-            # For now, we assume it matches what pipecat expects.
+        with wave.open(audio_stream, "rb") as wf:
             audio_bytes = wf.readframes(wf.getnframes())
 
         await self.push_frame(AudioRawFrame(audio_bytes))
@@ -480,7 +432,9 @@ async def main():
 
     # --- FINAL FIX FOR TTS ---
     # Use the local Piper TTS service with the configured voices
-    tts = PiperTTSService(voices=tts_voices)
+    model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
+    config_path = f"/opt/nomad/models/tts/{tts_voices[0]['config']}"
+    tts = PiperTTSService(model_path=model_path, config_path=config_path)
     runner = PipelineRunner()
 
     # TODO: Implement failover or selection logic for vision models
