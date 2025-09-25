@@ -112,9 +112,9 @@ class BenchmarkCollector(FrameProcessor):
         self.tts_first_audio_time = 0
 
 class FasterWhisperSTTService(FrameProcessor):
-    def __init__(self, model="tiny.en", language="en"):
+    def __init__(self, model_path, language="en"):
         super().__init__()
-        self.recorder = AudioToTextRecorder(model=model, language=language)
+        self.recorder = AudioToTextRecorder(model=model_path, language=language, local_files_only=True)
 
     async def process_frame(self, frame, direction):
         if not isinstance(frame, AudioRawFrame):
@@ -127,33 +127,6 @@ class FasterWhisperSTTService(FrameProcessor):
 
     async def transcribe(self, audio_bytes):
         return self.recorder.transcribe(audio_bytes)
-
-class PiperTTSService(FrameProcessor):
-    """A FrameProcessor that uses a local Piper model for Text-to-Speech."""
-
-    def __init__(self, model_path: str, config_path: str):
-        super().__init__()
-        self.voice = PiperVoice.from_files(model_path, config_path)
-        self.sample_rate = self.voice.config.sample_rate
-
-    async def process_frame(self, frame, direction):
-        if not isinstance(frame, TextFrame):
-            await self.push_frame(frame, direction)
-            return
-
-        logging.info(f"PiperTTS synthesizing audio for: '{frame.text}'")
-
-        # Synthesize audio to an in-memory WAV stream
-        audio_stream = io.BytesIO()
-        self.voice.synthesize(frame.text, audio_stream)
-        audio_stream.seek(0)
-
-        # Read the raw audio bytes from the WAV stream
-        with wave.open(audio_stream, "rb") as wf:
-            audio_bytes = wf.readframes(wf.getnframes())
-
-        await self.push_frame(AudioRawFrame(audio_bytes))
-
 
 class TwinService(FrameProcessor):
     def __init__(self, llm, vision_detector, runner, debug_mode=False, approval_mode=False, approval_queue=None):
@@ -440,7 +413,8 @@ async def main():
     tts_voices = pipecat_config.get("tts_voices", [])
     stt_service_name = os.getenv("STT_SERVICE")
     if stt_service_name == "faster-whisper":
-        stt = FasterWhisperSTTService()
+        model_path = "/opt/nomad/models/stt/faster-whisper-tiny.en"
+        stt = FasterWhisperSTTService(model_path=model_path)
         logging.info("Using local FasterWhisper for STT.")
     else:
         raise RuntimeError(f"STT_SERVICE environment variable not set to a valid value. Got '{stt_service_name}'")
