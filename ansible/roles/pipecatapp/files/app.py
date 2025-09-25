@@ -26,7 +26,7 @@ from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.services.openai.llm import OpenAILLMService
-from pipecat.transports.local.audio import LocalAudioTransport
+from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
 from RealtimeSTT import AudioToTextRecorder
 from piper import PiperVoice
 
@@ -400,7 +400,11 @@ class YOLOv8Detector(FrameProcessor):
         return self.latest_observation
 
 async def main():
-    transport = LocalAudioTransport()
+    transport_params = LocalAudioTransportParams(
+        audio_in_enabled=True,
+        audio_out_enabled=True,
+    )
+    transport = LocalAudioTransport(transport_params)
 
     # Start the web server in a separate thread
     config = uvicorn.Config(web_server.app, host="0.0.0.0", port=8000, log_level="info")
