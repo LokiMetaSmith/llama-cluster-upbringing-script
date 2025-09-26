@@ -46,3 +46,20 @@
       assert:
         that:
           - "'tokens/s' in benchmark_logs.stdout"
+
+- name: Playwright-based Web UI E2E Test
+  hosts: controller_nodes
+  tasks:
+    - name: Install Playwright browser dependencies
+      command: python -m playwright install
+      register: playwright_install
+      changed_when: "'Browsers installed' in playwright_install.stdout"
+
+    - name: Run Playwright tests with pytest
+      command: python -m pytest e2e/test_mission_control.py
+      register: playwright_test_results
+      changed_when: false # This task only reports status, doesn't change state
+
+    - name: Display Playwright test results
+      debug:
+        var: playwright_test_results.stdout_lines
