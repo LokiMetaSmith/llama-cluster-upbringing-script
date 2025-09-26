@@ -1,0 +1,54 @@
+- name: Diagnose Failed Nomad Job
+  hosts: controller_nodes[0]
+  gather_facts: no
+  vars:
+    job_id: "example-job" # This can be overridden with -e "job_id=..."
+  tasks:
+    - name: Get job allocations
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}:4646/v1/job/{{ job_id }}/allocations"
+        method: GET
+      register: job_allocations_response
+
+    - name: Set allocation facts
+      ansible.builtin.set_fact:
+        allocations: "{{ job_allocations_response.json }}"
+
+    - name: Gather diagnostics for each allocation
+      block:
+        - name: Get allocation status
+          ansible.builtin.command:
+            cmd: "nomad alloc status {{ item.ID }}"
+          register: alloc_status
+
+        - name: Get allocation logs (stdout)
+          ansible.builtin.command:
+            cmd: "nomad alloc logs {{ item.ID }}"
+          register: alloc_logs_stdout
+
+        - name: Get allocation logs (stderr)
+          ansible.builtin.command:
+            cmd: "nomad alloc logs -stderr {{ item.ID }}"
+          register: alloc_logs_stderr
+
+        - name: Assemble diagnostic data
+          ansible.builtin.set_fact:
+            diagnostic_data: |
+              {
+                "job_id": "{{ job_id }}",
+                "allocation_id": "{{ item.ID }}",
+                "status": "{{ alloc_status.stdout }}",
+                "logs": {
+                  "stdout": "{{ alloc_logs_stdout.stdout }}",
+                  "stderr": "{{ alloc_logs_stderr.stdout }}"
+                }
+              }
+      loop: "{{ allocations }}"
+      loop_control:
+        label: "{{ item.ID }}"
+
+    - name: Save diagnostic data to file
+      ansible.builtin.copy:
+        content: "{{ diagnostic_data }}"
+        dest: "./{{ job_id }}.diagnostics.json"
+      when: diagnostic_data is defined

@@ -1,0 +1,76 @@
+- name: Heal Failed Nomad Job
+  hosts: controller_nodes[0]
+  gather_facts: no
+  vars:
+    # This variable would be passed in from the orchestrator script
+    # Example: ansible-playbook heal_job.yaml -e 'solution_json={"action": "restart", "parameters": {"job_id": "pipecat-app"}}'
+    solution_json: '{}'
+
+  tasks:
+    - name: Parse the solution JSON
+      ansible.builtin.set_fact:
+        solution: "{{ solution_json | from_json }}"
+
+    - name: Heal the job based on the proposed action
+      block:
+        - name: Restart job - Get job definition
+          ansible.builtin.command:
+            cmd: "nomad job inspect {{ solution.parameters.job_id }}"
+          register: job_spec
+          changed_when: false
+
+        - name: Restart job - Save job definition to a temporary file
+          ansible.builtin.copy:
+            content: "{{ job_spec.stdout }}"
+            dest: "/tmp/{{ solution.parameters.job_id }}.nomad"
+          changed_when: false
+
+        - name: Restart job - Stop and purge the failed job
+          ansible.builtin.command:
+            cmd: "nomad job stop -purge {{ solution.parameters.job_id }}"
+          register: stop_result
+          failed_when: "'error' in stop_result.stderr and 'not found' not in stop_result.stderr"
+          changed_when: "'Deregistered' in stop_result.stdout"
+
+        - name: Restart job - Re-run the job from the saved definition
+          ansible.builtin.command:
+            cmd: "nomad job run /tmp/{{ solution.parameters.job_id }}.nomad"
+          register: run_result
+          changed_when: "'Eval ID' in run_result.stdout"
+
+        - name: Pause for 15 seconds to allow the job to start
+          ansible.builtin.pause:
+            seconds: 15
+
+        - name: Get IP of a node running pipecat-app for testing
+          ansible.builtin.uri:
+            url: "http://{{ ansible_host }}:4646/v1/service/pipecat-app"
+            method: GET
+          register: service_location
+          until: service_location.json | length > 0
+          retries: 5
+          delay: 5
+
+        - name: Set pipecat IP fact
+          ansible.builtin.set_fact:
+            pipecat_ip: "{{ service_location.json[0].Address }}"
+          when: service_location.json | length > 0
+
+        - name: Validate the fix with a unit test
+          ansible.builtin.script:
+            cmd: "python testing/unit_tests/test_pipecat_app.py {{ pipecat_ip }}"
+          register: test_result
+          changed_when: false
+          when: pipecat_ip is defined
+
+        - name: Report healing status
+          ansible.builtin.debug:
+            msg: "✅ Healing successful for job '{{ solution.parameters.job_id }}'. Unit test passed."
+          when: test_result.rc == 0
+
+        - name: Report healing failure
+          ansible.builtin.fail:
+            msg: "❌ Healing failed for job '{{ solution.parameters.job_id }}'. Unit test failed."
+          when: test_result.rc != 0
+
+      when: solution.action == 'restart'
