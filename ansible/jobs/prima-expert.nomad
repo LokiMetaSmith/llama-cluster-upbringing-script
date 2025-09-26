@@ -44,7 +44,7 @@ echo "Starting master server for expert: {{ job_name | default('prima-expert') }
 echo "Discovering worker services from Consul..."
 WORKER_IPS=""
 for i in {1..12}; do
-  WORKER_IPS=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '.[].Service.Address' | tr '\n' ',' | sed 's/,$//')
+  WORKER_IPS=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '.[].Service.Address + ":" + (.Service.Port|tostring)' | tr '\n' ',' | sed 's/,$//')
   if [ -n "$WORKER_IPS" ]; then
     echo "Discovered Worker IPs: $WORKER_IPS"
     break
