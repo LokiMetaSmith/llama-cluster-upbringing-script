@@ -4,7 +4,8 @@
 # set -e # We'll handle errors manually to provide better feedback
 
 REPO_DIR="distributed-llama-repo"
-SETUP_SCRIPT="setup_distributed_llama.sh"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+SETUP_SCRIPT="$SCRIPT_DIR/setup_distributed_llama.sh"
 
 # Function to print success messages
 print_success() {
@@ -37,7 +38,7 @@ fi
 print_success "$SETUP_SCRIPT is executable."
 
 echo "INFO: Running $SETUP_SCRIPT..."
-./"$SETUP_SCRIPT"
+"$SETUP_SCRIPT"
 SETUP_EXIT_CODE=$?
 if [ $SETUP_EXIT_CODE -ne 0 ]; then
     print_error_and_exit "$SETUP_SCRIPT failed with exit code $SETUP_EXIT_CODE."
