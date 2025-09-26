@@ -674,6 +674,30 @@ class TextMessageInjector(FrameProcessor):
             self._task.cancel()
             self._task = None
 
+async def discover_main_llm_service(consul_http_addr="http://localhost:8500", retries=12, delay=10):
+    """Discovers the main LLM service from Consul with retries."""
+    service_name = os.getenv("PRIMA_API_SERVICE_NAME", "prima-api-main")
+    logging.info(f"Attempting to discover main LLM service: {service_name}")
+    for i in range(retries):
+        try:
+            response = requests.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
+            response.raise_for_status()
+            services = response.json()
+            if services:
+                address = services[0]['Service']['Address']
+                port = services[0]['Service']['Port']
+                base_url = f"http://{address}:{port}/v1"
+                logging.info(f"Successfully discovered main LLM service at {base_url}")
+                return base_url
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"Could not connect to Consul or find service {service_name}: {e}")
+
+        logging.info(f"LLM service not found, retrying in {delay} seconds... (attempt {i+1}/{retries})")
+        await asyncio.sleep(delay)
+
+    logging.error("Failed to discover main LLM service after multiple retries.")
+    return None
+
 async def main():
     """The main entry point for the conversational AI application.
 
@@ -709,11 +733,18 @@ async def main():
     else:
         raise RuntimeError(f"STT_SERVICE environment variable not set to a valid value. Got '{stt_service_name}'")
 
+    # Discover the main LLM service from Consul
+    llm_base_url = await discover_main_llm_service()
+    if not llm_base_url:
+        logging.critical("Could not discover main LLM service. The agent cannot function.")
+        # We can't proceed without the LLM.
+        # In a real-world scenario, you might want to exit or have a more robust fallback.
+        return
 
     llm = OpenAILLMService(
-        base_url="http://localhost:8080/v1", # This should point to the prima.cpp service
+        base_url=llm_base_url,
         api_key="dummy",
-        model="dummy"
+        model="dummy" # The model is selected by the prima-expert job, not here.
     )
 
     # --- FINAL FIX FOR TTS ---
