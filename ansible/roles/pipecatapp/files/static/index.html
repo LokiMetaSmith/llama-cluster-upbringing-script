@@ -20,11 +20,16 @@
 <body>
     <h1>Mission Control <span id="status-light"></span></h1>
     <div id="controls">
+        <button id="test-and-evaluation-btn">test and evaluation</button>
         <input type="text" id="save-name-input" placeholder="Enter state name...">
         <button id="save-state-btn">Save State</button>
         <button id="load-state-btn">Load State</button>
     </div>
     <div id="terminal"></div>
+    <div id="status-display" style="padding: 10px; margin-top: 10px; border: 1px solid #333; background-color: #000;"></div>
+    <div id="input-area" style="padding: 10px; margin-top: 10px; display: flex; gap: 10px;">
+        <input type="text" id="message-input" style="flex-grow: 1; background-color: #333; color: #f0f0f0; border: 1px solid #555; padding: 5px;" placeholder="Type your message here and press Enter...">
+    </div>
     <script src="/static/terminal.js"></script>
 </body>
 </html>

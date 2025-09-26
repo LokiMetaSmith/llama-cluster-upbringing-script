@@ -36,7 +36,7 @@ import faiss
 import numpy as np
 from memory import MemoryStore
 import web_server
-from web_server import approval_queue
+from web_server import approval_queue, text_message_queue
 from tools.ssh_tool import SSH_Tool
 from tools.mcp_tool import MCP_Tool
 from tools.code_runner_tool import CodeRunnerTool
@@ -632,6 +632,48 @@ class YOLOv8Detector(FrameProcessor):
         """
         return self.latest_observation
 
+class TextMessageInjector(FrameProcessor):
+    """A custom FrameProcessor to inject text messages from the web UI into the pipeline.
+
+    This processor listens to a queue for incoming text messages and pushes them
+    downstream as TranscriptionFrames, allowing the agent to process text input.
+    """
+    def __init__(self, queue: asyncio.Queue):
+        super().__init__()
+        self.queue = queue
+        self._task = None
+
+    def start_listening(self):
+        """Starts the background task to listen for messages from the queue."""
+        if not self._task:
+            self._task = asyncio.create_task(self._run())
+
+    async def _run(self):
+        """The main loop that waits for messages and pushes them as frames."""
+        while True:
+            try:
+                message = await self.queue.get()
+                text = message.get("data")
+                if text:
+                    logging.info(f"Injecting text message from UI: {text}")
+                    await self.push_frame(TranscriptionFrame(text))
+            except Exception as e:
+                logging.error(f"Error in TextMessageInjector: {e}")
+
+    async def process_frame(self, frame, direction):
+        """Processes frames from upstream (i.e., the audio STT).
+
+        This method simply passes through any frames it receives from the
+        previous step in the pipeline.
+        """
+        await self.push_frame(frame, direction)
+
+    def stop_listening(self):
+        """Stops the listening task."""
+        if self._task:
+            self._task.cancel()
+            self._task = None
+
 async def main():
     """The main entry point for the conversational AI application.
 
@@ -704,9 +746,12 @@ async def main():
     )
     web_server.twin_service_instance = twin
 
+    text_injector = TextMessageInjector(text_message_queue)
+
     pipeline_steps = [
         transport.input(),
         stt,
+        text_injector,
         UILogger(sender="user"),
         twin,
         UILogger(sender="agent"),
@@ -743,6 +788,8 @@ async def main():
         stt,
         PipelineTask(handle_interrupt)
     ])
+
+    text_injector.start_listening()
 
     await runner.run(
         [main_task, PipelineTask(vision_pipeline), PipelineTask(interrupt_pipeline)]
