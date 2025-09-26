@@ -6,7 +6,7 @@ job "pipecat-app" {
     count = 1
 
     network {
-      mode = "bridge"
+      mode = "host"
       port "http" {
         to = 8000
       }
@@ -38,6 +38,8 @@ job "pipecat-app" {
       }
 
       env {
+        # This should match the service name of the main prima-expert job
+        PRIMA_API_SERVICE_NAME = "prima-api-main"
         # Set to "true" to enable the summarizer tool
         USE_SUMMARIZER = "false"
         # The vision and embedding models are now hardcoded in the application
