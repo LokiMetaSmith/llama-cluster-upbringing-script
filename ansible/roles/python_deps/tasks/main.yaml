@@ -17,19 +17,20 @@
     state: present
 
 - name: 3. Create a virtual environment for the target user
-  command: "python3 -m venv /home/{{ target_user }}/.local"
-  args:
+  ansible.builtin.shell:
+    cmd: "sudo -u {{ target_user }} python3 -m venv /home/{{ target_user }}/.local"
     creates: "/home/{{ target_user }}/.local/bin/pip"
-  become: no # Run as the user
+  become: yes
 
 - name: 4. Copy requirements.txt to remote host
   copy:
     src: requirements.txt
     dest: "/home/{{ target_user }}/requirements.txt"
-  become: no
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  become: yes
 
 - name: 5. Install python dependencies into the virtual environment
-  pip:
-    requirements: "/home/{{ target_user }}/requirements.txt"
-    executable: "/home/{{ target_user }}/.local/bin/pip"
-  become: no # Run as the user
+  ansible.builtin.shell:
+    cmd: "sudo -u {{ target_user }} /home/{{ target_user }}/.local/bin/pip install -r /home/{{ target_user }}/requirements.txt"
+  become: yes
