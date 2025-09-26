@@ -110,36 +110,48 @@
     src: app.py
     dest: /opt/pipecatapp/app.py
   become: yes
+  tags:
+    - deploy_app
 
 - name: Copy memory module
   ansible.builtin.copy:
     src: memory.py
     dest: /opt/pipecatapp/memory.py
   become: yes
+  tags:
+    - deploy_app
 
 - name: Copy web_server module
   ansible.builtin.copy:
     src: web_server.py
     dest: /opt/pipecatapp/web_server.py
   become: yes
+  tags:
+    - deploy_app
 
 - name: Copy static assets
   ansible.builtin.copy:
     src: static
     dest: /opt/pipecatapp/
   become: yes
+  tags:
+    - deploy_app
 
 - name: Copy tools directory
   ansible.builtin.copy:
     src: tools
     dest: /opt/pipecatapp/
   become: yes
+  tags:
+    - deploy_app
 
 - name: Copy moondream_detector module
   ansible.builtin.copy:
     src: moondream_detector.py
     dest: /opt/pipecatapp/moondream_detector.py
   become: yes
+  tags:
+    - deploy_app
 
 - name: Create STT model directory
   ansible.builtin.file:

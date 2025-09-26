@@ -1,0 +1,15 @@
+- name: Deploy Pipecat App
+  hosts: all
+  remote_user: "{{ target_user | default('loki') }}"
+  become: yes
+
+  roles:
+    - role: pipecatapp
+      tags: [deploy_app]
+
+  tasks:
+    - name: Restart pipecat-app service
+      ansible.builtin.systemd:
+        name: prima-services.service
+        state: restarted
+      become: yes

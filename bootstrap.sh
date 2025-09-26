@@ -81,11 +81,17 @@ echo "You will be prompted for your sudo password."
 
 if [ "$DEBUG_MODE" = true ]; then
     # Execute with verbose logging and redirect to file
-    time ansible-playbook -i local_inventory.ini playbook.yaml --ask-become-pass $ANSIBLE_ARGS > "$LOG_FILE" 2>&1
+    time ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS > "$LOG_FILE" 2>&1
     echo "✅ Playbook run complete. View the detailed log in '$LOG_FILE'."
 else
     # Execute normally
-    ansible-playbook -i local_inventory.ini playbook.yaml --ask-become-pass
+    ansible-playbook -i local_inventory.ini playbook.yaml
 fi
 
 echo "Bootstrap complete."
+
+# Redeploy the Nomad jobs
+echo "Redeploying Nomad jobs..."
+nomad job run ansible/jobs/prima-expert.nomad
+nomad job run ansible/jobs/pipecatapp.nomad
+echo "✅ Nomad jobs redeployed."
