@@ -1,20 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Pipecat App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission Control</title>
+    <style>
+        body { font-family: monospace; background-color: #1a1a1a; color: #f0f0f0; margin: 0; padding: 20px; }
+        h1 { color: #00ff00; }
+        #controls { margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        #terminal { border: 1px solid #333; height: 60vh; overflow-y: scroll; padding: 10px; background-color: #000; }
+        .approval-prompt { border: 1px dashed #ffc107; padding: 10px; margin: 10px 0; }
+        .user-message { color: #87cefa; }
+        .agent-message { color: #98fb98; }
+        .error { color: #ff6347; }
+        #status-light { width: 15px; height: 15px; border-radius: 50%; background-color: #f00; display: inline-block; margin-left: 10px; }
+        input, button { padding: 5px; background-color: #333; color: #f0f0f0; border: 1px solid #555; }
+    </style>
 </head>
 <body>
-    <h1>Pipecat App</h1>
-    <div id="logs"></div>
-    <script>
-        var ws = new WebSocket("ws://localhost:8000/ws");
-        ws.onmessage = function(event) {
-            var logs = document.getElementById('logs')
-            var message = document.createElement('p')
-            var content = document.createTextNode(event.data)
-            message.appendChild(content)
-            logs.appendChild(message)
-        };
-    </script>
+    <h1>Mission Control <span id="status-light"></span></h1>
+    <div id="controls">
+        <input type="text" id="save-name-input" placeholder="Enter state name...">
+        <button id="save-state-btn">Save State</button>
+        <button id="load-state-btn">Load State</button>
+    </div>
+    <div id="terminal"></div>
+    <script src="/static/terminal.js"></script>
 </body>
 </html>
