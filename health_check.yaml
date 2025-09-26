@@ -1,0 +1,37 @@
+- name: Check Nomad Job Health
+  hosts: controller_nodes[0]
+  gather_facts: no
+  tasks:
+    - name: Get list of all Nomad jobs
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}:4646/v1/jobs"
+        method: GET
+      register: nomad_jobs_response
+
+    - name: Parse job list
+      ansible.builtin.set_fact:
+        job_list: "{{ nomad_jobs_response.json }}"
+
+    - name: Check status for each job
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}:4646/v1/job/{{ item.ID }}"
+        method: GET
+      register: job_status_response
+      loop: "{{ job_list }}"
+      loop_control:
+        label: "{{ item.ID }}"
+
+    - name: Identify unhealthy jobs
+      ansible.builtin.set_fact:
+        unhealthy_jobs: "{{ job_status_response.results | selectattr('json.Status', '!=', 'running') | map(attribute='item') | list }}"
+
+    - name: Report and save unhealthy jobs
+      ansible.builtin.copy:
+        content: "{{ {'unhealthy_jobs': unhealthy_jobs} | to_json }}"
+        dest: "./failed_jobs.json"
+      when: unhealthy_jobs | length > 0
+
+    - name: Report that no unhealthy jobs were found
+      ansible.builtin.debug:
+        msg: "✅ All Nomad jobs are healthy."
+      when: unhealthy_jobs | length == 0
