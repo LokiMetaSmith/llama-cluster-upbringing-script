@@ -16,6 +16,38 @@ document.addEventListener("DOMContentLoaded", function() {
     const saveStateBtn = document.getElementById("save-state-btn");
     const loadStateBtn = document.getElementById("load-state-btn");
     const statusLight = document.getElementById("status-light");
+    const testAndEvaluationBtn = document.getElementById("test-and-evaluation-btn");
+    const statusDisplay = document.getElementById("status-display");
+    const messageInput = document.getElementById("message-input");
+
+    function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message) {
+            ws.send(JSON.stringify({ type: "user_message", data: message }));
+            logToTerminal(`<strong>You:</strong> ${message}`, "user-message");
+            messageInput.value = "";
+        }
+    }
+
+    messageInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    });
+
+    function updateStatus() {
+        fetch("/api/status")
+            .then(response => response.json())
+            .then(data => {
+                statusDisplay.innerHTML = `<pre>${JSON.stringify(data.status, null, 2)}</pre>`;
+            })
+            .catch(error => {
+                statusDisplay.innerText = `Error fetching status: ${error}`;
+                console.error("Error fetching status:", error);
+            });
+    }
+
+    testAndEvaluationBtn.onclick = updateStatus;
 
     function displayWelcomeArt() {
         const art = `
@@ -34,6 +66,7 @@ document.addEventListener("DOMContentLoaded", function() {
         displayWelcomeArt();
         logToTerminal("--- Connection established with Agent ---");
         statusLight.style.backgroundColor = "#0f0"; // Green
+        updateStatus();
     };
 
     saveStateBtn.onclick = function() {

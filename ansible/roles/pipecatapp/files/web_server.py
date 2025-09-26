@@ -7,8 +7,9 @@ import json
 
 app = FastAPI()
 
-# Create a queue to communicate between the web server and the TwinService
+# Create queues to communicate between the web server and the TwinService
 approval_queue = Queue()
+text_message_queue = Queue()
 
 class ConnectionManager:
     """Manages active WebSocket connections.
@@ -72,6 +73,8 @@ async def websocket_endpoint(websocket: WebSocket):
             message = json.loads(data)
             if message.get("type") == "approval_response":
                 await approval_queue.put(message)
+            elif message.get("type") == "user_message":
+                await text_message_queue.put(message)
     except Exception:
         manager.disconnect(websocket)
 
@@ -99,9 +102,18 @@ async def get_status():
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
     if twin_service_instance and hasattr(twin_service_instance, 'tools'):
         mcp = twin_service_instance.tools.get('mcp')
-        if mcp:
-            return {"status": mcp.get_status()}
-    return {"status": "Agent not fully initialized."}
+        if mcp and hasattr(mcp, 'runner') and mcp.runner:
+            tasks = mcp.runner.get_tasks()
+            if not tasks:
+                return {"status": "No active pipelines."}
+
+            status_report = "Current pipeline status:\n"
+            for task in tasks:
+                status_report += f"- Task {task.get_name()}: {task.get_state().value}\n"
+            return {"status": status_report}
+        else:
+            return {"status": "MCP tool or runner not available."}
+    return {"status": "Agent not fully initialized. Please wait..."}
 
 @app.get("/health")
 async def get_health():
