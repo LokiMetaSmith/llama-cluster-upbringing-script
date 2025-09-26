@@ -14,7 +14,7 @@ job "{{ job_name | default('prima-expert') }}" {
     }
 
     network {
-      mode = "bridge"
+      mode = "host"
       port "http" {}
     }
 
