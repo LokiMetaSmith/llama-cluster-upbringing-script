@@ -5,3 +5,4 @@ LICENSE.txt
 nomad.d/
 nomad_data/
 models/
+playbook_output.log
