@@ -51,6 +51,8 @@ job "pipecat-app" {
         cpu    = 1000 # 1 GHz
         memory = 1024 # 4 GB
       }
+
+      device "snd" {}
     }
   }
 }
