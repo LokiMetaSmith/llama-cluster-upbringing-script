@@ -167,15 +167,16 @@ class FasterWhisperSTTService(FrameProcessor):
     Attributes:
         recorder: An instance of `AudioToTextRecorder` for transcription.
     """
-    def __init__(self, model_path, language="en"):
+    def __init__(self, model_path, language="en", sample_rate=16000):
         """Initializes the FasterWhisperSTTService.
 
         Args:
             model_path (str): The path to the FasterWhisper model directory.
             language (str, optional): The language for transcription. Defaults to "en".
+            sample_rate (int, optional): The audio sample rate. Defaults to 16000.
         """
         super().__init__()
-        self.recorder = AudioToTextRecorder(model=model_path, language=language)
+        self.recorder = AudioToTextRecorder(model=model_path, language=language, sample_rate=sample_rate)
 
     async def process_frame(self, frame, direction):
         """Processes audio frames, transcribes them, and pushes TranscriptionFrames.
@@ -705,9 +706,14 @@ async def main():
     transport layers, and Pipecat pipelines (main, vision, and interrupt).
     It then starts the PipelineRunner to run all pipelines concurrently.
     """
+    # Define a consistent, safe sample rate for all audio processing
+    sample_rate = 16000
+
     transport_params = LocalAudioTransportParams(
         audio_in_enabled=True,
         audio_out_enabled=True,
+        audio_in_sample_rate=sample_rate,
+        audio_out_sample_rate=sample_rate,
     )
     transport = LocalAudioTransport(transport_params)
 
@@ -728,8 +734,8 @@ async def main():
     stt_service_name = os.getenv("STT_SERVICE")
     if stt_service_name == "faster-whisper":
         model_path = "/opt/nomad/models/stt/faster-whisper-tiny.en"
-        stt = FasterWhisperSTTService(model_path=model_path)
-        logging.info("Using local FasterWhisper for STT.")
+        stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
+        logging.info(f"Using local FasterWhisper for STT at {sample_rate}Hz.")
     else:
         raise RuntimeError(f"STT_SERVICE environment variable not set to a valid value. Got '{stt_service_name}'")
 
