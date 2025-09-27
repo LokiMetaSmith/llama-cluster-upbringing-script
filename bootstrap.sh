@@ -74,6 +74,7 @@ echo "Purging any old Nomad jobs that will be deployed..."
 nomad job stop -purge prima-expert-main || true
 nomad job stop -purge pipecat-app || true
 echo "Purge complete."
+ free -h
 
 # Run the Ansible playbook with the local inventory
 echo "Running the Ansible playbook for local setup..."
