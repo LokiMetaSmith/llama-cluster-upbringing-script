@@ -126,7 +126,11 @@ EOH
   }
 
   group "workers" {
-    count = {{ worker_count if worker_count is defined else 1 }}
+    {% if worker_count is defined %}
+    count = {{ worker_count }}
+    {% else %}
+    count = 1
+    {% endif %}
 
     network {
       mode = "host"
