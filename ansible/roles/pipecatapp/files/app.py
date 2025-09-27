@@ -167,16 +167,22 @@ class FasterWhisperSTTService(FrameProcessor):
     Attributes:
         recorder: An instance of `AudioToTextRecorder` for transcription.
     """
-    def __init__(self, model_path, language="en", sample_rate=16000):
+    def __init__(self, model_path, language="en", sample_rate=16000, device_index=None):
         """Initializes the FasterWhisperSTTService.
 
         Args:
             model_path (str): The path to the FasterWhisper model directory.
             language (str, optional): The language for transcription. Defaults to "en".
             sample_rate (int, optional): The audio sample rate. Defaults to 16000.
+            device_index (int, optional): The index of the audio device to use.
         """
         super().__init__()
-        self.recorder = AudioToTextRecorder(model=model_path, language=language, sample_rate=sample_rate)
+        self.recorder = AudioToTextRecorder(
+            model=model_path,
+            language=language,
+            sample_rate=sample_rate,
+            device_index=device_index
+        )
 
     async def process_frame(self, frame, direction):
         """Processes audio frames, transcribes them, and pushes TranscriptionFrames.
@@ -785,8 +791,12 @@ async def main():
     stt_service_name = os.getenv("STT_SERVICE")
     if stt_service_name == "faster-whisper":
         model_path = "/opt/nomad/models/stt/faster-whisper-tiny.en"
-        stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
-        logging.info(f"Configured FasterWhisper for STT with sample rate {sample_rate}Hz.")
+        stt = FasterWhisperSTTService(
+            model_path=model_path,
+            sample_rate=sample_rate,
+            device_index=device_index
+        )
+        logging.info(f"Configured FasterWhisper for STT with device index {device_index} and sample rate {sample_rate}Hz.")
     else:
         raise RuntimeError(f"STT_SERVICE environment variable not set to a valid value. Got '{stt_service_name}'")
 
