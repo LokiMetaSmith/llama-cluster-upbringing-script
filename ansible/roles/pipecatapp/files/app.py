@@ -27,7 +27,7 @@ from pipecat.pipeline.task import PipelineTask
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
-from RealtimeSTT import AudioToTextRecorder
+from faster_whisper import WhisperModel
 from piper.voice import PiperVoice
 import soundfile as sf
 import requests
@@ -159,56 +159,74 @@ class BenchmarkCollector(FrameProcessor):
         self.tts_first_audio_time = 0
 
 class FasterWhisperSTTService(FrameProcessor):
-    """A Pipecat FrameProcessor for Speech-to-Text using RealtimeSTT and FasterWhisper.
+    """A Pipecat FrameProcessor for Speech-to-Text using a local FasterWhisper model.
 
-    This class wraps the AudioToTextRecorder from RealtimeSTT to provide a
-    streaming STT service within the Pipecat pipeline.
+    This service buffers audio frames and transcribes them into text when the user
+    stops speaking. This implementation avoids using external recorders and relies
+    solely on the audio stream provided by the Pipecat pipeline.
 
     Attributes:
-        recorder: An instance of `AudioToTextRecorder` for transcription.
+        model: The loaded `faster_whisper` model.
+        audio_buffer (bytearray): A buffer to accumulate raw audio data.
+        sample_rate (int): The sample rate of the audio stream.
     """
-    def __init__(self, model_path, language="en", sample_rate=16000, device_index=None):
+    def __init__(self, model_path: str, sample_rate: int = 16000):
         """Initializes the FasterWhisperSTTService.
 
         Args:
             model_path (str): The path to the FasterWhisper model directory.
-            language (str, optional): The language for transcription. Defaults to "en".
-            sample_rate (int, optional): The audio sample rate. Defaults to 16000.
-            device_index (int, optional): The index of the audio device to use.
+            sample_rate (int, optional): The sample rate of the incoming audio.
+                                         Defaults to 16000.
         """
         super().__init__()
-        self.recorder = AudioToTextRecorder(
-            model=model_path,
-            language=language,
-            sample_rate=sample_rate,
-            device_index=device_index
-        )
+        # Using "cpu" and "int8" for broad compatibility.
+        # For better performance on compatible hardware, consider "cuda" and "float16".
+        self.model = WhisperModel(model_path, device="cpu", compute_type="int8")
+        self.audio_buffer = bytearray()
+        self.sample_rate = sample_rate
+        logging.info(f"FasterWhisperSTTService initialized with model '{model_path}'")
+
+    def _convert_audio_bytes_to_float_array(self, audio_bytes: bytes) -> np.ndarray:
+        """Converts raw s16le audio bytes to a NumPy array of f32 samples."""
+        audio_s16 = np.frombuffer(audio_bytes, dtype=np.int16)
+        audio_f32 = audio_s16.astype(np.float32) / 32768.0
+        return audio_f32
 
     async def process_frame(self, frame, direction):
-        """Processes audio frames, transcribes them, and pushes TranscriptionFrames.
+        """Processes audio and user speaking status frames.
+
+        This method buffers audio frames when the user is speaking and triggers
+        transcription when the user stops.
 
         Args:
             frame: The frame to process.
             direction: The direction of the frame in the pipeline.
         """
-        if not isinstance(frame, AudioRawFrame):
+        if isinstance(frame, UserStartedSpeakingFrame):
+            logging.debug("User started speaking, clearing audio buffer.")
+            self.audio_buffer.clear()
+        elif isinstance(frame, AudioRawFrame):
+            self.audio_buffer.extend(frame.audio)
+        elif isinstance(frame, UserStoppedSpeakingFrame):
+            logging.debug("User stopped speaking, transcribing buffered audio.")
+            if not self.audio_buffer:
+                logging.warning("User stopped speaking but audio buffer is empty.")
+                return
+
+            audio_f32 = self._convert_audio_bytes_to_float_array(self.audio_buffer)
+            self.audio_buffer.clear()
+
+            segments, _ = self.model.transcribe(audio_f32, language="en")
+
+            full_text = "".join(segment.text for segment in segments).strip()
+
+            if full_text:
+                logging.info(f"Transcription result: {full_text}")
+                await self.push_frame(TranscriptionFrame(full_text))
+            else:
+                logging.info("Transcription resulted in empty text.")
+        else:
             await self.push_frame(frame, direction)
-            return
-
-        text = await self.transcribe(frame.audio)
-        if text:
-            await self.push_frame(TranscriptionFrame(text))
-
-    async def transcribe(self, audio_bytes: bytes) -> str:
-        """Transcribes a chunk of audio bytes.
-
-        Args:
-            audio_bytes (bytes): The raw audio data to transcribe.
-
-        Returns:
-            str: The transcribed text.
-        """
-        return self.recorder.transcribe(audio_bytes)
 
 class PiperTTSService(FrameProcessor):
     """A FrameProcessor that uses a local Piper model for Text-to-Speech.
@@ -791,12 +809,8 @@ async def main():
     stt_service_name = os.getenv("STT_SERVICE")
     if stt_service_name == "faster-whisper":
         model_path = "/opt/nomad/models/stt/faster-whisper-tiny.en"
-        stt = FasterWhisperSTTService(
-            model_path=model_path,
-            sample_rate=sample_rate,
-            device_index=device_index
-        )
-        logging.info(f"Configured FasterWhisper for STT with device index {device_index} and sample rate {sample_rate}Hz.")
+        stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
+        logging.info(f"Configured FasterWhisper for STT with sample rate {sample_rate}Hz.")
     else:
         raise RuntimeError(f"STT_SERVICE environment variable not set to a valid value. Got '{stt_service_name}'")
 
