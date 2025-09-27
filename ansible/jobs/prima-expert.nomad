@@ -126,7 +126,7 @@ EOH
   }
 
   group "workers" {
-    count = {{ worker_count | default(1) }}
+    count = "{{ worker_count | default(1) }}"
 
     network {
       mode = "host"
