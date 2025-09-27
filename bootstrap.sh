@@ -6,6 +6,7 @@
 # server for development or as the initial control node for a new cluster.
 # It runs the main Ansible playbook using a local inventory file.
 
+
 # --- Initialize flags ---
 CLEAN_REPO=false
 DEBUG_MODE=false
@@ -74,7 +75,7 @@ echo "Purging any old Nomad jobs that will be deployed..."
 nomad job stop -purge prima-expert-main || true
 nomad job stop -purge pipecat-app || true
 echo "Purge complete."
-
+free -h
 # Run the Ansible playbook with the local inventory
 echo "Running the Ansible playbook for local setup..."
 echo "You will be prompted for your sudo password."
