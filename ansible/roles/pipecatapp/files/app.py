@@ -675,6 +675,46 @@ class TextMessageInjector(FrameProcessor):
             self._task.cancel()
             self._task = None
 
+def get_supported_sample_rate():
+    """
+    Checks for a supported sample rate from a list of common rates.
+    Returns the first supported rate found, or a default if none are supported.
+    """
+    # This needs the pyaudio package, which is a dependency of RealtimeSTT.
+    try:
+        import pyaudio
+    except ImportError:
+        logging.error("PyAudio is not installed. Please install it to enable dynamic sample rate detection.")
+        return 16000
+
+    p = pyaudio.PyAudio()
+    try:
+        device_info = p.get_default_input_device_info()
+        common_rates = [48000, 44100, 32000, 16000, 8000]
+
+        for rate in common_rates:
+            try:
+                if p.is_format_supported(
+                    rate,
+                    input_device=device_info['index'],
+                    input_channels=1,  # Mono input
+                    input_format=pyaudio.paInt16
+                ):
+                    logging.info(f"Found supported sample rate: {rate}Hz")
+                    return rate
+            except ValueError:
+                continue
+
+        logging.warning("Could not find a supported sample rate from the common list. Defaulting to 16000Hz.")
+        return 16000
+
+    except Exception as e:
+        logging.error(f"Error querying audio device for supported sample rates: {e}. Defaulting to 16000Hz.")
+        return 16000
+    finally:
+        p.terminate()
+
+
 async def discover_main_llm_service(consul_http_addr="http://localhost:8500", retries=12, delay=10):
     """Discovers the main LLM service from Consul with retries."""
     service_name = os.getenv("PRIMA_API_SERVICE_NAME", "prima-api-main")
@@ -707,7 +747,7 @@ async def main():
     It then starts the PipelineRunner to run all pipelines concurrently.
     """
     # Define a consistent, safe sample rate for all audio processing
-    sample_rate = 16000
+    sample_rate = get_supported_sample_rate()
 
     transport_params = LocalAudioTransportParams(
         audio_in_enabled=True,
