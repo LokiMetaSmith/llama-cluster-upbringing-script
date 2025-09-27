@@ -675,6 +675,56 @@ class TextMessageInjector(FrameProcessor):
             self._task.cancel()
             self._task = None
 
+def find_workable_audio_config():
+    """
+    Iterates through all available audio devices and common sample rates to
+    find a working configuration for audio input.
+
+    Returns:
+        tuple[int, int]: A tuple containing the device index and a supported
+                         sample rate. Returns (None, 16000) if no workable
+                         combination is found.
+    """
+    try:
+        import pyaudio
+    except ImportError:
+        logging.error("PyAudio is not installed. Please install it to enable dynamic audio configuration.")
+        return None, 16000  # Default fallback
+
+    p = pyaudio.PyAudio()
+    common_rates = [16000, 48000, 44100, 32000, 8000]
+
+    try:
+        device_count = p.get_device_count()
+        logging.info(f"Found {device_count} audio devices.")
+
+        for i in range(device_count):
+            device_info = p.get_device_info_by_index(i)
+            if device_info.get('maxInputChannels', 0) > 0:
+                logging.info(f"Checking device {i}: {device_info.get('name')}")
+                for rate in common_rates:
+                    try:
+                        if p.is_format_supported(
+                            rate,
+                            input_device=device_info['index'],
+                            input_channels=1,
+                            input_format=pyaudio.paInt16
+                        ):
+                            logging.info(f"Found workable config: Device Index {device_info['index']}, Sample Rate {rate}Hz")
+                            return device_info['index'], rate
+                    except ValueError:
+                        continue # This combination is not supported
+
+        logging.warning("Could not find a workable audio input configuration. Falling back to defaults.")
+        return None, 16000
+
+    except Exception as e:
+        logging.error(f"An error occurred during audio device discovery: {e}. Falling back to defaults.")
+        return None, 16000
+    finally:
+        p.terminate()
+
+
 async def discover_main_llm_service(consul_http_addr="http://localhost:8500", retries=12, delay=10):
     """Discovers the main LLM service from Consul with retries."""
     service_name = os.getenv("PRIMA_API_SERVICE_NAME", "prima-api-main")
@@ -706,12 +756,13 @@ async def main():
     transport layers, and Pipecat pipelines (main, vision, and interrupt).
     It then starts the PipelineRunner to run all pipelines concurrently.
     """
-    # Define a consistent, safe sample rate for all audio processing
-    sample_rate = 16000
+    # Dynamically find a workable audio configuration to avoid hardware issues
+    device_index, sample_rate = find_workable_audio_config()
 
     transport_params = LocalAudioTransportParams(
         audio_in_enabled=True,
         audio_out_enabled=True,
+        audio_in_device_index=device_index,
         audio_in_sample_rate=sample_rate,
         audio_out_sample_rate=sample_rate,
     )
@@ -735,7 +786,7 @@ async def main():
     if stt_service_name == "faster-whisper":
         model_path = "/opt/nomad/models/stt/faster-whisper-tiny.en"
         stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
-        logging.info(f"Using local FasterWhisper for STT at {sample_rate}Hz.")
+        logging.info(f"Configured FasterWhisper for STT with sample rate {sample_rate}Hz.")
     else:
         raise RuntimeError(f"STT_SERVICE environment variable not set to a valid value. Got '{stt_service_name}'")
 
