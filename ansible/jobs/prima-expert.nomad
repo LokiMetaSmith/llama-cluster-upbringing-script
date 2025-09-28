@@ -1,3 +1,4 @@
+{% set final_worker_count = worker_count if worker_count is defined else 1 %}
 # This is a Jinja2 template for a complete, distributed Prima expert.
 # It is parameterized and can be used to deploy any expert model.
 job "{{ job_name | default('prima-expert') }}" {
@@ -126,11 +127,7 @@ EOH
   }
 
   group "workers" {
-    {% if worker_count is defined %}
-    count = {{ worker_count }}
-    {% else %}
-    count = 1
-    {% endif %}
+    count = {{ final_worker_count }}
 
     network {
       mode = "host"
