@@ -3,6 +3,9 @@
   remote_user: "{{ target_user | default('loki') }}"
   become: yes
 
+  vars_files:
+    - group_vars/models.yaml
+
   roles:
     - role: pipecatapp
       tags: [deploy_app]

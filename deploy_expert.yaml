@@ -2,6 +2,9 @@
   connection: local
   gather_facts: no
 
+  vars_files:
+    - group_vars/models.yaml
+
   # These variables would be passed on the command line with -e
   # e.g., ansible-playbook deploy_expert.yaml -e "job_name=my-expert ..."
   vars:
