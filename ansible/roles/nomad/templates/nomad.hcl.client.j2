@@ -13,9 +13,8 @@ client {
     "driver.raw_exec.enable" = "1"
   }
 
-  host_devices {
-    "snd" {
-      paths = ["/dev/snd"]
-    }
+  host_volume "snd" {
+    path      = "/dev/snd"
+    read_only = false
   }
 }
