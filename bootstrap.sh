@@ -90,8 +90,6 @@ fi
 
 echo "Bootstrap complete."
 
-# Redeploy the Nomad jobs using the correct playbook to ensure templating
-echo "Redeploying Nomad jobs with correct templating..."
-ansible-playbook deploy_expert.yaml -e "job_name=prima-expert-main" -e "service_name=prima-api-main"
-ansible-playbook deploy_app.yaml
-echo "✅ Nomad jobs redeployed."
+# The main playbook handles the deployment of all necessary services.
+# No further action is needed.
+echo "✅ Standalone server setup is complete."
