@@ -21,6 +21,16 @@
         dest: /tmp/{{ job_name }}.nomad
         mode: '0644'
 
+    - name: "Wait for Nomad API to be ready"
+      ansible.builtin.uri:
+        url: http://127.0.0.1:4646/v1/status/leader
+        method: GET
+        status_code: 200
+      register: nomad_api_status
+      until: "nomad_api_status.status == 200"
+      retries: 12
+      delay: 5
+
     - name: "Run the custom Prima Expert job in Nomad"
       ansible.builtin.command:
         cmd: "nomad job run /tmp/{{ job_name }}.nomad"
