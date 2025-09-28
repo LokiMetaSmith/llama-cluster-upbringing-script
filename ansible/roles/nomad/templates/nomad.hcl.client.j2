@@ -13,7 +13,9 @@ client {
     "driver.raw_exec.enable" = "1"
   }
 
-  device {
-    name = "snd"
+  host_devices {
+    "snd" {
+      paths = ["/dev/snd"]
+    }
   }
 }
