@@ -90,8 +90,8 @@ fi
 
 echo "Bootstrap complete."
 
-# Redeploy the Nomad jobs
-echo "Redeploying Nomad jobs..."
-nomad job run ansible/jobs/prima-expert.nomad
-nomad job run ansible/jobs/pipecatapp.nomad
+# Redeploy the Nomad jobs using the correct playbook to ensure templating
+echo "Redeploying Nomad jobs with correct templating..."
+ansible-playbook deploy_expert.yaml -e "job_name=prima-expert-main" -e "service_name=prima-api-main"
+ansible-playbook deploy_app.yaml
 echo "✅ Nomad jobs redeployed."
