@@ -12,7 +12,7 @@
       ansible.builtin.apt:
         name: rsync
         state: present
-        
+
     - name: Ensure the sudo group exists
       ansible.builtin.group:
         name: sudo
@@ -110,10 +110,10 @@
         - power_manager
       loop_control:
         loop_var: role_name
- 
+
     - name: Flush handlers to ensure all services are started
       meta: flush_handlers
-        
+
   post_tasks:
     - name: Read rendered Nomad config file
       ansible.builtin.slurp:

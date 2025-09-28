@@ -1,8 +1,1 @@
-__pycache__/
-nomad_1.7.7_linux_amd64.zip
-nomad
-LICENSE.txt
-nomad.d/
-nomad_data/
-models/
-playbook_output.log
+node_modules/

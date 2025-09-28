@@ -1,4 +1,3 @@
----
 - name: Ensure paddler user and group exist
   ansible.builtin.group:
     name: "{{ paddler_balancer_group }}"

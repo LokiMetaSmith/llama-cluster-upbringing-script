@@ -8,17 +8,17 @@ The process uses an evolutionary algorithm to iteratively mutate the agent's mai
 
 ## Workflow
 
-1.  **Define Test Cases:**
+1. **Define Test Cases:**
     Add or modify the YAML test cases in the `evaluation_suite/` directory. Each test case should define a user query and the expected outcome (e.g., a specific tool call or a keyword in the response).
 
-2.  **Run the Evolution Script:**
+2. **Run the Evolution Script:**
     Execute the `evolve.py` script. This will:
     - Take the current best prompt as a starting point.
     - Use an LLM to generate mutations of the prompt.
     - For each new prompt, run the `evaluator.py` script to calculate a fitness score based on the test suite.
     - After many iterations, it will output the best-performing prompt it has found.
 
-3.  **Update the Agent:**
+3. **Update the Agent:**
     Once you have a new, improved prompt, manually copy it into the `get_tools_prompt` method in `app.py`.
 
 ## Running the Workflow

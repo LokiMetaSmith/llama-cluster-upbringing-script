@@ -1,0 +1,8 @@
+- hosts: all
+  gather_facts: no
+  tasks:
+    - name: "Check Nomad file formatting"
+      command: "nomad fmt -check -recursive /opt/nomad/jobs"
+      register: nomad_fmt_result
+      changed_when: false
+      failed_when: "nomad_fmt_result.rc != 0"

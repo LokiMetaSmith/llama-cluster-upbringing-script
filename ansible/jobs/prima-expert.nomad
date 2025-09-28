@@ -43,26 +43,30 @@ echo "Starting master server for expert: {{ job_name | default('prima-expert') }
 
 # Discover worker services via Consul
 echo "Discovering worker services from Consul..."
-WORKER_IPS=""
+worker_ips=""
 for i in {1..12}; do
-  WORKER_IPS=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '[.[] | .Service | "\(.Address):\(.Port)"] | join(",")')
-  if [ -n "$WORKER_IPS" ]; then
-    echo "Discovered Worker IPs: $WORKER_IPS"
+  {# djlint:off H022 #}
+  worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '[.[] | .Service | "\(.Address):\(.Port)"] | join(",")')
+  {# djlint:on #}
+  if [ -n "$worker_ips" ]; then
+    echo "Discovered Worker IPs: $worker_ips"
     break
   fi
   echo "No workers found yet, retrying in 10 seconds... (attempt $i/12)"
   sleep 10
 done
 
-RPC_ARGS=""
-if [ -n "$WORKER_IPS" ]; then
+rpc_args=""
+if [ -n "$worker_ips" ]; then
   echo "Workers found. Configuring RPC."
-  RPC_ARGS="--rpc-servers $WORKER_IPS"
+  rpc_args="--rpc-servers $worker_ips"
 else
   echo "No workers found after waiting. Starting in standalone mode."
 fi
 
-HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
+{# djlint:off H022 #}
+health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
+{# djlint:on #}
 
 # Loop through the provided models for failover
 {% for model in model_list %}
@@ -72,33 +76,35 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
     --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
-    $RPC_ARGS &
+    $rpc_args &
 
-  SERVER_PID=$!
-  echo "Server process started with PID $SERVER_PID. Waiting for it to become healthy..."
+  server_pid=$!
+  echo "Server process started with PID $server_pid. Waiting for it to become healthy..."
 
-  HEALTHY=false
+  healthy=false
   for i in {1..12}; do
     sleep 10
-    if curl -s --fail $HEALTH_CHECK_URL > /dev/null; then
+    if curl -s --fail $health_check_url > /dev/null; then
       echo "Server is healthy with model {{ model.name }}!"
-      HEALTHY=true
+      healthy=true
       break
     else
       echo "Health check failed (attempt $i/12)..."
     fi
   done
 
-  if [ "$HEALTHY" = true ]; then
+  if [ "$healthy" = true ]; then
     echo "Successfully started llama-server with model: {{ model.name }}"
     # Write the active model to Consul KV for other services to discover
+    {# djlint:off H022 #}
     curl -X PUT --data "{{ model.name }}" http://127.0.0.1:8500/v1/kv/active_model/{{ job_name }}
-    wait $SERVER_PID
+    {# djlint:on #}
+    wait $server_pid
     exit 0
   else
-    echo "Server failed to become healthy with model: {{ model.name }}. Killing process PID $SERVER_PID..."
-    kill $SERVER_PID
-    wait $SERVER_PID 2>/dev/null
+    echo "Server failed to become healthy with model: {{ model.name }}. Killing process PID $server_pid..."
+    kill $server_pid
+    wait $server_pid 2>/dev/null
   fi
 {% endfor %}
 

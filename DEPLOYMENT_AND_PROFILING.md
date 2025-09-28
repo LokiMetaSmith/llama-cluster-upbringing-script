@@ -9,20 +9,25 @@ After the Ansible provisioning is complete (`bootstrap.sh` or the main playbook)
 ### Step 1.1: Verify Service Deployment
 
 The bootstrap process deploys two main jobs to the `default` namespace:
+
 - **`prima-expert-main`**: The default, distributed LLM expert service.
 - **`pipecat-app`**: The main voice agent application.
 
 You can check the status of your newly deployed jobs at any time:
+
 ```bash
 nomad job status
 ```
+
 This command will show you if the jobs are running, pending, or have failed. To see detailed logs for a specific job, use:
+
 ```bash
 nomad alloc logs <allocation_id>
 # Example:
 # nomad job allocs prima-expert-main
 # nomad alloc logs <id_from_previous_command>
 ```
+
 If both jobs show a `running` status, your core services are up.
 
 ---
@@ -36,16 +41,21 @@ This project includes powerful tools to help you measure the performance of your
 This benchmark measures the pure inference speed of your LLM backend, reported in "tokens per second" (t/s). This is the key metric for raw LLM performance.
 
 **How to Use:**
-1.  Ensure you have an LLM backend job (from Step 1.1) running.
-2.  The benchmark job file is located at `/home/user/benchmark.nomad`. You can edit this file to customize the test, such as changing the model path (`-m`) or the prompt.
-3.  Run the benchmark job:
+
+1. Ensure you have an LLM backend job (from Step 1.1) running.
+2. The benchmark job file is located at `/home/user/benchmark.nomad`. You can edit this file to customize the test, such as changing the model path (`-m`) or the prompt.
+3. Run the benchmark job:
+
     ```bash
     nomad job run /home/user/benchmark.nomad
     ```
-4.  The job will run, perform the benchmark, and then complete. To see the results, view the logs:
+
+4. The job will run, perform the benchmark, and then complete. To see the results, view the logs:
+
     ```bash
     nomad job logs llama-benchmark
     ```
+
     The output will contain detailed performance data, including the final tokens/second measurement.
 
 ### 2.2: Real-Time Latency Benchmark
@@ -53,9 +63,11 @@ This benchmark measures the pure inference speed of your LLM backend, reported i
 This benchmark measures the "end-to-end" conversational latency: the time from when you stop speaking to when the AI starts replying. This is crucial for a natural-feeling interaction.
 
 **How to Use:**
-1.  This benchmark is a feature of the main `pipecat` application. To enable it, you must edit the job file.
-2.  Open `/home/user/pipecatapp.nomad` for editing.
-3.  In the `env` section of the `pipecat-app` task, set the `BENCHMARK_MODE` environment variable to `"true"`.
+
+1. This benchmark is a feature of the main `pipecat` application. To enable it, you must edit the job file.
+2. Open `/home/user/pipecatapp.nomad` for editing.
+3. In the `env` section of the `pipecat-app` task, set the `BENCHMARK_MODE` environment variable to `"true"`.
+
     ```hcl
     task "pipecat-app" {
       driver = "docker"
@@ -68,11 +80,15 @@ This benchmark measures the "end-to-end" conversational latency: the time from w
       }
     }
     ```
-4.  Deploy (or re-deploy) the application with this change:
+
+4. Deploy (or re-deploy) the application with this change:
+
     ```bash
     nomad job run /home/user/pipecatapp.nomad
     ```
-5.  As you have conversations with the agent, the end-to-end latency for each turn will be printed to the job's logs. You can monitor this in real-time:
+
+5. As you have conversations with the agent, the end-to-end latency for each turn will be printed to the job's logs. You can monitor this in real-time:
+
     ```bash
     nomad job logs -f pipecatapp
     ```
@@ -83,9 +99,9 @@ This benchmark measures the "end-to-end" conversational latency: the time from w
 
 By combining these benchmarks with system monitoring tools, you can get a complete picture of your cluster's performance.
 
-*   **Test Different Models:** Run the `llama-bench` benchmark against various models (e.g., a 3B parameter model vs. a 7B one). This will show you how well your hardware scales to handle more complex models.
-*   **Monitor System Resources:** While a benchmark is running, log in to your cluster nodes and use command-line tools like `htop` or `top`. This will give you a real-time view of CPU and memory usage, showing you exactly how much load the AI workload is placing on your machines.
-*   **Compare Backends:** Run the same `llama-bench` test against both the `prima.cpp` and `llamacpp-rpc` backends (running them one at a time). This will give you concrete data on which inference engine performs better on your specific hardware setup.
+- **Test Different Models:** Run the `llama-bench` benchmark against various models (e.g., a 3B parameter model vs. a 7B one). This will show you how well your hardware scales to handle more complex models.
+- **Monitor System Resources:** While a benchmark is running, log in to your cluster nodes and use command-line tools like `htop` or `top`. This will give you a real-time view of CPU and memory usage, showing you exactly how much load the AI workload is placing on your machines.
+- **Compare Backends:** Run the same `llama-bench` test against both the `prima.cpp` and `llamacpp-rpc` backends (running them one at a time). This will give you concrete data on which inference engine performs better on your specific hardware setup.
 
 ---
 
@@ -104,7 +120,8 @@ consul members
 You should see a list of all the nodes in your cluster with a status of "alive".
 
 **Example Output:**
-```
+
+```text
 Node      Address            Status  Type    Build   Protocol  DC   Partition  Segment
 AID-E-24  192.168.1.30:8301  alive   server  1.18.1  2         dc1  default    <all>
 AID-E-23  192.168.1.188:8301  alive   client  1.18.1  2         dc1  default    <all>
@@ -121,7 +138,8 @@ nomad node status
 This should show you all the nodes that have successfully joined the Nomad cluster with a status of "ready".
 
 **Example Output:**
-```
+
+```text
 ID        DC   Name      Class   Drain  Eligibility  Status
 1c3af54a  dc1  AID-E-24  <none>  false  eligible     ready
 a4f8e6c1  dc1  AID-E-23  <none>  false  eligible     ready

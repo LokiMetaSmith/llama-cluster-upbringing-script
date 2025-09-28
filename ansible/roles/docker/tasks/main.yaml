@@ -1,4 +1,3 @@
----
 - name: Check if Docker is already installed and running correctly
   block:
     - name: Check for docker binary
@@ -74,7 +73,7 @@
     groups: docker
     append: yes
   become: true
-  
+
 - name: Add root user to the 'docker' group
   ansible.builtin.user:
     name: root

@@ -1,4 +1,3 @@
----
 # handlers file for power_manager
 - name: restart power agent
   become: yes
