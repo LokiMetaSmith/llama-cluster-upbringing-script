@@ -1,5 +1,27 @@
 # TODO
 
+### 1. Refactor for Strict Idempotency in Ansible
+- [ ] Use `creates` and `when` to ensure tasks only run when necessary.
+- [ ] Check for existing state before making changes.
+- [ ] Use handlers for service restarts consistently.
+
+### 2. Centralize All Configuration
+- [ ] Consolidate all configurable parameters into `group_vars/all.yaml` and `group_vars/models.yaml`.
+- [ ] Use templates for all files containing configurable values.
+- [ ] Eliminate hardcoded values from the codebase.
+
+### 3. Pre-build a Docker Image for `pipecatapp`
+- [ ] Create a `Dockerfile` for the `pipecatapp` application.
+- [ ] Build and push the image to a registry as part of the development process.
+- [ ] Simplify the Nomad job to use the `docker` driver with the pre-built image.
+
+### 4. Bolster Your Automated Testing
+- [ ] Use Molecule to test Ansible roles in isolation.
+- [ ] Expand unit tests for Python tools.
+- [ ] Expand end-to-end tests to cover more critical paths.
+
+---
+
 - [x] State Export/Import: Allowing tasks to be saved and resumed.
 - [x] Interactive approval of actions: For enhanced safety and user control.
 - [x] Enhanced Debugging Modes: For better transparency.

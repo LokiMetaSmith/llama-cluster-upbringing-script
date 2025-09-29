@@ -8,62 +8,58 @@
     state: present
   become: yes
 
-- name: Create build directory for whisper.cpp
-  ansible.builtin.file:
-    path: /opt/whisper.cpp-build
-    state: directory
-    mode: '0755'
+- name: Check if whisper.cpp stream binary is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/stream
+  register: whisper_stream_binary
+
+- name: Build and install whisper.cpp
   become: yes
+  when: not whisper_stream_binary.stat.exists
+  block:
+    - name: Create build directory for whisper.cpp
+      ansible.builtin.file:
+        path: /opt/whisper.cpp-build
+        state: directory
+        mode: '0755'
 
-- name: Clone whisper.cpp repository
-  ansible.builtin.git:
-    repo: 'https://github.com/ggml-org/whisper.cpp.git'
-    dest: /opt/whisper.cpp-build
-    version: master
-    update: yes
-    force: yes
-  become: yes
+    - name: Clone whisper.cpp repository
+      ansible.builtin.git:
+        repo: 'https://github.com/ggml-org/whisper.cpp.git'
+        dest: /opt/whisper.cpp-build
+        version: master
+        update: yes
 
-# The whisper.cpp model is now downloaded by the central 'download_models' role.
+    - name: Configure whisper.cpp build
+      ansible.builtin.command:
+        cmd: cmake -B build
+      args:
+        chdir: /opt/whisper.cpp-build
+        creates: /opt/whisper.cpp-build/build/Makefile
 
-- name: Configure whisper.cpp build
-  ansible.builtin.command:
-    cmd: cmake -B build
-  args:
-    chdir: /opt/whisper.cpp-build
-    creates: /opt/whisper.cpp-build/build/Makefile
-  become: yes
+    - name: Build whisper.cpp
+      ansible.builtin.command:
+        cmd: cmake --build build --config Release -j
+      args:
+        chdir: /opt/whisper.cpp-build
+        creates: /opt/whisper.cpp-build/build/bin/stream
 
-- name: Build whisper.cpp
-  ansible.builtin.command:
-    cmd: cmake --build build --config Release -j
-  args:
-    chdir: /opt/whisper.cpp-build
-    creates: /opt/whisper.cpp-build/build/bin/main # Assuming 'main' is one of the binaries
-  become: yes
+    - name: Find compiled binaries
+      ansible.builtin.find:
+        paths: /opt/whisper.cpp-build/build/bin
+        patterns: '*'
+        file_type: file
+      register: whisper_binaries
 
-- name: Find compiled binaries
-  ansible.builtin.find:
-    paths: /opt/whisper.cpp-build/build/bin
-    patterns: '*'
-    file_type: file
-  register: whisper_binaries
-  become: yes
+    - name: Install whisper.cpp binaries
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "/usr/local/bin/{{ item.path | basename }}"
+        mode: '0755'
+        remote_src: yes
+      loop: "{{ whisper_binaries.files }}"
 
-- name: Install whisper.cpp binaries
-  ansible.builtin.copy:
-    src: "{{ binary_file.path }}"
-    dest: "/usr/local/bin/{{ binary_file.path | basename }}"
-    mode: '0755'
-    remote_src: yes
-  loop: "{{ whisper_binaries.files }}"
-  become: yes
-  loop_control:
-    loop_var: binary_file
-
-
-- name: Clean up whisper.cpp build directory
-  ansible.builtin.file:
-    path: /opt/whisper.cpp-build
-    state: absent
-  become: yes
+    - name: Clean up whisper.cpp build directory
+      ansible.builtin.file:
+        path: /opt/whisper.cpp-build
+        state: absent

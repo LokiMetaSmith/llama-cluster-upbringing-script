@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: "Include llama_cpp"
+      include_role:
+        name: "llama_cpp"

@@ -1,0 +1,16 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: "Check if llama-server binary exists"
+      ansible.builtin.stat:
+        path: /usr/local/bin/llama-server
+      register: llama_server_binary
+
+    - name: "Assert that llama-server binary exists"
+      ansible.builtin.assert:
+        that:
+          - llama_server_binary.stat.exists
+          - llama_server_binary.stat.executable
+        fail_msg: "llama-server binary not found or is not executable."

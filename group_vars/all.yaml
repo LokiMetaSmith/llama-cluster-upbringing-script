@@ -8,4 +8,11 @@ default(ansible_default_ipv4.address) }}"
 
 nomad_models_dir: "/opt/nomad/models"
 
+# Pipecat application settings
+prima_api_service_name: "prima-api-main"
+use_summarizer: "false"
+stt_service: "faster-whisper"
+pipecat_app_dir: "/opt/pipecatapp"
+pipecat_log_file: "/tmp/pipecat.log"
+
 # Model definitions have been moved to group_vars/models.yaml

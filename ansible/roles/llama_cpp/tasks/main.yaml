@@ -10,74 +10,70 @@
     state: present
   become: yes
 
-- name: Create build directory for llama.cpp
-  ansible.builtin.file:
-    path: /opt/llama.cpp-build
-    state: directory
-    mode: '0755'
-  become: yes
+- name: Check if llama-server is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/llama-server
+  register: llama_server_binary
 
-- name: Clone llama.cpp repository
-  ansible.builtin.git:
-    repo: 'https://github.com/ggml-org/llama.cpp.git'
-    dest: /opt/llama.cpp-build
-    version: master
-    update: yes
-    force: yes
+- name: Build and install llama.cpp
   become: yes
+  when: not llama_server_binary.stat.exists
+  block:
+    - name: Create build directory for llama.cpp
+      ansible.builtin.file:
+        path: /opt/llama.cpp-build
+        state: directory
+        mode: '0755'
 
-- name: Configure llama.cpp build with RPC and shared libraries
-  ansible.builtin.command:
-    cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON -DBUILD_SHARED_LIBS=ON
-  args:
-    chdir: /opt/llama.cpp-build
-    creates: /opt/llama.cpp-build/build/Makefile
-  become: yes
+    - name: Clone llama.cpp repository
+      ansible.builtin.git:
+        repo: 'https://github.com/ggml-org/llama.cpp.git'
+        dest: /opt/llama.cpp-build
+        version: master
+        update: yes
 
-- name: Build llama.cpp
-  ansible.builtin.command:
-    cmd: cmake --build build --config Release -j
-  args:
-    chdir: /opt/llama.cpp-build
-    creates: /opt/llama.cpp-build/build/bin/llama-server
-  become: yes
+    - name: Configure llama.cpp build with RPC and shared libraries
+      ansible.builtin.command:
+        cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON -DBUILD_SHARED_LIBS=ON
+      args:
+        chdir: /opt/llama.cpp-build
+        creates: /opt/llama.cpp-build/build/Makefile
 
-- name: Find all compiled binaries and libraries
-  ansible.builtin.find:
-    paths: "/opt/llama.cpp-build/build/bin"
-    patterns: '*'
-    file_type: any
-  register: llama_artifacts
-  become: yes
+    - name: Build llama.cpp
+      ansible.builtin.command:
+        cmd: cmake --build build --config Release -j
+      args:
+        chdir: /opt/llama.cpp-build
+        creates: /opt/llama.cpp-build/build/bin/llama-server
 
-- name: Install all compiled binaries to /usr/local/bin
-  ansible.builtin.copy:
-    src: "{{ item.path }}"
-    dest: "/usr/local/bin/{{ item.path | basename }}"
-    mode: '0755'
-    remote_src: yes
-  loop: "{{ llama_artifacts.files | rejectattr('path', 'match', '.*\\.so$') | list }}"
-  become: yes
+    - name: Find all compiled binaries and libraries
+      ansible.builtin.find:
+        paths: "/opt/llama.cpp-build/build/bin"
+        patterns: '*'
+        file_type: any
+      register: llama_artifacts
 
-- name: Install shared libraries to /usr/local/lib
-  ansible.builtin.copy:
-    src: "{{ item.path }}"
-    dest: "/usr/local/lib/{{ item.path | basename }}"
-    mode: '0755'
-    remote_src: yes
-  loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
-  become: yes
+    - name: Install all compiled binaries to /usr/local/bin
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "/usr/local/bin/{{ item.path | basename }}"
+        mode: '0755'
+        remote_src: yes
+      loop: "{{ llama_artifacts.files | rejectattr('path', 'match', '.*\\.so$') | list }}"
 
-- name: Update the shared library cache
-  ansible.builtin.command:
-    cmd: ldconfig
-  become: yes
+    - name: Install shared libraries to /usr/local/lib
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "/usr/local/lib/{{ item.path | basename }}"
+        mode: '0755'
+        remote_src: yes
+      loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
+      notify: update ld cache
 
-- name: Clean up llama.cpp build directory
-  ansible.builtin.file:
-    path: /opt/llama.cpp-build
-    state: absent
-  become: yes
+    - name: Clean up llama.cpp build directory
+      ansible.builtin.file:
+        path: /opt/llama.cpp-build
+        state: absent
 
 - name: Create Nomad jobs directory
   ansible.builtin.file:
