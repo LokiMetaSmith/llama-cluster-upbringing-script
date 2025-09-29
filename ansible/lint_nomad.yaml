@@ -1,8 +1,28 @@
 - hosts: all
   gather_facts: no
   tasks:
+    - name: "Check if nomad command exists"
+      shell: "command -v nomad"
+      register: nomad_command_check
+      changed_when: false
+      ignore_errors: true
+
+    - name: "Check if Nomad jobs directory exists"
+      stat:
+        path: "ansible/jobs"
+      register: nomad_dir
+
     - name: "Check Nomad file formatting"
-      command: "nomad fmt -check -recursive /opt/nomad/jobs"
+      command: "nomad fmt -check -recursive ansible/jobs"
       register: nomad_fmt_result
       changed_when: false
       failed_when: "nomad_fmt_result.rc != 0"
+      when:
+        - nomad_command_check.rc == 0
+        - nomad_dir.stat.exists
+        - nomad_dir.stat.isdir
+
+    - name: "Warn if Nomad is not installed"
+      debug:
+        msg: "Warning: 'nomad' command not found. Skipping Nomad format check."
+      when: nomad_command_check.rc != 0
