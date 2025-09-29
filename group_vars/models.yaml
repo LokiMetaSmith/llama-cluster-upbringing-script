@@ -1,4 +1,3 @@
----
 # This file centralizes the configuration for all AI models used in the project.
 
 # Each expert can have its own list of models for failover.
@@ -22,6 +21,18 @@ coding_expert_models:
   - name: "phi-3-mini-instruct"
     url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
     filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
+    memory_mb: 4096
+
+math_expert_models:
+  - name: "LFM2-350M-Math"
+    url: "https://huggingface.co/LiquidAI/LFM2-350M-Math-GGUF/resolve/main/LFM2-350M-Math-Q4_K_M.gguf"
+    filename: "LFM2-350M-Math-Q4_K_M.gguf"
+    memory_mb: 2048
+
+extract_expert_models:
+  - name: "LFM2-1.2B-Extract"
+    url: "https://huggingface.co/LiquidAI/LFM2-1.2B-Extract-GGUF/resolve/main/LFM2-1.2B-Extract-Q4_K_M.gguf"
+    filename: "LFM2-1.2B-Extract-Q4_K_M.gguf"
     memory_mb: 4096
 
 # Speech-to-Text models

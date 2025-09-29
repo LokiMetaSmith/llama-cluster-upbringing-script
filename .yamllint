@@ -1,0 +1,19 @@
+ignore: |
+  node_modules/
+rules:
+  line-length: disable
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+  document-start:
+    present: false
+  comments:
+    require-starting-space: false
+    min-spaces-from-content: 1
+  trailing-spaces:
+    level: warning
+  new-line-at-end-of-file:
+    level: warning
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 0

@@ -16,23 +16,24 @@ The project has evolved from a single setup script into a sophisticated, multi-l
 - **Phase 1-4: Foundational Setup:** Deployed a robust, multi-service architecture using Ansible and Nomad.
 - **Phase 5: Vision Integration:** Added a `YOLOv8Detector` service, giving the agent the ability to "see".
 - **Phase 6: Agent Embodiment:**
-    - Created the `TwinService`, the agent's "brain."
-    - Implemented both short-term and long-term memory.
-    - Implemented a tool-use framework with `vision`, `ssh`, and `mcp` tools.
+  - Created the `TwinService`, the agent's "brain."
+  - Implemented both short-term and long-term memory.
+  - Implemented a tool-use framework with `vision`, `ssh`, and `mcp` tools.
 - **Phase 7: Self-Reflection and Growth:**
-    - Created an offline workflow using `openevolve` to automatically improve the agent's core prompt.
+  - Created an offline workflow using `openevolve` to automatically improve the agent's core prompt.
 - **Phase 8-9: Advanced MoE Architecture:**
-    - Implemented a Mixture of Experts architecture with dynamic routing using Consul and isolation with Nomad Namespaces.
+  - Implemented a Mixture of Experts architecture with dynamic routing using Consul and isolation with Nomad Namespaces.
 - **Phase 10: Zero-Touch Provisioning:**
-    - Created a `pxe_server` Ansible role to fully automate the installation of Debian on new, bare-metal machines.
+  - Created a `pxe_server` Ansible role to fully automate the installation of Debian on new, bare-metal machines.
 - **Phase 11: Code Execution:**
-    - Implemented a `CodeRunnerTool` that allows the agent to write and execute Python code in a secure, sandboxed Docker container.
+  - Implemented a `CodeRunnerTool` that allows the agent to write and execute Python code in a secure, sandboxed Docker container.
 - **Phase 12: Web Browsing:**
-    - Implemented a `WebBrowserTool` using Playwright that allows the agent to browse the web to answer questions.
+  - Implemented a `WebBrowserTool` using Playwright that allows the agent to browse the web to answer questions.
 
 ---
 
 ## References
+
 - **[prima.cpp](https://github.com/gitalbenar/prima.cpp):** The distributed LLM inference engine.
 - **[pipecat-ai](https://github.com/pipecat-ai/pipecat):** The real-time, streaming conversational AI framework.
 - **[physiii/twin](https://github.com/physiii/twin):** The agent embodiment framework that inspired the `TwinService`.

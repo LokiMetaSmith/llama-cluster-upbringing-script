@@ -1,4 +1,3 @@
----
 - name: Install PXE boot dependencies
   apt:
     name:
@@ -70,4 +69,3 @@
     src: boot.ipxe.j2
     dest: /var/www/html/boot.ipxe
   become: yes
-

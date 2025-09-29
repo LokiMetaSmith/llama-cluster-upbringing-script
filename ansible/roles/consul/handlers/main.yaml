@@ -1,4 +1,3 @@
----
 - name: restart consul
   systemd:
     name: consul

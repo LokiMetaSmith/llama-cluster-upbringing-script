@@ -1,4 +1,3 @@
----
 # tasks file for power_manager
 
 - name: Install eBPF and BCC dependencies
