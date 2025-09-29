@@ -1,0 +1,249 @@
+document.addEventListener("DOMContentLoaded", function() {
+    const terminal = document.getElementById("terminal");
+    const ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+    function logToTerminal(message, className = '') {
+        const p = document.createElement('p');
+        p.innerHTML = message;
+        if (className) {
+            p.className = className;
+        }
+        terminal.appendChild(p);
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    const saveNameInput = document.getElementById("save-name-input");
+    const saveStateBtn = document.getElementById("save-state-btn");
+    const loadStateBtn = document.getElementById("load-state-btn");
+    const statusLight = document.getElementById("status-light");
+    const testAndEvaluationBtn = document.getElementById("test-and-evaluation-btn");
+    const statusDisplay = document.getElementById("status-display");
+    const messageInput = document.getElementById("message-input");
+
+    function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message) {
+            ws.send(JSON.stringify({ type: "user_message", data: message }));
+            logToTerminal(`<strong>You:</strong> ${message}`, "user-message");
+            messageInput.value = "";
+        }
+    }
+
+    messageInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    });
+
+    function updateStatus() {
+        fetch("/api/status")
+            .then(response => response.json())
+            .then(data => {
+                statusDisplay.innerHTML = `<pre>${JSON.stringify(data.status, null, 2)}</pre>`;
+            })
+            .catch(error => {
+                statusDisplay.innerText = `Error fetching status: ${error}`;
+                console.error("Error fetching status:", error);
+            });
+    }
+
+    testAndEvaluationBtn.onclick = updateStatus;
+
+    const robotArt = document.getElementById("robot-art");
+
+    const idleFrames = ["d[o_0]b", "d[-_-]b"];
+    const typingFrame = "d[O_O]b";
+    const wanderingFrames = ["b[o_0]d", "d[0_o]b"];
+
+    let currentFrame = 0;
+    let idleAnimation;
+    let typingTimeout;
+    let wanderTimeout;
+
+    function animateIdle() {
+        currentFrame = (currentFrame + 1) % idleFrames.length;
+        robotArt.textContent = idleFrames[currentFrame];
+    }
+
+    function stopAllAnimations() {
+        clearInterval(idleAnimation);
+        clearTimeout(typingTimeout);
+        clearTimeout(wanderTimeout);
+    }
+
+    function triggerWander() {
+        stopAllAnimations();
+        robotArt.textContent = wanderingFrames[0]; // Look left
+
+        setTimeout(() => {
+            robotArt.textContent = wanderingFrames[1]; // Look right
+            setTimeout(() => {
+                startIdleAnimation(); // Return to idle state, which will schedule the next wander
+            }, 1000);
+        }, 1000);
+    }
+
+    function startIdleAnimation() {
+        stopAllAnimations();
+        robotArt.textContent = idleFrames[0];
+        idleAnimation = setInterval(animateIdle, 2000);
+        // After starting idle, schedule a wander
+        wanderTimeout = setTimeout(triggerWander, 8000);
+    }
+
+    messageInput.addEventListener("input", () => {
+        stopAllAnimations();
+        robotArt.textContent = typingFrame;
+
+        typingTimeout = setTimeout(() => {
+            startIdleAnimation(); // After typing, go back to idle
+        }, 1500);
+    });
+
+    ws.onopen = function() {
+        logToTerminal("--- Connection established with Agent ---");
+        statusLight.style.backgroundColor = "#0f0"; // Green
+        updateStatus();
+        startIdleAnimation();
+    };
+
+    saveStateBtn.onclick = function() {
+        const saveName = saveNameInput.value.trim();
+        if (!saveName) {
+            logToTerminal("Please enter a name for the save state.", "error");
+            return;
+        }
+        fetch("/api/state/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ save_name: saveName })
+        })
+        .then(response => response.json())
+        .then(data => logToTerminal(data.message))
+        .catch(error => logToTerminal(`Error saving state: ${error}`, "error"));
+    };
+
+    loadStateBtn.onclick = function() {
+        const saveName = saveNameInput.value.trim();
+        if (!saveName) {
+            logToTerminal("Please enter the name of the state to load.", "error");
+            return;
+        }
+        fetch("/api/state/load", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ save_name: saveName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            logToTerminal(data.message);
+            logToTerminal("--- State loaded. You may need to refresh the page to see changes in memory. ---");
+        })
+        .catch(error => logToTerminal(`Error loading state: ${error}`, "error"));
+    };
+
+    ws.onmessage = function(event) {
+        try {
+            const msg = JSON.parse(event.data);
+            handleMessage(msg);
+        } catch (e) {
+            logToTerminal(event.data);
+        }
+    };
+
+    ws.onclose = function() {
+        logToTerminal("--- Connection lost with Agent ---", "error");
+        stopAllAnimations();
+    };
+
+    ws.onerror = function(error) {
+        logToTerminal(`--- WebSocket Error: ${error} ---`, "error");
+    };
+
+    function handleMessage(msg) {
+        const type = msg.type;
+        const data = msg.data;
+
+        if (type === "log") {
+            logToTerminal(data);
+        } else if (type === "user") {
+            logToTerminal(`<strong>You:</strong> ${data}`, "user-message");
+        } else if (type === "agent") {
+            logToTerminal(`<strong>Agent:</strong> ${data}`, "agent-message");
+        } else if (type === "display") {
+            renderEffect(data.text, data.effect);
+        } else if (type === "approval_request") {
+            renderApprovalPrompt(data);
+        } else {
+            logToTerminal(JSON.stringify(msg));
+        }
+    }
+
+    function renderApprovalPrompt(data) {
+        const requestId = data.request_id;
+        const toolCall = data.tool_call;
+
+        const container = document.createElement('div');
+        container.className = 'approval-prompt';
+
+        const promptText = document.createElement('p');
+        promptText.innerHTML = `<strong>Action Required:</strong> Approve the following tool call?`;
+        container.appendChild(promptText);
+
+        const toolCallPre = document.createElement('pre');
+        toolCallPre.textContent = JSON.stringify(toolCall, null, 2);
+        container.appendChild(toolCallPre);
+
+        const buttonContainer = document.createElement('div');
+
+        const approveButton = document.createElement('button');
+        approveButton.textContent = "Approve";
+        approveButton.onclick = function() {
+            sendApprovalResponse(requestId, true);
+            container.innerHTML = `<p><strong>Approved.</strong></p>`;
+        };
+        buttonContainer.appendChild(approveButton);
+
+        const denyButton = document.createElement('button');
+        denyButton.textContent = "Deny";
+        denyButton.onclick = function() {
+            sendApprovalResponse(requestId, false);
+            container.innerHTML = `<p><strong>Denied.</strong></p>`;
+        };
+        buttonContainer.appendChild(denyButton);
+
+        container.appendChild(buttonContainer);
+        terminal.appendChild(container);
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function sendApprovalResponse(requestId, approved) {
+        const response = {
+            type: "approval_response",
+            data: {
+                request_id: requestId,
+                approved: approved
+            }
+        };
+        ws.send(JSON.stringify(response));
+    }
+
+    function renderEffect(text, effect) {
+        if (effect === "figlet-lolcat") {
+            figlet.text(text, { font: 'slant' }, function(err, data) {
+                if (err) {
+                    logToTerminal(text); // fallback
+                    return;
+                }
+                const pre = document.createElement('pre');
+                pre.innerHTML = lolcat.rainbow(function(char, color) {
+                    return `<span style="color: ${color};">${char}</span>`;
+                }, data);
+                terminal.appendChild(pre);
+                terminal.scrollTop = terminal.scrollHeight;
+            });
+        } else {
+            logToTerminal(text);
+        }
+    }
+});

@@ -1,0 +1,36 @@
+--index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+torchaudio
+--extra-index-url https://pypi.org/simple
+accelerate
+docker
+einops
+espeakng_loader
+faiss-cpu
+fastapi
+faster-whisper
+fugashi-plus
+huggingface-hub
+kittentts
+https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-none-any.whl
+misaki[en]>=0.9.4
+num2words
+numpy
+onnxruntime
+opencv-python-headless
+paramiko
+pipecat-ai
+piper-tts
+playwright
+pyvips
+pyvips-binary
+RealtimeSTT
+webrtcvad
+requests
+sentence-transformers
+soundfile
+spacy
+ultralytics
+uvicorn
+websockets

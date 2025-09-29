@@ -32,31 +32,33 @@ job "pipecat-app" {
     }
 
     task "pipecat-task" {
-      driver = "raw_exec"
+      driver = "docker"
 
       config {
-        command = "/opt/pipecatapp/start_pipecat.sh"
+        image = "pipecatapp:latest"
+        ports = ["http"]
+        # Pass through the sound device to the container
+        devices = [
+          {
+            host_path      = "/dev/snd"
+            container_path = "/dev/snd"
+          }
+        ]
       }
 
       env {
         # This should match the service name of the main prima-expert job
-        PRIMA_API_SERVICE_NAME = "prima-api-main"
+        PRIMA_API_SERVICE_NAME = "{{ prima_api_service_name }}"
         # Set to "true" to enable the summarizer tool
-        USE_SUMMARIZER = "false"
+        USE_SUMMARIZER = "{{ use_summarizer }}"
         # The vision and embedding models are now hardcoded in the application
         # to load from the unified /opt/nomad/models directory.
-        STT_SERVICE = "faster-whisper"
+        STT_SERVICE = "{{ stt_service }}"
       }
 
       resources {
         cpu    = 1000 # 1 GHz
         memory = 1024 # 4 GB
-      }
-
-      volume_mount {
-        volume      = "snd"
-        destination = "/dev/snd"
-        read_only   = false
       }
     }
   }
