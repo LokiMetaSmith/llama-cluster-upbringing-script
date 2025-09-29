@@ -42,6 +42,14 @@
     mode: '0755'
   become: yes
 
+- name: Ensure correct ownership of the application directory
+  ansible.builtin.file:
+    path: /opt/pipecatapp
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    recurse: yes
+  become: yes
+
 - name: Create a virtual environment for the pipecat app
   ansible.builtin.command:
     cmd: python3 -m venv /opt/pipecatapp/venv
