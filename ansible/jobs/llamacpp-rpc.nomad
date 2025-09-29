@@ -57,6 +57,9 @@ HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
     --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
+    --n-gpu-layers 999 \
+    --flash-attn \
+    --mlock \
     --rpc-servers $WORKER_IPS > /tmp/llama-server.log 2>&1 &
 
   SERVER_PID=$!
@@ -140,7 +143,10 @@ EOH
 /usr/local/bin/llama-server \
   --model "/opt/nomad/models/llm/{{ llm_models_var[0].filename }}" \
   --host 0.0.0.0 \
-  --port {{ '{{' }} env "NOMAD_PORT_rpc" {{ '}}' }}
+  --port {{ '{{' }} env "NOMAD_PORT_rpc" {{ '}}' }} \
+  --n-gpu-layers 999 \
+  --flash-attn \
+  --mlock
 EOH
         destination = "local/run_worker.sh"
         perms       = "0755"
