@@ -75,6 +75,9 @@ nomad job stop -purge prima-expert-main || true
 nomad job stop -purge pipecat-app || true
 echo "Purge complete."
 
+# Display system memory
+free -h
+
 # Run the Ansible playbook with the local inventory
 echo "Running the Ansible playbook for local setup..."
 echo "You will be prompted for your sudo password."

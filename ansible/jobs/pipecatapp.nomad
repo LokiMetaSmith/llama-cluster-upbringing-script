@@ -50,7 +50,12 @@ job "pipecat-app" {
       resources {
         cpu    = 1000 # 1 GHz
         memory = 1024 # 4 GB
-        device "snd" {}
+      }
+
+      volume_mount {
+        volume      = "snd"
+        destination = "/dev/snd"
+        read_only   = false
       }
     }
   }
