@@ -4,7 +4,7 @@
 - [x] Interactive approval of actions: For enhanced safety and user control.
 - [x] Enhanced Debugging Modes: For better transparency.
 - [x] WebBrowserTool: For browsing the web.
-- [ ] Web UI: Display a cartoon robot face (ASCII art) in the web UI.
+- [ ] Web UI: Replace the placeholder ASCII art with a more expressive cartoon robot face.
 
 All major features are implemented. Please see the README.md for a complete list of features and usage instructions.
 
