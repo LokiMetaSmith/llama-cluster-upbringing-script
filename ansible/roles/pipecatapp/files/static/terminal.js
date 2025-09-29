@@ -49,24 +49,62 @@ document.addEventListener("DOMContentLoaded", function() {
 
     testAndEvaluationBtn.onclick = updateStatus;
 
-    function displayWelcomeArt() {
-        const art = `
-  ___
- / _ \\
-| | | |
-| |_| |
- \\___/
- [o o]
-  \\_/
-`;
-        logToTerminal(`<pre>${art}</pre>`);
+    const robotArt = document.getElementById("robot-art");
+
+    const idleFrames = ["d[o_0]b", "d[-_-]b"];
+    const typingFrame = "d[O_O]b";
+    const wanderingFrames = ["b[o_0]d", "d[0_o]b"];
+
+    let currentFrame = 0;
+    let idleAnimation;
+    let typingTimeout;
+    let wanderTimeout;
+
+    function animateIdle() {
+        currentFrame = (currentFrame + 1) % idleFrames.length;
+        robotArt.textContent = idleFrames[currentFrame];
     }
 
+    function stopAllAnimations() {
+        clearInterval(idleAnimation);
+        clearTimeout(typingTimeout);
+        clearTimeout(wanderTimeout);
+    }
+
+    function triggerWander() {
+        stopAllAnimations();
+        robotArt.textContent = wanderingFrames[0]; // Look left
+
+        setTimeout(() => {
+            robotArt.textContent = wanderingFrames[1]; // Look right
+            setTimeout(() => {
+                startIdleAnimation(); // Return to idle state, which will schedule the next wander
+            }, 1000);
+        }, 1000);
+    }
+
+    function startIdleAnimation() {
+        stopAllAnimations();
+        robotArt.textContent = idleFrames[0];
+        idleAnimation = setInterval(animateIdle, 2000);
+        // After starting idle, schedule a wander
+        wanderTimeout = setTimeout(triggerWander, 8000);
+    }
+
+    messageInput.addEventListener("input", () => {
+        stopAllAnimations();
+        robotArt.textContent = typingFrame;
+
+        typingTimeout = setTimeout(() => {
+            startIdleAnimation(); // After typing, go back to idle
+        }, 1500);
+    });
+
     ws.onopen = function() {
-        displayWelcomeArt();
         logToTerminal("--- Connection established with Agent ---");
         statusLight.style.backgroundColor = "#0f0"; // Green
         updateStatus();
+        startIdleAnimation();
     };
 
     saveStateBtn.onclick = function() {
@@ -115,6 +153,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     ws.onclose = function() {
         logToTerminal("--- Connection lost with Agent ---", "error");
+        stopAllAnimations();
     };
 
     ws.onerror = function(error) {
