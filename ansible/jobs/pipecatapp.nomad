@@ -12,6 +12,11 @@ job "pipecat-app" {
       }
     }
 
+    volume "snd" {
+      type   = "host"
+      source = "snd"
+    }
+
     service {
       name = "pipecat-app-http"
       port = "http"
