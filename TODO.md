@@ -1,5 +1,6 @@
 # TODO
 
+
 ### 1. Refactor for Strict Idempotency in Ansible
 - [ ] Use `creates` and `when` to ensure tasks only run when necessary.
 - [ ] Check for existing state before making changes.
@@ -22,6 +23,7 @@
 - [ ] Expand end-to-end tests to cover more critical paths.
 
 ---
+
 
 - [x] State Export/Import: Allowing tasks to be saved and resumed.
 - [x] Interactive approval of actions: For enhanced safety and user control.

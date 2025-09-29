@@ -1,15 +1,214 @@
-- name: Create Nomad jobs directory
+# FILE: your_playbook.yml
+- name: Install python3, pip, and venv system packages
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+
+- name: Install system dependencies for Python packages
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - python3-dev
+      - portaudio19-dev
+      - mecab
+      - libmecab-dev
+      - mecab-ipadic-utf8
+      - rustc
+      - cargo
+    state: present
+  become: yes
+
+- name: Install system dependencies for Playwright
+  ansible.builtin.apt:
+    name:
+      - libevent-2.1-7t64
+      - libgstreamer-plugins-bad1.0-0
+      - libflite1
+      - libavif16
+      - gstreamer1.0-libav
+    state: present
+  become: yes
+
+- name: Create pipecatapp application directory
   ansible.builtin.file:
-    path: /opt/nomad/jobs
+    path: /opt/pipecatapp
     state: directory
     mode: '0755'
+  become: yes
+
+- name: Ensure correct ownership of the application directory
+  ansible.builtin.file:
+    path: /opt/pipecatapp
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    recurse: yes
+  become: yes
+
+- name: Create a virtual environment for the pipecat app
+  ansible.builtin.command:
+    cmd: python3 -m venv /opt/pipecatapp/venv
+    creates: /opt/pipecatapp/venv/bin/pip
+  become: yes
+
+- name: Create a persistent temporary directory for pip builds
+  ansible.builtin.file:
+    path: /var/tmp/ansible_pip_build
+    state: directory
+    mode: '0777'
+  become: yes
+
+- name: Copy requirements.txt to remote host
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/ansible/roles/python_deps/files/requirements.txt"
+    dest: /opt/pipecatapp/requirements.txt
+  become: yes
+
+- name: Configure git to use anonymous protocol for GitHub
+  ansible.builtin.git_config:
+    name: url.https://github.com/.insteadOf
+    scope: system
+    value: git://github.com/
+  become: yes
+
+- name: Install/Upgrade base python packages in venv
+  ansible.builtin.pip:
+    name:
+      - pip
+      - setuptools
+      - wheel
+      - cython
+    state: latest
+    executable: /opt/pipecatapp/venv/bin/pip3
+  become: yes
+
+# MODIFIED THIS TASK
+- name: Install python dependencies into the virtual environment
+  ansible.builtin.pip:
+    requirements: /opt/pipecatapp/requirements.txt
+    executable: /opt/pipecatapp/venv/bin/pip3
+    extra_args: -v # Added for verbose logging
+  environment:
+    TMPDIR: /var/tmp/ansible_pip_build
+  become: yes
+  async: 1200 # Set timeout to 20 minutes
+  poll: 10    # Check status every 10 seconds
+
+- name: Clean up pip build directory
+  ansible.builtin.file:
+    path: /var/tmp/ansible_pip_build
+    state: absent
+  become: yes
+
+- name: Create pipecat configuration file
+  ansible.builtin.template:
+    src: pipecat_config.json.j2
+    dest: /opt/pipecatapp/pipecat_config.json
+    mode: '0644'
+  become: yes
+
+- name: Copy pipecat app
+  ansible.builtin.copy:
+    src: app.py
+    dest: /opt/pipecatapp/app.py
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy pipecat startup script
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/scripts/start_pipecat.sh"
+    dest: /opt/pipecatapp/start_pipecat.sh
+    mode: '0755'
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy memory module
+  ansible.builtin.copy:
+    src: memory.py
+    dest: /opt/pipecatapp/memory.py
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy web_server module
+  ansible.builtin.copy:
+    src: web_server.py
+    dest: /opt/pipecatapp/web_server.py
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy static assets
+  ansible.builtin.copy:
+    src: static
+    dest: /opt/pipecatapp/
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy tools directory
+  ansible.builtin.copy:
+    src: tools
+    dest: /opt/pipecatapp/
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy moondream_detector module
+  ansible.builtin.copy:
+    src: moondream_detector.py
+    dest: /opt/pipecatapp/moondream_detector.py
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Create STT model directory
+  ansible.builtin.file:
+    path: /opt/nomad/models/stt
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Clone faster-whisper model
+  ansible.builtin.git:
+    repo: 'https://huggingface.co/Systran/faster-whisper-tiny.en'
+    dest: /opt/nomad/models/stt/faster-whisper-tiny.en
+    version: main
+  become: yes
+
+- name: Create VAD model directory
+  ansible.builtin.file:
+    path: /root/.cache/torch/hub/snakers4_silero-vad_master
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Clone silero-vad model
+  ansible.builtin.git:
+    repo: 'https://github.com/snakers4/silero-vad.git'
+    dest: /root/.cache/torch/hub/snakers4_silero-vad_master
+    version: master
   become: yes
 
 - name: Copy pipecatapp Nomad job file
   ansible.builtin.template:
     src: ../../jobs/pipecatapp.nomad
     dest: /opt/nomad/jobs/pipecatapp.nomad
+
+# MODIFIED THIS TASK
+- name: Install Playwright browsers using the virtual environment's python
+  ansible.builtin.command:
+    cmd: /opt/pipecatapp/venv/bin/python3 -m playwright install
   become: yes
+  async: 900 # Set timeout to 15 minutes
+  poll: 10   # Check status every 10 seconds
 
 - name: Install systemd service for starting Nomad jobs on boot
   ansible.builtin.template:
@@ -30,7 +229,6 @@
   until: nomad_api_status.status == 200
   retries: 12 # Total wait time = retries * delay = 60 seconds
   delay: 5   # Wait 5 seconds between retries
-  become: yes
 
 - name: Check if pipecat-app job is running
   ansible.builtin.command:
@@ -38,14 +236,20 @@
   register: pipecat_job_status
   changed_when: false
   ignore_errors: true
-  become: yes
 
 - name: Run pipecat-app job
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
   when: pipecat_job_status.rc != 0
+
+- name: Ensure start_services.sh is executable
+  ansible.builtin.file:
+    path: /opt/cluster-infra/start_services.sh
+    mode: '0755'
+    owner: root
+    group: root
+    state: file
   become: yes
 
 - name: Flush handlers to ensure service is enabled and started
   ansible.builtin.meta: flush_handlers
-  become: yes
