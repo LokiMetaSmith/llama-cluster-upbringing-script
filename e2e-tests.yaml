@@ -1,4 +1,3 @@
----
 - name: E2E Cluster Health Check
   hosts: all
   gather_facts: false

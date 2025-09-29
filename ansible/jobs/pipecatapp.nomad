@@ -12,6 +12,11 @@ job "pipecat-app" {
       }
     }
 
+    volume "snd" {
+      type   = "host"
+      source = "snd"
+    }
+
     service {
       name = "pipecat-app-http"
       port = "http"
@@ -30,11 +35,7 @@ job "pipecat-app" {
       driver = "raw_exec"
 
       config {
-        command = "/bin/bash"
-        args = [
-          "-c",
-          "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py &> /tmp/pipecat.log"
-        ]
+        command = "/opt/pipecatapp/start_pipecat.sh"
       }
 
       env {
@@ -50,7 +51,12 @@ job "pipecat-app" {
       resources {
         cpu    = 1000 # 1 GHz
         memory = 1024 # 4 GB
-        device "snd" {}
+      }
+
+      volume_mount {
+        volume      = "snd"
+        destination = "/dev/snd"
+        read_only   = false
       }
     }
   }

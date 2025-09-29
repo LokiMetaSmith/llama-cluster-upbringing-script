@@ -69,12 +69,20 @@ then
     exit 1
 fi
 
-# Purge any existing jobs to ensure a clean deployment.
-echo "Purging any old Nomad jobs that will be deployed..."
+# Purge any existing jobs and processes to ensure a clean deployment.
+echo "Purging any old Nomad jobs..."
 nomad job stop -purge prima-expert-main || true
 nomad job stop -purge pipecat-app || true
 echo "Purge complete."
  free -h
+
+echo "Forcefully terminating any orphaned application processes to prevent memory leaks..."
+pkill -f dllama-api || true
+pkill -f "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py" || true
+echo "Process cleanup complete."
+
+# Display system memory
+free -h
 
 # Run the Ansible playbook with the local inventory
 echo "Running the Ansible playbook for local setup..."
@@ -91,8 +99,6 @@ fi
 
 echo "Bootstrap complete."
 
-# Redeploy the Nomad jobs using the correct playbook to ensure templating
-echo "Redeploying Nomad jobs with correct templating..."
-ansible-playbook deploy_expert.yaml -e "job_name=prima-expert-main" -e "service_name=prima-api-main"
-ansible-playbook deploy_app.yaml
-echo "✅ Nomad jobs redeployed."
+# The main playbook handles the deployment of all necessary services.
+# No further action is needed.
+echo "✅ Standalone server setup is complete."

@@ -1,4 +1,3 @@
----
 # tasks file for bootstrap_agent
 
 - name: Force all pending handlers to run now

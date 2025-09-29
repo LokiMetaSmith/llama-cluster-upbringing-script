@@ -1,7 +1,9 @@
----
 - hosts: localhost
   connection: local
   gather_facts: no
+
+  vars_files:
+    - group_vars/models.yaml
 
   # These variables would be passed on the command line with -e
   # e.g., ansible-playbook deploy_expert.yaml -e "job_name=my-expert ..."
@@ -18,6 +20,16 @@
         src: ansible/jobs/prima-expert.nomad
         dest: /tmp/{{ job_name }}.nomad
         mode: '0644'
+
+    - name: "Wait for Nomad API to be ready"
+      ansible.builtin.uri:
+        url: http://127.0.0.1:4646/v1/status/leader
+        method: GET
+        status_code: 200
+      register: nomad_api_status
+      until: "nomad_api_status.status == 200"
+      retries: 12
+      delay: 5
 
     - name: "Run the custom Prima Expert job in Nomad"
       ansible.builtin.command:

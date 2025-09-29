@@ -1,4 +1,3 @@
----
 - name: Ensure llama.cpp server is started with --slots argument
   ansible.builtin.debug:
     msg: |

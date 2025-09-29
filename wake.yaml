@@ -1,4 +1,3 @@
----
 - name: Wake up all cluster nodes
   hosts: all
   gather_facts: no

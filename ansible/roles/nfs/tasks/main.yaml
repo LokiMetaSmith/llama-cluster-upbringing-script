@@ -1,4 +1,3 @@
----
 - name: Install NFS packages
   apt:
     name:

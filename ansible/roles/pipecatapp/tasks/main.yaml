@@ -1,5 +1,4 @@
 # FILE: your_playbook.yml
----
 - name: Install python3, pip, and venv system packages
   ansible.builtin.apt:
     name:
@@ -113,6 +112,15 @@
   tags:
     - deploy_app
 
+- name: Copy pipecat startup script
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/scripts/start_pipecat.sh"
+    dest: /opt/pipecatapp/start_pipecat.sh
+    mode: '0755'
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy memory module
   ansible.builtin.copy:
     src: memory.py
@@ -203,6 +211,16 @@
   notify:
     - Reload systemd
     - Enable and start prima-services
+
+- name: Wait for Nomad API to be ready
+  ansible.builtin.uri:
+    url: http://127.0.0.1:4646/v1/status/leader
+    method: GET
+    status_code: 200
+  register: nomad_api_status
+  until: nomad_api_status.status == 200
+  retries: 12 # Total wait time = retries * delay = 60 seconds
+  delay: 5   # Wait 5 seconds between retries
 
 - name: Check if pipecat-app job is running
   ansible.builtin.command:
