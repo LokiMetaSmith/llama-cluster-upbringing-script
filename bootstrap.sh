@@ -69,11 +69,16 @@ then
     exit 1
 fi
 
-# Purge any existing jobs to ensure a clean deployment.
-echo "Purging any old Nomad jobs that will be deployed..."
+# Purge any existing jobs and processes to ensure a clean deployment.
+echo "Purging any old Nomad jobs..."
 nomad job stop -purge prima-expert-main || true
 nomad job stop -purge pipecat-app || true
 echo "Purge complete."
+
+echo "Forcefully terminating any orphaned application processes to prevent memory leaks..."
+pkill -f dllama-api || true
+pkill -f "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py" || true
+echo "Process cleanup complete."
 
 # Display system memory
 free -h
