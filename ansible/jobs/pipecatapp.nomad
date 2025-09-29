@@ -35,11 +35,7 @@ job "pipecat-app" {
       driver = "raw_exec"
 
       config {
-        command = "/bin/bash"
-        args = [
-          "-c",
-          "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py &> /tmp/pipecat.log"
-        ]
+        command = "/opt/pipecatapp/start_pipecat.sh"
       }
 
       env {

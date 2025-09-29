@@ -112,6 +112,15 @@
   tags:
     - deploy_app
 
+- name: Copy pipecat startup script
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/scripts/start_pipecat.sh"
+    dest: /opt/pipecatapp/start_pipecat.sh
+    mode: '0755'
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy memory module
   ansible.builtin.copy:
     src: memory.py
