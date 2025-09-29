@@ -11,7 +11,8 @@ set -e # Exit immediately if a command exits with a non-zero status.
 # --- Build Exclude Arguments ---
 EXCLUDE_FILE="scripts/lint_exclude.txt"
 MARKDOWN_IGNORE_ARGS=""
-DJLINT_EXCLUDE_ARGS="node_modules,venv" # Start with default excludes
+# Start with default excludes, using separate flags for each
+DJLINT_EXCLUDE_ARGS="--exclude node_modules --exclude venv"
 
 if [ -f "$EXCLUDE_FILE" ]; then
     # Read file line by line, ignoring comments and empty lines
@@ -20,7 +21,7 @@ if [ -f "$EXCLUDE_FILE" ]; then
             continue
         fi
         MARKDOWN_IGNORE_ARGS+=" --ignore $line"
-        DJLINT_EXCLUDE_ARGS+=",$line"
+        DJLINT_EXCLUDE_ARGS+=" --exclude $line"
     done < "$EXCLUDE_FILE"
 fi
 
@@ -54,7 +55,7 @@ else
 fi
 
 echo "--- Running Jinja2 Linter ---"
-# Pass the comma-separated exclude list to djlint
-djlint . --exclude "$DJLINT_EXCLUDE_ARGS"
+# Pass the exclude arguments to djlint. They must be unquoted.
+djlint . $DJLINT_EXCLUDE_ARGS
 
 echo "✅ All linters passed successfully!"
