@@ -169,7 +169,7 @@
 
 - name: Create VAD model directory
   ansible.builtin.file:
-    path: /opt/nomad/models/stt/silero-vad
+    path: /root/.cache/torch/hub/snakers4_silero-vad_master
     state: directory
     mode: '0755'
   become: yes
@@ -177,23 +177,8 @@
 - name: Clone silero-vad model
   ansible.builtin.git:
     repo: 'https://github.com/snakers4/silero-vad.git'
-    dest: /opt/nomad/models/stt/silero-vad
-    version: master
-  become: yes
-
-- name: Ensure parent directory for VAD model symlink exists
-  ansible.builtin.file:
-    path: /root/.cache/torch/hub
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Create symbolic link for silero-vad model for compatibility
-  ansible.builtin.file:
-    src: /opt/nomad/models/stt/silero-vad
     dest: /root/.cache/torch/hub/snakers4_silero-vad_master
-    state: link
-    force: yes
+    version: master
   become: yes
 
 - name: Copy pipecatapp Nomad job file
