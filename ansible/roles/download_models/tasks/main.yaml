@@ -3,7 +3,7 @@
     url: "{{ item.url }}"
     dest: "/opt/nomad/models/llm/{{ item.filename }}"
     mode: '0644'
-  loop: "{{ main_expert_models + coding_expert_models }}"
+  loop: "{{ main_expert_models + coding_expert_models + math_expert_models + extract_expert_models }}"
   become: yes
   loop_control:
     loop_var: item

@@ -74,6 +74,15 @@ echo "Purging any old Nomad jobs..."
 nomad job stop -purge prima-expert-main || true
 nomad job stop -purge pipecat-app || true
 echo "Purge complete."
+ free -h
+
+echo "Forcefully terminating any orphaned application processes to prevent memory leaks..."
+pkill -f dllama-api || true
+pkill -f "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py" || true
+echo "Process cleanup complete."
+
+# Display system memory
+free -h
 
 echo "Forcefully terminating any orphaned application processes to prevent memory leaks..."
 pkill -f dllama-api || true

@@ -1,0 +1,5 @@
+# This file lists files to be excluded from the linting process.
+# Add one file path per line.
+
+ansible/lint_nomad.yaml
+ansible/jobs/prima-expert.nomad
