@@ -23,74 +23,11 @@
         .error { color: #ff6347; }
         #status-light { width: 15px; height: 15px; border-radius: 50%; background-color: #f00; display: inline-block; margin-left: 10px; }
         input, button { padding: 5px; background-color: #333; color: #f0f0f0; border: 1px solid #555; }
-
-        /* Dropdown Button */
-        .dropbtn {
-            background-color: #008CBA;
-            color: white;
-            padding: 8px;
-            font-size: 14px;
-            border: none;
-            cursor: pointer;
-        }
-
-        /* The container <div> - needed to position the dropdown content */
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
-
-        /* Dropdown Content (Hidden by Default) */
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: #f9f9f9;
-            min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1;
-        }
-
-        /* Links inside the dropdown */
-        .dropdown-content a {
-            color: black;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-        }
-
-        /* Change color of dropdown links on hover */
-        .dropdown-content a:hover {background-color: #f1f1f1}
-
-        /* Show the dropdown menu on hover */
-        .dropdown:hover .dropdown-content {
-            display: block;
-        }
-
-        /* Change the background color of the dropdown button when the dropdown content is shown */
-        .dropdown:hover .dropbtn {
-            background-color: #005f7a;
-        }
-
-        #robot-face {
-            color: #00ff00; /* Green to match the title */
-            font-size: 2.5em;
-            text-align: center;
-            margin: 0 0 20px 0;
-            line-height: 1;
-            text-shadow: 0 0 5px #00ff00; /* Add a subtle glow */
-        }
     </style>
 </head>
 <body>
     <h1>Mission Control <span id="status-light"></span></h1>
-    <pre id="robot-face">d[o_0]b</pre>
     <div id="controls">
-        <div class="dropdown">
-            <button class="dropbtn">Admin UIs</button>
-            <div class="dropdown-content" id="admin-ui-links">
-                <!-- Links will be populated by JavaScript -->
-            </div>
-        </div>
         <button id="test-and-evaluation-btn">test and evaluation</button>
         <input type="text" id="save-name-input" placeholder="Enter state name...">
         <button id="save-state-btn">Save State</button>
@@ -102,39 +39,5 @@
         <input type="text" id="message-input" style="flex-grow: 1; background-color: #333; color: #f0f0f0; border: 1px solid #555; padding: 5px;" placeholder="Type your message here and press Enter...">
     </div>
     <script src="/static/terminal.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            fetch('/api/web_uis')
-                .then(response => response.json())
-                .then(data => {
-                    const adminUiLinks = document.getElementById('admin-ui-links');
-                    if (data.length === 0) {
-                        const noLink = document.createElement('a');
-                        noLink.textContent = "No UIs found";
-                        noLink.href = "#";
-                        adminUiLinks.appendChild(noLink);
-                        return;
-                    }
-                    data.forEach(ui => {
-                        const link = document.createElement('a');
-                        link.textContent = ui.name;
-                        // Construct URL relative to the current host
-                        const url = new URL(ui.url);
-                        url.hostname = window.location.hostname;
-                        link.href = url.toString();
-                        link.target = "_blank"; // Open in new tab
-                        adminUiLinks.appendChild(link);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error fetching web UIs:', error);
-                    const adminUiLinks = document.getElementById('admin-ui-links');
-                    const errorLink = document.createElement('a');
-                    errorLink.textContent = "Error loading UIs";
-                    errorLink.href = "#";
-                    adminUiLinks.appendChild(errorLink);
-                });
-        });
-    </script>
 </body>
 </html>
