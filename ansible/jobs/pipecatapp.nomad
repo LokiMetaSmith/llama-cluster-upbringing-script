@@ -28,6 +28,7 @@ job "pipecat-app" {
 
     task "pipecat-task" {
       driver = "raw_exec"
+      user   = "root"
 
       config {
         command = "/bin/bash"
