@@ -84,6 +84,14 @@ echo "Process cleanup complete."
 # Display system memory
 free -h
 
+echo "Forcefully terminating any orphaned application processes to prevent memory leaks..."
+pkill -f dllama-api || true
+pkill -f "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py" || true
+echo "Process cleanup complete."
+
+# Display system memory
+free -h
+
 # Run the Ansible playbook with the local inventory
 echo "Running the Ansible playbook for local setup..."
 echo "You will be prompted for your sudo password."
