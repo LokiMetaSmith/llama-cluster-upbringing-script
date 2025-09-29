@@ -11,6 +11,7 @@
 - [ ] Eliminate hardcoded values from the codebase.
 
 ### 3. Pre-build a Docker Image for `pipecatapp`
+- [ ] Add a flag in the bootstrap script to select running  the `pipecatapp` application locally or in a Docker container
 - [ ] Create a `Dockerfile` for the `pipecatapp` application.
 - [ ] Build and push the image to a registry as part of the development process.
 - [ ] Simplify the Nomad job to use the `docker` driver with the pre-built image.
