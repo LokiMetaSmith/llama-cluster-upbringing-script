@@ -118,8 +118,15 @@ async def get_status():
 
 @app.get("/health")
 async def get_health():
-    """A simple health check endpoint that returns a 200 OK status."""
-    return {"status": "ok"}
+    """A health check endpoint that verifies the agent is fully initialized."""
+    if twin_service_instance and twin_service_instance.router_llm:
+        # The presence of the router_llm indicates that the LLM service
+        # has been successfully discovered and the agent is ready.
+        return JSONResponse(content={"status": "ok"})
+    else:
+        # Return a 503 Service Unavailable status if the agent is not ready.
+        # This prevents Nomad from marking the allocation as healthy prematurely.
+        return JSONResponse(status_code=503, content={"status": "initializing"})
 
 @app.get("/api/web_uis")
 async def get_web_uis():
