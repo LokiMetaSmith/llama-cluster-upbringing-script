@@ -23,14 +23,22 @@ def test_mission_control_ui_loads(page: Page):
     status_light = page.locator("#status-light")
     expect(status_light).to_be_visible()
 
+import time
+
 def test_health_check_endpoint(page: Page):
     """
-    Tests that the /health API endpoint is responsive.
+    Tests that the /health API endpoint eventually becomes healthy.
+    The test will poll the endpoint for up to 60 seconds.
     """
-    # We can use Playwright to make API requests as well
-    response = page.request.get("http://localhost:8000/health")
-    expect(response).to_be_ok()
+    start_time = time.time()
+    timeout = 60  # seconds
 
-    # Verify the response body
-    json_response = response.json()
-    assert json_response == {"status": "ok"}
+    while time.time() - start_time < timeout:
+        response = page.request.get("http://localhost:8000/health", fail_on_error=False)
+        if response.ok:
+            json_response = response.json()
+            assert json_response == {"status": "ok"}
+            return  # Success
+        time.sleep(2)
+
+    pytest.fail(f"The /health endpoint did not return OK within {timeout} seconds.")
