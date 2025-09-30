@@ -37,6 +37,12 @@ job "pipecat-app" {
       config {
         image = "pipecatapp:latest"
         ports = ["http"]
+        # Mount volumes for models and config. Models are read-only.
+        # Assumes /app is the WORKDIR in the container, where pipecat_config.json will be placed.
+        volumes = [
+          "/opt/nomad/models:/opt/nomad/models:ro",
+          "/opt/pipecatapp/pipecat_config.json:/app/pipecat_config.json:ro",
+        ]
         # Pass through the sound device to the container
         devices = [
           {
