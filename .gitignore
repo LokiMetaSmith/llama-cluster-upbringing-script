@@ -1,2 +1,6 @@
 # Ignore all log files
 *.log
+node_modules/
+__pycache__/
+playbook_output.log
+.aider*
