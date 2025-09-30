@@ -1,0 +1,14 @@
+{
+    "tts_voices": [
+        {
+            "name": "en_US-l2arctic-medium",
+            "model": "en_US-l2arctic-medium.onnx",
+            "config": "en_US-l2arctic-medium.onnx.json"
+        },
+        {
+            "name": "en_US-lessac-low",
+            "model": "en_US-lessac-low.onnx",
+            "config": "en_US-lessac-low.onnx.json"
+        }
+    ]
+}
