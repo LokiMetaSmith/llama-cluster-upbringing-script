@@ -24,6 +24,7 @@ from pipecat.frames.frames import (
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
+from pipecat_whisker import WhiskerObserver
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
@@ -876,10 +877,12 @@ async def main():
 
     main_pipeline = Pipeline(pipeline_steps)
 
+    whisker = WhiskerObserver(main_pipeline)
+
     # Vision pipeline (runs in parallel to update the detector's state)
     vision_pipeline = Pipeline([vision_detector])
 
-    main_task = PipelineTask(main_pipeline)
+    main_task = PipelineTask(main_pipeline, observers=[whisker])
 
     # Interruption handling
     async def handle_interrupt(frame):

@@ -21,6 +21,7 @@ onnxruntime
 opencv-python-headless
 paramiko
 pipecat-ai
+pipecat-ai-whisker
 piper-tts
 playwright
 pyvips
