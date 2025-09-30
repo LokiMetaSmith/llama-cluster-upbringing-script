@@ -65,7 +65,7 @@
       changed_when: "'Browsers installed' in playwright_install.stdout"
 
     - name: Run Playwright tests with pytest
-      command: python -m pytest e2e/test_mission_control.py
+      command: python -m pytest e2e/
       register: playwright_test_results
       changed_when: false # This task only reports status, doesn't change state
 
