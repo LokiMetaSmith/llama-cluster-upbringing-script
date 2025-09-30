@@ -32,7 +32,7 @@ from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
 from faster_whisper import WhisperModel
 from piper.voice import PiperVoice
-import requests
+import httpx
 import numpy as np
 from memory import MemoryStore
 import web_server
@@ -338,7 +338,7 @@ class TwinService(FrameProcessor):
             self.tools["summarizer"] = SummarizerTool(self)
             logging.info("Summarizer tool enabled.")
 
-    def get_discovered_experts(self) -> list[str]:
+    async def get_discovered_experts(self) -> list[str]:
         """Discovers available 'expert' services registered in Consul.
 
         It queries the Consul catalog for services prefixed with "llama-api-"
@@ -348,17 +348,18 @@ class TwinService(FrameProcessor):
             list[str]: A list of discovered expert service names.
         """
         try:
-            response = requests.get(f"{self.consul_http_addr}/v1/catalog/services")
-            response.raise_for_status()
-            services = response.json()
-            # Filter for services that match our expert pattern, e.g., "llama-api-"
-            expert_names = [name for name in services.keys() if name.startswith("llama-api-")]
-            return expert_names
-        except requests.exceptions.RequestException as e:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.consul_http_addr}/v1/catalog/services")
+                response.raise_for_status()
+                services = response.json()
+                # Filter for services that match our expert pattern, e.g., "llama-api-"
+                expert_names = [name for name in services.keys() if name.startswith("llama-api-")]
+                return expert_names
+        except httpx.RequestError as e:
             logging.error(f"Could not connect to Consul: {e}")
             return []
 
-    def get_system_prompt(self, expert_name: str = "router") -> str:
+    async def get_system_prompt(self, expert_name: str = "router") -> str:
         """Constructs the system prompt for a given agent or expert.
 
         The prompt is assembled from a base prompt file and a dynamically
@@ -387,7 +388,7 @@ class TwinService(FrameProcessor):
                     if not method_name.startswith('_'):
                         tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
 
-        for service_name in self.get_discovered_experts():
+        for service_name in await self.get_discovered_experts():
             expert_name = service_name.replace("llama-api-", "")
             tools_prompt += f'- {{"tool": "route_to_expert", "args": {{"expert": "{expert_name}", "query": "<user_query>"}}}}: Use this for queries related to {expert_name}.\n'
 
@@ -404,19 +405,20 @@ class TwinService(FrameProcessor):
         """
         service_name = f"llama-api-{expert_name}"
         try:
-            response = requests.get(f"{self.consul_http_addr}/v1/health/service/{service_name}")
-            response.raise_for_status()
-            services = response.json()
-            if not services:
-                return None
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.consul_http_addr}/v1/health/service/{service_name}")
+                response.raise_for_status()
+                services = response.json()
+                if not services:
+                    return None
 
-            # Get the first healthy service instance
-            address = services[0]['Service']['Address']
-            port = services[0]['Service']['Port']
-            base_url = f"http://{address}:{port}/v1"
+                # Get the first healthy service instance
+                address = services[0]['Service']['Address']
+                port = services[0]['Service']['Port']
+                base_url = f"http://{address}:{port}/v1"
 
-            return OpenAILLMService(base_url=base_url, api_key="dummy", model=expert_name)
-        except requests.exceptions.RequestException as e:
+                return OpenAILLMService(base_url=base_url, api_key="dummy", model=expert_name)
+        except httpx.RequestError as e:
             logging.error(f"Could not get address for expert {expert_name}: {e}")
             return None
 
@@ -533,7 +535,7 @@ class TwinService(FrameProcessor):
 
         retrieved_memories = self.long_term_memory.search(user_text)
         short_term_context = "\n".join(self.short_term_memory)
-        system_prompt = self.get_system_prompt("router")
+        system_prompt = await self.get_system_prompt("router")
 
         prompt = f"""
         {system_prompt}
@@ -556,7 +558,7 @@ class TwinService(FrameProcessor):
                 expert_llm = await self.get_expert_service(expert_name)
                 if expert_llm:
                     logging.info(f"Routing to {expert_name} with query: {query}")
-                    expert_prompt = self.get_system_prompt(expert_name)
+                    expert_prompt = await self.get_system_prompt(expert_name)
                     final_expert_prompt = f"{expert_prompt}\n\nUser query: {query}"
                     expert_response = await expert_llm.process_text(final_expert_prompt)
                     await self.push_frame(TextFrame(expert_response))
@@ -757,22 +759,23 @@ async def discover_main_llm_service(consul_http_addr="http://localhost:8500", de
     """Discovers the main LLM service from Consul, retrying indefinitely."""
     service_name = os.getenv("PRIMA_API_SERVICE_NAME", "prima-api-main")
     logging.info(f"Attempting to discover main LLM service: {service_name}")
-    while True:
-        try:
-            response = requests.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
-            response.raise_for_status()
-            services = response.json()
-            if services:
-                address = services[0]['Service']['Address']
-                port = services[0]['Service']['Port']
-                base_url = f"http://{address}:{port}/v1"
-                logging.info(f"Successfully discovered main LLM service at {base_url}")
-                return base_url
-        except requests.exceptions.RequestException as e:
-            logging.warning(f"Could not connect to Consul or find service {service_name}: {e}")
+    async with httpx.AsyncClient() as client:
+        while True:
+            try:
+                response = await client.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
+                response.raise_for_status()
+                services = response.json()
+                if services:
+                    address = services[0]['Service']['Address']
+                    port = services[0]['Service']['Port']
+                    base_url = f"http://{address}:{port}/v1"
+                    logging.info(f"Successfully discovered main LLM service at {base_url}")
+                    return base_url
+            except httpx.RequestError as e:
+                logging.warning(f"Could not connect to Consul or find service {service_name}: {e}")
 
-        logging.info(f"LLM service not found, retrying in {delay} seconds...")
-        await asyncio.sleep(delay)
+            logging.info(f"LLM service not found, retrying in {delay} seconds...")
+            await asyncio.sleep(delay)
 
 async def main():
     """The main entry point for the conversational AI application.

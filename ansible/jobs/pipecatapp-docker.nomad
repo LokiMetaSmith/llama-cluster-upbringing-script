@@ -55,7 +55,7 @@ job "pipecat-app" {
 
       resources {
         cpu    = 1000 # 1 GHz
-        memory = 1024 # 1 GB
+        memory = 512 # 512 MB
       }
     }
   }

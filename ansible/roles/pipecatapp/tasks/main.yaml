@@ -98,6 +98,12 @@
   async: 1200 # Set timeout to 20 minutes
   poll: 10    # Check status every 10 seconds
 
+- name: Install httpx for async http requests
+  ansible.builtin.pip:
+    name: httpx
+    executable: /opt/pipecatapp/venv/bin/pip3
+  become: yes
+
 - name: Clean up pip build directory
   ansible.builtin.file:
     path: /var/tmp/ansible_pip_build
