@@ -14,7 +14,17 @@ job "pipecat-app" {
 
     volume "snd" {
       type   = "host"
-      source = "snd"
+      source = "/dev/snd"
+    }
+
+    volume "pipecatapp" {
+      type   = "host"
+      source = "/opt/pipecatapp"
+    }
+
+    volume "models" {
+      type   = "host"
+      source = "/opt/nomad/models"
     }
 
     service {
@@ -59,6 +69,18 @@ job "pipecat-app" {
         volume      = "snd"
         destination = "/dev/snd"
         read_only   = false
+      }
+
+      volume_mount {
+        volume      = "pipecatapp"
+        destination = "/opt/pipecatapp"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "models"
+        destination = "/opt/nomad/models"
+        read_only   = true
       }
     }
   }
