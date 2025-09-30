@@ -870,13 +870,16 @@ async def main():
     # Vision pipeline (runs in parallel to update the detector's state)
     vision_pipeline = Pipeline([vision_detector])
 
-    main_task = PipelineTask(main_pipeline)
+    main_task = PipelineTask(main_pipeline, restart_on_completion=True)
 
     # Interruption handling
     async def handle_interrupt(frame):
         if isinstance(frame, TextFrame) and frame.text.strip():
             logging.info(f"User interrupted with: {frame.text}")
             await main_task.cancel()
+            # After cancelling, reinject the user's interruption text
+            # so it can be processed by the newly started pipeline.
+            await text_message_queue.put({"data": frame.text})
 
     interrupt_pipeline = Pipeline([
         transport.input(),
