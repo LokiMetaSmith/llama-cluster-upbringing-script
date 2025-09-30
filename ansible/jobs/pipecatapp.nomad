@@ -26,11 +26,6 @@ job "pipecat-app" {
 
     }
 
-    volume "snd" {
-      type      = "host"
-      read_only = false
-      source    = "snd"
-    }
     task "pipecat-task" {
       driver = "raw_exec"
 
@@ -69,11 +64,11 @@ job "pipecat-app" {
 
       }
 
-      volume_mount {
-        volume      = "snd"
-        destination = "/dev/snd"
-        read_only   = false
-      }
+#      volume_mount {
+#        volume      = "snd"
+#        destination = "/dev/snd"
+#       read_only   = false
+#      }
 
       logs {
         max_files     = 3
