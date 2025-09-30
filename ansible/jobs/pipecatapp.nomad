@@ -48,6 +48,8 @@ job "pipecat-app" {
         command = "/opt/pipecatapp/start_pipecat.sh"
       }
 
+      user = "root"
+
       env {
         # This should match the service name of the main prima-expert job
         PRIMA_API_SERVICE_NAME = "prima-api-main"
