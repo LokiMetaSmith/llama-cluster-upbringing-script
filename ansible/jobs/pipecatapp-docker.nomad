@@ -60,8 +60,6 @@ job "pipecat-app" {
         # The vision and embedding models are now hardcoded in the application
         # to load from the unified /opt/nomad/models directory.
         STT_SERVICE = "{{ stt_service }}"
-        DEBUG_MODE = "{{ debug_mode | default('false') }}"
-        APPROVAL_MODE = "{{ approval_mode | default('false') }}"
       }
 
       resources {
