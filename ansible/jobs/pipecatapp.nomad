@@ -12,11 +12,6 @@ job "pipecat-app" {
       }
     }
 
-    volume "snd" {
-      type   = "host"
-      source = "/dev/snd"
-    }
-
     volume "pipecatapp" {
       type   = "host"
       source = "/opt/pipecatapp"
@@ -67,12 +62,6 @@ job "pipecat-app" {
       resources {
         cpu    = 1000 # 1 GHz
         memory = 1024 # 1 GB
-      }
-
-      volume_mount {
-        volume      = "snd"
-        destination = "/dev/snd"
-        read_only   = false
       }
 
       volume_mount {

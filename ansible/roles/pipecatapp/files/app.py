@@ -783,10 +783,14 @@ async def main():
     """
     # Dynamically find a workable audio configuration to avoid hardware issues
     device_index, sample_rate = find_workable_audio_config()
+    audio_enabled = device_index is not None
+
+    if not audio_enabled:
+        logging.warning("No workable audio configuration found. Disabling audio I/O.")
 
     transport_params = LocalAudioTransportParams(
-        audio_in_enabled=True,
-        audio_out_enabled=True,
+        audio_in_enabled=audio_enabled,
+        audio_out_enabled=audio_enabled,
         audio_in_device_index=device_index,
         audio_in_sample_rate=sample_rate,
         audio_out_sample_rate=sample_rate,

@@ -38,13 +38,7 @@ job "pipecat-app" {
           "/opt/nomad/models:/opt/nomad/models:ro",
           "/opt/pipecatapp/pipecat_config.json:/app/pipecat_config.json:ro",
         ]
-        # Pass through the sound device to the container
-        devices = [
-          {
-            host_path      = "/dev/snd"
-            container_path = "/dev/snd"
-          }
-        ]
+        # Sound device passthrough is disabled to allow running on servers without audio hardware.
       }
 
       env {
