@@ -801,6 +801,8 @@ async def main():
         logging.warning("pipecat_config.json not found, using defaults.")
 
     tts_voices = pipecat_config.get("tts_voices", [])
+    if not tts_voices:
+        raise RuntimeError("No TTS voices configured in pipecat_config.json. The 'tts_voices' array is empty.")
     stt_service_name = os.getenv("STT_SERVICE")
     if stt_service_name == "faster-whisper":
         model_path = "/opt/nomad/models/stt/faster-whisper-tiny.en"
