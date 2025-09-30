@@ -56,6 +56,7 @@ job "pipecat-app" {
         # to load from the unified /opt/nomad/models directory.
         STT_SERVICE = "{{ stt_service }}"
         VISION_MODEL = "{{ vision_model | default('yolo') }}"
+        TORCH_HOME = "/opt/nomad/models"
         DEBUG_MODE = "{{ debug_mode | default('false') }}"
         APPROVAL_MODE = "{{ approval_mode | default('false') }}"
       }

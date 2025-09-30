@@ -562,8 +562,8 @@ class TwinService(FrameProcessor):
                     await self.push_frame(TextFrame(expert_response))
                     self.short_term_memory.append(f"Assistant ({expert_name}): {expert_response}")
                 else:
-                    final_response = await self.router_llm.process_text(f"I could not find the {expert_name} expert. Please try again later.")
-                    await self.push_frame(TextFrame(final_response))
+                    logging.warning(f"Could not find a healthy instance of expert {expert_name}.")
+                    await self.push_frame(TextFrame(f"I could not find the {expert_name} expert. Please try again later."))
             elif tool_parts[0] in self.tools:
                 tool_name = tool_parts[0]
                 method_name = tool_parts[1]

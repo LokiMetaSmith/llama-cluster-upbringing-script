@@ -190,17 +190,17 @@
     version: main
   become: yes
 
-- name: Create VAD model directory
+- name: Create torch hub directory for VAD model
   ansible.builtin.file:
-    path: /root/.cache/torch/hub/snakers4_silero-vad_master
+    path: /opt/nomad/models/hub
     state: directory
     mode: '0755'
   become: yes
 
-- name: Clone silero-vad model
+- name: Clone silero-vad model to torch hub directory
   ansible.builtin.git:
     repo: 'https://github.com/snakers4/silero-vad.git'
-    dest: /root/.cache/torch/hub/snakers4_silero-vad_master
+    dest: /opt/nomad/models/hub/snakers4_silero-vad_master
     version: master
   become: yes
 

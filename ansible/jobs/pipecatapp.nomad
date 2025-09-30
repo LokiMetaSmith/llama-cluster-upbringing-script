@@ -59,6 +59,7 @@ job "pipecat-app" {
         # to load from the unified /opt/nomad/models directory.
         STT_SERVICE = "faster-whisper"
         VISION_MODEL = "yolo"
+        TORCH_HOME = "/opt/nomad/models"
         DEBUG_MODE = "true"
         APPROVAL_MODE = "true"
       }
