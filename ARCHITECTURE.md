@@ -85,12 +85,13 @@ To enhance security, the system now supports API key authentication for its cont
 - **Implementation:** Authentication is handled by a FastAPI middleware that checks for a valid API key in the `Authorization` header of incoming requests. Keys are loaded at startup from an environment variable.
 
 - **Configuration:**
-  1.  **Generate a Key:** Create a new, secure API key. A simple way to do this is with `python -c "import secrets; print(secrets.token_hex(32))"`.
-  2.  **Hash the Key:** The application stores a SHA-256 hash of the key, not the key itself. Hash your new key using a command like `echo -n "<your_new_key>" | sha256sum`.
-  3.  **Update Nomad Job:** Open the `ansible/jobs/pipecatapp.nomad` job file and find the `env` block for the `pipecat-task`. Add the hashed key to the `PIECAT_API_KEYS` environment variable. You can add multiple keys by separating them with a comma.
+  1. **Generate a Key:** Create a new, secure API key. A simple way to do this is with `python -c "import secrets; print(secrets.token_hex(32))"`.
+  2. **Hash the Key:** The application stores a SHA-256 hash of the key, not the key itself. Hash your new key using a command like `echo -n "<your_new_key>" | sha256sum`.
+  3. **Update Nomad Job:** Open the `ansible/jobs/pipecatapp.nomad` job file and find the `env` block for the `pipecat-task`. Add the hashed key to the `PIECAT_API_KEYS` environment variable. You can add multiple keys by separating them with a comma.
 
 - **Usage:** When making a request to a protected endpoint, include the API key in the `Authorization` header:
-  ```
+
+  ```sh
   curl -X GET http://<agent_ip>:8000/api/status \
        -H "Authorization: Bearer <your_new_key>"
   ```
