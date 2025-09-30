@@ -204,6 +204,20 @@
     version: master
   become: yes
 
+- name: Create vision model directory
+  ansible.builtin.file:
+    path: /opt/nomad/models/vision
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Download YOLOv8n model
+  ansible.builtin.get_url:
+    url: https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.pt
+    dest: /opt/nomad/models/vision/yolov8n.pt
+    mode: '0644'
+  become: yes
+
 - name: Copy pipecatapp Nomad job file
   ansible.builtin.template:
     src: ../../jobs/pipecatapp.nomad

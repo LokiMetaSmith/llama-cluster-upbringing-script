@@ -378,9 +378,12 @@ class TwinService(FrameProcessor):
 
         tools_prompt = "You have access to the following tools:\n"
         for tool_name, tool in self.tools.items():
-            for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
-                if not method_name.startswith('_'):
-                    tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
+            if tool_name == "vision":
+                tools_prompt += f'- {{"tool": "vision.get_observation"}}: Get a real-time description of what is visible in the webcam.\n'
+            else:
+                for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
+                    if not method_name.startswith('_'):
+                        tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
 
         for service_name in self.get_discovered_experts():
             expert_name = service_name.replace("llama-api-", "")
