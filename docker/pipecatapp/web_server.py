@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from typing import List, Dict
 import asyncio
 from asyncio import Queue
+from queue import Queue as ThreadSafeQueue
 import json
 import requests
 
@@ -11,6 +12,7 @@ app = FastAPI()
 # Create queues to communicate between the web server and the TwinService
 approval_queue = Queue()
 text_message_queue = Queue()
+log_queue = ThreadSafeQueue()
 
 class ConnectionManager:
     """Manages active WebSocket connections.
@@ -53,6 +55,18 @@ class ConnectionManager:
             await connection.send_text(message)
 
 manager = ConnectionManager()
+
+async def log_broadcaster():
+    """Monitors the log queue and broadcasts messages to all clients."""
+    loop = asyncio.get_event_loop()
+    while True:
+        log_entry = await loop.run_in_executor(None, log_queue.get)
+        await manager.broadcast(json.dumps({"type": "log", "data": log_entry}))
+
+@app.on_event("startup")
+async def startup_event():
+    """Starts the log broadcaster task on server startup."""
+    asyncio.create_task(log_broadcaster())
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

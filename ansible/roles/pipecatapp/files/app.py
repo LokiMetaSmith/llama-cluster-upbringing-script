@@ -57,13 +57,15 @@ class WebSocketLogHandler(logging.Handler):
     log monitoring from the browser.
     """
     def emit(self, record):
-        """Formats and broadcasts a log record.
+        """Formats and enqueues a log record to be broadcast via WebSocket.
 
         Args:
             record: The log record to be emitted.
         """
         log_entry = self.format(record)
-        asyncio.run(web_server.manager.broadcast(json.dumps({"type": "log", "data": log_entry})))
+        # This is thread-safe and won't block.
+        # The web_server will consume this queue and broadcast messages.
+        web_server.log_queue.put(log_entry)
 
 logger = logging.getLogger()
 logger.addHandler(WebSocketLogHandler())
@@ -831,9 +833,13 @@ async def main():
     tts = PiperTTSService(model_path=model_path, config_path=config_path)
     runner = PipelineRunner()
 
-    # TODO: Implement failover or selection logic for vision models
-    vision_detector = YOLOv8Detector()
-    logging.info("Using YOLOv8 for vision.")
+    vision_model_name = os.getenv("VISION_MODEL", "yolo").lower()
+    if vision_model_name == "moondream":
+        vision_detector = MoondreamDetector()
+        logging.info("Using Moondream for vision.")
+    else:
+        vision_detector = YOLOv8Detector()
+        logging.info("Using YOLOv8 for vision.")
 
     debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
     if debug_mode:

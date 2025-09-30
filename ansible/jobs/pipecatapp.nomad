@@ -58,6 +58,7 @@ job "pipecat-app" {
         # The vision and embedding models are now hardcoded in the application
         # to load from the unified /opt/nomad/models directory.
         STT_SERVICE = "faster-whisper"
+        VISION_MODEL = "yolo"
         DEBUG_MODE = "true"
         APPROVAL_MODE = "true"
       }
