@@ -1,4 +1,2 @@
-node_modules/
-__pycache__/
-playbook_output.log
-.aider*
+# Ignore all log files
+*.log

@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Mission Control for a distributed AI agent.">
+    <meta name="keywords" content="AI, agent, mission control, cluster, pipecat">
     <title>Mission Control</title>
     <style>
         body { font-family: monospace; background-color: #1a1a1a; color: #f0f0f0; margin: 0; padding: 20px; }
@@ -70,6 +72,26 @@
         .dropdown:hover .dropbtn {
             background-color: #005f7a;
         }
+
+        #robot-art {
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #status-display {
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #333;
+            background-color: #000;
+        }
+        #input-area {
+            padding: 10px;
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        #message-input {
+            flex-grow: 1;
+        }
     </style>
 </head>
 <body>
@@ -87,11 +109,11 @@
         <button id="load-state-btn">Load State</button>
     </div>
     <div id="terminal">
-        <pre id="robot-art" style="text-align: center; font-family: 'Courier New', Courier, monospace;"></pre>
+        <pre id="robot-art"></pre>
     </div>
-    <div id="status-display" style="padding: 10px; margin-top: 10px; border: 1px solid #333; background-color: #000;"></div>
-    <div id="input-area" style="padding: 10px; margin-top: 10px; display: flex; gap: 10px;">
-        <input type="text" id="message-input" style="flex-grow: 1; background-color: #333; color: #f0f0f0; border: 1px solid #555; padding: 5px;" placeholder="Type your message here and press Enter...">
+    <div id="status-display"></div>
+    <div id="input-area">
+        <input type="text" id="message-input" placeholder="Type your message here and press Enter...">
     </div>
     <script src="/static/terminal.js"></script>
     <script>
