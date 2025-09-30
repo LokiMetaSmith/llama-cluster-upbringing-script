@@ -26,11 +26,6 @@ job "pipecat-app" {
 
     }
 
-    volume "snd" {
-      type      = "host"
-      read_only = false
-      source    = "snd"
-    }
     task "pipecat-task" {
       driver = "raw_exec"
 
@@ -67,12 +62,6 @@ job "pipecat-app" {
         # EOF
         # OPENAI_API_KEY = "sk-..."
 
-      }
-
-      volume_mount {
-        volume      = "snd"
-        destination = "/dev/snd"
-        read_only   = false
       }
 
       resources {
