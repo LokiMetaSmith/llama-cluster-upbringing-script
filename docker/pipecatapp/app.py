@@ -37,6 +37,7 @@ import numpy as np
 from memory import MemoryStore
 import web_server
 from web_server import approval_queue, text_message_queue
+from api_keys import initialize_api_keys
 from tools.ssh_tool import SSH_Tool
 from tools.mcp_tool import MCP_Tool
 from tools.code_runner_tool import CodeRunnerTool
@@ -793,6 +794,14 @@ async def main():
     config = uvicorn.Config(web_server.app, host="0.0.0.0", port=8000, log_level="info")
     server = uvicorn.Server(config)
     threading.Thread(target=server.run).start()
+
+    # Initialize API keys from environment variable
+    hashed_api_keys_str = os.getenv("PIECAT_API_KEYS", "")
+    if hashed_api_keys_str:
+        hashed_keys = [key.strip() for key in hashed_api_keys_str.split(',')]
+        initialize_api_keys(hashed_keys)
+    else:
+        logging.warning("PIECAT_API_KEYS environment variable not set. The API will be unsecured.")
 
     # Load configuration from the JSON file created by Ansible
     pipecat_config = {}
