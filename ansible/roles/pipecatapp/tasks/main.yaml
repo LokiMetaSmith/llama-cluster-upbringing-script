@@ -1,13 +1,85 @@
-- name: Create Nomad jobs directory
-  ansible.builtin.file:
-    path: /opt/nomad/jobs
-    state: directory
-    mode: '0755'
+- name: Run setup for raw_exec deployment method
+  when: pipecat_deployment_method == 'raw_exec'
   become: yes
+  block:
+    - name: Install python3, pip, and venv system packages
+      ansible.builtin.apt:
+        name: [python3, python3-pip, python3-venv]
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
 
-- name: Copy pipecatapp Nomad job file
+    - name: Install system dependencies for Python packages
+      ansible.builtin.apt:
+        name: [build-essential, python3-dev, portaudio19-dev, mecab, libmecab-dev, mecab-ipadic-utf8, rustc, cargo]
+        state: present
+
+    - name: Install system dependencies for Playwright
+      ansible.builtin.apt:
+        name: [libevent-2.1-7t64, libgstreamer-plugins-bad1.0-0, libflite1, libavif16, gstreamer1.0-libav]
+        state: present
+
+    - name: Create pipecatapp application directory
+      ansible.builtin.file:
+        path: /opt/pipecatapp
+        state: directory
+        mode: '0755'
+
+    - name: Ensure correct ownership of the application directory
+      ansible.builtin.file:
+        path: /opt/pipecatapp
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        recurse: yes
+
+    - name: Create a virtual environment for the pipecat app
+      ansible.builtin.command:
+        cmd: python3 -m venv /opt/pipecatapp/venv
+        creates: /opt/pipecatapp/venv/bin/pip
+
+    - name: Copy requirements.txt to remote host
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/ansible/roles/python_deps/files/requirements.txt"
+        dest: /opt/pipecatapp/requirements.txt
+
+    - name: Install python dependencies into the virtual environment
+      ansible.builtin.pip:
+        requirements: /opt/pipecatapp/requirements.txt
+        executable: /opt/pipecatapp/venv/bin/pip3
+
+    - name: Create pipecat configuration file
+      ansible.builtin.template:
+        src: pipecat_config.json.j2
+        dest: /opt/pipecatapp/pipecat_config.json
+        mode: '0644'
+
+    - name: Copy pipecat application files
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /opt/pipecatapp/
+      loop:
+        - app.py
+        - memory.py
+        - web_server.py
+        - moondream_detector.py
+        - static
+        - tools
+
+    - name: Copy pipecat startup script
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/scripts/start_pipecat.sh"
+        dest: /opt/pipecatapp/start_pipecat.sh
+        mode: '0755'
+
+    - name: Install Playwright browsers
+      ansible.builtin.command:
+        cmd: /opt/pipecatapp/venv/bin/python3 -m playwright install
+      async: 900
+      poll: 10
+
+- name: Deploy pipecatapp Nomad job file
   ansible.builtin.template:
-    src: ../../jobs/pipecatapp.nomad
+    src: "../../jobs/pipecatapp.{{ pipecat_deployment_method }}.nomad"
     dest: /opt/nomad/jobs/pipecatapp.nomad
   become: yes
 
@@ -28,8 +100,8 @@
     status_code: 200
   register: nomad_api_status
   until: nomad_api_status.status == 200
-  retries: 12 # Total wait time = retries * delay = 60 seconds
-  delay: 5   # Wait 5 seconds between retries
+  retries: 12
+  delay: 5
   become: yes
 
 - name: Check if pipecat-app job is running

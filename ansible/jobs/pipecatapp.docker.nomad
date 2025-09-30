@@ -12,11 +12,6 @@ job "pipecat-app" {
       }
     }
 
-    volume "snd" {
-      type   = "host"
-      source = "snd"
-    }
-
     service {
       name = "pipecat-app-http"
       port = "http"
@@ -28,7 +23,6 @@ job "pipecat-app" {
         interval = "10s"
         timeout  = "2s"
       }
-
     }
 
     task "pipecat-task" {
@@ -48,12 +42,12 @@ job "pipecat-app" {
 
       env {
         # This should match the service name of the main prima-expert job
-        PRIMA_API_SERVICE_NAME = "{{ prima_api_service_name }}"
+        PRIMA_API_SERVICE_NAME = "{{ prima_api_service_name | default('prima-api-main') }}"
         # Set to "true" to enable the summarizer tool
-        USE_SUMMARIZER = "{{ use_summarizer }}"
+        USE_SUMMARIZER = "{{ use_summarizer | default('false') }}"
         # The vision and embedding models are now hardcoded in the application
         # to load from the unified /opt/nomad/models directory.
-        STT_SERVICE = "{{ stt_service }}"
+        STT_SERVICE = "{{ stt_service | default('faster-whisper') }}"
       }
 
       resources {

@@ -33,10 +33,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install Playwright browsers
 RUN playwright install
 
-# Download required AI models
-RUN git clone https://huggingface.co/Systran/faster-whisper-tiny.en /opt/nomad/models/stt/faster-whisper-tiny.en
-RUN git clone https://github.com/snakers4/silero-vad.git /root/.cache/torch/hub/snakers4_silero-vad_master
-
 # Copy the rest of the application source code
 COPY . .
 

@@ -11,6 +11,7 @@ CLEAN_REPO=false
 DEBUG_MODE=false
 ANSIBLE_ARGS=""
 LOG_FILE="playbook_output.log"
+EXTRA_VARS=""
 
 # --- Parse command-line arguments ---
 for arg in "$@"
@@ -22,6 +23,10 @@ do
         ;;
         --debug)
         DEBUG_MODE=true
+        shift
+        ;;
+        --pipecat-docker)
+        EXTRA_VARS="--extra-vars pipecat_deployment_method=docker"
         shift
         ;;
     esac
@@ -98,11 +103,11 @@ echo "You will be prompted for your sudo password."
 
 if [ "$DEBUG_MODE" = true ]; then
     # Execute with verbose logging and redirect to file
-    time ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS > "$LOG_FILE" 2>&1
+    time ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS $EXTRA_VARS > "$LOG_FILE" 2>&1
     echo "✅ Playbook run complete. View the detailed log in '$LOG_FILE'."
 else
     # Execute normally
-    ansible-playbook -i local_inventory.ini playbook.yaml
+    ansible-playbook -i local_inventory.ini playbook.yaml $EXTRA_VARS
 fi
 
 echo "Bootstrap complete."
