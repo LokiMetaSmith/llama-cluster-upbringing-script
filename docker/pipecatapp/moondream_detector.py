@@ -2,7 +2,7 @@ from transformers import AutoModelForCausalLM
 from PIL import Image
 import torch
 from pipecat.processors.frame_processor import FrameProcessor
-from pipecat.frames.frames import VisionImageRawFrame
+from pipecat.frames.frames import InputImageRawFrame
 
 class MoondreamDetector(FrameProcessor):
     """A vision processor that generates textual descriptions of image frames.
@@ -47,7 +47,7 @@ class MoondreamDetector(FrameProcessor):
             frame: The frame to process from the pipeline.
             direction: The direction of the frame in the pipeline.
         """
-        if not isinstance(frame, VisionImageRawFrame):
+        if not isinstance(frame, InputImageRawFrame):
             await self.push_frame(frame, direction)
             return
 

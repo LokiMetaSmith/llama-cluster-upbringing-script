@@ -46,6 +46,27 @@ job "pipecat-app" {
         # The vision and embedding models are now hardcoded in the application
         # to load from the unified /opt/nomad/models directory.
         STT_SERVICE = "faster-whisper"
+        # A comma-separated list of SHA-256 hashed API keys.
+        # Generate a key with: python -c "import secrets; print(secrets.token_hex(32))"
+        # Then hash it with: echo -n "<your_key>" | sha256sum
+        PIECAT_API_KEYS = ""
+
+        # Configuration for external, third-party LLM experts.
+        # This is a JSON string defining a dictionary where each key is the expert's name.
+        # - "base_url": The API endpoint for the expert.
+        # - "api_key_env": The name of the environment variable that holds the API key.
+        #
+        # Example:
+        # EXTERNAL_EXPERTS_CONFIG = <<EOF
+        # {
+        #   "openai_gpt4": {
+        #     "base_url": "https://api.openai.com/v1",
+        #     "api_key_env": "OPENAI_API_KEY"
+        #   }
+        # }
+        # EOF
+        # OPENAI_API_KEY = "sk-..."
+
       }
 
       resources {

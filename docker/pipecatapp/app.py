@@ -16,10 +16,10 @@ from pipecat.frames.frames import (
     AudioRawFrame,
     EndFrame,
     TextFrame,
-    VisionImageRawFrame,
     UserStartedSpeakingFrame,
     UserStoppedSpeakingFrame,
     TranscriptionFrame,
+    InputImageRawFrame,
 )
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
@@ -37,6 +37,7 @@ import numpy as np
 from memory import MemoryStore
 import web_server
 from web_server import approval_queue, text_message_queue
+from api_keys import initialize_api_keys
 from tools.ssh_tool import SSH_Tool
 from tools.mcp_tool import MCP_Tool
 from tools.code_runner_tool import CodeRunnerTool
@@ -45,6 +46,8 @@ from tools.ansible_tool import Ansible_Tool
 from tools.power_tool import Power_Tool
 from tools.summarizer_tool import SummarizerTool
 from moondream_detector import MoondreamDetector
+from llm_clients import ExternalLLMClient
+from expert_tracker import ExpertTracker
 
 import uvicorn
 
@@ -295,13 +298,14 @@ class TwinService(FrameProcessor):
         experts (dict): A dictionary to cache discovered expert services.
         tools (dict): A dictionary of available tools for the agent.
     """
-    def __init__(self, llm, vision_detector, runner, debug_mode=False, approval_mode=False, approval_queue=None):
+    def __init__(self, llm, vision_detector, runner, external_experts_config=None, debug_mode=False, approval_mode=False, approval_queue=None):
         """Initializes the TwinService.
 
         Args:
             llm: The primary LLM service.
             vision_detector: The vision processing service.
             runner: The Pipecat PipelineRunner.
+            external_experts_config (dict): Configuration for external LLM APIs.
             debug_mode (bool): Enables or disables debug logging.
             approval_mode (bool): Enables or disables the need for user approval.
             approval_queue: The queue for UI approval messages.
@@ -315,9 +319,16 @@ class TwinService(FrameProcessor):
         self.approval_queue = approval_queue
         self.short_term_memory = []
         self.long_term_memory = MemoryStore()
+        self.external_experts_config = external_experts_config or {}
+        self.expert_tracker = ExpertTracker()
 
         self.consul_http_addr = os.getenv("CONSUL_HTTP_ADDR", "http://localhost:8500")
         self.experts = {} # Experts will be discovered dynamically
+
+        # Register all experts with the tracker
+        for expert_name in self.get_discovered_experts():
+            expert_type = "external" if expert_name in self.external_experts_config else "local"
+            self.expert_tracker.register_expert(expert_name, expert_type)
 
         self.tools = {
             "ssh": SSH_Tool(),
@@ -334,24 +345,29 @@ class TwinService(FrameProcessor):
             logging.info("Summarizer tool enabled.")
 
     def get_discovered_experts(self) -> list[str]:
-        """Discovers available 'expert' services registered in Consul.
-
-        It queries the Consul catalog for services prefixed with "llama-api-"
-        and returns a list of their names.
+        """Discovers available local 'expert' services from Consul and adds
+        configured external experts.
 
         Returns:
-            list[str]: A list of discovered expert service names.
+            list[str]: A list of all available expert names.
         """
+        local_expert_names = []
         try:
             response = requests.get(f"{self.consul_http_addr}/v1/catalog/services")
             response.raise_for_status()
             services = response.json()
-            # Filter for services that match our expert pattern, e.g., "llama-api-"
-            expert_names = [name for name in services.keys() if name.startswith("llama-api-")]
-            return expert_names
+            # Filter for local services and strip the prefix
+            local_expert_names = [name.replace("llama-api-", "") for name in services.keys() if name.startswith("llama-api-")]
         except requests.exceptions.RequestException as e:
-            logging.error(f"Could not connect to Consul: {e}")
-            return []
+            logging.error(f"Could not connect to Consul to discover local experts: {e}")
+
+        # Get external expert names from the configuration
+        external_expert_names = list(self.external_experts_config.keys())
+
+        # Combine and return a unique list
+        all_experts = sorted(list(set(local_expert_names + external_expert_names)))
+        logging.info(f"Discovered experts: {all_experts}")
+        return all_experts
 
     def get_system_prompt(self, expert_name: str = "router") -> str:
         """Constructs the system prompt for a given agent or expert.
@@ -373,7 +389,10 @@ class TwinService(FrameProcessor):
         except FileNotFoundError:
             base_prompt = "You are a helpful AI assistant."
 
-        tools_prompt = "You have access to the following tools:\n"
+        # Get performance metrics to help the LLM make a routing decision
+        performance_metrics = self.expert_tracker.get_metrics_for_prompt()
+
+        tools_prompt = "You have access to the following tools and experts:\n"
         for tool_name, tool in self.tools.items():
             if tool_name == "vision":
                 tools_prompt += f'- {{"tool": "vision.get_observation"}}: Get a real-time description of what is visible in the webcam.\n'
@@ -382,27 +401,46 @@ class TwinService(FrameProcessor):
                     if not method_name.startswith('_'):
                         tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
 
-        for service_name in self.get_discovered_experts():
-            expert_name = service_name.replace("llama-api-", "")
+        for expert_name in self.get_discovered_experts():
             tools_prompt += f'- {{"tool": "route_to_expert", "args": {{"expert": "{expert_name}", "query": "<user_query>"}}}}: Use this for queries related to {expert_name}.\n'
 
-        return f"{base_prompt}\n\n{tools_prompt}\n\nIf the query doesn't fit a specific expert or tool, handle it yourself. Otherwise, respond with a JSON object with the 'tool' and 'args' keys."
+        return f"{base_prompt}\n\n{performance_metrics}\n\n{tools_prompt}\n\nBased on the user's query and the expert performance data, decide whether to handle it yourself, use a tool, or route to the most appropriate expert. Prioritize healthy and fast experts. Respond with a JSON object with the 'tool' and 'args' keys."
 
     async def get_expert_service(self, expert_name: str):
-        """Retrieves a healthy instance of an expert LLM service from Consul.
+        """Retrieves a client for a given expert, which can be local or external.
 
         Args:
-            expert_name (str): The name of the expert (e.g., "coding").
+            expert_name (str): The name of the expert (e.g., "coding", "openai_gpt4").
 
         Returns:
-            An OpenAILLMService instance if a healthy service is found, otherwise None.
+            A client instance (ExternalLLMClient or OpenAILLMService) or None.
         """
+        # Check if the expert is in the external configuration
+        if expert_name in self.external_experts_config:
+            logging.info(f"Creating client for external expert: {expert_name}")
+            config = self.external_experts_config[expert_name]
+            api_key_env_var = config.get("api_key_env")
+            api_key = os.getenv(api_key_env_var) if api_key_env_var else None
+
+            if not api_key:
+                logging.error(f"API key environment variable '{api_key_env_var}' not set for expert '{expert_name}'.")
+                return None
+
+            return ExternalLLMClient(
+                base_url=config["base_url"],
+                api_key=api_key,
+                model=expert_name  # The model name is the expert name
+            )
+
+        # If not external, assume it's a local expert discovered via Consul
+        logging.info(f"Looking up local expert in Consul: {expert_name}")
         service_name = f"llama-api-{expert_name}"
         try:
-            response = requests.get(f"{self.consul_http_addr}/v1/health/service/{service_name}")
+            response = requests.get(f"{self.consul_http_addr}/v1/health/service/{service_name}?passing=true")
             response.raise_for_status()
             services = response.json()
             if not services:
+                logging.warning(f"No healthy instances of local expert '{expert_name}' found in Consul.")
                 return None
 
             # Get the first healthy service instance
@@ -412,7 +450,7 @@ class TwinService(FrameProcessor):
 
             return OpenAILLMService(base_url=base_url, api_key="dummy", model=expert_name)
         except requests.exceptions.RequestException as e:
-            logging.error(f"Could not get address for expert {expert_name}: {e}")
+            logging.error(f"Could not get address for local expert {expert_name} from Consul: {e}")
             return None
 
     async def _request_approval(self, tool_call_info: dict) -> bool:
@@ -544,16 +582,25 @@ class TwinService(FrameProcessor):
             if tool_parts[0] == "route_to_expert":
                 expert_name = tool_call["args"]["expert"]
                 query = tool_call["args"]["query"]
+
+                start_time = time.time()
                 expert_llm = await self.get_expert_service(expert_name)
+
                 if expert_llm:
                     logging.info(f"Routing to {expert_name} with query: {query}")
                     expert_prompt = self.get_system_prompt(expert_name)
                     final_expert_prompt = f"{expert_prompt}\n\nUser query: {query}"
+
                     expert_response = await expert_llm.process_text(final_expert_prompt)
+
+                    latency = time.time() - start_time
+                    self.expert_tracker.record_success(expert_name, latency)
+
                     await self.push_frame(TextFrame(expert_response))
                     self.short_term_memory.append(f"Assistant ({expert_name}): {expert_response}")
                 else:
-                    final_response = await self.router_llm.process_text(f"I could not find the {expert_name} expert. Please try again later.")
+                    self.expert_tracker.record_failure(expert_name)
+                    final_response = await self.router_llm.process_text(f"I could not find or connect to the {expert_name} expert. Please try again later.")
                     await self.push_frame(TextFrame(final_response))
             elif tool_parts[0] in self.tools:
                 tool_name = tool_parts[0]
@@ -625,7 +672,7 @@ class YOLOv8Detector(FrameProcessor):
             frame: The frame to process.
             direction: The direction of the frame in the pipeline.
         """
-        if not isinstance(frame, VisionImageRawFrame):
+        if not isinstance(frame, InputImageRawFrame):
             await self.push_frame(frame, direction)
             return
 
@@ -794,6 +841,14 @@ async def main():
     server = uvicorn.Server(config)
     threading.Thread(target=server.run).start()
 
+    # Initialize API keys from environment variable
+    hashed_api_keys_str = os.getenv("PIECAT_API_KEYS", "")
+    if hashed_api_keys_str:
+        hashed_keys = [key.strip() for key in hashed_api_keys_str.split(',')]
+        initialize_api_keys(hashed_keys)
+    else:
+        logging.warning("PIECAT_API_KEYS environment variable not set. The API will be unsecured.")
+
     # Load configuration from the JSON file created by Ansible
     pipecat_config = {}
     try:
@@ -840,10 +895,21 @@ async def main():
     if approval_mode:
         logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
 
+    # Load external experts configuration from environment variable
+    external_experts_config = {}
+    external_experts_config_json = os.getenv("EXTERNAL_EXPERTS_CONFIG")
+    if external_experts_config_json:
+        try:
+            external_experts_config = json.loads(external_experts_config_json)
+            logging.info(f"Loaded configuration for {len(external_experts_config)} external expert(s).")
+        except json.JSONDecodeError:
+            logging.error(f"Failed to decode EXTERNAL_EXPERTS_CONFIG JSON: {external_experts_config_json}")
+
     twin = TwinService(
         llm=llm,
         vision_detector=vision_detector,
         runner=runner,
+        external_experts_config=external_experts_config,
         debug_mode=debug_mode,
         approval_mode=approval_mode,
         approval_queue=approval_queue

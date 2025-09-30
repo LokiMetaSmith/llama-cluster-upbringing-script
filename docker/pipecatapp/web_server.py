@@ -1,10 +1,11 @@
-from fastapi import FastAPI, WebSocket, Body
+from fastapi import FastAPI, WebSocket, Body, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from typing import List, Dict
 import asyncio
 from asyncio import Queue
 import json
 import requests
+from api_keys import get_api_key
 
 app = FastAPI()
 
@@ -98,7 +99,7 @@ async def get():
     with open(index_html_path) as f:
         return HTMLResponse(f.read())
 
-@app.get("/api/status")
+@app.get("/api/status", dependencies=[Depends(get_api_key)])
 async def get_status():
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
     if twin_service_instance and hasattr(twin_service_instance, 'tools'):
@@ -196,7 +197,7 @@ async def get_web_uis():
 
     return JSONResponse(content=sorted_uis)
 
-@app.post("/api/state/save")
+@app.post("/api/state/save", dependencies=[Depends(get_api_key)])
 async def save_state_endpoint(payload: Dict = Body(...)):
     """API endpoint to save the agent's current state to a named snapshot.
 
@@ -214,7 +215,7 @@ async def save_state_endpoint(payload: Dict = Body(...)):
         return {"message": result}
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
-@app.post("/api/state/load")
+@app.post("/api/state/load", dependencies=[Depends(get_api_key)])
 async def load_state_endpoint(payload: Dict = Body(...)):
     """API endpoint to load the agent's state from a named snapshot.
 
