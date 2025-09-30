@@ -798,7 +798,9 @@ async def main():
     transport = LocalAudioTransport(transport_params)
 
     # Start the web server in a separate thread
-    config = uvicorn.Config(web_server.app, host="0.0.0.0", port=8000, log_level="info")
+    # Get port from environment variable set by Nomad, default to 8000
+    port = int(os.getenv("NOMAD_PORT_http", 8000))
+    config = uvicorn.Config(web_server.app, host="0.0.0.0", port=port, log_level="info")
     server = uvicorn.Server(config)
     threading.Thread(target=server.run).start()
 

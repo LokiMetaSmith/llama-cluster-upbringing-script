@@ -7,9 +7,7 @@ job "pipecat-app" {
 
     network {
       mode = "host"
-      port "http" {
-        to = 8000
-      }
+      port "http" {}
     }
 
     service {
