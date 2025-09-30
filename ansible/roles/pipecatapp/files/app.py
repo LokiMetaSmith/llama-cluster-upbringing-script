@@ -569,10 +569,6 @@ class TwinService(FrameProcessor):
                     if not approved:
                         logging.warning(f"Execution of tool {tool_name} denied by user.")
                         await self.push_frame(TextFrame(f"Action denied. I cannot use the {tool_name} tool."))
-                        # We need to make sure the user's text is re-added to memory to avoid losing context
-                        self.short_term_memory.append(f"User: {user_text}")
-                        if len(self.short_term_memory) > 10:
-                            self.short_term_memory.pop(0)
                         return
 
                 logging.info(f"LLM requested to use tool: {tool_name}.{method_name} with args: {args}")
@@ -862,15 +858,6 @@ async def main():
         tts,
         transport.output()
     ]
-    # Set Debug  mode for troubleshooting and examining state
-    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-    if debug_mode:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logging.debug("Debug mode enabled.")
-
-    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
-    if approval_mode:
-        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
     if os.getenv("BENCHMARK_MODE", "false").lower() == "true":
         pipeline_steps.insert(1, BenchmarkCollector())
 
