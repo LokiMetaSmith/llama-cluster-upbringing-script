@@ -52,7 +52,7 @@ job "pipecat-app" {
 
       resources {
         cpu    = 1000 # 1 GHz
-        memory = 1024 # 4 GB
+        memory = 1024 # 1 GB
       }
 
       volume_mount {

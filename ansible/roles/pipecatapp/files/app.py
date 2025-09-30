@@ -11,6 +11,8 @@ import os
 import shutil
 import inspect
 import threading
+import uuid
+import functools
 
 from pipecat.frames.frames import (
     AudioRawFrame,
@@ -29,10 +31,7 @@ from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
 from faster_whisper import WhisperModel
 from piper.voice import PiperVoice
-import soundfile as sf
 import requests
-from sentence_transformers import SentenceTransformer
-import faiss
 import numpy as np
 from memory import MemoryStore
 import web_server
@@ -216,7 +215,10 @@ class FasterWhisperSTTService(FrameProcessor):
             audio_f32 = self._convert_audio_bytes_to_float_array(self.audio_buffer)
             self.audio_buffer.clear()
 
-            segments, _ = self.model.transcribe(audio_f32, language="en")
+            # Run the synchronous transcription in a thread pool to avoid blocking the event loop
+            loop = asyncio.get_running_loop()
+            transcribe_func = functools.partial(self.model.transcribe, language="en")
+            segments, _ = await loop.run_in_executor(None, transcribe_func, audio_f32)
 
             full_text = "".join(segment.text for segment in segments).strip()
 
@@ -375,12 +377,9 @@ class TwinService(FrameProcessor):
 
         tools_prompt = "You have access to the following tools:\n"
         for tool_name, tool in self.tools.items():
-            if tool_name == "vision":
-                tools_prompt += f'- {{"tool": "vision.get_observation"}}: Get a real-time description of what is visible in the webcam.\n'
-            else:
-                for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
-                    if not method_name.startswith('_'):
-                        tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
+            for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
+                if not method_name.startswith('_'):
+                    tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
 
         for service_name in self.get_discovered_experts():
             expert_name = service_name.replace("llama-api-", "")
@@ -424,7 +423,7 @@ class TwinService(FrameProcessor):
         Returns:
             bool: True if the action is approved, False otherwise.
         """
-        request_id = str(time.time())
+        request_id = str(uuid.uuid4())
         approval_request = {
             "type": "approval_request",
             "data": {
@@ -522,6 +521,10 @@ class TwinService(FrameProcessor):
         user_text = frame.text
         logging.info(f"TwinService received: {user_text}")
 
+        self.short_term_memory.append(f"User: {user_text}")
+        if len(self.short_term_memory) > 10:
+            self.short_term_memory.pop(0)
+
         retrieved_memories = self.long_term_memory.search(user_text)
         short_term_context = "\n".join(self.short_term_memory)
         system_prompt = self.get_system_prompt("router")
@@ -588,10 +591,6 @@ class TwinService(FrameProcessor):
             await self.push_frame(TextFrame(llm_response_text))
             self.short_term_memory.append(f"Assistant: {llm_response_text}")
 
-        self.short_term_memory.append(f"User: {user_text}")
-        if len(self.short_term_memory) > 10:
-            self.short_term_memory.pop(0)
-
 class YOLOv8Detector(FrameProcessor):
     """A Pipecat FrameProcessor for real-time object detection using YOLOv8.
 
@@ -626,7 +625,10 @@ class YOLOv8Detector(FrameProcessor):
             return
 
         img = frame.image
-        results = self.model(img)
+
+        # Run the synchronous model inference in a thread pool to avoid blocking the event loop
+        loop = asyncio.get_running_loop()
+        results = await loop.run_in_executor(None, self.model, img)
 
         detected_objects = set()
         for r in results:

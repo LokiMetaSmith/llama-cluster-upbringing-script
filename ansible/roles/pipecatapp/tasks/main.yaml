@@ -87,7 +87,6 @@
     executable: /opt/pipecatapp/venv/bin/pip3
   become: yes
 
-# MODIFIED THIS TASK
 - name: Install python dependencies into the virtual environment
   ansible.builtin.pip:
     requirements: /opt/pipecatapp/requirements.txt
@@ -210,7 +209,6 @@
     src: ../../jobs/pipecatapp.nomad
     dest: /opt/nomad/jobs/pipecatapp.nomad
 
-# MODIFIED THIS TASK
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
     cmd: /opt/pipecatapp/venv/bin/python3 -m playwright install
