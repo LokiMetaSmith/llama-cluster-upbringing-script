@@ -366,7 +366,7 @@ class TwinService(FrameProcessor):
         Returns:
             str: The fully constructed system prompt.
         """
-        prompt_file = f"ansible/roles/pipecatapp/files/prompts/{expert_name}.txt"
+        prompt_file = f"prompts/{expert_name}.txt"
         try:
             with open(prompt_file, "r") as f:
                 base_prompt = f.read()
@@ -797,7 +797,7 @@ async def main():
     # Load configuration from the JSON file created by Ansible
     pipecat_config = {}
     try:
-        with open("/opt/pipecatapp/pipecat_config.json", "r") as f:
+        with open("pipecat_config.json", "r") as f:
             pipecat_config = json.load(f)
     except FileNotFoundError:
         logging.warning("pipecat_config.json not found, using defaults.")
