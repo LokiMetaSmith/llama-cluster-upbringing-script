@@ -16,7 +16,7 @@ from pipecat.frames.frames import (
     AudioRawFrame,
     EndFrame,
     TextFrame,
-    VisionImageRawFrame,
+    UserImageRawFrame as VisionImageRawFrame,
     UserStartedSpeakingFrame,
     UserStoppedSpeakingFrame,
     TranscriptionFrame,
