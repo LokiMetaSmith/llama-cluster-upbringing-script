@@ -169,6 +169,14 @@
   tags:
     - deploy_app
 
+- name: Copy prompts directory
+  ansible.builtin.copy:
+    src: prompts
+    dest: /opt/pipecatapp/
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Create STT model directory
   ansible.builtin.file:
     path: /opt/nomad/models/stt
