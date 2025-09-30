@@ -1,0 +1,15 @@
+- name: Redeploy the pipecat-app Nomad job
+  hosts: coordinator
+  become: yes
+  vars:
+    target_user: nomad
+  vars_files:
+    - group_vars/models.yaml
+  pre_tasks:
+    - name: Ensure the target user 'nomad' exists
+      ansible.builtin.user:
+        name: "{{ target_user }}"
+        state: present
+        shell: /bin/bash
+  roles:
+    - role: pipecatapp

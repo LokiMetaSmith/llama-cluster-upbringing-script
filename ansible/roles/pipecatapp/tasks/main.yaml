@@ -197,6 +197,13 @@
     version: master
   become: yes
 
+- name: Ensure Nomad jobs directory exists
+  ansible.builtin.file:
+    path: /opt/nomad/jobs
+    state: directory
+    mode: '0755'
+  become: yes
+
 - name: Copy pipecatapp Nomad job file
   ansible.builtin.template:
     src: ../../jobs/pipecatapp.nomad
@@ -222,7 +229,7 @@
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: http://127.0.0.1:4646/v1/status/leader
+    url: "http://{{ ansible_default_ipv4.address }}:4646/v1/status/leader"
     method: GET
     status_code: 200
   register: nomad_api_status
@@ -236,11 +243,15 @@
   register: pipecat_job_status
   changed_when: false
   ignore_errors: true
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
 - name: Run pipecat-app job
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
   when: pipecat_job_status.rc != 0
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
 - name: Ensure start_services.sh is executable
   ansible.builtin.file:

@@ -13,7 +13,7 @@ server = true
 # In a single-node setup (like when using the bootstrap.sh script),
 # the inventory will only contain one host. In this case, we must set
 # bootstrap_expect to 1 to allow the server to elect itself as leader.
-{% if ansible_play_hosts_all | length == 1 %}
+{% if groups['controller_nodes'] | length == 1 %}
 bootstrap_expect = 1
 # A single server bootstraps itself and does not need to join anything.
 {% else %}

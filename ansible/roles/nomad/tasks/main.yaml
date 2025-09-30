@@ -139,6 +139,13 @@
     remote_src: yes
   become: yes
 
+- name: Ensure /dev/snd directory exists for Nomad volume
+  ansible.builtin.file:
+    path: /dev/snd
+    state: directory
+    mode: '0755'
+  become: yes
+
 - name: Start and enable Nomad service
   ansible.builtin.systemd:
     name: nomad
