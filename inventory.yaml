@@ -4,7 +4,7 @@ all:
     ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
 
   children:
-    bootstrap:
+    controller_nodes:
       hosts:
         coordinator:
           ansible_connection: local

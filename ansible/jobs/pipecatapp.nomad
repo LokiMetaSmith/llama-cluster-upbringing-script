@@ -12,11 +12,6 @@ job "pipecat-app" {
       }
     }
 
-    volume "snd" {
-      type   = "host"
-      source = "snd"
-    }
-
     service {
       name = "pipecat-app-http"
       port = "http"
@@ -69,15 +64,13 @@ job "pipecat-app" {
 
       }
 
+      device "snd" {
+        source = "/dev/snd"
+      }
+
       resources {
         cpu    = 1000 # 1 GHz
         memory = 1024 # 4 GB
-      }
-
-      volume_mount {
-        volume      = "snd"
-        destination = "/dev/snd"
-        read_only   = false
       }
     }
   }
