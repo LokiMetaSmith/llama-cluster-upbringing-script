@@ -24,6 +24,10 @@ do
         DEBUG_MODE=true
         shift
         ;;
+        --pipecat-docker)
+        ANSIBLE_ARGS="$ANSIBLE_ARGS --extra-vars \"pipecat_docker=true\""
+        shift
+        ;;
     esac
 done
 
@@ -55,7 +59,7 @@ fi
 # --- Handle the --debug option ---
 if [ "$DEBUG_MODE" = true ]; then
     echo "🔍 --debug flag detected. Ansible output will be saved to '$LOG_FILE'."
-    ANSIBLE_ARGS="-vvv"
+    ANSIBLE_ARGS="$ANSIBLE_ARGS -vvv"
 fi
 
 # --- Main script logic ---
@@ -102,7 +106,7 @@ if [ "$DEBUG_MODE" = true ]; then
     echo "✅ Playbook run complete. View the detailed log in '$LOG_FILE'."
 else
     # Execute normally
-    ansible-playbook -i local_inventory.ini playbook.yaml
+    ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS
 fi
 
 echo "Bootstrap complete."

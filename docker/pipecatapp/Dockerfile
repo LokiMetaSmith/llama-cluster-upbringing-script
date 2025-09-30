@@ -1,10 +1,11 @@
-# Use an official Python runtime as a parent image
+# Use the official Python 3.10 slim base image
 FROM python:3.10-slim
 
-# Set the working directory in the container
-WORKDIR /opt/pipecatapp
+# Set environment variables to prevent interactive prompts during installation
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=off
 
-# Install system dependencies
+# Install system dependencies identified from the Ansible role
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     python3-dev \
@@ -14,30 +15,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     mecab-ipadic-utf8 \
     rustc \
     cargo \
+    # Dependencies for Playwright
     libevent-2.1-7 \
     libgstreamer-plugins-bad1.0-0 \
     libflite1 \
-    libavif13 \
+    libavif16 \
     gstreamer1.0-libav \
-    git \
+    # Clean up apt cache to reduce image size
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create and activate virtual environment
-RUN python3 -m venv /opt/pipecatapp/venv
-ENV PATH="/opt/pipecatapp/venv/bin:$PATH"
+# Set the working directory
+WORKDIR /opt/pipecatapp
 
-# Install Python packages
+# Create a virtual environment
+RUN python3 -m venv /opt/pipecatapp/venv
+
+# Copy requirements file and install Python dependencies within the venv
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN . /opt/pipecatapp/venv/bin/activate && \
+    pip install --upgrade pip setuptools wheel cython && \
+    pip install -r requirements.txt
 
 # Install Playwright browsers
-RUN playwright install
+RUN . /opt/pipecatapp/venv/bin/activate && \
+    python -m playwright install
 
-# Download required AI models
-RUN git clone https://huggingface.co/Systran/faster-whisper-tiny.en /opt/nomad/models/stt/faster-whisper-tiny.en
-RUN git clone https://github.com/snakers4/silero-vad.git /root/.cache/torch/hub/snakers4_silero-vad_master
-
-# Copy the rest of the application source code
+# Copy the rest of the application code
 COPY . .
 
 # Make the startup script executable
