@@ -26,6 +26,7 @@ from pipecat.frames.frames import (
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
+from pipecat.processors.aggregators.vad import VADFrameAggregator
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
@@ -852,8 +853,11 @@ async def main():
 
     text_injector = TextMessageInjector(text_message_queue)
 
+    vad = VADFrameAggregator()
+
     pipeline_steps = [
         transport.input(),
+        vad,
         stt,
         text_injector,
         UILogger(sender="user"),
@@ -874,7 +878,7 @@ async def main():
 
     # Interruption handling
     async def handle_interrupt(frame):
-        if isinstance(frame, TextFrame) and frame.text.strip():
+        if isinstance(frame, TranscriptionFrame) and frame.text.strip():
             logging.info(f"User interrupted with: {frame.text}")
             await main_task.cancel()
             # After cancelling, reinject the user's interruption text
@@ -883,6 +887,7 @@ async def main():
 
     interrupt_pipeline = Pipeline([
         transport.input(),
+        vad,
         stt,
         PipelineTask(handle_interrupt)
     ])
