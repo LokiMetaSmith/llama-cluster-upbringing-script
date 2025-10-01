@@ -41,14 +41,6 @@ stt_whisper_models:
     url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
     filename: "ggml-base.en.bin"
 
-stt_models:
-- name: Clone the correct faster-whisper model
-  ansible.builtin.git:
-    repo: 'https://huggingface.co/Systran/faster-whisper-tiny.en'
-    dest: /opt/nomad/models/stt/faster-whisper-tiny.en
-    version: main
-  become: yes
-
 # A list of voices for the PiperTTSService to use, in order of preference.
 tts_voices:
   - name: "en_US-l2arctic-medium"
