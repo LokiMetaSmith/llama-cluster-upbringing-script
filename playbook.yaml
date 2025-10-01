@@ -40,6 +40,7 @@
   become: yes # Now we use the sudo privileges we just created
 
   vars_files:
+    - group_vars/all.yaml
     - group_vars/models.yaml
 
   pre_tasks:
@@ -54,12 +55,21 @@
           - "--exclude=.git"
 
   roles:
+    - system_deps
     - common
-    - common-tools
-    - consul
 
   tasks:
-    - name: Flush handlers to ensure Consul service is started
+    - name: Run service setup roles
+      include_role:
+        name: "{{ role_name }}"
+      loop:
+        - consul
+        - docker
+        - nomad
+      loop_control:
+        loop_var: role_name
+
+    - name: Flush handlers to ensure core services are started
       meta: flush_handlers
 
     - name: Wait for a Consul leader to be elected
@@ -80,36 +90,34 @@
           higher than the number of server nodes available.
       when: consul_leader_status.failed or consul_leader_status.content == '""'
 
-    - name: Run roles that depend on Consul
+    - name: Install all python dependencies
+      include_role:
+        name: python_deps
+
+    - name: Run application and configuration roles
       include_role:
         name: "{{ role_name }}"
       loop:
-        - docker
-        - nomad
-      loop_control:
-        loop_var: role_name
-
-    - name: Flush handlers to ensure Nomad service is started
-      meta: flush_handlers
-
-    - name: Run remaining roles
-      include_role:
-        name: "{{ role_name }}"
-      loop:
-        - python_deps
-        - download_models
-        - llama_cpp
-        - whisper_cpp
         - provisioning_api
         - desktop_extras
         - paddler
         - pipecatapp
         - vision
-        # - kittentts
         - bootstrap_agent
         - power_manager
       loop_control:
         loop_var: role_name
+
+    - name: Run model-dependent roles
+      include_role:
+        name: "{{ role_name }}"
+      loop:
+        - download_models
+        - llama_cpp
+        - whisper_cpp
+      loop_control:
+        loop_var: role_name
+      when: not external_model_server
 
     - name: Flush handlers to ensure all services are started
       meta: flush_handlers

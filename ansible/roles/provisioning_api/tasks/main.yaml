@@ -1,14 +1,3 @@
-- name: Install API dependencies
-  pip:
-    name:
-      - fastapi
-      - uvicorn
-      - python-dotenv
-      - pyyaml
-    state: present
-    virtualenv: /home/user/.local
-  when: inventory_hostname in groups['controller_nodes']
-
 - name: Create provisioning API directory
   file:
     path: /opt/provisioning_api

@@ -9,6 +9,7 @@
 # --- Initialize flags ---
 CLEAN_REPO=false
 DEBUG_MODE=false
+EXTERNAL_MODEL_SERVER=false
 ANSIBLE_ARGS=""
 LOG_FILE="playbook_output.log"
 
@@ -22,6 +23,10 @@ do
         ;;
         --debug)
         DEBUG_MODE=true
+        shift
+        ;;
+        --external-model-server)
+        EXTERNAL_MODEL_SERVER=true
         shift
         ;;
     esac
@@ -52,10 +57,15 @@ if [ "$CLEAN_REPO" = true ]; then
     fi
 fi
 
-# --- Handle the --debug option ---
+# --- Build Ansible arguments ---
 if [ "$DEBUG_MODE" = true ]; then
     echo "🔍 --debug flag detected. Ansible output will be saved to '$LOG_FILE'."
-    ANSIBLE_ARGS="-vvv"
+    ANSIBLE_ARGS="$ANSIBLE_ARGS -vvv"
+fi
+
+if [ "$EXTERNAL_MODEL_SERVER" = true ]; then
+    echo "⚡️ --external-model-server flag detected. Skipping large model downloads and builds."
+    ANSIBLE_ARGS="$ANSIBLE_ARGS --extra-vars=external_model_server=true"
 fi
 
 # --- Main script logic ---
@@ -102,7 +112,7 @@ if [ "$DEBUG_MODE" = true ]; then
     echo "✅ Playbook run complete. View the detailed log in '$LOG_FILE'."
 else
     # Execute normally
-    ansible-playbook -i local_inventory.ini playbook.yaml
+    ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS
 fi
 
 echo "Bootstrap complete."

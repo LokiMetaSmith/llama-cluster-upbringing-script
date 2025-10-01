@@ -1,27 +1,18 @@
-- name: 1. Update apt package cache
-  become: yes
-  apt:
-    update_cache: yes
-    cache_valid_time: 3600 # Cache is valid for 1 hour
-
-- name: 2. Install default Python dev and venv packages
-  become: yes
-  apt:
-    name:
-      - python3-dev
-      - python3-venv
-      - python3-pip
-      - python3-virtualenv
-      - portaudio19-dev
-    state: present
-
-- name: 3. Create a virtual environment for the target user
-  ansible.builtin.shell:
-    cmd: "sudo -u {{ target_user }} python3 -m venv /home/{{ target_user }}/.local"
+- name: Create a virtual environment for the target user
+  ansible.builtin.command:
+    cmd: "python3 -m venv /home/{{ target_user }}/.local"
     creates: "/home/{{ target_user }}/.local/bin/pip"
   become: yes
 
-- name: 4. Copy requirements.txt to remote host
+- name: Ensure correct ownership of the virtual environment
+  ansible.builtin.file:
+    path: "/home/{{ target_user }}/.local"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    recurse: yes
+  become: yes
+
+- name: Copy requirements.txt to remote host
   copy:
     src: requirements.txt
     dest: "/home/{{ target_user }}/requirements.txt"
@@ -29,7 +20,39 @@
     group: "{{ target_user }}"
   become: yes
 
-- name: 5. Install python dependencies into the virtual environment
-  ansible.builtin.shell:
-    cmd: "sudo -u {{ target_user }} /home/{{ target_user }}/.local/bin/pip install -r /home/{{ target_user }}/requirements.txt"
+- name: Create a persistent temporary directory for pip builds
+  ansible.builtin.file:
+    path: /var/tmp/ansible_pip_build
+    state: directory
+    mode: '0777'
+  become: yes
+
+- name: Install/Upgrade base python packages in venv
+  ansible.builtin.pip:
+    name:
+      - pip
+      - setuptools
+      - wheel
+      - cython
+    state: latest
+    executable: "/home/{{ target_user }}/.local/bin/pip3"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Install python dependencies into the virtual environment
+  ansible.builtin.pip:
+    requirements: "/home/{{ target_user }}/requirements.txt"
+    executable: "/home/{{ target_user }}/.local/bin/pip3"
+    extra_args: -v
+  environment:
+    TMPDIR: /var/tmp/ansible_pip_build
+  become: yes
+  become_user: "{{ target_user }}"
+  async: 1200 # Set timeout to 20 minutes
+  poll: 10    # Check status every 10 seconds
+
+- name: Clean up pip build directory
+  ansible.builtin.file:
+    path: /var/tmp/ansible_pip_build
+    state: absent
   become: yes
