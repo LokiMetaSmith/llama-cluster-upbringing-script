@@ -4,14 +4,14 @@ torchvision
 torchaudio
 --extra-index-url https://pypi.org/simple
 accelerate
-ctranslate2==4.4.0
+ctranslate2
 cython
 docker
 einops
 espeakng_loader
 faiss-cpu
 fastapi
-faster-whisper==1.1.0
+faster-whisper
 fugashi-plus
 huggingface-hub
 kittentts
