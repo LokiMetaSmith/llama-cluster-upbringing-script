@@ -12,6 +12,11 @@ job "pipecat-app" {
       }
     }
 
+    volume "snd" {
+      type   = "host"
+      source = "snd"
+    }
+
     service {
       name = "pipecat-app-http"
       port = "http"
@@ -64,11 +69,11 @@ job "pipecat-app" {
 
       }
 
-#      volume_mount {
-#        volume      = "snd"
-#        destination = "/dev/snd"
-#       read_only   = false
-#      }
+      volume_mount {
+        volume      = "snd"
+        destination = "/dev/snd"
+       read_only   = false
+      }
 
       logs {
         max_files     = 3
