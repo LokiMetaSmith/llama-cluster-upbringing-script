@@ -40,7 +40,7 @@ stt_whisper_models:
   - name: "whisper-base.en"
     url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
     filename: "ggml-base.en.bin"
-    
+
 stt_models:
 - name: Clone the correct faster-whisper model
   ansible.builtin.git:
