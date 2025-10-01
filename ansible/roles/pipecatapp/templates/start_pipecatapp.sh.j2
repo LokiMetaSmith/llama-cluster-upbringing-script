@@ -16,7 +16,7 @@ LOG_FILE="/tmp/pipecat.log"
 cd /opt/pipecatapp
 
 # Activate the virtual environment
-source /opt/pipecatapp/venv/bin/activate
+source /home/{{ target_user }}/.local/bin/activate
 
 # Create the log file if it doesn't exist
 touch "$LOG_FILE"
@@ -24,4 +24,4 @@ touch "$LOG_FILE"
 # Execute the Python application, redirecting all output to the log file.
 # The 'exec' command replaces the shell process with the python process.
 echo "--- Starting pipecat-app: $(date) ---" >> "$LOG_FILE"
-exec /opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py >> "$LOG_FILE" 2>&1
+exec /home/{{ target_user }}/.local/bin/python3 /opt/pipecatapp/app.py >> "$LOG_FILE" 2>&1

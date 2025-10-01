@@ -25,47 +25,48 @@
     version: master
     update: yes
   become: yes
-  register: primacpp_git_result
 
-- name: Build and install from source if updated
-  block:
-    - name: Configure prima.cpp build
-      ansible.builtin.command:
-        cmd: cmake -B build
-      args:
-        chdir: "{{ primacpp_install_dir }}"
-        creates: "{{ primacpp_install_dir }}/build/Makefile"
-      when: "'worker_nodes' in group_names and 'controller_nodes' not in group_names"
+- name: Configure prima.cpp build
+  ansible.builtin.command:
+    cmd: cmake -B build
+  args:
+    chdir: "{{ primacpp_install_dir }}"
+    creates: "{{ primacpp_install_dir }}/build/Makefile"
+  when: "'worker_nodes' in group_names and 'controller_nodes' not in group_names"
+  become: yes
 
-    - name: Configure prima.cpp build with HiGHS
-      ansible.builtin.command:
-        cmd: cmake -B build -DUSE_HIGHS=1
-      args:
-        chdir: "{{ primacpp_install_dir }}"
-        creates: "{{ primacpp_install_dir }}/build/Makefile"
-      when: "'controller_nodes' in group_names"
+- name: Configure prima.cpp build with HiGHS
+  ansible.builtin.command:
+    cmd: cmake -B build -DUSE_HIGHS=1
+  args:
+    chdir: "{{ primacpp_install_dir }}"
+    creates: "{{ primacpp_install_dir }}/build/Makefile"
+  when: "'controller_nodes' in group_names"
+  become: yes
 
-    - name: Build prima.cpp
-      ansible.builtin.command:
-        cmd: cmake --build build --config Release -j
-      args:
-        chdir: "{{ primacpp_install_dir }}"
+- name: Build prima.cpp
+  ansible.builtin.command:
+    cmd: cmake --build build --config Release -j
+  args:
+    chdir: "{{ primacpp_install_dir }}"
+    creates: "{{ primacpp_install_dir }}/build/bin/primaserver" # Assuming 'primaserver' is a binary
+  become: yes
 
-    - name: Find compiled binaries
-      ansible.builtin.find:
-        paths: "{{ primacpp_install_dir }}/build/bin"
-        patterns: '*'
-        file_type: file
-      register: primacpp_binaries
+- name: Find compiled binaries
+  ansible.builtin.find:
+    paths: "{{ primacpp_install_dir }}/build/bin"
+    patterns: '*'
+    file_type: file
+  register: primacpp_binaries
+  become: yes
 
-    - name: Install prima.cpp binaries
-      ansible.builtin.copy:
-        src: "{{ item.path }}"
-        dest: "/usr/local/bin/{{ item.path | basename }}"
-        mode: '0755'
-        remote_src: yes
-      loop: "{{ primacpp_binaries.files }}"
-  when: primacpp_git_result.changed
+- name: Install prima.cpp binaries
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "/usr/local/bin/{{ item.path | basename }}"
+    mode: '0755'
+    remote_src: yes
+  loop: "{{ primacpp_binaries.files }}"
   become: yes
 
 - name: Copy prima.cpp Nomad job file

@@ -1,6 +1,7 @@
 data_dir = "{{ consul_data_dir }}"
 bind_addr = "{{ ansible_default_ipv4.address }}"
 client_addr = "0.0.0.0"
+recursors = ["8.8.8.8"]
 
 # Enable the UI
 ui_config {
