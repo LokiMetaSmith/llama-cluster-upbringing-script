@@ -13,7 +13,7 @@
     url: "{{ item.url }}"
     dest: "/opt/nomad/models/stt/{{ item.filename }}"
     mode: '0644'
-  loop: "{{ stt_models }}"
+  loop: "{{ stt_whisper_models }}"
   become: yes
   loop_control:
     loop_var: item
