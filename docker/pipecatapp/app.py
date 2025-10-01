@@ -66,7 +66,17 @@ class WebSocketLogHandler(logging.Handler):
             record: The log record to be emitted.
         """
         log_entry = self.format(record)
-        asyncio.run(web_server.manager.broadcast(json.dumps({"type": "log", "data": log_entry})))
+        try:
+            # Get the running event loop and schedule the broadcast.
+            # This is the correct way to call an async function from a sync context
+            # when an event loop is already running.
+            loop = asyncio.get_running_loop()
+            loop.create_task(web_server.manager.broadcast(json.dumps({"type": "log", "data": log_entry})))
+        except RuntimeError:
+            # This can happen if a log is emitted when the event loop is not running
+            # (e.g., before app startup or after shutdown). In this case, we just drop the log
+            # for the UI, as there's no way to send it.
+            pass
 
 logger = logging.getLogger()
 logger.addHandler(WebSocketLogHandler())
