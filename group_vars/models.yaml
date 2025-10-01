@@ -35,12 +35,6 @@ extract_expert_models:
     filename: "LFM2-1.2B-Extract-Q4_K_M.gguf"
     memory_mb: 4096
 
-# Speech-to-Text models
-stt_whisper_models:
-  - name: "whisper-base.en"
-    url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
-    filename: "ggml-base.en.bin"
-
 # A list of voices for the PiperTTSService to use, in order of preference.
 tts_voices:
   - name: "en_US-l2arctic-medium"
