@@ -27,8 +27,8 @@
   become: yes
   register: primacpp_git_result
 
-- name: Build and install from source if updated
-  block:
+  - name: Build and install from source if updated
+    block:
     - name: Configure prima.cpp build
       ansible.builtin.command:
         cmd: cmake -B build
