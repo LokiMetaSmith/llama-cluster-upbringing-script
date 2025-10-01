@@ -72,11 +72,11 @@
       loop: "{{ primacpp_binaries.files }}"
     become: yes
 
-  - name: Clean up prima.cpp build directory
-    ansible.builtin.file:
-      path: "{{ primacpp_install_dir }}"
-      state: absent
-    become: yes
+    - name: Clean up prima.cpp build directory
+      ansible.builtin.file:
+        path: "{{ primacpp_install_dir }}"
+        state: absent
+      become: yes
 
   when: primacpp_git_result.changed
   become: yes
