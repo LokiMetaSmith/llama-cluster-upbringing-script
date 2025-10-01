@@ -10,14 +10,8 @@
     state: present
   become: yes
 
-- name: Check if llama-server is already installed
-  ansible.builtin.stat:
-    path: /usr/local/bin/llama-server
-  register: llama_server_binary
-
 - name: Build and install llama.cpp
   become: yes
-  when: not llama_server_binary.stat.exists
   block:
     - name: Create build directory for llama.cpp
       ansible.builtin.file:
@@ -69,11 +63,6 @@
         remote_src: yes
       loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
       notify: update ld cache
-
-    - name: Clean up llama.cpp build directory
-      ansible.builtin.file:
-        path: /opt/llama.cpp-build
-        state: absent
 
 - name: Create Nomad jobs directory
   ansible.builtin.file:
