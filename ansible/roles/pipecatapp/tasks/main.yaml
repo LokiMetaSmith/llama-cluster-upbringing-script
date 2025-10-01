@@ -1,40 +1,3 @@
-# FILE: your_playbook.yml
-- name: Install python3, pip, and venv system packages
-  ansible.builtin.apt:
-    name:
-      - python3
-      - python3-pip
-      - python3-venv
-    state: present
-    update_cache: yes
-    cache_valid_time: 3600
-  become: yes
-
-- name: Install system dependencies for Python packages
-  ansible.builtin.apt:
-    name:
-      - build-essential
-      - python3-dev
-      - portaudio19-dev
-      - mecab
-      - libmecab-dev
-      - mecab-ipadic-utf8
-      - rustc
-      - cargo
-    state: present
-  become: yes
-
-- name: Install system dependencies for Playwright
-  ansible.builtin.apt:
-    name:
-      - libevent-2.1-7t64
-      - libgstreamer-plugins-bad1.0-0
-      - libflite1
-      - libavif16
-      - gstreamer1.0-libav
-    state: present
-  become: yes
-
 - name: Create pipecatapp application directory
   ansible.builtin.file:
     path: /opt/pipecatapp
@@ -48,61 +11,6 @@
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
     recurse: yes
-  become: yes
-
-- name: Create a virtual environment for the pipecat app
-  ansible.builtin.command:
-    cmd: python3 -m venv /opt/pipecatapp/venv
-    creates: /opt/pipecatapp/venv/bin/pip
-  become: yes
-
-- name: Create a persistent temporary directory for pip builds
-  ansible.builtin.file:
-    path: /var/tmp/ansible_pip_build
-    state: directory
-    mode: '0777'
-  become: yes
-
-- name: Copy requirements.txt to remote host
-  ansible.builtin.copy:
-    src: "{{ playbook_dir }}/ansible/roles/python_deps/files/requirements.txt"
-    dest: /opt/pipecatapp/requirements.txt
-  become: yes
-
-- name: Configure git to use anonymous protocol for GitHub
-  ansible.builtin.git_config:
-    name: url.https://github.com/.insteadOf
-    scope: system
-    value: git://github.com/
-  become: yes
-
-- name: Install/Upgrade base python packages in venv
-  ansible.builtin.pip:
-    name:
-      - pip
-      - setuptools
-      - wheel
-      - cython
-    state: latest
-    executable: /opt/pipecatapp/venv/bin/pip3
-  become: yes
-
-# MODIFIED THIS TASK
-- name: Install python dependencies into the virtual environment
-  ansible.builtin.pip:
-    requirements: /opt/pipecatapp/requirements.txt
-    executable: /opt/pipecatapp/venv/bin/pip3
-    extra_args: -v # Added for verbose logging
-  environment:
-    TMPDIR: /var/tmp/ansible_pip_build
-  become: yes
-  async: 1200 # Set timeout to 20 minutes
-  poll: 10    # Check status every 10 seconds
-
-- name: Clean up pip build directory
-  ansible.builtin.file:
-    path: /var/tmp/ansible_pip_build
-    state: absent
   become: yes
 
 - name: Create pipecat configuration file
@@ -184,13 +92,6 @@
     mode: '0755'
   become: yes
 
-#- name: Clone faster-whisper model
-#  ansible.builtin.git:
-#    repo: 'https://huggingface.co/Systran/faster-whisper-tiny.en'
-#    dest: /opt/nomad/models/stt/faster-whisper-tiny.en
-#    version: main
-#  become: yes
-
 - name: Create VAD model directory
   ansible.builtin.file:
     path: /root/.cache/torch/hub/snakers4_silero-vad_master
@@ -217,10 +118,9 @@
     src: ../../jobs/pipecatapp.nomad
     dest: /opt/nomad/jobs/pipecatapp.nomad
 
-# MODIFIED THIS TASK
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
-    cmd: /opt/pipecatapp/venv/bin/python3 -m playwright install
+    cmd: "/home/{{ target_user }}/.local/bin/python3 -m playwright install"
   become: yes
   async: 900 # Set timeout to 15 minutes
   poll: 10   # Check status every 10 seconds
@@ -234,6 +134,9 @@
   notify:
     - Reload systemd
     - Enable and start prima-services
+
+- name: Flush handlers to apply systemd changes
+  meta: flush_handlers
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:

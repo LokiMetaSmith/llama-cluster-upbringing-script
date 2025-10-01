@@ -5,6 +5,7 @@ torchaudio
 --extra-index-url https://pypi.org/simple
 accelerate
 ctranslate2
+cython
 docker
 einops
 espeakng_loader
@@ -14,7 +15,6 @@ faster-whisper
 fugashi-plus
 huggingface-hub
 kittentts
-https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-none-any.whl
 misaki[en]>=0.9.4
 num2words
 numpy
@@ -23,16 +23,21 @@ opencv-python-headless
 paramiko
 pipecat-ai
 pipecat-ai-whisker
+pip
 piper-tts
 playwright
+python-dotenv
 pyvips
 pyvips-binary
+pyyaml
 RealtimeSTT
-webrtcvad
 requests
 sentence-transformers
+setuptools
 soundfile
 spacy
 ultralytics
 uvicorn
+webrtcvad
 websockets
+wheel
