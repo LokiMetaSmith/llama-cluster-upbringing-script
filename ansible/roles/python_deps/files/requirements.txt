@@ -4,6 +4,7 @@ torchvision
 torchaudio
 --extra-index-url https://pypi.org/simple
 accelerate
+ctranslate2
 docker
 einops
 espeakng_loader
