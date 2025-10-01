@@ -35,20 +35,6 @@ extract_expert_models:
     filename: "LFM2-1.2B-Extract-Q4_K_M.gguf"
     memory_mb: 4096
 
-# Speech-to-Text models
-stt_whisper_models:
-  - name: "whisper-base.en"
-    url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
-    filename: "ggml-base.en.bin"
-
-stt_models:
-- name: Clone the correct faster-whisper model
-  ansible.builtin.git:
-    repo: 'https://huggingface.co/Systran/faster-whisper-tiny.en'
-    dest: /opt/nomad/models/stt/faster-whisper-tiny.en
-    version: main
-  become: yes
-
 # A list of voices for the PiperTTSService to use, in order of preference.
 tts_voices:
   - name: "en_US-l2arctic-medium"
@@ -74,6 +60,20 @@ embedding_models:
   - name: "bge-large-en-v1.5"
     repo_id: "BAAI/bge-large-en-v1.5"
     # This model will be downloaded using the huggingface_hub module, which handles the whole repository.
+
+# Speech-to-Text models
+stt_models:
+  faster-whisper:
+    - name: "faster-whisper-tiny.en"
+      repo_id: "Systran/faster-whisper-tiny.en"
+    - name: "faster-whisper-base.en"
+      repo_id: "Systran/faster-whisper-base.en"
+    - name: "faster-whisper-medium.en"
+      repo_id: "Systran/faster-whisper-medium.en"
+
+# The provider and name of the STT model to be used by the pipecat-app
+active_stt_provider: "faster-whisper"
+active_stt_model_name: "faster-whisper-tiny.en"
 
 # Vision models
 vision_models:
