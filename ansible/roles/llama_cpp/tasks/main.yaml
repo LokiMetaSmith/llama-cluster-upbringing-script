@@ -25,6 +25,7 @@
         dest: /opt/llama.cpp-build
         version: master
         update: yes
+      register: llama_git_result
 
     - name: Configure llama.cpp build with RPC and shared libraries
       ansible.builtin.command:
@@ -38,7 +39,7 @@
         cmd: cmake --build build --config Release -j
       args:
         chdir: /opt/llama.cpp-build
-        creates: /opt/llama.cpp-build/build/bin/llama-server
+      when: llama_git_result.changed
 
     - name: Find all compiled binaries and libraries
       ansible.builtin.find:

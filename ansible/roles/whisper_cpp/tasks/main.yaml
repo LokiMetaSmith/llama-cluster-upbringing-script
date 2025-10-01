@@ -23,6 +23,7 @@
         dest: /opt/whisper.cpp-build
         version: master
         update: yes
+      register: whisper_git_result
 
     - name: Configure whisper.cpp build
       ansible.builtin.command:
@@ -36,7 +37,7 @@
         cmd: cmake --build build --config Release -j
       args:
         chdir: /opt/whisper.cpp-build
-        creates: /opt/whisper.cpp-build/build/bin/stream
+      when: whisper_git_result.changed
 
     - name: Find compiled binaries
       ansible.builtin.find:
