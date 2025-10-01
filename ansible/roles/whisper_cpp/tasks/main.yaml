@@ -8,8 +8,14 @@
     state: present
   become: yes
 
+- name: Check if whisper.cpp stream binary is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/stream
+  register: whisper_stream_binary
+
 - name: Build and install whisper.cpp
   become: yes
+  when: not whisper_stream_binary.stat.exists
   block:
     - name: Create build directory for whisper.cpp
       ansible.builtin.file:
@@ -23,35 +29,37 @@
         dest: /opt/whisper.cpp-build
         version: master
         update: yes
-      register: whisper_git_result
 
-    - name: Build and install from source if updated
-      block:
-        - name: Configure whisper.cpp build
-          ansible.builtin.command:
-            cmd: cmake -B build
-          args:
-            chdir: /opt/whisper.cpp-build
-            creates: /opt/whisper.cpp-build/build/Makefile
+    - name: Configure whisper.cpp build
+      ansible.builtin.command:
+        cmd: cmake -B build
+      args:
+        chdir: /opt/whisper.cpp-build
+        creates: /opt/whisper.cpp-build/build/Makefile
 
-        - name: Build whisper.cpp
-          ansible.builtin.command:
-            cmd: cmake --build build --config Release -j
-          args:
-            chdir: /opt/whisper.cpp-build
+    - name: Build whisper.cpp
+      ansible.builtin.command:
+        cmd: cmake --build build --config Release -j
+      args:
+        chdir: /opt/whisper.cpp-build
+        creates: /opt/whisper.cpp-build/build/bin/stream
 
-        - name: Find compiled binaries
-          ansible.builtin.find:
-            paths: /opt/whisper.cpp-build/build/bin
-            patterns: '*'
-            file_type: file
-          register: whisper_binaries
+    - name: Find compiled binaries
+      ansible.builtin.find:
+        paths: /opt/whisper.cpp-build/build/bin
+        patterns: '*'
+        file_type: file
+      register: whisper_binaries
 
-        - name: Install whisper.cpp binaries
-          ansible.builtin.copy:
-            src: "{{ item.path }}"
-            dest: "/usr/local/bin/{{ item.path | basename }}"
-            mode: '0755'
-            remote_src: yes
-          loop: "{{ whisper_binaries.files }}"
-      when: whisper_git_result.changed
+    - name: Install whisper.cpp binaries
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "/usr/local/bin/{{ item.path | basename }}"
+        mode: '0755'
+        remote_src: yes
+      loop: "{{ whisper_binaries.files }}"
+
+    - name: Clean up whisper.cpp build directory
+      ansible.builtin.file:
+        path: /opt/whisper.cpp-build
+        state: absent

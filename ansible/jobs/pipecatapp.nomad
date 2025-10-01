@@ -46,6 +46,7 @@ job "pipecat-app" {
         # The vision and embedding models are now hardcoded in the application
         # to load from the unified /opt/nomad/models directory.
         STT_SERVICE = "faster-whisper"
+        STT_MODEL_PATH = "/opt/nomad/models/stt/faster-whisper"
         # A comma-separated list of SHA-256 hashed API keys.
         # Generate a key with: python -c "import secrets; print(secrets.token_hex(32))"
         # Then hash it with: echo -n "<your_key>" | sha256sum
