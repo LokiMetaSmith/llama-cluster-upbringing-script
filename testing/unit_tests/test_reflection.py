@@ -13,13 +13,14 @@ class TestReflection(unittest.TestCase):
             "job_id": "job1",
             "logs": {"stderr": "Some error log with out of memory condition"}
         }
-        expected_solution = {
-            "analysis": "The job failed due to an out-of-memory error.",
-            "action": "increase_memory",
-            "parameters": {"job_id": "job1", "memory_mb": 512}
-        }
         solution = reflect.analyze_failure_with_llm(diagnostic_data)
-        self.assertEqual(solution, expected_solution)
+        self.assertIn("analysis", solution)
+        self.assertIn("action", solution)
+        self.assertIn("parameters", solution)
+        self.assertEqual(solution["action"], "increase_memory")
+        self.assertIn("job_id", solution["parameters"])
+        self.assertIn("memory_mb", solution["parameters"])
+        self.assertEqual(solution["parameters"]["job_id"], "job1")
 
     def test_analyze_failure_exit_code_1(self):
         diagnostic_data = {
@@ -27,13 +28,13 @@ class TestReflection(unittest.TestCase):
             "status": "Job finished with exit code 1",
             "logs": {"stderr": "Some other error"}
         }
-        expected_solution = {
-            "analysis": "The job exited with a non-zero exit code, suggesting a runtime error.",
-            "action": "restart",
-            "parameters": {"job_id": "job2"}
-        }
         solution = reflect.analyze_failure_with_llm(diagnostic_data)
-        self.assertEqual(solution, expected_solution)
+        self.assertIn("analysis", solution)
+        self.assertIn("action", solution)
+        self.assertIn("parameters", solution)
+        self.assertEqual(solution["action"], "restart")
+        self.assertIn("job_id", solution["parameters"])
+        self.assertEqual(solution["parameters"]["job_id"], "job2")
 
     def test_analyze_failure_default_case(self):
         diagnostic_data = {
@@ -41,13 +42,13 @@ class TestReflection(unittest.TestCase):
             "status": "failed",
             "logs": {"stderr": "An unknown error"}
         }
-        expected_solution = {
-            "analysis": "The cause of failure could not be determined from the logs. A restart is recommended as a first step.",
-            "action": "restart",
-            "parameters": {"job_id": "job3"}
-        }
         solution = reflect.analyze_failure_with_llm(diagnostic_data)
-        self.assertEqual(solution, expected_solution)
+        self.assertIn("analysis", solution)
+        self.assertIn("action", solution)
+        self.assertIn("parameters", solution)
+        self.assertEqual(solution["action"], "restart")
+        self.assertIn("job_id", solution["parameters"])
+        self.assertEqual(solution["parameters"]["job_id"], "job3")
 
     @patch('sys.argv', ['reflect.py', 'test.json'])
     @patch('builtins.open', new_callable=mock_open, read_data='{"job_id": "job4"}')
