@@ -58,7 +58,6 @@ if [ "$CLEAN_REPO" = true ]; then
 fi
 
 # --- Build Ansible arguments ---
-ANSIBLE_ARGS="--extra-vars=target_user=loki"
 
 if [ "$DEBUG_MODE" = true ]; then
     echo "🔍 --debug flag detected. Ansible output will be saved to '$LOG_FILE'."
