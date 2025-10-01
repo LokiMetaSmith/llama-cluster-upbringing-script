@@ -184,12 +184,12 @@
     mode: '0755'
   become: yes
 
-- name: Clone faster-whisper model
-  ansible.builtin.git:
-    repo: 'https://huggingface.co/Systran/faster-whisper-tiny.en'
-    dest: /opt/nomad/models/stt/faster-whisper-tiny.en
-    version: main
-  become: yes
+#- name: Clone faster-whisper model
+#  ansible.builtin.git:
+#    repo: 'https://huggingface.co/Systran/faster-whisper-tiny.en'
+#    dest: /opt/nomad/models/stt/faster-whisper-tiny.en
+#    version: main
+#  become: yes
 
 - name: Create VAD model directory
   ansible.builtin.file:
