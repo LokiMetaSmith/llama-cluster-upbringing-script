@@ -8,14 +8,8 @@
     state: present
   become: yes
 
-- name: Check if whisper.cpp stream binary is already installed
-  ansible.builtin.stat:
-    path: /usr/local/bin/stream
-  register: whisper_stream_binary
-
 - name: Build and install whisper.cpp
   become: yes
-  when: not whisper_stream_binary.stat.exists
   block:
     - name: Create build directory for whisper.cpp
       ansible.builtin.file:
@@ -58,8 +52,3 @@
         mode: '0755'
         remote_src: yes
       loop: "{{ whisper_binaries.files }}"
-
-    - name: Clean up whisper.cpp build directory
-      ansible.builtin.file:
-        path: /opt/whisper.cpp-build
-        state: absent
