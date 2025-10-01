@@ -1,0 +1,54 @@
+job "pipecat-app" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "pipecat-group" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" {
+        to = 8000
+      }
+    }
+
+    service {
+      name = "prima-api-main"
+      port = "http"
+      provider = "consul"
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "10s"
+        timeout  = "2s"
+      }
+
+    }
+
+    task "pipecat-task" {
+      driver = "exec"
+
+      config {
+        command = "/opt/pipecatapp/start_pipecat.sh"
+      }
+
+      env {
+        PRIMA_API_SERVICE_NAME = "prima-api-main"
+        USE_SUMMARIZER = "false"
+        STT_SERVICE = "faster-whisper"
+        PIECAT_API_KEYS = ""
+      }
+
+      logs {
+        max_files     = 3
+        max_file_size = 10 # MB
+      }
+
+      resources {
+        cpu    = 1000 # 1 GHz
+        memory = 1024 # 4 GB
+      }
+    }
+  }
+}

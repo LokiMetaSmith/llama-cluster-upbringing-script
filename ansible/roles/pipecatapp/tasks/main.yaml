@@ -29,8 +29,8 @@
     - deploy_app
 
 - name: Copy pipecat startup script
-  ansible.builtin.copy:
-    src: "{{ playbook_dir }}/scripts/start_pipecat.sh"
+  ansible.builtin.template:
+    src: start_pipecatapp.sh.j2
     dest: /opt/pipecatapp/start_pipecat.sh
     mode: '0755'
   become: yes
@@ -92,6 +92,16 @@
     mode: '0755'
   become: yes
 
+- name: Clone all STT models from all providers
+  ansible.builtin.git:
+    repo: "https://huggingface.co/{{ item.1.repo_id }}"
+    dest: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.name }}"
+    version: main
+  loop: "{{ stt_models | dict2items | subelements('value') }}"
+  loop_control:
+    label: "{{ item.0.key }}/{{ item.1.name }}"
+  become: yes
+
 - name: Create VAD model directory
   ansible.builtin.file:
     path: /root/.cache/torch/hub/snakers4_silero-vad_master
@@ -115,7 +125,7 @@
 
 - name: Copy pipecatapp Nomad job file
   ansible.builtin.template:
-    src: ../../jobs/pipecatapp.nomad
+    src: pipecatapp.nomad.j2
     dest: /opt/nomad/jobs/pipecatapp.nomad
 
 - name: Install Playwright browsers using the virtual environment's python
@@ -148,12 +158,18 @@
   retries: 12 # Total wait time = retries * delay = 60 seconds
   delay: 5   # Wait 5 seconds between retries
 
-- name: Check if pipecat-app job is running
+- name: Stop and purge any existing pipecat-app job to ensure idempotency
   ansible.builtin.command:
-    cmd: nomad job status pipecat-app
-  register: pipecat_job_status
-  changed_when: false
-  ignore_errors: true
+    cmd: nomad job stop -purge pipecat-app
+  register: pipecat_job_stop_status
+  changed_when: "pipecat_job_stop_status.rc == 0"
+  failed_when: false
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+
+- name: Run pipecat-app job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
@@ -169,13 +185,6 @@
   retries: 60
   delay: 10
   changed_when: false
-
-- name: Run pipecat-app job
-  ansible.builtin.command:
-    cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
-  when: pipecat_job_status.rc != 0
-  environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
 - name: Ensure start_services.sh is executable
   ansible.builtin.file:

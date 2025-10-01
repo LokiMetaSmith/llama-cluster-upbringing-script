@@ -41,6 +41,7 @@
             cmd: cmake --build build --config Release -j
           args:
             chdir: /opt/llama.cpp-build
+            creates: /opt/llama.cpp-build/build/bin/llama-server
 
         - name: Find all compiled binaries and libraries
           ansible.builtin.find:
@@ -65,7 +66,13 @@
             remote_src: yes
           loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
           notify: update ld cache
+
+        - name: Clean up llama.cpp build directory
+          ansible.builtin.file:
+            path: /opt/llama.cpp-build
+            state: absent
       when: llama_git_result.changed
+
 
 - name: Create Nomad jobs directory
   ansible.builtin.file:
