@@ -1,10 +1,10 @@
 data_dir  = "{{ nomad_data_dir }}"
-bind_addr = "{{ ansible_default_ipv4.address }}"
+bind_addr = "{{ ansible_host }}"
 
 advertise {
-  http = "{{ ansible_default_ipv4.address }}"
-  rpc  = "{{ ansible_default_ipv4.address }}"
-  serf = "{{ ansible_default_ipv4.address }}"
+  http = "{{ ansible_host }}"
+  rpc  = "{{ ansible_host }}"
+  serf = "{{ ansible_host }}"
 }
 
 server {

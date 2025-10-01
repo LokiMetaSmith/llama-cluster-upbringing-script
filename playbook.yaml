@@ -97,9 +97,9 @@
         name: "{{ role_name }}"
       loop:
         - python_deps
-        - download_models
-        - llama_cpp
-        - whisper_cpp
+        # - download_models
+        # - llama_cpp
+        # - whisper_cpp
         - provisioning_api
         - desktop_extras
         - paddler
