@@ -72,3 +72,22 @@
     - name: Display Playwright test results
       debug:
         var: playwright_test_results.stdout_lines
+
+- name: E2E Agent Tool Call Test
+  hosts: controller_nodes
+  tasks:
+    - name: Ask the agent for its status using the mcp_tool
+      uri:
+        url: "http://{{ ansible_host }}:8000/agent/chat"
+        method: POST
+        body_format: json
+        body:
+          text: "Use the mcp_tool to get your current status."
+        return_content: yes
+      register: agent_response
+
+    - name: Assert that the agent returned a valid status report
+      assert:
+        that:
+          - "'Current pipeline status' in agent_response.json.text or 'No active pipelines' in agent_response.json.text"
+        fail_msg: "Agent did not return a valid status report. Response: {{ agent_response.json.text }}"
