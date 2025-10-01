@@ -39,6 +39,7 @@
             cmd: cmake --build build --config Release -j
           args:
             chdir: /opt/whisper.cpp-build
+            creates: /opt/whisper.cpp-build/build/bin/stream
 
         - name: Find compiled binaries
           ansible.builtin.find:
@@ -54,4 +55,9 @@
             mode: '0755'
             remote_src: yes
           loop: "{{ whisper_binaries.files }}"
+
+        - name: Clean up whisper.cpp build directory
+          ansible.builtin.file:
+            path: /opt/whisper.cpp-build
+            state: absent
       when: whisper_git_result.changed

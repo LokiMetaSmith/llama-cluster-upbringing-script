@@ -92,6 +92,16 @@
     mode: '0755'
   become: yes
 
+- name: Clone all STT models from all providers
+  ansible.builtin.git:
+    repo: "https://huggingface.co/{{ item.1.repo_id }}"
+    dest: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.name }}"
+    version: main
+  loop: "{{ stt_models | dict2items | subelements('value') }}"
+  loop_control:
+    label: "{{ item.0.key }}/{{ item.1.name }}"
+  become: yes
+
 - name: Create VAD model directory
   ansible.builtin.file:
     path: /root/.cache/torch/hub/snakers4_silero-vad_master
