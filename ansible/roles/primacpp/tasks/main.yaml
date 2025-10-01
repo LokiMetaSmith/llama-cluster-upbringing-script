@@ -25,6 +25,7 @@
     version: master
     update: yes
   become: yes
+  register: primacpp_git_result
 
 - name: Configure prima.cpp build
   ansible.builtin.command:
@@ -49,7 +50,7 @@
     cmd: cmake --build build --config Release -j
   args:
     chdir: "{{ primacpp_install_dir }}"
-    creates: "{{ primacpp_install_dir }}/build/bin/primaserver" # Assuming 'primaserver' is a binary
+  when: primacpp_git_result.changed
   become: yes
 
 - name: Find compiled binaries
