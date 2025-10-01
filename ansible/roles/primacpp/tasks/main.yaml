@@ -29,6 +29,7 @@
 
 - name: Build and install from source if updated
   block:
+ 
     - name: Configure prima.cpp build
       ansible.builtin.command:
         cmd: cmake -B build
@@ -36,6 +37,7 @@
         chdir: "{{ primacpp_install_dir }}"
         creates: "{{ primacpp_install_dir }}/build/Makefile"
       when: "'worker_nodes' in group_names and 'controller_nodes' not in group_names"
+    become: yes
 
     - name: Configure prima.cpp build with HiGHS
       ansible.builtin.command:
@@ -44,12 +46,15 @@
         chdir: "{{ primacpp_install_dir }}"
         creates: "{{ primacpp_install_dir }}/build/Makefile"
       when: "'controller_nodes' in group_names"
+    become: yes
 
     - name: Build prima.cpp
       ansible.builtin.command:
         cmd: cmake --build build --config Release -j
       args:
         chdir: "{{ primacpp_install_dir }}"
+      creates: "{{ primacpp_install_dir }}/build/bin/primaserver" # Assuming 'primaserver' is a binary
+    become: yes
 
     - name: Find compiled binaries
       ansible.builtin.find:
@@ -57,6 +62,7 @@
         patterns: '*'
         file_type: file
       register: primacpp_binaries
+    become: yes
 
     - name: Install prima.cpp binaries
       ansible.builtin.copy:
@@ -65,6 +71,14 @@
         mode: '0755'
         remote_src: yes
       loop: "{{ primacpp_binaries.files }}"
+    become: yes
+
+    - name: Clean up prima.cpp build directory
+      ansible.builtin.file:
+        path: "{{ primacpp_install_dir }}"
+        state: absent
+      become: yes
+
   when: primacpp_git_result.changed
   become: yes
 
