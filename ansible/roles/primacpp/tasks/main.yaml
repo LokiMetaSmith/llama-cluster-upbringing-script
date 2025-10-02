@@ -74,12 +74,6 @@
   when: primacpp_git_result.changed
   become: yes
 
-- name: Copy prima.cpp Nomad job file
-  ansible.builtin.template:
-    src: ../../jobs/primacpp.nomad
-    dest: /opt/nomad/jobs/primacpp.nomad
-  when: "'controller_nodes' in group_names"
-
 - name: Template the prima-expert-main Nomad job file
   ansible.builtin.template:
     src: prima-expert.nomad.j2
@@ -103,4 +97,3 @@
   when: primacpp_job_status.rc != 0
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
-
