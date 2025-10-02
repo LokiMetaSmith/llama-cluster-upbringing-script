@@ -10,7 +10,7 @@
 set -e
 
 # Define the log file path
-LOG_FILE="/opt/pipecatapp/pipecat.log"
+LOG_FILE="{{ pipecat_app_dir }}/pipecat.log"
 
 cd {{ pipecat_app_dir }}
 
@@ -21,13 +21,11 @@ fi
 
 # Activate the correct virtual environment
 source {{ pipecat_app_dir }}/venv/bin/activate
-# ...
 
-# Activate the virtual environment
-source /home/{{ target_user }}/.local/bin/activate
-
-# Source the environment variables
-source /opt/pipecatapp/pipecat.env
+# Source the environment variables if the file exists
+if [ -f {{ pipecat_app_dir }}/pipecat.env ]; then
+  source {{ pipecat_app_dir }}/pipecat.env
+fi
 
 # Create the log file if it doesn't exist
 touch "$LOG_FILE"
@@ -35,4 +33,4 @@ touch "$LOG_FILE"
 # Execute the Python application, redirecting all output to the log file.
 # The 'exec' command replaces the shell process with the python process.
 echo "--- Starting pipecat-app: $(date) ---" >> "$LOG_FILE"
-exec /home/{{ target_user }}/.local/bin/python3 /opt/pipecatapp/app.py >> "$LOG_FILE" 2>&1
+exec {{ pipecat_app_dir }}/venv/bin/python3 {{ pipecat_app_dir }}/app.py 2>&1 | tee -a "$LOG_FILE"
