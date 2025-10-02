@@ -145,7 +145,7 @@
 
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
-    cmd: "/home/{{ target_user }}/.local/bin/python3 -m playwright install"
+    cmd: "/opt/pipecatapp/venv/bin/python3 -m playwright install"
   become: yes
   async: 900 # Set timeout to 15 minutes
   poll: 10   # Check status every 10 seconds
