@@ -36,8 +36,7 @@
       - cython
     state: latest
     executable: "/home/{{ target_user }}/.local/bin/pip3"
-  become: yes
-  become_user: "{{ target_user }}"
+  become: no
 
 - name: Install python dependencies into the virtual environment
   ansible.builtin.pip:
@@ -48,8 +47,7 @@
     TMPDIR: /var/tmp/ansible_pip_build
   async: 1200 # Set timeout to 20 minutes
   poll: 10    # Check status every 10 seconds
-  become: yes
-  become_user: "{{ target_user }}"
+  become: no
 
 - name: Clean up pip build directory
   ansible.builtin.file:

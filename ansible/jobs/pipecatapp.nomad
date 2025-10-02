@@ -12,6 +12,11 @@ job "pipecat-app" {
       }
     }
 
+    volume "pipecatapp" {
+      type   = "host"
+      source = "pipecatapp"
+    }
+
     volume "snd" {
       type   = "host"
       source = "snd"
@@ -38,12 +43,16 @@ job "pipecat-app" {
         command = "/opt/pipecatapp/start_pipecat.sh"
       }
 
-
+      volume_mount {
+        volume      = "pipecatapp"
+        destination = "/opt/pipecatapp"
+        read_only   = false
+      }
 
       volume_mount {
         volume      = "snd"
         destination = "/dev/snd"
-       read_only   = false
+        read_only   = false
       }
 
 

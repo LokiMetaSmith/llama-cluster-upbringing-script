@@ -1,7 +1,7 @@
 {% set final_worker_count = worker_count if worker_count is defined else 1 %}
 # This is a Jinja2 template for a complete, distributed Prima expert.
 # It is parameterized and can be used to deploy any expert model.
-job "{{ job_name | default('prima-expert') }}" {
+job "{{ job_name | default('prima-expert-main') }}" {
   datacenters = ["dc1"]
   namespace   = "{{ namespace | default('default') }}"
 
@@ -20,7 +20,7 @@ job "{{ job_name | default('prima-expert') }}" {
     }
 
     service {
-      name     = "{{ service_name | default('prima-api') }}"
+      name     = "{{ service_name | default('prima-api-main') }}"
       provider = "consul"
       port     = "http"
 
@@ -39,7 +39,7 @@ job "{{ job_name | default('prima-expert') }}" {
         data = <<EOH
 #!/bin/bash
 set -e
-echo "Starting master server for expert: {{ job_name | default('prima-expert') }}"
+echo "Starting master server for expert: {{ job_name | default('prima-expert-main') }}"
 
 # Discover worker services via Consul
 echo "Discovering worker services from Consul..."
