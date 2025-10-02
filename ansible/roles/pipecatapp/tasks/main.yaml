@@ -182,12 +182,6 @@
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
-- name: Run pipecat-app job
-  ansible.builtin.command:
-    cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
-  environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
-
 - name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/health/service/prima-api-main"
@@ -200,6 +194,12 @@
   retries: 60
   delay: 10
   changed_when: false
+
+- name: Run pipecat-app job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
 - name: Ensure start_services.sh is executable
   ansible.builtin.file:
