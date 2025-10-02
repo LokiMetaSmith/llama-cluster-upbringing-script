@@ -38,19 +38,19 @@ job "pipecat-app" {
         command = "/opt/pipecatapp/start_pipecat.sh"
       }
 
-      env {
+     #  env {
         # This should match the service name of the main prima-expert job
-        PRIMA_API_SERVICE_NAME = "prima-api-main"
+        # PRIMA_API_SERVICE_NAME = "prima-api-main"
         # Set to "true" to enable the summarizer tool
-        USE_SUMMARIZER = "false"
+        # USE_SUMMARIZER = "false"
         # The vision and embedding models are now hardcoded in the application
         # to load from the unified /opt/nomad/models directory.
-        STT_SERVICE = "faster-whisper"
-        STT_MODEL_PATH = "/opt/nomad/models/stt/{{ active_stt_provider }}/{{ active_stt_model_name }}"
+        # STT_SERVICE = "faster-whisper"
+        # STT_MODEL_PATH = "/opt/nomad/models/stt/{{ active_stt_provider }}/{{ active_stt_model_name }}"
         # A comma-separated list of SHA-256 hashed API keys.
         # Generate a key with: python -c "import secrets; print(secrets.token_hex(32))"
         # Then hash it with: echo -n "<your_key>" | sha256sum
-        PIECAT_API_KEYS = ""
+        # PIECAT_API_KEYS = ""
 
         # Configuration for external, third-party LLM experts.
         # This is a JSON string defining a dictionary where each key is the expert's name.
@@ -68,7 +68,7 @@ job "pipecat-app" {
         # EOF
         # OPENAI_API_KEY = "sk-..."
 
-      }
+     #  }
 
       volume_mount {
         volume      = "snd"
