@@ -30,7 +30,11 @@ job "pipecat-app" {
       driver = "exec"
 
       config {
-        command = "/opt/pipecatapp/start_pipecat.sh"
+        command = "/usr/bin/env"
+        args = [
+          "STT_SERVICE=${STT_SERVICE}",
+          "/opt/pipecatapp/start_pipecat.sh"
+        ]
       }
 
       env {
