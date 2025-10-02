@@ -17,7 +17,15 @@ pipecat_log_file: "/tmp/pipecat.log"
 # ... existing variables ...
 active_stt_provider: "faster-whisper"
 active_stt_model_name: "tiny.en"
-pipecat_api_keys: "<hashed_key>"
+
+# 1. Generate a new, secure key
+#python -c "import secrets; print(secrets.token_hex(32))"
+# Example output: a1b2c3d4e5f6...
+
+# 2. Hash the key (replace <your_key> with the output from the first command)
+#echo -n "<your_key>" | sha256sum
+# Example output: <hashed_key>  -
+pipecat_api_keys: ""
 
 # ... existing variables ...
 
