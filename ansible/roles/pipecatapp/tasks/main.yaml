@@ -150,16 +150,6 @@
   async: 900 # Set timeout to 15 minutes
   poll: 10   # Check status every 10 seconds
 
-- name: Install systemd service for starting Nomad jobs on boot
-  ansible.builtin.template:
-    src: prima-services.service.j2
-    dest: /etc/systemd/system/prima-services.service
-    mode: '0644'
-  become: yes
-  notify:
-    - Reload systemd
-    - Enable and start prima-services
-
 - name: Flush handlers to apply systemd changes
   meta: flush_handlers
 
