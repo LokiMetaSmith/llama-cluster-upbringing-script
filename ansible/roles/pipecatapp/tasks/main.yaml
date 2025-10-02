@@ -104,17 +104,20 @@
 
 - name: Create VAD model directory
   ansible.builtin.file:
-    path: /root/.cache/torch/hub/snakers4_silero-vad_master
+    path: "/home/{{ target_user }}/.cache/torch/hub/snakers4_silero-vad_master"
     state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
     mode: '0755'
   become: yes
 
 - name: Clone silero-vad model
   ansible.builtin.git:
     repo: 'https://github.com/snakers4/silero-vad.git'
-    dest: /root/.cache/torch/hub/snakers4_silero-vad_master
+    dest: "/home/{{ target_user }}/.cache/torch/hub/snakers4_silero-vad_master"
     version: master
   become: yes
+  become_user: "{{ target_user }}"
 
 - name: Ensure Nomad jobs directory exists
   ansible.builtin.file:
