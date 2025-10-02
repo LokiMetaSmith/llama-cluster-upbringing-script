@@ -14,5 +14,62 @@ use_summarizer: "false"
 stt_service: "faster-whisper"
 pipecat_app_dir: "/opt/pipecatapp"
 pipecat_log_file: "/tmp/pipecat.log"
+# ... existing variables ...
+active_stt_provider: "faster-whisper"
+active_stt_model_name: "tiny.en"
+pipecat_api_keys: "<hashed_key>"
+
+# ... existing variables ...
+
+# Configuration for external, third-party LLM experts.
+# This is a dictionary that will be converted to a JSON string.
+external_experts_config:
+  openai_gpt4:
+    base_url: "https://api.openai.com/v1"
+    api_key_env: "OPENAI_API_KEY"
+    model: "gpt-4-turbo" # Specify the exact model name
+
+# -- Storing Secrets with Ansible Vault --
+# This is the plain text version. In a real environment, you should
+# encrypt this variable. First, create an encrypted file:
+#   ansible-vault create group_vars/secrets.yaml
+# Then, add the following to that file:
+#   openai_api_key: "sk-..."
+# Your main playbook should then include:
+#   vars_files:
+#     - group_vars/secrets.yaml
+# For now, we'll place it here for simplicity.
+openai_api_key: "sk-your_openai_api_key_here"
 
 # Model definitions have been moved to group_vars/models.yaml
+     #  env {
+        # This should match the service name of the main prima-expert job
+        # PRIMA_API_SERVICE_NAME = "prima-api-main"
+        # Set to "true" to enable the summarizer tool
+        # USE_SUMMARIZER = "false"
+        # The vision and embedding models are now hardcoded in the application
+        # to load from the unified /opt/nomad/models directory.
+        # STT_SERVICE = "faster-whisper"
+        # STT_MODEL_PATH = "/opt/nomad/models/stt/{{ active_stt_provider }}/{{ active_stt_model_name }}"
+        # A comma-separated list of SHA-256 hashed API keys.
+        # Generate a key with: python -c "import secrets; print(secrets.token_hex(32))"
+        # Then hash it with: echo -n "<your_key>" | sha256sum
+        # PIECAT_API_KEYS = ""
+
+        # Configuration for external, third-party LLM experts.
+        # This is a JSON string defining a dictionary where each key is the expert's name.
+        # - "base_url": The API endpoint for the expert.
+        # - "api_key_env": The name of the environment variable that holds the API key.
+        #
+        # Example:
+        # EXTERNAL_EXPERTS_CONFIG = <<EOF
+        # {
+        #   "openai_gpt4": {
+        #     "base_url": "https://api.openai.com/v1",
+        #     "api_key_env": "OPENAI_API_KEY"
+        #   }
+        # }
+        # EOF
+        # OPENAI_API_KEY = "sk-..."
+
+     #  }
