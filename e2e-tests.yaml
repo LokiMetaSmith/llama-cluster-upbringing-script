@@ -28,10 +28,10 @@
       register: pipecat_job_inspect
       changed_when: false
 
-    - name: Assert that the driver is 'docker'
+    - name: Assert that the driver is 'exec'
       assert:
         that:
-          - "(pipecat_job_inspect.stdout | from_json).TaskGroups[0].Tasks[0].Driver == 'docker'"
+          - "(pipecat_job_inspect.stdout | from_json).TaskGroups[0].Tasks[0].Driver == 'exec'"
 
 - name: Llama.cpp Benchmark as an E2E Test
   hosts: controller_nodes
