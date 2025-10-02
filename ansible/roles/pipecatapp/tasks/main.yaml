@@ -28,6 +28,13 @@
   tags:
     - deploy_app
 
+- name: Create pipecat environment file from template
+  ansible.builtin.template:
+    src: pipecat.env.j2
+    dest: "{{ pipecat_app_dir }}/pipecat.env"
+    mode: '0644'
+  become: yes
+
 - name: Copy pipecat environment file
   ansible.builtin.copy:
     src: pipecat.env
