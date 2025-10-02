@@ -11,7 +11,12 @@ job "pipecat-app" {
         to = 8000
       }
     }
-
+    
+    volume "pipecatapp" {
+      type   = "host"
+      source = "pipecatapp" # must be defined in Nomad client config
+      read_only = false
+    }
     service {
       name = "prima-api-main"
       port = "http"
@@ -28,16 +33,15 @@ job "pipecat-app" {
 
     task "pipecat-task" {
       driver = "raw_exec"
-      template {
-        data = "/opt/pipecatapp/start_pipecat.sh"
-        destination = "local/start_pipecat.sh"
-        perms       = "0755"
-      }
+ 
       config {
-        command = "local/start_pipecat.sh"
+        command = "/opt/pipecatapp/start_pipecat.sh"
       }
 
-
+      volume_mount {
+        volume      = "pipecatapp"
+        destination = "/opt/pipecatapp"
+      }
 
       resources {
         cpu    = 1000 # 1 GHz
