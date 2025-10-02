@@ -4,8 +4,7 @@ After=network.target nomad.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/nomad job run /opt/nomad/jobs/prima-expert.nomad
-ExecStart=/usr/local/bin/nomad job run /opt/nomad/jobs/pipecatapp.nomad
+ExecStart=/opt/cluster-infra/start_services.sh
 RemainAfterExit=true
 StandardOutput=journal
 StandardError=journal

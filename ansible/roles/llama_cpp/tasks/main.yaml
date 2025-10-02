@@ -83,7 +83,7 @@
 
 - name: Deploy Prima Expert Nomad job template
   ansible.builtin.template:
-    src: ../../../jobs/prima-expert.nomad
+    src: ../../jobs/prima-expert.nomad
     dest: /opt/nomad/jobs/prima-expert.nomad
     mode: '0644'
   vars:
@@ -95,6 +95,6 @@
 
 - name: Copy benchmark Nomad job file
   ansible.builtin.template:
-    src: ../../../jobs/benchmark.nomad
+    src: ../../jobs/benchmark.nomad
     dest: /opt/nomad/jobs/benchmark.nomad
   when: "'controller_nodes' in group_names"
