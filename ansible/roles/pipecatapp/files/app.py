@@ -363,13 +363,15 @@ class TwinService(FrameProcessor):
             response = requests.get(f"{self.consul_http_addr}/v1/catalog/services")
             response.raise_for_status()
             services = response.json()
+            local_experts = {name.replace("prima-api-", "") for name in services.keys() if name.startswith("prima-api-")}
+            expert_names.update(local_experts)
             # Filter for services that match our expert pattern, e.g., "llama-api-"
-            expert_names = [name for name in services.keys() if name.startswith("llama-api-")]
-            return expert_names
+            #expert_names = [name for name in services.keys() if name.startswith("llama-api-")]
+            
         except requests.exceptions.RequestException as e:
             logging.error(f"Could not connect to Consul: {e}")
-            return []
-
+            
+        return sorted(list(expert_names))
     def get_system_prompt(self, expert_name: str = "router") -> str:
         """Constructs the system prompt for a given agent or expert.
 
@@ -406,30 +408,36 @@ class TwinService(FrameProcessor):
         return f"{base_prompt}\n\n{tools_prompt}\n\nIf the query doesn't fit a specific expert or tool, handle it yourself. Otherwise, respond with a JSON object with the 'tool' and 'args' keys."
 
     async def get_expert_service(self, expert_name: str):
-        """Retrieves a healthy instance of an expert LLM service from Consul.
-
-        Args:
-            expert_name (str): The name of the expert (e.g., "coding").
-
-        Returns:
-            An OpenAILLMService instance if a healthy service is found, otherwise None.
-        """
-        service_name = f"llama-api-{expert_name}"
+        """Retrieves a healthy instance of an expert LLM service."""
+        # Check if it's an external expert first
+        if expert_name in self.experts:
+            config = self.experts[expert_name]
+            api_key = os.getenv(config["api_key_env"])
+            if not api_key:
+                logging.error(f"API key environment variable '{config['api_key_env']}' not set for expert '{expert_name}'.")
+                return None
+            return OpenAILLMService(
+                base_url=config["base_url"],
+                api_key=api_key,
+                model=config.get("model", expert_name) # Use specific model if provided
+            )
+    
+        # Otherwise, assume it's a local expert and discover via Consul
+        service_name = f"prima-api-{expert_name}"
         try:
-            response = requests.get(f"{self.consul_http_addr}/v1/health/service/{service_name}")
+            response = requests.get(f"{self.consul_http_addr}/v1/health/service/{service_name}?passing")
             response.raise_for_status()
             services = response.json()
             if not services:
                 return None
-
-            # Get the first healthy service instance
+    
             address = services[0]['Service']['Address']
             port = services[0]['Service']['Port']
             base_url = f"http://{address}:{port}/v1"
-
+    
             return OpenAILLMService(base_url=base_url, api_key="dummy", model=expert_name)
         except requests.exceptions.RequestException as e:
-            logging.error(f"Could not get address for expert {expert_name}: {e}")
+            logging.error(f"Could not get address for local expert {expert_name}: {e}")
             return None
 
     async def _request_approval(self, tool_call_info: dict) -> bool:
