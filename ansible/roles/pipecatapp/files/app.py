@@ -328,6 +328,14 @@ class TwinService(FrameProcessor):
         self.consul_http_addr = os.getenv("CONSUL_HTTP_ADDR", "http://localhost:8500")
         self.experts = {} # Experts will be discovered dynamically
 
+        # Load external experts from environment variable
+        external_experts_config = os.getenv("EXTERNAL_EXPERTS_CONFIG")
+        if external_experts_config:
+            try:
+                self.experts = json.loads(external_experts_config)
+            except json.JSONDecodeError as e:
+                logging.error(f"Could not parse EXTERNAL_EXPERTS_CONFIG: {e}")
+        
         self.tools = {
             "ssh": SSH_Tool(),
             "mcp": MCP_Tool(self, self.runner),
