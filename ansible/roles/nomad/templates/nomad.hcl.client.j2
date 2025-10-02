@@ -22,6 +22,11 @@ client {
     "driver.raw_exec.enable" = "1"
   }
 
+  host_volume "pipecatapp" {
+    path      = "/opt/pipecatapp"
+    read_only = false
+  }
+
   # The "snd" volume is required for voice applications but will prevent
   # Nomad from starting on machines without a sound device. It is commented
   # out to allow for more flexible deployment. The pipecat job itself will
