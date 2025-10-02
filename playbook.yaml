@@ -182,3 +182,13 @@
           - For a single-node setup, ensure `bootstrap_expect` is 1.
           - For a multi-node setup, ensure enough controller nodes are running to form a quorum.
       when: consul_leader_status.failed or consul_leader_status.content == '""'
+
+      # In playbook.yaml
+
+- name: Play 4 - Deploy Core AI Services and Applications
+  hosts: controller_nodes[0]
+  connection: local
+  roles:
+    # --- FIX: Add the primacpp role here ---
+    - role: primacpp
+    - role: pipecatapp
