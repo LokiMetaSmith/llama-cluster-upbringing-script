@@ -1,0 +1,10 @@
+- name: Deploy the prompt evolution Nomad job
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: Deploy the prompt evolution job to Nomad
+      ansible.builtin.command:
+        cmd: "nomad job run ansible/jobs/evolve-prompt.nomad"
+      changed_when: true

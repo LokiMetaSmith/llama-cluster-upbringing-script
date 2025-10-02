@@ -1,0 +1,35 @@
+job "evolve-prompt" {
+  datacenters = ["dc1"]
+  namespace   = "default"
+  type        = "batch"
+
+  periodic {
+    # Run daily at midnight (UTC)
+    cron             = "0 0 * * *"
+    prohibit_overlap = true
+  }
+
+  group "evolution" {
+    count = 1
+
+    task "run-evolution" {
+      driver = "exec"
+
+      config {
+        command = "python3"
+        args = [
+          "prompt_engineering/evolve.py"
+        ]
+      }
+
+      env {
+        OPENAI_API_KEY = "{{ openai_api_key }}"
+      }
+
+      resources {
+        cpu    = 1000 # 1 GHz
+        memory = 2048 # 2 GB
+      }
+    }
+  }
+}
