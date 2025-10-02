@@ -3,6 +3,8 @@
 # This script starts the necessary Nomad jobs for the AI digital twin application.
 # It should be run from the user's home directory on a controller node.
 
+#NOTE: DO NOT RUN THIS FROM AN AUTOMATED SCRIPT
+
 set -e
 
 echo "🚀 Starting the main Prima Expert service..."
