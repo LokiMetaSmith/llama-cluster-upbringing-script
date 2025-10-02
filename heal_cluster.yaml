@@ -1,0 +1,20 @@
+---
+- name: Heal Core Services | Ensure core infrastructure is running
+  hosts: localhost
+  connection: local
+  become: no
+
+  vars:
+    # It's good practice to define the target user here
+    target_user: "loki"
+
+  tasks:
+    - name: Ensure prima-expert-main job is running
+      ansible.builtin.include_role:
+        name: primacpp
+        tasks_from: main.yaml
+
+    - name: Ensure pipecat-app job is running
+      ansible.builtin.include_role:
+        name: pipecatapp
+        tasks_from: main.yaml
