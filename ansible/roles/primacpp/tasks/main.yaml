@@ -80,7 +80,14 @@
     dest: /opt/nomad/jobs/primacpp.nomad
   when: "'controller_nodes' in group_names"
 
-  # --- ADD THIS BLOCK to the primacpp role ---
+- name: Template the prima-expert-main Nomad job file
+  ansible.builtin.template:
+    src: prima-expert.nomad.j2
+    dest: /opt/nomad/jobs/prima-expert.nomad
+  vars:
+    model_path: "/opt/nomad/models/llm/Llama-3-8B-Instruct-GGUF/Llama-3-8B-Instruct-Q4_K_M.gguf"
+  when: "'controller_nodes' in group_names"
+
 - name: Check if prima-expert-main job is running
   ansible.builtin.command:
     cmd: nomad job status prima-expert-main
@@ -93,7 +100,7 @@
 - name: Run prima-expert-main job
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/prima-expert.nomad
-  # --- ADD THIS 'when' CONDITION ---
   when: primacpp_job_status.rc != 0
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+
