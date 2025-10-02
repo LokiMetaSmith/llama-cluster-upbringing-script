@@ -117,5 +117,159 @@ class TestSupervisor(unittest.TestCase):
         mock_cleanup.assert_any_call(['job123.diagnostics.json'])
         mock_cleanup.assert_any_call(['failed_jobs.json'])
 
+    @patch('supervisor.run_playbook')
+    @patch('supervisor.cleanup_files')
+    @patch('os.path.exists')
+    @patch('time.sleep')
+    @patch('builtins.open')
+    def test_main_empty_unhealthy_jobs_list(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_playbook):
+        mock_sleep.side_effect = StopIteration
+        mock_run_playbook.return_value = True
+        mock_exists.return_value = True
+        failed_jobs_data = {"unhealthy_jobs": []}
+        mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(failed_jobs_data)
+
+        with self.assertRaises(StopIteration):
+            supervisor.main()
+
+        mock_run_playbook.assert_called_once_with('health_check.yaml')
+        mock_cleanup.assert_called_once_with(['failed_jobs.json'])
+
+    @patch('supervisor.run_playbook')
+    @patch('supervisor.run_script')
+    @patch('supervisor.cleanup_files')
+    @patch('os.path.exists')
+    @patch('time.sleep')
+    @patch('builtins.open')
+    def test_main_job_missing_id(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_script, mock_run_playbook):
+        mock_sleep.side_effect = StopIteration
+        mock_run_playbook.side_effect = [True, True, True]
+        mock_exists.return_value = True
+        failed_jobs_data = {"unhealthy_jobs": [{"Name": "job-no-id"}, {"ID": "job456"}]}
+        mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(failed_jobs_data)
+        solution_json = '{"action": "restart"}'
+        mock_run_script.return_value = solution_json
+
+        with self.assertRaises(StopIteration):
+            supervisor.main()
+
+        self.assertEqual(mock_run_playbook.call_count, 3)
+        mock_run_playbook.assert_any_call('health_check.yaml')
+        mock_run_playbook.assert_any_call('diagnose_failure.yaml', extra_vars={'job_id': 'job456'})
+        mock_run_playbook.assert_any_call('heal_job.yaml', extra_vars={'solution_json': solution_json})
+        mock_run_script.assert_called_once_with('reflection/reflect.py', ['job456.diagnostics.json'])
+        self.assertEqual(mock_cleanup.call_count, 2)
+        mock_cleanup.assert_any_call(['job456.diagnostics.json'])
+        mock_cleanup.assert_any_call(['failed_jobs.json'])
+
+    @patch('supervisor.run_playbook')
+    @patch('supervisor.run_script')
+    @patch('supervisor.cleanup_files')
+    @patch('os.path.exists')
+    @patch('time.sleep')
+    @patch('builtins.open')
+    def test_main_diagnose_failure_playbook_fails(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_script, mock_run_playbook):
+        mock_sleep.side_effect = StopIteration
+        mock_run_playbook.side_effect = [True, False]  # health_check.yaml passes, diagnose_failure.yaml fails
+        mock_exists.return_value = True
+        failed_jobs_data = {"unhealthy_jobs": [{"ID": "job789"}]}
+        mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(failed_jobs_data)
+
+        with self.assertRaises(StopIteration):
+            supervisor.main()
+
+        self.assertEqual(mock_run_playbook.call_count, 2)
+        mock_run_playbook.assert_any_call('health_check.yaml')
+        mock_run_playbook.assert_any_call('diagnose_failure.yaml', extra_vars={'job_id': 'job789'})
+        mock_run_script.assert_not_called()
+        mock_cleanup.assert_called_once_with(['failed_jobs.json'])
+
+    @patch('supervisor.run_playbook')
+    @patch('supervisor.run_script')
+    @patch('supervisor.cleanup_files')
+    @patch('os.path.exists')
+    @patch('time.sleep')
+    @patch('builtins.open')
+    def test_main_reflection_script_fails(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_script, mock_run_playbook):
+        mock_sleep.side_effect = StopIteration
+        mock_run_playbook.side_effect = [True, True]  # health_check.yaml and diagnose_failure.yaml pass
+        mock_exists.return_value = True
+        failed_jobs_data = {"unhealthy_jobs": [{"ID": "job101"}]}
+        mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(failed_jobs_data)
+        mock_run_script.return_value = None  # reflection/reflect.py fails
+
+        with self.assertRaises(StopIteration):
+            supervisor.main()
+
+        self.assertEqual(mock_run_playbook.call_count, 2)
+        mock_run_playbook.assert_any_call('health_check.yaml')
+        mock_run_playbook.assert_any_call('diagnose_failure.yaml', extra_vars={'job_id': 'job101'})
+        mock_run_script.assert_called_once_with('reflection/reflect.py', ['job101.diagnostics.json'])
+        self.assertEqual(mock_cleanup.call_count, 2)
+        mock_cleanup.assert_any_call(['job101.diagnostics.json'])
+        mock_cleanup.assert_any_call(['failed_jobs.json'])
+
+    @patch('supervisor.run_playbook')
+    @patch('supervisor.run_script')
+    @patch('supervisor.cleanup_files')
+    @patch('os.path.exists')
+    @patch('time.sleep')
+    @patch('builtins.open')
+    def test_main_heal_job_playbook_fails(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_script, mock_run_playbook):
+        mock_sleep.side_effect = StopIteration
+        mock_run_playbook.side_effect = [True, True, False]  # health_check.yaml and diagnose_failure.yaml pass, heal_job.yaml fails
+        mock_exists.return_value = True
+        failed_jobs_data = {"unhealthy_jobs": [{"ID": "job112"}]}
+        mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(failed_jobs_data)
+        solution_json = '{"action": "restart"}'
+        mock_run_script.return_value = solution_json
+
+        with self.assertRaises(StopIteration):
+            supervisor.main()
+
+        self.assertEqual(mock_run_playbook.call_count, 3)
+        mock_run_playbook.assert_any_call('health_check.yaml')
+        mock_run_playbook.assert_any_call('diagnose_failure.yaml', extra_vars={'job_id': 'job112'})
+        mock_run_playbook.assert_any_call('heal_job.yaml', extra_vars={'solution_json': solution_json})
+        mock_run_script.assert_called_once_with('reflection/reflect.py', ['job112.diagnostics.json'])
+        self.assertEqual(mock_cleanup.call_count, 2)
+        mock_cleanup.assert_any_call(['job112.diagnostics.json'])
+        mock_cleanup.assert_any_call(['failed_jobs.json'])
+
+    @patch('supervisor.run_playbook')
+    @patch('supervisor.run_script')
+    @patch('supervisor.cleanup_files')
+    @patch('os.path.exists')
+    @patch('time.sleep')
+    @patch('builtins.open')
+    def test_main_multiple_failed_jobs(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_script, mock_run_playbook):
+        mock_sleep.side_effect = StopIteration
+        # health_check, diagnose job1, heal job1, diagnose job2, heal job2
+        mock_run_playbook.side_effect = [True, True, True, True, True]
+        mock_exists.return_value = True
+        failed_jobs_data = {"unhealthy_jobs": [{"ID": "job-multi-1"}, {"ID": "job-multi-2"}]}
+        mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(failed_jobs_data)
+        solution_json = '{"action": "restart"}'
+        mock_run_script.return_value = solution_json
+
+        with self.assertRaises(StopIteration):
+            supervisor.main()
+
+        self.assertEqual(mock_run_playbook.call_count, 5)
+        mock_run_playbook.assert_any_call('health_check.yaml')
+        mock_run_playbook.assert_any_call('diagnose_failure.yaml', extra_vars={'job_id': 'job-multi-1'})
+        mock_run_playbook.assert_any_call('heal_job.yaml', extra_vars={'solution_json': solution_json})
+        mock_run_playbook.assert_any_call('diagnose_failure.yaml', extra_vars={'job_id': 'job-multi-2'})
+        mock_run_playbook.assert_any_call('heal_job.yaml', extra_vars={'solution_json': solution_json})
+
+        self.assertEqual(mock_run_script.call_count, 2)
+        mock_run_script.assert_any_call('reflection/reflect.py', ['job-multi-1.diagnostics.json'])
+        mock_run_script.assert_any_call('reflection/reflect.py', ['job-multi-2.diagnostics.json'])
+
+        self.assertEqual(mock_cleanup.call_count, 3)
+        mock_cleanup.assert_any_call(['job-multi-1.diagnostics.json'])
+        mock_cleanup.assert_any_call(['job-multi-2.diagnostics.json'])
+        mock_cleanup.assert_any_call(['failed_jobs.json'])
+
 if __name__ == '__main__':
     unittest.main()
