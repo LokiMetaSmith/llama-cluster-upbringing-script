@@ -1,6 +1,6 @@
 # This is a Jinja2 template for a complete, distributed Prima expert.
 # It is parameterized and can be used to deploy any expert model.
-job "{{ job_name | default('prima-expert') }}" {
+job "{{ job_name | default('prima-expert-main') }}" {
   datacenters = ["dc1"]
   namespace   = "{{ namespace | default('default') }}"
 
