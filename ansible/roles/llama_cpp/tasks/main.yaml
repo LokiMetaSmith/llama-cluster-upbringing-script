@@ -90,7 +90,7 @@
     job_name: "prima-expert-main"
     service_name: "prima-api-main"
     namespace: "default"
-    model_list: "{{ main_expert_models }}"
+    expert_models: "{{ main_expert_models }}"
     worker_count: 1
 
 - name: Copy benchmark Nomad job file
