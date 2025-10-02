@@ -46,10 +46,7 @@ job "pipecat-app" {
        read_only   = false
       }
 
-      logs {
-        max_files     = 3
-        max_file_size = 10 # MB
-      }
+
 
       resources {
         cpu    = 1000 # 1 GHz
