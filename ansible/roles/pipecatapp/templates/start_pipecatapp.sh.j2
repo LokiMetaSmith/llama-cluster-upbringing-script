@@ -12,8 +12,16 @@ set -e
 # Define the log file path
 LOG_FILE="/opt/pipecatapp/pipecat.log"
 
-# *** FIX: Change to the application directory first ***
-cd /opt/pipecatapp
+cd {{ pipecat_app_dir }}
+
+# Source the environment variables if the file exists
+if [ -f {{ pipecat_app_dir }}/pipecat.env ]; then
+  source {{ pipecat_app_dir }}/pipecat.env
+fi
+
+# Activate the correct virtual environment
+source {{ pipecat_app_dir }}/venv/bin/activate
+# ...
 
 # Activate the virtual environment
 source /home/{{ target_user }}/.local/bin/activate
