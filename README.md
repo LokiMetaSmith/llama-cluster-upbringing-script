@@ -104,12 +104,11 @@ The personality and instructions for the main router agent and each expert agent
 
 The system is designed to be self-bootstrapping. The `bootstrap.sh` script (or the main `playbook.yaml`) handles the deployment of the core AI services on the primary control node. This includes a default instance of the `prima-expert` job and the `pipecat` voice agent.
 
-### 6.1. Starting and Stopping Services
-
-Use the provided script to submit the core AI jobs to Nomad:
+### 6.1. Start, Restart, or "Heal" Your Core Services:
+If a job has been stopped, or you just want to verify that everything is running as it should be, you now use your new, lightweight playbook. It will skip all the system setup and only manage the Nomad jobs.
 
 ```bash
-./start_services.sh
+ansible-playbook heal_cluster.yaml
 ```
 
 If you make a change to a job file or need to restart the services from a clean state, it's best to purge the old jobs before running the start script again.
