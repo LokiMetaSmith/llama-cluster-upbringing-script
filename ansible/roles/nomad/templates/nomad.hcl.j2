@@ -31,10 +31,6 @@ server {
 client {
   enabled = true
 
-  host_volume "pipecatapp" {
-    path      = "/opt/pipecatapp"
-    read_only = false
-  }
 
   host_volume "models" {
     path      = "{{ nomad_models_dir }}"
