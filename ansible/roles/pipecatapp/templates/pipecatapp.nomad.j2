@@ -28,9 +28,13 @@ job "pipecat-app" {
 
     task "pipecat-task" {
       driver = "raw_exec"
-
+      template {
+        data = "/opt/pipecatapp/start_pipecat.sh"
+        destination = "local/start_pipecat.sh"
+        perms       = "0755"
+      }
       config {
-        command = "/opt/pipecatapp/start_pipecat.sh"
+        command = "local/start_pipecat.sh"
       }
 
 
