@@ -77,7 +77,7 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
     --host 0.0.0.0 \
     --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --n-gpu-layers 999 \
-    --flash-attn \
+    --flash-attn auto \
     --mlock \
     $rpc_args &
 
