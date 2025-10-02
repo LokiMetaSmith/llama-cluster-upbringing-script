@@ -1,4 +1,3 @@
----
 - name: Heal Core Services | Ensure core infrastructure is running
   hosts: localhost
   connection: local
