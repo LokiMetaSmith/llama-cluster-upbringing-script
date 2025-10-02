@@ -28,6 +28,14 @@
   tags:
     - deploy_app
 
+- name: Copy pipecat environment file
+  ansible.builtin.copy:
+    src: pipecat.env
+    dest: /opt/pipecatapp/pipecat.env
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy pipecat startup script
   ansible.builtin.template:
     src: start_pipecatapp.sh.j2

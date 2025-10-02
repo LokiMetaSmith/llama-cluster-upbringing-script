@@ -30,18 +30,7 @@ job "pipecat-app" {
       driver = "exec"
 
       config {
-        command = "/usr/bin/env"
-        args = [
-          "STT_SERVICE=${STT_SERVICE}",
-          "/opt/pipecatapp/start_pipecat.sh"
-        ]
-      }
-
-      env {
-        PRIMA_API_SERVICE_NAME = "prima-api-main"
-        USE_SUMMARIZER = "false"
-        STT_SERVICE = "faster-whisper"
-        PIECAT_API_KEYS = ""
+        command = "/opt/pipecatapp/start_pipecat.sh"
       }
 
       logs {

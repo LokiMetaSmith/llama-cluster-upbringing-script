@@ -18,6 +18,9 @@ cd /opt/pipecatapp
 # Activate the virtual environment
 source /home/{{ target_user }}/.local/bin/activate
 
+# Source the environment variables
+source /opt/pipecatapp/pipecat.env
+
 # Create the log file if it doesn't exist
 touch "$LOG_FILE"
 
