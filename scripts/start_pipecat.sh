@@ -9,19 +9,17 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Define the log file path
-LOG_FILE="/tmp/pipecat.log"
+# Define the log file path inside the app directory
+LOG_FILE="/opt/pipecatapp/pipecat.log"
 
-# *** FIX: Change to the application directory first ***
+# Change to the application directory first
 cd /opt/pipecatapp
 
-# Activate the virtual environment
+
 source /opt/pipecatapp/venv/bin/activate
 
 # Create the log file if it doesn't exist
 touch "$LOG_FILE"
 
-# Execute the Python application, redirecting all output to the log file.
-# The 'exec' command replaces the shell process with the python process.
 echo "--- Starting pipecat-app: $(date) ---" >> "$LOG_FILE"
 exec /opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py >> "$LOG_FILE" 2>&1
