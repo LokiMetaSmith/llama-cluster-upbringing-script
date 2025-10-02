@@ -3,3 +3,4 @@ molecule
 molecule-docker
 yamllint
 djlint
+pytest
