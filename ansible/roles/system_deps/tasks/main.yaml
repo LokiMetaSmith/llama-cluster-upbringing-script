@@ -23,6 +23,7 @@
       - hollywood
       - htop
       - iperf3
+      - jq
       - libavif16
       - libcurl4-openssl-dev
       - libevent-2.1-7t64

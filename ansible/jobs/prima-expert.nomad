@@ -44,7 +44,7 @@ echo "Starting master server for expert: {{ job_name | default('prima-expert') }
 # Discover worker services via Consul
 echo "Discovering worker services from Consul..."
 worker_ips=""
-for i in {1..12}; do
+for i in {1..30}; do
   {# djlint:off H022 #}
   worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '[.[] | .Service | "\(.Address):\(.Port)"] | join(",")')
   {# djlint:on #}
@@ -52,7 +52,7 @@ for i in {1..12}; do
     echo "Discovered Worker IPs: $worker_ips"
     break
   fi
-  echo "No workers found yet, retrying in 10 seconds... (attempt $i/12)"
+  echo "No workers found yet, retrying in 10 seconds... (attempt $i/30)"
   sleep 10
 done
 
@@ -69,7 +69,7 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
 {# djlint:on #}
 
 # Loop through the provided models for failover
-{% for model in model_list %}
+{% for model in expert_models %}
   echo "Attempting to start llama-server with model: {{ model.name }}"
 
   /usr/local/bin/llama-server \
@@ -85,14 +85,14 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
   echo "Server process started with PID $server_pid. Waiting for it to become healthy..."
 
   healthy=false
-  for i in {1..12}; do
+  for i in {1..30}; do
     sleep 10
     if curl -s --fail $health_check_url > /dev/null; then
       echo "Server is healthy with model {{ model.name }}!"
       healthy=true
       break
     else
-      echo "Health check failed (attempt $i/12)..."
+      echo "Health check failed (attempt $i/30)..."
     fi
   done
 
@@ -100,7 +100,7 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
     echo "Successfully started llama-server with model: {{ model.name }}"
     # Write the active model to Consul KV for other services to discover
     {# djlint:off H022 #}
-    curl -X PUT --data "{{ model.name }}" http://127.0.0.1:8500/v1/kv/active_model/{{ job_name }}
+    curl -X PUT --data "{{ model.name }}" http://127.0.0.1:8500/v1/kv/experts/{{ job_name }}/active_model
     {# djlint:on #}
     wait $server_pid
     exit 0
@@ -123,8 +123,8 @@ EOH
       }
 
       resources {
-        cpu    = 1000
-        memory = 8192 # Hardcoded for simplicity and stability
+        cpu    = 2000
+        memory = 16384
       }
 
       volume_mount {
