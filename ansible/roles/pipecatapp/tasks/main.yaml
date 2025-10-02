@@ -201,14 +201,5 @@
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
-- name: Ensure start_services.sh is executable
-  ansible.builtin.file:
-    path: /opt/cluster-infra/start_services.sh
-    mode: '0755'
-    owner: root
-    group: root
-    state: file
-  become: yes
-
 - name: Flush handlers to ensure service is enabled and started
   ansible.builtin.meta: flush_handlers
