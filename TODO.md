@@ -139,7 +139,26 @@ This section includes items from the original "For Future Review" list, expanded
 - [x] WebBrowserTool: For browsing the web.
 - [ ] Web UI: Replace the placeholder ASCII art with a more expressive cartoon robot face.
 
-All major features are implemented. Please see the README.md for a complete list of features and usage instructions.
+## 5. High-Priority Feature: Create OpenAI-Compatible API Gateway
+
+**Goal:** Expose the cluster's Mixture of Experts (MoE) routing capabilities to external applications through a standard, OpenAI-compatible REST API. This will transform the cluster from a standalone agent into a private, powerful AI cloud.
+
+-   [ ] **Create a New "MoE Gateway" Service:**
+    -   Develop a lightweight FastAPI application that will run as a new, dedicated Nomad job.
+    -   This service's sole responsibility will be to act as a secure entry point to the cluster.
+
+-   [ ] **Implement an OpenAI-Compatible Endpoint:**
+    -   The gateway must expose a `/v1/chat/completions` endpoint that mirrors the official OpenAI API specification.
+    -   It should handle API key authentication for external clients.
+
+-   [ ] **Integrate with the `pipecat` Pipeline:**
+    -   When the gateway receives a request, it will transform the payload into a text message.
+    -   It will then inject this message into the `pipecat-app`'s existing `text_message_queue`.
+
+-   [ ] **Handle the Response Path:**
+    -   The `pipecat-app` will process the request via the `TwinService` and generate a response.
+    -   A mechanism needs to be created to capture this final text response and route it back to the originating API call in the gateway service.
+    -   The gateway will then format this text into a valid OpenAI API JSON response and send it back to the client.
 
 ## For Future Review
 
