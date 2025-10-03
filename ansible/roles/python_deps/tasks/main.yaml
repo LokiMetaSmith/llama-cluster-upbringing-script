@@ -3,6 +3,7 @@
     cmd: "python3 -m venv /home/{{ target_user }}/.local"
     creates: "/home/{{ target_user }}/.local/bin/pip"
   become: yes
+  become_user: "{{ target_user }}"
 
 - name: Ensure correct ownership of the virtual environment
   ansible.builtin.file:
@@ -12,13 +13,22 @@
     recurse: yes
   become: yes
 
+- name: Ensure correct permissions for the virtual environment
+  ansible.builtin.file:
+    path: "/home/{{ target_user }}/.local/bin"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+    recurse: yes
+  become: yes
+
 - name: Copy requirements.txt to remote host
   copy:
     src: requirements.txt
     dest: "/home/{{ target_user }}/requirements.txt"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
-  become: yes
+  become: no
 
 - name: Create a persistent temporary directory for pip builds
   ansible.builtin.file:
@@ -36,7 +46,8 @@
       - cython
     state: latest
     executable: "/home/{{ target_user }}/.local/bin/pip3"
-  become: no
+  become: yes
+  become_user: "{{ target_user }}"
 
 - name: Install python dependencies into the virtual environment
   ansible.builtin.pip:
@@ -47,7 +58,8 @@
     TMPDIR: /var/tmp/ansible_pip_build
   async: 1200 # Set timeout to 20 minutes
   poll: 10    # Check status every 10 seconds
-  become: no
+  become: yes
+  become_user: "{{ target_user }}"
 
 - name: Clean up pip build directory
   ansible.builtin.file:

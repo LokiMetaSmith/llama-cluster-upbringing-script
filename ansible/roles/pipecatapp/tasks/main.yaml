@@ -142,7 +142,6 @@
   ansible.builtin.command:
     cmd: "/home/{{ target_user }}/.local/bin/python3 -m playwright install"
   become: yes
-  become_user: "{{ target_user }}"
   async: 900 # Set timeout to 15 minutes
   poll: 10   # Check status every 10 seconds
 

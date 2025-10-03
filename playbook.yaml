@@ -2,56 +2,9 @@
   hosts: all
   become: yes
 
-  vars:
-    target_user: user
-    external_model_server: false
-    main_expert_models:
-      - name: "Llama-3-8B-Instruct"
-        url: "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF-v2/resolve/main/Meta-Llama-3-8B-Instruct-v2.Q4_K_M.gguf"
-        filename: "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
-        memory_mb: 8192
-      - name: "phi-3-mini-instruct"
-        url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
-        filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
-        memory_mb: 4096
-    coding_expert_models: []
-    math_expert_models: []
-    extract_expert_models: []
-    tts_voices:
-      - name: "en_US-l2arctic-medium"
-        model: "en_US-l2arctic-medium.onnx"
-        config: "en_US-l2arctic-medium.onnx.json"
-      - name: "en_US-lessac-low"
-        model: "en_US-lessac-low.onnx"
-        config: "en_US-lessac-low.onnx.json"
-    piper_voice_files:
-      - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx"
-        filename: "en_US-l2arctic-medium.onnx"
-      - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx.json"
-        filename: "en_US-l2arctic-medium.onnx.json"
-      - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/low/en_US-lessac-low.onnx"
-        filename: "en_US-lessac-low.onnx"
-      - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/low/en_US-lessac-low.onnx.json"
-        filename: "en_US-lessac-low.onnx.json"
-    embedding_models:
-      - name: "bge-large-en-v1.5"
-        repo_id: "BAAI/bge-large-en-v1.5"
-    stt_models:
-      faster-whisper:
-        - name: "faster-whisper-tiny.en"
-          repo_id: "Systran/faster-whisper-tiny.en"
-        - name: "faster-whisper-base.en"
-          repo_id: "Systran/faster-whisper-base.en"
-        - name: "faster-whisper-medium.en"
-          repo_id: "Systran/faster-whisper-medium.en"
-    active_stt_provider: "faster-whisper"
-    active_stt_model_name: "faster-whisper-tiny.en"
-    vision_models:
-      - name: "yolov8n"
-        url: "https://github.com/ultralytics/assets/releases/download/v8.1.0/yolov8n.pt"
-        filename: "yolov8n.pt"
-      - name: "moondream2"
-        repo_id: "vikhyatk/moondream2"
+  vars_files:
+    - group_vars/models.yaml
+    - group_vars/config.yaml
 
   tasks:
     - name: Ensure the sudo package is installed
@@ -90,58 +43,25 @@
   remote_user: "{{ target_user }}"
   become: yes
 
-  vars:
-    target_user: user
-    external_model_server: false
-    main_expert_models:
-      - name: "Llama-3-8B-Instruct"
-        url: "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF-v2/resolve/main/Meta-Llama-3-8B-Instruct-v2.Q4_K_M.gguf"
-        filename: "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
-        memory_mb: 8192
-      - name: "phi-3-mini-instruct"
-        url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
-        filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
-        memory_mb: 4096
-    coding_expert_models: []
-    math_expert_models: []
-    extract_expert_models: []
-    tts_voices:
-      - name: "en_US-l2arctic-medium"
-        model: "en_US-l2arctic-medium.onnx"
-        config: "en_US-l2arctic-medium.onnx.json"
-      - name: "en_US-lessac-low"
-        model: "en_US-lessac-low.onnx"
-        config: "en_US-lessac-low.onnx.json"
-    piper_voice_files:
-      - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx"
-        filename: "en_US-l2arctic-medium.onnx"
-      - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx.json"
-        filename: "en_US-l2arctic-medium.onnx.json"
-      - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/low/en_US-lessac-low.onnx"
-        filename: "en_US-lessac-low.onnx"
-      - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/low/en_US-lessac-low.onnx.json"
-        filename: "en_US-lessac-low.onnx.json"
-    embedding_models:
-      - name: "bge-large-en-v1.5"
-        repo_id: "BAAI/bge-large-en-v1.5"
-    stt_models:
-      faster-whisper:
-        - name: "faster-whisper-tiny.en"
-          repo_id: "Systran/faster-whisper-tiny.en"
-        - name: "faster-whisper-base.en"
-          repo_id: "Systran/faster-whisper-base.en"
-        - name: "faster-whisper-medium.en"
-          repo_id: "Systran/faster-whisper-medium.en"
-    active_stt_provider: "faster-whisper"
-    active_stt_model_name: "faster-whisper-tiny.en"
-    vision_models:
-      - name: "yolov8n"
-        url: "https://github.com/ultralytics/assets/releases/download/v8.1.0/yolov8n.pt"
-        filename: "yolov8n.pt"
-      - name: "moondream2"
-        repo_id: "vikhyatk/moondream2"
+  vars_files:
+    - group_vars/models.yaml
+    - group_vars/config.yaml
 
   pre_tasks:
+    - name: Stop and disable Nomad service before changing config
+      ansible.builtin.systemd:
+        name: nomad
+        state: stopped
+        enabled: no
+      become: yes
+      ignore_errors: yes
+
+    - name: Remove old Nomad config directory
+      ansible.builtin.file:
+        path: /etc/nomad.d
+        state: absent
+      become: yes
+
     - name: Check connectivity to all nodes
       ansible.builtin.ping:
 
@@ -155,34 +75,13 @@
   roles:
     - system_deps
     - common
+    - consul
+    - docker
+    - nomad
+    - python_deps
+    - pipecatapp
 
   tasks:
-    - name: Install all python dependencies
-      include_role:
-        name: python_deps
-
-    - name: Run model-dependent roles
-      include_role:
-        name: "{{ role_name }}"
-      loop:
-        - download_models
-        - llama_cpp
-        - whisper_cpp
-      loop_control:
-        loop_var: role_name
-      when: not external_model_server
-
-    - name: Run service setup roles
-      include_role:
-        name: "{{ role_name }}"
-      loop:
-        - consul
-        - docker
-        - pipecatapp
-        - nomad
-      loop_control:
-        loop_var: role_name
-
     - name: Flush handlers to ensure core services are started
       meta: flush_handlers
 
@@ -217,6 +116,17 @@
       loop_control:
         loop_var: role_name
 
+    - name: Run model-dependent roles
+      include_role:
+        name: "{{ role_name }}"
+      loop:
+        - download_models
+        - llama_cpp
+        - whisper_cpp
+      loop_control:
+        loop_var: role_name
+      when: not external_model_server
+
     - name: Flush handlers to ensure all services are started
       meta: flush_handlers
 
@@ -237,46 +147,3 @@
         block: |
           mac_address: "{{ ansible_default_ipv4.macaddress }}"
       delegate_to: localhost
-
-- name: Play 3 - Final Verification
-  hosts: localhost
-  connection: local
-  become: no
-  gather_facts: no
-  tasks:
-    - name: Check if the Consul service is running
-      ansible.builtin.systemd:
-        name: consul
-      register: consul_service_status
-      failed_when: "consul_service_status.status.ActiveState != 'active'"
-      changed_when: false
-      ignore_errors: yes
-
-    - name: Fail gracefully if Consul service is not running
-      ansible.builtin.fail:
-        msg: |
-          The Consul service is not running or has failed.
-          Playbook cannot continue without a functioning Consul service.
-          Please check the service logs by running 'journalctl -u consul.service' on the target node.
-          Status details: {{ consul_service_status }}
-      when: consul_service_status.failed
-
-    - name: Wait for a Consul leader to be elected
-      ansible.builtin.uri:
-        url: "http://127.0.0.1:8500/v1/status/leader"
-        return_content: yes
-      register: consul_leader_status
-      until: consul_leader_status.content != '""' and consul_leader_status.status == 200
-      retries: 12
-      delay: 5
-      ignore_errors: yes
-
-    - name: Fail gracefully if no Consul leader is found
-      ansible.builtin.fail:
-        msg: |
-          The Consul service is running, but it has not elected a leader after 60 seconds.
-          This usually means the `bootstrap_expect` value in your Consul configuration is
-          higher than the number of server nodes available.
-          - For a single-node setup, ensure `bootstrap_expect` is 1.
-          - For a multi-node setup, ensure enough controller nodes are running to form a quorum.
-      when: consul_leader_status.failed or consul_leader_status.content == '""'

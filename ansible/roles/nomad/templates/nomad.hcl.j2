@@ -1,8 +1,8 @@
 # Main data directory
-data_dir  = "{{ nomad_data_dir }}"
+data_dir  = "/opt/nomad"
 
 # Listen on all network interfaces for API calls
-bind_addr = "{{ ansible_default_ipv4.address }}"
+bind_addr = "0.0.0.0"
 
 # Tell other nodes how to reach this one.
 # This IP should be set in your Ansible inventory.
@@ -31,16 +31,10 @@ server {
 client {
   enabled = true
 
-
-  options = {
-    "driver.raw_exec.enable" = "1"
-  }
-
   host_volume "models" {
     path      = "{{ nomad_models_dir }}"
     read_only = true
   }
-
   host_volume "pipecatapp" {
     path      = "/opt/pipecatapp"
     read_only = false
@@ -53,5 +47,11 @@ client {
   host_volume "snd" {
     path      = "/dev/snd"
     read_only = false
+  }
+
+  plugin "raw_exec" {
+    config {
+      enabled = true
+    }
   }
 }
