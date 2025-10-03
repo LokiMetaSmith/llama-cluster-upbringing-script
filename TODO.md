@@ -4,6 +4,76 @@ This document outlines the major refactoring, feature enhancement, and maintenan
 
 -----
 
+# Critical
+
+---
+## 0. Detailed Refactoring Plan
+
+This plan is broken into phases. Each phase is a self-contained set of tasks designed to progressively refactor the codebase.
+
+### Phase 1: Solidify Core Deployment & Service Management
+
+**Goal:** Eliminate the race conditions and conflicting entry points that have caused the cascading failures. Make the system's state fully managed by Ansible in a declarative way.
+
+1.  **Create `heal_cluster.yaml`:**
+    * Create a new playbook in the root directory named `heal_cluster.yaml`.
+    * This playbook will have one play targeting `localhost`.
+    * It will use `ansible.builtin.include_role` to run the `primacpp` role first, followed by the `pipecatapp` role. This playbook becomes the standard way to ensure services are running.
+
+2.  **Make `primacpp` Role Idempotent:**
+    * In `ansible/roles/primacpp/tasks/main.yaml`, add a task using `ansible.builtin.command` to check the status of the `prima-expert-main` job (`nomad job status prima-expert-main`). Register the result.
+    * Add a `when` condition to the `nomad job run` task so that it only executes if the previous check shows the job is not already running.
+
+3.  **Refactor the Main Playbook (`playbook.yaml`):**
+    * Confirm that the `primacpp` role is included in "Play 3" and runs *before* the `pipecatapp` role.
+    * Confirm the `Wait for the main expert service to be healthy in Consul` task exists in the `pipecatapp` role and is correctly placed *before* the `Run pipecat-app job` task.
+
+4.  **Remove Conflicting Startup Logic:**
+    * Delete the `ansible/roles/pipecatapp/templates/prima-services.service.j2` file.
+    * In `ansible/roles/pipecatapp/tasks/main.yaml`, remove the task that deploys this `systemd` service.
+
+---
+### Phase 2: Implement the OpenAI-Compatible MoE Gateway
+
+**Goal:** Create a new, standalone service that exposes the cluster's MoE capabilities to external clients.
+
+1.  **Create a New Ansible Role (`moe_gateway`):**
+    * Create the directory structure `ansible/roles/moe_gateway/`.
+    * Inside, create `tasks/main.yaml` and `files/`.
+
+2.  **Develop the Gateway Application:**
+    * In `ansible/roles/moe_gateway/files/`, create a Python script `gateway.py`.
+    * This script will be a FastAPI application with a single `/v1/chat/completions` endpoint.
+    * It will need to discover the `pipecat-app`'s text message queue (this will require a small modification to `pipecat-app` to share the queue, perhaps via a global variable or a simple singleton pattern).
+    * It will need a mechanism to receive a response. The most robust method is to create a unique response queue (e.g., using `asyncio.Queue`) for each incoming request, pass the ID of this queue along with the message to `pipecat-app`, and wait for the response to appear on it.
+
+3.  **Create the Nomad Job:**
+    * In `ansible/roles/moe_gateway/files/`, create a `moe-gateway.nomad` job file.
+    * This job will run the `gateway.py` application. It should register a `moe-gateway` service in Consul.
+
+4.  **Update the `pipecat-app`:**
+    * Modify `app.py` and `web_server.py`. The `TwinService` needs to be able to check if an incoming text message has a `response_queue_id`.
+    * If it does, the final text response from the agent should be put onto that specific queue instead of being sent to the TTS service.
+
+5.  **Update the Main Playbook:**
+    * Add the `moe_gateway` role to `playbook.yaml` so it gets deployed along with the other core services.
+
+---
+### Phase 3: Documentation and Cleanup
+
+**Goal:** Finalize the project by cleaning up obsolete files and creating clear documentation for the new features.
+
+1.  **Remove Obsolete Scripts:**
+    * Delete the entire `debian_service/` directory and its contents.
+    * Review the `initial-setup/` scripts and migrate any remaining essential logic into the main Ansible roles, then remove the scripts.
+
+2.  **Create API Documentation:**
+    * Create a new file, `API_USAGE.md`, in the root directory.
+    * This file should explain how to use the new OpenAI-compatible endpoint, including the URL, authentication method (API keys), and example `curl` or Python requests.
+
+3.  **Review and Finalize `TODO.md`:**
+    * Review the updated `TODO.md`, mark all completed refactoring tasks, and re-prioritize the remaining feature enhancements.
+
 ## 1. High-Priority: Harden the Core System
 
 These tasks are focused on addressing the brittleness of the deployment process and making the system more resilient, predictable, and maintainable.
