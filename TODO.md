@@ -11,28 +11,6 @@ This document outlines the major refactoring, feature enhancement, and maintenan
 
 This plan is broken into phases. Each phase is a self-contained set of tasks designed to progressively refactor the codebase.
 
-### Phase 1: Solidify Core Deployment & Service Management
-
-**Goal:** Eliminate the race conditions and conflicting entry points that have caused the cascading failures. Make the system's state fully managed by Ansible in a declarative way.
-
-1.  **Create `heal_cluster.yaml`:**
-    * Create a new playbook in the root directory named `heal_cluster.yaml`.
-    * This playbook will have one play targeting `localhost`.
-    * It will use `ansible.builtin.include_role` to run the `primacpp` role first, followed by the `pipecatapp` role. This playbook becomes the standard way to ensure services are running.
-
-2.  **Make `primacpp` Role Idempotent:**
-    * In `ansible/roles/primacpp/tasks/main.yaml`, add a task using `ansible.builtin.command` to check the status of the `prima-expert-main` job (`nomad job status prima-expert-main`). Register the result.
-    * Add a `when` condition to the `nomad job run` task so that it only executes if the previous check shows the job is not already running.
-
-3.  **Refactor the Main Playbook (`playbook.yaml`):**
-    * Confirm that the `primacpp` role is included in "Play 3" and runs *before* the `pipecatapp` role.
-    * Confirm the `Wait for the main expert service to be healthy in Consul` task exists in the `pipecatapp` role and is correctly placed *before* the `Run pipecat-app job` task.
-
-4.  **Remove Conflicting Startup Logic:**
-    * Delete the `ansible/roles/pipecatapp/templates/prima-services.service.j2` file.
-    * In `ansible/roles/pipecatapp/tasks/main.yaml`, remove the task that deploys this `systemd` service.
-
----
 ### Phase 2: Implement the OpenAI-Compatible MoE Gateway
 
 **Goal:** Create a new, standalone service that exposes the cluster's MoE capabilities to external clients.
@@ -82,7 +60,7 @@ These tasks are focused on addressing the brittleness of the deployment process 
 
 **Goal:** Ensure that the Ansible playbook can be run multiple times without causing errors or unintended side effects. This is the most critical step to achieving a stable and predictable deployment process.
 
-- [ ] **Apply `creates` argument to compilation tasks:** In roles like `llama_cpp`, `whisper_cpp`, and `primacpp`, the `cmake` and `make` tasks should be skipped if the final binary artifacts already exist. This will prevent unnecessary and potentially error-prone recompilation on every playbook run.
+- [ ] **Apply `creates` argument to compilation tasks:** In roles like `llama_cpp` and `whisper_cpp`, the `cmake` and `make` tasks should be skipped if the final binary artifacts already exist. This will prevent unnecessary and potentially error-prone recompilation on every playbook run.
   - *Example (`ansible/roles/llama_cpp/tasks/main.yaml`):*
 
     ```yaml
