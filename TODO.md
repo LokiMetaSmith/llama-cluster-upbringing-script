@@ -11,6 +11,28 @@ This document outlines the major refactoring, feature enhancement, and maintenan
 
 This plan is broken into phases. Each phase is a self-contained set of tasks designed to progressively refactor the codebase.
 
+### Phase 1: Solidify Core Deployment & Service Management
+
+**Goal:** Eliminate the race conditions and conflicting entry points that have caused the cascading failures. Make the system's state fully managed by Ansible in a declarative way.
+
+1.  **Create `heal_cluster.yaml`:**
+    * Create a new playbook in the root directory named `heal_cluster.yaml`.
+    * This playbook will have one play targeting the primary controller node.
+    * It will use `ansible.builtin.include_role` to run the `bootstrap_agent` role first, followed by the `pipecatapp` role. This playbook becomes the standard way to ensure services are running.
+
+2.  **Make `llama_cpp` and `bootstrap_agent` Roles Idempotent:**
+    * In `ansible/roles/bootstrap_agent/tasks/deploy_llama_cpp_model.yaml`, ensure the `nomad job run` task for `prima-expert-main` only runs if the job is not already running.
+    * In `ansible/roles/llama_cpp/tasks/main.yaml`, ensure the compilation tasks are skipped if the binaries already exist.
+
+3.  **Refactor the Main Playbook (`playbook.yaml`):**
+    * Confirm that the `llama_cpp` role is included in "Play 2" and the `bootstrap_agent` role is in "Play 4", running *before* the `pipecatapp` role.
+    * Confirm the `Wait for the main expert service to be healthy in Consul` task exists in the `pipecatapp` role and is correctly placed *before* the `Run pipecat-app job` task.
+
+4.  **Remove Conflicting Startup Logic:**
+    * Delete the `ansible/roles/pipecatapp/templates/prima-services.service.j2` file if it exists.
+    * In `ansible/roles/pipecatapp/tasks/main.yaml`, remove any task that deploys a conflicting `systemd` service.
+
+---
 ### Phase 2: Implement the OpenAI-Compatible MoE Gateway
 
 **Goal:** Create a new, standalone service that exposes the cluster's MoE capabilities to external clients.
@@ -152,7 +174,7 @@ This section includes items from the original "For Future Review" list, expanded
   - **Run services as non-root users:** Audit all services (Nomad, Consul, etc.) and ensure they are running as dedicated, non-privileged users where possible. The `pipecatapp` already does this well; apply the same principle to the system services.
 - [ ] **Monitoring and Observability:**
   - Deploy a monitoring stack like Prometheus and Grafana to collect and visualize metrics from Nomad, Consul, and the application itself.
-  - Expose custom application metrics from the `pipecat-app` (e.g., pipeline latency, number of tool calls) for Prometheus to scrape.
+  - Expose custom application metrics from the `pipecatapp` (e.g., pipeline latency, number of tool calls) for Prometheus to scrape.
 
 ## 1. Refactor for Strict Idempotency in Ansible
 
@@ -201,7 +223,7 @@ This section includes items from the original "For Future Review" list, expanded
 
 -   [ ] **Integrate with the `pipecat` Pipeline:**
     -   When the gateway receives a request, it will transform the payload into a text message.
-    -   It will then inject this message into the `pipecat-app`'s existing `text_message_queue`.
+    -   It will then inject this message into the `pipecatapp`'s existing `text_message_queue`.
 
 -   [ ] **Handle the Response Path:**
     -   The `pipecat-app` will process the request via the `TwinService` and generate a response.
