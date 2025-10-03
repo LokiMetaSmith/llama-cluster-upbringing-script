@@ -7,6 +7,9 @@
     - group_vars/all.yaml
     - group_vars/models.yaml
 
+  vars:
+    target_user: "loki"
+
   tasks:
     - name: Ensure prima-expert-main job is running
       ansible.builtin.include_role:
