@@ -61,7 +61,7 @@ if [ -z "$worker_ips" ]; then
   exit 1
 fi
 
-health_check_url="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
+health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
 
 # 2. Loop through suitable models for failover
 #    This list has been pre-filtered by Jinja2 to match system memory.
@@ -72,7 +72,7 @@ health_check_url="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
-    --port {{ env "NOMAD_PORT_http" }} \
+    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --n-gpu-layers 999 \
     --mlock \
     --rpc-servers $worker_ips &
@@ -151,7 +151,7 @@ EOH
         command = "/usr/local/bin/rpc-server"
         args = [
           "--host", "0.0.0.0",
-          "--port", "${NOMAD_PORT_rpc}"
+          "--port", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}"
         ]
       }
 

@@ -180,8 +180,7 @@
   register: expert_health
   until: >
     expert_health.json is defined and
-    expert_health.json | selectattr('Checks', 'defined')
-    | selectattr('Status', 'equalto', 'passing') | list | length > 0
+    expert_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
   retries: 60
   delay: 10
   changed_when: false

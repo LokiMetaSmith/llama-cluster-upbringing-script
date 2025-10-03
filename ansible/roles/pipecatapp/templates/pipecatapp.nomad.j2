@@ -32,7 +32,7 @@ job "pipecat-app" {
     }
 
     task "pipecat-task" {
-      driver = "raw_exec"
+      driver = "exec"
  
       config {
         command = "/opt/pipecatapp/start_pipecat.sh"
