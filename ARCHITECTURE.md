@@ -78,6 +78,21 @@ This layer provides a user-facing interface for interacting with and monitoring 
   3. REST endpoints are provided for saving and loading agent state.
 - **Outcome:** A real-time, interactive "Mission Control" dashboard for the agent.
 
+## Layer 6: External API Gateway
+
+To expose the cluster's capabilities to the outside world, a dedicated gateway service provides a standard, OpenAI-compatible REST API.
+
+- **Technology:** [FastAPI](https://fastapi.tiangolo.com/) running as a dedicated Nomad service.
+- **Implementation:** The `moe_gateway` service acts as a secure entry point to the cluster.
+- **Workflow:**
+  1. The gateway service discovers the main `pipecatapp` service via Consul.
+  2. It exposes a `/v1/chat/completions` endpoint, validating requests with API keys.
+  3. Incoming requests are transformed and injected into the `pipecat` pipeline via its text message queue.
+  4. The `TwinService` processes the request, routes it to the appropriate expert, and generates a response.
+  5. A new mechanism captures the final text response and sends it back to the gateway.
+  6. The gateway formats the text into a valid OpenAI API JSON response and returns it to the external client.
+- **Outcome:** Any application capable of communicating with the OpenAI API can now leverage the power of the distributed, self-hosted Mixture of Experts.
+
 ### API Key Authentication
 
 To enhance security, the system now supports API key authentication for its control plane endpoints (e.g., `/api/status`, `/api/state/save`). This ensures that only authorized clients can interact with the agent's core functions.
