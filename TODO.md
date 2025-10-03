@@ -44,7 +44,7 @@ This plan is broken into phases. Each phase is a self-contained set of tasks des
 2.  **Develop the Gateway Application:**
     * In `ansible/roles/moe_gateway/files/`, create a Python script `gateway.py`.
     * This script will be a FastAPI application with a single `/v1/chat/completions` endpoint.
-    * It will need to discover the `pipecat-app`'s text message queue (this will require a small modification to `pipecat-app` to share the queue, perhaps via a global variable or a simple singleton pattern).
+    * It will need to discover the `pipecat-app`'s text message queue (this will require a small modification to `pipecatapp` to share the queue, perhaps via a global variable or a simple singleton pattern).
     * It will need a mechanism to receive a response. The most robust method is to create a unique response queue (e.g., using `asyncio.Queue`) for each incoming request, pass the ID of this queue along with the message to `pipecat-app`, and wait for the response to appear on it.
 
 3.  **Create the Nomad Job:**
@@ -174,7 +174,7 @@ This section includes items from the original "For Future Review" list, expanded
   - **Run services as non-root users:** Audit all services (Nomad, Consul, etc.) and ensure they are running as dedicated, non-privileged users where possible. The `pipecatapp` already does this well; apply the same principle to the system services.
 - [ ] **Monitoring and Observability:**
   - Deploy a monitoring stack like Prometheus and Grafana to collect and visualize metrics from Nomad, Consul, and the application itself.
-  - Expose custom application metrics from the `pipecatapp` (e.g., pipeline latency, number of tool calls) for Prometheus to scrape.
+  - Expose custom application metrics from the `pipecat-app` (e.g., pipeline latency, number of tool calls) for Prometheus to scrape.
 
 ## 1. Refactor for Strict Idempotency in Ansible
 
@@ -226,7 +226,7 @@ This section includes items from the original "For Future Review" list, expanded
     -   It will then inject this message into the `pipecatapp`'s existing `text_message_queue`.
 
 -   [ ] **Handle the Response Path:**
-    -   The `pipecat-app` will process the request via the `TwinService` and generate a response.
+    -   The `pipecatapp` will process the request via the `TwinService` and generate a response.
     -   A mechanism needs to be created to capture this final text response and route it back to the originating API call in the gateway service.
     -   The gateway will then format this text into a valid OpenAI API JSON response and send it back to the client.
 

@@ -1,26 +1,32 @@
-job "llamacpp-rpc" {
-  datacenters = ["dc1"]
-  namespace   = "default"
+# This Nomad job starts a distributed llama.cpp RPC cluster.
+# It consists of one "master" node that runs the main llama-server,
+# and one or more "worker" nodes that run the rpc-server for offloading.
 
+# --- DYNAMIC MODEL SELECTION ---
+# This Jinja2 block filters the full list of models to only include
+# those that can fit within the host system's memory, adding a 2GB buffer.
+{% set memory_buffer_mb = 2048 %}
+{% set available_memory_mb = ansible_memtotal_mb - memory_buffer_mb %}
+{% set suitable_models = model_list | selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | list %}
+
+job "{{ job_name | default('prima-expert-main') }}" {
+  datacenters = ["dc1"]
+  namespace   = "{{ namespace | default('default') }}"
+
+  # --- MASTER GROUP ---
+  # This group runs the main llama-server which acts as the entry point.
   group "master" {
     count = 1
 
-    volume "models" {
-      type      = "host"
-      source    = "models"
-      read_only = true
-    }
-
     network {
-      mode = "bridge"
-      port "http" {}
+      mode = "host"
+      port "http" { to = 8080 }
     }
 
     service {
-      name     = "llama-cpp-api"
+      name     = "{{ service_name | default('prima-api-main') }}"
       provider = "consul"
       port     = "http"
-
       check {
         type     = "http"
         path     = "/health"
@@ -29,67 +35,77 @@ job "llamacpp-rpc" {
       }
     }
 
-    task "llama-master" {
-      driver = "exec"
+    task "llama-server-master" {
+      driver = "raw_exec"
 
       template {
         data = <<EOH
 #!/bin/bash
-echo "Starting run_master.sh script..." >> /tmp/master-script.log
+set -e
+echo "--- Starting RPC Master for {{ job_name }} ---"
 
-# Wait until at least one worker service is available
-echo "Waiting for worker services to become available in Consul..." >> /tmp/master-script.log
-while [ -z "$(/usr/local/bin/nomad service discover -address-type=ipv4 llama-cpp-rpc-worker 2>/dev/null)" ]; do
-  echo "Still waiting for worker services..." >> /tmp/master-script.log
-  sleep 5
+# 1. Discover RPC worker services via Consul
+worker_ips=""
+for i in {1..30}; do
+  worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '[.[] | .Service | "\(.Address):\(.Port)"] | join(",")')
+  if [ -n "$worker_ips" ]; then
+    echo "Discovered Worker IPs: $worker_ips"
+    break
+  fi
+  echo "No workers found yet, retrying in 10s... (attempt $i/30)"
+  sleep 10
 done
-echo "Worker services are available." >> /tmp/master-script.log
 
-echo "Discovering worker IPs..." >> /tmp/master-script.log
-WORKER_IPS=$(/usr/local/bin/nomad service discover -address-type=ipv4 llama-cpp-rpc-worker | tr '\n' ',' | sed 's/,$//')
-echo "Worker IPs: $WORKER_IPS" >> /tmp/master-script.log
-HEALTH_CHECK_URL="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
+if [ -z "$worker_ips" ]; then
+  echo "FATAL: No RPC workers became available after 5 minutes. Exiting."
+  exit 1
+fi
 
-# Loop through the provided models and try to start the server
-{% for model in llm_models_var %}
-  echo "Attempting to start llama-server with model: {{ model.name }}"
+health_check_url="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
+
+# 2. Loop through suitable models for failover
+#    This list has been pre-filtered by Jinja2 to match system memory.
+{% if suitable_models %}
+{% for model in suitable_models %}
+  echo "Attempting to start llama-server with suitable model: {{ model.name }}"
+
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
-    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
+    --port {{ env "NOMAD_PORT_http" }} \
     --n-gpu-layers 999 \
-    -fa auto \
     --mlock \
-    --rpc-servers $WORKER_IPS > /tmp/llama-server.log 2>&1 &
+    --rpc-servers $worker_ips &
 
-  SERVER_PID=$!
-  echo "Server process started with PID $SERVER_PID. Waiting for it to become healthy..."
+  server_pid=$!
+  echo "Server process started (PID $server_pid). Waiting for health check..."
 
-  # Health check loop
-  HEALTHY=false
-  for i in $(seq 1 12); do
+  healthy=false
+  for i in {1..30}; do
     sleep 10
-    if curl -s --fail $HEALTH_CHECK_URL > /dev/null; then
-      echo "Server is healthy with model {{ model.name }}!"
-      HEALTHY=true
+    if curl -s --fail $health_check_url > /dev/null; then
+      echo "✅ Server is healthy with model {{ model.name }}!"
+      healthy=true
       break
     else
-      echo "Health check failed (attempt $i/12)..."
+      echo "Health check failed (attempt $i/30)..."
     fi
   done
 
-  if [ "$HEALTHY" = true ]; then
-    echo "Successfully started and health-checked llama-server with model: {{ model.name }}"
-    wait $SERVER_PID # Keep the script running with the successful server
+  if [ "$healthy" = true ]; then
+    wait $server_pid
     exit 0
   else
-    echo "Server failed to become healthy with model: {{ model.name }}. Killing process and trying next model."
-    kill $SERVER_PID
-    wait $SERVER_PID 2>/dev/null
+    echo "❌ Server failed to become healthy with {{ model.name }}. Trying next model."
+    kill $server_pid
+    wait $server_pid 2>/dev/null
   fi
 {% endfor %}
+{% else %}
+  echo "FATAL: No suitable models found for the available system memory of {{ ansible_memtotal_mb }} MB."
+{% endif %}
 
-echo "All models failed to start. Exiting."
+echo "❌ All suitable models failed to start. Exiting."
 exit 1
 EOH
         destination = "local/run_master.sh"
@@ -102,70 +118,46 @@ EOH
 
       resources {
         cpu    = 1000
-        memory = {% if llm_models_var[0].memory_mb is defined %}{{ llm_models_var[0].memory_mb }}{% else %}2048{% endif %}
-
-      }
-
-      volume_mount {
-        volume      = "models"
-        destination = "/opt/nomad/models"
-        read_only   = true
+        memory = 4096 # Allocate memory for the master process itself
       }
     }
   }
 
+  # --- WORKER GROUP ---
+  # This group runs the rpc-server processes that perform the actual inference.
   group "workers" {
-    count = {% if llm_models_var[0].WORKER_COUNT is defined %}{{ llm_models_var[0].WORKER_COUNT }}{% else %}1{% endif %}
-
-    volume "models" {
-      type      = "host"
-      source    = "models"
-      read_only = true
-    }
+    count = {{ worker_count | default(1) }}
 
     network {
-      mode = "bridge"
+      mode = "host"
       port "rpc" {}
     }
 
     service {
-      name     = "llama-cpp-rpc-worker"
+      name     = "{{ job_name }}-worker"
       provider = "consul"
       port     = "rpc"
+      check {
+        type     = "tcp"
+        interval = "15s"
+        timeout  = "5s"
+      }
     }
 
-    task "llama-worker" {
-      driver = "exec"
-
-      template {
-        data = <<EOH
-#!/bin/bash
-/usr/local/bin/llama-server \
-  --model "/opt/nomad/models/llm/{{ llm_models_var[0].filename }}" \
-  --host 0.0.0.0 \
-  --port {{ '{{' }} env "NOMAD_PORT_rpc" {{ '}}' }} \
-  --n-gpu-layers 999 \
-  --flash-attn \
-  --mlock
-EOH
-        destination = "local/run_worker.sh"
-        perms       = "0755"
-      }
+    task "rpc-server-worker" {
+      driver = "raw_exec"
 
       config {
-        command = "local/run_worker.sh"
+        command = "/usr/local/bin/rpc-server"
+        args = [
+          "--host", "0.0.0.0",
+          "--port", "${NOMAD_PORT_rpc}"
+        ]
       }
 
       resources {
-        cpu    = 1000
-        memory = {% if llm_models_var[0].memory_mb is defined %}{{ llm_models_var[0].memory_mb }}{% else %}2048{% endif %}
-
-      }
-
-      volume_mount {
-        volume      = "models"
-        destination = "/opt/nomad/models"
-        read_only   = true
+        cpu    = 500
+        memory = 1024 # Memory for the RPC process itself
       }
     }
   }

@@ -1,7 +1,7 @@
-- name: Render the Prima Expert Nomad job from template for bootstrap
+- name: Render the Llama.cpp RPC Nomad job from template for bootstrap
   ansible.builtin.template:
-    src: "{{ playbook_dir }}/ansible/jobs/prima-expert.nomad"
-    dest: "/tmp/prima-expert-main.nomad"
+    src: "{{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad"
+    dest: "/tmp/llamacpp-rpc-main.nomad"
     mode: '0644'
   vars:
     job_name: "prima-expert-main"
@@ -10,16 +10,18 @@
     model_list: "{{ main_expert_models }}"
     worker_count: 1
 
-- name: Deploy the main Prima Expert service to Nomad
+- name: Deploy the main Llama.cpp RPC service to Nomad
   ansible.builtin.command:
-    cmd: "nomad job run -detach /tmp/prima-expert-main.nomad"
+    cmd: "nomad job run -detach /tmp/llamacpp-rpc-main.nomad"
   register: llama_job_run
   changed_when: "'Eval ID' in llama_job_run.stdout"
   failed_when: llama_job_run.rc != 0 and 'already running' not in llama_job_run.stderr
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
 - name: Clean up temporary rendered job file
   ansible.builtin.file:
-    path: "/tmp/prima-expert-main.nomad"
+    path: "/tmp/llamacpp-rpc-main.nomad"
     state: absent
 
 - name: Wait for the main expert service to be healthy in Consul
