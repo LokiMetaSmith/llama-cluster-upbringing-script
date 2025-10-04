@@ -31,6 +31,7 @@ pipecat_api_keys: ""
 
 # Configuration for external, third-party LLM experts.
 # This is a dictionary that will be converted to a JSON string.
+external_model_server: false
 external_experts_config:
   openai_gpt4:
     base_url: "https://api.openai.com/v1"
