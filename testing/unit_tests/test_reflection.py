@@ -8,19 +8,32 @@ from reflection import reflect
 
 class TestReflection(unittest.TestCase):
 
-    def test_analyze_failure_out_of_memory(self):
+    @patch('subprocess.run')
+    def test_analyze_failure_out_of_memory(self, mock_subprocess_run):
+        # Configure the mock to simulate a successful tool run
+        mock_job_spec = {
+            "ID": "job1", "Name": "job1",
+            "TaskGroups": [{"Tasks": [{"Resources": {"MemoryMB": 256}}]}]
+        }
+        # Mock the CompletedProcess object returned by subprocess.run
+        mock_subprocess_run.return_value.stdout = json.dumps(mock_job_spec)
+        mock_subprocess_run.return_value.stderr = ""
+        mock_subprocess_run.return_value.returncode = 0
+
         diagnostic_data = {
             "job_id": "job1",
-            "logs": {"stderr": "Some error log with out of memory condition"}
+            "logs": {"stderr": "some error log with out of memory condition"}
         }
+
         solution = reflect.analyze_failure_with_llm(diagnostic_data)
+
         self.assertIn("analysis", solution)
         self.assertIn("action", solution)
         self.assertIn("parameters", solution)
         self.assertEqual(solution["action"], "increase_memory")
-        self.assertIn("job_id", solution["parameters"])
-        self.assertIn("memory_mb", solution["parameters"])
         self.assertEqual(solution["parameters"]["job_id"], "job1")
+        # The logic in reflect.py should double the memory
+        self.assertEqual(solution["parameters"]["memory_mb"], 512)
 
     def test_analyze_failure_exit_code_1(self):
         diagnostic_data = {
