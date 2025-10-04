@@ -81,16 +81,16 @@
     mode: '0755'
   become: yes
 
-- name: Deploy Prima Expert Nomad job template
+- name: Deploy Llama.cpp RPC Nomad job template
   ansible.builtin.template:
-    src: ../../jobs/prima-expert.nomad
-    dest: /opt/nomad/jobs/prima-expert.nomad
+    src: ../../jobs/llamacpp-rpc.nomad
+    dest: /opt/nomad/jobs/llamacpp-rpc.nomad
     mode: '0644'
   vars:
-    job_name: "prima-expert-main"
-    service_name: "prima-api-main"
+    job_name: "llamacpp-rpc"
+    service_name: "llamacpp-rpc-api"
     namespace: "default"
-    expert_models: "{{ main_expert_models }}"
+    model_list: "{{ main_expert_models }}"
     worker_count: 1
 
 - name: Copy benchmark Nomad job file

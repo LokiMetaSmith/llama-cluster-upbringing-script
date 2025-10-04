@@ -9,7 +9,7 @@ default(ansible_default_ipv4.address) }}"
 nomad_models_dir: "/opt/nomad/models"
 
 # Pipecat application settings
-prima_api_service_name: "prima-api-main"
+llama_api_service_name: "llamacpp-rpc-api"
 use_summarizer: "false"
 stt_service: "faster-whisper"
 pipecat_app_dir: "/opt/pipecatapp"
