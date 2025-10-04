@@ -363,11 +363,15 @@ class TwinService(FrameProcessor):
             response = requests.get(f"{self.consul_http_addr}/v1/catalog/services")
             response.raise_for_status()
             services = response.json()
-            local_experts = {name.replace("prima-api-", "") for name in services.keys() if name.startswith("prima-api-")}
+            # Discover local experts from Consul
+            local_experts = {
+                name.replace("llamacpp-rpc-", "")
+                for name in services.keys()
+                if name.startswith("llamacpp-rpc-")
+            }
+            # Combine with externally configured experts
+            expert_names = set(self.experts.keys())
             expert_names.update(local_experts)
-            # Filter for services that match our expert pattern, e.g., "llama-api-"
-            #expert_names = [name for name in services.keys() if name.startswith("llama-api-")]
-            
         except requests.exceptions.RequestException as e:
             logging.error(f"Could not connect to Consul: {e}")
             
@@ -423,7 +427,7 @@ class TwinService(FrameProcessor):
             )
     
         # Otherwise, assume it's a local expert and discover via Consul
-        service_name = f"prima-api-{expert_name}"
+        service_name = f"llamacpp-rpc-{expert_name}"
         try:
             response = requests.get(f"{self.consul_http_addr}/v1/health/service/{service_name}?passing")
             response.raise_for_status()
@@ -776,7 +780,7 @@ def find_workable_audio_config():
 
 async def discover_main_llm_service(consul_http_addr="http://localhost:8500", delay=10):
     """Discovers the main LLM service from Consul, retrying indefinitely."""
-    service_name = os.getenv("PRIMA_API_SERVICE_NAME", "prima-api-main")
+    service_name = os.getenv("PRIMA_API_SERVICE_NAME", "llamacpp-rpc-api")
     logging.info(f"Attempting to discover main LLM service: {service_name}")
     while True:
         try:
