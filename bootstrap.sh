@@ -58,6 +58,7 @@ if [ "$CLEAN_REPO" = true ]; then
 fi
 
 # --- Build Ansible arguments ---
+ANSIBLE_ARGS="--extra-vars=target_user=loki"
 
 if [ "$DEBUG_MODE" = true ]; then
     echo "🔍 --debug flag detected. Ansible output will be saved to '$LOG_FILE'."
@@ -80,13 +81,6 @@ then
     exit 1
 fi
 
-# Purge any existing jobs and processes to ensure a clean deployment.
-echo "Purging any old Nomad jobs..."
-nomad job stop -purge prima-expert-main || true
-nomad job stop -purge pipecat-app || true
-echo "Purge complete."
- free -h
-
 echo "Forcefully terminating any orphaned application processes to prevent memory leaks..."
 pkill -f dllama-api || true
 pkill -f "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py" || true
@@ -95,8 +89,6 @@ echo "Process cleanup complete."
 # Display system memory
 free -h
 
-
-
 # Run the Ansible playbook with the local inventory
 echo "Running the Ansible playbook for local setup..."
 echo "You will be prompted for your sudo password."
@@ -104,11 +96,25 @@ echo "You will be prompted for your sudo password."
 if [ "$DEBUG_MODE" = true ]; then
     # Execute with verbose logging and redirect to file
     time ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS > "$LOG_FILE" 2>&1
+    playbook_exit_code=$?
     echo "✅ Playbook run complete. View the detailed log in '$LOG_FILE'."
 else
     # Execute normally
     ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS
+    playbook_exit_code=$?
 fi
+
+if [ $playbook_exit_code -ne 0 ]; then
+    echo "❌ Ansible playbook failed. Aborting script."
+    exit $playbook_exit_code
+fi
+
+# Purge any existing jobs and processes to ensure a clean deployment.
+echo "Purging any old Nomad jobs..."
+nomad job stop -purge prima-expert-main || true
+nomad job stop -purge pipecat-app || true
+echo "Purge complete."
+ free -h
 
 echo "Bootstrap complete."
 

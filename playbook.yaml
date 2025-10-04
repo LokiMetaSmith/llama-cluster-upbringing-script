@@ -25,6 +25,12 @@
         groups: sudo
         append: yes
 
+    - name: Set correct permissions for the user's home directory
+      ansible.builtin.file:
+        path: "/home/{{ target_user }}"
+        state: directory
+        mode: '0755'
+
     - name: Allow '{{ target_user }}' to have passwordless sudo access
       ansible.builtin.lineinfile:
         path: "/etc/sudoers.d/ansible-{{ target_user }}-nopasswd"
@@ -101,9 +107,9 @@
         - provisioning_api
         - desktop_extras
         - paddler
-        - pipecatapp
         - vision
         - bootstrap_agent
+        - pipecatapp
         - power_manager
       loop_control:
         loop_var: role_name
