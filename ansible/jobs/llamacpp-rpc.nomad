@@ -75,7 +75,7 @@ health_check_url="http://127.0.0.1:${NOMAD_PORT_http}/health"
     --port ${NOMAD_PORT_http} \
     --n-gpu-layers 999 \
     --mlock \
-    --rpc-servers $worker_ips &
+    --rpc $worker_ips &
 
   server_pid=$!
   echo "Server process started (PID $server_pid). Waiting for health check..."
