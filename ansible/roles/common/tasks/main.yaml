@@ -72,6 +72,13 @@
     - "{{ nomad_models_dir }}/vision"
   become: yes
 
+- name: Create pipecatapp directory for Nomad host volume
+  ansible.builtin.file:
+    path: /opt/pipecatapp
+    state: directory
+    mode: '0755'
+  become: yes
+
 - name: Deploy SSH authorized keys sync script
   ansible.builtin.template:
     src: update-ssh-authorized-keys.sh.j2

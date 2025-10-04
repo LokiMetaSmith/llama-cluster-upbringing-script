@@ -1,10 +1,3 @@
-- name: Create pipecatapp application directory
-  ansible.builtin.file:
-    path: /opt/pipecatapp
-    state: directory
-    mode: '0755'
-  become: yes
-
 - name: Ensure correct ownership of the application directory
   ansible.builtin.file:
     path: /opt/pipecatapp
@@ -178,7 +171,7 @@
 
 - name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/prima-api-main"
+    url: "http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-api"
     return_content: yes
   register: expert_health
   until: >
