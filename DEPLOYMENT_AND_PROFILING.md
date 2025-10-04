@@ -101,7 +101,7 @@ By combining these benchmarks with system monitoring tools, you can get a comple
 
 - **Test Different Models:** Run the `llama-bench` benchmark against various models (e.g., a 3B parameter model vs. a 7B one). This will show you how well your hardware scales to handle more complex models.
 - **Monitor System Resources:** While a benchmark is running, log in to your cluster nodes and use command-line tools like `htop` or `top`. This will give you a real-time view of CPU and memory usage, showing you exactly how much load the AI workload is placing on your machines.
-- **Compare Backends:** Run the same `llama-bench` test against both the `prima.cpp` and `llamacpp-rpc` backends (running them one at a time). This will give you concrete data on which inference engine performs better on your specific hardware setup.
+- **Compare Backends:** Run the same `llama-bench` test against different `llama.cpp` configurations (e.g., with and without GPU acceleration, or with different model quantization levels). This will give you concrete data on which setup performs better on your specific hardware.
 
 ---
 

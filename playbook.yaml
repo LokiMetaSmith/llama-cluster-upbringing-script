@@ -108,8 +108,6 @@
         - desktop_extras
         - paddler
         - vision
-        - bootstrap_agent
-        - pipecatapp
         - power_manager
       loop_control:
         loop_var: role_name
@@ -195,6 +193,5 @@
   hosts: controller_nodes[0]
   connection: local
   roles:
-    # --- FIX: Add the primacpp role here ---
-    - role: primacpp
+    - role: bootstrap_agent
     - role: pipecatapp

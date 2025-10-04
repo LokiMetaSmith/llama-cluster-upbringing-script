@@ -19,9 +19,11 @@
     - name: Check that the pipecat application is running
       uri:
         url: "http://{{ ansible_host }}:8000/health"
-        return_content: yes
+        status_code: 200
       register: pipecat_status
-      failed_when: "'ok' not in pipecat_status.content"
+      until: pipecat_status.status == 200
+      retries: 30 # 30 retries * 10 seconds = 5 minutes
+      delay: 10
 
     - name: Verify that the pipecat application is running with the Docker driver
       command: nomad job inspect pipecat-app
