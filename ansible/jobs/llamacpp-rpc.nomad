@@ -6,7 +6,7 @@
 {% set available_memory_mb = ansible_memtotal_mb - memory_buffer_mb %}
 {% set suitable_models = model_list | selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | list %}
 
-job "{{ job_name | default('prima-expert-main') }}" {
+job "{{ job_name | default('llamacpp-rpc') }}" {
   datacenters = ["dc1"]
   namespace   = "{{ namespace | default('default') }}"
 
@@ -20,7 +20,7 @@ job "{{ job_name | default('prima-expert-main') }}" {
     }
 
     service {
-      name     = "{{ service_name | default('prima-api-main') }}"
+      name     = "{{ service_name | default('llamacpp-rpc-api') }}"
       provider = "consul"
       port     = "http"
       check {
@@ -57,7 +57,7 @@ if [ -z "$worker_ips" ]; then
   exit 1
 fi
 
-health_check_url="http://127.0.0.1:${NOMAD_PORT_http}/health"
+health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
 
 # 2. Loop through suitable models for failover
 {% if suitable_models %}
@@ -67,7 +67,7 @@ health_check_url="http://127.0.0.1:${NOMAD_PORT_http}/health"
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
-    --port ${NOMAD_PORT_http} \
+    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --n-gpu-layers 99 \
     --mlock \
     --rpc $worker_ips &
@@ -145,7 +145,7 @@ EOH
         command = "/usr/local/bin/rpc-server"
         args = [
           "--host", "0.0.0.0",
-          "--port", "${NOMAD_PORT_rpc}"
+          "--port", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}"
         ]
       }
 
