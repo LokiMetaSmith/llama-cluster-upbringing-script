@@ -2,9 +2,6 @@
 # It consists of one "master" node that runs the main llama-server,
 # and one or more "worker" nodes that run the rpc-server for offloading.
 
-# --- DYNAMIC MODEL SELECTION ---
-# This Jinja2 block filters the full list of models to only include
-# those that can fit within the host system's memory, adding a 2GB buffer.
 {% set memory_buffer_mb = 2048 %}
 {% set available_memory_mb = ansible_memtotal_mb - memory_buffer_mb %}
 {% set suitable_models = model_list | selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | list %}
@@ -14,7 +11,6 @@ job "{{ job_name | default('prima-expert-main') }}" {
   namespace   = "{{ namespace | default('default') }}"
 
   # --- MASTER GROUP ---
-  # This group runs the main llama-server which acts as the entry point.
   group "master" {
     count = 1
 
@@ -64,7 +60,6 @@ fi
 health_check_url="http://127.0.0.1:${NOMAD_PORT_http}/health"
 
 # 2. Loop through suitable models for failover
-#    This list has been pre-filtered by Jinja2 to match system memory.
 {% if suitable_models %}
 {% for model in suitable_models %}
   echo "Attempting to start llama-server with suitable model: {{ model.name }}"
@@ -73,7 +68,7 @@ health_check_url="http://127.0.0.1:${NOMAD_PORT_http}/health"
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
     --port ${NOMAD_PORT_http} \
-    --n-gpu-layers 999 \
+    --n-gpu-layers 99 \
     --mlock \
     --rpc $worker_ips &
 
@@ -118,13 +113,12 @@ EOH
 
       resources {
         cpu    = 1000
-        memory = 4096 # Allocate memory for the master process itself
+        memory = 4096
       }
     }
   }
 
   # --- WORKER GROUP ---
-  # This group runs the rpc-server processes that perform the actual inference.
   group "workers" {
     count = {{ worker_count | default(1) }}
 
@@ -157,7 +151,7 @@ EOH
 
       resources {
         cpu    = 500
-        memory = 1024 # Memory for the RPC process itself
+        memory = 1024
       }
     }
   }
