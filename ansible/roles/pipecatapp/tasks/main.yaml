@@ -137,11 +137,13 @@
   ansible.builtin.template:
     src: pipecatapp.nomad.j2
     dest: /opt/nomad/jobs/pipecatapp.nomad
+  become: yes
 
 - name: Template prompt evolution Nomad job file
   ansible.builtin.template:
     src: ../../jobs/evolve-prompt.nomad.j2
     dest: /opt/nomad/jobs/evolve-prompt.nomad
+  become: yes
 
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
