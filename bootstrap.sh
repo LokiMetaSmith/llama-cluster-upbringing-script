@@ -82,7 +82,7 @@ fi
 
 # Purge any existing jobs and processes to ensure a clean deployment.
 echo "Purging any old Nomad jobs..."
-nomad job stop -purge prima-expert-main || true
+nomad job stop -purge llamacpp-rpc || true
 nomad job stop -purge pipecat-app || true
 echo "Purge complete."
  free -h

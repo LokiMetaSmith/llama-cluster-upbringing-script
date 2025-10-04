@@ -21,7 +21,7 @@ This plan is broken into phases. Each phase is a self-contained set of tasks des
     * It will use `ansible.builtin.include_role` to run the `bootstrap_agent` role first, followed by the `pipecatapp` role. This playbook becomes the standard way to ensure services are running.
 
 2.  **Make `llama_cpp` and `bootstrap_agent` Roles Idempotent:**
-    * In `ansible/roles/bootstrap_agent/tasks/deploy_llama_cpp_model.yaml`, ensure the `nomad job run` task for `prima-expert-main` only runs if the job is not already running.
+    * In `ansible/roles/bootstrap_agent/tasks/deploy_llama_cpp_model.yaml`, ensure the `nomad job run` task for `llamacpp-rpc` only runs if the job is not already running.
     * In `ansible/roles/llama_cpp/tasks/main.yaml`, ensure the compilation tasks are skipped if the binaries already exist.
 
 3.  **Refactor the Main Playbook (`playbook.yaml`):**

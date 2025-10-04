@@ -1,8 +1,8 @@
 # -----------------------------------------------------------------------------
-# Ansible Playbook: Debug Prima Expert Template
+# Ansible Playbook: Debug Llama.cpp RPC Template
 #
 # Purpose:
-# This playbook provides a fast way to render the main `prima-expert.nomad`
+# This playbook provides a fast way to render the main `llamacpp-rpc.nomad`
 # job file from its Jinja2 template. It's designed for quick debugging and
 # validation of the template without running the entire main bootstrap script.
 #
@@ -11,11 +11,11 @@
 # 2. It defines the variables (`job_name`, `model_list`, etc.) that the
 #    Nomad template expects.
 # 3. It uses the `ansible.builtin.template` module to process
-#    `ansible/jobs/prima-expert.nomad` and saves the output to a new file named
-#    `rendered_prima_expert_job.nomad` in the project's root directory.
+#    `ansible/jobs/llamacpp-rpc.nomad` and saves the output to a new file named
+#    `rendered_llamacpp_rpc_job.nomad` in the project's root directory.
 #
 # -----------------------------------------------------------------------------
-- name: Debug and Render Prima Expert Nomad Template
+- name: Debug and Render Llama.cpp RPC Nomad Template
   hosts: localhost
   connection: local
   gather_facts: no
@@ -26,8 +26,8 @@
   # Define the variables that the prima-expert.nomad template expects.
   # This simulates how the main `llama_cpp` role would deploy the default expert.
   vars:
-    job_name: "prima-expert-main"
-    service_name: "prima-api-main"
+    job_name: "llamacpp-rpc"
+    service_name: "llamacpp-rpc-api"
     namespace: "default"
     model_list: "{{ main_expert_models }}"
     worker_count: 1

@@ -1,3 +1,10 @@
+- name: Create pipecatapp application directory
+  ansible.builtin.file:
+    path: /opt/pipecatapp
+    state: directory
+    mode: '0755'
+  become: yes
+
 - name: Ensure correct ownership of the application directory
   ansible.builtin.file:
     path: /opt/pipecatapp
