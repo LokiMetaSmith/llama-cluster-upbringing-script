@@ -90,6 +90,11 @@
           higher than the number of server nodes available.
       when: consul_leader_status.failed or consul_leader_status.content == '""'
 
+    - name: Populate Consul KV with configuration
+      include_role:
+        name: config_manager
+      run_once: true
+
     - name: Install all python dependencies
       include_role:
         name: python_deps

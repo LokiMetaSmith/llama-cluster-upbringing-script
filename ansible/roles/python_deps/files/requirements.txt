@@ -26,6 +26,7 @@ pipecat-ai-whisker
 pip
 piper-tts
 playwright
+python-consul
 python-dotenv
 pyvips
 pyvips-binary

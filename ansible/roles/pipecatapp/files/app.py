@@ -32,6 +32,7 @@ from faster_whisper import WhisperModel
 from piper.voice import PiperVoice
 import soundfile as sf
 import requests
+import consul.aio
 from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
@@ -283,6 +284,33 @@ class PiperTTSService(FrameProcessor):
 
         await self.push_frame(AudioRawFrame(audio_bytes))
 
+async def load_config_from_consul(consul_host, consul_port):
+    """Fetches application configuration from the Consul KV store."""
+    logging.info("Loading configuration from Consul KV store...")
+    config = {}
+    c = consul.aio.Consul(host=consul_host, port=consul_port)
+    try:
+        index, data = await c.kv.get('config/app/settings')
+        if data:
+            app_settings = json.loads(data['Value'].decode('utf-8'))
+            config.update(app_settings)
+            logging.info("Successfully loaded application settings from Consul.")
+        else:
+            logging.error("Could not find 'config/app/settings' in Consul KV.")
+
+        # Also load tts_voices, which are stored separately
+        index, data = await c.kv.get('config/models/tts_voices')
+        if data:
+            config['tts_voices'] = json.loads(data['Value'].decode('utf-8'))
+            logging.info("Successfully loaded TTS voices from Consul.")
+        else:
+            logging.warning("Could not find 'config/models/tts_voices' in Consul KV.")
+
+    except Exception as e:
+        logging.error(f"Error loading configuration from Consul: {e}")
+    finally:
+        await c.close()
+    return config
 
 class TwinService(FrameProcessor):
     """The core logic unit ("brain") of the conversational AI agent.
@@ -295,8 +323,7 @@ class TwinService(FrameProcessor):
         router_llm: The primary LLM service used for routing and general conversation.
         vision_detector: The service responsible for visual perception.
         runner: The PipelineRunner instance, used for managing pipeline tasks.
-        debug_mode (bool): If True, enables verbose logging.
-        approval_mode (bool): If True, requires user approval for sensitive tool actions.
+        app_config (dict): A dictionary containing the application's configuration.
         approval_queue: A queue for receiving approval status from the UI.
         short_term_memory (list): A list storing the recent conversation history.
         long_term_memory (MemoryStore): A vector store for long-term knowledge.
@@ -304,37 +331,31 @@ class TwinService(FrameProcessor):
         experts (dict): A dictionary to cache discovered expert services.
         tools (dict): A dictionary of available tools for the agent.
     """
-    def __init__(self, llm, vision_detector, runner, debug_mode=False, approval_mode=False, approval_queue=None):
+    def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None):
         """Initializes the TwinService.
 
         Args:
             llm: The primary LLM service.
             vision_detector: The vision processing service.
             runner: The Pipecat PipelineRunner.
-            debug_mode (bool): Enables or disables debug logging.
-            approval_mode (bool): Enables or disables the need for user approval.
+            app_config (dict): The application's configuration loaded from Consul.
             approval_queue: The queue for UI approval messages.
         """
         super().__init__()
         self.router_llm = llm # The main LLM acts as a router
         self.vision_detector = vision_detector
         self.runner = runner
-        self.debug_mode = debug_mode
-        self.approval_mode = approval_mode
+        self.app_config = app_config
         self.approval_queue = approval_queue
         self.short_term_memory = []
         self.long_term_memory = MemoryStore()
 
-        self.consul_http_addr = os.getenv("CONSUL_HTTP_ADDR", "http://localhost:8500")
-        self.experts = {} # Experts will be discovered dynamically
+        self.debug_mode = self.app_config.get("debug_mode", False)
+        self.approval_mode = self.app_config.get("approval_mode", False)
+        self.consul_http_addr = f"http://{self.app_config.get('consul_host', '127.0.0.1')}:{self.app_config.get('consul_port', 8500)}"
 
-        # Load external experts from environment variable
-        external_experts_config = os.getenv("EXTERNAL_EXPERTS_CONFIG")
-        if external_experts_config:
-            try:
-                self.experts = json.loads(external_experts_config)
-            except json.JSONDecodeError as e:
-                logging.error(f"Could not parse EXTERNAL_EXPERTS_CONFIG: {e}")
+        # External experts config is now part of the main app_config
+        self.experts = self.app_config.get("external_experts_config", {})
         
         self.tools = {
             "ssh": SSH_Tool(),
@@ -346,32 +367,38 @@ class TwinService(FrameProcessor):
             "power": Power_Tool(),
         }
 
-        if os.getenv("USE_SUMMARIZER", "false").lower() == "true":
+        if self.app_config.get("use_summarizer", False):
             self.tools["summarizer"] = SummarizerTool(self)
             logging.info("Summarizer tool enabled.")
 
     def get_discovered_experts(self) -> list[str]:
         """Discovers available 'expert' services registered in Consul.
 
-        It queries the Consul catalog for services prefixed with "llama-api-"
-        and returns a list of their names.
+        It queries the Consul catalog for services with the 'expert' tag.
 
         Returns:
-            list[str]: A list of discovered expert service names.
+            list[str]: A list of discovered expert names (e.g., "main", "coding").
         """
+        expert_names = set(self.experts.keys())
         try:
             response = requests.get(f"{self.consul_http_addr}/v1/catalog/services")
             response.raise_for_status()
             services = response.json()
-            local_experts = {name.replace("prima-api-", "") for name in services.keys() if name.startswith("prima-api-")}
-            expert_names.update(local_experts)
-            # Filter for services that match our expert pattern, e.g., "llama-api-"
-            #expert_names = [name for name in services.keys() if name.startswith("llama-api-")]
+            # Discover local experts by the "expert" tag
+            for name, service_info in services.items():
+                tags = service_info.get("Tags", [])
+                if "expert" in tags:
+                    # The expert name is also a tag
+                    for tag in tags:
+                        if tag != "expert":
+                            expert_names.add(tag)
+                            break
             
         except requests.exceptions.RequestException as e:
-            logging.error(f"Could not connect to Consul: {e}")
+            logging.error(f"Could not connect to Consul for expert discovery: {e}")
             
         return sorted(list(expert_names))
+
     def get_system_prompt(self, expert_name: str = "router") -> str:
         """Constructs the system prompt for a given agent or expert.
 
@@ -401,9 +428,8 @@ class TwinService(FrameProcessor):
                     if not method_name.startswith('_'):
                         tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
 
-        for service_name in self.get_discovered_experts():
-            expert_name = service_name.replace("llama-api-", "")
-            tools_prompt += f'- {{"tool": "route_to_expert", "args": {{"expert": "{expert_name}", "query": "<user_query>"}}}}: Use this for queries related to {expert_name}.\n'
+        for expert in self.get_discovered_experts():
+            tools_prompt += f'- {{"tool": "route_to_expert", "args": {{"expert": "{expert}", "query": "<user_query>"}}}}: Use this for queries related to {expert}.\n'
 
         return f"{base_prompt}\n\n{tools_prompt}\n\nIf the query doesn't fit a specific expert or tool, handle it yourself. Otherwise, respond with a JSON object with the 'tool' and 'args' keys."
 
@@ -774,10 +800,9 @@ def find_workable_audio_config():
         p.terminate()
 
 
-async def discover_main_llm_service(consul_http_addr="http://localhost:8500", delay=10):
-    """Discovers the main LLM service from Consul, retrying indefinitely."""
-    service_name = os.getenv("PRIMA_API_SERVICE_NAME", "prima-api-main")
-    logging.info(f"Attempting to discover main LLM service: {service_name}")
+async def discover_service(service_name: str, consul_http_addr: str, delay=10):
+    """Discovers a healthy service from Consul, retrying indefinitely."""
+    logging.info(f"Attempting to discover service: {service_name}")
     while True:
         try:
             response = requests.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
@@ -787,12 +812,12 @@ async def discover_main_llm_service(consul_http_addr="http://localhost:8500", de
                 address = services[0]['Service']['Address']
                 port = services[0]['Service']['Port']
                 base_url = f"http://{address}:{port}/v1"
-                logging.info(f"Successfully discovered main LLM service at {base_url}")
+                logging.info(f"Successfully discovered {service_name} at {base_url}")
                 return base_url
         except requests.exceptions.RequestException as e:
             logging.warning(f"Could not connect to Consul or find service {service_name}: {e}")
 
-        logging.info(f"LLM service not found, retrying in {delay} seconds...")
+        logging.info(f"Service {service_name} not found, retrying in {delay} seconds...")
         await asyncio.sleep(delay)
 
 async def main():
@@ -819,25 +844,30 @@ async def main():
     server = uvicorn.Server(config)
     threading.Thread(target=server.run).start()
 
-    # Load configuration from the JSON file created by Ansible
-    pipecat_config = {}
-    try:
-        with open("pipecat_config.json", "r") as f:
-            pipecat_config = json.load(f)
-    except FileNotFoundError:
-        logging.warning("pipecat_config.json not found, using defaults.")
+    # Load configuration from Consul
+    consul_host = os.getenv("CONSUL_HOST", "127.0.0.1")
+    consul_port = int(os.getenv("CONSUL_PORT", "8500"))
+    app_config = await load_config_from_consul(consul_host, consul_port)
 
-    tts_voices = pipecat_config.get("tts_voices", [])
-    stt_service_name = os.getenv("STT_SERVICE")
+    # Add consul host and port to config for other components to use
+    app_config['consul_host'] = consul_host
+    app_config['consul_port'] = consul_port
+
+    tts_voices = app_config.get("tts_voices", [])
+    stt_service_name = app_config.get("stt_service")
     if stt_service_name == "faster-whisper":
-        model_path = os.getenv("STT_MODEL_PATH", "tiny.en")
+        stt_provider = app_config.get("active_stt_provider", "faster-whisper")
+        stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
+        model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
         stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
         logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate {sample_rate}Hz.")
     else:
-        raise RuntimeError(f"STT_SERVICE environment variable not set to a valid value. Got '{stt_service_name}'")
+        raise RuntimeError(f"STT_SERVICE not configured correctly in Consul. Got '{stt_service_name}'")
 
     # Discover the main LLM service from Consul
-    llm_base_url = await discover_main_llm_service()
+    main_llm_service_name = app_config.get("prima_api_service_name", "prima-api-main")
+    consul_http_addr = f"http://{consul_host}:{consul_port}"
+    llm_base_url = await discover_service(main_llm_service_name, consul_http_addr)
 
     llm = OpenAILLMService(
         base_url=llm_base_url,
@@ -845,32 +875,30 @@ async def main():
         model="dummy" # The model is selected by the prima-expert job, not here.
     )
 
-    # --- FINAL FIX FOR TTS ---
     # Use the local Piper TTS service with the configured voices
+    if not tts_voices:
+        raise RuntimeError("TTS voices not configured in Consul.")
     model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
     config_path = f"/opt/nomad/models/tts/{tts_voices[0]['config']}"
     tts = PiperTTSService(model_path=model_path, config_path=config_path)
     runner = PipelineRunner()
 
-    # TODO: Implement failover or selection logic for vision models
     vision_detector = YOLOv8Detector()
     logging.info("Using YOLOv8 for vision.")
 
-    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-    if debug_mode:
+    # Set logging level and approval mode from config
+    if app_config.get("debug_mode", False):
         logging.getLogger().setLevel(logging.DEBUG)
         logging.debug("Debug mode enabled.")
 
-    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
-    if approval_mode:
+    if app_config.get("approval_mode", False):
         logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
 
     twin = TwinService(
         llm=llm,
         vision_detector=vision_detector,
         runner=runner,
-        debug_mode=debug_mode,
-        approval_mode=approval_mode,
+        app_config=app_config,
         approval_queue=approval_queue
     )
     web_server.twin_service_instance = twin
@@ -887,16 +915,9 @@ async def main():
         tts,
         transport.output()
     ]
-    # Set Debug  mode for troubleshooting and examining state
-    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-    if debug_mode:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logging.debug("Debug mode enabled.")
 
-    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
-    if approval_mode:
-        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
-    if os.getenv("BENCHMARK_MODE", "false").lower() == "true":
+    # Add benchmark collector if enabled in config
+    if app_config.get("benchmark_mode", False):
         pipeline_steps.insert(1, BenchmarkCollector())
 
     main_pipeline = Pipeline(pipeline_steps)

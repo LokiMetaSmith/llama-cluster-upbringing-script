@@ -1,9 +1,11 @@
-{% set final_worker_count = worker_count if worker_count is defined else 1 %}
-# This is a Jinja2 template for a complete, distributed Prima expert.
-# It is parameterized and can be used to deploy any expert model.
-job "{{ job_name | default('prima-expert-main') }}" {
+job "expert-${meta.expert_name}" {
   datacenters = ["dc1"]
-  namespace   = "{{ namespace | default('default') }}"
+  namespace   = "default"
+
+  meta {
+    # This will be overridden by the `nomad run -meta` command
+    expert_name = "main"
+  }
 
   group "master" {
     count = 1
@@ -20,9 +22,10 @@ job "{{ job_name | default('prima-expert-main') }}" {
     }
 
     service {
-      name     = "{{ service_name | default('prima-api-main') }}"
+      name     = "prima-api-${meta.expert_name}"
       provider = "consul"
       port     = "http"
+      tags     = ["expert", "${meta.expert_name}"]
 
       check {
         type     = "http"
@@ -39,15 +42,13 @@ job "{{ job_name | default('prima-expert-main') }}" {
         data = <<EOH
 #!/bin/bash
 set -e
-echo "Starting master server for expert: {{ job_name | default('prima-expert-main') }}"
+echo "Starting master server for expert: ${NOMAD_META_expert_name}"
 
 # Discover worker services via Consul
 echo "Discovering worker services from Consul..."
 worker_ips=""
 for i in {1..30}; do
-  {# djlint:off H022 #}
-  worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '[.[] | .Service | "\(.Address):\(.Port)"] | join(",")')
-  {# djlint:on #}
+  worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/expert-${NOMAD_META_expert_name}-worker?passing" | jq -r '[.[] | .Service | "\(.Address):\(.Port)"] | join(",")')
   if [ -n "$worker_ips" ]; then
     echo "Discovered Worker IPs: $worker_ips"
     break
@@ -64,18 +65,27 @@ else
   echo "No workers found after waiting. Starting in standalone mode."
 fi
 
-{# djlint:off H022 #}
-health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
-{# djlint:on #}
+health_check_url="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
+
+echo "Fetching model configuration from Consul..."
+MODEL_CONFIG_JSON=$(curl -s http://127.0.0.1:8500/v1/kv/config/models/${NOMAD_META_expert_name}?raw)
+
+if [ -z "$MODEL_CONFIG_JSON" ] || [ "$MODEL_CONFIG_JSON" == "null" ]; then
+  echo "Error: Could not fetch model configuration for expert '${NOMAD_META_expert_name}' from Consul."
+  exit 1
+fi
 
 # Loop through the provided models for failover
-{% for model in expert_models %}
-  echo "Attempting to start llama-server with model: {{ model.name }}"
+for model_data in $(echo "$MODEL_CONFIG_JSON" | jq -c '.[]'); do
+  model_name=$(echo "$model_data" | jq -r '.name')
+  model_filename=$(echo "$model_data" | jq -r '.filename')
+
+  echo "Attempting to start llama-server with model: $model_name"
 
   /usr/local/bin/llama-server \
-    --model "/opt/nomad/models/llm/{{ model.filename }}" \
+    --model "/opt/nomad/models/llm/${model_filename}" \
     --host 0.0.0.0 \
-    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
+    --port {{ env "NOMAD_PORT_http" }} \
     --n-gpu-layers 999 \
     --fa auto \
     --mlock \
@@ -88,7 +98,7 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
   for i in {1..30}; do
     sleep 10
     if curl -s --fail $health_check_url > /dev/null; then
-      echo "Server is healthy with model {{ model.name }}!"
+      echo "Server is healthy with model $model_name!"
       healthy=true
       break
     else
@@ -97,19 +107,17 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
   done
 
   if [ "$healthy" = true ]; then
-    echo "Successfully started llama-server with model: {{ model.name }}"
+    echo "Successfully started llama-server with model: $model_name"
     # Write the active model to Consul KV for other services to discover
-    {# djlint:off H022 #}
-    curl -X PUT --data "{{ model.name }}" http://127.0.0.1:8500/v1/kv/experts/{{ job_name }}/active_model
-    {# djlint:on #}
+    curl -X PUT --data "$model_name" "http://127.0.0.1:8500/v1/kv/experts/${NOMAD_META_expert_name}/active_model"
     wait $server_pid
     exit 0
   else
-    echo "Server failed to become healthy with model: {{ model.name }}. Killing process PID $server_pid..."
+    echo "Server failed to become healthy with model: $model_name. Killing process PID $server_pid..."
     kill $server_pid
     wait $server_pid 2>/dev/null
   fi
-{% endfor %}
+done
 
 echo "All models failed to start. Exiting."
 exit 1
@@ -136,7 +144,7 @@ EOH
   }
 
   group "workers" {
-    count = {{ final_worker_count }}
+    count = 1 # This can be parameterized later if needed
 
     network {
       mode = "host"
@@ -144,7 +152,7 @@ EOH
     }
 
     service {
-      name     = "{{ job_name }}-worker"
+      name     = "expert-${meta.expert_name}-worker"
       provider = "consul"
       port     = "rpc"
 
@@ -162,7 +170,7 @@ EOH
         data = <<EOH
 #!/bin/bash
 set -e
-/usr/local/bin/rpc-server --host 0.0.0.0 --port {{ '{{' }} env "NOMAD_PORT_rpc" {{ '}}' }}
+/usr/local/bin/rpc-server --host 0.0.0.0 --port {{ env "NOMAD_PORT_rpc" }}
 EOH
         destination = "local/run_rpc.sh"
         perms       = "0755"

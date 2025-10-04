@@ -81,17 +81,36 @@
     mode: '0755'
   become: yes
 
-- name: Deploy Prima Expert Nomad job template
-  ansible.builtin.template:
-    src: ../../jobs/prima-expert.nomad
-    dest: /opt/nomad/jobs/prima-expert.nomad
+- name: Copy generic expert Nomad job file
+  ansible.builtin.copy:
+    src: ../../jobs/expert.nomad
+    dest: /opt/nomad/jobs/expert.nomad
     mode: '0644'
-  vars:
-    job_name: "prima-expert-main"
-    service_name: "prima-api-main"
-    namespace: "default"
-    expert_models: "{{ main_expert_models }}"
-    worker_count: 1
+
+- name: Stop and purge any existing expert jobs to ensure idempotency
+  ansible.builtin.command:
+    cmd: nomad job stop -purge "expert-{{ item }}"
+  loop:
+    - main
+    - coding
+    - math
+    - extract
+  register: expert_job_stop_status
+  changed_when: "expert_job_stop_status.rc == 0"
+  failed_when: false # Don't fail if the job doesn't exist
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+
+- name: Run expert jobs
+  ansible.builtin.command:
+    cmd: nomad job run -meta "expert_name={{ item }}" /opt/nomad/jobs/expert.nomad
+  loop:
+    - main
+    - coding
+    - math
+    - extract
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
 - name: Copy benchmark Nomad job file
   ansible.builtin.template:
