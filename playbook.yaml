@@ -150,8 +150,7 @@
       delegate_to: localhost
 
 - name: Play 3 - Final Verification
-  hosts: localhost
-  connection: local
+  hosts: all
   become: no
   gather_facts: no
   tasks:
@@ -196,7 +195,6 @@
 
 - name: Play 4 - Deploy Core AI Services and Applications
   hosts: controller_nodes[0]
-  connection: local
 
   pre_tasks:
     - name: Load model variables

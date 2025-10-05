@@ -140,7 +140,7 @@
 
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
-    cmd: "/opt/pipecatapp/venv/bin/python -m playwright install"
+    cmd: "/home/{{ target_user }}/.local/bin/python -m playwright install"
 
   become: yes
   become_user: "{{ target_user }}"

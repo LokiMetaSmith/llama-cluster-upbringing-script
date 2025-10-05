@@ -374,37 +374,36 @@ class TwinService(FrameProcessor):
     def get_discovered_experts(self) -> list[str]:
         """Discovers available 'expert' services registered in Consul.
 
-        It queries the Consul catalog for services with the 'expert' tag.
+        It queries the Consul catalog for services with the 'expert' tag or
+        with names following the 'llamacpp-rpc-<name>' convention.
 
         Returns:
             list[str]: A list of discovered expert names (e.g., "main", "coding").
         """
+        # Start with externally configured experts
         expert_names = set(self.experts.keys())
         try:
             response = requests.get(f"{self.consul_http_addr}/v1/catalog/services")
             response.raise_for_status()
             services = response.json()
-            # Discover local experts by the "expert" tag
+
+            # Discover local experts from Consul by service name and tags
             for name, service_info in services.items():
+                # Method 1: Discover from service name convention (e.g., "llamacpp-rpc-coding")
+                if name.startswith("llamacpp-rpc-"):
+                    expert_names.add(name.replace("llamacpp-rpc-", ""))
+
+                # Method 2: Discover from "expert" tag
                 tags = service_info.get("Tags", [])
                 if "expert" in tags:
-                    # The expert name is also a tag
+                    # The expert name is also a tag. Ignore common tags like "llm".
                     for tag in tags:
-                        if tag != "expert":
+                        if tag not in ["expert", "llm"]:
                             expert_names.add(tag)
-                            break
-            # Discover local experts from Consul
-            local_experts = {
-                name.replace("llamacpp-rpc-", "")
-                for name in services.keys()
-                if name.startswith("llamacpp-rpc-")
-            }
-            # Combine with externally configured experts
-            expert_names = set(self.experts.keys())
-            expert_names.update(local_experts)
+                            break  # Assume only one expert name tag per service
         except requests.exceptions.RequestException as e:
             logging.error(f"Could not connect to Consul for expert discovery: {e}")
-            
+
         return sorted(list(expert_names))
 
     def get_system_prompt(self, expert_name: str = "router") -> str:
@@ -877,7 +876,7 @@ async def main():
         raise RuntimeError(f"STT_SERVICE not configured correctly in Consul. Got '{stt_service_name}'")
 
     # Discover the main LLM service from Consul
-    main_llm_service_name = app_config.get("prima_api_service_name", "prima-api-main")
+    main_llm_service_name = app_config.get("llama_api_service_name", "llamacpp-rpc-api")
     consul_http_addr = f"http://{consul_host}:{consul_port}"
     llm_base_url = await discover_service(main_llm_service_name, consul_http_addr)
 
