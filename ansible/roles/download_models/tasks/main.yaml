@@ -5,21 +5,24 @@
     embedding_models_to_download: []
     piper_files_to_download: []
 
+# LLM Models
 - name: Query Consul for all LLM expert model lists
-  community.general.consul_kv:
-    key: "{{ item }}"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/kv/{{ item }}?raw=true"
+    return_content: yes
   loop:
     - config/models/main
     - config/models/coding
     - config/models/math
     - config/models/extract
   register: llm_expert_results
+  ignore_errors: true
 
 - name: Aggregate all LLM models to be downloaded
   ansible.builtin.set_fact:
-    llm_models_to_download: "{{ llm_models_to_download + (item.value | from_json) }}"
+    llm_models_to_download: "{{ llm_models_to_download + (item.content | from_json) }}"
   loop: "{{ llm_expert_results.results }}"
-  when: item.value is defined and item.value != ""
+  when: item.content is defined and item.content and item.status == 200
 
 - name: Download all LLM models
   ansible.builtin.get_url:
@@ -31,14 +34,17 @@
   loop_control:
     loop_var: item
 
+# Piper Voice Files
 - name: Query Consul for Piper voice files
-  community.general.consul_kv:
-    key: "config/models/piper_voice_files"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/kv/config/models/piper_voice_files?raw=true"
+    return_content: yes
   register: piper_voice_files_result
+  ignore_errors: true
 
 - name: Set piper files fact
   ansible.builtin.set_fact:
-    piper_files_to_download: "{{ (piper_voice_files_result.value | from_json) if piper_voice_files_result.value else [] }}"
+    piper_files_to_download: "{{ (piper_voice_files_result.content | from_json) if piper_voice_files_result.content and piper_voice_files_result.status == 200 else [] }}"
 
 - name: Download all Text-to-Speech model files
   ansible.builtin.get_url:
@@ -50,14 +56,17 @@
   loop_control:
     loop_var: item
 
+# Vision Models
 - name: Query Consul for Vision models
-  community.general.consul_kv:
-    key: "config/models/vision_models"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/kv/config/models/vision_models?raw=true"
+    return_content: yes
   register: vision_models_result
+  ignore_errors: true
 
 - name: Set vision models fact
   ansible.builtin.set_fact:
-    vision_models_to_download: "{{ (vision_models_result.value | from_json) if vision_models_result.value else [] }}"
+    vision_models_to_download: "{{ (vision_models_result.content | from_json) if vision_models_result.content and vision_models_result.status == 200 else [] }}"
 
 - name: Download all Vision models (URL-based)
   ansible.builtin.get_url:
@@ -78,14 +87,17 @@
   loop_control:
     loop_var: item
 
+# Embedding Models
 - name: Query Consul for Embedding models
-  community.general.consul_kv:
-    key: "config/models/embedding_models"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/kv/config/models/embedding_models?raw=true"
+    return_content: yes
   register: embedding_models_result
+  ignore_errors: true
 
 - name: Set embedding models fact
   ansible.builtin.set_fact:
-    embedding_models_to_download: "{{ (embedding_models_result.value | from_json) if embedding_models_result.value else [] }}"
+    embedding_models_to_download: "{{ (embedding_models_result.content | from_json) if embedding_models_result.content and embedding_models_result.status == 200 else [] }}"
 
 - name: Download all Embedding models (Hub-based)
   ansible.builtin.script: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/embedding/{{ item.name }}"

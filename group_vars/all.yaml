@@ -1,4 +1,4 @@
-expected_cluster_size: "{{ groups['workers'] | default([]) | length }}"
+expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
 
 # This variable dynamically determines the IP address for Nomad to advertise.
 # It prefers the first non-loopback IPv6 address if available,
