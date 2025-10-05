@@ -24,12 +24,20 @@
   loop: "{{ llm_expert_results.results }}"
   when: item.content is defined and item.content and item.status == 200
 
+- name: Check for existing LLM models
+  ansible.builtin.stat:
+    path: "/opt/nomad/models/llm/{{ item.filename }}"
+  loop: "{{ llm_models_to_download | unique(attribute='url') }}"
+  register: llm_model_files
+  become: yes
+
 - name: Download all LLM models
   ansible.builtin.get_url:
-    url: "{{ item.url }}"
-    dest: "/opt/nomad/models/llm/{{ item.filename }}"
+    url: "{{ item.item.url }}"
+    dest: "/opt/nomad/models/llm/{{ item.item.filename }}"
     mode: '0644'
-  loop: "{{ llm_models_to_download | unique(attribute='url') }}"
+  loop: "{{ llm_model_files.results }}"
+  when: not item.stat.exists
   become: yes
   loop_control:
     loop_var: item
@@ -46,12 +54,20 @@
   ansible.builtin.set_fact:
     piper_files_to_download: "{{ (piper_voice_files_result.content | from_json) if piper_voice_files_result.content and piper_voice_files_result.status == 200 else [] }}"
 
+- name: Check for existing TTS model files
+  ansible.builtin.stat:
+    path: "/opt/nomad/models/tts/{{ item.filename }}"
+  loop: "{{ piper_files_to_download }}"
+  register: tts_model_files
+  become: yes
+
 - name: Download all Text-to-Speech model files
   ansible.builtin.get_url:
-    url: "{{ item.url }}"
-    dest: "/opt/nomad/models/tts/{{ item.filename }}"
+    url: "{{ item.item.url }}"
+    dest: "/opt/nomad/models/tts/{{ item.item.filename }}"
     mode: '0644'
-  loop: "{{ piper_files_to_download }}"
+  loop: "{{ tts_model_files.results }}"
+  when: not item.stat.exists
   become: yes
   loop_control:
     loop_var: item
@@ -68,12 +84,20 @@
   ansible.builtin.set_fact:
     vision_models_to_download: "{{ (vision_models_result.content | from_json) if vision_models_result.content and vision_models_result.status == 200 else [] }}"
 
+- name: Check for existing Vision models (URL-based)
+  ansible.builtin.stat:
+    path: "/opt/nomad/models/vision/{{ item.filename }}"
+  loop: "{{ vision_models_to_download | selectattr('url', 'defined') | list }}"
+  register: vision_model_files_url
+  become: yes
+
 - name: Download all Vision models (URL-based)
   ansible.builtin.get_url:
-    url: "{{ item.url }}"
-    dest: "/opt/nomad/models/vision/{{ item.filename }}"
+    url: "{{ item.item.url }}"
+    dest: "/opt/nomad/models/vision/{{ item.item.filename }}"
     mode: '0644'
-  loop: "{{ vision_models_to_download | selectattr('url', 'defined') | list }}"
+  loop: "{{ vision_model_files_url.results }}"
+  when: not item.stat.exists
   become: yes
   loop_control:
     loop_var: item
@@ -81,7 +105,8 @@
 - name: Download all Vision models (Hub-based)
   ansible.builtin.script: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/vision/{{ item.name }}"
   args:
-    executable: "/home/{{ target_user }}/.local/bin/python3"
+    executable: "/opt/pipecatapp/venv/bin/python"
+    creates: "/opt/nomad/models/vision/{{ item.name }}"
   loop: "{{ vision_models_to_download | selectattr('repo_id', 'defined') | list }}"
   become: yes
   loop_control:
@@ -102,7 +127,8 @@
 - name: Download all Embedding models (Hub-based)
   ansible.builtin.script: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/embedding/{{ item.name }}"
   args:
-    executable: "/home/{{ target_user }}/.local/bin/python3"
+    executable: "/opt/pipecatapp/venv/bin/python"
+    creates: "/opt/nomad/models/embedding/{{ item.name }}"
   loop: "{{ embedding_models_to_download | selectattr('repo_id', 'defined') | list }}"
   become: yes
   loop_control:
