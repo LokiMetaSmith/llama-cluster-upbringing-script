@@ -51,3 +51,11 @@ external_experts_config:
 openai_api_key: "sk-your_openai_api_key_here"
 
 # Model definitions have been moved to group_vars/models.yaml
+
+# A list of all available experts. This is used to dynamically generate
+# the Nomad jobs for each expert model.
+experts:
+  - main
+  - coding
+  - math
+  - extract
