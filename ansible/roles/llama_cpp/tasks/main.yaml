@@ -1,3 +1,7 @@
+- name: Load common variables
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/group_vars/all.yaml"
+
 - name: Install build and runtime dependencies for llama.cpp
   ansible.builtin.apt:
     name:
