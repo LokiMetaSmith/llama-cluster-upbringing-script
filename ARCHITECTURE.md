@@ -30,7 +30,7 @@ This layer takes the base Debian installs and configures them into a functional,
     - **Status Tracking:** It provides API endpoints to monitor the status of ongoing and completed provisioning jobs.
     - **Failure Logging:** If a provisioning run fails, it automatically captures the error log and appends it to a `TODO.md` file for administrative review.
     - **Race Condition Prevention:** It uses file locking to ensure the integrity of the inventory file when multiple nodes call home simultaneously.
-  - **Agent Bootstrapping:** A new role, `bootstrap_agent`, runs at the end of the initial playbook run. Its sole purpose is to perform the "Day 2" setup of the primary control node, automatically deploying the `prima-expert` and `pipecatapp` Nomad jobs. This action transforms the freshly provisioned control node into a fully autonomous AI agent, ready to manage the cluster.
+  - **Agent Bootstrapping:** A new role, `bootstrap_agent`, runs at the end of the initial playbook run. Its sole purpose is to perform the "Day 2" setup of the primary control node, automatically deploying the `llamacpp-rpct` and `pipecatapp` Nomad jobs. This action transforms the freshly provisioned control node into a fully autonomous AI agent, ready to manage the cluster.
 - **Workflow:**
   1. An administrator manually sets up the first control node and runs the main Ansible playbook. This playbook installs the `provisioning_api` and runs the `bootstrap_agent` role to make the node self-aware.
   2. A new, PXE-booted client runs a "call home" script on its first boot, sending its hostname and IP address to the `provisioning_api`.
@@ -42,9 +42,9 @@ This layer takes the base Debian installs and configures them into a functional,
 This layer is responsible for deploying, managing, and scaling the various services that make up the AI agent.
 
 - **Technology:** [HashiCorp Nomad](https://www.nomadproject.io/) for orchestration and [HashiCorp Consul](https://www.consul.io/) for service discovery.
-- **Implementation:** Services are defined as declarative job files (e.g., `pipecatapp.nomad`, `prima-expert.nomad`).
+- **Implementation:** Services are defined as declarative job files (e.g., `pipecatapp.nomad`, `llamacpp-rpc.nomad`).
 - **Workflow:**
-  1. The `bootstrap_agent` Ansible role automatically deploys the core `prima-expert` and `pipecatapp` jobs to Nomad on the primary control node.
+  1. The `bootstrap_agent` Ansible role automatically deploys the core `llamacpp-rpc` and `pipecatapp` jobs to Nomad on the primary control node.
   2. For advanced use cases, an administrator can still manually deploy additional jobs (e.g., specialized experts) using the `nomad job run` command.
   3. Nomad schedules all jobs on available worker nodes based on their resource requirements.
   4. **Service Discovery:** As jobs start, they automatically register with Consul. For example, the `TwinService` can dynamically discover all available "expert" LLM backends by querying Consul for services tagged with a specific pattern.
