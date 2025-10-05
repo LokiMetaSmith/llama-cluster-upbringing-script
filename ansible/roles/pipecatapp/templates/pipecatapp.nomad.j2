@@ -13,7 +13,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     }
     
     service {
-      name     = "{{ service_name | default('prima-api-main') }}"
+      name     = "{{ service_name | default('pipecat-app') }}"
       port     = "http"
       provider = "consul"
 

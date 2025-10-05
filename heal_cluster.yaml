@@ -11,7 +11,7 @@
     target_user: "loki"
 
   tasks:
-    - name: Ensure prima-expert-main job is running
+    - name: Ensure llamacpp-rpc job is running
       ansible.builtin.include_role:
         name: bootstrap_agent
         tasks_from: deploy_llama_cpp_model.yaml
