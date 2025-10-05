@@ -59,6 +59,7 @@
         dest: /opt/cluster-infra/
         rsync_opts:
           - "--exclude=.git"
+      when: inventory_hostname != 'localhost'
 
   roles:
     - system_deps
@@ -129,7 +130,7 @@
   post_tasks:
     - name: Read rendered Nomad config file
       ansible.builtin.slurp:
-        src: /etc/nomad.d/nomad.hcl
+        src: /etc/nomad.d/client.hcl
       register: nomad_config_file
 
     - name: Display rendered Nomad config file
@@ -192,6 +193,9 @@
 - name: Play 4 - Deploy Core AI Services and Applications
   hosts: controller_nodes[0]
   connection: local
+  vars_files:
+    - group_vars/all.yaml
+    - group_vars/models.yaml
   roles:
     - role: bootstrap_agent
     - role: pipecatapp

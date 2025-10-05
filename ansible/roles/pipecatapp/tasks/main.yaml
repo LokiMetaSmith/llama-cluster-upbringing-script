@@ -145,6 +145,12 @@
     dest: /opt/nomad/jobs/evolve-prompt.nomad
   become: yes
 
+- name: Copy test runner Nomad job template
+  ansible.builtin.copy:
+    src: ../../jobs/test-runner.nomad.j2
+    dest: /opt/nomad/jobs/test-runner.nomad.j2
+  become: yes
+
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
     cmd: "/opt/pipecatapp/venv/bin/python -m playwright install"
