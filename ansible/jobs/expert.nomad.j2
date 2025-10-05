@@ -1,10 +1,9 @@
-job "expert-${meta.expert_name}" {
+job "expert-{{ expert_name }}" {
   datacenters = ["dc1"]
   namespace   = "default"
 
   meta {
-    # This will be overridden by the `nomad run -meta` command
-    expert_name = "main"
+    expert_name = "{{ expert_name }}"
   }
 
   group "master" {
@@ -22,10 +21,10 @@ job "expert-${meta.expert_name}" {
     }
 
     service {
-      name     = "prima-api-${meta.expert_name}"
+      name     = "prima-api-{{ expert_name }}"
       provider = "consul"
       port     = "http"
-      tags     = ["expert", "${meta.expert_name}"]
+      tags     = ["expert", "{{ expert_name }}"]
 
       check {
         type     = "http"
@@ -152,7 +151,7 @@ EOH
     }
 
     service {
-      name     = "expert-${meta.expert_name}-worker"
+      name     = "expert-{{ expert_name }}-worker"
       provider = "consul"
       port     = "rpc"
 
