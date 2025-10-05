@@ -64,7 +64,7 @@ else
   echo "No workers found after waiting. Starting in standalone mode."
 fi
 
-health_check_url="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
+health_check_url="http://127.0.0.1:{{ '{{' }} env \"NOMAD_PORT_http\" {{ '}}' }}/health"
 
 echo "Fetching model configuration from Consul..."
 MODEL_CONFIG_JSON=$(curl -s http://127.0.0.1:8500/v1/kv/config/models/${NOMAD_META_expert_name}?raw)
@@ -84,7 +84,7 @@ for model_data in $(echo "$MODEL_CONFIG_JSON" | jq -c '.[]'); do
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/${model_filename}" \
     --host 0.0.0.0 \
-    --port {{ env "NOMAD_PORT_http" }} \
+    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --n-gpu-layers 999 \
     --fa auto \
     --mlock \
@@ -169,7 +169,7 @@ EOH
         data = <<EOH
 #!/bin/bash
 set -e
-/usr/local/bin/rpc-server --host 0.0.0.0 --port {{ env "NOMAD_PORT_rpc" }}
+/usr/local/bin/rpc-server --host 0.0.0.0 --port {{ '{{' }} env "NOMAD_PORT_rpc" {{ '}}' }}
 EOH
         destination = "local/run_rpc.sh"
         perms       = "0755"
