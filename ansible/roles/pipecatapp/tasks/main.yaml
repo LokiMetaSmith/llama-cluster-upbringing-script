@@ -13,13 +13,6 @@
     recurse: yes
   become: yes
 
-- name: Create pipecat configuration file
-  ansible.builtin.template:
-    src: pipecat_config.json.j2
-    dest: /opt/pipecatapp/pipecat_config.json
-    mode: '0644'
-  become: yes
-
 - name: Copy pipecat app
   ansible.builtin.copy:
     src: app.py
@@ -147,7 +140,7 @@
 
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
-    cmd: "/opt/pipecatapp/venv/bin/python -m playwright install"
+    cmd: "/home/{{ target_user }}/.local/bin/python -m playwright install"
 
   become: yes
   become_user: "{{ target_user }}"
