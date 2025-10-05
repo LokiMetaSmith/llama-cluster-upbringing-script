@@ -1,62 +1,42 @@
-- name: Populate Consul KV with Main Expert Models
-  community.general.consul_kv:
-    key: "config/models/main"
-    value: "{{ main_expert_models | to_json }}"
+- name: Populate Consul KV with Model Configurations
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/kv/config/models/{{ item.key }}"
+    method: PUT
+    body: "{{ item.value | to_json }}"
+    status_code: 200
+  loop:
+    - { key: 'main', value: "{{ main_expert_models }}" }
+    - { key: 'coding', value: "{{ coding_expert_models }}" }
+    - { key: 'math', value: "{{ math_expert_models }}" }
+    - { key: 'extract', value: "{{ extract_expert_models }}" }
+    - { key: 'tts_voices', value: "{{ tts_voices }}" }
+    - { key: 'piper_voice_files', value: "{{ piper_voice_files }}" }
+    - { key: 'embedding_models', value: "{{ embedding_models }}" }
+    - { key: 'stt_models', value: "{{ stt_models }}" }
+    - { key: 'vision_models', value: "{{ vision_models }}" }
+  loop_control:
+    label: "{{ item.key }}"
 
-- name: Populate Consul KV with Coding Expert Models
-  community.general.consul_kv:
-    key: "config/models/coding"
-    value: "{{ coding_expert_models | to_json }}"
-
-- name: Populate Consul KV with Math Expert Models
-  community.general.consul_kv:
-    key: "config/models/math"
-    value: "{{ math_expert_models | to_json }}"
-
-- name: Populate Consul KV with Extract Expert Models
-  community.general.consul_kv:
-    key: "config/models/extract"
-    value: "{{ extract_expert_models | to_json }}"
-
-- name: Populate Consul KV with TTS Voices
-  community.general.consul_kv:
-    key: "config/models/tts_voices"
-    value: "{{ tts_voices | to_json }}"
-
-- name: Populate Consul KV with Piper Voice Files
-  community.general.consul_kv:
-    key: "config/models/piper_voice_files"
-    value: "{{ piper_voice_files | to_json }}"
-
-- name: Populate Consul KV with Embedding Models
-  community.general.consul_kv:
-    key: "config/models/embedding_models"
-    value: "{{ embedding_models | to_json }}"
-
-- name: Populate Consul KV with STT Models
-  community.general.consul_kv:
-    key: "config/models/stt_models"
-    value: "{{ stt_models | to_json }}"
-
-- name: Populate Consul KV with Vision Models
-  community.general.consul_kv:
-    key: "config/models/vision_models"
-    value: "{{ vision_models | to_json }}"
-
-- name: Populate Consul KV with App Config
-  community.general.consul_kv:
-    key: "config/app/settings"
-    value:
-      prima_api_service_name: "{{ prima_api_service_name }}"
-      use_summarizer: "{{ use_summarizer }}"
-      stt_service: "{{ stt_service }}"
-      pipecat_app_dir: "{{ pipecat_app_dir }}"
-      pipecat_log_file: "{{ pipecat_log_file }}"
-      active_stt_provider: "{{ active_stt_provider }}"
-      active_stt_model_name: "{{ active_stt_model_name }}"
-      pipecat_api_keys: "{{ pipecat_api_keys }}"
-      external_experts_config: "{{ external_experts_config }}"
-      openai_api_key: "{{ openai_api_key }}"
-      advertise_ip: "{{ advertise_ip }}"
-      nomad_models_dir: "{{ nomad_models_dir }}"
-      expected_cluster_size: "{{ expected_cluster_size }}"
+- name: Populate Consul KV with App Settings
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/kv/config/app/settings"
+    method: PUT
+    body: >
+      {{
+        {
+          "llama_api_service_name": llama_api_service_name,
+          "use_summarizer": use_summarizer,
+          "stt_service": stt_service,
+          "pipecat_app_dir": pipecat_app_dir,
+          "pipecat_log_file": pipecat_log_file,
+          "active_stt_provider": active_stt_provider,
+          "active_stt_model_name": active_stt_model_name,
+          "pipecat_api_keys": pipecat_api_keys,
+          "external_experts_config": external_experts_config,
+          "openai_api_key": openai_api_key,
+          "advertise_ip": advertise_ip,
+          "nomad_models_dir": nomad_models_dir,
+          "expected_cluster_size": expected_cluster_size
+        } | to_json
+      }}
+    status_code: 200
