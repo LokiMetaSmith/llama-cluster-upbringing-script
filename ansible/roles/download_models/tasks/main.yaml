@@ -33,10 +33,11 @@
 
 - name: Download all LLM models
   ansible.builtin.get_url:
-    url: "{{ item.item.url }}"
-    dest: "/opt/nomad/models/llm/{{ item.item.filename }}"
+    url: "{{ item.url }}"
+    dest: "/opt/nomad/models/llm/{{ item.filename }}"
     mode: '0644'
-  loop: "{{ llm_model_files.results }}"
+  loop: "{{ llm_model_files.results | unique(attribute='url')  }}"
+  
   when: not item.stat.exists
   become: yes
   loop_control:
@@ -64,7 +65,7 @@
 - name: Download all Text-to-Speech model files
   ansible.builtin.get_url:
     url: "{{ item.item.url }}"
-    dest: "/opt/nomad/models/tts/{{ item.item.filename }}"
+    dest: "/opt/nomad/models/tts/{{ item.filename }}"
     mode: '0644'
   loop: "{{ tts_model_files.results }}"
   when: not item.stat.exists
@@ -94,7 +95,7 @@
 - name: Download all Vision models (URL-based)
   ansible.builtin.get_url:
     url: "{{ item.item.url }}"
-    dest: "/opt/nomad/models/vision/{{ item.item.filename }}"
+    dest: "/opt/nomad/models/vision/{{ item.filename }}"
     mode: '0644'
   loop: "{{ vision_model_files_url.results }}"
   when: not item.stat.exists
