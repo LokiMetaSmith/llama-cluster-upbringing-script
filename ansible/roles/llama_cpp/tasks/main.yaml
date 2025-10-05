@@ -103,7 +103,7 @@
 
 - name: Run expert jobs
   ansible.builtin.command:
-    cmd: nomad job run -meta "expert_name={{ item }}" /opt/nomad/jobs/expert.nomad
+    cmd: nomad job run -var "expert_name={{ item }}" /opt/nomad/jobs/expert.nomad
   loop:
     - main
     - coding
