@@ -106,7 +106,6 @@
         - provisioning_api
         - desktop_extras
         - paddler
-        - pipecatapp
         - vision
         - bootstrap_agent
         - power_manager
@@ -119,6 +118,7 @@
       loop:
         - download_models
         - llama_cpp
+        - pipecatapp
         - whisper_cpp
       loop_control:
         loop_var: role_name
