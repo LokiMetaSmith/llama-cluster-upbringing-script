@@ -30,9 +30,6 @@ job "{{ job_name | default('pipecat-app') }}" {
  
       config {
         command = "/opt/pipecatapp/start_pipecat.sh"
-        volumes = [
-          "{{ host_volume_source | default('/opt/pipecatapp') }}:/opt/pipecatapp",
-        ]
       }
 
       resources {
