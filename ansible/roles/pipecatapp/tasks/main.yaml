@@ -142,7 +142,7 @@
   ansible.builtin.template:
     src: ../../jobs/llamacpp-rpc.nomad.j2
     dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
-  loop: "{{ expert_names }}"
+  loop: "{{ experts }}"
   vars:
     job_name: "expert-{{ item }}"
     service_name: "prima-api-{{ item }}"

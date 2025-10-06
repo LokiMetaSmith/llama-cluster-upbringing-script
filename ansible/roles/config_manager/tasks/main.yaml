@@ -4,16 +4,17 @@
     method: PUT
     body: "{{ item.value | to_json }}"
     status_code: 200
-  loop:
-    - { key: 'main', value: "{{ main_expert_models }}" }
-    - { key: 'coding', value: "{{ coding_expert_models }}" }
-    - { key: 'math', value: "{{ math_expert_models }}" }
-    - { key: 'extract', value: "{{ extract_expert_models }}" }
-    - { key: 'tts_voices', value: "{{ tts_voices }}" }
-    - { key: 'piper_voice_files', value: "{{ piper_voice_files }}" }
-    - { key: 'embedding_models', value: "{{ embedding_models }}" }
-    - { key: 'stt_models', value: "{{ stt_models }}" }
-    - { key: 'vision_models', value: "{{ vision_models }}" }
+  loop: >
+    {{
+      (expert_models | dict2items) +
+      [
+        { 'key': 'tts_voices', 'value': tts_voices },
+        { 'key': 'piper_voice_files', 'value': piper_voice_files },
+        { 'key': 'embedding_models', 'value': embedding_models },
+        { 'key': 'stt_models', 'value': stt_models },
+        { 'key': 'vision_models', 'value': vision_models }
+      ]
+    }}
   loop_control:
     label: "{{ item.key }}"
 
