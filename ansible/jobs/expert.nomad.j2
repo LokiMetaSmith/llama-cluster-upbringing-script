@@ -10,9 +10,9 @@
 
 {% set suitable_models = model_list | selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | list %}
 
-job "{{ job_name | default("expert-{{ expert_name }}") }}" {
+job "expert-{{ expert_name }}" {
   datacenters = ["dc1"]
-  namespace   = "{{ namespace | default('default') }}"
+  namespace   = "default"
 
   meta {
     expert_name = "{{ expert_name }}"
@@ -41,7 +41,7 @@ job "{{ job_name | default("expert-{{ expert_name }}") }}" {
     }
 
     task "llama-server-master" {
-      driver = "exec"
+      driver = "raw_exec"
 
       template {
         data = <<EOH
@@ -67,7 +67,7 @@ done
 rpc_args=""
 if [ -n "$worker_ips" ]; then
   echo "Workers found. Configuring RPC."
-  rpc_args="--rpc-servers $worker_ips"
+  rpc_args="--rpc $worker_ips"
 else
   echo "No workers found after waiting. Starting in standalone mode."
 fi
@@ -87,7 +87,7 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env \"NOMAD_PORT_http\" {{ '}}' }}
     --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --n-gpu-layers 99 \
     --mlock \
-    --rpc $worker_ips &
+    $rpc_args &
 
   server_pid=$!
   echo "Server process started (PID $server_pid). Waiting for health check..."
