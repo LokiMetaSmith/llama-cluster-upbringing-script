@@ -33,11 +33,10 @@
 
 - name: Download all LLM models
   ansible.builtin.get_url:
-    url: "{{ item.url }}"
-    dest: "/opt/nomad/models/llm/{{ item.filename }}"
+    url: "{{ item.item.url }}"
+    dest: "/opt/nomad/models/llm/{{ item.item.filename }}"
     mode: '0644'
   loop: "{{ llm_model_files.results }}"
-  
   when: not item.stat.exists
   become: yes
   loop_control:

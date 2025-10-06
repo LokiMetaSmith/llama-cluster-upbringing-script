@@ -29,7 +29,7 @@
     job_name: "llamacpp-rpc"
     service_name: "llamacpp-rpc-api"
     namespace: "default"
-    model_list: "{{ main_expert_models }}"
+    model_list: "{{ expert_models['main'] }}"
     worker_count: 1
 
   tasks:

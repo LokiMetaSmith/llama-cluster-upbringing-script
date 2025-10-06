@@ -99,7 +99,7 @@
   loop: "{{ experts }}"
   vars:
     expert_name: "{{ item }}"
-    model_list: "{{ vars[item + '_expert_models'] }}"
+    model_list: "{{ expert_models[item] }}"
 
 - name: Run expert jobs
   ansible.builtin.command:
