@@ -308,8 +308,6 @@ async def load_config_from_consul(consul_host, consul_port):
 
     except Exception as e:
         logging.error(f"Error loading configuration from Consul: {e}")
-    finally:
-        await c.close()
     return config
 
 class TwinService(FrameProcessor):

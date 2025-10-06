@@ -1,17 +1,23 @@
 # This Nomad job starts a distributed llama.cpp RPC cluster.
 # It consists of one "master" node that runs the main llama-server,
 # and one or more "worker" nodes that run the rpc-server for offloading.
+ 
 # --- DYNAMIC MODEL SELECTION ---
 # This Jinja2 block filters the full list of models to only include
 # those that can fit within the host system's memory, adding a 2GB buffer.
 {% set memory_buffer_mb = 2048 %}
 {% set available_memory_mb = ansible_memtotal_mb - memory_buffer_mb %}
-{% set suitable_models = model_list |
-selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | list %}
 
-job "{{ job_name | default('prima-expert-main') }}" {
+{% set suitable_models = model_list | selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | list %}
+
+job "{{ job_name | default("expert-{{ expert_name }}") }}" {
   datacenters = ["dc1"]
   namespace   = "{{ namespace | default('default') }}"
+
+  meta {
+    expert_name = "{{ expert_name }}"
+  }
+
 
   # --- MASTER GROUP ---
   # This group runs the main llama-server which acts as the entry point.
@@ -35,7 +41,7 @@ job "{{ job_name | default('prima-expert-main') }}" {
     }
 
     task "llama-server-master" {
-      driver = "raw_exec"
+      driver = "exec"
 
       template {
         data = <<EOH
@@ -57,16 +63,20 @@ then
   sleep 10
 done
 
-if [ -z "$worker_ips" ];
-then
-  echo "FATAL: No RPC workers became available after 5 minutes. Exiting."
-  exit 1
+
+rpc_args=""
+if [ -n "$worker_ips" ]; then
+  echo "Workers found. Configuring RPC."
+  rpc_args="--rpc-servers $worker_ips"
+else
+  echo "No workers found after waiting. Starting in standalone mode."
 fi
 
-health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
+health_check_url="http://127.0.0.1:{{ '{{' }} env \"NOMAD_PORT_http\" {{ '}}' }}/health"
 
-# 2. Loop through suitable models for failover
-#    This list has been pre-filtered by Jinja2 to match system memory.
+# Loop through suitable models for failover
+# This list has been pre-filtered by Jinja2 to match system memory.
+
 {% if suitable_models %}
 {% for model in suitable_models %}
   echo "Attempting to start llama-server with suitable model: {{ model.name }}"
@@ -86,8 +96,9 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
   for i in {1..30};
   do
     sleep 10
-    if curl -s --fail $health_check_url > /dev/null;
-  then
+
+    if curl -s --fail $health_check_url > /dev/null; then
+
       echo "✅ Server is healthy with model {{ model.name }}!"
       healthy=true
       break
@@ -96,8 +107,12 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
     fi
   done
 
-  if [ "$healthy" = true ];
-  then
+
+  if [ "$healthy" = true ]; then
+    echo "Successfully started llama-server with model: {{ model.name }}"
+    # Write the active model to Consul KV for other services to discover
+    curl -X PUT --data "{{ model.name }}" "http://127.0.0.1:8500/v1/kv/experts/${NOMAD_META_expert_name}/active_model"
+
     wait $server_pid
     exit 0
   else
@@ -122,8 +137,16 @@ EOH
       }
 
       resources {
-        cpu    = 1000
+
+        cpu    = 2000
         memory = 4096 # Allocate memory for the master process itself
+      }
+
+      volume_mount {
+        volume      = "models"
+        destination = "/opt/nomad/models"
+        read_only   = true
+
       }
     }
   }
@@ -131,8 +154,9 @@ EOH
   # --- WORKER GROUP ---
   # This group runs the rpc-server processes that perform the actual inference.
   group "workers" {
-    count = {{ worker_count |
-default(1) }}
+
+    count = {{ worker_count | default(1) }}
+
 
     network {
       mode = "host"
