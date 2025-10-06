@@ -1,13 +1,13 @@
 # This Nomad job starts a distributed llama.cpp RPC cluster.
 # It consists of one "master" node that runs the main llama-server,
 # and one or more "worker" nodes that run the rpc-server for offloading.
-
 # --- DYNAMIC MODEL SELECTION ---
 # This Jinja2 block filters the full list of models to only include
 # those that can fit within the host system's memory, adding a 2GB buffer.
 {% set memory_buffer_mb = 2048 %}
 {% set available_memory_mb = ansible_memtotal_mb - memory_buffer_mb %}
-{% set suitable_models = model_list | selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | list %}
+{% set suitable_models = model_list |
+selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | list %}
 
 job "{{ job_name | default('prima-expert-main') }}" {
   datacenters = ["dc1"]
@@ -17,7 +17,6 @@ job "{{ job_name | default('prima-expert-main') }}" {
   # This group runs the main llama-server which acts as the entry point.
   group "master" {
     count = 1
-
     network {
       mode = "host"
       port "http" { to = 8080 }
@@ -46,9 +45,11 @@ echo "--- Starting RPC Master for {{ job_name }} ---"
 
 # 1. Discover RPC worker services via Consul
 worker_ips=""
-for i in {1..30}; do
-  worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '[.[] | .Service | "\(.Address):\(.Port)"] | join(",")')
-  if [ -n "$worker_ips" ]; then
+for i in {1..30}; 
+do
+  worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '[.[] | .Service | "\\(.Address):\\(.Port)"] | join(",")')
+  if [ -n "$worker_ips" ];
+then
     echo "Discovered Worker IPs: $worker_ips"
     break
   fi
@@ -56,12 +57,13 @@ for i in {1..30}; do
   sleep 10
 done
 
-if [ -z "$worker_ips" ]; then
+if [ -z "$worker_ips" ];
+then
   echo "FATAL: No RPC workers became available after 5 minutes. Exiting."
   exit 1
 fi
 
-health_check_url="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
+health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/health"
 
 # 2. Loop through suitable models for failover
 #    This list has been pre-filtered by Jinja2 to match system memory.
@@ -72,7 +74,7 @@ health_check_url="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
   /usr/local/bin/llama-server \
     --model "/opt/nomad/models/llm/{{ model.filename }}" \
     --host 0.0.0.0 \
-    --port {{ env "NOMAD_PORT_http" }} \
+    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --n-gpu-layers 99 \
     --mlock \
     --rpc $worker_ips &
@@ -81,9 +83,11 @@ health_check_url="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
   echo "Server process started (PID $server_pid). Waiting for health check..."
 
   healthy=false
-  for i in {1..30}; do
+  for i in {1..30};
+  do
     sleep 10
-    if curl -s --fail $health_check_url > /dev/null; then
+    if curl -s --fail $health_check_url > /dev/null;
+  then
       echo "✅ Server is healthy with model {{ model.name }}!"
       healthy=true
       break
@@ -92,7 +96,8 @@ health_check_url="http://127.0.0.1:{{ env "NOMAD_PORT_http" }}/health"
     fi
   done
 
-  if [ "$healthy" = true ]; then
+  if [ "$healthy" = true ];
+  then
     wait $server_pid
     exit 0
   else
@@ -126,7 +131,8 @@ EOH
   # --- WORKER GROUP ---
   # This group runs the rpc-server processes that perform the actual inference.
   group "workers" {
-    count = {{ worker_count | default(1) }}
+    count = {{ worker_count |
+default(1) }}
 
     network {
       mode = "host"
@@ -151,7 +157,7 @@ EOH
         command = "/usr/local/bin/rpc-server"
         args = [
           "--host", "0.0.0.0",
-          "--port", "${NOMAD_PORT_rpc}"
+          "--port", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}"
         ]
       }
 
@@ -162,4 +168,3 @@ EOH
     }
   }
 }
-
