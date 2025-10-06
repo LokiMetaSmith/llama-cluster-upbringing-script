@@ -35,7 +35,7 @@ job "expert-{{ expert_name }}" {
     }
 
     task "llama-server-master" {
-      driver = "exec"
+      driver = "raw_exec"
 
       template {
         data = <<EOH
@@ -86,7 +86,7 @@ for model_data in $(echo "$MODEL_CONFIG_JSON" | jq -c '.[]'); do
     --host 0.0.0.0 \
     --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --n-gpu-layers 999 \
-    --fa auto \
+    --flash-attn auto \
     --mlock \
     $rpc_args &
 
@@ -163,20 +163,14 @@ EOH
     }
 
     task "rpc-server-worker" {
-      driver = "exec"
-
-      template {
-        data = <<EOH
-#!/bin/bash
-set -e
-/usr/local/bin/rpc-server --host 0.0.0.0 --port {{ '{{' }} env "NOMAD_PORT_rpc" {{ '}}' }}
-EOH
-        destination = "local/run_rpc.sh"
-        perms       = "0755"
-      }
+      driver = "raw_exec"
 
       config {
-        command = "local/run_rpc.sh"
+        command = "/usr/local/bin/rpc-server"
+        args = [
+          "--host", "0.0.0.0",
+          "--port", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}"
+        ]
       }
 
       resources {
