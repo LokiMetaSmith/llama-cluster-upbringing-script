@@ -36,4 +36,9 @@ client {
     path      = "/dev/snd"
     read_only = false
   }
+
+  host_volume "models" {
+    path      = "{{ nomad_models_dir }}"
+    read_only = true
+  }
 }
