@@ -1,13 +1,12 @@
 # This Nomad job starts a distributed llama.cpp RPC cluster.
 # It consists of one "master" node that runs the main llama-server,
 # and one or more "worker" nodes that run the rpc-server for offloading.
- 
+
 # --- DYNAMIC MODEL SELECTION ---
 # This Jinja2 block filters the full list of models to only include
 # those that can fit within the host system's memory, adding a 2GB buffer.
 {% set memory_buffer_mb = 2048 %}
 {% set available_memory_mb = ansible_memtotal_mb - memory_buffer_mb %}
-
 {% set suitable_models = model_list | selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | list %}
 
 job "{{ job_name | default("expert-{{ expert_name }}") }}" {
@@ -18,20 +17,28 @@ job "{{ job_name | default("expert-{{ expert_name }}") }}" {
     expert_name = "{{ expert_name }}"
   }
 
-
   # --- MASTER GROUP ---
   # This group runs the main llama-server which acts as the entry point.
   group "master" {
     count = 1
+
+    volume "models" {
+      type      = "host"
+      source    = "models"
+      read_only = true
+    }
+
     network {
       mode = "host"
-      port "http" { to = 8080 }
+      port "http" {}
     }
 
     service {
-      name     = "{{ service_name | default('prima-api-main') }}"
+      name     = "prima-api-{{ expert_name }}"
       provider = "consul"
       port     = "http"
+      tags     = ["expert", "{{ expert_name }}"]
+
       check {
         type     = "http"
         path     = "/health"
@@ -47,22 +54,20 @@ job "{{ job_name | default("expert-{{ expert_name }}") }}" {
         data = <<EOH
 #!/bin/bash
 set -e
-echo "--- Starting RPC Master for {{ job_name }} ---"
+echo "Starting master server for expert: ${NOMAD_META_expert_name}"
 
-# 1. Discover RPC worker services via Consul
+# Discover worker services via Consul
+echo "Discovering worker services from Consul..."
 worker_ips=""
-for i in {1..30}; 
-do
-  worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '[.[] | .Service | "\\(.Address):\\(.Port)"] | join(",")')
-  if [ -n "$worker_ips" ];
-then
+for i in {1..30}; do
+  worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/expert-${NOMAD_META_expert_name}-worker?passing" | jq -r '[.[] | .Service | "\(.Address):\(.Port)"] | join(",")')
+  if [ -n "$worker_ips" ]; then
     echo "Discovered Worker IPs: $worker_ips"
     break
   fi
-  echo "No workers found yet, retrying in 10s... (attempt $i/30)"
+  echo "No workers found yet, retrying in 10 seconds... (attempt $i/30)"
   sleep 10
 done
-
 
 rpc_args=""
 if [ -n "$worker_ips" ]; then
@@ -76,7 +81,6 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env \"NOMAD_PORT_http\" {{ '}}' }}
 
 # Loop through suitable models for failover
 # This list has been pre-filtered by Jinja2 to match system memory.
-
 {% if suitable_models %}
 {% for model in suitable_models %}
   echo "Attempting to start llama-server with suitable model: {{ model.name }}"
@@ -87,18 +91,15 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env \"NOMAD_PORT_http\" {{ '}}' }}
     --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --n-gpu-layers 99 \
     --mlock \
-    --rpc $worker_ips &
+    $rpc_args &
 
   server_pid=$!
   echo "Server process started (PID $server_pid). Waiting for health check..."
 
   healthy=false
-  for i in {1..30};
-  do
+  for i in {1..30}; do
     sleep 10
-
     if curl -s --fail $health_check_url > /dev/null; then
-
       echo "✅ Server is healthy with model {{ model.name }}!"
       healthy=true
       break
@@ -107,12 +108,10 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env \"NOMAD_PORT_http\" {{ '}}' }}
     fi
   done
 
-
   if [ "$healthy" = true ]; then
     echo "Successfully started llama-server with model: {{ model.name }}"
     # Write the active model to Consul KV for other services to discover
     curl -X PUT --data "{{ model.name }}" "http://127.0.0.1:8500/v1/kv/experts/${NOMAD_META_expert_name}/active_model"
-
     wait $server_pid
     exit 0
   else
@@ -137,7 +136,6 @@ EOH
       }
 
       resources {
-
         cpu    = 2000
         memory = 4096 # Allocate memory for the master process itself
       }
@@ -146,7 +144,6 @@ EOH
         volume      = "models"
         destination = "/opt/nomad/models"
         read_only   = true
-
       }
     }
   }
@@ -154,9 +151,7 @@ EOH
   # --- WORKER GROUP ---
   # This group runs the rpc-server processes that perform the actual inference.
   group "workers" {
-
     count = {{ worker_count | default(1) }}
-
 
     network {
       mode = "host"
@@ -164,9 +159,10 @@ EOH
     }
 
     service {
-      name     = "{{ job_name }}-worker"
+      name     = "expert-{{ expert_name }}-worker"
       provider = "consul"
       port     = "rpc"
+
       check {
         type     = "tcp"
         interval = "15s"
@@ -187,7 +183,7 @@ EOH
 
       resources {
         cpu    = 500
-        memory = 1024 # Memory for the RPC process itself
+        memory = 1024
       }
     }
   }
