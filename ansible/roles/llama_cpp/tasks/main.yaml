@@ -98,6 +98,7 @@
     mode: '0644'
   loop: "{{ experts }}"
   vars:
+    job_name: "expert-{{ item }}"
     expert_name: "{{ item }}"
     model_list: "{{ expert_models[item] }}"
 
