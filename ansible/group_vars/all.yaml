@@ -1,7 +1,6 @@
-external_model_server: false
-target_user: user
-experts:
-  - main
-  - coding
-  - math
-  - extract
+# This file contains variables that are common to all hosts in the inventory.
+# It's a good place to define default values that might be overridden by
+# more specific group_vars files.
+target_user: loki
+expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
+ansible_python_interpreter: /usr/bin/python3
