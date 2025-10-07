@@ -14,12 +14,6 @@ job "expert-{{ expert_name }}" {
   datacenters = ["dc1"]
   namespace   = "default"
 
-  volume "models" {
-    type      = "host"
-    read_only = true
-    source    = "nomad_models"
-  }
-
   meta {
     expert_name = "{{ expert_name }}"
   }
