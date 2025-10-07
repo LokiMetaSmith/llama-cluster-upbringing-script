@@ -1,2 +1,7 @@
 external_model_server: false
 target_user: user
+experts:
+  - main
+  - coding
+  - math
+  - extract

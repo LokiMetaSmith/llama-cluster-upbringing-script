@@ -7,7 +7,7 @@
       - clang
       - llvm
       - libbpf-dev
-      - linux-headers-{{ ansible_kernel }}
+      - linux-headers-generic # This will install headers for the running kernel
       - python3-bpfcc # This provides the bcc Python library
     state: present
     update_cache: yes

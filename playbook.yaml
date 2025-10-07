@@ -25,6 +25,12 @@
         groups: sudo
         append: yes
 
+    - name: Set correct permissions for the user's home directory
+      ansible.builtin.file:
+        path: "/home/{{ target_user }}"
+        state: directory
+        mode: '0755'
+
     - name: Allow '{{ target_user }}' to have passwordless sudo access
       ansible.builtin.lineinfile:
         path: "/etc/sudoers.d/ansible-{{ target_user }}-nopasswd"
@@ -53,6 +59,7 @@
         dest: /opt/cluster-infra/
         rsync_opts:
           - "--exclude=.git"
+      when: inventory_hostname != 'localhost'
 
   roles:
     - system_deps
@@ -90,6 +97,11 @@
           higher than the number of server nodes available.
       when: consul_leader_status.failed or consul_leader_status.content == '""'
 
+    - name: Populate Consul KV with configuration
+      include_role:
+        name: config_manager
+      run_once: true
+
     - name: Install all python dependencies
       include_role:
         name: python_deps
@@ -101,9 +113,7 @@
         - provisioning_api
         - desktop_extras
         - paddler
-        - pipecatapp
         - vision
-        - bootstrap_agent
         - power_manager
       loop_control:
         loop_var: role_name
@@ -125,7 +135,7 @@
   post_tasks:
     - name: Read rendered Nomad config file
       ansible.builtin.slurp:
-        src: /etc/nomad.d/nomad.hcl
+        src: /etc/nomad.d/client.hcl
       register: nomad_config_file
 
     - name: Display rendered Nomad config file
@@ -141,8 +151,7 @@
       delegate_to: localhost
 
 - name: Play 3 - Final Verification
-  hosts: localhost
-  connection: local
+  hosts: all
   become: no
   gather_facts: no
   tasks:
@@ -188,7 +197,15 @@
 - name: Play 4 - Deploy Core AI Services and Applications
   hosts: controller_nodes[0]
   connection: local
+  
+  pre_tasks:
+    - name: Load model variables
+      ansible.builtin.include_vars:
+        file: group_vars/models.yaml
+  vars_files:
+    - group_vars/all.yaml
+    - group_vars/models.yaml
+
   roles:
-    # --- FIX: Add the primacpp role here ---
-    - role: primacpp
+    - role: bootstrap_agent
     - role: pipecatapp
