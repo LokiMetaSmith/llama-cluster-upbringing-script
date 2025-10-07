@@ -81,3 +81,26 @@ openai_api_key: "sk-your_openai_api_key_here"
         # OPENAI_API_KEY = "sk-..."
 
      #  }
+
+# --- PXE Boot Configuration ---
+
+# Select the operating system for the PXE server.
+# Options: "debian" or "nixos". Defaults to "debian" for backward compatibility.
+pxe_os: "debian"
+
+# -- NixOS PXE Server Variables --
+# These variables are only used if pxe_os is set to "nixos".
+
+# The network interface on the PXE server for DHCP/TFTP/HTTP services.
+pxe_interface: "enp0s8"
+
+# The public SSH key to embed in the NixOS clients for root access.
+# Replace this with your actual public key.
+pxe_client_ssh_key: "ssh-rsa AAAA..."
+
+# DHCP network configuration for NixOS clients.
+pxe_subnet: "192.168.1.0"
+pxe_netmask: "255.255.255.0"
+pxe_range_start: "192.168.1.200"
+pxe_range_end: "192.168.1.250"
+pxe_router: "192.168.1.1"
