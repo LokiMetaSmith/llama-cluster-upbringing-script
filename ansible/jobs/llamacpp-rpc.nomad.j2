@@ -41,7 +41,7 @@ job "{{ job_name | default('prima-expert-main') }}" {
       template {
         data = <<EOH
 #!/bin/bash
-set -e
+set -ex
 echo "--- Starting RPC Master for {{ job_name }} ---"
 
 # 1. Discover RPC worker services via Consul
