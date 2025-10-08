@@ -51,7 +51,7 @@ job "expert-{{ expert_name }}" {
       template {
         data = <<EOH
 #!/bin/bash
-set -e
+set -ex
 echo "--- Starting RPC Master for {{ job_name }} ---"
 
 # 1. Discover RPC worker services via Consul
