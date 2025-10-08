@@ -102,13 +102,14 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env \"NOMAD_PORT_http\" {{ '}}' }}
   do
     sleep 10
 
-    if curl -s --fail $health_check_url > /dev/null; then
-
+    # Use curl with verbose logging to diagnose health check failures.
+    # We redirect stdout to /dev/null but let stderr (where -v output goes) print.
+    if curl -s --fail --verbose $health_check_url > /dev/null; then
       echo "✅ Server is healthy with model {{ model.name }}!"
       healthy=true
       break
     else
-      echo "Health check failed (attempt $i/30)..."
+      echo "Health check failed (attempt $i/30). See verbose curl output above."
     fi
   done
 
