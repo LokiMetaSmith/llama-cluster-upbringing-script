@@ -1,0 +1,6 @@
+- name: Rebuild NixOS
+  ansible.builtin.command: nixos-rebuild switch
+  become: yes
+  register: rebuild_result
+  changed_when: "'building the system configuration' in rebuild_result.stdout"
+  failed_when: "rebuild_result.rc != 0"
