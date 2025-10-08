@@ -46,7 +46,7 @@ job "expert-{{ expert_name }}" {
     }
 
     task "llama-server-master" {
-      driver = "raw_exec"
+      driver = "exec"
 
       template {
         data = <<EOH
@@ -102,13 +102,14 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env \"NOMAD_PORT_http\" {{ '}}' }}
   do
     sleep 10
 
-    if curl -s --fail $health_check_url > /dev/null; then
-
+    # Use curl with verbose logging to diagnose health check failures.
+    # We redirect stdout to /dev/null but let stderr (where -v output goes) print.
+    if curl -s --fail --verbose $health_check_url > /dev/null; then
       echo "✅ Server is healthy with model {{ model.name }}!"
       healthy=true
       break
     else
-      echo "Health check failed (attempt $i/30)..."
+      echo "Health check failed (attempt $i/30). See verbose curl output above."
     fi
   done
 
@@ -118,12 +119,18 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env \"NOMAD_PORT_http\" {{ '}}' }}
     # Write the active model to Consul KV for other services to discover
     curl -X PUT --data "{{ model.name }}" "http://127.0.0.1:8500/v1/kv/experts/${NOMAD_META_expert_name}/active_model"
 
-    wait $server_pid
+    # If we get here, the server is healthy and running. Wait for it to exit.
+    if [ -n "$server_pid" ]; then
+      wait $server_pid
+    fi
     exit 0
   else
     echo "❌ Server failed to become healthy with {{ model.name }}. Trying next model."
-    kill $server_pid
-    wait $server_pid 2>/dev/null
+    # Only try to kill the process if the PID was captured.
+    if [ -n "$server_pid" ]; then
+      kill $server_pid
+      wait $server_pid 2>/dev/null
+    fi
   fi
 {% endfor %}
 {% else %}
@@ -180,7 +187,7 @@ EOH
     }
 
     task "rpc-server-worker" {
-      driver = "raw_exec"
+      driver = "exec"
 
       config {
         command = "/usr/local/bin/rpc-server"
