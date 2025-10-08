@@ -1,4 +1,4 @@
-expected_cluster_size: "{{ groups['workers'] | length }}"
+expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
 
 # This variable dynamically determines the IP address for Nomad to advertise.
 # It prefers the first non-loopback IPv6 address if available,
@@ -9,7 +9,7 @@ default(ansible_default_ipv4.address) }}"
 nomad_models_dir: "/opt/nomad/models"
 
 # Pipecat application settings
-prima_api_service_name: "prima-api-main"
+llama_api_service_name: "llamacpp-rpc-api"
 use_summarizer: "false"
 stt_service: "faster-whisper"
 pipecat_app_dir: "/opt/pipecatapp"
@@ -31,6 +31,7 @@ pipecat_api_keys: ""
 
 # Configuration for external, third-party LLM experts.
 # This is a dictionary that will be converted to a JSON string.
+external_model_server: false
 external_experts_config:
   openai_gpt4:
     base_url: "https://api.openai.com/v1"
@@ -50,34 +51,11 @@ external_experts_config:
 openai_api_key: "sk-your_openai_api_key_here"
 
 # Model definitions have been moved to group_vars/models.yaml
-     #  env {
-        # This should match the service name of the main prima-expert job
-        # PRIMA_API_SERVICE_NAME = "prima-api-main"
-        # Set to "true" to enable the summarizer tool
-        # USE_SUMMARIZER = "false"
-        # The vision and embedding models are now hardcoded in the application
-        # to load from the unified /opt/nomad/models directory.
-        # STT_SERVICE = "faster-whisper"
-        # STT_MODEL_PATH = "/opt/nomad/models/stt/{{ active_stt_provider }}/{{ active_stt_model_name }}"
-        # A comma-separated list of SHA-256 hashed API keys.
-        # Generate a key with: python -c "import secrets; print(secrets.token_hex(32))"
-        # Then hash it with: echo -n "<your_key>" | sha256sum
-        # PIECAT_API_KEYS = ""
 
-        # Configuration for external, third-party LLM experts.
-        # This is a JSON string defining a dictionary where each key is the expert's name.
-        # - "base_url": The API endpoint for the expert.
-        # - "api_key_env": The name of the environment variable that holds the API key.
-        #
-        # Example:
-        # EXTERNAL_EXPERTS_CONFIG = <<EOF
-        # {
-        #   "openai_gpt4": {
-        #     "base_url": "https://api.openai.com/v1",
-        #     "api_key_env": "OPENAI_API_KEY"
-        #   }
-        # }
-        # EOF
-        # OPENAI_API_KEY = "sk-..."
-
-     #  }
+# A list of all available experts. This is used to dynamically generate
+# the Nomad jobs for each expert model.
+experts:
+  - main
+  - coding
+  - math
+  - extract

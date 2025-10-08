@@ -146,6 +146,15 @@
     mode: '0755'
   become: yes
 
+- name: Ensure /opt/pipecatapp directory exists for Nomad volume
+  ansible.builtin.file:
+    path: /opt/pipecatapp
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+  become: yes
+
 - name: Start and enable Nomad service
   ansible.builtin.systemd:
     name: nomad

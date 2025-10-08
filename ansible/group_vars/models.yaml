@@ -1,7 +1,3 @@
-# This file centralizes the configuration for all AI models used in the project.
-
-# Each expert can have its own list of models for failover.
-# The `prima-expert.nomad` job template will be rendered with one of these lists.
 expert_models:
   main:
     - name: "Llama-3-8B-Instruct"
@@ -32,16 +28,14 @@ expert_models:
       filename: "LFM2-1.2B-Extract-Q4_K_M.gguf"
       memory_mb: 4096
 
-# A list of voices for the PiperTTSService to use, in order of preference.
 tts_voices:
   - name: "en_US-l2arctic-medium"
-    model: "en_US-l2arctic-medium.onnx"
-    config: "en_US-l2arctic-medium.onnx.json"
+    repo_id: "rhasspy/piper-voices"
+    path_in_repo: "en/en_US/l2arctic/medium"
   - name: "en_US-lessac-low"
-    model: "en_US-lessac-low.onnx"
-    config: "en_US-lessac-low.onnx.json"
+    repo_id: "rhasspy/piper-voices"
+    path_in_repo: "en/en_US/lessac/low"
 
-# A flat list of all files that need to be downloaded for TTS.
 piper_voice_files:
   - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx"
     filename: "en_US-l2arctic-medium.onnx"
@@ -52,31 +46,18 @@ piper_voice_files:
   - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/low/en_US-lessac-low.onnx.json"
     filename: "en_US-lessac-low.onnx.json"
 
-# Embedding models
 embedding_models:
   - name: "bge-large-en-v1.5"
     repo_id: "BAAI/bge-large-en-v1.5"
-    # This model will be downloaded using the huggingface_hub module, which handles the whole repository.
 
-# Speech-to-Text models
 stt_models:
-  faster-whisper:
-    - name: "faster-whisper-tiny.en"
-      repo_id: "Systran/faster-whisper-tiny.en"
-    - name: "faster-whisper-base.en"
-      repo_id: "Systran/faster-whisper-base.en"
-    - name: "faster-whisper-medium.en"
-      repo_id: "Systran/faster-whisper-medium.en"
+  - name: "whisper-large-v3"
+    url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin"
+    filename: "ggml-large-v3.bin"
 
-# The provider and name of the STT model to be used by the pipecat-app
-active_stt_provider: "faster-whisper"
-active_stt_model_name: "faster-whisper-tiny.en"
-
-# Vision models
 vision_models:
   - name: "yolov8n"
     url: "https://github.com/ultralytics/assets/releases/download/v8.1.0/yolov8n.pt"
     filename: "yolov8n.pt"
   - name: "moondream2"
     repo_id: "vikhyatk/moondream2"
-    # This model will be downloaded using the huggingface_hub module.

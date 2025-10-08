@@ -13,13 +13,6 @@
     recurse: yes
   become: yes
 
-- name: Create pipecat configuration file
-  ansible.builtin.template:
-    src: pipecat_config.json.j2
-    dest: /opt/pipecatapp/pipecat_config.json
-    mode: '0644'
-  become: yes
-
 - name: Copy pipecat app
   ansible.builtin.copy:
     src: app.py
@@ -137,16 +130,38 @@
   ansible.builtin.template:
     src: pipecatapp.nomad.j2
     dest: /opt/nomad/jobs/pipecatapp.nomad
+  become: yes
 
 - name: Template prompt evolution Nomad job file
   ansible.builtin.template:
     src: ../../jobs/evolve-prompt.nomad.j2
     dest: /opt/nomad/jobs/evolve-prompt.nomad
+  become: yes
+  
+- name: Create expert job files from template
+  ansible.builtin.template:
+    src: ../../jobs/llamacpp-rpc.nomad.j2
+    dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
+  loop: "{{ experts }}"
+  vars:
+    job_name: "expert-{{ item }}"
+    service_name: "prima-api-{{ item }}"
+    model_list: "{{ expert_models[item] }}"
+    worker_count: 1
+    ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
+
+- name: Copy test runner Nomad job template
+  ansible.builtin.copy:
+    src: ../../jobs/test-runner.nomad.j2
+    dest: /opt/nomad/jobs/test-runner.nomad.j2
+  become: yes
 
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
-    cmd: "/opt/pipecatapp/venv/bin/python3 -m playwright install"
+    cmd: "{{ pipecat_app_dir }}/venv/bin/python -m playwright install"
+
   become: yes
+  become_user: "{{ target_user }}"
   async: 900 # Set timeout to 15 minutes
   poll: 10   # Check status every 10 seconds
 
@@ -174,13 +189,12 @@
 
 - name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/prima-api-main"
+    url: "http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-api"
     return_content: yes
   register: expert_health
   until: >
     expert_health.json is defined and
-    expert_health.json | selectattr('Checks', 'defined')
-    | selectattr('Status', 'equalto', 'passing') | list | length > 0
+    expert_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
   retries: 60
   delay: 10
   changed_when: false

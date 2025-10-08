@@ -115,7 +115,7 @@ ansible-playbook heal_cluster.yaml
 If you make a change to a job file or need to restart the services from a clean state, it's best to purge the old jobs before running the start script again.
 
 ```bash
-nomad job stop -purge prima-expert-main
+nomad job stop -purge llamacpp-rpc
 nomad job stop -purge pipecat-app
 ```
 

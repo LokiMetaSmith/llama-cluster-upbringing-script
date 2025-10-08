@@ -1,8 +1,0 @@
-{
-    "tts_voices": [
-        {
-            "model": "en_US-lessac-medium.onnx",
-            "config": "en_US-lessac-medium.onnx.json"
-        }
-    ]
-}

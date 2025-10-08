@@ -808,7 +808,7 @@ def find_workable_audio_config():
 
 async def discover_main_llm_service(consul_http_addr="http://localhost:8500", delay=10):
     """Discovers the main LLM service from Consul, retrying indefinitely."""
-    service_name = os.getenv("PRIMA_API_SERVICE_NAME", "prima-api-main")
+    service_name = os.getenv("LLAMA_API_SERVICE_NAME", "llamacpp-rpc-api")
     logging.info(f"Attempting to discover main LLM service: {service_name}")
     while True:
         try:

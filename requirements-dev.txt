@@ -4,5 +4,11 @@ molecule-docker
 yamllint
 djlint
 pytest
+pytest-asyncio
 pytest-mock
 pyautogui
+httpx
+opencv-python-headless
+# Note: torch should be installed with --index-url https://download.pytorch.org/whl/cpu
+torch
+ultralytics
