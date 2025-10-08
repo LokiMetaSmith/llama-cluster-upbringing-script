@@ -13,7 +13,7 @@ llama_api_service_name: "llamacpp-rpc-api"
 use_summarizer: "false"
 stt_service: "faster-whisper"
 pipecat_app_dir: "/opt/pipecatapp"
-pipecat_log_file: "/tmp/pipecat.log"
+pipecat_log_file: "/opt/pipecatapp/pipecat.log"
 # ... existing variables ...
 active_stt_provider: "faster-whisper"
 active_stt_model_name: "tiny.en"
