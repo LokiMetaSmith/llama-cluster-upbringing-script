@@ -10,9 +10,9 @@ async def run_evolution():
     if not os.environ.get("OPENAI_API_KEY"):
         raise ValueError("Please set OPENAI_API_KEY environment variable")
 
-    # The initial program is the router prompt
+    # The initial program is the main application script
     initial_program_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "prompts", "router.txt")
+        os.path.join(os.path.dirname(__file__), "..", "ansible", "roles", "pipecatapp", "files", "app.py")
     )
 
     if not os.path.exists(initial_program_path):

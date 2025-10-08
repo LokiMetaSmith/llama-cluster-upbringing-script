@@ -63,8 +63,8 @@
 
 - name: Download all Text-to-Speech model files
   ansible.builtin.get_url:
-    url: "{{ item.url }}"
-    dest: "/opt/nomad/models/tts/{{ item.filename }}"
+    url: "{{ item.item.url }}"
+    dest: "/opt/nomad/models/tts/{{ item.item.filename }}"
     mode: '0644'
   loop: "{{ tts_model_files.results }}"
   when: not item.stat.exists
@@ -93,8 +93,8 @@
 
 - name: Download all Vision models (URL-based)
   ansible.builtin.get_url:
-    url: "{{ item.url }}"
-    dest: "/opt/nomad/models/vision/{{ item.filename }}"
+    url: "{{ item.item.url }}"
+    dest: "/opt/nomad/models/vision/{{ item.item.filename }}"
     mode: '0644'
   loop: "{{ vision_model_files_url.results }}"
   when: not item.stat.exists

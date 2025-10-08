@@ -33,12 +33,15 @@
         name: config_manager
       run_once: true
 
-    - name: Run model-dependent roles
+    - name: Run download_models role
       include_role:
-        name: "{{ role_name }}"
-      loop:
-        - download_models
-        - llama_cpp
-      loop_control:
-        loop_var: role_name
+        name: download_models
+      when: not external_model_server
+
+    - name: Flush handlers again before running llama_cpp
+      meta: flush_handlers
+
+    - name: Run llama_cpp role
+      include_role:
+        name: llama_cpp
       when: not external_model_server
