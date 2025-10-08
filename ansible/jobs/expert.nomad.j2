@@ -95,51 +95,12 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env \"NOMAD_PORT_http\" {{ '}}' }}
     --mlock \
     $rpc_args"
 
-  # Echo the command to the log for debugging, then execute it
-  echo "--- EXECUTING COMMAND ---"
+  # Echo the command to the log for debugging, then exit
+  echo "--- INTENDED COMMAND (DIAGNOSTIC) ---"
   echo "$full_command"
-  echo "-------------------------"
-
-  $full_command &
-
-  server_pid=$!
-  echo "Server process started (PID $server_pid). Waiting for health check..."
-
-  healthy=false
-  for i in {1..30};
-  do
-    sleep 10
-
-    # Use curl with verbose logging to diagnose health check failures.
-    # We redirect stdout to /dev/null but let stderr (where -v output goes) print.
-    if curl -s --fail --verbose $health_check_url > /dev/null; then
-      echo "✅ Server is healthy with model {{ model.name }}!"
-      healthy=true
-      break
-    else
-      echo "Health check failed (attempt $i/30). See verbose curl output above."
-    fi
-  done
-
-
-  if [ "$healthy" = true ]; then
-    echo "Successfully started llama-server with model: {{ model.name }}"
-    # Write the active model to Consul KV for other services to discover
-    curl -X PUT --data "{{ model.name }}" "http://127.0.0.1:8500/v1/kv/experts/${NOMAD_META_expert_name}/active_model"
-
-    # If we get here, the server is healthy and running. Wait for it to exit.
-    if [ -n "$server_pid" ]; then
-      wait $server_pid
-    fi
-    exit 0
-  else
-    echo "❌ Server failed to become healthy with {{ model.name }}. Trying next model."
-    # Only try to kill the process if the PID was captured.
-    if [ -n "$server_pid" ]; then
-      kill $server_pid
-      wait $server_pid 2>/dev/null
-    fi
-  fi
+  echo "-------------------------------------"
+  echo "Exiting for diagnostic purposes."
+  exit 0
 {% endfor %}
 {% else %}
   echo "FATAL: No suitable models found for the available system memory of {{ ansible_memtotal_mb }} MB."
