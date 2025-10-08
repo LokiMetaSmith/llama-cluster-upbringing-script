@@ -64,5 +64,30 @@ class TestWebBrowserTool(unittest.TestCase):
         self.mock_browser.close.assert_called_once()
         self.mock_playwright.stop.assert_called_once()
 
+    def test_get_screenshot(self):
+        """Test taking a screenshot."""
+        dummy_bytes = b'screenshot_data'
+        self.mock_page.screenshot.return_value = dummy_bytes
+        result = self.browser_tool.get_screenshot()
+        self.mock_page.screenshot.assert_called_once()
+        import base64
+        self.assertEqual(result, base64.b64encode(dummy_bytes).decode('utf-8'))
+
+    def test_click_at(self):
+        """Test clicking at a specific coordinate."""
+        x, y = 100, 200
+        result = self.browser_tool.click_at(x, y)
+        self.mock_page.mouse.click.assert_called_once_with(x, y)
+        self.assertEqual(result, "Successfully clicked at (100, 200).")
+
+    def test_type_text_at(self):
+        """Test typing text at a specific coordinate."""
+        x, y = 150, 250
+        text = "hello vision"
+        result = self.browser_tool.type_text_at(x, y, text)
+        self.mock_page.mouse.click.assert_called_once_with(x, y)
+        self.mock_page.keyboard.type.assert_called_once_with(text)
+        self.assertEqual(result, f"Successfully typed '{text}' at ({x}, {y}).")
+
 if __name__ == '__main__':
     unittest.main()

@@ -4,3 +4,5 @@ molecule-docker
 yamllint
 djlint
 pytest
+pytest-mock
+pyautogui
