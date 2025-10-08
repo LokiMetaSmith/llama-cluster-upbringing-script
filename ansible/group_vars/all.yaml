@@ -4,3 +4,4 @@
 target_user: loki
 expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
 ansible_python_interpreter: /usr/bin/python3
+nomad_models_dir: /opt/nomad/models

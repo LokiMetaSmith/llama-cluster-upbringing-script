@@ -38,7 +38,7 @@
 
         - name: Build llama.cpp
           ansible.builtin.command:
-            cmd: cmake --build build --config Release -j
+            cmd: cmake --build build --config Release -j 2
           args:
             chdir: /opt/llama.cpp-build
             creates: /opt/llama.cpp-build/build/bin/llama-server

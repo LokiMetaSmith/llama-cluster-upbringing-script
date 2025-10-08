@@ -22,6 +22,12 @@ job "expert-{{ expert_name }}" {
   # This group runs the main llama-server which acts as the entry point.
   group "master" {
     count = 1
+
+    volume "models" {
+      type      = "host"
+      source    = "models"
+      read_only = true
+    }
     network {
       mode = "host"
       port "http" { to = 8080 }
@@ -40,7 +46,7 @@ job "expert-{{ expert_name }}" {
     }
 
     task "llama-server-master" {
-      driver = "exec"
+      driver = "raw_exec"
 
       template {
         data = <<EOH
@@ -174,7 +180,7 @@ EOH
     }
 
     task "rpc-server-worker" {
-      driver = "exec"
+      driver = "raw_exec"
 
       config {
         command = "/usr/local/bin/rpc-server"
