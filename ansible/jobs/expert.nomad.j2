@@ -46,7 +46,7 @@ job "expert-{{ expert_name }}" {
     }
 
     task "llama-server-master" {
-      driver = "raw_exec"
+      driver = "exec"
 
       template {
         data = <<EOH
@@ -187,7 +187,7 @@ EOH
     }
 
     task "rpc-server-worker" {
-      driver = "raw_exec"
+      driver = "exec"
 
       config {
         command = "/usr/local/bin/rpc-server"
