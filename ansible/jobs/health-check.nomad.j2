@@ -1,0 +1,67 @@
+job "health-check" {
+  datacenters = ["dc1"]
+  type        = "batch"
+
+  task "health-checker" {
+    driver = "raw_exec"
+
+    template {
+      data = <<EOH
+#!/bin/bash
+set -eo pipefail
+
+echo "--- Starting Cluster-Wide LLM Health Check ---"
+FAILURES=0
+SERVICES=$(curl -s "http://127.0.0.1:8500/v1/catalog/services" | jq -r 'keys[] | select(. | startswith("llama-api-"))')
+
+if [ -z "$SERVICES" ]; then
+  echo "No 'llama-api-*' services found in Consul. Exiting."
+  exit 0
+fi
+
+echo "Found services to check: $SERVICES"
+
+for SERVICE in $SERVICES; do
+  echo "--- Checking service: $SERVICE ---"
+  HEALTHY_INSTANCE=$(curl -s "http://127.0.0.1:8500/v1/health/service/$SERVICE?passing" | jq -r '.[0] | "\(.Service.Address):\(.Service.Port)"')
+
+  if [ -z "$HEALTHY_INSTANCE" ] || [ "$HEALTHY_INSTANCE" == "null" ]; then
+    echo "❌ FAILED: No healthy instances found for service '$SERVICE'."
+    FAILURES=$((FAILURES + 1))
+    continue
+  fi
+
+  echo "Found healthy instance at: $HEALTHY_INSTANCE"
+  HEALTH_URL="http://$HEALTHY_INSTANCE/health"
+
+  if curl -s --fail "$HEALTH_URL"; then
+    echo "✅ PASSED: Health check for '$SERVICE' at $HEALTHY_INSTANCE succeeded."
+  else
+    echo "❌ FAILED: Health check for '$SERVICE' at $HEALTHY_INSTANCE failed (curl exit code: $?)."
+    FAILURES=$((FAILURES + 1))
+  fi
+done
+
+echo "--- Health Check Complete ---"
+if [ "$FAILURES" -gt 0 ]; then
+  echo "❌ Finished with $FAILURES failure(s)."
+  exit 1
+else
+  echo "✅ All services are healthy."
+  exit 0
+fi
+EOH
+      destination = "local/run_health_check.sh"
+      perms       = "0755"
+    }
+
+    config {
+      command = "local/run_health_check.sh"
+    }
+
+    resources {
+      cpu    = 200
+      memory = 128
+    }
+  }
+}
