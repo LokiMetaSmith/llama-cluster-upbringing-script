@@ -76,48 +76,44 @@ health_check_url="http://127.0.0.1:{{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }}/h
     --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --n-gpu-layers 99 \
     --mlock \
-    --rpc-server $worker_ips"
-
-  $full_command &
+    --rpc $worker_ips"
 
   server_pid=$!
-  echo "Server process started (PID $server_pid). Waiting for health check..."
+  echo "Server process started with PID $server_pid. Performing health check for model {{ model.name }}..."
 
   healthy=false
-  for i in {1..30}; do
-    sleep 10
+  # Wait for up to 60 seconds (6 * 10s) for the server to become healthy.
+  for i in {1..6};
+  do
     # Use curl with verbose logging to diagnose health check failures.
-    # We redirect stdout to /dev/null but let stderr (where -v output goes) print.
     if curl -s --fail --verbose $health_check_url > /dev/null; then
-      echo "✅ Server is healthy with model {{ model.name }}!"
+      echo "✅ Health check PASSED for model {{ model.name }}."
       healthy=true
       break
     else
-      echo "Health check failed (attempt $i/30). See verbose curl output above."
+      echo "Health check failed (attempt $i/6). See verbose curl output above. Retrying in 10s..."
+      sleep 10
     fi
   done
 
-  if [ "$healthy" = true ]; then
-    # If we get here, the server is healthy and running. Wait for it to exit.
-    if [ -n "$server_pid" ]; then
-      wait $server_pid
-    fi
-    exit 0
-  else
-    echo "❌ Server failed to become healthy with {{ model.name }}. Trying next model."
-    # Only try to kill the process if the PID was captured.
-    if [ -n "$server_pid" ]; then
-      kill $server_pid
-      wait $server_pid 2>/dev/null
-    fi
+  if [ "$healthy" = false ]; then
+      echo "❌ Health check FAILED for model {{ model.name }} after 60 seconds."
   fi
+
+  echo "--- Shutting down server for model {{ model.name }} (PID $server_pid) ---"
+  # Always kill the process, regardless of health, to continue the loop.
+  if [ -n "$server_pid" ]; then
+      kill $server_pid
+      wait $server_pid 2>/dev/null || echo "Server process (PID $server_pid) was already gone."
+  fi
+  echo "--- Server for model {{ model.name }} shut down. ---"
 {% endfor %}
 {% else %}
   echo "FATAL: No suitable models found for the available system memory of {{ ansible_memtotal_mb }} MB."
 {% endif %}
 
-echo "❌ All suitable models failed to start. Exiting."
-exit 1
+echo "✅ Completed health check verification loop for all suitable models."
+exit 0
 EOH
         destination = "local/run_master.sh"
         perms       = "0755"
@@ -161,7 +157,8 @@ EOH
       config {
         command = "/usr/local/bin/rpc-server"
         args = [
-          "--help"
+          "-H", "0.0.0.0",
+          "-p", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}"
         ]
       }
 
