@@ -22,12 +22,6 @@ job "expert-{{ expert_name }}" {
   # This group runs the main llama-server which acts as the entry point.
   group "master" {
     count = 1
-
-    volume "models" {
-      type      = "host"
-      source    = "models"
-      read_only = true
-    }
     network {
       mode = "host"
       port "http" { to = 8080 }

@@ -19,7 +19,8 @@ consul {
 client {
   enabled = true
   options = {
-    "driver.raw_exec.enable" = "1"
+    "driver.raw_exec.enable"      = "1"
+    "raw_exec.volumes.enabled" = "true"
   }
 
   host_volume "pipecatapp" {

@@ -38,7 +38,7 @@
 
         - name: Build llama.cpp
           ansible.builtin.command:
-            cmd: cmake --build build --config Release -j 2
+            cmd: cmake --build build --config Release -j
           args:
             chdir: /opt/llama.cpp-build
             creates: /opt/llama.cpp-build/build/bin/llama-server
@@ -98,8 +98,8 @@
     mode: '0644'
   loop: "{{ experts }}"
   vars:
-    job_name: "expert-{{ item }}"
     expert_name: "{{ item }}"
+    job_name: "expert-{{ item }}"
     model_list: "{{ expert_models[item] }}"
 
 - name: Run expert jobs
