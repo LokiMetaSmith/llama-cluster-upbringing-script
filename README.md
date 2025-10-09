@@ -166,6 +166,12 @@ This project includes a web-based dashboard for real-time display and debugging.
 - **Check Cluster Status:** `nomad node status`
 - **Check Job Status:** `nomad job status`
 - **View Logs:** `nomad alloc logs <allocation_id>` or use the Mission Control Web UI.
+
+#### Cluster Health Check
+A dedicated health check job exists to verify the status of all running LLM experts. This provides a quick way to ensure the entire cluster is operational.
+
+- **Run the check:** `ansible-playbook run_health_check.yaml`
+- **View results:** `nomad job logs health-check`
 - **Manual Test Scripts:** A set of scripts for manual testing of individual components is available in the `testing/` directory.
 
 ### 8.1. Code Quality and Linting
