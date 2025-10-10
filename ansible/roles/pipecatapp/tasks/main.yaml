@@ -137,18 +137,6 @@
     src: ../../jobs/evolve-prompt.nomad.j2
     dest: /opt/nomad/jobs/evolve-prompt.nomad
   become: yes
-  
-- name: Create expert job files from template
-  ansible.builtin.template:
-    src: ../../jobs/llamacpp-rpc.nomad.j2
-    dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
-  loop: "{{ experts }}"
-  vars:
-    job_name: "expert-{{ item }}"
-    service_name: "prima-api-{{ item }}"
-    model_list: "{{ expert_models[item] }}"
-    worker_count: 1
-    ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
 
 - name: Copy test runner Nomad job template
   ansible.builtin.copy:

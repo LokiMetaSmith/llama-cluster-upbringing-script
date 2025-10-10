@@ -81,36 +81,26 @@
     mode: '0755'
   become: yes
 
-- name: Stop and purge any existing expert jobs to ensure idempotency
-  ansible.builtin.command:
-    cmd: nomad job stop -purge "expert-{{ item }}"
-  loop: "{{ experts }}"
-  register: expert_job_stop_status
-  changed_when: "'Running' in expert_job_stop_status.stdout"
-  failed_when: false # Don't fail if the job doesn't exist
-  environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
-
-- name: Create expert job files from template
+- name: Render the Llama.cpp RPC Nomad job from template for bootstrap
   ansible.builtin.template:
-    src: ../../jobs/expert.nomad.j2
-    dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
+    src: "{{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad.j2"
+    dest: "/opt/nomad/jobs/llamacpp-rpc.nomad"
     mode: '0644'
-  loop: "{{ experts }}"
   vars:
-    job_name: "expert-{{ item }}"
-    expert_name: "{{ item }}"
-    model_list: "{{ expert_models[item] }}"
+    job_name: "llamacpp-rpc"
+    service_name: "llamacpp-rpc-api"
+    model_list: "{{ expert_models['main'] }}"
+    worker_count: 1
 
-- name: Run expert jobs
+- name: Deploy the main Llama.cpp RPC service to Nomad
   ansible.builtin.command:
-    cmd: "nomad job run /opt/nomad/jobs/expert-{{ item }}.nomad"
-  loop: "{{ experts }}"
-  environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    cmd: "nomad job run -detach /opt/nomad/jobs/llamacpp-rpc.nomad"
+  register: llama_job_run
+  changed_when: "'Eval ID' in llama_job_run.stdout"
+  failed_when: llama_job_run.rc != 0 and 'already running' not in llama_job_run.stderr
 
 - name: Copy benchmark Nomad job file
-  ansible.builtin.template:
+  ansible.builtin.copy:
     src: ../../jobs/benchmark.nomad
     dest: /opt/nomad/jobs/benchmark.nomad
   when: "'controller_nodes' in group_names"
