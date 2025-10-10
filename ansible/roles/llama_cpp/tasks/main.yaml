@@ -101,6 +101,7 @@
     job_name: "expert-{{ item }}"
     expert_name: "{{ item }}"
     model_list: "{{ expert_models[item] }}"
+    nomad_namespace: "{{ nomad_namespace }}"
 
 - name: Run expert jobs
   ansible.builtin.command:
