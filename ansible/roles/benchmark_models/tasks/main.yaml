@@ -1,0 +1,25 @@
+You will create a dedicated Ansible role to orchestrate the benchmarking process.
+
+Create the role structure: ansible/roles/benchmark_models
+
+Implement tasks/main.yaml:
+
+This task file will contain the logic to iterate through all defined models.
+
+Load Variables: Ensure it has access to the expert_models from group_vars/models.yaml.
+
+Loop Through Models: Use a loop to iterate over all models in all expert lists. You will need to flatten the expert_models dictionary to get a single, unique list of models to test.
+
+Inside the loop, for each model:
+
+Render the Job: Use ansible.builtin.template to render the model-benchmark.nomad.j2 template, passing the model_filename. Save it to a unique temporary file.
+
+Run the Job: Use ansible.builtin.command to run the temporary Nomad job file.
+
+Wait for Completion: Use a do/until loop with nomad job status to poll until the batch job's status is dead (which means complete). This is a critical step. Add a reasonable number of retries and a delay.
+
+Log the Results: Use ansible.builtin.command with nomad alloc logs to capture the output of the completed benchmark. Register this output.
+
+Record Success/Failure: Check the output for a success metric (like "tokens per second"). Use ansible.builtin.set_fact to add the model to a list of verified_models if the benchmark was successful.
+
+Cleanup: Purge the benchmark job from Nomad and remove the temporary job file.
