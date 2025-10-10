@@ -1,0 +1,16 @@
+task "benchmark-task" {
+  driver = "exec"
+  volume_mount {
+    volume      = "models"
+    destination = "/opt/nomad/models"
+    read_only   = true
+  }
+  config {
+    command = "/usr/local/bin/llama-bench"
+    args = [
+      "-m", "/opt/nomad/models/llm/{{ model_filename }}",
+      "-p", "128",  # Use a small prompt for a quick load test
+      "-n", "128"
+    ]
+  }
+}
