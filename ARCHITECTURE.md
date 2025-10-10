@@ -42,7 +42,7 @@ This layer takes the base Debian installs and configures them into a functional,
 This layer is responsible for deploying, managing, and scaling the various services that make up the AI agent.
 
 - **Technology:** [HashiCorp Nomad](https://www.nomadproject.io/) for orchestration and [HashiCorp Consul](https://www.consul.io/) for service discovery.
-- **Implementation:** Services are defined as declarative job files (e.g., `pipecatapp.nomad`, `primacpp.nomad`).
+- **Implementation:** Services are defined as declarative job files (e.g., `pipecatapp.nomad`, `llamacpp-rpc.nomad`).
 - **Workflow:**
   1. The `bootstrap_agent` Ansible role automatically deploys the core `llamacpp-rpc` and `pipecatapp` jobs to Nomad on the primary control node.
   2. For advanced use cases, an administrator can still manually deploy additional jobs (e.g., specialized experts) using the `nomad job run` command.

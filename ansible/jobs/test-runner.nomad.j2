@@ -1,0 +1,30 @@
+job "test-runner" {
+  datacenters = ["dc1"]
+  type        = "batch"
+
+  group "testing" {
+    count = 1
+
+    task "run-tests" {
+      driver = "exec"
+
+      config {
+        command = "/home/jules/.pyenv/versions/3.12.11/bin/python"
+        args = [
+          "-m",
+          "pytest",
+          "testing/integration_tests"
+        ]
+      }
+
+      env {
+        TARGET_SERVICE_URL = "http://{{ service_name }}.service.consul:8000"
+      }
+
+      resources {
+        cpu    = 500 # 500 MHz
+        memory = 512 # 512 MB
+      }
+    }
+  }
+}

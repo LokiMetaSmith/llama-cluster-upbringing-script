@@ -1,0 +1,63 @@
+expert_models:
+  main:
+    - name: "Llama-3-8B-Instruct"
+      url: "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF-v2/resolve/main/Meta-Llama-3-8B-Instruct-v2.Q4_K_M.gguf"
+      filename: "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
+      memory_mb: 8192
+    - name: "phi-3-mini-instruct"
+      url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
+      filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
+      memory_mb: 4096
+  coding:
+    - name: "CodeLlama-7B-Instruct"
+      url: "https://huggingface.co/TheBloke/CodeLlama-7B-Instruct-GGUF/resolve/main/codellama-7b-instruct.Q4_K_M.gguf"
+      filename: "codellama-7b-instruct.Q4_K_M.gguf"
+      memory_mb: 8192
+    - name: "phi-3-mini-instruct"
+      url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
+      filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
+      memory_mb: 4096
+  math:
+    - name: "LFM2-350M-Math"
+      url: "https://huggingface.co/LiquidAI/LFM2-350M-Math-GGUF/resolve/main/LFM2-350M-Math-Q4_K_M.gguf"
+      filename: "LFM2-350M-Math-Q4_K_M.gguf"
+      memory_mb: 2048
+  extract:
+    - name: "LFM2-1.2B-Extract"
+      url: "https://huggingface.co/LiquidAI/LFM2-1.2B-Extract-GGUF/resolve/main/LFM2-1.2B-Extract-Q4_K_M.gguf"
+      filename: "LFM2-1.2B-Extract-Q4_K_M.gguf"
+      memory_mb: 4096
+
+tts_voices:
+  - name: "en_US-l2arctic-medium"
+    repo_id: "rhasspy/piper-voices"
+    path_in_repo: "en/en_US/l2arctic/medium"
+  - name: "en_US-lessac-low"
+    repo_id: "rhasspy/piper-voices"
+    path_in_repo: "en/en_US/lessac/low"
+
+piper_voice_files:
+  - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx"
+    filename: "en_US-l2arctic-medium.onnx"
+  - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/l2arctic/medium/en_US-l2arctic-medium.onnx.json"
+    filename: "en_US-l2arctic-medium.onnx.json"
+  - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/low/en_US-lessac-low.onnx"
+    filename: "en_US-lessac-low.onnx"
+  - url: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/low/en_US-lessac-low.onnx.json"
+    filename: "en_US-lessac-low.onnx.json"
+
+embedding_models:
+  - name: "bge-large-en-v1.5"
+    repo_id: "BAAI/bge-large-en-v1.5"
+
+stt_models:
+  - name: "whisper-large-v3"
+    url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin"
+    filename: "ggml-large-v3.bin"
+
+vision_models:
+  - name: "yolov8n"
+    url: "https://github.com/ultralytics/assets/releases/download/v8.1.0/yolov8n.pt"
+    filename: "yolov8n.pt"
+  - name: "moondream2"
+    repo_id: "vikhyatk/moondream2"

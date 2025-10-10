@@ -1,4 +1,4 @@
-job "pipecat-app" {
+job "{{ job_name | default('pipecat-app') }}" {
   datacenters = ["dc1"]
   type        = "service"
 
@@ -12,14 +12,9 @@ job "pipecat-app" {
       }
     }
     
-    volume "pipecatapp" {
-      type   = "host"
-      source = "pipecatapp" # must be defined in Nomad client config
-      read_only = false
-    }
     service {
-      name = "prima-api-main"
-      port = "http"
+      name     = "{{ service_name | default('pipecat-app') }}"
+      port     = "http"
       provider = "consul"
 
       check {
@@ -28,7 +23,6 @@ job "pipecat-app" {
         interval = "10s"
         timeout  = "2s"
       }
-
     }
 
     task "pipecat-task" {
@@ -36,11 +30,6 @@ job "pipecat-app" {
  
       config {
         command = "/opt/pipecatapp/start_pipecat.sh"
-      }
-
-      volume_mount {
-        volume      = "pipecatapp"
-        destination = "/opt/pipecatapp"
       }
 
       resources {
