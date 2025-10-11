@@ -13,13 +13,6 @@
     recurse: yes
   become: yes
 
-- name: Create pipecat configuration file
-  ansible.builtin.template:
-    src: pipecat_config.json.j2
-    dest: /opt/pipecatapp/pipecat_config.json
-    mode: '0644'
-  become: yes
-
 - name: Copy pipecat app
   ansible.builtin.copy:
     src: app.py
@@ -145,9 +138,28 @@
     dest: /opt/nomad/jobs/evolve-prompt.nomad
   become: yes
 
+- name: Create expert job files from template
+  ansible.builtin.template:
+    src: ../../jobs/llamacpp-rpc.nomad.j2
+    dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
+  loop: "{{ experts }}"
+  vars:
+    job_name: "expert-{{ item }}"
+    service_name: "prima-api-{{ item }}"
+    model_list: "{{ expert_models[item] }}"
+    worker_count: 1
+    ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
+
+- name: Copy test runner Nomad job template
+  ansible.builtin.copy:
+    src: ../../jobs/test-runner.nomad.j2
+    dest: /opt/nomad/jobs/test-runner.nomad.j2
+  become: yes
+
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
-    cmd: "/opt/pipecatapp/venv/bin/python -m playwright install"
+    cmd: "{{ pipecat_app_dir }}/venv/bin/python -m playwright install"
+
   become: yes
   become_user: "{{ target_user }}"
   async: 900 # Set timeout to 15 minutes
@@ -177,7 +189,7 @@
 
 - name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/prima-api-main"
+    url: "http://127.0.0.1:8500/v1/health/service/expert-api-main"
     return_content: yes
   register: expert_health
   until: >

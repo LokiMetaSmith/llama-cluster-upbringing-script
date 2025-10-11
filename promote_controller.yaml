@@ -1,0 +1,90 @@
+- name: Promote Worker to Controller
+  hosts: localhost
+  gather_facts: false
+  vars_prompt:
+    - name: target_hostname
+      prompt: "Enter the hostname of the worker to promote"
+      private: no
+
+  tasks:
+    - name: Read the inventory file
+      ansible.builtin.slurp:
+        src: inventory.yaml
+      register: inventory_file
+
+    - name: Load the inventory YAML
+      ansible.builtin.set_fact:
+        inventory: "{{ inventory_file.content | b64decode | from_yaml }}"
+
+    - name: Add host to controller_nodes
+      ansible.builtin.set_fact:
+        inventory: "{{ inventory | combine({'all': {'children': {'controller_nodes': {'hosts': inventory.all.children.controller_nodes.hosts | combine({target_hostname: {}})}}}}, recursive=True) }}"
+
+    - name: Remove host from workers
+      ansible.builtin.set_fact:
+        inventory: "{{ inventory | combine({'all': {'children': {'workers': {'hosts': inventory.all.children.workers.hosts | dict2items | rejectattr('key', 'equalto', target_hostname) | list | items2dict}}}}, recursive=True) }}"
+      when: inventory.all.children.workers.hosts[target_hostname] is defined
+
+    - name: Write the updated inventory back to the file
+      ansible.builtin.copy:
+        content: "{{ inventory | to_nice_yaml }}"
+        dest: inventory.yaml
+        mode: '0644'
+
+    - name: Refresh inventory to ensure the new controller is recognized
+      ansible.builtin.meta: refresh_inventory
+
+- name: Re-configure the Promoted Node
+  hosts: "{{ target_hostname }}"
+  become: true
+  pre_tasks:
+    - name: Stop Consul service
+      ansible.builtin.systemd:
+        name: consul
+        state: stopped
+      ignore_errors: true
+
+    - name: Stop Nomad service
+      ansible.builtin.systemd:
+        name: nomad
+        state: stopped
+      ignore_errors: true
+
+    - name: Clean Consul data directory
+      ansible.builtin.file:
+        path: "/opt/consul"
+        state: absent
+
+    - name: Clean Nomad data directory
+      ansible.builtin.file:
+        path: "/opt/nomad"
+        state: absent
+
+  roles:
+    - role: consul
+    - role: nomad
+
+  post_tasks:
+    - name: Deploy Nomad server configuration
+      ansible.builtin.template:
+        src: ansible/roles/nomad/templates/nomad.hcl.server.j2
+        dest: /etc/nomad.d/server.hcl
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart nomad
+
+  handlers:
+    - name: restart consul
+      ansible.builtin.systemd:
+        name: consul
+        state: restarted
+        enabled: true
+        daemon_reload: true
+
+    - name: Restart nomad
+      ansible.builtin.systemd:
+        name: nomad
+        state: restarted
+        enabled: true
+        daemon_reload: true

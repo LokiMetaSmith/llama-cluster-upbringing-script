@@ -10,7 +10,7 @@ After the Ansible provisioning is complete (`bootstrap.sh` or the main playbook)
 
 The bootstrap process deploys two main jobs to the `default` namespace:
 
-- **`prima-expert-main`**: The default, distributed LLM expert service.
+- **`llamacpp-rpc`**: The default, distributed LLM expert service.
 - **`pipecat-app`**: The main voice agent application.
 
 You can check the status of your newly deployed jobs at any time:
@@ -24,7 +24,7 @@ This command will show you if the jobs are running, pending, or have failed. To 
 ```bash
 nomad alloc logs <allocation_id>
 # Example:
-# nomad job allocs prima-expert-main
+# nomad job allocs llamacpp-rpc
 # nomad alloc logs <id_from_previous_command>
 ```
 

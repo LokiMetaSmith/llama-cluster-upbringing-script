@@ -48,10 +48,12 @@
       - rsync
       - rustc
       - sl
+      - sshpass
       - sysbench
       - toilet
       - tmux
       - ufw
       - unzip
+      - yq
     state: present
   become: yes

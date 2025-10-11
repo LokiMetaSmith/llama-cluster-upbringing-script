@@ -1,5 +1,5 @@
 data_dir  = "{{ nomad_data_dir }}"
-bind_addr = "{{ ansible_default_ipv4.address }}"
+bind_addr = "0.0.0.0" # Listen on all interfaces
 
 advertise {
   http = "{{ ansible_default_ipv4.address }}"
@@ -19,7 +19,8 @@ consul {
 client {
   enabled = true
   options = {
-    "driver.raw_exec.enable" = "1"
+    "driver.raw_exec.enable" = "1",
+    "driver.exec.enable"     = "1"
   }
 
   host_volume "pipecatapp" {
@@ -34,5 +35,10 @@ client {
   host_volume "snd" {
     path      = "/dev/snd"
     read_only = false
+  }
+
+  host_volume "models" {
+    path      = "{{ nomad_models_dir }}"
+    read_only = true
   }
 }
