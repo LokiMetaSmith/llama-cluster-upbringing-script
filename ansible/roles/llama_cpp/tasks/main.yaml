@@ -107,7 +107,6 @@
   ansible.builtin.command:
     cmd: "nomad job run /opt/nomad/jobs/expert-{{ item }}.nomad"
   loop: "{{ experts }}"
-  when: item == 'main'
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
