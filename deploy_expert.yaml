@@ -11,7 +11,7 @@
     job_name: "default-expert"
     service_name: "prima-api-default"
     namespace: "default"
-    model_list: "{{ main_expert_models }}"
+    model_list: "{{ expert_models['main'] }}"
     worker_count: 1
 
   tasks:

@@ -1,147 +1,115 @@
-import yaml
 import os
 import sys
 import json
-import glob
-import asyncio
-from unittest.mock import patch, MagicMock
+import uuid
+import shutil
+import logging
 
-from openai import OpenAI
-
-# Add the project root to the python path to allow importing app parts
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-# We need to import the TwinService to replicate its prompt construction logic
-from ansible.roles.pipecatapp.files.app import TwinService
+from evaluation_lib import (
+    render_nomad_job,
+    wait_for_service_healthy,
+    get_test_results,
+    cleanup,
+)
 
 # --- Configuration ---
-# Use a fast and cheap model for evaluation.
-EVALUATION_MODEL = "gpt-3.5-turbo"
-EVALUATION_SUITE_DIR = "prompt_engineering/evaluation_suite"
+JOB_TEMPLATE_PATH = "ansible/roles/pipecatapp/templates/pipecatapp.nomad.j2"
+TEST_RUNNER_TEMPLATE_PATH = "ansible/jobs/test-runner.nomad.j2"
+APP_SOURCE_DIR = "ansible/roles/pipecatapp/files"
+EVALUATION_TIMEOUT_SECONDS = 300  # 5 minutes
+HEALTH_CHECK_RETRIES = 60
+HEALTH_CHECK_DELAY = 5
+
+# --- Logging ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def load_test_suite(directory: str) -> list:
-    """Loads all YAML test cases from a given directory."""
-    test_cases = []
-    for filepath in glob.glob(os.path.join(directory, "*.yaml")):
-        with open(filepath, "r") as f:
-            cases = yaml.safe_load(f)
-            if isinstance(cases, list):
-                test_cases.extend(cases)
-    return test_cases
-
-
-def construct_full_prompt(candidate_prompt: str, query: str) -> str:
+async def evaluate_code(candidate_code: str) -> dict:
     """
-    Constructs the full prompt that would be sent to the LLM, by replicating
-    the logic from TwinService.
+    Evaluates candidate Python code by deploying it in an isolated Nomad
+    environment and running integration tests against it.
     """
-    # We instantiate a dummy TwinService to get access to its tool generation logic.
-    # Most dependencies can be mocked as they are not needed for prompt construction.
-    with patch('ansible.roles.pipecatapp.files.app.YOLOv8Detector'), \
-         patch('ansible.roles.pipecatapp.files.app.MoondreamDetector'), \
-         patch('ansible.roles.pipecatapp.files.app.PipelineRunner'):
+    eval_id = str(uuid.uuid4())[:8]
+    temp_dir = f"/tmp/eval-{eval_id}"
+    app_job_id = f"pipecat-app-eval-{eval_id}"
+    service_name = f"prima-api-eval-{eval_id}"
+    test_job_id = f"test-runner-eval-{eval_id}"
 
-        mock_runner = MagicMock()
-        mock_vision_detector = MagicMock()
+    jobs_to_clean = []
 
-        # We need to mock the Consul call for service discovery.
-        with patch('requests.get') as mock_requests_get:
-            # Pretend there are no other experts to simplify the tool list.
-            mock_requests_get.return_value.json.return_value = {}
-            mock_requests_get.return_value.status_code = 200
+    try:
+        # 1. Setup temporary directory with candidate code
+        logging.info(f"Creating temporary directory: {temp_dir}")
+        shutil.copytree(APP_SOURCE_DIR, temp_dir)
+        with open(os.path.join(temp_dir, "app.py"), "w") as f:
+            f.write(candidate_code)
 
-            twin = TwinService(
-                llm=None,  # Not needed for prompt construction
-                vision_detector=mock_vision_detector,
-                runner=mock_runner
-            )
-
-            # This is the prompt that lists all the tools.
-            tools_prompt = twin.get_system_prompt("router").split(candidate_prompt)[-1]
-
-    # Assemble the final prompt, similar to how TwinService does it.
-    # We use the candidate prompt as the base, add the tools, and then the query.
-    # We omit memory for simplicity in this evaluation context.
-    full_prompt = f"""
-    {candidate_prompt}
-    {tools_prompt}
-
-    Current user query: {query}
-    """
-    return full_prompt.strip()
+        # Also copy the startup script, which is not in the source dir
+        main_startup_script = "/opt/pipecatapp/start_pipecat.sh"
+        if not os.path.exists(main_startup_script):
+            raise FileNotFoundError(f"Main startup script not found at {main_startup_script}. Run bootstrap.sh first.")
+        shutil.copy(main_startup_script, os.path.join(temp_dir, "start_pipecat.sh"))
+        os.chmod(os.path.join(temp_dir, "start_pipecat.sh"), 0o755)
 
 
-async def evaluate_prompt(candidate_prompt: str) -> dict:
-    """
-    Evaluates a candidate prompt against the test suite and returns a fitness score.
-    """
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY environment variable not set.")
+        # 2. Deploy the application with the candidate code
+        logging.info(f"Deploying application job '{app_job_id}'")
+        app_job_context = {
+            "job_name": app_job_id,
+            "service_name": service_name,
+            "host_volume_source": temp_dir
+        }
+        app_job_spec = render_nomad_job(JOB_TEMPLATE_PATH, app_job_context)
+        # Note: The original script used a global nomad_client. The lib function does too.
+        from evaluation_lib import nomad_client
+        nomad_client.jobs.register_job({'Job': app_job_spec})
+        jobs_to_clean.append(app_job_id)
 
-    client = OpenAI(api_key=api_key)
-    test_cases = load_test_suite(EVALUATION_SUITE_DIR)
+        # 3. Wait for the new service to be healthy
+        if not wait_for_service_healthy(service_name, HEALTH_CHECK_RETRIES, HEALTH_CHECK_DELAY):
+            raise RuntimeError("Application service failed to become healthy.")
 
-    if not test_cases:
-        return {"fitness": 0.0, "passed": 0, "total": 0, "error": "No test cases found."}
+        # 4. Run the test job
+        logging.info(f"Running test job '{test_job_id}' against service '{service_name}'")
+        test_job_spec = render_nomad_job(TEST_RUNNER_TEMPLATE_PATH, {})
+        test_job_spec['ID'] = test_job_id
+        # This assumes the test runner job has this env var available.
+        test_job_spec['TaskGroups'][0]['Tasks'][0]['Env']['TARGET_SERVICE_URL'] = f"http://{service_name}.service.consul:8000"
 
-    passed_count = 0
-    for case in test_cases:
-        query = case["query"]
-        full_prompt = construct_full_prompt(candidate_prompt, query)
+        nomad_client.jobs.register_job({'Job': test_job_spec})
+        jobs_to_clean.append(test_job_id)
 
-        try:
-            # Call the LLM with the constructed prompt
-            response = client.chat.completions.create(
-                model=EVALUATION_MODEL,
-                messages=[{"role": "system", "content": full_prompt}],
-                temperature=0.0,
-            )
-            llm_output = response.choices[0].message.content.strip()
+        # 5. Get test results
+        results = get_test_results(test_job_id, EVALUATION_TIMEOUT_SECONDS)
+        fitness = 1.0 if results.get("passed") else 0.0
 
-            # Check against expectations
-            passed = False
-            if "expected_tool_call" in case:
-                try:
-                    tool_call = json.loads(llm_output)
-                    if tool_call.get("tool") == case["expected_tool_call"]:
-                        passed = True
-                except json.JSONDecodeError:
-                    # Not a valid JSON tool call, so it fails the check.
-                    pass
-            elif "expected_output_contains" in case:
-                if case["expected_output_contains"] in llm_output:
-                    passed = True
+        logging.info(f"Evaluation finished. Fitness: {fitness}. Details: {results.get('details')}")
 
-            if passed:
-                passed_count += 1
+        return {
+            "fitness": fitness,
+            "passed": results.get("passed"),
+            "details": results.get("details"),
+            "log": results.get("log", "")
+        }
 
-        except Exception as e:
-            # If the API call fails, the test case fails.
-            print(f"Error during evaluation of query '{query}': {e}")
-            continue
-
-    fitness = (passed_count / len(test_cases)) if test_cases else 0.0
-
-    return {
-        "fitness": fitness,
-        "passed": passed_count,
-        "total": len(test_cases)
-    }
+    except Exception as e:
+        logging.error(f"An error occurred during evaluation: {e}", exc_info=True)
+        return {"fitness": 0.0, "error": str(e)}
+    finally:
+        # Cleanup successful jobs, leave failed ones for inspection
+        cleanup(jobs_to_clean, temp_dir)
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python evaluator.py <candidate_prompt_text>")
+        print("Usage: python evaluator.py <path_to_candidate_code_file>")
         sys.exit(1)
 
-    prompt_file = sys.argv[1]
-    with open(prompt_file, 'r') as f:
-        prompt = f.read()
+    code_file_path = sys.argv[1]
+    with open(code_file_path, 'r') as f:
+        code = f.read()
 
-    # openevolve runs async, so we need a loop to run our main function
-    results = asyncio.run(evaluate_prompt(prompt))
+    import asyncio
+    results = asyncio.run(evaluate_code(code))
 
-    # The openevolve library expects a JSON object printed to stdout
     print(json.dumps(results))

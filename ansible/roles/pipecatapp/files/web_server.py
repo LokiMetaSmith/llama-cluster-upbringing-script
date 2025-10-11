@@ -6,7 +6,11 @@ from asyncio import Queue
 import json
 import requests
 
-app = FastAPI()
+app = FastAPI(
+    title="Pipecat Agent API",
+    description="This API exposes endpoints to interact with the Pipecat agent, including real-time communication, status checks, and state management.",
+    version="1.0.0",
+)
 
 # Create queues to communicate between the web server and the TwinService
 approval_queue = Queue()
@@ -61,7 +65,7 @@ async def websocket_endpoint(websocket: WebSocket):
     This endpoint manages the lifecycle of a WebSocket connection. It listens
     for incoming messages and, if a message is an "approval_response", it
     puts the message onto the `approval_queue` to be processed by the
-    `TwinService`.
+    `TwinService`. It also handles user text messages.
 
     Args:
         websocket (WebSocket): The client's WebSocket connection.
@@ -70,7 +74,6 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            # Assuming the data is JSON
             message = json.loads(data)
             if message.get("type") == "approval_response":
                 await approval_queue.put(message)
@@ -85,20 +88,19 @@ from fastapi.staticfiles import StaticFiles
 # This will be set by the main application
 twin_service_instance = None
 
-# Get the absolute path to the directory containing this script
 script_dir = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.join(script_dir, "static")
 index_html_path = os.path.join(static_dir, "index.html")
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-@app.get("/")
+@app.get("/", summary="Serve Web UI", description="Serves the main `index.html` file for the web user interface.", tags=["UI"])
 async def get():
     """Serves the main `index.html` file for the web UI."""
     with open(index_html_path) as f:
         return HTMLResponse(f.read())
 
-@app.get("/api/status")
+@app.get("/api/status", summary="Get Agent Status", description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks.", tags=["Agent"])
 async def get_status():
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
     if twin_service_instance and hasattr(twin_service_instance, 'tools'):
@@ -116,19 +118,15 @@ async def get_status():
             return {"status": "MCP tool or runner not available."}
     return {"status": "Agent not fully initialized. Please wait..."}
 
-@app.get("/health")
+@app.get("/health", summary="Health Check", description="Provides a health check endpoint. It returns a 200 OK if the agent is initialized and ready, otherwise a 503 Service Unavailable. This is used by Nomad for service health checks.", tags=["System"])
 async def get_health():
     """A health check endpoint that verifies the agent is fully initialized."""
     if twin_service_instance and twin_service_instance.router_llm:
-        # The presence of the router_llm indicates that the LLM service
-        # has been successfully discovered and the agent is ready.
         return JSONResponse(content={"status": "ok"})
     else:
-        # Return a 503 Service Unavailable status if the agent is not ready.
-        # This prevents Nomad from marking the allocation as healthy prematurely.
         return JSONResponse(status_code=503, content={"status": "initializing"})
 
-@app.get("/api/web_uis")
+@app.get("/api/web_uis", summary="Discover Web UIs", description="Discovers other web UIs available on the network by querying Consul. It returns a list of services with their names and URLs.", tags=["System"])
 async def get_web_uis():
     """
     Discovers web UIs from Consul.
@@ -139,10 +137,8 @@ async def get_web_uis():
     consul_url = "http://127.0.0.1:8500"
 
     try:
-        # 1. Add Consul UI
         web_uis.append({"name": "Consul", "url": f"{consul_url}/ui"})
 
-        # 2. Add Nomad UI
         nomad_service_response = requests.get(f"{consul_url}/v1/catalog/service/nomad")
         nomad_service_response.raise_for_status()
         nomad_services = nomad_service_response.json()
@@ -150,7 +146,6 @@ async def get_web_uis():
             nomad_address = nomad_services[0].get("ServiceAddress") or nomad_services[0].get("Address")
             web_uis.append({"name": "Nomad", "url": f"http://{nomad_address}:4646"})
 
-        # 3. Discover other HTTP services
         services_response = requests.get(f"{consul_url}/v1/catalog/services")
         services_response.raise_for_status()
         all_services = services_response.json()
@@ -196,8 +191,8 @@ async def get_web_uis():
 
     return JSONResponse(content=sorted_uis)
 
-@app.post("/api/state/save")
-async def save_state_endpoint(payload: Dict = Body(...)):
+@app.post("/api/state/save", summary="Save Agent State", description="Saves the agent's current conversation and internal state to a named snapshot.", tags=["Agent"])
+async def save_state_endpoint(payload: Dict = Body(..., example={"save_name": "my_snapshot"})):
     """API endpoint to save the agent's current state to a named snapshot.
 
     Args:
@@ -214,8 +209,8 @@ async def save_state_endpoint(payload: Dict = Body(...)):
         return {"message": result}
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
-@app.post("/api/state/load")
-async def load_state_endpoint(payload: Dict = Body(...)):
+@app.post("/api/state/load", summary="Load Agent State", description="Loads the agent's state from a previously saved snapshot.", tags=["Agent"])
+async def load_state_endpoint(payload: Dict = Body(..., example={"save_name": "my_snapshot"})):
     """API endpoint to load the agent's state from a named snapshot.
 
     Args:
@@ -232,8 +227,6 @@ async def load_state_endpoint(payload: Dict = Body(...)):
         return {"message": result}
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
-# We will need a way to get the server to run.
-# This will be handled in the main app.py
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

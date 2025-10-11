@@ -1,0 +1,128 @@
+# /etc/nixos/configuration.nix
+# This file will be templated by Ansible to configure the NixOS PXE server.
+
+{ config, pkgs, lib, ... }:
+
+let
+  # This defines the minimal NixOS system that will be booted by clients.
+  # It includes an SSH key for remote access after booting.
+  netbootSystem = pkgs.lib.nixosSystem {
+    system = "x86_64-linux";
+    modules = [
+      ({ pkgs, ... }: {
+        boot.isContainer = true; # Important for netboot, avoids bootloader install etc.
+
+        # Enable DHCP on the client so it can get an IP.
+        networking.useDHCP = true;
+
+        # Set a root password or add an SSH key to access the provisioned machine.
+        # This uses a variable that should be defined in Ansible group_vars.
+        users.users.root.openssh.authorizedKeys.keys = [ "{{ pxe_client_ssh_key }}" ];
+        services.openssh.enable = true;
+
+        # You can add other packages or services needed on the clients here.
+        environment.systemPackages = with pkgs; [
+          wget
+          curl
+          git
+        ];
+      })
+    ];
+  };
+
+  # Get iPXE bootloaders from nixpkgs
+  ipxeUndionly = "${pkgs.ipxe}/undionly.kpxe";
+  ipxeEfi = "${pkgs.ipxe}/ipxe.efi";
+
+in
+{
+  imports = [
+    # This is where you could import hardware-specific configurations
+  ];
+
+  # Basic system config for the PXE server itself
+  boot.loader.grub.enable = true;
+  boot.loader.grub.device = "/dev/sda"; # Adjust as needed, e.g., "nodev" for cloud
+  networking.hostName = "nixos-pxe-server";
+  time.timeZone = "UTC";
+
+  # Define the network interface for the PXE services
+  networking.interfaces."{{ pxe_interface }}".useDHCP = false;
+  networking.interfaces."{{ pxe_interface }}".ipv4.addresses = [
+    {
+      address = "{{ ansible_default_ipv4.address }}";
+      prefixLength = 24;
+    }
+  ];
+
+  # DHCP Server Configuration
+  services.dhcpd4 = {
+    enable = true;
+    interfaces = [ "{{ pxe_interface }}" ];
+    extraConfig = ''
+      option domain-name "nixos.pxe";
+      option domain-name-servers 8.8.8.8, 8.8.4.4;
+
+      default-lease-time 600;
+      max-lease-time 7200;
+      authoritative;
+
+      # iPXE chainloading logic from https://ipxe.org/howto/dhcpd
+      option client-arch code 93 = unsigned integer 16;
+
+      subnet {{ pxe_subnet }} netmask {{ pxe_netmask }} {
+        range {{ pxe_range_start }} {{ pxe_range_end }};
+        option routers {{ pxe_router }};
+
+        # Logic to serve the right iPXE bootloader
+        if exists user-class and option user-class = "iPXE" {
+          filename "http://{{ ansible_default_ipv4.address }}/boot.ipxe";
+        } else if option client-arch = 00:07 {
+          # UEFI client
+          filename "ipxe.efi";
+        } else {
+          # BIOS client
+          filename "undionly.kpxe";
+        }
+      }
+    '';
+  };
+
+  # TFTP Server to serve the iPXE bootloaders
+  services.tftpd = {
+    enable = true;
+    # We create a directory containing symlinks to the iPXE bootloaders from nixpkgs.
+    tftpRoot = pkgs.linkFarm "tftp-root" [
+      { name = "undionly.kpxe"; path = ipxeUndionly; }
+      { name = "ipxe.efi"; path = ipxeEfi; }
+    ];
+  };
+
+  # HTTP Server (Nginx) to serve the iPXE script and NixOS netboot files
+  services.nginx = {
+    enable = true;
+    # The boot script itself will be placed at /var/www/boot.ipxe by Ansible.
+    # The netboot artifacts are built by Nix from the `netbootSystem` definition above.
+    virtualHosts."default" = {
+      # Nginx needs a physical root directory to exist.
+      root = "/var/www";
+      extraConfig = ''
+        location /boot.ipxe {
+          alias /var/www/boot.ipxe;
+        }
+        location / {
+          alias ${netbootSystem.config.system.build.netbootRamdisk}/;
+          # The alias above points to the directory with kernel, initrd etc.
+        }
+      '';
+    };
+  };
+
+  # Allow firewall access to the services
+  networking.firewall.allowedTCPPorts = [ 80 ]; # HTTP
+  networking.firewall.allowedUDPPorts = [ 67 69 ]; # DHCP and TFTP
+
+  # Nix settings for flakes, etc.
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  system.stateVersion = "23.11"; # Or your desired NixOS version
+}

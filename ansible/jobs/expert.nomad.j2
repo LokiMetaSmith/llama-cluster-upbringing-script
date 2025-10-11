@@ -1,0 +1,106 @@
+# This Nomad job file runs the main "expert" orchestrator service.
+# It loads a single, suitable model and distributes inference across a
+# pool of rpc-server providers discovered via Consul.
+
+# --- DYNAMIC MODEL SELECTION ---
+# This block filters the model list to find ones that fit in memory,
+# then selects the single largest one to run as the expert.
+{% set memory_buffer_mb = 2048 %}
+{% set available_memory_mb = ansible_memtotal_mb - memory_buffer_mb %}
+{% set suitable_models = model_list | selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | sort(attribute='memory_mb', reverse=true) | list %}
+{% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-provider' %}
+
+job "{{ job_name | default('expert-service') }}" {
+  datacenters = ["dc1"]
+  namespace   = "{{ namespace | default('default') }}"
+
+  # --- ORCHESTRATOR GROUP ---
+  # This group runs the main llama-server which acts as the entry point.
+  group "orchestrator" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" { to = 8080 }
+    }
+
+    # Register the main API endpoint in Consul
+    service {
+      name     = "{{ service_name | default('expert-api') }}"
+      provider = "consul"
+      port     = "http"
+
+      # This health check ensures the model is loaded and the API is responsive.
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "15s"
+        timeout  = "5s"
+      }
+    }
+
+    task "llama-server-orchestrator" {
+      driver = "raw_exec"
+
+      template {
+        data = <<EOH
+#!/bin/bash
+set -e
+echo "--- Starting Orchestrator for {{ job_name }} ---"
+
+# 1. Discover RPC worker services via Consul.
+#    This queries the service created by the 'llamacpp-rpc.nomad.j2' job.
+worker_ips=""
+for i in {1..30}; do
+  worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ rpc_service_name }}?passing" | jq -r '[.[] | .Service | "\(.Address):\(.Port)"] | join(",")')
+  if [ -n "$worker_ips" ]; then
+    echo "Discovered GPU Provider IPs: $worker_ips"
+    break
+  fi
+  echo "No GPU providers found yet, retrying in 10s... (attempt $i/30)"
+  sleep 10
+done
+
+if [ -z "$worker_ips" ]; then
+  echo "FATAL: No RPC GPU providers became available after 5 minutes. Exiting."
+  exit 1
+fi
+
+# 2. Select the best model and launch the server.
+#    This list has been pre-filtered and sorted by Jinja2.
+{% if suitable_models %}
+  selected_model_filename="{{ suitable_models[0].filename }}"
+  selected_model_name="{{ suitable_models[0].name }}"
+
+  echo "✅ Found suitable model. Preparing to launch server with: $selected_model_name"
+
+  # Use 'exec' to replace the script process with the llama-server process.
+  # This is the correct way to run a long-lived service in Nomad.
+  exec /usr/local/bin/llama-server \
+    --model /opt/nomad/models/llm/$selected_model_filename \
+    --host 0.0.0.0 \
+    --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
+    --n-gpu-layers 99 \
+    --mlock \
+    --rpc "$worker_ips"
+
+{% else %}
+  echo "FATAL: No suitable models found for the available system memory of {{ ansible_memtotal_mb }} MB."
+  exit 1
+{% endif %}
+EOH
+        destination = "local/run_orchestrator.sh"
+        perms       = "0755"
+      }
+
+      config {
+        command = "local/run_orchestrator.sh"
+      }
+
+      resources {
+        cpu    = 2000 # Higher CPU for the main process
+        memory = {{ (suitable_models[0].memory_mb | default(4096)) + 1024 }} # Memory for model + buffer
+      }
+    }
+  }
+}

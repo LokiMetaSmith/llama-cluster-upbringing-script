@@ -17,20 +17,20 @@ This plan is broken into phases. Each phase is a self-contained set of tasks des
 
 1.  **Create `heal_cluster.yaml`:**
     * Create a new playbook in the root directory named `heal_cluster.yaml`.
-    * This playbook will have one play targeting `localhost`.
-    * It will use `ansible.builtin.include_role` to run the `primacpp` role first, followed by the `pipecatapp` role. This playbook becomes the standard way to ensure services are running.
+    * This playbook will have one play targeting the primary controller node.
+    * It will use `ansible.builtin.include_role` to run the `bootstrap_agent` role first, followed by the `pipecatapp` role. This playbook becomes the standard way to ensure services are running.
 
-2.  **Make `primacpp` Role Idempotent:**
-    * In `ansible/roles/primacpp/tasks/main.yaml`, add a task using `ansible.builtin.command` to check the status of the `prima-expert-main` job (`nomad job status prima-expert-main`). Register the result.
-    * Add a `when` condition to the `nomad job run` task so that it only executes if the previous check shows the job is not already running.
+2.  **Make `llama_cpp` and `bootstrap_agent` Roles Idempotent:**
+    * In `ansible/roles/bootstrap_agent/tasks/deploy_llama_cpp_model.yaml`, ensure the `nomad job run` task for `llamacpp-rpc` only runs if the job is not already running.
+    * In `ansible/roles/llama_cpp/tasks/main.yaml`, ensure the compilation tasks are skipped if the binaries already exist.
 
 3.  **Refactor the Main Playbook (`playbook.yaml`):**
-    * Confirm that the `primacpp` role is included in "Play 3" and runs *before* the `pipecatapp` role.
+    * Confirm that the `llama_cpp` role is included in "Play 2" and the `bootstrap_agent` role is in "Play 4", running *before* the `pipecatapp` role.
     * Confirm the `Wait for the main expert service to be healthy in Consul` task exists in the `pipecatapp` role and is correctly placed *before* the `Run pipecat-app job` task.
 
 4.  **Remove Conflicting Startup Logic:**
-    * Delete the `ansible/roles/pipecatapp/templates/prima-services.service.j2` file.
-    * In `ansible/roles/pipecatapp/tasks/main.yaml`, remove the task that deploys this `systemd` service.
+    * Delete the `ansible/roles/pipecatapp/templates/prima-services.service.j2` file if it exists.
+    * In `ansible/roles/pipecatapp/tasks/main.yaml`, remove any task that deploys a conflicting `systemd` service.
 
 ---
 ### Phase 2: Implement the OpenAI-Compatible MoE Gateway
@@ -44,7 +44,7 @@ This plan is broken into phases. Each phase is a self-contained set of tasks des
 2.  **Develop the Gateway Application:**
     * In `ansible/roles/moe_gateway/files/`, create a Python script `gateway.py`.
     * This script will be a FastAPI application with a single `/v1/chat/completions` endpoint.
-    * It will need to discover the `pipecat-app`'s text message queue (this will require a small modification to `pipecat-app` to share the queue, perhaps via a global variable or a simple singleton pattern).
+    * It will need to discover the `pipecat-app`'s text message queue (this will require a small modification to `pipecatapp` to share the queue, perhaps via a global variable or a simple singleton pattern).
     * It will need a mechanism to receive a response. The most robust method is to create a unique response queue (e.g., using `asyncio.Queue`) for each incoming request, pass the ID of this queue along with the message to `pipecat-app`, and wait for the response to appear on it.
 
 3.  **Create the Nomad Job:**
@@ -82,7 +82,7 @@ These tasks are focused on addressing the brittleness of the deployment process 
 
 **Goal:** Ensure that the Ansible playbook can be run multiple times without causing errors or unintended side effects. This is the most critical step to achieving a stable and predictable deployment process.
 
-- [ ] **Apply `creates` argument to compilation tasks:** In roles like `llama_cpp`, `whisper_cpp`, and `primacpp`, the `cmake` and `make` tasks should be skipped if the final binary artifacts already exist. This will prevent unnecessary and potentially error-prone recompilation on every playbook run.
+- [ ] **Apply `creates` argument to compilation tasks:** In roles like `llama_cpp` and `whisper_cpp`, the `cmake` and `make` tasks should be skipped if the final binary artifacts already exist. This will prevent unnecessary and potentially error-prone recompilation on every playbook run.
   - *Example (`ansible/roles/llama_cpp/tasks/main.yaml`):*
 
     ```yaml
@@ -223,10 +223,10 @@ This section includes items from the original "For Future Review" list, expanded
 
 -   [ ] **Integrate with the `pipecat` Pipeline:**
     -   When the gateway receives a request, it will transform the payload into a text message.
-    -   It will then inject this message into the `pipecat-app`'s existing `text_message_queue`.
+    -   It will then inject this message into the `pipecatapp`'s existing `text_message_queue`.
 
 -   [ ] **Handle the Response Path:**
-    -   The `pipecat-app` will process the request via the `TwinService` and generate a response.
+    -   The `pipecatapp` will process the request via the `TwinService` and generate a response.
     -   A mechanism needs to be created to capture this final text response and route it back to the originating API call in the gateway service.
     -   The gateway will then format this text into a valid OpenAI API JSON response and send it back to the client.
 
