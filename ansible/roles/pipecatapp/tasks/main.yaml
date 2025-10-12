@@ -192,7 +192,7 @@
         "models={{ expert_models[item] | map(attribute='filename') | join(',') }}"
       ]
 
-- name: Fallback: warn if no verified experts found
+- name: Fallback and warn if no verified experts found
   ansible.builtin.debug:
     msg: >
       ⚠️  No verified experts found! Skipping expert job creation.
