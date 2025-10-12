@@ -206,6 +206,12 @@
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
+- name: Run main expert job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/expert-main.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+
 - name: Wait for the main router service to be healthy in Consul
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/health/service/llama-api-main"
