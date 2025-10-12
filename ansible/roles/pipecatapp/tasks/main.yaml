@@ -42,8 +42,6 @@
   ansible.builtin.debug:
     msg: "⚠️ No verified experts found — skipping expert job creation."
   when: verified_experts is not defined or verified_experts | length == 0
-    mode: '0755'
-  become: yes
 
 - name: Ensure correct ownership of the application directory
   ansible.builtin.file:
