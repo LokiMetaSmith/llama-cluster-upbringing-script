@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # iPXE Boot Server Setup for Automated Debian Installation
 
 This document explains how to set up an advanced PXE boot server that uses iPXE to automate the installation of Debian 12 on new cluster nodes. This method is faster and more reliable than traditional PXE by leveraging HTTP instead of TFTP for the bulk of the file transfers.

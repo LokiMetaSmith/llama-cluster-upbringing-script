@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # Project Summary: Architecting a Responsive, Distributed Conversational AI Pipeline
 
 This document summarizes the final architecture and key features of the project.
