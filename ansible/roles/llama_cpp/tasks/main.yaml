@@ -116,4 +116,4 @@
   loop: "{{ all_models_to_benchmark }}"
   loop_control:
     loop_var: model_item
-  become: yes
+
