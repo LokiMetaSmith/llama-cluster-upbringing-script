@@ -1,0 +1,57 @@
+- name: "Render benchmark Nomad job for model {{ model.name }}"
+  ansible.builtin.template:
+    src: model-benchmark.nomad.j2
+    dest: "/tmp/model-benchmark-{{ model.filename }}.nomad"
+    mode: '0644'
+  vars:
+    model_filename: "{{ model.filename }}"
+
+- name: "Run benchmark job for model {{ model.name }}"
+  ansible.builtin.command:
+    cmd: "nomad job run /tmp/model-benchmark-{{ model.filename }}.nomad"
+  register: benchmark_models_job_run_result
+  changed_when: "'job registration' in benchmark_models_job_run_result.stdout"
+
+- name: "Wait for benchmark job to complete for model {{ model.name }}"
+  ansible.builtin.command:
+    cmd: "nomad job status -json model-benchmark-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
+  register: benchmark_models_job_status_result
+  until: "((benchmark_models_job_status_result.stdout | from_json).Status == 'dead') and ((benchmark_models_job_status_result.stdout | from_json).JobSummary.Summary.Complete == 1)"
+  retries: 60 # 5 minutes (60 * 5s)
+  delay: 5
+  changed_when: false
+
+- name: "Get allocation ID for model {{ model.name }}"
+  ansible.builtin.command:
+    cmd: "nomad job allocs -json model-benchmark-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
+  register: benchmark_models_job_allocs_result
+  changed_when: false
+
+- name: "Capture benchmark logs for model {{ model.name }}"
+  ansible.builtin.command:
+    cmd: "nomad alloc logs {{ (benchmark_models_job_allocs_result.stdout | from_json)[0].ID }} benchmark-task"
+  register: benchmark_models_benchmark_logs
+  changed_when: false
+
+- name: "Check benchmark output and record result for model {{ model.name }}"
+  block:
+    - name: Check for success metric
+      ansible.builtin.debug:
+        msg: "Benchmark for {{ model.name }} successful. Tokens per second found."
+      when: "'tokens per second' in benchmark_models_benchmark_logs.stdout"
+
+    - name: Add to verified models list
+      ansible.builtin.set_fact:
+        benchmark_models_verified_models: "{{ benchmark_models_verified_models + [model] }}"
+      when: "'tokens per second' in benchmark_models_benchmark_logs.stdout"
+  always:
+    - name: "Purge benchmark job for model {{ model.name }}"
+      ansible.builtin.command:
+        cmd: "nomad job stop -purge model-benchmark-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
+      changed_when: false
+
+    - name: "Remove temporary job file for model {{ model.name }}"
+      ansible.builtin.file:
+        path: "/tmp/model-benchmark-{{ model.filename }}.nomad"
+        state: absent
+      changed_when: false
