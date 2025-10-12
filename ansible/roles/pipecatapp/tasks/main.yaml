@@ -199,9 +199,6 @@
       (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
   when: verified_experts is not defined or verified_experts | length == 0
 
-  when: verified_experts is not defined or verified_experts | length == 0
-
-
 - name: Copy test runner Nomad job template
   ansible.builtin.copy:
     src: ../../jobs/test-runner.nomad.j2
