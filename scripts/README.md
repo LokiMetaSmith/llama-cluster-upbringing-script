@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # Project Linting and Formatting
 
 This document outlines the process for running linters to ensure code quality and consistency across the repository. The project uses a suite of linters for YAML, Markdown, Nomad (HCL), and Jinja2 files.
