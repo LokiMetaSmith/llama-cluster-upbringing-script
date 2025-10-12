@@ -169,6 +169,8 @@
     model_list: "{{ expert_models[item] }}"
     worker_count: 1
     ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
+    nomad_namespace: "{{ nomad_namespace }}"
+
 
 - name: Copy test runner Nomad job template
   ansible.builtin.copy:
