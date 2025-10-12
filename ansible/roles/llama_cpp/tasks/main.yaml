@@ -73,7 +73,6 @@
             state: absent
       when: llama_git_result.changed
 
-
 - name: Create Nomad jobs directory
   ansible.builtin.file:
     path: /opt/nomad/jobs
@@ -116,4 +115,3 @@
   loop: "{{ all_models_to_benchmark }}"
   loop_control:
     loop_var: model_item
-

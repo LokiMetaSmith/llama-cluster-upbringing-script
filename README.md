@@ -71,17 +71,20 @@ This cluster is designed for resilience and scalability. As your needs grow, you
 
 **To promote an existing worker node to a controller:**
 
-1.  **Ensure the worker is part of the cluster:** The node you wish to promote must already be a provisioned worker and visible in `nomad node status`.
-2.  **Run the promotion playbook:**
+1. **Ensure the worker is part of the cluster:** The node you wish to promote must already be a provisioned worker and visible in `nomad node status`.
+2. **Run the promotion playbook:**
+
     ```bash
     ansible-playbook promote_controller.yaml
     ```
-3.  **Enter the hostname:** You will be prompted to enter the exact hostname of the worker node you want to promote (e.g., `worker1`).
+
+3. **Enter the hostname:** You will be prompted to enter the exact hostname of the worker node you want to promote (e.g., `worker1`).
 
 The playbook will handle everything:
--   It safely modifies the `inventory.yaml` file to move the node from the `workers` group to the `controller_nodes` group.
--   It stops the services on the target node, cleans up the old worker-specific state, and re-runs the `consul` and `nomad` configuration roles to re-provision it as a server.
--   The node will automatically rejoin the cluster as a controller, strengthening the control plane.
+
+- It safely modifies the `inventory.yaml` file to move the node from the `workers` group to the `controller_nodes` group.
+- It stops the services on the target node, cleans up the old worker-specific state, and re-runs the `consul` and `nomad` configuration roles to re-provision it as a server.
+- The node will automatically rejoin the cluster as a controller, strengthening the control plane.
 
 ## 6. Agent Architecture: The `TwinService`
 
@@ -185,7 +188,8 @@ This project includes a web-based dashboard for real-time display and debugging.
 - **Check Job Status:** `nomad job status`
 - **View Logs:** `nomad alloc logs <allocation_id>` or use the Mission Control Web UI.
 
-#### Cluster Health Check
+### Cluster Health Check
+
 A dedicated health check job exists to verify the status of all running LLM experts. This provides a quick way to ensure the entire cluster is operational.
 
 - **Run the check:** `ansible-playbook run_health_check.yaml`

@@ -60,24 +60,6 @@ experts:
   - math
   - extract
 
-        # Configuration for external, third-party LLM experts.
-        # This is a JSON string defining a dictionary where each key is the expert's name.
-        # - "base_url": The API endpoint for the expert.
-        # - "api_key_env": The name of the environment variable that holds the API key.
-        #
-        # Example:
-        # EXTERNAL_EXPERTS_CONFIG = <<EOF
-        # {
-        #   "openai_gpt4": {
-        #     "base_url": "https://api.openai.com/v1",
-        #     "api_key_env": "OPENAI_API_KEY"
-        #   }
-        # }
-        # EOF
-        # OPENAI_API_KEY = "sk-..."
-
-     #  }
-
 # --- PXE Boot Configuration ---
 
 # Select the operating system for the PXE server.
@@ -100,4 +82,3 @@ pxe_netmask: "255.255.255.0"
 pxe_range_start: "192.168.1.200"
 pxe_range_end: "192.168.1.250"
 pxe_router: "192.168.1.1"
-

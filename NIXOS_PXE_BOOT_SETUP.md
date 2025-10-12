@@ -6,19 +6,19 @@ This document explains how to set up a PXE boot server using NixOS. This method 
 
 This setup uses a new Ansible role, `nixos_pxe_server`, to configure a designated NixOS machine to act as a PXE server. Unlike the traditional, imperative setup used for Debian, the NixOS model defines the entire server configuration—including DHCP, TFTP, and HTTP services, as well as the bootable client system itself—in a single, declarative file (`configuration.nix`).
 
-### Key Differences from the Debian Method:
+### Key Differences from the Debian Method
 
-*   **Declarative Configuration:** All services are defined in one Nix file, not installed and configured with sequential commands. This makes the setup more reliable and easier to maintain.
-*   **No Preseed:** NixOS does not use preseed files. Instead, a complete, minimal NixOS system is built on the server and served to clients over the network.
-*   **Atomic Updates:** `nixos-rebuild switch` atomically builds and activates the new configuration. If the build fails, the system is automatically rolled back to the last known good configuration.
-*   **Reproducibility:** The entire PXE server and the client operating system it serves can be perfectly reproduced from the same Nix configuration.
+* **Declarative Configuration:** All services are defined in one Nix file, not installed and configured with sequential commands. This makes the setup more reliable and easier to maintain.
+* **No Preseed:** NixOS does not use preseed files. Instead, a complete, minimal NixOS system is built on the server and served to clients over the network.
+* **Atomic Updates:** `nixos-rebuild switch` atomically builds and activates the new configuration. If the build fails, the system is automatically rolled back to the last known good configuration.
+* **Reproducibility:** The entire PXE server and the client operating system it serves can be perfectly reproduced from the same Nix configuration.
 
 ## 2. Setup
 
 ### 2.1. Prerequisites
 
-*   A machine with NixOS installed. This machine will become your PXE server.
-*   A static IP address configured on the PXE server's network interface.
+* A machine with NixOS installed. This machine will become your PXE server.
+* A static IP address configured on the PXE server's network interface.
 
 ### 2.2. Configure Ansible
 
@@ -74,18 +74,20 @@ ansible-playbook pxe_setup.yaml
 ```
 
 The playbook will:
-1.  Copy the templated `configuration.nix` file to `/etc/nixos/` on the server.
-2.  Copy the templated `boot.ipxe` script to `/var/www/`.
-3.  Run `nixos-rebuild switch`. This command will:
-    *   Build the minimal NixOS netboot environment (kernel and initrd).
-    *   Install and configure the DHCP, TFTP, and Nginx services.
-    *   Start the services and make them available on the network.
+
+1. Copy the templated `configuration.nix` file to `/etc/nixos/` on the server.
+2. Copy the templated `boot.ipxe` script to `/var/www/`.
+3. Run `nixos-rebuild switch`. This command will:
+    * Build the minimal NixOS netboot environment (kernel and initrd).
+    * Install and configure the DHCP, TFTP, and Nginx services.
+    * Start the services and make them available on the network.
 
 ### 2.4. Client Boot Process
 
 When a client machine is set to network boot, it will:
-1.  Contact the DHCP server and receive an IP address.
-2.  Download and run the iPXE bootloader (`.kpxe` or `.efi`) from the TFTP server.
-3.  iPXE will then download and execute the `boot.ipxe` script from the HTTP server.
-4.  The script instructs iPXE to download the NixOS kernel (`bzImage`) and initrd.
-5.  The client boots into a fully functional, minimal NixOS environment running in RAM, with SSH access enabled. From here, you can proceed with further provisioning.
+
+1. Contact the DHCP server and receive an IP address.
+2. Download and run the iPXE bootloader (`.kpxe` or `.efi`) from the TFTP server.
+3. iPXE will then download and execute the `boot.ipxe` script from the HTTP server.
+4. The script instructs iPXE to download the NixOS kernel (`bzImage`) and initrd.
+5. The client boots into a fully functional, minimal NixOS environment running in RAM, with SSH access enabled. From here, you can proceed with further provisioning.
