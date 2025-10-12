@@ -184,7 +184,7 @@
   when: verified_experts is defined and verified_experts | length > 0
   vars:
     job_name: "expert-{{ item }}"
-    service_name: "llama-api-{{ item }}"
+    service_name: "expert-api-{{ item }}"
     model_list: "{{ expert_models[item] | default(experts, true) }}"
     worker_count: 1
     ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
@@ -203,7 +203,7 @@
     expert_tags: >-
       [
         "expert={{ item }}",
-        "namespace={{ namespace | default('default', true) }}",
+        "namespace={{ nomad_namespace | default('default', true) }}",
         "avg_tps={{ avg_tokens_per_second | round(2) }}",
         "memory_mb={{ ansible_memtotal_mb }}",
         "models={{ expert_models[item] | map(attribute='filename') | join(',') }}"
@@ -258,9 +258,9 @@
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
-- name: Wait for the main router service to be healthy in Consul
+- name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/llama-api-main"
+    url: "http://127.0.0.1:8500/v1/health/service/expert-api-main"
     return_content: yes
   register: expert_health
   until: >
