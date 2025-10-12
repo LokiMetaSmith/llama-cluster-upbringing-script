@@ -4,7 +4,7 @@
 job "model-benchmark-{{ model_filename | regex_replace('[^a-zA-Z0-9-]', '-') }}" {
   datacenters = ["dc1"]
   type        = "batch"
-  namespace   = "{{ namespace | default('default') }}"
+  namespace   = "{{ nomad_namespace | default('default') }}"
 
   group "benchmark-group" {
     count = 1

@@ -14,8 +14,6 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture
 def client(mocker):
-    # Mock the startup event to prevent it from running
-    mocker.patch("web_server.startup_event", new_callable=AsyncMock)
     client = TestClient(app)
     return client
 
@@ -25,7 +23,12 @@ def test_read_main(client):
     assert response.status_code == 200
     assert "Mission Control" in response.text
 
-def test_health_check(client):
+def test_health_check(client, mocker):
+    # Mock the twin_service_instance to simulate a healthy state
+    mock_twin_service = mocker.Mock()
+    mock_twin_service.router_llm = True
+    mocker.patch("web_server.twin_service_instance", mock_twin_service)
+
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
