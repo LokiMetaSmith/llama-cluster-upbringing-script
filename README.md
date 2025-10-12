@@ -120,7 +120,7 @@ The personality and instructions for the main router agent and each expert agent
 
 ## 7. AI Service Deployment
 
-The system is designed to be self-bootstrapping. The `bootstrap.sh` script (or the main `playbook.yaml`) handles the deployment of the core AI services on the primary control node. This includes a default instance of the `prima-expert` job and the `pipecat` voice agent.
+The system is designed to be self-bootstrapping. The `bootstrap.sh` script (or the main `playbook.yaml`) handles the deployment of the core AI services on the primary control node. This includes a default instance of the `llama-expert` job and the `pipecat` voice agent.
 
 ### 7.1. Start, Restart, or "Heal" Your Core Services
 
@@ -139,7 +139,7 @@ nomad job stop -purge pipecat-app
 
 ### 7.2. Advanced: Deploying Additional AI Experts
 
-The true power of this architecture is the ability to deploy multiple, specialized AI experts that the main `pipecat` agent can route queries to. With the new unified `prima-expert.nomad` job template, deploying a new expert is handled through a dedicated Ansible playbook.
+The true power of this architecture is the ability to deploy multiple, specialized AI experts that the main `pipecat` agent can route queries to. With the new unified `llama-expert.nomad` job template, deploying a new expert is handled through a dedicated Ansible playbook.
 
 1. **Define a Model List for Your Expert:**
     First, open `group_vars/models.yaml` and create a new list of models for your expert. For example, to create a `creative-writing` expert, you could add:
@@ -156,10 +156,10 @@ The true power of this architecture is the ability to deploy multiple, specializ
     - **Example: Deploying a `creative-writing` expert to the `creative` namespace:**
 
       ```bash
-      ansible-playbook deploy_expert.yaml -e "job_name=creative-expert service_name=prima-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
+      ansible-playbook deploy_expert.yaml -e "job_name=creative-expert service_name=llama-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
       ```
 
-The `TwinService` in the `pipecatapp` will automatically discover any service registered in Consul with the `prima-api-` prefix and make it available for routing.
+The `TwinService` in the `pipecatapp` will automatically discover any service registered in Consul with the `llama-api-` prefix and make it available for routing.
 
 ## 8. Advanced System Features
 
@@ -204,7 +204,7 @@ npm run lint
 
 ## 10. Performance Tuning & Service Selection
 
-- **Model Selection:** The `prima-expert.nomad` job is configured via Ansible variables in `group_vars/models.yaml`. You can define different model lists for different experts.
+- **Model Selection:** The `llama-expert.nomad` job is configured via Ansible variables in `group_vars/models.yaml`. You can define different model lists for different experts.
 - **Network:** Wired gigabit ethernet is strongly recommended over Wi-Fi for reduced latency.
 - **VAD Tuning:** The `RealtimeSTT` sensitivity can be tuned in `app.py` for better performance in noisy environments.
 - **STT/TTS Service Selection:** You can choose which Speech-to-Text and Text-to-Speech services to use by setting environment variables in the `pipecatapp.nomad` job file.

@@ -9,15 +9,15 @@
   # e.g., ansible-playbook deploy_expert.yaml -e "job_name=my-expert ..."
   vars:
     job_name: "default-expert"
-    service_name: "prima-api-default"
+    service_name: "llama-api-default"
     namespace: "default"
     model_list: "{{ expert_models['main'] }}"
     worker_count: 1
 
   tasks:
-    - name: "Render the Prima Expert job template with custom variables"
+    - name: "Render the Llama Expert job template with custom variables"
       ansible.builtin.template:
-        src: ansible/jobs/prima-expert.nomad
+        src: ansible/jobs/llama-expert.nomad
         dest: /tmp/{{ job_name }}.nomad
         mode: '0644'
 
@@ -31,7 +31,7 @@
       retries: 12
       delay: 5
 
-    - name: "Run the custom Prima Expert job in Nomad"
+    - name: "Run the custom Llama Expert job in Nomad"
       ansible.builtin.command:
         cmd: "nomad job run /tmp/{{ job_name }}.nomad"
       register: nomad_run_result

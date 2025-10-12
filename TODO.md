@@ -29,7 +29,7 @@ This plan is broken into phases. Each phase is a self-contained set of tasks des
     * Confirm the `Wait for the main expert service to be healthy in Consul` task exists in the `pipecatapp` role and is correctly placed *before* the `Run pipecat-app job` task.
 
 4.  **Remove Conflicting Startup Logic:**
-    * Delete the `ansible/roles/pipecatapp/templates/prima-services.service.j2` file if it exists.
+    * Delete the `ansible/roles/pipecatapp/templates/llama-services.service.j2` file if it exists.
     * In `ansible/roles/pipecatapp/tasks/main.yaml`, remove any task that deploys a conflicting `systemd` service.
 
 ---
@@ -106,7 +106,7 @@ These tasks are focused on addressing the brittleness of the deployment process 
   - *Specific examples:*
     - The `NOMAD_ADDR` in the `pipecatapp` role tasks should be a variable.
     - The log file path `/tmp/pipecat.log` in `start_pipecat.sh` should be a variable.
-    - The `PRIMA_API_SERVICE_NAME` in `pipecatapp.nomad` should be a variable.
+    - The `LLAMA_API_SERVICE_NAME` in `pipecatapp.nomad` should be a variable.
 - [ ] **Convert all configuration files to templates:** Any file that contains a variable should be a Jinja2 template (`.j2`). This includes all Nomad job files (`*.nomad`), the `start_pipecat.sh` script, and systemd service files.
 - [ ] **Establish a clear variable hierarchy:** Use `group_vars/all.yaml` for system-wide defaults and consider `host_vars/<hostname>.yaml` for machine-specific overrides (like `mac_address`, which is already being done correctly).
 
@@ -152,7 +152,7 @@ These tasks are focused on addressing the brittleness of the deployment process 
 This section includes items from the original "For Future Review" list, expanded with more concrete action items.
 
 - [ ] **Implement Graceful LLM Failover:**
-  - The `prima-expert.nomad` job template already loops through a list of models. Enhance this by adding a final, lightweight fallback model to the end of every model list in `group_vars/models.yaml` (e.g., a 3B parameter model). This ensures that even if larger models fail to load due to memory constraints, the expert service will still start with a basic capability.
+  - The `llama-expert.nomad` job template already loops through a list of models. Enhance this by adding a final, lightweight fallback model to the end of every model list in `group_vars/models.yaml` (e.g., a 3B parameter model). This ensures that even if larger models fail to load due to memory constraints, the expert service will still start with a basic capability.
 - [ ] **Re-evaluate Consul Connect Service Mesh:**
   - Once the core system is stable, create a new feature branch and attempt to re-enable `sidecar_service` in the Nomad job files. Document the exact steps needed to configure the service mesh and any performance overhead observed.
 - [ ] **Add Pre-flight System Health Checks:**

@@ -32,7 +32,7 @@ async def evaluate_code(candidate_code: str) -> dict:
     eval_id = str(uuid.uuid4())[:8]
     temp_dir = f"/tmp/eval-{eval_id}"
     app_job_id = f"pipecat-app-eval-{eval_id}"
-    service_name = f"prima-api-eval-{eval_id}"
+    service_name = f"llama-api-eval-{eval_id}"
     test_job_id = f"test-runner-eval-{eval_id}"
 
     jobs_to_clean = []

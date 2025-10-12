@@ -291,7 +291,7 @@ async def discover_service(service_name: str, consul_http_addr: str, delay=10):
 
 async def discover_main_llm_service(consul_http_addr="http://localhost:8500", delay=10):
     # This is useful for vision-specific LLM calls (used by TwinService._call_vision_llm)
-    service_name = os.getenv("PRIMA_API_SERVICE_NAME", "prima-api-main")
+    service_name = os.getenv("PRIMA_API_SERVICE_NAME", "llama-api-main")
     while True:
         try:
             response = requests.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")

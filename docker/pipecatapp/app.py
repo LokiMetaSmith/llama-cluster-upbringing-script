@@ -882,7 +882,7 @@ async def main():
     llm = OpenAILLMService(
         base_url=llm_base_url,
         api_key="dummy",
-        model="dummy" # The model is selected by the prima-expert job, not here.
+        model="dummy" # The model is selected by the llama-expert job, not here.
     )
 
     # --- FINAL FIX FOR TTS ---

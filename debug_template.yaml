@@ -23,7 +23,7 @@
   vars_files:
     - group_vars/models.yaml
 
-  # Define the variables that the prima-expert.nomad template expects.
+  # Define the variables that the llama-expert.nomad template expects.
   # This simulates how the main `llama_cpp` role would deploy the default expert.
   vars:
     job_name: "llamacpp-rpc"
@@ -33,12 +33,12 @@
     worker_count: 1
 
   tasks:
-    - name: Render the Prima Expert Nomad job from template
+    - name: Render the Llama Expert Nomad job from template
       ansible.builtin.template:
         # Source: The Jinja2 template file for the Nomad job.
-        src: ansible/jobs/prima-expert.nomad
+        src: ansible/jobs/llama-expert.nomad
         # Destination: The output file. This will be a pure, valid HCL file
         # that you can test directly with the `nomad` command.
-        dest: ./rendered_prima_expert_job.nomad
+        dest: ./rendered_llama_expert_job.nomad
         # Set standard file permissions for the rendered file.
         mode: '0644'

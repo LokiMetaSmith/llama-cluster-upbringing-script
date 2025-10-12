@@ -1,7 +1,7 @@
 # This file centralizes the configuration for all AI models used in the project.
 
 # Each expert can have its own list of models for failover.
-# The `prima-expert.nomad` job template will be rendered with one of these lists.
+# The `llama-expert.nomad` job template will be rendered with one of these lists.
 expert_models:
   main:
     - name: "Llama-3-8B-Instruct"
