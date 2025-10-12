@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # Deploying and Profiling AI Services
 
 This guide provides step-by-step instructions for deploying the various AI services on your cluster and for using the built-in benchmarking tools to profile system performance.

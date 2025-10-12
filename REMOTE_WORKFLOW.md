@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # Improving Your Remote Workflow with Mosh and Tmux
 
 Managing a remote cluster involves spending a lot of time in a terminal. Mosh and tmux are two essential tools that make this experience faster, more reliable, and more efficient.

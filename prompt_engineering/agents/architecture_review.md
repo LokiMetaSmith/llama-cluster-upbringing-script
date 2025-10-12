@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # Agent: Architecture Review
 
 ## Role

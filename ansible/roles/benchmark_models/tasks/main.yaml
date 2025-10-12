@@ -1,3 +1,31 @@
-- name: Placeholder for benchmark_models role
+- name: Load model variables
+  ansible.builtin.include_vars:
+    file: group_vars/models.yaml
+
+- name: Initialize model list
+  ansible.builtin.set_fact:
+    benchmark_models_all_models: []
+
+- name: Create a flattened and unique list of all models to benchmark
+  ansible.builtin.set_fact:
+    benchmark_models_all_models: "{{ benchmark_models_all_models + expert_models[item] }}"
+  loop: "{{ expert_models.keys() | list }}"
+
+- name: Deduplicate the list of models
+  ansible.builtin.set_fact:
+    benchmark_models_unique_models: "{{ benchmark_models_all_models | unique(attribute='filename') }}"
+
+- name: Initialize list of verified models
+  ansible.builtin.set_fact:
+    benchmark_models_verified_models: []
+
+- name: Iterate over each model and run benchmark
+  ansible.builtin.include_tasks:
+    file: benchmark_loop.yaml
+  loop: "{{ benchmark_models_unique_models }}"
+  loop_control:
+    loop_var: model
+
+- name: Display the list of verified models
   ansible.builtin.debug:
-    msg: "This role is not yet implemented."
+    var: benchmark_models_verified_models

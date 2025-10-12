@@ -1,10 +1,12 @@
+Last updated: 2025-10-12
+
 # NixOS-based PXE Boot Server Setup
 
 This document explains how to set up a PXE boot server using NixOS. This method leverages the declarative nature of NixOS to provide a reproducible and robust PXE environment for provisioning bare-metal machines.
 
 ## 1. Overview
 
-This setup uses a new Ansible role, `nixos_pxe_server`, to configure a designated NixOS machine to act as a PXE server. Unlike the traditional, imperative setup used for Debian, the NixOS model defines the entire server configuration—including DHCP, TFTP, and HTTP services, as well as the bootable client system itself—in a single, declarative file (`configuration.nix`).
+This setup uses a new Ansible role, `nixos_pxe_server`, to configure a designated NixOS machine to act as a PXE server. Unlike the traditional, imperative setup used for Debian, the NixOS model defines the entire server configuration—including DHCP, TFT, and HTTP services, as well as the bootable client system itself—in a single, declarative file (`configuration.nix`).
 
 ### Key Differences from the Debian Method
 

@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # TODO
 
 This document outlines the major refactoring, feature enhancement, and maintenance tasks for the project. It is divided into high-priority tasks for improving stability and a backlog of future enhancements.
