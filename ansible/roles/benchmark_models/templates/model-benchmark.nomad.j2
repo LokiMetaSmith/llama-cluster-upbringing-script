@@ -1,0 +1,33 @@
+# This Nomad job file runs a benchmark for a single model.
+# It is designed to be a short-lived batch job.
+
+job "model-benchmark-{{ model_filename | regex_replace('[^a-zA-Z0-9-]', '-') }}" {
+  datacenters = ["dc1"]
+  type        = "batch"
+  namespace   = "{{ namespace | default('default') }}"
+
+  group "benchmark-group" {
+    count = 1
+
+    task "benchmark-task" {
+      driver = "raw_exec"
+
+      config {
+        command = "/usr/local/bin/llama-server"
+        args = [
+          "--model", "/opt/nomad/models/llm/{{ model_filename }}",
+          "--host", "127.0.0.1",
+          "--port", "8080",
+          "--n-gpu-layers", "99",
+          "--mlock",
+          "--benchmark"
+        ]
+      }
+
+      resources {
+        cpu    = 2000
+        memory = 8192 # Allocate enough memory for the largest model
+      }
+    }
+  }
+}
