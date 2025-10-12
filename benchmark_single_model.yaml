@@ -10,6 +10,6 @@
 - name: "Append benchmark result for {{ model_item.filename }}"
   ansible.builtin.lineinfile:
     path: /var/log/llama_benchmarks.jsonl
-    line: "{{ {'model': model_item.filename, 'status': 'success' if benchmark_result.rc == 0 else 'fail', 'tokens_per_second': (benchmark_result.stdout | regex_search('total tokens/s.*= *([0-9]+\\.[0-9]+)', '\\1') | first | default(0) | float) if benchmark_result.rc == 0 else 0} | to_json }}"
+    line: "{{ {'model': model_item.filename, 'status': 'success' if benchmark_result.rc == 0 else 'fail', 'tokens_per_second': (benchmark_result.stdout | regex_search('total tokens/s.*= *([0-9]+\\.[0-9]+)', '\\1') | default([]) | first | default(0) | float) if benchmark_result.rc == 0 else 0} | to_json }}"
   become: yes
 
