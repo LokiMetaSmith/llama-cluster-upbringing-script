@@ -162,12 +162,12 @@
   ansible.builtin.template:
     src: ../../jobs/llamacpp-rpc.nomad.j2
     dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
-  loop: "{{ verified_experts | default(experts, true) }}"
+  loop: "{{ verified_experts | default([]) }}"
   when: verified_experts is defined and verified_experts | length > 0
   vars:
     job_name: "expert-{{ item }}"
     service_name: "llama-api-{{ item }}"
-    model_list: "{{ expert_models[item] | default([]) }}"
+    model_list: "{{ expert_models[item] | default(experts, true) }}"
     worker_count: 1
     ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
     nomad_namespace: "{{ nomad_namespace | default('default', true) }}"
@@ -195,8 +195,10 @@
 - name: Fallback: warn if no verified experts found
   ansible.builtin.debug:
     msg: >
-      ⚠️ No verified experts found! Skipping expert job creation.
+      ⚠️  No verified experts found! Skipping expert job creation.
       (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
+  when: verified_experts is not defined or verified_experts | length == 0
+
   when: verified_experts is not defined or verified_experts | length == 0
 
 
