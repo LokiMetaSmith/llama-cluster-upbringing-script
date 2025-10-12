@@ -34,7 +34,7 @@ The project has evolved from a single setup script into a sophisticated, multi-l
 
 ## References
 
-- **[prima.cpp](https://github.com/gitalbenar/prima.cpp):** The distributed LLM inference engine.
+
 - **[pipecat-ai](https://github.com/pipecat-ai/pipecat):** The real-time, streaming conversational AI framework.
 - **[physiii/twin](https://github.com/physiii/twin):** The agent embodiment framework that inspired the `TwinService`.
 - **[codelion/openevolve](https://github.com/codelion/openevolve):** The AlphaEvolve implementation for prompt engineering.
