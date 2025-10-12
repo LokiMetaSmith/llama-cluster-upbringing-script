@@ -1,27 +1,47 @@
-- name: Read benchmark results file
-  ansible.builtin.command:
-    cmd: cat /var/log/llama_benchmarks.jsonl
-  register: benchmark_results
-  changed_when: false
-  failed_when: false # Don't fail if the file doesn't exist
+- name: Read and parse benchmark results
+  block:
+    - name: Read benchmark log file
+      ansible.builtin.slurp:
+        src: /var/log/llama_benchmarks.jsonl
+      register: benchmark_log_raw
+
+    - name: Parse benchmark JSONL content safely
+      ansible.builtin.set_fact:
+        benchmark_results: >-
+          {{
+            benchmark_log_raw.content
+            | b64decode
+            | splitlines
+            | map('from_json')
+            | list
+          }}
+  rescue:
+    - name: Set empty benchmark results on failure
+      ansible.builtin.set_fact:
+        benchmark_results: []
 
 - name: Identify successful models from benchmarks
   ansible.builtin.set_fact:
-    successful_models: "{{ benchmark_results.stdout_lines | map('from_json') | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
-  when: benchmark_results.stdout_lines is defined and benchmark_results.stdout_lines
+    successful_models: "{{ benchmark_results | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
 
-- name: Identify which experts have at least one runnable model
+- name: Identify verified experts with at least one successful model
   ansible.builtin.set_fact:
-    verified_experts: "{{ verified_experts | default([]) + [item] }}"
-  loop: "{{ experts }}"
-  when: >
-    successful_models is defined and
-    expert_models[item] | map(attribute='filename') | intersect(successful_models) | length > 0
+    verified_experts: >-
+      {{
+        experts
+        | select('in', (
+            successful_models
+            | map('regex_replace', '^', '')
+            | list
+          ))
+        | list
+      }}
+  when: successful_models | length > 0
 
-- name: Create pipecatapp application directory
-  ansible.builtin.file:
-    path: /opt/pipecatapp
-    state: directory
+- name: Warn if no verified experts found
+  ansible.builtin.debug:
+    msg: "⚠️ No verified experts found — skipping expert job creation."
+  when: verified_experts is not defined or verified_experts | length == 0
     mode: '0755'
   become: yes
 
