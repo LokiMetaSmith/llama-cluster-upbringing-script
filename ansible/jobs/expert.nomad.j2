@@ -12,7 +12,7 @@
 
 job "{{ job_name | default('expert-service') }}" {
   datacenters = ["dc1"]
-  namespace   = "{{ namespace | default('default') }}"
+  namespace   = "{{ nomad_namespace | default('default') }}"
 
   # --- ORCHESTRATOR GROUP ---
   # This group runs the main llama-server which acts as the entry point.

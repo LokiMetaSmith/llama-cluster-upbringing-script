@@ -42,6 +42,8 @@
   ansible.builtin.debug:
     msg: "⚠️ No verified experts found — skipping expert job creation."
   when: verified_experts is not defined or verified_experts | length == 0
+    mode: '0755'
+  become: yes
 
 - name: Ensure correct ownership of the application directory
   ansible.builtin.file:
@@ -188,8 +190,7 @@
     model_list: "{{ expert_models[item] | default(experts, true) }}"
     worker_count: 1
     ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
-    nomad_namespace: "{{ nomad_namespace | default('default', true) }}"
-    namespace: "{{ namespace | default('default', true) }}"
+    nomad_namespace: "{{ nomad_namespace | default('default') }}"
     benchmark_data: >-
       {{
         (benchmark_results.stdout_lines | map('from_json') |

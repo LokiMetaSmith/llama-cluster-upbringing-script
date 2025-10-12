@@ -4,7 +4,7 @@
 
 job "{{ job_name | default('llamacpp-rpc-pool') }}" {
   datacenters = ["dc1"]
-  namespace   = "{{ namespace | default('default') }}"
+  namespace   = "{{ nomad_namespace | default('default') }}"
   
   # --- Metadata about this expert ---
   meta {

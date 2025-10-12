@@ -2,7 +2,7 @@
 # It is parameterized and can be used to deploy any expert model.
 job "{{ job_name | default('llama-expert-main') }}" {
   datacenters = ["dc1"]
-  namespace   = "{{ namespace | default('default') }}"
+  namespace   = "{{ nomad_namespace | default('default') }}"
 
   group "master" {
     count = 1
