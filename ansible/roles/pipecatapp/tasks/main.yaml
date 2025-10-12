@@ -1,3 +1,23 @@
+- name: Read benchmark results file
+  ansible.builtin.command:
+    cmd: cat /var/log/llama_benchmarks.jsonl
+  register: benchmark_results
+  changed_when: false
+  failed_when: false # Don't fail if the file doesn't exist
+
+- name: Identify successful models from benchmarks
+  ansible.builtin.set_fact:
+    successful_models: "{{ benchmark_results.stdout_lines | map('from_json') | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
+  when: benchmark_results.stdout_lines is defined and benchmark_results.stdout_lines
+
+- name: Identify which experts have at least one runnable model
+  ansible.builtin.set_fact:
+    verified_experts: "{{ verified_experts | default([]) + [item] }}"
+  loop: "{{ experts }}"
+  when: >
+    successful_models is defined and
+    expert_models[item] | map(attribute='filename') | intersect(successful_models) | length > 0
+
 - name: Create pipecatapp application directory
   ansible.builtin.file:
     path: /opt/pipecatapp
@@ -138,14 +158,14 @@
     dest: /opt/nomad/jobs/evolve-prompt.nomad
   become: yes
 
-- name: Create expert job files from template
+- name: Create expert job files from template for verified models
   ansible.builtin.template:
     src: ../../jobs/llamacpp-rpc.nomad.j2
     dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
-  loop: "{{ experts }}"
+  loop: "{{ verified_experts | default(experts) }}" # Fallback to all experts if verification fails
   vars:
     job_name: "expert-{{ item }}"
-    service_name: "prima-api-{{ item }}"
+    service_name: "llama-api-{{ item }}"
     model_list: "{{ expert_models[item] }}"
     worker_count: 1
     ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
@@ -159,7 +179,6 @@
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
     cmd: "{{ pipecat_app_dir }}/venv/bin/python -m playwright install"
-
   become: yes
   become_user: "{{ target_user }}"
   async: 900 # Set timeout to 15 minutes
@@ -187,9 +206,9 @@
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
-- name: Wait for the main expert service to be healthy in Consul
+- name: Wait for the main router service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/expert-api-main"
+    url: "http://127.0.0.1:8500/v1/health/service/llama-api-main"
     return_content: yes
   register: expert_health
   until: >
