@@ -1,0 +1,15 @@
+- name: "Run llama-bench for {{ model_item.filename }}"
+  ansible.builtin.command:
+    cmd: "llama-bench -m /opt/nomad/models/llm/{{ model_item.filename }} -p 32 -n 32"
+  register: benchmark_result
+  ignore_errors: true
+  changed_when: false
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: "Append benchmark result for {{ model_item.filename }}"
+  ansible.builtin.lineinfile:
+    path: /var/log/llama_benchmarks.jsonl
+    line: "{{ {'model': model_item.filename, 'status': 'success' if benchmark_result.rc == 0 else 'fail', 'tokens_per_second': (benchmark_result.stdout | regex_search('total tokens/s.*= *([0-9]+\\.[0-9]+)', '\\1') | first | float) if benchmark_result.rc == 0 else 0} | to_json }}"
+  become: yes
+
