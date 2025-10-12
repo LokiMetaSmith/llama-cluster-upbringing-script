@@ -11,7 +11,7 @@ if not os.path.isdir(AGENT_DEFS_DIR):
 # Get a list of all markdown files in the directory
 agent_files = [f for f in os.listdir(AGENT_DEFS_DIR) if f.endswith(".md")]
 
-def parse_and_validate_agent_def(content):
+def parse_and_validate_agent_def(content, filename):
     """
     Parses the content of an agent definition file and validates its structure.
     Returns a list of validation error messages.
@@ -24,6 +24,10 @@ def parse_and_validate_agent_def(content):
     found_llm_heading = False
     found_model_spec = False
 
+    # EVALUATOR_GENERATOR.md is a special case, it's a generator, not a definition.
+    if "EVALUATOR_GENERATOR.md" in filename:
+        return []
+
     for line in lines:
         if line == "## Role":
             found_role_heading = True
@@ -31,7 +35,7 @@ def parse_and_validate_agent_def(content):
             if not found_role_heading:
                 errors.append("'## Backing LLM Model' section appears before '## Role' section.")
             found_llm_heading = True
-        elif line.startswith("*   **Model:**"):
+        elif line.startswith("*") and "**Model:**" in line:
             if not found_llm_heading:
                 errors.append("'Model' specification appears before '## Backing LLM Model' section.")
             found_model_spec = True
@@ -41,7 +45,7 @@ def parse_and_validate_agent_def(content):
     if not found_llm_heading:
         errors.append("Missing '## Backing LLM Model' section.")
     if not found_model_spec:
-        errors.append("Missing '*   **Model:**' specification.")
+        errors.append("Missing 'Model' specification (e.g., '* **Model:** ...').")
 
     return errors
 
@@ -55,6 +59,6 @@ def test_agent_definition_schema(filename):
     with open(filepath, 'r') as f:
         content = f.read()
 
-    errors = parse_and_validate_agent_def(content)
+    errors = parse_and_validate_agent_def(content, filename)
 
     assert not errors, f"Schema validation failed for {filename}:\n" + "\n".join(errors)

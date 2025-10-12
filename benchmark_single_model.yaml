@@ -6,8 +6,6 @@
   changed_when: false
   become: yes
   become_user: "{{ target_user }}"
-
-
 - name: "Append benchmark result for {{ model_item.filename }}"
   ansible.builtin.lineinfile:
     path: /var/log/llama_benchmarks.jsonl
@@ -31,4 +29,3 @@
         } | to_json
       }}
   become: yes
-
