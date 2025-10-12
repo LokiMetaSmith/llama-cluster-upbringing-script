@@ -162,14 +162,42 @@
   ansible.builtin.template:
     src: ../../jobs/llamacpp-rpc.nomad.j2
     dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
-  loop: "{{ verified_experts | default(experts) }}" # Fallback to all experts if verification fails
+  loop: "{{ verified_experts | default(experts, true) }}"
+  when: verified_experts is defined and verified_experts | length > 0
   vars:
     job_name: "expert-{{ item }}"
     service_name: "llama-api-{{ item }}"
-    model_list: "{{ expert_models[item] }}"
+    model_list: "{{ expert_models[item] | default([]) }}"
     worker_count: 1
     ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
-    nomad_namespace: "{{ nomad_namespace }}"
+    nomad_namespace: "{{ nomad_namespace | default('default', true) }}"
+    namespace: "{{ namespace | default('default', true) }}"
+    benchmark_data: >-
+      {{
+        (benchmark_results.stdout_lines | map('from_json') |
+        selectattr('model', 'in', expert_models[item] | map(attribute='filename') | list) |
+        list) | default([])
+      }}
+    avg_tokens_per_second: >-
+      {{
+        (benchmark_data | map(attribute='tokens_per_second') | list | sum / (benchmark_data | length))
+        if (benchmark_data | length > 0) else 0
+      }}
+    expert_tags: >-
+      [
+        "expert={{ item }}",
+        "namespace={{ namespace | default('default', true) }}",
+        "avg_tps={{ avg_tokens_per_second | round(2) }}",
+        "memory_mb={{ ansible_memtotal_mb }}",
+        "models={{ expert_models[item] | map(attribute='filename') | join(',') }}"
+      ]
+
+- name: Fallback: warn if no verified experts found
+  ansible.builtin.debug:
+    msg: >
+      ⚠️ No verified experts found! Skipping expert job creation.
+      (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
+  when: verified_experts is not defined or verified_experts | length == 0
 
 
 - name: Copy test runner Nomad job template
