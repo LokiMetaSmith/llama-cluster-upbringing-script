@@ -12,6 +12,12 @@
     state: present
     update_cache: yes
 
+- name: Install kernel headers for the current kernel
+  become: yes
+  ansible.builtin.apt:
+    name: "linux-headers-{{ ansible_kernel }}"
+    state: present
+
 - name: Create directory for the power agent
   become: yes
   ansible.builtin.file:
