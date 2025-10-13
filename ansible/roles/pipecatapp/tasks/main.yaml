@@ -176,7 +176,7 @@
     dest: /opt/nomad/jobs/evolve-prompt.nomad
   become: yes
 
-  - name: Stop and purge any existing expert jobs to ensure idempotency
+- name: Stop and purge any existing expert jobs to ensure idempotency
   ansible.builtin.command:
     cmd: nomad job stop -purge "expert-{{ item }}"
   loop: "{{ experts }}"
