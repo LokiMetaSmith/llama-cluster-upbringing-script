@@ -1,0 +1,39 @@
+- name: Clone term.everything repository
+  ansible.builtin.git:
+    repo: 'https://github.com/mmulet/term.everything.git'
+    dest: '/tmp/term.everything'
+    version: 'main'
+    recursive: yes
+
+- name: Build term.everything AppImage
+  ansible.builtin.command:
+    cmd: ./distribute.sh
+    chdir: '/tmp/term.everything'
+  register: build_result
+  changed_when: build_result.rc == 0
+
+- name: Create tools directory
+  ansible.builtin.file:
+    path: '/opt/mcp/tools'
+    state: directory
+    mode: '0755'
+
+- name: Find the AppImage file
+  find:
+    paths: /tmp/term.everything/dist
+    patterns: '*.AppImage'
+  register: find_result
+
+- name: Move AppImage to tools directory
+  ansible.builtin.move:
+    src: "{{ item.path }}"
+    dest: "/opt/mcp/termeverything.AppImage"
+    remote_src: yes
+    mode: '0755'
+  with_items: "{{ find_result.files }}"
+  when: find_result.files | length > 0
+
+- name: Clean up temporary build directory
+  ansible.builtin.file:
+    path: '/tmp/term.everything'
+    state: absent

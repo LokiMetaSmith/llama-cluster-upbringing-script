@@ -206,6 +206,7 @@
 
   roles:
     - role: bootstrap_agent
+    - role: term_everything
     - role: pipecatapp
 # In your main playbook.yaml, after "Play 4"
 #
