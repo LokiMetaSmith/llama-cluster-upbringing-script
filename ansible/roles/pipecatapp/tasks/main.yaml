@@ -195,6 +195,7 @@
   vars:
     job_name: "expert-{{ item }}"
     service_name: "expert-api-{{ item }}"
+    nomad_namespace: "{{ nomad_namespace }}" 
     model_list: "{{ expert_models[item] | default(experts, true) }}"
     worker_count: 1
     ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
