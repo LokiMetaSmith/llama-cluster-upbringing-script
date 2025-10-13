@@ -36,15 +36,6 @@ pipecat_api_keys: ""
 
 # ... existing variables ...
 
-# Configuration for external, third-party LLM experts.
-# This is a dictionary that will be converted to a JSON string.
-external_model_server: false
-external_experts_config:
-  openai_gpt4:
-    base_url: "https://api.openai.com/v1"
-    api_key_env: "OPENAI_API_KEY"
-    model: "gpt-4-turbo" # Specify the exact model name
-
 # -- Storing Secrets with Ansible Vault --
 # This is the plain text version. In a real environment, you should
 # encrypt this variable. First, create an encrypted file:

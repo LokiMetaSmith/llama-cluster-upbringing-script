@@ -2,6 +2,11 @@
   hosts: all
   become: yes # We are already root
 
+  vars_files:
+    - group_vars/all.yaml
+    - group_vars/models.yaml
+    - group_vars/external_experts.yaml
+
   tasks:
     - name: Ensure the sudo package is installed
       ansible.builtin.apt:
@@ -44,10 +49,6 @@
   hosts: all
   remote_user: "{{ target_user }}"
   become: yes # Now we use the sudo privileges we just created
-
-  vars_files:
-    - group_vars/all.yaml
-    - group_vars/models.yaml
 
   pre_tasks:
     - name: Check connectivity to all nodes
@@ -202,9 +203,6 @@
     - name: Load model variables
       ansible.builtin.include_vars:
         file: group_vars/models.yaml
-  vars_files:
-    - group_vars/all.yaml
-    - group_vars/models.yaml
 
   roles:
     - role: bootstrap_agent
