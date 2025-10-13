@@ -38,10 +38,13 @@
       }}
   when: successful_models | length > 0
 
-- name: Warn if no verified experts found
+- name: Fallback and warn if no verified experts found
   ansible.builtin.debug:
-    msg: "⚠️ No verified experts found — skipping expert job creation."
+    msg: >
+      ⚠️  No verified experts found! Skipping expert job creation.
+      (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
   when: verified_experts is not defined or verified_experts | length == 0
+
 
 - name: Ensure correct ownership of the application directory
   ansible.builtin.file:
@@ -195,7 +198,7 @@
   vars:
     job_name: "expert-{{ item }}"
     service_name: "expert-api-{{ item }}"
-    nomad_namespace: "{{ nomad_namespace }}" 
+    nomad_namespace: "{{ nomad_namespace | default('default', true) }}" 
     model_list: "{{ expert_models[item] | default(experts, true) }}"
     worker_count: 1
     ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
