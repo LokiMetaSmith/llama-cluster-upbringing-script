@@ -35,9 +35,13 @@ expert_models:
 # A list of voices for the PiperTTSService to use, in order of preference.
 tts_voices:
   - name: "en_US-l2arctic-medium"
+    repo_id: "rhasspy/piper-voices"
+    path_in_repo: "en/en_US/l2arctic/medium"
     model: "en_US-l2arctic-medium.onnx"
     config: "en_US-l2arctic-medium.onnx.json"
   - name: "en_US-lessac-low"
+    repo_id: "rhasspy/piper-voices"
+    path_in_repo: "en/en_US/lessac/low"
     model: "en_US-lessac-low.onnx"
     config: "en_US-lessac-low.onnx.json"
 
@@ -60,6 +64,11 @@ embedding_models:
 
 # Speech-to-Text models
 stt_models:
+  whisper-cpp:
+    - name: "whisper-large-v3"
+      url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin"
+      filename: "ggml-large-v3.bin"
+
   faster-whisper:
     - name: "faster-whisper-tiny.en"
       repo_id: "Systran/faster-whisper-tiny.en"
