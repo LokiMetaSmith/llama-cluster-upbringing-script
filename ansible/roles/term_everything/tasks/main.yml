@@ -5,6 +5,12 @@
     version: "main"
     recursive: yes
 
+- name: Install podman
+  ansible.builtin.package:
+    name: podman
+    state: present
+  become: yes
+
 - name: Build term.everything AppImage
   ansible.builtin.command:
     cmd: ./distribute.sh
