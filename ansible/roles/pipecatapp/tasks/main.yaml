@@ -188,7 +188,6 @@
     model_list: "{{ expert_models[item] | default(experts, true) }}"
     worker_count: 1
     ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
-    nomad_namespace: "{{ nomad_namespace | default('default') }}"
     benchmark_data: >-
       {{
         (benchmark_results.stdout_lines | map('from_json') |
