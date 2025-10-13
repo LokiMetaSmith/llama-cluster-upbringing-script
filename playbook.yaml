@@ -50,6 +50,11 @@
   remote_user: "{{ target_user }}"
   become: yes # Now we use the sudo privileges we just created
 
+  vars_files:
+    - group_vars/all.yaml
+    - group_vars/models.yaml
+    - group_vars/external_experts.yaml
+
   pre_tasks:
     - name: Check connectivity to all nodes
       ansible.builtin.ping:
