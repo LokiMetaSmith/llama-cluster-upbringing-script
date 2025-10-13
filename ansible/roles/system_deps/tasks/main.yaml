@@ -25,6 +25,13 @@
       - iperf3
       - jq
       - libavif16
+      - libavformat-dev
+      - libavcodec-dev
+      - libavdevice-dev
+      - libavutil-dev
+      - libavfilter-dev
+      - libswscale-dev
+      - libswresample-dev
       - libcurl4-openssl-dev
       - libevent-2.1-7t64
       - libflite1
@@ -38,6 +45,7 @@
       - ncdu
       - nfs-common
       - openssh-server
+      - pkg-config
       - portaudio19-dev
       - python3
       - python3-dev
