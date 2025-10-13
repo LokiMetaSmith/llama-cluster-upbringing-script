@@ -1,25 +1,31 @@
-You will create a dedicated Ansible role to orchestrate the benchmarking process.
+- name: Load model variables
+  ansible.builtin.include_vars:
+    file: group_vars/models.yaml
 
-Create the role structure: ansible/roles/benchmark_models
+- name: Initialize model list
+  ansible.builtin.set_fact:
+    benchmark_models_all_models: []
 
-Implement tasks/main.yaml:
+- name: Create a flattened and unique list of all models to benchmark
+  ansible.builtin.set_fact:
+    benchmark_models_all_models: "{{ benchmark_models_all_models + expert_models[item] }}"
+  loop: "{{ expert_models.keys() | list }}"
 
-This task file will contain the logic to iterate through all defined models.
+- name: Deduplicate the list of models
+  ansible.builtin.set_fact:
+    benchmark_models_unique_models: "{{ benchmark_models_all_models | unique(attribute='filename') }}"
 
-Load Variables: Ensure it has access to the expert_models from group_vars/models.yaml.
+- name: Initialize list of verified models
+  ansible.builtin.set_fact:
+    benchmark_models_verified_models: []
 
-Loop Through Models: Use a loop to iterate over all models in all expert lists. You will need to flatten the expert_models dictionary to get a single, unique list of models to test.
+- name: Iterate over each model and run benchmark
+  ansible.builtin.include_tasks:
+    file: benchmark_loop.yaml
+  loop: "{{ benchmark_models_unique_models }}"
+  loop_control:
+    loop_var: model
 
-Inside the loop, for each model:
-
-Render the Job: Use ansible.builtin.template to render the model-benchmark.nomad.j2 template, passing the model_filename. Save it to a unique temporary file.
-
-Run the Job: Use ansible.builtin.command to run the temporary Nomad job file.
-
-Wait for Completion: Use a do/until loop with nomad job status to poll until the batch job's status is dead (which means complete). This is a critical step. Add a reasonable number of retries and a delay.
-
-Log the Results: Use ansible.builtin.command with nomad alloc logs to capture the output of the completed benchmark. Register this output.
-
-Record Success/Failure: Check the output for a success metric (like "tokens per second"). Use ansible.builtin.set_fact to add the model to a list of verified_models if the benchmark was successful.
-
-Cleanup: Purge the benchmark job from Nomad and remove the temporary job file.
+- name: Display the list of verified models
+  ansible.builtin.debug:
+    var: benchmark_models_verified_models

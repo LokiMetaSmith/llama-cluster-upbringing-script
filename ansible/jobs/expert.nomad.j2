@@ -6,13 +6,13 @@
 # This block filters the model list to find ones that fit in memory,
 # then selects the single largest one to run as the expert.
 {% set memory_buffer_mb = 2048 %}
-{% set available_memory_mb = ansible_memtotal_mb - memory_buffer_mb %}
+{% set available_memory_mb = (ansible_memtotal_mb | int) - memory_buffer_mb %}
 {% set suitable_models = model_list | selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | sort(attribute='memory_mb', reverse=true) | list %}
 {% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-provider' %}
 
 job "{{ job_name | default('expert-service') }}" {
   datacenters = ["dc1"]
-  namespace   = "{{ namespace | default('default') }}"
+  namespace   = "{{ nomad_namespace | default('default') }}"
 
   # --- ORCHESTRATOR GROUP ---
   # This group runs the main llama-server which acts as the entry point.

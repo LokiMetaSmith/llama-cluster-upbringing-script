@@ -1,29 +1,50 @@
-- name: Read benchmark results file
-  ansible.builtin.command:
-    cmd: cat /var/log/llama_benchmarks.jsonl
-  register: benchmark_results
-  changed_when: false
-  failed_when: false # Don't fail if the file doesn't exist
+- name: Read and parse benchmark results
+  block:
+    - name: Read benchmark log file
+      ansible.builtin.slurp:
+        src: /var/log/llama_benchmarks.jsonl
+      register: benchmark_log_raw
+
+    - name: Parse benchmark JSONL content safely
+      ansible.builtin.set_fact:
+        benchmark_results: >-
+          {{
+            benchmark_log_raw.content
+            | b64decode
+            | splitlines
+            | map('from_json')
+            | list
+          }}
+  rescue:
+    - name: Set empty benchmark results on failure
+      ansible.builtin.set_fact:
+        benchmark_results: []
 
 - name: Identify successful models from benchmarks
   ansible.builtin.set_fact:
-    successful_models: "{{ benchmark_results.stdout_lines | map('from_json') | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
-  when: benchmark_results.stdout_lines is defined and benchmark_results.stdout_lines
+    successful_models: "{{ benchmark_results | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
 
-- name: Identify which experts have at least one runnable model
+- name: Identify verified experts with at least one successful model
   ansible.builtin.set_fact:
-    verified_experts: "{{ verified_experts | default([]) + [item] }}"
-  loop: "{{ experts }}"
-  when: >
-    successful_models is defined and
-    expert_models[item] | map(attribute='filename') | intersect(successful_models) | length > 0
+    verified_experts: >-
+      {{
+        experts
+        | select('in', (
+            successful_models
+            | map('regex_replace', '^', '')
+            | list
+          ))
+        | list
+      }}
+  when: successful_models | length > 0
 
-- name: Create pipecatapp application directory
-  ansible.builtin.file:
-    path: /opt/pipecatapp
-    state: directory
-    mode: '0755'
-  become: yes
+- name: Fallback and warn if no verified experts found
+  ansible.builtin.debug:
+    msg: >
+      ⚠️  No verified experts found! Skipping expert job creation.
+      (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
+  when: verified_experts is not defined or verified_experts | length == 0
+
 
 - name: Ensure correct ownership of the application directory
   ansible.builtin.file:
@@ -158,17 +179,60 @@
     dest: /opt/nomad/jobs/evolve-prompt.nomad
   become: yes
 
+- name: Stop and purge any existing expert jobs to ensure idempotency
+  ansible.builtin.command:
+    cmd: nomad job stop -purge "expert-{{ item }}"
+  loop: "{{ experts }}"
+  register: expert_job_stop_status
+  changed_when: "'Running' in expert_job_stop_status.stdout"
+  failed_when: false
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+
+- name: Debug Nomad namespace
+  debug:
+    var: nomad_namespace
+
 - name: Create expert job files from template for verified models
   ansible.builtin.template:
-    src: ../../jobs/llamacpp-rpc.nomad.j2
+    src: ../../jobs/expert.nomad.j2
     dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
-  loop: "{{ verified_experts | default(experts) }}" # Fallback to all experts if verification fails
+  loop: "{{ verified_experts | default([]) }}"
+  when: verified_experts is defined and verified_experts | length > 0
   vars:
     job_name: "expert-{{ item }}"
-    service_name: "llama-api-{{ item }}"
-    model_list: "{{ expert_models[item] }}"
+    service_name: "expert-api-{{ item }}"
+    #nomad_namespace: "{{ (nomad_namespace | default('default', true)) | string }}" 
+    nomad_namespace: "default"
+    model_list: "{{ expert_models[item] | default(experts, true) }}"
     worker_count: 1
     ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
+    benchmark_data: >-
+      {{
+        (benchmark_results.stdout_lines | map('from_json') |
+        selectattr('model', 'in', expert_models[item] | map(attribute='filename') | list) |
+        list) | default([])
+      }}
+    avg_tokens_per_second: >-
+      {{
+        (benchmark_data | map(attribute='tokens_per_second') | list | sum / (benchmark_data | length))
+        if (benchmark_data | length > 0) else 0
+      }}
+    expert_tags: >-
+      [
+        "expert={{ item }}",
+        "namespace={{ nomad_namespace | default('default', true) }}",
+        "avg_tps={{ avg_tokens_per_second | round(2) }}",
+        "memory_mb={{ ansible_memtotal_mb }}",
+        "models={{ expert_models[item] | map(attribute='filename') | join(',') }}"
+      ]
+
+- name: Fallback and warn if no verified experts found
+  ansible.builtin.debug:
+    msg: >
+      ⚠️  No verified experts found! Skipping expert job creation.
+      (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
+  when: verified_experts is defined and verified_experts | length > 0
 
 - name: Copy test runner Nomad job template
   ansible.builtin.copy:
@@ -206,9 +270,15 @@
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
-- name: Wait for the main router service to be healthy in Consul
+- name: Run main expert job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/expert-main.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+
+- name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/llama-api-main"
+    url: "http://127.0.0.1:8500/v1/health/service/expert-api-main"
     return_content: yes
   register: expert_health
   until: >
@@ -217,6 +287,8 @@
   retries: 60
   delay: 10
   changed_when: false
+  when: "'main' in verified_experts"
+
 
 - name: Run pipecat-app job
   ansible.builtin.command:

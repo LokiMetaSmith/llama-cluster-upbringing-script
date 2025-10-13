@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # Project Summary: Architecting a Responsive, Distributed Conversational AI Pipeline
 
 This document summarizes the final architecture and key features of the project.
@@ -33,7 +35,6 @@ The project has evolved from a single setup script into a sophisticated, multi-l
 ---
 
 ## References
-
 
 - **[pipecat-ai](https://github.com/pipecat-ai/pipecat):** The real-time, streaming conversational AI framework.
 - **[physiii/twin](https://github.com/physiii/twin):** The agent embodiment framework that inspired the `TwinService`.

@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # Agent Task: Generate a Custom Code Evaluator Script
 
 ## Goal
@@ -7,6 +9,7 @@ Your task is to generate a Python script that will act as an "evaluator" for the
 ## Context
 
 The `openevolve` library works by iteratively modifying a piece of code (the "candidate") and testing its performance. The evaluator script is the testing mechanism. It must:
+
 1. Receive the full content of the candidate code as a string.
 2. Set up an environment to run the candidate code.
 3. Run a test suite against the running code.
@@ -16,7 +19,7 @@ The `openevolve` library works by iteratively modifying a piece of code (the "ca
 
 You will use the helper functions provided in the `prompt_engineering.evaluation_lib` module. You must import and use these functions correctly.
 
-### Available Functions:
+### Available Functions
 
 - **`render_nomad_job(template_path: str, context: dict) -> dict`**:
   - Renders a Jinja2 Nomad job template into a dictionary that the Nomad API can accept.
@@ -43,33 +46,33 @@ You will use the helper functions provided in the `prompt_engineering.evaluation
 
 You must generate a complete Python script. The script should not be invoked directly with command-line arguments in production, but it should include a `if __name__ == "__main__":` block for standalone testing, which reads the candidate code from a file path given as the first argument.
 
-### Script Requirements:
+### Script Requirements
 
-1.  **Imports**: Import necessary standard libraries (`os`, `sys`, `json`, `uuid`, `shutil`, `logging`, `asyncio`) and the functions from `evaluation_lib`.
-2.  **Configuration**: Define constants for file paths and environment settings. These should be clearly defined at the top of the script. The user will provide these values.
-3.  **`evaluate_code` async function**: This will be the main function. It must accept one argument: `candidate_code: str`.
-4.  **Unique IDs**: Generate a unique ID (`eval_id`) for each evaluation run to ensure that job names and temporary directories are isolated.
-5.  **Temporary Directory Setup**:
-    -   Create a temporary directory (e.g., `/tmp/eval-{eval_id}`).
-    -   Copy the *entire source directory* of the application being tested into this temp directory.
-    -   Overwrite the target file within the temp directory (e.g., `app.py`) with the `candidate_code`.
-    -   Copy any necessary startup scripts or other assets.
-6.  **Deployment**:
-    -   Render the Nomad job template for the main application, passing in the `job_name`, `service_name`, and the path to the temporary directory (`host_volume_source`).
-    -   Register the job with Nomad using the `nomad_client`.
-7.  **Health Check**: Use `wait_for_service_healthy` to ensure the application is running before starting tests.
-8.  **Test Execution**:
-    -   Render the Nomad job template for the test runner.
-    -   Set the target service URL in the test runner's environment variables so it knows which instance to test against.
-    -   Register the test runner job with Nomad.
-9.  **Result Processing**:
-    -   Call `get_test_results` to get the outcome.
-    -   Calculate the fitness score (1.0 for pass, 0.0 for fail).
-    -   Return a dictionary containing `fitness`, `passed`, `details`, and `log`.
+1. **Imports**: Import necessary standard libraries (`os`, `sys`, `json`, `uuid`, `shutil`, `logging`, `asyncio`) and the functions from `evaluation_lib`.
+2. **Configuration**: Define constants for file paths and environment settings. These should be clearly defined at the top of the script. The user will provide these values.
+3. **`evaluate_code` async function**: This will be the main function. It must accept one argument: `candidate_code: str`.
+4. **Unique IDs**: Generate a unique ID (`eval_id`) for each evaluation run to ensure that job names and temporary directories are isolated.
+5. **Temporary Directory Setup**:
+    - Create a temporary directory (e.g., `/tmp/eval-{eval_id}`).
+    - Copy the *entire source directory* of the application being tested into this temp directory.
+    - Overwrite the target file within the temp directory (e.g., `app.py`) with the `candidate_code`.
+    - Copy any necessary startup scripts or other assets.
+6. **Deployment**:
+    - Render the Nomad job template for the main application, passing in the `job_name`, `service_name`, and the path to the temporary directory (`host_volume_source`).
+    - Register the job with Nomad using the `nomad_client`.
+7. **Health Check**: Use `wait_for_service_healthy` to ensure the application is running before starting tests.
+8. **Test Execution**:
+    - Render the Nomad job template for the test runner.
+    - Set the target service URL in the test runner's environment variables so it knows which instance to test against.
+    - Register the test runner job with Nomad.
+9. **Result Processing**:
+    - Call `get_test_results` to get the outcome.
+    - Calculate the fitness score (1.0 for pass, 0.0 for fail).
+    - Return a dictionary containing `fitness`, `passed`, `details`, and `log`.
 10. **Error Handling & Cleanup**: Wrap the entire process in a `try...finally` block. The `finally` block **must** call the `cleanup` function to stop the Nomad jobs and remove the temporary directory, regardless of success or failure.
 11. **Main Block**: Include a standard `if __name__ == "__main__":` block that allows the script to be run from the command line for testing. It should read the code from a file, call `evaluate_code`, and print the results as a JSON string.
 
-### Example Script Template:
+### Example Script Template
 
 ```python
 import os

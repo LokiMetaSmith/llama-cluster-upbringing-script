@@ -4,8 +4,17 @@
 
 job "{{ job_name | default('llamacpp-rpc-pool') }}" {
   datacenters = ["dc1"]
-  namespace   = "{{ namespace | default('default') }}"
-
+  namespace   = "{{ nomad_namespace | default('default') }}"
+  
+  # --- Metadata about this expert ---
+  meta {
+    expert_name = "{{ job_name | default('llamacpp-rpc-pool') }}"
+    namespace   = "{{ nomad_namespace | default('default') }}"
+    avg_tps     = "{{ avg_tokens_per_second | default(0) | round(2) }}"
+    memory_mb   = "{{ ansible_memtotal_mb | default(0) }}"
+    models      = "{{ expert_models[item] | map(attribute='filename') | join(',') if expert_models is defined else '' }}"
+  }
+  
   # --- GPU PROVIDER GROUP ---
   # This group runs the rpc-server processes that expose GPUs.
   group "rpc-provider" {
@@ -44,6 +53,11 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
       resources {
         cpu    = 500
         memory = 1024 # Memory for the RPC daemon itself.
+        
+      # Optional logging directory (for troubleshooting)
+      artifact {
+        source      = "local/"
+        destination = "local"
       }
     }
   }
