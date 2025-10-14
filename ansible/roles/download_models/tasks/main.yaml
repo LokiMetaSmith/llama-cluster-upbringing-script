@@ -4,6 +4,7 @@
     vision_models_to_download: []
     embedding_models_to_download: []
     piper_files_to_download: []
+    stt_models_to_download: []
 
 # LLM Models
 - name: Query Consul for all LLM expert model lists
@@ -41,6 +42,56 @@
   become: yes
   loop_control:
     loop_var: item
+
+# STT Models
+- name: Query Consul for STT models
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/kv/config/models/stt_models?raw=true"
+    return_content: yes
+  register: stt_models_result
+  ignore_errors: true
+
+- name: Set STT models fact
+  ansible.builtin.set_fact:
+    stt_models_to_download: "{{ (stt_models_result.content | from_json) if stt_models_result.content and stt_models_result.status == 200 else {} }}"
+
+- name: "Ensure STT models directory exists"
+  ansible.builtin.file:
+    path: "/opt/nomad/models/stt"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Check for existing STT models (URL-based)
+  ansible.builtin.stat:
+    path: "/opt/nomad/models/stt/{{ item.1.filename }}"
+  loop: "{{ stt_models_to_download | dict2items | subelements('value') | selectattr('1.url', 'defined') | list }}"
+  register: stt_model_files_url
+  become: yes
+  loop_control:
+    label: "{{ item.1.name }}"
+
+- name: Download all STT models (URL-based)
+  ansible.builtin.get_url:
+    url: "{{ item.item.1.url }}"
+    dest: "/opt/nomad/models/stt/{{ item.item.1.filename }}"
+    mode: '0644'
+  loop: "{{ stt_model_files_url.results }}"
+  when: not item.stat.exists
+  become: yes
+  loop_control:
+    label: "{{ item.item.1.name }}"
+    loop_var: item
+
+- name: Download all STT models (Hub-based)
+  ansible.builtin.script: "download_hf_repo.py {{ item.1.repo_id }} /opt/nomad/models/stt/{{ item.1.name }}"
+  args:
+    executable: "/opt/pipecatapp/venv/bin/python"
+    creates: "/opt/nomad/models/stt/{{ item.1.name }}"
+  loop: "{{ stt_models_to_download | dict2items | subelements('value') | selectattr('1.repo_id', 'defined') | list }}"
+  become: yes
+  loop_control:
+    label: "{{ item.1.name }}"
 
 # Piper Voice Files
 - name: Query Consul for Piper voice files
