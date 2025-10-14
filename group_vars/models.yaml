@@ -69,13 +69,6 @@ stt_models:
       url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin"
       filename: "ggml-large-v3.bin"
 
-  faster-whisper:
-    - name: "faster-whisper-tiny.en"
-      repo_id: "Systran/faster-whisper-tiny.en"
-    - name: "faster-whisper-base.en"
-      repo_id: "Systran/faster-whisper-base.en"
-    - name: "faster-whisper-medium.en"
-      repo_id: "Systran/faster-whisper-medium.en"
 
 # The provider and name of the STT model to be used by the pipecat-app
 active_stt_provider: "faster-whisper"
