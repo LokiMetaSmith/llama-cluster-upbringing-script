@@ -65,10 +65,10 @@
             mode: '0755'
             remote_src: yes
           loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
+          notify: update ld cache
 
-        - name: Update shared library cache
-          ansible.builtin.command: ldconfig
-          become: yes
+        - name: Flush handlers to update ldconfig
+          meta: flush_handlers
 
         - name: Clean up llama.cpp build directory
           ansible.builtin.file:
