@@ -83,10 +83,14 @@ fi
 
 
 # Purge any existing jobs and processes to ensure a clean deployment.
-echo "Purging any old Nomad jobs..."
-nomad job stop -purge llamacpp-rpc || true
-nomad job stop -purge pipecat-app || true
-echo "Purge complete."
+if command -v nomad &> /dev/null; then
+    echo "Purging any old Nomad jobs..."
+    nomad job stop -purge llamacpp-rpc || true
+    nomad job stop -purge pipecat-app || true
+    echo "Purge complete."
+else
+    echo "Nomad not found, skipping job purge."
+fi
  free -h
 
 echo "Forcefully terminating any orphaned application processes to prevent memory leaks..."
