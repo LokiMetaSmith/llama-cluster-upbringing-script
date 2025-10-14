@@ -67,6 +67,9 @@
           loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
           notify: update ld cache
 
+        - name: Flush handlers to update ldconfig
+          meta: flush_handlers
+
         - name: Clean up llama.cpp build directory
           ansible.builtin.file:
             path: /opt/llama.cpp-build

@@ -204,10 +204,10 @@
   hosts: controller_nodes[0]
   connection: local
 
-  pre_tasks:
-    - name: Load model variables
-      ansible.builtin.include_vars:
-        file: group_vars/models.yaml
+  vars_files:
+    - group_vars/all.yaml
+    - group_vars/models.yaml
+    - group_vars/external_experts.yaml
 
   roles:
     - role: bootstrap_agent
