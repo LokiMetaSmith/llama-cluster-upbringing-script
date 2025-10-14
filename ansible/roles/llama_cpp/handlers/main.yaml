@@ -1,5 +1,3 @@
-- name: Update shared library cache
-  ansible.builtin.command:
-    cmd: ldconfig
+- name: update ld cache
+  ansible.builtin.command: ldconfig
   become: yes
-  listen: "update ld cache"
