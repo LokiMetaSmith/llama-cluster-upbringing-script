@@ -4,7 +4,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/opt/pipecatapp/venv/bin/python3 /opt/power_manager/power_agent.py
+ExecStart=/usr/bin/python3 /opt/power_manager/power_agent.py
 WorkingDirectory=/opt/power_manager
 Restart=on-failure
 User=0
