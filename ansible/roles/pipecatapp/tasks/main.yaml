@@ -11,7 +11,8 @@
           {{
             benchmark_log_raw.content
             | b64decode
-            | splitlines
+                | split('\n')
+                | select
             | map('from_json')
             | list
           }}

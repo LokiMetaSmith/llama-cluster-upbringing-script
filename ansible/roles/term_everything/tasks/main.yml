@@ -13,12 +13,29 @@
     recursive: yes
 
 - name: Build term.everything AppImage
-  ansible.builtin.command:
-    cmd: ./distribute.sh
-    chdir: /tmp/term.everything
-  register: build_result
-  changed_when: build_result.rc == 0
-  failed_when: build_result.rc != 0
+  become: yes
+  block:
+    - name: Attempt to build term.everything AppImage
+      ansible.builtin.command:
+        cmd: ./distribute.sh
+        chdir: /tmp/term.everything
+      register: build_result
+      changed_when: build_result.rc == 0
+      failed_when: build_result.rc != 0
+  rescue:
+    - name: "Debug: Display build stdout"
+      ansible.builtin.debug:
+        var: build_result.stdout
+      when: build_result.stdout is defined and build_result.stdout != ""
+
+    - name: "Debug: Display build stderr"
+      ansible.builtin.debug:
+        var: build_result.stderr
+      when: build_result.stderr is defined and build_result.stderr != ""
+
+    - name: Fail the playbook with a clear error message
+      ansible.builtin.fail:
+        msg: "Failed to build term.everything AppImage. See stdout/stderr for details."
 
 - name: Create tools directory
   ansible.builtin.file:
