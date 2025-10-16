@@ -100,6 +100,7 @@
   ansible.builtin.script: "download_hf_repo.py {{ item.item.1.repo_id }} /opt/nomad/models/stt/{{ item.item.0.key }}/{{ item.item.1.name }}"
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
+    creates: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.name }}"
   loop: "{{ stt_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
