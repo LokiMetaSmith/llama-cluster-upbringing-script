@@ -127,14 +127,6 @@
   tags:
     - deploy_app
 
-- name: Create STT model directory
-  ansible.builtin.file:
-    path: /opt/nomad/models/stt
-    state: directory
-    mode: '0755'
-  become: yes
-
-
 - name: Setup STT providers
   ansible.builtin.include_tasks: "{{ item }}.yaml"
   loop:
