@@ -20,7 +20,7 @@
 
 - name: Set model facts from Consul KV
   ansible.builtin.set_fact:
-    llm_models_to_download: "{{ (model_config_results.results[0].content | from_json | default({})) | combine((model_config_results.results[1].content | from_json | default({})), (model_config_results.results[2].content | from_json | default({})), (model_config_results.results[3].content | from_json | default({}))) }}"
+    loop: "{{ (llm_models_to_download.values() | safe_flatten | unique(attribute='filename')) | list }}"
     piper_voice_files: "{{ (model_config_results.results[4].content | from_json) if model_config_results.results[4].status == 200 and model_config_results.results[4].content else [] }}"
     embedding_models: "{{ (model_config_results.results[5].content | from_json) if model_config_results.results[5].status == 200 and model_config_results.results[5].content else [] }}"
     stt_models: "{{ (model_config_results.results[6].content | from_json) if model_config_results.results[6].status == 200 and model_config_results.results[6].content else {} }}"
