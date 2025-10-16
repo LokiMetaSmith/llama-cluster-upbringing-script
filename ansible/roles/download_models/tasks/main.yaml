@@ -30,6 +30,11 @@
     download_models_stt_models: "{{ (download_models_config_results.results[6].content | from_json) if download_models_config_results.results[6].status == 200 and download_models_config_results.results[6].content else {} }}"
     download_models_vision_models: "{{ (download_models_config_results.results[7].content | from_json) if download_models_config_results.results[7].status == 200 and download_models_config_results.results[7].content else [] }}"
 
+   # loop: "{{ (download_models_llm_models_to_download.values() | safe_flatten | unique(attribute='filename')) | list }}"
+   # piper_voice_files: "{{ (download_models_config_results.results[4].content | from_json) if download_models_config_results.results[4].status == 200 and download_models_config_results.results[4].content else [] }}"
+   # embedding_models:  "{{ (download_models_config_results.results[5].content | from_json) if download_models_config_results.results[5].status == 200 and download_models_config_results.results[5].content else [] }}"
+   # stt_models:        "{{ (download_models_config_results.results[6].content | from_json) if download_models_config_results.results[6].status == 200 and download_models_config_results.results[6].content else {} }}"
+   # vision_models:     "{{ (download_models_config_results.results[7].content | from_json) if download_models_config_results.results[7].status == 200 and download_models_config_results.results[7].content else [] }}"
 
 # --- 2. LLM Models ---
 - name: "Ensure LLM model directory exists"
