@@ -1,4 +1,3 @@
----
 # tasks file for download_models
 
 # --- 1. Query Consul and Set Facts ---
@@ -15,16 +14,27 @@
     - embedding_models
     - stt_models
     - vision_models
-  register: model_config_results
+  register: download_models_config_results
   ignore_errors: true
 
 - name: Set model facts from Consul KV
   ansible.builtin.set_fact:
-    loop: "{{ (llm_models_to_download.values() | safe_flatten | unique(attribute='filename')) | list }}"
-    piper_voice_files: "{{ (model_config_results.results[4].content | from_json) if model_config_results.results[4].status == 200 and model_config_results.results[4].content else [] }}"
-    embedding_models: "{{ (model_config_results.results[5].content | from_json) if model_config_results.results[5].status == 200 and model_config_results.results[5].content else [] }}"
-    stt_models: "{{ (model_config_results.results[6].content | from_json) if model_config_results.results[6].status == 200 and model_config_results.results[6].content else {} }}"
-    vision_models: "{{ (model_config_results.results[7].content | from_json) if model_config_results.results[7].status == 200 and model_config_results.results[7].content else [] }}"
+    download_models_llm_models_to_download: {
+      'main': "{{ (download_models_config_results.results[0].content | from_json) if download_models_config_results.results[0].status == 200 and download_models_config_results.results[0].content else [] }}",
+      'coding': "{{ (download_models_config_results.results[1].content | from_json) if download_models_config_results.results[1].status == 200 and download_models_config_results.results[1].content else [] }}",
+      'math': "{{ (download_models_config_results.results[2].content | from_json) if download_models_config_results.results[2].status == 200 and download_models_config_results.results[2].content else [] }}",
+      'extract': "{{ (download_models_config_results.results[3].content | from_json) if download_models_config_results.results[3].status == 200 and download_models_config_results.results[3].content else [] }}"
+    }
+    download_models_piper_voice_files: "{{ (download_models_config_results.results[4].content | from_json) if download_models_config_results.results[4].status == 200 and download_models_config_results.results[4].content else [] }}"
+    download_models_embedding_models: "{{ (download_models_config_results.results[5].content | from_json) if download_models_config_results.results[5].status == 200 and download_models_config_results.results[5].content else [] }}"
+    download_models_stt_models: "{{ (download_models_config_results.results[6].content | from_json) if download_models_config_results.results[6].status == 200 and download_models_config_results.results[6].content else {} }}"
+    download_models_vision_models: "{{ (download_models_config_results.results[7].content | from_json) if download_models_config_results.results[7].status == 200 and download_models_config_results.results[7].content else [] }}"
+
+   # loop: "{{ (download_models_llm_models_to_download.values() | safe_flatten | unique(attribute='filename')) | list }}"
+   # piper_voice_files: "{{ (download_models_config_results.results[4].content | from_json) if download_models_config_results.results[4].status == 200 and download_models_config_results.results[4].content else [] }}"
+   # embedding_models:  "{{ (download_models_config_results.results[5].content | from_json) if download_models_config_results.results[5].status == 200 and download_models_config_results.results[5].content else [] }}"
+   # stt_models:        "{{ (download_models_config_results.results[6].content | from_json) if download_models_config_results.results[6].status == 200 and download_models_config_results.results[6].content else {} }}"
+   # vision_models:     "{{ (download_models_config_results.results[7].content | from_json) if download_models_config_results.results[7].status == 200 and download_models_config_results.results[7].content else [] }}"
 
 # --- 2. LLM Models ---
 - name: "Ensure LLM model directory exists"
@@ -37,8 +47,8 @@
 - name: Check for existing LLM models
   ansible.builtin.stat:
     path: "/opt/nomad/models/llm/{{ item.filename }}"
-  loop: "{{ llm_models_to_download.values() | select('list') | sum(start=[]) | unique(attribute='filename') }}"
-  register: llm_model_files
+  loop: "{{ download_models_llm_models_to_download.values() | select('list') | sum(start=[]) | unique(attribute='filename') }}"
+  register: download_models_llm_model_files
   become: yes
 
 - name: Download all LLM models if they do not exist
@@ -46,7 +56,7 @@
     url: "{{ item.item.url }}"
     dest: "/opt/nomad/models/llm/{{ item.item.filename }}"
     mode: '0644'
-  loop: "{{ llm_model_files.results }}"
+  loop: "{{ download_models_llm_model_files.results }}"
   when: not item.stat.exists
   become: yes
   loop_control:
@@ -58,7 +68,7 @@
     path: "/opt/nomad/models/stt/{{ item.key }}"
     state: directory
     mode: '0755'
-  loop: "{{ stt_models | dict2items }}"
+  loop: "{{ download_models_stt_models | dict2items }}"
   loop_control:
     label: "{{ item.key }}"
   become: yes
@@ -66,8 +76,8 @@
 - name: Check for existing STT models (URL-based)
   ansible.builtin.stat:
     path: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.filename }}"
-  loop: "{{ stt_models | dict2items | subelements('value') | selectattr('1.url', 'defined') | list }}"
-  register: stt_model_files_url
+  loop: "{{ download_models_stt_models | dict2items | subelements('value') | selectattr('1.url', 'defined') | list }}"
+  register: download_models_stt_model_files_url
   become: yes
   loop_control:
     label: "{{ item.1.name }}"
@@ -75,8 +85,8 @@
 - name: Check for existing STT models (Hub-based)
   ansible.builtin.stat:
     path: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.name }}"
-  loop: "{{ stt_models | dict2items | subelements('value') | selectattr('1.repo_id', 'defined') | list }}"
-  register: stt_model_files_hub
+  loop: "{{ download_models_stt_models | dict2items | subelements('value') | selectattr('1.repo_id', 'defined') | list }}"
+  register: download_models_stt_model_files_hub
   become: yes
   loop_control:
     label: "{{ item.1.name }}"
@@ -86,7 +96,7 @@
     url: "{{ item.item.1.url }}"
     dest: "/opt/nomad/models/stt/{{ item.item.0.key }}/{{ item.item.1.filename }}"
     mode: '0644'
-  loop: "{{ stt_model_files_url.results }}"
+  loop: "{{ download_models_stt_model_files_url.results }}"
   when: not item.stat.exists
   become: yes
   loop_control:
@@ -98,7 +108,7 @@
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
     creates: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.name }}"
-  loop: "{{ stt_model_files_hub.results }}"
+  loop: "{{ download_models_stt_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
   loop_control:
@@ -116,8 +126,8 @@
 - name: Check for existing TTS model files
   ansible.builtin.stat:
     path: "/opt/nomad/models/tts/{{ item.filename }}"
-  loop: "{{ piper_voice_files }}"
-  register: tts_model_files
+  loop: "{{ download_models_piper_voice_files }}"
+  register: download_models_tts_model_files
   become: yes
 
 - name: Download all Text-to-Speech model files if they do not exist
@@ -125,7 +135,7 @@
     url: "{{ item.item.url }}"
     dest: "/opt/nomad/models/tts/{{ item.item.filename }}"
     mode: '0644'
-  loop: "{{ tts_model_files.results }}"
+  loop: "{{ download_models_tts_model_files.results }}"
   when: not item.stat.exists
   become: yes
   loop_control:
@@ -142,15 +152,15 @@
 - name: Check for existing Vision models (URL-based)
   ansible.builtin.stat:
     path: "/opt/nomad/models/vision/{{ item.filename }}"
-  loop: "{{ vision_models | selectattr('url', 'defined') | list }}"
-  register: vision_model_files_url
+  loop: "{{ download_models_vision_models | selectattr('url', 'defined') | list }}"
+  register: download_models_vision_model_files_url
   become: yes
 
 - name: Check for existing Vision models (Hub-based)
   ansible.builtin.stat:
     path: "/opt/nomad/models/vision/{{ item.name }}"
-  loop: "{{ vision_models | selectattr('repo_id', 'defined') | list }}"
-  register: vision_model_files_hub
+  loop: "{{ download_models_vision_models | selectattr('repo_id', 'defined') | list }}"
+  register: download_models_vision_model_files_hub
   become: yes
 
 - name: Download all Vision models (URL-based) if they do not exist
@@ -158,7 +168,7 @@
     url: "{{ item.item.url }}"
     dest: "/opt/nomad/models/vision/{{ item.item.filename }}"
     mode: '0644'
-  loop: "{{ vision_model_files_url.results }}"
+  loop: "{{ download_models_vision_model_files_url.results }}"
   when: not item.stat.exists
   become: yes
   loop_control:
@@ -168,7 +178,7 @@
   ansible.builtin.script: "download_hf_repo.py {{ item.item.repo_id }} /opt/nomad/models/vision/{{ item.item.name }}"
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
-  loop: "{{ vision_model_files_hub.results }}"
+  loop: "{{ download_models_vision_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
   loop_control:
@@ -185,15 +195,15 @@
 - name: Check for existing Embedding models (Hub-based)
   ansible.builtin.stat:
     path: "/opt/nomad/models/embedding/{{ item.name }}"
-  loop: "{{ embedding_models | selectattr('repo_id', 'defined') | list }}"
-  register: embedding_model_files_hub
+  loop: "{{ download_models_embedding_models | selectattr('repo_id', 'defined') | list }}"
+  register: download_models_embedding_model_files_hub
   become: yes
 
 - name: Download all Embedding models (Hub-based) if they do not exist
   ansible.builtin.script: "download_hf_repo.py {{ item.item.repo_id }} /opt/nomad/models/embedding/{{ item.item.name }}"
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
-  loop: "{{ embedding_model_files_hub.results }}"
+  loop: "{{ download_models_embedding_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
   loop_control:
