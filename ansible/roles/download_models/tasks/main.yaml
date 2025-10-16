@@ -55,16 +55,17 @@
   ansible.builtin.set_fact:
     stt_models_to_download: "{{ (stt_models_result.content | from_json) if stt_models_result.content and stt_models_result.status == 200 else {} }}"
 
-- name: "Ensure STT models directory exists"
+- name: Create STT program-specific directories
   ansible.builtin.file:
-    path: "/opt/nomad/models/stt"
+    path: "/opt/nomad/models/stt/{{ item.key }}"
     state: directory
     mode: '0755'
+  loop: "{{ stt_models_to_download | dict2items }}"
   become: yes
 
 - name: Check for existing STT models (URL-based)
   ansible.builtin.stat:
-    path: "/opt/nomad/models/stt/{{ item.1.filename }}"
+    path: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.filename }}"
   loop: "{{ stt_models_to_download | dict2items | subelements('value') | selectattr('1.url', 'defined') | list }}"
   register: stt_model_files_url
   become: yes
@@ -74,7 +75,7 @@
 - name: Download all STT models (URL-based)
   ansible.builtin.get_url:
     url: "{{ item.item.1.url }}"
-    dest: "/opt/nomad/models/stt/{{ item.item.1.filename }}"
+    dest: "/opt/nomad/models/stt/{{ item.item.0.key }}/{{ item.item.1.filename }}"
     mode: '0644'
   loop: "{{ stt_model_files_url.results }}"
   when: not item.stat.exists
@@ -84,10 +85,10 @@
     loop_var: item
 
 - name: Download all STT models (Hub-based)
-  ansible.builtin.script: "download_hf_repo.py {{ item.1.repo_id }} /opt/nomad/models/stt/{{ item.1.name }}"
+  ansible.builtin.script: "download_hf_repo.py {{ item.1.repo_id }} /opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.name }}"
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
-    creates: "/opt/nomad/models/stt/{{ item.1.name }}"
+    creates: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.name }}"
   loop: "{{ stt_models_to_download | dict2items | subelements('value') | selectattr('1.repo_id', 'defined') | list }}"
   become: yes
   loop_control:
