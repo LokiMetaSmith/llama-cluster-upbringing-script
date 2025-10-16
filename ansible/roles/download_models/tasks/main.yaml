@@ -1,38 +1,50 @@
-- name: Initialize model lists
-  ansible.builtin.set_fact:
-    llm_models_to_download: []
-    vision_models_to_download: []
-    embedding_models_to_download: []
-    piper_files_to_download: []
-    stt_models_to_download: []
+---
+# tasks file for download_models
 
-# LLM Models
-- name: Query Consul for all LLM expert model lists
+# --- 1. Query Consul and Set Facts ---
+- name: Query Consul for all model configurations
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/{{ item }}?raw=true"
+    url: "http://127.0.0.1:8500/v1/kv/config/models/{{ item }}?raw=true"
     return_content: yes
   loop:
-    - config/models/main
-    - config/models/coding
-    - config/models/math
-    - config/models/extract
-  register: llm_expert_results
+    - main
+    - coding
+    - math
+    - extract
+    - piper_voice_files
+    - embedding_models
+    - stt_models
+    - vision_models
+  register: model_config_results
   ignore_errors: true
 
-- name: Aggregate all LLM models to be downloaded
+- name: Set model facts from Consul KV
   ansible.builtin.set_fact:
-    llm_models_to_download: "{{ llm_models_to_download + (item.content | from_json) }}"
-  loop: "{{ llm_expert_results.results }}"
-  when: item.content is defined and item.content and item.status == 200
+    llm_models_to_download: "{{ (model_config_results.results[0].content | from_json)
+      | combine((model_config_results.results[1].content | from_json), default={}, recursive=True)
+      | combine((model_config_results.results[2].content | from_json), default={}, recursive=True)
+      | combine((model_config_results.results[3].content | from_json), default={}, recursive=True) }}"
+    piper_voice_files: "{{ (model_config_results.results[4].content | from_json) if model_config_results.results[4].status == 200 else [] }}"
+    embedding_models: "{{ (model_config_results.results[5].content | from_json) if model_config_results.results[5].status == 200 else [] }}"
+    stt_models: "{{ (model_config_results.results[6].content | from_json) if model_config_results.results[6].status == 200 else {} }}"
+    vision_models: "{{ (model_config_results.results[7].content | from_json) if model_config_results.results[7].status == 200 else [] }}"
+
+# --- 2. LLM Models ---
+- name: "Ensure LLM model directory exists"
+  ansible.builtin.file:
+    path: "/opt/nomad/models/llm"
+    state: directory
+    mode: '0755'
+  become: yes
 
 - name: Check for existing LLM models
   ansible.builtin.stat:
     path: "/opt/nomad/models/llm/{{ item.filename }}"
-  loop: "{{ llm_models_to_download | unique(attribute='url') }}"
+  loop: "{{ llm_models_to_download.values() | sum(start=[]) | unique(attribute='filename') }}"
   register: llm_model_files
   become: yes
 
-- name: Download all LLM models
+- name: Download all LLM models if they do not exist
   ansible.builtin.get_url:
     url: "{{ item.item.url }}"
     dest: "/opt/nomad/models/llm/{{ item.item.filename }}"
@@ -43,38 +55,39 @@
   loop_control:
     loop_var: item
 
-# STT Models
-- name: Query Consul for STT models
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/config/models/stt_models?raw=true"
-    return_content: yes
-  register: stt_models_result
-  ignore_errors: true
-
-- name: Set STT models fact
-  ansible.builtin.set_fact:
-    stt_models_to_download: "{{ (stt_models_result.content | from_json) if stt_models_result.content and stt_models_result.status == 200 else {} }}"
-
-- name: "Ensure STT models directory exists"
+# --- 3. STT Models (Provider-based directory structure with existence checks) ---
+- name: Create provider-specific STT model directories
   ansible.builtin.file:
-    path: "/opt/nomad/models/stt"
+    path: "/opt/nomad/models/stt/{{ item.key }}"
     state: directory
     mode: '0755'
+  loop: "{{ stt_models | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
   become: yes
 
 - name: Check for existing STT models (URL-based)
   ansible.builtin.stat:
-    path: "/opt/nomad/models/stt/{{ item.1.filename }}"
-  loop: "{{ stt_models_to_download | dict2items | subelements('value') | selectattr('1.url', 'defined') | list }}"
+    path: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.filename }}"
+  loop: "{{ stt_models | dict2items | subelements('value') | selectattr('1.url', 'defined') | list }}"
   register: stt_model_files_url
   become: yes
   loop_control:
     label: "{{ item.1.name }}"
 
-- name: Download all STT models (URL-based)
+- name: Check for existing STT models (Hub-based)
+  ansible.builtin.stat:
+    path: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.name }}"
+  loop: "{{ stt_models | dict2items | subelements('value') | selectattr('1.repo_id', 'defined') | list }}"
+  register: stt_model_files_hub
+  become: yes
+  loop_control:
+    label: "{{ item.1.name }}"
+
+- name: Download all STT models (URL-based) if they do not exist
   ansible.builtin.get_url:
     url: "{{ item.item.1.url }}"
-    dest: "/opt/nomad/models/stt/{{ item.item.1.filename }}"
+    dest: "/opt/nomad/models/stt/{{ item.item.0.key }}/{{ item.item.1.filename }}"
     mode: '0644'
   loop: "{{ stt_model_files_url.results }}"
   when: not item.stat.exists
@@ -83,36 +96,33 @@
     label: "{{ item.item.1.name }}"
     loop_var: item
 
-- name: Download all STT models (Hub-based)
-  ansible.builtin.script: "download_hf_repo.py {{ item.1.repo_id }} /opt/nomad/models/stt/{{ item.1.name }}"
+- name: Download all STT models (Hub-based) if they do not exist
+  ansible.builtin.script: "download_hf_repo.py {{ item.item.1.repo_id }} /opt/nomad/models/stt/{{ item.item.0.key }}/{{ item.item.1.name }}"
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
-    creates: "/opt/nomad/models/stt/{{ item.1.name }}"
-  loop: "{{ stt_models_to_download | dict2items | subelements('value') | selectattr('1.repo_id', 'defined') | list }}"
+  loop: "{{ stt_model_files_hub.results }}"
+  when: not item.stat.exists
   become: yes
   loop_control:
-    label: "{{ item.1.name }}"
+    label: "{{ item.item.1.name }}"
+    loop_var: item
 
-# Piper Voice Files
-- name: Query Consul for Piper voice files
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/config/models/piper_voice_files?raw=true"
-    return_content: yes
-  register: piper_voice_files_result
-  ignore_errors: true
-
-- name: Set piper files fact
-  ansible.builtin.set_fact:
-    piper_files_to_download: "{{ (piper_voice_files_result.content | from_json) if piper_voice_files_result.content and piper_voice_files_result.status == 200 else [] }}"
+# --- 4. TTS (Piper) Voice Files ---
+- name: "Ensure TTS model directory exists"
+  ansible.builtin.file:
+    path: "/opt/nomad/models/tts"
+    state: directory
+    mode: '0755'
+  become: yes
 
 - name: Check for existing TTS model files
   ansible.builtin.stat:
     path: "/opt/nomad/models/tts/{{ item.filename }}"
-  loop: "{{ piper_files_to_download }}"
+  loop: "{{ piper_voice_files }}"
   register: tts_model_files
   become: yes
 
-- name: Download all Text-to-Speech model files
+- name: Download all Text-to-Speech model files if they do not exist
   ansible.builtin.get_url:
     url: "{{ item.item.url }}"
     dest: "/opt/nomad/models/tts/{{ item.item.filename }}"
@@ -123,26 +133,29 @@
   loop_control:
     loop_var: item
 
-# Vision Models
-- name: Query Consul for Vision models
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/config/models/vision_models?raw=true"
-    return_content: yes
-  register: vision_models_result
-  ignore_errors: true
-
-- name: Set vision models fact
-  ansible.builtin.set_fact:
-    vision_models_to_download: "{{ (vision_models_result.content | from_json) if vision_models_result.content and vision_models_result.status == 200 else [] }}"
+# --- 5. Vision Models ---
+- name: "Ensure Vision model directory exists"
+  ansible.builtin.file:
+    path: "/opt/nomad/models/vision"
+    state: directory
+    mode: '0755'
+  become: yes
 
 - name: Check for existing Vision models (URL-based)
   ansible.builtin.stat:
     path: "/opt/nomad/models/vision/{{ item.filename }}"
-  loop: "{{ vision_models_to_download | selectattr('url', 'defined') | list }}"
+  loop: "{{ vision_models | selectattr('url', 'defined') | list }}"
   register: vision_model_files_url
   become: yes
 
-- name: Download all Vision models (URL-based)
+- name: Check for existing Vision models (Hub-based)
+  ansible.builtin.stat:
+    path: "/opt/nomad/models/vision/{{ item.name }}"
+  loop: "{{ vision_models | selectattr('repo_id', 'defined') | list }}"
+  register: vision_model_files_hub
+  become: yes
+
+- name: Download all Vision models (URL-based) if they do not exist
   ansible.builtin.get_url:
     url: "{{ item.item.url }}"
     dest: "/opt/nomad/models/vision/{{ item.item.filename }}"
@@ -153,34 +166,37 @@
   loop_control:
     loop_var: item
 
-- name: Download all Vision models (Hub-based)
-  ansible.builtin.script: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/vision/{{ item.name }}"
+- name: Download all Vision models (Hub-based) if they do not exist
+  ansible.builtin.script: "download_hf_repo.py {{ item.item.repo_id }} /opt/nomad/models/vision/{{ item.item.name }}"
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
-    creates: "/opt/nomad/models/vision/{{ item.name }}"
-  loop: "{{ vision_models_to_download | selectattr('repo_id', 'defined') | list }}"
+  loop: "{{ vision_model_files_hub.results }}"
+  when: not item.stat.exists
   become: yes
   loop_control:
     loop_var: item
 
-# Embedding Models
-- name: Query Consul for Embedding models
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/config/models/embedding_models?raw=true"
-    return_content: yes
-  register: embedding_models_result
-  ignore_errors: true
+# --- 6. Embedding Models ---
+- name: "Ensure Embedding model directory exists"
+  ansible.builtin.file:
+    path: "/opt/nomad/models/embedding"
+    state: directory
+    mode: '0755'
+  become: yes
 
-- name: Set embedding models fact
-  ansible.builtin.set_fact:
-    embedding_models_to_download: "{{ (embedding_models_result.content | from_json) if embedding_models_result.content and embedding_models_result.status == 200 else [] }}"
+- name: Check for existing Embedding models (Hub-based)
+  ansible.builtin.stat:
+    path: "/opt/nomad/models/embedding/{{ item.name }}"
+  loop: "{{ embedding_models | selectattr('repo_id', 'defined') | list }}"
+  register: embedding_model_files_hub
+  become: yes
 
-- name: Download all Embedding models (Hub-based)
-  ansible.builtin.script: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/embedding/{{ item.name }}"
+- name: Download all Embedding models (Hub-based) if they do not exist
+  ansible.builtin.script: "download_hf_repo.py {{ item.item.repo_id }} /opt/nomad/models/embedding/{{ item.item.name }}"
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
-    creates: "/opt/nomad/models/embedding/{{ item.name }}"
-  loop: "{{ embedding_models_to_download | selectattr('repo_id', 'defined') | list }}"
+  loop: "{{ embedding_model_files_hub.results }}"
+  when: not item.stat.exists
   become: yes
   loop_control:
     loop_var: item
