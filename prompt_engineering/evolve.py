@@ -1,14 +1,26 @@
 from openevolve import OpenEvolve
 import os
+import argparse
+import asyncio
 
 # This is a placeholder for the real evolution logic.
 # A real implementation would need to load the initial prompt from app.py,
 # configure the OpenEvolve object, and run the evolution.
 
-async def run_evolution():
+async def run_evolution(test_case_path=None):
     # Ensure API key is set
     if not os.environ.get("OPENAI_API_KEY"):
         raise ValueError("Please set OPENAI_API_KEY environment variable")
+
+    # If a dynamic test case is provided, set it as an environment variable
+    # so the evaluator script can find it.
+    if test_case_path:
+        print(f"--- Using dynamic test case: {test_case_path} ---")
+        os.environ["DYNAMIC_TEST_CASE_PATH"] = os.path.abspath(test_case_path)
+    elif "DYNAMIC_TEST_CASE_PATH" in os.environ:
+        # Clear any stale env var if not used in this run
+        del os.environ["DYNAMIC_TEST_CASE_PATH"]
+
 
     # The initial program is the main application script
     initial_program_path = os.path.abspath(
@@ -47,6 +59,18 @@ Your goal is to make the tests pass. A fitness score of 1.0 means all tests pass
     print("\nBest program code:")
     print(best_program.code)
 
+    # Clean up the environment variable
+    if "DYNAMIC_TEST_CASE_PATH" in os.environ:
+        del os.environ["DYNAMIC_TEST_CASE_PATH"]
+
+
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(run_evolution())
+    parser = argparse.ArgumentParser(description="Evolve a prompt using OpenEvolve.")
+    parser.add_argument(
+        "--test-case",
+        type=str,
+        help="Path to a specific YAML test case file to use for evaluation."
+    )
+    args = parser.parse_args()
+
+    asyncio.run(run_evolution(test_case_path=args.test_case))

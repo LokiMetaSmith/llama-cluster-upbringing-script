@@ -73,8 +73,21 @@ async def evaluate_code(candidate_code: str) -> dict:
         logging.info(f"Running test job '{test_job_id}' against service '{service_name}'")
         test_job_spec = render_nomad_job(TEST_RUNNER_TEMPLATE_PATH, {})
         test_job_spec['ID'] = test_job_id
-        # This assumes the test runner job has this env var available.
-        test_job_spec['TaskGroups'][0]['Tasks'][0]['Env']['TARGET_SERVICE_URL'] = f"http://{service_name}.service.consul:8000"
+        # This assumes the test runner job has these env vars available.
+        test_job_env = test_job_spec['TaskGroups'][0]['Tasks'][0]['Env']
+        test_job_env['TARGET_SERVICE_URL'] = f"http://{service_name}.service.consul:8000"
+
+        # Check if a dynamic test case path is provided via environment variable
+        dynamic_test_path = os.environ.get("DYNAMIC_TEST_CASE_PATH")
+        if dynamic_test_path:
+            logging.info(f"Using dynamic test case from: {dynamic_test_path}")
+            # The test runner is configured to look for this env var
+            test_job_env['PYTEST_TARGET'] = dynamic_test_path
+        else:
+            # Default behavior: run the whole suite
+            logging.info("No dynamic test case provided. Running default test suite.")
+            test_job_env['PYTEST_TARGET'] = "testing/integration_tests/"
+
 
         nomad_client.jobs.register_job({'Job': test_job_spec})
         jobs_to_clean.append(test_job_id)
