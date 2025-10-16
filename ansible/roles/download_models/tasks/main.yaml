@@ -25,8 +25,6 @@
     embedding_models: "{{ (model_config_results.results[5].content | from_json) if model_config_results.results[5].status == 200 and model_config_results.results[5].content else [] }}"
     stt_models: "{{ (model_config_results.results[6].content | from_json) if model_config_results.results[6].status == 200 and model_config_results.results[6].content else {} }}"
     vision_models: "{{ (model_config_results.results[7].content | from_json) if model_config_results.results[7].status == 200 and model_config_results.results[7].content else [] }}"
-#    loop: "{{ llm_models_to_download | safe_flatten | unique(attribute='filename') }}"
-
 
 # --- 2. LLM Models ---
 - name: "Ensure LLM model directory exists"
