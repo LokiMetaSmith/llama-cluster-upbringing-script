@@ -6,7 +6,7 @@
   vars:
     job_name: "llamacpp-rpc"
     service_name: "llamacpp-rpc-api"
-    namespace: "default"
+    nomad_namespace: "default"
     model_list: "{{ expert_models['main'] }}"
     worker_count: 1
 
