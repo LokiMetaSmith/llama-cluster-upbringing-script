@@ -10,7 +10,7 @@
   vars:
     job_name: "default-expert"
     service_name: "llama-api-default"
-    namespace: "default"
+    nomad_namespace: "default"
     model_list: "{{ expert_models['main'] }}"
     worker_count: 1
 
