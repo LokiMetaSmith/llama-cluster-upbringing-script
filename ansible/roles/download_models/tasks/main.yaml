@@ -48,16 +48,16 @@
 - name: Check for existing LLM models
   ansible.builtin.stat:
     path: "/opt/nomad/models/llm/{{ item.filename }}"
-  loop: "{{ llm_models_to_download.values() | unique(attribute='filename') }}"
-  register: download_models_llm_model_files
+  loop: "{{ llm_models_to_download.values() | sum(start=[]) | unique(attribute='filename') }}"
+  register: llm_model_files
   become: yes
 
 - name: Download all LLM models if they do not exist
   ansible.builtin.get_url:
-    url: "{{ item.url }}"
-    dest: "/opt/nomad/models/llm/{{ item.1.filename }}"
+    url: "{{ item.item.url }}"
+    dest: "/opt/nomad/models/llm/{{ item.item.filename }}"
     mode: '0644'
-  loop: "{{ download_models_llm_model_files.results }}"
+  loop: "{{ llm_model_files.results }}"
   when: not item.stat.exists
   become: yes
   loop_control:
