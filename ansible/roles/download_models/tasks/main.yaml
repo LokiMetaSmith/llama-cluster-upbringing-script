@@ -54,8 +54,8 @@
 
 - name: Download all LLM models if they do not exist
   ansible.builtin.get_url:
-    url: "{{ item.item.url }}"
-    dest: "/opt/nomad/models/llm/{{ item.item.filename }}"
+    url: "{{ item.url }}"
+    dest: "/opt/nomad/models/llm/{{ item.1.filename }}"
     mode: '0644'
   loop: "{{ download_models_llm_model_files.results }}"
   when: not item.stat.exists
@@ -66,7 +66,7 @@
 # --- 3. STT Models (Provider-based directory structure with existence checks) ---
 - name: Create provider-specific STT model directories
   ansible.builtin.file:
-    path: "/opt/nomad/models/stt/{{ item.key }}"
+    path: "/opt/nomad/models/stt/{{ item.0.key }}"
     state: directory
     mode: '0755'
   loop: "{{ download_models_stt_models | dict2items }}"
@@ -94,18 +94,18 @@
 
 - name: Download all STT models (URL-based) if they do not exist
   ansible.builtin.get_url:
-    url: "{{ item.item.1.url }}"
-    dest: "/opt/nomad/models/stt/{{ item.item.0.key }}/{{ item.item.1.filename }}"
+    url: "{{ item.1.url }}"
+    dest: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.filename }}"
     mode: '0644'
   loop: "{{ download_models_stt_model_files_url.results }}"
   when: not item.stat.exists
   become: yes
   loop_control:
-    label: "{{ item.item.1.name }}"
+    label: "{{ item.1.name }}"
     loop_var: item
 
 - name: Download all STT models (Hub-based) if they do not exist
-  ansible.builtin.script: "download_hf_repo.py {{ item.item.1.repo_id }} /opt/nomad/models/stt/{{ item.item.0.key }}/{{ item.item.1.name }}"
+  ansible.builtin.script: "download_hf_repo.py {{ item.1.repo_id }} /opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.name }}"
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
     creates: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.name }}"
@@ -201,7 +201,7 @@
   become: yes
 
 - name: Download all Embedding models (Hub-based) if they do not exist
-  ansible.builtin.script: "download_hf_repo.py {{ item.item.repo_id }} /opt/nomad/models/embedding/{{ item.item.name }}"
+  ansible.builtin.script: "download_hf_repo.py {{ item.repo_id }} /opt/nomad/models/embedding/{{ item.name }}"
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
   loop: "{{ download_models_embedding_model_files_hub.results }}"
