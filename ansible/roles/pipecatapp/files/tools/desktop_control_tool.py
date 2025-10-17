@@ -1,4 +1,3 @@
-import pyautogui
 import base64
 import io
 
@@ -24,6 +23,7 @@ class DesktopControlTool:
             str: A base64-encoded string of the screenshot PNG, or an error message.
         """
         try:
+            import pyautogui
             screenshot = pyautogui.screenshot()
             buffered = io.BytesIO()
             screenshot.save(buffered, format="PNG")
@@ -43,6 +43,7 @@ class DesktopControlTool:
             str: A confirmation message on success, or an error message.
         """
         try:
+            import pyautogui
             pyautogui.click(x, y)
             return f"Successfully clicked at desktop coordinate ({x}, {y})."
         except Exception as e:
@@ -58,6 +59,7 @@ class DesktopControlTool:
             str: A confirmation message on success, or an error message.
         """
         try:
+            import pyautogui
             pyautogui.typewrite(text)
             return f"Successfully typed '{text}'."
         except Exception as e:

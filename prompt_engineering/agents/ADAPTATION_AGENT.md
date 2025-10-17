@@ -2,9 +2,16 @@
 
 This document formally defines the role of the Adaptation Agent, a new meta-agent responsible for orchestrating the self-improvement of the entire system.
 
-## Agent Persona
+## Role
 
 The Adaptation Agent acts as the system's own internal "prompt engineer" or "performance tuner." It is not a user-facing agent. Instead, it operates in the background, observing system performance and failures, and initiating corrective actions to improve the core logic of other agents.
+
+## Backing LLM Model
+
+* **Model:** `groq/llama3-70b-8192`
+* **Parameters:**
+    * Temperature: 0.7
+    * Top-p: 0.9
 
 ## Core Responsibilities
 
