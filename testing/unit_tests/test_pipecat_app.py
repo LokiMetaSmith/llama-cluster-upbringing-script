@@ -36,7 +36,7 @@ def test_health_check(client, mocker):
 # More advanced tests for the TwinService can be added here
 # For example, mocking the LLM and other services to test the agent's logic
 
-@pytest.mark.skip(reason="Skipping tests that require a display.")
+@pytest.mark.requires_display
 @pytest.mark.asyncio
 async def test_twin_service_initialization(mocker):
     """Tests that the TwinService initializes correctly."""
@@ -54,7 +54,7 @@ async def test_twin_service_initialization(mocker):
     assert service is not None
 
 # Example of a more advanced test with mocking
-@pytest.mark.skip(reason="Skipping tests that require a display.")
+@pytest.mark.requires_display
 @pytest.mark.asyncio
 async def test_twin_service_sends_vision_frame(mocker):
     """Tests that TwinService sends a vision frame to the LLM."""
@@ -83,7 +83,6 @@ async def test_twin_service_sends_vision_frame(mocker):
 # In a CI environment, these might be run as a separate step after
 # the application has been deployed to a staging environment.
 
-@pytest.mark.skip(reason="Skipping integration tests.")
 @pytest.mark.asyncio
 async def test_health_check_is_healthy(mocker):
     """Tests that the /health endpoint returns a 200 OK status."""
@@ -104,7 +103,6 @@ async def test_health_check_is_healthy(mocker):
         assert response.json() == {"status": "ok"}
 
 
-@pytest.mark.skip(reason="Skipping integration tests.")
 @pytest.mark.asyncio
 async def test_main_page_loads(mocker):
     """Tests that the main page ('/') loads correctly."""
