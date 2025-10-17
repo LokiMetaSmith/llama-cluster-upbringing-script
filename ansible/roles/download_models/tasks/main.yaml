@@ -48,7 +48,7 @@
 - name: Check for existing LLM models
   ansible.builtin.stat:
     path: "/opt/nomad/models/llm/{{ item.filename }}"
-  loop: "{{ download_models_config_results.values() | select('list') | sum(start=[]) | unique(attribute='filename') }}"
+  loop: "{{ llm_models_to_download.values() | unique(attribute='filename') }}"
   register: download_models_llm_model_files
   become: yes
 
