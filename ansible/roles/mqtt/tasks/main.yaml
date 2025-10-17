@@ -1,0 +1,35 @@
+- name: Ensure Mosquitto directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  become: yes
+  loop:
+    - /opt/nomad/volumes/mqtt-data/mosquitto/data
+    - /opt/nomad/volumes/mqtt-data/mosquitto/log
+
+- name: Create Mosquitto config file
+  ansible.builtin.copy:
+    dest: /opt/nomad/volumes/mqtt-data/mosquitto/mosquitto.conf
+    content: |
+      persistence true
+      persistence_location /mosquitto/data/
+      log_dest file /mosquitto/log/mosquitto.log
+      listener 1883
+      listener 9001
+      protocol websockets
+    mode: '0644'
+  become: yes
+
+- name: Template mqtt Nomad job file
+  ansible.builtin.template:
+    src: mqtt.nomad.j2
+    dest: /opt/nomad/jobs/mqtt.nomad
+  become: yes
+
+- name: Run mqtt job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/mqtt.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  changed_when: true

@@ -116,6 +116,8 @@
       include_role:
         name: "{{ role_name }}"
       loop:
+        - mqtt
+        - home_assistant
         - provisioning_api
         - desktop_extras
         - paddler

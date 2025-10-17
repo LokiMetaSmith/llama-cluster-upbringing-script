@@ -1,0 +1,19 @@
+- name: Ensure Home Assistant config directory exists
+  ansible.builtin.file:
+    path: /opt/nomad/volumes/ha-config
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Template home-assistant Nomad job file
+  ansible.builtin.template:
+    src: home_assistant.nomad.j2
+    dest: /opt/nomad/jobs/home-assistant.nomad
+  become: yes
+
+- name: Run home-assistant job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/home-assistant.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  changed_when: true
