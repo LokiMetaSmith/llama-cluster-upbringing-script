@@ -25,7 +25,8 @@ def mock_faiss():
         # Mock the IndexFlatL2 and its methods
         mock_index = MagicMock()
         mock_index.add.return_value = None
-        mock_index.search.return_value = (np.array([[1.0, 1.0, 1.0]]), np.array([[0, 0, 0]]))
+        # Return 3 results to match k=3 in the search function
+        mock_index.search.return_value = (np.array([[1.0, 2.0, 3.0]]), np.array([[0, 1, 2]]))
         mock.IndexFlatL2.return_value = mock_index
         yield mock
 
@@ -37,7 +38,8 @@ def mock_text_splitter():
         # Mock create_documents to return a list of mock documents
         mock_doc = MagicMock()
         mock_doc.page_content = "This is a test chunk."
-        mock_instance.create_documents.return_value = [mock_doc]
+        # The tool expects a list of documents, so return a list
+        mock_instance.create_documents.return_value = [mock_doc, mock_doc, mock_doc]
         yield mock
 
 def test_rag_tool_initialization(mock_sentence_transformer, mock_faiss, mock_text_splitter):
@@ -69,18 +71,28 @@ def test_rag_tool_search(mock_sentence_transformer, mock_faiss, mock_text_splitt
         with patch('builtins.open', m):
             tool = RAG_Tool(base_dir="/fake/dir")
             # Mock the document list after it has been populated
-            mock_doc = MagicMock()
-            mock_doc.page_content = "This is a test chunk."
-            mock_doc.metadata = {"source": "/fake/dir/test.md"}
-            tool.documents = [mock_doc]
+            doc1 = MagicMock()
+            doc1.page_content = "This is chunk 1."
+            doc1.metadata = {"source": "/fake/dir/test1.md"}
+            doc2 = MagicMock()
+            doc2.page_content = "This is chunk 2."
+            doc2.metadata = {"source": "/fake/dir/test2.txt"}
+            doc3 = MagicMock()
+            doc3.page_content = "This is chunk 3."
+            doc3.metadata = {"source": "/fake/dir/test3.md"}
+            tool.documents = [doc1, doc2, doc3]
 
             # Perform a search
             results = tool.search_knowledge_base("test query")
 
             # Verify that the search method was called on the index
             mock_faiss.IndexFlatL2.return_value.search.assert_called_once()
-            assert "From /fake/dir/test.md" in results
-            assert "This is a test chunk." in results
+            assert "From /fake/dir/test1.md" in results
+            assert "This is chunk 1." in results
+            assert "From /fake/dir/test2.txt" in results
+            assert "This is chunk 2." in results
+            assert "From /fake/dir/test3.md" in results
+            assert "This is chunk 3." in results
 
 def test_rag_tool_empty_knowledge_base(mock_sentence_transformer, mock_faiss, mock_text_splitter):
     """Tests that the RAG tool handles an empty knowledge base gracefully."""
@@ -92,3 +104,16 @@ def test_rag_tool_empty_knowledge_base(mock_sentence_transformer, mock_faiss, mo
         assert tool.documents == []
         result = tool.search_knowledge_base("any query")
         assert result == "The knowledge base is empty. I cannot answer questions about the project yet."
+
+def test_no_relevant_documents_found(mock_sentence_transformer, mock_faiss, mock_text_splitter):
+    """Tests the case where the search returns no relevant documents."""
+    with patch('os.walk') as mock_walk:
+        mock_walk.return_value = [('/fake/dir', [], ['test.md'])]
+        m = mock_open(read_data="This is a test file.")
+        with patch('builtins.open', m):
+            tool = RAG_Tool(base_dir="/fake/dir")
+            # Mock the FAISS search to return no results
+            mock_faiss.IndexFlatL2.return_value.search.return_value = (np.array([[-1, -1, -1]]), np.array([[-1, -1, -1]]))
+            # Perform a search
+            results = tool.search_knowledge_base("test query")
+            assert results == "I could not find any relevant information in the knowledge base to answer your question."
