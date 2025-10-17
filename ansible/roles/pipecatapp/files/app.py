@@ -48,6 +48,7 @@ from tools.ansible_tool import Ansible_Tool
 from tools.power_tool import Power_Tool
 from tools.summarizer_tool import SummarizerTool
 from tools.term_everything_tool import TermEverythingTool
+from tools.rag_tool import RAG_Tool
 from moondream_detector import MoondreamDetector
 
 import uvicorn
@@ -339,6 +340,7 @@ class TwinService(FrameProcessor):
             "ansible": Ansible_Tool(),
             "power": Power_Tool(),
             "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
+            "rag": RAG_Tool(base_dir="/"),
         }
 
         if self.app_config.get("use_summarizer", False):
