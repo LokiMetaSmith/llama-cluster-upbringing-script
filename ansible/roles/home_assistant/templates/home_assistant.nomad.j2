@@ -47,6 +47,21 @@ job "home-assistant" {
         ]
       }
 
+      env {
+        MQTT_BROKER = "mqtt.service.consul"
+      }
+
+      template {
+        data = <<EOF
+default_config:
+mqtt:
+  broker: "{{ env "MQTT_BROKER" }}"
+  port: 1883
+EOF
+        destination = "local/configuration.yaml"
+        change_mode = "restart"
+      }
+
       volume_mount {
         volume      = "ha-config"
         destination = "/config"

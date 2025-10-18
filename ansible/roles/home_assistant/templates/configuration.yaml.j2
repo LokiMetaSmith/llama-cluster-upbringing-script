@@ -1,0 +1,7 @@
+# Enables the default configuration for Home Assistant
+default_config:
+
+# Configure the MQTT integration
+mqtt:
+  broker: {{ `{{ env "MQTT_BROKER" }}` }}
+  port: 1883
