@@ -41,17 +41,15 @@ job "mqtt" {
 
         # The entrypoint is overridden to explicitly load the config file.
         # The config file itself is created by Ansible and placed in the host volume.
+        # The entrypoint is overridden to explicitly load the config file.
+        # The config file itself is created by Ansible and placed in the host volume.
         command = "mosquitto"
         args = ["-c", "/mosquitto/mosquitto.conf"]
-
-        volumes = [
-          "/opt/nomad/volumes/mqtt-data/mosquitto/:/mosquitto/"
-        ]
       }
 
       volume_mount {
         volume      = "mqtt-data"
-        destination = "/mosquitto/"
+        destination = "/mosquitto"
         read_only   = false
       }
 
