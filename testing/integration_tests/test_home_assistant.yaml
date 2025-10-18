@@ -1,0 +1,16 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Run the home_assistant role
+      include_role:
+        name: home_assistant
+
+    - name: Wait for home-assistant to be healthy
+      uri:
+        url: "http://localhost:8500/v1/health/service/home-assistant"
+        method: GET
+      register: result
+      until: "result.status == 200 and result.json | length > 0 and result.json[0].Checks[1].Status == 'passing'"
+      retries: 30
+      delay: 10
+      changed_when: false
