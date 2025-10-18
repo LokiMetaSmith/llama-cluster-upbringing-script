@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # Holistic Project Architecture
 
 This document provides a detailed overview of the system architecture, from the hardware provisioning layer to the application logic and user interface. The system is designed as a multi-layered stack to deploy a responsive, distributed, and embodied conversational AI agent on a cluster of legacy machines.
@@ -30,7 +32,7 @@ This layer takes the base Debian installs and configures them into a functional,
     - **Status Tracking:** It provides API endpoints to monitor the status of ongoing and completed provisioning jobs.
     - **Failure Logging:** If a provisioning run fails, it automatically captures the error log and appends it to a `TODO.md` file for administrative review.
     - **Race Condition Prevention:** It uses file locking to ensure the integrity of the inventory file when multiple nodes call home simultaneously.
-  - **Agent Bootstrapping:** A new role, `bootstrap_agent`, runs at the end of the initial playbook run. Its sole purpose is to perform the "Day 2" setup of the primary control node, automatically deploying the `prima-expert` and `pipecatapp` Nomad jobs. This action transforms the freshly provisioned control node into a fully autonomous AI agent, ready to manage the cluster.
+  - **Agent Bootstrapping:** A new role, `bootstrap_agent`, runs at the end of the initial playbook run. Its sole purpose is to perform the "Day 2" setup of the primary control node, automatically deploying the `llamacpp-rpc` and `pipecatapp` Nomad jobs. This action transforms the freshly provisioned control node into a fully autonomous AI agent, ready to manage the cluster.
 - **Workflow:**
   1. An administrator manually sets up the first control node and runs the main Ansible playbook. This playbook installs the `provisioning_api` and runs the `bootstrap_agent` role to make the node self-aware.
   2. A new, PXE-booted client runs a "call home" script on its first boot, sending its hostname and IP address to the `provisioning_api`.
@@ -42,9 +44,9 @@ This layer takes the base Debian installs and configures them into a functional,
 This layer is responsible for deploying, managing, and scaling the various services that make up the AI agent.
 
 - **Technology:** [HashiCorp Nomad](https://www.nomadproject.io/) for orchestration and [HashiCorp Consul](https://www.consul.io/) for service discovery.
-- **Implementation:** Services are defined as declarative job files (e.g., `pipecatapp.nomad`, `prima-expert.nomad`).
+- **Implementation:** Services are defined as declarative job files (e.g., `pipecatapp.nomad`, `llamacpp-rpc.nomad`).
 - **Workflow:**
-  1. The `bootstrap_agent` Ansible role automatically deploys the core `prima-expert` and `pipecatapp` jobs to Nomad on the primary control node.
+  1. The `bootstrap_agent` Ansible role automatically deploys the core `llamacpp-rpc` and `pipecatapp` jobs to Nomad on the primary control node.
   2. For advanced use cases, an administrator can still manually deploy additional jobs (e.g., specialized experts) using the `nomad job run` command.
   3. Nomad schedules all jobs on available worker nodes based on their resource requirements.
   4. **Service Discovery:** As jobs start, they automatically register with Consul. For example, the `TwinService` can dynamically discover all available "expert" LLM backends by querying Consul for services tagged with a specific pattern.
@@ -92,6 +94,27 @@ To expose the cluster's capabilities to the outside world, a dedicated gateway s
   5. A new mechanism captures the final text response and sends it back to the gateway.
   6. The gateway formats the text into a valid OpenAI API JSON response and returns it to the external client.
 - **Outcome:** Any application capable of communicating with the OpenAI API can now leverage the power of the distributed, self-hosted Mixture of Experts.
+
+---
+
+## Layer 7: Self-Adaptation Loop (SEAL-Inspired)
+
+This layer represents the highest level of system autonomy. Inspired by the principles of Self-Adapting Language Models (SEAL), this is a closed-loop feedback system that allows the agent to learn from its own failures and autonomously improve its core programming.
+
+- **Technology:** Python, Ansible, Nomad, and the `openevolve` library.
+- **Implementation:** This loop connects the `supervisor.py` script with the `reflection` and `prompt_engineering` workflows.
+- **Workflow:**
+  1.  **Detection:** The `supervisor.py` script continuously monitors the health of all Nomad jobs.
+  2.  **Reflection:** When a job fails, the supervisor triggers the `reflection/reflect.py` script. This script uses an LLM to analyze the failure's diagnostic data.
+  3.  **Triage:**
+      - If the failure is simple (e.g., an Out-of-Memory error), the reflection script returns a structured solution (e.g., `{"action": "increase_memory", ...}`), and the `heal_job.yaml` playbook is run to fix it directly.
+      - If the failure is complex and cannot be diagnosed as a simple resource issue, the reflection script returns `{"action": "error", ...}`.
+  4.  **Adaptation:** This "error" action is the trigger for the self-adaptation loop. The supervisor calls the `reflection/adaptation_manager.py` script (the implementation of the **Adaptation Agent**).
+  5.  **Test Case Generation:** The Adaptation Manager takes the raw failure data and generates a new, specific test case that encapsulates the failure.
+  6.  **Evolution:** The manager then invokes the `prompt_engineering/evolve.py` script, injecting the new test case into the process. This script uses an evolutionary algorithm to mutate the agent's core `app.py` code, searching for a new version that passes the new test case (and all existing ones).
+  7.  **Deployment (Human-in-the-loop):** Once the evolution process finds a superior version of `app.py`, it is saved. A human administrator is then notified to review the proposed change and manually promote it to become the new production code.
+- **Agent Definition:** The logic and role of this process are formally defined in `prompt_engineering/agents/ADAPTATION_AGENT.md`.
+- **Outcome:** The system can automatically learn from novel failures, hardening its own source code and becoming more robust over time without direct human intervention in the learning process.
 
 ### API Key Authentication
 

@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # Building an MCP Server with Service Discovery
 
 The category of software you're looking for is generally called service discovery. These tools are designed to help applications and services find each other in a dynamic, distributed environment like a cluster of servers.

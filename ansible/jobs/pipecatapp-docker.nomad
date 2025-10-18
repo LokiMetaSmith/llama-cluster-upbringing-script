@@ -53,8 +53,8 @@ job "pipecat-app" {
       }
 
       env {
-        # This should match the service name of the main prima-expert job
-        PRIMA_API_SERVICE_NAME = "{{ prima_api_service_name }}"
+        # This should match the service name of the main llama-expert job
+        LLAMA_API_SERVICE_NAME = "{{ llama_api_service_name }}"
         # Set to "true" to enable the summarizer tool
         USE_SUMMARIZER = "{{ use_summarizer }}"
         # The vision and embedding models are now hardcoded in the application

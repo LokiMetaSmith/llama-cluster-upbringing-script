@@ -1,8 +1,8 @@
-# This is a Jinja2 template for a complete, distributed Prima expert.
+# This is a Jinja2 template for a complete, distributed Llama expert.
 # It is parameterized and can be used to deploy any expert model.
-job "{{ job_name | default('prima-expert-main') }}" {
+job "{{ job_name | default('llama-expert-main') }}" {
   datacenters = ["dc1"]
-  namespace   = "{{ namespace | default('default') }}"
+  namespace   = "{{ nomad_namespace | default('default') }}"
 
   group "master" {
     count = 1
@@ -19,7 +19,7 @@ job "{{ job_name | default('prima-expert-main') }}" {
     }
 
     service {
-      name     = "{{ service_name | default('prima-api') }}"
+      name     = "{{ service_name | default('llama-api') }}"
       provider = "consul"
       port     = "http"
 
@@ -38,7 +38,7 @@ job "{{ job_name | default('prima-expert-main') }}" {
         data = <<EOH
 #!/bin/bash
 set -ex
-echo "--- Starting prima-expert master in DEBUG MODE ---"
+echo "--- Starting llama-expert master in DEBUG MODE ---"
 
 # For debugging, we are not discovering workers and are using a hardcoded model.
 echo "Attempting to start llama-server with hardcoded model: Llama-3-8B-Instruct.gguf"
@@ -49,7 +49,7 @@ echo "Attempting to start llama-server with hardcoded model: Llama-3-8B-Instruct
   --host 0.0.0.0 \
   --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
   --n-gpu-layers 999 \
-  -fa auto \
+  --flash-attn auto \
   --mlock \
   2>&1
 

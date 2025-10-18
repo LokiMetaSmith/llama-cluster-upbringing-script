@@ -1,0 +1,77 @@
+job "home-assistant" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "home-assistant-group" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 8123
+      }
+    }
+
+    volume "ha-config" {
+      type      = "host"
+      source    = "ha-config"
+      read_only = false
+    }
+
+    service {
+      name     = "home-assistant"
+      port     = "http"
+      provider = "consul"
+
+      check {
+        type     = "http"
+        path     = "/"
+        interval = "30s"
+        timeout  = "5s"
+      }
+    }
+
+    task "home-assistant" {
+      driver = "docker"
+
+      config {
+        image = "homeassistant/home-assistant:stable"
+        ports = ["http"]
+
+        # Allow access to USB devices for Zigbee/Z-Wave controllers
+        devices = [
+          {
+            host_path      = "/dev/ttyUSB0"
+            container_path = "/dev/ttyUSB0"
+            permissions    = "rwm"
+          }
+        ]
+      }
+
+      env {
+        MQTT_BROKER = "mqtt.service.consul"
+      }
+
+      template {
+        data = <<EOF
+default_config:
+mqtt:
+  broker: "{{ env "MQTT_BROKER" }}"
+  port: 1883
+EOF
+        destination = "local/configuration.yaml"
+        change_mode = "restart"
+      }
+
+      volume_mount {
+        volume      = "ha-config"
+        destination = "/config"
+        read_only   = false
+      }
+
+      resources {
+        cpu    = 1000 # 1 GHz
+        memory = 2048 # 2 GB
+      }
+    }
+  }
+}

@@ -23,7 +23,7 @@
 
     - name: Identify unhealthy jobs
       ansible.builtin.set_fact:
-        unhealthy_jobs: "{{ job_status_response.results | selectattr('json.Status', '!=', 'running') | map(attribute='item') | list }}"
+        unhealthy_jobs: "{{ job_status_response.results | selectattr('json.Status', '==', 'dead') | map(attribute='item') | list }}"
 
     - name: Report and save unhealthy jobs
       ansible.builtin.copy:

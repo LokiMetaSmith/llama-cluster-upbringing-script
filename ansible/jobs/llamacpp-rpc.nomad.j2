@@ -1,0 +1,64 @@
+# This Nomad job file creates a pool of llama.cpp rpc-server providers.
+# Its only purpose is to run the rpc-server daemon on each worker node,
+# exposing its GPU(s) to the network for an orchestrator to use.
+
+job "{{ job_name | default('llamacpp-rpc-pool') }}" {
+  datacenters = ["dc1"]
+  namespace   = "{{ nomad_namespace | default('default') }}"
+  
+  # --- Metadata about this expert ---
+  meta {
+    expert_name = "{{ job_name | default('llamacpp-rpc-pool') }}"
+    namespace   = "{{ nomad_namespace | default('default') }}"
+    avg_tps     = "{{ avg_tokens_per_second | default(0) | round(2) }}"
+    memory_mb   = "{{ ansible_memtotal_mb | default(0) }}"
+    models      = "{{ expert_models[item] | map(attribute='filename') | join(',') if expert_models is defined else '' }}"
+  }
+  
+  # --- GPU PROVIDER GROUP ---
+  # This group runs the rpc-server processes that expose GPUs.
+  group "rpc-provider" {
+    count = {{ worker_count | default(1) }}
+
+    network {
+      mode = "host"
+      port "rpc" {} # Nomad will assign a dynamic port.
+    }
+
+    # Register the RPC provider in Consul for discovery by the orchestrator.
+    service {
+      name     = "{{ job_name | default('llamacpp-rpc-pool') }}-provider"
+      provider = "consul"
+      port     = "rpc"
+
+      # A simple TCP check is sufficient to confirm the daemon is running.
+      check {
+        type     = "tcp"
+        interval = "15s"
+        timeout  = "5s"
+      }
+    }
+
+    task "rpc-server-provider" {
+      driver = "raw_exec"
+
+      config {
+        command = "/usr/local/bin/rpc-server"
+        args = [
+          "-H", "0.0.0.0",
+          "-p", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}"
+        ]
+      }
+
+      resources {
+        cpu    = 500
+        memory = 1024 # Memory for the RPC daemon itself.
+        
+      # Optional logging directory (for troubleshooting)
+      artifact {
+        source      = "local/"
+        destination = "local"
+      }
+    }
+  }
+}

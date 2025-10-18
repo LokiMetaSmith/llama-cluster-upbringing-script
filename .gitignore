@@ -4,3 +4,4 @@ node_modules/
 __pycache__/
 playbook_output.log
 .aider*
+.venv/

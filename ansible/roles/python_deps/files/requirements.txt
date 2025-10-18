@@ -26,6 +26,7 @@ pipecat-ai-whisker
 pip
 piper-tts
 playwright
+python-consul2
 python-dotenv
 pyvips
 pyvips-binary
@@ -33,6 +34,7 @@ pyyaml
 RealtimeSTT
 requests
 sentence-transformers
+langchain
 setuptools
 soundfile
 spacy

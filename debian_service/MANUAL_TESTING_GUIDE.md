@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # Manual Testing Guide for distributed-llama Service
 
 This guide will walk you through the steps to manually test the `distributed-llama` service on your Debian server. It assumes you have already followed the `SERVICE_SETUP_AND_USAGE.MD` guide for installation and initial configuration.

@@ -94,11 +94,25 @@ def main():
                 cleanup_files([diagnostics_file])
                 continue
 
-            # 5. Attempt to heal the job
-            if not run_playbook("heal_job.yaml", extra_vars={"solution_json": solution_json}):
-                print(f"Healing attempt failed for {job_id}.")
+            # 5. Parse the solution and decide on the next step
+            try:
+                solution = json.loads(solution_json)
+                action = solution.get("action")
+            except (json.JSONDecodeError, AttributeError):
+                print(f"Could not parse solution for job {job_id}. Skipping.")
+                cleanup_files([diagnostics_file])
+                continue
+
+            if action == "error":
+                # 5a. If reflection fails, trigger self-adaptation
+                print(f"--- Reflection could not find a direct solution. Triggering self-adaptation for job {job_id}. ---")
+                run_script("reflection/adaptation_manager.py", [diagnostics_file])
             else:
-                print(f"Healing attempt completed for {job_id}.")
+                # 5b. Otherwise, attempt to heal the job directly
+                if not run_playbook("heal_job.yaml", extra_vars={"solution_json": solution_json}):
+                    print(f"Healing attempt failed for {job_id}.")
+                else:
+                    print(f"Healing attempt completed for {job_id}.")
 
             # 6. Cleanup diagnostic file
             cleanup_files([diagnostics_file])

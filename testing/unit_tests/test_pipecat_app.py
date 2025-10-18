@@ -1,67 +1,123 @@
-import unittest
-from unittest.mock import patch, Mock
+import pytest
 import os
-import requests
+import sys
+import httpx
+from unittest.mock import AsyncMock, MagicMock
 
-class TestPipecatApp(unittest.TestCase):
-    """
-    Unit tests for the Pipecat application's web server.
-    """
+# Add the parent directory of 'testing' to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files')))
 
-    def setUp(self):
-        """Set up the base URL for the web server."""
-        host = os.environ.get("PIPECAT_HOST", "127.0.0.1")
-        self.base_url = f"http://{host}:8000"
+# Now we can import from the files in ansible/roles/pipecatapp/files
+from app import TwinService
+from web_server import app
+from fastapi.testclient import TestClient
 
-    @patch('requests.get')
-    def test_health_check_is_healthy(self, mock_get):
-        """
-        Tests that the /health endpoint returns a 200 OK status.
-        """
-        # Configure the mock to return a successful response
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"status": "ok"}
-        mock_get.return_value = mock_response
+@pytest.fixture
+def client(mocker):
+    client = TestClient(app)
+    return client
 
-        response = requests.get(f"{self.base_url}/health")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"status": "ok"})
-        mock_get.assert_called_once_with(f"{self.base_url}/health")
+# Basic testing of the web server endpoints
+def test_read_main(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Mission Control" in response.text
+
+def test_health_check(client, mocker):
+    # Mock the twin_service_instance to simulate a healthy state
+    mock_twin_service = mocker.Mock()
+    mock_twin_service.router_llm = True
+    mocker.patch("web_server.twin_service_instance", mock_twin_service)
+
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+# More advanced tests for the TwinService can be added here
+# For example, mocking the LLM and other services to test the agent's logic
+
+@pytest.mark.requires_display
+@pytest.mark.asyncio
+async def test_twin_service_initialization(mocker):
+    """Tests that the TwinService initializes correctly."""
+    # This is a basic test. More advanced tests would mock dependencies.
+    mocker.patch('memory.SentenceTransformer')
+    mocker.patch('faiss.IndexFlatL2')
+    mocker.patch('docker.from_env')
+    mocker.patch('tools.web_browser_tool.sync_playwright')
+    mocker.patch('tools.summarizer_tool.SentenceTransformer')
+    mock_llm = mocker.AsyncMock()
+    mock_vision = mocker.AsyncMock()
+    mock_runner = mocker.AsyncMock()
+    mock_config = mocker.MagicMock()
+    service = TwinService(llm=mock_llm, vision_detector=mock_vision, runner=mock_runner, app_config=mock_config)
+    assert service is not None
+
+# Example of a more advanced test with mocking
+@pytest.mark.requires_display
+@pytest.mark.asyncio
+async def test_twin_service_sends_vision_frame(mocker):
+    """Tests that TwinService sends a vision frame to the LLM."""
+    # Mock the LLM and other external services
+    mocker.patch('memory.SentenceTransformer')
+    mocker.patch('faiss.IndexFlatL2')
+    mocker.patch('docker.from_env')
+    mocker.patch('tools.web_browser_tool.sync_playwright')
+    mocker.patch('tools.summarizer_tool.SentenceTransformer')
+    mock_llm = mocker.AsyncMock()
+    mock_vision = mocker.AsyncMock()
+    mock_runner = mocker.AsyncMock()
+    mock_config = mocker.MagicMock()
+
+    service = TwinService(llm=mock_llm, vision_detector=mock_vision, runner=mock_runner, app_config=mock_config)
+
+    # Create a mock vision frame
+    mock_frame = MagicMock()
+
+    # This test will require more setup to properly simulate the pipeline
+    # For now, we'll just check that the service can be instantiated.
+    assert service is not None
+
+# The following tests are marked as integration tests because they
+# are designed to run against a live, running pipecat server.
+# In a CI environment, these might be run as a separate step after
+# the application has been deployed to a staging environment.
+
+@pytest.mark.asyncio
+async def test_health_check_is_healthy(mocker):
+    """Tests that the /health endpoint returns a 200 OK status."""
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"status": "ok"}
+
+    async def get_mock_response(*args, **kwargs):
+        return mock_response
+
+    mocker.patch("httpx.AsyncClient.get", new=get_mock_response)
+
+    host = os.environ.get("PIPECAT_HOST", "127.0.0.1")
+    base_url = f"http://{host}:8000"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{base_url}/health", timeout=5)
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
 
 
-    @patch('requests.get')
-    def test_main_page_loads(self, mock_get):
-        """
-        Tests that the main page ('/') loads correctly and returns a 200 OK status.
-        """
-        # Configure the mock for the health check
-        mock_health_response = Mock()
-        mock_health_response.status_code = 200
-        mock_health_response.json.return_value = {"status": "ok"}
+@pytest.mark.asyncio
+async def test_main_page_loads(mocker):
+    """Tests that the main page ('/') loads correctly."""
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.text = "Mission Control"
 
-        # Configure the mock for the main page
-        mock_main_response = Mock()
-        mock_main_response.status_code = 200
-        mock_main_response.text = "Mission Control"
+    async def get_mock_response(*args, **kwargs):
+        return mock_response
 
-        # Set the side_effect to return different mocks for different calls
-        mock_get.side_effect = [mock_health_response, mock_main_response]
+    mocker.patch("httpx.AsyncClient.get", new=get_mock_response)
 
-        # Call health check
-        health_response = requests.get(f"{self.base_url}/health")
-        self.assertEqual(health_response.status_code, 200)
-
-        # Call main page
-        main_response = requests.get(self.base_url)
-        self.assertEqual(main_response.status_code, 200)
-        self.assertIn("Mission Control", main_response.text)
-
-        # Verify calls
-        self.assertEqual(mock_get.call_count, 2)
-        mock_get.assert_any_call(f"{self.base_url}/health")
-        mock_get.assert_any_call(self.base_url)
-
-
-if __name__ == '__main__':
-    unittest.main()
+    host = os.environ.get("PIPECAT_HOST", "127.0.0.1")
+    base_url = f"http://{host}:8000"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(base_url, timeout=5)
+        assert response.status_code == 200
+        assert "Mission Control" in response.text

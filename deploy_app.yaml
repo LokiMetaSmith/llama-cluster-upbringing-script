@@ -16,6 +16,6 @@
   tasks:
     - name: Restart pipecat-app service
       ansible.builtin.systemd:
-        name: prima-services.service
+        name: llama-services.service
         state: restarted
       become: yes

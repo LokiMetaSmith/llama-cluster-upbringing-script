@@ -38,7 +38,7 @@
 
         - name: Build llama.cpp
           ansible.builtin.command:
-            cmd: cmake --build build --config Release -j
+            cmd: cmake --build build --config Release -j 2
           args:
             chdir: /opt/llama.cpp-build
             creates: /opt/llama.cpp-build/build/bin/llama-server
@@ -67,12 +67,14 @@
           loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
           notify: update ld cache
 
+        - name: Flush handlers to update ldconfig
+          meta: flush_handlers
+
         - name: Clean up llama.cpp build directory
           ansible.builtin.file:
             path: /opt/llama.cpp-build
             state: absent
       when: llama_git_result.changed
-
 
 - name: Create Nomad jobs directory
   ansible.builtin.file:
@@ -81,20 +83,38 @@
     mode: '0755'
   become: yes
 
-- name: Deploy Prima Expert Nomad job template
-  ansible.builtin.template:
-    src: ../../jobs/prima-expert.nomad
-    dest: /opt/nomad/jobs/prima-expert.nomad
-    mode: '0644'
-  vars:
-    job_name: "prima-expert-main"
-    service_name: "prima-api-main"
-    namespace: "default"
-    expert_models: "{{ main_expert_models }}"
-    worker_count: 1
+- name: Stop and purge any existing expert jobs to ensure idempotency
+  ansible.builtin.command:
+    cmd: nomad job stop -purge "expert-{{ item }}"
+  loop: "{{ experts }}"
+  register: expert_job_stop_status
+  changed_when: "'Running' in expert_job_stop_status.stdout"
+  failed_when: false # Don't fail if the job doesn't exist
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
-- name: Copy benchmark Nomad job file
-  ansible.builtin.template:
-    src: ../../jobs/benchmark.nomad
-    dest: /opt/nomad/jobs/benchmark.nomad
-  when: "'controller_nodes' in group_names"
+- name: Prepare for model benchmarking
+  become: yes
+  block:
+    - name: Clear previous benchmark results
+      ansible.builtin.file:
+        path: /var/log/llama_benchmarks.jsonl
+        state: absent
+
+    - name: Create empty benchmark results file
+      ansible.builtin.file:
+        path: /var/log/llama_benchmarks.jsonl
+        state: touch
+        mode: '0644'
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+
+- name: Flatten model list for benchmarking
+  ansible.builtin.set_fact:
+    all_models_to_benchmark: "{{ expert_models.values() | sum(start=[]) | unique(attribute='filename') }}"
+
+- name: Benchmark each available model and record results
+  ansible.builtin.include_tasks: benchmark_single_model.yaml
+  loop: "{{ all_models_to_benchmark }}"
+  loop_control:
+    loop_var: model_item
