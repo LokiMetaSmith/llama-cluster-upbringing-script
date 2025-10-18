@@ -5,8 +5,8 @@
     mode: '0755'
   become: yes
   loop:
-    - /opt/nomad/volumes/mqtt-data/mosquitto/data
-    - /opt/nomad/volumes/mqtt-data/mosquitto/log
+    - /opt/nomad/volumes/mqtt-data/data
+    - /opt/nomad/volumes/mqtt-data/log
 
 - name: Create Mosquitto config file
   ansible.builtin.copy:
