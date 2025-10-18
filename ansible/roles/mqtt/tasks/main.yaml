@@ -10,7 +10,7 @@
 
 - name: Create Mosquitto config file
   ansible.builtin.copy:
-    dest: /opt/nomad/volumes/mqtt-data/mosquitto/mosquitto.conf
+    dest: /opt/nomad/volumes/mqtt-data/mosquitto.conf
     content: |
       persistence true
       persistence_location /mosquitto/data/
