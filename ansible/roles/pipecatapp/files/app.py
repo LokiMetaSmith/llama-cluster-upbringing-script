@@ -33,8 +33,6 @@ from piper.voice import PiperVoice
 import soundfile as sf
 import requests
 import consul.aio
-from sentence_transformers import SentenceTransformer
-import faiss
 import numpy as np
 from memory import MemoryStore
 import web_server
@@ -321,7 +319,9 @@ class TwinService(FrameProcessor):
         self.app_config = app_config or {}
         self.approval_queue = approval_queue
         self.short_term_memory = []
-        self.long_term_memory = MemoryStore()
+        chroma_host = self.app_config.get("chroma_host", "chromadb-api.service.consul")
+        chroma_port = self.app_config.get("chroma_port", 8000)
+        self.long_term_memory = MemoryStore(host=chroma_host, port=chroma_port)
 
         self.debug_mode = self.app_config.get("debug_mode", False)
         self.approval_mode = self.app_config.get("approval_mode", False)
@@ -340,7 +340,7 @@ class TwinService(FrameProcessor):
             "ansible": Ansible_Tool(),
             "power": Power_Tool(),
             "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
-            "rag": RAG_Tool(base_dir="/"),
+            "rag": RAG_Tool(base_dir="/", chroma_host=chroma_host, chroma_port=chroma_port),
         }
 
         if self.app_config.get("use_summarizer", False):

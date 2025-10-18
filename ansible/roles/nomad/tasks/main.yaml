@@ -149,6 +149,10 @@
 - name: Ensure /opt/pipecatapp directory exists for Nomad volume
   ansible.builtin.file:
     path: /opt/pipecatapp
+
+- name: Ensure /opt/chromadb directory exists for Nomad volume
+  ansible.builtin.file:
+    path: /opt/chromadb
     state: directory
     owner: "{{ target_user }}"
     group: "{{ target_user }}"

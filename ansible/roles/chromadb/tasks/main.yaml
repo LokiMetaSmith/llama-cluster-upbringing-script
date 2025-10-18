@@ -1,0 +1,25 @@
+- name: "ChromaDB : Ensure ChromaDB directories exist"
+  tags:
+    - chromadb
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0755"
+  loop:
+    - "/opt/chromadb"
+  become: true
+
+- name: "ChromaDB : Deploy chromadb.nomad job"
+  tags:
+    - chromadb
+  ansible.builtin.template:
+    src: "chromadb.nomad.j2"
+    dest: "/opt/nomad/jobs/chromadb.nomad"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: true
+  notify:
+    - "Run nomad job"
