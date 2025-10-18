@@ -123,6 +123,7 @@
         - paddler
         - vision
         - power_manager
+        - world_model_service
       loop_control:
         loop_var: role_name
 
