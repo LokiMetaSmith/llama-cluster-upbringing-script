@@ -9,9 +9,10 @@ def test_playbook_integration_syntax_check():
     This uses `ansible-playbook --syntax-check`, which is a more direct
     validation of integration than linting.
     """
-    # Construct the path to the ansible-playbook executable within the virtualenv
+    # The virtual environment is created by the test setup, so we can rely on this path.
     ansible_playbook_path = ".venv/bin/ansible-playbook"
 
+    # The test now correctly points to the virtual environment's executable.
     if not os.path.exists(ansible_playbook_path):
         pytest.fail(f"ansible-playbook executable not found at {ansible_playbook_path}")
 
