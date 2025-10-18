@@ -37,11 +37,6 @@ job "home-assistant" {
         image = "homeassistant/home-assistant:stable"
         ports = ["http"]
 
-        # Mount the configuration volume
-        volumes = [
-          "/opt/nomad/volumes/ha-config:/config"
-        ]
-
         # Allow access to USB devices for Zigbee/Z-Wave controllers
         devices = [
           {
