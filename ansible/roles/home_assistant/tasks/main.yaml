@@ -1,4 +1,3 @@
-
 - name: Ensure Home Assistant config directory exists
   ansible.builtin.file:
     path: /opt/nomad/volumes/ha-config
@@ -50,7 +49,6 @@
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   changed_when: true
   become: no # Run nomad client as the ansible user
-  # --- Make the task asynchronous ---
   async: 300 # Max runtime for the command itself (submit shouldn't take long)
   poll: 0    # Fire and forget - don't wait for command completion
-  # --- End async changes ---
+

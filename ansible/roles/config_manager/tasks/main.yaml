@@ -1,3 +1,4 @@
+# tasks file for ansible/roles/config_manager/tasks/main.yaml
 
 # --- Check for auth file instead of waiting ---
 - name: Check if Home Assistant auth file exists
@@ -89,3 +90,5 @@
         } | to_json
       }}
     status_code: 200
+
+# --- End Conditional Tasks ---
