@@ -9,6 +9,5 @@ def test_home_assistant_template():
     j2_env = Environment(loader=FileSystemLoader('ansible/roles/home_assistant/templates'), trim_blocks=True)
     template = j2_env.get_template('home_assistant.nomad.j2')
     result = template.render()
-    job = yaml.safe_load(result)
 
-    assert job['group'][0]['task'][0]['env']['MQTT_BROKER'] == 'mqtt.service.consul'
+    assert 'MQTT_BROKER = "mqtt.service.consul"' in result
