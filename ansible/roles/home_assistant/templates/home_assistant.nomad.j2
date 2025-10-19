@@ -13,7 +13,7 @@ job "home-assistant" {
 
     volume "ha-config" {
       type      = "host"
-      source    = "ha-config"
+      source    = "volumes/ha-config"
       read_only = false
     }
 
