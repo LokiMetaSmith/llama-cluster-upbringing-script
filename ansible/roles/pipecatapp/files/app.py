@@ -33,6 +33,8 @@ from piper.voice import PiperVoice
 import soundfile as sf
 import requests
 import consul.aio
+from sentence_transformers import SentenceTransformer
+import faiss
 import numpy as np
 from memory import MemoryStore
 import web_server
@@ -47,6 +49,7 @@ from tools.power_tool import Power_Tool
 from tools.summarizer_tool import SummarizerTool
 from tools.term_everything_tool import TermEverythingTool
 from tools.rag_tool import RAG_Tool
+from tools.home_assistant_tool import HomeAssistantTool
 from moondream_detector import MoondreamDetector
 
 import uvicorn
@@ -319,9 +322,7 @@ class TwinService(FrameProcessor):
         self.app_config = app_config or {}
         self.approval_queue = approval_queue
         self.short_term_memory = []
-        chroma_host = self.app_config.get("chroma_host", "chromadb-api.service.consul")
-        chroma_port = self.app_config.get("chroma_port", 8000)
-        self.long_term_memory = MemoryStore(host=chroma_host, port=chroma_port)
+        self.long_term_memory = MemoryStore()
 
         self.debug_mode = self.app_config.get("debug_mode", False)
         self.approval_mode = self.app_config.get("approval_mode", False)
@@ -340,7 +341,8 @@ class TwinService(FrameProcessor):
             "ansible": Ansible_Tool(),
             "power": Power_Tool(),
             "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
-            "rag": RAG_Tool(base_dir="/", chroma_host=chroma_host, chroma_port=chroma_port),
+            "rag": RAG_Tool(base_dir="/"),
+            "home_assistant": HomeAssistantTool(token=self.app_config.get("hass_token")),
         }
 
         if self.app_config.get("use_summarizer", False):
@@ -527,6 +529,13 @@ async def load_config_from_consul(consul_host, consul_port):
             logging.info("Successfully loaded TTS voices from Consul.")
         else:
             logging.warning("Could not find 'config/models/tts_voices' in Consul KV.")
+
+        index, data = await c.kv.get('config/hass/token')
+        if data:
+            config['hass_token'] = data['Value'].decode('utf-8')
+            logging.info("Successfully loaded Home Assistant token from Consul.")
+        else:
+            logging.warning("Could not find 'config/hass/token' in Consul KV. Home Assistant integration will not work.")
 
     except Exception as e:
         logging.error(f"Error loading configuration from Consul: {e}")
