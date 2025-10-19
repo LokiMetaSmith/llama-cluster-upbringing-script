@@ -1,10 +1,16 @@
+import os
+import json
+import asyncio
+import logging
+import requests
 from fastapi import FastAPI, WebSocket, Body
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from typing import List, Dict
-import asyncio
-from asyncio import Queue
-import json
-import requests
+
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(
     title="Pipecat Agent API",
@@ -13,10 +19,10 @@ app = FastAPI(
 )
 
 # Create queues to communicate between the web server and the TwinService
-approval_queue = Queue()
-text_message_queue = Queue()
+approval_queue = asyncio.Queue()
+text_message_queue = asyncio.Queue()
 
-class ConnectionManager:
+class WebSocketManager:
     """Manages active WebSocket connections.
 
     This class provides methods to connect, disconnect, and broadcast messages
@@ -47,6 +53,14 @@ class ConnectionManager:
         """
         self.active_connections.remove(websocket)
 
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        """Sends a message to all active WebSocket connections.
+
+        Args:
+            message (str): The message to broadcast.
+        """
+        await websocket.send_text(message)
+
     async def broadcast(self, message: str):
         """Sends a message to all active WebSocket connections.
 
@@ -56,7 +70,17 @@ class ConnectionManager:
         for connection in self.active_connections:
             await connection.send_text(message)
 
-manager = ConnectionManager()
+manager = WebSocketManager()
+
+# This will be set by the main application
+twin_service_instance = None
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+static_dir = os.path.join(script_dir, "static")
+index_html_path = os.path.join(static_dir, "index.html")
+
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -82,17 +106,6 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception:
         manager.disconnect(websocket)
 
-import os
-from fastapi.staticfiles import StaticFiles
-
-# This will be set by the main application
-twin_service_instance = None
-
-script_dir = os.path.dirname(os.path.abspath(__file__))
-static_dir = os.path.join(script_dir, "static")
-index_html_path = os.path.join(static_dir, "index.html")
-
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.get("/", summary="Serve Web UI", description="Serves the main `index.html` file for the web user interface.", tags=["UI"])
 async def get():
@@ -126,7 +139,7 @@ async def get_health():
     else:
         return JSONResponse(status_code=503, content={"status": "initializing"})
 
-@app.get("/api/web_uis", summary="Discover Web UIs", description="Discovers other web UIs available on the network by querying Consul. It returns a list of services with their names and URLs.", tags=["System"])
+@app.get("/api/web_uis")
 async def get_web_uis():
     """
     Discovers web UIs from Consul.
@@ -137,8 +150,10 @@ async def get_web_uis():
     consul_url = "http://127.0.0.1:8500"
 
     try:
+        # 1. Add Consul UI
         web_uis.append({"name": "Consul", "url": f"{consul_url}/ui"})
 
+        # 2. Add Nomad UI
         nomad_service_response = requests.get(f"{consul_url}/v1/catalog/service/nomad")
         nomad_service_response.raise_for_status()
         nomad_services = nomad_service_response.json()
@@ -146,6 +161,7 @@ async def get_web_uis():
             nomad_address = nomad_services[0].get("ServiceAddress") or nomad_services[0].get("Address")
             web_uis.append({"name": "Nomad", "url": f"http://{nomad_address}:4646"})
 
+        # 3. Discover other HTTP services
         services_response = requests.get(f"{consul_url}/v1/catalog/services")
         services_response.raise_for_status()
         all_services = services_response.json()
@@ -214,7 +230,7 @@ async def load_state_endpoint(payload: Dict = Body(..., example={"save_name": "m
     """API endpoint to load the agent's state from a named snapshot.
 
     Args:
-        payload (Dict): The request body, expected to contain a "save_name" key.
+        payload (Dict): The request body, a JSON object with a "save_name" key.
 
     Returns:
         JSONResponse: A message indicating success or failure.

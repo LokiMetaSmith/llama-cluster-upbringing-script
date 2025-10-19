@@ -44,12 +44,12 @@ def run_prompt_evolution(test_case_path):
     )
 
     if result.returncode != 0:
-        print(f"--- Prompt evolution failed ---", file=sys.stderr)
+        print("--- Prompt evolution failed ---", file=sys.stderr)
         print(f"STDOUT:\n{result.stdout}", file=sys.stderr)
         print(f"STDERR:\n{result.stderr}", file=sys.stderr)
         return False
 
-    print(f"--- Prompt evolution completed successfully ---", file=sys.stderr)
+    print("--- Prompt evolution completed successfully ---", file=sys.stderr)
     print(f"STDOUT:\n{result.stdout}", file=sys.stderr)
     return True
 

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import MagicMock
 
 # Assume mcp_tool is in the same directory or adjust path as needed
 from mcp_tool import MCP_Tool

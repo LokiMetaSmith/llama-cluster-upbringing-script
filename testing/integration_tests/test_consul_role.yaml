@@ -1,0 +1,23 @@
+- hosts: all
+  become: yes
+  vars:
+    target_user: "testuser"
+  tasks:
+    - name: Ensure test user exists
+      ansible.builtin.user:
+        name: "{{ target_user }}"
+        state: present
+
+    - name: Run the consul role
+      include_role:
+        name: consul
+
+    - name: Wait for consul to be healthy
+      uri:
+        url: "http://localhost:8500/v1/status/leader"
+        method: GET
+      register: result
+      until: "result.status == 200"
+      retries: 30
+      delay: 10
+      changed_when: false

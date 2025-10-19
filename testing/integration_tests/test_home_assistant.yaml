@@ -1,16 +1,28 @@
-- hosts: all
-  become: yes
-  tasks:
-    - name: Run the home_assistant role
-      include_role:
-        name: home_assistant
+```yaml
+- name: Test Home Assistant Integration
+  hosts: localhost
+  connection: local
+  gather_facts: false
 
-    - name: Wait for home-assistant to be healthy
-      uri:
-        url: "http://localhost:8500/v1/health/service/home-assistant"
-        method: GET
+  tasks:
+    - name: Wait for Home Assistant to be ready
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8123"
+        status_code: 200
       register: result
-      until: "result.status == 200 and result.json | length > 0 and result.json[0].Checks[1].Status == 'passing'"
+      until: result.status == 200
       retries: 30
       delay: 10
+
+    - name: Check if Home Assistant is connected to MQTT
+      ansible.builtin.command:
+        cmd: "docker logs home-assistant"
+      register: docker_logs
       changed_when: false
+
+    - name: Assert that Home Assistant is connected to MQTT
+      ansible.builtin.assert:
+        that:
+          - "'Successfully connected to MQTT broker' in docker_logs.stdout"
+        fail_msg: "Home Assistant failed to connect to MQTT broker"
+```

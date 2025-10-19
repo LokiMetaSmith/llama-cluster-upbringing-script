@@ -52,7 +52,7 @@ Your goal is to make the tests pass. A fitness score of 1.0 means all tests pass
 
     # Run the evolution
     best_program = await evolve.run(iterations=10)
-    print(f"Best program metrics:")
+    print("Best program metrics:")
     for name, value in best_program.metrics.items():
         print(f"  {name}: {value:.4f}")
 

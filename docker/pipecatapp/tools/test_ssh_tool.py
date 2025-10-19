@@ -1,6 +1,6 @@
 import pytest
 from ssh_tool import SSH_Tool
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 @pytest.fixture
 def ssh_tool():

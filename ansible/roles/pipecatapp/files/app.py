@@ -1,20 +1,16 @@
 import asyncio
 import logging
-import cv2
-import torch
 from ultralytics import YOLO
 import time
 import json
 import io
 import wave
 import os
-import shutil
 import inspect
 import threading
 
 from pipecat.frames.frames import (
     AudioRawFrame,
-    EndFrame,
     TextFrame,
     UserImageRawFrame as VisionImageRawFrame,
     UserStartedSpeakingFrame,
@@ -24,17 +20,13 @@ from pipecat.frames.frames import (
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
-from pipecat_whisker import WhiskerObserver
-from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+from pipecat.processors.frame_processor import FrameProcessor
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
 from faster_whisper import WhisperModel
 from piper.voice import PiperVoice
-import soundfile as sf
 import requests
 import consul.aio
-from sentence_transformers import SentenceTransformer
-import faiss
 import numpy as np
 from memory import MemoryStore
 import web_server
@@ -51,7 +43,6 @@ from tools.term_everything_tool import TermEverythingTool
 from tools.rag_tool import RAG_Tool
 from tools.home_assistant_tool import HomeAssistantTool
 from tools.ha_tool import HA_Tool
-from moondream_detector import MoondreamDetector
 
 import uvicorn
 
@@ -392,7 +383,7 @@ class TwinService(FrameProcessor):
         tools_prompt = "You have access to the following tools:\n"
         for tool_name, tool in self.tools.items():
             if tool_name == "vision":
-                tools_prompt += f'- {{"tool": "vision.get_observation"}}: Get a real-time description of what is visible in the webcam.\n'
+                tools_prompt += '- {"tool": "vision.get_observation"}: Get a real-time description of what is visible in the webcam.\n'
             elif tool_name == "ha":
                 # Special handling for HA tool to ensure it's always included
                 tools_prompt += f'- {{"tool": "ha.call_ai_task", "args": {{"instructions": "<natural language command>"}}}}: {HA_Tool.call_ai_task.__doc__}\n'
@@ -646,8 +637,7 @@ async def main():
         pipeline_steps.insert(1, BenchmarkCollector())
 
     main_pipeline = Pipeline(pipeline_steps)
-    whisker = WhiskerObserver(main_pipeline)
-    main_task = PipelineTask(main_pipeline, observers=[whisker])
+    main_task = PipelineTask(main_pipeline)
 
     # Vision pipeline (parallel)
     vision_pipeline = Pipeline([vision_detector])

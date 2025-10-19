@@ -1,11 +1,14 @@
 import pytest
 import os
+import sys
 from unittest.mock import patch, MagicMock, AsyncMock
 
-# Add the project root to the Python path to allow importing evolve
-import sys
+# Add the project root to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
+# Add create_evaluator to the path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'prompt_engineering')))
+from prompt_engineering import create_evaluator
 from prompt_engineering import evolve
 
 @pytest.mark.asyncio
@@ -40,11 +43,6 @@ async def test_run_evolution_initializes_openevolve_correctly(mock_open_evolve):
 
     # Clean up the environment variable
     del os.environ['OPENAI_API_KEY']
-
-
-# Add create_evaluator to the path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'prompt_engineering')))
-from prompt_engineering import create_evaluator
 
 def test_create_evaluator_script():
     """

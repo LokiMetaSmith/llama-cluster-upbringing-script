@@ -1,5 +1,4 @@
 import requests
-import os
 
 def create_reflection():
     """

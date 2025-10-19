@@ -1,7 +1,5 @@
 import subprocess
-import threading
 import fcntl
-import time
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 import yaml
@@ -58,11 +56,11 @@ def run_ansible_playbook(hostname: str, ip_address: str):
             print(error_message)
             # Add to TODO list
             with open(TODO_PATH, "a") as f:
-                f.write(f"\n---\n")
+                f.write("\n---\n")
                 f.write(f"### Provisioning Failed for `{hostname}`\n")
                 f.write(f"- **IP Address:** {ip_address}\n")
                 f.write(f"- **Timestamp:** {datetime.now().isoformat()}\n")
-                f.write(f"- **Error Log:**\n")
+                f.write("- **Error Log:**\n")
                 f.write("```\n")
                 f.write("".join(log_buffer))
                 f.write("\n```\n")

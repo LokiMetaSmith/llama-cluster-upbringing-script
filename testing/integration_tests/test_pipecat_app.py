@@ -23,8 +23,6 @@ class TestPipecatApp(unittest.TestCase):
         """
         timeout = 60  # seconds
         start_time = time.time()
-        last_status = None
-        last_content = None
 
         while time.time() - start_time < timeout:
             try:

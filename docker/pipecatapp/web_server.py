@@ -1,19 +1,24 @@
+import os
+import json
+import logging
+import requests
+import asyncio
 from fastapi import FastAPI, WebSocket, Body, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from typing import List, Dict
-import asyncio
-from asyncio import Queue
-import json
-import requests
+
 from api_keys import get_api_key
 
-app = FastAPI()
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Create queues to communicate between the web server and the TwinService
-approval_queue = Queue()
-text_message_queue = Queue()
+approval_queue = asyncio.Queue()
+text_message_queue = asyncio.Queue()
 
-class ConnectionManager:
+
+class WebSocketManager:
     """Manages active WebSocket connections.
 
     This class provides methods to connect, disconnect, and broadcast messages
@@ -23,6 +28,7 @@ class ConnectionManager:
     Attributes:
         active_connections (List[WebSocket]): A list of active WebSocket connections.
     """
+
     def __init__(self):
         """Initializes the ConnectionManager."""
         self.active_connections: List[WebSocket] = []
@@ -44,6 +50,14 @@ class ConnectionManager:
         """
         self.active_connections.remove(websocket)
 
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        """Sends a message to all active WebSocket connections.
+
+        Args:
+            message (str): The message to broadcast.
+        """
+        await websocket.send_text(message)
+
     async def broadcast(self, message: str):
         """Sends a message to all active WebSocket connections.
 
@@ -53,7 +67,28 @@ class ConnectionManager:
         for connection in self.active_connections:
             await connection.send_text(message)
 
-manager = ConnectionManager()
+
+manager = WebSocketManager()
+
+app = FastAPI()
+
+# This will be set by the main application
+twin_service_instance = None
+
+# Get the absolute path to the directory containing this script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+static_dir = os.path.join(script_dir, "static")
+index_html_path = os.path.join(static_dir, "index.html")
+
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.get("/")
+async def get():
+    """Serves the main `index.html` file for the web UI."""
+    with open(index_html_path) as f:
+        return HTMLResponse(f.read())
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -80,24 +115,6 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception:
         manager.disconnect(websocket)
 
-import os
-from fastapi.staticfiles import StaticFiles
-
-# This will be set by the main application
-twin_service_instance = None
-
-# Get the absolute path to the directory containing this script
-script_dir = os.path.dirname(os.path.abspath(__file__))
-static_dir = os.path.join(script_dir, "static")
-index_html_path = os.path.join(static_dir, "index.html")
-
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-@app.get("/")
-async def get():
-    """Serves the main `index.html` file for the web UI."""
-    with open(index_html_path) as f:
-        return HTMLResponse(f.read())
 
 @app.get("/api/status", dependencies=[Depends(get_api_key)])
 async def get_status():
@@ -117,6 +134,7 @@ async def get_status():
             return {"status": "MCP tool or runner not available."}
     return {"status": "Agent not fully initialized. Please wait..."}
 
+
 @app.get("/health")
 async def get_health():
     """A health check endpoint that verifies the agent is fully initialized."""
@@ -128,6 +146,7 @@ async def get_health():
         # Return a 503 Service Unavailable status if the agent is not ready.
         # This prevents Nomad from marking the allocation as healthy prematurely.
         return JSONResponse(status_code=503, content={"status": "initializing"})
+
 
 @app.get("/api/web_uis")
 async def get_web_uis():
@@ -144,12 +163,15 @@ async def get_web_uis():
         web_uis.append({"name": "Consul", "url": f"{consul_url}/ui"})
 
         # 2. Add Nomad UI
-        nomad_service_response = requests.get(f"{consul_url}/v1/catalog/service/nomad")
+        nomad_service_response = requests.get(
+            f"{consul_url}/v1/catalog/service/nomad")
         nomad_service_response.raise_for_status()
         nomad_services = nomad_service_response.json()
         if nomad_services:
-            nomad_address = nomad_services[0].get("ServiceAddress") or nomad_services[0].get("Address")
-            web_uis.append({"name": "Nomad", "url": f"http://{nomad_address}:4646"})
+            nomad_address = nomad_services[0].get(
+                "ServiceAddress") or nomad_services[0].get("Address")
+            web_uis.append(
+                {"name": "Nomad", "url": f"http://{nomad_address}:4646"})
 
         # 3. Discover other HTTP services
         services_response = requests.get(f"{consul_url}/v1/catalog/services")
@@ -160,7 +182,8 @@ async def get_web_uis():
             if service_name in ["nomad", "consul"] or "pipecat" in service_name:
                 continue
 
-            health_response = requests.get(f"{consul_url}/v1/health/service/{service_name}?passing")
+            health_response = requests.get(
+                f"{consul_url}/v1/health/service/{service_name}?passing")
             if health_response.status_code != 200:
                 continue
 
@@ -177,10 +200,13 @@ async def get_web_uis():
             if has_http_check:
                 instance = service_instances[0]
                 service_info = instance.get("Service", {})
-                address = service_info.get("Address") or instance.get("Node", {}).get("Address")
+                address = service_info.get(
+                    "Address") or instance.get(
+                    "Node", {}).get("Address")
                 port = service_info.get("Port")
                 if address and port:
-                    web_uis.append({"name": service_name, "url": f"http://{address}:{port}"})
+                    web_uis.append(
+                        {"name": service_name, "url": f"http://{address}:{port}"})
 
     except requests.RequestException as e:
         print(f"Could not connect to Consul to discover UIs: {e}")
@@ -197,6 +223,7 @@ async def get_web_uis():
 
     return JSONResponse(content=sorted_uis)
 
+
 @app.post("/api/state/save", dependencies=[Depends(get_api_key)])
 async def save_state_endpoint(payload: Dict = Body(...)):
     """API endpoint to save the agent's current state to a named snapshot.
@@ -209,32 +236,38 @@ async def save_state_endpoint(payload: Dict = Body(...)):
     """
     save_name = payload.get("save_name")
     if not save_name:
-        return JSONResponse(status_code=400, content={"message": "save_name is required"})
+        return JSONResponse(status_code=400,
+                            content={"message": "save_name is required"})
     if twin_service_instance:
         result = twin_service_instance.save_state(save_name)
         return {"message": result}
-    return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
+    return JSONResponse(status_code=503, content={
+                        "message": "Agent not fully initialized."})
+
 
 @app.post("/api/state/load", dependencies=[Depends(get_api_key)])
 async def load_state_endpoint(payload: Dict = Body(...)):
     """API endpoint to load the agent's state from a named snapshot.
 
     Args:
-        payload (Dict): The request body, expected to contain a "save_name" key.
+        payload (Dict): The request body, a JSON object with a "save_name" key.
 
     Returns:
         JSONResponse: A message indicating success or failure.
     """
     save_name = payload.get("save_name")
     if not save_name:
-        return JSONResponse(status_code=400, content={"message": "save_name is required"})
+        return JSONResponse(status_code=400,
+                            content={"message": "save_name is required"})
     if twin_service_instance:
         result = twin_service_instance.load_state(save_name)
         return {"message": result}
-    return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
+    return JSONResponse(status_code=503, content={
+                        "message": "Agent not fully initialized."})
 
-# We will need a way to get the server to run.
-# This will be handled in the main app.py
+
+# This is a placeholder for the main application logic
+# that would use this web server.
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

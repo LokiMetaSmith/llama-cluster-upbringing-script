@@ -45,8 +45,7 @@
         mode: '0440'
 
 
-- name: Play 2 - Configure Nodes as '{{ target_user }}'
-  hosts: all
+- hosts: all
   remote_user: "{{ target_user }}"
   become: yes # Now we use the sudo privileges we just created
 
