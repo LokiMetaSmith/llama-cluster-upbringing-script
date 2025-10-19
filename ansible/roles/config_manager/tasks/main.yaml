@@ -4,10 +4,6 @@
     timeout: 300
   become: yes
 
-- name: Populate Consul KV with Model Configurations
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/config/models/{{ item.key }}"
-    method: PUT
 - name: Read and register Home Assistant token
   block:
     - name: Read Home Assistant auth file
@@ -27,6 +23,11 @@
           }}
     body: "{{ item.value | to_json }}"
     status_code: 200
+
+- name: Populate Consul KV with Model Configurations
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/kv/config/models/{{ item.key }}"
+    method: PUT
   loop: >
     {{
       (expert_models | dict2items) +
