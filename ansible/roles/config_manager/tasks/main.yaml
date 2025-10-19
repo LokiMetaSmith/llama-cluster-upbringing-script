@@ -18,6 +18,20 @@
   loop_control:
     label: "{{ item.key }}"
 
+- name: Prompt for Home Assistant Token
+  ansible.builtin.pause:
+    prompt: "Please enter your Home Assistant Long-Lived Access Token. This will be stored in Consul KV."
+  register: "hass_token_prompt"
+  when: hass_token is not defined
+
+- name: Populate Consul KV with Home Assistant Token
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/kv/config/hass/token"
+    method: PUT
+    body: "{{ hass_token_prompt.user_input }}"
+    status_code: 200
+  when: hass_token_prompt.user_input is defined
+
 - name: Populate Consul KV with App Settings
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/kv/config/app/settings"
