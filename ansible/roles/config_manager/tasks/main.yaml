@@ -51,7 +51,9 @@
           "openai_api_key": openai_api_key,
           "advertise_ip": advertise_ip,
           "nomad_models_dir": nomad_models_dir,
-          "expected_cluster_size": expected_cluster_size
+          "expected_cluster_size": expected_cluster_size,
+          "ha_url": "{{ ha_url | default('') }}",
+          "ha_token": "{{ ha_token | default('') }}"
         } | to_json
       }}
     status_code: 200

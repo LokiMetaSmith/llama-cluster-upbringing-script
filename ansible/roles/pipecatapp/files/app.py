@@ -50,6 +50,7 @@ from tools.summarizer_tool import SummarizerTool
 from tools.term_everything_tool import TermEverythingTool
 from tools.rag_tool import RAG_Tool
 from tools.home_assistant_tool import HomeAssistantTool
+from tools.ha_tool import HA_Tool
 from moondream_detector import MoondreamDetector
 
 import uvicorn
@@ -343,6 +344,10 @@ class TwinService(FrameProcessor):
             "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
             "rag": RAG_Tool(base_dir="/"),
             "home_assistant": HomeAssistantTool(token=self.app_config.get("hass_token")),
+            "ha": HA_Tool(
+                ha_url=self.app_config.get("ha_url"),
+                ha_token=self.app_config.get("ha_token")
+            ),
         }
 
         if self.app_config.get("use_summarizer", False):
@@ -385,6 +390,9 @@ class TwinService(FrameProcessor):
         for tool_name, tool in self.tools.items():
             if tool_name == "vision":
                 tools_prompt += f'- {{"tool": "vision.get_observation"}}: Get a real-time description of what is visible in the webcam.\n'
+            elif tool_name == "ha":
+                # Special handling for HA tool to ensure it's always included
+                tools_prompt += f'- {{"tool": "ha.call_ai_task", "args": {{"instructions": "<natural language command>"}}}}: {HA_Tool.call_ai_task.__doc__}\n'
             else:
                 for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
                     if not method_name.startswith('_'):
