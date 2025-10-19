@@ -86,7 +86,6 @@
           "nomad_models_dir": nomad_models_dir,
           "expected_cluster_size": expected_cluster_size,
           "ha_url": "{{ ha_url | default('') }}",
-          # Include token only if it was found
           "ha_token": "{{ hass_token | default('') if (hass_token is defined and hass_token is not none) else '' }}"
         } | to_json
       }}
