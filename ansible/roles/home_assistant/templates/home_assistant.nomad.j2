@@ -40,7 +40,7 @@ job "home-assistant" {
 
       env {
         "HASS_SERVER" = "http://127.0.0.1:8123"
-        "HASS_TOKEN" = "{{ home_assistant_token }}"
+        "HASS_TOKEN" = "{{ home_assistant_token | default('') }}"
         "MQTT_SERVER" = "{{ hostvars['controller_node_1']['ansible_host'] | default('127.0.0.1') }}"
       }
 
