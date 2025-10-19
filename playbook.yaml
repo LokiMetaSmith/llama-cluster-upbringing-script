@@ -71,17 +71,25 @@
     - common
 
   tasks:
-    - name: Run service setup roles
-      include_role:
-        name: "{{ role_name }}"
-      loop:
-        - consul
-        - docker
-        - nomad
-      loop_control:
-        loop_var: role_name
+    - name: Create Nomad volumes directory before service setup
+      ansible.builtin.file:
+        path: /opt/nomad/volumes
+        state: directory
+        mode: '0755'
 
-    - name: Flush handlers to ensure core services are started
+    - name: Run Consul setup
+      include_role:
+        name: consul
+
+    - name: Run Docker setup
+      include_role:
+        name: docker
+
+    - name: Run Nomad setup
+      include_role:
+        name: nomad
+
+    - name: Flush handlers to ensure Nomad is restarted with new config
       meta: flush_handlers
 
     - name: Wait for a Consul leader to be elected
@@ -101,11 +109,6 @@
           This usually means the `bootstrap_expect` value in your Consul configuration is
           higher than the number of server nodes available.
       when: consul_leader_status.failed or consul_leader_status.content == '""'
-
-    - name: Populate Consul KV with configuration
-      include_role:
-        name: config_manager
-      run_once: true
 
     - name: Install all python dependencies
       include_role:
@@ -139,6 +142,11 @@
 
     - name: Flush handlers to ensure all services are started
       meta: flush_handlers
+
+    - name: Populate Consul KV with configuration
+      include_role:
+        name: config_manager
+      run_once: true
 
   post_tasks:
     - name: Read rendered Nomad config file
