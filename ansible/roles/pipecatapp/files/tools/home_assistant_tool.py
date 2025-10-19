@@ -5,26 +5,26 @@ import logging
 class HomeAssistantTool:
     """A tool for interacting with the Home Assistant API."""
 
-    def __init__(self, base_url: str = None, token: str = None):
+    def __init__(self, ha_url: str = None, ha_token: str = None):
         """Initializes the HomeAssistantTool.
 
         Args:
-            base_url (str, optional): The base URL of the Home Assistant API.
-                Defaults to the value of the HASS_URL environment variable, or
-                'http://home-assistant.service.consul:8123'.
-            token (str, optional): The Long-Lived Access Token for authentication.
-                Defaults to the value of the HASS_TOKEN environment variable.
+            ha_url (str, optional): The base URL of the Home Assistant API.
+                Defaults to 'http://home-assistant.service.consul:8123'.
+            ha_token (str, optional): The Long-Lived Access Token for authentication.
         """
         self.name = "home_assistant"
         self.description = "Controls smart home devices via Home Assistant."
-        self.base_url = base_url or os.getenv("HASS_URL", "http://home-assistant.service.consul:8123")
-        self.token = token
-        self.headers = {
-            "Authorization": f"Bearer {self.token}",
-            "Content-Type": "application/json",
-        }
+        self.base_url = ha_url or "http://home-assistant.service.consul:8123"
+        self.token = ha_token
+        self.headers = {}
         if not self.token:
             logging.error("Home Assistant token not provided. Home Assistant tool will not work.")
+        else:
+            self.headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json",
+            }
 
     def call_service(self, domain: str, service: str, entity_id: str, service_data: dict = None) -> str:
         """Calls a service in Home Assistant.

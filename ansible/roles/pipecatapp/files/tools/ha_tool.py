@@ -7,14 +7,16 @@ class HA_Tool:
         """
         Initializes the Home Assistant tool.
         """
-        self.ha_url = ha_url or os.getenv("HA_URL")
+        self.ha_url = ha_url or os.getenv("HA_URL", "http://home-assistant.service.consul:8123")
         self.ha_token = ha_token or os.getenv("HA_TOKEN")
-        if not self.ha_url or not self.ha_token:
-            raise ValueError("Home Assistant URL and Token must be provided.")
-        self.headers = {
-            "Authorization": f"Bearer {self.ha_token}",
-            "Content-Type": "application/json",
-        }
+        self.headers = {}
+        if not self.ha_token:
+            logging.error("Home Assistant token not provided. Home Assistant tool will not work.")
+        else:
+            self.headers = {
+                "Authorization": f"Bearer {self.ha_token}",
+                "Content-Type": "application/json",
+            }
 
     def call_ai_task(self, instructions: str) -> str:
         """
@@ -22,6 +24,8 @@ class HA_Tool:
         Use this to control devices or get information from Home Assistant.
         For example: 'Turn on the living room light' or 'What is the temperature in the bedroom?'
         """
+        if not self.ha_token:
+            return "Error: Home Assistant token is not configured."
         if not instructions:
             return "Error: Instructions cannot be empty."
 

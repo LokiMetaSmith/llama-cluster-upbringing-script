@@ -343,7 +343,10 @@ class TwinService(FrameProcessor):
             "power": Power_Tool(),
             "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
             "rag": RAG_Tool(base_dir="/"),
-            "home_assistant": HomeAssistantTool(token=self.app_config.get("hass_token")),
+            "home_assistant": HomeAssistantTool(
+                ha_url=self.app_config.get("ha_url"),
+                ha_token=self.app_config.get("ha_token")
+            ),
             "ha": HA_Tool(
                 ha_url=self.app_config.get("ha_url"),
                 ha_token=self.app_config.get("ha_token")
@@ -540,7 +543,7 @@ async def load_config_from_consul(consul_host, consul_port):
 
         index, data = await c.kv.get('config/hass/token')
         if data:
-            config['hass_token'] = data['Value'].decode('utf-8')
+            config['ha_token'] = data['Value'].decode('utf-8')
             logging.info("Successfully loaded Home Assistant token from Consul.")
         else:
             logging.warning("Could not find 'config/hass/token' in Consul KV. Home Assistant integration will not work.")
