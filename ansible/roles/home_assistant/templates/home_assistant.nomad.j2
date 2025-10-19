@@ -13,7 +13,7 @@ job "home-assistant" {
 
     volume "ha-config" {
       type      = "host"
-      source    = "ha-config"
+      source    = "volumes/ha-config"
       read_only = false
     }
 
@@ -47,6 +47,15 @@ job "home-assistant" {
       device "usb" {
         count = 10
         class = "78D1"
+      template {
+        data = <<EOF
+default_config:
+mqtt:
+  broker: "{{ '{{' }} env "MQTT_BROKER" {{ '}}' }}"
+  port: 1883
+EOF
+        destination = "local/configuration.yaml"
+        change_mode = "restart"
       }
 
       volume_mount {

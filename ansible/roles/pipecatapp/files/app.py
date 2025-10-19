@@ -41,6 +41,7 @@ from tools.power_tool import Power_Tool
 from tools.summarizer_tool import SummarizerTool
 from tools.term_everything_tool import TermEverythingTool
 from tools.rag_tool import RAG_Tool
+from tools.home_assistant_tool import HomeAssistantTool
 from tools.ha_tool import HA_Tool
 
 import uvicorn
@@ -333,6 +334,10 @@ class TwinService(FrameProcessor):
             "power": Power_Tool(),
             "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
             "rag": RAG_Tool(base_dir="/"),
+            "home_assistant": HomeAssistantTool(
+                ha_url=self.app_config.get("ha_url"),
+                ha_token=self.app_config.get("ha_token")
+            ),
             "ha": HA_Tool(
                 ha_url=self.app_config.get("ha_url"),
                 ha_token=self.app_config.get("ha_token")
@@ -526,6 +531,13 @@ async def load_config_from_consul(consul_host, consul_port):
             logging.info("Successfully loaded TTS voices from Consul.")
         else:
             logging.warning("Could not find 'config/models/tts_voices' in Consul KV.")
+
+        index, data = await c.kv.get('config/hass/token')
+        if data:
+            config['ha_token'] = data['Value'].decode('utf-8')
+            logging.info("Successfully loaded Home Assistant token from Consul.")
+        else:
+            logging.warning("Could not find 'config/hass/token' in Consul KV. Home Assistant integration will not work.")
 
     except Exception as e:
         logging.error(f"Error loading configuration from Consul: {e}")
