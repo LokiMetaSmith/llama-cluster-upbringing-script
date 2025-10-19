@@ -3,5 +3,5 @@ default_config:
 
 # Configure the MQTT integration
 mqtt:
-  broker: "{% raw %}{{ env "MQTT_BROKER" }}{% endraw %}"
+  broker: "{{ hostvars['controller_node_1']['ansible_host'] | default('127.0.0.1') }}"
   port: 1883
