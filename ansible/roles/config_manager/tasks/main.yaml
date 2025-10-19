@@ -1,7 +1,30 @@
+- name: Wait for Home Assistant to generate auth file
+  ansible.builtin.wait_for:
+    path: /opt/nomad/volumes/ha-config/.storage/auth_provider.homeassistant
+    timeout: 300
+  become: yes
+
 - name: Populate Consul KV with Model Configurations
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/kv/config/models/{{ item.key }}"
     method: PUT
+- name: Read and register Home Assistant token
+  block:
+    - name: Read Home Assistant auth file
+      ansible.builtin.slurp:
+        src: /opt/nomad/volumes/ha-config/.storage/auth_provider.homeassistant
+      register: "hass_auth_file"
+      become: yes
+
+    - name: Set hass_token fact
+      ansible.builtin.set_fact:
+        hass_token: >
+          {{
+            (hass_auth_file['content'] | b64decode | from_json).data.ll_tokens
+            | selectattr('type', 'eq', 'long_lived_access')
+            | map(attribute='token')
+            | first
+          }}
     body: "{{ item.value | to_json }}"
     status_code: 200
   loop: >
@@ -18,19 +41,13 @@
   loop_control:
     label: "{{ item.key }}"
 
-- name: Prompt for Home Assistant Token
-  ansible.builtin.pause:
-    prompt: "Please enter your Home Assistant Long-Lived Access Token. This will be stored in Consul KV."
-  register: "hass_token_prompt"
-  when: hass_token is not defined
-
 - name: Populate Consul KV with Home Assistant Token
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/kv/config/hass/token"
     method: PUT
-    body: "{{ hass_token_prompt.user_input }}"
+    body: "{{ hass_token }}"
     status_code: 200
-  when: hass_token_prompt.user_input is defined
+  when: hass_token is defined
 
 - name: Populate Consul KV with App Settings
   ansible.builtin.uri:
@@ -53,7 +70,7 @@
           "nomad_models_dir": nomad_models_dir,
           "expected_cluster_size": expected_cluster_size,
           "ha_url": "{{ ha_url | default('') }}",
-          "ha_token": "{{ ha_token | default('') }}"
+          "ha_token": "{{ hass_token | default('') }}"
         } | to_json
       }}
     status_code: 200
