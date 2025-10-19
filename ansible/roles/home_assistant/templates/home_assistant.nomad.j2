@@ -36,30 +36,17 @@ job "home-assistant" {
       config {
         image = "homeassistant/home-assistant:stable"
         ports = ["http"]
-
-        # Allow access to USB devices for Zigbee/Z-Wave controllers
-        devices = [
-          {
-            host_path      = "/dev/ttyUSB0"
-            container_path = "/dev/ttyUSB0"
-            permissions    = "rwm"
-          }
-        ]
       }
 
       env {
-        MQTT_BROKER = "mqtt.service.consul"
+        "HASS_SERVER" = "http://127.0.0.1:8123"
+        "HASS_TOKEN" = "{{ home_assistant_token }}"
+        "MQTT_SERVER" = "{{ hostvars['controller_node_1']['ansible_host'] | default('127.0.0.1') }}"
       }
 
-      template {
-        data = <<EOF
-default_config:
-mqtt:
-  broker: "{{ env "MQTT_BROKER" }}"
-  port: 1883
-EOF
-        destination = "local/configuration.yaml"
-        change_mode = "restart"
+      device "usb" {
+        count = 10
+        class = "78D1"
       }
 
       volume_mount {

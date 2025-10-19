@@ -1,7 +1,5 @@
-import os
 import subprocess
 import asyncio
-from typing import List, Any, Dict
 
 
 class TermEverythingTool(object):

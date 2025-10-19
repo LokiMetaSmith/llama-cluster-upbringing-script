@@ -2,7 +2,7 @@ import pytest
 import os
 import sys
 import httpx
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock, AsyncMock
 
 # Add the parent directory of 'testing' to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files')))
@@ -46,10 +46,10 @@ async def test_twin_service_initialization(mocker):
     mocker.patch('docker.from_env')
     mocker.patch('tools.web_browser_tool.sync_playwright')
     mocker.patch('tools.summarizer_tool.SentenceTransformer')
-    mock_llm = mocker.AsyncMock()
-    mock_vision = mocker.AsyncMock()
-    mock_runner = mocker.AsyncMock()
-    mock_config = mocker.MagicMock()
+    mock_llm = AsyncMock()
+    mock_vision = AsyncMock()
+    mock_runner = AsyncMock()
+    mock_config = MagicMock()
     service = TwinService(llm=mock_llm, vision_detector=mock_vision, runner=mock_runner, app_config=mock_config)
     assert service is not None
 
@@ -64,15 +64,12 @@ async def test_twin_service_sends_vision_frame(mocker):
     mocker.patch('docker.from_env')
     mocker.patch('tools.web_browser_tool.sync_playwright')
     mocker.patch('tools.summarizer_tool.SentenceTransformer')
-    mock_llm = mocker.AsyncMock()
-    mock_vision = mocker.AsyncMock()
-    mock_runner = mocker.AsyncMock()
-    mock_config = mocker.MagicMock()
+    mock_llm = AsyncMock()
+    mock_vision = AsyncMock()
+    mock_runner = AsyncMock()
+    mock_config = MagicMock()
 
     service = TwinService(llm=mock_llm, vision_detector=mock_vision, runner=mock_runner, app_config=mock_config)
-
-    # Create a mock vision frame
-    mock_frame = MagicMock()
 
     # This test will require more setup to properly simulate the pipeline
     # For now, we'll just check that the service can be instantiated.

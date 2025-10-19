@@ -7,11 +7,6 @@ advertise {
   serf = "{{ ansible_default_ipv4.address }}"
 }
 
-server {
-  enabled          = true
-  bootstrap_expect = 1
-}
-
 consul {
   address = "127.0.0.1:8500"
 }

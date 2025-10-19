@@ -1,6 +1,4 @@
-import pytest
 from playwright.sync_api import Page, expect
-import time
 
 def test_code_runner_tool(page: Page):
     """

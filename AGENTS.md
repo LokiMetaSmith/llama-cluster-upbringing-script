@@ -22,6 +22,7 @@ Expert agents are specialized LLMs deployed as separate, independent services. T
 The system includes the following experts by default:
 
 #### a. The Main Expert
+
 This is the general-purpose, conversational agent. It is the default destination for any query that does not require a specialist.
 
 - **Expert Name**: `main`
@@ -29,6 +30,7 @@ This is the general-purpose, conversational agent. It is the default destination
 - **Models**: Configured in `group_vars/models.yaml` under the `expert_models.main` key.
 
 #### b. The Coding Expert
+
 This agent is fine-tuned for programming and software development tasks.
 
 - **Expert Name**: `coding`
@@ -37,6 +39,7 @@ This agent is fine-tuned for programming and software development tasks.
 - **Models**: Configured in `group_vars/models.yaml` under the `expert_models.coding` key.
 
 #### c. The Math Expert
+
 A specialist for mathematical and quantitative reasoning.
 
 - **Expert Name**: `math`
@@ -45,13 +48,13 @@ A specialist for mathematical and quantitative reasoning.
 - **Models**: Configured in `group_vars/models.yaml` under the `expert_models.math` key.
 
 #### d. The Extract Expert
+
 This agent is optimized for extracting structured data from unstructured text.
 
 - **Expert Name**: `extract`
 - **Role**: Parses text to find and format specific information, like names, dates, or other data points.
 - **Prompt File**: `ansible/roles/pipecatapp/files/prompts/extract_expert.txt`
 - **Models**: Configured in `group_vars/models.yaml` under the `expert_models.extract` key.
-
 
 ## Tool-Using Capabilities
 
@@ -65,10 +68,11 @@ The modular design makes the system highly extensible and easy to adapt to new t
 - To change the behavior of an **Expert Agent**, edit its corresponding file in the `ansible/roles/pipecatapp/files/prompts/` directory.
 
 You can easily create new experts by following these steps:
-1.  **Add a new prompt file** to the `ansible/roles/pipecatapp/files/prompts/` directory (e.g., `legal_expert.txt`).
-2.  **Define a new model list** for it in `group_vars/models.yaml` under the `expert_models` dictionary.
-3.  **Add the new expert's name** to the `experts` list in `group_vars/all.yaml`.
-4.  The ansible playbooks will automatically deploy a new service for your expert.
+
+1. **Add a new prompt file** to the `ansible/roles/pipecatapp/files/prompts/` directory (e.g., `legal_expert.txt`).
+2. **Define a new model list** for it in `group_vars/models.yaml` under the `expert_models` dictionary.
+3. **Add the new expert's name** to the `experts` list in `group_vars/all.yaml`.
+4. The ansible playbooks will automatically deploy a new service for your expert.
 
 ## Local Development and Testing
 
@@ -78,20 +82,22 @@ For an efficient local development and testing workflow, it's recommended to set
 
 This project uses two key files for managing Python dependencies:
 
--   `ansible/roles/python_deps/files/requirements.txt`: This file lists all the **runtime dependencies** needed for the `pipecatapp` application to function on the cluster nodes. The main Ansible playbook automatically installs these into a virtual environment on each server as part of the provisioning process.
+- `ansible/roles/python_deps/files/requirements.txt`: This file lists all the **runtime dependencies** needed for the `pipecatapp` application to function on the cluster nodes. The main Ansible playbook automatically installs these into a virtual environment on each server as part of the provisioning process.
 
--   `requirements-dev.txt`: This file contains all the **development and testing dependencies**, including tools like `pytest`, `ansible-lint`, and `yamllint`. This is the file you should use to set up your local environment.
+- `requirements-dev.txt`: This file contains all the **development and testing dependencies**, including tools like `pytest`, `ansible-lint`, and `yamllint`. This is the file you should use to set up your local environment.
 
 ### Recommended Setup Procedure
 
-1.  **Create and activate a Python virtual environment:**
+1. **Create and activate a Python virtual environment:**
+
     ```bash
     python3 -m venv .venv
     source .venv/bin/activate
     ```
 
-2.  **Install development dependencies:**
+2. **Install development dependencies:**
     This command installs all the necessary tools for local testing and linting. This process is also documented in `scripts/README.md`.
+
     ```bash
     pip install -r requirements-dev.txt
     ```

@@ -89,11 +89,12 @@ Helix is a modern text editor with a focus on simplicity and speed. It comes wit
 
 **Key Benefits:**
 
-*   **Zero Configuration:** Comes with powerful features out-of-the-box, including tree-sitter for syntax highlighting and language server integration.
-*   **Modal Editing:** Uses a Kakoune-inspired modal editing model (select-then-act) which can be very efficient.
-*   **Fast and Lightweight:** Written in Rust, it's highly performant.
+* **Zero Configuration:** Comes with powerful features out-of-the-box, including tree-sitter for syntax highlighting and language server integration.
+* **Modal Editing:** Uses a Kakoune-inspired modal editing model (select-then-act) which can be very efficient.
+* **Fast and Lightweight:** Written in Rust, it's highly performant.
 
 **Recommended `~/.config/helix/config.toml` setup:**
+
 ```toml
 [editor]
 line-number = "relative"
@@ -130,10 +131,12 @@ bind-key y display-popup -d '#{pane_current_path}' -x R -h 95% -w 95% -E 'tmux n
 bind-key g popup -E -w 95% -h 95%  -d '#{pane_current_path}' lazygit
 bind-key e display-popup -w 95% -h 90% -E "tmux capture-pane -Jp -S- | hx -"
 ```
+
 With this configuration (and after reloading your tmux config with `tmux source-file ~/.tmux.conf`), you can use the following shortcuts (assuming default `Ctrl+b` prefix):
-*   `prefix` + `y`: Opens the **Yazi** file manager in a popup.
-*   `prefix` + `g`: Opens **Lazygit** in a popup for easy git operations.
-*   `prefix` + `e`: Opens your terminal history in **Helix** for searching and copying.
+
+* `prefix` + `y`: Opens the **Yazi** file manager in a popup.
+* `prefix` + `g`: Opens **Lazygit** in a popup for easy git operations.
+* `prefix` + `e`: Opens your terminal history in **Helix** for searching and copying.
 
 ### Yazi: A Blazing Fast Terminal File Manager
 
@@ -141,9 +144,9 @@ Yazi is a terminal file manager written in Rust. It's fast, has a clean interfac
 
 **Key Benefits:**
 
-*   **Fast and Responsive:** Navigating large directories is snappy.
-*   **Visually Appealing:** Uses modern terminal features for a good-looking UI.
-*   **Great with Popups:** The `tmux` configuration above makes it a breeze to use.
+* **Fast and Responsive:** Navigating large directories is snappy.
+* **Visually Appealing:** Uses modern terminal features for a good-looking UI.
+* **Great with Popups:** The `tmux` configuration above makes it a breeze to use.
 
 ### Lazygit: A TUI for Git
 
@@ -151,6 +154,6 @@ Lazygit provides a terminal-based user interface for git commands. It makes it e
 
 **Key Benefits:**
 
-*   **Intuitive Interface:** Makes complex git operations much simpler.
-*   **Visual History:** Easily browse branches and commits.
-*   **Efficient:** Speed up your git workflow significantly.
+* **Intuitive Interface:** Makes complex git operations much simpler.
+* **Visual History:** Easily browse branches and commits.
+* **Efficient:** Speed up your git workflow significantly.

@@ -57,7 +57,7 @@ class TestSummarizerTool(unittest.TestCase):
         mock_similarities = torch.tensor([[0.98, 0.99, 0.985, 0.2]])
 
         # We need to patch 'util.cos_sim' within the summarizer_tool's module scope
-        with patch('summarizer_tool.util.cos_sim', return_value=mock_similarities) as mock_cos_sim:
+        with patch('summarizer_tool.util.cos_sim', return_value=mock_similarities):
             result = self.summarizer_tool.get_summary("Tell me about the setup process.")
 
             # Verify the correct prefixes were used for encoding
@@ -101,7 +101,7 @@ class TestSummarizerTool(unittest.TestCase):
         mock_history_embeddings = torch.tensor([[0.9, 0.1]])
         self.mock_model.encode.side_effect = [mock_query_embedding, mock_history_embeddings]
 
-        with patch('summarizer_tool.util.cos_sim', return_value=torch.tensor([[0.99]])) as mock_cos_sim:
+        with patch('summarizer_tool.util.cos_sim', return_value=torch.tensor([[0.99]])):
             result = self.summarizer_tool.get_summary("A query.")
 
             expected_summary = (

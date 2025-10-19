@@ -17,6 +17,27 @@
     dest: /opt/nomad/volumes/ha-config/configuration.yaml
   become: yes
 
+- name: Wait for Nomad to be ready
+  ansible.builtin.wait_for:
+    host: "{{ ansible_default_ipv4.address }}"
+    port: 4646
+    timeout: 60
+
+- name: Wait for MQTT service to be available
+  ansible.builtin.wait_for:
+    host: "{{ hostvars['controller_node_1']['ansible_host'] | default('127.0.0.1') }}"
+    port: 1883
+    timeout: 60
+
+- name: Wait for MQTT service to be available
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/health/service/mqtt?passing"
+    return_content: yes
+  register: mqtt_health
+  until: mqtt_health.json | length > 0
+  retries: 30
+  delay: 10
+
 - name: Run home-assistant job
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/home-assistant.nomad

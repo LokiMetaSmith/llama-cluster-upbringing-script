@@ -1,5 +1,6 @@
 import pytest
 from playwright.sync_api import Page, expect
+import time
 
 def test_mission_control_ui_loads(page: Page):
     """
@@ -22,8 +23,6 @@ def test_mission_control_ui_loads(page: Page):
     # Check that the status light is present
     status_light = page.locator("#status-light")
     expect(status_light).to_be_visible()
-
-import time
 
 def test_health_check_endpoint(page: Page):
     """

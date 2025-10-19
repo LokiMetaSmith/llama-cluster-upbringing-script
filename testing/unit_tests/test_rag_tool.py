@@ -30,19 +30,7 @@ def mock_faiss():
         mock.IndexFlatL2.return_value = mock_index
         yield mock
 
-@pytest.fixture
-def mock_text_splitter():
-    """Fixture to mock the RecursiveCharacterTextSplitter."""
-    with patch('tools.rag_tool.RecursiveCharacterTextSplitter') as mock:
-        mock_instance = mock.return_value
-        # Mock create_documents to return a list of mock documents
-        mock_doc = MagicMock()
-        mock_doc.page_content = "This is a test chunk."
-        # The tool expects a list of documents, so return a list
-        mock_instance.create_documents.return_value = [mock_doc, mock_doc, mock_doc]
-        yield mock
-
-def test_rag_tool_initialization(mock_sentence_transformer, mock_faiss, mock_text_splitter):
+def test_rag_tool_initialization(mock_sentence_transformer, mock_faiss):
     """Tests that the RAG_Tool initializes without errors."""
     # Mock os.walk to return a controlled set of files
     with patch('os.walk') as mock_walk:
@@ -63,7 +51,7 @@ def test_rag_tool_initialization(mock_sentence_transformer, mock_faiss, mock_tex
             mock_faiss.IndexFlatL2.return_value.add.assert_called_once()
 
 
-def test_rag_tool_search(mock_sentence_transformer, mock_faiss, mock_text_splitter):
+def test_rag_tool_search(mock_sentence_transformer, mock_faiss):
     """Tests the search functionality of the RAG_Tool."""
     with patch('os.walk') as mock_walk:
         mock_walk.return_value = [('/fake/dir', [], ['test.md'])]
@@ -71,15 +59,9 @@ def test_rag_tool_search(mock_sentence_transformer, mock_faiss, mock_text_splitt
         with patch('builtins.open', m):
             tool = RAG_Tool(base_dir="/fake/dir")
             # Mock the document list after it has been populated
-            doc1 = MagicMock()
-            doc1.page_content = "This is chunk 1."
-            doc1.metadata = {"source": "/fake/dir/test1.md"}
-            doc2 = MagicMock()
-            doc2.page_content = "This is chunk 2."
-            doc2.metadata = {"source": "/fake/dir/test2.txt"}
-            doc3 = MagicMock()
-            doc3.page_content = "This is chunk 3."
-            doc3.metadata = {"source": "/fake/dir/test3.md"}
+            doc1 = type('obj', (object,), {'page_content': "This is chunk 1.", 'metadata': {"source": "/fake/dir/test1.md"}})
+            doc2 = type('obj', (object,), {'page_content': "This is chunk 2.", 'metadata': {"source": "/fake/dir/test2.txt"}})
+            doc3 = type('obj', (object,), {'page_content': "This is chunk 3.", 'metadata': {"source": "/fake/dir/test3.md"}})
             tool.documents = [doc1, doc2, doc3]
 
             # Perform a search
@@ -94,7 +76,7 @@ def test_rag_tool_search(mock_sentence_transformer, mock_faiss, mock_text_splitt
             assert "From /fake/dir/test3.md" in results
             assert "This is chunk 3." in results
 
-def test_rag_tool_empty_knowledge_base(mock_sentence_transformer, mock_faiss, mock_text_splitter):
+def test_rag_tool_empty_knowledge_base(mock_sentence_transformer, mock_faiss):
     """Tests that the RAG tool handles an empty knowledge base gracefully."""
     with patch('os.walk') as mock_walk:
         # Simulate no files being found
@@ -105,7 +87,7 @@ def test_rag_tool_empty_knowledge_base(mock_sentence_transformer, mock_faiss, mo
         result = tool.search_knowledge_base("any query")
         assert result == "The knowledge base is empty. I cannot answer questions about the project yet."
 
-def test_no_relevant_documents_found(mock_sentence_transformer, mock_faiss, mock_text_splitter):
+def test_no_relevant_documents_found(mock_sentence_transformer, mock_faiss):
     """Tests the case where the search returns no relevant documents."""
     with patch('os.walk') as mock_walk:
         mock_walk.return_value = [('/fake/dir', [], ['test.md'])]

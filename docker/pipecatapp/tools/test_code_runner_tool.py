@@ -2,11 +2,10 @@ import pytest
 from code_runner_tool import CodeRunnerTool
 from unittest.mock import MagicMock, patch
 import docker
-import os
 
 @pytest.fixture
 def code_runner():
-    with patch('docker.from_env') as mock_docker_from_env:
+    with patch('docker.from_env'):
         runner = CodeRunnerTool()
         # Mock the client that is created in the constructor
         runner.client = MagicMock()

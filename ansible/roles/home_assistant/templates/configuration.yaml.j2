@@ -3,5 +3,5 @@ default_config:
 
 # Configure the MQTT integration
 mqtt:
-  broker: {{ `{{ env "MQTT_BROKER" }}` }}
+  broker: "{% raw %}{{ env "MQTT_BROKER" }}{% endraw %}"
   port: 1883

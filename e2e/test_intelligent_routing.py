@@ -1,9 +1,7 @@
 import pytest
-import asyncio
 import json
 import os
-import time
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, patch
 
 # Add the app directory to the path to allow imports
 import sys
@@ -11,8 +9,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from app import TwinService, TranscriptionFrame
 from pipecat.frames.frames import StartFrame
-from llm_clients import ExternalLLMClient
-from expert_tracker import ExpertTracker
 
 # Mock LLM service that returns a predictable response
 class MockLLM:

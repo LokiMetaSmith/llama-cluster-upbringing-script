@@ -3,7 +3,7 @@ import logging
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+#from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 class RAG_Tool:
     """A tool to retrieve information from a project-specific knowledge base.
@@ -24,11 +24,7 @@ class RAG_Tool:
         self.description = "Searches the project's documentation to answer questions."
         self.base_dir = base_dir
         self.model = SentenceTransformer(model_name)
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
-            length_function=len,
-        )
+        self.text_splitter = None
         self.documents = []
         self.index = None
         self._build_knowledge_base()
@@ -52,11 +48,13 @@ class RAG_Tool:
                             content = f.read()
 
                         if content.strip(): # Ensure file is not empty
-                            chunks = self.text_splitter.create_documents([content])
-                            for chunk in chunks:
-                                # Add file path as metadata to each chunk
-                                chunk.metadata = {"source": file_path}
-                                all_chunks.append(chunk)
+                            # Simple split by paragraph
+                            chunks = content.split("\n\n")
+                            for chunk_text in chunks:
+                                if chunk_text.strip():
+                                    # Create a simple object to mimic the previous structure
+                                    chunk = type('obj', (object,), {'page_content': chunk_text, 'metadata': {"source": file_path}})
+                                    all_chunks.append(chunk)
                     except Exception as e:
                         logging.warning(f"Could not read or process file {file_path}: {e}")
 

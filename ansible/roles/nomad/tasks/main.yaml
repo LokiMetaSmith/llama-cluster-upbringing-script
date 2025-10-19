@@ -76,6 +76,24 @@
     mode: '0755'
   become: yes
 
+- name: Create Nomad models directory
+  ansible.builtin.file:
+    path: /opt/nomad/models
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: Create Nomad jobs directory
+  ansible.builtin.file:
+    path: /opt/nomad/jobs
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
 - name: Deploy the client Nomad configuration from template
   ansible.builtin.template:
     src: nomad.hcl.client.j2
@@ -150,8 +168,8 @@
   ansible.builtin.file:
     path: /opt/pipecatapp
     state: directory
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
+    owner: "{{ target_user | default('loki') }}"
+    group: "{{ target_user | default('loki') }}"
     mode: '0755'
   become: yes
 
@@ -165,7 +183,6 @@
   async: 45
   poll: 5
   register: nomad_service_start
-  ignore_errors: true # Continue to the debug steps even if this fails
 
 - name: Check Nomad service status if start task failed
   when: nomad_service_start.failed
@@ -187,6 +204,10 @@
       failed_when: false
       changed_when: false
       become: yes
+
+    - name: Display Nomad logs
+      ansible.builtin.debug:
+        var: nomad_logs.stdout_lines
 
     - name: Display Nomad logs and fail
       ansible.builtin.fail:
