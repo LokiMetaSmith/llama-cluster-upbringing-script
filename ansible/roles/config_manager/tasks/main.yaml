@@ -1,27 +1,31 @@
-- name: Wait for Home Assistant to generate auth file
-  ansible.builtin.wait_for:
+# tasks file for ansible/roles/config_manager/tasks/main.yaml
+
+# --- Check for auth file instead of waiting ---
+- name: Check if Home Assistant auth file exists
+  ansible.builtin.stat:
     path: /opt/nomad/volumes/ha-config/.storage/auth_provider.homeassistant
-    timeout: 300
+  register: hass_auth_file_stat
   become: yes
 
-- name: Read and register Home Assistant token
-  block:
-    - name: Read Home Assistant auth file
-      ansible.builtin.slurp:
-        src: /opt/nomad/volumes/ha-config/.storage/auth_provider.homeassistant
-      register: "hass_auth_file"
-      become: yes
+# --- Make subsequent tasks conditional ---
+- name: Read Home Assistant auth file if it exists
+  ansible.builtin.slurp:
+    src: /opt/nomad/volumes/ha-config/.storage/auth_provider.homeassistant
+  register: "hass_auth_file_content"
+  become: yes
+  when: hass_auth_file_stat.stat.exists # Only run if file exists
 
-    - name: Set hass_token fact
-      ansible.builtin.set_fact:
-        hass_token: >
-          {{
-            (hass_auth_file['content'] | b64decode | from_json).data.ll_tokens
-            | selectattr('type', 'eq', 'long_lived_access')
-            | map(attribute='token')
-            | first
-          }}
-
+- name: Set hass_token fact if file was read
+  ansible.builtin.set_fact:
+    # Use default filter to handle case where slurp didn't run
+    hass_token: >
+      {{
+        (hass_auth_file_content.content | default('e30K') | b64decode | from_json({}, true)).data.ll_tokens
+        | selectattr('type', 'eq', 'long_lived_access')
+        | map(attribute='token')
+        | first | default(none, true)
+      }}
+  when: hass_auth_file_stat.stat.exists # Only run if file exists
 
 - name: Populate Consul KV with Model Configurations
   ansible.builtin.uri:
@@ -43,13 +47,23 @@
   loop_control:
     label: "{{ item.key }}"
 
-- name: Populate Consul KV with Home Assistant Token
+- name: Populate Consul KV with Home Assistant Token if found
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/kv/config/hass/token"
     method: PUT
     body: "{{ hass_token }}"
     status_code: 200
-  when: hass_token is defined
+  when: hass_token is defined and hass_token is not none # Only run if token was successfully extracted
+
+- name: Report if HA token was populated
+  ansible.builtin.debug:
+    msg: "Home Assistant token was found and populated into Consul KV."
+  when: hass_token is defined and hass_token is not none
+
+- name: Report if HA token was NOT populated
+  ansible.builtin.debug:
+    msg: "Home Assistant auth file not found or token could not be extracted yet. Token NOT populated into Consul KV."
+  when: hass_token is not defined or hass_token is none
 
 - name: Populate Consul KV with App Settings
   ansible.builtin.uri:
@@ -72,7 +86,10 @@
           "nomad_models_dir": nomad_models_dir,
           "expected_cluster_size": expected_cluster_size,
           "ha_url": "{{ ha_url | default('') }}",
-          "ha_token": "{{ hass_token | default('') }}"
+          # Include token only if it was found
+          "ha_token": "{{ hass_token | default('') if (hass_token is defined and hass_token is not none) else '' }}"
         } | to_json
       }}
     status_code: 200
+
+# --- End Conditional Tasks ---
