@@ -55,7 +55,7 @@ job "home-assistant" {
         data = <<EOF
 default_config:
 mqtt:
-  broker: "{{ env "MQTT_BROKER" }}"
+  broker: "{{ '{{' }} env "MQTT_BROKER" {{ '}}' }}"
   port: 1883
 EOF
         destination = "local/configuration.yaml"
