@@ -21,13 +21,14 @@
             | map(attribute='token')
             | first
           }}
-    body: "{{ item.value | to_json }}"
-    status_code: 200
+
 
 - name: Populate Consul KV with Model Configurations
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/kv/config/models/{{ item.key }}"
     method: PUT
+    body: "{{ item.value | to_json }}"
+    status_code: 200
   loop: >
     {{
       (expert_models | dict2items) +
