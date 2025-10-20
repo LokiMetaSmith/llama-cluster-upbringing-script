@@ -9,6 +9,7 @@
     mode: "0755"
   loop:
     - "/opt/world_model_service"
+    - "/opt/world_model_service/config"
   become: true
 
 - name: "World Model Service : Copy service files"

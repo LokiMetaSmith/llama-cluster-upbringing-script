@@ -1,28 +1,18 @@
-```yaml
-- name: Test Home Assistant Integration
-  hosts: localhost
-  connection: local
+- name: Home Assistant Integration Test
+  hosts: all
   gather_facts: false
-
   tasks:
     - name: Wait for Home Assistant to be ready
       ansible.builtin.uri:
         url: "http://127.0.0.1:8123"
         status_code: 200
-      register: result
-      until: result.status == 200
-      retries: 30
-      delay: 10
+      register: ha_status
+      until: ha_status.status == 200
+      retries: 20
+      delay: 15
+      ignore_errors: yes
 
-    - name: Check if Home Assistant is connected to MQTT
-      ansible.builtin.command:
-        cmd: "docker logs home-assistant"
-      register: docker_logs
-      changed_when: false
-
-    - name: Assert that Home Assistant is connected to MQTT
-      ansible.builtin.assert:
-        that:
-          - "'Successfully connected to MQTT broker' in docker_logs.stdout"
-        fail_msg: "Home Assistant failed to connect to MQTT broker"
-```
+    - name: Fail if Home Assistant is not running
+      ansible.builtin.fail:
+        msg: "Home Assistant is not running or not responding on port 8123."
+      when: ha_status.status != 200

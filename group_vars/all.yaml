@@ -47,7 +47,17 @@ pipecat_api_keys: ""
 # For now, we'll place it here for simplicity.
 openai_api_key: "sk-your_openai_api_key_here"
 
+# Home Assistant Long-Lived Access Token
+# 1. Go to your Home Assistant UI -> Your Profile (bottom left)
+# 2. Scroll down to "Long-Lived Access Tokens"
+# 3. Click "Create Token", give it a name (e.g., "Ansible"), and copy the generated token here.
+home_assistant_token: "your_long_lived_access_token_here"
+
 # Model definitions have been moved to group_vars/models.yaml
+
+# The default user for remote connections and service execution.
+target_user: ubuntu
+
 # A list of all available experts. This is used to dynamically generate
 # the Nomad jobs for each expert model.
 experts:

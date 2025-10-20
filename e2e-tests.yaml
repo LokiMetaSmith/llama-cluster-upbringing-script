@@ -1,24 +1,23 @@
-```yaml
 - name: E2E Cluster Health Check
   hosts: all
   gather_facts: false
   tasks:
     - name: Check that Consul is running and has a leader
-      uri:
+      ansible.builtin.uri:
         url: "http://{{ ansible_host }}:8500/v1/status/leader"
         return_content: yes
       register: consul_leader
       failed_when: consul_leader.content == '""'
 
     - name: Check that Nomad is running and has a leader
-      uri:
+      ansible.builtin.uri:
         url: "http://{{ ansible_host }}:4646/v1/status/leader"
         return_content: yes
       register: nomad_leader
       failed_when: nomad_leader.content == '""'
 
     - name: Check that the pipecat application is running
-      uri:
+      ansible.builtin.uri:
         url: "http://{{ ansible_host }}:8000/health"
         status_code: 200
       register: pipecat_status
@@ -27,12 +26,12 @@
       delay: 10
 
     - name: Verify that the pipecat application is running with the Docker driver
-      command: nomad job inspect pipecat-app
+      ansible.builtin.command: nomad job inspect pipecat-app
       register: pipecat_job_inspect
       changed_when: false
 
     - name: Assert that the driver is 'docker'
-      assert:
+      ansible.builtin.assert:
         that:
           - "(pipecat_job_inspect.stdout | from_json).TaskGroups[0].Tasks[0].Driver == 'docker'"
 
@@ -40,22 +39,22 @@
   hosts: controller_nodes
   tasks:
     - name: Run the llama-benchmark Nomad job
-      command: nomad job run ansible/jobs/benchmark.nomad
+      ansible.builtin.command: nomad job run ansible/jobs/benchmark.nomad
       register: benchmark_run
 
     - name: Wait for the benchmark job to complete
-      command: nomad job status llama-benchmark
+      ansible.builtin.command: nomad job status llama-benchmark
       register: benchmark_status
       until: "'dead' in benchmark_status.stdout"
       retries: 20
       delay: 10
 
     - name: Get benchmark logs
-      command: nomad job logs llama-benchmark
+      ansible.builtin.command: nomad job logs llama-benchmark
       register: benchmark_logs
 
     - name: Assert that the benchmark produced a result
-      assert:
+      ansible.builtin.assert:
         that:
           - "'tokens/s' in benchmark_logs.stdout"
 
@@ -63,24 +62,24 @@
   hosts: controller_nodes
   tasks:
     - name: Install Playwright browser dependencies
-      command: python -m playwright install
+      ansible.builtin.command: python -m playwright install
       register: playwright_install
       changed_when: "'Browsers installed' in playwright_install.stdout"
 
     - name: Run Playwright tests with pytest
-      command: python -m pytest e2e/
+      ansible.builtin.command: python -m pytest e2e/
       register: playwright_test_results
       changed_when: false # This task only reports status, doesn't change state
 
     - name: Display Playwright test results
-      debug:
+      ansible.builtin.debug:
         var: playwright_test_results.stdout_lines
 
 - name: E2E Agent Tool Call Test
   hosts: controller_nodes
   tasks:
     - name: Ask the agent for its status using the mcp_tool
-      uri:
+      ansible.builtin.uri:
         url: "http://{{ ansible_host }}:8000/agent/chat"
         method: POST
         body_format: json
@@ -90,37 +89,9 @@
       register: agent_response
 
     - name: Assert that the agent returned a valid status report
-      assert:
+      ansible.builtin.assert:
         that:
           - "'Current pipeline status' in agent_response.json.text or 'No active pipelines' in agent_response.json.text"
         fail_msg: "Agent did not return a valid status report. Response: {{ agent_response.json.text }}"
 
 - import_playbook: testing/integration_tests/test_home_assistant.yaml
-
-- name: Test Home Assistant Integration
-  hosts: localhost
-  connection: local
-  gather_facts: false
-
-  tasks:
-    - name: Wait for Home Assistant to be ready
-      ansible.builtin.uri:
-        url: "http://127.0.0.1:8123"
-        status_code: 200
-      register: result
-      until: result.status == 200
-      retries: 30
-      delay: 10
-
-    - name: Check if Home Assistant is connected to MQTT
-      ansible.builtin.command:
-        cmd: "docker logs home-assistant"
-      register: docker_logs
-      changed_when: false
-
-    - name: Assert that Home Assistant is connected to MQTT
-      ansible.builtin.assert:
-        that:
-          - "'Successfully connected to MQTT broker' in docker_logs.stdout"
-        fail_msg: "Home Assistant failed to connect to MQTT broker"
-```

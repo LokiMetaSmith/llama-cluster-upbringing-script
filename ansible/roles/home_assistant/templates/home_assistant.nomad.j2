@@ -13,7 +13,7 @@ job "home-assistant" {
 
     volume "ha-config" {
       type      = "host"
-      source    = "volumes/ha-config"
+      source    = "ha-config"
       read_only = false
     }
 
@@ -36,26 +36,21 @@ job "home-assistant" {
       config {
         image = "homeassistant/home-assistant:stable"
         ports = ["http"]
+        volumes = [
+          "/etc/localtime:/etc/localtime:ro",
+        ]
       }
 
       env {
-        "HASS_SERVER" = "http://127.0.0.1:8123"
-        "HASS_TOKEN" = "{{ home_assistant_token }}"
-        "MQTT_SERVER" = "{{ hostvars['controller_node_1']['ansible_host'] | default('127.0.0.1') }}"
+        "TZ" = "America/Los_Angeles"
+        "PUID" = "1000"
+        "PGID" = "1000"
       }
 
-      device "usb" {
-        count = 10
-        class = "78D1"
-      template {
-        data = <<EOF
-default_config:
-mqtt:
-  broker: "{{ '{{' }} env "MQTT_BROKER" {{ '}}' }}"
-  port: 1883
-EOF
-        destination = "local/configuration.yaml"
-        change_mode = "restart"
+      volume_mount {
+        volume      = "ha-config"
+        destination = "/config"
+        read_only   = false
       }
 
       volume_mount {

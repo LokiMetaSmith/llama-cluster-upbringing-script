@@ -20,10 +20,8 @@ job "world-model-service" {
       }
 
       env {
-        MQTT_HOST = "mqtt.service.consul"
+        MQTT_HOST = "{{ nomad_host_ip }}"
         MQTT_PORT = "1883"
-        CONSUL_HOST = "{{ nomad_host_ip }}"
-        CONSUL_PORT = "8500"
       }
 
       resources {

@@ -1,3 +1,4 @@
+```yaml
 - name: Ensure Home Assistant config directory exists
   ansible.builtin.file:
     path: /opt/nomad/volumes/ha-config
@@ -24,12 +25,6 @@
     timeout: 60
 
 - name: Wait for MQTT service to be available
-  ansible.builtin.wait_for:
-    host: "{{ hostvars['controller_node_1']['ansible_host'] | default('127.0.0.1') }}"
-    port: 1883
-    timeout: 60
-
-- name: Wait for MQTT service to be available
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/health/service/mqtt?passing"
     return_content: yes
@@ -44,3 +39,4 @@
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   changed_when: true
+```

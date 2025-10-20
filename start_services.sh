@@ -6,7 +6,7 @@
 
 #NOTE: DO NOT RUN THIS FROM AN AUTOMATED SCRIPT
 
-# set -e
+set -e
 
 echo "🚀 Starting the main Llama Expert service..."
 if [ -f /opt/nomad/jobs/expert-main.nomad ]; then
@@ -17,7 +17,9 @@ echo "🚀 Starting the Pipecat application service..."
 nomad job run /opt/nomad/jobs/pipecatapp.nomad
 
 echo "🚀 Starting the Home Assistant service..."
-nomad job run /opt/nomad/jobs/home-assistant.nomad
+if [ -f /opt/nomad/jobs/home-assistant.nomad ]; then
+    nomad job run /opt/nomad/jobs/home-assistant.nomad
+fi
 
 echo "✅ All services have been submitted to Nomad."
 echo "Use 'nomad status' to monitor their deployment."
