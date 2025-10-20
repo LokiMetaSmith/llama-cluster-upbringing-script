@@ -2,7 +2,13 @@ import pytest
 import os
 import sys
 import httpx
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, patch
+
+# Mock the problematic imports before they are imported by the app
+sys.modules['pipecat.transports.local.audio'] = MagicMock()
+sys.modules['pyaudio'] = MagicMock()
+sys.modules['faster_whisper'] = MagicMock()
+sys.modules['piper.voice'] = MagicMock()
 
 # Add the parent directory of 'testing' to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files')))

@@ -1,4 +1,12 @@
 import base64
+import sys
+from unittest.mock import MagicMock
+
+# Mock playwright if it's not available
+if 'playwright' not in sys.modules:
+    sys.modules['playwright'] = MagicMock()
+    sys.modules['playwright.sync_api'] = MagicMock()
+
 from playwright.sync_api import sync_playwright
 
 class WebBrowserTool:
