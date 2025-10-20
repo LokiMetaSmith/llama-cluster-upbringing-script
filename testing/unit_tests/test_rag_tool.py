@@ -99,3 +99,28 @@ def test_no_relevant_documents_found(mock_sentence_transformer, mock_faiss):
             # Perform a search
             results = tool.search_knowledge_base("test query")
             assert results == "I could not find any relevant information in the knowledge base to answer your question."
+
+def test_rag_tool_search_with_fewer_than_k_results(mock_sentence_transformer, mock_faiss):
+    """Tests that search works correctly when the knowledge base has fewer than k documents."""
+    with patch('os.walk') as mock_walk:
+        mock_walk.return_value = [('/fake/dir', [], ['test.md'])]
+        m = mock_open(read_data="This is a test file.")
+        with patch('builtins.open', m):
+            tool = RAG_Tool(base_dir="/fake/dir")
+            # Mock the document list with only 2 documents
+            doc1 = type('obj', (object,), {'page_content': "This is chunk 1.", 'metadata': {"source": "/fake/dir/test1.md"}})
+            doc2 = type('obj', (object,), {'page_content': "This is chunk 2.", 'metadata': {"source": "/fake/dir/test2.txt"}})
+            tool.documents = [doc1, doc2]
+
+            # Mock the FAISS search to return only 2 results, as if k=3 but only 2 docs exist
+            mock_faiss.IndexFlatL2.return_value.search.return_value = (np.array([[1.0, 2.0]]), np.array([[0, 1]]))
+
+            # Perform a search
+            results = tool.search_knowledge_base("test query")
+
+            # Verify that the search method was called on the index
+            mock_faiss.IndexFlatL2.return_value.search.assert_called_once()
+            assert "From /fake/dir/test1.md" in results
+            assert "This is chunk 1." in results
+            assert "From /fake/dir/test2.txt" in results
+            assert "This is chunk 2." in results
