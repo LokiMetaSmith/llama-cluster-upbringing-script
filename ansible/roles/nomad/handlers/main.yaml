@@ -2,3 +2,13 @@
   service:
     name: nomad
     state: restarted
+
+- name: Wait for Nomad API to be ready after restart
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:4646/v1/agent/self"
+    status_code: 200
+  register: nomad_api_status
+  until: nomad_api_status.status == 200
+  retries: 12
+  delay: 5
+  
