@@ -10,6 +10,42 @@
     state: present
   become: yes
 
+- name: Get latest commit hash from llama.cpp remote repo
+  ansible.builtin.command:
+    cmd: "git ls-remote https://github.com/ggml-org/llama.cpp.git HEAD"
+  register: git_ls_remote_result
+  changed_when: false
+  become: no
+
+- name: Extract commit hash from git ls-remote output
+  ansible.builtin.set_fact:
+    latest_commit_hash: "{{ git_ls_remote_result.stdout.split()[0] }}"
+
+- name: Check for existing llama.cpp version file
+  ansible.builtin.stat:
+    path: /usr/local/etc/llama-cpp.version
+  register: version_file_stat
+  become: yes
+
+- name: Read installed llama.cpp version
+  ansible.builtin.slurp:
+    src: /usr/local/etc/llama-cpp.version
+  when: version_file_stat.stat.exists
+  register: installed_version_raw
+  become: yes
+
+- name: Set installed_version fact
+  ansible.builtin.set_fact:
+    installed_version: "{{ (installed_version_raw.content | b64decode | trim) if installed_version_raw is defined else 'none' }}"
+
+- name: Decide if llama.cpp needs to be built
+  ansible.builtin.set_fact:
+    build_llama_cpp: "{{ installed_version != latest_commit_hash }}"
+
+- name: Print versions for debugging
+  ansible.builtin.debug:
+    msg: "Installed version: {{ installed_version }}, Latest version: {{ latest_commit_hash }}. Build needed: {{ build_llama_cpp }}"
+
 - name: Build and install llama.cpp
   become: yes
   block:
@@ -23,58 +59,61 @@
       ansible.builtin.git:
         repo: 'https://github.com/ggml-org/llama.cpp.git'
         dest: /opt/llama.cpp-build
-        version: master
+        version: "{{ latest_commit_hash }}"
         update: yes
-      register: llama_git_result
 
-    - name: Build and install from source if updated
-      block:
-        - name: Configure llama.cpp build with RPC and shared libraries
-          ansible.builtin.command:
-            cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON -DBUILD_SHARED_LIBS=ON
-          args:
-            chdir: /opt/llama.cpp-build
-            creates: /opt/llama.cpp-build/build/Makefile
+    - name: Configure llama.cpp build with RPC and shared libraries
+      ansible.builtin.command:
+        cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON -DBUILD_SHARED_LIBS=ON
+      args:
+        chdir: /opt/llama.cpp-build
+        creates: /opt/llama.cpp-build/build/Makefile
 
-        - name: Build llama.cpp
-          ansible.builtin.command:
-            cmd: cmake --build build --config Release -j 2
-          args:
-            chdir: /opt/llama.cpp-build
-            creates: /opt/llama.cpp-build/build/bin/llama-server
+    - name: Build llama.cpp
+      ansible.builtin.command:
+        cmd: cmake --build build --config Release -j 2
+      args:
+        chdir: /opt/llama.cpp-build
+        creates: /opt/llama.cpp-build/build/bin/llama-server
 
-        - name: Find all compiled binaries and libraries
-          ansible.builtin.find:
-            paths: "/opt/llama.cpp-build/build/bin"
-            patterns: '*'
-            file_type: any
-          register: llama_artifacts
+    - name: Find all compiled binaries and libraries
+      ansible.builtin.find:
+        paths: "/opt/llama.cpp-build/build/bin"
+        patterns: '*'
+        file_type: any
+      register: llama_artifacts
 
-        - name: Install all compiled binaries to /usr/local/bin
-          ansible.builtin.copy:
-            src: "{{ item.path }}"
-            dest: "/usr/local/bin/{{ item.path | basename }}"
-            mode: '0755'
-            remote_src: yes
-          loop: "{{ llama_artifacts.files | rejectattr('path', 'match', '.*\\.so$') | list }}"
+    - name: Install all compiled binaries to /usr/local/bin
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "/usr/local/bin/{{ item.path | basename }}"
+        mode: '0755'
+        remote_src: yes
+      loop: "{{ llama_artifacts.files | rejectattr('path', 'match', '.*\\.so$') | list }}"
 
-        - name: Install shared libraries to /usr/local/lib
-          ansible.builtin.copy:
-            src: "{{ item.path }}"
-            dest: "/usr/local/lib/{{ item.path | basename }}"
-            mode: '0755'
-            remote_src: yes
-          loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
-          notify: update ld cache
+    - name: Install shared libraries to /usr/local/lib
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "/usr/local/lib/{{ item.path | basename }}"
+        mode: '0755'
+        remote_src: yes
+      loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
+      notify: update ld cache
 
-        - name: Flush handlers to update ldconfig
-          meta: flush_handlers
+    - name: Flush handlers to update ldconfig
+      meta: flush_handlers
 
-        - name: Clean up llama.cpp build directory
-          ansible.builtin.file:
-            path: /opt/llama.cpp-build
-            state: absent
-      when: llama_git_result.changed
+    - name: Stamp the installed version
+      ansible.builtin.copy:
+        content: "{{ latest_commit_hash }}"
+        dest: /usr/local/etc/llama-cpp.version
+        mode: '0644'
+
+    - name: Clean up llama.cpp build directory
+      ansible.builtin.file:
+        path: /opt/llama.cpp-build
+        state: absent
+  when: build_llama_cpp
 
 - name: Create Nomad jobs directory
   ansible.builtin.file:
