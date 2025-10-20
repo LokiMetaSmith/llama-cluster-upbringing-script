@@ -20,7 +20,7 @@ job "world-model-service" {
       }
 
       env {
-        MQTT_HOST = "{{ nomad_host_ip }}"
+        MQTT_HOST = "{{ advertise_ip }}"
         MQTT_PORT = "1883"
         CONSUL_HOST = "{{ advertise_ip }}"
         CONSUL_PORT = "8500"

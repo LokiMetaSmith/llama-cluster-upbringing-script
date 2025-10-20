@@ -19,7 +19,7 @@
 
 - name: Wait for Nomad API to be ready before submitting job
   ansible.builtin.uri:
-    url: ""{{ ansible_default_ipv4.address }}:4646/v1/status/leader"
+    url: "http://{{ ansible_default_ipv4.address }}:4646/v1/status/leader"
     method: GET
     status_code: 200
   register: nomad_api_status
