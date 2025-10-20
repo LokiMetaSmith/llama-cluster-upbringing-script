@@ -173,6 +173,27 @@
     mode: '0755'
   become: yes
 
+ name: Create Nomad volumes directory before service setup
+  ansible.builtin.file:
+    path: /opt/nomad/volumes
+    state: directory
+    owner: "{{ target_user | default('loki') }}"
+    group: "{{ target_user | default('loki') }}"
+    mode: '0755'
+  become: yes
+
+- name: Create subdirectories for Nomad volumes
+  ansible.builtin.file:
+    path: "/opt/nomad/volumes/{{ item }}"
+    state: directory
+    owner: "{{ target_user | default('loki') }}"
+    group: "{{ target_user | default('loki') }}"
+    mode: '0755'
+  loop:
+    - mqtt-data
+    - ha-config
+  become: yes
+
 - name: Start and enable Nomad service
   ansible.builtin.systemd:
     name: nomad
