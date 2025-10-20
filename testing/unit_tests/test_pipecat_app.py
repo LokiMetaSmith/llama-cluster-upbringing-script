@@ -1,4 +1,3 @@
-```python
 import pytest
 import os
 import sys
@@ -119,4 +118,3 @@ async def test_main_page_loads(mocker):
         response = await client.get(base_url, timeout=5)
         assert response.status_code == 200
         assert "Mission Control" in response.text
-```
