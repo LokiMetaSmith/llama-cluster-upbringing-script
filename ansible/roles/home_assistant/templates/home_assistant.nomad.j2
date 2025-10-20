@@ -47,10 +47,6 @@ job "home-assistant" {
         MQTT_SERVER = "{{ hostvars['controller_node_1']['ansible_host'] | default('127.0.0.1') }}"
       }
 
-      device "usb" {
-        count = 10
-        class = "78D1"
-      }
 
       volume_mount {
         volume      = "ha-config"
