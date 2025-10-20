@@ -79,7 +79,6 @@
 
     - name: Run Consul setup
       include_role:
-       include_role:
         name: "{{ role_name }}"
       loop:
         - consul
@@ -237,8 +236,8 @@
 #      - name: coding
 #      - name: math
 #      - name: extract#
-
-  #tasks:
+#
+#  tasks:
 #    - name: Ensure the GPU Provider Pool job is running
 #      ansible.builtin.command: >
 #        nomad job run -var="job_name=llamacpp-rpc-pool" -var="worker_count={{ groups['workers'] | length }}" /opt/cluster-infra/nomad/jobs/llamacpp-rpc.nomad.j2
