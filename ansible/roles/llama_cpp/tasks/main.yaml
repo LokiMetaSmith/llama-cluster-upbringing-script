@@ -36,7 +36,7 @@
 
 - name: Set installed_version fact
   ansible.builtin.set_fact:
-    installed_version: "{{ (installed_version_raw.content | b64decode | trim) if installed_version_raw is defined else 'none' }}"
+    installed_version: "{{ (installed_version_raw.content | b64decode | trim) if 'content' in installed_version_raw else 'none' }}"
 
 - name: Decide if llama.cpp needs to be built
   ansible.builtin.set_fact:
