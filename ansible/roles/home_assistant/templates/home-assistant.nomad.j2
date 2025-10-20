@@ -61,7 +61,7 @@ job "home-assistant" {
         device "usb" {
           count = 10
           constraint {
-            attribute = "class_id"
+            attribute = "usb.class_id"
             value     = "30929"
           }
         }
