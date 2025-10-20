@@ -16,6 +16,11 @@ job "home-assistant" {
       source    = "ha-config"
       read_only = false
     }
+    volume_mount {
+      volume      = "ha-config"
+      destination = "/config"
+      read_only   = false
+    }
 
     service {
       name     = "home-assistant"
@@ -45,13 +50,6 @@ job "home-assistant" {
         HA_SERVER = "http://127.0.0.1:8123"
         HA_TOKEN = "{{ home_assistant_token | default('') }}"
         MQTT_SERVER = "{{ hostvars['controller_node_1']['ansible_host'] | default('127.0.0.1') }}"
-      }
-
-
-      volume_mount {
-        volume      = "ha-config"
-        destination = "/config"
-        read_only   = false
       }
 
       resources {
