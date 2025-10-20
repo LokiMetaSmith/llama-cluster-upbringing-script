@@ -79,7 +79,6 @@
 
     - name: Run Consul setup
       include_role:
-       include_role:
         name: "{{ role_name }}"
       loop:
         - consul
