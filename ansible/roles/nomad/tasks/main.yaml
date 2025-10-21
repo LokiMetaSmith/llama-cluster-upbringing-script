@@ -4,6 +4,10 @@
     dest: "/tmp/nomad.zip"
     mode: '0644'
     timeout: 30
+  register: download_task
+  until: download_task is success
+  retries: 5
+  delay: 10
 
 - name: Unzip Nomad
   ansible.builtin.unarchive:
