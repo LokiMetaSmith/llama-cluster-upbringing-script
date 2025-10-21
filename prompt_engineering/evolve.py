@@ -8,6 +8,22 @@ import asyncio
 # configure the OpenEvolve object, and run the evolution.
 
 async def run_evolution(test_case_path=None):
+    """Initializes and runs the OpenEvolve algorithm.
+
+    This function sets up the OpenEvolve environment, pointing it to the
+    initial program (`app.py`) and the custom evaluator script. It then
+    runs the evolutionary process for a set number of iterations to improve
+    the program based on the evaluation results.
+
+    Args:
+        test_case_path (str, optional): The path to a specific YAML test case
+            file to be used for the evaluation. If provided, this path is
+            passed to the evaluator via an environment variable. Defaults to None.
+
+    Raises:
+        ValueError: If the OPENAI_API_KEY environment variable is not set.
+        FileNotFoundError: If the initial program file cannot be found.
+    """
     # Ensure API key is set
     if not os.environ.get("OPENAI_API_KEY"):
         raise ValueError("Please set OPENAI_API_KEY environment variable")

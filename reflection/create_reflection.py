@@ -1,9 +1,12 @@
 import requests
 
 def create_reflection():
-    """
-    Reads the AID-E log file, sends it to a local llama.cpp server,
-    and generates a reflection based on the 'Learn, Reflect, Apply, Prepare' framework.
+    """Generates a structured reflection from an AI's interaction log.
+
+    This function reads the content of `aid_e_log.txt`, formats it into a
+    prompt using the "Learn, Reflect, Apply, Prepare" framework, and sends it
+    to a local LLaMA C++ server. The generated reflection is then printed to the
+    console and saved to a Markdown file.
     """
     log_file_path = "aid_e_log.txt"
     reflection_output_path = "reflection/daily_reflection.md"

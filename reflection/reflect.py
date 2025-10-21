@@ -9,7 +9,16 @@ import yaml
 LLM_CONFIG = None
 
 def load_llm_config():
-    """Loads LLM configuration from group_vars/all.yaml and caches it."""
+    """Loads and caches the LLM configuration from the main Ansible vars file.
+
+    This function reads `group_vars/all.yaml` to find the configuration
+    for the external expert (OpenAI GPT-4), which is used for reflection.
+    It caches the result in a global variable to avoid repeated file reads.
+
+    Returns:
+        dict: The configuration dictionary for the LLM, or None if the
+              configuration cannot be loaded.
+    """
     global LLM_CONFIG
     if LLM_CONFIG:
         return LLM_CONFIG
@@ -27,7 +36,19 @@ def load_llm_config():
         return None
 
 def call_openai_llm(messages):
-    """Makes a real API call to the OpenAI chat completions endpoint."""
+    """Sends a request to the OpenAI Chat Completions API.
+
+    This function constructs and sends a request to the configured OpenAI
+    endpoint, handling authentication and error reporting.
+
+    Args:
+        messages (list): A list of message dictionaries conforming to the
+            OpenAI API schema.
+
+    Returns:
+        str: The JSON content of the API response as a string, or a JSON
+             string containing an error message.
+    """
     config = load_llm_config()
     if not config:
         return json.dumps({"analysis": "LLM configuration is missing or invalid.", "action": "error", "parameters": {}})
@@ -71,7 +92,18 @@ def call_openai_llm(messages):
         return json.dumps({"analysis": error_msg, "action": "error", "parameters": {}})
 
 def run_tool(tool_call):
-    """Executes a tool call requested by the LLM."""
+    """Executes a tool call requested by the LLM and captures its output.
+
+    This function acts as a dispatcher, calling the appropriate local script
+    or function based on the tool name provided by the LLM.
+
+    Args:
+        tool_call (dict): A dictionary representing the tool call, containing
+            'name' and 'parameters'.
+
+    Returns:
+        str: The standard output of the executed tool, or an error message.
+    """
     tool_name = tool_call.get("name")
     params = tool_call.get("parameters")
 
@@ -90,9 +122,19 @@ def run_tool(tool_call):
     return "Error: Unknown tool requested."
 
 def analyze_failure_with_llm(diagnostic_data):
-    """
-    Analyzes a job failure by making real API calls to an LLM,
-    including handling tool use by maintaining a message history.
+    """Orchestrates the LLM interaction to analyze a failure.
+
+    This function manages the conversational loop with the LLM. It sends the
+    initial diagnostic data, handles requests for tool execution, and sends
+    the tool output back to the LLM until a final action is decided upon.
+
+    Args:
+        diagnostic_data (dict): A dictionary containing the initial failure
+            diagnostics.
+
+    Returns:
+        dict: The final JSON object from the LLM, containing the analysis
+              and the proposed action.
     """
     system_prompt = """
     You are an expert system administrator specializing in Nomad cluster operations. Your task is to analyze a failed job's diagnostic data and determine a course of action.
@@ -145,6 +187,13 @@ def analyze_failure_with_llm(diagnostic_data):
     return llm_response
 
 def main():
+    """The main entry point for the reflection script.
+
+    This function parses the command-line arguments to get the path to the
+    diagnostic file, reads the file, and initiates the failure analysis
+    process. The final proposed solution from the LLM is printed to standard
+    output as a JSON string.
+    """
     if len(sys.argv) < 2:
         print("Usage: python reflect.py <path_to_diagnostic_file>", file=sys.stderr)
         sys.exit(1)

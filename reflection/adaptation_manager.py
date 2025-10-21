@@ -6,8 +6,15 @@ import sys
 import yaml
 
 def generate_test_case(failure_data, test_case_path):
-    """
-    Generates a YAML test case from the failure data.
+    """Generates a dynamic YAML test case from captured failure data.
+
+    This function creates a new test case file that encapsulates the context
+    of a specific failure. This test case can then be used by the prompt
+    evolution process to find a better solution.
+
+    Args:
+        failure_data (dict): A dictionary containing the details of the failure.
+        test_case_path (str): The file path to write the generated YAML test case.
     """
     # This is a placeholder implementation.
     # In a real scenario, this would involve a more sophisticated
@@ -21,8 +28,16 @@ def generate_test_case(failure_data, test_case_path):
         yaml.dump([test_case], f)
 
 def run_prompt_evolution(test_case_path):
-    """
-    Runs the prompt evolution script with the generated test case.
+    """Invokes the prompt evolution script with the generated test case.
+
+    This function runs `prompt_engineering/evolve.py` as a subprocess,
+    passing the path to the dynamically generated test case.
+
+    Args:
+        test_case_path (str): The file path of the test case to use for evolution.
+
+    Returns:
+        bool: True if the evolution script ran successfully, False otherwise.
     """
     evolve_script_path = os.path.join(os.path.dirname(__file__), '..', 'prompt_engineering', 'evolve.py')
     command = [
@@ -55,6 +70,11 @@ def run_prompt_evolution(test_case_path):
 
 
 def main():
+    """The main entry point for the self-adaptation manager.
+
+    This script orchestrates the process of turning a runtime failure into a
+    new test case and then using that test case to evolve a better prompt.
+    """
     parser = argparse.ArgumentParser(description="Orchestrate the self-adaptation loop.")
     parser.add_argument(
         "failure_data_file",

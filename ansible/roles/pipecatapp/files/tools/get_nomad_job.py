@@ -19,6 +19,11 @@ def get_nomad_job_definition(job_id):
         return None
 
 def main():
+    """The main entry point for the script.
+
+    Parses command-line arguments to get the job ID, fetches the job
+    definition, and prints it to standard output.
+    """
     if len(sys.argv) < 2:
         print("Usage: python get_nomad_job.py <job_id>", file=sys.stderr)
         sys.exit(1)

@@ -116,6 +116,12 @@ if __name__ == "__main__":
 """
 
 def main():
+    """Parses command-line arguments and generates a new evaluator script.
+
+    This function reads paths and configuration from the command line,
+    formats them into the EVALUATOR_TEMPLATE, and writes the resulting
+    Python script to the specified output path.
+    """
     parser = argparse.ArgumentParser(
         description="Generate a custom evaluator script for openevolve.",
         formatter_class=argparse.RawTextHelpFormatter

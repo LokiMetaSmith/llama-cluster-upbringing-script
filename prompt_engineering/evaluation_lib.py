@@ -19,7 +19,20 @@ nomad_client = nomad.Nomad(address=NOMAD_ADDR)
 
 
 def render_nomad_job(template_path: str, context: dict) -> dict:
-    """Renders a Jinja2 Nomad job template."""
+    """Renders a Jinja2 Nomad job template into a Python dictionary.
+
+    This function takes a path to a Jinja2 template for a Nomad job and a
+    context dictionary, renders the template, and then uses the Nomad HTTP API
+    to parse the resulting HCL into a dictionary that can be used to register
+    the job.
+
+    Args:
+        template_path (str): The file path to the Jinja2 Nomad job template.
+        context (dict): A dictionary of variables to render in the template.
+
+    Returns:
+        dict: The parsed Nomad job specification as a dictionary.
+    """
     template_dir, template_name = os.path.split(template_path)
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     template = env.get_template(template_name)
@@ -28,7 +41,20 @@ def render_nomad_job(template_path: str, context: dict) -> dict:
 
 
 def wait_for_service_healthy(service_name: str, retries: int, delay: int) -> bool:
-    """Waits for a Consul service to become healthy."""
+    """Periodically queries Consul until a service is reported as healthy.
+
+    This function polls the Consul health API for a given service name, waiting
+    for all its health checks to pass.
+
+    Args:
+        service_name (str): The name of the service registered in Consul.
+        retries (int): The maximum number of times to check for health.
+        delay (int): The number of seconds to wait between retries.
+
+    Returns:
+        bool: True if the service becomes healthy, False if the timeout is
+              reached.
+    """
     logging.info(f"Waiting for service '{service_name}' to become healthy...")
     for i in range(retries):
         try:
