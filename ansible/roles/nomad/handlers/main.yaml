@@ -1,4 +1,4 @@
-- name: Restart nomad
+- name: "Nomad service restart"
   block:
     - name: Restart nomad service
       ansible.builtin.service:
