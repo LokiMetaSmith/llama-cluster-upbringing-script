@@ -73,8 +73,12 @@
     - docker
     - nomad
 
-  tasks:
+- name: Play 2a - Run tasks after roles
+  hosts: all
+  remote_user: "{{ target_user }}"
+  become: yes
 
+  tasks:
     - name: Flush handlers to ensure Nomad is restarted with new config
       meta: flush_handlers
 
