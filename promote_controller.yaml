@@ -72,19 +72,12 @@
         owner: root
         group: root
         mode: '0644'
-      notify: Restart nomad
+      notify: "Nomad service restart"
 
   handlers:
     - name: restart consul
       ansible.builtin.systemd:
         name: consul
-        state: restarted
-        enabled: true
-        daemon_reload: true
-
-    - name: Restart nomad
-      ansible.builtin.systemd:
-        name: nomad
         state: restarted
         enabled: true
         daemon_reload: true

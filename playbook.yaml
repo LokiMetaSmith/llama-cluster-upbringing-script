@@ -66,26 +66,14 @@
           - "--exclude=.git"
       when: inventory_hostname != 'localhost'
 
+  roles:
+    - system_deps
+    - common
+    - consul
+    - docker
+    - nomad
+
   tasks:
-    - name: Import system_deps role
-      ansible.builtin.import_role:
-        name: system_deps
-
-    - name: Import common role
-      ansible.builtin.import_role:
-        name: common
-
-    - name: Import consul role
-      ansible.builtin.import_role:
-        name: consul
-
-    - name: Import docker role
-      ansible.builtin.import_role:
-        name: docker
-
-    - name: Import nomad role
-      ansible.builtin.import_role:
-        name: nomad
 
     - name: Flush handlers to ensure Nomad is restarted with new config
       meta: flush_handlers
