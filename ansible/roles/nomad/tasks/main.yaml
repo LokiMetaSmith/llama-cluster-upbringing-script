@@ -107,7 +107,7 @@
     mode: '0644'
   become: yes
   notify:
-    - "Nomad service restart"
+    - Restart nomad
 
 - name: Copy Nomad systemd service file
   ansible.builtin.template:
