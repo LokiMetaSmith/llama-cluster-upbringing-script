@@ -69,23 +69,11 @@
   roles:
     - system_deps
     - common
+    - consul
+    - docker
+    - nomad
 
   tasks:
-    - name: Create Nomad volumes directory before service setup
-      ansible.builtin.file:
-        path: /opt/nomad/volumes
-        state: directory
-        mode: '0755'
-
-    - name: Run Consul setup
-      include_role:
-        name: "{{ role_name }}"
-      loop:
-        - consul
-        - docker
-        - nomad
-      loop_control:
-        loop_var: role_name
 
     - name: Flush handlers to ensure Nomad is restarted with new config
       meta: flush_handlers
