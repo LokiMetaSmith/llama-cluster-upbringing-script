@@ -57,10 +57,13 @@ job "home-assistant" {
       resources {
         cpu    = 1000 # 1 GHz
         memory = 2048 # 2 GB
-        
+
         device "usb" {
           count = 10
-          class = "78D1"
+          constraint {
+            attribute = "usb.class_id"
+            value     = "30929"
+          }
         }
       }
     }

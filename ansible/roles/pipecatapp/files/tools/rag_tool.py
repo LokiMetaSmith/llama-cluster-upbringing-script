@@ -93,7 +93,7 @@ class RAG_Tool:
         distances, indices = self.index.search(np.array(query_embedding, dtype=np.float32), k)
 
         results = []
-        for i in range(k):
+        for i in range(len(indices[0])):
             if indices[0][i] != -1: # FAISS returns -1 for no result
                 doc_index = indices[0][i]
                 doc = self.documents[doc_index]
