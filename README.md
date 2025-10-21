@@ -1,4 +1,4 @@
-Last updated: 2025-10-12
+Last updated: 2025-10-20
 
 # Distributed Conversational AI Pipeline for Legacy CPU Clusters
 
@@ -10,11 +10,25 @@ This project provides a complete solution for deploying a high-performance, low-
 - **Control Node:** A machine to run Ansible for provisioning.
 - **Recommended OS:** Debian Trixie, minimal install with SSH server.
 
-## 2. Initial Machine Setup
+## 2. Project Structure
+
+A brief overview of the key directories in this repository:
+
+-   **/ansible**: Contains all Ansible playbooks, roles, and templates for provisioning and deploying the entire system.
+    -   **/ansible/roles**: Individual, reusable components for managing specific parts of the system (e.g., `nomad`, `consul`, `pipecatapp`).
+    -   **/ansible/roles/pipecatapp/files**: The core Python source code for the conversational agent, including `app.py`, `memory.py`, and the `tools` directory.
+-   **/prompt_engineering**: Scripts and tools for evaluating and improving the AI's prompts using evolutionary algorithms.
+-   **/reflection**: Scripts related to the agent's self-reflection and self-healing capabilities.
+-   **/scripts**: Utility and linting scripts for maintaining code quality.
+-   **/testing**: Contains unit and integration tests for the various components of the project.
+-   **/*.yaml**: Top-level Ansible playbook files (e.g., `playbook.yaml`, `heal_cluster.yaml`).
+-   **/group_vars**: Ansible configuration files that apply to all hosts, such as `all.yaml` and `models.yaml`.
+
+## 3. Initial Machine Setup
 
 Setting up a new cluster involves two main methods: a one-time manual setup for the first node, and a fully automated setup for all subsequent nodes.
 
-### 2.1. Manual Setup (First Node / PXE Server)
+### 3.1. Manual Setup (First Node / PXE Server)
 
 The first node in your cluster requires a manual OS installation. This node will later be configured by Ansible to act as the PXE/iPXE boot server for all other nodes.
 
@@ -24,15 +38,15 @@ The first node in your cluster requires a manual OS installation. This node will
 4. **Run Setup Script:** Execute the script with root privileges: `sudo bash setup.sh`
 5. **Reboot.**
 
-After rebooting, this node is ready for Ansible provisioning (see Section 3). It should be designated as both a `controller_node` and your `pxe_server` in the Ansible inventory.
+After rebooting, this node is ready for Ansible provisioning (see Section 4). It should be designated as both a `controller_node` and your `pxe_server` in the Ansible inventory.
 
-### 2.2. Automated Setup (All Other Nodes)
+### 3.2. Automated Setup (All Other Nodes)
 
 Once your first node has been provisioned by Ansible and the `pxe_server` role has been applied to it, you can automatically install Debian on all other bare-metal machines in your cluster.
 
 This system uses an advanced iPXE-over-HTTP method that is significantly faster and more reliable than traditional PXE. For detailed instructions on how to apply the Ansible role and prepare the client machines for network booting, see the **[iPXE Boot Server Setup Guide](PXE_BOOT_SETUP.md)**.
 
-## 3. Easy Bootstrap (Single-Server Setup)
+## 4. Easy Bootstrap (Single-Server Setup)
 
 For development, testing, or bootstrapping the very first node of a new cluster, you can use the provided bootstrap script. This is the recommended method for getting started.
 
@@ -110,6 +124,8 @@ The agent can use tools to perform actions and gather information. The `TwinServ
 - **Ansible (`ansible.run_playbook`)**: Runs an Ansible playbook to configure and manage the cluster.
 - **Web Browser (`web_browser.*`)**: Provides a full web browser (via Playwright) for navigating (`goto`), reading (`get_page_content`), and interacting with websites (`click`, `type`).
 - **Power (`power.set_idle_threshold`)**: Controls the cluster's power management policies by setting service idle thresholds.
+- **Home Assistant (`ha.call_ai_task`)**: Controls smart home devices and queries their state using natural language commands.
+- **RAG (`rag.search_knowledge_base`)**: Searches the project's documentation to answer questions.
 - **Summarizer (`summarizer.get_summary`)**: Performs an extractive summary of the conversation to find the most relevant points related to a query.
 
 ### 6.3. Mixture of Experts (MoE) Routing
@@ -117,7 +133,7 @@ The agent can use tools to perform actions and gather information. The `TwinServ
 The agent is designed to function as a "Mixture of Experts." The primary `pipecat` agent acts as a router, classifying the user's query and routing it to a specialized backend expert if appropriate.
 
 - **How it Works:** The `TwinService` prompt instructs the main agent to first classify the user's query. If it determines the query is best handled by a specialist (e.g., a 'coding' expert), it uses the `route_to_expert` tool. This tool call is intercepted by the `TwinService`, which then discovers the expert's API endpoint via Consul and forwards the query.
-- **Configuration:** Deploying these specialized experts is done using the `deploy_expert.yaml` Ansible playbook. For detailed instructions, see the [Advanced AI Service Deployment](#72-advanced-deploying-additional-ai-experts) section below.
+- **Configuration:** Deploying these specialized experts is done using the `deploy_expert.yaml` Ansible playbook. For detailed instructions, see the [Advanced AI Service Deployment](#82-advanced-deploying-additional-ai-experts) section below.
 
 ### 6.4. Configuring Agent Personas
 
@@ -142,7 +158,7 @@ nomad job stop -purge llamacpp-rpc
 nomad job stop -purge pipecat-app
 ```
 
-### 7.2. Advanced: Deploying Additional AI Experts
+### 8.2. Advanced: Deploying Additional AI Experts
 
 The true power of this architecture is the ability to deploy multiple, specialized AI experts that the main `pipecat` agent can route queries to. With the new unified `llama-expert.nomad` job template, deploying a new expert is handled through a dedicated Ansible playbook.
 
@@ -166,9 +182,9 @@ The true power of this architecture is the ability to deploy multiple, specializ
 
 The `TwinService` in the `pipecatapp` will automatically discover any service registered in Consul with the `llama-api-` prefix and make it available for routing.
 
-## 8. Advanced System Features
+## 9. Advanced System Features
 
-### 8.1. Power Management
+### 9.1. Power Management
 
 To optimize resource usage on legacy hardware, this project includes an intelligent power management system.
 
@@ -176,7 +192,7 @@ To optimize resource usage on legacy hardware, this project includes an intellig
 - **Sleep/Wake:** If a monitored service is idle for a configurable period, the power agent automatically stops the corresponding Nomad job. When new traffic is detected, the agent restarts the job.
 - **Configuration:** The agent can configure this behavior using the `power.set_idle_threshold` tool.
 
-### 8.2. Mission Control Web UI
+### 9.2. Mission Control Web UI
 
 This project includes a web-based dashboard for real-time display and debugging. To access it, navigate to the IP address of any node in your cluster on port 8000 (e.g., `http://192.168.1.101:8000`). The UI provides:
 
@@ -184,7 +200,7 @@ This project includes a web-based dashboard for real-time display and debugging.
 - A request-approval interface for sensitive tool actions.
 - The ability to save and load the agent's memory state.
 
-## 9. Testing and Verification
+## 10. Testing and Verification
 
 - **Check Cluster Status:** `nomad node status`
 - **Check Job Status:** `nomad job status`
@@ -198,7 +214,7 @@ A dedicated health check job exists to verify the status of all running LLM expe
 - **View results:** `nomad job logs health-check`
 - **Manual Test Scripts:** A set of scripts for manual testing of individual components is available in the `testing/` directory.
 
-### 9.1. Code Quality and Linting
+### 10.1. Code Quality and Linting
 
 This project uses a suite of linters to ensure code quality and consistency. For detailed instructions on how to install the development dependencies and run the checks, please see the **[Linting Documentation](scripts/README.md)**.
 
@@ -208,22 +224,22 @@ To run all linters, use the following command:
 npm run lint
 ```
 
-## 10. Performance Tuning & Service Selection
+## 11. Performance Tuning & Service Selection
 
 - **Model Selection:** The `llama-expert.nomad` job is configured via Ansible variables in `group_vars/models.yaml`. You can define different model lists for different experts.
 - **Network:** Wired gigabit ethernet is strongly recommended over Wi-Fi for reduced latency.
 - **VAD Tuning:** The `RealtimeSTT` sensitivity can be tuned in `app.py` for better performance in noisy environments.
 - **STT/TTS Service Selection:** You can choose which Speech-to-Text and Text-to-Speech services to use by setting environment variables in the `pipecatapp.nomad` job file.
 
-## 11. Benchmarking
+## 12. Benchmarking
 
 This project includes two types of benchmarks.
 
-### 11.1. Real-Time Latency Benchmark
+### 12.1. Real-Time Latency Benchmark
 
 Measures the end-to-end latency of a live conversation. Enable it by setting `BENCHMARK_MODE = "true"` in the `env` section of the `pipecatapp.nomad` job file. Results are printed to the job logs.
 
-### 11.2. Standardized Performance Benchmark
+### 12.2. Standardized Performance Benchmark
 
 Uses `llama-bench` to measure the raw inference speed (tokens/sec) of the deployed LLM backend. Run the `benchmark.nomad` job to test the performance of the default model.
 
@@ -233,6 +249,6 @@ nomad job run /opt/nomad/jobs/benchmark.nomad
 
 View results in the job logs: `nomad job logs llama-benchmark`
 
-## 12. Advanced Development: Prompt Evolution
+## 13. Advanced Development: Prompt Evolution
 
 For advanced users, this project includes a workflow for automatically improving the agent's core prompt using evolutionary algorithms. See `prompt_engineering/PROMPT_ENGINEERING.md` for details.

@@ -25,9 +25,25 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 async def evaluate_code(candidate_code: str) -> dict:
-    """
-    Evaluates candidate Python code by deploying it in an isolated Nomad
-    environment and running integration tests against it.
+    """Evaluates candidate code by deploying it and running integration tests.
+
+    This function orchestrates the end-to-end evaluation of a candidate code
+    string. It performs the following steps:
+    1. Creates a temporary directory and copies the application source code.
+    2. Overwrites the target file (e.g., `app.py`) with the candidate code.
+    3. Renders and deploys a Nomad job for the application.
+    4. Waits for the application's service to become healthy in Consul.
+    5. Renders and deploys a Nomad batch job to run integration tests against
+       the new service.
+    6. Monitors the test job and captures its logs to determine the outcome.
+    7. Cleans up all created resources (Nomad jobs, temporary directories).
+
+    Args:
+        candidate_code (str): The Python code to be evaluated.
+
+    Returns:
+        dict: A dictionary containing the fitness score (1.0 for pass, 0.0 for
+              fail), a boolean 'passed' status, and details from the test run.
     """
     eval_id = str(uuid.uuid4())[:8]
     temp_dir = f"/tmp/eval-{eval_id}"

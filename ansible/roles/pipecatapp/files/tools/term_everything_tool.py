@@ -3,18 +3,38 @@ import asyncio
 
 
 class TermEverythingTool(object):
-    """
-    A tool for running GUI applications in the terminal using term.everything.
+    """A tool for running GUI applications in the terminal.
+
+    This tool uses the `term.everything` AppImage to execute commands that would
+    typically require a graphical user interface, capturing their output from
+    the terminal.
+
+    Attributes:
+        app_image_path (str): The path to the term.everything AppImage.
     """
 
     def __init__(self, app_image_path: str, **kwargs):
+        """Initializes the TermEverythingTool.
+
+        Args:
+            app_image_path (str): The file path to the term.everything AppImage.
+            **kwargs: Additional keyword arguments.
+        """
         super().__init__(**kwargs)
         self.app_image_path = app_image_path
 
     async def execute(self, command: str) -> str:
-        """
-        Executes the term.everything AppImage with the given command.
-        The command string is split into arguments.
+        """Executes a command using the term.everything AppImage.
+
+        The provided command string is split into arguments and executed as a
+        subprocess.
+
+        Args:
+            command (str): The command to execute.
+
+        Returns:
+            str: The standard output of the command on success, or an error
+                 message on failure.
         """
         command_parts = command.split()
         try:

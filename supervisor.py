@@ -4,7 +4,20 @@ import subprocess
 import time
 
 def run_playbook(playbook_path, extra_vars=None):
-    """A helper function to run an Ansible playbook."""
+    """Executes an Ansible playbook as a subprocess.
+
+    This function provides a standardized way to call `ansible-playbook`
+    from within the supervisor script, handling command construction and
+    error reporting.
+
+    Args:
+        playbook_path (str): The file path to the Ansible playbook.
+        extra_vars (dict, optional): A dictionary of extra variables to pass
+            to the playbook. Defaults to None.
+
+    Returns:
+        bool: True if the playbook ran successfully, False otherwise.
+    """
     command = ["ansible-playbook", playbook_path]
     if extra_vars:
         command.extend(["-e", json.dumps(extra_vars)])
@@ -22,7 +35,19 @@ def run_playbook(playbook_path, extra_vars=None):
     return True
 
 def run_script(script_path, args=None):
-    """A helper function to run a Python script."""
+    """Executes a Python script as a subprocess.
+
+    This function is used to run other Python scripts, such as the reflection
+    and adaptation managers, and captures their standard output.
+
+    Args:
+        script_path (str): The file path to the Python script.
+        args (list, optional): A list of command-line arguments to pass to
+            the script. Defaults to None.
+
+    Returns:
+        str: The standard output of the script, or None if an error occurred.
+    """
     command = ["python", script_path]
     if args:
         command.extend(args)
@@ -39,14 +64,26 @@ def run_script(script_path, args=None):
     return result.stdout
 
 def cleanup_files(files):
-    """A helper function to remove temporary files."""
+    """Removes a list of temporary files.
+
+    This is a utility function to ensure that transient files generated during
+    the supervision loop (like diagnostic reports) are cleaned up.
+
+    Args:
+        files (list): A list of file paths to remove.
+    """
     for f in files:
         if os.path.exists(f):
             os.remove(f)
             print(f"Removed temporary file: {f}")
 
 def main():
-    """The main supervisor loop."""
+    """The main entry point for the supervisor's self-healing loop.
+
+    This function orchestrates the entire process of monitoring, diagnosing,
+    and healing failed services. It runs in an infinite loop, periodically
+    checking system health and taking corrective action as needed.
+    """
     failed_jobs_file = "failed_jobs.json"
 
     while True:
