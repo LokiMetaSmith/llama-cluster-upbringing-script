@@ -13,4 +13,3 @@
       until: nomad_api_status.status == 200
       retries: 12
       delay: 5
-  
