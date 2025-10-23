@@ -4,6 +4,8 @@
       ansible.builtin.service:
         name: nomad
         state: restarted
+        enabled: true
+        daemon_reload: true        
 
     - name: Wait for Nomad API to be ready after restart
       ansible.builtin.uri:
