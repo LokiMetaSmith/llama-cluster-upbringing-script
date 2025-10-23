@@ -77,6 +77,11 @@
   hosts: all
   remote_user: "{{ target_user }}"
   become: yes
+  
+  vars_files:
+    - group_vars/all.yaml
+    - group_vars/models.yaml
+    - group_vars/external_experts.yaml
 
   tasks:
     - name: Flush handlers to ensure Nomad is restarted with new config
