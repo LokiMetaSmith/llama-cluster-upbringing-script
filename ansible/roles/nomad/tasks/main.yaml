@@ -109,6 +109,9 @@
   notify:
     - Restart nomad
 
+- name: Ensure handlers run now # <-- ADD THIS TASK
+  meta: flush_handlers
+
 - name: Copy Nomad systemd service file
   ansible.builtin.template:
     src: nomad.service.j2
