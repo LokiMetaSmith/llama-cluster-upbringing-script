@@ -4,7 +4,15 @@ job "home-assistant" {
 
   group "home-assistant-group" {
     count = 1
-
+    
+    update {
+      max_parallel      = 1
+      min_healthy_time  = "30s" # Require it to be healthy for 30s
+      healthy_deadline  = "5m"  # Individual alloc health deadline
+      progress_deadline = "10m" # Overall deployment deadline << INCREASED
+      auto_revert       = true
+    }
+    
     network {
       port "http" {
         to = 8123
