@@ -100,8 +100,8 @@
       loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
       notify: update ld cache
 
-    - name: Flush handlers to update ldconfig
-      meta: flush_handlers
+#    - name: Flush handlers to update ldconfig
+#      meta: flush_handlers
 
     - name: Stamp the installed version
       ansible.builtin.copy:
