@@ -82,9 +82,4 @@
         enabled: true
         daemon_reload: true
 
-    - name: Restart nomad
-      ansible.builtin.systemd:
-        name: nomad
-        state: restarted
-        enabled: true
-        daemon_reload: true
+
