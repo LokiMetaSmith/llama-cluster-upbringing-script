@@ -220,7 +220,7 @@
     expert_tags: >-
       [
         "expert={{ item }}",
-        "nomad_namespace={{ nomad_namespace | default('default', true) }}",
+       # "nomad_namespace={{ nomad_namespace | default('default', true) }}",
         "avg_tps={{ avg_tokens_per_second | round(2) }}",
         "memory_mb={{ ansible_memtotal_mb }}",
         "models={{ expert_models[item] | map(attribute='filename') | join(',') }}"
