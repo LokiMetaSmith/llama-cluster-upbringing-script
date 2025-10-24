@@ -48,7 +48,7 @@
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   changed_when: true
   register: mqtt_job_run
-  notify: Restart Home Assistant
+#  notify: Restart Home Assistant
 
 - name: Debug mqtt job run
   ansible.builtin.debug:
