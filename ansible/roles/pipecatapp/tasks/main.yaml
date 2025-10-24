@@ -7,6 +7,7 @@
 
     - name: Parse benchmark JSONL content safely using shell and jq
       ansible.builtin.shell:
+        executable: /bin/bash
         cmd: |
           set -o pipefail
           echo '{{ benchmark_log_raw.content }}' | base64 --decode | while IFS= read -r line; do
