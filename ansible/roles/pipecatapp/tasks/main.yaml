@@ -127,11 +127,6 @@
   tags:
     - deploy_app
 
-- name: Setup STT providers
-  ansible.builtin.include_tasks: "{{ item }}.yaml"
-  loop:
-    - setup_whisper_cpp
-    - setup_faster_whisper
 
 - name: Create VAD model directory
   ansible.builtin.file:
