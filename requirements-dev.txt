@@ -3,6 +3,7 @@ molecule
 molecule-docker
 yamllint
 djlint
+yaml
 pytest
 pytest-asyncio
 pytest-mock
