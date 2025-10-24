@@ -127,9 +127,9 @@
   tags:
     - deploy_app
 
-- name: Setup STT providers
-  ansible.builtin.include_role:
-    name: whisper_cpp
+#- name: Setup STT providers
+#  ansible.builtin.include_role:
+#    name: whisper_cpp
 
 - name: Create VAD model directory
   ansible.builtin.file:
@@ -191,7 +191,7 @@
     job_name: "expert-{{ item }}"
     service_name: "expert-api-{{ item }}"
     #nomad_namespace: "{{ (nomad_namespace | default('default', true)) | string }}"
-    #nomad_namespace: "default"
+    nomad_namespace: "default"
     model_list: "{{ expert_models[item] | default(experts, true) }}"
     worker_count: 1
     ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
