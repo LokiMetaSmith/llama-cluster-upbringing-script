@@ -13,3 +13,16 @@ opencv-python-headless
 # Note: torch should be installed with --index-url https://download.pytorch.org/whl/cpu
 torch
 ultralytics
+# Added to fix unit test failures
+pyyaml
+pipecat-ai
+openevolve
+faiss-cpu
+websockets
+sentence-transformers
+python-consul2
+fastapi
+paramiko
+uvicorn
+langchain
+python-nomad
