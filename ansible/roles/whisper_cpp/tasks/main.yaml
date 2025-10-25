@@ -8,7 +8,39 @@
     state: present
   become: yes
 
-- name: Build and install whisper.cpp
+- name: Get latest commit hash from whisper.cpp remote repo
+  ansible.builtin.command:
+    cmd: "git ls-remote https://github.com/ggml-org/whisper.cpp.git HEAD"
+  register: git_ls_remote_result
+  changed_when: false
+  become: no
+
+- name: Extract commit hash from git ls-remote output
+  ansible.builtin.set_fact:
+    latest_commit_hash: "{{ git_ls_remote_result.stdout.split()[0] }}"
+
+- name: Check for existing whisper.cpp version file
+  ansible.builtin.stat:
+    path: /usr/local/etc/whisper-cpp.version
+  register: version_file_stat
+  become: yes
+
+- name: Read installed whisper.cpp version
+  ansible.builtin.slurp:
+    src: /usr/local/etc/whisper-cpp.version
+  when: version_file_stat.stat.exists
+  register: installed_version_raw
+  become: yes
+
+- name: Set installed_version fact
+  ansible.builtin.set_fact:
+    installed_version: "{{ (installed_version_raw.content | b64decode | trim) if 'content' in installed_version_raw else 'none' }}"
+
+- name: Decide if whisper.cpp needs to be built
+  ansible.builtin.set_fact:
+    build_whisper_cpp: "{{ installed_version != latest_commit_hash }}"
+
+- name: Build and install whisper.cpp if needed
   become: yes
   block:
     - name: Create build directory for whisper.cpp
@@ -21,43 +53,46 @@
       ansible.builtin.git:
         repo: 'https://github.com/ggml-org/whisper.cpp.git'
         dest: /opt/whisper.cpp-build
-        version: master
+        version: "{{ latest_commit_hash }}"
         update: yes
-      register: whisper_git_result
 
-    - name: Build and install from source if updated
-      block:
-        - name: Configure whisper.cpp build
-          ansible.builtin.command:
-            cmd: cmake -B build
-          args:
-            chdir: /opt/whisper.cpp-build
-            creates: /opt/whisper.cpp-build/build/Makefile
+    - name: Configure whisper.cpp build
+      ansible.builtin.command:
+        cmd: cmake -B build
+      args:
+        chdir: /opt/whisper.cpp-build
+        creates: /opt/whisper.cpp-build/build/Makefile
 
-        - name: Build whisper.cpp
-          ansible.builtin.command:
-            cmd: cmake --build build --config Release -j
-          args:
-            chdir: /opt/whisper.cpp-build
-            creates: /opt/whisper.cpp-build/build/bin/stream
+    - name: Build whisper.cpp
+      ansible.builtin.command:
+        cmd: cmake --build build --config Release -j
+      args:
+        chdir: /opt/whisper.cpp-build
+        creates: /opt/whisper.cpp-build/build/bin/stream
 
-        - name: Find compiled binaries
-          ansible.builtin.find:
-            paths: /opt/whisper.cpp-build/build/bin
-            patterns: '*'
-            file_type: file
-          register: whisper_binaries
+    - name: Find compiled binaries
+      ansible.builtin.find:
+        paths: /opt/whisper.cpp-build/build/bin
+        patterns: '*'
+        file_type: file
+      register: whisper_binaries
 
-        - name: Install whisper.cpp binaries
-          ansible.builtin.copy:
-            src: "{{ item.path }}"
-            dest: "/usr/local/bin/{{ item.path | basename }}"
-            mode: '0755'
-            remote_src: yes
-          loop: "{{ whisper_binaries.files }}"
+    - name: Install whisper.cpp binaries
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "/usr/local/bin/{{ item.path | basename }}"
+        mode: '0755'
+        remote_src: yes
+      loop: "{{ whisper_binaries.files }}"
 
-        - name: Clean up whisper.cpp build directory
-          ansible.builtin.file:
-            path: /opt/whisper.cpp-build
-            state: absent
-      when: whisper_git_result.changed
+    - name: Stamp the installed version
+      ansible.builtin.copy:
+        content: "{{ latest_commit_hash }}"
+        dest: /usr/local/etc/whisper-cpp.version
+        mode: '0644'
+
+    - name: Clean up whisper.cpp build directory
+      ansible.builtin.file:
+        path: /opt/whisper.cpp-build
+        state: absent
+  when: build_whisper_cpp

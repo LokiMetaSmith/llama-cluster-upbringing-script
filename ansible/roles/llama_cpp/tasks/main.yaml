@@ -122,7 +122,7 @@
     mode: '0755'
   become: yes
 
-- name: Stop and purge any existing expert jobs to ensure idempotency
+- name: Stop and purge any existing expert jobs if llama.cpp was rebuilt
   ansible.builtin.command:
     cmd: nomad job stop -purge "expert-{{ item }}"
   loop: "{{ experts }}"
@@ -131,29 +131,33 @@
   failed_when: false # Don't fail if the job doesn't exist
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  when: build_llama_cpp
 
-- name: Prepare for model benchmarking
-  become: yes
+- name: Run model benchmarking if enabled
   block:
-    - name: Clear previous benchmark results
-      ansible.builtin.file:
-        path: /var/log/llama_benchmarks.jsonl
-        state: absent
+    - name: Prepare for model benchmarking
+      become: yes
+      block:
+        - name: Clear previous benchmark results
+          ansible.builtin.file:
+            path: /var/log/llama_benchmarks.jsonl
+            state: absent
 
-    - name: Create empty benchmark results file
-      ansible.builtin.file:
-        path: /var/log/llama_benchmarks.jsonl
-        state: touch
-        mode: '0644'
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
+        - name: Create empty benchmark results file
+          ansible.builtin.file:
+            path: /var/log/llama_benchmarks.jsonl
+            state: touch
+            mode: '0644'
+            owner: "{{ target_user }}"
+            group: "{{ target_user }}"
 
-- name: Flatten model list for benchmarking
-  ansible.builtin.set_fact:
-    all_models_to_benchmark: "{{ expert_models.values() | sum(start=[]) | unique(attribute='filename') }}"
+    - name: Flatten model list for benchmarking
+      ansible.builtin.set_fact:
+        all_models_to_benchmark: "{{ expert_models.values() | sum(start=[]) | unique(attribute='filename') }}"
 
-- name: Benchmark each available model and record results
-  ansible.builtin.include_tasks: benchmark_single_model.yaml
-  loop: "{{ all_models_to_benchmark }}"
-  loop_control:
-    loop_var: model_item
+    - name: Benchmark each available model and record results
+      ansible.builtin.include_tasks: benchmark_single_model.yaml
+      loop: "{{ all_models_to_benchmark }}"
+      loop_control:
+        loop_var: model_item
+  when: run_benchmarks | default(false)
