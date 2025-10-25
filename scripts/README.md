@@ -56,3 +56,58 @@ The following files are currently excluded from linting:
 * **`ansible/jobs/llama-expert.nomad`**: Excluded from `djlint` because the linter incorrectly flags the `http://` URLs used for local Consul communication (Rule `H022`). This is a false positive, as these URLs are internal to the cluster.
 
 These exclusions ensure that the linting process can complete successfully while still providing value for the rest of the codebase. They should be revisited periodically to see if updates to the linters or the files themselves can resolve the underlying issues.
+
+## 4. Ansible Playbook Change Detection
+
+To ensure that changes to the Ansible playbooks are intentional and well-understood, the `ansible_diff.sh` script provides a way to compare playbook runs over time.
+
+### Purpose
+
+This script helps prevent unintended side effects by comparing the output of a "dry run" (`--check` mode) against a known-good "baseline" run. If the dry run output differs from the baseline, it means that applying the playbook will result in changes to the system.
+
+### How it Works
+
+1.  **Baseline Creation**: The first time you run the script, it executes the main playbook and saves its output to `ansible_run.baseline.log`. This file represents the expected state of the system.
+2.  **Comparison**: On subsequent runs, the script executes the playbook in `--check --diff` mode, which predicts changes without making them. It saves this output to a temporary log file.
+3.  **Difference Reporting**: The script then `diff`s the baseline log against the temporary check log. If differences are found, they are saved to `ansible_diff.log` for you to review.
+
+### Usage
+
+**Initial Run (Creating the Baseline):**
+
+Before you can compare for changes, you must establish a baseline from a known-good system state.
+
+1.  First, ensure the system is configured correctly by running the main playbook.
+2.  Then, create the baseline with the `--update-baseline` flag:
+
+```bash
+./scripts/ansible_diff.sh --update-baseline
+```
+
+This will run the playbook in `--check --diff` mode and save its output to `ansible_run.baseline.log`.
+
+**Checking for Changes:**
+
+Once the baseline exists, run the script without any flags to compare the current playbook against the baseline:
+
+```bash
+./scripts/ansible_diff.sh
+```
+
+If changes are detected, review the `ansible_diff.log` file.
+
+**Updating the Baseline:**
+
+If you have made intentional changes to the playbooks and want to update the baseline to reflect the new expected state, run the same command as the initial setup:
+
+```bash
+./scripts/ansible_diff.sh --update-baseline
+```
+
+**Customizing the Run:**
+
+You can override the default inventory and extra variables using command-line flags:
+
+```bash
+./scripts/ansible_diff.sh -i my_inventory.ini -e "target_user=other_user"
+```
