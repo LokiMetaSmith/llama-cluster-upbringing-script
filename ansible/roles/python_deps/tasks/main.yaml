@@ -33,7 +33,14 @@
       - pip
       - setuptools
       - wheel
-      - cython
+    state: latest
+    executable: "/opt/pipecatapp/venv/bin/pip3"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Install Cython separately to ensure it's available for other builds
+  ansible.builtin.pip:
+    name: cython
     state: latest
     executable: "/opt/pipecatapp/venv/bin/pip3"
   become: yes
