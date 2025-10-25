@@ -59,9 +59,8 @@ run_playbook() {
 # Handle baseline update
 if [ "$UPDATE_BASELINE" = true ]; then
   echo "--- Updating Baseline ---"
-  echo "Step 1: Applying playbook to ensure system is in the desired state..."
-  run_playbook "/dev/null" "" # Run for real, discard output
-  echo "Step 2: Running in --check mode to create a clean baseline..."
+  echo "Running in --check mode to create a clean baseline..."
+  echo "Ensure the target system is in the desired, known-good state before running this command."
   run_playbook "$BASELINE_LOG" "--check --diff"
   echo "Baseline updated successfully."
   exit 0
@@ -71,7 +70,7 @@ fi
 if [ ! -f "$BASELINE_LOG" ]; then
   echo "--- Initial Run ---"
   echo "No baseline found at '$BASELINE_LOG'."
-  echo "Please create one by running the playbook to configure the system, then run this script with the --update-baseline flag."
+  echo "Please create one by ensuring the system is correctly configured, then run this script with the --update-baseline flag."
   echo "Example: ./scripts/ansible_diff.sh --update-baseline"
   exit 1
 fi
