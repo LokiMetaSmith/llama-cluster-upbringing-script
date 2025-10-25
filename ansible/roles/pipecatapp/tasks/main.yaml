@@ -80,6 +80,8 @@
     dest: "{{ pipecat_app_dir }}/pipecat.env"
     mode: '0644'
   become: yes
+  vars:
+    llama_api_service_name: "expert-api-main"
 
 - name: Copy pipecat startup script
   ansible.builtin.template:
