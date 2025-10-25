@@ -269,6 +269,17 @@
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
+- name: Flush handlers to ensure service is enabled and started
+  ansible.builtin.meta: flush_handlers
+
+- name: Run pipecat-app job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+
+
+  
 - name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/health/service/expert-api-main"
@@ -283,11 +294,3 @@
   when: "'main' in verified_experts"
 
 
-- name: Run pipecat-app job
-  ansible.builtin.command:
-    cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
-  environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
-
-- name: Flush handlers to ensure service is enabled and started
-  ansible.builtin.meta: flush_handlers
