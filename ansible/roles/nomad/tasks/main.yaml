@@ -105,6 +105,9 @@
     mode: '0644'
   become: yes
 
+- name: Ensure handlers run now # 
+  meta: flush_handlers
+
 - name: Deploy the client Nomad configuration from template
   ansible.builtin.template:
     src: nomad.hcl.client.j2
@@ -197,6 +200,8 @@
     - mqtt-data
     - ha-config
   become: yes
+
+
 
 - name: Start and enable Nomad service
   ansible.builtin.systemd:
