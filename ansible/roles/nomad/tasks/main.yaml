@@ -104,6 +104,8 @@
     dest: /etc/systemd/system/nomad.service
     mode: '0644'
   become: yes
+  notify:
+    - Reload systemd
 
 - name: Ensure handlers run now # 
   meta: flush_handlers
