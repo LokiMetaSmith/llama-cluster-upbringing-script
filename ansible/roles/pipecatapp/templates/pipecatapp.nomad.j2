@@ -7,11 +7,9 @@ job "{{ job_name | default('pipecat-app') }}" {
 
     network {
       mode = "host"
-      port "http" {
-        to = 8000
-      }
+      port "http" {}
     }
-    
+
     service {
       name     = "{{ service_name | default('pipecat-app') }}"
       port     = "http"
@@ -27,6 +25,10 @@ job "{{ job_name | default('pipecat-app') }}" {
 
     task "pipecat-task" {
       driver = "raw_exec"
+
+      env {
+        WEB_PORT = "${NOMAD_PORT_http}"
+      }
  
       config {
         command = "/opt/pipecatapp/start_pipecat.sh"
