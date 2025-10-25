@@ -201,7 +201,7 @@
   vars:
     job_name: "expert-{{ item }}"
     service_name: "expert-api-{{ item }}"
-    #nomad_namespace: "{{ (nomad_namespace | default('default', true)) | string }}"
+    nomad_namespace: "{{ (nomad_namespace | default('default', true)) | string }}"
     #nomad_namespace: "default"
     model_list: "{{ expert_models[item] | default(experts, true) }}"
     worker_count: 1
@@ -220,7 +220,7 @@
     expert_tags: >-
       [
         "expert={{ item }}",
-       # "nomad_namespace={{ nomad_namespace | default('default', true) }}",
+        "nomad_namespace={{ nomad_namespace | default('default', true) }}",
         "avg_tps={{ avg_tokens_per_second | round(2) }}",
         "memory_mb={{ ansible_memtotal_mb }}",
         "models={{ expert_models[item] | map(attribute='filename') | join(',') }}"
