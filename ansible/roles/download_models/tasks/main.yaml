@@ -175,6 +175,7 @@
   ansible.builtin.script: "download_hf_repo.py {{ item.item.repo_id }} /opt/nomad/models/vision/{{ item.item.name }}"
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
+    creates: "/opt/nomad/models/vision/{{ item.item.name }}"
   loop: "{{ vision_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
@@ -200,6 +201,7 @@
   ansible.builtin.script: "download_hf_repo.py {{ item.item.repo_id }} /opt/nomad/models/embedding/{{ item.item.name }}"
   args:
     executable: "/opt/pipecatapp/venv/bin/python"
+    creates: "/opt/nomad/models/embedding/{{ item.item.name }}"
   loop: "{{ embedding_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
