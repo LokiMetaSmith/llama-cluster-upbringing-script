@@ -43,7 +43,7 @@
   ansible.builtin.pip:
     requirements: "/opt/pipecatapp/requirements.txt"
     executable: "/opt/pipecatapp/venv/bin/pip3"
-    extra_args: -v
+    extra_args: -v --no-cache-dir
   environment:
     TMPDIR: /var/tmp/ansible_pip_build
   async: 1200 # Set timeout to 20 minutes
