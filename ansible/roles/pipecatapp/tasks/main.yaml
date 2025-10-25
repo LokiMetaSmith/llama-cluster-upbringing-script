@@ -81,7 +81,7 @@
     mode: '0644'
   become: yes
   vars:
-    llama_api_service_name: "expert-api-main"
+    llama_api_service_name: "router-api"
 
 - name: Copy pipecat startup script
   ansible.builtin.template:
@@ -194,6 +194,12 @@
   debug:
     var: nomad_namespace
 
+- name: Create router job file from template
+  ansible.builtin.template:
+    src: ../../jobs/router.nomad.j2
+    dest: "/opt/nomad/jobs/router.nomad"
+  become: yes
+
 - name: Create expert job files from template for verified models
   ansible.builtin.template:
     src: ../../jobs/expert.nomad.j2
@@ -274,6 +280,12 @@
 - name: Flush handlers to ensure service is enabled and started
   ansible.builtin.meta: flush_handlers
 
+- name: Run router job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/router.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+
 - name: Run pipecat-app job
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
@@ -282,17 +294,16 @@
 
 
   
-- name: Wait for the main expert service to be healthy in Consul
+- name: Wait for the router service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/expert-api-main"
+    url: "http://127.0.0.1:8500/v1/health/service/router-api"
     return_content: yes
-  register: expert_health
+  register: router_health
   until: >
-    expert_health.json is defined and
-    expert_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
+    router_health.json is defined and
+    router_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
   retries: 60
   delay: 10
   changed_when: false
-  when: "'main' in verified_experts"
 
 
