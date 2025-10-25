@@ -116,8 +116,7 @@
     group: root
     mode: '0644'
   become: yes
-  notify:
-    - Restart nomad
+
 
 - name: Create systemd override directory for Nomad service
   ansible.builtin.file:
@@ -256,3 +255,5 @@
           or failed dependencies like Consul or Docker.
           Logs:
           {{ nomad_logs.stdout }}
+  notify:
+    - Restart nomad
