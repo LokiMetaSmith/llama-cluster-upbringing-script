@@ -111,3 +111,30 @@ You can override the default inventory and extra variables using command-line fl
 ```bash
 ./scripts/ansible_diff.sh -i my_inventory.ini -e "target_user=other_user"
 ```
+
+### Automated CI Check
+
+For automated environments, the `ci_ansible_check.sh` script provides a wrapper around the `ansible_diff.sh` script that is suitable for use in CI/CD pipelines or as a pre-push git hook.
+
+**Purpose:**
+
+This script is designed to run non-interactively. It will:
+-   Exit with a status code of `0` if no changes are detected.
+-   Exit with a status code of `1` if changes are detected, printing the diff to standard output.
+
+**How it Works:**
+
+The script relies on a baseline file (`ansible_run.baseline.log`) being present in the CI environment's workspace.
+
+-   **First Run:** If the baseline file does not exist, the script will automatically create one and exit successfully. This establishes the initial state for the CI runner.
+-   **Subsequent Runs:** The script will run the comparison. If it finds a difference, it will print the diff and exit with an error, failing the CI job.
+
+**Usage:**
+
+To run the check, simply execute the script from the root of the repository:
+
+```bash
+./scripts/ci_ansible_check.sh
+```
+
+In a CI pipeline, a failure of this script should be treated as a failed build, alerting developers that their changes have a potential impact on the system that needs to be reviewed. To approve the changes, the baseline file on the CI runner must be deleted, so it is regenerated on the next run.
