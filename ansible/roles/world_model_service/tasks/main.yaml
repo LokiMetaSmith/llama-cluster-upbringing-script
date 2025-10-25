@@ -10,6 +10,7 @@
   loop:
     - "/opt/world_model_service"
     - "/opt/world_model_service/config"
+    - "/opt/nomad/volumes/world_model_storage"
   become: true
 
 - name: "World Model Service : Copy service files"
