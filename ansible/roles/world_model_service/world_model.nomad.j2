@@ -5,6 +5,12 @@ job "world-model-service" {
   group "world-model" {
     count = 1
 
+    volume "world_model_storage" {
+      type      = "host"
+      read_only = false
+      source    = "world_model_storage"
+    }
+
     network {
       port "http" {
         to = 8000
@@ -19,6 +25,12 @@ job "world-model-service" {
         ports   = ["http"]
       }
 
+      volume_mount {
+        volume      = "world_model_storage"
+        destination = "/data"
+        read_only   = false
+      }
+
       env {
         MQTT_HOST = "{{ advertise_ip }}"
         MQTT_PORT = "1883"
@@ -28,7 +40,7 @@ job "world-model-service" {
 
       resources {
         cpu    = 250
-        memory = 128
+        memory = 256
       }
 
       service {
