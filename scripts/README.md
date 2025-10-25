@@ -124,17 +124,20 @@ This script is designed to run non-interactively. It will:
 
 **How it Works:**
 
-The script relies on a baseline file (`ansible_run.baseline.log`) being present in the CI environment's workspace.
+The GitHub Actions workflow uses the `actions/cache` action to persist the `ansible_run.baseline.log` file across runs. The cache is keyed to the specific Git branch, so each pull request will have its own baseline.
 
--   **First Run:** If the baseline file does not exist, the script will automatically create one and exit successfully. This establishes the initial state for the CI runner.
--   **Subsequent Runs:** The script will run the comparison. If it finds a difference, it will print the diff and exit with an error, failing the CI job.
+-   **First Run on a Branch:** When the workflow runs for the first time on a new branch, the cache will be empty. The script will detect that the baseline file is missing, create a new one, and exit successfully. The new baseline file is then saved to the cache for the next run.
+-   **Subsequent Runs:** On subsequent pushes to the same branch, the workflow will restore the baseline file from the cache. The script will then run the comparison against this restored baseline. If it finds a difference, it will print the diff and exit with an error, failing the CI job.
 
 **Usage:**
 
-To run the check, simply execute the script from the root of the repository:
+This check runs automatically on every pull request. No manual intervention is needed.
 
-```bash
-./scripts/ci_ansible_check.sh
-```
+**Updating the Baseline in a Pull Request:**
 
-In a CI pipeline, a failure of this script should be treated as a failed build, alerting developers that their changes have a potential impact on the system that needs to be reviewed. To approve the changes, the baseline file on the CI runner must be deleted, so it is regenerated on the next run.
+If a pull request introduces intentional changes to the Ansible playbooks, the `ansible-check` job will fail. To approve the changes and update the baseline for that branch, you must:
+
+1.  Navigate to the "Actions" tab in the GitHub repository.
+2.  Find the failed workflow run for your pull request.
+3.  Go to the "Cache" section and delete the cache entry corresponding to your branch (e.g., `ansible-baseline-refs/heads/your-branch-name`).
+4.  Re-run the failed job. It will now run on a clean cache, generate a new baseline, and pass successfully.
