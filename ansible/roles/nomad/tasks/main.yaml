@@ -98,6 +98,13 @@
     mode: '0755'
   become: yes
 
+- name: Copy Nomad systemd service file
+  ansible.builtin.template:
+    src: nomad.service.j2
+    dest: /etc/systemd/system/nomad.service
+    mode: '0644'
+  become: yes
+
 - name: Deploy the client Nomad configuration from template
   ansible.builtin.template:
     src: nomad.hcl.client.j2
@@ -108,16 +115,6 @@
   become: yes
   notify:
     - Restart nomad
-
-- name: Ensure handlers run now # <-- ADD THIS TASK
-  meta: flush_handlers
-
-- name: Copy Nomad systemd service file
-  ansible.builtin.template:
-    src: nomad.service.j2
-    dest: /etc/systemd/system/nomad.service
-    mode: '0644'
-  become: yes
 
 - name: Create systemd override directory for Nomad service
   ansible.builtin.file:
