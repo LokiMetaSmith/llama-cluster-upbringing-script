@@ -7,6 +7,11 @@
       private: no
 
   tasks:
+    - name: Add the promoted host to a dynamic group for targeting
+      ansible.builtin.add_host:
+        name: "{{ target_hostname }}"
+        groups: promoted_nodes
+
     - name: Read the inventory file
       ansible.builtin.slurp:
         src: inventory.yaml
@@ -35,7 +40,7 @@
       ansible.builtin.meta: refresh_inventory
 
 - name: Re-configure the Promoted Node
-  hosts: "{{ target_hostname }}"
+  hosts: promoted_nodes
   become: true
   pre_tasks:
     - name: Stop Consul service

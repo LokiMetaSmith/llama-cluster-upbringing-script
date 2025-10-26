@@ -13,7 +13,7 @@
         mac: "{{ mac_address }}"
         broadcast: 192.168.1.255 #<-- Optional: Use your network's broadcast IP
       delegate_to: localhost
-      when: ping_result.unreachable is defined and ping_result.unreachable
+      when: ping_result.unreachable is defined and ping_result.unreachable and mac_address is defined
 
     - name: Report status for reachable hosts
       ansible.builtin.debug:
@@ -23,4 +23,9 @@
     - name: Report status for unreachable hosts
       ansible.builtin.debug:
         msg: "❌ {{ inventory_hostname }} is DOWN (Wake-on-LAN packet sent)"
-      when: ping_result.unreachable is defined and ping_result.unreachable
+      when: ping_result.unreachable is defined and ping_result.unreachable and mac_address is defined
+
+    - name: Report status for unreachable hosts without mac_address
+      ansible.builtin.debug:
+        msg: "❌ {{ inventory_hostname }} is DOWN (No mac_address defined, cannot send Wake-on-LAN packet)"
+      when: ping_result.unreachable is defined and ping_result.unreachable and mac_address is not defined
