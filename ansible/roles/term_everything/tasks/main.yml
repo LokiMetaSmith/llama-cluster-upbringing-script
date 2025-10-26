@@ -5,63 +5,106 @@
     state: present
     update_cache: yes
 
-- name: Clone term.everything repository
-  ansible.builtin.git:
-    repo: "https://github.com/mmulet/term.everything.git"
-    dest: "/tmp/term.everything"
-    version: "main"
-    recursive: yes
+- name: Get latest commit hash from term.everything remote repo
+  ansible.builtin.command:
+    cmd: "git ls-remote https://github.com/mmulet/term.everything.git HEAD"
+  register: git_ls_remote_result
+  changed_when: false
+  become: no
 
-- name: Build term.everything AppImage
+- name: Extract commit hash from git ls-remote output
+  ansible.builtin.set_fact:
+    latest_commit_hash: "{{ git_ls_remote_result.stdout.split()[0] }}"
+
+- name: Check for existing term.everything version file
+  ansible.builtin.stat:
+    path: /usr/local/etc/term.everything.version
+  register: version_file_stat
+  become: yes
+
+- name: Read installed term.everything version
+  ansible.builtin.slurp:
+    src: /usr/local/etc/term.everything.version
+  when: version_file_stat.stat.exists
+  register: installed_version_raw
+  become: yes
+
+- name: Set installed_version fact
+  ansible.builtin.set_fact:
+    installed_version: "{{ (installed_version_raw.content | b64decode | trim) if 'content' in installed_version_raw else 'none' }}"
+
+- name: Decide if term.everything needs to be built
+  ansible.builtin.set_fact:
+    build_term_everything: "{{ installed_version != latest_commit_hash }}"
+
+- name: Print versions for debugging
+  ansible.builtin.debug:
+    msg: "Installed version: {{ installed_version }}, Latest version: {{ latest_commit_hash }}. Build needed: {{ build_term_everything }}"
+
+- name: Build and install term.everything
+  when: build_term_everything
   become: yes
   block:
-    - name: Attempt to build term.everything AppImage
-      ansible.builtin.command:
-        cmd: ./distribute.sh
-        chdir: /tmp/term.everything
-      register: build_result
-      changed_when: build_result.rc == 0
-      failed_when: build_result.rc != 0
-  rescue:
-    - name: "Debug: Display build stdout"
-      ansible.builtin.debug:
-        var: build_result.stdout
-      when: build_result.stdout is defined and build_result.stdout != ""
+    - name: Clone term.everything repository
+      ansible.builtin.git:
+        repo: "https://github.com/mmulet/term.everything.git"
+        dest: "/tmp/term.everything"
+        version: "{{ latest_commit_hash }}"
+        recursive: yes
+        update: yes
 
-    - name: "Debug: Display build stderr"
-      ansible.builtin.debug:
-        var: build_result.stderr
-      when: build_result.stderr is defined and build_result.stderr != ""
+    - name: Build term.everything AppImage
+      block:
+        - name: Attempt to build term.everything AppImage
+          ansible.builtin.command:
+            cmd: ./distribute.sh
+            chdir: /tmp/term.everything
+          register: build_result
+          changed_when: build_result.rc == 0
+          failed_when: build_result.rc != 0
+      rescue:
+        - name: "Debug: Display build stdout"
+          ansible.builtin.debug:
+            var: build_result.stdout
+          when: build_result.stdout is defined and build_result.stdout != ""
 
-    - name: Fail the playbook with a clear error message
-      ansible.builtin.fail:
-        msg: "Failed to build term.everything AppImage. See stdout/stderr for details."
+        - name: "Debug: Display build stderr"
+          ansible.builtin.debug:
+            var: build_result.stderr
+          when: build_result.stderr is defined and build_result.stderr != ""
 
-- name: Create tools directory
-  ansible.builtin.file:
-    path: /opt/mcp/tools
-    state: directory
-    mode: "0755"
-  become: yes
+        - name: Fail the playbook with a clear error message
+          ansible.builtin.fail:
+            msg: "Failed to build term.everything AppImage. See stdout/stderr for details."
 
-- name: Find the AppImage file
-  ansible.builtin.find:
-    paths: /tmp/term.everything/dist
-    patterns: "*.AppImage"
-  register: find_result
+    - name: Create tools directory
+      ansible.builtin.file:
+        path: /opt/mcp/tools
+        state: directory
+        mode: "0755"
 
-- name: Move AppImage to tools directory
-  ansible.builtin.copy:
-    src: "{{ item.path }}"
-    dest: "/opt/mcp/tools/termeverything.AppImage"
-    remote_src: yes
-    mode: "0755"
-  loop: "{{ find_result.files }}"
-  when: find_result.files | length > 0
-  become: yes
+    - name: Find the AppImage file
+      ansible.builtin.find:
+        paths: /tmp/term.everything/dist
+        patterns: "*.AppImage"
+      register: find_result
 
-- name: Clean up temporary build directory
-  ansible.builtin.file:
-    path: /tmp/term.everything
-    state: absent
-  become: yes
+    - name: Move AppImage to tools directory
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "/opt/mcp/tools/termeverything.AppImage"
+        remote_src: yes
+        mode: "0755"
+      loop: "{{ find_result.files }}"
+      when: find_result.files | length > 0
+
+    - name: Stamp the installed version
+      ansible.builtin.copy:
+        content: "{{ latest_commit_hash }}"
+        dest: /usr/local/etc/term.everything.version
+        mode: '0644'
+
+    - name: Clean up temporary build directory
+      ansible.builtin.file:
+        path: /tmp/term.everything
+        state: absent
