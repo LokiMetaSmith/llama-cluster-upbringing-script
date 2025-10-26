@@ -15,8 +15,10 @@
     - embedding_models
     - stt_models
     - vision_models
-  register: model_config_results
-  ignore_errors: true
+  register: consul_models
+  until: consul_models.status == 200
+  retries: 5
+  delay: 2
 
 - name: Set model facts from Consul KV
   ansible.builtin.set_fact:
