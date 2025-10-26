@@ -1,6 +1,6 @@
 - hosts: localhost
   connection: local
-  gather_facts: no
+  gather_facts: yes
 
   vars_files:
     - group_vars/models.yaml
@@ -17,7 +17,7 @@
   tasks:
     - name: "Render the Llama Expert job template with custom variables"
       ansible.builtin.template:
-        src: ansible/jobs/llama-expert.nomad
+        src: ansible/jobs/expert.nomad.j2
         dest: /tmp/{{ job_name }}.nomad
         mode: '0644'
 
