@@ -53,22 +53,16 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
       driver = "raw_exec"
 
       config {
-        command = "/usr/local/bin/rpc-server"
+        command = "/bin/bash"
         args = [
-          "-H", "0.0.0.0",
-          "-p", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}"
+          "-c",
+          "/usr/local/bin/rpc-server -H 0.0.0.0 -p $NOMAD_PORT_rpc"
         ]
       }
 
       resources {
         cpu    = 500
         memory = 1024 # Memory for the RPC daemon itself.
-      }
-        
-      # Optional logging directory (for troubleshooting)
-      artifact {
-        source      = "local/"
-        destination = "local"
       }
     }
   }
