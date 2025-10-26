@@ -205,33 +205,35 @@
     src: ../../jobs/expert.nomad.j2
     dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
   loop: "{{ verified_experts | default([]) }}"
+  loop_control:
+    loop_var: current_expert # Using the previously updated loop variable name
   when: verified_experts is defined and verified_experts | length > 0
   vars:
-    job_name: "expert-{{ item }}"
-    service_name: "expert-api-{{ item }}"
-    nomad_namespace: "{{ (nomad_namespace | default('default', true)) | string }}"
-    #nomad_namespace: "default"
-    model_list: "{{ expert_models[item] | default(experts, true) }}"
+    # Define ONLY loop-specific variables here
+    job_name: "expert-{{ current_expert }}"
+    service_name: "expert-api-{{ current_expert }}"
+    model_list: "{{ expert_models[current_expert] | default([]) }}" # Corrected default
     worker_count: 1
-    ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
-    benchmark_data: >-
+    # DO NOT redefine ansible_memtotal_mb here
+    # The benchmark data calculation can stay if needed, adjust variable names if necessary
+    current_benchmark_data: >-
       {{
         (benchmark_results.stdout_lines | map('from_json') |
-        selectattr('model', 'in', expert_models[item] | map(attribute='filename') | list) |
+        selectattr('model', 'in', expert_models[current_expert] | map(attribute='filename') | list) |
         list) | default([])
       }}
-    avg_tokens_per_second: >-
+    current_avg_tokens: >-
       {{
-        (benchmark_data | map(attribute='tokens_per_second') | list | sum / (benchmark_data | length))
-        if (benchmark_data | length > 0) else 0
+        (current_benchmark_data | map(attribute='tokens_per_second') | list | sum / (current_benchmark_data | length))
+        if (current_benchmark_data | length > 0) else 0
       }}
-    expert_tags: >-
+    # expert_tags definition can stay, but ensure it doesn't redefine ansible_memtotal_mb
+    current_expert_tags: >-
       [
-        "expert={{ item }}",
-        "nomad_namespace={{ nomad_namespace | default('default', true) }}",
-        "avg_tps={{ avg_tokens_per_second | round(2) }}",
-        "memory_mb={{ ansible_memtotal_mb }}",
-        "models={{ expert_models[item] | map(attribute='filename') | join(',') }}"
+        "expert={{ current_expert }}",
+        "avg_tps={{ current_avg_tokens | round(2) }}",
+        "memory_mb={{ ansible_memtotal_mb }}", # Access global fact directly
+        "models={{ model_list | map(attribute='filename') | join(',') }}"
       ]
 
 - name: Fallback and warn if no verified experts found
