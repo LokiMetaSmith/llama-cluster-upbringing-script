@@ -186,11 +186,34 @@
   become: yes
 
 - name: Parse benchmark JSONL content safely
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      output=""
+      while IFS= read -r line; do
+        if echo "$line" | jq -e . > /dev/null; then
+          if [ -z "$output" ]; then
+            output="[$line"
+          else
+            output="$output,$line"
+          fi
+        fi
+      done < /var/log/llama_benchmarks.jsonl
+      if [ -n "$output" ]; then
+        output="$output]"
+      else
+        output="[]"
+      fi
+      echo "$output"
+    executable: /bin/bash
+  register: benchmark_parser_result
+  changed_when: false
+  become: yes
+
+- name: Set benchmark_results fact from parsed content
   ansible.builtin.set_fact:
-    benchmark_results: >-
-      {{
-        (benchmark_log_raw.content | default('e30K') | b64decode | split('\n') | select | map('from_json') | list) if benchmark_log_raw.content is defined else []
-      }}
+    benchmark_results: "{{ benchmark_parser_result.stdout | from_json }}"
+
 
 - name: Template and run llamacpp-rpc nomad job for each model
   ansible.builtin.include_tasks: run_single_rpc_job.yaml
