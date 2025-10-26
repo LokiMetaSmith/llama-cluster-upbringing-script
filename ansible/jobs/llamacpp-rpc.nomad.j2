@@ -63,6 +63,7 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
       resources {
         cpu    = 500
         memory = 1024 # Memory for the RPC daemon itself.
+      }
         
       # Optional logging directory (for troubleshooting)
       artifact {
