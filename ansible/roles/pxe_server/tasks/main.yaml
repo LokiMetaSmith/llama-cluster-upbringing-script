@@ -12,6 +12,7 @@
     path: /srv/tftp
     state: directory
   become: yes
+  check_mode: no
 
 - name: Download and extract Debian netboot files
   unarchive:

@@ -36,19 +36,19 @@
   ansible.builtin.set_fact:
     successful_models: "{{ benchmark_results | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
 
-- name: Identify verified experts with at least one successful model
+- name: Identify verified experts by checking their models against benchmark results
   ansible.builtin.set_fact:
     verified_experts: >-
       {{
-        experts
-        | select('in', (
-            successful_models
-            | map('regex_replace', '^', '')
-            | list
-          ))
-        | list
+        verified_experts | default([]) + [item]
       }}
-  when: successful_models | length > 0
+  loop: "{{ experts }}"
+  vars:
+    # Get the list of model filenames for the current expert
+    expert_model_files: "{{ expert_models[item] | map(attribute='filename') | list }}"
+    # Check if any of the expert's models are in the list of successful models
+    is_verified: "{{ expert_model_files | intersect(successful_models) | length > 0 }}"
+  when: is_verified
 
 - name: Fallback and warn if no verified experts found
   ansible.builtin.debug:
