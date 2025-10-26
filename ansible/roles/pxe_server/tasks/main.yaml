@@ -20,6 +20,7 @@
     dest: /srv/tftp
     remote_src: yes
   become: yes
+  check_mode: no
 
 - name: Download iPXE BIOS bootloader
   get_url:
