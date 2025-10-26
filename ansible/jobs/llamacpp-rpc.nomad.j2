@@ -36,7 +36,7 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
       tags = [
         "rpc-provider", # General tag for discovery
         "model={{ item.filename }}",
-        "avg_tps={{ avg_tokens_per_second | default(0) | round(2) }}", # Uses var passed from Ansible
+        "avg_tps={{ avg_tokens_per_second | default(0) | float | round(2) }}", # Uses var passed from Ansible
         "memory_mb={{ item.memory_mb | default(0) }}"
         # Add other relevant tags if needed
       ]
