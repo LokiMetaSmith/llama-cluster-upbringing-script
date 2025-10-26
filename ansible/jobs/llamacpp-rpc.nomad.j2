@@ -6,13 +6,14 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
   datacenters = ["dc1"]
   namespace   = "{{ nomad_namespace | default('default') }}"
   
-  # --- Metadata about this expert ---
-  meta {
-    expert_name = "{{ job_name | default('llamacpp-rpc-pool') }}"
-    namespace   = "{{ nomad_namespace | default('default') }}"
-    avg_tps     = "{{ avg_tokens_per_second | default(0) | round(2) }}"
-    memory_mb   = "{{ ansible_memtotal_mb | default(0) }}"
-    models      = "{{ expert_models[item] | map(attribute='filename') | join(',') if expert_models is defined else '' }}"
+meta {
+    # These should reflect the specific model this job instance is for
+    model_name    = "{{ item.name | default('unknown') }}"
+    model_filename= "{{ item.filename | default('unknown') }}"
+    memory_mb   = "{{ item.memory_mb | default(0) }}"
+    # Namespace is defined at job level, redundant here.
+    # avg_tps is not available in this loop context.
+    # The problematic 'models' line is removed/corrected above.
   }
   
   # --- GPU PROVIDER GROUP ---
