@@ -10,7 +10,7 @@
 CLEAN_REPO=false
 DEBUG_MODE=false
 EXTERNAL_MODEL_SERVER=false
-ANSIBLE_ARGS="--tags download_models"
+ANSIBLE_ARGS=""
 LOG_FILE="playbook_output.log"
 
 # --- Parse command-line arguments ---
