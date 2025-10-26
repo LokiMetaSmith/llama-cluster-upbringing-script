@@ -24,7 +24,23 @@ fi
 
 # --- Main Logic Function ---
 run_playbook_checks() {
+  # --- FIX 4: Find the ansible-playbook executable dynamically ---
+  local ansible_executable
+  if command -v ansible-playbook &> /dev/null; then
+    ansible_executable=$(command -v ansible-playbook)
+  else
+    ansible_executable=$(find "$HOME/.pyenv" -type f -name "ansible-playbook" | head -n 1)
+  fi
+
+  if [[ -z "$ansible_executable" ]]; then
+    echo "ERROR: 'ansible-playbook' executable not found." >&2
+    echo "Please ensure Ansible is installed and in your PATH or pyenv." >&2
+    return 1
+  fi
+  # --- END FIX 4 ---
+
   echo "Starting Ansible playbook check..."
+  echo "Using executable: $ansible_executable"
   echo
 
   local found_files=0
@@ -66,7 +82,7 @@ run_playbook_checks() {
 
       # --- FIX 1 (cont.): Execute safely using array expansion ---
       # The "${extra_args[@]}" part expands safely to all our arguments.
-      ansible-playbook --check "${extra_args[@]}" "$playbook" 2>&1
+      "$ansible_executable" --check "${extra_args[@]}" "$playbook" 2>&1
 
       if [ $? -eq 0 ]; then
         echo "Dry-run PASSED for ${playbook}"

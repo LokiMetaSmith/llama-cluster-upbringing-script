@@ -8,6 +8,7 @@
   command: "curl -L -o /tmp/consul.zip {{ consul_zip_url }}"
   args:
     creates: /tmp/consul.zip
+  check_mode: no
 
 - name: Unzip Consul
   unarchive:
@@ -16,6 +17,7 @@
     remote_src: yes
     creates: /tmp/consul
   become: yes
+  check_mode: no
 
 - name: Move Consul to /usr/local/bin
   copy:
