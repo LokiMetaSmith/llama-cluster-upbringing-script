@@ -17,8 +17,7 @@ job "router" {
       port     = "http"
 
       check {
-        type     = "http"
-        path     = "/health"
+        type     = "tcp"
         interval = "15s"
         timeout  = "5s"
       }
