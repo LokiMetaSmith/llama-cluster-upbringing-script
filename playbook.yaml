@@ -124,6 +124,11 @@
       loop_control:
         loop_var: role_name
 
+    - name: Populate Consul KV with configuration
+      include_role:
+        name: config_manager
+      run_once: true
+
     - name: Run model-dependent roles
       include_role:
         name: "{{ role_name }}"
@@ -138,11 +143,6 @@
 
     - name: Flush handlers to ensure all services are started
       meta: flush_handlers
-
-    - name: Populate Consul KV with configuration
-      include_role:
-        name: config_manager
-      run_once: true
 
   post_tasks:
     - name: Read rendered Nomad config file
