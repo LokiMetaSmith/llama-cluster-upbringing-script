@@ -193,7 +193,7 @@
       }}
 
 - name: Template and run llamacpp-rpc nomad job for each model
-  ansible.builtin.include_tasks: run_single_rpc_job.yaml # <-- Changed to include_tasks
+  ansible.builtin.include_tasks: run_single_rpc_job.yaml
   loop: "{{ all_models_for_rpc }}" # Use the flattened list created earlier
   loop_control:
     loop_var: model_item # Use a distinct loop variable name
