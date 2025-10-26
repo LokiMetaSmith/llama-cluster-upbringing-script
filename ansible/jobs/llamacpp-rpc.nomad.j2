@@ -31,7 +31,12 @@ meta {
       name     = "{{ job_name | default('llamacpp-rpc-pool') }}-provider"
       provider = "consul"
       port     = "rpc"
-
+      tags = [
+        "rpc-provider", # General tag for discovery
+        "model={{ item.filename }}",
+        "avg_tps={{ avg_tokens_per_second | default(0) | round(2) }}",
+        "memory_mb={{ item.memory_mb | default(0) }}"
+      ]
       # A simple TCP check is sufficient to confirm the daemon is running.
       check {
         type     = "tcp"
