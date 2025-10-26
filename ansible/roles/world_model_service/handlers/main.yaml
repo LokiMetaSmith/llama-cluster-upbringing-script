@@ -5,3 +5,5 @@
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   changed_when: true
   become: no
+  async: 300
+  poll: 0

@@ -51,3 +51,30 @@ jobs:
 
       - name: "Run unit tests"
         run: python -m unittest discover testing/unit_tests
+
+  ansible-check:
+    name: "Ansible Change Detection"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: "Install Ansible and dependencies"
+        run: pip install -r requirements-dev.txt
+
+      - name: "Cache Ansible baseline"
+        uses: actions/cache@v4
+        id: cache-ansible-baseline
+        with:
+          path: ansible_run.baseline.log
+          key: ansible-baseline-${{ github.ref }}
+          restore-keys: |
+            ansible-baseline-refs/heads/main
+
+      - name: "Run Ansible change detection script"
+        run: ./scripts/ci_ansible_check.sh

@@ -100,8 +100,8 @@
       loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
       notify: update ld cache
 
-    - name: Flush handlers to update ldconfig
-      meta: flush_handlers
+#    - name: Flush handlers to update ldconfig
+#      meta: flush_handlers
 
     - name: Stamp the installed version
       ansible.builtin.copy:
@@ -122,7 +122,24 @@
     mode: '0755'
   become: yes
 
-- name: Stop and purge any existing expert jobs to ensure idempotency
+- name: Flatten model list for RPC jobs
+  ansible.builtin.set_fact:
+    all_models_for_rpc: "{{ expert_models.values() | sum(start=[]) | unique(attribute='filename') }}"
+
+- name: Stop and purge any existing llamacpp-rpc jobs if llama.cpp was rebuilt
+  ansible.builtin.command:
+    cmd: nomad job stop -purge "llamacpp-rpc-{{ item.filename | regex_replace('\\.gguf$', '') }}"
+  loop: "{{ all_models_for_rpc }}"
+  register: rpc_job_stop_status
+  changed_when: "'Running' in rpc_job_stop_status.stdout"
+  failed_when: false # Don't fail if the job doesn't exist
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  when: build_llama_cpp
+
+
+
+- name: Stop and purge any existing expert jobs if llama.cpp was rebuilt
   ansible.builtin.command:
     cmd: nomad job stop -purge "expert-{{ item }}"
   loop: "{{ experts }}"
@@ -131,29 +148,74 @@
   failed_when: false # Don't fail if the job doesn't exist
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  when: build_llama_cpp
 
-- name: Prepare for model benchmarking
-  become: yes
+- name: Run model benchmarking if enabled
   block:
-    - name: Clear previous benchmark results
-      ansible.builtin.file:
-        path: /var/log/llama_benchmarks.jsonl
-        state: absent
+    - name: Prepare for model benchmarking
+      become: yes
+      block:
+        - name: Clear previous benchmark results
+          ansible.builtin.file:
+            path: /var/log/llama_benchmarks.jsonl
+            state: absent
 
-    - name: Create empty benchmark results file
-      ansible.builtin.file:
-        path: /var/log/llama_benchmarks.jsonl
-        state: touch
-        mode: '0644'
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
+        - name: Create empty benchmark results file
+          ansible.builtin.file:
+            path: /var/log/llama_benchmarks.jsonl
+            state: touch
+            mode: '0644'
+            owner: "{{ target_user }}"
+            group: "{{ target_user }}"
 
-- name: Flatten model list for benchmarking
+    - name: Flatten model list for benchmarking
+      ansible.builtin.set_fact:
+        all_models_to_benchmark: "{{ expert_models.values() | sum(start=[]) | unique(attribute='filename') }}"
+
+    - name: Benchmark each available model and record results
+      ansible.builtin.include_tasks: benchmark_single_model.yaml
+      loop: "{{ all_models_to_benchmark }}"
+      loop_control:
+        loop_var: model_item
+  when: run_benchmarks | default(false)
+
+- name: Read benchmark log file
+  ansible.builtin.slurp:
+    src: /var/log/llama_benchmarks.jsonl
+  register: benchmark_log_raw
+  become: yes
+
+- name: Parse benchmark JSONL content safely
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      output=""
+      while IFS= read -r line; do
+        if echo "$line" | jq -e . > /dev/null; then
+          if [ -z "$output" ]; then
+            output="[$line"
+          else
+            output="$output,$line"
+          fi
+        fi
+      done < /var/log/llama_benchmarks.jsonl
+      if [ -n "$output" ]; then
+        output="$output]"
+      else
+        output="[]"
+      fi
+      echo "$output"
+    executable: /bin/bash
+  register: benchmark_parser_result
+  changed_when: false
+  become: yes
+
+- name: Set benchmark_results fact from parsed content
   ansible.builtin.set_fact:
-    all_models_to_benchmark: "{{ expert_models.values() | sum(start=[]) | unique(attribute='filename') }}"
+    benchmark_results: "{{ benchmark_parser_result.stdout | from_json }}"
 
-- name: Benchmark each available model and record results
-  ansible.builtin.include_tasks: benchmark_single_model.yaml
-  loop: "{{ all_models_to_benchmark }}"
+- name: Template and run llamacpp-rpc nomad job for each model
+  ansible.builtin.include_tasks: run_single_rpc_job.yaml
+  loop: "{{ all_models_for_rpc }}" # Use the flattened list created earlier
   loop_control:
-    loop_var: model_item
+    loop_var: model_item # Use a distinct loop variable name

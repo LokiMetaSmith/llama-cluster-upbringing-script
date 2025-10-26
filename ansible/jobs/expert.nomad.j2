@@ -2,20 +2,21 @@
 # It loads a single, suitable model and distributes inference across a
 # pool of rpc-server providers discovered via Consul.
 
-# --- DYNAMIC MODEL SELECTION ---
-# This block filters the model list to find ones that fit in memory,
-# then selects the single largest one to run as the expert.
+# --- DYNAMIC MODEL SELECTION & TPS CALCULATION ---
 {% set memory_buffer_mb = 2048 %}
 {% set available_memory_mb = (ansible_memtotal_mb | int) - memory_buffer_mb %}
-{% set suitable_models = model_list | selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | sort(attribute='memory_mb', reverse=true) | list %}
+{% set suitable_models = model_list |
+   selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | sort(attribute='memory_mb', reverse=true) | list %}
 {% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-provider' %}
+{# Calculate avg TPS from benchmark data passed from Ansible #}
+{% set tps_list = benchmark_data_for_expert | map(attribute='tokens_per_second') | list %}
+{% set avg_tps = (tps_list | sum / tps_list | length) if (tps_list | length > 0) else 0 %}
 
 job "{{ job_name | default('expert-service') }}" {
   datacenters = ["dc1"]
-  namespace   = "{{ nomad_namespace | default('default') }}"
+  namespace   = "{{ (nomad_namespace | default('default')) | string }}" # Force string just in case
 
   # --- ORCHESTRATOR GROUP ---
-  # This group runs the main llama-server which acts as the entry point.
   group "orchestrator" {
     count = 1
 
@@ -30,7 +31,17 @@ job "{{ job_name | default('expert-service') }}" {
       provider = "consul"
       port     = "http"
 
-      # This health check ensures the model is loaded and the API is responsive.
+      # --- ADD TAGS HERE ---
+      tags = [
+        "expert={{ job_name | replace('expert-', '') }}", # Extract expert name
+        "nomad_namespace={{ nomad_namespace | default('default') }}",
+        "avg_tps={{ avg_tps | round(2) }}",
+        "memory_mb={{ ansible_memtotal_mb }}",
+        # Use suitable_models[0] if it exists, otherwise indicate no model loaded
+        "model={{ suitable_models[0].filename if suitable_models else 'none' }}"
+      ]
+      # --- END ADD TAGS ---
+
       check {
         type     = "http"
         path     = "/health"
@@ -49,7 +60,6 @@ set -e
 echo "--- Starting Orchestrator for {{ job_name }} ---"
 
 # 1. Discover RPC worker services via Consul.
-#    This queries the service created by the 'llamacpp-rpc.nomad.j2' job.
 worker_ips=""
 for i in {1..30}; do
   worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ rpc_service_name }}?passing" | jq -r '[.[] | .Service | "\(.Address):\(.Port)"] | join(",")')
@@ -67,15 +77,12 @@ if [ -z "$worker_ips" ]; then
 fi
 
 # 2. Select the best model and launch the server.
-#    This list has been pre-filtered and sorted by Jinja2.
 {% if suitable_models %}
   selected_model_filename="{{ suitable_models[0].filename }}"
   selected_model_name="{{ suitable_models[0].name }}"
 
   echo "✅ Found suitable model. Preparing to launch server with: $selected_model_name"
 
-  # Use 'exec' to replace the script process with the llama-server process.
-  # This is the correct way to run a long-lived service in Nomad.
   exec /usr/local/bin/llama-server \
     --model /opt/nomad/models/llm/$selected_model_filename \
     --host 0.0.0.0 \
@@ -99,7 +106,7 @@ EOH
 
       resources {
         cpu    = 2000 # Higher CPU for the main process
-        memory = {{ (suitable_models[0].memory_mb | default(4096)) + 1024 }} # Memory for model + buffer
+        memory = {{ (suitable_models[0].memory_mb | default(4096)) + 1024 if suitable_models else 512 }} # Memory for model + buffer, or minimal if no model
       }
     }
   }

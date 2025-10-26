@@ -8,6 +8,7 @@
   until: download_task is success
   retries: 5
   delay: 10
+  check_mode: no
 
 - name: Unzip Nomad
   ansible.builtin.unarchive:
@@ -15,6 +16,7 @@
     dest: "/tmp"
     remote_src: yes
     creates: /tmp/nomad
+  check_mode: no
 
 - name: Get version of the existing Nomad binary
   ansible.builtin.command:
@@ -98,6 +100,18 @@
     mode: '0755'
   become: yes
 
+- name: Copy Nomad systemd service file
+  ansible.builtin.template:
+    src: nomad.service.j2
+    dest: /etc/systemd/system/nomad.service
+    mode: '0644'
+  become: yes
+  notify:
+    - Reload systemd
+
+- name: Ensure handlers run now # 
+  meta: flush_handlers
+
 - name: Deploy the client Nomad configuration from template
   ansible.builtin.template:
     src: nomad.hcl.client.j2
@@ -106,15 +120,7 @@
     group: root
     mode: '0644'
   become: yes
-  notify:
-    - Restart nomad
 
-- name: Copy Nomad systemd service file
-  ansible.builtin.template:
-    src: nomad.service.j2
-    dest: /etc/systemd/system/nomad.service
-    mode: '0644'
-  become: yes
 
 - name: Create systemd override directory for Nomad service
   ansible.builtin.file:
@@ -153,6 +159,7 @@
     dest: /tmp/cni-plugins.tgz
     mode: '0644'
     timeout: 30
+  check_mode: no
 
 - name: Extract CNI plugins into /opt/cni/bin
   ansible.builtin.unarchive:
@@ -161,6 +168,7 @@
     remote_src: yes
     creates: /opt/cni/bin/bridge
   become: yes
+  check_mode: no
 
 - name: Ensure /dev/snd directory exists for Nomad volume
   ansible.builtin.file:
@@ -198,6 +206,8 @@
     - mqtt-data
     - ha-config
   become: yes
+
+
 
 - name: Start and enable Nomad service
   ansible.builtin.systemd:
@@ -252,3 +262,5 @@
           or failed dependencies like Consul or Docker.
           Logs:
           {{ nomad_logs.stdout }}
+  notify:
+    - Restart nomad

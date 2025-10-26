@@ -26,18 +26,22 @@ if [ -f "$EXCLUDE_FILE" ]; then
 fi
 
 echo "--- Running YAML Linter ---"
-# Find all yaml files and filter them using grep. The -f flag reads patterns from a file.
-# We filter the exclude file to remove comments and empty lines before passing it to grep.
+# Find all yaml files.
+YAML_FILES_TO_LINT=$(find . -type f \( -name "*.yaml" -o -name "*.yml" \))
+
+# If an exclude file exists, filter the list of files.
 if [ -f "$EXCLUDE_FILE" ]; then
     EXCLUDE_PATTERNS=$(grep -v '^#' "$EXCLUDE_FILE" | grep -v '^$')
     if [ -n "$EXCLUDE_PATTERNS" ]; then
-        # Use process substitution to feed the patterns to grep's -f option
-        yamllint $(find . -type f \( -name "*.yaml" -o -name "*.yml" \) | grep -vFf <(echo "$EXCLUDE_PATTERNS"))
-    else
-        yamllint . # Run on all files if exclude list is empty
+        YAML_FILES_TO_LINT=$(echo "$YAML_FILES_TO_LINT" | grep -vFf <(echo "$EXCLUDE_PATTERNS"))
     fi
-else
-    yamllint . # Run on all files if exclude file doesn't exist
+fi
+
+# Run yamllint only if there are files to lint.
+if [ -n "$YAML_FILES_TO_LINT" ]; then
+    # We are intentionally word-splitting the file list.
+    # shellcheck disable=SC2086
+    yamllint $YAML_FILES_TO_LINT
 fi
 
 echo "--- Running Markdown Linter ---"

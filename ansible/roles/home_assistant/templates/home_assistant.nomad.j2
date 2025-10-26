@@ -5,6 +5,14 @@ job "home-assistant" {
   group "home-assistant-group" {
     count = 1
 
+    update {
+      max_parallel      = 1
+      min_healthy_time  = "30s" # Require it to be healthy for 30s
+      healthy_deadline  = "5m"  # Individual alloc health deadline
+      progress_deadline = "10m" # Overall deployment deadline << INCREASED
+      auto_revert       = true
+    }
+
     network {
       port "http" {
         to = 8123
@@ -58,13 +66,13 @@ job "home-assistant" {
         cpu    = 1000 # 1 GHz
         memory = 2048 # 2 GB
 
-        device "usb" {
-          count = 10
-          constraint {
-            attribute = "usb.class_id"
-            value     = "30929"
-          }
-        }
+#        device "usb" {
+#          count = 10
+#          constraint {
+#            attribute = "usb.class_id"
+#            value     = "30929"
+#          }
+#        }
       }
     }
   }

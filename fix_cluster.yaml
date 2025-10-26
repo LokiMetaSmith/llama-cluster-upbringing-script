@@ -95,6 +95,8 @@
     - name: Re-apply Nomad role to configure as a server
       ansible.builtin.include_role:
         name: nomad
+      vars:
+        target_user: loki
 
     - name: Start Consul service
       ansible.builtin.service:
