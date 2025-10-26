@@ -31,6 +31,11 @@ expert_models:
       url: "https://huggingface.co/LiquidAI/LFM2-1.2B-Extract-GGUF/resolve/main/LFM2-1.2B-Extract-Q4_K_M.gguf"
       filename: "LFM2-1.2B-Extract-Q4_K_M.gguf"
       memory_mb: 4096
+  router:
+    - name: "hermes-2-pro-mistral-7b"
+      url: "https://huggingface.co/NousResearch/Hermes-2-Pro-Mistral-7B-GGUF/resolve/main/Hermes-2-Pro-Mistral-7B.Q4_K_M.gguf"
+      filename: "Hermes-2-Pro-Mistral-7B.Q4_K_M.gguf"
+      memory_mb: 8192
 
 # A list of voices for the PiperTTSService to use, in order of preference.
 tts_voices:
