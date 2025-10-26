@@ -20,17 +20,25 @@
 
 - name: Set model facts from Consul KV
   ansible.builtin.set_fact:
-    llm_models_to_download: >-
-      {{ (model_config_results.results[0].content | from_json if model_config_results.results[0].status == 200 and model_config_results.results[0].content else {}) |
-         combine( (model_config_results.results[1].content | from_json if model_config_results.results[1].status == 200 and model_config_results.results[1].content else {}), recursive=True ) |
-         combine( (model_config_results.results[2].content | from_json if model_config_results.results[2].status == 200 and model_config_results.results[2].content else {}), recursive=True ) |
-         combine( (model_config_results.results[3].content | from_json if model_config_results.results[3].status == 200 and model_config_results.results[3].content else {}), recursive=True ) |
-         combine( (model_config_results.results[4].content | from_json if model_config_results.results[4].status == 200 and model_config_results.results[4].content else {}), recursive=True ) }}
-    piper_voice_files: "{{ (model_config_results.results[5].content | from_json) if model_config_results.results[5].status == 200 and model_config_results.results[5].content else [] }}"
-    embedding_models: "{{ (model_config_results.results[6].content | from_json) if model_config_results.results[6].status == 200 and model_config_results.results[6].content else [] }}"
-    stt_models: "{{ (model_config_results.results[7].content | from_json) if model_config_results.results[7].status == 200 and model_config_results.results[7].content else {} }}"
-    vision_models: "{{ (model_config_results.results[8].content | from_json) if model_config_results.results[8].status == 200 and model_config_results.results[8].content else [] }}"
-  when: model_config_results.results | length >= 5
+    llm_models_to_download: "{{ consul_models.results | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'router']) | map(attribute='json') | map('from_json') | safe_flatten | list }}"
+    piper_voice_files: "{{ consul_models.results | selectattr('item', 'equalto', 'piper_voice_files') | map(attribute='json') | map('from_json') | first | default([]) }}"
+    embedding_models: "{{ consul_models.results | selectattr('item', 'equalto', 'embedding_models') | map(attribute='json') | map('from_json') | first | default([]) }}"
+    stt_models: "{{ consul_models.results | selectattr('item', 'equalto', 'stt_models') | map(attribute='json') | map('from_json') | first | default({}) }}"
+    vision_models: "{{ consul_models.results | selectattr('item', 'equalto', 'vision_models') | map(attribute='json') | map('from_json') | first | default([]) }}"
+
+#- name: Set model facts from Consul KV
+#  ansible.builtin.set_fact:
+#    llm_models_to_download: >-
+#      {{ (model_config_results.results[0].content | from_json if model_config_results.results[0].status == 200 and model_config_results.results[0].content else {}) |
+#         combine( (model_config_results.results[1].content | from_json if model_config_results.results[1].status == 200 and model_config_results.results[1].content else {}), recursive=True ) |
+#         combine( (model_config_results.results[2].content | from_json if model_config_results.results[2].status == 200 and model_config_results.results[2].content else {}), recursive=True ) |
+#         combine( (model_config_results.results[3].content | from_json if model_config_results.results[3].status == 200 and model_config_results.results[3].content else {}), recursive=True ) |
+#         combine( (model_config_results.results[4].content | from_json if model_config_results.results[4].status == 200 and model_config_results.results[4].content else {}), recursive=True ) }}
+#    piper_voice_files: "{{ (model_config_results.results[5].content | from_json) if model_config_results.results[5].status == 200 and model_config_results.results[5].content else [] }}"
+#    embedding_models: "{{ (model_config_results.results[6].content | from_json) if model_config_results.results[6].status == 200 and model_config_results.results[6].content else [] }}"
+#    stt_models: "{{ (model_config_results.results[7].content | from_json) if model_config_results.results[7].status == 200 and model_config_results.results[7].content else {} }}"
+#    vision_models: "{{ (model_config_results.results[8].content | from_json) if model_config_results.results[8].status == 200 and model_config_results.results[8].content else [] }}"
+#  when: model_config_results.results | length >= 5
 
 # --- 2. LLM Models ---
 - name: "Ensure LLM model directory exists"
