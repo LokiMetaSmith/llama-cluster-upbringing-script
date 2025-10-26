@@ -137,16 +137,7 @@
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   when: build_llama_cpp
 
-- name: Template and run llamacpp-rpc nomad job for each model
-  ansible.builtin.template:
-    src: ../../jobs/llamacpp-rpc.nomad.j2
-    dest: "/opt/nomad/jobs/llamacpp-rpc-{{ item.filename | regex_replace('\\.gguf$', '') }}.nomad"
-    mode: '0644'
-  loop: "{{ all_models_for_rpc }}"
-  become: yes
-  notify: run nomad llamacpp-rpc job
-  loop_control:
-    label: "{{ item.filename }}"
+
 
 - name: Stop and purge any existing expert jobs if llama.cpp was rebuilt
   ansible.builtin.command:
@@ -187,3 +178,22 @@
       loop_control:
         loop_var: model_item
   when: run_benchmarks | default(false)
+
+- name: Read benchmark log file
+  ansible.builtin.slurp:
+    src: /var/log/llama_benchmarks.jsonl
+  register: benchmark_log_raw
+  become: yes
+
+- name: Parse benchmark JSONL content safely
+  ansible.builtin.set_fact:
+    benchmark_results: >-
+      {{
+        (benchmark_log_raw.content | default('e30K') | b64decode | split('\n') | select | map('from_json') | list) if benchmark_log_raw.content is defined else []
+      }}
+
+- name: Template and run llamacpp-rpc nomad job for each model
+  ansible.builtin.include_tasks: run_single_rpc_job.yaml # <-- Changed to include_tasks
+  loop: "{{ all_models_for_rpc }}" # Use the flattened list created earlier
+  loop_control:
+    loop_var: model_item # Use a distinct loop variable name
