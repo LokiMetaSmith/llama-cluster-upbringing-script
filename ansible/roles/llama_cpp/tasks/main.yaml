@@ -214,7 +214,6 @@
   ansible.builtin.set_fact:
     benchmark_results: "{{ benchmark_parser_result.stdout | from_json }}"
 
-
 - name: Template and run llamacpp-rpc nomad job for each model
   ansible.builtin.include_tasks: run_single_rpc_job.yaml
   loop: "{{ all_models_for_rpc }}" # Use the flattened list created earlier
