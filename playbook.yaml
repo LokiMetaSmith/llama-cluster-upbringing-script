@@ -134,6 +134,7 @@
       loop_control:
         loop_var: role_name
       when: not external_model_server
+      tags: llama_cpp
 
     - name: Flush handlers to ensure all services are started
       meta: flush_handlers

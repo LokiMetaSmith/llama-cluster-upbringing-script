@@ -1,3 +1,9 @@
-- name: update ld cache
-  ansible.builtin.command: ldconfig
+- name: run nomad llamacpp-rpc job
+  ansible.builtin.command:
+    cmd: nomad job run "/opt/nomad/jobs/llamacpp-rpc-{{ item.filename | regex_replace('\\.gguf$', '') }}.nomad"
+  loop: "{{ all_models_for_rpc }}"
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  loop_control:
+    label: "{{ item.filename }}"
   become: yes
