@@ -20,15 +20,36 @@
   until: consul_models.status == 200
   retries: 5
   delay: 2
+  failed_when: false
 
 - name: Set model facts from Consul KV
   ansible.builtin.set_fact:
-    llm_models_to_download: "{{ consul_models.results | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'router']) | map(attribute='json') | map('from_json') | safe_flatten | list }}"
-    piper_voice_files: "{{ consul_models.results | selectattr('item', 'equalto', 'piper_voice_files') | map(attribute='json') | map('from_json') | first | default([]) }}"
-    embedding_models: "{{ consul_models.results | selectattr('item', 'equalto', 'embedding_models') | map(attribute='json') | map('from_json') | first | default([]) }}"
-    stt_models: "{{ consul_models.results | selectattr('item', 'equalto', 'stt_models') | map(attribute='json') | map('from_json') | first | default({}) }}"
-    vision_models: "{{ consul_models.results | selectattr('item', 'equalto', 'vision_models') | map(attribute='json') | map('from_json') | first | default([]) }}"
-
+    llm_models_to_download: >
+      {{ consul_models.results
+         | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'router'])
+         | selectattr('json', 'defined')
+         | map(attribute='json') | map('from_json') | safe_flatten | list }}
+    piper_voice_files: >
+      {{ consul_models.results
+         | selectattr('item', 'equalto', 'piper_voice_files')
+         | selectattr('json', 'defined')
+         | map(attribute='json') | map('from_json') | first | default([]) }}
+    embedding_models: >
+      {{ consul_models.results
+         | selectattr('item', 'equalto', 'embedding_models')
+         | selectattr('json', 'defined')
+         | map(attribute='json') | map('from_json') | first | default([]) }}
+    stt_models: >
+      {{ consul_models.results
+         | selectattr('item', 'equalto', 'stt_models')
+         | selectattr('json', 'defined')
+         | map(attribute='json') | map('from_json') | first | default({}) }}
+    vision_models: >
+      {{ consul_models.results
+         | selectattr('item', 'equalto', 'vision_models')
+         | selectattr('json', 'defined')
+         | map(attribute='json') | map('from_json') | first | default([]) }}
+         
 # ---------------------------------------------------------------------------- #
 #                                  LLM Models                                  #
 # ---------------------------------------------------------------------------- #
