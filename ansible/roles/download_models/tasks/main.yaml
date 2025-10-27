@@ -59,7 +59,8 @@
   become: yes
   loop_control:
     loop_var: item
-
+  ignore_errors: yes
+  
 # ---------------------------------------------------------------------------- #
 #                                  STT Models                                  #
 # ---------------------------------------------------------------------------- #
@@ -107,7 +108,7 @@
   become: yes
   loop_control:
     loop_var: item
-
+  ignore_errors: yes
 # ---------------------------------------------------------------------------- #
 #                                  TTS Models                                  #
 # ---------------------------------------------------------------------------- #
@@ -135,7 +136,8 @@
   become: yes
   loop_control:
     loop_var: item
-
+  ignore_errors: yes
+  
 # ---------------------------------------------------------------------------- #
 #                                 Vision Models                                #
 # ---------------------------------------------------------------------------- #
@@ -170,6 +172,7 @@
   become: yes
   loop_control:
     loop_var: item
+   ignore_errors: yes   
 
 - name: Download all Vision models (Hub-based) if they do not exist
   ansible.builtin.command:
@@ -182,7 +185,8 @@
   become: yes
   loop_control:
     loop_var: item
-
+  ignore_errors: yes
+  
 # ---------------------------------------------------------------------------- #
 #                               Embedding Models                               #
 # ---------------------------------------------------------------------------- #
@@ -211,3 +215,5 @@
   become: yes
   loop_control:
     loop_var: item
+  ignore_errors: yes
+  
