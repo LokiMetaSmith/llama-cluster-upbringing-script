@@ -22,11 +22,11 @@
 
 - name: Set model facts from Consul KV
   ansible.builtin.set_fact:
-    llm_models_to_download: "{{ model_config_results.results | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'router']) | map(attribute='json') | map('from_json') | safe_flatten | list }}"
-    piper_voice_files: "{{ model_config_results.results | selectattr('item', 'equalto', 'piper_voice_files') | map(attribute='json') | map('from_json') | first | default([]) }}"
-    embedding_models: "{{ model_config_results.results | selectattr('item', 'equalto', 'embedding_models') | map(attribute='json') | map('from_json') | first | default([]) }}"
-    stt_models: "{{ model_config_results.results | selectattr('item', 'equalto', 'stt_models') | map(attribute='json') | map('from_json') | first | default({}) }}"
-    vision_models: "{{ model_config_results.results | selectattr('item', 'equalto', 'vision_models') | map(attribute='json') | map('from_json') | first | default([]) }}"
+    llm_models_to_download: "{{ model_config_results.results | selectattr('status', 'equalto', 200) | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'router']) | map(attribute='content') | map('from_json') | list | combine }}"
+    piper_voice_files: "{{ model_config_results.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'piper_voice_files') | map(attribute='content') | map('from_json') | first | default([]) }}"
+    embedding_models: "{{ model_config_results.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'embedding_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
+    stt_models: "{{ model_config_results.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'stt_models') | map(attribute='content') | map('from_json') | first | default({}) }}"
+    vision_models: "{{ model_config_results.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'vision_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
 
 #- name: Set model facts from Consul KV
 #  ansible.builtin.set_fact:
