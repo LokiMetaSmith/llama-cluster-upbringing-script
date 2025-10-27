@@ -3,9 +3,9 @@
     daemon_reload: yes
   become: yes
 
-- name: Enable and start prima-services
+- name: Enable and start llama-services
   ansible.builtin.systemd:
-    name: prima-services.service
+    name: llama-services.service
     enabled: yes
     state: started
   become: yes

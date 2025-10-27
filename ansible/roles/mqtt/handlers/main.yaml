@@ -1,0 +1,6 @@
+- name: Restart Home Assistant
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/home-assistant.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  changed_when: true

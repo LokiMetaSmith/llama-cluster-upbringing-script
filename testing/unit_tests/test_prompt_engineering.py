@@ -1,11 +1,14 @@
 import pytest
 import os
+import sys
 from unittest.mock import patch, MagicMock, AsyncMock
 
-# Add the project root to the Python path to allow importing evolve
-import sys
+# Add the project root to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
+# Add create_evaluator to the path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'prompt_engineering')))
+from prompt_engineering import create_evaluator
 from prompt_engineering import evolve
 
 @pytest.mark.asyncio
@@ -29,7 +32,7 @@ async def test_run_evolution_initializes_openevolve_correctly(mock_open_evolve):
 
     # Define the expected path
     expected_path = os.path.abspath(
-        os.path.join(os.path.dirname(evolve.__file__), "..", "prompts", "router.txt")
+        os.path.join(os.path.dirname(evolve.__file__), "..", "ansible", "roles", "pipecatapp", "files", "app.py")
     )
 
     # Assert that OpenEvolve was called with the correct initial_program_path
@@ -40,3 +43,37 @@ async def test_run_evolution_initializes_openevolve_correctly(mock_open_evolve):
 
     # Clean up the environment variable
     del os.environ['OPENAI_API_KEY']
+
+def test_create_evaluator_script():
+    """
+    Tests that the create_evaluator script generates a file with the correct content.
+    """
+    # Define test arguments
+    test_args = {
+        "app_job_template": "test/app.nomad.j2",
+        "test_runner_job_template": "test/runner.nomad.j2",
+        "app_source_dir": "test/src",
+        "target_code_file": "test_app.py",
+        "aux_startup_script": "/test/start.sh",
+        "output_path": "/tmp/test_generated_evaluator.py"
+    }
+
+    # Use patch to simulate command-line arguments
+    with patch('argparse.ArgumentParser.parse_args', return_value=MagicMock(**test_args)):
+        create_evaluator.main()
+
+    # Check if the file was created
+    assert os.path.exists(test_args["output_path"])
+
+    # Read the file and check if the content is correct
+    with open(test_args["output_path"], 'r') as f:
+        content = f.read()
+
+    assert f'APP_JOB_TEMPLATE_PATH = "{test_args["app_job_template"]}"' in content
+    assert f'TEST_RUNNER_JOB_TEMPLATE_PATH = "{test_args["test_runner_job_template"]}"' in content
+    assert f'APP_SOURCE_DIR = "{test_args["app_source_dir"]}"' in content
+    assert f'TARGET_CODE_FILE = "{test_args["target_code_file"]}"' in content
+    assert f'AUXILIARY_STARTUP_SCRIPT = \'{test_args["aux_startup_script"]}\'' in content
+
+    # Clean up the created file
+    os.remove(test_args["output_path"])

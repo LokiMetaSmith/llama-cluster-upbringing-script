@@ -12,6 +12,7 @@
     state: present
     update_cache: yes
 
+
 - name: Create directory for the power agent
   become: yes
   ansible.builtin.file:

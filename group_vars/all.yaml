@@ -1,4 +1,10 @@
+# This file contains variables that are common to all hosts in the inventory.
+# It's a good place to define default values that might be overridden by
+# more specific group_vars files.
+nomad_zip_url: "https://releases.hashicorp.com/nomad/1.7.5/nomad_1.7.5_linux_amd64.zip"
 expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
+
+ansible_python_interpreter: /usr/bin/python3
 
 # This variable dynamically determines the IP address for Nomad to advertise.
 # It prefers the first non-loopback IPv6 address if available,
@@ -6,6 +12,7 @@ expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups els
 advertise_ip: "{{ (ansible_all_ipv6_addresses | reject('equalto', '::1') | list | first) |
 default(ansible_default_ipv4.address) }}"
 
+nomad_namespace: "default"
 nomad_models_dir: "/opt/nomad/models"
 
 # Pipecat application settings
@@ -13,7 +20,7 @@ llama_api_service_name: "llamacpp-rpc-api"
 use_summarizer: "false"
 stt_service: "faster-whisper"
 pipecat_app_dir: "/opt/pipecatapp"
-pipecat_log_file: "/tmp/pipecat.log"
+pipecat_log_file: "/opt/pipecatapp/pipecat.log"
 # ... existing variables ...
 active_stt_provider: "faster-whisper"
 active_stt_model_name: "tiny.en"
@@ -29,15 +36,6 @@ pipecat_api_keys: ""
 
 # ... existing variables ...
 
-# Configuration for external, third-party LLM experts.
-# This is a dictionary that will be converted to a JSON string.
-external_model_server: false
-external_experts_config:
-  openai_gpt4:
-    base_url: "https://api.openai.com/v1"
-    api_key_env: "OPENAI_API_KEY"
-    model: "gpt-4-turbo" # Specify the exact model name
-
 # -- Storing Secrets with Ansible Vault --
 # This is the plain text version. In a real environment, you should
 # encrypt this variable. First, create an encrypted file:
@@ -50,7 +48,16 @@ external_experts_config:
 # For now, we'll place it here for simplicity.
 openai_api_key: "sk-your_openai_api_key_here"
 
+# Home Assistant Long-Lived Access Token
+# 1. Go to your Home Assistant UI -> Your Profile (bottom left)
+# 2. Scroll down to "Long-Lived Access Tokens"
+# 3. Click "Create Token", give it a name (e.g., "Ansible"), and copy the generated token here.
+home_assistant_token: "your_long_lived_access_token_here"
+
 # Model definitions have been moved to group_vars/models.yaml
+
+# The default user for remote connections and service execution.
+target_user: ubuntu
 
 # A list of all available experts. This is used to dynamically generate
 # the Nomad jobs for each expert model.
@@ -59,3 +66,27 @@ experts:
   - coding
   - math
   - extract
+  - router
+
+# --- PXE Boot Configuration ---
+
+# Select the operating system for the PXE server.
+# Options: "debian" or "nixos". Defaults to "debian" for backward compatibility.
+pxe_os: "debian"
+
+# -- NixOS PXE Server Variables --
+# These variables are only used if pxe_os is set to "nixos".
+
+# The network interface on the PXE server for DHCP/TFTP/HTTP services.
+pxe_interface: "enp0s8"
+
+# The public SSH key to embed in the NixOS clients for root access.
+# Replace this with your actual public key.
+pxe_client_ssh_key: "ssh-rsa AAAA..."
+
+# DHCP network configuration for NixOS clients.
+pxe_subnet: "192.168.1.0"
+pxe_netmask: "255.255.255.0"
+pxe_range_start: "192.168.1.200"
+pxe_range_end: "192.168.1.250"
+pxe_router: "192.168.1.1"

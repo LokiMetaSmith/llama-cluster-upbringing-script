@@ -62,7 +62,7 @@ ANSIBLE_ARGS="--extra-vars=target_user=loki"
 
 if [ "$DEBUG_MODE" = true ]; then
     echo "🔍 --debug flag detected. Ansible output will be saved to '$LOG_FILE'."
-    ANSIBLE_ARGS="$ANSIBLE_ARGS -vvv"
+    ANSIBLE_ARGS="$ANSIBLE_ARGS -vvvv"
 fi
 
 if [ "$EXTERNAL_MODEL_SERVER" = true ]; then
@@ -82,12 +82,6 @@ then
 fi
 
 
-# Purge any existing jobs and processes to ensure a clean deployment.
-echo "Purging any old Nomad jobs..."
-nomad job stop -purge llamacpp-rpc || true
-nomad job stop -purge pipecat-app || true
-echo "Purge complete."
- free -h
 
 echo "Forcefully terminating any orphaned application processes to prevent memory leaks..."
 pkill -f dllama-api || true
@@ -103,12 +97,12 @@ echo "You will be prompted for your sudo password."
 
 if [ "$DEBUG_MODE" = true ]; then
     # Execute with verbose logging and redirect to file
-    time ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS > "$LOG_FILE" 2>&1
+    time ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS > "$LOG_FILE" 2>&1 &
     playbook_exit_code=$?
     echo "✅ Playbook run complete. View the detailed log in '$LOG_FILE'."
 else
     # Execute normally
-    ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS
+    ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS &
     playbook_exit_code=$?
 fi
 

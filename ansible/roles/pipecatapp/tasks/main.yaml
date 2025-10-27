@@ -1,9 +1,62 @@
-- name: Create pipecatapp application directory
-  ansible.builtin.file:
-    path: /opt/pipecatapp
-    state: directory
-    mode: '0755'
-  become: yes
+- name: Read and parse benchmark results
+  block:
+    - name: Read benchmark log file
+      ansible.builtin.slurp:
+        src: /var/log/llama_benchmarks.jsonl
+      register: benchmark_log_raw
+
+    - name: Parse benchmark JSONL content safely using shell and jq
+      ansible.builtin.shell:
+        executable: /bin/bash
+        cmd: |
+          set -o pipefail
+          echo '{{ benchmark_log_raw.content }}' | base64 --decode | while IFS= read -r line; do
+            # Skip empty or whitespace-only lines
+            if [[ -n "${line// /}" ]]; then
+              # Check if the line is valid JSON and print it if it is
+              if echo "$line" | jq -e . >/dev/null 2>&1; then
+                echo "$line"
+              fi
+            fi
+          done | jq -s .
+      register: parsed_json
+      changed_when: false
+      when: benchmark_log_raw.content is defined
+
+    - name: Set benchmark_results fact from parsed content
+      ansible.builtin.set_fact:
+        benchmark_results: "{{ (parsed_json.stdout | from_json) if (parsed_json.stdout is defined and parsed_json.stdout) else [] }}"
+      when: benchmark_log_raw.content is defined
+  rescue:
+    - name: Set empty benchmark results on failure
+      ansible.builtin.set_fact:
+        benchmark_results: []
+
+- name: Identify successful models from benchmarks
+  ansible.builtin.set_fact:
+    successful_models: "{{ benchmark_results | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
+
+- name: Identify verified experts by checking their models against benchmark results
+  ansible.builtin.set_fact:
+    verified_experts: >-
+      {{
+        verified_experts | default([]) + [item]
+      }}
+  loop: "{{ experts }}"
+  vars:
+    # Get the list of model filenames for the current expert
+    expert_model_files: "{{ expert_models[item] | map(attribute='filename') | list }}"
+    # Check if any of the expert's models are in the list of successful models
+    is_verified: "{{ expert_model_files | intersect(successful_models) | length > 0 }}"
+  when: is_verified
+
+- name: Fallback and warn if no verified experts found
+  ansible.builtin.debug:
+    msg: >
+      ⚠️  No verified experts found! Skipping expert job creation.
+      (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
+  when: verified_experts is not defined or verified_experts | length == 0
+
 
 - name: Ensure correct ownership of the application directory
   ansible.builtin.file:
@@ -27,6 +80,8 @@
     dest: "{{ pipecat_app_dir }}/pipecat.env"
     mode: '0644'
   become: yes
+  vars:
+    llama_api_service_name: "router-api"
 
 - name: Copy pipecat startup script
   ansible.builtin.template:
@@ -85,22 +140,9 @@
   tags:
     - deploy_app
 
-- name: Create STT model directory
-  ansible.builtin.file:
-    path: /opt/nomad/models/stt
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Clone all STT models from all providers
-  ansible.builtin.git:
-    repo: "https://huggingface.co/{{ item.1.repo_id }}"
-    dest: "/opt/nomad/models/stt/{{ item.0.key }}/{{ item.1.name }}"
-    version: main
-  loop: "{{ stt_models | dict2items | subelements('value') }}"
-  loop_control:
-    label: "{{ item.0.key }}/{{ item.1.name }}"
-  become: yes
+#- name: Setup STT providers
+#  ansible.builtin.include_role:
+#    name: whisper_cpp
 
 - name: Create VAD model directory
   ansible.builtin.file:
@@ -137,18 +179,69 @@
     src: ../../jobs/evolve-prompt.nomad.j2
     dest: /opt/nomad/jobs/evolve-prompt.nomad
   become: yes
-  
-- name: Create expert job files from template
-  ansible.builtin.template:
-    src: ../../jobs/llamacpp-rpc.nomad.j2
-    dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
+
+- name: Stop and purge any existing expert jobs to ensure idempotency
+  ansible.builtin.command:
+    cmd: nomad job stop -purge "expert-{{ item }}"
   loop: "{{ experts }}"
+  register: expert_job_stop_status
+  changed_when: "'Running' in expert_job_stop_status.stdout"
+  failed_when: false
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+
+- name: Debug Nomad namespace
+  debug:
+    var: nomad_namespace
+
+- name: Create router job file from template
+  ansible.builtin.template:
+    src: ../../jobs/router.nomad.j2
+    dest: "/opt/nomad/jobs/router.nomad"
+  become: yes
+
+- name: Create expert job files from template for verified models
+  ansible.builtin.template:
+    src: ../../jobs/expert.nomad.j2
+    dest: "/opt/nomad/jobs/expert-{{ current_expert }}.nomad"
+  loop: "{{ verified_experts | default([]) }}"
+  loop_control:
+    loop_var: current_expert # Using the previously updated loop variable name
+  when: verified_experts is defined and verified_experts | length > 0
   vars:
-    job_name: "expert-{{ item }}"
-    service_name: "prima-api-{{ item }}"
-    model_list: "{{ expert_models[item] }}"
+    # Define ONLY loop-specific variables here
+    job_name: "expert-{{ current_expert }}"
+    service_name: "expert-api-{{ current_expert }}"
+    model_list: "{{ expert_models[current_expert] | default([]) }}" # Corrected default
     worker_count: 1
-    ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
+    # DO NOT redefine ansible_memtotal_mb here
+    # The benchmark data calculation can stay if needed, adjust variable names if necessary
+    benchmark_data_for_expert: >-
+      {{
+        (benchmark_results |
+        selectattr('model', 'in', expert_models[current_expert] | map(attribute='filename') | list) |
+        list) | default([])
+      }}
+    avg_tokens: >-
+      {{
+        (benchmark_data_for_expert | map(attribute='tokens_per_second') | list | sum / (benchmark_data_for_expert | length))
+        if (benchmark_data_for_expert | length > 0) else 0
+      }}
+    # expert_tags definition can stay, but ensure it doesn't redefine ansible_memtotal_mb
+    current_expert_tags: >-
+      [
+        "expert={{ current_expert }}",
+        "avg_tps={{ avg_tokens | round(2) }}",
+        "memory_mb={{ ansible_memtotal_mb }}", # Access global fact directly
+        "models={{ model_list | map(attribute='filename') | join(',') }}"
+      ]
+
+- name: Fallback and warn if no verified experts found
+  ansible.builtin.debug:
+    msg: >
+      ⚠️  No verified experts found! Skipping expert job creation.
+      (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
+  when: verified_experts is defined and verified_experts | length > 0
 
 - name: Copy test runner Nomad job template
   ansible.builtin.copy:
@@ -159,7 +252,6 @@
 - name: Install Playwright browsers using the virtual environment's python
   ansible.builtin.command:
     cmd: "{{ pipecat_app_dir }}/venv/bin/python -m playwright install"
-
   become: yes
   become_user: "{{ target_user }}"
   async: 900 # Set timeout to 15 minutes
@@ -187,17 +279,14 @@
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
-- name: Wait for the main expert service to be healthy in Consul
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-api"
-    return_content: yes
-  register: expert_health
-  until: >
-    expert_health.json is defined and
-    expert_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
-  retries: 60
-  delay: 10
-  changed_when: false
+- name: Flush handlers to ensure service is enabled and started
+  ansible.builtin.meta: flush_handlers
+
+- name: Run router job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/router.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
 - name: Run pipecat-app job
   ansible.builtin.command:
@@ -205,5 +294,18 @@
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
-- name: Flush handlers to ensure service is enabled and started
-  ansible.builtin.meta: flush_handlers
+
+
+- name: Wait for the router service to be healthy in Consul
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/health/service/router-api"
+    return_content: yes
+  register: router_health
+  until: >
+    router_health.json is defined and
+    router_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
+  retries: 60
+  delay: 10
+  changed_when: false
+
+

@@ -1,0 +1,7 @@
+# Enables the default configuration for Home Assistant
+default_config:
+
+# Configure the MQTT integration
+mqtt:
+  broker: "{{ hostvars['controller_node_1']['ansible_host'] | default('127.0.0.1') }}"
+  port: 1883

@@ -1,5 +1,4 @@
 from transformers import AutoModelForCausalLM
-from PIL import Image
 import torch
 from pipecat.processors.frame_processor import FrameProcessor
 from pipecat.frames.frames import UserImageRawFrame as VisionImageRawFrame

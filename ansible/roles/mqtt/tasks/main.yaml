@@ -1,0 +1,55 @@
+- name: Ensure Nomad volumes directory exists
+  ansible.builtin.file:
+    path: /opt/nomad/volumes
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Ensure Mosquitto directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  become: yes
+  loop:
+    - /opt/nomad/volumes/mqtt-data
+    - /opt/nomad/volumes/mqtt-data/data
+    - /opt/nomad/volumes/mqtt-data/log
+
+- name: Create Mosquitto config file
+  ansible.builtin.copy:
+    dest: /opt/nomad/volumes/mqtt-data/mosquitto.conf
+    content: |
+      persistence true
+      persistence_location /mosquitto/data/
+      log_dest file /mosquitto/log/mosquitto.log
+      listener 1883
+      listener 9001
+      protocol websockets
+    mode: '0644'
+  become: yes
+
+- name: Template mqtt Nomad job file
+  ansible.builtin.template:
+    src: mqtt.nomad.j2
+    dest: /opt/nomad/jobs/mqtt.nomad
+  become: yes
+
+- name: Wait for Nomad to be ready
+  ansible.builtin.wait_for:
+    host: "{{ ansible_default_ipv4.address }}"
+    port: 4646
+    timeout: 60
+
+- name: Run mqtt job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/mqtt.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  changed_when: true
+  register: mqtt_job_run
+#  notify: Restart Home Assistant
+
+- name: Debug mqtt job run
+  ansible.builtin.debug:
+    var: mqtt_job_run

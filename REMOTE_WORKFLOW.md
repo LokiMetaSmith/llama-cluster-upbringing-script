@@ -1,3 +1,5 @@
+Last updated: 2025-10-12
+
 # Improving Your Remote Workflow with Mosh and Tmux
 
 Managing a remote cluster involves spending a lot of time in a terminal. Mosh and tmux are two essential tools that make this experience faster, more reliable, and more efficient.
@@ -76,3 +78,82 @@ Using Mosh and tmux together gives you the best of both worlds: a highly resilie
     ```
 
 Now, you can work on your cluster with the confidence that neither a network drop nor a local crash will interrupt your long-running tasks.
+
+## Beyond the Basics: Advanced Tools for Power Users 🚀
+
+The following tools are not required, but they can significantly enhance your development experience, especially when working with code, files, and version control directly on the remote machine.
+
+### Helix: A Modern, Post-Modern Text Editor
+
+Helix is a modern text editor with a focus on simplicity and speed. It comes with language server support and other features built-in, requiring minimal configuration. It's a great alternative to Vim/Neovim if you find their plugin ecosystems complex.
+
+**Key Benefits:**
+
+* **Zero Configuration:** Comes with powerful features out-of-the-box, including tree-sitter for syntax highlighting and language server integration.
+* **Modal Editing:** Uses a Kakoune-inspired modal editing model (select-then-act) which can be very efficient.
+* **Fast and Lightweight:** Written in Rust, it's highly performant.
+
+**Recommended `~/.config/helix/config.toml` setup:**
+
+```toml
+[editor]
+line-number = "relative"
+mouse = true
+rulers = [120]
+true-color = true
+completion-replace = true
+auto-save = true
+
+[editor.file-picker]
+hidden = false
+```
+
+### Tmux Popups: Integrating Tools Seamlessly
+
+You can configure `tmux` to open common tools in convenient pop-up windows over your current session. This is great for quick file browsing or checking git status without leaving your editor.
+
+Add the following to your `~/.tmux.conf` file:
+
+```tmux
+# Yazi, Lazygit, and Helix popups
+# You may need to install yazi and lazygit first
+# On Debian/Ubuntu:
+# sudo add-apt-repository ppa:lazygit-team/release
+# sudo apt-get update
+# sudo apt-get install lazygit
+# cargo install yazi-fm
+
+set -g allow-passthrough on
+set -ga update-environment TERM
+set -ga update-environment TERM_PROGRAM
+
+bind-key y display-popup -d '#{pane_current_path}' -x R -h 95% -w 95% -E 'tmux new-session yazi \; set status off'
+bind-key g popup -E -w 95% -h 95%  -d '#{pane_current_path}' lazygit
+bind-key e display-popup -w 95% -h 90% -E "tmux capture-pane -Jp -S- | hx -"
+```
+
+With this configuration (and after reloading your tmux config with `tmux source-file ~/.tmux.conf`), you can use the following shortcuts (assuming default `Ctrl+b` prefix):
+
+* `prefix` + `y`: Opens the **Yazi** file manager in a popup.
+* `prefix` + `g`: Opens **Lazygit** in a popup for easy git operations.
+* `prefix` + `e`: Opens your terminal history in **Helix** for searching and copying.
+
+### Yazi: A Blazing Fast Terminal File Manager
+
+Yazi is a terminal file manager written in Rust. It's fast, has a clean interface, and integrates well with `tmux`.
+
+**Key Benefits:**
+
+* **Fast and Responsive:** Navigating large directories is snappy.
+* **Visually Appealing:** Uses modern terminal features for a good-looking UI.
+* **Great with Popups:** The `tmux` configuration above makes it a breeze to use.
+
+### Lazygit: A TUI for Git
+
+Lazygit provides a terminal-based user interface for git commands. It makes it easy to stage files, craft commits, and view your repository's history without having to remember all the git command-line flags.
+
+**Key Benefits:**
+
+* **Intuitive Interface:** Makes complex git operations much simpler.
+* **Visual History:** Easily browse branches and commits.
+* **Efficient:** Speed up your git workflow significantly.

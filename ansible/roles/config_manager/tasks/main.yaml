@@ -1,3 +1,32 @@
+# tasks file for ansible/roles/config_manager/tasks/main.yaml
+
+# --- Check for auth file instead of waiting ---
+- name: Check if Home Assistant auth file exists
+  ansible.builtin.stat:
+    path: /opt/nomad/volumes/ha-config/.storage/auth_provider.homeassistant
+  register: ha_auth_file_stat
+  become: yes
+
+# --- Make subsequent tasks conditional ---
+- name: Read Home Assistant auth file if it exists
+  ansible.builtin.slurp:
+    src: /opt/nomad/volumes/ha-config/.storage/auth_provider.homeassistant
+  register: "ha_auth_file_content"
+  become: yes
+  when: ha_auth_file_stat.stat.exists # Only run if file exists
+
+- name: Set ha_token fact if file was read
+  ansible.builtin.set_fact:
+    # Use default filter to handle case where slurp didn't run
+    ha_token: >
+      {{
+        (ha_auth_file_content.content | default('e30K') | b64decode | from_json({}, true)).data.ll_tokens
+        | selectattr('type', 'eq', 'long_lived_access')
+        | map(attribute='token')
+        | first | default(none, true)
+      }}
+  when: ha_auth_file_stat.stat.exists # Only run if file exists
+
 - name: Populate Consul KV with Model Configurations
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/kv/config/models/{{ item.key }}"
@@ -18,6 +47,24 @@
   loop_control:
     label: "{{ item.key }}"
 
+- name: Populate Consul KV with Home Assistant Token if found
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/kv/config/ha/token"
+    method: PUT
+    body: "{{ ha_token }}"
+    status_code: 200
+  when: ha_token is defined and ha_token is not none # Only run if token was successfully extracted
+
+- name: Report if HA token was populated
+  ansible.builtin.debug:
+    msg: "Home Assistant token was found and populated into Consul KV."
+  when: ha_token is defined and ha_token is not none
+
+- name: Report if HA token was NOT populated
+  ansible.builtin.debug:
+    msg: "Home Assistant auth file not found or token could not be extracted yet. Token NOT populated into Consul KV."
+  when: ha_token is not defined or ha_token is none
+
 - name: Populate Consul KV with App Settings
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/kv/config/app/settings"
@@ -37,7 +84,11 @@
           "openai_api_key": openai_api_key,
           "advertise_ip": advertise_ip,
           "nomad_models_dir": nomad_models_dir,
-          "expected_cluster_size": expected_cluster_size
+          "expected_cluster_size": expected_cluster_size,
+          "ha_url": "{{ ha_url | default('') }}",
+          "ha_token": "{{ ha_token | default('') }}"
         } | to_json
       }}
     status_code: 200
+
+# --- End Conditional Tasks ---

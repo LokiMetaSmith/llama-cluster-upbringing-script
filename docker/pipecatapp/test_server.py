@@ -1,7 +1,6 @@
 import os
 import logging
 from api_keys import initialize_api_keys
-from web_server import app
 
 # This is a special entry point for testing purposes.
 # It initializes the API keys from the environment before the app starts.

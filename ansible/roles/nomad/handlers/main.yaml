@@ -1,4 +1,6 @@
 - name: Restart nomad
-  service:
-    name: nomad
-    state: restarted
+  include_tasks: restart_nomad_handler_tasks.yaml
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes

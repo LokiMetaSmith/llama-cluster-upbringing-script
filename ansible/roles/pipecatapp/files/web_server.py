@@ -1,18 +1,28 @@
+import os
+import json
+import asyncio
+import logging
+import requests
 from fastapi import FastAPI, WebSocket, Body
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from typing import List, Dict
-import asyncio
-from asyncio import Queue
-import json
-import requests
 
-app = FastAPI()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+app = FastAPI(
+    title="Pipecat Agent API",
+    description="This API exposes endpoints to interact with the Pipecat agent, including real-time communication, status checks, and state management.",
+    version="1.0.0",
+)
 
 # Create queues to communicate between the web server and the TwinService
-approval_queue = Queue()
-text_message_queue = Queue()
+approval_queue = asyncio.Queue()
+text_message_queue = asyncio.Queue()
 
-class ConnectionManager:
+class WebSocketManager:
     """Manages active WebSocket connections.
 
     This class provides methods to connect, disconnect, and broadcast messages
@@ -43,6 +53,14 @@ class ConnectionManager:
         """
         self.active_connections.remove(websocket)
 
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        """Sends a message to all active WebSocket connections.
+
+        Args:
+            message (str): The message to broadcast.
+        """
+        await websocket.send_text(message)
+
     async def broadcast(self, message: str):
         """Sends a message to all active WebSocket connections.
 
@@ -52,7 +70,17 @@ class ConnectionManager:
         for connection in self.active_connections:
             await connection.send_text(message)
 
-manager = ConnectionManager()
+manager = WebSocketManager()
+
+# This will be set by the main application
+twin_service_instance = None
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+static_dir = os.path.join(script_dir, "static")
+index_html_path = os.path.join(static_dir, "index.html")
+
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -61,7 +89,7 @@ async def websocket_endpoint(websocket: WebSocket):
     This endpoint manages the lifecycle of a WebSocket connection. It listens
     for incoming messages and, if a message is an "approval_response", it
     puts the message onto the `approval_queue` to be processed by the
-    `TwinService`.
+    `TwinService`. It also handles user text messages.
 
     Args:
         websocket (WebSocket): The client's WebSocket connection.
@@ -70,7 +98,6 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            # Assuming the data is JSON
             message = json.loads(data)
             if message.get("type") == "approval_response":
                 await approval_queue.put(message)
@@ -79,26 +106,14 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception:
         manager.disconnect(websocket)
 
-import os
-from fastapi.staticfiles import StaticFiles
 
-# This will be set by the main application
-twin_service_instance = None
-
-# Get the absolute path to the directory containing this script
-script_dir = os.path.dirname(os.path.abspath(__file__))
-static_dir = os.path.join(script_dir, "static")
-index_html_path = os.path.join(static_dir, "index.html")
-
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-@app.get("/")
+@app.get("/", summary="Serve Web UI", description="Serves the main `index.html` file for the web user interface.", tags=["UI"])
 async def get():
     """Serves the main `index.html` file for the web UI."""
     with open(index_html_path) as f:
         return HTMLResponse(f.read())
 
-@app.get("/api/status")
+@app.get("/api/status", summary="Get Agent Status", description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks.", tags=["Agent"])
 async def get_status():
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
     if twin_service_instance and hasattr(twin_service_instance, 'tools'):
@@ -116,16 +131,12 @@ async def get_status():
             return {"status": "MCP tool or runner not available."}
     return {"status": "Agent not fully initialized. Please wait..."}
 
-@app.get("/health")
+@app.get("/health", summary="Health Check", description="Provides a health check endpoint. It returns a 200 OK if the agent is initialized and ready, otherwise a 503 Service Unavailable. This is used by Nomad for service health checks.", tags=["System"])
 async def get_health():
     """A health check endpoint that verifies the agent is fully initialized."""
     if twin_service_instance and twin_service_instance.router_llm:
-        # The presence of the router_llm indicates that the LLM service
-        # has been successfully discovered and the agent is ready.
         return JSONResponse(content={"status": "ok"})
     else:
-        # Return a 503 Service Unavailable status if the agent is not ready.
-        # This prevents Nomad from marking the allocation as healthy prematurely.
         return JSONResponse(status_code=503, content={"status": "initializing"})
 
 @app.get("/api/web_uis")
@@ -196,8 +207,8 @@ async def get_web_uis():
 
     return JSONResponse(content=sorted_uis)
 
-@app.post("/api/state/save")
-async def save_state_endpoint(payload: Dict = Body(...)):
+@app.post("/api/state/save", summary="Save Agent State", description="Saves the agent's current conversation and internal state to a named snapshot.", tags=["Agent"])
+async def save_state_endpoint(payload: Dict = Body(..., example={"save_name": "my_snapshot"})):
     """API endpoint to save the agent's current state to a named snapshot.
 
     Args:
@@ -214,12 +225,12 @@ async def save_state_endpoint(payload: Dict = Body(...)):
         return {"message": result}
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
-@app.post("/api/state/load")
-async def load_state_endpoint(payload: Dict = Body(...)):
+@app.post("/api/state/load", summary="Load Agent State", description="Loads the agent's state from a previously saved snapshot.", tags=["Agent"])
+async def load_state_endpoint(payload: Dict = Body(..., example={"save_name": "my_snapshot"})):
     """API endpoint to load the agent's state from a named snapshot.
 
     Args:
-        payload (Dict): The request body, expected to contain a "save_name" key.
+        payload (Dict): The request body, a JSON object with a "save_name" key.
 
     Returns:
         JSONResponse: A message indicating success or failure.
@@ -232,8 +243,6 @@ async def load_state_endpoint(payload: Dict = Body(...)):
         return {"message": result}
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
-# We will need a way to get the server to run.
-# This will be handled in the main app.py
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

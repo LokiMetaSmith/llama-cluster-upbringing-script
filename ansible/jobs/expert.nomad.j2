@@ -1,36 +1,47 @@
-# This Nomad job starts a distributed llama.cpp RPC cluster.
-# It consists of one "master" node that runs the main llama-server,
-# and one or more "worker" nodes that run the rpc-server for offloading.
- 
-# --- DYNAMIC MODEL SELECTION ---
-# This Jinja2 block filters the full list of models to only include
-# those that can fit within the host system's memory, adding a 2GB buffer.
+# This Nomad job file runs the main "expert" orchestrator service.
+# It loads a single, suitable model and distributes inference across a
+# pool of rpc-server providers discovered via Consul.
+
+# --- DYNAMIC MODEL SELECTION & TPS CALCULATION ---
 {% set memory_buffer_mb = 2048 %}
-{% set available_memory_mb = ansible_memtotal_mb - memory_buffer_mb %}
+{% set available_memory_mb = (ansible_memtotal_mb | int) - memory_buffer_mb %}
+{% set suitable_models = model_list |
+   selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | sort(attribute='memory_mb', reverse=true) | list %}
+{% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-provider' %}
+{# Calculate avg TPS from benchmark data passed from Ansible #}
+{% set tps_list = benchmark_data_for_expert | map(attribute='tokens_per_second') | list %}
+{% set avg_tps = (tps_list | sum / tps_list | length) if (tps_list | length > 0) else 0 %}
 
-{% set suitable_models = model_list | selectattr('memory_mb', 'defined') | selectattr('memory_mb', '<=', available_memory_mb) | list %}
-
-job "expert-{{ expert_name }}" {
+job "{{ job_name | default('expert-service') }}" {
   datacenters = ["dc1"]
-  namespace   = "default"
+  namespace   = "{{ (nomad_namespace | default('default')) | string }}" # Force string just in case
 
-  meta {
-    expert_name = "{{ expert_name }}"
-  }
-
-  # --- MASTER GROUP ---
-  # This group runs the main llama-server which acts as the entry point.
-  group "master" {
+  # --- ORCHESTRATOR GROUP ---
+  group "orchestrator" {
     count = 1
+
     network {
       mode = "host"
       port "http" { to = 8080 }
     }
 
+    # Register the main API endpoint in Consul
     service {
-      name     = "{{ service_name | default('prima-api-main') }}"
+      name     = "{{ service_name | default('expert-api-main') }}"
       provider = "consul"
       port     = "http"
+
+      # --- ADD TAGS HERE ---
+      tags = [
+        "expert={{ job_name | replace('expert-', '') }}", # Extract expert name
+        "nomad_namespace={{ nomad_namespace | default('default') }}",
+        "avg_tps={{ avg_tps | round(2) }}",
+        "memory_mb={{ ansible_memtotal_mb }}",
+        # Use suitable_models[0] if it exists, otherwise indicate no model loaded
+        "model={{ suitable_models[0].filename if suitable_models else 'none' }}"
+      ]
+      # --- END ADD TAGS ---
+
       check {
         type     = "http"
         path     = "/health"
@@ -39,154 +50,63 @@ job "expert-{{ expert_name }}" {
       }
     }
 
-    task "llama-server-master" {
+    task "llama-server-orchestrator" {
       driver = "raw_exec"
 
       template {
         data = <<EOH
 #!/bin/bash
 set -e
-echo "--- Starting RPC Master for {{ job_name }} ---"
+echo "--- Starting Orchestrator for {{ job_name }} ---"
 
-# 1. Discover RPC worker services via Consul
+# 1. Discover RPC worker services via Consul.
 worker_ips=""
-for i in {1..30}; 
-do
-  worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ job_name }}-worker?passing" | jq -r '[.[] | .Service | "\\(.Address):\\(.Port)"] | join(",")')
-  if [ -n "$worker_ips" ];
-then
-    echo "Discovered Worker IPs: $worker_ips"
+for i in {1..30}; do
+  worker_ips=$(curl -s "http://127.0.0.1:8500/v1/health/service/{{ rpc_service_name }}?passing" | jq -r '[.[] | .Service | "\(.Address):\(.Port)"] | join(",")')
+  if [ -n "$worker_ips" ]; then
+    echo "Discovered GPU Provider IPs: $worker_ips"
     break
   fi
-  echo "No workers found yet, retrying in 10s... (attempt $i/30)"
+  echo "No GPU providers found yet, retrying in 10s... (attempt $i/30)"
   sleep 10
 done
 
-
-rpc_args=""
-if [ -n "$worker_ips" ]; then
-  echo "Workers found. Configuring RPC."
-  rpc_args="--rpc $worker_ips"
-else
-  echo "No workers found after waiting. Starting in standalone mode."
+if [ -z "$worker_ips" ]; then
+  echo "FATAL: No RPC GPU providers became available after 5 minutes. Exiting."
+  exit 1
 fi
 
-health_check_url="http://127.0.0.1:{{ '{{' }} env \"NOMAD_PORT_http\" {{ '}}' }}/health"
-
-# Loop through suitable models for failover
-# This list has been pre-filtered by Jinja2 to match system memory.
-
+# 2. Select the best model and launch the server.
 {% if suitable_models %}
-{% for model in suitable_models %}
-  echo "Attempting to start llama-server with suitable model: {{ model.name }}"
+  selected_model_filename="{{ suitable_models[0].filename }}"
+  selected_model_name="{{ suitable_models[0].name }}"
 
-  /usr/local/bin/llama-server \
-    --model "/opt/nomad/models/llm/{{ model.filename }}" \
+  echo "✅ Found suitable model. Preparing to launch server with: $selected_model_name"
+
+  exec /usr/local/bin/llama-server \
+    --model /opt/nomad/models/llm/$selected_model_filename \
     --host 0.0.0.0 \
     --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
     --n-gpu-layers 99 \
     --mlock \
-    $rpc_args &
+    --rpc "$worker_ips"
 
-  server_pid=$!
-  echo "Server process started (PID $server_pid). Waiting for health check..."
-
-  healthy=false
-  for i in {1..30};
-  do
-    sleep 10
-
-    if curl -s --fail $health_check_url > /dev/null; then
-
-      echo "✅ Server is healthy with model {{ model.name }}!"
-      healthy=true
-      break
-    else
-      echo "Health check failed (attempt $i/30)..."
-    fi
-  done
-
-
-  if [ "$healthy" = true ]; then
-    echo "Successfully started llama-server with model: {{ model.name }}"
-    # Write the active model to Consul KV for other services to discover
-    curl -X PUT --data "{{ model.name }}" "http://127.0.0.1:8500/v1/kv/experts/${NOMAD_META_expert_name}/active_model"
-
-    wait $server_pid
-    exit 0
-  else
-    echo "❌ Server failed to become healthy with {{ model.name }}. Trying next model."
-    kill $server_pid
-    wait $server_pid 2>/dev/null
-  fi
-{% endfor %}
 {% else %}
   echo "FATAL: No suitable models found for the available system memory of {{ ansible_memtotal_mb }} MB."
+  exit 1
 {% endif %}
-
-echo "❌ All suitable models failed to start. Exiting."
-exit 1
 EOH
-        destination = "local/run_master.sh"
+        destination = "local/run_orchestrator.sh"
         perms       = "0755"
       }
 
       config {
-        command = "local/run_master.sh"
+        command = "local/run_orchestrator.sh"
       }
 
       resources {
-
-        cpu    = 2000
-        memory = 4096 # Allocate memory for the master process itself
-      }
-
-      volume_mount {
-        volume      = "models"
-        destination = "/opt/nomad/models"
-        read_only   = true
-
-      }
-    }
-  }
-
-  # --- WORKER GROUP ---
-  # This group runs the rpc-server processes that perform the actual inference.
-  group "workers" {
-
-    count = {{ worker_count | default(1) }}
-
-
-    network {
-      mode = "host"
-      port "rpc" {}
-    }
-
-    service {
-      name     = "{{ job_name }}-worker"
-      provider = "consul"
-      port     = "rpc"
-      check {
-        type     = "tcp"
-        interval = "15s"
-        timeout  = "5s"
-      }
-    }
-
-    task "rpc-server-worker" {
-      driver = "raw_exec"
-
-      config {
-        command = "/usr/local/bin/rpc-server"
-        args = [
-          "--host", "0.0.0.0",
-          "--port", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}"
-        ]
-      }
-
-      resources {
-        cpu    = 500
-        memory = 1024 # Memory for the RPC process itself
+        cpu    = 2000 # Higher CPU for the main process
+        memory = {{ (suitable_models[0].memory_mb | default(4096)) + 1024 if suitable_models else 512 }} # Memory for model + buffer, or minimal if no model
       }
     }
   }

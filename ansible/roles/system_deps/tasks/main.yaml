@@ -1,8 +1,12 @@
 - name: Update apt cache
-  apt:
+  ansible.builtin.apt:
     update_cache: yes
     cache_valid_time: 3600
   become: yes
+  register: apt_update_result
+  until: apt_update_result is success
+  retries: 5
+  delay: 10
 
 - name: Install all system dependencies
   apt:
@@ -25,6 +29,13 @@
       - iperf3
       - jq
       - libavif16
+      - libavformat-dev
+      - libavcodec-dev
+      - libavdevice-dev
+      - libavutil-dev
+      - libavfilter-dev
+      - libswscale-dev
+      - libswresample-dev
       - libcurl4-openssl-dev
       - libevent-2.1-7t64
       - libflite1
@@ -38,6 +49,7 @@
       - ncdu
       - nfs-common
       - openssh-server
+      - pkg-config
       - portaudio19-dev
       - python3
       - python3-dev
@@ -48,10 +60,12 @@
       - rsync
       - rustc
       - sl
+      - sshpass
       - sysbench
       - toilet
       - tmux
       - ufw
       - unzip
+      - yq
     state: present
   become: yes

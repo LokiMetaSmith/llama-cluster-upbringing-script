@@ -2,14 +2,9 @@ data_dir  = "{{ nomad_data_dir }}"
 bind_addr = "0.0.0.0" # Listen on all interfaces
 
 advertise {
-  http = "{{ ansible_default_ipv4.address }}"
-  rpc  = "{{ ansible_default_ipv4.address }}"
-  serf = "{{ ansible_default_ipv4.address }}"
-}
-
-server {
-  enabled          = true
-  bootstrap_expect = 1
+  http = "{{ advertise_ip }}"
+  rpc  = "{{ advertise_ip }}"
+  serf = "{{ advertise_ip }}"
 }
 
 consul {
@@ -19,8 +14,8 @@ consul {
 client {
   enabled = true
   options = {
-    "driver.raw_exec.enable"      = "1"
-    "raw_exec.volumes.enabled" = "true"
+    "driver.raw_exec.enable" = "1",
+    "driver.exec.enable"     = "1"
   }
 
   host_volume "pipecatapp" {
@@ -40,5 +35,15 @@ client {
   host_volume "models" {
     path      = "{{ nomad_models_dir }}"
     read_only = true
+  }
+
+  host_volume "mqtt-data" {
+    path      = "/opt/nomad/volumes/mqtt-data"
+    read_only = false
+  }
+
+  host_volume "ha-config" {
+    path      = "/opt/nomad/volumes/ha-config"
+    read_only = false
   }
 }

@@ -2,6 +2,7 @@
   hosts: controller_nodes[0] # This should run on the primary controller
   connection: local
   become: no
+  gather_facts: yes
 
   vars_files:
     - group_vars/all.yaml

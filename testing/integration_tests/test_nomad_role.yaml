@@ -1,0 +1,30 @@
+- hosts: all
+  become: yes
+  vars:
+    target_user: "testuser"
+  tasks:
+    - name: Ensure test user exists
+      ansible.builtin.user:
+        name: "{{ target_user }}"
+        state: present
+
+    - name: Run the nomad role
+      include_role:
+        name: nomad
+
+    - name: Wait for Nomad to be ready
+      ansible.builtin.wait_for:
+        host: "{{ ansible_default_ipv4.address }}"
+        port: 4646
+        timeout: 60
+
+    - name: Check that Nomad service is active
+      ansible.builtin.service_facts:
+      register: service_facts
+
+    - name: Assert that Nomad service is running
+      ansible.builtin.assert:
+        that:
+          - "service_facts.ansible_facts.services['nomad.service'].state == 'running'"
+        fail_msg: "Nomad service is not running"
+        success_msg: "Nomad service is running"

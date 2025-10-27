@@ -1,0 +1,57 @@
+# This Nomad job file runs the "router" service.
+job "router" {
+  datacenters = ["dc1"]
+  namespace   = "{{ nomad_namespace | default('default') }}"
+
+  group "router" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" { to = 8081 } # Use a different port than the expert
+    }
+
+    service {
+      name     = "router-api"
+      provider = "consul"
+      port     = "http"
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "15s"
+        timeout  = "5s"
+      }
+    }
+
+    task "llama-server-router" {
+      driver = "raw_exec"
+
+      template {
+        data = <<EOH
+#!/bin/bash
+set -e
+echo "--- Starting Router ---"
+
+exec /usr/local/bin/llama-server \
+  --model /opt/nomad/models/llm/{{ expert_models.router[0].filename }} \
+  --host 0.0.0.0 \
+  --port ${NOMAD_PORT_http} \
+  --n-gpu-layers 99 \
+  --mlock
+EOH
+        destination = "local/run_router.sh"
+        perms       = "0755"
+      }
+
+      config {
+        command = "local/run_router.sh"
+      }
+
+      resources {
+        cpu    = 2000
+        memory = 8192 # Allocate a fixed amount of memory for the router
+      }
+    }
+  }
+}

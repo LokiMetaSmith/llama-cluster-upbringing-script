@@ -1,7 +1,5 @@
 import asyncio
 import logging
-import cv2
-import torch
 from ultralytics import YOLO
 import time
 import json
@@ -14,7 +12,6 @@ import threading
 
 from pipecat.frames.frames import (
     AudioRawFrame,
-    EndFrame,
     TextFrame,
     UserStartedSpeakingFrame,
     UserStoppedSpeakingFrame,
@@ -24,15 +21,12 @@ from pipecat.frames.frames import (
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
-from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+from pipecat.processors.frame_processor import FrameProcessor
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
 from faster_whisper import WhisperModel
 from piper.voice import PiperVoice
-import soundfile as sf
 import requests
-from sentence_transformers import SentenceTransformer
-import faiss
 import numpy as np
 from memory import MemoryStore
 import web_server
@@ -45,7 +39,6 @@ from tools.web_browser_tool import WebBrowserTool
 from tools.ansible_tool import Ansible_Tool
 from tools.power_tool import Power_Tool
 from tools.summarizer_tool import SummarizerTool
-from moondream_detector import MoondreamDetector
 from llm_clients import ExternalLLMClient
 from expert_tracker import ExpertTracker
 
@@ -405,7 +398,7 @@ class TwinService(FrameProcessor):
         tools_prompt = "You have access to the following tools and experts:\n"
         for tool_name, tool in self.tools.items():
             if tool_name == "vision":
-                tools_prompt += f'- {{"tool": "vision.get_observation"}}: Get a real-time description of what is visible in the webcam.\n'
+                tools_prompt += '- {"tool": "vision.get_observation"}: Get a real-time description of what is visible in the webcam.\n'
             else:
                 for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
                     if not method_name.startswith('_'):
@@ -882,7 +875,7 @@ async def main():
     llm = OpenAILLMService(
         base_url=llm_base_url,
         api_key="dummy",
-        model="dummy" # The model is selected by the prima-expert job, not here.
+        model="dummy" # The model is selected by the llama-expert job, not here.
     )
 
     # --- FINAL FIX FOR TTS ---
