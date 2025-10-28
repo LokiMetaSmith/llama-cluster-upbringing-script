@@ -72,7 +72,6 @@
         dest: /opt/cluster-infra/
         rsync_opts:
           - "--exclude=.git"
-        delegate_to: localhost
       when: inventory_hostname == 'localhost'
 
   roles:
