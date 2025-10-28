@@ -240,7 +240,8 @@
     - name: Ensure the GPU Provider Pool job is running
       ansible.builtin.command: >
         #nomad job run -var="job_name=llamacpp-rpc-pool" -var="worker_count={{ groups['workers'] | length }}" /opt/cluster-infra/nomad/jobs/llamacpp-rpc.nomad.j2
-        nomad job run -var="job_name=llamacpp-rpc-pool" -var="worker_count={{ llamacpp-rpc-pool.workers | length }}" /opt/cluster-infra/nomad/jobs/llamacpp-rpc.nomad.j2
+        #nomad job run -var="job_name=llamacpp-rpc-pool" -var="worker_count={{ llamacpp-rpc-pool.workers | length }}" /opt/cluster-infra/nomad/jobs/llamacpp-rpc.nomad.j2
+        nomad job run -var="job_name=llamacpp-rpc-pool" -var="worker_count={{ llamacpp_rpc_pool.workers | length }}" /opt/cluster-infra/nomad/jobs/llamacpp-rpc.nomad.j2
       changed_when: true # This command always triggers a deployment evaluation
 
     - name: Wait for GPU Providers to become healthy in Consul
