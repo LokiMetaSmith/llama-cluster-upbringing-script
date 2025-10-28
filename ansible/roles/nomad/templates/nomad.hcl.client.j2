@@ -18,6 +18,14 @@ client {
     "driver.exec.enable"     = "1"
   }
 
+  plugin "docker" {
+    config {
+      volumes {
+        enabled = true
+      }
+    }
+  }
+
   host_volume "pipecatapp" {
     path      = "/opt/pipecatapp"
     read_only = false
