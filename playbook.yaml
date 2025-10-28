@@ -66,6 +66,15 @@
           - "--exclude=.git"
       when: inventory_hostname != 'localhost'
 
+    - name: Synchronize control repository for local bootstrap
+      ansible.posix.synchronize:
+        src: "{{ playbook_dir }}/"
+        dest: /opt/cluster-infra/
+        rsync_opts:
+          - "--exclude=.git"
+        delegate_to: localhost
+      when: inventory_hostname == 'localhost'
+
   roles:
     - system_deps
     - common
