@@ -10,7 +10,13 @@ advertise {
 consul {
   address = "127.0.0.1:8500"
 }
-
+plugin "docker" {
+  config {
+    volumes {
+      enabled = true
+    }
+  }
+}
 client {
   enabled = true
   options = {
@@ -18,13 +24,7 @@ client {
     "driver.exec.enable"     = "1"
   }
 
-  plugin "docker" {
-    config {
-      volumes {
-        enabled = true
-      }
-    }
-  }
+
 
   host_volume "pipecatapp" {
     path      = "/opt/pipecatapp"
