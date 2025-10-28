@@ -1,7 +1,14 @@
 # This Nomad job file runs the "router" service.
 job "router" {
   datacenters = ["dc1"]
+  type        = "service"
   namespace   = "{{ nomad_namespace | default('default') }}"
+
+  update {
+    max_parallel      = 1
+    progress_deadline = "15m"
+    healthy_deadline  = "10m" # Give it 10 mins to become healthy
+    min_healthy_time  = "30s"
 
   group "router" {
     count = 1
