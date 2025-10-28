@@ -204,6 +204,7 @@
   loop:
     - mqtt-data
     - ha-config
+    - world_model_storage
   become: yes
 
 
@@ -229,7 +230,7 @@
   delay: 5
 
 - name: Check Nomad service status if start task failed
-  when: nomad_service_start.failed
+  when: nomad_service_start.failed or nomad_api_status.failed
   block:
     - name: Get Nomad service status
       ansible.builtin.command: systemctl status nomad --no-pager
