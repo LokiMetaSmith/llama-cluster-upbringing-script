@@ -287,13 +287,18 @@
     cmd: nomad job run /opt/nomad/jobs/router.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  register: router_job_run
+  changed_when: router_job_run.rc == 0
+  ignore_errors: yes
 
 - name: Run pipecat-app job
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
-
+  register: router_job_run
+  changed_when: router_job_run.rc == 0
+  ignore_errors: yes
 
   
 - name: Wait for the router service to be healthy in Consul
