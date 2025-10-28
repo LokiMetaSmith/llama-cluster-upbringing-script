@@ -27,6 +27,7 @@ job "pipecat-app" {
         path     = "/health"
         interval = "10s"
         timeout  = "2s"
+        initial_delay = "10m"
       }
 
     }
