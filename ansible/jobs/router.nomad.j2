@@ -9,7 +9,7 @@ job "router" {
     progress_deadline = "15m"
     healthy_deadline  = "10m" # Give it 10 mins to become healthy
     min_healthy_time  = "30s"
-
+  }
   group "router" {
     count = 1
 
