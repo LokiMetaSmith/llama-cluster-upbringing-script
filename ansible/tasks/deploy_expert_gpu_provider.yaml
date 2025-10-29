@@ -1,0 +1,15 @@
+---
+- name: "Render the GPU Provider Pool job template for {{ item.name }}"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad.j2"
+    dest: "/tmp/llamacpp-rpc-pool-{{ item.name }}.nomad"
+    mode: '0644'
+  vars:
+    job_name: "llamacpp-rpc-pool-{{ item.name }}"
+    worker_count: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
+    # The 'item' variable is passed from the main playbook loop
+
+- name: "Run the GPU Provider Pool job for {{ item.name }}"
+  ansible.builtin.command:
+    cmd: "nomad job run /tmp/llamacpp-rpc-pool-{{ item.name }}.nomad"
+  changed_when: true
