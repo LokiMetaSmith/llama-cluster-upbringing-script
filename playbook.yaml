@@ -236,19 +236,18 @@
   gather_facts: no
   become: no
 
-  # Define the list of experts to deploy
   vars:
-    experts:
-      - name: main
-      - name: coding
-      - name: math
-      - name: extract
+    # This creates a new list containing only the first model object from each expert's list.
+    # The template needs the full object (name, filename, memory_mb, etc.), not just the name.
+    expert_primary_models: "{{ expert_models.values() | map('first') | list }}"
 
   tasks:
     - name: Deploy and run the GPU Provider Pool job for each expert
       include_tasks:
         file: "{{ playbook_dir }}/ansible/tasks/deploy_expert_gpu_provider.yaml"
       loop: "{{ experts | map(attribute='name') | list }}"
+      # We loop over the enriched list of model objects.
+      #loop: "{{ expert_primary_models }}"
       loop_control:
         loop_var: item
 
