@@ -245,9 +245,7 @@
     - name: Deploy and run the GPU Provider Pool job for each expert
       include_tasks:
         file: "{{ playbook_dir }}/ansible/tasks/deploy_expert_gpu_provider.yaml"
-      loop: "{{ experts | map(attribute='name') | list }}"
-      # We loop over the enriched list of model objects.
-      #loop: "{{ expert_primary_models }}"
+      loop: "{{ expert_models.keys() | list }}"
       loop_control:
         loop_var: item
 
