@@ -42,6 +42,7 @@ from tools.summarizer_tool import SummarizerTool
 from tools.term_everything_tool import TermEverythingTool
 from tools.rag_tool import RAG_Tool
 from tools.ha_tool import HA_Tool
+from tools.git_tool import Git_Tool
 
 import uvicorn
 
@@ -526,6 +527,7 @@ class TwinService(FrameProcessor):
                 ha_url=self.app_config.get("ha_url"),
                 ha_token=self.app_config.get("ha_token")
             ),
+            "git": Git_Tool(),
         }
 
         if self.app_config.get("use_summarizer", False):
