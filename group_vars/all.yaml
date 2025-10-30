@@ -16,7 +16,7 @@ nomad_namespace: "default"
 nomad_models_dir: "/opt/nomad/models"
 
 # Pipecat application settings
-llama_api_service_name: "llamacpp-rpc-api"
+llama_api_service_name: "router-api"
 use_summarizer: "false"
 stt_service: "faster-whisper"
 pipecat_app_dir: "/opt/pipecatapp"
