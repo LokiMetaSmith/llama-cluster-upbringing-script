@@ -241,6 +241,7 @@
     - group_vars/models.yaml
     - group_vars/external_experts.yaml
 
+
   vars:
     # This creates a new list containing only the first model object from each expert's list.
     # The template needs the full object (name, filename, memory_mb, etc.), not just the name.

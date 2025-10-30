@@ -26,12 +26,10 @@ job "router" {
 
       check {
         type     = "http"
-        address  = "{{ advertise_ip }}"
         port     = "http"
         path     = "/health"
         interval = "15s"
         timeout  = "5s"
-        initial_delay = "60s"
       }
     }
 
@@ -49,7 +47,8 @@ exec /usr/local/bin/llama-server \
   --host 0.0.0.0 \
   --port ${NOMAD_PORT_http} \
   --n-gpu-layers 99 \
-  --mlock
+  --mlock \
+  --verbose
 EOH
         destination = "local/run_router.sh"
         perms       = "0755"
