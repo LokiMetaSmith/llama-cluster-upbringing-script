@@ -9,7 +9,7 @@ def test_playbook_integration_syntax_check():
     validation of integration than linting.
     """
     # Find the ansible-playbook executable in the PATH
-    ansible_playbook_path = "/home/jules/.pyenv/versions/3.12.12/bin/ansible-playbook"
+    ansible_playbook_path = "/usr/bin/ansible-playbook"
 
     try:
         # Run ansible-playbook with --syntax-check
@@ -18,7 +18,7 @@ def test_playbook_integration_syntax_check():
             [
                 ansible_playbook_path,
                 "playbook.yaml",
-                "-i", "inventory.yaml",
+                "-i", "local_inventory.ini",
                 "-e", "target_user=testuser",
                 "--syntax-check"
             ],
