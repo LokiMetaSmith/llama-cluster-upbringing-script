@@ -26,10 +26,12 @@ job "router" {
 
       check {
         type     = "http"
+        address  = "{{ advertise_ip }}"
+        port     = "http"
         path     = "/health"
         interval = "15s"
         timeout  = "5s"
-        initial_delay = "10m" 
+        initial_delay = "60s"
       }
     }
 
