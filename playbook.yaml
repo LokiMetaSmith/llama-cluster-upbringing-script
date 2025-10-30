@@ -66,6 +66,14 @@
           - "--exclude=.git"
       when: inventory_hostname != 'localhost'
 
+    - name: Synchronize control repository for local bootstrap
+      ansible.posix.synchronize:
+        src: "{{ playbook_dir }}/"
+        dest: /opt/cluster-infra/
+        rsync_opts:
+          - "--exclude=.git"
+      when: inventory_hostname == 'localhost'
+
   roles:
     - system_deps
     - common
@@ -124,6 +132,11 @@
       loop_control:
         loop_var: role_name
 
+    - name: Populate Consul KV with configuration
+      include_role:
+        name: config_manager
+      run_once: true
+
     - name: Run model-dependent roles
       include_role:
         name: "{{ role_name }}"
@@ -134,14 +147,10 @@
       loop_control:
         loop_var: role_name
       when: not external_model_server
+      tags: llama_cpp
 
     - name: Flush handlers to ensure all services are started
       meta: flush_handlers
-
-    - name: Populate Consul KV with configuration
-      include_role:
-        name: config_manager
-      run_once: true
 
   post_tasks:
     - name: Read rendered Nomad config file
@@ -208,6 +217,7 @@
 - name: Play 4 - Deploy Core AI Services and Applications
   hosts: controller_nodes[0]
   connection: local
+  gather_facts: yes
 
   vars_files:
     - group_vars/all.yaml
@@ -226,19 +236,24 @@
   gather_facts: no
   become: no
 
-  # Define the list of experts to deploy
+  vars_files:
+    - group_vars/all.yaml
+    - group_vars/models.yaml
+    - group_vars/external_experts.yaml
+
+
   vars:
-    experts:
-      - name: main
-      - name: coding
-      - name: math
-      - name: extract
+    # This creates a new list containing only the first model object from each expert's list.
+    # The template needs the full object (name, filename, memory_mb, etc.), not just the name.
+    expert_primary_models: "{{ expert_models.values() | map('first') | list }}"
 
   tasks:
-    - name: Ensure the GPU Provider Pool job is running
-      ansible.builtin.command: >
-        nomad job run -var="job_name=llamacpp-rpc-pool" -var="worker_count={{ groups['workers'] | length }}" /opt/cluster-infra/nomad/jobs/llamacpp-rpc.nomad.j2
-      changed_when: true # This command always triggers a deployment evaluation
+    - name: Deploy and run the GPU Provider Pool job for each expert
+      include_tasks:
+        file: "{{ playbook_dir }}/ansible/tasks/deploy_expert_gpu_provider.yaml"
+      loop: "{{ expert_models.keys() | list }}"
+      loop_control:
+        loop_var: item
 
     - name: Wait for GPU Providers to become healthy in Consul
       ansible.builtin.uri:

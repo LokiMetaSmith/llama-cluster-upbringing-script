@@ -6,13 +6,14 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
   datacenters = ["dc1"]
   namespace   = "{{ nomad_namespace | default('default') }}"
   
-  # --- Metadata about this expert ---
   meta {
-    expert_name = "{{ job_name | default('llamacpp-rpc-pool') }}"
-    namespace   = "{{ nomad_namespace | default('default') }}"
-    avg_tps     = "{{ avg_tokens_per_second | default(0) | round(2) }}"
-    memory_mb   = "{{ ansible_memtotal_mb | default(0) }}"
-    models      = "{{ expert_models[item] | map(attribute='filename') | join(',') if expert_models is defined else '' }}"
+    # These should reflect the specific model this job instance is for
+    model_name    = "{{ item.name | default('unknown') }}"
+    model_filename= "{{ item.filename | default('unknown') }}"
+    memory_mb   = "{{ item.memory_mb | default(0) }}"
+    # Namespace is defined at job level, redundant here.
+    # avg_tps is not available in this loop context.
+    # The problematic 'models' line is removed/corrected above.
   }
   
   # --- GPU PROVIDER GROUP ---
@@ -31,7 +32,16 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
       provider = "consul"
       port     = "rpc"
 
-      # A simple TCP check is sufficient to confirm the daemon is running.
+      # --- METADATA GOES HERE IN TAGS ---
+      tags = [
+        "rpc-provider", # General tag for discovery
+        "model={{ item.filename }}",
+        "avg_tps={{ avg_tokens_per_second | default(0) | float | round(2) }}", # Uses var passed from Ansible
+        "memory_mb={{ item.memory_mb | default(0) }}"
+        # Add other relevant tags if needed
+      ]
+      # --- END TAGS ---
+
       check {
         type     = "tcp"
         interval = "15s"
@@ -43,21 +53,16 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
       driver = "raw_exec"
 
       config {
-        command = "/usr/local/bin/rpc-server"
+        command = "/bin/bash"
         args = [
-          "-H", "0.0.0.0",
-          "-p", "{{ '{{' }} env \"NOMAD_PORT_rpc\" {{ '}}' }}"
+          "-c",
+          "/usr/local/bin/rpc-server -H 0.0.0.0 -p $NOMAD_PORT_rpc"
         ]
       }
 
       resources {
         cpu    = 500
         memory = 1024 # Memory for the RPC daemon itself.
-        
-      # Optional logging directory (for troubleshooting)
-      artifact {
-        source      = "local/"
-        destination = "local"
       }
     }
   }

@@ -73,7 +73,7 @@
             msg: "❌ Healing failed for job '{{ solution.parameters.job_id }}'. Unit test failed."
           when: test_result.rc != 0
 
-      when: solution.action == 'restart'
+      when: solution.action is defined and solution.action == 'restart'
 
     - name: Heal the job by increasing memory
       block:
@@ -142,4 +142,4 @@
           ansible.builtin.fail:
             msg: "❌ Healing failed for job '{{ solution.parameters.job_id }}' after increasing memory. Unit test failed."
           when: test_result.rc != 0
-      when: solution.action == 'increase_memory'
+      when: solution.action is defined and solution.action == 'increase_memory'

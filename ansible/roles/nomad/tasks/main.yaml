@@ -8,6 +8,7 @@
   until: download_task is success
   retries: 5
   delay: 10
+  check_mode: no
 
 - name: Unzip Nomad
   ansible.builtin.unarchive:
@@ -15,6 +16,7 @@
     dest: "/tmp"
     remote_src: yes
     creates: /tmp/nomad
+  check_mode: no
 
 - name: Get version of the existing Nomad binary
   ansible.builtin.command:
@@ -157,6 +159,7 @@
     dest: /tmp/cni-plugins.tgz
     mode: '0644'
     timeout: 30
+  check_mode: no
 
 - name: Extract CNI plugins into /opt/cni/bin
   ansible.builtin.unarchive:
@@ -164,6 +167,7 @@
     dest: /opt/cni/bin
     remote_src: yes
   become: yes
+  check_mode: no
 
 - name: Ensure /dev/snd directory exists for Nomad volume
   ansible.builtin.file:
@@ -200,6 +204,7 @@
   loop:
     - mqtt-data
     - ha-config
+    - world_model_storage
   become: yes
 
 
@@ -225,7 +230,7 @@
   delay: 5
 
 - name: Check Nomad service status if start task failed
-  when: nomad_service_start.failed
+  when: nomad_service_start.failed or nomad_api_status.failed
   block:
     - name: Get Nomad service status
       ansible.builtin.command: systemctl status nomad --no-pager

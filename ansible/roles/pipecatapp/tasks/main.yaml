@@ -36,19 +36,19 @@
   ansible.builtin.set_fact:
     successful_models: "{{ benchmark_results | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
 
-- name: Identify verified experts with at least one successful model
+- name: Identify verified experts by checking their models against benchmark results
   ansible.builtin.set_fact:
     verified_experts: >-
       {{
-        experts
-        | select('in', (
-            successful_models
-            | map('regex_replace', '^', '')
-            | list
-          ))
-        | list
+        verified_experts | default([]) + [item]
       }}
-  when: successful_models | length > 0
+  loop: "{{ experts }}"
+  vars:
+    # Get the list of model filenames for the current expert
+    expert_model_files: "{{ expert_models[item] | map(attribute='filename') | list }}"
+    # Check if any of the expert's models are in the list of successful models
+    is_verified: "{{ expert_model_files | intersect(successful_models) | length > 0 }}"
+  when: is_verified
 
 - name: Fallback and warn if no verified experts found
   ansible.builtin.debug:
@@ -203,35 +203,37 @@
 - name: Create expert job files from template for verified models
   ansible.builtin.template:
     src: ../../jobs/expert.nomad.j2
-    dest: "/opt/nomad/jobs/expert-{{ item }}.nomad"
+    dest: "/opt/nomad/jobs/expert-{{ current_expert }}.nomad"
   loop: "{{ verified_experts | default([]) }}"
+  loop_control:
+    loop_var: current_expert # Using the previously updated loop variable name
   when: verified_experts is defined and verified_experts | length > 0
   vars:
-    job_name: "expert-{{ item }}"
-    service_name: "expert-api-{{ item }}"
-    nomad_namespace: "{{ (nomad_namespace | default('default', true)) | string }}"
-    #nomad_namespace: "default"
-    model_list: "{{ expert_models[item] | default(experts, true) }}"
+    # Define ONLY loop-specific variables here
+    job_name: "expert-{{ current_expert }}"
+    service_name: "expert-api-{{ current_expert }}"
+    model_list: "{{ expert_models[current_expert] | default([]) }}" # Corrected default
     worker_count: 1
-    ansible_memtotal_mb: "{{ ansible_memtotal_mb }}"
-    benchmark_data: >-
+    # DO NOT redefine ansible_memtotal_mb here
+    # The benchmark data calculation can stay if needed, adjust variable names if necessary
+    benchmark_data_for_expert: >-
       {{
-        (benchmark_results.stdout_lines | map('from_json') |
-        selectattr('model', 'in', expert_models[item] | map(attribute='filename') | list) |
+        (benchmark_results |
+        selectattr('model', 'in', expert_models[current_expert] | map(attribute='filename') | list) |
         list) | default([])
       }}
-    avg_tokens_per_second: >-
+    avg_tokens: >-
       {{
-        (benchmark_data | map(attribute='tokens_per_second') | list | sum / (benchmark_data | length))
-        if (benchmark_data | length > 0) else 0
+        (benchmark_data_for_expert | map(attribute='tokens_per_second') | list | sum / (benchmark_data_for_expert | length))
+        if (benchmark_data_for_expert | length > 0) else 0
       }}
-    expert_tags: >-
+    # expert_tags definition can stay, but ensure it doesn't redefine ansible_memtotal_mb
+    current_expert_tags: >-
       [
-        "expert={{ item }}",
-        "nomad_namespace={{ nomad_namespace | default('default', true) }}",
-        "avg_tps={{ avg_tokens_per_second | round(2) }}",
-        "memory_mb={{ ansible_memtotal_mb }}",
-        "models={{ expert_models[item] | map(attribute='filename') | join(',') }}"
+        "expert={{ current_expert }}",
+        "avg_tps={{ avg_tokens | round(2) }}",
+        "memory_mb={{ ansible_memtotal_mb }}", # Access global fact directly
+        "models={{ model_list | map(attribute='filename') | join(',') }}"
       ]
 
 - name: Fallback and warn if no verified experts found
@@ -285,13 +287,18 @@
     cmd: nomad job run /opt/nomad/jobs/router.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  register: router_job_run
+  changed_when: router_job_run.rc == 0
+  ignore_errors: yes
 
 - name: Run pipecat-app job
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
-
+  register: router_job_run
+  changed_when: router_job_run.rc == 0
+  ignore_errors: yes
 
   
 - name: Wait for the router service to be healthy in Consul

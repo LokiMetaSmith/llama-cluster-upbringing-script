@@ -9,16 +9,18 @@
 
 - name: Create TFTP root directory
   file:
-    path: "{{ tftp_root }}"
+    path: /srv/tftp
     state: directory
   become: yes
+  check_mode: no
 
 - name: Download and extract Debian netboot files
   unarchive:
-    src: "{{ netboot_url }}"
-    dest: "{{ tftp_root }}"
+    src: "http://ftp.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/netboot.tar.gz"
+    dest: /srv/tftp
     remote_src: yes
   become: yes
+  check_mode: no
 
 - name: Download iPXE BIOS bootloader
   get_url:

@@ -1,7 +1,15 @@
 # This Nomad job file runs the "router" service.
 job "router" {
   datacenters = ["dc1"]
+  type        = "service"
   namespace   = "{{ nomad_namespace | default('default') }}"
+
+  update {
+    max_parallel      = 1
+    progress_deadline = "15m"
+    healthy_deadline  = "10m" # Give it 10 mins to become healthy
+    min_healthy_time  = "30s"
+  }
 
   group "router" {
     count = 1
@@ -17,10 +25,12 @@ job "router" {
       port     = "http"
 
       check {
-        type     = "http"
-        path     = "/health"
-        interval = "15s"
-        timeout  = "5s"
+        type         = "http"
+        port         = "http"
+        address_mode = "host"
+        path         = "/health"
+        interval     = "15s"
+        timeout      = "5s"
       }
     }
 
@@ -38,7 +48,8 @@ exec /usr/local/bin/llama-server \
   --host 0.0.0.0 \
   --port ${NOMAD_PORT_http} \
   --n-gpu-layers 99 \
-  --mlock
+  --mlock \
+  --verbose
 EOH
         destination = "local/run_router.sh"
         perms       = "0755"

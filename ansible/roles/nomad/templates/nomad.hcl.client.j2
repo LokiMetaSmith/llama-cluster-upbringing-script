@@ -2,21 +2,30 @@ data_dir  = "{{ nomad_data_dir }}"
 bind_addr = "0.0.0.0" # Listen on all interfaces
 
 advertise {
-  http = "{{ ansible_default_ipv4.address }}"
-  rpc  = "{{ ansible_default_ipv4.address }}"
-  serf = "{{ ansible_default_ipv4.address }}"
+  http = "{{ advertise_ip }}"
+  rpc  = "{{ advertise_ip }}"
+  serf = "{{ advertise_ip }}"
 }
 
 consul {
   address = "127.0.0.1:8500"
 }
-
+plugin "docker" {
+  config {
+    volumes {
+      enabled = true
+    }
+    allow_caps = ["NET_RAW", "NET_ADMIN"]
+  }
+}
 client {
   enabled = true
   options = {
     "driver.raw_exec.enable" = "1",
     "driver.exec.enable"     = "1"
   }
+
+
 
   host_volume "pipecatapp" {
     path      = "/opt/pipecatapp"
@@ -46,4 +55,10 @@ client {
     path      = "/opt/nomad/volumes/ha-config"
     read_only = false
   }
+
+  host_volume "world_model_storage" {
+    path      = "/opt/nomad/volumes/world_model_storage"
+    read_only = false
+  }
+
 }

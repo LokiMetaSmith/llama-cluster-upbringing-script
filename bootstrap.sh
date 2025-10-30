@@ -62,7 +62,7 @@ ANSIBLE_ARGS="--extra-vars=target_user=loki"
 
 if [ "$DEBUG_MODE" = true ]; then
     echo "🔍 --debug flag detected. Ansible output will be saved to '$LOG_FILE'."
-    ANSIBLE_ARGS="$ANSIBLE_ARGS -vvv"
+    ANSIBLE_ARGS="$ANSIBLE_ARGS -vvvv"
 fi
 
 if [ "$EXTERNAL_MODEL_SERVER" = true ]; then

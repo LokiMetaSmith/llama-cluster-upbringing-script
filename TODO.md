@@ -205,4 +205,5 @@ This section includes items from the original "For Future Review" list, expanded
 - [ ] Create a new integration test file for home assistant.
 - [ ] Add the new test to `e2e-tests.yaml`.
 - [ ] Modify `start_services.sh` to include the home assistant job.
+- [ ] Investigate https://github.com/microsoft/agent-lightning as a possible agent improvement method
 ```
