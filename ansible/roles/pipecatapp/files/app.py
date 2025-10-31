@@ -239,7 +239,7 @@ class PiperTTSService(FrameProcessor):
             config_path (str): The path to the Piper TTS model config file.
         """
         super().__init__()
-        self.voice = PiperVoice.from_files(model_path, config_path)
+        self.voice = PiperVoice.load(model_path, config_path)
         self.sample_rate = self.voice.config.sample_rate
 
     async def process_frame(self, frame, direction):
