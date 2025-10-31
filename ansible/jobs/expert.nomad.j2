@@ -15,6 +15,7 @@
 job "{{ job_name | default('expert-service') }}" {
   datacenters = ["dc1"]
   namespace   = "{{ (nomad_namespace | default('default')) | string }}" # Force string just in case
+  priority    = 50
 
   # --- ORCHESTRATOR GROUP ---
   group "orchestrator" {

@@ -3,6 +3,7 @@ job "router" {
   datacenters = ["dc1"]
   type        = "service"
   namespace   = "{{ nomad_namespace | default('default') }}"
+  priority    = 50
 
   update {
     max_parallel      = 1
