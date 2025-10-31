@@ -69,6 +69,21 @@ This agent is the problem-solver of the ensemble. It is responsible for running 
 
 This agent is dedicated to improving the quality and maintainability of the codebase. It focuses on refactoring, removing redundancy, improving readability, and applying best practices to reduce technical debt.
 
+### Automated Code Review with Quibbler
+
+To augment the peer review process, this project has integrated Quibbler, an AI-powered code reviewer. After making changes, developers should use the `run_quibbler.sh` script to get automated feedback on their work.
+
+**Usage:**
+
+```bash
+./scripts/run_quibbler.sh "<user_instructions>" "<agent_plan>"
+```
+
+- `<user_instructions>`: The original instructions given to the agent.
+- `<agent_plan>`: A summary of the changes made by the agent.
+
+This script will run Quibbler to analyze the code changes and provide feedback, helping to ensure that the changes align with the user's intent and the project's coding standards.
+
 ---
 
 ## Local Development and Testing
