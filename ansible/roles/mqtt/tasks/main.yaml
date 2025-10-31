@@ -29,6 +29,15 @@
     mode: '0644'
   become: yes
 
+- name: Set ownership for Mosquitto directories
+  ansible.builtin.file:
+    path: /opt/nomad/volumes/mqtt-data
+    state: directory
+    owner: "1883"
+    group: "1883"
+    recurse: yes
+  become: yes
+
 - name: Template mqtt Nomad job file
   ansible.builtin.template:
     src: mqtt.nomad.j2
