@@ -8,9 +8,9 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
   
   meta {
     # These should reflect the specific model this job instance is for
-    model_name    = "{{ item.name | default('unknown') }}"
-    model_filename= "{{ item.filename | default('unknown') }}"
-    memory_mb   = "{{ item.memory_mb | default(0) }}"
+    model_name    = "{{ model.name | default('unknown') }}"
+    model_filename= "{{ model.filename | default('unknown') }}"
+    memory_mb   = "{{ model.memory_mb | default(0) }}"
     # Namespace is defined at job level, redundant here.
     # avg_tps is not available in this loop context.
     # The problematic 'models' line is removed/corrected above.
@@ -35,9 +35,9 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
       # --- METADATA GOES HERE IN TAGS ---
       tags = [
         "rpc-provider", # General tag for discovery
-        "model={{ item.filename }}",
+        "model={{ model.filename }}",
         "avg_tps={{ avg_tokens_per_second | default(0) | float | round(2) }}", # Uses var passed from Ansible
-        "memory_mb={{ item.memory_mb | default(0) }}"
+        "memory_mb={{ model.memory_mb | default(0) }}"
         # Add other relevant tags if needed
       ]
       # --- END TAGS ---
