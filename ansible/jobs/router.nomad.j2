@@ -16,7 +16,7 @@ job "router" {
 
     network {
       mode = "host"
-      port "http" { to = 8081 } # Use a different port than the expert
+      port "http" { } # Use a different port than the expert
     }
 
     service {
