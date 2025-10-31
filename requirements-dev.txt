@@ -25,3 +25,4 @@ paramiko
 uvicorn
 langchain
 python-nomad
+quibbler
