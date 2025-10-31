@@ -231,15 +231,14 @@ class PiperTTSService(FrameProcessor):
         voice: The loaded Piper voice model.
         sample_rate (int): The sample rate of the synthesized audio.
     """
-    def __init__(self, model_path: str, config_path: str):
+    def __init__(self, model_path: str):
         """Initializes the TTS service.
 
         Args:
             model_path (str): The path to the Piper TTS model file.
-            config_path (str): The path to the Piper TTS model config file.
         """
         super().__init__()
-        self.voice = PiperVoice.load(model_path, config_path)
+        self.voice = PiperVoice.load(model_path)
         self.sample_rate = self.voice.config.sample_rate
 
     async def process_frame(self, frame, direction):
@@ -844,8 +843,7 @@ async def main():
     if not tts_voices:
         raise RuntimeError("TTS voices not configured in Consul.")
     model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
-    config_path = f"/opt/nomad/models/tts/{tts_voices[0]['config']}"
-    tts = PiperTTSService(model_path=model_path, config_path=config_path)
+    tts = PiperTTSService(model_path=model_path)
 
     runner = PipelineRunner()
     vision_detector = YOLOv8Detector()
