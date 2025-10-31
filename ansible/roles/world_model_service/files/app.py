@@ -4,13 +4,16 @@ import threading
 import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+import uvicorn
 import paho.mqtt.client as mqtt
 
 # --- Configuration ---
 MQTT_HOST = os.getenv("MQTT_HOST", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", "#")
+
 NOMAD_ADDR = os.getenv("NOMAD_ADDR", "http://localhost:4646")
+
 
 # --- In-Memory State ---
 world_state = {}
@@ -98,3 +101,5 @@ async def dispatch_job(job_request: DispatchJobRequest):
             return response.json()
         except httpx.HTTPStatusError as e:
             raise HTTPException(status_code=e.response.status_code, detail=str(e.response.text))
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=PORT)

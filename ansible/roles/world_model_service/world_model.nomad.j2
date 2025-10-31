@@ -12,9 +12,8 @@ job "world-model-service" {
     }
 
     network {
-      port "http" {
-        to = 8000
-      }
+      mode = "host"
+      port "http" {}
     }
 
     task "server" {
@@ -37,6 +36,7 @@ job "world-model-service" {
         MQTT_PORT = "1883"
         CONSUL_HOST = "{{ advertise_ip }}"
         CONSUL_PORT = "8500"
+        PORT = "${NOMAD_PORT_http}"
       }
 
       resources {
