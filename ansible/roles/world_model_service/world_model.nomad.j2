@@ -23,6 +23,7 @@ job "world-model-service" {
       config {
         image   = "world-model-service:latest"
         ports   = ["http"]
+        force_pull = false
       }
 
       volume_mount {
