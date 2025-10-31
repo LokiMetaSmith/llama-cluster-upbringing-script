@@ -1,6 +1,7 @@
 import os
 import json
 import threading
+import uvicorn
 from fastapi import FastAPI
 import paho.mqtt.client as mqtt
 
@@ -8,6 +9,7 @@ import paho.mqtt.client as mqtt
 MQTT_HOST = os.getenv("MQTT_HOST", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", "#")
+PORT = int(os.getenv("PORT", 8000))
 
 # --- In-Memory State ---
 world_state = {}
@@ -64,3 +66,6 @@ async def startup_event():
     """Start the MQTT client in a background thread on app startup."""
     mqtt_thread = threading.Thread(target=run_mqtt_client, daemon=True)
     mqtt_thread.start()
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
