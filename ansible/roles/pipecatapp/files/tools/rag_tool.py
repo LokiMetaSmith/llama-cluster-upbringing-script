@@ -3,6 +3,7 @@ import logging
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
+import threading
 #from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 class RAG_Tool:
@@ -27,7 +28,9 @@ class RAG_Tool:
         self.text_splitter = None
         self.documents = []
         self.index = None
-        self._build_knowledge_base()
+        self.is_ready = False
+        # Run knowledge base build in a separate thread
+        threading.Thread(target=self._build_knowledge_base, daemon=True).start()
 
     def _build_knowledge_base(self):
         """Scans for documents, chunks them, and builds the FAISS index."""
@@ -60,6 +63,7 @@ class RAG_Tool:
 
         if not all_chunks:
             logging.warning("No documents found for RAG tool. Knowledge base is empty.")
+            self.is_ready = True
             return
 
         self.documents = all_chunks
@@ -70,6 +74,7 @@ class RAG_Tool:
         embedding_dim = embeddings.shape[1]
         self.index = faiss.IndexFlatL2(embedding_dim)
         self.index.add(np.array(embeddings, dtype=np.float32))
+        self.is_ready = True
         logging.info(f"RAG knowledge base built successfully with {len(self.documents)} chunks.")
 
     def search_knowledge_base(self, query: str) -> str:
@@ -82,6 +87,8 @@ class RAG_Tool:
             str: A formatted string containing the most relevant document
                  excerpts, or a message if no relevant information is found.
         """
+        if not self.is_ready:
+            return "The knowledge base is still being built. Please try again shortly."
         if self.index is None or not self.documents:
             return "The knowledge base is empty. I cannot answer questions about the project yet."
 
