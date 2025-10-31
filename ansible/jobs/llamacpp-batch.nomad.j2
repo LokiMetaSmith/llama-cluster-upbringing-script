@@ -1,0 +1,33 @@
+job "llamacpp-batch" {
+  datacenters = ["dc1"]
+  type        = "batch"
+  namespace   = "{{ nomad_namespace | default('default') }}"
+  priority    = 80
+
+  parameterized {
+    meta_required = ["model_name", "prompt"]
+    meta_optional = ["cpu", "memory", "gpu_count"]
+  }
+
+  group "llamacpp-batch-group" {
+    count = 1
+
+    task "llamacpp-batch-task" {
+      driver = "raw_exec"
+
+      config {
+        command = "/usr/local/bin/main"
+        args = [
+          "-m", "/opt/nomad/models/llm/${NOMAD_META_model_name}",
+          "-p", "${NOMAD_META_prompt}",
+          "-ngl", "99"
+        ]
+      }
+
+      resources {
+        cpu    = tonumber(meta.cpu)
+        memory = tonumber(meta.memory)
+      }
+    }
+  }
+}

@@ -43,6 +43,7 @@ from tools.term_everything_tool import TermEverythingTool
 from tools.rag_tool import RAG_Tool
 from tools.ha_tool import HA_Tool
 from tools.git_tool import Git_Tool
+from tools.orchestrator_tool import OrchestratorTool
 
 import uvicorn
 
@@ -527,6 +528,7 @@ class TwinService(FrameProcessor):
                 ha_token=self.app_config.get("ha_token")
             ),
             "git": Git_Tool(),
+            "orchestrator": OrchestratorTool(),
         }
 
         if self.app_config.get("use_summarizer", False):

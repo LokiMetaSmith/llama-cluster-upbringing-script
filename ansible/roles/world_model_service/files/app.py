@@ -1,15 +1,19 @@
 import os
 import json
 import threading
+import httpx
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import uvicorn
-from fastapi import FastAPI
 import paho.mqtt.client as mqtt
 
 # --- Configuration ---
 MQTT_HOST = os.getenv("MQTT_HOST", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", "#")
-PORT = int(os.getenv("PORT", 8000))
+
+NOMAD_ADDR = os.getenv("NOMAD_ADDR", "http://localhost:4646")
+
 
 # --- In-Memory State ---
 world_state = {}
@@ -67,5 +71,35 @@ async def startup_event():
     mqtt_thread = threading.Thread(target=run_mqtt_client, daemon=True)
     mqtt_thread.start()
 
+class DispatchJobRequest(BaseModel):
+    model_name: str
+    prompt: str
+    cpu: int = 1000
+    memory: int = 4096
+    gpu_count: int = 1
+
+@app.post("/dispatch-job")
+async def dispatch_job(job_request: DispatchJobRequest):
+    """Receives a request to dispatch a Nomad batch job."""
+    job_id = "llamacpp-batch"
+    url = f"{NOMAD_ADDR}/v1/job/{job_id}/dispatch"
+
+    payload = {
+        "Meta": {
+            "model_name": job_request.model_name,
+            "prompt": job_request.prompt,
+            "cpu": str(job_request.cpu),
+            "memory": str(job_request.memory),
+            "gpu_count": str(job_request.gpu_count),
+        }
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail=str(e.response.text))
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=PORT)

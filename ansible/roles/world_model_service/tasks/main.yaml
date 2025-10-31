@@ -59,3 +59,24 @@
   changed_when: true
   become: no
   when: nomad_job_template.changed
+
+- name: "World Model Service : Deploy llamacpp-batch.nomad job"
+  tags:
+    - world_model_service
+  ansible.builtin.template:
+    src: "../../jobs/llamacpp-batch.nomad.j2"
+    dest: "/opt/nomad/jobs/llamacpp-batch.nomad"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: true
+  register: batch_job_template
+
+- name: "World Model Service : Register batch nomad job"
+  ansible.builtin.command:
+    cmd: "nomad job run /opt/nomad/jobs/llamacpp-batch.nomad"
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  changed_when: true
+  become: no
+  when: batch_job_template.changed
