@@ -15,7 +15,7 @@ plugin "docker" {
     volumes {
       enabled = true
     }
-    allow_caps = ["NET_RAW", "NET_ADMIN"]
+    allow_caps = ["NET_RAW", "NET_ADMIN", "SETUID", "SETGID"]
   }
 }
 client {
