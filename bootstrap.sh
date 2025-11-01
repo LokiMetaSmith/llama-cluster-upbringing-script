@@ -97,7 +97,7 @@ echo "You will be prompted for your sudo password."
 
 if [ "$DEBUG_MODE" = true ]; then
     # Execute with verbose logging and redirect to file
-    time ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS > "$LOG_FILE" 2>&1 &
+    time ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS > "$LOG_FILE" 2>&1
     playbook_exit_code=$?
     echo "✅ Playbook run complete. View the detailed log in '$LOG_FILE'."
 else
