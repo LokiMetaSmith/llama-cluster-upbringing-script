@@ -21,8 +21,9 @@
     dest: /opt/nomad/volumes/mqtt-data/mosquitto.conf
     content: |
       persistence true
-      persistence_location /mosquitto/data/
-      log_dest file /mosquitto/log/mosquitto.log
+      persistence_location /mosquitto/data
+      log_dest stdout
+      log_type all
       listener 1883
       listener 9001
       protocol websockets
