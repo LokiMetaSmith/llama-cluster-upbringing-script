@@ -58,6 +58,8 @@ job "mqtt" {
         cpu    = 200 # 200 MHz
         memory = 128 # 128 MB
       }
+
+      user = "1000"
     }
   }
 }
