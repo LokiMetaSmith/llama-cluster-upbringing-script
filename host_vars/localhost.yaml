@@ -1,4 +1,4 @@
 target_user: loki
 # BEGIN ANSIBLE MANAGED BLOCK
-mac_address: "06:00:c0:a8:00:02"
+mac_address: "bc:5f:f4:44:2f:0e"
 # END ANSIBLE MANAGED BLOCK
