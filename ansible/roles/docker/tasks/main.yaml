@@ -15,8 +15,8 @@
         docker_is_broken: true
 
 # This block runs only if docker is not installed, or if the service check failed.
-- when: not docker_stat_result.stat.exists or docker_is_broken is defined
-  block:
+#- when: not docker_stat_result.stat.exists or docker_is_broken is defined
+#  block:
     - name: Purge any conflicting Docker and containerd packages
       ansible.builtin.apt:
         name:
