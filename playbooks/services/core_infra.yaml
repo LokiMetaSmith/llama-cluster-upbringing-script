@@ -6,6 +6,12 @@
     - ../../group_vars/all.yaml
 
   pre_tasks:
+    - name: Ensure rsync is installed for synchronization tasks
+      ansible.builtin.apt:
+        name: rsync
+        state: present
+        update_cache: yes
+
     - name: Check connectivity to all nodes
       ansible.builtin.ping:
 
