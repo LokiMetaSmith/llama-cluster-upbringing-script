@@ -18,7 +18,7 @@
   tasks:
     - name: Deploy and run the GPU Provider Pool job for each expert
       include_tasks:
-        file: "{{ playbook_dir }}/ansible/tasks/deploy_expert_gpu_provider.yaml"
+        file: "{{ playbook_dir }}/../../ansible/tasks/deploy_expert_gpu_provider.yaml"
       loop: "{{ expert_models.keys() | list }}"
       loop_control:
         loop_var: item

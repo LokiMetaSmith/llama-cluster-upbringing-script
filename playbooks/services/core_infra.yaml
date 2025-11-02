@@ -11,7 +11,7 @@
 
     - name: Distribute control repository to all nodes
       ansible.posix.synchronize:
-        src: "{{ playbook_dir }}/"
+        src: "{{ playbook_dir }}/../../"
         dest: /opt/cluster-infra/
         rsync_opts:
           - "--exclude=.git"
@@ -19,7 +19,7 @@
 
     - name: Synchronize control repository for local bootstrap
       ansible.posix.synchronize:
-        src: "{{ playbook_dir }}/"
+        src: "{{ playbook_dir }}/../../"
         dest: /opt/cluster-infra/
         rsync_opts:
           - "--exclude=.git"

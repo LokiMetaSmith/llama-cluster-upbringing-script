@@ -11,8 +11,10 @@ CLEAN_REPO=false
 DEBUG_MODE=false
 EXTERNAL_MODEL_SERVER=false
 PURGE_JOBS=false
+CONTINUE_RUN=false
 ANSIBLE_ARGS=""
 LOG_FILE="playbook_output.log"
+STATE_FILE=".bootstrap_state"
 
 # --- Parse command-line arguments ---
 for arg in "$@"
@@ -32,6 +34,10 @@ do
         ;;
         --external-model-server)
         EXTERNAL_MODEL_SERVER=true
+        shift
+        ;;
+        --continue)
+        CONTINUE_RUN=true
         shift
         ;;
     esac
@@ -121,8 +127,25 @@ free -h
 echo "Running Ansible playbooks for local setup..."
 echo "You may be prompted for your sudo password."
 
-# Clear the log file if debug mode is on
-if [ "$DEBUG_MODE" = true ]; then
+# --- State Management ---
+start_index=0
+if [ "$CONTINUE_RUN" = true ]; then
+    if [ -f "$STATE_FILE" ]; then
+        last_completed_index=$(cat "$STATE_FILE")
+        start_index=$((last_completed_index + 1))
+        echo "🔄 --continue flag detected. Resuming from playbook at index $start_index."
+    else
+        echo "ℹ️  --continue flag detected, but no state file found. Starting from the beginning."
+    fi
+else
+    # Not a continued run, so remove the state file to ensure a fresh start
+    if [ -f "$STATE_FILE" ]; then
+        rm "$STATE_FILE"
+    fi
+fi
+
+# Clear the log file if debug mode is on and we are not continuing a run
+if [ "$DEBUG_MODE" = true ] && [ "$CONTINUE_RUN" = false ]; then
     > "$LOG_FILE"
 fi
 
@@ -136,9 +159,18 @@ PLAYBOOKS=(
     "playbooks/services/final_verification.yaml"
 )
 
-for playbook in "${PLAYBOOKS[@]}"; do
+for i in "${!PLAYBOOKS[@]}"; do
+    playbook="${PLAYBOOKS[$i]}"
+
+    if [ "$i" -lt "$start_index" ]; then
+        echo "--------------------------------------------------"
+        echo "⏭️  Skipping already completed playbook: $playbook"
+        echo "--------------------------------------------------"
+        continue
+    fi
+
     echo "--------------------------------------------------"
-    echo "🚀 Running playbook: $playbook"
+    echo "🚀 Running playbook ($((i+1))/${#PLAYBOOKS[@]}): $playbook"
     echo "--------------------------------------------------"
 
     if [ "$DEBUG_MODE" = true ]; then
@@ -153,11 +185,15 @@ for playbook in "${PLAYBOOKS[@]}"; do
 
     if [ $playbook_exit_code -ne 0 ]; then
         echo "❌ Playbook '$playbook' failed. Aborting script."
+        echo "To resume from the next playbook, run this script again with the --continue flag."
         if [ "$DEBUG_MODE" = true ]; then
             echo "View the detailed log in '$LOG_FILE'."
         fi
         exit $playbook_exit_code
     fi
+
+    # Save the index of the successfully completed playbook
+    echo "$i" > "$STATE_FILE"
     echo "✅ Playbook '$playbook' completed successfully."
 done
 
