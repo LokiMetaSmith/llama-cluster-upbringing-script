@@ -121,6 +121,8 @@
     group: root
     mode: '0644'
   become: yes
+  notify:
+    - Restart nomad
 
 - name: Deploy the Nomad configuration from template
   ansible.builtin.template:
@@ -132,6 +134,8 @@
   vars:
     is_controller: "{{ true if inventory_hostname in groups['controller_nodes'] else false }}"
   become: yes
+  notify:
+    - Restart nomad
 
 - name: Create systemd override directory for Nomad service
   ansible.builtin.file:
