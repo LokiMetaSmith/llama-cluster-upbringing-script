@@ -55,7 +55,7 @@
   ansible.builtin.command:
     cmd: "nomad job run /opt/nomad/jobs/world_model.nomad"
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
   changed_when: true
   become: no
   when: nomad_job_template.changed
@@ -76,7 +76,7 @@
   ansible.builtin.command:
     cmd: "nomad job run /opt/nomad/jobs/llamacpp-batch.nomad"
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
   changed_when: true
   become: no
   when: batch_job_template.changed

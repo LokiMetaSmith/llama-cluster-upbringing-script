@@ -20,7 +20,7 @@ subnet 192.168.1.0 netmask 255.255.255.0 {
 
   if exists user-class and option user-class = "iPXE" {
     # Client is already running iPXE
-    filename "http://{{ ansible_default_ipv4.address }}/boot.ipxe";
+    filename "http://{{ advertise_ip }}/boot.ipxe";
   } else if option client-arch = 00:07 {
     # UEFI client
     filename "ipxe.efi";

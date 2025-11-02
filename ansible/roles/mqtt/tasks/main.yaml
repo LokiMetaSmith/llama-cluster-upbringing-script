@@ -47,7 +47,7 @@
 
 - name: Wait for Nomad to be ready
   ansible.builtin.wait_for:
-    host: "{{ ansible_default_ipv4.address }}"
+    host: "{{ advertise_ip }}"
     port: 4646
     timeout: 60
 
@@ -55,7 +55,7 @@
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/mqtt.nomad
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
   changed_when: true
   register: mqtt_job_run
 #  notify: Restart Home Assistant

@@ -17,7 +17,7 @@
   changed_when: "'Eval ID' in llama_job_run.stdout"
   failed_when: llama_job_run.rc != 0 and 'already running' not in llama_job_run.stderr
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
 
 - name: Clean up temporary rendered job file
   ansible.builtin.file:

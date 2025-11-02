@@ -11,7 +11,7 @@ paddler_agent_name: "paddler-agent-{{ inventory_hostname }}"
 # llama.cpp server configuration
 paddler_agent_llamacpp_port: 8088
 paddler_agent_local_llamacpp_addr: "127.0.0.1:{{ paddler_agent_llamacpp_port }}"
-paddler_agent_external_llamacpp_addr: "{{ ansible_default_ipv4.address }}:{{ paddler_agent_llamacpp_port }}"
+paddler_agent_external_llamacpp_addr: "{{ advertise_ip }}:{{ paddler_agent_llamacpp_port }}"
 paddler_agent_local_llamacpp_api_key: "" # Set this if your llama.cpp server uses an API key
 
 # Paddler balancer configuration

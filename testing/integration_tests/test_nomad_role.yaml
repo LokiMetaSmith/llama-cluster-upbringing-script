@@ -14,7 +14,7 @@
 
     - name: Wait for Nomad to be ready
       ansible.builtin.wait_for:
-        host: "{{ ansible_default_ipv4.address }}"
+        host: "{{ advertise_ip }}"
         port: 4646
         timeout: 60
 

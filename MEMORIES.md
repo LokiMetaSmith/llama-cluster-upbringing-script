@@ -212,7 +212,7 @@ To idempotently manage changes to systemd service files in Ansible without causi
 
 
 
-When using Ansible's ansible.builtin.uri module for service health checks, it may fail on hosts with IPv6 enabled due to malformed URLs. To ensure reliability, explicitly use ansible_default_ipv4.address in the URL.
+When using Ansible's ansible.builtin.uri module for service health checks, it may fail on hosts with IPv6 enabled due to malformed URLs. To ensure reliability, explicitly use advertise_ip in the URL.
 
 
 
@@ -452,7 +452,7 @@ The llama.cpp Ansible role ensures idempotent builds by comparing the latest rem
 
 
 
-When executing nomad commands via Ansible, the NOMAD_ADDR environment variable must be set, typically to http://{{ ansible_default_ipv4.address }}:4646.
+When executing nomad commands via Ansible, the NOMAD_ADDR environment variable must be set, typically to http://{{ advertise_ip }}:4646.
 
 
 
