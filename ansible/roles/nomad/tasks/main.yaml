@@ -71,6 +71,7 @@
   loop:
     - /etc/nomad.d/client.hcl
     - /etc/nomad.d/server.hcl
+    - /etc/nomad.d/nomad.hcl
   become: yes
 
 - name: Create Nomad config directory
