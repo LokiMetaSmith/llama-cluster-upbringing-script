@@ -7,10 +7,6 @@ advertise {
   serf = "{{ advertise_ip }}"
 }
 
-# preemption {
-#   enabled = true
-# }
-
 {% if is_controller is defined and is_controller %}
 server {
   enabled = true
@@ -20,6 +16,11 @@ server {
 
 consul {
   address = "127.0.0.1:8500"
+}
+
+server {
+  enabled          = true
+  bootstrap_expect = 1
 }
 
 plugin "docker" {
