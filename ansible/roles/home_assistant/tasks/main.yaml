@@ -49,4 +49,3 @@
   become: no # Run nomad client as the ansible user
   async: 300 # Max runtime for the command itself (submit shouldn't take long)
   poll: 0    # Fire and forget - don't wait for command completion
-

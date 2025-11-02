@@ -71,6 +71,7 @@
   loop:
     - /etc/nomad.d/client.hcl
     - /etc/nomad.d/server.hcl
+    - /etc/nomad.d/nomad.hcl
   become: yes
 
 - name: Create Nomad config directory
@@ -109,7 +110,7 @@
   notify:
     - Reload systemd
 
-- name: Ensure handlers run now # 
+- name: Ensure handlers run now #
   meta: flush_handlers
 
 - name: Deploy the client Nomad configuration from template
@@ -120,7 +121,21 @@
     group: root
     mode: '0644'
   become: yes
+  notify:
+    - Restart nomad
 
+- name: Deploy the Nomad configuration from template
+  ansible.builtin.template:
+    src: nomad.hcl.j2
+    dest: /etc/nomad.d/nomad.hcl
+    owner: root
+    group: root
+    mode: '0644'
+  vars:
+    is_controller: "{{ true if inventory_hostname in groups['controller_nodes'] else false }}"
+  become: yes
+  notify:
+    - Restart nomad
 
 - name: Create systemd override directory for Nomad service
   ansible.builtin.file:
@@ -138,12 +153,10 @@
   become: yes
 
 - name: Set NOMAD_ADDR environment variable for all users
-  ansible.builtin.copy:
+  ansible.builtin.template:
     dest: /etc/profile.d/nomad.sh
     mode: '0755'
-    content: |
-      #!/bin/sh
-      export NOMAD_ADDR="http://127.0.0.1:4646"
+    src: nomad.sh.j2
   become: yes
 
 - name: Ensure CNI plugin directory exists
@@ -207,8 +220,6 @@
     - world_model_storage
   become: yes
 
-
-
 - name: Start and enable Nomad service
   ansible.builtin.systemd:
     name: nomad
@@ -222,7 +233,7 @@
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "http://127.0.0.1:4646/v1/agent/self"
+    url: "http://{{ advertise_ip }}:4646/v1/agent/self"
     status_code: 200
   register: nomad_api_status
   until: nomad_api_status.status == 200

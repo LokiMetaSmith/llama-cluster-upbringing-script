@@ -1,4 +1,3 @@
----
 - name: "Set verified model for {{ item }}"
   ansible.builtin.set_fact:
     verified_model: "{{ expert_models[item] | selectattr('filename', 'in', successful_models) | first | default(none) }}"

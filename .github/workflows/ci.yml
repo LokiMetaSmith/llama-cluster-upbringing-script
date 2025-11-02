@@ -47,7 +47,7 @@ jobs:
           python-version: '3.12'
 
       - name: "Install test dependencies"
-        run: pip install requests
+        run: pip install -r requirements-dev.txt
 
       - name: "Run unit tests"
         run: python -m unittest discover testing/unit_tests
@@ -66,6 +66,9 @@ jobs:
 
       - name: "Install Ansible and dependencies"
         run: pip install -r requirements-dev.txt
+
+      - name: "Install Ansible collections"
+        run: ansible-galaxy collection install community.general ansible.posix
 
       - name: "Cache Ansible baseline"
         uses: actions/cache@v4

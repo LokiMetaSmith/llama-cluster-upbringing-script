@@ -137,8 +137,6 @@
     NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
   when: build_llama_cpp
 
-
-
 - name: Stop and purge any existing expert jobs if llama.cpp was rebuilt
   ansible.builtin.command:
     cmd: nomad job stop -purge "expert-{{ item }}"

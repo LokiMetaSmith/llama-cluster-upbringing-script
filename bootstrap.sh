@@ -10,6 +10,7 @@
 CLEAN_REPO=false
 DEBUG_MODE=false
 EXTERNAL_MODEL_SERVER=false
+PURGE_JOBS=false
 ANSIBLE_ARGS=""
 LOG_FILE="playbook_output.log"
 
@@ -17,6 +18,10 @@ LOG_FILE="playbook_output.log"
 for arg in "$@"
 do
     case $arg in
+        --purge-jobs)
+        PURGE_JOBS=true
+        shift
+        ;;
         --clean)
         CLEAN_REPO=true
         shift
@@ -72,7 +77,7 @@ fi
 
 # --- Main script logic ---
 
-# Check if ansible-playbook is installed
+# Check if ansible-playbook and nomad are installed
 if ! command -v ansible-playbook &> /dev/null
 then
     echo "Error: ansible-playbook could not be found."
@@ -81,7 +86,28 @@ then
     exit 1
 fi
 
+# --- Handle Nomad job purge ---
+if [ "$PURGE_JOBS" = true ]; then
+    if command -v nomad &> /dev/null; then
+        echo "🔥 --purge-jobs flag detected. Stopping and purging all Nomad jobs..."
+        # Get all job IDs, filter out the header and any 'No jobs' messages
+        job_ids=$(nomad job status | awk 'NR>1 {print $1}')
 
+        if [ -n "$job_ids" ]; then
+            echo "$job_ids" | while read -r job_id; do
+                if [ -n "$job_id" ]; then
+                    echo "Stopping and purging job: $job_id"
+                    nomad job stop -purge "$job_id" >/dev/null
+                fi
+            done
+            echo "✅ All Nomad jobs have been purged."
+        else
+            echo "No running Nomad jobs found to purge."
+        fi
+    else
+        echo "⚠️  Warning: 'nomad' command not found. Cannot purge jobs. Skipping."
+    fi
+fi
 
 echo "Forcefully terminating any orphaned application processes to prevent memory leaks..."
 pkill -f dllama-api || true
