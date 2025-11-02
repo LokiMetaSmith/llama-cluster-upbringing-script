@@ -1,4 +1,3 @@
----
 # tasks file for download_models
 
 - name: Query Consul for all model configurations
