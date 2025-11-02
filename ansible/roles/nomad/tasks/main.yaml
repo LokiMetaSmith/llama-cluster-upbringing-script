@@ -110,7 +110,7 @@
   notify:
     - Reload systemd
 
-- name: Ensure handlers run now # 
+- name: Ensure handlers run now #
   meta: flush_handlers
 
 - name: Deploy the client Nomad configuration from template
@@ -205,8 +205,6 @@
     - ha-config
     - world_model_storage
   become: yes
-
-
 
 - name: Start and enable Nomad service
   ansible.builtin.systemd:
