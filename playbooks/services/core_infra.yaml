@@ -1,0 +1,44 @@
+- hosts: all
+  remote_user: "{{ target_user }}"
+  become: yes
+
+  vars_files:
+    - ../../group_vars/all.yaml
+
+  pre_tasks:
+    - name: Check connectivity to all nodes
+      ansible.builtin.ping:
+
+    - name: Distribute control repository to all nodes
+      ansible.posix.synchronize:
+        src: "{{ playbook_dir }}/../../"
+        dest: /opt/cluster-infra/
+        rsync_opts:
+          - "--exclude=.git"
+      when: inventory_hostname != 'localhost'
+
+    - name: Synchronize control repository for local bootstrap
+      ansible.posix.synchronize:
+        src: "{{ playbook_dir }}/../../"
+        dest: /opt/cluster-infra/
+        rsync_opts:
+          - "--exclude=.git"
+      when: inventory_hostname == 'localhost'
+
+  tasks:
+    - name: Import system_deps role
+      include_role:
+        name: system_deps
+
+    - name: Import common role
+      include_role:
+        name: common
+
+    - name: Import Consul playbook
+      ansible.builtin.import_playbook: consul.yaml
+
+    - name: Import Docker playbook
+      ansible.builtin.import_playbook: docker.yaml
+
+    - name: Import Nomad playbook
+      ansible.builtin.import_playbook: nomad.yaml

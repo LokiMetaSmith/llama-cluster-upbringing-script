@@ -1,0 +1,24 @@
+- name: Deploy Model-Dependent Services
+  hosts: all
+  remote_user: "{{ target_user }}"
+  become: yes
+
+  vars_files:
+    - ../../group_vars/all.yaml
+    - ../../group_vars/models.yaml
+
+  tasks:
+    - name: Run model-dependent roles
+      include_role:
+        name: "{{ role_name }}"
+      loop:
+        - download_models
+        - llama_cpp
+        - whisper_cpp
+      loop_control:
+        loop_var: role_name
+      when: not external_model_server
+      tags: llama_cpp
+
+    - name: Flush handlers to ensure all services are started
+      meta: flush_handlers

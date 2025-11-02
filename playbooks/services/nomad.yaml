@@ -1,0 +1,10 @@
+- name: Deploy Nomad
+  hosts: all
+  remote_user: "{{ target_user }}"
+  become: yes
+
+  vars_files:
+    - ../../group_vars/all.yaml
+
+  roles:
+    - nomad
