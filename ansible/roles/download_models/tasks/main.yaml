@@ -30,7 +30,7 @@
     stt_models: "{{ ((consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'stt_models') | first).content | default('{}')) | from_json }}"
     vision_models: "{{ consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'vision_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
 
-         
+
 # ---------------------------------------------------------------------------- #
 #                                  LLM Models                                  #
 # ---------------------------------------------------------------------------- #
@@ -60,7 +60,6 @@
   loop_control:
     loop_var: item
   ignore_errors: yes
-  
 # ---------------------------------------------------------------------------- #
 #                                  STT Models                                  #
 # ---------------------------------------------------------------------------- #
@@ -137,7 +136,6 @@
   loop_control:
     loop_var: item
   ignore_errors: yes
-  
 # ---------------------------------------------------------------------------- #
 #                                 Vision Models                                #
 # ---------------------------------------------------------------------------- #
@@ -172,8 +170,7 @@
   become: yes
   loop_control:
     loop_var: item
-  ignore_errors: yes   
-
+  ignore_errors: yes
 - name: Download all Vision models (Hub-based) if they do not exist
   ansible.builtin.command:
     cmd: >
@@ -186,7 +183,6 @@
   loop_control:
     loop_var: item
   ignore_errors: yes
-  
 # ---------------------------------------------------------------------------- #
 #                               Embedding Models                               #
 # ---------------------------------------------------------------------------- #
@@ -216,4 +212,3 @@
   loop_control:
     loop_var: item
   ignore_errors: yes
-  
