@@ -67,6 +67,9 @@ jobs:
       - name: "Install Ansible and dependencies"
         run: pip install -r requirements-dev.txt
 
+      - name: "Install Ansible collections"
+        run: ansible-galaxy collection install community.general
+
       - name: "Cache Ansible baseline"
         uses: actions/cache@v4
         id: cache-ansible-baseline
