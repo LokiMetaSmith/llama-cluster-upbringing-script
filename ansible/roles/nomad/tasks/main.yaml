@@ -122,6 +122,16 @@
     mode: '0644'
   become: yes
 
+ name: Deploy the Nomad configuration from template
+  ansible.builtin.template:
+    src: nomad.hcl.j2
+    dest: /etc/nomad.d/nomad.hcl
+    owner: root
+    group: root
+    mode: '0644'
+  vars:
+    is_controller: "{{ true if inventory_hostname in groups['controller_nodes'] else false }}"
+  become: yes
 
 - name: Create systemd override directory for Nomad service
   ansible.builtin.file:
