@@ -122,7 +122,7 @@
     mode: '0644'
   become: yes
 
- name: Deploy the Nomad configuration from template
+- name: Deploy the Nomad configuration from template
   ansible.builtin.template:
     src: nomad.hcl.j2
     dest: /etc/nomad.d/nomad.hcl
