@@ -1,45 +1,76 @@
-# Main data directory
-data_dir  = "/opt/nomad"
+data_dir  = "{{ nomad_data_dir }}"
+bind_addr = "0.0.0.0" # Listen on all interfaces
 
-# Listen on all network interfaces for API calls
-bind_addr = "0.0.0.0"
-
-# Tell other nodes how to reach this one.
-# This IP should be set in your Ansible inventory.
 advertise {
-  http = "{{ ansible_default_ipv4.address }}"
-  rpc  = "{{ ansible_default_ipv4.address }}"
-  serf = "{{ ansible_default_ipv4.address }}"
+  http = "{{ advertise_ip }}"
+  rpc  = "{{ advertise_ip }}"
+  serf = "{{ advertise_ip }}"
 }
 
-# Integrate with Consul for service discovery
+{% if is_controller is defined and is_controller %}
+server {
+  enabled = true
+  bootstrap_expect = {{ nomad_bootstrap_expect }}
+}
+{% endif %}
+
 consul {
   address = "127.0.0.1:8500"
-  checks_use_advertise = true
 }
 
-# Configure this node as a server
 server {
   enabled          = true
-
-
-  # Set to 1 for a single-server cluster
   bootstrap_expect = 1
 }
 
-# Configure this node as a client
+plugin "docker" {
+  config {
+    volumes {
+      enabled = true
+    }
+    allow_caps = ["NET_RAW", "NET_ADMIN", "SETUID", "SETGID", "CHOWN"]
+  }
+}
+
 client {
   enabled = true
+  options = {
+    "driver.raw_exec.enable" = "1",
+    "driver.exec.enable"     = "1"
+  }
 
+  host_volume "pipecatapp" {
+    path      = "/opt/pipecatapp"
+    read_only = false
+  }
+
+  # The "snd" volume is required for voice applications but will prevent
+  # Nomad from starting on machines without a sound device. It is commented
+  # out to allow for more flexible deployment. The pipecat job itself will
+  # still require this volume to be present on the target node.
+  host_volume "snd" {
+    path      = "/dev/snd"
+    read_only = false
+  }
 
   host_volume "models" {
     path      = "{{ nomad_models_dir }}"
     read_only = true
   }
-  
-  plugin "raw_exec" {
-    config {
-      enabled = true
-    }
+
+  host_volume "mqtt-data" {
+    path      = "/opt/nomad/volumes/mqtt-data"
+    read_only = false
   }
+
+  host_volume "ha-config" {
+    path      = "/opt/nomad/volumes/ha-config"
+    read_only = false
+  }
+  
+  host_volume "world_model_storage" {
+    path      = "/opt/nomad/volumes/world_model_storage"
+    read_only = false
+  }
+  
 }

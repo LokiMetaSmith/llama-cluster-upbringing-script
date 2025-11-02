@@ -71,6 +71,7 @@
   loop:
     - /etc/nomad.d/client.hcl
     - /etc/nomad.d/server.hcl
+    - /etc/nomad.d/nomad.hcl
   become: yes
 
 - name: Create Nomad config directory
@@ -138,12 +139,10 @@
   become: yes
 
 - name: Set NOMAD_ADDR environment variable for all users
-  ansible.builtin.copy:
+  ansible.builtin.template:
     dest: /etc/profile.d/nomad.sh
     mode: '0755'
-    content: |
-      #!/bin/sh
-      export NOMAD_ADDR="http://127.0.0.1:4646"
+    src: nomad.sh.j2
   become: yes
 
 - name: Ensure CNI plugin directory exists
@@ -222,7 +221,7 @@
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "http://127.0.0.1:4646/v1/agent/self"
+    url: "http://{{ advertise_ip }}:4646/v1/agent/self"
     status_code: 200
   register: nomad_api_status
   until: nomad_api_status.status == 200

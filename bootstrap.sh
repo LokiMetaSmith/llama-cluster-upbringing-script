@@ -90,7 +90,6 @@ fi
 if [ "$PURGE_JOBS" = true ]; then
     if command -v nomad &> /dev/null; then
         echo "🔥 --purge-jobs flag detected. Stopping and purging all Nomad jobs..."
-
         # Get all job IDs, filter out the header and any 'No jobs' messages
         job_ids=$(nomad job status | awk 'NR>1 {print $1}')
 
