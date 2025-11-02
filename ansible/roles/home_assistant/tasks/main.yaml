@@ -19,7 +19,7 @@
 
 - name: Wait for Nomad API to be ready before submitting job
   ansible.builtin.uri:
-    url: "http://{{ advertise_ip }}:4646/v1/status/leader"
+    url: "http://{{ ansible_default_ipv4.address }}:4646/v1/status/leader"
     method: GET
     status_code: 200
   register: nomad_api_status
@@ -44,7 +44,7 @@
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/home-assistant.nomad
   environment:
-    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   changed_when: true
   become: no # Run nomad client as the ansible user
   async: 300 # Max runtime for the command itself (submit shouldn't take long)

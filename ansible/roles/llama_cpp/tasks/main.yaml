@@ -134,7 +134,7 @@
   changed_when: "'Running' in rpc_job_stop_status.stdout"
   failed_when: false # Don't fail if the job doesn't exist
   environment:
-    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   when: build_llama_cpp
 
 - name: Stop and purge any existing expert jobs if llama.cpp was rebuilt
@@ -145,7 +145,7 @@
   changed_when: "'Running' in expert_job_stop_status.stdout"
   failed_when: false # Don't fail if the job doesn't exist
   environment:
-    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   when: build_llama_cpp
 
 - name: Run model benchmarking if enabled

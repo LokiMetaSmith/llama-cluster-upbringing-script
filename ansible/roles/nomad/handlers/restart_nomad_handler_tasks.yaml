@@ -7,7 +7,7 @@
 
 - name: Wait for Nomad API to be ready after restart
   ansible.builtin.uri:
-    url: "http://{{ advertise_ip }}:4646/v1/agent/self"
+    url: "http://{{ ansible_default_ipv4.address }}:4646/v1/agent/self"
     status_code: 200
   register: nomad_api_status
   until: nomad_api_status.status == 200
