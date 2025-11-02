@@ -1,0 +1,15 @@
+- name: Test Docker Deployment
+  hosts: all
+  become: no
+  gather_facts: no
+
+  tasks:
+    - name: Import the Docker playbook
+      ansible.builtin.import_playbook: ../services/docker.yaml
+
+    - name: Check if the Docker service is running
+      ansible.builtin.systemd:
+        name: docker
+      register: docker_service_status
+      failed_when: "docker_service_status.status.ActiveState != 'active'"
+      changed_when: false

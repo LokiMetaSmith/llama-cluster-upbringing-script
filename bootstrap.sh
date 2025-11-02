@@ -117,29 +117,50 @@ echo "Process cleanup complete."
 # Display system memory
 free -h
 
-# Run the Ansible playbook with the local inventory
-echo "Running the Ansible playbook for local setup..."
-echo "You will be prompted for your sudo password."
+# --- Run Ansible Playbooks ---
+echo "Running Ansible playbooks for local setup..."
+echo "You may be prompted for your sudo password."
 
+# Clear the log file if debug mode is on
 if [ "$DEBUG_MODE" = true ]; then
-    # Execute with verbose logging and redirect to file
-    time ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS > "$LOG_FILE" 2>&1
-    playbook_exit_code=$?
-    echo "✅ Playbook run complete. View the detailed log in '$LOG_FILE'."
-else
-    # Execute normally
-    ansible-playbook -i local_inventory.ini playbook.yaml $ANSIBLE_ARGS &
-    playbook_exit_code=$?
+    > "$LOG_FILE"
 fi
 
-if [ $playbook_exit_code -ne 0 ]; then
-    echo "❌ Ansible playbook failed. Aborting script."
-    exit $playbook_exit_code
-fi
+PLAYBOOKS=(
+    "playbooks/common_setup.yaml"
+    "playbooks/services/core_infra.yaml"
+    "playbooks/services/app_services.yaml"
+    "playbooks/services/model_services.yaml"
+    "playbooks/services/core_ai_services.yaml"
+    "playbooks/services/ai_experts.yaml"
+    "playbooks/services/final_verification.yaml"
+)
 
+for playbook in "${PLAYBOOKS[@]}"; do
+    echo "--------------------------------------------------"
+    echo "🚀 Running playbook: $playbook"
+    echo "--------------------------------------------------"
 
+    if [ "$DEBUG_MODE" = true ]; then
+        # Execute with verbose logging and append to file
+        time ansible-playbook -i local_inventory.ini "$playbook" $ANSIBLE_ARGS >> "$LOG_FILE" 2>&1
+        playbook_exit_code=$?
+    else
+        # Execute normally
+        time ansible-playbook -i local_inventory.ini "$playbook" $ANSIBLE_ARGS
+        playbook_exit_code=$?
+    fi
+
+    if [ $playbook_exit_code -ne 0 ]; then
+        echo "❌ Playbook '$playbook' failed. Aborting script."
+        if [ "$DEBUG_MODE" = true ]; then
+            echo "View the detailed log in '$LOG_FILE'."
+        fi
+        exit $playbook_exit_code
+    fi
+    echo "✅ Playbook '$playbook' completed successfully."
+done
+
+echo "--------------------------------------------------"
+echo "✅ All playbooks completed successfully."
 echo "Bootstrap complete."
-
-# The main playbook handles the deployment of all necessary services.
-# No further action is needed.
-echo "✅ Standalone server setup is complete."

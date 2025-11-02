@@ -1,0 +1,14 @@
+- name: Deploy Core AI Services and Applications
+  hosts: controller_nodes[0]
+  connection: local
+  gather_facts: yes
+
+  vars_files:
+    - ../../group_vars/all.yaml
+    - ../../group_vars/models.yaml
+    - ../../group_vars/external_experts.yaml
+
+  roles:
+    - role: bootstrap_agent
+    - role: term_everything
+    - role: pipecatapp

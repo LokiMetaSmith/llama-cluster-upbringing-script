@@ -1,0 +1,53 @@
+- name: Deploy Application Services
+  hosts: all
+  remote_user: "{{ target_user }}"
+  become: yes
+
+  vars_files:
+    - ../../group_vars/all.yaml
+
+  tasks:
+    - name: Flush handlers to ensure Nomad is restarted with new config
+      meta: flush_handlers
+
+    - name: Wait for a Consul leader to be elected
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8500/v1/status/leader"
+        return_content: yes
+      register: consul_leader_status
+      until: consul_leader_status.content != '""' and consul_leader_status.status == 200
+      retries: 12
+      delay: 5
+      ignore_errors: yes
+
+    - name: Fail gracefully if no Consul leader is found
+      ansible.builtin.fail:
+        msg: |
+          The Consul service is running, but it has not elected a leader after 60 seconds.
+          This usually means the `bootstrap_expect` value in your Consul configuration is
+          higher than the number of server nodes available.
+      when: consul_leader_status.failed or consul_leader_status.content == '""'
+
+    - name: Install all python dependencies
+      include_role:
+        name: python_deps
+
+    - name: Run application and configuration roles
+      include_role:
+        name: "{{ role_name }}"
+      loop:
+        - mqtt
+        - home_assistant
+        - provisioning_api
+        - desktop_extras
+        - paddler
+        - vision
+        - power_manager
+        - world_model_service
+      loop_control:
+        loop_var: role_name
+
+    - name: Populate Consul KV with configuration
+      include_role:
+        name: config_manager
+      run_once: true

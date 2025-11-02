@@ -1,0 +1,45 @@
+- name: Play 1 - Bootstrap New Nodes as 'root'
+  hosts: all
+  become: yes # We are already root
+
+  vars_files:
+    - ../group_vars/all.yaml
+    - ../group_vars/models.yaml
+    - ../group_vars/external_experts.yaml
+
+  tasks:
+    - name: Ensure the sudo package is installed
+      ansible.builtin.apt:
+        name: sudo
+        state: present
+
+    - name: Ensure the rsync package is installed
+      ansible.builtin.apt:
+        name: rsync
+        state: present
+
+    - name: Ensure the sudo group exists
+      ansible.builtin.group:
+        name: sudo
+        state: present
+
+    - name: Create the '{{ target_user }}' account with sudo access
+      ansible.builtin.user:
+        name: "{{ target_user }}"
+        shell: /bin/bash
+        groups: sudo
+        append: yes
+
+    - name: Set correct permissions for the user's home directory
+      ansible.builtin.file:
+        path: "/home/{{ target_user }}"
+        state: directory
+        mode: '0755'
+
+    - name: Allow '{{ target_user }}' to have passwordless sudo access
+      ansible.builtin.lineinfile:
+        path: "/etc/sudoers.d/ansible-{{ target_user }}-nopasswd"
+        line: "{{ target_user }} ALL=(ALL) NOPASSWD: ALL"
+        create: yes
+        validate: 'visudo -cf %s'
+        mode: '0440'

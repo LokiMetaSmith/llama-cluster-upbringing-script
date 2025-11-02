@@ -1,0 +1,45 @@
+- name: Deploy Distributed AI Experts
+  hosts: controller_nodes[0] # Run these commands from a single controller node
+  connection: local
+  gather_facts: no
+  become: no
+
+  vars_files:
+    - ../../group_vars/all.yaml
+    - ../../group_vars/models.yaml
+    - ../../group_vars/external_experts.yaml
+
+
+  vars:
+    # This creates a new list containing only the first model object from each expert's list.
+    # The template needs the full object (name, filename, memory_mb, etc.), not just the name.
+    expert_primary_models: "{{ expert_models.values() | map('first') | list }}"
+
+  tasks:
+    - name: Deploy and run the GPU Provider Pool job for each expert
+      include_tasks:
+        file: "{{ playbook_dir }}/ansible/tasks/deploy_expert_gpu_provider.yaml"
+      loop: "{{ expert_models.keys() | list }}"
+      loop_control:
+        loop_var: item
+
+    - name: Wait for GPU Providers to become healthy in Consul
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-pool-provider?passing"
+        return_content: yes
+      register: consul_health
+      until: "consul_health.json | length >= (groups['workers'] | length)"
+      retries: 30 # Wait up to 5 minutes (30 * 10s)
+      delay: 10
+      vars:
+        ansible_connection: local # Ensure this task runs on the controller
+
+    - name: Deploy the Expert Orchestrator services
+      ansible.builtin.command: >
+        nomad job run
+        -var="job_name=expert-{{ item.name }}"
+        -var="service_name=expert-api-{{ item.name }}"
+        -var="rpc_pool_job_name=llamacpp-rpc-pool"
+        /opt/cluster-infra/nomad/jobs/expert.nomad.j2
+      loop: "{{ experts }}"
+      changed_when: true
