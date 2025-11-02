@@ -39,6 +39,7 @@ job "mqtt" {
       config {
         image = "eclipse-mosquitto:2"
         ports = ["mqtt", "ws"]
+        cap_add = ["SETUID", "SETGID", "CHOWN"]
 
         # The entrypoint is overridden to explicitly load the config file.
         # The config file itself is created by Ansible and placed in the host volume.
