@@ -182,6 +182,7 @@
     src: /var/log/llama_benchmarks.jsonl
   register: benchmark_log_raw
   become: yes
+  when: run_benchmarks | default(false)
 
 - name: Parse benchmark JSONL content safely
   ansible.builtin.shell:
@@ -207,10 +208,12 @@
   register: benchmark_parser_result
   changed_when: false
   become: yes
+  when: run_benchmarks | default(false)
 
 - name: Set benchmark_results fact from parsed content
   ansible.builtin.set_fact:
     benchmark_results: "{{ benchmark_parser_result.stdout | from_json }}"
+  when: run_benchmarks | default(false)
 
 - name: Template and run llamacpp-rpc nomad job for each model
   ansible.builtin.include_tasks: run_single_rpc_job.yaml

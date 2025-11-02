@@ -14,7 +14,7 @@
   vars:
     # Pass necessary variables to the template
     job_name: "llamacpp-rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
-    item: "{{ model_item }}" # Pass the current model dict as 'item' for the template
+    model: "{{ model_item }}" # Pass the current model dict as 'model' for the template
     avg_tokens_per_second: "{{ current_avg_tps }}" # Pass the calculated TPS
     worker_count: 1 # Assuming 1 worker per model for RPC? Adjust if needed.
 
