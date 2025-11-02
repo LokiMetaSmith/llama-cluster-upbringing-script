@@ -25,20 +25,10 @@
           - "--exclude=.git"
       when: inventory_hostname == 'localhost'
 
-  tasks:
-    - name: Import system_deps role
-      include_role:
-        name: system_deps
+  roles:
+    - role: system_deps
+    - role: common
 
-    - name: Import common role
-      include_role:
-        name: common
-
-    - name: Import Consul playbook
-      ansible.builtin.import_playbook: consul.yaml
-
-    - name: Import Docker playbook
-      ansible.builtin.import_playbook: docker.yaml
-
-    - name: Import Nomad playbook
-      ansible.builtin.import_playbook: nomad.yaml
+- ansible.builtin.import_playbook: consul.yaml
+- ansible.builtin.import_playbook: docker.yaml
+- ansible.builtin.import_playbook: nomad.yaml
