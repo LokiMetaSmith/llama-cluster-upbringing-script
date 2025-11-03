@@ -4,6 +4,7 @@ After=network-online.target
 
 [Service]
 Type=simple
+Environment="POWER_AGENT_INTERFACE={{ power_manager_interface }}"
 ExecStart=/usr/bin/python3 /opt/power_manager/power_agent.py
 WorkingDirectory=/opt/power_manager
 Restart=on-failure
