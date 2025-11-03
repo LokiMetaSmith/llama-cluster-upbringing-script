@@ -81,11 +81,30 @@ if [ "$EXTERNAL_MODEL_SERVER" = true ]; then
     ANSIBLE_ARGS="$ANSIBLE_ARGS --extra-vars=external_model_server=true"
 fi
 
-# --- Main script logic ---
+# --- Find Ansible Playbook executable ---
+find_executable() {
+    local executable_name=$1
+    # 1. Check PATH first
+    if command -v "$executable_name" &> /dev/null; then
+        command -v "$executable_name"
+        return 0
+    fi
 
-# Check if ansible-playbook and nomad are installed
-if ! command -v ansible-playbook &> /dev/null
-then
+    # 2. Check pyenv shims and versions
+    if [ -d "$HOME/.pyenv" ]; then
+        local pyenv_path
+        pyenv_path=$(find "$HOME/.pyenv/versions" -type f -name "$executable_name" | head -n 1)
+        if [ -n "$pyenv_path" ] && [ -x "$pyenv_path" ]; then
+            echo "$pyenv_path"
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+ANSIBLE_PLAYBOOK=$(find_executable "ansible-playbook")
+if [ -z "$ANSIBLE_PLAYBOOK" ]; then
     echo "Error: ansible-playbook could not be found."
     echo "Please install Ansible before running this script."
     echo "On Debian/Ubuntu: sudo apt update && sudo apt install ansible"
@@ -175,11 +194,11 @@ for i in "${!PLAYBOOKS[@]}"; do
 
     if [ "$DEBUG_MODE" = true ]; then
         # Execute with verbose logging and append to file
-        time ansible-playbook -i local_inventory.ini "$playbook" $ANSIBLE_ARGS >> "$LOG_FILE" 2>&1
+        time "$ANSIBLE_PLAYBOOK" -i local_inventory.ini "$playbook" $ANSIBLE_ARGS >> "$LOG_FILE" 2>&1
         playbook_exit_code=$?
     else
         # Execute normally
-        time ansible-playbook -i local_inventory.ini "$playbook" $ANSIBLE_ARGS
+        time "$ANSIBLE_PLAYBOOK" -i local_inventory.ini "$playbook" $ANSIBLE_ARGS
         playbook_exit_code=$?
     fi
 
