@@ -5,11 +5,11 @@
 # --- DYNAMIC MODEL SELECTION & TPS CALCULATION ---
 {% set memory_buffer_mb = 2048 %}
 {% set available_memory_mb = (ansible_memtotal_mb | int) - memory_buffer_mb %}
-{% set model_list = expert_models[item] %}
+{% set model_list = expert_models[current_expert] %}
 {% set models_with_memory = model_list | selectattr('memory_mb', 'defined') %}
 {% set suitable_models_unsorted = models_with_memory | selectattr('memory_mb', 'le', available_memory_mb) %}
 {% set suitable_models = suitable_models_unsorted | sort(attribute='memory_mb', reverse=true) | list %}
-{% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-' ~ item ~ '-provider' %}
+{% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-' ~ current_expert ~ '-provider' %}
 {# Calculate avg TPS from benchmark data passed from Ansible #}
 {% set tps_list = benchmark_data_for_expert | map(attribute='tokens_per_second') | list %}
 {% set avg_tps = (tps_list | sum) / (tps_list | length) if (tps_list | length > 0) else 0 %}
