@@ -111,3 +111,29 @@ This project uses two key files for managing Python dependencies:
     ```bash
     pip install -r requirements-dev.txt
     ```
+
+### Bootstrapping the Environment
+
+After setting up the Python environment, the next step is to run the `bootstrap.sh` script. This script automates the process of setting up the entire application stack, including all the necessary services and configurations, using Ansible.
+
+**Basic Usage:**
+
+To run the script with default settings, simply execute it from the root of the repository:
+
+```bash
+./bootstrap.sh
+```
+
+This will run a series of Ansible playbooks to provision the local environment.
+
+**Common Flags:**
+
+You can customize the bootstrap process using the following flags:
+
+-   `--external-model-server`: Use this flag to skip the download and build steps for large language models. This is useful for development when you don't need the full model capabilities or are using a remote model server.
+
+-   `--purge-jobs`: This flag will stop and purge all running Nomad jobs before starting the bootstrap process. This is useful for ensuring a clean deployment.
+
+-   `--debug`: If the script fails, use the `--debug` flag to enable verbose logging. The output will be saved to `playbook_output.log`, which can be used to diagnose the issue.
+
+-   `--continue`: If the bootstrap process is interrupted, you can use the `--continue` flag to resume from the last successfully completed playbook. This can save a significant amount of time by avoiding the need to rerun completed tasks.
