@@ -48,14 +48,6 @@
         mode: '0755'
       become: true
 
-    - name: Place the Docker daemon configuration file
-      ansible.builtin.template:
-        src: daemon.json.j2
-        dest: /etc/docker/daemon.json
-        mode: '0644'
-      become: true
-      notify: Restart Docker
-
     - name: Download the get-docker.sh script
       ansible.builtin.get_url:
         url: https://get.docker.com
@@ -80,7 +72,15 @@
     groups: docker
     append: yes
   become: true
-
+  
+- name: Place the Docker daemon configuration file
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: '0644'
+  become: true
+  notify: Restart Docker
+  
 - name: Ensure Docker service is started and enabled
   ansible.builtin.systemd:
     name: docker
