@@ -3,9 +3,9 @@
   become: yes # We are already root
 
   vars_files:
-    - ../group_vars/all.yaml
-    - ../group_vars/models.yaml
-    - ../group_vars/external_experts.yaml
+    - "{{ playbook_dir }}/../group_vars/all.yaml"
+    - "{{ playbook_dir }}/../group_vars/models.yaml"
+    - "{{ playbook_dir }}/../group_vars/external_experts.yaml"
 
   tasks:
     - name: Ensure the sudo package is installed

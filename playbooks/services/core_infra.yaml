@@ -3,7 +3,7 @@
   become: yes
 
   vars_files:
-    - ../../group_vars/all.yaml
+    - "{{ playbook_dir }}/../../group_vars/all.yaml"
 
   pre_tasks:
     - name: Check connectivity to all nodes
@@ -25,20 +25,6 @@
           - "--exclude=.git"
       when: inventory_hostname == 'localhost'
 
-  tasks:
-    - name: Import system_deps role
-      include_role:
-        name: system_deps
-
-    - name: Import common role
-      include_role:
-        name: common
-
-    - name: Import Consul playbook
-      ansible.builtin.import_playbook: consul.yaml
-
-    - name: Import Docker playbook
-      ansible.builtin.import_playbook: docker.yaml
-
-    - name: Import Nomad playbook
-      ansible.builtin.import_playbook: nomad.yaml
+  roles:
+    - system_deps
+    - common

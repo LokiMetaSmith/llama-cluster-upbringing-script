@@ -2,7 +2,6 @@
   hosts: all
   become: no
   gather_facts: no
-
   tasks:
     - name: Check if the Consul service is running
       ansible.builtin.systemd:
@@ -40,26 +39,3 @@
           - For a single-node setup, ensure `bootstrap_expect` is 1.
           - For a multi-node setup, ensure enough controller nodes are running to form a quorum.
       when: consul_leader_status.failed or consul_leader_status.content == '""'
-
-- name: Post Tasks
-  hosts: all
-  remote_user: "{{ target_user }}"
-  become: yes
-
-  post_tasks:
-    - name: Read rendered Nomad config file
-      ansible.builtin.slurp:
-        src: /etc/nomad.d/client.hcl
-      register: nomad_config_file
-
-    - name: Display rendered Nomad config file
-      ansible.builtin.debug:
-        msg: "{{ nomad_config_file['content'] | b64decode }}"
-
-    - name: Discover and save the MAC address for future use
-      ansible.builtin.blockinfile:
-        path: "host_vars/{{ inventory_hostname }}.yaml"
-        create: yes
-        block: |
-          mac_address: "{{ ansible_default_ipv4.macaddress }}"
-      delegate_to: localhost

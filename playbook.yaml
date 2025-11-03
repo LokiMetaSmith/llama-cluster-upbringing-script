@@ -1,20 +1,10 @@
-- name: Bootstrap New Nodes
-  ansible.builtin.import_playbook: playbooks/common_setup.yaml
-
-- name: Deploy Core Infrastructure
-  ansible.builtin.import_playbook: playbooks/services/core_infra.yaml
-
-- name: Deploy Application Services
-  ansible.builtin.import_playbook: playbooks/services/app_services.yaml
-
-- name: Deploy Model-Dependent Services
-  ansible.builtin.import_playbook: playbooks/services/model_services.yaml
-
-- name: Deploy Core AI Services
-  ansible.builtin.import_playbook: playbooks/services/core_ai_services.yaml
-
-- name: Deploy Distributed AI Experts
-  ansible.builtin.import_playbook: playbooks/services/ai_experts.yaml
-
-- name: Final Verification
-  ansible.builtin.import_playbook: playbooks/services/final_verification.yaml
+- import_playbook: playbooks/common_setup.yaml
+- import_playbook: playbooks/services/core_infra.yaml
+- import_playbook: playbooks/services/consul.yaml
+- import_playbook: playbooks/services/docker.yaml
+- import_playbook: playbooks/services/nomad.yaml
+- import_playbook: playbooks/services/app_services.yaml
+- import_playbook: playbooks/services/model_services.yaml
+- import_playbook: playbooks/services/core_ai_services.yaml
+- import_playbook: playbooks/services/ai_experts.yaml
+- import_playbook: playbooks/services/final_verification.yaml

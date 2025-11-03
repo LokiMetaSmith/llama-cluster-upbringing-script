@@ -2,11 +2,35 @@
 #
 # Unified Linting Script
 #
-# This script runs a series of linters to ensure code quality and consistency
-# across the repository. It checks YAML, Markdown, Nomad (HCL), and Jinja2 files.
-# It uses an exclude file at scripts/lint_exclude.txt to ignore problematic files.
+# This script runs a series of linters to ensure code quality and consistency.
+# It accumulates failures and reports them at the end, rather than exiting on
+# the first error.
 
-set -e # Exit immediately if a command exits with a non-zero status.
+EXIT_CODE=0
+
+# Helper function to run a command, capture its exit code, and print status.
+run_linter() {
+    local name="$1"
+    shift
+    echo "--- Running $name ---"
+
+    # Check if the command exists
+    if ! command -v "$1" &> /dev/null; then
+        echo "⚠️  Warning: command '$1' not found. Skipping."
+        echo
+        return
+    fi
+
+    # Execute the command with its arguments
+    "$@"
+    local status=$?
+    if [ $status -ne 0 ]; then
+        # The linter's own stderr is the primary error report.
+        # We set a flag to indicate failure but don't print extra messages.
+        EXIT_CODE=1
+    fi
+    echo
+}
 
 # --- Build Exclude Arguments ---
 EXCLUDE_FILE="scripts/lint_exclude.txt"
@@ -25,41 +49,49 @@ if [ -f "$EXCLUDE_FILE" ]; then
     done < "$EXCLUDE_FILE"
 fi
 
-echo "--- Running YAML Linter ---"
-# Find all yaml files.
-YAML_FILES_TO_LINT=$(find . -type f \( -name "*.yaml" -o -name "*.yml" \))
+# --- Run Linters ---
 
-# If an exclude file exists, filter the list of files.
+# YAML Linter
+# Find all yaml files and filter them.
+YAML_FILES_TO_LINT=$(find . -type f \( -name "*.yaml" -o -name "*.yml" \))
 if [ -f "$EXCLUDE_FILE" ]; then
     EXCLUDE_PATTERNS=$(grep -v '^#' "$EXCLUDE_FILE" | grep -v '^$')
     if [ -n "$EXCLUDE_PATTERNS" ]; then
         YAML_FILES_TO_LINT=$(echo "$YAML_FILES_TO_LINT" | grep -vFf <(echo "$EXCLUDE_PATTERNS"))
     fi
 fi
-
-# Run yamllint only if there are files to lint.
 if [ -n "$YAML_FILES_TO_LINT" ]; then
-    # We are intentionally word-splitting the file list.
+    # Word splitting is intentional and required for yamllint to receive multiple files.
     # shellcheck disable=SC2086
-    yamllint $YAML_FILES_TO_LINT
+    run_linter "YAML Linter" yamllint $YAML_FILES_TO_LINT
 fi
 
-echo "--- Running Markdown Linter ---"
-# Use npx to run the version specified in package.json.
-# The ignore arguments must be unquoted to be treated as separate flags.
-npx markdownlint-cli "**/*.md" --ignore "node_modules/**" $MARKDOWN_IGNORE_ARGS
+# Markdown Linter
+# Word splitting is intentional for ignore args.
+# shellcheck disable=SC2086
+run_linter "Markdown Linter" npx markdownlint-cli "**/*.md" --ignore "node_modules/**" $MARKDOWN_IGNORE_ARGS
 
-echo "--- Running Nomad Formatter Check ---"
+# Nomad Formatter Check (not a linter, run directly)
 if command -v ansible-playbook &> /dev/null; then
-    # Run the check via Ansible to ensure it runs on a provisioned node
+    echo "--- Running Nomad Formatter Check ---"
     ansible-playbook -i local_inventory.ini ansible/lint_nomad.yaml
+    echo
 else
     echo "⚠️  Warning: ansible-playbook not found. Skipping Nomad format check."
-    echo "Please install Ansible to enable this check."
+    echo
 fi
 
-echo "--- Running Jinja2 Linter ---"
-# Pass the exclude arguments to djlint. They must be unquoted.
-djlint . $DJLINT_EXCLUDE_ARGS
+# Jinja2 Linter
+# Word splitting is intentional for exclude args.
+# shellcheck disable=SC2086
+run_linter "Jinja2 Linter" djlint . $DJLINT_EXCLUDE_ARGS
+
+
+# --- Final Exit Status ---
+if [ "$EXIT_CODE" -ne 0 ]; then
+    echo "❌ One or more linters failed."
+    exit 1
+fi
 
 echo "✅ All linters passed successfully!"
+exit 0

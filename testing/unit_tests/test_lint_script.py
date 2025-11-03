@@ -32,6 +32,10 @@ class TestLintScript(unittest.TestCase):
         with open(os.path.join(self.scripts_dir, 'lint_exclude.txt'), 'w') as f:
             f.write('excluded.yaml\n')
 
+        # Create a dummy markdown file to prevent markdownlint from printing help
+        with open(os.path.join(self.test_dir, 'good.md'), 'w') as f:
+            f.write('# Good Markdown\n')
+
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 

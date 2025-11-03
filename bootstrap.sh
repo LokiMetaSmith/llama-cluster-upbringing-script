@@ -12,7 +12,7 @@ DEBUG_MODE=false
 EXTERNAL_MODEL_SERVER=false
 PURGE_JOBS=false
 CONTINUE_RUN=false
-ANSIBLE_ARGS=""
+ANSIBLE_ARGS=() # Use an array for Ansible arguments
 LOG_FILE="playbook_output.log"
 STATE_FILE=".bootstrap_state"
 
@@ -44,7 +44,8 @@ do
 done
 
 # --- Move to the script's directory ---
-cd "$(dirname "$0")"
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd "$SCRIPT_DIR"
 
 # --- Handle the --clean option ---
 if [ "$CLEAN_REPO" = true ]; then
@@ -69,26 +70,45 @@ if [ "$CLEAN_REPO" = true ]; then
 fi
 
 # --- Build Ansible arguments ---
-ANSIBLE_ARGS="--extra-vars=target_user=loki"
+ANSIBLE_ARGS+=(--extra-vars "target_user=loki")
 
 if [ "$DEBUG_MODE" = true ]; then
     echo "🔍 --debug flag detected. Ansible output will be saved to '$LOG_FILE'."
-    ANSIBLE_ARGS="$ANSIBLE_ARGS -vvvv"
+    ANSIBLE_ARGS+=("-vvvv")
 fi
 
 if [ "$EXTERNAL_MODEL_SERVER" = true ]; then
     echo "⚡️ --external-model-server flag detected. Skipping large model downloads and builds."
-    ANSIBLE_ARGS="$ANSIBLE_ARGS --extra-vars=external_model_server=true"
+    ANSIBLE_ARGS+=(--extra-vars "external_model_server=true")
+fi
+
+if [ "$PURGE_JOBS" = true ]; then
+    ANSIBLE_ARGS+=(--extra-vars "purge_jobs=true")
 fi
 
 # --- Main script logic ---
 
+# Find the ansible-playbook executable
+if [ -n "$ANSIBLE_PLAYBOOK_EXEC" ]; then
+    echo "Using ansible-playbook from ANSIBLE_PLAYBOOK_EXEC: $ANSIBLE_PLAYBOOK_EXEC"
+elif command -v ansible-playbook &> /dev/null; then
+    ANSIBLE_PLAYBOOK_EXEC=$(command -v ansible-playbook)
+    echo "Found ansible-playbook in PATH: $ANSIBLE_PLAYBOOK_EXEC"
+else
+    # Check common pyenv paths
+    PYENV_ANSIBLE_PATH="$HOME/.pyenv/shims/ansible-playbook"
+    if [ -x "$PYENV_ANSIBLE_PATH" ]; then
+        ANSIBLE_PLAYBOOK_EXEC="$PYENV_ANSIBLE_PATH"
+        echo "Found ansible-playbook in pyenv: $ANSIBLE_PLAYBOOK_EXEC"
+    else
+        echo "Error: ansible-playbook not found in PATH or pyenv. Please install it or set ANSIBLE_PLAYBOOK_EXEC."
+        exit 1
+    fi
+fi
+
 # Check if ansible-playbook and nomad are installed
-if ! command -v ansible-playbook &> /dev/null
-then
-    echo "Error: ansible-playbook could not be found."
-    echo "Please install Ansible before running this script."
-    echo "On Debian/Ubuntu: sudo apt update && sudo apt install ansible"
+if ! [ -x "$ANSIBLE_PLAYBOOK_EXEC" ]; then
+    echo "Error: ansible-playbook could not be found at $ANSIBLE_PLAYBOOK_EXEC"
     exit 1
 fi
 
@@ -152,6 +172,9 @@ fi
 PLAYBOOKS=(
     "playbooks/common_setup.yaml"
     "playbooks/services/core_infra.yaml"
+    "playbooks/services/consul.yaml"
+    "playbooks/services/docker.yaml"
+    "playbooks/services/nomad.yaml"
     "playbooks/services/app_services.yaml"
     "playbooks/services/model_services.yaml"
     "playbooks/services/core_ai_services.yaml"
@@ -160,31 +183,33 @@ PLAYBOOKS=(
 )
 
 for i in "${!PLAYBOOKS[@]}"; do
-    playbook="${PLAYBOOKS[$i]}"
+    playbook_path="$SCRIPT_DIR/${PLAYBOOKS[$i]}"
 
     if [ "$i" -lt "$start_index" ]; then
         echo "--------------------------------------------------"
-        echo "⏭️  Skipping already completed playbook: $playbook"
+        echo "⏭️  Skipping already completed playbook: $playbook_path"
         echo "--------------------------------------------------"
         continue
     fi
 
     echo "--------------------------------------------------"
-    echo "🚀 Running playbook ($((i+1))/${#PLAYBOOKS[@]}): $playbook"
+    echo "🚀 Running playbook ($((i+1))/${#PLAYBOOKS[@]}): $playbook_path"
     echo "--------------------------------------------------"
+
+    COMMAND=("$ANSIBLE_PLAYBOOK_EXEC" -i local_inventory.ini "$playbook_path" "${ANSIBLE_ARGS[@]}")
 
     if [ "$DEBUG_MODE" = true ]; then
         # Execute with verbose logging and append to file
-        time ansible-playbook -i local_inventory.ini "$playbook" $ANSIBLE_ARGS >> "$LOG_FILE" 2>&1
+        time "${COMMAND[@]}" >> "$LOG_FILE" 2>&1
         playbook_exit_code=$?
     else
         # Execute normally
-        time ansible-playbook -i local_inventory.ini "$playbook" $ANSIBLE_ARGS
+        time "${COMMAND[@]}"
         playbook_exit_code=$?
     fi
 
     if [ $playbook_exit_code -ne 0 ]; then
-        echo "❌ Playbook '$playbook' failed. Aborting script."
+        echo "❌ Playbook '$playbook_path' failed. Aborting script."
         echo "To resume from the next playbook, run this script again with the --continue flag."
         if [ "$DEBUG_MODE" = true ]; then
             echo "View the detailed log in '$LOG_FILE'."
@@ -194,7 +219,7 @@ for i in "${!PLAYBOOKS[@]}"; do
 
     # Save the index of the successfully completed playbook
     echo "$i" > "$STATE_FILE"
-    echo "✅ Playbook '$playbook' completed successfully."
+    echo "✅ Playbook '$playbook_path' completed successfully."
 done
 
 echo "--------------------------------------------------"

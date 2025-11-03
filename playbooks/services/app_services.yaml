@@ -4,7 +4,9 @@
   become: yes
 
   vars_files:
-    - ../../group_vars/all.yaml
+    - "{{ playbook_dir }}/../../group_vars/all.yaml"
+    - "{{ playbook_dir }}/../../group_vars/models.yaml"
+    - "{{ playbook_dir }}/../../group_vars/external_experts.yaml"
 
   tasks:
     - name: Flush handlers to ensure Nomad is restarted with new config
@@ -46,8 +48,3 @@
         - world_model_service
       loop_control:
         loop_var: role_name
-
-    - name: Populate Consul KV with configuration
-      include_role:
-        name: config_manager
-      run_once: true
