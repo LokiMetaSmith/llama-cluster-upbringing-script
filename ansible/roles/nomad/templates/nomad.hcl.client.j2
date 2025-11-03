@@ -34,10 +34,6 @@ plugin "exec" {
 client {
   enabled = true
 
-  preemption {
-    enabled = true
-  }
-
   host_volume "pipecatapp" {
     path      = "/opt/pipecatapp"
     read_only = false
@@ -72,4 +68,7 @@ client {
     read_only = false
   }
   
+}
+preemption {
+  enabled = true
 }
