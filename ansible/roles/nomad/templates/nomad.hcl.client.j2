@@ -25,6 +25,10 @@ client {
     "driver.exec.enable"     = "1"
   }
 
+  preemption {
+    enabled = true
+  }
+
   host_volume "pipecatapp" {
     path      = "/opt/pipecatapp"
     read_only = false

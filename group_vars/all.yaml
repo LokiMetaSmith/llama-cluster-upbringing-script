@@ -2,9 +2,6 @@
 # It's a good place to define default values that might be overridden by
 # more specific group_vars files.
 
-# Whether to use an external model server. If true, model-related roles
-# like download_models and llama_cpp will be skipped.
-external_model_server: false
 nomad_zip_url: "https://releases.hashicorp.com/nomad/1.7.5/nomad_1.7.5_linux_amd64.zip"
 expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
 
