@@ -25,12 +25,18 @@
         loop_var: item
 
 
+    - name: Create Expert Orchestrator job files
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../../ansible/jobs/expert.nomad.j2"
+        dest: "/tmp/expert-{{ item }}.nomad"
+      loop: "{{ experts }}"
+
     - name: Deploy the Expert Orchestrator services
       ansible.builtin.command: >
         nomad job run
         -var="job_name=expert-{{ item }}"
         -var="service_name=expert-api-{{ item }}"
         -var="rpc_pool_job_name=llamacpp-rpc-pool"
-                {{ playbook_dir }}/../../ansible/jobs/expert.nomad.j2
+        /tmp/expert-{{ item }}.nomad
       loop: "{{ experts }}"
       changed_when: true
