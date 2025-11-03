@@ -86,7 +86,27 @@ if [ "$PURGE_JOBS" = true ]; then
     ANSIBLE_ARGS+=(--extra-vars "purge_jobs=true")
 fi
 
-# --- Main script logic ---
+# --- Find Ansible Playbook executable ---
+find_executable() {
+    local executable_name=$1
+    # 1. Check PATH first
+    if command -v "$executable_name" &> /dev/null; then
+        command -v "$executable_name"
+        return 0
+    fi
+
+    # 2. Check pyenv shims and versions
+    if [ -d "$HOME/.pyenv" ]; then
+        local pyenv_path
+        pyenv_path=$(find "$HOME/.pyenv/versions" -type f -name "$executable_name" | head -n 1)
+        if [ -n "$pyenv_path" ] && [ -x "$pyenv_path" ]; then
+            echo "$pyenv_path"
+            return 0
+        fi
+    fi
+
+    return 1
+}
 
 # Find the ansible-playbook executable
 if [ -n "$ANSIBLE_PLAYBOOK_EXEC" ]; then
@@ -102,6 +122,8 @@ else
         echo "Found ansible-playbook in pyenv: $ANSIBLE_PLAYBOOK_EXEC"
     else
         echo "Error: ansible-playbook not found in PATH or pyenv. Please install it or set ANSIBLE_PLAYBOOK_EXEC."
+        echo "Please install Ansible before running this script."
+        echo "On Debian/Ubuntu: sudo apt update && sudo apt install ansible"
         exit 1
     fi
 fi
@@ -109,6 +131,7 @@ fi
 # Check if ansible-playbook and nomad are installed
 if ! [ -x "$ANSIBLE_PLAYBOOK_EXEC" ]; then
     echo "Error: ansible-playbook could not be found at $ANSIBLE_PLAYBOOK_EXEC"
+
     exit 1
 fi
 
@@ -205,6 +228,7 @@ for i in "${!PLAYBOOKS[@]}"; do
     else
         # Execute normally
         time "${COMMAND[@]}"
+
         playbook_exit_code=$?
     fi
 

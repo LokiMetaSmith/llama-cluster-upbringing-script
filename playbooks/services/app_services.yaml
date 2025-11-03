@@ -30,6 +30,10 @@
           higher than the number of server nodes available.
       when: consul_leader_status.failed or consul_leader_status.content == '""'
 
+    - name: Install system dependencies
+      include_role:
+        name: system_deps
+
     - name: Install all python dependencies
       include_role:
         name: python_deps
