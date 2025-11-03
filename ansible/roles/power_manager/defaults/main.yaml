@@ -1,0 +1,3 @@
+---
+# defaults file for power_manager
+power_manager_interface: "eth0"
