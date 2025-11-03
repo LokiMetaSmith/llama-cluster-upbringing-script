@@ -5,6 +5,15 @@
     mode: '0755'
   become: yes
 
+- name: Set ownership for Home Assistant config directory
+  ansible.builtin.file:
+    path: /opt/nomad/volumes/ha-config
+    state: directory
+    owner: "8123"
+    group: "8123"
+    recurse: yes
+  become: yes
+
 - name: Template home-assistant Nomad job file
   ansible.builtin.template:
     src: home_assistant.nomad.j2
