@@ -49,8 +49,15 @@
       become: true
 
     - name: Place the Docker daemon configuration file
-      ansible.builtin.template:
-        src: daemon.json.j2
+      ansible.builtin.copy:
+        content: |
+          {
+            "cgroup-driver": "systemd",
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "100m"
+            }
+          }
         dest: /etc/docker/daemon.json
         mode: '0644'
       become: true
