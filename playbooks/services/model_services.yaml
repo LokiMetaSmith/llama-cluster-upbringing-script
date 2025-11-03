@@ -1,13 +1,19 @@
-- name: Deploy Model-Dependent Services
+- name: Deploy Model Services
   hosts: all
   remote_user: "{{ target_user }}"
   become: yes
 
   vars_files:
-    - ../../group_vars/all.yaml
-    - ../../group_vars/models.yaml
+    - "{{ playbook_dir }}/../../group_vars/all.yaml"
+    - "{{ playbook_dir }}/../../group_vars/models.yaml"
+    - "{{ playbook_dir }}/../../group_vars/external_experts.yaml"
 
   tasks:
+    - name: Populate Consul KV with configuration
+      include_role:
+        name: config_manager
+      run_once: true
+
     - name: Run model-dependent roles
       include_role:
         name: "{{ role_name }}"

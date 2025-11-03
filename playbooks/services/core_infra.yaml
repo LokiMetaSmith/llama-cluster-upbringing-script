@@ -3,7 +3,7 @@
   become: yes
 
   vars_files:
-    - ../../group_vars/all.yaml
+    - "{{ playbook_dir }}/../../group_vars/all.yaml"
 
   pre_tasks:
     - name: Ensure rsync is installed for synchronization tasks
@@ -32,9 +32,6 @@
       when: inventory_hostname == 'localhost'
 
   roles:
-    - role: system_deps
-    - role: common
+    - system_deps
+    - common
 
-- ansible.builtin.import_playbook: consul.yaml
-- ansible.builtin.import_playbook: docker.yaml
-- ansible.builtin.import_playbook: nomad.yaml
