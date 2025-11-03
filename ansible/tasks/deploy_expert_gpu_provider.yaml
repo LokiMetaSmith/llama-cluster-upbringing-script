@@ -4,7 +4,7 @@
 
 - name: "Render the GPU Provider Pool job template for {{ item }}"
   ansible.builtin.template:
-    src: "{{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad.j2"
+    src: "{{ playbook_dir }}/../../ansible/jobs/llamacpp-rpc.nomad.j2"
     dest: "/tmp/llamacpp-rpc-pool-{{ item }}.nomad"
     mode: '0644'
   vars:
@@ -17,4 +17,14 @@
   ansible.builtin.command:
     cmd: "nomad job run /tmp/llamacpp-rpc-pool-{{ item }}.nomad"
   changed_when: true
+  when: verified_model
+
+- name: "Wait for GPU Provider for {{ item }} to become healthy in Consul"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-pool-{{ item }}-provider?passing"
+    return_content: yes
+  register: consul_health
+  until: "consul_health.json | length >= expected_worker_count | int"
+  retries: 30 # Wait up to 5 minutes (30 * 10s)
+  delay: 10
   when: verified_model

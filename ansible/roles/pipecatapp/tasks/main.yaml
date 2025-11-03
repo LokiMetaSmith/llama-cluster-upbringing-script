@@ -34,6 +34,7 @@
 
 - name: Identify successful models from benchmarks
   ansible.builtin.set_fact:
+    cacheable: true
     successful_models: "{{ benchmark_results | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
 
 - name: Identify verified experts by checking their models against benchmark results
