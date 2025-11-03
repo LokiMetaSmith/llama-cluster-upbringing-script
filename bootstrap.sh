@@ -175,6 +175,10 @@ echo "You may be prompted for your sudo password."
 # --- State Management ---
 start_index=0
 if [ "$CONTINUE_RUN" = true ]; then
+    if [ "$DEBUG_MODE" = true ] && [ -f "$LOG_FILE" ]; then
+        echo "🔄 --continue and --debug flags detected. Saving previous log to ${LOG_FILE}.before_changes"
+        mv "$LOG_FILE" "${LOG_FILE}.before_changes"
+    fi
     if [ -f "$STATE_FILE" ]; then
         last_completed_index=$(cat "$STATE_FILE")
         start_index=$((last_completed_index + 1))

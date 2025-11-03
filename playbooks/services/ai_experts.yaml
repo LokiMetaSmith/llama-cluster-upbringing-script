@@ -24,23 +24,13 @@
       loop_control:
         loop_var: item
 
-    - name: Wait for GPU Providers to become healthy in Consul
-      ansible.builtin.uri:
-        url: "http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-pool-provider?passing"
-        return_content: yes
-      register: consul_health
-      until: "consul_health.json | length >= expected_worker_count | int"
-      retries: 30 # Wait up to 5 minutes (30 * 10s)
-      delay: 10
-      vars:
-        ansible_connection: local # Ensure this task runs on the controller
 
     - name: Deploy the Expert Orchestrator services
       ansible.builtin.command: >
         nomad job run
-        -var="job_name=expert-{{ item.name }}"
-        -var="service_name=expert-api-{{ item.name }}"
+        -var="job_name=expert-{{ item }}"
+        -var="service_name=expert-api-{{ item }}"
         -var="rpc_pool_job_name=llamacpp-rpc-pool"
-        /opt/cluster-infra/nomad/jobs/expert.nomad.j2
+                {{ playbook_dir }}/../../ansible/jobs/expert.nomad.j2
       loop: "{{ experts }}"
       changed_when: true
