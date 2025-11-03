@@ -11,6 +11,7 @@
 
 
   vars:
+    expected_worker_count: "{{ ((groups['workers'] | default([]) | length) if (groups['workers'] | default([]) | length) > 0 else 1) | int }}"
     # This creates a new list containing only the first model object from each expert's list.
     # The template needs the full object (name, filename, memory_mb, etc.), not just the name.
     expert_primary_models: "{{ expert_models.values() | map('first') | list }}"
@@ -28,7 +29,7 @@
         url: "http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-pool-provider?passing"
         return_content: yes
       register: consul_health
-      until: "consul_health.json | length >= (1 if groups['workers'] is not defined else (groups['workers'] | length))"
+      until: "consul_health.json | length >= expected_worker_count | int"
       retries: 30 # Wait up to 5 minutes (30 * 10s)
       delay: 10
       vars:
