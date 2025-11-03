@@ -39,6 +39,14 @@
     recurse: yes
   become: yes
 
+- name: Purge mqtt job
+  ansible.builtin.command:
+    cmd: nomad job stop -purge mqtt
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  changed_when: true
+  ignore_errors: yes
+
 - name: Template mqtt Nomad job file
   ansible.builtin.template:
     src: mqtt.nomad.j2
