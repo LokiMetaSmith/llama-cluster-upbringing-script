@@ -181,7 +181,12 @@ class FasterWhisperSTTService(FrameProcessor):
         """
         super().__init__()
         # Use CPU int8 to reduce memory; adjust if you want GPU
-        self.model = WhisperModel(model_path, device="cpu", compute_type="int8")
+        self.model = WhisperModel(
+            model_path,
+            device="cpu",
+            compute_type="int8",
+            local_files_only=True
+        )
         self.audio_buffer = bytearray()
         self.sample_rate = sample_rate
         logging.info(f"FasterWhisperSTTService initialized with model '{model_path}'")
