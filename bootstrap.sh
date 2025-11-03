@@ -70,21 +70,22 @@ if [ "$CLEAN_REPO" = true ]; then
 fi
 
 # --- Build Ansible arguments ---
-ANSIBLE_ARGS+=(--extra-vars "target_user=loki")
-ANSIBLE_ARGS+=(--extra-vars "run_benchmarks=true")
+EXTRA_VARS="target_user=loki"
+
+if [ "$EXTERNAL_MODEL_SERVER" = true ]; then
+    echo "⚡️ --external-model-server flag detected. Skipping large model downloads and builds."
+    EXTRA_VARS="$EXTRA_VARS external_model_server=true"
+fi
+
+if [ "$PURGE_JOBS" = true ]; then
+    EXTRA_VARS="$EXTRA_VARS purge_jobs=true"
+fi
+
+ANSIBLE_ARGS+=(--extra-vars "$EXTRA_VARS")
 
 if [ "$DEBUG_MODE" = true ]; then
     echo "🔍 --debug flag detected. Ansible output will be saved to '$LOG_FILE'."
     ANSIBLE_ARGS+=("-vvvv")
-fi
-
-if [ "$EXTERNAL_MODEL_SERVER" = true ]; then
-    echo "⚡️ --external-model-server flag detected. Skipping large model downloads and builds."
-    ANSIBLE_ARGS+=(--extra-vars "external_model_server=true")
-fi
-
-if [ "$PURGE_JOBS" = true ]; then
-    ANSIBLE_ARGS+=(--extra-vars "purge_jobs=true")
 fi
 
 # --- Find Ansible Playbook executable ---

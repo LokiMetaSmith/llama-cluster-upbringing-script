@@ -4,7 +4,7 @@
 
 - name: "Render the GPU Provider Pool job template for {{ item }}"
   ansible.builtin.template:
-    src: "{{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad.j2"
+    src: "{{ playbook_dir }}/../../ansible/jobs/llamacpp-rpc.nomad.j2"
     dest: "/tmp/llamacpp-rpc-pool-{{ item }}.nomad"
     mode: '0644'
   vars:

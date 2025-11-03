@@ -28,7 +28,7 @@
         url: "http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-pool-provider?passing"
         return_content: yes
       register: consul_health
-      until: "consul_health.json | length >= (groups['workers'] | length)"
+      until: "consul_health.json | length >= (1 if groups['workers'] is not defined else (groups['workers'] | length))"
       retries: 30 # Wait up to 5 minutes (30 * 10s)
       delay: 10
       vars:
