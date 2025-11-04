@@ -24,12 +24,107 @@
       loop_control:
         loop_var: item
 
+    - name: Read and parse benchmark results
+      block:
+        - name: Read benchmark log file
+          ansible.builtin.slurp:
+            src: /var/log/llama_benchmarks.jsonl
+          register: benchmark_log_raw
+
+        - name: Parse benchmark JSONL content safely using shell and jq
+          ansible.builtin.shell:
+            executable: /bin/bash
+            cmd: |
+              set -o pipefail
+              echo '{{ benchmark_log_raw.content }}' | base64 --decode | while IFS= read -r line; do
+                # Skip empty or whitespace-only lines
+                if [[ -n "${line// /}" ]]; then
+                  # Check if the line is valid JSON and print it if it is
+                  if echo "$line" | jq -e . >/dev/null 2>&1; then
+                    echo "$line"
+                  fi
+                fi
+              done | jq -s .
+          register: parsed_json
+          changed_when: false
+          when: benchmark_log_raw.content is defined
+
+        - name: Set benchmark_results fact from parsed content
+          ansible.builtin.set_fact:
+            benchmark_results: "{{ (parsed_json.stdout | from_json) if (parsed_json.stdout is defined and parsed_json.stdout) else [] }}"
+          when: benchmark_log_raw.content is defined
+      rescue:
+        - name: Set empty benchmark results on failure
+          ansible.builtin.set_fact:
+            benchmark_results: []
+
+    - name: Identify successful models from benchmarks
+      ansible.builtin.set_fact:
+        cacheable: true
+        successful_models: "{{ benchmark_results | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
+
+    - name: Identify verified experts by checking their models against benchmark results
+      ansible.builtin.set_fact:
+        verified_experts: >-
+          {{
+            verified_experts | default([]) + [item]
+          }}
+      loop: "{{ experts }}"
+      vars:
+        # Get the list of model filenames for the current expert
+        expert_model_files: "{{ expert_models[item] | map(attribute='filename') | list }}"
+        # Check if any of the expert's models are in the list of successful models
+        is_verified: "{{ expert_model_files | intersect(successful_models) | length > 0 }}"
+      when: is_verified
+
+    - name: Fallback and warn if no verified experts found
+      ansible.builtin.debug:
+        msg: >
+          ⚠️  No verified experts found! Skipping expert job creation.
+          (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
+      when: verified_experts is not defined or verified_experts | length == 0
+
+    - name: Calculate benchmark data and average tokens per second for each expert
+      ansible.builtin.set_fact:
+        expert_benchmark_data: >-
+          {{
+            expert_benchmark_data | default({}) | combine({
+              item: {
+                'benchmark_data': (
+                  benchmark_results |
+                  selectattr('model', 'in', expert_models[item] | map(attribute='filename') | list) |
+                  list
+                ),
+                'avg_tokens': (
+                  (
+                    (benchmark_results |
+                    selectattr('model', 'in', expert_models[item] | map(attribute='filename') | list) |
+                    map(attribute='tokens_per_second') | list | sum) /
+                    (
+                      (benchmark_results |
+                      selectattr('model', 'in', expert_models[item] | map(attribute='filename') | list) |
+                      list) | length
+                    )
+                  ) if (
+                    (benchmark_results |
+                    selectattr('model', 'in', expert_models[item] | map(attribute='filename') | list) |
+                    list) | length
+                  ) > 0 else 0
+                )
+              }
+            })
+          }}
+      loop: "{{ experts }}"
+      loop_control:
+        loop_var: item
+      when: benchmark_results is defined and benchmark_results | length > 0
 
     - name: Create Expert Orchestrator job files
-      ansible.builtin.template:
-        src: "{{ playbook_dir }}/../../ansible/jobs/expert.nomad.j2"
-        dest: "/tmp/expert-{{ item }}.nomad"
+      include_tasks:
+        file: "{{ playbook_dir }}/../../ansible/tasks/create_expert_job.yaml"
       loop: "{{ experts }}"
+      loop_control:
+        loop_var: current_expert
 
     - name: Deploy the Expert Orchestrator services
       ansible.builtin.command: >

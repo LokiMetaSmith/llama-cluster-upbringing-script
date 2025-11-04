@@ -211,10 +211,12 @@
   when: verified_experts is defined and verified_experts | length > 0
   vars:
     # Define ONLY loop-specific variables here
+    nomad_namespace: "{{ nomad_namespace }}"
     job_name: "expert-{{ current_expert }}"
     service_name: "expert-api-{{ current_expert }}"
     model_list: "{{ expert_models[current_expert] | default([]) }}" # Corrected default
     worker_count: 1
+    rpc_pool_job_name: "llamacpp-rpc-pool"
     # DO NOT redefine ansible_memtotal_mb here
     # The benchmark data calculation can stay if needed, adjust variable names if necessary
     benchmark_data_for_expert: >-
@@ -232,7 +234,7 @@
     current_expert_tags: >-
       [
         "expert={{ current_expert }}",
-        "avg_tps={{ avg_tokens | round(2) }}",
+        "avg_tps={{ avg_tokens | float | round(2) }}",
         "memory_mb={{ ansible_memtotal_mb }}", # Access global fact directly
         "models={{ model_list | map(attribute='filename') | join(',') }}"
       ]

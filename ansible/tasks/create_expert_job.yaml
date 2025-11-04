@@ -1,0 +1,17 @@
+- name: Create Expert Orchestrator job file for {{ current_expert }}
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/../../ansible/jobs/expert.nomad.j2"
+    dest: "/tmp/expert-{{ current_expert }}.nomad"
+  vars:
+    # Define ONLY loop-specific variables here
+    job_name: "expert-{{ current_expert }}"
+    service_name: "expert-api-{{ current_expert }}"
+    model_list: "{{ expert_models[current_expert] | default([]) }}" # Corrected default
+    worker_count: 1
+    rpc_pool_job_name: "llamacpp-rpc-pool"
+    # DO NOT redefine ansible_memtotal_mb here
+    current_expert_tags:
+      - "expert={{ current_expert }}"
+      - "avg_tps={{ expert_benchmark_data[current_expert].avg_tokens | float | round(2) }}"
+      - "memory_mb={{ ansible_memtotal_mb }}"
+      - "models={{ model_list | map(attribute='filename') | join(',') }}"
