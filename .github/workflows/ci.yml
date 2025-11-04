@@ -70,14 +70,17 @@ jobs:
       - name: "Install Ansible collections"
         run: ansible-galaxy collection install community.general ansible.posix
 
-      - name: "Cache Ansible baseline"
+      - name: "Cache Ansible baselines"
         uses: actions/cache@v4
-        id: cache-ansible-baseline
+        id: cache-ansible-baselines
         with:
-          path: ansible_run.baseline.log
-          key: ansible-baseline-${{ github.ref }}
+          path: |
+            *.baseline.log
+            playbooks/*.baseline.log
+            playbooks/services/*.baseline.log
+          key: ansible-baselines-${{ github.ref }}
           restore-keys: |
-            ansible-baseline-refs/heads/main
+            ansible-baselines-refs/heads/main
 
       - name: "Run Ansible change detection script"
         run: ./scripts/ci_ansible_check.sh

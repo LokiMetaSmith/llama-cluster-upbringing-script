@@ -55,10 +55,16 @@
   notify: restart consul
   become: yes
 
+- name: Reload systemd to recognize new service
+  systemd:
+    daemon_reload: yes
+  become: yes
+  when: not ansible_check_mode
+
 - name: Start and enable Consul service
   systemd:
     name: consul
     state: started
     enabled: yes
-    daemon_reload: yes
   become: yes
+  when: not ansible_check_mode

@@ -74,3 +74,4 @@
     msg: >
       Current cluster members ({{ nomad_peers.json | length }}/{{ expected_cluster_size }}):
       {{ nomad_peers.json | join(', ') }}
+  when: nomad_peers_summary.skipped is not defined

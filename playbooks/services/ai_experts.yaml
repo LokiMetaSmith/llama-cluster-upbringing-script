@@ -24,6 +24,11 @@
       loop_control:
         loop_var: item
 
+    - name: Check for benchmark log file
+      stat:
+        path: /var/log/llama_benchmarks.jsonl
+      register: benchmark_log_stat
+
     - name: Read and parse benchmark results
       block:
         - name: Read benchmark log file
@@ -57,11 +62,13 @@
         - name: Set empty benchmark results on failure
           ansible.builtin.set_fact:
             benchmark_results: []
+      when: benchmark_log_stat.stat.exists
 
     - name: Identify successful models from benchmarks
       ansible.builtin.set_fact:
         cacheable: true
         successful_models: "{{ benchmark_results | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
+      when: benchmark_results is defined
 
     - name: Identify verified experts by checking their models against benchmark results
       ansible.builtin.set_fact:
@@ -75,14 +82,14 @@
         expert_model_files: "{{ expert_models[item] | map(attribute='filename') | list }}"
         # Check if any of the expert's models are in the list of successful models
         is_verified: "{{ expert_model_files | intersect(successful_models) | length > 0 }}"
-      when: is_verified
+      when: is_verified and benchmark_results is defined
 
     - name: Fallback and warn if no verified experts found
       ansible.builtin.debug:
         msg: >
           ⚠️  No verified experts found! Skipping expert job creation.
           (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
-      when: verified_experts is not defined or verified_experts | length == 0
+      when: (verified_experts is not defined or verified_experts | length == 0) and benchmark_results is defined
 
     - name: Calculate benchmark data and average tokens per second for each expert
       ansible.builtin.set_fact:
@@ -117,7 +124,7 @@
       loop: "{{ experts }}"
       loop_control:
         loop_var: item
-      when: benchmark_results is defined and benchmark_results | length > 0
+      when: benchmark_results is defined and benchmark_results | length > 0 and benchmark_results is defined
 
     - name: Create Expert Orchestrator job files
       include_tasks:
@@ -125,6 +132,7 @@
       loop: "{{ experts }}"
       loop_control:
         loop_var: current_expert
+      when: benchmark_results is defined
 
     - name: Deploy the Expert Orchestrator services
       ansible.builtin.command: >
@@ -135,3 +143,4 @@
         /tmp/expert-{{ item }}.nomad
       loop: "{{ experts }}"
       changed_when: true
+      when: benchmark_results is defined

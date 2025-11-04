@@ -8,10 +8,11 @@
 set -e
 
 # --- Configuration & Defaults ---
-PLAYBOOK="playbook.yaml"
-BASELINE_LOG="ansible_run.baseline.log"
-CURRENT_CHECK_LOG="ansible_run.check.log"
-DIFF_LOG="ansible_diff.log"
+PLAYBOOK=${1:?"Usage: $0 <playbook> [--update-baseline] [-i INVENTORY] [-e 'EXTRA_VARS']"}
+shift # The first argument is the playbook
+BASELINE_LOG="${PLAYBOOK%.*}.baseline.log"
+CURRENT_CHECK_LOG="${PLAYBOOK%.*}.check.log"
+DIFF_LOG="${PLAYBOOK%.*}.diff.log"
 INVENTORY="local_inventory.ini"
 EXTRA_VARS="target_user=jules" # Default extra vars
 
@@ -36,7 +37,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     *)    # unknown option
       echo "Unknown option: $1"
-      echo "Usage: $0 [--update-baseline] [-i INVENTORY] [-e 'EXTRA_VARS']"
+      echo "Usage: $0 <playbook> [--update-baseline] [-i INVENTORY] [-e 'EXTRA_VARS']"
       exit 1
       ;;
   esac
