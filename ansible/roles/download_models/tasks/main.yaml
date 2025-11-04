@@ -98,9 +98,9 @@
 - name: Download all STT models (Hub-based) if they do not exist
   ansible.builtin.command:
     cmd: >
-      /opt/pipecatapp/venv/bin/python3 {{ role_path }}/files/download_hf_repo.py
-      --repo-id "{{ item.item[1].repo_id }}"
-      --local-dir "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
+      {{ ansible_python_interpreter }} {{ role_path }}/files/download_hf_repo.py
+      "{{ item.item[1].repo_id }}"
+      "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
   loop: "{{ stt_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
@@ -170,9 +170,9 @@
 - name: Download all Vision models (Hub-based) if they do not exist
   ansible.builtin.command:
     cmd: >
-      /opt/pipecatapp/venv/bin/python3 {{ role_path }}/files/download_hf_repo.py
-      --repo-id "{{ item.item.repo_id }}"
-      --local-dir "{{ nomad_models_dir }}/vision/{{ item.item.name }}"
+      {{ ansible_python_interpreter }} {{ role_path }}/files/download_hf_repo.py
+      "{{ item.item.repo_id }}"
+      "{{ nomad_models_dir }}/vision/{{ item.item.name }}"
   loop: "{{ vision_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
@@ -198,9 +198,9 @@
 - name: Download all Embedding models (Hub-based) if they do not exist
   ansible.builtin.command:
     cmd: >
-      /opt/pipecatapp/venv/bin/python3 {{ role_path }}/files/download_hf_repo.py
-      --repo-id "{{ item.item.repo_id }}"
-      --local-dir "{{ nomad_models_dir }}/embedding/{{ item.item.name }}"
+      {{ ansible_python_interpreter }} {{ role_path }}/files/download_hf_repo.py
+      "{{ item.item.repo_id }}"
+      "{{ nomad_models_dir }}/embedding/{{ item.item.name }}"
   loop: "{{ embedding_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
