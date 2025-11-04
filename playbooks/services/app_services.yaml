@@ -34,10 +34,6 @@
       include_role:
         name: system_deps
 
-    - name: Install all python dependencies
-      include_role:
-        name: python_deps
-
     - name: Run application and configuration roles
       include_role:
         name: "{{ role_name }}"
