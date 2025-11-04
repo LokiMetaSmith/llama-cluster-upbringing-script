@@ -5,7 +5,7 @@
 nomad_zip_url: "https://releases.hashicorp.com/nomad/1.7.5/nomad_1.7.5_linux_amd64.zip"
 expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
 
-ansible_python_interpreter: /usr/bin/python3
+ansible_python_interpreter: /home/jules/.pyenv/versions/3.12.12/bin/python
 
 # This variable dynamically determines the IP address for Nomad to advertise.
 # It prefers the first non-loopback IPv6 address if available,

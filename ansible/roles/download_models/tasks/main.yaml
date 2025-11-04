@@ -1,35 +1,12 @@
 # tasks file for download_models
 
-- name: Query Consul for all model configurations
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/config/models/{{ item }}?raw=true"
-    method: GET
-    status_code: [200, 404]
-    return_content: true
-  loop:
-    - main
-    - coding
-    - math
-    - extract
-    - router
-    - piper_voice_files
-    - embedding_models
-    - stt_models
-    - vision_models
-  register: consul_models
-  until: consul_models.status in [200, 404]
-  retries: 5
-  delay: 2
-  failed_when: false
-
-- name: Set model facts from Consul KV
+- name: Set model facts from local vars
   ansible.builtin.set_fact:
-    llm_models_to_download: "{{ consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'router']) | map(attribute='content') | map('from_json') | sum(start=[]) }}"
-    piper_voice_files: "{{ consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'piper_voice_files') | map(attribute='content') | map('from_json') | first | default([]) }}"
-    embedding_models: "{{ consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'embedding_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
-    stt_models: "{{ ((consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'stt_models') | first).content | default('{}')) | from_json }}"
-    vision_models: "{{ consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'vision_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
-
+    llm_models_to_download: "{{ expert_models.values() | map('first') | list }}"
+    piper_voice_files: "{{ piper_voice_files }}"
+    embedding_models: "{{ embedding_models }}"
+    stt_models: "{{ stt_models }}"
+    vision_models: "{{ vision_models }}"
 
 # ---------------------------------------------------------------------------- #
 #                                  LLM Models                                  #
@@ -98,7 +75,7 @@
 - name: Download all STT models (Hub-based) if they do not exist
   ansible.builtin.command:
     cmd: >
-      {{ ansible_python_interpreter }} {{ role_path }}/files/download_hf_repo.py
+      /opt/pipecatapp/venv/bin/python3 {{ role_path }}/files/download_hf_repo.py
       "{{ item.item[1].repo_id }}"
       "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
   loop: "{{ stt_model_files_hub.results }}"
@@ -170,7 +147,7 @@
 - name: Download all Vision models (Hub-based) if they do not exist
   ansible.builtin.command:
     cmd: >
-      {{ ansible_python_interpreter }} {{ role_path }}/files/download_hf_repo.py
+      /opt/pipecatapp/venv/bin/python3 {{ role_path }}/files/download_hf_repo.py
       "{{ item.item.repo_id }}"
       "{{ nomad_models_dir }}/vision/{{ item.item.name }}"
   loop: "{{ vision_model_files_hub.results }}"
@@ -198,7 +175,7 @@
 - name: Download all Embedding models (Hub-based) if they do not exist
   ansible.builtin.command:
     cmd: >
-      {{ ansible_python_interpreter }} {{ role_path }}/files/download_hf_repo.py
+      /opt/pipecatapp/venv/bin/python3 {{ role_path }}/files/download_hf_repo.py
       "{{ item.item.repo_id }}"
       "{{ nomad_models_dir }}/embedding/{{ item.item.name }}"
   loop: "{{ embedding_model_files_hub.results }}"

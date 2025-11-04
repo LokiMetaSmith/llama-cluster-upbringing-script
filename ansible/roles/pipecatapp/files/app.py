@@ -828,7 +828,7 @@ async def main():
     stt_service_name = app_config.get("stt_service")
     if stt_service_name == "faster-whisper":
         stt_provider = app_config.get("active_stt_provider", "faster-whisper")
-        stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
+        stt_model_name = app_config.get("active_stt_model_name", "faster-whisper-tiny.en")
         model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
         stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
         logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate {sample_rate}Hz.")

@@ -1,0 +1,9 @@
+- hosts: all
+  become: yes
+  vars_files:
+    - group_vars/all.yaml
+    - group_vars/models.yaml
+    - group_vars/external_experts.yaml
+  roles:
+    - role: config_manager
+    - role: pipecatapp

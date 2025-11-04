@@ -46,6 +46,13 @@
   become: yes
   become_user: "{{ target_user }}"
 
+- name: Install huggingface_hub
+  ansible.builtin.pip:
+    name: huggingface_hub
+    executable: "/opt/pipecatapp/venv/bin/pip3"
+  become: yes
+  become_user: "{{ target_user }}"
+
 - name: Install python dependencies into the virtual environment
   ansible.builtin.pip:
     requirements: "/opt/pipecatapp/requirements.txt"
