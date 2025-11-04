@@ -1,0 +1,4 @@
+- name: Create Expert Orchestrator job file for {{ current_expert }}
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/../../ansible/jobs/expert.nomad.j2"
+    dest: "/tmp/expert-{{ current_expert }}.nomad"
