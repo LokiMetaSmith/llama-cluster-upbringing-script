@@ -2,7 +2,7 @@
   ansible.builtin.file:
     path: /opt/nomad/volumes/ha-config
     state: directory
-    mode: '0755'
+    mode: '0775'
   become: yes
 
 - name: Set ownership for Home Assistant config directory
