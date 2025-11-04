@@ -216,6 +216,7 @@
     service_name: "expert-api-{{ current_expert }}"
     model_list: "{{ expert_models[current_expert] | default([]) }}" # Corrected default
     worker_count: 1
+    rpc_pool_job_name: "llamacpp-rpc-pool"
     # DO NOT redefine ansible_memtotal_mb here
     # The benchmark data calculation can stay if needed, adjust variable names if necessary
     benchmark_data_for_expert: >-
