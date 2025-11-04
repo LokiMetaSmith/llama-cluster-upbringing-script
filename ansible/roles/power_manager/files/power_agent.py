@@ -17,6 +17,8 @@ from bcc import BPF
 import json
 import os
 import subprocess
+import sys
+import ctypes as ct
 
 # --- Dummy HTTP Server for Health Check Spoofing ---
 class HealthCheckHandler(BaseHTTPRequestHandler):
@@ -126,68 +128,65 @@ def wake_service_up(port: int):
         print(f"Error starting job from file '{job_file_path}': {e}")
 
 def main():
-    """The main entry point and loop for the power agent.
+    """The main entry point and loop for the power agent."""
+    interface = os.environ.get("POWER_AGENT_INTERFACE")
+    if not interface:
+        print("Error: POWER_AGENT_INTERFACE environment variable not set.")
+        sys.exit(1)
 
-    Initializes the health check server, loads and attaches the eBPF program,
-    and enters a continuous loop to monitor traffic, reload configuration,
-    and manage the sleep/wake state of services.
-    """
     # Start the health check spoofer in a separate thread
     health_server_thread = threading.Thread(target=run_health_check_server, daemon=True)
     health_server_thread.start()
 
-    # Load the eBPF program
-    b = BPF(src_file="traffic_monitor.c")
-    b.attach_xdp(dev="eth0", fn=b.load_func("xdp_traffic_monitor", BPF.XDP))
-
-    packet_counts = b.get_table("packet_counts")
-    last_known_counts = {}
-
-    print("Power agent started. Monitoring traffic...")
-    print("Press Ctrl+C to exit.")
-
+    b = None
     try:
-        while True:
-            load_config() # Periodically check for and reload config changes
-            time.sleep(10) # Check every 10 seconds
+        print(f"Loading eBPF program and attaching to interface {interface}...")
+        b = BPF(src_file="traffic_monitor.c")
+        b.attach_xdp(dev=interface, fn=b.load_func("xdp_traffic_monitor", BPF.XDP))
 
-            # --- Sleep Logic ---
+        packet_counts = b.get_table("packet_counts")
+        last_known_counts = {}
+
+        print("Power agent started. Monitoring traffic...")
+        print("Press Ctrl+C to exit.")
+
+        while True:
+            load_config()
+            time.sleep(10)
+
             for port, config in MONITORED_SERVICES.items():
                 if config["status"] == "running":
-                    current_count = packet_counts.get(port, 0)
+                    # Correctly handle ctypes instances from the BPF table
+                    current_count_obj = packet_counts.get(ct.c_ushort(port))
+                    current_count = current_count_obj.value if current_count_obj else 0
                     last_count = last_known_counts.get(port, 0)
 
                     if current_count > last_count:
-                        # Traffic detected
                         print(f"Traffic detected for port {port}. Resetting idle timer.")
                         config["last_traffic_time"] = time.time()
                         last_known_counts[port] = current_count
                     else:
-                        # No new traffic
                         idle_time = time.time() - config["last_traffic_time"]
                         if idle_time > config["idle_threshold_seconds"]:
                             put_service_to_sleep(port)
 
-            # --- Wake Logic (Placeholder) ---
-            # In a real implementation, this would not be a polling loop.
-            # Instead, the eBPF program would send a perf event when it sees
-            # traffic for a *sleeping* service. This agent would listen for
-            # that event and call wake_service_up() immediately.
-            #
-            # For demonstration, we'll simulate this by checking if a sleeping
-            # service has new traffic.
             for port, config in MONITORED_SERVICES.items():
-                 if config["status"] == "sleeping":
-                    current_count = packet_counts.get(port, 0)
+                if config["status"] == "sleeping":
+                    current_count_obj = packet_counts.get(ct.c_ushort(port))
+                    current_count = current_count_obj.value if current_count_obj else 0
                     last_count = last_known_counts.get(port, 0)
                     if current_count > last_count:
                         wake_service_up(port)
                         last_known_counts[port] = current_count
 
-
-    except KeyboardInterrupt:
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        sys.exit(1)
+    finally:
+        if b:
+            print("Detaching eBPF program...")
+            b.remove_xdp(dev=interface, flags=0)
         print("Power agent stopped.")
-        b.remove_xdp(dev="eth0", flags=0)
 
 if __name__ == "__main__":
     main()

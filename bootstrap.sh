@@ -40,6 +40,19 @@ do
         CONTINUE_RUN=true
         shift
         ;;
+        --user)
+        UPDATE_USER=true
+        shift
+        ;;
+        --benchmark)
+        BENCHMARK_MODE=true
+        shift
+        ;;
+        *)
+        echo "Unknown option: $1"
+        # (You could add a usage/help function here)
+        exit 1
+        ;;
     esac
 done
 
@@ -70,18 +83,38 @@ if [ "$CLEAN_REPO" = true ]; then
 fi
 
 # --- Build Ansible arguments ---
-EXTRA_VARS="target_user=loki"
+if [ "$UPDATE_USER" = true ]; then
+    echo "--user flag detected, updating user"
+    ANSIBLE_ARGS+=(--extra-vars "target_user=loki")
+else
+    # FIXED: This was a conflicting 'if' block before
+    echo "--user flag not detected, using default"
+    ANSIBLE_ARGS+=(--extra-vars "target_user=loki")
+    # (If the default is different, change 'loki' here, or remove the 'else' block)
+fi
 
+# FIXED: Correct 'if' statement spacing
+if [ "$BENCHMARK_MODE" = true ]; then
+    echo "--benchmark flag detected, running benchmarks"
+    ANSIBLE_ARGS+=(--extra-vars "run_benchmarks=true")
+fi
+
+# FIXED: Updated to use ANSIBLE_ARGS array directly
 if [ "$EXTERNAL_MODEL_SERVER" = true ]; then
     echo "⚡️ --external-model-server flag detected. Skipping large model downloads and builds."
-    EXTRA_VARS="$EXTRA_VARS external_model_server=true"
+    ANSIBLE_ARGS+=(--extra-vars "external_model_server=true")
 fi
 
 if [ "$PURGE_JOBS" = true ]; then
-    EXTRA_VARS="$EXTRA_VARS purge_jobs=true"
+    ANSIBLE_ARGS+=(--extra-vars "purge_jobs=true")
 fi
+# --- Now you can use the ANSIBLE_ARGS array ---
+echo "---"
+echo "Running Ansible with the following arguments:"
+# This 'printf' is a safe way to show the final command
+printf "ansible-playbook ... %s \n" "${ANSIBLE_ARGS[@]}"
 
-ANSIBLE_ARGS+=(--extra-vars "$EXTRA_VARS")
+# ANSIBLE_ARGS+=(--extra-vars "$EXTRA_VARS")
 
 if [ "$DEBUG_MODE" = true ]; then
     echo "🔍 --debug flag detected. Ansible output will be saved to '$LOG_FILE'."
