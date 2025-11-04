@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/home/loki/llama-cluster-upbringing-script/venv/bin/python
 
 import argparse
 import sys
