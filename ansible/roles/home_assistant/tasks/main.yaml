@@ -2,7 +2,8 @@
   ansible.builtin.file:
     path: /opt/nomad/volumes/ha-config
     state: directory
-    mode: '0755'
+
+    mode: '0777'
   become: yes
 
 - name: Set ownership for Home Assistant config directory
@@ -12,6 +13,7 @@
     owner: "8123"
     group: "8123"
     recurse: yes
+
   become: yes
 
 - name: Template home-assistant Nomad job file
@@ -58,3 +60,15 @@
   become: no # Run nomad client as the ansible user
   async: 300 # Max runtime for the command itself (submit shouldn't take long)
   poll: 0    # Fire and forget - don't wait for command completion
+
+- name: DEBUG - Get Home Assistant container user ID
+  ansible.builtin.command:
+    cmd: nomad alloc exec -task home-assistant $(nomad job status -t "{{ '{{' }} .ID {{ '}}' }}" home-assistant | head -n 1) -- stat -c '%u:%g' /
+  register: ha_user_id
+  changed_when: false
+  become: no
+  ignore_errors: true
+
+- name: DEBUG - Display Home Assistant container user ID
+  ansible.builtin.debug:
+    var: ha_user_id.stdout

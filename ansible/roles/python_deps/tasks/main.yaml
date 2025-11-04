@@ -1,23 +1,15 @@
 - name: Create a virtual environment for the application
   ansible.builtin.command:
-    cmd: "python3 -m venv /opt/pipecatapp/venv"
-    creates: "/opt/pipecatapp/venv/bin/pip"
+    cmd: "python3 -m venv {{ venv_path }}"
+    creates: "{{ venv_path }}/bin/pip"
   become: yes
 
 - name: Ensure correct ownership of the virtual environment
   ansible.builtin.file:
-    path: "/opt/pipecatapp/venv"
+    path: "{{ venv_path }}"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
     recurse: yes
-  become: yes
-
-- name: Copy requirements.txt to the application directory
-  copy:
-    src: requirements.txt
-    dest: "/opt/pipecatapp/requirements.txt"
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
   become: yes
 
 - name: Create a persistent temporary directory for pip builds
@@ -34,7 +26,7 @@
       - setuptools
       - wheel
     state: latest
-    executable: "/opt/pipecatapp/venv/bin/pip3"
+    executable: "{{ venv_path }}/bin/pip3"
   become: yes
   become_user: "{{ target_user }}"
 
@@ -42,7 +34,7 @@
   ansible.builtin.pip:
     name: cython
     state: latest
-    executable: "/opt/pipecatapp/venv/bin/pip3"
+    executable: "{{ venv_path }}/bin/pip3"
   become: yes
   become_user: "{{ target_user }}"
 
@@ -55,8 +47,8 @@
 
 - name: Install python dependencies into the virtual environment
   ansible.builtin.pip:
-    requirements: "/opt/pipecatapp/requirements.txt"
-    executable: "/opt/pipecatapp/venv/bin/pip3"
+    requirements: "{{ requirements_path }}"
+    executable: "{{ venv_path }}/bin/pip3"
     extra_args: -v --no-cache-dir
   environment:
     TMPDIR: /var/tmp/ansible_pip_build

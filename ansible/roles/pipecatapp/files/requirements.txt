@@ -1,0 +1,20 @@
+--index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+torchaudio
+--extra-index-url https://pypi.org/simple
+docker
+faiss-cpu
+fastapi
+faster-whisper==1.0.1
+numpy
+paramiko
+pipecat-ai
+piper-tts
+playwright
+pyaudio
+python-consul2
+requests
+sentence-transformers
+ultralytics
+uvicorn
