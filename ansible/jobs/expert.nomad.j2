@@ -10,9 +10,6 @@
 {% set suitable_models_unsorted = models_with_memory | selectattr('memory_mb', 'le', available_memory_mb) %}
 {% set suitable_models = suitable_models_unsorted | sort(attribute='memory_mb', reverse=true) | list %}
 {% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-' ~ current_expert ~ '-provider' %}
-{# Calculate avg TPS from benchmark data passed from Ansible #}
-{% set tps_list = expert_benchmark_data[current_expert].benchmark_data | map(attribute='tokens_per_second') | list %}
-{% set avg_tps = (tps_list | sum) / (tps_list | length) if (tps_list | length > 0) else 0 %}
 
 variable "job_name" {
   type = string
@@ -61,7 +58,7 @@ job "{{ job_name }}" {
           "--expert-id", "{{ job_name }}",
           "--model-list", "{{ model_list | to_json | regex_replace('"', '\\"') }}",
           "--rpc-pool-job-name", "{{ rpc_pool_job_name }}",
-          "--avg-tokens", "{{ avg_tps }}"
+          "--avg-tokens", "{{ avg_tokens }}"
         ]
       }
 
