@@ -67,6 +67,21 @@
     recurse: yes
   become: yes
 
+- name: Copy pipecat requirements.txt
+  ansible.builtin.copy:
+    src: requirements.txt
+    dest: "/opt/pipecatapp/requirements.txt"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  become: yes
+
+- name: Install python dependencies for pipecat
+  ansible.builtin.include_role:
+    name: python_deps
+  vars:
+    venv_path: "/opt/pipecatapp/venv"
+    requirements_path: "/opt/pipecatapp/requirements.txt"
+
 - name: Copy pipecat app
   ansible.builtin.copy:
     src: app.py
