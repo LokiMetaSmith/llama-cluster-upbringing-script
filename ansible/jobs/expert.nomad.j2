@@ -50,15 +50,17 @@ job "{{ job_name }}" {
       config {
         image = "alpine:latest"
         ports = ["http"]
-{% set args_list = [] %}
-{% do args_list.append("--expert-id=" ~ job_name) %}
-{% for model in model_list %}
-{% do args_list.append("--model=" ~ (model | to_json)) %}
-{% endfor %}
-{% do args_list.append("--rpc-pool-job-name=" ~ rpc_pool_job_name) %}
-{% do args_list.append("--avg-tokens=" ~ avg_tokens) %}
-
-        args = {{ args_list | to_json }}
+        {% set command_args = [
+          '--expert-id=' ~ job_name,
+        ] %}
+        {% for model in model_list %}
+          {% set command_args = command_args + ['--model=' ~ (model | to_json)] %}
+        {% endfor %}
+        {% set command_args = command_args + [
+          '--rpc-pool-job-name=' ~ rpc_pool_job_name,
+          '--avg-tokens=' ~ avg_tokens,
+        ] %}
+        args = {{ command_args | to_json }}
       }
 
       resources {
