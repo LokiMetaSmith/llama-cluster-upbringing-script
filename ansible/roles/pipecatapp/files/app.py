@@ -180,9 +180,10 @@ class FasterWhisperSTTService(FrameProcessor):
             sample_rate (int): The sample rate of the input audio.
         """
         super().__init__()
+        model_name = os.path.basename(model_path)
         # Use CPU int8 to reduce memory; adjust if you want GPU
         self.model = WhisperModel(
-            model_path,
+            model_name,
             device="cpu",
             compute_type="int8",
             local_files_only=True
