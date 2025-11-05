@@ -216,6 +216,7 @@
     service_name: "expert-api-{{ current_expert }}"
     model_list: "{{ expert_models[current_expert] | default([]) }}" # Corrected default
     worker_count: 1
+    rpc_pool_job_name: "llamacpp-rpc-pool"
     # DO NOT redefine ansible_memtotal_mb here
     # The benchmark data calculation can stay if needed, adjust variable names if necessary
     benchmark_data_for_expert: >-
@@ -233,7 +234,7 @@
     current_expert_tags: >-
       [
         "expert={{ current_expert }}",
-        "avg_tps={{ avg_tokens | round(2) }}",
+        "avg_tps={{ avg_tokens | float | round(2) }}",
         "memory_mb={{ ansible_memtotal_mb }}", # Access global fact directly
         "models={{ model_list | map(attribute='filename') | join(',') }}"
       ]
@@ -264,7 +265,7 @@
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "http://{{ advertise_ip }}:4646/v1/status/leader"
+    url: "http://{{ ansible_default_ipv4.address }}:4646/v1/status/leader"
     method: GET
     status_code: 200
   register: nomad_api_status
@@ -279,7 +280,7 @@
   changed_when: "pipecat_job_stop_status.rc == 0"
   failed_when: false
   environment:
-    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
 - name: Flush handlers to ensure service is enabled and started
   ansible.builtin.meta: flush_handlers
@@ -288,7 +289,7 @@
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/router.nomad
   environment:
-    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   register: router_job_run
   changed_when: router_job_run.rc == 0
   ignore_errors: yes
@@ -297,7 +298,7 @@
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
   environment:
-    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   register: router_job_run
   changed_when: router_job_run.rc == 0
   ignore_errors: yes

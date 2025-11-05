@@ -10,27 +10,20 @@
 {% set suitable_models_unsorted = models_with_memory | selectattr('memory_mb', 'le', available_memory_mb) %}
 {% set suitable_models = suitable_models_unsorted | sort(attribute='memory_mb', reverse=true) | list %}
 {% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-' ~ current_expert ~ '-provider' %}
-{# Calculate avg TPS from benchmark data passed from Ansible #}
-{% set tps_list = expert_benchmark_data[current_expert].benchmark_data | map(attribute='tokens_per_second') | list %}
-{% set avg_tps = (tps_list | sum) / (tps_list | length) if (tps_list | length > 0) else 0 %}
-
-variable "job_name" {
-  type = string
-}
-
-variable "service_name" {
-  type = string
-}
-
-variable "rpc_pool_job_name" {
-  type = string
-}
 
 job "{{ job_name }}" {
   datacenters = ["dc1"]
 
   group "{{ job_name }}-group" {
     count = 1
+
+    update {
+      max_parallel = 1
+      progress_deadline = "15m"
+      min_healthy_time = "10s"
+      healthy_deadline = "10m"
+      auto_revert = true
+    }
 
     network {
       port "http" {
@@ -55,14 +48,17 @@ job "{{ job_name }}" {
       driver = "docker"
 
       config {
-        image = "pipecat/expert-orchestrator:latest"
+        image = "alpine:latest"
         ports = ["http"]
-        args = [
-          "--expert-id", "{{ job_name }}",
-          "--model-list", "{{ model_list | to_json | regex_replace('"', '\\"') }}",
-          "--rpc-pool-job-name", "{{ rpc_pool_job_name }}",
-          "--avg-tokens", "{{ avg_tps }}"
-        ]
+{% set args_list = [] %}
+{% do args_list.append("--expert-id=" ~ job_name) %}
+{% for model in model_list %}
+{% do args_list.append("--model=" ~ (model | to_json)) %}
+{% endfor %}
+{% do args_list.append("--rpc-pool-job-name=" ~ rpc_pool_job_name) %}
+{% do args_list.append("--avg-tokens=" ~ avg_tokens) %}
+
+        args = {{ args_list | to_json }}
       }
 
       resources {
