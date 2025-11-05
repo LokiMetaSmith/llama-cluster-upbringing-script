@@ -2,6 +2,18 @@
 # It loads a single, suitable model and distributes inference across a
 # pool of rpc-server providers discovered via Consul.
 
+variable "job_name" {
+  type = string
+}
+
+variable "service_name" {
+  type = string
+}
+
+variable "rpc_pool_job_name" {
+  type = string
+}
+
 # --- DYNAMIC MODEL SELECTION & TPS CALCULATION ---
 {% set memory_buffer_mb = 2048 %}
 {% set available_memory_mb = (ansible_memtotal_mb | int) - memory_buffer_mb %}
