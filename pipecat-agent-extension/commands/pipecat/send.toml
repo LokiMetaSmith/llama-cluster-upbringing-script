@@ -1,0 +1,7 @@
+prompt = "Sending message to pipecat agent"
+tool = "send_message"
+args = """
+{
+    "message": "{{args}}"
+}
+"""
