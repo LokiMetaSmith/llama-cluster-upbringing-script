@@ -47,7 +47,7 @@ job "home-assistant" {
         volumes = [
           "/etc/localtime:/etc/localtime:ro",
         ]
-        cap_add = ["NET_RAW"]
+        cap_add = ["NET_RAW", "NET_ADMIN"]
       }
 
       env {
