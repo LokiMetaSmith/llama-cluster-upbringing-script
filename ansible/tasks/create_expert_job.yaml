@@ -10,9 +10,10 @@
     model_list: "{{ expert_models[current_expert] | default([]) }}" # Corrected default
     worker_count: 1
     rpc_pool_job_name: "llamacpp-rpc-pool"
+    avg_tokens: "{{ (expert_benchmark_data.get(current_expert, {})).get('avg_tokens', 0) | float | round(2) }}"
     # DO NOT redefine ansible_memtotal_mb here
     current_expert_tags:
       - "expert={{ current_expert }}"
-      - "avg_tps={{ expert_benchmark_data[current_expert].avg_tokens | float | round(2) }}"
+      - "avg_tps={{ avg_tokens }}"
       - "memory_mb={{ ansible_memtotal_mb }}"
       - "models={{ model_list | map(attribute='filename') | join(',') }}"
