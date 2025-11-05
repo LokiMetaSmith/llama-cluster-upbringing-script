@@ -60,8 +60,8 @@ job "{{ job_name }}" {
       driver = "docker"
 
       config {
-        image = "alpine:latest"
-        ports = ["http"]
+        image = "pipecatapp:latest"
+        command = "/opt/pipecatapp/start_pipecat.sh"        ports = ["http"]
         {% set command_args = [
           '--expert-id=' ~ job_name,
         ] %}
