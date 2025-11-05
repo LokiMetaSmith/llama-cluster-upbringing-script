@@ -2,6 +2,7 @@
   ansible.builtin.template:
     src: "/home/loki/llama-cluster-upbringing-script/ansible/jobs/expert.nomad.j2"
     dest: "/tmp/expert-{{ current_expert }}.nomad"
+  when: expert_benchmark_data is defined
   vars:
     # Define ONLY loop-specific variables here
     job_name: "expert-{{ current_expert }}"

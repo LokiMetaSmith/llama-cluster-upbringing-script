@@ -10,6 +10,7 @@
       failed_when: "consul_service_status.status.ActiveState != 'active'"
       changed_when: false
       ignore_errors: yes # We'll provide a better error message in the next task
+      when: not ansible_check_mode
 
     - name: Fail gracefully if Consul service is not running
       ansible.builtin.fail:
@@ -18,7 +19,7 @@
           Playbook cannot continue without a functioning Consul service.
           Please check the service logs by running 'journalctl -u consul.service' on the target node.
           Status details: {{ consul_service_status }}
-      when: consul_service_status.failed
+      when: consul_service_status.skipped is not defined and consul_service_status.failed and not ansible_check_mode
 
     - name: Wait for a Consul leader to be elected
       ansible.builtin.uri:
@@ -29,6 +30,7 @@
       retries: 12
       delay: 5
       ignore_errors: yes
+      when: not ansible_check_mode
 
     - name: Fail gracefully if no Consul leader is found
       ansible.builtin.fail:
@@ -38,4 +40,4 @@
           higher than the number of server nodes available.
           - For a single-node setup, ensure `bootstrap_expect` is 1.
           - For a multi-node setup, ensure enough controller nodes are running to form a quorum.
-      when: consul_leader_status.failed or consul_leader_status.content == '""'
+      when: consul_leader_status.skipped is not defined and (consul_leader_status.failed or consul_leader_status.content == '""') and not ansible_check_mode

@@ -70,3 +70,4 @@
       - yq
     state: present
   become: yes
+  check_mode: no
