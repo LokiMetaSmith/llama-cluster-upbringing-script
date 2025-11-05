@@ -139,11 +139,57 @@ The agent is designed to function as a "Mixture of Experts." The primary `pipeca
 
 The personality and instructions for the main router agent and each expert agent are defined in simple text files located in the `ansible/roles/pipecatapp/files/prompts/` directory. You can edit these files to customize the behavior of each agent. For example, you can edit `coding_expert.txt` to give it a different programming specialty.
 
-## 7. AI Service Deployment
+## 7. Interacting with the Agent
+
+There are two primary ways to interact with the conversational agent: the web interface and the Gemini CLI extension.
+
+### 7.1. Web Interface
+
+Navigate to the IP address of any node in your cluster on port 8000 (e.g., `http://192.168.1.101:8000`). The web UI provides real-time conversation logs, a request-approval interface, and the ability to save and load the agent's memory state.
+
+### 7.2. Gemini CLI Extension
+
+For command-line users, a Gemini CLI extension is provided to send messages directly to the agent.
+
+#### 7.2.1. First-Time Setup
+
+1.  **Install the Gemini CLI:**
+    ```bash
+    npm install -g @google/gemini-cli
+    ```
+2.  **Navigate to the extension directory:**
+    ```bash
+    cd pipecat-agent-extension
+    ```
+3.  **Install dependencies and build the extension:**
+    ```bash
+    npm install
+    npm run build
+    ```
+4.  **Link the extension to your Gemini CLI installation:**
+    ```bash
+    gemini extensions link .
+    ```
+
+#### 7.2.2. Sending a Message
+
+Once the extension is linked, you can use the custom `/pipecat:send` command to send a message to the agent:
+
+```bash
+gemini /pipecat:send "Your message here"
+```
+
+**Example:**
+```bash
+gemini /pipecat:send "Can you write a python script to list files in a directory?"
+```
+The agent will process this message as if you had typed it in the web UI.
+
+## 8. AI Service Deployment
 
 The system is designed to be self-bootstrapping. The `bootstrap.sh` script (or the main `playbook.yaml`) handles the deployment of the core AI services on the primary control node. This includes a default instance of the `llama-expert` job and the `pipecat` voice agent.
 
-### 7.1. Start, Restart, or "Heal" Your Core Services
+### 8.1. Start, Restart, or "Heal" Your Core Services
 
 If a job has been stopped, or you just want to verify that everything is running as it should be, you now use your new, lightweight playbook. It will skip all the system setup and only manage the Nomad jobs.
 
