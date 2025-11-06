@@ -1,4 +1,4 @@
-#!/home/loki/llama-cluster-upbringing-script/venv/bin/python
+#!'{{ playbook_dir }}/../..//venv/bin/python
 
 import argparse
 import sys

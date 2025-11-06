@@ -5,9 +5,9 @@
   become: no
 
   vars_files:
-    - /home/loki/llama-cluster-upbringing-script/group_vars/all.yaml
-    - /home/loki/llama-cluster-upbringing-script/group_vars/models.yaml
-    - /home/loki/llama-cluster-upbringing-script/group_vars/external_experts.yaml
+    - '{{ playbook_dir }}/../..//group_vars/all.yaml
+    - '{{ playbook_dir }}/../..//group_vars/models.yaml
+    - '{{ playbook_dir }}/../..//group_vars/external_experts.yaml
 
 
   vars:

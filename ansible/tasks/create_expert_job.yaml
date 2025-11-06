@@ -1,6 +1,6 @@
 - name: Create Expert Orchestrator job file for {{ current_expert }}
   ansible.builtin.template:
-    src: "/home/loki/llama-cluster-upbringing-script/ansible/jobs/expert.nomad.j2"
+    src: "'{{ playbook_dir }}/../..//ansible/jobs/expert.nomad.j2"
     dest: "/tmp/expert-{{ current_expert }}.nomad"
   when: expert_benchmark_data is defined
   vars:
