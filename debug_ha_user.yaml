@@ -1,0 +1,10 @@
+---
+- hosts: all
+  gather_facts: yes
+  roles:
+    - home_assistant
+  post_tasks:
+    - name: Fail and print HA user ID
+      ansible.builtin.fail:
+        msg: "Home Assistant container is running as user {{ ha_user_id.stdout }}"
+      when: ha_user_id.stdout is defined
