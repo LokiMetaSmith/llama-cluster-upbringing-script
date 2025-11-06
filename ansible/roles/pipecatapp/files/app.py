@@ -831,8 +831,8 @@ async def main():
 
 
     transport_params = LocalAudioTransportParams(
-        audio_in_enabled=True,
-        audio_out_enabled=True,
+        audio_in_enabled=False,
+        audio_out_enabled=False,
         audio_in_device_index=device_index,
         audio_in_sample_rate=sample_rate,
         audio_out_sample_rate=sample_rate,
