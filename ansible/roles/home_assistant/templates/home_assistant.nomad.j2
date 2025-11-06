@@ -42,6 +42,7 @@ job "home-assistant" {
       driver = "docker"
 
       config {
+        user = "{{ ansible_user_id }}"
         image = "homeassistant/home-assistant:stable"
         ports = ["http"]
         volumes = [
