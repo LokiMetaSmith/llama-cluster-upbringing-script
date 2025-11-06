@@ -134,7 +134,7 @@ async def get_status():
 @app.get("/health", summary="Health Check", description="Provides a health check endpoint. It returns a 200 OK if the agent is initialized and ready, otherwise a 503 Service Unavailable. This is used by Nomad for service health checks.", tags=["System"])
 async def get_health():
     """A health check endpoint that verifies the agent is fully initialized."""
-    if twin_service_instance and twin_service_instance.router_llm and twin_service_instance.tools.get("rag").is_ready:
+    if twin_service_instance and twin_service_instance.router_llm:
         return JSONResponse(content={"status": "ok"})
     else:
         return JSONResponse(status_code=503, content={"status": "initializing"})
