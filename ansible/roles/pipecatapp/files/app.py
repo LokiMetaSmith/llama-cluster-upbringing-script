@@ -180,9 +180,10 @@ class FasterWhisperSTTService(FrameProcessor):
             sample_rate (int): The sample rate of the input audio.
         """
         super().__init__()
+        model_name = os.path.basename(model_path)
         # Use CPU int8 to reduce memory; adjust if you want GPU
         self.model = WhisperModel(
-            model_path,
+            model_name,
             device="cpu",
             compute_type="int8",
             local_files_only=True
@@ -829,6 +830,9 @@ async def main():
     if stt_service_name == "faster-whisper":
         stt_provider = app_config.get("active_stt_provider", "faster-whisper")
         stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
+        # Sanitize the model name if it contains the provider name as a prefix
+        if stt_model_name.startswith(f"{stt_provider}-"):
+            stt_model_name = stt_model_name[len(stt_provider) + 1:]
         model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
         stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
         logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate {sample_rate}Hz.")
