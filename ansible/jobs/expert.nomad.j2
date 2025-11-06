@@ -22,9 +22,7 @@ variable "rpc_pool_job_name" {
 {% set suitable_models_unsorted = models_with_memory | selectattr('memory_mb', 'le', available_memory_mb) %}
 {% set suitable_models = suitable_models_unsorted | sort(attribute='memory_mb', reverse=true) | list %}
 {% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-' ~ current_expert ~ '-provider' %}
-{% set args_list = [] %}
-{% do args_list.append("/opt/pipecatapp/supervisor.py") %}
-{% do args_list.append("--expert-id=" ~ job_name) %}
+{% set args_list = ["/opt/pipecatapp/supervisor.py", "--expert-id=" ~ job_name] %}
 
 job "{{ job_name }}" {
   datacenters = ["dc1"]
@@ -68,9 +66,7 @@ job "{{ job_name }}" {
         force_pull = false
         command = "python"
         ports = ["http"]
-        args = [
-          "/opt/pipecatapp/app.py"
-        ]
+        args = {{ args_list | to_json }}
       }
 
       env {
