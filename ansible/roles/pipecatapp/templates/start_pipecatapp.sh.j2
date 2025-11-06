@@ -1,31 +1,19 @@
 #!/bin/bash
-#
-# Wrapper Script for pipecatapp
-#
-# This script ensures that the pipecat application is run within its
-# virtual environment and that all of its output (both stdout and stderr)
-# is reliably redirected to a log file for debugging.
-
-# Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Define the log file path
 LOG_FILE="{{ pipecat_app_dir }}/pipecat.log"
 
-cd {{ pipecat_app_dir }}
+# Step 1: Create log file
+echo "--- Script started: $(date) ---" > "$LOG_FILE"
 
-# Source the environment variables if the file exists
-if [ -f {{ pipecat_app_dir }}/pipecat.env ]; then
-  source {{ pipecat_app_dir }}/pipecat.env
-fi
+# Step 2: Activate virtual environment
+echo "--- Activating venv ---" >> "$LOG_FILE"
+source {{ pipecat_app_dir }}/venv/bin/activate >> "$LOG_FILE" 2>&1
 
-# Activate the correct virtual environment
-source {{ pipecat_app_dir }}/venv/bin/activate
+# Step 3: Run simple python command
+echo "--- Running python test ---" >> "$LOG_FILE"
+{{ pipecat_app_dir }}/venv/bin/python3 -c "import sys; print(f'Python version: {sys.version}')" >> "$LOG_FILE" 2>&1
 
-# Create the log file if it doesn't exist
-touch "$LOG_FILE"
-
-# Execute the Python application, redirecting all output to the log file.
-# The 'exec' command replaces the shell process with the python process.
+# Step 4: Original command
 echo "--- Starting pipecat-app: $(date) ---" >> "$LOG_FILE"
-exec {{ pipecat_app_dir }}/venv/bin/python3 {{ pipecat_app_dir }}/app.py 2>&1 | tee -a "$LOG_FILE"
+exec {{ pipecat_app_dir }}/venv/bin/python3 {{ pipecat_app_dir }}/app.py >> "$LOG_FILE" 2>&1
