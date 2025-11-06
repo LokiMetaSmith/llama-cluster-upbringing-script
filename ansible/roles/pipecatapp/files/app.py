@@ -180,18 +180,28 @@ class FasterWhisperSTTService(FrameProcessor):
             sample_rate (int): The sample rate of the input audio.
         """
         super().__init__()
-        model_name = os.path.basename(model_path)
         # Use CPU int8 to reduce memory; adjust if you want GPU
-        model_name = os.path.basename(model_path)
-        self.model = WhisperModel(
-            model_name,
-            device="cpu",
-            compute_type="int8",
-            local_files_only=True
-        )
+        if not os.path.isdir(model_path):
+            logging.error(f"Model directory not found at: {model_path}")
+            # Fallback to model name if path doesn't exist
+            model_identifier = os.path.basename(model_path)
+            logging.info(f"Attempting to load model by name: {model_identifier}")
+        else:
+            model_identifier = model_path
+
+        try:
+            self.model = WhisperModel(
+                model_identifier,
+                device="cpu",
+                compute_type="int8"
+            )
+        except Exception as e:
+            logging.error(f"Fatal error loading WhisperModel with identifier '{model_identifier}': {e}")
+            raise e
+
         self.audio_buffer = bytearray()
         self.sample_rate = sample_rate
-        logging.info(f"FasterWhisperSTTService initialized with model '{model_name}'")
+        logging.info(f"FasterWhisperSTTService initialized with model identifier '{model_identifier}'")
 
     def _convert_audio_bytes_to_float_array(self, audio_bytes: bytes) -> np.ndarray:
         """Converts raw 16-bit PCM audio bytes to a 32-bit float NumPy array.

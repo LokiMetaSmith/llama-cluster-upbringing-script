@@ -1,0 +1,8 @@
+- hosts: localhost
+  gather_facts: yes
+  vars_files:
+    - "{{ playbook_dir }}/group_vars/all.yaml"
+    - "{{ playbook_dir }}/group_vars/models.yaml"
+    - "{{ playbook_dir }}/group_vars/external_experts.yaml"
+  roles:
+    - consul

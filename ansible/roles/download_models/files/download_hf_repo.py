@@ -1,4 +1,4 @@
-#!'{{ playbook_dir }}/../..//venv/bin/python
+#!/usr/bin/env python3
 
 import argparse
 import sys
