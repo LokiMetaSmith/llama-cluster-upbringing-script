@@ -22,6 +22,9 @@ variable "rpc_pool_job_name" {
 {% set suitable_models_unsorted = models_with_memory | selectattr('memory_mb', 'le', available_memory_mb) %}
 {% set suitable_models = suitable_models_unsorted | sort(attribute='memory_mb', reverse=true) | list %}
 {% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-' ~ current_expert ~ '-provider' %}
+{% set args_list = [] %}
+{% do args_list.append("/opt/pipecatapp/supervisor.py") %}
+{% do args_list.append("--expert-id=" ~ job_name) %}
 
 job "{{ job_name }}" {
   datacenters = ["dc1"]
@@ -61,18 +64,19 @@ job "{{ job_name }}" {
 
       config {
         image = "pipecatapp:latest"
-        command = "/opt/pipecatapp/start_pipecat.sh"        ports = ["http"]
-        {% set command_args = [
-          '--expert-id=' ~ job_name,
-        ] %}
-        {% for model in model_list %}
-          {% set command_args = command_args + ['--model=' ~ (model | to_json)] %}
+        force_pull = false
+        command = "/opt/pipecatapp/start_pipecat.sh"
+
+        args = [
+          "/opt/pipecatapp/app.py",
+        {% for arg in args_list %}
+          "{{ arg }}"{% if not loop.last %},{% endif %}
         {% endfor %}
-        {% set command_args = command_args + [
-          '--rpc-pool-job-name=' ~ rpc_pool_job_name,
-          '--avg-tokens=' ~ avg_tokens,
-        ] %}
-        args = {{ command_args | to_json }}
+        ]
+      }
+
+      env {
+        STT_SERVICE = "faster-whisper"
       }
 
       resources {
