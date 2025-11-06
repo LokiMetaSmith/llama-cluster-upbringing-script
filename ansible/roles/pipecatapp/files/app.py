@@ -181,15 +181,16 @@ class FasterWhisperSTTService(FrameProcessor):
         """
         super().__init__()
         # Use CPU int8 to reduce memory; adjust if you want GPU
+        model_name = os.path.basename(model_path)
         self.model = WhisperModel(
-            model_path,
+            model_name,
             device="cpu",
             compute_type="int8",
             local_files_only=True
         )
         self.audio_buffer = bytearray()
         self.sample_rate = sample_rate
-        logging.info(f"FasterWhisperSTTService initialized with model '{model_path}'")
+        logging.info(f"FasterWhisperSTTService initialized with model '{model_name}'")
 
     def _convert_audio_bytes_to_float_array(self, audio_bytes: bytes) -> np.ndarray:
         """Converts raw 16-bit PCM audio bytes to a 32-bit float NumPy array.
