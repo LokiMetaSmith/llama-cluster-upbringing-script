@@ -39,10 +39,10 @@ job "home-assistant" {
     }
 
     task "home-assistant" {
+      user = "{{ ansible_user_id }}"
       driver = "docker"
 
       config {
-        user = "{{ ansible_user_id }}"
         image = "homeassistant/home-assistant:stable"
         ports = ["http"]
         volumes = [
