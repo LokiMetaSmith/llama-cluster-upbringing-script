@@ -303,6 +303,17 @@
   changed_when: router_job_run.rc == 0
   ignore_errors: yes
 
+- name: Wait for the pipecat-app service to be healthy in Consul
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/health/service/pipecat-app"
+    return_content: yes
+  register: pipecat_health
+  until: >
+    pipecat_health.json is defined and
+    pipecat_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
+  retries: 60
+  delay: 10
+  changed_when: false
 
 - name: Wait for the router service to be healthy in Consul
   ansible.builtin.uri:
