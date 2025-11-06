@@ -82,6 +82,12 @@ if [ "$CLEAN_REPO" = true ]; then
     fi
 fi
 
+# --- Build Docker image ---
+echo "Building pipecatapp Docker image..."
+docker build -t pipecatapp:latest docker/pipecatapp
+docker save pipecatapp:latest > /tmp/pipecatapp.tar
+ls -l /opt/pipecatapp
+
 # --- Build Ansible arguments ---
 if [ "$UPDATE_USER" = true ]; then
     echo "--user flag detected, updating user"

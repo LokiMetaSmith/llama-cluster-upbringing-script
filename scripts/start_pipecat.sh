@@ -22,4 +22,4 @@ source /opt/pipecatapp/venv/bin/activate
 touch "$LOG_FILE"
 
 echo "--- Starting pipecat-app: $(date) ---" >> "$LOG_FILE"
-exec /opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py >> "$LOG_FILE" 2>&1
+exec /opt/pipecatapp/venv/bin/python3 "$@" >> "$LOG_FILE" 2>&1
