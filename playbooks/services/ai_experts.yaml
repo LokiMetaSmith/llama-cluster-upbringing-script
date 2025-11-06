@@ -150,3 +150,17 @@
       loop: "{{ experts }}"
       changed_when: true
       when: benchmark_results is defined
+
+    - name: Wait for the expert services to be healthy in Consul
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8500/v1/health/service/expert-api-{{ item }}"
+        return_content: yes
+      register: expert_health
+      until: >
+        expert_health.json is defined and
+        expert_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
+      retries: 60
+      delay: 10
+      loop: "{{ experts }}"
+      changed_when: false
+      when: benchmark_results is defined
