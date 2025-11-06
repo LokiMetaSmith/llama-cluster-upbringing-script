@@ -25,8 +25,8 @@ job "pipecat-app" {
       check {
         type     = "http"
         path     = "/health"
-        interval = "10s"
-        timeout  = "2s"
+        interval = "30s"
+        timeout  = "10s"
         initial_delay = "10m"
       }
 

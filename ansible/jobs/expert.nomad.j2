@@ -55,7 +55,8 @@ job "{{ job_name }}" {
         type     = "http"
         path     = "/health"
         interval = "10s"
-        timeout  = "2s"
+        timeout  = "10s"
+        initial_delay = "30s"
       }
     }
 
@@ -65,25 +66,16 @@ job "{{ job_name }}" {
       config {
         image = "pipecatapp:latest"
         force_pull = false
-        command = "/opt/pipecatapp/start_pipecat.sh"
+        command = "python"
         ports = ["http"]
         args = [
-          "/opt/pipecatapp/app.py",
-        {% for arg in args_list %}
-          "{{ arg }}"{% if not loop.last %},{% endif %}
-        {% endfor %}
-        ]
-        {% set command_args = [
-          '--expert-id=' ~ job_name,
-        ] %}
-        {% for model in model_list %}
-          {% set command_args = command_args + ['--model=' ~ (model | to_json)] %}
-        {% endfor %}
+          "/opt/pipecatapp/app.py"
         ]
       }
 
       env {
         STT_SERVICE = "faster-whisper"
+        LLAMA_API_SERVICE_NAME = "{{ rpc_pool_job_name }}-provider"
       }
 
       resources {
