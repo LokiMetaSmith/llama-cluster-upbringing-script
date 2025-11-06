@@ -208,7 +208,7 @@ async def get_web_uis():
     return JSONResponse(content=sorted_uis)
 
 @app.post("/api/state/save", summary="Save Agent State", description="Saves the agent's current conversation and internal state to a named snapshot.", tags=["Agent"])
-async def save_state_endpoint(payload: Dict = Body(..., example={"save_name": "my_snapshot"})):
+async def save_state_endpoint(payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}])):
     """API endpoint to save the agent's current state to a named snapshot.
 
     Args:
@@ -226,7 +226,7 @@ async def save_state_endpoint(payload: Dict = Body(..., example={"save_name": "m
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
 @app.post("/api/state/load", summary="Load Agent State", description="Loads the agent's state from a previously saved snapshot.", tags=["Agent"])
-async def load_state_endpoint(payload: Dict = Body(..., example={"save_name": "my_snapshot"})):
+async def load_state_endpoint(payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}])):
     """API endpoint to load the agent's state from a named snapshot.
 
     Args:

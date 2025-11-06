@@ -800,8 +800,25 @@ async def load_config_from_consul(consul_host, consul_port):
 
 async def main():
     """The main entry point for the conversational AI application."""
-    # Find workable audio device/sample rate
-    device_index, sample_rate = find_workable_audio_config()
+    # Load configuration from Consul
+    consul_host = os.getenv("CONSUL_HOST", "127.0.0.1")
+    consul_port = int(os.getenv("CONSUL_PORT", "8500"))
+    app_config = await load_config_from_consul(consul_host, consul_port)
+
+    # Add consul host/port to app_config
+    app_config['consul_host'] = consul_host
+    app_config['consul_port'] = consul_port
+
+    # Use configured audio device or find a workable one
+    device_index = app_config.get("audio_in_device_index")
+    if device_index is None:
+        device_index, sample_rate = find_workable_audio_config()
+    else:
+        # If device is specified, we assume a sample rate.
+        # This could be improved by also allowing sample_rate in config.
+        sample_rate = 48000
+        logging.info(f"Using configured audio device index: {device_index} with assumed sample rate {sample_rate}Hz.")
+
 
     transport_params = LocalAudioTransportParams(
         audio_in_enabled=True,
@@ -816,15 +833,6 @@ async def main():
     config = uvicorn.Config(web_server.app, host="0.0.0.0", port=int(os.getenv("WEB_PORT", "8000")), log_level="info")
     server = uvicorn.Server(config)
     threading.Thread(target=server.run, daemon=True).start()
-
-    # Load configuration from Consul
-    consul_host = os.getenv("CONSUL_HOST", "127.0.0.1")
-    consul_port = int(os.getenv("CONSUL_PORT", "8500"))
-    app_config = await load_config_from_consul(consul_host, consul_port)
-
-    # Add consul host/port to app_config
-    app_config['consul_host'] = consul_host
-    app_config['consul_port'] = consul_port
 
     tts_voices = app_config.get("tts_voices", [])
     stt_service_name = app_config.get("stt_service")

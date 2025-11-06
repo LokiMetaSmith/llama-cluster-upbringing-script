@@ -86,7 +86,8 @@
           "nomad_models_dir": nomad_models_dir,
           "expected_cluster_size": expected_cluster_size,
           "ha_url": "{{ ha_url | default('') }}",
-          "ha_token": "{{ ha_token | default('') }}"
+          "ha_token": "{{ ha_token | default('') }}",
+          "audio_in_device_index": 0
         } | to_json
       }}
     status_code: 200
