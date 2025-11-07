@@ -80,7 +80,7 @@
     mode: '0644'
   become: true
   notify: Restart Docker
-  
+
 - name: Ensure Docker service is started and enabled
   ansible.builtin.systemd:
     name: docker
