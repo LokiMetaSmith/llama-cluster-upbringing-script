@@ -155,9 +155,6 @@ if [ -n "$ANSIBLE_PLAYBOOK_EXEC" ]; then
 elif command -v ansible-playbook &> /dev/null; then
     ANSIBLE_PLAYBOOK_EXEC=$(command -v ansible-playbook)
     echo "Found ansible-playbook in PATH: $ANSIBLE_PLAYBOOK_EXEC"
-elif [ -x "$HOME/.local/bin/ansible-playbook" ]; then
-    ANSIBLE_PLAYBOOK_EXEC="$HOME/.local/bin/ansible-playbook"
-    echo "Found ansible-playbook in home directory: $ANSIBLE_PLAYBOOK_EXEC"
 else
     # Check common pyenv paths
     PYENV_ANSIBLE_PATH="$HOME/.pyenv/shims/ansible-playbook"
@@ -268,9 +265,6 @@ for i in "${!PLAYBOOKS[@]}"; do
     echo "--------------------------------------------------"
 
     COMMAND=("$ANSIBLE_PLAYBOOK_EXEC" -i local_inventory.ini "$playbook_path" "${ANSIBLE_ARGS[@]}")
-    if [ -n "$ANSIBLE_TAGS" ]; then
-        COMMAND+=("--tags" "$ANSIBLE_TAGS")
-    fi
 
     if [ "$DEBUG_MODE" = true ]; then
         # Execute with verbose logging and append to file
