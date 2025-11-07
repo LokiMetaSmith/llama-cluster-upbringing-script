@@ -1,6 +1,6 @@
-Last updated: 2025-10-20
-
 # Distributed Conversational AI Pipeline for Legacy CPU Clusters
+
+Last updated: 2025-11-06
 
 This project provides a complete solution for deploying a high-performance, low-latency conversational AI pipeline on a cluster of legacy, resource-constrained desktop computers. It uses Ansible for automated provisioning, Nomad for cluster orchestration, and a state-of-the-art AI stack to create a responsive, streaming, and embodied voice agent. For a detailed technical description of the system's layers, see the [Holistic Project Architecture](ARCHITECTURE.md) document.
 
@@ -14,15 +14,15 @@ This project provides a complete solution for deploying a high-performance, low-
 
 A brief overview of the key directories in this repository:
 
--   **/ansible**: Contains all Ansible playbooks, roles, and templates for provisioning and deploying the entire system.
-    -   **/ansible/roles**: Individual, reusable components for managing specific parts of the system (e.g., `nomad`, `consul`, `pipecatapp`).
-    -   **/ansible/roles/pipecatapp/files**: The core Python source code for the conversational agent, including `app.py`, `memory.py`, and the `tools` directory.
--   **/prompt_engineering**: Scripts and tools for evaluating and improving the AI's prompts using evolutionary algorithms.
--   **/reflection**: Scripts related to the agent's self-reflection and self-healing capabilities.
--   **/scripts**: Utility and linting scripts for maintaining code quality.
--   **/testing**: Contains unit and integration tests for the various components of the project.
--   **/*.yaml**: Top-level Ansible playbook files (e.g., `playbook.yaml`, `heal_cluster.yaml`).
--   **/group_vars**: Ansible configuration files that apply to all hosts, such as `all.yaml` and `models.yaml`.
+- **/ansible**: Contains all Ansible playbooks, roles, and templates for provisioning and deploying the entire system.
+  - **/ansible/roles**: Individual, reusable components for managing specific parts of the system (e.g., `nomad`, `consul`, `pipecatapp`).
+  - **/ansible/roles/pipecatapp/files**: The core Python source code for the conversational agent, including `app.py`, `memory.py`, and the `tools` directory.
+- **/prompt_engineering**: Scripts and tools for evaluating and improving the AI's prompts using evolutionary algorithms.
+- **/reflection**: Scripts related to the agent's self-reflection and self-healing capabilities.
+- **/scripts**: Utility and linting scripts for maintaining code quality.
+- **/testing**: Contains unit and integration tests for the various components of the project.
+- **/*.yaml**: Top-level Ansible playbook files (e.g., `playbook.yaml`, `heal_cluster.yaml`).
+- **/group_vars**: Ansible configuration files that apply to all hosts, such as `all.yaml` and `models.yaml`.
 
 ## 3. Initial Machine Setup
 
@@ -53,14 +53,14 @@ For development, testing, or bootstrapping the very first node of a new cluster,
 1. **On your control node, install Ansible and Git:** `sudo apt install ansible git -y`
 2. **Clone this repository.**
 3. **Run the Bootstrap Script:**
-    This script handles all the necessary steps to configure the local machine as a fully-functional, standalone agent and control node.
+   This script handles all the necessary steps to configure the local machine as a fully-functional, standalone agent and control node.
 
-    ```bash
-    ./bootstrap.sh
-    ```
+   ```bash
+   ./bootstrap.sh
+   ```
 
-    - **What this does:** The script invokes Ansible with a special inventory file (`local_inventory.ini`) that targets only the local machine. It installs and configures all necessary system components (Consul, Nomad, Docker) and deploys the AI agent services.
-    - You will be prompted for your `sudo` password, as the script needs administrative privileges to install and configure software.
+   - **What this does:** The script invokes Ansible with a special inventory file (`local_inventory.ini`) that targets only the local machine. It installs and configures all necessary system components (Consul, Nomad, Docker) and deploys the AI agent services.
+   - You will be prompted for your `sudo` password, as the script needs administrative privileges to install and configure software.
 
 This single node is now ready to be used as a standalone conversational AI agent. It can also serve as the primary "seed" node for a larger cluster. To expand your cluster, see the advanced guide below.
 
@@ -69,17 +69,17 @@ This single node is now ready to be used as a standalone conversational AI agent
 If you are setting up a multi-node cluster, you will need to work with the Ansible inventory directly.
 
 1. **Configure Initial Inventory (`inventory.yaml`):** Edit the `inventory.yaml` file to define your *initial* controller nodes. While new worker nodes will be added to the cluster automatically, you must define the initial seed nodes for the control plane here.
-    - Create a *host group* named `controller_nodes`. This group must contain at least one node that will act as the primary control node and Nomad server.
-    - Create an empty *host group* named `worker_nodes`. This group will be populated automatically as new nodes join the cluster.
+   - Create a *host group* named `controller_nodes`. This group must contain at least one node that will act as the primary control node and Nomad server.
+   - Create an empty *host group* named `worker_nodes`. This group will be populated automatically as new nodes join the cluster.
 2. **Run the Main Playbook:**
-    Run the following command from the root of this repository. This will configure the initial control node(s) and prepare the cluster for auto-expansion.
+   Run the following command from the root of this repository. This will configure the initial control node(s) and prepare the cluster for auto-expansion.
 
-    ```bash
-    ansible-playbook -i inventory.yaml playbook.yaml --ask-become-pass
-    ```
+   ```bash
+   ansible-playbook -i inventory.yaml playbook.yaml --ask-become-pass
+   ```
 
-    - **`--ask-become-pass`**: This flag is important. It will prompt you for your `sudo` password, which Ansible needs to perform administrative tasks.
-    - **What this does:** This playbook not only aconfigures the cluster services (Consul, Nomad, etc.) but also automatically bootstraps the primary control node into a fully autonomous AI agent by deploying the necessary AI services.
+   - **`--ask-become-pass`**: This flag is important. It will prompt you for your `sudo` password, which Ansible needs to perform administrative tasks.
+   - **What this does:** This playbook not only aconfigures the cluster services (Consul, Nomad, etc.) but also automatically bootstraps the primary control node into a fully autonomous AI agent by deploying the necessary AI services.
 
 ## 5. Expanding the Control Plane (Adding Controllers)
 
@@ -90,9 +90,9 @@ This cluster is designed for resilience and scalability. As your needs grow, you
 1. **Ensure the worker is part of the cluster:** The node you wish to promote must already be a provisioned worker and visible in `nomad node status`.
 2. **Run the promotion playbook:**
 
-    ```bash
-    ansible-playbook promote_controller.yaml
-    ```
+   ```bash
+   ansible-playbook promote_controller.yaml
+   ```
 
 3. **Enter the hostname:** You will be prompted to enter the exact hostname of the worker node you want to promote (e.g., `worker1`).
 
@@ -153,23 +153,30 @@ For command-line users, a Gemini CLI extension is provided to send messages dire
 
 #### 7.2.1. First-Time Setup
 
-1.  **Install the Gemini CLI:**
-    ```bash
-    npm install -g @google/gemini-cli
-    ```
-2.  **Navigate to the extension directory:**
-    ```bash
-    cd pipecat-agent-extension
-    ```
-3.  **Install dependencies and build the extension:**
-    ```bash
-    npm install
-    npm run build
-    ```
-4.  **Link the extension to your Gemini CLI installation:**
-    ```bash
-    gemini extensions link .
-    ```
+1. **Install the Gemini CLI:**
+
+   ```bash
+   npm install -g @google/gemini-cli
+   ```
+
+2. **Navigate to the extension directory:**
+
+   ```bash
+   cd pipecat-agent-extension
+   ```
+
+3. **Install dependencies and build the extension:**
+
+   ```bash
+   npm install
+   npm run build
+   ```
+
+4. **Link the extension to your Gemini CLI installation:**
+
+   ```bash
+   gemini extensions link .
+   ```
 
 #### 7.2.2. Sending a Message
 
@@ -180,9 +187,11 @@ gemini /pipecat:send "Your message here"
 ```
 
 **Example:**
+
 ```bash
 gemini /pipecat:send "Can you write a python script to list files in a directory?"
 ```
+
 The agent will process this message as if you had typed it in the web UI.
 
 ## 8. AI Service Deployment
@@ -209,22 +218,22 @@ nomad job stop -purge pipecat-app
 The true power of this architecture is the ability to deploy multiple, specialized AI experts that the main `pipecat` agent can route queries to. With the new unified `llama-expert.nomad` job template, deploying a new expert is handled through a dedicated Ansible playbook.
 
 1. **Define a Model List for Your Expert:**
-    First, open `group_vars/models.yaml` and create a new list of models for your expert. For example, to create a `creative-writing` expert, you could add:
+   First, open `group_vars/models.yaml` and create a new list of models for your expert. For example, to create a `creative-writing` expert, you could add:
 
-    ```yaml
-    creative_writing_models:
-      - name: "phi-3-mini-instruct"
-        # ... other model details
-    ```
+   ```yaml
+   creative_writing_models:
+     - name: "phi-3-mini-instruct"
+       # ... other model details
+   ```
 
 2. **Deploy the Expert with Ansible:**
-    Use the `deploy_expert.yaml` playbook to render the Nomad job with your custom parameters and launch it. You pass variables on the command line using the `-e` flag.
+   Use the `deploy_expert.yaml` playbook to render the Nomad job with your custom parameters and launch it. You pass variables on the command line using the `-e` flag.
 
-    - **Example: Deploying a `creative-writing` expert to the `creative` namespace:**
+   - **Example: Deploying a `creative-writing` expert to the `creative` namespace:**
 
-      ```bash
-      ansible-playbook deploy_expert.yaml -e "job_name=creative-expert service_name=llama-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
-      ```
+     ```bash
+     ansible-playbook deploy_expert.yaml -e "job_name=creative-expert service_name=llama-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
+     ```
 
 The `TwinService` in the `pipecatapp` will automatically discover any service registered in Consul with the `llama-api-` prefix and make it available for routing.
 

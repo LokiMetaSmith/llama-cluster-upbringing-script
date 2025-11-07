@@ -72,7 +72,7 @@
     groups: docker
     append: yes
   become: true
-  
+
 - name: Place the Docker daemon configuration file
   ansible.builtin.template:
     src: daemon.json.j2

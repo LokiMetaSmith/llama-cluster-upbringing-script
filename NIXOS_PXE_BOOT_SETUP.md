@@ -1,6 +1,6 @@
-Last updated: 2025-10-12
-
 # NixOS-based PXE Boot Server Setup
+
+Last updated: 2025-11-06
 
 This document explains how to set up a PXE boot server using NixOS. This method leverages the declarative nature of NixOS to provide a reproducible and robust PXE environment for provisioning bare-metal machines.
 
