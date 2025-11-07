@@ -48,6 +48,10 @@ do
         BENCHMARK_MODE=true
         shift
         ;;
+        --deploy-docker)
+        ANSIBLE_ARGS+=(--extra-vars "pipecat_deployment_style=docker")
+        shift
+        ;;
         *)
         echo "Unknown option: $1"
         # (You could add a usage/help function here)
@@ -81,12 +85,6 @@ if [ "$CLEAN_REPO" = true ]; then
         exit 1
     fi
 fi
-
-# --- Build Docker image ---
-echo "Building pipecatapp Docker image..."
-docker build -t pipecatapp:latest docker/pipecatapp
-docker save pipecatapp:latest > /tmp/pipecatapp.tar
-ls -l /opt/pipecatapp
 
 # --- Build Ansible arguments ---
 if [ "$UPDATE_USER" = true ]; then

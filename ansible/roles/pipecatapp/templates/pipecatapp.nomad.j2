@@ -5,10 +5,24 @@ job "{{ job_name | default('pipecat-app') }}" {
   group "pipecat-group" {
     count = 1
 
+    {% if pipecat_deployment_style == 'docker' %}
+    network {
+      mode = "host"
+      port "http" {
+        to = 8000
+      }
+    }
+
+    volume "snd" {
+      type   = "host"
+      source = "snd"
+    }
+    {% else %}
     network {
       mode = "host"
       port "http" {}
     }
+    {% endif %}
 
     service {
       name     = "{{ service_name | default('pipecat-app') }}"
@@ -21,9 +35,50 @@ job "{{ job_name | default('pipecat-app') }}" {
         interval     = "10s"
         timeout      = "2s"
         address_mode = "host"
+        {% if pipecat_deployment_style == 'docker' %}
+        initial_delay = "10m"
+        {% endif %}
       }
     }
 
+    {% if pipecat_deployment_style == 'docker' %}
+    task "pipecat-task" {
+      driver = "docker"
+
+      config {
+        image = "pipecatapp:latest"
+        ports = ["http"]
+        # Mount volumes for models and config. Models are read-only.
+        # Assumes /app is the WORKDIR in the container, where pipecat_config.json will be placed.
+        volumes = [
+          "/opt/nomad/models:/opt/nomad/models:ro",
+          "/opt/pipecatapp/pipecat_config.json:/app/pipecat_config.json:ro",
+        ]
+        # Pass through the sound device to the container
+        devices = [
+          {
+            host_path      = "/dev/snd"
+            container_path = "/dev/snd"
+          }
+        ]
+      }
+
+      env {
+        # This should match the service name of the main llama-expert job
+        LLAMA_API_SERVICE_NAME = "{{ llama_api_service_name }}"
+        # Set to "true" to enable the summarizer tool
+        USE_SUMMARIZER = "{{ use_summarizer }}"
+        # The vision and embedding models are now hardcoded in the application
+        # to load from the unified /opt/nomad/models directory.
+        STT_SERVICE = "{{ stt_service }}"
+      }
+
+      resources {
+        cpu    = 1000 # 1 GHz
+        memory = 1024 # 4 GB
+      }
+    }
+    {% else %}
     task "pipecat-task" {
       driver = "raw_exec"
 
@@ -40,5 +95,6 @@ job "{{ job_name | default('pipecat-app') }}" {
         memory = 1024 # 4 GB
       }
     }
+    {% endif %}
   }
 }

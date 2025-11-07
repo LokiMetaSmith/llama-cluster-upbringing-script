@@ -162,6 +162,15 @@
   become: yes
   become_user: "{{ target_user }}"
 
+- name: Build pipecatapp Docker image when deployment style is docker
+  community.docker.docker_image:
+    name: pipecatapp
+    tag: latest
+    build:
+      path: "{{ playbook_dir }}/../../docker/pipecatapp"
+    source: build
+  when: pipecat_deployment_style == 'docker'
+
 - name: Ensure Nomad jobs directory exists
   ansible.builtin.file:
     path: /opt/nomad/jobs

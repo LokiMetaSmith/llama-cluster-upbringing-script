@@ -17,6 +17,7 @@ nomad_namespace: "default"
 nomad_models_dir: "/opt/nomad/models"
 
 # Pipecat application settings
+pipecat_deployment_style: 'raw_exec' # Can be 'raw_exec' or 'docker'
 llama_api_service_name: "router-api"
 use_summarizer: "false"
 stt_service: "faster-whisper"
