@@ -305,7 +305,7 @@
 
 - name: Wait for the pipecat-app service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/pipecat-app"
+    url: "http://{{ ansible_default_ipv4.address }}:8500/v1/health/service/pipecat-app"
     return_content: yes
   register: pipecat_health
   until: >
@@ -317,7 +317,7 @@
 
 - name: Wait for the router service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/router-api"
+    url: "http://{{ ansible_default_ipv4.address }}:8500/v1/health/service/router-api"
     return_content: yes
   register: router_health
   until: >
