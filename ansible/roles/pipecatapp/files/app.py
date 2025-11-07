@@ -384,54 +384,58 @@ class TextMessageInjector(FrameProcessor):
 # -----------------------
 # Helper: find workable audio config
 # -----------------------
-def find_workable_audio_config():
-    """Scans for and selects a functional audio input device and sample rate.
+import contextlib
+import sys
 
-    This function iterates through available audio devices and common sample
-    rates to find a combination supported by PyAudio, ensuring the application
-    can capture audio on different hardware setups.
+@contextlib.contextmanager
+def suppress_stderr():
+    """A context manager to temporarily redirect stderr to /dev/null."""
+    stderr = sys.stderr
+    devnull = open(os.devnull, 'w')
+    sys.stderr = devnull
+    try:
+        yield
+    finally:
+        sys.stderr = stderr  # Restore stderr
+        devnull.close()
+
+def find_workable_audio_input_device():
+    """
+    Silently scans for a workable PyAudio input device.
 
     Returns:
-        A tuple containing the device index (or None for default) and the
-        selected sample rate.
+        An integer (device_index) if a workable device is found.
+        None if no workable device is found.
     """
+    logging.info("Starting silent audio device scan...")
+    pa = None
     try:
         import pyaudio
-    except ImportError:
-        logging.error("PyAudio is not installed. Using default audio config.")
-        return None, 16000  # Default fallback
+        # 1. Suppress C-level spam during init
+        with suppress_stderr():
+            pa = pyaudio.PyAudio()
 
-    p = pyaudio.PyAudio()
-    common_rates = [16000, 48000, 44100, 32000, 8000]
+        # 2. Scan devices for a workable input
+        for i in range(pa.get_device_count()):
+            device_info = pa.get_device_info_by_index(i)
+            # This is a basic check. You can make this more robust
+            # (e.g., check for sample rate, "USB", "Analog", etc.)
+            if device_info.get('maxInputChannels') > 0:
+                logging.info(f"Found workable audio device: [Index {i}] {device_info.get('name')}")
+                return i  # Return the first workable device index
 
-    try:
-        device_count = p.get_device_count()
-        logging.info(f"Found {device_count} audio devices.")
+        logging.warning("No workable audio input device found after full scan.")
+        return None
 
-        for i in range(device_count):
-            device_info = p.get_device_info_by_index(i)
-            if device_info.get('maxInputChannels', 0) > 0:
-                logging.info(f"Checking device {i}: {device_info.get('name')}")
-                for rate in common_rates:
-                    try:
-                        if p.is_format_supported(
-                            rate,
-                            input_device=device_info['index'],
-                            input_channels=1,
-                            input_format=pyaudio.paInt16
-                        ):
-                            logging.info(f"Found workable config: Device Index {device_info['index']}, Sample Rate {rate}Hz")
-                            return device_info['index'], rate
-                    except ValueError:
-                        continue
-        logging.warning("Could not find a workable audio input configuration. Falling back to defaults.")
-        return None, 16000
+    except (ImportError, Exception) as e:
+        # This catches errors like "No Default Input Device" on truly headless systems
+        logging.warning(f"Audio subsystem scan failed (this is OK for headless): {e}")
+        return None
 
-    except Exception as e:
-        logging.error(f"An error occurred during audio device discovery: {e}. Falling back to defaults.")
-        return None, 16000
     finally:
-        p.terminate()
+        # 3. Always terminate PyAudio to release resources
+        if pa:
+            pa.terminate()
 
 # -----------------------
 # Service discovery helpers
@@ -819,44 +823,13 @@ async def main():
     app_config['consul_host'] = consul_host
     app_config['consul_port'] = consul_port
 
-    # Use configured audio device or find a workable one
-    device_index = app_config.get("audio_in_device_index")
-    if device_index is None:
-        device_index, sample_rate = find_workable_audio_config()
-    else:
-        # If device is specified, we assume a sample rate.
-        # This could be improved by also allowing sample_rate in config.
-        sample_rate = 48000
-        logging.info(f"Using configured audio device index: {device_index} with assumed sample rate {sample_rate}Hz.")
-
-
-    transport_params = LocalAudioTransportParams(
-        audio_in_enabled=False,
-        audio_out_enabled=False,
-        audio_in_device_index=device_index,
-        audio_in_sample_rate=sample_rate,
-        audio_out_sample_rate=sample_rate,
-    )
-    transport = LocalAudioTransport(transport_params)
+    # Run the robust, silent pre-flight check
+    audio_device_index = find_workable_audio_input_device()
 
     # Start web server (uvicorn) in its own thread
     config = uvicorn.Config(web_server.app, host="0.0.0.0", port=int(os.getenv("WEB_PORT", "8000")), log_level="info")
     server = uvicorn.Server(config)
     threading.Thread(target=server.run, daemon=True).start()
-
-    tts_voices = app_config.get("tts_voices", [])
-    stt_service_name = app_config.get("stt_service")
-    if stt_service_name == "faster-whisper":
-        stt_provider = app_config.get("active_stt_provider", "faster-whisper")
-        stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
-        # Sanitize the model name if it contains the provider name as a prefix
-        if stt_model_name.startswith(f"{stt_provider}-"):
-            stt_model_name = stt_model_name[len(stt_provider) + 1:]
-        model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
-        stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
-        logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate {sample_rate}Hz.")
-    else:
-        raise RuntimeError(f"STT_SERVICE not configured correctly in Consul. Got '{stt_service_name}'")
 
     # Discover main LLM from Consul
     main_llm_service_name = app_config.get("llama_api_service_name", "llamacpp-rpc-api")
@@ -868,12 +841,6 @@ async def main():
         api_key="dummy",
         model="dummy"
     )
-
-    # TTS setup
-    if not tts_voices:
-        raise RuntimeError("TTS voices not configured in Consul.")
-    model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
-    tts = PiperTTSService(model_path=model_path)
 
     runner = PipelineRunner()
     vision_detector = YOLOv8Detector()
@@ -897,16 +864,52 @@ async def main():
 
     text_injector = TextMessageInjector(text_message_queue)
 
-    pipeline_steps = [
-        transport.input(),
-        stt,
-        text_injector,
-        UILogger(sender="user"),
-        twin,
-        UILogger(sender="agent"),
-        tts,
-        transport.output()
-    ]
+    pipeline_steps = []
+
+    if audio_device_index is not None:
+        logging.info("Audio device detected. Starting audio pipeline.")
+        transport_params = LocalAudioTransportParams(
+            audio_in_enabled=True,
+            audio_out_enabled=True,
+            audio_in_device_index=audio_device_index,
+            audio_in_sample_rate=16000,
+            audio_out_sample_rate=16000,
+        )
+        transport = LocalAudioTransport(transport_params)
+
+        stt_service_name = app_config.get("stt_service")
+        if stt_service_name == "faster-whisper":
+            stt_provider = app_config.get("active_stt_provider", "faster-whisper")
+            stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
+            # Sanitize the model name if it contains the provider name as a prefix
+            if stt_model_name.startswith(f"{stt_provider}-"):
+                stt_model_name = stt_model_name[len(stt_provider) + 1:]
+            model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
+            stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
+            logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate 16000Hz.")
+        else:
+            raise RuntimeError(f"STT_SERVICE not configured correctly in Consul. Got '{stt_service_name}'")
+
+        tts_voices = app_config.get("tts_voices", [])
+        if not tts_voices:
+            raise RuntimeError("TTS voices not configured in Consul.")
+        model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
+        tts = PiperTTSService(model_path=model_path)
+
+        pipeline_steps.extend([
+            transport.input(),
+            stt,
+            UILogger(sender="user"),
+            twin,
+            UILogger(sender="agent"),
+            tts,
+            transport.output()
+        ])
+    else:
+        logging.warning("No audio device found. Starting in headless mode (no audio source, no STT).")
+        pipeline_steps.append(twin)
+
+    pipeline_steps.insert(0, text_injector)
 
     # Optionally insert benchmark collector
     if app_config.get("benchmark_mode", False):
@@ -918,22 +921,10 @@ async def main():
     # Vision pipeline (parallel)
     vision_pipeline = Pipeline([vision_detector])
 
-    # Interruption handler pipeline (best-effort)
-    async def handle_interrupt(frame):
-        if isinstance(frame, TextFrame) and frame.text.strip():
-            logging.info(f"User interrupted with: {frame.text}")
-            await main_task.cancel()
-
-    interrupt_pipeline = Pipeline([
-        transport.input(),
-        stt,
-        PipelineTask(handle_interrupt)
-    ])
-
     text_injector.start_listening()
 
     await runner.run(
-        [main_task, PipelineTask(vision_pipeline), PipelineTask(interrupt_pipeline)]
+        [main_task, PipelineTask(vision_pipeline)]
     )
 
 if __name__ == "__main__":
