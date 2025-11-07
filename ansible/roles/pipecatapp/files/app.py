@@ -848,6 +848,10 @@ async def main():
     if app_config.get("approval_mode", False):
         logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
 
+    # Set initial state for web server
+    web_server.app.state.is_ready = False
+    web_server.app.state.twin_service_instance = None
+
     twin = TwinService(
         llm=llm,
         vision_detector=vision_detector,
@@ -855,7 +859,7 @@ async def main():
         app_config=app_config,
         approval_queue=approval_queue
     )
-    web_server.twin_service_instance = twin
+    web_server.app.state.twin_service_instance = twin
 
     # Start web server (uvicorn) in its own thread, now that TwinService is initialized
     config = uvicorn.Config(
@@ -866,6 +870,11 @@ async def main():
     )
     server = uvicorn.Server(config)
     threading.Thread(target=server.run, daemon=True).start()
+
+    # Now that the twin service is initialized and the web server is starting,
+    # we can mark the application as ready.
+    web_server.app.state.is_ready = True
+    logging.info("Application is fully initialized and ready.")
 
     text_injector = TextMessageInjector(text_message_queue)
 

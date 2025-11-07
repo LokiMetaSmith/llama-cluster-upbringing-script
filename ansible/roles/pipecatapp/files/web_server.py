@@ -3,7 +3,7 @@ import json
 import asyncio
 import logging
 import requests
-from fastapi import FastAPI, WebSocket, Body
+from fastapi import FastAPI, WebSocket, Body, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict
@@ -72,9 +72,6 @@ class WebSocketManager:
 
 manager = WebSocketManager()
 
-# This will be set by the main application
-twin_service_instance = None
-
 script_dir = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.join(script_dir, "static")
 index_html_path = os.path.join(static_dir, "index.html")
@@ -114,10 +111,11 @@ async def get():
         return HTMLResponse(f.read())
 
 @app.get("/api/status", summary="Get Agent Status", description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks.", tags=["Agent"])
-async def get_status():
+async def get_status(request: Request):
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
-    if twin_service_instance and hasattr(twin_service_instance, 'tools'):
-        mcp = twin_service_instance.tools.get('mcp')
+    twin_service = request.app.state.twin_service_instance
+    if twin_service and hasattr(twin_service, 'tools'):
+        mcp = twin_service.tools.get('mcp')
         if mcp and hasattr(mcp, 'runner') and mcp.runner:
             tasks = mcp.runner.get_tasks()
             if not tasks:
@@ -132,9 +130,9 @@ async def get_status():
     return {"status": "Agent not fully initialized. Please wait..."}
 
 @app.get("/health", summary="Health Check", description="Provides a health check endpoint. It returns a 200 OK if the agent is initialized and ready, otherwise a 503 Service Unavailable. This is used by Nomad for service health checks.", tags=["System"])
-async def get_health():
+async def get_health(request: Request):
     """A health check endpoint that verifies the agent is fully initialized."""
-    if twin_service_instance and twin_service_instance.router_llm:
+    if getattr(request.app.state, "is_ready", False):
         return JSONResponse(content={"status": "ok"})
     else:
         return JSONResponse(status_code=503, content={"status": "initializing"})
@@ -208,7 +206,7 @@ async def get_web_uis():
     return JSONResponse(content=sorted_uis)
 
 @app.post("/api/state/save", summary="Save Agent State", description="Saves the agent's current conversation and internal state to a named snapshot.", tags=["Agent"])
-async def save_state_endpoint(payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}])):
+async def save_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}])):
     """API endpoint to save the agent's current state to a named snapshot.
 
     Args:
@@ -220,13 +218,15 @@ async def save_state_endpoint(payload: Dict = Body(..., examples=[{"save_name": 
     save_name = payload.get("save_name")
     if not save_name:
         return JSONResponse(status_code=400, content={"message": "save_name is required"})
-    if twin_service_instance:
-        result = twin_service_instance.save_state(save_name)
+
+    twin_service = request.app.state.twin_service_instance
+    if twin_service:
+        result = twin_service.save_state(save_name)
         return {"message": result}
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
 @app.post("/api/state/load", summary="Load Agent State", description="Loads the agent's state from a previously saved snapshot.", tags=["Agent"])
-async def load_state_endpoint(payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}])):
+async def load_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}])):
     """API endpoint to load the agent's state from a named snapshot.
 
     Args:
@@ -238,8 +238,10 @@ async def load_state_endpoint(payload: Dict = Body(..., examples=[{"save_name": 
     save_name = payload.get("save_name")
     if not save_name:
         return JSONResponse(status_code=400, content={"message": "save_name is required"})
-    if twin_service_instance:
-        result = twin_service_instance.load_state(save_name)
+
+    twin_service = request.app.state.twin_service_instance
+    if twin_service:
+        result = twin_service.load_state(save_name)
         return {"message": result}
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
