@@ -19,7 +19,7 @@ PLAYBOOKS=(
 # Run the tests
 for playbook in "${PLAYBOOKS[@]}"; do
     echo "Testing playbook: $playbook"
-    ./scripts/ansible_diff.sh "$playbook"
+    ./scripts/ansible_diff.sh "$playbook" "$@"
 done
 
 echo "All playbooks tested successfully!"
