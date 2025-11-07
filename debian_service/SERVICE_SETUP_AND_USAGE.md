@@ -1,6 +1,6 @@
-Last updated: 2025-10-12
-
 # Setting Up and Managing the distributed-llama Service
+
+Last updated: 2025-11-06
 
 ## 1. Overview
 

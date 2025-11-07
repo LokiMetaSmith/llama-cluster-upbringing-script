@@ -36,10 +36,10 @@ The modular design makes the system highly extensible and easy to adapt to new t
 
 You can easily create new experts by following these steps:
 
-1.  **Add a new prompt file** to the `ansible/roles/pipecatapp/files/prompts/` directory (e.g., `legal_expert.txt`).
-2.  **Define a new model list** for it in `group_vars/models.yaml` under the `expert_models` dictionary.
-3.  **Add the new expert's name** to the `experts` list in `group_vars/all.yaml`.
-4.  The ansible playbooks will automatically deploy a new service for your expert.
+1. **Add a new prompt file** to the `ansible/roles/pipecatapp/files/prompts/` directory (e.g., `legal_expert.txt`).
+2. **Define a new model list** for it in `group_vars/models.yaml` under the `expert_models` dictionary.
+3. **Add the new expert's name** to the `experts` list in `group_vars/all.yaml`.
+4. The ansible playbooks will automatically deploy a new service for your expert.
 
 ---
 
@@ -101,16 +101,16 @@ This project uses two key files for managing Python dependencies:
 
 1. **Create and activate a Python virtual environment:**
 
-    ```bash
-    python3 -m venv .venv
-    source .venv/bin/activate
-    ```
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
 
 2. **Install development dependencies:**
 
-    ```bash
-    pip install -r requirements-dev.txt
-    ```
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
 
 ### Bootstrapping the Environment
 
@@ -130,10 +130,7 @@ This will run a series of Ansible playbooks to provision the local environment.
 
 You can customize the bootstrap process using the following flags:
 
--   `--external-model-server`: Use this flag to skip the download and build steps for large language models. This is useful for development when you don't need the full model capabilities or are using a remote model server.
-
--   `--purge-jobs`: This flag will stop and purge all running Nomad jobs before starting the bootstrap process. This is useful for ensuring a clean deployment.
-
--   `--debug`: If the script fails, use the `--debug` flag to enable verbose logging. The output will be saved to `playbook_output.log`, which can be used to diagnose the issue.
-
--   `--continue`: If the bootstrap process is interrupted, you can use the `--continue` flag to resume from the last successfully completed playbook. This can save a significant amount of time by avoiding the need to rerun completed tasks.
+- `--external-model-server`: Use this flag to skip the download and build steps for large language models. This is useful for development when you don't need the full model capabilities or are using a remote model server.
+- `--purge-jobs`: This flag will stop and purge all running Nomad jobs before starting the bootstrap process. This is useful for ensuring a clean deployment.
+- `--debug`: If the script fails, use the `--debug` flag to enable verbose logging. The output will be saved to `playbook_output.log`, which can be used to diagnose the issue.
+- `--continue`: If the bootstrap process is interrupted, you can use the `--continue` flag to resume from the last successfully completed playbook. This can save a significant amount of time by avoiding the need to rerun completed tasks.

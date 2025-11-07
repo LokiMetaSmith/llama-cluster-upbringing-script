@@ -1,6 +1,6 @@
-Last updated: 2025-10-12
-
 # Manual Worker Node Setup
+
+Last updated: 2025-11-06
 
 This directory contains a script for manually preparing a new worker node to be added to the cluster. This script should be used in cases where the automated PXE boot installation method is not feasible.
 
