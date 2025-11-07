@@ -826,11 +826,6 @@ async def main():
     # Run the robust, silent pre-flight check
     audio_device_index = find_workable_audio_input_device()
 
-    # Start web server (uvicorn) in its own thread
-    config = uvicorn.Config(web_server.app, host="0.0.0.0", port=int(os.getenv("WEB_PORT", "8000")), log_level="info")
-    server = uvicorn.Server(config)
-    threading.Thread(target=server.run, daemon=True).start()
-
     # Discover main LLM from Consul
     main_llm_service_name = app_config.get("llama_api_service_name", "llamacpp-rpc-api")
     consul_http_addr = f"http://{consul_host}:{consul_port}"
@@ -861,6 +856,16 @@ async def main():
         approval_queue=approval_queue
     )
     web_server.twin_service_instance = twin
+
+    # Start web server (uvicorn) in its own thread, now that TwinService is initialized
+    config = uvicorn.Config(
+        web_server.app,
+        host="0.0.0.0",
+        port=int(os.getenv("WEB_PORT", "8000")),
+        log_level="info"
+    )
+    server = uvicorn.Server(config)
+    threading.Thread(target=server.run, daemon=True).start()
 
     text_injector = TextMessageInjector(text_message_queue)
 
