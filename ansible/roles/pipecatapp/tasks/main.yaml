@@ -294,6 +294,18 @@
   changed_when: router_job_run.rc == 0
   ignore_errors: yes
 
+- name: Wait for the router service to be healthy in Consul
+  ansible.builtin.uri:
+    url: "http://{{ ansible_default_ipv4.address }}:8500/v1/health/service/router-api"
+    return_content: yes
+  register: router_health
+  until: >
+    router_health.json is defined and
+    router_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
+  retries: 60
+  delay: 10
+  changed_when: false
+
 - name: Run pipecat-app job
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
@@ -311,18 +323,6 @@
   until: >
     pipecat_health.json is defined and
     pipecat_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
-  retries: 60
-  delay: 10
-  changed_when: false
-
-- name: Wait for the router service to be healthy in Consul
-  ansible.builtin.uri:
-    url: "http://{{ ansible_default_ipv4.address }}:8500/v1/health/service/router-api"
-    return_content: yes
-  register: router_health
-  until: >
-    router_health.json is defined and
-    router_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
   retries: 60
   delay: 10
   changed_when: false
