@@ -24,5 +24,5 @@ This agent can delegate tasks to specialized sub-agents to handle specific aspec
 
 ## Backing LLM Model
 
-* **Model:** `claude-3-sonnet`
-* **Reasoning:** While still a very capable model, `claude-3-sonnet` offers a good balance of performance and efficiency for tasks like refactoring and code cleanup that are often less complex than initial architecture or debugging. This makes it a cost-effective choice for this role.
+- **Model:** `claude-3-sonnet`
+- **Reasoning:** While still a very capable model, `claude-3-sonnet` offers a good balance of performance and efficiency for tasks like refactoring and code cleanup that are often less complex than initial architecture or debugging. This makes it a cost-effective choice for this role.
