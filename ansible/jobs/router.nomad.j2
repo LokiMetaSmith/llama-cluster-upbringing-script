@@ -26,11 +26,12 @@ job "router" {
       port     = "http"
 
       check {
-        type     = "http"
-        port     = "http"
-        path     = "/health"
-        interval = "15s"
-        timeout  = "5s"
+        type         = "http"
+        port         = "http"
+        path         = "/health"
+        interval     = "15s"
+        timeout      = "5s"
+        address_mode = "host"
       }
     }
 
