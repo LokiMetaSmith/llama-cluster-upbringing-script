@@ -2,8 +2,9 @@
   ansible.builtin.file:
     path: /opt/nomad/volumes/ha-config
     state: directory
-
-    mode: '0777'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
   become: yes
 
 - name: Template home-assistant Nomad job file
