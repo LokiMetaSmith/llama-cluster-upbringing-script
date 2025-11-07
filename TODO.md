@@ -58,20 +58,20 @@ This plan is broken into phases. Each phase is a self-contained set of tasks des
 
 **Goal:** Eliminate the race conditions and conflicting entry points that have caused the cascading failures. Make the system's state fully managed by Ansible in a declarative way.
 
-1. **Create `heal_cluster.yaml`:**
+1. **[COMPLETED] Create `heal_cluster.yaml`:**
     - Create a new playbook in the root directory named `heal_cluster.yaml`.
     - This playbook will have one play targeting the primary controller node.
     - It will use `ansible.builtin.include_role` to run the `bootstrap_agent` role first, followed by the `pipecatapp` role. This playbook becomes the standard way to ensure services are running.
 
-2. **Make `llama_cpp` and `bootstrap_agent` Roles Idempotent:**
+2. **[COMPLETED] Make `llama_cpp` and `bootstrap_agent` Roles Idempotent:**
     - In `ansible/roles/bootstrap_agent/tasks/deploy_llama_cpp_model.yaml`, ensure the `nomad job run` task for `llamacpp-rpc` only runs if the job is not already running.
     - In `ansible/roles/llama_cpp/tasks/main.yaml`, ensure the compilation tasks are skipped if the aries already exist.
 
-3. **Refactor the Main Playbook (`playbook.yaml`):**
+3. **[COMPLETED] Refactor the Main Playbook (`playbook.yaml`):**
     - Confirm that the `llama_cpp` role is included in "Play 2" and the `bootstrap_agent` role is in "Play 4", running *before* the `pipecatapp` role.
     - **[COMPLETED]** Confirm the `Wait for the main expert service to be healthy in Consul` task exists in the `pipecatapp` role and is correctly placed *before* the `Run pipecat-app job` task.
 
-4. **Remove Conflicting Startup Logic:**
+4. **[COMPLETED] Remove Conflicting Startup Logic:**
     - Delete the `ansible/roles/pipecatapp/templates/llama-services.service.j2` file if it exists.
     - In `ansible/roles/pipecatapp/tasks/main.yaml`, remove any task that deploys a conflicting `systemd` service.
 
