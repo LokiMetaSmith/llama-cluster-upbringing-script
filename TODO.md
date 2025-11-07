@@ -69,7 +69,7 @@ This plan is broken into phases. Each phase is a self-contained set of tasks des
 
 3. **Refactor the Main Playbook (`playbook.yaml`):**
     - Confirm that the `llama_cpp` role is included in "Play 2" and the `bootstrap_agent` role is in "Play 4", running *before* the `pipecatapp` role.
-    - Confirm the `Wait for the main expert service to be healthy in Consul` task exists in the `pipecatapp` role and is correctly placed *before* the `Run pipecat-app job` task.
+    - **[COMPLETED]** Confirm the `Wait for the main expert service to be healthy in Consul` task exists in the `pipecatapp` role and is correctly placed *before* the `Run pipecat-app job` task.
 
 4. **Remove Conflicting Startup Logic:**
     - Delete the `ansible/roles/pipecatapp/templates/llama-services.service.j2` file if it exists.
