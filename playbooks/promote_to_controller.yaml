@@ -1,0 +1,27 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: "Promote Node to Controller"
+      ansible.builtin.debug:
+        msg: "Promoting {{ inventory_hostname }} to a controller."
+
+    - name: "Re-configure Consul as a Server"
+      ansible.builtin.include_role:
+        name: consul
+      vars:
+        consul_mode: "server"
+        consul_server: true
+
+    - name: "Re-configure Nomad as a Server"
+      ansible.builtin.include_role:
+        name: nomad
+      vars:
+        nomad_mode: "server"
+        nomad_server: true
+
+    - name: "Promotion Complete"
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} has been promoted to a controller. Please allow a few minutes for the cluster to stabilize."
