@@ -1,0 +1,41 @@
+---
+- hosts: localhost
+  gather_facts: no
+  become: no
+
+  vars:
+    consul_api_url: "http://127.0.0.1:8500/v1/agent/members"
+    nomad_api_url: "http://127.0.0.1:4646/v1/nodes"
+
+  tasks:
+    - name: "Check Consul Cluster Members"
+      ansible.builtin.uri:
+        url: "{{ consul_api_url }}"
+      register: consul_members_result
+
+    - name: "Parse Consul Members"
+      ansible.builtin.set_fact:
+        consul_servers: "{{ consul_members_result.json | selectattr('Tags.role', 'equalto', 'consul') | list }}"
+        consul_clients: "{{ consul_members_result.json | selectattr('Tags.role', 'ne', 'consul') | list }}"
+
+    - name: "Check Nomad Cluster Members"
+      ansible.builtin.uri:
+        url: "{{ nomad_api_url }}"
+      register: nomad_nodes_result
+
+    - name: "Parse Nomad Members"
+      ansible.builtin.set_fact:
+        nomad_servers: "{{ nomad_nodes_result.json | selectattr('Server', 'equalto', true) | list }}"
+        nomad_clients: "{{ nomad_nodes_result.json | selectattr('Server', 'equalto', false) | list }}"
+
+    - name: "Display Cluster Status"
+      ansible.builtin.debug:
+        msg: |
+          --- Cluster Status ---
+          Consul:
+            - Servers: {{ consul_servers | length }}
+            - Clients: {{ consul_clients | length }}
+          Nomad:
+            - Servers: {{ nomad_servers | length }}
+            - Clients: {{ nomad_clients | length }}
+          ----------------------
