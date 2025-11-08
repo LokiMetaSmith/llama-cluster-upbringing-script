@@ -589,7 +589,7 @@ cd whisper.cpp/
   135  sudo cat munge/munge.key
   136  cd ~
   137  ls
-  138  scp ./munge.key loki@pop-os:~/
+  138  scp ./munge.key pipecatapp@pop-os:~/
   139  ls
   140  cd llama.cpp/
   141  ls

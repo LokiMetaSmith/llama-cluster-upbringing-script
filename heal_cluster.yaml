@@ -9,7 +9,7 @@
     - group_vars/models.yaml
 
   vars:
-    target_user: "loki"
+    target_user: "pipecatapp"
 
   tasks:
     - name: Ensure llamacpp-rpc job is running

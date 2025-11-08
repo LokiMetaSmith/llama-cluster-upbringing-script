@@ -1,13 +1,13 @@
 - name: Deploy Pipecat App
   hosts: all
-  remote_user: "{{ target_user | default('loki') }}"
+  remote_user: "{{ target_user | default('pipecatapp') }}"
   become: yes
 
   vars_files:
     - group_vars/models.yaml
 
   vars:
-    target_user: "loki"
+    target_user: "pipecatapp"
 
   roles:
     - role: pipecatapp
