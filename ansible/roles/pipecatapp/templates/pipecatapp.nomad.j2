@@ -47,6 +47,7 @@ job "{{ job_name | default('pipecat-app') }}" {
 
       config {
         image = "pipecatapp:latest"
+        force_pull = false
         ports = ["http"]
         # Mount volumes for models and config. Models are read-only.
         # Assumes /app is the WORKDIR in the container, where pipecat_config.json will be placed.

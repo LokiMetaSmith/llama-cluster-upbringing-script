@@ -79,8 +79,8 @@ stt_models:
 
 
 # The provider and name of the STT model to be used by the pipecat-app
-active_stt_provider: "faster-whisper"
-active_stt_model_name: "tiny.en"
+active_stt_provider: "whisper.cpp"
+active_stt_model_name: "whisper-large-v3"
 
 # Vision models
 vision_models:
