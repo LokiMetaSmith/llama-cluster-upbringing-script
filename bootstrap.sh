@@ -12,14 +12,31 @@ DEBUG_MODE=false
 EXTERNAL_MODEL_SERVER=false
 PURGE_JOBS=false
 CONTINUE_RUN=false
+ROLE="all" # Default role
+CONTROLLER_IP=""
 ANSIBLE_ARGS=() # Use an array for Ansible arguments
 LOG_FILE="playbook_output.log"
 STATE_FILE=".bootstrap_state"
 
 # --- Parse command-line arguments ---
-for arg in "$@"
-do
-    case $arg in
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        --role)
+        ROLE="$2"
+        shift
+        shift
+        ;;
+        --controller-ip)
+        CONTROLLER_IP="$2"
+        shift
+        shift
+        ;;
+        --tags)
+        ANSIBLE_TAGS="$2"
+        shift
+        shift
+        ;;
         --purge-jobs)
         PURGE_JOBS=true
         shift
@@ -60,9 +77,28 @@ do
     esac
 done
 
+# --- Validate Arguments ---
+if [ "$ROLE" = "worker" ] && [ -z "$CONTROLLER_IP" ]; then
+    echo "Error: --controller-ip is required when using --role=worker"
+    exit 1
+fi
+
 # --- Move to the script's directory ---
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR"
+
+# --- Run Initial Machine Setup based on Role ---
+# This script handles pre-Ansible configuration like network and hostname.
+# It's run for all roles, and the script itself determines what to do based on the config.
+echo "--- Running Initial Machine Setup ---"
+if [ -f "initial-setup/setup.sh" ]; then
+    echo "You may be prompted for your sudo password to run the initial setup script."
+    sudo bash "initial-setup/setup.sh"
+    echo "✅ Initial machine setup complete."
+else
+    echo "⚠️  Warning: initial-setup/setup.sh not found. Skipping pre-configuration."
+fi
+
 
 # --- Handle the --clean option ---
 if [ "$CLEAN_REPO" = true ]; then
@@ -235,7 +271,8 @@ if [ "$DEBUG_MODE" = true ] && [ "$CONTINUE_RUN" = false ]; then
     > "$LOG_FILE"
 fi
 
-PLAYBOOKS=(
+# --- Define Role-Specific Playbooks ---
+ALL_PLAYBOOKS=(
     "playbooks/common_setup.yaml"
     "playbooks/services/core_infra.yaml"
     "playbooks/services/consul.yaml"
@@ -247,6 +284,40 @@ PLAYBOOKS=(
     "playbooks/services/ai_experts.yaml"
     "playbooks/services/final_verification.yaml"
 )
+
+CONTROLLER_PLAYBOOKS=(
+    "playbooks/common_setup.yaml"
+    "playbooks/services/core_infra.yaml"
+    "playbooks/services/consul.yaml"
+    "playbooks/services/docker.yaml"
+    "playbooks/services/nomad.yaml"
+)
+
+WORKER_PLAYBOOKS=(
+    "playbooks/worker.yaml"
+)
+
+# --- Select Playbooks based on Role ---
+if [ -n "$ANSIBLE_TAGS" ]; then
+    ANSIBLE_ARGS+=(--tags "$ANSIBLE_TAGS")
+fi
+case "$ROLE" in
+    "all")
+        PLAYBOOKS=("${ALL_PLAYBOOKS[@]}")
+        ;;
+    "controller")
+        PLAYBOOKS=("${CONTROLLER_PLAYBOOKS[@]}")
+        ;;
+    "worker")
+        PLAYBOOKS=("${WORKER_PLAYBOOKS[@]}")
+        ANSIBLE_ARGS+=(--extra-vars "controller_ip=$CONTROLLER_IP")
+        ;;
+    *)
+        echo "Error: Invalid role '$ROLE' specified."
+        exit 1
+        ;;
+esac
+
 
 for i in "${!PLAYBOOKS[@]}"; do
     playbook_path="$SCRIPT_DIR/${PLAYBOOKS[$i]}"
