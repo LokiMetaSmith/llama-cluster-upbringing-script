@@ -33,7 +33,8 @@ def test_health_check(client, mocker):
     # Mock the twin_service_instance to simulate a healthy state
     mock_twin_service = mocker.Mock()
     mock_twin_service.router_llm = True
-    mocker.patch("web_server.twin_service_instance", mock_twin_service)
+    client.app.state.twin_service_instance = mock_twin_service
+    client.app.state.is_ready = True
 
     response = client.get("/health")
     assert response.status_code == 200
