@@ -125,12 +125,12 @@ fi
 # --- Build Ansible arguments ---
 if [ "$UPDATE_USER" = true ]; then
     echo "--user flag detected, updating user"
-    ANSIBLE_ARGS+=(--extra-vars "target_user=loki")
+    ANSIBLE_ARGS+=(--extra-vars "target_user=pipecatapp")
 else
     # FIXED: This was a conflicting 'if' block before
     echo "--user flag not detected, using default"
-    ANSIBLE_ARGS+=(--extra-vars "target_user=loki")
-    # (If the default is different, change 'loki' here, or remove the 'else' block)
+    ANSIBLE_ARGS+=(--extra-vars "target_user=pipecatapp")
+    # (If the default is different, change 'pipecatapp' here, or remove the 'else' block)
 fi
 
 # FIXED: Correct 'if' statement spacing

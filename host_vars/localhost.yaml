@@ -1,4 +1,4 @@
-target_user: loki
+target_user: pipecatapp
 # BEGIN ANSIBLE MANAGED BLOCK
 mac_address: "bc:5f:f4:44:2f:0e"
 # END ANSIBLE MANAGED BLOCK

@@ -96,7 +96,7 @@
       ansible.builtin.include_role:
         name: nomad
       vars:
-        target_user: loki
+        target_user: pipecatapp
 
     - name: Start Consul service
       ansible.builtin.service:

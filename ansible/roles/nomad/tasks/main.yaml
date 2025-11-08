@@ -193,8 +193,8 @@
   ansible.builtin.file:
     path: /opt/pipecatapp
     state: directory
-    owner: "{{ target_user | default('loki') }}"
-    group: "{{ target_user | default('loki') }}"
+    owner: "{{ target_user | default('pipecatapp') }}"
+    group: "{{ target_user | default('pipecatapp') }}"
     mode: '0755'
   become: yes
 
@@ -202,8 +202,8 @@
   ansible.builtin.file:
     path: /opt/nomad/volumes
     state: directory
-    owner: "{{ target_user | default('loki') }}"
-    group: "{{ target_user | default('loki') }}"
+    owner: "{{ target_user | default('pipecatapp') }}"
+    group: "{{ target_user | default('pipecatapp') }}"
     mode: '0755'
   become: yes
 
@@ -211,8 +211,8 @@
   ansible.builtin.file:
     path: "/opt/nomad/volumes/{{ item }}"
     state: directory
-    owner: "{{ target_user | default('loki') }}"
-    group: "{{ target_user | default('loki') }}"
+    owner: "{{ target_user | default('pipecatapp') }}"
+    group: "{{ target_user | default('pipecatapp') }}"
     mode: '0755'
   loop:
     - mqtt-data
