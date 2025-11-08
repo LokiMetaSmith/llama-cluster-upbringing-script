@@ -7,7 +7,7 @@ job "mqtt" {
 
     network {
       port "mqtt" {
-        to = 1883
+        static = 1883
       }
       port "ws" {
         to = 9001
