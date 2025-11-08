@@ -35,8 +35,6 @@ job "{{ job_name | default('pipecat-app') }}" {
         interval     = "10s"
         timeout      = "2s"
         address_mode = "host"
-        {% if pipecat_deployment_style == 'docker' %}
-        {% endif %}
       }
     }
 
