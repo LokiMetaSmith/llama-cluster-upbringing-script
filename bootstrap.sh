@@ -32,6 +32,11 @@ while [[ $# -gt 0 ]]; do
         shift
         shift
         ;;
+        --tags)
+        ANSIBLE_TAGS="$2"
+        shift
+        shift
+        ;;
         --purge-jobs)
         PURGE_JOBS=true
         shift
@@ -289,12 +294,13 @@ CONTROLLER_PLAYBOOKS=(
 )
 
 WORKER_PLAYBOOKS=(
-    "playbooks/common_setup.yaml"
-    "playbooks/services/docker.yaml"
-    "playbooks/services/nomad_worker.yaml" # A potential future playbook for workers
+    "playbooks/worker.yaml"
 )
 
 # --- Select Playbooks based on Role ---
+if [ -n "$ANSIBLE_TAGS" ]; then
+    ANSIBLE_ARGS+=(--tags "$ANSIBLE_TAGS")
+fi
 case "$ROLE" in
     "all")
         PLAYBOOKS=("${ALL_PLAYBOOKS[@]}")

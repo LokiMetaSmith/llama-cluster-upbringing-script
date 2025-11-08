@@ -1,0 +1,9 @@
+---
+- name: Configure Nomad as a client
+  ansible.builtin.include_role:
+    name: nomad
+  vars:
+    nomad_mode: "client"
+    nomad_server_join:
+      enabled: true
+      server_address: "{{ controller_ip | default('127.0.0.1') }}"
