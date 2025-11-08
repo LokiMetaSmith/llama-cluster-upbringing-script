@@ -19,7 +19,7 @@
     - name: Check that the pipecat application is running
       ansible.builtin.uri:
         url: "http://{{ ansible_host }}:8000/health"
-        status_code: 200
+        status_code: [200, 503]
       register: pipecat_status
       until: pipecat_status.status == 200
       retries: 30 # 30 retries * 10 seconds = 5 minutes

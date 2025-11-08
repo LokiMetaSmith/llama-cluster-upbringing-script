@@ -75,6 +75,16 @@ logger = logging.getLogger()
 logger.addHandler(WebSocketLogHandler())
 
 # Custom frame processor to broadcast conversation to the web UI
+class TapService(FrameProcessor):
+    """A simple Pipecat frame processor that logs frames for debugging."""
+    def __init__(self, prefix: str = ""):
+        super().__init__()
+        self.prefix = prefix
+
+    async def process_frame(self, frame, direction):
+        logging.debug(f"[{self.prefix}] Frame received: {frame}")
+        await self.push_frame(frame, direction)
+
 class UILogger(FrameProcessor):
     """A Pipecat frame processor to broadcast conversation text to the web UI.
 
@@ -889,15 +899,6 @@ async def main():
     vision_detector = YOLOv8Detector()
     logging.info("Using YOLOv8 for vision.")
 
-    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-    if debug_mode:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logging.debug("Debug mode enabled.")
-
-    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
-    if approval_mode:
-        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
-
     # Load external experts configuration from environment variable
     external_experts_config = {}
     external_experts_config_json = os.getenv("EXTERNAL_EXPERTS_CONFIG")
@@ -907,6 +908,15 @@ async def main():
             logging.info(f"Loaded configuration for {len(external_experts_config)} external expert(s).")
         except json.JSONDecodeError:
             logging.error(f"Failed to decode EXTERNAL_EXPERTS_CONFIG JSON: {external_experts_config_json}")
+
+    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
+    if debug_mode:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug("Debug mode enabled.")
+
+    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
+    if approval_mode:
+        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
 
     twin = TwinService(
         llm=llm,
@@ -924,22 +934,21 @@ async def main():
     pipeline_steps = [
         transport.input(),
         stt,
+    ]
+    if debug_mode:
+        pipeline_steps.append(TapService("after-stt"))
+    pipeline_steps.extend([
         text_injector,
         UILogger(sender="user"),
         twin,
+    ])
+    if debug_mode:
+        pipeline_steps.append(TapService("after-twin"))
+    pipeline_steps.extend([
         UILogger(sender="agent"),
         tts,
         transport.output()
-    ]
-    # Set Debug  mode for troubleshooting and examining state
-    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-    if debug_mode:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logging.debug("Debug mode enabled.")
-
-    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
-    if approval_mode:
-        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
+    ])
     if os.getenv("BENCHMARK_MODE", "false").lower() == "true":
         pipeline_steps.insert(1, BenchmarkCollector())
 
