@@ -43,6 +43,23 @@ from llm_clients import ExternalLLMClient
 from expert_tracker import ExpertTracker
 
 import uvicorn
+import contextlib
+import sys
+
+@contextlib.contextmanager
+def suppress_stderr():
+    """
+    A context manager to temporarily redirect stderr to /dev/null.
+    This is used to silence the C-level spam from PortAudio/ALSA.
+    """
+    stderr = sys.stderr
+    devnull = open(os.devnull, 'w')
+    sys.stderr = devnull
+    try:
+        yield
+    finally:
+        sys.stderr = stderr  # Restore stderr
+        devnull.close()
 
 # Custom logging handler to broadcast logs to the web UI
 class WebSocketLogHandler(logging.Handler):
@@ -75,6 +92,16 @@ logger = logging.getLogger()
 logger.addHandler(WebSocketLogHandler())
 
 # Custom frame processor to broadcast conversation to the web UI
+class TapService(FrameProcessor):
+    """A simple Pipecat frame processor that logs frames for debugging."""
+    def __init__(self, prefix: str = ""):
+        super().__init__()
+        self.prefix = prefix
+
+    async def process_frame(self, frame, direction):
+        logging.debug(f"[{self.prefix}] Frame received: {frame}")
+        await self.push_frame(frame, direction)
+
 class UILogger(FrameProcessor):
     """A Pipecat frame processor to broadcast conversation text to the web UI.
 
@@ -759,13 +786,17 @@ def find_workable_audio_config():
                          sample rate. Returns (None, 16000) if no workable
                          combination is found.
     """
-    try:
-        import pyaudio
-    except ImportError:
-        logging.error("PyAudio is not installed. Please install it to enable dynamic audio configuration.")
-        return None, 16000  # Default fallback
+    logging.info("Initializing audio subsystem. Suppressing expected C-library noise...")
+    with suppress_stderr():
+        try:
+            import pyaudio
+        except ImportError:
+            logging.error("PyAudio is not installed. Please install it to enable dynamic audio configuration.")
+            return None, 16000  # Default fallback
 
-    p = pyaudio.PyAudio()
+        p = pyaudio.PyAudio()
+
+    logging.info("PyAudio initialized. Starting robust device scan...")
     common_rates = [16000, 48000, 44100, 32000, 8000]
 
     try:
@@ -863,9 +894,10 @@ async def main():
     tts_voices = pipecat_config.get("tts_voices", [])
     stt_service_name = os.getenv("STT_SERVICE")
     if stt_service_name == "faster-whisper":
-            model_path = "/opt/pipecatapp/faster-whisper-model"
-            print(f"DEBUG: model_path before WhisperModel: {model_path}")
-            stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)        logging.info(f"Configured FasterWhisper for STT with sample rate {sample_rate}Hz.")
+        model_path = "/opt/models/stt/faster-whisper/" # docker container doesn't have a nomad directory
+        print(f"DEBUG: model_path before WhisperModel: {model_path}")
+        stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
+        logging.info(f"Configured FasterWhisper for STT with sample rate {sample_rate}Hz.")
     else:
         raise RuntimeError(f"STT_SERVICE environment variable not set to a valid value. Got '{stt_service_name}'")
 
@@ -889,15 +921,6 @@ async def main():
     vision_detector = YOLOv8Detector()
     logging.info("Using YOLOv8 for vision.")
 
-    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-    if debug_mode:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logging.debug("Debug mode enabled.")
-
-    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
-    if approval_mode:
-        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
-
     # Load external experts configuration from environment variable
     external_experts_config = {}
     external_experts_config_json = os.getenv("EXTERNAL_EXPERTS_CONFIG")
@@ -907,6 +930,15 @@ async def main():
             logging.info(f"Loaded configuration for {len(external_experts_config)} external expert(s).")
         except json.JSONDecodeError:
             logging.error(f"Failed to decode EXTERNAL_EXPERTS_CONFIG JSON: {external_experts_config_json}")
+
+    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
+    if debug_mode:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug("Debug mode enabled.")
+
+    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
+    if approval_mode:
+        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
 
     twin = TwinService(
         llm=llm,
@@ -924,22 +956,21 @@ async def main():
     pipeline_steps = [
         transport.input(),
         stt,
+    ]
+    if debug_mode:
+        pipeline_steps.append(TapService("after-stt"))
+    pipeline_steps.extend([
         text_injector,
         UILogger(sender="user"),
         twin,
+    ])
+    if debug_mode:
+        pipeline_steps.append(TapService("after-twin"))
+    pipeline_steps.extend([
         UILogger(sender="agent"),
         tts,
         transport.output()
-    ]
-    # Set Debug  mode for troubleshooting and examining state
-    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-    if debug_mode:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logging.debug("Debug mode enabled.")
-
-    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
-    if approval_mode:
-        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
+    ])
     if os.getenv("BENCHMARK_MODE", "false").lower() == "true":
         pipeline_steps.insert(1, BenchmarkCollector())
 
