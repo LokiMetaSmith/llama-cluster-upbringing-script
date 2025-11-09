@@ -14,29 +14,29 @@
       ansible.builtin.debug:
         var: job_status.stdout
 
-    - name: Get allocation ID for home-assistant
-      ansible.builtin.command:
-        cmd: "nomad job status -t '{{ '{{' }} range .Allocations {{ '}}' }}{{ '{{' }} if eq .ClientStatus \"running\" {{ '}}' }}{{ '{{' }} .ID {{ '}}' }}{{ '{{' }} end {{ '}}' }}{{ '{{' }} end {{ '}}' }}' home-assistant"
-      register: alloc_id
-      changed_when: false
-      when: job_status.rc == 0
+    - name: Get Home Assistant allocations from Nomad API
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:4646/v1/job/home-assistant/allocations"
+      register: ha_allocations_response
+      when: job_status.rc == 0 and "'No allocations placed' not in job_status.stdout"
+      ignore_errors: yes
 
-    - name: Display allocation ID
-      ansible.builtin.debug:
-        var: alloc_id.stdout
-      when: job_status.rc == 0
+    - name: Set latest allocation fact
+      ansible.builtin.set_fact:
+        latest_ha_allocation: "{{ (ha_allocations_response.json | default([]) | sort(attribute='CreateIndex', reverse=true) | first) }}"
+      when: ha_allocations_response.status == 200 and ha_allocations_response.json is defined and ha_allocations_response.json | length > 0
 
-    - name: Get logs for home-assistant allocation
+    - name: Get logs for latest home-assistant allocation
       ansible.builtin.command:
-        cmd: "nomad alloc logs {{ alloc_id.stdout }}"
+        cmd: "nomad alloc logs {{ latest_ha_allocation.ID }}"
       register: alloc_logs
       changed_when: false
-      when: job_status.rc == 0 and alloc_id.stdout != ""
+      when: latest_ha_allocation is defined and latest_ha_allocation.ID is defined
 
     - name: Display allocation logs
       ansible.builtin.debug:
         var: alloc_logs.stdout
-      when: job_status.rc == 0 and alloc_id.stdout != ""
+      when: alloc_logs is defined
 
     - name: Check permissions of ha-config directory
       ansible.builtin.stat:
