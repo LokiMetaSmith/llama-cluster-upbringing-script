@@ -863,9 +863,9 @@ async def main():
     tts_voices = pipecat_config.get("tts_voices", [])
     stt_service_name = os.getenv("STT_SERVICE")
     if stt_service_name == "faster-whisper":
-        model_path = "/opt/nomad/models/stt/faster-whisper-tiny.en"
-        stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
-        logging.info(f"Configured FasterWhisper for STT with sample rate {sample_rate}Hz.")
+            model_path = "/opt/pipecatapp/faster-whisper-model"
+            print(f"DEBUG: model_path before WhisperModel: {model_path}")
+            stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)        logging.info(f"Configured FasterWhisper for STT with sample rate {sample_rate}Hz.")
     else:
         raise RuntimeError(f"STT_SERVICE environment variable not set to a valid value. Got '{stt_service_name}'")
 

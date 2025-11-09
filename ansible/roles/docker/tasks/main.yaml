@@ -92,3 +92,4 @@
   ansible.builtin.command:
     cmd: docker load -i /tmp/pipecatapp.tar
   become: yes
+
