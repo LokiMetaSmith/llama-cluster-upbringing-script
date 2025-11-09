@@ -45,7 +45,7 @@ echo "Attempting to start llama-server with hardcoded model: Llama-3-8B-Instruct
 
 # Run the server in the foreground and redirect all output to Nomad's logs
 /usr/local/bin/llama-server \
-  --model "/opt/nomad/models/llm/Llama-3-8B-Instruct.gguf" \
+  --model "{{ nomad_models_dir }}/llm/Llama-3-8B-Instruct.gguf" \
   --host 0.0.0.0 \
   --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
   --n-gpu-layers 999 \
@@ -71,7 +71,7 @@ EOH
 
       volume_mount {
         volume      = "models"
-        destination = "/opt/nomad/models"
+        destination = "{{ nomad_models_dir }}"
         read_only   = true
       }
     }

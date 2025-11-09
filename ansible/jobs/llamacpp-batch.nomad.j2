@@ -18,7 +18,7 @@ job "llamacpp-batch" {
       config {
         command = "/usr/local/bin/main"
         args = [
-          "-m", "/opt/nomad/models/llm/${NOMAD_META_model_name}",
+          "-m", "{{ nomad_models_dir }}/llm/${NOMAD_META_model_name}",
           "-p", "${NOMAD_META_prompt}",
           "-ngl", "99"
         ]

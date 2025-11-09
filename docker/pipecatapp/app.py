@@ -690,7 +690,7 @@ class YOLOv8Detector(FrameProcessor):
         """Initializes the YOLOv8Detector and loads the model."""
         super().__init__()
         # The model is now managed by Ansible and placed in a predictable location.
-        model_path = "/opt/nomad/models/vision/yolov8n.pt"
+        model_path = "/opt/models/vision/yolov8n.pt"
         self.model = YOLO(model_path)
         self.latest_observation = "I don't see anything."
         self.last_detected_objects = set()
@@ -912,8 +912,8 @@ async def main():
 
     # --- FINAL FIX FOR TTS ---
     # Use the local Piper TTS service with the configured voices
-    model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
-    config_path = f"/opt/nomad/models/tts/{tts_voices[0]['config']}"
+    model_path = f"/opt/models/tts/{tts_voices[0]['model']}"
+    config_path = f"/opt/models/tts/{tts_voices[0]['config']}"
     tts = PiperTTSService(model_path=model_path, config_path=config_path)
     runner = PipelineRunner()
 

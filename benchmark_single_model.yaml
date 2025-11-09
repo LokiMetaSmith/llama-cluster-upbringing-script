@@ -1,6 +1,6 @@
 - name: "Run llama-bench for {{ model_item.filename }}"
   ansible.builtin.command:
-    cmd: "llama-bench -m /opt/nomad/models/llm/{{ model_item.filename }} -p 32 -n 32"
+    cmd: "llama-bench -m {{ nomad_models_dir }}/llm/{{ model_item.filename }} -p 32 -n 32"
   register: benchmark_result
   ignore_errors: true
   changed_when: false

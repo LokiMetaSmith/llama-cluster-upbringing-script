@@ -293,7 +293,7 @@ class YOLOv8Detector(FrameProcessor):
     def __init__(self):
         """Initializes the YOLOv8 detector."""
         super().__init__()
-        model_path = os.getenv("YOLO_MODEL_PATH", "/opt/nomad/models/vision/yolov8n.pt")
+        model_path = os.getenv("YOLO_MODEL_PATH", "/opt/models/vision/yolov8n.pt")
         self.model = YOLO(model_path)
         self.latest_observation = "I don't see anything."
         self.last_detected_objects = set()
@@ -898,7 +898,7 @@ async def main():
             # Sanitize the model name if it contains the provider name as a prefix
             if stt_model_name.startswith(f"{stt_provider}-"):
                 stt_model_name = stt_model_name[len(stt_provider) + 1:]
-            model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
+            model_path = f"/opt/models/stt/{stt_provider}/{stt_model_name}"
             stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
             logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate 16000Hz.")
         else:
@@ -907,7 +907,7 @@ async def main():
         tts_voices = app_config.get("tts_voices", [])
         if not tts_voices:
             raise RuntimeError("TTS voices not configured in Consul.")
-        model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
+        model_path = f"/opt/models/tts/{tts_voices[0]['model']}"
         tts = PiperTTSService(model_path=model_path)
 
         pipeline_steps.extend([

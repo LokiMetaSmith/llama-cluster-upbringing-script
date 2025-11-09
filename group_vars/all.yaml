@@ -14,7 +14,7 @@ advertise_ip: "{{ (ansible_all_ipv6_addresses | reject('equalto', '::1') | list 
 default(ansible_default_ipv4.address) }}"
 
 nomad_namespace: "default"
-nomad_models_dir: "/opt/nomad/models"
+nomad_models_dir: "/opt/models"
 
 # Pipecat application settings
 pipecat_deployment_style: 'docker' # Can be 'raw_exec' or 'docker'

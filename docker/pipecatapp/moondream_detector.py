@@ -23,7 +23,7 @@ class MoondreamDetector(FrameProcessor):
         """
         super().__init__()
         # The model is now managed by Ansible and placed in a predictable location.
-        model_path = "/opt/nomad/models/vision/moondream2"
+        model_path = "/opt/models/vision/moondream2"
         self.model = AutoModelForCausalLM.from_pretrained(
             model_path,
             trust_remote_code=True,
