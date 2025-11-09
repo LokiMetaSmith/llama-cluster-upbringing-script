@@ -176,8 +176,8 @@
     tag: local
     build:
       path: "{{ playbook_dir }}/../../docker/pipecatapp"
+      nocache: true
     source: build
-    force_rebuild: true
   when: pipecat_deployment_style == 'docker'
 
 - name: Ensure Nomad jobs directory exists
