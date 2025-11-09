@@ -1,0 +1,48 @@
+---
+- hosts: localhost
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Check Nomad job status for home-assistant
+      ansible.builtin.command:
+        cmd: "nomad job status home-assistant"
+      register: job_status
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display Nomad job status
+      ansible.builtin.debug:
+        var: job_status.stdout
+
+    - name: Get allocation ID for home-assistant
+      ansible.builtin.command:
+        cmd: "nomad job status -t '{{ '{{' }} range .Allocations {{ '}}' }}{{ '{{' }} if eq .ClientStatus \"running\" {{ '}}' }}{{ '{{' }} .ID {{ '}}' }}{{ '{{' }} end {{ '}}' }}{{ '{{' }} end {{ '}}' }}' home-assistant"
+      register: alloc_id
+      changed_when: false
+      when: job_status.rc == 0
+
+    - name: Display allocation ID
+      ansible.builtin.debug:
+        var: alloc_id.stdout
+      when: job_status.rc == 0
+
+    - name: Get logs for home-assistant allocation
+      ansible.builtin.command:
+        cmd: "nomad alloc logs {{ alloc_id.stdout }}"
+      register: alloc_logs
+      changed_when: false
+      when: job_status.rc == 0 and alloc_id.stdout != ""
+
+    - name: Display allocation logs
+      ansible.builtin.debug:
+        var: alloc_logs.stdout
+      when: job_status.rc == 0 and alloc_id.stdout != ""
+
+    - name: Check permissions of ha-config directory
+      ansible.builtin.stat:
+        path: /opt/nomad/volumes/ha-config
+      register: ha_config_stat
+
+    - name: Display permissions of ha-config directory
+      ansible.builtin.debug:
+        var: ha_config_stat.stat
