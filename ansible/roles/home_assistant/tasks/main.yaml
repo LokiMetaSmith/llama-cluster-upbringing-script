@@ -52,14 +52,21 @@
   async: 300 # Max runtime for the command itself (submit shouldn't take long)
   poll: 0    # Fire and forget - don't wait for command completion
 
-- name: DEBUG - Get Home Assistant container user ID
+- name: Get Home Assistant allocation ID
+  ansible.builtin.shell:
+    cmd: nomad job status -t "{{ '{{' }} .ID {{ '}}' }}" home-assistant | head -n 1
+  register: ha_alloc_id
+  changed_when: false
+  become: no
+
+- name: Get Home Assistant container user ID
   ansible.builtin.command:
-    cmd: nomad alloc exec -task home-assistant $(nomad job status -t "{{ '{{' }} .ID {{ '}}' }}" home-assistant | head -n 1) -- stat -c '%u:%g' /
+    cmd: "nomad alloc exec -task home-assistant {{ ha_alloc_id.stdout }} -- stat -c '%u:%g' /"
   register: ha_user_id
   changed_when: false
   become: no
   ignore_errors: true
 
-- name: DEBUG - Display Home Assistant container user ID
+- name: Display Home Assistant container user ID
   ansible.builtin.debug:
     var: ha_user_id.stdout
