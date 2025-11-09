@@ -2,8 +2,8 @@
   ansible.builtin.file:
     path: /opt/nomad/volumes/ha-config
     state: directory
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ home_assistant_uid | default(1000) }}"
+    group: "{{ home_assistant_gid | default(1000) }}"
     mode: '0755'
   become: yes
 
