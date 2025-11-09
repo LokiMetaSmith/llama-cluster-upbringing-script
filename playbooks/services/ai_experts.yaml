@@ -11,7 +11,7 @@
 
 
   vars:
-    experts: "{{ expert_models.keys() | list }}"
+    experts: "{{ expert_models.keys() | reject('equalto', 'router') | list }}"
     expected_worker_count: "{{ ((groups['workers'] | default([]) | length) if (groups['workers'] | default([]) | length) > 0 else 1) | int }}"
     # This creates a new list containing only the first model object from each expert's list.
     # The template needs the full object (name, filename, memory_mb, etc.), not just the name.
