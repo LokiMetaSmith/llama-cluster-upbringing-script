@@ -43,6 +43,23 @@ from llm_clients import ExternalLLMClient
 from expert_tracker import ExpertTracker
 
 import uvicorn
+import contextlib
+import sys
+
+@contextlib.contextmanager
+def suppress_stderr():
+    """
+    A context manager to temporarily redirect stderr to /dev/null.
+    This is used to silence the C-level spam from PortAudio/ALSA.
+    """
+    stderr = sys.stderr
+    devnull = open(os.devnull, 'w')
+    sys.stderr = devnull
+    try:
+        yield
+    finally:
+        sys.stderr = stderr  # Restore stderr
+        devnull.close()
 
 # Custom logging handler to broadcast logs to the web UI
 class WebSocketLogHandler(logging.Handler):
@@ -769,13 +786,17 @@ def find_workable_audio_config():
                          sample rate. Returns (None, 16000) if no workable
                          combination is found.
     """
-    try:
-        import pyaudio
-    except ImportError:
-        logging.error("PyAudio is not installed. Please install it to enable dynamic audio configuration.")
-        return None, 16000  # Default fallback
+    logging.info("Initializing audio subsystem. Suppressing expected C-library noise...")
+    with suppress_stderr():
+        try:
+            import pyaudio
+        except ImportError:
+            logging.error("PyAudio is not installed. Please install it to enable dynamic audio configuration.")
+            return None, 16000  # Default fallback
 
-    p = pyaudio.PyAudio()
+        p = pyaudio.PyAudio()
+
+    logging.info("PyAudio initialized. Starting robust device scan...")
     common_rates = [16000, 48000, 44100, 32000, 8000]
 
     try:
@@ -873,7 +894,7 @@ async def main():
     tts_voices = pipecat_config.get("tts_voices", [])
     stt_service_name = os.getenv("STT_SERVICE")
     if stt_service_name == "faster-whisper":
-        model_path = "/opt/nomad/models/stt/faster-whisper-tiny.en"
+        model_path = "/opt/nomad/models/stt/faster-whisper/tiny.en"
         stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
         logging.info(f"Configured FasterWhisper for STT with sample rate {sample_rate}Hz.")
     else:
