@@ -132,6 +132,19 @@
         loop_var: item
       when: benchmark_results is defined and benchmark_results | length > 0 and benchmark_results is defined
 
+    - name: Wait for the llamacpp-rpc-pool service to be healthy in Consul
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-pool-provider"
+        return_content: yes
+      register: rpc_pool_health
+      until: >
+        rpc_pool_health.json is defined and
+        rpc_pool_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
+      retries: 60
+      delay: 10
+      changed_when: false
+      when: benchmark_results is defined
+
     - name: Create Expert Orchestrator job files
       include_tasks:
         file: "{{ playbook_dir }}/../../ansible/tasks/create_expert_job.yaml"
