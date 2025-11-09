@@ -894,7 +894,8 @@ async def main():
     tts_voices = pipecat_config.get("tts_voices", [])
     stt_service_name = os.getenv("STT_SERVICE")
     if stt_service_name == "faster-whisper":
-        model_path = "/opt/nomad/models/stt/faster-whisper/tiny.en"
+        model_path = "/opt/models/stt/faster-whisper/" # docker container doesn't have a nomad directory
+        print(f"DEBUG: model_path before WhisperModel: {model_path}")
         stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
         logging.info(f"Configured FasterWhisper for STT with sample rate {sample_rate}Hz.")
     else:

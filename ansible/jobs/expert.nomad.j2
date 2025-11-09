@@ -24,6 +24,7 @@ variable "rpc_pool_job_name" {
 {% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-' ~ current_expert ~ '-provider' %}
 {% set args_list = ["/opt/pipecatapp/supervisor.py", "--expert-id=" ~ job_name] %}
 
+
 job "{{ job_name }}" {
   datacenters = ["dc1"]
 
@@ -61,11 +62,9 @@ job "{{ job_name }}" {
       driver = "docker"
 
       config {
-        image = "pipecatapp:latest"
+        image = "pipecatapp:local"
         force_pull = false
-        command = "python"
         ports = ["http"]
-        args = {{ args_list | to_json }}
       }
 
       env {
@@ -75,7 +74,7 @@ job "{{ job_name }}" {
 
       resources {
         cpu    = 500 # 500 MHz
-        memory = 256 # 256MB
+        memory = 1024 # 1024MB
       }
     }
   }
