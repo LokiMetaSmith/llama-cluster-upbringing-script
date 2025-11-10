@@ -26,15 +26,26 @@ class TestAdaptationManager(unittest.TestCase):
         with patch.object(sys, 'argv', ['adaptation_manager.py', 'dummy_diagnostics.json']):
             main()
 
-        # Verify that the test case file was generated
-        mock_file.assert_called_with('/tmp/test_job.test_case.yaml', 'w')
+        # Verify that the test case file was written
+        # We iterate through the calls to find the one that writes the test case
+        written_filepath = None
+        for call in mock_file.call_args_list:
+            # call is a tuple of (args, kwargs)
+            filepath = call[0][0]
+            mode = call[0][1]
+            if mode == 'w' and 'failure_test_job_' in os.path.basename(filepath):
+                self.assertIn('prompt_engineering/generated_evaluators', filepath)
+                written_filepath = filepath
+                break
 
-        # Verify that the evolution script was called
+        self.assertIsNotNone(written_filepath, "Did not find the call to write the test case file.")
+
+        # Verify that the evolution script was called with the correct path
         mock_popen.assert_called_once()
         args, _ = mock_popen.call_args
         self.assertIn("evolve.py", args[0][1])
         self.assertIn("--test-case", args[0])
-        self.assertIn("/tmp/test_job.test_case.yaml", args[0])
+        self.assertEqual(args[0][-1], written_filepath)
 
 if __name__ == '__main__':
     unittest.main()

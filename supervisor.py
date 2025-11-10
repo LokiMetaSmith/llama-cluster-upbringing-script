@@ -146,7 +146,7 @@ def main():
                 run_script("reflection/adaptation_manager.py", [diagnostics_file])
             else:
                 # 5b. Otherwise, attempt to heal the job directly
-                if not run_playbook("heal_job.yaml", extra_vars={"solution_json": solution_json}):
+                if not run_playbook("heal_job.yaml", extra_vars={"solution_json": json.dumps(solution)}):
                     print(f"Healing attempt failed for {job_id}.")
                 else:
                     print(f"Healing attempt completed for {job_id}.")

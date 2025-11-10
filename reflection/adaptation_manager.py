@@ -4,93 +4,114 @@ import os
 import subprocess
 import sys
 import yaml
+from datetime import datetime
 
-def generate_test_case(diagnostics_data):
-    """Generates a YAML test case from diagnostic data.
+def generate_test_case(diagnostic_data):
+    """Creates a structured YAML test case from diagnostic information.
 
-    This function creates a structured test case that captures the essence of
-    a job failure, making it reproducible for the prompt evolution process.
+    This function transforms the raw JSON output from a diagnostic run into a
+    formal YAML test case that can be consumed by the evaluation and evolution
+    scripts. The generated test case is designed to reproduce the failure
+    scenario.
 
     Args:
-        diagnostics_data (dict): The parsed JSON data from the diagnostics file.
+        diagnostic_data (dict): The parsed JSON data from the diagnostic file.
 
     Returns:
-        str: The file path to the newly created YAML test case file.
+        str: A string containing the formatted YAML test case.
     """
-    job_id = diagnostics_data.get("job_id", "unknown_job")
+    job_id = diagnostic_data.get("job_id", "unknown_job")
+    error_logs = diagnostic_data.get("logs", {}).get("stderr", "No stderr logs.")
+
     test_case = {
         "test_name": f"test_failure_reproduction_{job_id}",
+        "description": (
+            f"This test case is generated automatically from a runtime failure "
+            f"of job '{job_id}'. The goal is to evolve the reflection agent "
+            f"to produce a valid healing action instead of an error."
+        ),
         "steps": [
             {
-                "action": "deploy_job",
-                "job_id": job_id,
-                "expected_outcome": "job_should_be_healthy"
+                "type": "run_script",
+                "name": "reflection/reflect.py",
+                "parameters": {
+                    # The parameter is the diagnostic data itself, representing the input
+                    "diagnostic_data": diagnostic_data
+                },
+                "expected_outcome": {
+                    "action_not_equals": "error"
+                },
+                "failure_evidence": {
+                    "stderr": error_logs
+                }
             }
         ]
     }
-
-    test_case_path = f"/tmp/{job_id}.test_case.yaml"
-    with open(test_case_path, 'w') as f:
-        yaml.dump(test_case, f)
-
-    print(f"Generated test case for job {job_id} at {test_case_path}")
-    return test_case_path
-
-def run_evolution(test_case_path):
-    """Triggers the prompt evolution process with a specific test case.
-
-    This function calls the `evolve.py` script as a subprocess, ensuring that
-    the self-adaptation loop is focused on resolving the specific failure
-    captured in the provided test case.
-
-    Args:
-        test_case_path (str): The path to the YAML test case file.
-    """
-    evolve_script_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "prompt_engineering", "evolve.py")
-    )
-
-    if not os.path.exists(evolve_script_path):
-        print(f"Error: Could not find evolution script at {evolve_script_path}", file=sys.stderr)
-        return
-
-    command = ["python", evolve_script_path, "--test-case", test_case_path]
-    print(f"--- Triggering prompt evolution: {' '.join(command)} ---")
-
-    # Using Popen for fire-and-forget, as evolution is a long-running process
-    subprocess.Popen(command)
+    return yaml.dump([test_case], default_flow_style=False)
 
 def main():
-    """The main entry point for the adaptation manager.
+    """Main entry point for the adaptation manager script.
 
-    This script orchestrates the self-adaptation process by taking a failed
-    job's diagnostic data, converting it into a reproducible test case, and
-    then launching the prompt evolution workflow to find a solution.
+    Orchestrates the process of reading diagnostics, generating a test case,
+    and invoking the prompt evolution script.
     """
     parser = argparse.ArgumentParser(
-        description="""
-        Orchestrates the self-adaptation loop by generating a test case from
-        a failed job's diagnostics and triggering the prompt evolution process.
-        """
+        description="Generate a test case from a failed job's diagnostics and run prompt evolution."
     )
     parser.add_argument(
-        "diagnostics_file",
+        "diagnostic_file",
         type=str,
-        help="Path to the JSON diagnostics file for the failed job."
+        help="Path to the JSON diagnostic file for the failed job."
     )
     args = parser.parse_args()
 
+    # 1. Read and parse the diagnostic file
     try:
-        with open(args.diagnostics_file, 'r') as f:
-            diagnostics_data = json.load(f)
+        with open(args.diagnostic_file, 'r') as f:
+            diagnostic_data = json.load(f)
     except (IOError, json.JSONDecodeError) as e:
-        print(f"Error reading or parsing diagnostics file {args.diagnostics_file}: {e}", file=sys.stderr)
+        print(f"Error: Could not read or parse diagnostic file '{args.diagnostic_file}': {e}", file=sys.stderr)
         sys.exit(1)
 
-    test_case_path = generate_test_case(diagnostics_data)
-    run_evolution(test_case_path)
+    # 2. Generate the YAML test case content
+    job_id = diagnostic_data.get("job_id", "unknown")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    test_case_yaml = generate_test_case(diagnostic_data)
 
-    print("--- Adaptation process initiated. ---")
+    # 3. Write the test case to a new file
+    # Ensure the target directory exists
+    output_dir = os.path.join(os.path.dirname(__file__), '..', 'prompt_engineering', 'generated_evaluators')
+    os.makedirs(output_dir, exist_ok=True)
+
+    test_case_filename = f"failure_{job_id}_{timestamp}.yaml"
+    test_case_filepath = os.path.join(output_dir, test_case_filename)
+
+    try:
+        with open(test_case_filepath, 'w') as f:
+            f.write(test_case_yaml)
+        print(f"--- Successfully generated test case: {test_case_filepath} ---")
+    except IOError as e:
+        print(f"Error: Could not write test case file to '{test_case_filepath}': {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # 4. Invoke the evolve.py script with the new test case
+    evolve_script_path = os.path.join(os.path.dirname(__file__), '..', 'prompt_engineering', 'evolve.py')
+    command = [
+        "python",
+        evolve_script_path,
+        "--test-case",
+        test_case_filepath
+    ]
+
+    print(f"--- Invoking prompt evolution script: {' '.join(command)} ---")
+    try:
+        # We use Popen for a "fire and forget" approach, as evolution can be a long-running process.
+        # The supervisor can continue its loop without waiting for this to finish.
+        subprocess.Popen(command, stdout=open('adaptation.log', 'a'), stderr=subprocess.STDOUT)
+        print("--- Prompt evolution process started in the background. See adaptation.log for details. ---")
+    except (subprocess.SubprocessError, FileNotFoundError) as e:
+        print(f"Error: Failed to start evolution script '{evolve_script_path}': {e}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
