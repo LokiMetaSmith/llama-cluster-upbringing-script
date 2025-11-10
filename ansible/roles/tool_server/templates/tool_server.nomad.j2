@@ -26,24 +26,11 @@ job "tool-server" {
           "/opt/pipecatapp:/app"
         ]
 
-        command = "python"
-        args = ["/app/tool_server.py"]
-      }
-
-      lifecycle {
-        hook = "prestart"
-        sidecar = false
-        task {
-          driver = "docker"
-          config {
-            image = "python:3.12-slim"
-            volumes = [
-              "/opt/pipecatapp:/app"
-            ]
-            command = "pip"
-            args = ["install", "-r", "/app/ansible/roles/python_deps/files/requirements.txt"]
-          }
-        }
+        command = "bash"
+        args = [
+          "-c",
+          "pip install -r /app/ansible/roles/python_deps/files/requirements.txt && python /app/tool_server.py"
+        ]
       }
 
       service {
