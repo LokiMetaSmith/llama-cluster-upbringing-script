@@ -55,15 +55,22 @@
         state: stopped
       ignore_errors: true
 
+    - name: Skip data cleanup if --leave-services-running is used
+      ansible.builtin.debug:
+        msg: "Skipping cleanup of Consul and Nomad data directories."
+      when: not cleanup_services
+
     - name: Clean Consul data directory
       ansible.builtin.file:
         path: "/opt/consul"
         state: absent
+      when: cleanup_services
 
     - name: Clean Nomad data directory
       ansible.builtin.file:
         path: "/opt/nomad"
         state: absent
+      when: cleanup_services
 
   roles:
     - role: consul

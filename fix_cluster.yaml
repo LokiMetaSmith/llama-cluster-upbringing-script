@@ -78,15 +78,22 @@
         - stop_consul_service.failed == true
         - not stop_consul_service.msg.startswith('Could not find the requested service')
 
+    - name: Skip data cleanup if --leave-services-running is used
+      ansible.builtin.debug:
+        msg: "Skipping cleanup of Consul and Nomad data directories."
+      when: not cleanup_services
+
     - name: Remove Nomad data directory to reset state
       ansible.builtin.file:
         path: /opt/nomad/data
         state: absent
+      when: cleanup_services
 
     - name: Remove Consul data directory to reset state
       ansible.builtin.file:
         path: /opt/consul/data
         state: absent
+      when: cleanup_services
 
     - name: Re-apply Consul role to configure as a server
       ansible.builtin.include_role:

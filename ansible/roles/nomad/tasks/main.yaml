@@ -33,9 +33,10 @@
 
 - name: Reset Nomad state if version has changed
   when: >
-    existing_nomad_version.stdout is defined and
+    (existing_nomad_version.stdout is defined and
     new_nomad_version.stdout is defined and
-    existing_nomad_version.stdout != new_nomad_version.stdout
+    existing_nomad_version.stdout != new_nomad_version.stdout) and
+    cleanup_services
   block:
     - name: Stop Nomad service
       ansible.builtin.systemd:
