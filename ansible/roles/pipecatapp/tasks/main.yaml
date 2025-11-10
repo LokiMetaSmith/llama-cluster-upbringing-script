@@ -180,6 +180,7 @@
     source: build
   when: pipecat_deployment_style == 'docker'
 
+
 - name: Ensure Nomad jobs directory exists
   ansible.builtin.file:
     path: /opt/nomad/jobs
