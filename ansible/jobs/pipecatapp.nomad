@@ -3,7 +3,27 @@ job "pipecat-app" {
   type        = "service"
 
   group "pipecat-group" {
-    count = 1
+    count = 3
+
+    update {
+      max_parallel = 1
+      min_healthy_time = "10s"
+      healthy_deadline = "3m"
+      auto_revert = true
+    }
+
+    migrate {
+      max_parallel = 1
+      health_check = "checks"
+      healthy_deadline = "5m"
+    }
+
+    reschedule {
+      attempts  = 3
+      interval  = "1m"
+      delay     = "30s"
+      unlimited = false
+    }
 
     network {
       mode = "host"
