@@ -3,6 +3,7 @@
 node_modules/
 __pycache__/
 playbook_output.log
+playbook_output.log.before_changes
 .aider*
 .venv/
 *.bak
