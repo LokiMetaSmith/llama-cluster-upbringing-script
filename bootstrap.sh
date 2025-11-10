@@ -10,6 +10,7 @@
 CLEAN_REPO=false
 DEBUG_MODE=false
 EXTERNAL_MODEL_SERVER=false
+LEAVE_SERVICES_RUNNING=false
 PURGE_JOBS=false
 CONTINUE_RUN=false
 ROLE="all" # Default role
@@ -47,6 +48,10 @@ while [[ $# -gt 0 ]]; do
         ;;
         --debug)
         DEBUG_MODE=true
+        shift
+        ;;
+        --leave-services-running)
+        LEAVE_SERVICES_RUNNING=true
         shift
         ;;
         --external-model-server)
@@ -147,6 +152,14 @@ fi
 
 if [ "$PURGE_JOBS" = true ]; then
     ANSIBLE_ARGS+=(--extra-vars "purge_jobs=true")
+fi
+
+if [ "$LEAVE_SERVICES_RUNNING" = true ]; then
+    echo "✅ --leave-services-running detected. Nomad and Consul data will not be cleaned up."
+    ANSIBLE_ARGS+=(--extra-vars "cleanup_services=false")
+else
+    echo "🧹 Nomad and Consul data will be cleaned up by default. Use --leave-services-running to prevent this."
+    ANSIBLE_ARGS+=(--extra-vars "cleanup_services=true")
 fi
 # --- Now you can use the ANSIBLE_ARGS array ---
 echo "---"
