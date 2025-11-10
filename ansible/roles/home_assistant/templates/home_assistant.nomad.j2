@@ -41,6 +41,8 @@ job "home-assistant" {
     task "home-assistant" {
       driver = "docker"
 
+      user = "{{ home_assistant_uid | default(1000) }}:{{ home_assistant_gid | default(1000) }}"
+
       config {
         image = "homeassistant/home-assistant:stable"
         ports = ["http"]
@@ -48,7 +50,6 @@ job "home-assistant" {
           "/etc/localtime:/etc/localtime:ro",
         ]
         cap_add = ["NET_RAW", "NET_ADMIN"]
-        user    = "{{ home_assistant_uid | default(1000) }}:{{ home_assistant_gid | default(1000) }}"
       }
 
       env {
