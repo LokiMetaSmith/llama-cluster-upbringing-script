@@ -70,6 +70,27 @@
         .dropdown:hover .dropbtn {
             background-color: #005f7a;
         }
+
+        .breathing-shimmering {
+            animation: breathing-shimmer 2s infinite ease-in-out;
+            font-weight: bold;
+            color: #00ff00;
+        }
+
+        @keyframes breathing-shimmer {
+            0% {
+                text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00;
+                opacity: 0.8;
+            }
+            50% {
+                text-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00, 0 0 40px #00ff00;
+                opacity: 1;
+            }
+            100% {
+                text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00;
+                opacity: 0.8;
+            }
+        }
     </style>
 </head>
 <body>
