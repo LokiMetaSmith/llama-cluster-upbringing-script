@@ -5,15 +5,29 @@ job "router" {
   namespace   = "{{ nomad_namespace | default('default') }}"
   priority    = 50
 
-  update {
-    max_parallel      = 1
-    progress_deadline = "15m"
-    healthy_deadline  = "10m" # Give it 10 mins to become healthy
-    min_healthy_time  = "30s"
-  }
-
   group "router" {
-    count = 1
+    count = 3
+
+    update {
+      max_parallel      = 1
+      progress_deadline = "15m"
+      healthy_deadline  = "10m" # Give it 10 mins to become healthy
+      min_healthy_time  = "30s"
+      auto_revert       = true
+    }
+
+    migrate {
+      max_parallel = 1
+      health_check = "checks"
+      healthy_deadline = "5m"
+    }
+
+    reschedule {
+      attempts  = 3
+      interval  = "1m"
+      delay     = "30s"
+      unlimited = false
+    }
 
     network {
       mode = "host"
