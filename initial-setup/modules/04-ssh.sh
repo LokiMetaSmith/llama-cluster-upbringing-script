@@ -40,15 +40,22 @@ fi
 HOSTNAME=$(hostname)
 PUB_KEY_CONTENT=$(cat "$PUBLIC_KEY")
 
-log "Waiting for Consul agent to be available..."
-# Wait for up to 2 minutes for Consul to become available
+log "Waiting for Consul agent to be available and KV store to be ready..."
+# Wait for up to 2 minutes for Consul to become available and KV store to be ready
 for i in {1..24}; do
-    if curl -s "http://127.0.0.1:8500/v1/status/leader" &> /dev/null; then
-        log "Consul agent is up."
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse")
+    if [ "$HTTP_CODE" -eq 200 ]; then
+        log "Consul agent and KV store are up."
         break
     fi
+    log "Waiting for Consul agent and KV store (HTTP Status: $HTTP_CODE)..."
     sleep 5
 done
+
+if [ "$HTTP_CODE" -ne 200 ]; then
+    log "Consul agent and KV store did not become available after multiple retries. Aborting SSH configuration."
+    exit 1
+fi
 
 log "Publishing public key to Consul for host: $HOSTNAME"
 curl -s -X PUT -d "$PUB_KEY_CONTENT" "http://127.0.0.1:8500/v1/kv/ssh-keys/$HOSTNAME"
@@ -79,6 +86,23 @@ chown "$USERNAME":"$USERNAME" "$USER_HOME/.ssh"
 chmod 700 "$USER_HOME/.ssh"
 
 # Fetch all keys from Consul and decode them into a temporary file.
+# Wait for Consul to be available and return valid JSON
+for i in {1..24}; do
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse")
+    if [ "$HTTP_CODE" -eq 200 ]; then
+        log_sync "Consul KV store for SSH keys is available."
+        break
+    fi
+    log_sync "Waiting for Consul KV store for SSH keys (HTTP Status: $HTTP_CODE)..."
+    sleep 5
+done
+
+if [ "$HTTP_CODE" -ne 200 ]; then
+    log_sync "Consul KV store for SSH keys did not become available after multiple retries. Aborting SSH key sync."
+    rm "$TEMP_KEYS_FILE"
+    exit 1
+fi
+
 curl -s "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse" | jq -r '.[].Value' | while read -r val; do
     echo "$val" | base64 -d >> "$TEMP_KEYS_FILE"
     echo >> "$TEMP_KEYS_FILE" # Ensure a newline after each key

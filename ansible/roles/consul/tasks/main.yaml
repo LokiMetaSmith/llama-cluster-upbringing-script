@@ -27,6 +27,12 @@
     mode: '0755'
   become: yes
 
+- name: Remove Consul data directory (for clean restart)
+  file:
+    path: "{{ consul_data_dir }}"
+    state: absent
+  become: yes
+
 - name: Create Consul data directory
   file:
     path: "{{ consul_data_dir }}"
@@ -66,5 +72,12 @@
     name: consul
     state: started
     enabled: yes
+  become: yes
+  when: not ansible_check_mode
+
+- name: Force restart Consul service to apply all changes
+  systemd:
+    name: consul
+    state: restarted
   become: yes
   when: not ansible_check_mode

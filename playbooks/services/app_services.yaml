@@ -18,7 +18,7 @@
         return_content: yes
       register: consul_leader_status
       until: consul_leader_status.content != '""' and consul_leader_status.status == 200
-      retries: 12
+      retries: 24
       delay: 5
       ignore_errors: yes
 

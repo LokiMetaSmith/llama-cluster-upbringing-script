@@ -18,13 +18,20 @@ log "Starting dynamic inventory generation..."
 
 # Wait for Consul to be available
 for i in {1..24}; do
-    if curl -s "http://127.0.0.1:8500/v1/status/leader" &> /dev/null; then
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8500/v1/status/leader")
+    if [ "$HTTP_CODE" -eq 200 ]; then
         log "Consul agent is available."
         break
     fi
-    log "Waiting for Consul..."
+    log "Waiting for Consul (HTTP Status: $HTTP_CODE)..."
     sleep 5
 done
+
+# If after all retries, Consul is not available, exit.
+if [ "$HTTP_CODE" -ne 200 ]; then
+    log "Consul agent did not become available after multiple retries. Aborting."
+    exit 1
+fi
 
 # Fetch all nodes from the Consul catalog. These are the workers.
 # The '.[] | .Address' jq filter extracts the Address field from each object in the JSON array.
