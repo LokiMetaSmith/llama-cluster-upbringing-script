@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", function() {
         } else if (type === "user") {
             logToTerminal(`<strong>You:</strong> ${data}`, "user-message");
         } else if (type === "agent") {
-            logToTerminal(`<strong>Agent:</strong> ${data}`, "agent-message");
+            logToTerminal(`<strong>Agent:</strong> ${data}`, "agent-message breathing-shimmering");
             startIdleAnimation();
         } else if (type === "display") {
             renderEffect(data.text, data.effect);
