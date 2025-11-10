@@ -57,7 +57,7 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
         command = "/bin/bash"
         args = [
           "-c",
-          "/usr/local/bin/rpc-server -H 0.0.0.0 -p $NOMAD_PORT_rpc"
+          "/usr/local/bin/llama-server --host 0.0.0.0 --port $NOMAD_PORT_rpc --model /opt/nomad/models/llm/{{ model.filename }}"
         ]
       }
 
