@@ -88,8 +88,4 @@
     enabled: yes
   become: yes
 
-- name: Load pipecatapp image
-  ansible.builtin.command:
-    cmd: docker load -i /tmp/pipecatapp.tar
-  become: yes
 
