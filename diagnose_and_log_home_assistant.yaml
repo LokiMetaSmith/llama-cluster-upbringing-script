@@ -1,0 +1,83 @@
+---
+- hosts: localhost
+  gather_facts: no
+  vars:
+    log_file: "{{ playbook_dir }}/home_assistant_debug.log"
+  tasks:
+    - name: Start logging session
+      ansible.builtin.lineinfile:
+        create: yes
+        path: "{{ log_file }}"
+        line: "--- Diagnostic run for Home Assistant at {{ ansible_date_time.iso8661 }} ---"
+        mode: '0644'
+
+    - name: Check Nomad job status
+      ansible.builtin.command: "nomad job status home-assistant"
+      register: job_status
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Log job status
+      ansible.builtin.lineinfile:
+        path: "{{ log_file }}"
+        line: |
+          [JOB STATUS]
+          RC: {{ job_status.rc }}
+          STDOUT:
+          {{ job_status.stdout | indent(2) }}
+          STDERR:
+          {{ job_status.stderr | indent(2) }}
+
+    - name: Get latest allocation ID
+      ansible.builtin.shell: "nomad job status -t '{{ '{{' }} .ID {{ '}}' }}' home-assistant | head -n 1"
+      register: alloc_id
+      changed_when: false
+      when: job_status.rc == 0
+
+    - name: Get allocation details
+      ansible.builtin.command: "nomad alloc status {{ alloc_id.stdout }}"
+      register: alloc_status
+      changed_when: false
+      when: alloc_id.stdout != ""
+
+    - name: Log allocation status
+      ansible.builtin.lineinfile:
+        path: "{{ log_file }}"
+        line: |
+          [ALLOCATION STATUS]
+          {{ alloc_status.stdout | indent(2) }}
+      when: alloc_status is defined
+
+    - name: Get allocation logs
+      ansible.builtin.command: "nomad alloc logs {{ alloc_id.stdout }}"
+      register: alloc_logs
+      changed_when: false
+      when: alloc_id.stdout != ""
+
+    - name: Log allocation logs
+      ansible.builtin.lineinfile:
+        path: "{{ log_file }}"
+        line: |
+          [ALLOCATION LOGS]
+          {{ alloc_logs.stdout | indent(2) }}
+      when: alloc_logs is defined
+
+    - name: Check host volume permissions
+      ansible.builtin.stat:
+        path: /opt/nomad/volumes/ha-config
+      register: ha_config_stat
+      become: yes
+
+    - name: Log host volume permissions
+      ansible.builtin.lineinfile:
+        path: "{{ log_file }}"
+        line: |
+          [HOST VOLUME PERMISSIONS]
+          Path: {{ ha_config_stat.stat.path }}
+          Owner: {{ ha_config_stat.stat.pw_name }} ({{ ha_config_stat.stat.uid }})
+          Group: {{ ha_config_stat.stat.gr_name }} ({{ ha_config_stat.stat.gid }})
+          Mode: {{ ha_config_stat.stat.mode }}
+
+    - name: Display final log location
+      ansible.builtin.debug:
+        msg: "Home Assistant diagnostic log created at: {{ log_file }}"

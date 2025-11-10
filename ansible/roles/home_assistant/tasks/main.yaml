@@ -2,8 +2,8 @@
   ansible.builtin.file:
     path: /opt/nomad/volumes/ha-config
     state: directory
-    owner: "{{ home_assistant_uid | default(1000) }}"
-    group: "{{ home_assistant_gid | default(1000) }}"
+    owner: "568"
+    group: "568"
     mode: '0755'
   become: yes
 
@@ -49,24 +49,10 @@
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   changed_when: true
   become: no # Run nomad client as the ansible user
-  async: 300 # Max runtime for the command itself (submit shouldn't take long)
-  poll: 0    # Fire and forget - don't wait for command completion
+  async: 300
+  poll: 0
+  register: ha_job_run_status
 
-- name: Get Home Assistant allocation ID
-  ansible.builtin.shell:
-    cmd: nomad job status -t "{{ '{{' }} .ID {{ '}}' }}" home-assistant | head -n 1
-  register: ha_alloc_id
-  changed_when: false
-  become: no
-
-- name: Get Home Assistant container user ID
-  ansible.builtin.command:
-    cmd: "nomad alloc exec -task home-assistant {{ ha_alloc_id.stdout }} -- stat -c '%u:%g' /"
-  register: ha_user_id
-  changed_when: false
-  become: no
-  ignore_errors: true
-
-- name: Display Home Assistant container user ID
+- name: Log job submission status
   ansible.builtin.debug:
-    var: ha_user_id.stdout
+    var: ha_job_run_status
