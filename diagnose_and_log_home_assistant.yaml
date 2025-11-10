@@ -1,5 +1,5 @@
----
-- hosts: localhost
+- name: Diagnose and Log Home Assistant Status
+  hosts: localhost
   gather_facts: no
   vars:
     log_file: "{{ playbook_dir }}/home_assistant_debug.log"
@@ -29,7 +29,11 @@
           {{ job_status.stderr | indent(2) }}
 
     - name: Get latest allocation ID
-      ansible.builtin.shell: "nomad job status -t '{{ '{{' }} .ID {{ '}}' }}' home-assistant | head -n 1"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          nomad job status -t "{{ '{{' }} .ID {{ '}}' }}" home-assistant | head -n 1
+        executable: /bin/bash
       register: alloc_id
       changed_when: false
       when: job_status.rc == 0

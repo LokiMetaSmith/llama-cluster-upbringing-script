@@ -11,12 +11,14 @@
   ansible.builtin.template:
     src: home_assistant.nomad.j2
     dest: /opt/nomad/jobs/home-assistant.nomad
+    mode: '0644'
   become: yes
 
 - name: Template Home Assistant configuration
   ansible.builtin.template:
     src: configuration.yaml.j2
     dest: /opt/nomad/volumes/ha-config/configuration.yaml
+    mode: '0644'
   become: yes
 
 - name: Wait for Nomad API to be ready before submitting job
@@ -24,8 +26,8 @@
     url: "http://{{ ansible_default_ipv4.address }}:4646/v1/status/leader"
     method: GET
     status_code: 200
-  register: nomad_api_status
-  until: nomad_api_status.status == 200
+  register: home_assistant_nomad_api_status
+  until: home_assistant_nomad_api_status.status == 200
   retries: 12 # ~1 minute
   delay: 5
   changed_when: false
@@ -35,8 +37,8 @@
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/health/service/mqtt?passing"
     return_content: yes
-  register: mqtt_health
-  until: mqtt_health.json is defined and mqtt_health.json | length > 0
+  register: home_assistant_mqtt_health
+  until: home_assistant_mqtt_health.json is defined and home_assistant_mqtt_health.json | length > 0
   retries: 30 # ~5 minutes
   delay: 10
   changed_when: false
@@ -51,8 +53,8 @@
   become: no # Run nomad client as the ansible user
   async: 300
   poll: 0
-  register: ha_job_run_status
+  register: home_assistant_ha_job_run_status
 
 - name: Log job submission status
   ansible.builtin.debug:
-    var: ha_job_run_status
+    var: home_assistant_ha_job_run_status
