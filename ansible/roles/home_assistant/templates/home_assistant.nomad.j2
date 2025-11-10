@@ -41,8 +41,6 @@ job "home-assistant" {
     task "home-assistant" {
       driver = "docker"
 
-      user = "{{ home_assistant_uid | default(1000) }}:{{ home_assistant_gid | default(1000) }}"
-
       config {
         image = "homeassistant/home-assistant:stable"
         ports = ["http"]
@@ -76,6 +74,11 @@ job "home-assistant" {
 #            value     = "30929"
 #          }
 #        }
+      }
+
+      logs {
+        max_files     = 5
+        max_file_size = 15 # MB
       }
     }
   }

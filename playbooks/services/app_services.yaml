@@ -10,7 +10,7 @@
 
   tasks:
     - name: Flush handlers to ensure Nomad is restarted with new config
-      meta: flush_handlers
+      ansible.builtin.meta: flush_handlers
 
     - name: Wait for a Consul leader to be elected
       ansible.builtin.uri:
@@ -31,19 +31,37 @@
       when: consul_leader_status.skipped is not defined and (consul_leader_status.failed or consul_leader_status.content == '""')
 
     - name: Install system dependencies
-      include_role:
+      ansible.builtin.include_role:
         name: system_deps
 
     - name: Install all python dependencies
-      include_role:
+      ansible.builtin.include_role:
         name: python_deps
 
-    - name: Run application and configuration roles
-      include_role:
+    - name: Run pre-Home Assistant application roles
+      ansible.builtin.include_role:
         name: "{{ role_name }}"
       loop:
         - mqtt
-        - home_assistant
+      loop_control:
+        loop_var: role_name
+
+    - name: Deploy Home Assistant with error handling
+      block:
+        - name: Run home_assistant role
+          ansible.builtin.include_role:
+            name: home_assistant
+      rescue:
+        - name: On failure, run Home Assistant diagnostic playbook
+          ansible.builtin.import_playbook: "{{ playbook_dir }}/../../diagnose_and_log_home_assistant.yaml"
+        - name: Fail the playbook after diagnostics
+          ansible.builtin.fail:
+            msg: "Home Assistant deployment failed. Diagnostic log has been created."
+
+    - name: Run post-Home Assistant application roles
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      loop:
         - provisioning_api
         - desktop_extras
         - paddler
