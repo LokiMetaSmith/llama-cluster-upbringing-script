@@ -16,7 +16,25 @@
     state: present
     global: yes
 
+- name: Discover tool-server-api address
+  ansible.builtin.uri:
+    url: "http://localhost:8500/v1/health/service/tool-server-api?passing"
+    return_content: yes
+  register: tool_server_service
+  until: tool_server_service.json | length > 0
+  retries: 12
+  delay: 5
+
 - name: Configure llxprt-code
   ansible.builtin.template:
     src: llxprt-code.env.j2
     dest: /opt/llxprt-code/.env
+
+- name: Template MCP config
+  ansible.builtin.template:
+    src: mcp_config.json.j2
+    dest: /tmp/mcp_config.json
+
+- name: Add MCP server to llxprt-code
+  ansible.builtin.command: llxprt mcp add-json tool-server /tmp/mcp_config.json
+  changed_when: true
