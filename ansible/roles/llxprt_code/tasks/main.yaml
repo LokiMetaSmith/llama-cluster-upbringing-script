@@ -1,0 +1,22 @@
+---
+- name: Clone llxprt-code repository
+  ansible.builtin.git:
+    repo: 'https://github.com/vybestack/llxprt-code.git'
+    dest: /opt/llxprt-code
+    version: main
+
+- name: Install llxprt-code dependencies
+  ansible.builtin.npm:
+    path: /opt/llxprt-code
+    state: present
+
+- name: Install llxprt-code globally
+  ansible.builtin.npm:
+    path: /opt/llxprt-code
+    state: present
+    global: yes
+
+- name: Configure llxprt-code
+  ansible.builtin.template:
+    src: llxprt-code.env.j2
+    dest: /opt/llxprt-code/.env
