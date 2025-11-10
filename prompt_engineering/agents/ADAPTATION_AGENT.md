@@ -1,32 +1,26 @@
-# Agent Definition: The Adaptation Agent
+# The Self-Adaptation Agent
 
-This document formally defines the role of the Adaptation Agent, a new meta-agent responsible for orchestrating the self-improvement of the entire system.
+This document defines the role and responsibilities of the Self-Adaptation Agent within the "Ensemble of Agents" development workflow. This agent is the cornerstone of the system's autonomous self-improvement loop, bridging the gap between runtime failure and automated code evolution.
 
 ## Role
 
-The Adaptation Agent acts as the system's own internal "prompt engineer" or "performance tuner." It is not a user-facing agent. Instead, it operates in the background, observing system performance and failures, and initiating corrective actions to improve the core logic of other agents.
+The Self-Adaptation Agent is a specialized, non-interactive agent responsible for translating runtime failures into actionable, structured test cases. Its primary function is to analyze diagnostic data from a failed system component and generate a formal test case that can be used by the prompt evolution process to automatically improve the system's core logic and prevent the failure from recurring.
 
-## Backing LLM Model
+## Key Responsibilities
 
-* **Model:** `groq/llama3-70b-8192`
-* **Parameters:**
-  * Temperature: 0.7
-  * Top-p: 0.9
+- **Failure Analysis**: Ingest structured diagnostic data (e.g., logs, status codes, allocation information) from a failed Nomad job.
+- **Test Case Generation**: Synthesize the failure conditions into a precise, machine-readable YAML test case. This test case must clearly define the inputs, the observed erroneous output, and the expected correct output.
+- **Orchestration of Evolution**: Trigger the `evolve.py` script, providing it with the newly generated test case to initiate the automated improvement process.
 
-## Core Responsibilities
+## Input
 
-1. **Failure-Driven Adaptation**: The agent's primary trigger is a complex system failure that the standard `heal_job` playbook cannot resolve. When the `reflection/reflect.py` script determines it cannot fix an issue (e.g., it's not a simple memory error), it hands off the failure context to this agent.
+The agent is activated by the `supervisor.py` script and receives a single input:
 
-2. **Test Case Generation**: Upon receiving a failure context, the Adaptation Agent's first task is to transform that raw diagnostic data into a structured, high-quality test case. This test case precisely captures the scenario that led to the failure and defines the expected, correct outcome.
+- **Diagnostic File Path**: The file path to a JSON file containing the detailed diagnostic information of a failed job, captured by the `diagnose_failure.yaml` playbook.
 
-3. **Orchestrating Prompt Evolution**: With a new test case in hand, the agent invokes the `prompt_engineering/evolve.py` workflow. It injects the new, failure-driven test case into the evaluation suite. This ensures that the prompt evolution process is not just optimizing for general performance, but is specifically focused on generating a new prompt that can overcome the identified failure.
+## Output
 
-4. **Promoting Improvements**: While the current workflow requires a human to manually promote the best-evolved prompt, the long-term vision is for the Adaptation Agent to be able to autonomously validate and deploy improved prompts into the live system.
+The agent produces two primary outputs:
 
-## Integration into the Architecture
-
-* **Trigger**: The `supervisor.py` script will invoke the `reflection/adaptation_manager.py` script (the implementation of this agent) when it receives an "error" action from the `reflect.py` script.
-* **Input**: A JSON object containing the diagnostic data of the original failure.
-* **Output**: An improved prompt file (`best_prompt.txt`) and a log of the evolutionary process. The system will then be ready for a human to review and deploy the improved prompt.
-
-This agent embodies the core principle of a Self-Adapting Language Model (SEAL), creating a closed-loop system where the model can learn from its mistakes and autonomously improve its own capabilities over time.
+1.  **A YAML Test Case File**: A new file containing a structured test case that reproduces the failure.
+2.  **A Subprocess Call**: An invocation of `prompt_engineering/evolve.py` with the path to the new test case file as an argument.

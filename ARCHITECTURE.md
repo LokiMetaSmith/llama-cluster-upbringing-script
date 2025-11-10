@@ -104,15 +104,15 @@ This layer represents the highest level of system autonomy. Inspired by the prin
 - **Technology:** Python, Ansible, Nomad, and the `openevolve` library.
 - **Implementation:** This loop connects the `supervisor.py` script with the `reflection` and `prompt_engineering` workflows.
 - **Workflow:**
-  1. **Detection:** The `supervisor.py` script continuously monitors the health of all Nomad jobs.
-  2. **Reflection:** When a job fails, the supervisor triggers the `reflection/reflect.py` script. This script uses an LLM to analyze the failure's diagnostic data.
-  3. **Triage:**
-      - If the failure is simple (e.g., an Out-of-Memory error), the reflection script returns a structured solution (e.g., `{"action": "increase_memory", ...}`), and the `heal_job.yaml` playbook is run to fix it directly.
-      - If the failure is complex and cannot be diagnosed as a simple resource issue, the reflection script returns `{"action": "error", ...}`.
-  4. **Adaptation:** This "error" action is the trigger for the self-adaptation loop. The supervisor calls the `reflection/adaptation_manager.py` script (the implementation of the **Adaptation Agent**).
-  5. **Test Case Generation:** The Adaptation Manager takes the raw failure data and generates a new, specific test case that encapsulates the failure.
-  6. **Evolution:** The manager then invokes the `prompt_engineering/evolve.py` script, injecting the new test case into the process. This script uses an evolutionary algorithm to mutate the agent's core `app.py` code, searching for a new version that passes the new test case (and all existing ones).
-  7. **Deployment (Human-in-the-loop):** Once the evolution process finds a superior version of `app.py`, it is saved. A human administrator is then notified to review the proposed change and manually promote it to become the new production code.
+  1. **Detection:** The `supervisor.py` script continuously monitors the health of all Nomad jobs using the `health_check.yaml` playbook.
+  2. **Diagnosis:** If a failure is detected, the `diagnose_failure.yaml` playbook is run to gather detailed logs and status information.
+  3. **Reflection:** The supervisor then triggers the `reflection/reflect.py` script. This script uses an LLM to analyze the failure's diagnostic data.
+  4. **Triage & Healing:**
+      - If the failure is simple and understood (e.g., an Out-of-Memory error), the reflection script returns a structured solution (e.g., `{"action": "increase_memory", ...}`), and the `heal_job.yaml` playbook is run to fix it directly.
+      - If the failure is complex or novel and cannot be diagnosed as a simple issue, the reflection script returns `{"action": "error", ...}`.
+  5. **Adaptation:** This "error" action is the trigger for the self-adaptation loop. The supervisor calls the `reflection/adaptation_manager.py` script, which acts as the **Adaptation Agent**.
+  6. **Test Case Generation:** The Adaptation Manager takes the raw diagnostic data and generates a new, specific YAML test case that programmatically encapsulates the failure.
+  7. **Evolution:** The manager then invokes the `prompt_engineering/evolve.py` script as a background process, injecting the new test case into the workflow. This script uses an evolutionary algorithm (`openevolve`) to mutate the agent's core `reflect.py` logic, searching for a new version that can successfully produce a valid healing action for the failure, thus passing the test.
 - **Agent Definition:** The logic and role of this process are formally defined in `prompt_engineering/agents/ADAPTATION_AGENT.md`.
 - **Outcome:** The system can automatically learn from novel failures, hardening its own source code and becoming more robust over time without direct human intervention in the learning process.
 
