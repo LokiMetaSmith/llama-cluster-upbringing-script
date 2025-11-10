@@ -37,104 +37,104 @@ fi
 
 # --- Consul Integration ---
 # Publish public key to Consul KV store
-HOSTNAME=$(hostname)
-PUB_KEY_CONTENT=$(cat "$PUBLIC_KEY")
+# HOSTNAME=$(hostname)
+# PUB_KEY_CONTENT=$(cat "$PUBLIC_KEY")
 
-log "Waiting for Consul agent to be available and KV store to be ready..."
-# Wait for up to 2 minutes for Consul to become available and KV store to be ready
-for i in {1..24}; do
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse")
-    if [ "$HTTP_CODE" -eq 200 ]; then
-        log "Consul agent and KV store are up."
-        break
-    fi
-    log "Waiting for Consul agent and KV store (HTTP Status: $HTTP_CODE)..."
-    sleep 5
-done
+# log "Waiting for Consul agent to be available and KV store to be ready..."
+# # Wait for up to 2 minutes for Consul to become available and KV store to be ready
+# for i in {1..24}; do
+#     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse")
+#     if [ "$HTTP_CODE" -eq 200 ]; then
+#         log "Consul agent and KV store are up."
+#         break
+#     fi
+#     log "Waiting for Consul agent and KV store (HTTP Status: $HTTP_CODE)..."
+#     sleep 5
+# done
 
-if [ "$HTTP_CODE" -ne 200 ]; then
-    log "Consul agent and KV store did not become available after multiple retries. Aborting SSH configuration."
-    exit 1
-fi
+# if [ "$HTTP_CODE" -ne 200 ]; then
+#     log "Consul agent and KV store did not become available after multiple retries. Aborting SSH configuration."
+#     exit 1
+# fi
 
-log "Publishing public key to Consul for host: $HOSTNAME"
-curl -s -X PUT -d "$PUB_KEY_CONTENT" "http://127.0.0.1:8500/v1/kv/ssh-keys/$HOSTNAME"
+# log "Publishing public key to Consul for host: $HOSTNAME"
+# curl -s -X PUT -d "$PUB_KEY_CONTENT" "http://127.0.0.1:8500/v1/kv/ssh-keys/$HOSTNAME"
 
 # --- Create Idempotent Authorized Keys Sync Script ---
-SYNC_SCRIPT_PATH="/usr/local/bin/update-ssh-authorized-keys.sh"
-cat > "$SYNC_SCRIPT_PATH" << 'EOF'
-#!/bin/bash
-# This script idempotently syncs SSH public keys from the Consul KV store.
-# It only writes to the authorized_keys file if there are actual changes.
+# SYNC_SCRIPT_PATH="/usr/local/bin/update-ssh-authorized-keys.sh"
+# cat > "$SYNC_SCRIPT_PATH" << 'EOF'
+# #!/bin/bash
+# # This script idempotently syncs SSH public keys from the Consul KV store.
+# # It only writes to the authorized_keys file if there are actual changes.
 
-log_sync() {
-    echo "[SSH-Sync] $1"
-}
+# log_sync() {
+#     echo "[SSH-Sync] $1"
+# }
 
-# The USERNAME is set in /etc/environment by a previous script, but we can default to 'user'
-if [ -z "$USERNAME" ]; then
-    USERNAME="user"
-fi
+# # The USERNAME is set in /etc/environment by a previous script, but we can default to 'user'
+# if [ -z "$USERNAME" ]; then
+#     USERNAME="user"
+# fi
 
-USER_HOME="/home/$USERNAME"
-AUTHORIZED_KEYS_FILE="$USER_HOME/.ssh/authorized_keys"
-TEMP_KEYS_FILE=$(mktemp)
+# USER_HOME="/home/$USERNAME"
+# AUTHORIZED_KEYS_FILE="$USER_HOME/.ssh/authorized_keys"
+# TEMP_KEYS_FILE=$(mktemp)
 
-# Ensure the .ssh directory exists
-mkdir -p "$USER_HOME/.ssh"
-chown "$USERNAME":"$USERNAME" "$USER_HOME/.ssh"
-chmod 700 "$USER_HOME/.ssh"
+# # Ensure the .ssh directory exists
+# mkdir -p "$USER_HOME/.ssh"
+# chown "$USERNAME":"$USERNAME" "$USER_HOME/.ssh"
+# chmod 700 "$USER_HOME/.ssh"
 
-# Fetch all keys from Consul and decode them into a temporary file.
-# Wait for Consul to be available and return valid JSON
-for i in {1..24}; do
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse")
-    if [ "$HTTP_CODE" -eq 200 ]; then
-        log_sync "Consul KV store for SSH keys is available."
-        break
-    fi
-    log_sync "Waiting for Consul KV store for SSH keys (HTTP Status: $HTTP_CODE)..."
-    sleep 5
-done
+# # Fetch all keys from Consul and decode them into a temporary file.
+# # Wait for Consul to be available and return valid JSON
+# for i in {1..24}; do
+#     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse")
+#     if [ "$HTTP_CODE" -eq 200 ]; then
+#         log_sync "Consul KV store for SSH keys is available."
+#         break
+#     fi
+#     log_sync "Waiting for Consul KV store for SSH keys (HTTP Status: $HTTP_CODE)..."
+#     sleep 5
+# done
 
-if [ "$HTTP_CODE" -ne 200 ]; then
-    log_sync "Consul KV store for SSH keys did not become available after multiple retries. Aborting SSH key sync."
-    rm "$TEMP_KEYS_FILE"
-    exit 1
-fi
+# if [ "$HTTP_CODE" -ne 200 ]; then
+#     log_sync "Consul KV store for SSH keys did not become available after multiple retries. Aborting SSH key sync."
+#     rm "$TEMP_KEYS_FILE"
+#     exit 1
+# fi
 
-curl -s "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse" | jq -r '.[].Value' | while read -r val; do
-    echo "$val" | base64 -d >> "$TEMP_KEYS_FILE"
-    echo >> "$TEMP_KEYS_FILE" # Ensure a newline after each key
-done
+# curl -s "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse" | jq -r '.[].Value' | while read -r val; do
+#     echo "$val" | base64 -d >> "$TEMP_KEYS_FILE"
+#     echo >> "$TEMP_KEYS_FILE" # Ensure a newline after each key
+# done
 
-# Check if the authorized_keys file exists. If not, we must create it.
-if [ ! -f "$AUTHORIZED_KEYS_FILE" ]; then
-    log_sync "Authorized keys file does not exist. Creating it."
-    mv "$TEMP_KEYS_FILE" "$AUTHORIZED_KEYS_FILE"
-    chown "$USERNAME":"$USERNAME" "$AUTHORIZED_KEYS_FILE"
-    chmod 600 "$AUTHORIZED_KEYS_FILE"
-    log_sync "SSH authorized keys created."
-# Compare the new keys with the existing ones. Only write if they are different.
-elif ! diff -q "$AUTHORIZED_KEYS_FILE" "$TEMP_KEYS_FILE" >/dev/null; then
-    log_sync "SSH key changes detected in Consul. Updating local file."
-    mv "$TEMP_KEYS_FILE" "$AUTHORIZED_KEYS_FILE"
-    chmod 600 "$AUTHORIZED_KEYS_FILE" # Ensure permissions are correct
-    log_sync "SSH authorized keys updated."
-else
-    # The files are the same, no need to do anything. Clean up the temp file.
-    rm "$TEMP_KEYS_FILE"
-fi
-EOF
+# # Check if the authorized_keys file exists. If not, we must create it.
+# if [ ! -f "$AUTHORIZED_KEYS_FILE" ]; then
+#     log_sync "Authorized keys file does not exist. Creating it."
+#     mv "$TEMP_KEYS_FILE" "$AUTHORIZED_KEYS_FILE"
+#     chown "$USERNAME":"$USERNAME" "$AUTHORIZED_KEYS_FILE"
+#     chmod 600 "$AUTHORIZED_KEYS_FILE"
+#     log_sync "SSH authorized keys created."
+# # Compare the new keys with the existing ones. Only write if they are different.
+# elif ! diff -q "$AUTHORIZED_KEYS_FILE" "$TEMP_KEYS_FILE" >/dev/null; then
+#     log_sync "SSH key changes detected in Consul. Updating local file."
+#     mv "$TEMP_KEYS_FILE" "$AUTHORIZED_KEYS_FILE"
+#     chmod 600 "$AUTHORIZED_KEYS_FILE" # Ensure permissions are correct
+#     log_sync "SSH authorized keys updated."
+# else
+#     # The files are the same, no need to do anything. Clean up the temp file.
+#     rm "$TEMP_KEYS_FILE"
+# fi
+# EOF
 
-chmod +x "$SYNC_SCRIPT_PATH"
+# chmod +x "$SYNC_SCRIPT_PATH"
 
-# --- Initial Sync and Cron Job setup ---
-log "Performing initial SSH key sync..."
-bash "$SYNC_SCRIPT_PATH"
+# # --- Initial Sync and Cron Job setup ---
+# log "Performing initial SSH key sync..."
+# bash "$SYNC_SCRIPT_PATH"
 
-# Set up cron job to run the sync script every 5 minutes for the user
-# The definition of 'log' is not available to the cron job, so we redirect output
-(crontab -u "$USERNAME" -l 2>/dev/null; echo "*/5 * * * * $SYNC_SCRIPT_PATH >> /var/log/ssh-key-sync.log 2>&1") | crontab -u "$USERNAME" -
+# # Set up cron job to run the sync script every 5 minutes for the user
+# # The definition of 'log' is not available to the cron job, so we redirect output
+# (crontab -u "$USERNAME" -l 2>/dev/null; echo "*/5 * * * * $SYNC_SCRIPT_PATH >> /var/log/ssh-key-sync.log 2>&1") | crontab -u "$USERNAME" -
 
 log "Advanced SSH configuration complete. A cron job will keep keys synced idempotently."

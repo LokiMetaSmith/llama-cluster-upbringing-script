@@ -4,10 +4,26 @@
     state: present
   become: yes
 
+- name: Remove Consul binary from /usr/local/bin
+  file:
+    path: /usr/local/bin/consul
+    state: absent
+  become: yes
+
+- name: Remove temporary Consul unarchive directory
+  file:
+    path: /tmp/consul
+    state: absent
+  become: yes
+
+- name: Remove existing Consul zip file
+  file:
+    path: /tmp/consul.zip
+    state: absent
+  become: yes
+
 - name: Download Consul
   command: "curl -L -o /tmp/consul.zip {{ consul_zip_url }}"
-  args:
-    creates: /tmp/consul.zip
   check_mode: no
 
 - name: Unzip Consul
@@ -15,7 +31,6 @@
     src: "/tmp/consul.zip"
     dest: "/tmp"
     remote_src: yes
-    creates: /tmp/consul
   become: yes
   check_mode: no
 
@@ -26,6 +41,15 @@
     remote_src: yes
     mode: '0755'
   become: yes
+
+- name: Verify Consul binary existence
+  stat:
+    path: /usr/local/bin/consul
+  register: consul_binary_stat
+
+- name: Debug Consul binary existence
+  debug:
+    msg: "Consul binary exists at /usr/local/bin/consul: {{ consul_binary_stat.stat.exists }}"
 
 - name: Remove Consul data directory (for clean restart)
   file:
