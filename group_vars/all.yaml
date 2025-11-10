@@ -50,6 +50,13 @@ pipecat_api_keys: ""
 # For now, we'll place it here for simplicity.
 openai_api_key: "sk-your_openai_api_key_here"
 
+# Home Assistant User and Group IDs
+# These should match the user ID and group ID that the Home Assistant
+# container runs as. This ensures that the configuration files on the
+# host have the correct ownership. The default is 568.
+home_assistant_uid: 568
+home_assistant_gid: 568
+
 # Home Assistant Long-Lived Access Token
 # 1. Go to your Home Assistant UI -> Your Profile (bottom left)
 # 2. Scroll down to "Long-Lived Access Tokens"
