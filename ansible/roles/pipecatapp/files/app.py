@@ -44,6 +44,7 @@ from tools.rag_tool import RAG_Tool
 from tools.ha_tool import HA_Tool
 from tools.git_tool import Git_Tool
 from tools.orchestrator_tool import OrchestratorTool
+from tools.llxprt_code_tool import LLxprt_Code_Tool
 
 import uvicorn
 
@@ -550,6 +551,7 @@ class TwinService(FrameProcessor):
             ),
             "git": Git_Tool(),
             "orchestrator": OrchestratorTool(),
+            "llxprt_code": LLxprt_Code_Tool(),
         }
 
         if self.app_config.get("use_summarizer", False):
