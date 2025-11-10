@@ -1,0 +1,62 @@
+job "tool-server" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "tool-server-group" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 8001
+      }
+    }
+
+    task "tool-server-task" {
+      driver = "docker"
+
+      config {
+        image = "python:3.12-slim"
+        ports = ["http"]
+
+        env {
+          TOOL_SERVER_API_KEY = "{{ openai_api_key }}"
+        }
+
+        volumes = [
+          "/opt/pipecatapp:/app"
+        ]
+
+        command = "python"
+        args = ["/app/tool_server.py"]
+      }
+
+      lifecycle {
+        hook = "prestart"
+        sidecar = false
+        task {
+          driver = "docker"
+          config {
+            image = "python:3.12-slim"
+            volumes = [
+              "/opt/pipecatapp:/app"
+            ]
+            command = "pip"
+            args = ["install", "-r", "/app/ansible/roles/python_deps/files/requirements.txt"]
+          }
+        }
+      }
+
+      service {
+        name = "tool-server-api"
+        port = "http"
+
+        check {
+          type     = "http"
+          path     = "/tools/"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}
