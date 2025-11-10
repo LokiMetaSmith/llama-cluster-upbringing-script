@@ -1,4 +1,14 @@
 ---
+- name: Build tool-server docker image
+  community.docker.docker_image:
+    name: tool-server:latest
+    build:
+      path: /opt/pipecatapp
+      dockerfile: "{{ role_path }}/Dockerfile"
+    source: build
+    force_source: yes
+  become: yes
+
 - name: Template tool-server.nomad job file
   ansible.builtin.template:
     src: tool_server.nomad.j2
