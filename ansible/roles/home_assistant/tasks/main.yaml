@@ -4,7 +4,8 @@
     state: directory
     owner: "{{ home_assistant_uid | default(568) }}"
     group: "{{ home_assistant_gid | default(568) }}"
-    mode: '0755'
+    mode: '0775'
+    recurse: yes
   become: yes
 
 - name: Template home-assistant Nomad job file
