@@ -21,8 +21,11 @@ The project has evolved from a single setup script into a sophisticated, multi-l
   - Created the `TwinService`, the agent's "brain."
   - Implemented both short-term and long-term memory.
   - Implemented a tool-use framework with `vision`, `ssh`, and `mcp` tools.
-- **Phase 7: Self-Reflection and Growth:**
-  - Created an offline workflow using `openevolve` to automatically improve the agent's core prompt.
+- **Phase 7: Self-Healing and Adaptation (SEAL-Inspired):**
+  - Implemented a closed-loop, autonomous system (`supervisor.py`) that monitors for job failures.
+  - Upon failure, a `reflection` agent (`reflect.py`) performs root cause analysis.
+  - Simple issues are healed directly by an Ansible playbook (`heal_job.yaml`).
+  - For novel failures, an `adaptation_manager.py` script automatically generates a new test case and uses an evolutionary algorithm (`openevolve`) to adapt the reflection agent's logic, enabling it to handle the failure in the future.
 - **Phase 8-9: Advanced MoE Architecture:**
   - Implemented a Mixture of Experts architecture with dynamic routing using Consul and isolation with Nomad Namespaces.
 - **Phase 10: Zero-Touch Provisioning:**
