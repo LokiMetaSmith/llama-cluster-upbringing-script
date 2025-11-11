@@ -1,4 +1,13 @@
-- hosts: localhost
+---
+- hosts: pxe_server
   become: yes
-  roles:
-    - pxe_server
+  tasks:
+    - name: Include Debian PXE role
+      include_role:
+        name: pxe_server
+      when: pxe_os == 'debian'
+
+    - name: Include NixOS PXE role
+      include_role:
+        name: nixos_pxe_server
+      when: pxe_os == 'nixos'
