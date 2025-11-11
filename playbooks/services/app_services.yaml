@@ -3,11 +3,6 @@
   remote_user: "{{ target_user }}"
   become: yes
 
-  vars_files:
-    - "{{ playbook_dir }}/../../group_vars/all.yaml"
-    - "{{ playbook_dir }}/../../group_vars/models.yaml"
-    - "{{ playbook_dir }}/../../group_vars/external_experts.yaml"
-
   tasks:
     - name: Flush handlers to ensure Nomad is restarted with new config
       ansible.builtin.meta: flush_handlers

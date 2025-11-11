@@ -3,8 +3,5 @@
   remote_user: "{{ target_user }}"
   become: yes
 
-  vars_files:
-    - "{{ playbook_dir }}/../../group_vars/all.yaml"
-
   roles:
     - docker
