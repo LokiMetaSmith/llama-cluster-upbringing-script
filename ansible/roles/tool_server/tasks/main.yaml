@@ -1,4 +1,13 @@
 ---
+- name: Copy requirements.txt for docker build
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/roles/python_deps/files/requirements.txt"
+    dest: "/opt/pipecatapp/requirements.txt"
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
 - name: Build tool-server docker image
   community.docker.docker_image:
     name: tool-server:latest
