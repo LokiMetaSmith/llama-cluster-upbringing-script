@@ -35,5 +35,3 @@ spacy
 ultralytics
 uvicorn
 websockets
-scipy>=1.12.0
-matplotlib>=3.8.0
