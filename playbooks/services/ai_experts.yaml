@@ -4,12 +4,6 @@
   gather_facts: yes
   become: no
 
-  vars_files:
-    - '{{ playbook_dir }}/../../group_vars/all.yaml'
-    - '{{ playbook_dir }}/../../group_vars/models.yaml'
-    - '{{ playbook_dir }}/../../group_vars/external_experts.yaml'
-
-
   vars:
     experts: "{{ expert_models.keys() | reject('equalto', 'router') | list }}"
     expected_worker_count: "{{ ((groups['workers'] | default([]) | length) if (groups['workers'] | default([]) | length) > 0 else 1) | int }}"
