@@ -28,7 +28,7 @@ from piper.voice import PiperVoice
 import requests
 import consul.aio
 import numpy as np
-from memory import MemoryStore
+from pmm_memory import PMMMemory
 import web_server
 from web_server import approval_queue, text_message_queue
 from tools.ssh_tool import SSH_Tool
@@ -525,7 +525,7 @@ class TwinService(FrameProcessor):
         self.app_config = app_config or {}
         self.approval_queue = approval_queue
         self.short_term_memory = []
-        self.long_term_memory = MemoryStore()
+        self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
 
         self.debug_mode = self.app_config.get("debug_mode", False)
         self.approval_mode = self.app_config.get("approval_mode", False)
@@ -544,7 +544,7 @@ class TwinService(FrameProcessor):
             "ansible": Ansible_Tool(),
             "power": Power_Tool(),
             "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
-            "rag": RAG_Tool(base_dir="/"),
+            "rag": RAG_Tool(pmm_memory=self.long_term_memory, base_dir="/"),
             "ha": HA_Tool(
                 ha_url=self.app_config.get("ha_url"),
                 ha_token=self.app_config.get("ha_token")
@@ -708,6 +708,7 @@ class TwinService(FrameProcessor):
             {"role": "system", "content": [{"type": "text", "text": self.get_system_prompt("router")}]},
             {"role": "user", "content": [{"type": "text", "text": user_text}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{screenshot}"}}]}
         ]
+        self.long_term_memory.add_event(kind="user_message", content=user_text)
         self.short_term_memory.append(f"User: {user_text}")
 
         for _ in range(10):  # Max 10 turns
@@ -754,6 +755,7 @@ class TwinService(FrameProcessor):
             except (json.JSONDecodeError, ValueError, KeyError) as e:
                 logging.info(f"No tool call detected or error processing: {e}")
                 await self.push_frame(TextFrame(llm_response_text))
+                self.long_term_memory.add_event(kind="assistant_message", content=llm_response_text)
                 self.short_term_memory.append(f"Assistant: {llm_response_text}")
                 break
 
