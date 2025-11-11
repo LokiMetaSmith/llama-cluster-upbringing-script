@@ -14,6 +14,7 @@
     build:
       path: /opt/pipecatapp
       dockerfile: "{{ role_path }}/Dockerfile"
+      nocache: yes
     source: build
     force_source: yes
   become: yes
