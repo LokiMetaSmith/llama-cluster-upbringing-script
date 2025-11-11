@@ -41,8 +41,6 @@ job "home-assistant" {
     task "home-assistant" {
       driver = "docker"
 
-      user = "{{ home_assistant_uid | default(568) }}:{{ home_assistant_gid | default(568) }}"
-
       config {
         image = "homeassistant/home-assistant:stable"
         ports = ["http"]
