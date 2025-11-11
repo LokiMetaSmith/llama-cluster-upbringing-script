@@ -28,7 +28,24 @@ Expert agents are specialized LLMs deployed as separate, independent services. T
 
 ### Tool-Using Capabilities
 
-**Only the Router Agent has access to the library of tools** (e.g., `ssh`, `code_runner`, `ansible`). This is a deliberate design choice for security and predictability. When the Router determines that a task requires interacting with the outside world, it will select and use the appropriate tool itself, rather than passing that capability down to a specialized expert. This concentrates the system's interactive capabilities in one place, making it easier to manage, monitor, and secure.
+**Only the Router Agent has access to the library of tools.** This is a deliberate design choice for security and predictability. When the Router determines that a task requires interacting with the outside world, it will select and use the appropriate tool itself, rather than passing that capability down to a specialized expert. This concentrates the system's interactive capabilities in one place, making it easier to manage, monitor, and secure.
+
+The following tools are available:
+- **`ssh`**: Executes commands on remote machines.
+- **`mcp`**: Provides agent introspection and self-control (e.g., status checks, memory management).
+- **`vision`**: Gets a real-time description of what is visible via the webcam.
+- **`desktop_control`**: Provides full control over the desktop environment, including taking screenshots and performing mouse/keyboard actions.
+- **`code_runner`**: Executes Python code in a secure, sandboxed environment.
+- **`web_browser`**: Enables web navigation and content interaction.
+- **`ansible`**: Runs Ansible playbooks to manage the cluster.
+- **`power`**: Controls the cluster's power management policies.
+- **`summarizer`**: Summarizes conversation history.
+- **`term_everything`**: Provides a terminal interface for interacting with the system.
+- **`rag`**: Searches the project's documentation to answer questions.
+- **`ha`**: Controls smart home devices via Home Assistant.
+- **`git`**: Interacts with Git repositories.
+- **`orchestrator`**: Dispatches high-priority, complex jobs to the cluster.
+- **`llxprt_code`**: A specialized tool for code-related tasks.
 
 ### Configuration and Customization
 

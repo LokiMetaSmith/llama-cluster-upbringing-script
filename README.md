@@ -50,17 +50,35 @@ This system uses an advanced iPXE-over-HTTP method that is significantly faster 
 
 For development, testing, or bootstrapping the very first node of a new cluster, you can use the provided bootstrap script. This is the recommended method for getting started.
 
-1. **On your control node, install Ansible and Git:** `sudo apt install ansible git -y`
+1. **On your control node, install Git:** `sudo apt install git -y`
 2. **Clone this repository.**
 3. **Run the Bootstrap Script:**
-   This script handles all the necessary steps to configure the local machine as a fully-functional, standalone agent and control node.
+   This script is a powerful wrapper around Ansible that handles all necessary steps to configure the local machine as a fully-functional, standalone agent, a cluster controller, or a new worker node.
+
+   **Basic Usage:**
 
    ```bash
    ./bootstrap.sh
    ```
 
-   - **What this does:** The script invokes Ansible with a special inventory file (`local_inventory.ini`) that targets only the local machine. It installs and configures all necessary system components (Consul, Nomad, Docker) and deploys the AI agent services.
+   - **What this does:** By default, the script runs the complete end-to-end process to configure the local machine as a standalone agent and control node. It invokes a series of Ansible playbooks that install and configure all necessary system components (Consul, Nomad, Docker) and deploy the AI agent services.
    - You will be prompted for your `sudo` password, as the script needs administrative privileges to install and configure software.
+
+   **Common Flags for Customizing the Bootstrap Process:**
+
+   You can control the behavior of the bootstrap script with the following flags:
+
+   - `--role <role>`: Specify the role for the node.
+     - `all` (default): Full setup for a standalone control node.
+     - `controller`: Sets up only the core infrastructure services (Consul, Nomad, etc.).
+     - `worker`: Configures the node as a worker and requires `--controller-ip`.
+   - `--controller-ip <ip>`: The IP address of the main controller node. **Required** when ` --role` is `worker`.
+   - `--tags <tag1,tag2>`: Run only specific parts of the Ansible playbook (e.g., `--tags nomad` would only run the Nomad configuration tasks).
+   - `--external-model-server`: Skips the download and build steps for large language models. This is ideal for development or if you are using a remote model server.
+   - `--purge-jobs`: Stops and purges all running Nomad jobs before starting the bootstrap process, ensuring a clean deployment.
+   - `--clean`: **Use with caution.** This will permanently delete all untracked files in the repository (`git clean -fdx`), restoring it to a pristine state.
+   - `--debug`: Enables verbose Ansible logging (`-vvvv`) and saves the full output to `playbook_output.log`.
+   - `--continue`: If a previous bootstrap run failed, this flag will resume the process from the last successfully completed playbook, saving significant time.
 
 This single node is now ready to be used as a standalone conversational AI agent. It can also serve as the primary "seed" node for a larger cluster. To expand your cluster, see the advanced guide below.
 
@@ -117,16 +135,21 @@ The agent can use tools to perform actions and gather information. The `TwinServ
 
 #### Available Tools
 
-- **Vision (`vision.get_observation`)**: Gets a real-time description of what is visible in the webcam, powered by the Moondream2 model.
-- **Master Control Program (`mcp.*`)**: Provides agent introspection and self-control, allowing it to check pipeline status (`get_status`) and manage memory (`get_memory_summary`, `clear_short_term_memory`).
-- **SSH (`ssh.run_command`)**: Executes a command on a remote machine via SSH, using key-based or password authentication.
-- **Code Runner (`code_runner.run_python_code`)**: Executes Python code in a secure, sandboxed Docker container.
-- **Ansible (`ansible.run_playbook`)**: Runs an Ansible playbook to configure and manage the cluster.
-- **Web Browser (`web_browser.*`)**: Provides a full web browser (via Playwright) for navigating (`goto`), reading (`get_page_content`), and interacting with websites (`click`, `type`).
-- **Power (`power.set_idle_threshold`)**: Controls the cluster's power management policies by setting service idle thresholds.
-- **Home Assistant (`ha.call_ai_task`)**: Controls smart home devices and queries their state using natural language commands.
-- **RAG (`rag.search_knowledge_base`)**: Searches the project's documentation to answer questions.
-- **Summarizer (`summarizer.get_summary`)**: Performs an extractive summary of the conversation to find the most relevant points related to a query.
+- **SSH (`ssh`)**: Executes commands on remote machines.
+- **Master Control Program (`mcp`)**: Provides agent introspection and self-control (e.g., status checks, memory management).
+- **Vision (`vision`)**: Gets a real-time description of what is visible via the webcam.
+- **Desktop Control (`desktop_control`)**: Provides full control over the desktop environment, including taking screenshots and performing mouse/keyboard actions.
+- **Code Runner (`code_runner`)**: Executes Python code in a secure, sandboxed environment.
+- **Web Browser (`web_browser`)**: Enables web navigation and content interaction.
+- **Ansible (`ansible`)**: Runs Ansible playbooks to manage the cluster.
+- **Power (`power`)**: Controls the cluster's power management policies.
+- **Summarizer (`summarizer`)**: Summarizes conversation history.
+- **Term Everything (`term_everything`)**: Provides a terminal interface for interacting with the system.
+- **RAG (`rag`)**: Searches the project's documentation to answer questions.
+- **Home Assistant (`ha`)**: Controls smart home devices via Home Assistant.
+- **Git (`git`)**: Interacts with Git repositories.
+- **Orchestrator (`orchestrator`)**: Dispatches high-priority, complex jobs to the cluster.
+- **LLxprt Code (`llxprt_code`)**: A specialized tool for code-related tasks.
 
 ### 6.3. Mixture of Experts (MoE) Routing
 
