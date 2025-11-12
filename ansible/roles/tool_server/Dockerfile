@@ -26,8 +26,6 @@ RUN pip install --no-cache-dir --upgrade pip
 # Install pipecat-ai and its extras first
 RUN pip install --no-cache-dir "pipecat-ai[all]"
 
-COPY . .
-
 # Now install the other requirements
 RUN pip install --no-cache-dir \
     av==16.0.1 \
@@ -61,5 +59,5 @@ RUN pip install --no-cache-dir \
     ultralytics \
     sentence_transformers
 
-# This command is just to start the container and keep it running.
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]
+
