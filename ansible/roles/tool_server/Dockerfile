@@ -1,7 +1,7 @@
-# Use a base image with Python 3.12
 FROM python:3.12-slim
 
-# Install system dependencies required for pipecat-ai and its extras
+WORKDIR /app
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
@@ -14,17 +14,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     portaudio19-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
-WORKDIR /app
-
-# Upgrade pip and install pipecat-ai with all extras first
 RUN pip install --no-cache-dir --upgrade pip
+
+# Install pipecat-ai and its extras first
 RUN pip install --no-cache-dir "pipecat-ai[all]"
 
-# Copy the application code
 COPY . .
 
-# Install the remaining, non-conflicting application-specific dependencies
+# Now install the other requirements
 RUN pip install --no-cache-dir \
     ctranslate2==4.1.0 \
     docker \
@@ -54,8 +51,5 @@ RUN pip install --no-cache-dir \
     webrtcvad \
     websockets
 
-# Install playwright browsers
-RUN python -m playwright install --with-deps
-
-# Command to run the application
-CMD ["python", "tool_server.py"]
+# This command is just to start the container and keep it running.
+CMD ["tail", "-f", "/dev/null"]
