@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-bookworm
 
 WORKDIR /app
 
@@ -12,6 +12,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libsndfile1 \
     portaudio19-dev \
+    libavformat-dev \
+    libavcodec-dev \
+    libavdevice-dev \
+    libavutil-dev \
+    libavfilter-dev \
+    libswscale-dev \
+    libswresample-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir --upgrade pip
@@ -21,13 +28,14 @@ RUN pip install --no-cache-dir "pipecat-ai[all]"
 
 # Now install the other requirements
 RUN pip install --no-cache-dir \
-    ctranslate2==4.1.0 \
+    av==16.0.1 \
+    ctranslate2==4.4.0 \
     docker \
     einops \
     espeakng_loader \
     faiss-cpu \
     fastapi \
-    faster-whisper==1.0.1 \
+    faster-whisper==1.2.1 \
     fugashi-plus \
     kittentts \
     "misaki[en]>=0.9.4" \
@@ -47,6 +55,9 @@ RUN pip install --no-cache-dir \
     spacy \
     uvicorn \
     webrtcvad \
-    websockets
+    websockets \
+    ultralytics \
+    sentence_transformers
 
-CMD ["python", "tool_server.py"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]
+
