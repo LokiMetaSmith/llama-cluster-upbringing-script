@@ -19,8 +19,6 @@ RUN pip install --no-cache-dir --upgrade pip
 # Install pipecat-ai and its extras first
 RUN pip install --no-cache-dir "pipecat-ai[all]"
 
-COPY . .
-
 # Now install the other requirements
 RUN pip install --no-cache-dir \
     ctranslate2==4.1.0 \
@@ -51,5 +49,4 @@ RUN pip install --no-cache-dir \
     webrtcvad \
     websockets
 
-# This command is just to start the container and keep it running.
-CMD ["tail", "-f", "/dev/null"]
+CMD ["python", "tool_server.py"]
