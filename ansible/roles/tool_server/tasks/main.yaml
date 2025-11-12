@@ -1,11 +1,15 @@
 ---
-- name: Copy requirements.txt for docker build
+- name: Copy application files for docker build
   ansible.builtin.copy:
-    src: "{{ role_path }}/../python_deps/files/requirements.txt"
-    dest: "/opt/pipecatapp/requirements.txt"
+    src: "{{ role_path }}/../../pipecatapp/files/{{ item }}"
+    dest: "/opt/pipecatapp/{{ item }}"
     owner: root
     group: root
     mode: '0644'
+  loop:
+    - requirements.txt
+    - tool_server.py
+    - tools
   become: yes
 
 - name: Build tool-server docker image
