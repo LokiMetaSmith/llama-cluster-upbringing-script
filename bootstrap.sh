@@ -74,6 +74,10 @@ while [[ $# -gt 0 ]]; do
         ANSIBLE_ARGS+=(--extra-vars "pipecat_deployment_style=docker")
         shift
         ;;
+        --home-assistant-debug)
+        ANSIBLE_ARGS+=(--extra-vars "home_assistant_debug_mode=true")
+        shift
+        ;;
         *)
         echo "Unknown option: $1"
         # (You could add a usage/help function here)
