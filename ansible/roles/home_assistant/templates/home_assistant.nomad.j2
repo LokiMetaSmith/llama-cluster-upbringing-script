@@ -13,6 +13,12 @@ job "home-assistant" {
       auto_revert       = true
     }
 
+    {% if home_assistant_debug_mode %}
+    reschedule {
+      attempts = 0
+    }
+    {% endif %}
+
     # Optional: use host networking for SSDP/mDNS/discovery compatibility.
     # To enable, set the job variable `use_host_network` to true in your templating system.
     # When enabled, remove or ignore the port "http" below.
