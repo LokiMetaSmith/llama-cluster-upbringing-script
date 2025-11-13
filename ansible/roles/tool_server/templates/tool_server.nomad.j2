@@ -29,10 +29,11 @@ job "tool-server" {
         port = "http"
 
         check {
-          type     = "http"
-          path     = "/tools/"
-          interval = "10s"
-          timeout  = "2s"
+          type         = "http"
+          path         = "/tools/"
+          interval     = "10s"
+          timeout      = "2s"
+          address_mode = "host"
         }
       }
     }
