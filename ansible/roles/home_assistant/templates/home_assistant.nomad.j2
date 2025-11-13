@@ -7,9 +7,9 @@ job "home-assistant" {
 
     update {
       max_parallel      = 1
-      min_healthy_time  = "30s" # Require it to be healthy for 30s
-      healthy_deadline  = "5m"  # Individual alloc health deadline
-      progress_deadline = "10m" # Overall deployment deadline << INCREASED
+      min_healthy_time  = "30s"   # Require it to be healthy for 30s
+      healthy_deadline  = "5m"    # Individual alloc health deadline
+      progress_deadline = "15m"   # Overall deployment deadline (increased)
       auto_revert       = true
     }
 
@@ -19,11 +19,20 @@ job "home-assistant" {
     }
     {% endif %}
 
+    # Optional: use host networking for SSDP/mDNS/discovery compatibility.
+    # To enable, set the job variable `use_host_network` to true in your templating system.
+    # When enabled, remove or ignore the port "http" below.
+    {% if use_host_network | default(false) %}
+    network {
+      mode = "host"
+    }
+    {% else %}
     network {
       port "http" {
         to = 8123
       }
     }
+    {% endif %}
 
     volume "ha-config" {
       type      = "host"
@@ -33,7 +42,9 @@ job "home-assistant" {
 
     service {
       name     = "home-assistant"
+      {% if not use_host_network | default(false) %}
       port     = "http"
+      {% endif %}
       provider = "consul"
 
       check {
@@ -49,19 +60,36 @@ job "home-assistant" {
 
       config {
         image = "homeassistant/home-assistant:stable"
+        {% if not use_host_network | default(false) %}
         ports = ["http"]
+        {% endif %}
+
+        # Keep localtime synced
         volumes = [
           "/etc/localtime:/etc/localtime:ro",
         ]
+
+        # Docker logging driver options — ensures rotation if supported
+        logging {
+          type = "json-file"
+          config {
+            "max-size" = "15m"
+            "max-file" = "5"
+          }
+        }
+
+        # Keep container capabilities required for some network features (as you had)
         cap_add = ["NET_RAW", "NET_ADMIN"]
       }
 
+      # Environment variables — HA_TOKEN is included only if defined/non-empty
       env {
         HA_SERVER = "http://127.0.0.1:8123"
-        HA_TOKEN = "{{ home_assistant_token | default('') }}"
+        {% if home_assistant_token is defined and home_assistant_token | length > 0 %}
+        HA_TOKEN = "{{ home_assistant_token }}"
+        {% endif %}
         MQTT_SERVER = "mqtt://{{ hostvars['controller_node_1']['ansible_host'] | default('127.0.0.1') }}:1883"
       }
-
 
       volume_mount {
         volume      = "ha-config"
@@ -73,14 +101,30 @@ job "home-assistant" {
         cpu    = 1000 # 1 GHz
         memory = 2048 # 2 GB
 
-#        device "usb" {
-#          count = 10
-#          constraint {
-#            attribute = "usb.class_id"
-#            value     = "30929"
-#          }
-#        }
+        # Optional USB passthrough example (commented).
+        # To use it, ensure a Nomad device plugin / driver is configured on your client.
+        # Then enable by setting `enable_usb` template variable to true, or uncomment and adapt.
+        #
+        # device "usb" {
+        #   count = 1
+        #   constraint {
+        #     # Example attribute you can tune to select a specific USB vendor/product
+        #     attribute = "usb.vendor_id"
+        #     value     = "10c4"
+        #   }
+        # }
       }
+
+      # Restart policy: makes the service resilient to crashes.
+      restart {
+        attempts = 5
+        interval = "30m"
+        delay    = "15s"
+        mode     = "delay"
+      }
+
+      # Allow graceful shutdown to reduce DB corruption risk
+      shutdown_delay = "15s"
 
       logs {
         max_files     = 5

@@ -1,0 +1,17 @@
+---
+- name: Clone Claude_Clone repository
+  ansible.builtin.git:
+    repo: 'https://github.com/LokiMetaSmith/Claude_Clone.git'
+    dest: /opt/claude_clone
+    version: main
+
+- name: Install Claude_Clone dependencies
+  ansible.builtin.npm:
+    path: /opt/claude_clone
+    state: present
+
+- name: Build Claude_Clone project
+  ansible.builtin.command:
+    cmd: npm run build
+    chdir: /opt/claude_clone
+  changed_when: true

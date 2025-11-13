@@ -6,9 +6,7 @@ job "tool-server" {
     count = 1
 
     network {
-      port "http" {
-        to = 8001
-      }
+      port "http" {}
     }
 
     task "tool-server-task" {
@@ -18,9 +16,12 @@ job "tool-server" {
         image = "tool-server:latest"
         ports = ["http"]
 
-        env {
-          TOOL_SERVER_API_KEY = "{{ openai_api_key }}"
-        }
+        command = "uvicorn"
+        args = ["app:app", "--host", "0.0.0.0", "--port", "${NOMAD_PORT_http}"]
+      }
+
+      env {
+        TOOL_SERVER_API_KEY = "{{ openai_api_key }}"
       }
 
       service {

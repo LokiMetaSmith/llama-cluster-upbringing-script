@@ -65,5 +65,8 @@
         - world_model_service
         - tool_server
         - llxprt_code
+        - claude_clone
       loop_control:
         loop_var: role_name
+      tags:
+        - tool_server
