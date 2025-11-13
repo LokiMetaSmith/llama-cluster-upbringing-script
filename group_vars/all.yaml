@@ -63,6 +63,10 @@ home_assistant_gid: 568
 # 3. Click "Create Token", give it a name (e.g., "Ansible"), and copy the generated token here.
 home_assistant_token: "your_long_lived_access_token_here"
 
+# When set to true, this will prevent the Home Assistant Nomad job from
+# automatically restarting after a crash. This is useful for debugging.
+home_assistant_debug_mode: false
+
 # Model definitions have been moved to group_vars/models.yaml
 
 # The default user for remote connections and service execution.

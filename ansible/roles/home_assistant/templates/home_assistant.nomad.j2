@@ -13,6 +13,12 @@ job "home-assistant" {
       auto_revert       = true
     }
 
+    {% if home_assistant_debug_mode %}
+    reschedule {
+      attempts = 0
+    }
+    {% endif %}
+
     network {
       port "http" {
         to = 8123

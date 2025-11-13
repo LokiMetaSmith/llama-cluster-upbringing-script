@@ -1,6 +1,6 @@
 - name: Diagnose and Log Home Assistant Status
   hosts: localhost
-  gather_facts: no
+  gather_facts: true
   vars:
     log_file: "{{ playbook_dir }}/home_assistant_debug.log"
   tasks:
@@ -8,7 +8,7 @@
       ansible.builtin.lineinfile:
         create: yes
         path: "{{ log_file }}"
-        line: "--- Diagnostic run for Home Assistant at {{ ansible_date_time.iso8661 }} ---"
+        line: "--- Diagnostic run for Home Assistant at {{ ansible_facts['date_time']['iso8661'] }} ---"
         mode: '0644'
 
     - name: Check Nomad job status
