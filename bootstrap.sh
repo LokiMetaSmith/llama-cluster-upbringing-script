@@ -63,7 +63,8 @@ while [[ $# -gt 0 ]]; do
         shift
         ;;
         --user)
-        UPDATE_USER=true
+        TARGET_USER="$2"
+        shift
         shift
         ;;
         --benchmark)
@@ -132,14 +133,12 @@ if [ "$CLEAN_REPO" = true ]; then
 fi
 
 # --- Build Ansible arguments ---
-if [ "$UPDATE_USER" = true ]; then
-    echo "--user flag detected, updating user"
-    ANSIBLE_ARGS+=(--extra-vars "target_user=pipecatapp")
+if [ -n "$TARGET_USER" ]; then
+    echo "Using target user from --user flag: $TARGET_USER"
+    ANSIBLE_ARGS+=(--extra-vars "target_user=$TARGET_USER")
 else
-    # FIXED: This was a conflicting 'if' block before
-    echo "--user flag not detected, using default"
+    echo "Using default target user: pipecatapp"
     ANSIBLE_ARGS+=(--extra-vars "target_user=pipecatapp")
-    # (If the default is different, change 'pipecatapp' here, or remove the 'else' block)
 fi
 
 # FIXED: Correct 'if' statement spacing
