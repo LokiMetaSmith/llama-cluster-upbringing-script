@@ -181,13 +181,20 @@ fi
 # --- Find Ansible Playbook executable ---
 find_executable() {
     local executable_name=$1
-    # 1. Check PATH first
+    # 1. Check local virtual environment
+    if [ -f ".venv/bin/$executable_name" ]; then
+        # Use realpath to resolve the absolute path
+        echo "$(realpath ".venv/bin/$executable_name")"
+        return 0
+    fi
+
+    # 2. Check PATH
     if command -v "$executable_name" &> /dev/null; then
         command -v "$executable_name"
         return 0
     fi
 
-    # 2. Check pyenv shims and versions
+    # 3. Check pyenv shims and versions
     if [ -d "$HOME/.pyenv" ]; then
         local pyenv_path
         pyenv_path=$(find "$HOME/.pyenv/versions" -type f -name "$executable_name" | head -n 1)
@@ -201,31 +208,29 @@ find_executable() {
 }
 
 # Find the ansible-playbook executable
-if [ -n "$ANSIBLE_PLAYBOOK_EXEC" ]; then
-    echo "Using ansible-playbook from ANSIBLE_PLAYBOOK_EXEC: $ANSIBLE_PLAYBOOK_EXEC"
-elif command -v ansible-playbook &> /dev/null; then
-    ANSIBLE_PLAYBOOK_EXEC=$(command -v ansible-playbook)
-    echo "Found ansible-playbook in PATH: $ANSIBLE_PLAYBOOK_EXEC"
+ANSIBLE_PLAYBOOK_EXEC=$(find_executable "ansible-playbook")
+
+if [ -n "$ANSIBLE_PLAYBOOK_EXEC" ] && [ -x "$ANSIBLE_PLAYBOOK_EXEC" ]; then
+    echo "Found ansible-playbook: $ANSIBLE_PLAYBOOK_EXEC"
 else
-    # Check common pyenv paths
-    PYENV_ANSIBLE_PATH="$HOME/.pyenv/shims/ansible-playbook"
-    if [ -x "$PYENV_ANSIBLE_PATH" ]; then
-        ANSIBLE_PLAYBOOK_EXEC="$PYENV_ANSIBLE_PATH"
-        echo "Found ansible-playbook in pyenv: $ANSIBLE_PLAYBOOK_EXEC"
-    else
-        echo "Error: ansible-playbook not found in PATH or pyenv. Please install it or set ANSIBLE_PLAYBOOK_EXEC."
-        echo "Please install Ansible before running this script."
-        echo "On Debian/Ubuntu: sudo apt update && sudo apt install ansible"
-        exit 1
-    fi
-fi
-
-# Check if ansible-playbook and nomad are installed
-if ! [ -x "$ANSIBLE_PLAYBOOK_EXEC" ]; then
-    echo "Error: ansible-playbook could not be found at $ANSIBLE_PLAYBOOK_EXEC"
-
+    echo "Error: ansible-playbook not found."
+    echo "Please ensure you have created a virtual environment, run 'pip install -r requirements-dev.txt',"
+    echo "and that 'ansible-core' is listed in the requirements file."
     exit 1
 fi
+
+# Find the ansible-galaxy executable
+ANSIBLE_GALAXY_EXEC=$(find_executable "ansible-galaxy")
+if [ -n "$ANSIBLE_GALAXY_EXEC" ] && [ -x "$ANSIBLE_GALAXY_EXEC" ]; then
+    echo "Found ansible-galaxy: $ANSIBLE_GALAXY_EXEC"
+else
+    echo "Error: ansible-galaxy not found."
+    exit 1
+fi
+
+# Install Ansible collections
+echo "Installing Ansible collections..."
+"$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix
 
 # --- Handle Nomad job purge ---
 if [ "$PURGE_JOBS" = true ]; then
@@ -349,54 +354,6 @@ for i in "${!PLAYBOOKS[@]}"; do
     echo "--------------------------------------------------"
     echo "🚀 Running playbook ($((i+1))/${#PLAYBOOKS[@]}): $playbook_path"
     echo "--------------------------------------------------"
-
-    # Add a delay before running app_services.yaml to avoid port conflicts
-    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
-        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
-        sleep 10
-    fi
-
-    # Add a delay before running app_services.yaml to avoid port conflicts
-    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
-        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
-        sleep 10
-    fi
-
-    # Add a delay before running app_services.yaml to avoid port conflicts
-    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
-        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
-        sleep 10
-    fi
-
-    # Add a delay before running app_services.yaml to avoid port conflicts
-    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
-        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
-        sleep 10
-    fi
-
-    # Add a delay before running app_services.yaml to avoid port conflicts
-    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
-        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
-        sleep 10
-    fi
-
-    # Add a delay before running app_services.yaml to avoid port conflicts
-    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
-        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
-        sleep 10
-    fi
-
-    # Add a delay before running app_services.yaml to avoid port conflicts
-    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
-        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
-        sleep 10
-    fi
-
-    # Add a delay before running app_services.yaml to avoid port conflicts
-    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
-        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
-        sleep 10
-    fi
 
     # Add a delay before running app_services.yaml to avoid port conflicts
     if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
