@@ -346,6 +346,60 @@ for i in "${!PLAYBOOKS[@]}"; do
     echo "🚀 Running playbook ($((i+1))/${#PLAYBOOKS[@]}): $playbook_path"
     echo "--------------------------------------------------"
 
+    # Add a delay before running app_services.yaml to avoid port conflicts
+    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
+        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
+        sleep 10
+    fi
+
+    # Add a delay before running app_services.yaml to avoid port conflicts
+    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
+        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
+        sleep 10
+    fi
+
+    # Add a delay before running app_services.yaml to avoid port conflicts
+    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
+        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
+        sleep 10
+    fi
+
+    # Add a delay before running app_services.yaml to avoid port conflicts
+    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
+        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
+        sleep 10
+    fi
+
+    # Add a delay before running app_services.yaml to avoid port conflicts
+    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
+        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
+        sleep 10
+    fi
+
+    # Add a delay before running app_services.yaml to avoid port conflicts
+    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
+        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
+        sleep 10
+    fi
+
+    # Add a delay before running app_services.yaml to avoid port conflicts
+    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
+        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
+        sleep 10
+    fi
+
+    # Add a delay before running app_services.yaml to avoid port conflicts
+    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
+        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
+        sleep 10
+    fi
+
+    # Add a delay before running app_services.yaml to avoid port conflicts
+    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
+        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
+        sleep 10
+    fi
+
     COMMAND=("$ANSIBLE_PLAYBOOK_EXEC" -i local_inventory.ini "$playbook_path" "${ANSIBLE_ARGS[@]}")
 
     if [ "$DEBUG_MODE" = true ]; then
