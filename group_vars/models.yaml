@@ -37,6 +37,11 @@ expert_models:
       filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
       memory_mb: 4096
 
+vllm_expert_models:
+  - name: "vllm-main"
+    filename: "meta-llama/Llama-2-7b-hf"
+    memory_mb: 8192
+
 # A list of voices for the PiperTTSService to use, in order of preference.
 tts_voices:
   - name: "en_US-l2arctic-medium"

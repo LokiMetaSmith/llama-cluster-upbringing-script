@@ -1,0 +1,61 @@
+job "vllm-server-{{ model.name }}" {
+  datacenters = ["dc1"]
+  namespace   = "{{ nomad_namespace | default('default') }}"
+
+  meta {
+    model_name    = "{{ model.name }}"
+    model_filename= "{{ model.filename }}"
+    memory_mb   = "{{ model.memory_mb }}"
+  }
+
+  group "vllm-server" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" {
+        to = 8000
+      }
+    }
+
+    service {
+      name     = "vllm-server-{{ model.name }}"
+      provider = "consul"
+      port     = "http"
+
+      tags = [
+        "vllm-server",
+        "model={{ model.filename }}"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "15s"
+        timeout  = "5s"
+        address_mode = "host"
+      }
+    }
+
+    task "vllm-api-server" {
+      driver = "docker"
+
+      config {
+        image = "vllm/vllm-openai:latest"
+        ports = ["http"]
+        args = [
+          "--model", "{{ model.filename }}",
+          "--host", "0.0.0.0"
+        ]
+      }
+
+      resources {
+        cpu    = 2000
+        memory = {{ model.memory_mb }}
+        device "cuda" {
+          count = 1
+        }
+      }
+    }
+  }
+}

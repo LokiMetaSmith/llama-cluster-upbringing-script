@@ -79,6 +79,7 @@ experts:
   - coding
   - math
   - extract
+  - vllm
 
 # --- PXE Boot Configuration ---
 
