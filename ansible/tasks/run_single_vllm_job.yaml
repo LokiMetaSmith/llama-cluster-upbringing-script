@@ -1,0 +1,20 @@
+- name: Template vllm job for {{ model_item.filename }}
+  ansible.builtin.template:
+    src: ../../jobs/vllm.nomad.j2
+    dest: "/tmp/vllm-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
+    mode: '0644'
+  vars:
+    model: "{{ model_item }}"
+
+- name: Run vllm job for {{ model_item.filename }}
+  ansible.builtin.command:
+    cmd: "nomad job run /tmp/vllm-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
+  register: vllm_job_run
+  changed_when: "'Eval ID' in vllm_job_run.stdout"
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+
+- name: Clean up temporary job file for {{ model_item.filename }}
+  ansible.builtin.file:
+    path: "/tmp/vllm-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
+    state: absent
