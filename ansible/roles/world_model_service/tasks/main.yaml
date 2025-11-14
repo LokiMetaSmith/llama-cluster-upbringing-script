@@ -58,7 +58,6 @@
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   changed_when: true
   become: no
-  when: nomad_job_template.changed
 
 - name: "World Model Service : Deploy llamacpp-batch.nomad job"
   tags:
@@ -79,4 +78,3 @@
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   changed_when: true
   become: no
-  when: batch_job_template.changed

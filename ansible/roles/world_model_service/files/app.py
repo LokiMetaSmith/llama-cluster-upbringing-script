@@ -13,6 +13,7 @@ MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", "#")
 
 NOMAD_ADDR = os.getenv("NOMAD_ADDR", "http://localhost:4646")
+PORT = int(os.getenv("PORT", 5678))
 
 
 # --- In-Memory State ---
@@ -101,5 +102,6 @@ async def dispatch_job(job_request: DispatchJobRequest):
             return response.json()
         except httpx.HTTPStatusError as e:
             raise HTTPException(status_code=e.response.status_code, detail=str(e.response.text))
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=PORT)

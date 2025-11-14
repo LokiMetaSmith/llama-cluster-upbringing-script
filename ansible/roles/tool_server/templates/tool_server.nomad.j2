@@ -24,15 +24,15 @@ job "tool-server" {
       }
 
       service {
-        name = "tool-server-api"
+        name = "tool-server"
         port = "http"
+        tags = ["tool-server", "http"]
 
         check {
-          type         = "http"
-          path         = "/tools/"
-          interval     = "10s"
-          timeout      = "2s"
-          address_mode = "host"
+          type     = "http"
+          path     = "/health"
+          interval = "10s"
+          timeout  = "2s"
         }
       }
     }

@@ -5,8 +5,8 @@ After=network-online.target consul.service
 Wants=network-online.target consul.service
 
 [Service]
-User=root
-Group=root
+User=pipecatapp
+Group=pipecatapp
 WorkingDirectory=/opt/provisioning_api
 ExecStart=/opt/pipecatapp/venv/bin/python3 -m uvicorn provisioning_api:app --host 0.0.0.0 --port 8002
 Restart=always
