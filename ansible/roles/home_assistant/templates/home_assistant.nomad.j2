@@ -116,12 +116,20 @@ job "home-assistant" {
       }
 
       # Restart policy: makes the service resilient to crashes.
+      {% if home_assistant_debug_mode %}
+      # In debug mode, prevent restarts to inspect the failed task.
+      restart {
+        attempts = 0
+        mode     = "fail"
+      }
+      {% else %}
       restart {
         attempts = 5
         interval = "30m"
         delay    = "15s"
         mode     = "delay"
       }
+      {% endif %}
 
       # Allow graceful shutdown to reduce DB corruption risk
       shutdown_delay = "15s"
