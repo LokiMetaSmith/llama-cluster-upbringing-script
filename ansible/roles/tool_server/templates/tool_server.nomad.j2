@@ -6,9 +6,7 @@ job "tool-server" {
     count = 1
 
     network {
-      port "http" {
-        to = "8001"
-      }
+      port "http" {}
     }
 
     task "tool-server-task" {
@@ -17,6 +15,9 @@ job "tool-server" {
       config {
         image = "tool-server:latest"
         ports = ["http"]
+
+        command = "uvicorn"
+        args = ["app:app", "--host", "0.0.0.0", "--port", "${NOMAD_PORT_http}"]
       }
 
       env {
