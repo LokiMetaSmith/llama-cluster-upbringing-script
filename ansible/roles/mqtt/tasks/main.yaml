@@ -39,6 +39,12 @@
     recurse: yes
   become: yes
 
+- name: Restart nomad to pick up volume ownership
+  ansible.builtin.service:
+    name: nomad
+    state: restarted
+  become: yes
+
 - name: Purge mqtt job
   ansible.builtin.command:
     cmd: nomad job stop -purge mqtt
