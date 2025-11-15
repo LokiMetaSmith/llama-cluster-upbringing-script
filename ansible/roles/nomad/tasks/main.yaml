@@ -112,6 +112,9 @@
     - Reload systemd
     - Restart nomad
 
+- name: Force immediate handler flush to ensure systemd is reloaded
+  meta: flush_handlers
+
 - name: Deploy Nomad server configuration for controller nodes
   ansible.builtin.template:
     src: server.hcl.j2
