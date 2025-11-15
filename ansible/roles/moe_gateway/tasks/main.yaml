@@ -1,0 +1,31 @@
+---
+- name: Ensure gateway application directory exists
+  ansible.builtin.file:
+    path: /opt/pipecatapp/moe_gateway
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy gateway application file
+  ansible.builtin.copy:
+    src: gateway.py
+    dest: /opt/pipecatapp/moe_gateway/gateway.py
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create moe-gateway job file
+  ansible.builtin.template:
+    src: moe-gateway.nomad.j2
+    dest: /opt/nomad/jobs/moe-gateway.nomad
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Run moe-gateway job
+
+- name: Ensure moe-gateway job is running
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/moe-gateway.nomad
+  changed_when: true

@@ -83,6 +83,7 @@
         - tool_server
         - llxprt_code
         - claude_clone
+        - moe_gateway
       loop_control:
         loop_var: role_name
       tags:
