@@ -115,15 +115,25 @@
   meta: flush_handlers
 
 
-- name: Deploy the Nomad configuration from template
+- name: Deploy Nomad server configuration for controller nodes
   ansible.builtin.template:
-    src: nomad.hcl.j2
-    dest: /etc/nomad.d/nomad.hcl
+    src: server.hcl.j2
+    dest: /etc/nomad.d/server.hcl
     owner: root
     group: root
-    mode: '0644'
-  vars:
-    is_controller: "{{ true if inventory_hostname in groups['controller_nodes'] else false }}"
+    mode: "0644"
+  become: yes
+  when: inventory_hostname in groups['controller_nodes']
+  notify:
+    - Restart nomad
+
+- name: Deploy Nomad client configuration
+  ansible.builtin.template:
+    src: client.hcl.j2
+    dest: /etc/nomad.d/client.hcl
+    owner: root
+    group: root
+    mode: "0644"
   become: yes
   notify:
     - Restart nomad
