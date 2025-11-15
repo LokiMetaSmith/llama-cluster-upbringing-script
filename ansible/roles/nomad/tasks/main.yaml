@@ -112,10 +112,6 @@
     - Reload systemd
     - Restart nomad
 
-- name: Ensure handlers run now #
-  meta: flush_handlers
-
-
 - name: Deploy Nomad server configuration for controller nodes
   ansible.builtin.template:
     src: server.hcl.j2
@@ -289,3 +285,6 @@
           {{ nomad_logs.stdout }}
   notify:
     - Restart nomad
+
+- name: Ensure handlers are flushed
+  meta: flush_handlers

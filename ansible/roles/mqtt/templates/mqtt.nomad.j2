@@ -37,7 +37,7 @@ job "mqtt" {
       driver = "docker"
 
       config {
-        image = "eclipse-mosquitto:2"
+        image = "ccr.ccs.tencentyun.com/library/eclipse-mosquitto:2"
         ports = ["mqtt", "ws"]
         cap_add = ["SETUID", "SETGID", "CHOWN"]
 

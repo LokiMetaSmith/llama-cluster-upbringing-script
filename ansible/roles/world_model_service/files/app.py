@@ -102,9 +102,8 @@ class DispatchJobRequest(BaseModel):
     memory: int = 4096
     gpu_count: int = 1
 
-@app.post("/dispatch-job")
-async def dispatch_job(job_request: DispatchJobRequest):
-    """Receives a request to dispatch a Nomad batch job."""
+async def dispatch_job_func(job_request: DispatchJobRequest):
+    """Dispatches a Nomad batch job."""
     job_id = "llamacpp-batch"
     url = f"{NOMAD_ADDR}/v1/job/{job_id}/dispatch"
 
@@ -125,6 +124,11 @@ async def dispatch_job(job_request: DispatchJobRequest):
             return response.json()
         except httpx.HTTPStatusError as e:
             raise HTTPException(status_code=e.response.status_code, detail=str(e.response.text))
+
+@app.post("/dispatch-job")
+async def dispatch_job_endpoint(job_request: DispatchJobRequest):
+    """Endpoint to dispatch a Nomad batch job."""
+    return await dispatch_job_func(job_request)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=PORT)

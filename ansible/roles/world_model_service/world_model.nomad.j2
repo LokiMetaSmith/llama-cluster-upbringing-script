@@ -53,7 +53,8 @@ job "world-model-service" {
           type     = "http"
           path     = "/state"
           interval = "10s"
-          timeout  = "2s"
+          timeout  = "5s"
+          initial_delay = "20s"
           address_mode = "host"
         }
       }
