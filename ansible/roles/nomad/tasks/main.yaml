@@ -122,12 +122,14 @@
     owner: root
     group: root
     mode: "0644"
+  vars:
+    is_controller: true
   become: yes
   when: inventory_hostname in groups['controller_nodes']
   notify:
     - Restart nomad
 
-- name: Deploy Nomad client configuration
+- name: Deploy Nomad client configuration for worker nodes
   ansible.builtin.template:
     src: client.hcl.j2
     dest: /etc/nomad.d/client.hcl
@@ -135,6 +137,7 @@
     group: root
     mode: "0644"
   become: yes
+  when: inventory_hostname not in groups['controller_nodes']
   notify:
     - Restart nomad
 
