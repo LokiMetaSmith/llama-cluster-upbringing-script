@@ -34,3 +34,43 @@ plugin "raw_exec" {
 plugin "exec" {
   enabled = true
 }
+
+client {
+  enabled = true
+  servers = ["127.0.0.1"]
+
+  host_volume "pipecatapp" {
+    path      = "/opt/pipecatapp"
+    read_only = false
+  }
+
+  # The "snd" volume is required for voice applications but will prevent
+  # Nomad from starting on machines without a sound device. It is commented
+  # out to allow for more flexible deployment. The pipecat job itself will
+  # still require this volume to be present on the target node.
+  host_volume "snd" {
+    path      = "/dev/snd"
+    read_only = false
+  }
+
+  host_volume "models" {
+    path      = "{{ nomad_models_dir }}"
+    read_only = true
+  }
+
+  host_volume "mqtt-data" {
+    path      = "/opt/nomad/volumes/mqtt-data"
+    read_only = false
+  }
+
+  host_volume "ha-config" {
+    path      = "/opt/nomad/volumes/ha-config"
+    read_only = false
+  }
+
+  host_volume "world_model_storage" {
+    path      = "/opt/nomad/volumes/world_model_storage"
+    read_only = false
+  }
+
+}
