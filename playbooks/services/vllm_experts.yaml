@@ -4,9 +4,14 @@
   gather_facts: no
   become: no
 
+  tags:
+    - vllm-experts
+
   tasks:
     - name: Template and run vllm nomad job for each model
       ansible.builtin.include_tasks: ../../ansible/tasks/run_single_vllm_job.yaml
       loop: "{{ vllm_expert_models | default([]) }}"
       loop_control:
         loop_var: model_item
+      tags:
+        - run-vllm-job

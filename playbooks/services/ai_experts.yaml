@@ -4,6 +4,9 @@
   gather_facts: yes
   become: no
 
+  tags:
+    - ai-experts
+
   vars:
     experts: "{{ expert_models.keys() | reject('equalto', 'router') | list }}"
     expected_worker_count: "{{ ((groups['workers'] | default([]) | length) if (groups['workers'] | default([]) | length) > 0 else 1) | int }}"
@@ -18,11 +21,15 @@
       loop: "{{ expert_models.keys() | list }}"
       loop_control:
         loop_var: item
+      tags:
+        - deploy-gpu-provider
 
     - name: Check for benchmark log file
       stat:
         path: /var/log/llama_benchmarks.jsonl
       register: benchmark_log_stat
+      tags:
+        - benchmark
 
     - name: Read and parse benchmark results
       block:
@@ -58,12 +65,16 @@
           ansible.builtin.set_fact:
             benchmark_results: []
       when: benchmark_log_stat.stat.exists
+      tags:
+        - benchmark
 
     - name: Identify successful models from benchmarks
       ansible.builtin.set_fact:
         cacheable: true
         successful_models: "{{ benchmark_results | selectattr('status', 'equalto', 'success') | map(attribute='model') | list }}"
       when: benchmark_results is defined
+      tags:
+        - benchmark
 
     - name: Identify verified experts by checking their models against benchmark results
       ansible.builtin.set_fact:
@@ -78,10 +89,14 @@
         # Check if any of the expert's models are in the list of successful models
         is_verified: "{{ expert_model_files | intersect(successful_models) | length > 0 }}"
       when: is_verified and benchmark_results is defined
+      tags:
+        - benchmark
 
     - name: Initialize expert_benchmark_data as an empty dictionary
       ansible.builtin.set_fact:
         expert_benchmark_data: {}
+      tags:
+        - benchmark
 
     - name: Populate expert_benchmark_data with default values for all experts
       ansible.builtin.set_fact:
@@ -89,6 +104,8 @@
       loop: "{{ experts }}"
       loop_control:
         loop_var: item
+      tags:
+        - benchmark
 
     - name: Calculate benchmark data and average tokens per second for each expert
       ansible.builtin.set_fact:
@@ -125,6 +142,8 @@
       loop_control:
         loop_var: item
       when: benchmark_results is defined and benchmark_results | length > 0 and benchmark_results is defined
+      tags:
+        - benchmark
 
     - name: Wait for the llamacpp-rpc-pool service to be healthy in Consul
       ansible.builtin.uri:
@@ -138,6 +157,8 @@
       delay: 10
       changed_when: false
       when: benchmark_results is defined
+      tags:
+        - healthcheck
 
     - name: Create Expert Orchestrator job files
       include_tasks:
@@ -146,6 +167,8 @@
       loop_control:
         loop_var: current_expert
       when: benchmark_results is defined
+      tags:
+        - deploy-expert
 
     - name: Deploy the Expert Orchestrator services
       ansible.builtin.command: >
@@ -157,6 +180,8 @@
       loop: "{{ experts }}"
       changed_when: true
       when: benchmark_results is defined
+      tags:
+        - deploy-expert
 
     - name: Wait for the expert services to be healthy in Consul
       ansible.builtin.uri:
@@ -171,3 +196,5 @@
       loop: "{{ experts }}"
       changed_when: false
       when: benchmark_results is defined
+      tags:
+        - healthcheck

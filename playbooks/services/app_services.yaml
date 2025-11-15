@@ -3,9 +3,14 @@
   remote_user: "{{ target_user }}"
   become: yes
 
+  tags:
+    - app-services
+
   tasks:
     - name: Flush handlers to ensure Nomad is restarted with new config
       ansible.builtin.meta: flush_handlers
+      tags:
+        - always
 
     - name: Wait for a Consul leader to be elected
       ansible.builtin.uri:
@@ -16,6 +21,8 @@
       retries: 12
       delay: 5
       ignore_errors: yes
+      tags:
+        - consul
 
     - name: Fail gracefully if no Consul leader is found
       ansible.builtin.fail:
@@ -24,14 +31,20 @@
           This usually means the `bootstrap_expect` value in your Consul configuration is
           higher than the number of server nodes available.
       when: consul_leader_status.skipped is not defined and (consul_leader_status.failed or consul_leader_status.content == '""')
+      tags:
+        - consul
 
     - name: Install system dependencies
       ansible.builtin.include_role:
         name: system_deps
+      tags:
+        - system_deps
 
     - name: Install all python dependencies
       ansible.builtin.include_role:
         name: python_deps
+      tags:
+        - python_deps
 
     - name: Run pre-Home Assistant application roles
       ansible.builtin.include_role:
@@ -40,6 +53,8 @@
         - mqtt
       loop_control:
         loop_var: role_name
+      tags:
+        - mqtt
 
     - name: Deploy Home Assistant with error handling
       block:
@@ -52,6 +67,8 @@
         - name: Fail the playbook after diagnostics
           ansible.builtin.fail:
             msg: "Home Assistant deployment failed. Diagnostic log has been created."
+      tags:
+        - home_assistant
 
     - name: Run post-Home Assistant application roles
       ansible.builtin.include_role:
@@ -69,5 +86,12 @@
       loop_control:
         loop_var: role_name
       tags:
-        - tool_server
+        - provisioning_api
+        - desktop_extras
+        - paddler
+        - vision
+        - power_manager
         - world_model_service
+        - tool_server
+        - llxprt_code
+        - claude_clone

@@ -3,11 +3,16 @@
   remote_user: "{{ target_user }}"
   become: yes
 
+  tags:
+    - model-services
+
   tasks:
     - name: Populate Consul KV with configuration
       include_role:
         name: config_manager
       run_once: true
+      tags:
+        - config_manager
 
     - name: Run model-dependent roles
       include_role:
@@ -19,7 +24,12 @@
       loop_control:
         loop_var: role_name
       when: not external_model_server
-      tags: llama_cpp
+      tags:
+        - download_models
+        - llama_cpp
+        - whisper_cpp
 
     - name: Flush handlers to ensure all services are started
       meta: flush_handlers
+      tags:
+        - always

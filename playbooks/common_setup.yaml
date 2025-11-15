@@ -2,6 +2,9 @@
   hosts: all
   become: yes # We are already root
 
+  tags:
+    - common-setup
+
   vars_files:
     - "{{ playbook_dir }}/../group_vars/all.yaml"
     - "{{ playbook_dir }}/../group_vars/models.yaml"
@@ -9,21 +12,29 @@
 
   tasks:
     - name: Ensure the sudo package is installed
+      tags:
+        - sudo
       ansible.builtin.apt:
         name: sudo
         state: present
 
     - name: Ensure the rsync package is installed
+      tags:
+        - rsync
       ansible.builtin.apt:
         name: rsync
         state: present
 
     - name: Ensure the sudo group exists
+      tags:
+        - sudo
       ansible.builtin.group:
         name: sudo
         state: present
 
     - name: Create the '{{ target_user }}' account with sudo access
+      tags:
+        - user
       ansible.builtin.user:
         name: "{{ target_user }}"
         shell: /bin/bash
@@ -31,12 +42,16 @@
         append: yes
 
     - name: Set correct permissions for the user's home directory
+      tags:
+        - user
       ansible.builtin.file:
         path: "/home/{{ target_user }}"
         state: directory
         mode: '0755'
 
     - name: Allow '{{ target_user }}' to have passwordless sudo access
+      tags:
+        - sudo
       ansible.builtin.lineinfile:
         path: "/etc/sudoers.d/ansible-{{ target_user }}-nopasswd"
         line: "{{ target_user }} ALL=(ALL) NOPASSWD: ALL"

@@ -2,17 +2,26 @@
   remote_user: "{{ target_user }}"
   become: yes
 
+  tags:
+    - core-infra
+
   pre_tasks:
     - name: Ensure rsync is installed for synchronization tasks
+      tags:
+        - rsync
       ansible.builtin.apt:
         name: rsync
         state: present
         update_cache: yes
 
     - name: Check connectivity to all nodes
+      tags:
+        - ping
       ansible.builtin.ping:
 
     - name: Distribute control repository to all nodes
+      tags:
+        - sync
       ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../../"
         dest: /opt/cluster-infra/
@@ -21,6 +30,8 @@
       when: inventory_hostname != 'localhost'
 
     - name: Synchronize control repository for local bootstrap
+      tags:
+        - sync
       ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../../"
         dest: /opt/cluster-infra/
@@ -28,5 +39,9 @@
           - "--exclude=.git"
       when: inventory_hostname == 'localhost'
   roles:
-    - system_deps
-    - common
+    - role: system_deps
+      tags:
+        - system_deps
+    - role: common
+      tags:
+        - common
