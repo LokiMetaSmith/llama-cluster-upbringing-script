@@ -31,6 +31,26 @@ job "{{ job_name }}" {
   group "{{ job_name }}-group" {
     count = 1
 
+    scaling {
+      enabled = true
+      min     = 1
+      max     = 10
+
+      policy {
+        cooldown = "1m"
+        evaluation_interval = "30s"
+
+        check "cpu_usage" {
+          source = "nomad"
+          query  = "avg(nomad.client.allocs.cpu.total_percent)"
+
+          strategy "target-value" {
+            target = 70
+          }
+        }
+      }
+    }
+
     update {
       max_parallel = 1
       progress_deadline = "15m"
