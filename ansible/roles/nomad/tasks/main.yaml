@@ -36,7 +36,7 @@
     (existing_nomad_version.stdout is defined and
     new_nomad_version.stdout is defined and
     existing_nomad_version.stdout != new_nomad_version.stdout) and
-    cleanup_services
+    (cleanup_services | bool)
   block:
     - name: Stop Nomad service
       ansible.builtin.systemd:
@@ -110,6 +110,7 @@
   become: yes
   notify:
     - Reload systemd
+    - Restart nomad
 
 - name: Ensure handlers run now #
   meta: flush_handlers
@@ -124,6 +125,14 @@
     mode: "0644"
   become: yes
   when: inventory_hostname in groups['controller_nodes']
+  notify:
+    - Restart nomad
+
+- name: Copy Nomad config for local bootstrap
+  ansible.builtin.template:
+    src: nomad.hcl.server.j2
+    dest: "{{ nomad_config_dir }}/nomad.hcl"
+  when: "inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names"
   notify:
     - Restart nomad
 
