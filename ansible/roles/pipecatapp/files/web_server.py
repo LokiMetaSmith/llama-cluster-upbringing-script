@@ -104,6 +104,17 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
+@app.post("/internal/chat", summary="Process Internal Chat Message", description="Receives a chat message from an internal service like the MoE Gateway, processes it, and sends the response to a specified callback URL.", tags=["Internal"])
+async def internal_chat(payload: Dict = Body(...)):
+    """
+    Handles a chat message from another internal service.
+    The payload should contain the user's text, a unique request_id,
+    and a response_url where the final agent message should be sent.
+    """
+    await text_message_queue.put(payload)
+    return JSONResponse(status_code=202, content={"message": "Request accepted"})
+
+
 @app.get("/", summary="Serve Web UI", description="Serves the main `index.html` file for the web user interface.", tags=["UI"])
 async def get():
     """Serves the main `index.html` file for the web UI."""

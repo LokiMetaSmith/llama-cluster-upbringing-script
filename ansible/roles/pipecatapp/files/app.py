@@ -361,10 +361,17 @@ class TextMessageInjector(FrameProcessor):
         while True:
             try:
                 message = await self.queue.get()
-                text = message.get("data")
-                if text:
-                    logging.info(f"Injecting text message from UI: {text}")
-                    await self.push_frame(TranscriptionFrame(text))
+                # The message can be a simple string (from UI) or a dict (from gateway)
+                if isinstance(message, dict):
+                    text = message.get("text")
+                    # Pass the whole dict along in the frame's meta attribute
+                    if text:
+                        logging.info(f"Injecting text message from gateway: {text}")
+                        await self.push_frame(TranscriptionFrame(text, meta=message))
+                elif isinstance(message, str):
+                     # Legacy support for simple text messages
+                    logging.info(f"Injecting text message from UI: {message}")
+                    await self.push_frame(TranscriptionFrame(message))
             except Exception as e:
                 logging.error(f"Error in TextMessageInjector: {e}")
 
@@ -527,6 +534,9 @@ class TwinService(FrameProcessor):
         self.approval_queue = approval_queue
         self.short_term_memory = []
         self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
+
+        # This will hold metadata from incoming requests (e.g., from the gateway)
+        self.current_request_meta = None
 
         self.debug_mode = self.app_config.get("debug_mode", False)
         self.approval_mode = self.app_config.get("approval_mode", False)
@@ -691,7 +701,28 @@ class TwinService(FrameProcessor):
         if not isinstance(frame, TranscriptionFrame):
             await self.push_frame(frame, direction)
             return
+
+        # Store meta for this request
+        self.current_request_meta = frame.meta if hasattr(frame, 'meta') else None
+
         await self.run_agent_loop(frame.text)
+
+    async def _send_response(self, text: str):
+        """Sends a response back to the appropriate channel (TTS or Gateway)."""
+        if self.current_request_meta and "response_url" in self.current_request_meta:
+            response_url = self.current_request_meta["response_url"]
+            request_id = self.current_request_meta["request_id"]
+            try:
+                # Use a standard library HTTP client for this async context
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    await client.post(response_url, json={"request_id": request_id, "content": text})
+                logging.info(f"Sent response for request {request_id} to gateway.")
+            except Exception as e:
+                logging.error(f"Failed to send response to gateway: {e}")
+        else:
+            # Default to pushing to the audio pipeline
+            await self.push_frame(TextFrame(text))
 
     async def run_agent_loop(self, user_text: str):
         """Runs the main conversational loop for a single user turn.
@@ -720,7 +751,7 @@ class TwinService(FrameProcessor):
                 tool_call = json.loads(llm_response_text)
                 if tool_call.get("tool") == "task_complete":
                     final_response = await self.router_llm.process_text("Summarize what you did and why.")
-                    await self.push_frame(TextFrame(final_response))
+                    await self._send_response(final_response)
                     self.short_term_memory.append(f"Assistant: {final_response}")
                     return
 
@@ -734,10 +765,10 @@ class TwinService(FrameProcessor):
                     if expert_llm:
                         expert_prompt = self.get_system_prompt(expert_name)
                         expert_response = await expert_llm.process_text(f"{expert_prompt}\n\nUser query: {query}")
-                        await self.push_frame(TextFrame(expert_response))
+                        await self._send_response(expert_response)
                         self.short_term_memory.append(f"Assistant ({expert_name}): {expert_response}")
                     else:
-                        await self.push_frame(TextFrame(f"Could not find expert {expert_name}."))
+                        await self._send_response(f"Could not find expert {expert_name}.")
                     return
 
                 tool = self.tools[tool_name]
@@ -745,7 +776,7 @@ class TwinService(FrameProcessor):
 
                 if self.approval_mode and tool_name in ["ssh", "code_runner", "ansible"]:
                     if not await self._request_approval(tool_call):
-                        await self.push_frame(TextFrame(f"Action denied. I cannot use the {tool_name} tool."))
+                        await self._send_response(f"Action denied. I cannot use the {tool_name} tool.")
                         return
 
                 # Synchronous tool call (tools were synchronous in your code)
@@ -756,7 +787,7 @@ class TwinService(FrameProcessor):
 
             except (json.JSONDecodeError, ValueError, KeyError) as e:
                 logging.info(f"No tool call detected or error processing: {e}")
-                await self.push_frame(TextFrame(llm_response_text))
+                await self._send_response(llm_response_text)
                 self.long_term_memory.add_event(kind="assistant_message", content=llm_response_text)
                 self.short_term_memory.append(f"Assistant: {llm_response_text}")
                 break
