@@ -51,13 +51,36 @@ def on_message(client, userdata, msg):
         current_level[keys[-1]] = payload
 
 
+import time
+
 def run_mqtt_client():
-    """Sets up and runs the MQTT client loop."""
+    """Sets up and runs the MQTT client loop with connection retries."""
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_connect = on_connect
     client.on_message = on_message
-    client.connect(MQTT_HOST, MQTT_PORT, 60)
-    client.loop_forever()
+
+    max_retries = 5
+    retry_delay = 10  # seconds
+    for attempt in range(max_retries):
+        try:
+            print(f"Attempting to connect to MQTT broker... (Attempt {attempt + 1}/{max_retries})")
+            client.connect(MQTT_HOST, MQTT_PORT, 60)
+            client.loop_forever()
+            # If loop_forever() returns, it means the connection was lost.
+            # We break the loop to allow the process to exit and be restarted by Nomad.
+            print("MQTT client loop exited. The service might need to restart.")
+            break
+        except ConnectionRefusedError:
+            print(f"Connection refused. Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+        except OSError as e:
+            print(f"Connection failed with OSError: {e}. Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}. Not retrying.")
+            break
+    else:
+        print(f"Failed to connect to MQTT broker after {max_retries} attempts. Exiting.")
 
 # --- API Endpoints ---
 @app.get("/state")
