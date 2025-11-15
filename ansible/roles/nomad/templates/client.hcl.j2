@@ -17,7 +17,6 @@ plugin "docker" {
       enabled = true
     }
     allow_caps = ["NET_RAW", "NET_ADMIN", "SETUID", "SETGID", "CHOWN"]
-    pull_policy = "if-not-present"
   }
 }
 
