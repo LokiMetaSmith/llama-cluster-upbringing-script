@@ -2,6 +2,14 @@
 
 log "Configuring network..."
 
+# --- Dynamically determine the primary network interface ---
+INTERFACE=$(ip route | grep '^default' | awk '{print $5}' | head -n1)
+if [ -z "$INTERFACE" ]; then
+    log "Could not determine primary network interface. Falling back to eth0."
+    INTERFACE="eth0"
+fi
+log "Using network interface: $INTERFACE"
+
 # --- Helper function to check if an element is in a bash array ---
 containsElement () {
   local e match="$1"

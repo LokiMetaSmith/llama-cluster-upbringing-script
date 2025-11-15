@@ -204,6 +204,15 @@ if [ "$DEBUG_MODE" = true ]; then
     ANSIBLE_ARGS+=("-vvvv")
 fi
 
+# --- Install Python dependencies ---
+echo "Installing Python dependencies from requirements-dev.txt..."
+if [ -f "requirements-dev.txt" ]; then
+    pip install -r requirements-dev.txt
+    echo "✅ Python dependencies installed."
+else
+    echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
+fi
+
 # --- Find Ansible Playbook executable ---
 find_executable() {
     local executable_name=$1
