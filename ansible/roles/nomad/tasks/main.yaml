@@ -126,7 +126,7 @@
   vars:
     is_controller: true
   become: yes
-  when: inventory_hostname in groups['controller_nodes']
+  when: "'controller_nodes' in groups and inventory_hostname in groups['controller_nodes']"
   notify:
     - Restart nomad
 
@@ -147,7 +147,7 @@
     group: root
     mode: "0644"
   become: yes
-  when: inventory_hostname in groups['workers']
+  when: "'workers' in groups and inventory_hostname in groups['workers']"
   notify:
     - Restart nomad
 
