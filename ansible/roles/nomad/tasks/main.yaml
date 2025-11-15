@@ -147,7 +147,7 @@
     group: root
     mode: "0644"
   become: yes
-  when: inventory_hostname not in groups['controller_nodes']
+  when: inventory_hostname in groups['workers']
   notify:
     - Restart nomad
 
