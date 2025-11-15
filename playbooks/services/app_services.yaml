@@ -70,3 +70,4 @@
         loop_var: role_name
       tags:
         - tool_server
+        - world_model_service
