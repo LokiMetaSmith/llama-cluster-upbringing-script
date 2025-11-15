@@ -39,11 +39,18 @@
     recurse: yes
   become: yes
 
-- name: Restart nomad to pick up volume ownership
-  ansible.builtin.service:
-    name: nomad
-    state: restarted
+- name: Set ownership for Mosquitto directories
+  ansible.builtin.file:
+    path: /opt/nomad/volumes/mqtt-data
+    state: directory
+    owner: "1883"
+    group: "1883"
+    recurse: yes
   become: yes
+  notify: Restart nomad
+
+- name: Flush handlers to ensure nomad is restarted and ready
+  ansible.builtin.meta: flush_handlers
 
 - name: Purge mqtt job
   ansible.builtin.command:
