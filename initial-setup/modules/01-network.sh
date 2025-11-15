@@ -1,66 +1,85 @@
 #!/bin/bash
+#
+# Manages network configuration for controller and worker nodes.
+# It identifies the primary network interface and configures a static IP
+# for controller nodes to ensure stable communication.
 
-log "Configuring network..."
+# --- Configuration ---
+# All configuration is now sourced from setup.conf to centralize settings.
 
-# --- Helper function to check if an element is in a bash array ---
-containsElement () {
-  local e match="$1"
-  shift
-  for e; do [[ "$e" == "$match" ]] && return 0; done
-  return 1
+# --- Script Logic ---
+echo "[INFO] Configuring network..."
+
+# Load configuration safely
+source "$(dirname "$0")/../setup.conf"
+
+# --- Functions ---
+get_primary_interface() {
+    # Get the interface associated with the default route
+    ip route | grep '^default' | awk '{print $5}' | head -n1
 }
 
-# --- Get current hostname ---
-CURRENT_HOSTNAME=$(hostname)
+# --- Main Execution ---
+PRIMARY_INTERFACE=$(get_primary_interface)
 
-# --- Determine node type and configure network ---
-if containsElement "$CURRENT_HOSTNAME" "${CONTROLLER_HOSTNAMES[@]}"; then
-    # This is a CONTROLLER node, configure a static IP.
-    log "Node '$CURRENT_HOSTNAME' is a controller. Configuring static IP: $STATIC_IP..."
-
-    # Check if the IP is already configured
-    if ip addr show "$INTERFACE" | grep -q "$STATIC_IP"; then
-        log "Static IP $STATIC_IP is already configured on $INTERFACE."
-        return 0
-    fi
-
-    cat > /etc/network/interfaces <<EOL
-# This file is managed by the llama-cluster-upbringing-script
-auto $INTERFACE
-iface $INTERFACE inet static
-    address $STATIC_IP
-    netmask $NETMASK
-    gateway $GATEWAY
-EOL
-    log "Static IP configuration written for $INTERFACE."
-
-else
-    # This is a WORKER node, configure DHCP.
-    log "Node '$CURRENT_HOSTNAME' is a worker. Configuring DHCP..."
-
-    # Check if DHCP is already configured
-    if grep -q "iface $INTERFACE inet dhcp" /etc/network/interfaces; then
-        log "DHCP is already configured on $INTERFACE."
-        return 0
-    fi
-
-    cat > /etc/network/interfaces <<EOL
-# This file is managed by the llama-cluster-upbringing-script
-auto $INTERFACE
-iface $INTERFACE inet dhcp
-EOL
-    log "DHCP configuration written for $INTERFACE."
+if [ -z "$PRIMARY_INTERFACE" ]; then
+    echo "[ERROR] Could not determine the primary network interface. Exiting."
+    exit 1
 fi
 
+echo "[INFO] Detected primary network interface: $PRIMARY_INTERFACE"
 
-# --- Restart networking service ---
-log "Restarting networking service to apply changes..."
-if systemctl list-units --type=service | grep -q 'networking.service'; then
-    systemctl restart networking
-elif systemctl list-units --type=service | grep -q 'systemd-networkd.service'; then
-    systemctl restart systemd-networkd
+if [ "$NODE_TYPE" = "controller" ]; then
+    echo "[INFO] Node '$HOSTNAME' is a controller. Configuring static IP: $CONTROLLER_STATIC_IP..."
+
+    # Create Netplan configuration for a static IP on the primary interface
+    # This overwrites any existing config for the interface to ensure consistency.
+    cat > /etc/netplan/01-static.yaml <<- EOM
+network:
+  version: 2
+  ethernets:
+    $PRIMARY_INTERFACE:
+      dhcp4: no
+      addresses:
+        - $CONTROLLER_STATIC_IP/24
+      routes:
+        - to: default
+          via: $GATEWAY_IP
+      nameservers:
+        addresses:
+          - 8.8.8.8
+          - 8.8.4.4
+EOM
+
+    echo "[INFO] Netplan configuration written for $PRIMARY_INTERFACE."
+    echo "[INFO] Applying Netplan configuration..."
+    netplan apply
+
+    # Verify the IP address was set
+    if ip addr show "$PRIMARY_INTERFACE" | grep -q "$CONTROLLER_STATIC_IP"; then
+        echo "[INFO] Successfully set static IP on $PRIMARY_INTERFACE."
+    else
+        echo "[ERROR] Failed to set static IP on $PRIMARY_INTERFACE. Please check Netplan configuration and logs."
+        exit 1
+    fi
+
+elif [ "$NODE_TYPE" = "worker" ]; then
+    echo "[INFO] Node '$HOSTNAME' is a worker. Ensuring it uses DHCP..."
+
+    # Create a simple DHCP configuration for the primary interface.
+    # This ensures workers get their IP from the network's DHCP server.
+    cat > /etc/netplan/01-dhcp.yaml <<- EOM
+network:
+  version: 2
+  ethernets:
+    $PRIMARY_INTERFACE:
+      dhcp4: yes
+EOM
+    echo "[INFO] Netplan DHCP configuration written for $PRIMARY_INTERFACE."
+    echo "[INFO] Applying Netplan configuration..."
+    netplan apply
 else
-    log "Could not find networking.service or systemd-networkd.service to restart."
+    echo "[WARNING] NODE_TYPE is not set to 'controller' or 'worker'. Skipping network configuration."
 fi
 
-log "Network configuration complete."
+echo "[INFO] Network configuration complete."

@@ -1,0 +1,24 @@
+client {
+  enabled = true
+}
+
+plugin "docker" {
+  config {
+    volumes {
+      enabled = true
+    }
+    allow_caps = ["NET_RAW", "NET_ADMIN", "SETUID", "SETGID", "CHOWN"]
+  }
+}
+
+plugin "raw_exec" {
+  config {
+    enabled = true
+  }
+}
+
+plugin "exec" {
+  config {
+    enabled = true
+  }
+}

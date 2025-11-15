@@ -1,0 +1,38 @@
+data_dir  = "{{ nomad_data_dir }}"
+bind_addr = "0.0.0.0" # Listen on all interfaces
+
+advertise {
+  http = "{{ ansible_default_ipv4.address }}"
+  rpc  = "{{ ansible_default_ipv4.address }}"
+  serf = "{{ ansible_default_ipv4.address }}"
+}
+
+server {
+  enabled = true
+  bootstrap_expect = {{ nomad_bootstrap_expect }}
+}
+
+consul {
+  address = "127.0.0.1:8500"
+}
+
+plugin "docker" {
+  config {
+    volumes {
+      enabled = true
+    }
+    allow_caps = ["NET_RAW", "NET_ADMIN", "SETUID", "SETGID", "CHOWN"]
+  }
+}
+
+plugin "raw_exec" {
+  config {
+    enabled = true
+  }
+}
+
+plugin "exec" {
+  config {
+    enabled = true
+  }
+}
