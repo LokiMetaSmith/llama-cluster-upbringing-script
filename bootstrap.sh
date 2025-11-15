@@ -6,6 +6,29 @@
 # server for development or as the initial control node for a new cluster.
 # It runs the main Ansible playbook using a local inventory file.
 
+# --- Help Menu ---
+show_help() {
+    echo "Usage: $0 [options]"
+    echo ""
+    echo "This script runs the main Ansible playbook to bootstrap the system."
+    echo ""
+    echo "Options:"
+    echo "  --role <role>                Specify the role for this node (all, controller, worker). Default: all."
+    echo "  --controller-ip <ip>         Required if --role is 'worker'. IP address of the controller node."
+    echo "  --tags <tags>                Comma-separated list of Ansible tags to run."
+    echo "  --user <user>                Specify the target user for Ansible. Default: pipecatapp."
+    echo "  --purge-jobs                 Stop and purge all running Nomad jobs before starting."
+    echo "  --clean                      Clean the repository of all untracked files (interactive prompt)."
+    echo "  --debug                      Enable verbose Ansible output and log to playbook_output.log."
+    echo "  --leave-services-running     Do not clean up Nomad and Consul data on startup."
+    echo "  --external-model-server      Skip large model downloads and builds, assuming an external server."
+    echo "  --continue                   Resume from the last successfully completed playbook."
+    echo "  --benchmark                  Run benchmark tests."
+    echo "  --deploy-docker              Deploy the pipecat application using Docker."
+    echo "  --home-assistant-debug       Enable debug mode for Home Assistant."
+    echo "  -h, --help                   Display this help message and exit."
+}
+
 # --- Initialize flags ---
 CLEAN_REPO=false
 DEBUG_MODE=false
@@ -79,9 +102,13 @@ while [[ $# -gt 0 ]]; do
         ANSIBLE_ARGS+=(--extra-vars "home_assistant_debug_mode=true")
         shift
         ;;
+        -h|--help)
+        show_help
+        exit 0
+        ;;
         *)
         echo "Unknown option: $1"
-        # (You could add a usage/help function here)
+        show_help
         exit 1
         ;;
     esac
