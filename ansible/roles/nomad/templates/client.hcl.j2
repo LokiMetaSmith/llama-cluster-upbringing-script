@@ -7,13 +7,6 @@ advertise {
   serf = "{{ ansible_default_ipv4.address }}"
 }
 
-{% if is_controller is defined and is_controller %}
-server {
-  enabled = true
-  bootstrap_expect = {{ nomad_bootstrap_expect }}
-}
-{% endif %}
-
 consul {
   address = "127.0.0.1:8500"
 }
