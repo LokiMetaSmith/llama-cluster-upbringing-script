@@ -3,7 +3,16 @@
   connection: local
   gather_facts: yes
 
+  tags:
+    - core-ai-services
+
   roles:
     - role: bootstrap_agent
+      tags:
+        - bootstrap_agent
     - role: term_everything
+      tags:
+        - term_everything
     - role: pipecatapp
+      tags:
+        - pipecatapp

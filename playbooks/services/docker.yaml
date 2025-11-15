@@ -3,5 +3,10 @@
   remote_user: "{{ target_user }}"
   become: yes
 
-  roles:
+  tags:
     - docker
+
+  roles:
+    - role: docker
+      tags:
+        - docker

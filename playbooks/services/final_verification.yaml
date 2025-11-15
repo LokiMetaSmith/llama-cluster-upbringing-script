@@ -2,6 +2,8 @@
   hosts: all
   become: no
   gather_facts: no
+  tags:
+    - final-verification
   tasks:
     - name: Check if the Consul service is running
       ansible.builtin.systemd:
@@ -11,6 +13,8 @@
       changed_when: false
       ignore_errors: yes # We'll provide a better error message in the next task
       when: not ansible_check_mode
+      tags:
+        - consul-health
 
     - name: Fail gracefully if Consul service is not running
       ansible.builtin.fail:
@@ -20,6 +24,8 @@
           Please check the service logs by running 'journalctl -u consul.service' on the target node.
           Status details: {{ consul_service_status }}
       when: consul_service_status.skipped is not defined and consul_service_status.failed and not ansible_check_mode
+      tags:
+        - consul-health
 
     - name: Wait for a Consul leader to be elected
       ansible.builtin.uri:
@@ -31,6 +37,8 @@
       delay: 5
       ignore_errors: yes
       when: not ansible_check_mode
+      tags:
+        - consul-health
 
     - name: Fail gracefully if no Consul leader is found
       ansible.builtin.fail:
@@ -41,3 +49,5 @@
           - For a single-node setup, ensure `bootstrap_expect` is 1.
           - For a multi-node setup, ensure enough controller nodes are running to form a quorum.
       when: consul_leader_status.skipped is not defined and (consul_leader_status.failed or consul_leader_status.content == '""') and not ansible_check_mode
+      tags:
+        - consul-health

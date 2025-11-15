@@ -3,5 +3,10 @@
   remote_user: "{{ target_user }}"
   become: yes
 
-  roles:
+  tags:
     - nomad
+
+  roles:
+    - role: nomad
+      tags:
+        - nomad
