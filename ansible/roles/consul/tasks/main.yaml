@@ -4,11 +4,22 @@
     state: present
   become: yes
 
+- name: Check installed Consul version
+  command: "consul version"
+  register: consul_version_output
+  changed_when: false
+  failed_when: false
+
+- name: Set installed Consul version fact
+  set_fact:
+    installed_consul_version: "{{ consul_version_output.stdout | regex_search('Consul v([0-9]+\\.[0-9]+\\.[0-9]+)', '\\\\1') | first | default('0.0.0') }}"
+
 - name: Download Consul
   command: "curl -L -o /tmp/consul.zip {{ consul_zip_url }}"
   args:
     creates: /tmp/consul.zip
   check_mode: no
+  when: installed_consul_version != consul_version
 
 - name: Unzip Consul
   unarchive:
@@ -18,6 +29,7 @@
     creates: /tmp/consul
   become: yes
   check_mode: no
+  when: installed_consul_version != consul_version
 
 - name: Move Consul to /usr/local/bin
   copy:
@@ -26,6 +38,7 @@
     remote_src: yes
     mode: '0755'
   become: yes
+  when: installed_consul_version != consul_version
 
 - name: Create Consul data directory
   file:
