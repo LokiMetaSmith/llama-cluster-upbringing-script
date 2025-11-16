@@ -4,15 +4,21 @@
     state: present
   become: yes
 
+- name: Check if consul executable exists
+  stat:
+    path: /usr/local/bin/consul
+  register: consul_executable
+
 - name: Check installed Consul version
   command: "consul version"
   register: consul_version_output
   changed_when: false
   failed_when: false
+  when: consul_executable.stat.exists
 
 - name: Set installed Consul version fact
   set_fact:
-    installed_consul_version: "{{ (consul_version_output.stdout | regex_search('Consul v([0-9]+\\.[0-9]+\\.[0-9]+)', '\\\\1') | first) if consul_version_output.rc == 0 else '0.0.0' }}"
+    installed_consul_version: "{{ (consul_version_output.stdout | regex_search('Consul v([0-9]+\\.[0-9]+\\.[0-9]+)', '\\\\1') | first) if consul_executable.stat.exists and consul_version_output.rc == 0 else '0.0.0' }}"
 
 - name: Download Consul
   command: "curl -L -o /tmp/consul.zip {{ consul_zip_url }}"
