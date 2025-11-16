@@ -27,3 +27,4 @@ uvicorn
 langchain
 python-nomad
 quibbler
+llm-sandbox[docker]

@@ -44,3 +44,4 @@ uvicorn
 webrtcvad
 websockets
 wheel
+llm-sandbox[docker]
