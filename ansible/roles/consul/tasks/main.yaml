@@ -1,9 +1,10 @@
----
+
 # Task 0: Install community.general collection
 - name: Install community.general Ansible collection
   ansible.builtin.command: ansible-galaxy collection install community.general
   tags:
     - consul_install_deps
+
 
 # Task 1: Install unzip (from user snippet)
 - name: Install unzip
