@@ -1,4 +1,12 @@
 ---
+# Task 0: Ensure ansible-galaxy collections are installed
+- name: Install community.general Ansible collection
+  ansible.builtin.command: ansible-galaxy collection install community.general
+  changed_when: false # We don't want this to report "changed" every time
+  delegate_to: localhost
+  run_once: true
+  become: false # Should run as the user executing the playbook
+
 # Task 1: Install unzip (from user snippet)
 - name: Install unzip
   become: true
