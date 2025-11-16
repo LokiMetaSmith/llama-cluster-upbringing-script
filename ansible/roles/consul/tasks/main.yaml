@@ -1,10 +1,18 @@
 ---
+# Task 0: Install community.general collection
+- name: Install community.general Ansible collection
+  ansible.builtin.command: ansible-galaxy collection install community.general
+  tags:
+    - consul_install_deps
+
 # Task 1: Install unzip (from user snippet)
 - name: Install unzip
   become: true
   ansible.builtin.apt:
     name: unzip
     state: present
+  tags:
+    - consul_configure
 
 # Task 2: Check version FIRST. This prevents the 'NoneType' error.
 - name: Check installed Consul version
@@ -12,6 +20,8 @@
   register: consul_version_output
   changed_when: false
   failed_when: false # Do not fail if consul isn't found, we'll install it.
+  tags:
+    - consul_configure
 
 # Task 3: Log the output for debugging (as requested)
 - name: "Log Consul version command output (for debugging)"
@@ -22,6 +32,8 @@
       - "STDERR: {{ consul_version_output.stderr | default('stderr was not defined or was None') }}"
       - "RC: {{ consul_version_output.rc | default('rc was not defined') }}"
   when: consul_version_output is defined
+  tags:
+    - consul_configure
 
 # Task 4: Download and install Consul (using user snippet's var/when logic)
 - name: Download and install Consul
@@ -39,6 +51,8 @@
   when: >
     current_version is none or
     current_version | community.general.version_compare(consul_version, '<')
+  tags:
+    - consul_configure
 
 # Task 5: Create consul group (best practice)
 - name: Create consul group
@@ -46,6 +60,8 @@
   ansible.builtin.group:
     name: consul
     state: present
+  tags:
+    - consul_configure
 
 # Task 6: Create consul user (best practice)
 - name: Create consul user
@@ -56,6 +72,8 @@
     shell: /bin/false
     home: "{{ consul_config_dir }}" # Use config dir as home
     create_home: yes
+  tags:
+    - consul_configure
 
 # Task 7: Create Consul data directory (from original, with ownership)
 - name: Create Consul data directory
@@ -66,6 +84,8 @@
     owner: consul
     group: consul
     mode: '0755'
+  tags:
+    - consul_configure
 
 # Task 8: Create Consul config directory (from original, with ownership)
 - name: Create Consul config directory
@@ -76,6 +96,8 @@
     owner: consul
     group: consul
     mode: '0755'
+  tags:
+    - consul_configure
 
 # Task 9: Generate certificates on localhost (from original file)
 - name: Generate certificates on localhost
@@ -132,14 +154,20 @@
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
   delegate_to: localhost
   run_once: true
+  tags:
+    - consul_configure
 
 # Task 10: Include TLS tasks (from original file)
 - name: Include TLS tasks
   ansible.builtin.include_tasks: tls.yaml
+  tags:
+    - consul_configure
 
 # Task 11: Include ACL tasks (from original file)
 - name: Include ACL tasks
   ansible.builtin.include_tasks: acl.yaml
+  tags:
+    - consul_configure
 
 # Task 12: Copy Consul config (from original, with ownership/mode)
 - name: Copy Consul config
@@ -151,6 +179,8 @@
     group: consul
     mode: '0640'
   notify: restart consul
+  tags:
+    - consul_configure
 
 # Task 13: Copy Consul systemd service file (from original file)
 - name: Copy Consul systemd service file
@@ -160,6 +190,8 @@
     dest: /etc/systemd/system/consul.service
     mode: '0644'
   notify: restart consul
+  tags:
+    - consul_configure
 
 # Task 14: Reload systemd to recognize new service (from original file)
 - name: Reload systemd to recognize new service
@@ -167,8 +199,9 @@
   ansible.builtin.systemd:
     daemon_reload: yes
   when: not ansible_check_mode
+  tags:
+    - consul_.venv
 
-# Task 15: Start and enable Consul service (from original file)
 - name: Start and enable Consul service
   become: true
   ansible.builtin.systemd:
@@ -176,6 +209,8 @@
     state: started
     enabled: yes
   when: not ansible_check_mode
+  tags:
+    - consul_configure
 
 # Task 16: Clean up temporary certificate directory (from original file)
 - name: Clean up temporary certificate directory
@@ -184,3 +219,5 @@
     state: absent
   delegate_to: localhost
   run_once: true
+  tags:
+    - consul_configure
