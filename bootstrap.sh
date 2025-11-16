@@ -263,9 +263,19 @@ else
     exit 1
 fi
 
-# Install Ansible collections
-echo "Installing Ansible collections..."
-if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker; then
+# Install Ansible and collections
+echo "Installing Ansible and collections..."
+if ! "$ANSIBLE_PLAYBOOK_EXEC" --version > /dev/null 2>&1 || ! "$ANSIBLE_GALAXY_EXEC" --version > /dev/null 2>&1; then
+    echo "Ansible or ansible-galaxy not found, installing..."
+    pip install ansible
+fi
+
+# Define the collections path
+COLLECTIONS_PATH="$HOME/.ansible/collections"
+mkdir -p "$COLLECTIONS_PATH"
+
+# Install collections to the specified path
+if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker -p "$COLLECTIONS_PATH"; then
     echo "Error: Failed to install Ansible collections." >&2
     exit 1
 fi
