@@ -3,23 +3,20 @@ import os
 import sys
 from unittest.mock import MagicMock, patch, AsyncMock
 
-# Add the path to the world_model_service app
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'world_model_service', 'files')))
-
-from app import app, on_connect, on_message, run_mqtt_client
+from world_model_service.files.app import app, on_connect, on_message, run_mqtt_client
 from fastapi.testclient import TestClient
 
 @pytest.fixture
 def client():
     """Fixture to create a TestClient for the FastAPI app."""
-    with patch('app.run_mqtt_client'): # Prevent MQTT client from starting
+    with patch('world_model_service.files.app.run_mqtt_client'): # Prevent MQTT client from starting
         with TestClient(app) as test_client:
             yield test_client
 
 @pytest.fixture
 def mock_mqtt_client():
     """Fixture to mock the paho.mqtt.client."""
-    with patch('paho.mqtt.client.Client') as mock:
+    with patch('world_model_service.files.app.mqtt.Client') as mock:
         yield mock.return_value
 
 def test_health_check(client):
@@ -48,7 +45,7 @@ def test_on_message():
     # How to assert the world_state update? Needs a bit of refactoring in app.py
     # For now, just test that it runs without error.
 
-@patch('app.time.sleep', return_value=None)
+@patch('world_model_service.files.app.time.sleep', return_value=None)
 def test_run_mqtt_client_successful_connection(mock_sleep, mock_mqtt_client):
     """Tests the run_mqtt_client function with a successful connection."""
     mock_mqtt_client.connect.return_value = 0
@@ -56,7 +53,7 @@ def test_run_mqtt_client_successful_connection(mock_sleep, mock_mqtt_client):
     mock_mqtt_client.connect.assert_called_once()
     mock_mqtt_client.loop_forever.assert_called_once()
 
-@patch('app.time.sleep', return_value=None)
+@patch('world_model_service.files.app.time.sleep', return_value=None)
 def test_run_mqtt_client_connection_refused(mock_sleep, mock_mqtt_client):
     """Tests the run_mqtt_client function with a ConnectionRefusedError."""
     mock_mqtt_client.connect.side_effect = ConnectionRefusedError
@@ -66,7 +63,7 @@ def test_run_mqtt_client_connection_refused(mock_sleep, mock_mqtt_client):
 @pytest.mark.asyncio
 async def test_dispatch_job(client):
     """Tests the /dispatch-job endpoint."""
-    with patch('app.dispatch_job_func', new_callable=AsyncMock) as mock_dispatch_job:
+    with patch('world_model_service.files.app.dispatch_job_func', new_callable=AsyncMock) as mock_dispatch_job:
         mock_dispatch_job.return_value = {"status": "success"}
         response = client.post("/dispatch-job", json={
             "model_name": "test-model",

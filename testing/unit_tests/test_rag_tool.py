@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, patch, mock_open
 import threading
 
 # Add the path to the RAG tool
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
 
-from tools.rag_tool import RAG_Tool
+from rag_tool import RAG_Tool
 
 @pytest.fixture
 def mock_sentence_transformer():

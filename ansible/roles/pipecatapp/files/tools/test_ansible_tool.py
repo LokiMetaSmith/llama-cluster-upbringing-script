@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import patch, MagicMock
 import subprocess
 
-# Assume ansible_tool is in the same directory or adjust path as needed
 from ansible_tool import Ansible_Tool
 
 class TestAnsibleTool(unittest.TestCase):
