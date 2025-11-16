@@ -265,7 +265,7 @@ fi
 
 # Install Ansible collections
 echo "Installing Ansible collections..."
-"$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix
+"$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker
 
 # --- Handle Nomad job purge ---
 if [ "$PURGE_JOBS" = true ]; then
