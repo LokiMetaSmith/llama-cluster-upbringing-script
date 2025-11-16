@@ -41,12 +41,9 @@ job "mqtt" {
         ports = ["mqtt", "ws"]
         cap_add = ["SETUID", "SETGID", "CHOWN"]
 
-        # The entrypoint is overridden to explicitly load the config file.
-        # The config file itself is created by Ansible and placed in the host volume.
-        # The entrypoint is overridden to explicitly load the config file.
-        # The config file itself is created by Ansible and placed in the host volume.
-        command = "mosquitto"
-        args = ["-c", "/mosquitto/mosquitto.conf"]
+        # By not specifying a command, we allow the container to use its
+        # default entrypoint, which is a script that correctly initializes the
+        # Mosquitto service, including setting file permissions.
       }
 
       volume_mount {
