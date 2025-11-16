@@ -1,186 +1,86 @@
----
-# Task 1: Install unzip (from user snippet)
-- name: Install unzip
-  become: true
-  ansible.builtin.apt:
-    name: unzip
-    state: present
-
-# Task 2: Check version FIRST. This prevents the 'NoneType' error.
-- name: Check installed Consul version
-  ansible.builtin.command: consul --version
-  register: consul_version_output
-  changed_when: false
-  failed_when: false # Do not fail if consul isn't found, we'll install it.
-
-# Task 3: Log the output for debugging (as requested)
-- name: "Log Consul version command output (for debugging)"
-  ansible.builtin.debug:
-    msg:
-      - "Jules Task Log: Debugging consul --version output."
-      - "STDOUT: {{ consul_version_output.stdout | default('stdout was not defined or was None') }}"
-      - "STDERR: {{ consul_version_output.stderr | default('stderr was not defined or was None') }}"
-      - "RC: {{ consul_version_output.rc | default('rc was not defined') }}"
-  when: consul_version_output is defined
-
-# Task 4: Download and install Consul (using user snippet's var/when logic)
-- name: Download and install Consul
-  become: true
-  ansible.builtin.unarchive:
-    src: "https://releases.hashicorp.com/consul/{{ consul_version }}/consul_{{ consul_version }}_linux_amd64.zip"
-    dest: /usr/local/bin
-    remote_src: yes
-    owner: root
-    group: root
-    mode: 0755
-  vars:
-    # Define local var for use in 'when' condition
-    current_version: "{{ consul_version_output.stdout | default('') | regex_search('[0-9]+\\.[0-9]+\\.[0-9]+') }}"
-  when: >
-    current_version is none or
-    current_version | community.general.version_compare(consul_version, '<')
-
-# Task 5: Create consul group (best practice)
-- name: Create consul group
-  become: true
-  ansible.builtin.group:
-    name: consul
-    state: present
-
-# Task 6: Create consul user (best practice)
-- name: Create consul user
-  become: true
-  ansible.builtin.user:
-    name: consul
-    group: consul
-    shell: /bin/false
-    home: "{{ consul_config_dir }}" # Use config dir as home
-    create_home: yes
-
-# Task 7: Create Consul data directory (from original, with ownership)
-- name: Create Consul data directory
-  become: true
+- name: Ensure Nomad volumes directory exists
   ansible.builtin.file:
-    path: "{{ consul_data_dir }}"
+    path: /opt/nomad/volumes
     state: directory
-    owner: consul
-    group: consul
     mode: '0755'
+  become: yes
 
-# Task 8: Create Consul config directory (from original, with ownership)
-- name: Create Consul config directory
-  become: true
+- name: Ensure Mosquitto directories exist
   ansible.builtin.file:
-    path: "{{ consul_config_dir }}"
+    path: "{{ item }}"
     state: directory
-    owner: consul
-    group: consul
     mode: '0755'
+  become: yes
+  loop:
+    - /opt/nomad/volumes/mqtt-data
+    - /opt/nomad/volumes/mqtt-data/data
+    - /opt/nomad/volumes/mqtt-data/log
 
-# Task 9: Generate certificates on localhost (from original file)
-- name: Generate certificates on localhost
-  block:
-    - name: Create local certs directory
-      ansible.builtin.file:
-        path: "{{ consul_temp_cert_dir }}"
-        state: directory
-
-    - name: Generate CA key
-      ansible.builtin.command: "openssl genrsa -out {{ consul_temp_cert_dir }}/ca.key 2048"
-      args:
-        creates: "{{ consul_temp_cert_dir }}/ca.key"
-
-    - name: Generate CA certificate
-      ansible.builtin.command: "openssl req -new -x509 -days 3650 -key {{ consul_temp_cert_dir }}/ca.key -out {{ consul_temp_cert_dir }}/ca.pem -subj '/CN=Consul CA'"
-      args:
-        creates: "{{ consul_temp_cert_dir }}/ca.pem"
-
-    - name: Generate server keys for controller nodes
-      ansible.builtin.command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
-      args:
-        creates: "{{ consul_temp_cert_dir }}/{{ item }}.key"
-      loop: "{{ groups['controller_nodes'] }}"
-
-    - name: Generate server CSRs for controller nodes
-      ansible.builtin.command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=server.consul'"
-      args:
-        creates: "{{ consul_temp_cert_dir }}/{{ item }}.csr"
-      loop: "{{ groups['controller_nodes'] }}"
-
-    - name: Sign server certificates for controller nodes
-      ansible.builtin.command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
-      args:
-        creates: "{{ consul_temp_cert_dir }}/{{ item }}.pem"
-      loop: "{{ groups['controller_nodes'] }}"
-
-    - name: Generate client keys for client nodes
-      ansible.builtin.command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
-      args:
-        creates: "{{ consul_temp_cert_dir }}/{{ item }}.key"
-      loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
-
-    - name: Generate client CSRs for client nodes
-      ansible.builtin.command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=client.consul'"
-      args:
-        creates: "{{ consul_temp_cert_dir }}/{{ item }}.csr"
-      loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
-
-    - name: Sign client certificates for client nodes
-      ansible.builtin.command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
-      args:
-        creates: "{{ consul_temp_cert_dir }}/{{ item }}.pem"
-      loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
-  delegate_to: localhost
-  run_once: true
-
-# Task 10: Include TLS tasks (from original file)
-- name: Include TLS tasks
-  ansible.builtin.include_tasks: tls.yaml
-
-# Task 11: Include ACL tasks (from original file)
-- name: Include ACL tasks
-  ansible.builtin.include_tasks: acl.yaml
-
-# Task 12: Copy Consul config (from original, with ownership/mode)
-- name: Copy Consul config
-  become: true
-  ansible.builtin.template:
-    src: consul.hcl.j2
-    dest: "{{ consul_config_dir }}/consul.hcl"
-    owner: consul
-    group: consul
-    mode: '0640'
-  notify: restart consul
-
-# Task 13: Copy Consul systemd service file (from original file)
-- name: Copy Consul systemd service file
-  become: true
-  ansible.builtin.template:
-    src: consul.service.j2
-    dest: /etc/systemd/system/consul.service
+- name: Create Mosquitto config file
+  ansible.builtin.copy:
+    dest: /opt/nomad/volumes/mqtt-data/mosquitto.conf
+    content: |
+      persistence true
+      persistence_location /mosquitto/data
+      log_dest stdout
+      log_type all
+      listener 1883
+      listener 9001
+      protocol websockets
     mode: '0644'
-  notify: restart consul
+  become: yes
 
-# Task 14: Reload systemd to recognize new service (from original file)
-- name: Reload systemd to recognize new service
-  become: true
-  ansible.builtin.systemd:
-    daemon_reload: yes
-  when: not ansible_check_mode
-
-# Task 15: Start and enable Consul service (from original file)
-- name: Start and enable Consul service
-  become: true
-  ansible.builtin.systemd:
-    name: consul
-    state: started
-    enabled: yes
-  when: not ansible_check_mode
-
-# Task 16: Clean up temporary certificate directory (from original file)
-- name: Clean up temporary certificate directory
+- name: Set ownership for Mosquitto directories
   ansible.builtin.file:
-    path: "{{ consul_temp_cert_dir }}"
-    state: absent
-  delegate_to: localhost
-  run_once: true
+    path: /opt/nomad/volumes/mqtt-data
+    state: directory
+    owner: "1883"
+    group: "1883"
+    recurse: yes
+  become: yes
+
+- name: Set ownership for Mosquitto directories
+  ansible.builtin.file:
+    path: /opt/nomad/volumes/mqtt-data
+    state: directory
+    owner: "1883"
+    group: "1883"
+    recurse: yes
+  become: yes
+  notify: Restart nomad
+
+- name: Flush handlers to ensure nomad is restarted and ready
+  ansible.builtin.meta: flush_handlers
+
+- name: Purge mqtt job
+  ansible.builtin.command:
+    cmd: nomad job stop -purge mqtt
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  changed_when: true
+  ignore_errors: yes
+
+- name: Template mqtt Nomad job file
+  ansible.builtin.template:
+    src: mqtt.nomad.j2
+    dest: /opt/nomad/jobs/mqtt.nomad
+  become: yes
+
+- name: Wait for Nomad to be ready
+  ansible.builtin.wait_for:
+    host: "{{ ansible_default_ipv4.address }}"
+    port: 4646
+    timeout: 60
+
+- name: Run mqtt job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/mqtt.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  changed_when: true
+  register: mqtt_job_run
+#  notify: Restart Home Assistant
+
+- name: Debug mqtt job run
+  ansible.builtin.debug:
+    var: mqtt_job_run
