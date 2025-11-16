@@ -214,62 +214,38 @@ else
 fi
 
 # --- Find Ansible Playbook executable ---
-find_executable() {
-    local executable_name=$1
-    # 1. Check local virtual environment
-    if [ -f ".venv/bin/$executable_name" ]; then
-        # Use realpath to resolve the absolute path
-        echo "$(realpath ".venv/bin/$executable_name")"
-        return 0
-    fi
+# JULES: The original find_executable function was unreliable. This new approach
+# dynamically finds the active python interpreter's bin directory, making it
+# portable across different environments (system, venv, pyenv).
 
-    # 2. Check PATH
-    if command -v "$executable_name" &> /dev/null; then
-        command -v "$executable_name"
-        return 0
-    fi
-
-    # 3. Check pyenv shims and versions
-    if [ -d "$HOME/.pyenv" ]; then
-        local pyenv_path
-        pyenv_path=$(find "$HOME/.pyenv/versions" -type f -name "$executable_name" | head -n 1)
-        if [ -n "$pyenv_path" ] && [ -x "$pyenv_path" ]; then
-            echo "$pyenv_path"
-            return 0
-        fi
-    fi
-
-    return 1
-}
-
-# Find the ansible-playbook executable
-ANSIBLE_PLAYBOOK_EXEC=$(find_executable "ansible-playbook")
-
-if [ -n "$ANSIBLE_PLAYBOOK_EXEC" ] && [ -x "$ANSIBLE_PLAYBOOK_EXEC" ]; then
-    echo "Found ansible-playbook: $ANSIBLE_PLAYBOOK_EXEC"
-else
-    echo "Error: ansible-playbook not found."
-    echo "Please ensure you have created a virtual environment, run 'pip install -r requirements-dev.txt',"
-    echo "and that 'ansible-core' is listed in the requirements file."
+# Find the directory containing the active python executable
+PYTHON_EXEC=$(command -v python || command -v python3)
+if [ -z "$PYTHON_EXEC" ]; then
+    echo "Error: Could not find 'python' or 'python3' in the PATH." >&2
     exit 1
 fi
+PYTHON_BIN_DIR=$(dirname "$PYTHON_EXEC")
 
-# Find the ansible-galaxy executable
-ANSIBLE_GALAXY_EXEC=$(find_executable "ansible-galaxy")
-if [ -n "$ANSIBLE_GALAXY_EXEC" ] && [ -x "$ANSIBLE_GALAXY_EXEC" ]; then
-    echo "Found ansible-galaxy: $ANSIBLE_GALAXY_EXEC"
-else
-    echo "Error: ansible-galaxy not found."
-    exit 1
+ANSIBLE_PLAYBOOK_EXEC="$PYTHON_BIN_DIR/ansible-playbook"
+ANSIBLE_GALAXY_EXEC="$PYTHON_BIN_DIR/ansible-galaxy"
+
+# Check if Ansible executables exist, if not, install ansible-core
+if [ ! -x "$ANSIBLE_PLAYBOOK_EXEC" ] || [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
+    echo "Ansible executables not found. Attempting to install ansible-core..."
+    pip install ansible-core
+    # Verify after installation
+    if [ ! -x "$ANSIBLE_PLAYBOOK_EXEC" ] || [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
+        echo "Error: Failed to locate Ansible executables even after pip install." >&2
+        echo "Looked for: $ANSIBLE_PLAYBOOK_EXEC"
+        exit 1
+    fi
 fi
 
-# Install Ansible and collections
+echo "Found ansible-playbook: $ANSIBLE_PLAYBOOK_EXEC"
+echo "Found ansible-galaxy: $ANSIBLE_GALAXY_EXEC"
+
+# Install Ansible collections
 echo "Installing Ansible and collections..."
-if ! "$ANSIBLE_PLAYBOOK_EXEC" --version > /dev/null 2>&1 || ! "$ANSIBLE_GALAXY_EXEC" --version > /dev/null 2>&1; then
-    echo "Ansible or ansible-galaxy not found, installing..."
-    pip install ansible
-fi
-
 # Define the collections path
 COLLECTIONS_PATH="$HOME/.ansible/collections"
 mkdir -p "$COLLECTIONS_PATH"
