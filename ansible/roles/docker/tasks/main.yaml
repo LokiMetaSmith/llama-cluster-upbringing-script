@@ -59,12 +59,29 @@
         cmd: /tmp/get-docker.sh
       become: true
 
+- name: Check if target_user is in the docker group
+  ansible.builtin.command:
+    cmd: "groups {{ target_user }}"
+  register: target_user_groups
+  changed_when: false
+  become: true
+  check_mode: no
+
 - name: Add user to the 'docker' group for rootless execution
   ansible.builtin.user:
     name: "{{ target_user }}"
     groups: docker
     append: yes
   become: true
+  when: "'docker' not in target_user_groups.stdout"
+
+- name: Check if root is in the docker group
+  ansible.builtin.command:
+    cmd: "groups root"
+  register: root_user_groups
+  changed_when: false
+  become: true
+  check_mode: no
 
 - name: Add root user to the 'docker' group
   ansible.builtin.user:
@@ -72,6 +89,7 @@
     groups: docker
     append: yes
   become: true
+  when: "'docker' not in root_user_groups.stdout"
 
 - name: Place the Docker daemon configuration file
   ansible.builtin.template:
