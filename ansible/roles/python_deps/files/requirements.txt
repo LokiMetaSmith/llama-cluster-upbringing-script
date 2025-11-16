@@ -38,6 +38,7 @@ langchain
 setuptools
 soundfile
 spacy
+tenacity
 ultralytics
 uvicorn
 webrtcvad

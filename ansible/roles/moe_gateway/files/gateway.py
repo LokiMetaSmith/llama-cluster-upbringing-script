@@ -1,17 +1,22 @@
 import asyncio
+import logging
 import os
 import uuid
 from typing import Dict, Any
 
 import httpx
 from fastapi import FastAPI, Request, Response, Body
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+# --- Logging ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # --- Configuration ---
-# We'll get the pipecat service URL from Consul
 PIPECAT_SERVICE_URL = ""
-# In a real app, this would be more dynamic
 GATEWAY_URL = f"http://{os.getenv('NOMAD_IP_http')}:{os.getenv('NOMAD_PORT_http')}" if os.getenv('NOMAD_IP_http') and os.getenv('NOMAD_PORT_http') else "http://127.0.0.1:8001"
+CONSUL_HTTP_ADDR = os.getenv("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
 
 
 # --- FastAPI App ---
@@ -25,18 +30,26 @@ app = FastAPI(
 # In a production system, you might use Redis or another store for this.
 pending_requests: Dict[str, Dict[str, Any]] = {}
 
-
 # --- Service Discovery ---
+class ServiceNotFound(Exception):
+    pass
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((httpx.RequestError, ServiceNotFound)),
+    before_sleep=lambda retry_state: logger.info(f"Retrying service discovery, attempt {retry_state.attempt_number}...")
+)
 async def discover_pipecat_service():
     """
-    Discovers the pipecat-app service URL from Consul.
-    This is a simplified version. A real implementation would be more robust.
+    Discovers the pipecat-app service URL from Consul with retry logic.
     """
     global PIPECAT_SERVICE_URL
+    consul_url = f"{CONSUL_HTTP_ADDR}/v1/health/service/pipecat-app?passing"
+    logger.info(f"Attempting to discover 'pipecat-app' service from Consul at {consul_url}")
     try:
-        consul_url = "http://127.0.0.1:8500/v1/health/service/pipecat-app?passing"
         async with httpx.AsyncClient() as client:
-            response = await client.get(consul_url)
+            response = await client.get(consul_url, timeout=5.0)
             response.raise_for_status()
             services = response.json()
             if services:
@@ -44,11 +57,18 @@ async def discover_pipecat_service():
                 address = service["Address"]
                 port = service["Port"]
                 PIPECAT_SERVICE_URL = f"http://{address}:{port}"
-                print(f"Discovered pipecat-app service at: {PIPECAT_SERVICE_URL}")
+                logger.info(f"Successfully discovered 'pipecat-app' service at: {PIPECAT_SERVICE_URL}")
             else:
-                print("Could not find pipecat-app service in Consul.")
+                raise ServiceNotFound("Could not find a healthy 'pipecat-app' service instance in Consul.")
+    except httpx.RequestError as e:
+        logger.error(f"A network error occurred while trying to connect to Consul: {e}")
+        raise
+    except ServiceNotFound as e:
+        logger.warning(str(e))
+        raise
     except Exception as e:
-        print(f"Error discovering pipecat service: {e}")
+        logger.exception(f"An unexpected error occurred during service discovery: {e}")
+        raise
 
 @app.on_event("startup")
 async def startup_event():
