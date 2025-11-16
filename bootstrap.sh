@@ -265,7 +265,11 @@ fi
 
 # Install Ansible collections
 echo "Installing Ansible collections..."
-"$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker
+if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker; then
+    echo "Error: Failed to install Ansible collections." >&2
+    exit 1
+fi
+echo "✅ Ansible collections installed successfully."
 
 # --- Handle Nomad job purge ---
 if [ "$PURGE_JOBS" = true ]; then
