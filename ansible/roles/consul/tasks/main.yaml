@@ -58,53 +58,53 @@
   block:
     - name: Create local certs directory
       file:
-        path: "{{ role_path }}/files/certs"
+        path: "{{ consul_temp_cert_dir }}"
         state: directory
 
     - name: Generate CA key
-      command: "openssl genrsa -out {{ role_path }}/files/certs/ca.key 2048"
+      command: "openssl genrsa -out {{ consul_temp_cert_dir }}/ca.key 2048"
       args:
-        creates: "{{ role_path }}/files/certs/ca.key"
+        creates: "{{ consul_temp_cert_dir }}/ca.key"
 
     - name: Generate CA certificate
-      command: "openssl req -new -x509 -days 3650 -key {{ role_path }}/files/certs/ca.key -out {{ role_path }}/files/certs/ca.pem -subj '/CN=Consul CA'"
+      command: "openssl req -new -x509 -days 3650 -key {{ consul_temp_cert_dir }}/ca.key -out {{ consul_temp_cert_dir }}/ca.pem -subj '/CN=Consul CA'"
       args:
-        creates: "{{ role_path }}/files/certs/ca.pem"
+        creates: "{{ consul_temp_cert_dir }}/ca.pem"
 
     - name: Generate server keys for controller nodes
-      command: "openssl genrsa -out {{ role_path }}/files/certs/{{ item }}.key 2048"
+      command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
       args:
-        creates: "{{ role_path }}/files/certs/{{ item }}.key"
+        creates: "{{ consul_temp_cert_dir }}/{{ item }}.key"
       loop: "{{ groups['controller_nodes'] }}"
 
     - name: Generate server CSRs for controller nodes
-      command: "openssl req -new -key {{ role_path }}/files/certs/{{ item }}.key -out {{ role_path }}/files/certs/{{ item }}.csr -subj '/CN=server.consul'"
+      command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=server.consul'"
       args:
-        creates: "{{ role_path }}/files/certs/{{ item }}.csr"
+        creates: "{{ consul_temp_cert_dir }}/{{ item }}.csr"
       loop: "{{ groups['controller_nodes'] }}"
 
     - name: Sign server certificates for controller nodes
-      command: "openssl x509 -req -in {{ role_path }}/files/certs/{{ item }}.csr -CA {{ role_path }}/files/certs/ca.pem -CAkey {{ role_path }}/files/certs/ca.key -CAcreateserial -out {{ role_path }}/files/certs/{{ item }}.pem -days 365"
+      command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
       args:
-        creates: "{{ role_path }}/files/certs/{{ item }}.pem"
+        creates: "{{ consul_temp_cert_dir }}/{{ item }}.pem"
       loop: "{{ groups['controller_nodes'] }}"
 
     - name: Generate client keys for client nodes
-      command: "openssl genrsa -out {{ role_path }}/files/certs/{{ item }}.key 2048"
+      command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
       args:
-        creates: "{{ role_path }}/files/certs/{{ item }}.key"
+        creates: "{{ consul_temp_cert_dir }}/{{ item }}.key"
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
 
     - name: Generate client CSRs for client nodes
-      command: "openssl req -new -key {{ role_path }}/files/certs/{{ item }}.key -out {{ role_path }}/files/certs/{{ item }}.csr -subj '/CN=client.consul'"
+      command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=client.consul'"
       args:
-        creates: "{{ role_path }}/files/certs/{{ item }}.csr"
+        creates: "{{ consul_temp_cert_dir }}/{{ item }}.csr"
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
 
     - name: Sign client certificates for client nodes
-      command: "openssl x509 -req -in {{ role_path }}/files/certs/{{ item }}.csr -CA {{ role_path }}/files/certs/ca.pem -CAkey {{ role_path }}/files/certs/ca.key -CAcreateserial -out {{ role_path }}/files/certs/{{ item }}.pem -days 365"
+      command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
       args:
-        creates: "{{ role_path }}/files/certs/{{ item }}.pem"
+        creates: "{{ consul_temp_cert_dir }}/{{ item }}.pem"
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
   delegate_to: localhost
   run_once: true
@@ -142,3 +142,10 @@
     enabled: yes
   become: yes
   when: not ansible_check_mode
+
+- name: Clean up temporary certificate directory
+  file:
+    path: "{{ consul_temp_cert_dir }}"
+    state: absent
+  delegate_to: localhost
+  run_once: true

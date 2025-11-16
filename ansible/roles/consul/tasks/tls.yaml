@@ -1,13 +1,13 @@
 - name: Copy CA certificate to all nodes
   copy:
-    src: "{{ role_path }}/files/certs/ca.pem"
+    src: "{{ consul_temp_cert_dir }}/ca.pem"
     dest: "{{ consul_config_dir }}/ca.pem"
     mode: '0644'
   become: yes
 
 - name: Copy node certificate and key to each node
   copy:
-    src: "{{ role_path }}/files/certs/{{ inventory_hostname }}.{{ item }}"
+    src: "{{ consul_temp_cert_dir }}/{{ inventory_hostname }}.{{ item }}"
     dest: "{{ consul_config_dir }}/{{ item }}"
     mode: '0600'
   loop:
