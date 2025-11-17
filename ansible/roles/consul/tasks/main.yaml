@@ -149,6 +149,16 @@
   tags:
     - consul_configure
 
+- name: Ensure correct ownership of temporary certificates
+  ansible.builtin.file:
+    path: "{{ consul_temp_cert_dir }}"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    recurse: yes
+  delegate_to: localhost
+  run_once: true
+  become: yes
+
 # Task 10: Include TLS tasks (from original file)
 - name: Include TLS tasks
   ansible.builtin.include_tasks: tls.yaml
