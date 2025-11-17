@@ -1,4 +1,3 @@
----
 - name: Clone Claude_Clone repository
   ansible.builtin.git:
     repo: 'https://github.com/LokiMetaSmith/Claude_Clone.git'
