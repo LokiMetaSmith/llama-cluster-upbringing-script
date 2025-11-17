@@ -253,8 +253,8 @@ if [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
     exit 1
 fi
 
-# Install collections without a specific path to use Ansible's default search path
-if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker; then
+# Install collections to a system-wide path to ensure they are available to the root user (via become)
+if ! sudo "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker --collections-path /usr/share/ansible/collections; then
     echo "Error: Failed to install Ansible collections." >&2
     exit 1
 fi
