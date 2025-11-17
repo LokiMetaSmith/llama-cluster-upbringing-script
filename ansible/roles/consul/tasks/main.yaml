@@ -94,6 +94,12 @@
 # Task 9: Generate certificates on localhost (from original file)
 - name: Generate certificates on localhost
   block:
+    - name: Ensure openssl is installed on localhost
+      become: yes
+      ansible.builtin.package:
+        name: openssl
+        state: present
+
     - name: Create local certs directory
       ansible.builtin.file:
         path: "{{ consul_temp_cert_dir }}"
