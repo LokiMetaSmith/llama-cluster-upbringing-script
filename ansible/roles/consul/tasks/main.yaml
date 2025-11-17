@@ -150,6 +150,17 @@
   tags:
     - consul_configure
 
+- name: Set readable permissions on generated certs
+  ansible.builtin.file:
+    path: "{{ consul_temp_cert_dir }}"
+    state: directory
+    recurse: yes
+    mode: '0644'
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - consul_configure
+
 # Task 10: Include TLS tasks (from original file)
 - name: Include TLS tasks
   ansible.builtin.include_tasks: tls.yaml
