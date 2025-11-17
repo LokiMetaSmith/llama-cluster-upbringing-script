@@ -22,5 +22,5 @@ The agent is activated by the `supervisor.py` script and receives a single input
 
 The agent produces two primary outputs:
 
-1.  **A YAML Test Case File**: A new file containing a structured test case that reproduces the failure.
-2.  **A Subprocess Call**: An invocation of `prompt_engineering/evolve.py` with the path to the new test case file as an argument.
+1. **A YAML Test Case File**: A new file containing a structured test case that reproduces the failure.
+2. **A Subprocess Call**: An invocation of `prompt_engineering/evolve.py` with the path to the new test case file as an argument.

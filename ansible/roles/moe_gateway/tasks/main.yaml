@@ -1,4 +1,3 @@
----
 - name: Ensure gateway application directory exists
   ansible.builtin.file:
     path: /opt/pipecatapp/moe_gateway
