@@ -40,11 +40,9 @@
     group: root
     mode: 0755
   vars:
-    # Define local var for use in 'when' condition
-    current_version: "{{ consul_version_output.stdout | default('') | regex_search('[0-9]+\\.[0-9]+\\.[0-9]+') }}"
-  when: >
-    current_version is none or
-    current_version | community.general.version_compare(consul_version, '<')
+    # Define local var for use in 'when' condition. Use 'or' to default the version.
+    current_version: "{{ (consul_version_output.stdout | regex_search('[0-9]+\\.[0-9]+\\.[0-9]+')) or '0.0.0' }}"
+  when: current_version is version(consul_version, '<')
   tags:
     - consul_configure
 
