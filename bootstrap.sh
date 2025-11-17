@@ -232,7 +232,7 @@ ANSIBLE_GALAXY_EXEC="$PYTHON_BIN_DIR/ansible-galaxy"
 # Check if Ansible executables exist, if not, install ansible-core
 if [ ! -x "$ANSIBLE_PLAYBOOK_EXEC" ] || [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
     echo "Ansible executables not found. Attempting to install ansible-core..."
-    pip install ansible-core
+    "$PYTHON_EXEC" -m pip install ansible-core
     # Verify after installation
     if [ ! -x "$ANSIBLE_PLAYBOOK_EXEC" ] || [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
         echo "Error: Failed to locate Ansible executables even after pip install." >&2
