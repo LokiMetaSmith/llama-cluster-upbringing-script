@@ -109,41 +109,23 @@
       args:
         creates: "{{ consul_temp_cert_dir }}/ca.pem"
 
-    - name: Generate server keys for controller nodes
+    - name: Generate server keys for all nodes
       ansible.builtin.command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.key"
-      loop: "{{ groups['controller_nodes'] }}"
+      loop: "{{ query('inventory_hostnames', 'all') }}"
 
-    - name: Generate server CSRs for controller nodes
+    - name: Generate server CSRs for all nodes
       ansible.builtin.command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=server.consul'"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.csr"
-      loop: "{{ groups['controller_nodes'] }}"
+      loop: "{{ query('inventory_hostnames', 'all') }}"
 
-    - name: Sign server certificates for controller nodes
+    - name: Sign server certificates for all nodes
       ansible.builtin.command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.pem"
-      loop: "{{ groups['controller_nodes'] }}"
-
-    - name: Generate client keys for client nodes
-      ansible.builtin.command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
-      args:
-        creates: "{{ consul_temp_cert_dir }}/{{ item }}.key"
-      loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
-
-    - name: Generate client CSRs for client nodes
-      ansible.builtin.command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=client.consul'"
-      args:
-        creates: "{{ consul_temp_cert_dir }}/{{ item }}.csr"
-      loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
-
-    - name: Sign client certificates for client nodes
-      ansible.builtin.command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
-      args:
-        creates: "{{ consul_temp_cert_dir }}/{{ item }}.pem"
-      loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
+      loop: "{{ query('inventory_hostnames', 'all') }}"
   delegate_to: localhost
   run_once: true
   tags:
