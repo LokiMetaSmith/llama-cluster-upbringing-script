@@ -3,6 +3,9 @@ import os
 import sys
 from unittest.mock import MagicMock, patch, AsyncMock
 
+# Add the ansible/roles directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../ansible/roles')))
+
 from world_model_service.files.app import app, on_connect, on_message, run_mqtt_client
 from fastapi.testclient import TestClient
 

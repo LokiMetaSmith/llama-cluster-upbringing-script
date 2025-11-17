@@ -28,3 +28,5 @@ langchain
 python-nomad
 quibbler
 llm-sandbox[docker]
+kubernetes
+paho-mqtt
