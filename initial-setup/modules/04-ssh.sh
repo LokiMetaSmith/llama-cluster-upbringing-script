@@ -36,22 +36,29 @@ else
 fi
 
 # --- Consul Integration ---
-# Publish public key to Consul KV store
-HOSTNAME=$(hostname)
-PUB_KEY_CONTENT=$(cat "$PUBLIC_KEY")
-
-log "Waiting for Consul agent to be available..."
-# Wait for up to 2 minutes for Consul to become available
-for i in {1..24}; do
-    if curl -s "http://127.0.0.1:8500/v1/status/leader" &> /dev/null; then
-        log "Consul agent is up."
-        break
-    fi
-    sleep 5
-done
-
-log "Publishing public key to Consul for host: $HOSTNAME"
-curl -s -X PUT -d "$PUB_KEY_CONTENT" "http://127.0.0.1:8500/v1/kv/ssh-keys/$HOSTNAME"
+# JULES: The Consul integration logic in this pre-flight script has been
+# temporarily disabled. It was causing the bootstrap process to hang by waiting
+# for the Consul service, which is installed later by the main Ansible playbook.
+# This created a circular dependency that prevented the setup from completing.
+# The functionality of publishing and syncing SSH keys via Consul will be
+# restored and moved to an Ansible role that can run *after* Consul is
+# properly installed and running.
+#
+# HOSTNAME=$(hostname)
+# PUB_KEY_CONTENT=$(cat "$PUBLIC_KEY")
+#
+# log "Waiting for Consul agent to be available..."
+# # Wait for up to 2 minutes for Consul to become available
+# for i in {1..24}; do
+#     if curl -s "http://127.0.0.1:8500/v1/status/leader" &> /dev/null; then
+#         log "Consul agent is up."
+#         break
+#     fi
+#     sleep 5
+# done
+#
+# log "Publishing public key to Consul for host: $HOSTNAME"
+# curl -s -X PUT -d "$PUB_KEY_CONTENT" "http://127.0.0.1:8500/v1/kv/ssh-keys/$HOSTNAME"
 
 # --- Create Idempotent Authorized Keys Sync Script ---
 SYNC_SCRIPT_PATH="/usr/local/bin/update-ssh-authorized-keys.sh"

@@ -229,16 +229,17 @@ PYTHON_BIN_DIR=$(dirname "$PYTHON_EXEC")
 ANSIBLE_PLAYBOOK_EXEC="$PYTHON_BIN_DIR/ansible-playbook"
 ANSIBLE_GALAXY_EXEC="$PYTHON_BIN_DIR/ansible-galaxy"
 
-# Check if Ansible executables exist, if not, install ansible-core
+# JULES: The previous dynamic check was unreliable. This has been replaced with
+# an explicit, unconditional installation of ansible-core to ensure that the
+# required executables are always present in the correct environment before use.
+echo "Ensuring ansible-core is installed..."
+"$PYTHON_EXEC" -m pip install ansible-core
+
+# Verify after installation that the executables are where we expect them.
 if [ ! -x "$ANSIBLE_PLAYBOOK_EXEC" ] || [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
-    echo "Ansible executables not found. Attempting to install ansible-core..."
-    pip install ansible-core
-    # Verify after installation
-    if [ ! -x "$ANSIBLE_PLAYBOOK_EXEC" ] || [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
-        echo "Error: Failed to locate Ansible executables even after pip install." >&2
-        echo "Looked for: $ANSIBLE_PLAYBOOK_EXEC"
-        exit 1
-    fi
+    echo "Error: Failed to locate Ansible executables even after explicit install." >&2
+    echo "Looked for: $ANSIBLE_PLAYBOOK_EXEC and $ANSIBLE_GALAXY_EXEC"
+    exit 1
 fi
 
 echo "Found ansible-playbook: $ANSIBLE_PLAYBOOK_EXEC"
@@ -246,12 +247,6 @@ echo "Found ansible-galaxy: $ANSIBLE_GALAXY_EXEC"
 
 # Install Ansible collections
 echo "Installing Ansible and collections..."
-
-# Ensure ansible-galaxy is executable
-if [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
-    echo "Error: ansible-galaxy is not executable at $ANSIBLE_GALAXY_EXEC" >&2
-    exit 1
-fi
 
 # Install collections without a specific path to use Ansible's default search path
 if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker; then
