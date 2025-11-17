@@ -3,6 +3,11 @@
   remote_user: "{{ target_user }}"
   become: yes
 
+  tasks:
+    - name: Debug collections path
+      ansible.builtin.debug:
+        var: ansible_collections_paths
+
   tags:
     - consul
 
