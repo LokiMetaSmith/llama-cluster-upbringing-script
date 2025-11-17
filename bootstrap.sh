@@ -226,19 +226,19 @@ if [ -z "$PYTHON_EXEC" ]; then
 fi
 PYTHON_BIN_DIR=$(dirname "$PYTHON_EXEC")
 
+# Proactively install ansible-core to ensure executables are present
+echo "Ensuring ansible-core is installed..."
+"$PYTHON_EXEC" -m pip install ansible-core
+echo "✅ ansible-core is installed."
+
 ANSIBLE_PLAYBOOK_EXEC="$PYTHON_BIN_DIR/ansible-playbook"
 ANSIBLE_GALAXY_EXEC="$PYTHON_BIN_DIR/ansible-galaxy"
 
-# Check if Ansible executables exist, if not, install ansible-core
+# Check if Ansible executables exist after installation
 if [ ! -x "$ANSIBLE_PLAYBOOK_EXEC" ] || [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
-    echo "Ansible executables not found. Attempting to install ansible-core..."
-    "$PYTHON_EXEC" -m pip install ansible-core
-    # Verify after installation
-    if [ ! -x "$ANSIBLE_PLAYBOOK_EXEC" ] || [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
-        echo "Error: Failed to locate Ansible executables even after pip install." >&2
-        echo "Looked for: $ANSIBLE_PLAYBOOK_EXEC"
-        exit 1
-    fi
+    echo "Error: Failed to locate Ansible executables even after pip install." >&2
+    echo "Looked for: $ANSIBLE_PLAYBOOK_EXEC and $ANSIBLE_GALAXY_EXEC"
+    exit 1
 fi
 
 echo "Found ansible-playbook: $ANSIBLE_PLAYBOOK_EXEC"
