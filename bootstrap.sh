@@ -246,12 +246,15 @@ echo "Found ansible-galaxy: $ANSIBLE_GALAXY_EXEC"
 
 # Install Ansible collections
 echo "Installing Ansible and collections..."
-# Define the collections path
-COLLECTIONS_PATH="$HOME/.ansible/collections"
-mkdir -p "$COLLECTIONS_PATH"
 
-# Install collections to the specified path
-if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker -p "$COLLECTIONS_PATH"; then
+# Ensure ansible-galaxy is executable
+if [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
+    echo "Error: ansible-galaxy is not executable at $ANSIBLE_GALAXY_EXEC" >&2
+    exit 1
+fi
+
+# Install collections without a specific path to use Ansible's default search path
+if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker; then
     echo "Error: Failed to install Ansible collections." >&2
     exit 1
 fi
