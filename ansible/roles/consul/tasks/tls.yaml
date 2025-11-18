@@ -3,6 +3,7 @@
     src: "{{ consul_temp_cert_dir }}/ca.pem"
     dest: "{{ consul_config_dir }}/ca.pem"
     mode: '0644'
+    remote_src: yes
   become: yes
 
 - name: Copy node certificate and key to each node
@@ -10,6 +11,7 @@
     src: "{{ consul_temp_cert_dir }}/{{ inventory_hostname }}.{{ item }}"
     dest: "{{ consul_config_dir }}/{{ item }}"
     mode: '0600'
+    remote_src: yes
   loop:
     - key
     - pem
