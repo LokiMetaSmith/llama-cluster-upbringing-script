@@ -1,15 +1,11 @@
 - name: Bootstrap ACLs
   block:
-    - name: Check if ACLs are already bootstrapped
-      stat:
-        path: "{{ consul_config_dir }}/acl_bootstrapped"
-      register: acl_bootstrapped
-      become: yes
-
     - name: Bootstrap ACLs
       command: "consul acl bootstrap"
+      args:
+        creates: "{{ consul_config_dir }}/management_token"
       register: acl_bootstrap_result
-      when: not acl_bootstrapped.stat.exists
+      changed_when: acl_bootstrap_result.rc == 0 and acl_bootstrap_result.stdout != ""
       become: yes
 
     - name: Store management token
@@ -17,14 +13,7 @@
         content: "{{ (acl_bootstrap_result.stdout | from_json).SecretID }}"
         dest: "{{ consul_config_dir }}/management_token"
         mode: '0600'
-      when: not acl_bootstrapped.stat.exists
-      become: yes
-
-    - name: Mark ACLs as bootstrapped
-      file:
-        path: "{{ consul_config_dir }}/acl_bootstrapped"
-        state: touch
-      when: not acl_bootstrapped.stat.exists
+      when: acl_bootstrap_result.changed
       become: yes
   when: "'controller_nodes' in groups and groups['controller_nodes'] | length > 0"
   run_once: true
