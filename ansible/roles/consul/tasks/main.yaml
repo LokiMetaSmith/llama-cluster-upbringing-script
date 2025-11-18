@@ -179,12 +179,6 @@
   tags:
     - consul_configure
 
-# Task 11: Include ACL tasks (from original file)
-- name: Include ACL tasks
-  ansible.builtin.include_tasks: acl.yaml
-  tags:
-    - consul_configure
-
 # Task 12: Copy Consul config (from original, with ownership/mode)
 - name: Copy Consul config
   become: true
@@ -225,6 +219,15 @@
     state: started
     enabled: yes
   when: not ansible_check_mode
+  tags:
+    - consul_configure
+
+- name: Flush handlers to restart consul
+  meta: flush_handlers
+
+# Task 11: Include ACL tasks (from original file)
+- name: Include ACL tasks
+  ansible.builtin.include_tasks: acl.yaml
   tags:
     - consul_configure
 
