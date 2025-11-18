@@ -69,11 +69,11 @@
             dest: "{{ consul_config_dir }}/management_token"
             mode: '0600'
           become: yes
-      when: "'ACL bootstrap no longer allowed' in ansible_failed_result.results[0].stderr"
+      when: ansible_failed_result.stderr is defined and 'ACL bootstrap no longer allowed' in ansible_failed_result.stderr
       delegate_to: "{{ groups['controller_nodes'][0] }}"
       run_once: true
 
     - name: Fail on unrecoverable ACL bootstrap error
       fail:
         msg: "ACL bootstrap failed with an unrecoverable error: {{ ansible_failed_result }}"
-      when: "'ACL bootstrap no longer allowed' not in ansible_failed_result.results[0].stderr"
+      when: ansible_failed_result.stderr is not defined or 'ACL bootstrap no longer allowed' not in ansible_failed_result.stderr
