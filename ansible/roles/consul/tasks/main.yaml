@@ -93,7 +93,20 @@
 # Task 9: Generate certificates on localhost (from original file)
 - name: Generate certificates on localhost
   block:
+    - name: Clean up previous temporary certificate directory
+      become: yes
+      ansible.builtin.file:
+        path: "{{ consul_temp_cert_dir }}"
+        state: absent
+
+    - name: Ensure openssl is installed on localhost
+      become: yes
+      ansible.builtin.package:
+        name: openssl
+        state: present
+
     - name: Create local certs directory
+      become: yes
       ansible.builtin.file:
         path: "{{ consul_temp_cert_dir }}"
         state: directory
@@ -215,7 +228,7 @@
   tags:
     - consul_configure
 
-# Task 16: Clean up temporary certificate directory (from original file)
+# Task 16: Clean up temporary certificate directory
 - name: Clean up temporary certificate directory
   ansible.builtin.file:
     path: "{{ consul_temp_cert_dir }}"
