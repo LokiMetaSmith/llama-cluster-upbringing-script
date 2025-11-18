@@ -205,6 +205,7 @@ if [ "$DEBUG_MODE" = true ]; then
 fi
 
 # --- Install Python dependencies ---
+# --- Install Python dependencies ---
 echo "Installing Python dependencies from requirements-dev.txt..."
 if [ -f "requirements-dev.txt" ]; then
     pip install -r requirements-dev.txt
@@ -244,17 +245,13 @@ fi
 echo "Found ansible-playbook: $ANSIBLE_PLAYBOOK_EXEC"
 echo "Found ansible-galaxy: $ANSIBLE_GALAXY_EXEC"
 
-# Install Ansible collections
-echo "Installing Ansible and collections..."
-
-# Ensure ansible-galaxy is executable
-if [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
-    echo "Error: ansible-galaxy is not executable at $ANSIBLE_GALAXY_EXEC" >&2
-    exit 1
-fi
-
-# Install collections without a specific path to use Ansible's default search path
-if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker; then
+# --- Install Ansible Collections System-Wide ---
+# This is the correct place to install collections. They must be available on the
+# control node *before* the playbook is parsed. Using sudo ensures they are
+# installed in a system-wide directory accessible by all users, including root
+# when 'become: true' is used in the playbook.
+echo "--- Installing Ansible Collections System-Wide ---"
+if ! sudo "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker; then
     echo "Error: Failed to install Ansible collections." >&2
     exit 1
 fi
