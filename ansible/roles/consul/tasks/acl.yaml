@@ -63,12 +63,18 @@
           register: acl_bootstrap_result_recovery
           become: yes
 
+        - name: "Debug: Display ACL bootstrap recovery output"
+          debug:
+            msg:
+              - "STDOUT: {{ acl_bootstrap_result_recovery.stdout }}"
+              - "STDERR: {{ acl_bootstrap_result_recovery.stderr }}"
+
         - name: Store recovered management token
           copy:
             content: "{{ (acl_bootstrap_result_recovery.stdout | from_json).SecretID }}"
             dest: "{{ consul_config_dir }}/management_token"
             mode: '0600'
-          when: acl_bootstrap_result_recovery.stdout != ""
+          when: acl_bootstrap_result_recovery.stdout | from_json is a success
           become: yes
       when: ansible_failed_result.stderr is defined and 'ACL bootstrap no longer allowed' in ansible_failed_result.stderr
       delegate_to: "{{ groups['controller_nodes'][0] }}"
