@@ -3,3 +3,4 @@ consul_zip_url: "https://releases.hashicorp.com/consul/{{ consul_version }}/cons
 consul_data_dir: "/opt/consul"
 consul_config_dir: "/etc/consul.d"
 consul_temp_cert_dir: "/tmp/consul_certs"
+consul_datacenter: "dc1"
