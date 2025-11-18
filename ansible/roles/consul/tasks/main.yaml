@@ -222,6 +222,15 @@
   tags:
     - consul_configure
 
+- name: Wait for Consul API to be ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/status/leader"
+  register: consul_status
+  until: consul_status.status == 200
+  retries: 30
+  delay: 5
+  when: not ansible_check_mode
+
 - name: Flush handlers to restart consul
   meta: flush_handlers
 
