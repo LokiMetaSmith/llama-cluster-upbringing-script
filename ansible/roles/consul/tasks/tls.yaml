@@ -8,23 +8,11 @@
 
 - name: Copy node certificate and key to each node
   copy:
-    src: "{{ consul_temp_cert_dir }}/{{ inventory_hostname }}.{{ item }}"
-    dest: "{{ consul_config_dir }}/{{ item }}"
+    src: "{{ consul_temp_cert_dir }}/{{ inventory_hostname }}.{{ item.src }}"
+    dest: "{{ consul_config_dir }}/{{ item.dest }}"
     mode: '0600'
     remote_src: yes
   loop:
-    - key
-    - pem
-  become: yes
-
-- name: Rename node certificate to cert.pem
-  command: "mv {{ consul_config_dir }}/{{ inventory_hostname }}.pem {{ consul_config_dir }}/cert.pem"
-  args:
-    creates: "{{ consul_config_dir }}/cert.pem"
-  become: yes
-
-- name: Rename node key to key.pem
-  command: "mv {{ consul_config_dir }}/{{ inventory_hostname }}.key {{ consul_config_dir }}/key.pem"
-  args:
-    creates: "{{ consul_config_dir }}/key.pem"
+    - { src: 'pem', dest: 'cert.pem' }
+    - { src: 'key', dest: 'key.pem' }
   become: yes
