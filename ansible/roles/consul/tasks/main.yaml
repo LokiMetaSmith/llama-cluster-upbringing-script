@@ -219,6 +219,7 @@
     state: started
     enabled: yes
   when: not ansible_check_mode
+  notify: Restart nomad
   tags:
     - consul_configure
 
