@@ -12,7 +12,7 @@
 
         - name: Store management token
           copy:
-            content: "{{ (acl_bootstrap_result.stdout | from_json).SecretID }}"
+            content: "{{ acl_bootstrap_result.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') | first }}"
             dest: "{{ consul_config_dir }}/management_token"
             mode: '0600'
           when: acl_bootstrap_result.changed
@@ -71,10 +71,10 @@
 
         - name: Store recovered management token
           copy:
-            content: "{{ (acl_bootstrap_result_recovery.stdout | from_json).SecretID }}"
+            content: "{{ acl_bootstrap_result_recovery.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') | first }}"
             dest: "{{ consul_config_dir }}/management_token"
             mode: '0600'
-          when: acl_bootstrap_result_recovery.stdout | from_json is a success
+          when: "'SecretID:' in acl_bootstrap_result_recovery.stdout"
           become: yes
       when: ansible_failed_result.stderr is defined and 'ACL bootstrap no longer allowed' in ansible_failed_result.stderr
       delegate_to: "{{ groups['controller_nodes'][0] }}"
