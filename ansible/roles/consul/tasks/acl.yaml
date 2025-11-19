@@ -12,10 +12,10 @@
 
         - name: Store management token
           copy:
-            content: "{{ acl_bootstrap_result.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') | first }}"
+            content: "{{ (acl_bootstrap_result.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') or []) | first | default('') }}"
             dest: "{{ consul_config_dir }}/management_token"
             mode: '0600'
-          when: acl_bootstrap_result.changed
+          when: acl_bootstrap_result.changed and 'SecretID:' in acl_bootstrap_result.stdout
           become: yes
       when: "'controller_nodes' in groups and groups['controller_nodes'] | length > 0"
       run_once: true
@@ -71,7 +71,7 @@
 
         - name: Store recovered management token
           copy:
-            content: "{{ acl_bootstrap_result_recovery.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') | first }}"
+            content: "{{ (acl_bootstrap_result_recovery.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') or []) | first | default('') }}"
             dest: "{{ consul_config_dir }}/management_token"
             mode: '0600'
           when: "'SecretID:' in acl_bootstrap_result_recovery.stdout"
