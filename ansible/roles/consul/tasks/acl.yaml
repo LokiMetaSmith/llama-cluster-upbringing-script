@@ -7,12 +7,12 @@
           args:
             creates: "{{ consul_config_dir }}/management_token"
           register: acl_bootstrap_result
-          changed_when: acl_bootstrap_result.rc == 0 and acl_bootstrap_result.stdout != ""
+          changed_when: "'SecretID:' in acl_bootstrap_result.stdout"
           become: yes
 
         - name: Store management token
           copy:
-            content: "{{ acl_bootstrap_result.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') | first }}"
+            content: "{{ acl_bootstrap_result.stdout | regex_findall('SecretID:\\s+([^\\n]+)') | first }}"
             dest: "{{ consul_config_dir }}/management_token"
             mode: '0600'
           when: acl_bootstrap_result.changed
@@ -71,7 +71,7 @@
 
         - name: Store recovered management token
           copy:
-            content: "{{ acl_bootstrap_result_recovery.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') | first }}"
+            content: "{{ acl_bootstrap_result_recovery.stdout | regex_findall('SecretID:\\s+([^\\n]+)') | first }}"
             dest: "{{ consul_config_dir }}/management_token"
             mode: '0600'
           when: "'SecretID:' in acl_bootstrap_result_recovery.stdout"

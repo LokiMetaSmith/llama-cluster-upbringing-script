@@ -231,14 +231,11 @@
   delay: 5
   when: not ansible_check_mode
 
-- name: Flush handlers to restart consul
+- name: Flush handlers to ensure Consul is ready
   meta: flush_handlers
 
-# Task 11: Include ACL tasks (from original file)
 - name: Include ACL tasks
-  ansible.builtin.include_tasks: acl.yaml
-  tags:
-    - consul_configure
+  include_tasks: acl.yaml
 
 # Task 16: Clean up temporary certificate directory
 - name: Clean up temporary certificate directory
