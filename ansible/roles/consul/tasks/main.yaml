@@ -208,9 +208,8 @@
   become: true
   ansible.builtin.systemd:
     daemon_reload: yes
-  when: not ansible_check_mode
   tags:
-    - consul_.venv
+    - consul_configure
 
 - name: Start and enable Consul service
   become: true
@@ -218,7 +217,6 @@
     name: consul
     state: started
     enabled: yes
-  when: not ansible_check_mode
   tags:
     - consul_configure
 
@@ -229,10 +227,14 @@
   until: consul_status.status == 200
   retries: 30
   delay: 5
-  when: not ansible_check_mode
 
 - name: Flush handlers to ensure Consul is ready
   meta: flush_handlers
+
+- name: Wait for Consul to be ready before ACL bootstrap
+  ansible.builtin.wait_for:
+    port: 8500
+    delay: 10
 
 - name: Include ACL tasks
   include_tasks: acl.yaml
