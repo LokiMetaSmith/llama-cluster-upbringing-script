@@ -27,6 +27,6 @@ uvicorn
 langchain
 python-nomad
 quibbler
-llm-sandbox[docker]
+llm-sandbox[docker,podman]
 kubernetes
 paho-mqtt
