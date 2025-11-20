@@ -1,0 +1,9 @@
+- name: Play 1 - Install Developer Tools
+  hosts: all
+  become: yes
+
+  tags:
+    - developer-tools
+
+  roles:
+    - role: heretic_tool

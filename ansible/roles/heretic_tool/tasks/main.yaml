@@ -1,0 +1,32 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+  become: yes
+
+- name: Placeholder for GPU dependencies
+  ansible.builtin.debug:
+    msg: "NOTE: The heretic tool requires a GPU and the appropriate drivers (e.g., NVIDIA drivers and CUDA) to be installed on the host. This role does not install them."
+
+- name: Create heretic tool directory
+  ansible.builtin.file:
+    path: "{{ heretic_tool_dir }}"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+  become: yes
+
+- name: Create heretic tool virtual environment
+  ansible.builtin.command:
+    cmd: python3 -m venv {{ heretic_tool_venv_dir }}
+    creates: "{{ heretic_tool_venv_dir }}/bin/activate"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Install heretic-llm
+  ansible.builtin.pip:
+    name: heretic-llm
+    virtualenv: "{{ heretic_tool_venv_dir }}"
+  become: yes
+  become_user: "{{ target_user }}"
