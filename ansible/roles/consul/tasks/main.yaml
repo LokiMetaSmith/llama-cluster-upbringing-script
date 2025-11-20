@@ -7,6 +7,11 @@
   tags:
     - consul_configure
 
+- name: Check if consul executable exists
+  stat:
+    path: /usr/local/bin/consul
+  register: consul_executable
+
 # Task 2: Check version FIRST. This prevents the 'NoneType' error.
 - name: Check installed Consul version
   ansible.builtin.command: consul --version
