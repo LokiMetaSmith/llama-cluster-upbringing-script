@@ -115,6 +115,25 @@
 - name: Force immediate handler flush to ensure systemd is reloaded
   meta: flush_handlers
 
+- name: Fetch Consul management token
+  ansible.builtin.slurp:
+    src: /etc/consul.d/management_token
+  register: consul_token_file
+  delegate_to: "{{ (groups['controller_nodes'] | first) if ('controller_nodes' in groups and groups['controller_nodes']) else inventory_hostname }}"
+  run_once: true
+  become: yes
+  ignore_errors: yes
+  tags:
+    - nomad
+
+- name: Set Consul token fact
+  set_fact:
+    consul_bootstrap_token: "{{ consul_token_file['content'] | b64decode | trim }}"
+  when: consul_token_file is success and consul_token_file.content is defined
+  run_once: true
+  tags:
+    - nomad
+
 - name: Deploy Nomad server configuration for controller nodes
   ansible.builtin.template:
     src: server.hcl.j2
