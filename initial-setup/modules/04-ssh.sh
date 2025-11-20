@@ -40,18 +40,22 @@ fi
 HOSTNAME=$(hostname)
 PUB_KEY_CONTENT=$(cat "$PUBLIC_KEY")
 
-log "Waiting for Consul agent to be available..."
-# Wait for up to 2 minutes for Consul to become available
-for i in {1..24}; do
-    if curl -s "http://127.0.0.1:8500/v1/status/leader" &> /dev/null; then
-        log "Consul agent is up."
-        break
-    fi
-    sleep 5
-done
-
-log "Publishing public key to Consul for host: $HOSTNAME"
-curl -s -X PUT -d "$PUB_KEY_CONTENT" "http://127.0.0.1:8500/v1/kv/ssh-keys/$HOSTNAME"
+log "Checking for active Consul agent before attempting to publish SSH key..."
+if systemctl is-active --quiet consul; then
+    log "Consul agent is active. Waiting for it to become available..."
+    # Wait for up to 2 minutes for Consul to become available
+    for i in {1..24}; do
+        if curl -s "http://127.0.0.1:8500/v1/status/leader" &> /dev/null; then
+            log "Consul agent is up."
+            log "Publishing public key to Consul for host: $HOSTNAME"
+            curl -s -X PUT -d "$PUB_KEY_CONTENT" "http://127.0.0.1:8500/v1/kv/ssh-keys/$HOSTNAME"
+            break
+        fi
+        sleep 5
+    done
+else
+    log "Consul agent is not active. Skipping public key publication."
+fi
 
 # --- Create Idempotent Authorized Keys Sync Script ---
 SYNC_SCRIPT_PATH="/usr/local/bin/update-ssh-authorized-keys.sh"
