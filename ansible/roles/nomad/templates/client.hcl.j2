@@ -9,6 +9,8 @@ advertise {
 
 consul {
   address = "127.0.0.1:8500"
+  token   = "{{ consul_token | default('') }}"
+
 }
 
 plugin "docker" {
@@ -31,6 +33,7 @@ plugin "exec" {
 client {
   enabled = true
   servers = ["127.0.0.1"]
+  
 
   host_volume "pipecatapp" {
     path      = "/opt/pipecatapp"
