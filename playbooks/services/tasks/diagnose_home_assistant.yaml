@@ -36,7 +36,7 @@
   ansible.builtin.command: "nomad alloc status {{ alloc_id.stdout }}"
   register: alloc_status
   changed_when: false
-  when: alloc_id.stdout != ""
+  when: alloc_id.stdout is defined and alloc_id.stdout != ""
 
 - name: Log allocation status
   ansible.builtin.lineinfile:
@@ -44,13 +44,13 @@
     line: |
       [ALLOCATION STATUS]
       {{ alloc_status.stdout | indent(2) }}
-  when: alloc_status is defined
+  when: alloc_status.stdout is defined
 
 - name: Get allocation logs
   ansible.builtin.command: "nomad alloc logs {{ alloc_id.stdout }}"
   register: alloc_logs
   changed_when: false
-  when: alloc_id.stdout != ""
+  when: alloc_id.stdout is defined and alloc_id.stdout != ""
 
 - name: Log allocation logs
   ansible.builtin.lineinfile:
@@ -58,7 +58,7 @@
     line: |
       [ALLOCATION LOGS]
       {{ alloc_logs.stdout | indent(2) }}
-  when: alloc_logs is defined
+  when: alloc_logs.stdout is defined
 
 - name: Check host volume permissions
   ansible.builtin.stat:
