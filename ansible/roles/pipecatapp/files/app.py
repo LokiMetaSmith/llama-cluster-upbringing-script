@@ -46,6 +46,7 @@ from tools.git_tool import Git_Tool
 from tools.orchestrator_tool import OrchestratorTool
 from tools.llxprt_code_tool import LLxprt_Code_Tool
 from tools.claude_clone_tool import ClaudeCloneTool
+from tools.smol_agent_tool import SmolAgentTool
 
 import uvicorn
 
@@ -551,6 +552,7 @@ class TwinService(FrameProcessor):
             "vision": self.vision_detector,
             "desktop_control": DesktopControlTool(),
             "code_runner": CodeRunnerTool(),
+            "smol_agent_computer": SmolAgentTool(),
             "web_browser": WebBrowserTool(),
             "ansible": Ansible_Tool(),
             "power": Power_Tool(),

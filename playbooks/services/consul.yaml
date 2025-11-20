@@ -1,4 +1,22 @@
-- name: Deploy Consul
+- name: Deploy Consul - Install Dependencies
+  hosts: all
+  remote_user: "{{ target_user }}"
+  become: yes
+
+  tasks:
+    - name: Debug collections path
+      ansible.builtin.debug:
+        var: ansible_collections_paths
+
+  tags:
+    - consul
+
+  roles:
+    - role: consul
+      tags:
+        - consul_install_deps
+
+- name: Deploy Consul - Configure
   hosts: all
   remote_user: "{{ target_user }}"
   become: yes
@@ -9,4 +27,4 @@
   roles:
     - role: consul
       tags:
-        - consul
+        - consul_configure

@@ -1,9 +1,3 @@
-- hosts: all
-  vars_files:
-    - group_vars/all.yaml
-    - group_vars/models.yaml
-    - group_vars/external_experts.yaml
-
 - import_playbook: playbooks/common_setup.yaml
 - import_playbook: playbooks/services/core_infra.yaml
 - import_playbook: playbooks/services/consul.yaml

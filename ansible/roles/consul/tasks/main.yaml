@@ -1,157 +1,255 @@
+# Task 1: Install unzip (from user snippet)
 - name: Install unzip
-  apt:
+  become: true
+  ansible.builtin.apt:
     name: unzip
     state: present
-  become: yes
+  tags:
+    - consul_configure
 
 - name: Check if consul executable exists
   stat:
     path: /usr/local/bin/consul
   register: consul_executable
 
+# Task 2: Check version FIRST. This prevents the 'NoneType' error.
 - name: Check installed Consul version
-  command: "consul version"
+  ansible.builtin.command: consul --version
   register: consul_version_output
   changed_when: false
-  failed_when: false
-  when: consul_executable.stat.exists
+  failed_when: false # Do not fail if consul isn't found, we'll install it.
+  tags:
+    - consul_configure
 
-- name: Set installed Consul version fact
-  set_fact:
-    installed_consul_version: "{{ (consul_version_output.stdout | regex_search('Consul v([0-9]+\\.[0-9]+\\.[0-9]+)', '\\\\1') | first) if consul_executable.stat.exists and consul_version_output.rc == 0 else '0.0.0' }}"
+# Task 3: Log the output for debugging (as requested)
+- name: "Log Consul version command output (for debugging)"
+  ansible.builtin.debug:
+    msg:
+      - "Jules Task Log: Debugging consul --version output."
+      - "STDOUT: {{ consul_version_output.stdout | default('stdout was not defined or was None') }}"
+      - "STDERR: {{ consul_version_output.stderr | default('stderr was not defined or was None') }}"
+      - "RC: {{ consul_version_output.rc | default('rc was not defined') }}"
+  when: consul_version_output is defined
+  tags:
+    - consul_configure
 
-- name: Download Consul
-  command: "curl -L -o /tmp/consul.zip {{ consul_zip_url }}"
-  args:
-    creates: /tmp/consul.zip
-  check_mode: no
-  when: installed_consul_version != consul_version
-
-- name: Unzip Consul
-  unarchive:
-    src: "/tmp/consul.zip"
-    dest: "/tmp"
+# Task 4: Download and install Consul (using user snippet's var/when logic)
+- name: Download and install Consul
+  become: true
+  ansible.builtin.unarchive:
+    src: "https://releases.hashicorp.com/consul/{{ consul_version }}/consul_{{ consul_version }}_linux_amd64.zip"
+    dest: /usr/local/bin
     remote_src: yes
-    creates: /tmp/consul
-  become: yes
-  check_mode: no
-  when: installed_consul_version != consul_version
+    owner: root
+    group: root
+    mode: 0755
+  vars:
+    # Define local var for use in 'when' condition. Use 'or' to default the version.
+    current_version: "{{ (consul_version_output.stdout | regex_search('[0-9]+\\.[0-9]+\\.[0-9]+')) or '0.0.0' }}"
+  when: current_version is version(consul_version, '<')
+  tags:
+    - consul_configure
 
-- name: Move Consul to /usr/local/bin
-  copy:
-    src: /tmp/consul
-    dest: /usr/local/bin/consul
-    remote_src: yes
-    mode: '0755'
-  become: yes
-  when: installed_consul_version != consul_version
+# Task 5: Create consul group (best practice)
+- name: Create consul group
+  become: true
+  ansible.builtin.group:
+    name: consul
+    state: present
+  tags:
+    - consul_configure
 
+# Task 6: Create consul user (best practice)
+- name: Create consul user
+  become: true
+  ansible.builtin.user:
+    name: consul
+    group: consul
+    shell: /bin/false
+    home: "{{ consul_config_dir }}" # Use config dir as home
+    create_home: yes
+  tags:
+    - consul_configure
+
+# Task 7: Create Consul data directory (from original, with ownership)
 - name: Create Consul data directory
-  file:
+  become: true
+  ansible.builtin.file:
     path: "{{ consul_data_dir }}"
     state: directory
+    owner: consul
+    group: consul
     mode: '0755'
-  become: yes
+  tags:
+    - consul_configure
 
+# Task 8: Create Consul config directory (from original, with ownership)
 - name: Create Consul config directory
-  file:
+  become: true
+  ansible.builtin.file:
     path: "{{ consul_config_dir }}"
     state: directory
+    owner: consul
+    group: consul
     mode: '0755'
-  become: yes
+  tags:
+    - consul_configure
 
+# Task 9: Generate certificates on localhost (from original file)
 - name: Generate certificates on localhost
   block:
+    - name: Clean up previous temporary certificate directory
+      become: yes
+      ansible.builtin.file:
+        path: "{{ consul_temp_cert_dir }}"
+        state: absent
+
+    - name: Ensure openssl is installed on localhost
+      become: yes
+      ansible.builtin.package:
+        name: openssl
+        state: present
+
     - name: Create local certs directory
-      file:
+      become: yes
+      ansible.builtin.file:
         path: "{{ consul_temp_cert_dir }}"
         state: directory
+        mode: '0755'
 
     - name: Generate CA key
-      command: "openssl genrsa -out {{ consul_temp_cert_dir }}/ca.key 2048"
+      ansible.builtin.command: "openssl genrsa -out {{ consul_temp_cert_dir }}/ca.key 2048"
       args:
         creates: "{{ consul_temp_cert_dir }}/ca.key"
 
     - name: Generate CA certificate
-      command: "openssl req -new -x509 -days 3650 -key {{ consul_temp_cert_dir }}/ca.key -out {{ consul_temp_cert_dir }}/ca.pem -subj '/CN=Consul CA'"
+      ansible.builtin.command: "openssl req -new -x509 -days 3650 -key {{ consul_temp_cert_dir }}/ca.key -out {{ consul_temp_cert_dir }}/ca.pem -subj '/CN=Consul CA'"
       args:
         creates: "{{ consul_temp_cert_dir }}/ca.pem"
 
     - name: Generate server keys for controller nodes
-      command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
+      ansible.builtin.command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.key"
       loop: "{{ groups['controller_nodes'] }}"
 
     - name: Generate server CSRs for controller nodes
-      command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=server.consul'"
+      ansible.builtin.command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=server.consul'"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.csr"
       loop: "{{ groups['controller_nodes'] }}"
 
     - name: Sign server certificates for controller nodes
-      command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
+      ansible.builtin.command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.pem"
       loop: "{{ groups['controller_nodes'] }}"
 
     - name: Generate client keys for client nodes
-      command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
+      ansible.builtin.command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.key"
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
 
     - name: Generate client CSRs for client nodes
-      command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=client.consul'"
+      ansible.builtin.command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=client.consul'"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.csr"
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
 
     - name: Sign client certificates for client nodes
-      command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
+      ansible.builtin.command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.pem"
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
   delegate_to: localhost
   run_once: true
+  tags:
+    - consul_configure
 
+- name: Set readable permissions on generated certs
+  ansible.builtin.file:
+    path: "{{ consul_temp_cert_dir }}"
+    state: directory
+    recurse: yes
+    mode: '0644'
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - consul_configure
+
+# Task 10: Include TLS tasks (from original file)
 - name: Include TLS tasks
-  include_tasks: tls.yaml
+  ansible.builtin.include_tasks: tls.yaml
+  tags:
+    - consul_configure
+
+# Task 12: Copy Consul config (from original, with ownership/mode)
+- name: Copy Consul config
+  become: true
+  ansible.builtin.template:
+    src: consul.hcl.j2
+    dest: "{{ consul_config_dir }}/consul.hcl"
+    owner: consul
+    group: consul
+    mode: '0640'
+  notify: restart consul
+  tags:
+    - consul_configure
+
+# Task 13: Copy Consul systemd service file (from original file)
+- name: Copy Consul systemd service file
+  become: true
+  ansible.builtin.template:
+    src: consul.service.j2
+    dest: /etc/systemd/system/consul.service
+    mode: '0644'
+  notify: restart consul
+  tags:
+    - consul_configure
+
+# Task 14: Reload systemd to recognize new service (from original file)
+- name: Reload systemd to recognize new service
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  tags:
+    - consul_configure
+
+- name: Start and enable Consul service
+  become: true
+  ansible.builtin.systemd:
+    name: consul
+    state: started
+    enabled: yes
+  tags:
+    - consul_configure
+
+- name: Wait for Consul API to be ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/status/leader"
+  register: consul_status
+  until: consul_status.status == 200
+  retries: 30
+  delay: 5
+
+- name: Flush handlers to ensure Consul is ready
+  meta: flush_handlers
+
+- name: Wait for Consul to be ready before ACL bootstrap
+  ansible.builtin.wait_for:
+    port: 8500
+    delay: 10
 
 - name: Include ACL tasks
   include_tasks: acl.yaml
 
-- name: Copy Consul config
-  template:
-    src: consul.hcl.j2
-    dest: "{{ consul_config_dir }}/consul.hcl"
-  notify: restart consul
-  become: yes
-
-- name: Copy Consul systemd service file
-  template:
-    src: consul.service.j2
-    dest: /etc/systemd/system/consul.service
-  notify: restart consul
-  become: yes
-
-- name: Reload systemd to recognize new service
-  systemd:
-    daemon_reload: yes
-  become: yes
-  when: not ansible_check_mode
-
-- name: Start and enable Consul service
-  systemd:
-    name: consul
-    state: started
-    enabled: yes
-  become: yes
-  when: not ansible_check_mode
-
+# Task 16: Clean up temporary certificate directory
 - name: Clean up temporary certificate directory
-  file:
+  ansible.builtin.file:
     path: "{{ consul_temp_cert_dir }}"
     state: absent
   delegate_to: localhost
   run_once: true
+  tags:
+    - consul_configure

@@ -1,31 +1,86 @@
-- name: Bootstrap ACLs
+- name: Bootstrap ACLs and recover from failures
   block:
-    - name: Check if ACLs are already bootstrapped
-      stat:
-        path: "{{ consul_config_dir }}/acl_bootstrapped"
-      register: acl_bootstrapped
-      become: yes
-
     - name: Bootstrap ACLs
-      command: "consul acl bootstrap"
-      register: acl_bootstrap_result
-      when: not acl_bootstrapped.stat.exists
-      become: yes
+      block:
+        - name: Bootstrap ACLs
+          command: "consul acl bootstrap"
+          args:
+            creates: "{{ consul_config_dir }}/management_token"
+          register: acl_bootstrap_result
+          changed_when: "'SecretID:' in acl_bootstrap_result.stdout"
+          become: yes
 
-    - name: Store management token
-      copy:
-        content: "{{ (acl_bootstrap_result.stdout | from_json).SecretID }}"
-        dest: "{{ consul_config_dir }}/management_token"
-        mode: '0600'
-      when: not acl_bootstrapped.stat.exists
-      become: yes
+        - name: Store management token
+          copy:
+            content: "{{ (acl_bootstrap_result.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') or []) | first | default('') }}"
+            dest: "{{ consul_config_dir }}/management_token"
+            mode: '0600'
+          when: acl_bootstrap_result.changed and 'SecretID:' in acl_bootstrap_result.stdout
+          become: yes
+      when: "'controller_nodes' in groups and groups['controller_nodes'] | length > 0"
+      run_once: true
+      delegate_to: "{{ groups['controller_nodes'][0] }}"
+  rescue:
+    - name: Recover from failed ACL bootstrap
+      block:
+        - name: Stop Consul service
+          systemd:
+            name: consul
+            state: stopped
+          become: yes
 
-    - name: Mark ACLs as bootstrapped
-      file:
-        path: "{{ consul_config_dir }}/acl_bootstrapped"
-        state: touch
-      when: not acl_bootstrapped.stat.exists
-      become: yes
-  when: "'controller_nodes' in groups and groups['controller_nodes'] | length > 0"
-  run_once: true
-  delegate_to: "{{ groups['controller_nodes'][0] }}"
+        - name: Delete Consul data directory
+          file:
+            path: "{{ consul_data_dir }}"
+            state: absent
+          become: yes
+
+        - name: Re-create Consul data directory
+          file:
+            path: "{{ consul_data_dir }}"
+            state: directory
+            owner: consul
+            group: consul
+            mode: '0755'
+          become: yes
+
+        - name: Restart Consul service
+          systemd:
+            name: consul
+            state: restarted
+          become: yes
+
+        - name: Wait for Consul API to be ready after recovery
+          uri:
+            url: "http://127.0.0.1:8500/v1/status/leader"
+          register: consul_status_recovery
+          until: consul_status_recovery.status == 200
+          retries: 30
+          delay: 5
+
+        - name: Retry ACL bootstrap
+          command: "consul acl bootstrap"
+          register: acl_bootstrap_result_recovery
+          become: yes
+
+        - name: "Debug: Display ACL bootstrap recovery output"
+          debug:
+            msg:
+              - "STDOUT: {{ acl_bootstrap_result_recovery.stdout }}"
+              - "STDERR: {{ acl_bootstrap_result_recovery.stderr }}"
+
+        - name: Store recovered management token
+          copy:
+            content: "{{ (acl_bootstrap_result_recovery.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') or []) | first | default('') }}"
+            dest: "{{ consul_config_dir }}/management_token"
+            mode: '0600'
+          when: "'SecretID:' in acl_bootstrap_result_recovery.stdout"
+          become: yes
+      when: ansible_failed_result.stderr is defined and 'ACL bootstrap no longer allowed' in ansible_failed_result.stderr
+      delegate_to: "{{ groups['controller_nodes'][0] }}"
+      run_once: true
+
+    - name: Fail on unrecoverable ACL bootstrap error
+      fail:
+        msg: "ACL bootstrap failed with an unrecoverable error: {{ ansible_failed_result }}"
+      when: ansible_failed_result.stderr is not defined or 'ACL bootstrap no longer allowed' not in ansible_failed_result.stderr

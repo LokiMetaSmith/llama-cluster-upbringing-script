@@ -11,6 +11,77 @@ def code_runner():
         runner.client = MagicMock()
         return runner
 
+# We patch SandboxSession where it's used in the code_runner_tool module.
+@patch('code_runner_tool.SandboxSession')
+def test_run_code_in_sandbox_success(mock_sandbox_session, code_runner):
+    """
+    Test that run_code_in_sandbox successfully executes Python code.
+    """
+    code_to_run = "print('hello sandbox')"
+    expected_output = "hello sandbox\n"
+
+    # Configure the mock result from the sandbox run
+    mock_result = MagicMock()
+    mock_result.stdout = expected_output
+    mock_result.stderr = ""
+    mock_result.exit_code = 0
+    mock_result.plots = []
+
+    mock_session_instance = mock_sandbox_session.return_value.__enter__.return_value
+    mock_session_instance.run.return_value = mock_result
+
+    result = code_runner.run_code_in_sandbox(code=code_to_run, language="python")
+
+    assert result == expected_output
+    mock_sandbox_session.assert_called_once_with(lang="python")
+    mock_session_instance.run.assert_called_once_with(code_to_run, libraries=[])
+
+@patch('code_runner_tool.SandboxSession')
+def test_run_code_in_sandbox_with_libraries(mock_sandbox_session, code_runner):
+    """
+    Test that run_code_in_sandbox correctly passes libraries.
+    """
+    code_to_run = "import pandas as pd; print(pd.DataFrame())"
+    libraries = ["pandas"]
+    expected_output = "Empty DataFrame\nColumns: []\nIndex: []\n"
+
+    mock_result = MagicMock()
+    mock_result.stdout = expected_output
+    mock_result.stderr = ""
+    mock_result.exit_code = 0
+    mock_result.plots = []
+
+    mock_session_instance = mock_sandbox_session.return_value.__enter__.return_value
+    mock_session_instance.run.return_value = mock_result
+
+    result = code_runner.run_code_in_sandbox(code=code_to_run, language="python", libraries=libraries)
+
+    assert result == expected_output
+    mock_session_instance.run.assert_called_once_with(code_to_run, libraries=libraries)
+
+@patch('code_runner_tool.SandboxSession')
+def test_run_code_in_sandbox_with_error(mock_sandbox_session, code_runner):
+    """
+    Test that run_code_in_sandbox returns a formatted error string.
+    """
+    code_to_run = "import non_existent_library"
+    error_output = "ModuleNotFoundError: No module named 'non_existent_library'"
+
+    mock_result = MagicMock()
+    mock_result.stdout = ""
+    mock_result.stderr = error_output
+    mock_result.exit_code = 1
+    mock_result.plots = []
+
+    mock_session_instance = mock_sandbox_session.return_value.__enter__.return_value
+    mock_session_instance.run.return_value = mock_result
+
+    result = code_runner.run_code_in_sandbox(code=code_to_run, language="python")
+
+    assert "Exit Code: 1" in result
+    assert "---STDERR---" in result
+    assert error_output in result
+
 @patch('os.unlink')
 @patch('os.path.exists', return_value=True)
 def test_run_python_code_success(mock_path_exists, mock_unlink, code_runner, mocker):

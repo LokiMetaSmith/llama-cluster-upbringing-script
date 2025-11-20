@@ -9,12 +9,13 @@
 
 - block:
     - name: Wait for Nomad service to become active (bootstrap single node)
-      ansible.builtin.command: systemctl is-active --quiet nomad
+      ansible.builtin.command: systemctl is-active nomad
       register: nomad_service_status
-      until: nomad_service_status.rc == 0
+      until: nomad_service_status.stdout == "active"
       retries: 12
       delay: 5
       changed_when: false
+      check_mode: no
   when: ansible_connection == "local"
 
 # ============================
@@ -23,12 +24,13 @@
 
 - block:
     - name: Wait for Nomad service to become active (multi-node)
-      ansible.builtin.command: systemctl is-active --quiet nomad
+      ansible.builtin.command: systemctl is-active nomad
       register: nomad_service_status
-      until: nomad_service_status.rc == 0
+      until: nomad_service_status.stdout == "active"
       retries: 12
       delay: 5
       changed_when: false
+      check_mode: no
 
     - name: Wait for at least 1 Nomad peer
       ansible.builtin.uri:

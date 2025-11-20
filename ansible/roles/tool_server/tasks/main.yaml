@@ -1,6 +1,3 @@
----
-
-
 - name: Copy app.py into the build context
   ansible.builtin.copy:
     src: app.py  # Looks for files/app.py inside the role

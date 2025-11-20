@@ -1,4 +1,3 @@
----
 - hosts: pxe_server
   become: yes
   tasks:

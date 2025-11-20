@@ -31,6 +31,7 @@ Expert agents are specialized LLMs deployed as separate, independent services. T
 **Only the Router Agent has access to the library of tools.** This is a deliberate design choice for security and predictability. When the Router determines that a task requires interacting with the outside world, it will select and use the appropriate tool itself, rather than passing that capability down to a specialized expert. This concentrates the system's interactive capabilities in one place, making it easier to manage, monitor, and secure.
 
 The following tools are available:
+
 - **`ssh`**: Executes commands on remote machines.
 - **`mcp`**: Provides agent introspection and self-control (e.g., status checks, memory management).
 - **`vision`**: Gets a real-time description of what is visible via the webcam.

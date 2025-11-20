@@ -139,7 +139,7 @@ These tasks are focused on addressing the brittleness of the deployment process 
 
 - [x] **Use `when` clauses for state checks:** Before making a change, verify if it's necessary. For instance, when adding a user to the `docker` group, first check if the user is already a member to prevent the task from showing "changed" on every run.
 - [ ] **Audit all roles for idempotency:** Systematically review every task in every role (`common`, `docker`, `nomad`, `consul`, etc.) and apply idempotency checks where they are missing.
-- [ ] **Convert `command` and `shell` to Ansible modules where possible:** Replace generic shell commands with dedicated Ansible modules (e.g., `ansible.builtin.user`, `ansible.builtin.file`, `community.general.nmcli`), as these modules are inherently idempotent.
+- [x] **Convert `command` and `shell` to Ansible modules where possible:** Replace generic shell commands with dedicated Ansible modules (e.g., `ansible.builtin.user`, `ansible.builtin.file`, `community.general.nmcli`), as these modules are inherently idempotent.
 
 ### 1.2. Centralize All Configuration
 
@@ -208,5 +208,4 @@ This section includes items from the original "For Future Review" list, expanded
 - [ ] Add the new test to `e2e-tests.yaml`.
 - [ ] Modify `start_services.sh` to include the home assistant job.
 - [ ] Investigate https://github.com/microsoft/agent-lightning as a possible agent improvement method
-- [ ] Remove paddler
 ```

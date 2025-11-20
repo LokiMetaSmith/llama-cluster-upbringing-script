@@ -1,4 +1,3 @@
----
 - name: Clone llxprt-code repository
   ansible.builtin.git:
     repo: 'https://github.com/vybestack/llxprt-code.git'

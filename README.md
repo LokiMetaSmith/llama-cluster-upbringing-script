@@ -72,7 +72,7 @@ For development, testing, or bootstrapping the very first node of a new cluster,
      - `all` (default): Full setup for a standalone control node.
      - `controller`: Sets up only the core infrastructure services (Consul, Nomad, etc.).
      - `worker`: Configures the node as a worker and requires `--controller-ip`.
-   - `--controller-ip <ip>`: The IP address of the main controller node. **Required** when ` --role` is `worker`.
+   - `--controller-ip <ip>`: The IP address of the main controller node. **Required** when `--role` is `worker`.
    - `--tags <tag1,tag2>`: Run only specific parts of the Ansible playbook (e.g., `--tags nomad` would only run the Nomad configuration tasks).
    - `--external-model-server`: Skips the download and build steps for large language models. This is ideal for development or if you are using a remote model server.
    - `--purge-jobs`: Stops and purges all running Nomad jobs before starting the bootstrap process, ensuring a clean deployment.
