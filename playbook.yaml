@@ -1,22 +1,11 @@
-- name: Main Playbook
-  hosts: all
-  vars_files:
-    - group_vars/all.yaml
-    - group_vars/models.yaml
-    - group_vars/external_experts.yaml
-  tasks:
-    - name: Import Playbooks
-      include_tasks:
-        file: "{{ item }}"
-      loop:
-        - playbooks/common_setup.yaml
-        - playbooks/services/core_infra.yaml
-        - playbooks/services/consul.yaml
-        - playbooks/services/docker.yaml
-        - playbooks/services/nomad.yaml
-        - playbooks/services/app_services.yaml
-        - playbooks/services/model_services.yaml
-        - playbooks/services/core_ai_services.yaml
-        - playbooks/services/ai_experts.yaml
-        - playbooks/services/vllm_experts.yaml
-        - playbooks/services/final_verification.yaml
+- import_playbook: playbooks/common_setup.yaml
+- import_playbook: playbooks/services/core_infra.yaml
+- import_playbook: playbooks/services/consul.yaml
+- import_playbook: playbooks/services/docker.yaml
+- import_playbook: playbooks/services/nomad.yaml
+- import_playbook: playbooks/services/app_services.yaml
+- import_playbook: playbooks/services/model_services.yaml
+- import_playbook: playbooks/services/core_ai_services.yaml
+- import_playbook: playbooks/services/ai_experts.yaml
+- import_playbook: playbooks/services/vllm_experts.yaml
+- import_playbook: playbooks/services/final_verification.yaml

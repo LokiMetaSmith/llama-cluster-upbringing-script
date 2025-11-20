@@ -7,7 +7,7 @@
           args:
             creates: "{{ consul_config_dir }}/management_token"
           register: acl_bootstrap_result
-          changed_when: acl_bootstrap_result.rc == 0 and acl_bootstrap_result.stdout != ""
+          changed_when: "'SecretID:' in acl_bootstrap_result.stdout"
           become: yes
 
         - name: Store management token
