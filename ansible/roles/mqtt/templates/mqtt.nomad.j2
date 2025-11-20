@@ -6,11 +6,12 @@ job "mqtt" {
     count = 1
 
     network {
+      mode = "host"
       port "mqtt" {
         static = 1883
       }
       port "ws" {
-        to = 9001
+        static = 9001
       }
     }
 
@@ -29,6 +30,7 @@ job "mqtt" {
         type     = "tcp"
         interval = "10s"
         timeout  = "2s"
+        address_mode = "host"
       }
     }
 
