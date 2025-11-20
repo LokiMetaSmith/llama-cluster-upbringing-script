@@ -15,10 +15,11 @@
     - /opt/nomad/volumes/mqtt-data
     - /opt/nomad/volumes/mqtt-data/data
     - /opt/nomad/volumes/mqtt-data/log
+    - /opt/nomad/volumes/mqtt-data/config
 
 - name: Create Mosquitto config file
   ansible.builtin.copy:
-    dest: /opt/nomad/volumes/mqtt-data/mosquitto.conf
+    dest: /opt/nomad/volumes/mqtt-data/config/mosquitto.conf
     content: |
       persistence true
       persistence_location /mosquitto/data
@@ -39,16 +40,6 @@
     recurse: yes
   become: yes
 
-- name: Set ownership for Mosquitto directories
-  ansible.builtin.file:
-    path: /opt/nomad/volumes/mqtt-data
-    state: directory
-    owner: "1883"
-    group: "1883"
-    recurse: yes
-  become: yes
-  notify: Restart nomad
-
 - name: Flush handlers to ensure nomad is restarted and ready
   ansible.builtin.meta: flush_handlers
 
@@ -56,7 +47,7 @@
   ansible.builtin.command:
     cmd: nomad job stop -purge mqtt
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
   changed_when: true
   ignore_errors: yes
 
@@ -68,7 +59,7 @@
 
 - name: Wait for Nomad to be ready
   ansible.builtin.wait_for:
-    host: "{{ ansible_default_ipv4.address }}"
+    host: "{{ ansible_facts['default_ipv4']['address'] }}"
     port: 4646
     timeout: 60
 
@@ -76,7 +67,7 @@
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/mqtt.nomad
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
   changed_when: true
   register: mqtt_job_run
 #  notify: Restart Home Assistant
