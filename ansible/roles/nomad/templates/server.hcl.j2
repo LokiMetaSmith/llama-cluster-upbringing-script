@@ -16,8 +16,8 @@ server {
 
 consul {
   address = "127.0.0.1:8500"
-  {% if nomad_consul_token is defined %}
-  token   = "{{ nomad_consul_token }}"
+  {% if consul_bootstrap_token is defined %}
+  token   = "{{ consul_bootstrap_token }}"
   {% endif %}
 }
 
