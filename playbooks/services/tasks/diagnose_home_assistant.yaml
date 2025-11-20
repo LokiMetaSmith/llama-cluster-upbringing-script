@@ -5,6 +5,47 @@
     line: "--- Diagnostic run for Home Assistant at {{ ansible_facts['date_time']['iso8601'] }} ---"
     mode: '0644'
 
+- name: Check Nomad job status for MQTT
+  ansible.builtin.command: "nomad job status mqtt"
+  register: mqtt_job_status
+  changed_when: false
+  ignore_errors: yes
+
+- name: Log MQTT job status
+  ansible.builtin.lineinfile:
+    path: "{{ log_file }}"
+    line: |
+      [MQTT JOB STATUS]
+      RC: {{ mqtt_job_status.rc }}
+      STDOUT:
+      {{ mqtt_job_status.stdout | indent(2) }}
+      STDERR:
+      {{ mqtt_job_status.stderr | indent(2) }}
+
+- name: Get latest MQTT allocation ID
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      nomad job status -t "{{ '{{' }} (index .Allocations 0).ID {{ '}}' }}" mqtt | head -n 1
+    executable: /bin/bash
+  register: mqtt_alloc_id
+  changed_when: false
+  when: mqtt_job_status.rc == 0
+
+- name: Get MQTT allocation logs
+  ansible.builtin.command: "nomad alloc logs {{ mqtt_alloc_id.stdout }}"
+  register: mqtt_alloc_logs
+  changed_when: false
+  when: mqtt_alloc_id.stdout is defined and mqtt_alloc_id.stdout != ""
+
+- name: Log MQTT allocation logs
+  ansible.builtin.lineinfile:
+    path: "{{ log_file }}"
+    line: |
+      [MQTT ALLOCATION LOGS]
+      {{ mqtt_alloc_logs.stdout | indent(2) }}
+  when: mqtt_alloc_logs.stdout is defined
+
 - name: Check Nomad job status
   ansible.builtin.command: "nomad job status home-assistant"
   register: job_status
@@ -72,8 +113,8 @@
     line: |
       [HOST VOLUME PERMISSIONS]
       Path: {{ ha_config_stat.stat.path }}
-      Owner: {{ ha_config_stat.stat.pw_name }} ({{ ha_config_stat.stat.uid }})
-      Group: {{ ha_config_stat.stat.gr_name }} ({{ ha_config_stat.stat.gid }})
+      Owner: {{ ha_config_stat.stat.pw_name | default('unknown') }} ({{ ha_config_stat.stat.uid }})
+      Group: {{ ha_config_stat.stat.gr_name | default('unknown') }} ({{ ha_config_stat.stat.gid }})
       Mode: {{ ha_config_stat.stat.mode }}
 
 - name: Display final log location
