@@ -57,18 +57,21 @@
         - mqtt
 
     - name: Deploy Home Assistant with error handling
+      tags:
+        - home_assistant
       block:
         - name: Run home_assistant role
           ansible.builtin.include_role:
             name: home_assistant
       rescue:
-        - name: On failure, run Home Assistant diagnostic playbook
-          ansible.builtin.import_playbook: "{{ playbook_dir }}/../../diagnose_and_log_home_assistant.yaml"
+        - name: On failure, run Home Assistant diagnostic tasks
+          ansible.builtin.include_tasks:
+            file: tasks/diagnose_home_assistant.yaml
+          vars:
+            log_file: "{{ playbook_dir }}/home_assistant_debug.log"
         - name: Fail the playbook after diagnostics
           ansible.builtin.fail:
-            msg: "Home Assistant deployment failed. Diagnostic log has been created."
-      tags:
-        - home_assistant
+            msg: "Home Assistant deployment failed. Diagnostic log has been created at {{ playbook_dir }}/home_assistant_debug.log"
 
     - name: Run post-Home Assistant application roles
       ansible.builtin.include_role:
