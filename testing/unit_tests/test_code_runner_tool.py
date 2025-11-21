@@ -1,7 +1,13 @@
 import pytest
-from code_runner_tool import CodeRunnerTool
+import sys
+import os
 from unittest.mock import MagicMock, patch
 import docker
+
+# Add tools directory to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
+
+from code_runner_tool import CodeRunnerTool
 
 @pytest.fixture
 def code_runner():

@@ -40,13 +40,10 @@ def test_on_connect_failed(mock_mqtt_client):
 
 def test_on_message():
     """Tests the on_message callback."""
-    # This test can be expanded to check the world_state
     msg = MagicMock()
     msg.topic = "home/livingroom/light"
     msg.payload = b'{"status": "on"}'
     on_message(None, None, msg)
-    # How to assert the world_state update? Needs a bit of refactoring in app.py
-    # For now, just test that it runs without error.
 
 @patch('world_model_service.files.app.time.sleep', return_value=None)
 def test_run_mqtt_client_successful_connection(mock_sleep, mock_mqtt_client):
