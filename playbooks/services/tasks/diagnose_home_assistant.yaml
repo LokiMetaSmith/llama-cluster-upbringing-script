@@ -26,7 +26,7 @@
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      nomad job status -t "{{ '{{' }} (index .Allocations 0).ID {{ '}}' }}" mqtt | head -n 1
+      nomad job status -json mqtt | jq -r '.Allocations[0].ID'
     executable: /bin/bash
   register: mqtt_alloc_id
   changed_when: false
