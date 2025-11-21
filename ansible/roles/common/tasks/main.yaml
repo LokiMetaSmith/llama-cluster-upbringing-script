@@ -34,16 +34,6 @@
   check_mode: no
   when: ansible_host != '127.0.0.1'
 
-- name: Disable any non-gateway interfaces that have an IP
-  community.general.nmcli:
-    conn: "{{ item.device }}"
-    state: disconnected
-  loop: "{{ ansible_interfaces }}"
-  when:
-    - ansible_host != '127.0.0.1'
-    - item.ipv4 is defined
-    - item.device != default_gw_interface.stdout
-    - item.device != 'lo'
 
 - name: Prevent system sleep but allow screen blanking
   lineinfile:
