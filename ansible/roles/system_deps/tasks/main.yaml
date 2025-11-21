@@ -12,6 +12,7 @@
   apt:
     name:
       - acl
+      - avahi-daemon
       - build-essential
       - cmake
       - cargo
@@ -42,6 +43,7 @@
       - libflite1
       - libgstreamer-plugins-bad1.0-0
       - libmecab-dev
+      - libnss-mdns
       - lolcat
       - make
       - mecab
@@ -71,3 +73,10 @@
     state: present
   become: yes
   check_mode: no
+
+- name: Ensure avahi-daemon is started and enabled
+  ansible.builtin.service:
+    name: avahi-daemon
+    state: started
+    enabled: yes
+  become: yes
