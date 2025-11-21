@@ -36,6 +36,7 @@
     build:
       path: "/opt/world_model_service/"
     source: build
+    force_source: true
     state: present
   become: true
 
