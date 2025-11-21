@@ -34,11 +34,17 @@ if containsElement "$CURRENT_HOSTNAME" "${CONTROLLER_HOSTNAMES[@]}"; then
 
     cat > /etc/network/interfaces <<EOL
 # This file is managed by the llama-cluster-upbringing-script
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
 auto $INTERFACE
 iface $INTERFACE inet static
     address $STATIC_IP
     netmask $NETMASK
     gateway $GATEWAY
+    dns-nameservers 1.1.1.1 8.8.8.8
 EOL
     log "Static IP configuration written for $INTERFACE."
 
@@ -54,6 +60,11 @@ else
 
     cat > /etc/network/interfaces <<EOL
 # This file is managed by the llama-cluster-upbringing-script
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
 auto $INTERFACE
 iface $INTERFACE inet dhcp
 EOL
