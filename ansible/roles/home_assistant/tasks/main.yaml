@@ -34,9 +34,17 @@
   changed_when: false
   become: no # Should be accessible locally
 
+- name: Fetch Consul management token
+  ansible.builtin.slurp:
+    src: /etc/consul.d/management_token
+  register: home_assistant_consul_token
+  become: yes
+
 - name: Wait for MQTT service to be available in Consul before starting HA
   ansible.builtin.uri:
     url: "http://{{ ansible_facts['default_ipv4']['address'] }}:8500/v1/health/service/mqtt?passing"
+    headers:
+      X-Consul-Token: "{{ home_assistant_consul_token.content | b64decode | trim }}"
     return_content: yes
   register: home_assistant_mqtt_health
   until: home_assistant_mqtt_health.json is defined and home_assistant_mqtt_health.json | length > 0
