@@ -4,12 +4,6 @@ import sys
 import httpx
 from unittest.mock import MagicMock, AsyncMock, patch
 
-# Mock the problematic imports before they are imported by the app
-sys.modules['pipecat.transports.local.audio'] = MagicMock()
-sys.modules['pyaudio'] = MagicMock()
-sys.modules['faster_whisper'] = MagicMock()
-sys.modules['piper.voice'] = MagicMock()
-
 # Add the parent directory of 'testing' to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files')))
 
@@ -40,14 +34,10 @@ def test_health_check(client, mocker):
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
-# More advanced tests for the TwinService can be added here
-# For example, mocking the LLM and other services to test the agent's logic
-
 @pytest.mark.requires_display
 @pytest.mark.asyncio
 async def test_twin_service_initialization(mocker):
     """Tests that the TwinService initializes correctly."""
-    # This is a basic test. More advanced tests would mock dependencies.
     mocker.patch('memory.SentenceTransformer')
     mocker.patch('faiss.IndexFlatL2')
     mocker.patch('docker.from_env')
@@ -60,12 +50,10 @@ async def test_twin_service_initialization(mocker):
     service = TwinService(llm=mock_llm, vision_detector=mock_vision, runner=mock_runner, app_config=mock_config)
     assert service is not None
 
-# Example of a more advanced test with mocking
 @pytest.mark.requires_display
 @pytest.mark.asyncio
 async def test_twin_service_sends_vision_frame(mocker):
     """Tests that TwinService sends a vision frame to the LLM."""
-    # Mock the LLM and other external services
     mocker.patch('memory.SentenceTransformer')
     mocker.patch('faiss.IndexFlatL2')
     mocker.patch('docker.from_env')
@@ -77,15 +65,7 @@ async def test_twin_service_sends_vision_frame(mocker):
     mock_config = MagicMock()
 
     service = TwinService(llm=mock_llm, vision_detector=mock_vision, runner=mock_runner, app_config=mock_config)
-
-    # This test will require more setup to properly simulate the pipeline
-    # For now, we'll just check that the service can be instantiated.
     assert service is not None
-
-# The following tests are marked as integration tests because they
-# are designed to run against a live, running pipecat server.
-# In a CI environment, these might be run as a separate step after
-# the application has been deployed to a staging environment.
 
 @pytest.mark.asyncio
 async def test_health_check_is_healthy(mocker):
@@ -105,7 +85,6 @@ async def test_health_check_is_healthy(mocker):
         response = await client.get(f"{base_url}/health", timeout=5)
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
-
 
 @pytest.mark.asyncio
 async def test_main_page_loads(mocker):

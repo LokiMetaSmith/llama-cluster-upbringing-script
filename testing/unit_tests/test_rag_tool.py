@@ -1,28 +1,29 @@
 import pytest
 import os
 import sys
-import numpy as np
 from unittest.mock import MagicMock, patch, mock_open
 import threading
 
 # Add the path to the RAG tool
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
 
+import numpy as np # Now safe to import
 from rag_tool import RAG_Tool
 
 @pytest.fixture
 def mock_sentence_transformer():
     """Fixture to mock the SentenceTransformer."""
-    with patch('tools.rag_tool.SentenceTransformer') as mock:
+    with patch('rag_tool.SentenceTransformer') as mock:
         # Mock the encode method to return a dummy embedding
         mock_instance = mock.return_value
+        # Use mock numpy array
         mock_instance.encode.return_value = np.array([[0.1, 0.2, 0.3]])
         yield mock
 
 @pytest.fixture
 def mock_faiss():
     """Fixture to mock the FAISS index."""
-    with patch('tools.rag_tool.faiss') as mock:
+    with patch('rag_tool.faiss') as mock:
         # Mock the IndexFlatL2 and its methods
         mock_index = MagicMock()
         mock_index.add.return_value = None
