@@ -143,7 +143,6 @@
     mode: "0644"
   vars:
     is_controller: true
-    consul_token: "{{ consul_token_slurp['content'] | b64decode }}"
   become: yes
   when: "'controller_nodes' in groups and inventory_hostname in groups['controller_nodes']"
   notify:
@@ -154,8 +153,6 @@
   ansible.builtin.template:
     src: nomad.hcl.server.j2
     dest: "{{ nomad_config_dir }}/nomad.hcl"
-  vars:
-    consul_token: "{{ consul_token_slurp['content'] | b64decode }}"
   when: "inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names"
   notify:
     - Restart nomad
@@ -167,8 +164,6 @@
     owner: root
     group: root
     mode: "0644"
-  vars:
-    consul_token: "{{ consul_token_slurp['content'] | b64decode }}"
   become: yes
   when: "'workers' in groups and inventory_hostname in groups['workers']"
   notify:

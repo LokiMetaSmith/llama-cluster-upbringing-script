@@ -6,7 +6,7 @@
     mode: '0644'
 
 - name: Check Nomad job status for MQTT
-  ansible.builtin.command: "nomad job status mqtt"
+  ansible.builtin.command: "/usr/local/bin/nomad job status mqtt"
   register: mqtt_job_status
   changed_when: false
   ignore_errors: yes
@@ -26,7 +26,7 @@
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      nomad job status -t "{{ '{{' }} range .Allocations {{ '}}' }}{{ '{{' }} .ID {{ '}}' }}
+      /usr/local/bin/nomad job status -t "{{ '{{' }} range .Allocations {{ '}}' }}{{ '{{' }} .ID {{ '}}' }}
       {{ '{{' }} end {{ '}}' }}" mqtt | head -n 1
     executable: /bin/bash
   register: mqtt_alloc_id
@@ -34,7 +34,7 @@
   when: mqtt_job_status.rc == 0
 
 - name: Get MQTT allocation logs
-  ansible.builtin.command: "nomad alloc logs {{ mqtt_alloc_id.stdout }}"
+  ansible.builtin.command: "/usr/local/bin/nomad alloc logs {{ mqtt_alloc_id.stdout }}"
   register: mqtt_alloc_logs
   changed_when: false
   when: mqtt_alloc_id.stdout is defined and mqtt_alloc_id.stdout != ""
@@ -48,7 +48,7 @@
   when: mqtt_alloc_logs.stdout is defined
 
 - name: Check Nomad job status
-  ansible.builtin.command: "nomad job status home-assistant"
+  ansible.builtin.command: "/usr/local/bin/nomad job status home-assistant"
   register: job_status
   changed_when: false
   ignore_errors: yes
@@ -68,7 +68,7 @@
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      nomad job status -t "{{ '{{' }} range .Allocations {{ '}}' }}{{ '{{' }} .ID {{ '}}' }}
+      /usr/local/bin/nomad job status -t "{{ '{{' }} range .Allocations {{ '}}' }}{{ '{{' }} .ID {{ '}}' }}
       {{ '{{' }} end {{ '}}' }}" home-assistant | head -n 1
     executable: /bin/bash
   register: alloc_id
@@ -76,7 +76,7 @@
   when: job_status.rc == 0
 
 - name: Get allocation details
-  ansible.builtin.command: "nomad alloc status {{ alloc_id.stdout }}"
+  ansible.builtin.command: "/usr/local/bin/nomad alloc status {{ alloc_id.stdout }}"
   register: alloc_status
   changed_when: false
   when: alloc_id.stdout is defined and alloc_id.stdout != ""
@@ -90,7 +90,7 @@
   when: alloc_status.stdout is defined
 
 - name: Get allocation logs
-  ansible.builtin.command: "nomad alloc logs {{ alloc_id.stdout }}"
+  ansible.builtin.command: "/usr/local/bin/nomad alloc logs {{ alloc_id.stdout }}"
   register: alloc_logs
   changed_when: false
   when: alloc_id.stdout is defined and alloc_id.stdout != ""
