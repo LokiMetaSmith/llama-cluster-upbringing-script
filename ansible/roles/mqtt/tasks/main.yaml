@@ -73,6 +73,13 @@
   register: mqtt_job_run
 #  notify: Restart Home Assistant
 
+- name: Wait for MQTT port to be open
+  ansible.builtin.wait_for:
+    host: "{{ ansible_facts['default_ipv4']['address'] }}"
+    port: 1883
+    timeout: 60
+  become: no
+
 - name: Debug mqtt job run
   ansible.builtin.debug:
     var: mqtt_job_run

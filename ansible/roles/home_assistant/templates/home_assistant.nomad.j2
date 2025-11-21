@@ -88,7 +88,7 @@ job "home-assistant" {
         {% if home_assistant_token is defined and home_assistant_token | length > 0 %}
         HA_TOKEN = "{{ home_assistant_token }}"
         {% endif %}
-        MQTT_SERVER = "mqtt://{{ hostvars['controller_node_1']['ansible_host'] | default('127.0.0.1') }}:1883"
+        MQTT_SERVER = "mqtt://{{ hostvars['controller_node_1']['ansible_host'] | default(advertise_ip) }}:1883"
       }
 
       volume_mount {
