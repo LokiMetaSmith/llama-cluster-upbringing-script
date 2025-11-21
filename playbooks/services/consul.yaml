@@ -28,3 +28,12 @@
     - role: consul
       tags:
         - consul_configure
+
+  post_tasks:
+    - name: Run Consul Unit Tests
+      ansible.builtin.command:
+        cmd: "{{ ansible_playbook_python }} -m unittest testing.unit_tests.test_infrastructure.TestInfrastructure.test_consul_running"
+        chdir: "{{ playbook_dir }}/../../"
+      changed_when: false
+      tags:
+        - consul_test
