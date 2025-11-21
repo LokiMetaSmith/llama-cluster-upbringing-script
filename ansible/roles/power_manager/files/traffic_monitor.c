@@ -13,6 +13,7 @@
 #include <uapi/linux/if_ether.h>
 #include <uapi/linux/ip.h>
 #include <uapi/linux/tcp.h>
+#include <uapi/linux/in.h>
 
 /**
  * @brief BPF hash map to store packet counts per destination port.

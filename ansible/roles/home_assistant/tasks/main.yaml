@@ -40,6 +40,11 @@
   register: home_assistant_consul_token
   become: yes
 
+- name: Debug Consul token
+  ansible.builtin.debug:
+    msg: "Token length: {{ (home_assistant_consul_token.content | b64decode | trim) | length }}"
+  when: home_assistant_consul_token.content is defined
+
 - name: Wait for MQTT service to be available in Consul before starting HA
   ansible.builtin.uri:
     url: "http://{{ ansible_facts['default_ipv4']['address'] }}:8500/v1/health/service/mqtt?passing"
