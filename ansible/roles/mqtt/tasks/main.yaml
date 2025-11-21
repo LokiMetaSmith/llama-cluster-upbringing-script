@@ -46,7 +46,7 @@
 
 - name: Purge mqtt job
   ansible.builtin.command:
-    cmd: nomad job stop -purge mqtt
+    cmd: /usr/local/bin/nomad job stop -purge mqtt
   environment:
     NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
   changed_when: true
@@ -66,7 +66,7 @@
 
 - name: Run mqtt job
   ansible.builtin.command:
-    cmd: nomad job run /opt/nomad/jobs/mqtt.nomad
+    cmd: /usr/local/bin/nomad job run /opt/nomad/jobs/mqtt.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
   changed_when: true

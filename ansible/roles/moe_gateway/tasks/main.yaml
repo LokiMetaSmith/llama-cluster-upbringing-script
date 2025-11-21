@@ -26,5 +26,5 @@
 
 - name: Ensure moe-gateway job is running
   ansible.builtin.command:
-    cmd: nomad job run /opt/nomad/jobs/moe-gateway.nomad
+    cmd: /usr/local/bin/nomad job run /opt/nomad/jobs/moe-gateway.nomad
   changed_when: true

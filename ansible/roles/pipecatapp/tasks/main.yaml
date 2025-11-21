@@ -202,7 +202,7 @@
 
 - name: Stop and purge any existing expert jobs to ensure idempotency
   ansible.builtin.command:
-    cmd: nomad job stop -purge "expert-{{ item }}"
+    cmd: /usr/local/bin/nomad job stop -purge "expert-{{ item }}"
   loop: "{{ experts }}"
   register: expert_job_stop_status
   changed_when: "'Running' in expert_job_stop_status.stdout"
@@ -294,7 +294,7 @@
 
 - name: Stop and purge any existing pipecat-app job to ensure idempotency
   ansible.builtin.command:
-    cmd: nomad job stop -purge pipecat-app
+    cmd: /usr/local/bin/nomad job stop -purge pipecat-app
   register: pipecat_job_stop_status
   changed_when: "pipecat_job_stop_status.rc == 0"
   failed_when: false
@@ -306,7 +306,7 @@
 
 - name: Run router job
   ansible.builtin.command:
-    cmd: nomad job run /opt/nomad/jobs/router.nomad
+    cmd: /usr/local/bin/nomad job run /opt/nomad/jobs/router.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   register: router_job_run
@@ -327,7 +327,7 @@
 
 - name: Run pipecat-app job
   ansible.builtin.command:
-    cmd: nomad job run /opt/nomad/jobs/pipecatapp.nomad
+    cmd: /usr/local/bin/nomad job run /opt/nomad/jobs/pipecatapp.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   register: router_job_run

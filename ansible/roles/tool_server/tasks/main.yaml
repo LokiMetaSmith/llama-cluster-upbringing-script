@@ -21,5 +21,5 @@
     dest: /opt/nomad/jobs/tool_server.nomad
 
 - name: Run tool-server nomad job
-  ansible.builtin.command: nomad job run /opt/nomad/jobs/tool_server.nomad
+  ansible.builtin.command: /usr/local/bin/nomad job run /opt/nomad/jobs/tool_server.nomad
   changed_when: true
