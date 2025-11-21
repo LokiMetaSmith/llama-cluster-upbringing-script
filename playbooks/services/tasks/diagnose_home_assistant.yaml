@@ -26,8 +26,7 @@
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      /usr/local/bin/nomad job status -t "{{ '{{' }} range .Allocations {{ '}}' }}{{ '{{' }} .ID {{ '}}' }}
-      {{ '{{' }} end {{ '}}' }}" mqtt | head -n 1
+      /usr/local/bin/nomad job status -json mqtt | jq -r '.Allocations[0].ID'
     executable: /bin/bash
   register: mqtt_alloc_id
   changed_when: false
@@ -68,8 +67,7 @@
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      /usr/local/bin/nomad job status -t "{{ '{{' }} range .Allocations {{ '}}' }}{{ '{{' }} .ID {{ '}}' }}
-      {{ '{{' }} end {{ '}}' }}" home-assistant | head -n 1
+      /usr/local/bin/nomad job status -json home-assistant | jq -r '.Allocations[0].ID'
     executable: /bin/bash
   register: alloc_id
   changed_when: false
