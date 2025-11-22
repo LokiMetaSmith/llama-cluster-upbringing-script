@@ -40,6 +40,33 @@
     state: present
   become: true
 
+- name: "World Model Service : Copy debug script"
+  tags:
+    - world_model_service
+  ansible.builtin.copy:
+    src: "debug_world_model.sh"
+    dest: "/opt/world_model_service/debug_world_model.sh"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0755"
+  become: true
+
+- name: "World Model Service : Run debug script (verify container)"
+  tags:
+    - world_model_service
+  ansible.builtin.command:
+    cmd: "/opt/world_model_service/debug_world_model.sh"
+  become: true
+  register: debug_output
+  changed_when: false
+  failed_when: false
+
+- name: "World Model Service : Display debug output"
+  tags:
+    - world_model_service
+  ansible.builtin.debug:
+    var: debug_output.stdout_lines
+
 - name: "World Model Service : Deploy world_model.nomad job"
   tags:
     - world_model_service

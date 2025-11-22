@@ -24,6 +24,7 @@ NOMAD_ADDR = os.getenv("NOMAD_ADDR", "http://localhost:4646")
 # Robustly determine the port
 nomad_port = os.getenv("NOMAD_PORT_http")
 if nomad_port:
+    logger.info(f"Found NOMAD_PORT_http: {nomad_port}")
     PORT = int(nomad_port)
 else:
     # Fallback for local development or if NOMAD_PORT_http is missing
@@ -31,9 +32,10 @@ else:
     # which causes int() to fail.
     port_env = os.getenv("PORT", "5678")
     if port_env and port_env.isdigit():
+        logger.info(f"Using PORT env var: {port_env}")
         PORT = int(port_env)
     else:
-        print(f"Warning: Invalid PORT environment variable '{port_env}'. Defaulting to 5678.")
+        logger.warning(f"Invalid PORT environment variable '{port_env}'. Defaulting to 5678.")
         PORT = 5678
 
 # --- In-Memory State ---
