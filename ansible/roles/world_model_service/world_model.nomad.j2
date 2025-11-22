@@ -50,11 +50,11 @@ job "world-model-service" {
         port = "http"
 
         check {
-          type     = "http"
-          path     = "/state"
+          type     = "script"
+          name     = "alive"
+          command  = "python -c 'import urllib.request, os; urllib.request.urlopen(\"http://127.0.0.1:\" + os.environ[\"NOMAD_PORT_http\"] + \"/state\")'"
           interval = "15s"
           timeout  = "10s"
-          address_mode = "host"
         }
       }
     }
