@@ -13,7 +13,21 @@ MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", "#")
 
 NOMAD_ADDR = os.getenv("NOMAD_ADDR", "http://localhost:4646")
-PORT = int(os.getenv("PORT", 5678))
+
+# Robustly determine the port
+nomad_port = os.getenv("NOMAD_PORT_http")
+if nomad_port:
+    PORT = int(nomad_port)
+else:
+    # Fallback for local development or if NOMAD_PORT_http is missing
+    # We must handle the case where PORT might be set to a literal template string "${NOMAD_PORT_http}"
+    # which causes int() to fail.
+    port_env = os.getenv("PORT", "5678")
+    if port_env and port_env.isdigit():
+        PORT = int(port_env)
+    else:
+        print(f"Warning: Invalid PORT environment variable '{port_env}'. Defaulting to 5678.")
+        PORT = 5678
 
 
 # --- In-Memory State ---
