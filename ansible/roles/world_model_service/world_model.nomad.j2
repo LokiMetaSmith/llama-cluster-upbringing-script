@@ -32,11 +32,11 @@ job "world-model-service" {
       }
 
       env {
-        MQTT_HOST = "{{ ansible_default_ipv4.address }}"
+        MQTT_HOST = "{{ ansible_facts['default_ipv4']['address'] }}"
         MQTT_PORT = "1883"
-        CONSUL_HOST = "{{ ansible_default_ipv4.address }}"
+        CONSUL_HOST = "{{ ansible_facts['default_ipv4']['address'] }}"
         CONSUL_PORT = "8500"
-        NOMAD_ADDR = "http://{{ ansible_default_ipv4.address }}:4646"
+        NOMAD_ADDR = "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
         PORT = "${NOMAD_PORT_http}"
       }
 

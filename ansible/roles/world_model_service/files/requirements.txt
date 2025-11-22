@@ -1,5 +1,4 @@
 fastapi
-uvicorn[standard]
+uvicorn
 paho-mqtt
 httpx
-
