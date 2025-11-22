@@ -47,6 +47,7 @@ from tools.orchestrator_tool import OrchestratorTool
 from tools.llxprt_code_tool import LLxprt_Code_Tool
 from tools.claude_clone_tool import ClaudeCloneTool
 from tools.smol_agent_tool import SmolAgentTool
+from durable_execution import DurableExecutionEngine, durable_step
 
 import uvicorn
 
@@ -535,6 +536,9 @@ class TwinService(FrameProcessor):
         self.approval_queue = approval_queue
         self.short_term_memory = []
         self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
+        self.durable_engine = DurableExecutionEngine()
+        self.current_flow_id = None
+        self.step_counter = 0
 
         # This will hold metadata from incoming requests (e.g., from the gateway)
         self.current_request_meta = None
@@ -726,6 +730,28 @@ class TwinService(FrameProcessor):
             # Default to pushing to the audio pipeline
             await self.push_frame(TextFrame(text))
 
+    @durable_step
+    async def _execute_tool_and_capture(self, tool_name: str, method_name: str, args: dict):
+        """Executes a tool and captures a post-execution screenshot.
+
+        Returns:
+            tuple: (tool_result, screenshot_base64)
+        """
+        tool = self.tools[tool_name]
+        method = getattr(tool, method_name)
+
+        if self.approval_mode and tool_name in ["ssh", "code_runner", "ansible"]:
+            if not await self._request_approval({"tool": f"{tool_name}.{method_name}", "args": args}):
+                return f"Action denied. I cannot use the {tool_name} tool.", self.tools["desktop_control"].get_desktop_screenshot()
+
+        # Execute tool
+        result = method(**args)
+
+        # Capture screenshot
+        new_screenshot = self.tools["desktop_control"].get_desktop_screenshot()
+
+        return result, new_screenshot
+
     async def run_agent_loop(self, user_text: str):
         """Runs the main conversational loop for a single user turn.
 
@@ -738,6 +764,18 @@ class TwinService(FrameProcessor):
             user_text (str): The transcribed text from the user.
         """
         logging.info(f"Starting agent loop for user query: {user_text}")
+
+        # Initialize flow ID for durable execution
+        if self.current_request_meta and "request_id" in self.current_request_meta:
+            self.current_flow_id = self.current_request_meta["request_id"]
+        else:
+            # Fallback to generating one based on time if not provided
+            # Ideally this should persist across restarts for the same logical task
+            import uuid
+            self.current_flow_id = str(uuid.uuid4())
+
+        self.step_counter = 0
+
         screenshot = self.tools["desktop_control"].get_desktop_screenshot()
         self._contents = [
             {"role": "system", "content": [{"type": "text", "text": self.get_system_prompt("router")}]},
@@ -773,17 +811,9 @@ class TwinService(FrameProcessor):
                         await self._send_response(f"Could not find expert {expert_name}.")
                     return
 
-                tool = self.tools[tool_name]
-                method = getattr(tool, method_name)
+                # Durable execution of tool step
+                result, new_screenshot = await self._execute_tool_and_capture(tool_name, method_name, args)
 
-                if self.approval_mode and tool_name in ["ssh", "code_runner", "ansible"]:
-                    if not await self._request_approval(tool_call):
-                        await self._send_response(f"Action denied. I cannot use the {tool_name} tool.")
-                        return
-
-                # Synchronous tool call (tools were synchronous in your code)
-                result = method(**args)
-                new_screenshot = self.tools["desktop_control"].get_desktop_screenshot()
                 self._contents.append({"role": "tool", "content": [{"type": "text", "text": result}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{new_screenshot}"}}]})
                 continue
 
@@ -797,6 +827,7 @@ class TwinService(FrameProcessor):
         if len(self.short_term_memory) > 10:
             self.short_term_memory.pop(0)
 
+    @durable_step
     async def _call_vision_llm(self) -> str:
         """Makes a direct HTTP request to the vision-capable LLM service.
 
