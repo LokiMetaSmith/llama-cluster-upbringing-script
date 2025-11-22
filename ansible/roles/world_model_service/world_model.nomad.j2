@@ -52,8 +52,8 @@ job "world-model-service" {
         check {
           type     = "http"
           path     = "/state"
-          interval = "10s"
-          timeout  = "5s"
+          interval = "15s"
+          timeout  = "10s"
           address_mode = "host"
         }
       }
