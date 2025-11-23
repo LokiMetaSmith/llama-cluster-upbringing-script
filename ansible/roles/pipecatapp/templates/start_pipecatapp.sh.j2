@@ -9,19 +9,19 @@
 set -e
 
 # Change to the application directory
-cd /opt/pipecatapp
+cd "{{ pipecat_app_dir }}"
 
 # Activate the virtual environment
-source /opt/pipecatapp/venv/bin/activate
+source "{{ pipecat_app_dir }}/venv/bin/activate"
 
 echo "--- Starting pipecat-app: $(date) ---"
 
 {% if pipecat_deployment_style == 'raw_exec' %}
 # For raw_exec, we manage our own log file.
-LOG_FILE="/opt/pipecatapp/pipecat.log"
+LOG_FILE="{{ pipecat_log_file }}"
 touch "$LOG_FILE"
-exec /opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py >> "$LOG_FILE" 2>&1
+exec "{{ pipecat_app_dir }}/venv/bin/python3" "{{ pipecat_app_dir }}/app.py" >> "$LOG_FILE" 2>&1
 {% else %}
 # For Docker, we log to stdout/stderr and let the container runtime handle it.
-exec /opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py
+exec "{{ pipecat_app_dir }}/venv/bin/python3" "{{ pipecat_app_dir }}/app.py"
 {% endif %}

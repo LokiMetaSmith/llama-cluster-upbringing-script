@@ -1,7 +1,7 @@
 - name: Render the Llama.cpp RPC Nomad job from template for bootstrap
   ansible.builtin.template:
     src: "{{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad.j2"
-    dest: "/tmp/llamacpp-rpc.nomad"
+    dest: "/opt/nomad/jobs/llamacpp-rpc.nomad"
     mode: '0644'
   vars:
     job_name: "llamacpp-rpc"
@@ -9,20 +9,26 @@
     nomad_namespace: "default"
     model_list: "{{ expert_models['main'] }}"
     worker_count: 1
+  register: job_file
 
-- name: Deploy the main Llama.cpp RPC service to Nomad
+- name: Check if llamacpp-rpc job is running
   ansible.builtin.command:
-    cmd: "nomad job run -detach /tmp/llamacpp-rpc.nomad"
-  register: llama_job_run
-  changed_when: "'Eval ID' in llama_job_run.stdout"
-  failed_when: llama_job_run.rc != 0 and 'already running' not in llama_job_run.stderr
+    cmd: "nomad job status llamacpp-rpc"
+  register: job_status
+  failed_when: false
+  changed_when: false
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
 
-- name: Clean up temporary rendered job file
-  ansible.builtin.file:
-    path: "/tmp/llamacpp-rpc.nomad"
-    state: absent
+- name: Deploy the main Llama.cpp RPC service to Nomad
+  ansible.builtin.command:
+    cmd: "nomad job run -detach /opt/nomad/jobs/llamacpp-rpc.nomad"
+  register: llama_job_run
+  changed_when: "'Eval ID' in llama_job_run.stdout"
+  failed_when: llama_job_run.rc != 0
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+  when: job_file.changed or job_status.rc != 0
 
 - name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
