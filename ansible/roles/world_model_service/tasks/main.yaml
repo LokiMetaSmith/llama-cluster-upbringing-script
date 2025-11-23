@@ -32,7 +32,7 @@
   tags:
     - world_model_service
   community.docker.docker_image:
-    name: "world-model-service:latest"
+    name: "localhost/world-model-service:latest"
     build:
       path: "/opt/world_model_service/"
     source: build
