@@ -51,7 +51,11 @@ run_playbook() {
   local ansible_args="$@"
 
   echo "Running: ansible-playbook -i $INVENTORY $PLAYBOOK --extra-vars=\"$EXTRA_VARS\" $ansible_args"
-  ansible-playbook -i "$INVENTORY" "$PLAYBOOK" --extra-vars="$EXTRA_VARS" $ansible_args > "$output_log" 2>&1
+  if ! ansible-playbook -i "$INVENTORY" "$PLAYBOOK" --extra-vars="$EXTRA_VARS" $ansible_args > "$output_log" 2>&1; then
+      echo "Ansible playbook failed!"
+      cat "$output_log"
+      exit 1
+  fi
   echo "Playbook run finished. Log saved to $output_log"
 }
 
