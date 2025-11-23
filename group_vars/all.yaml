@@ -20,14 +20,17 @@ node_id: >-
   }}
 
 cluster_subnet_prefix: "10.0.0"
-cluster_ip: "{{ cluster_subnet_prefix }}.{{ node_id }}"
+# In single-node or dev environments without a dedicated overlay network,
+# we bind to the primary interface IP to ensure services start.
+# Otherwise, we use the overlay network IP derived from the node ID.
+cluster_ip: "{{ advertise_ip if (groups['all'] | length == 1 or inventory_hostname == 'devbox') else (cluster_subnet_prefix + '.' + node_id) }}"
 
 ansible_python_interpreter: /usr/bin/python3
 
 # This variable dynamically determines the IP address for Nomad to advertise.
 # It is set to the default IPv4 address to align with the Nomad configuration
 # which explicitly binds to IPv4.
-advertise_ip: "{{ ansible_default_ipv4.address }}"
+advertise_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
 
 nomad_namespace: "default"
 nomad_models_dir: "/opt/nomad/models"
