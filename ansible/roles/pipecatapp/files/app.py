@@ -49,6 +49,7 @@ from tools.claude_clone_tool import ClaudeCloneTool
 from tools.smol_agent_tool import SmolAgentTool
 from tools.final_answer_tool import FinalAnswerTool
 from tools.shell_tool import ShellTool
+from tools.prompt_improver_tool import PromptImproverTool
 from durable_execution import DurableExecutionEngine, durable_step
 
 import uvicorn
@@ -574,6 +575,7 @@ class TwinService(FrameProcessor):
             "claude_clone": ClaudeCloneTool(),
             "final_answer": FinalAnswerTool(),
             "shell": ShellTool(),
+            "prompt_improver": PromptImproverTool(self),
         }
 
         if self.app_config.get("use_summarizer", False):
@@ -750,6 +752,8 @@ class TwinService(FrameProcessor):
 
         # Execute tool
         result = method(**args)
+        if inspect.iscoroutine(result):
+            result = await result
 
         # Capture screenshot
         new_screenshot = self.tools["desktop_control"].get_desktop_screenshot()
