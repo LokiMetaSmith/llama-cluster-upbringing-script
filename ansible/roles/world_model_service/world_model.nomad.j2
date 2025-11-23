@@ -52,7 +52,7 @@ job "world-model-service" {
         check {
           type     = "script"
           name     = "alive"
-          command  = "python -c 'import urllib.request, os; urllib.request.urlopen(\"http://127.0.0.1:\" + os.environ[\"NOMAD_PORT_http\"] + \"/state\")'"
+          command  = "python -c 'import urllib.request, os, sys; sys.exit(0) if urllib.request.urlopen(\"http://127.0.0.1:\" + os.environ[\"NOMAD_PORT_http\"] + \"/state\").getcode() == 200 else sys.exit(1)'"
           interval = "15s"
           timeout  = "10s"
         }
