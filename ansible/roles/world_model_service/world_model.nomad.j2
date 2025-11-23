@@ -51,9 +51,8 @@ job "world-model-service" {
 
         check {
           type     = "script"
-          name     = "check-state"
-          command  = "/usr/local/bin/python"
-          args     = ["-c", "import httpx, os; httpx.get('http://127.0.0.1:' + os.environ['NOMAD_PORT_http'] + '/state').raise_for_status()"]
+          name     = "alive"
+          command  = "python -c 'import urllib.request, os, sys; sys.exit(0) if urllib.request.urlopen(\"http://127.0.0.1:\" + os.environ[\"NOMAD_PORT_http\"] + \"/state\").getcode() == 200 else sys.exit(1)'"
           interval = "15s"
           timeout  = "10s"
         }

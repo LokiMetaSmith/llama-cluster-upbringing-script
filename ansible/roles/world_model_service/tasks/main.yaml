@@ -80,6 +80,8 @@
   register: nomad_job_template
 
 - name: "World Model Service : Run nomad job"
+  tags:
+    - world_model_service
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run /opt/nomad/jobs/world_model.nomad"
   environment:
