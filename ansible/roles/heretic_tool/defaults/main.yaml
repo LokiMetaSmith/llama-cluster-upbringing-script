@@ -1,3 +1,2 @@
----
 heretic_tool_dir: /opt/heretic_tool
 heretic_tool_venv_dir: "{{ heretic_tool_dir }}/venv"
