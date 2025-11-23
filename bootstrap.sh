@@ -127,14 +127,14 @@ cd "$SCRIPT_DIR"
 # --- Run Initial Machine Setup based on Role ---
 # This script handles pre-Ansible configuration like network and hostname.
 # It's run for all roles, and the script itself determines what to do based on the config.
-# echo "--- Running Initial Machine Setup ---"
-# if [ -f "initial-setup/setup.sh" ]; then
-#     echo "You may be prompted for your sudo password to run the initial setup script."
-#     sudo bash "initial-setup/setup.sh"
-#     echo "✅ Initial machine setup complete."
-# else
-#     echo "⚠️  Warning: initial-setup/setup.sh not found. Skipping pre-configuration."
-# fi
+echo "--- Running Initial Machine Setup ---"
+if [ -f "initial-setup/setup.sh" ]; then
+    echo "You may be prompted for your sudo password to run the initial setup script."
+    sudo bash "initial-setup/setup.sh"
+    echo "✅ Initial machine setup complete."
+else
+    echo "⚠️  Warning: initial-setup/setup.sh not found. Skipping pre-configuration."
+fi
 
 
 # --- Handle the --clean option ---
