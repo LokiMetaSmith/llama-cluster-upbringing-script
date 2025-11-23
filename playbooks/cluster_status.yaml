@@ -1,4 +1,5 @@
-- hosts: localhost
+- name: Check Cluster Status
+  hosts: localhost
   gather_facts: no
   become: no
 
@@ -11,21 +12,25 @@
       ansible.builtin.uri:
         url: "{{ consul_api_url }}"
       register: consul_members_result
+      check_mode: no
+      ignore_errors: yes
 
     - name: "Parse Consul Members"
       ansible.builtin.set_fact:
-        consul_servers: "{{ consul_members_result.json | selectattr('Tags.role', 'equalto', 'consul') | list }}"
-        consul_clients: "{{ consul_members_result.json | selectattr('Tags.role', 'ne', 'consul') | list }}"
+        consul_servers: "{{ (consul_members_result.json | default([])) | selectattr('Tags.role', 'equalto', 'consul') | list }}"
+        consul_clients: "{{ (consul_members_result.json | default([])) | selectattr('Tags.role', 'ne', 'consul') | list }}"
 
     - name: "Check Nomad Cluster Members"
       ansible.builtin.uri:
         url: "{{ nomad_api_url }}"
       register: nomad_nodes_result
+      check_mode: no
+      ignore_errors: yes
 
     - name: "Parse Nomad Members"
       ansible.builtin.set_fact:
-        nomad_servers: "{{ nomad_nodes_result.json | selectattr('Server', 'equalto', true) | list }}"
-        nomad_clients: "{{ nomad_nodes_result.json | selectattr('Server', 'equalto', false) | list }}"
+        nomad_servers: "{{ (nomad_nodes_result.json | default([])) | selectattr('Server', 'equalto', true) | list }}"
+        nomad_clients: "{{ (nomad_nodes_result.json | default([])) | selectattr('Server', 'equalto', false) | list }}"
 
     - name: "Display Cluster Status"
       ansible.builtin.debug:
