@@ -14,13 +14,13 @@ option client-arch code 93 = unsigned integer 16;
 
 log-facility local7;
 
-subnet 192.168.1.0 netmask 255.255.255.0 {
-  range 192.168.1.200 192.168.1.250;
-  option routers 192.168.1.1;
+subnet {{ pxe_subnet }} netmask {{ pxe_netmask }} {
+  range {{ pxe_range_start }} {{ pxe_range_end }};
+  option routers {{ pxe_router }};
 
   if exists user-class and option user-class = "iPXE" {
     # Client is already running iPXE
-    filename "http://{{ ansible_default_ipv4.address }}/boot.ipxe";
+    filename "http://{{ cluster_ip }}/boot.ipxe";
   } else if option client-arch = 00:07 {
     # UEFI client
     filename "ipxe.efi";
