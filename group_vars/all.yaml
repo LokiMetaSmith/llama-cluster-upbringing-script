@@ -7,8 +7,17 @@ expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups els
 
 # This variable dynamically determines the node ID based on the hostname.
 # If the hostname is 'devbox', the ID is 10.
-# Otherwise, it extracts the number from the hostname (e.g., 'worker1' -> 1) and adds 10 (result: 11).
-node_id: "{{ '10' if inventory_hostname == 'devbox' else (inventory_hostname | regex_replace('^.*?([0-9]+)$', '\\\\1') | int + 10) }}"
+# If the hostname contains numbers (e.g. 'worker1'), it extracts them and adds 10 (worker1 -> 11).
+# If the hostname has no numbers (e.g. 'loki'), it defaults to 11 to match the shell script fallback.
+node_id: >-
+  {{
+    '10' if inventory_hostname == 'devbox'
+    else (
+      ((inventory_hostname | regex_search('[0-9]+')) | int + 10)
+      if (inventory_hostname | regex_search('[0-9]+'))
+      else '11'
+    )
+  }}
 
 cluster_subnet_prefix: "10.0.0"
 cluster_ip: "{{ cluster_subnet_prefix }}.{{ node_id }}"
