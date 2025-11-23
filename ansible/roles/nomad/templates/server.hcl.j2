@@ -1,10 +1,11 @@
 data_dir  = "{{ nomad_data_dir }}"
-bind_addr = "0.0.0.0" # Listen on all interfaces
+bind_addr = "{{ cluster_ip }}" # Bind explicitly to the Private Alias IP
 
 advertise {
-  http = "{{ ansible_default_ipv4.address }}"
-  rpc  = "{{ ansible_default_ipv4.address }}"
-  serf = "{{ ansible_default_ipv4.address }}"
+  # Advertise the private IP so other nodes talk over the private lane
+  http = "{{ cluster_ip }}"
+  rpc  = "{{ cluster_ip }}"
+  serf = "{{ cluster_ip }}"
 }
 
 {% if is_controller is defined and is_controller %}
@@ -40,7 +41,7 @@ plugin "exec" {
 
 client {
   enabled = true
-  servers = ["127.0.0.1"]
+  servers = ["{{ cluster_ip }}"]
 
   host_volume "pipecatapp" {
     path      = "/opt/pipecatapp"

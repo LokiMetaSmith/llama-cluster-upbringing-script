@@ -21,55 +21,44 @@ containsElement () {
 # --- Get current hostname ---
 CURRENT_HOSTNAME=$(hostname)
 
-# --- Determine node type and configure network ---
-if containsElement "$CURRENT_HOSTNAME" "${CONTROLLER_HOSTNAMES[@]}"; then
-    # This is a CONTROLLER node, configure a static IP.
-    log "Node '$CURRENT_HOSTNAME' is a controller. Configuring static IP: $STATIC_IP..."
-
-    # Check if the IP is already configured
-    if ip addr show "$INTERFACE" | grep -q "$STATIC_IP"; then
-        log "Static IP $STATIC_IP is already configured on $INTERFACE."
-        return 0
-    fi
-
-    cat > /etc/network/interfaces <<EOL
-# This file is managed by the llama-cluster-upbringing-script
-
-# The loopback network interface
-auto lo
-iface lo inet loopback
-
-auto $INTERFACE
-iface $INTERFACE inet static
-    address $STATIC_IP
-    netmask $NETMASK
-    gateway $GATEWAY
-    dns-nameservers 1.1.1.1 8.8.8.8
-EOL
-    log "Static IP configuration written for $INTERFACE."
-
+# --- Derive NODE_ID for cluster network ---
+# If hostname is 'devbox', use 10. Otherwise extract number and add 10.
+if [ "$CURRENT_HOSTNAME" == "devbox" ]; then
+    NODE_ID=10
 else
-    # This is a WORKER node, configure DHCP.
-    log "Node '$CURRENT_HOSTNAME' is a worker. Configuring DHCP..."
-
-    # Check if DHCP is already configured
-    if grep -q "iface $INTERFACE inet dhcp" /etc/network/interfaces; then
-        log "DHCP is already configured on $INTERFACE."
-        return 0
+    NODE_ID_SUFFIX=$(echo "$CURRENT_HOSTNAME" | tr -dc '0-9')
+    if [ -z "$NODE_ID_SUFFIX" ]; then
+        # Fallback if no number found, though this shouldn't happen with correct naming
+        NODE_ID=11
+        log "WARNING: Could not extract number from hostname $CURRENT_HOSTNAME. Defaulting to 11."
+    else
+        NODE_ID=$((NODE_ID_SUFFIX + 10))
     fi
+fi
+log "Derived Node ID: $NODE_ID (Cluster IP: ${CLUSTER_SUBNET_PREFIX}.${NODE_ID})"
 
-    cat > /etc/network/interfaces <<EOL
+# --- Configure Network Interfaces ---
+# All nodes use DHCP for the primary interface (WAN) and a static alias for the cluster (LAN).
+
+cat > /etc/network/interfaces <<EOL
 # This file is managed by the llama-cluster-upbringing-script
 
 # The loopback network interface
 auto lo
 iface lo inet loopback
 
+# Primary Interface (WAN) - Gets Internet from Home Router
 auto $INTERFACE
 iface $INTERFACE inet dhcp
+
+# Virtual Interface (Cluster LAN) - Private Static IP
+auto $INTERFACE:0
+iface $INTERFACE:0 inet static
+    address ${CLUSTER_SUBNET_PREFIX}.${NODE_ID}
+    netmask ${CLUSTER_NETMASK}
 EOL
-    log "DHCP configuration written for $INTERFACE."
-fi
+
+log "Network configuration written. WAN: DHCP, LAN: ${CLUSTER_SUBNET_PREFIX}.${NODE_ID}"
 
 
 # --- Restart networking service ---

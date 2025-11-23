@@ -5,6 +5,14 @@
 nomad_zip_url: "https://releases.hashicorp.com/nomad/1.7.5/nomad_1.7.5_linux_amd64.zip"
 expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
 
+# This variable dynamically determines the node ID based on the hostname.
+# If the hostname is 'devbox', the ID is 10.
+# Otherwise, it extracts the number from the hostname (e.g., 'worker1' -> 1) and adds 10 (result: 11).
+node_id: "{{ '10' if inventory_hostname == 'devbox' else (inventory_hostname | regex_replace('^.*?([0-9]+)$', '\\\\1') | int + 10) }}"
+
+cluster_subnet_prefix: "10.0.0"
+cluster_ip: "{{ cluster_subnet_prefix }}.{{ node_id }}"
+
 ansible_python_interpreter: /usr/bin/python3
 
 # This variable dynamically determines the IP address for Nomad to advertise.
@@ -96,9 +104,9 @@ pxe_interface: "enp0s8"
 # Replace this with your actual public key.
 pxe_client_ssh_key: "ssh-rsa AAAA..."
 
-# DHCP network configuration for NixOS clients.
-pxe_subnet: "192.168.1.0"
+# DHCP network configuration for NixOS clients and the pxe_server role.
+pxe_subnet: "10.0.0.0"
 pxe_netmask: "255.255.255.0"
-pxe_range_start: "192.168.1.200"
-pxe_range_end: "192.168.1.250"
-pxe_router: "192.168.1.1"
+pxe_range_start: "10.0.0.200"
+pxe_range_end: "10.0.0.250"
+pxe_router: "10.0.0.1"
