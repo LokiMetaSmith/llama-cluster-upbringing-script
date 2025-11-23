@@ -21,7 +21,6 @@ job "world-model-service" {
 
       config {
         image   = "world-model-service:latest"
-        ports   = ["http"]
         force_pull = false
       }
 
@@ -50,11 +49,13 @@ job "world-model-service" {
         port = "http"
 
         check {
-          type     = "script"
+          type     = "http"
           name     = "alive"
-          command  = "python -c 'import urllib.request, os, sys; sys.exit(0) if urllib.request.urlopen(\"http://127.0.0.1:\" + os.environ[\"NOMAD_PORT_http\"] + \"/state\").getcode() == 200 else sys.exit(1)'"
+          path     = "/state"
           interval = "15s"
           timeout  = "10s"
+          method   = "GET"
+          port     = "http"
         }
       }
     }
