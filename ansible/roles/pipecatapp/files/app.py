@@ -47,6 +47,7 @@ from tools.orchestrator_tool import OrchestratorTool
 from tools.llxprt_code_tool import LLxprt_Code_Tool
 from tools.claude_clone_tool import ClaudeCloneTool
 from tools.smol_agent_tool import SmolAgentTool
+from tools.prompt_improver_tool import PromptImproverTool
 from durable_execution import DurableExecutionEngine, durable_step
 
 import uvicorn
@@ -570,6 +571,7 @@ class TwinService(FrameProcessor):
             "orchestrator": OrchestratorTool(),
             "llxprt_code": LLxprt_Code_Tool(),
             "claude_clone": ClaudeCloneTool(),
+            "prompt_improver": PromptImproverTool(self),
         }
 
         if self.app_config.get("use_summarizer", False):
@@ -746,6 +748,8 @@ class TwinService(FrameProcessor):
 
         # Execute tool
         result = method(**args)
+        if inspect.iscoroutine(result):
+            result = await result
 
         # Capture screenshot
         new_screenshot = self.tools["desktop_control"].get_desktop_screenshot()
