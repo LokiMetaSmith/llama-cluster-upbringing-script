@@ -1,4 +1,5 @@
-- hosts: localhost
+- name: Diagnose Home Assistant
+  hosts: localhost
   become: yes
   gather_facts: no
   tasks:
@@ -8,6 +9,7 @@
       register: job_status
       changed_when: false
       ignore_errors: yes
+      check_mode: no
 
     - name: Display Nomad job status
       ansible.builtin.debug:
@@ -19,11 +21,12 @@
       register: ha_allocations_response
       when: job_status.rc == 0 and "'No allocations placed' not in job_status.stdout"
       ignore_errors: yes
+      check_mode: no
 
     - name: Set latest allocation fact
       ansible.builtin.set_fact:
         latest_ha_allocation: "{{ (ha_allocations_response.json | default([]) | sort(attribute='CreateIndex', reverse=true) | first) }}"
-      when: ha_allocations_response.status == 200 and ha_allocations_response.json is defined and ha_allocations_response.json | length > 0
+      when: ha_allocations_response.status is defined and ha_allocations_response.status == 200 and ha_allocations_response.json is defined and ha_allocations_response.json | length > 0
 
     - name: Get logs for latest home-assistant allocation
       ansible.builtin.command:

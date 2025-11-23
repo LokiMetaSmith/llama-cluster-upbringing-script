@@ -1,4 +1,5 @@
-- hosts: localhost
+- name: Deploy Expert Job
+  hosts: localhost
   connection: local
   gather_facts: yes
 
@@ -22,6 +23,12 @@
       - "models={{ model_list | map(attribute='filename') | join(',') }}"
 
   tasks:
+    - name: Create virtual environment
+      ansible.builtin.command: python3 -m venv /tmp/jinja2_venv
+      args:
+        creates: /tmp/jinja2_venv/bin/pip
+      check_mode: no
+
     - name: Install jinja2 into the virtual environment
       ansible.builtin.pip:
         executable: /tmp/jinja2_venv/bin/pip
@@ -47,6 +54,7 @@
             'ansible_memtotal_mb': ansible_memtotal_mb
           } | to_json }}"
         dest: "{{ playbook_dir }}/tmp/expert-{{ current_expert }}-vars.json"
+        mode: '0644'
 
     - name: Render the Llama Expert job template with custom variables
       ansible.builtin.shell:
@@ -59,6 +67,7 @@
     - name: Run nomad version
       ansible.builtin.command: nomad version
       register: nomad_version_output
+      changed_when: false
 
     - name: Display Nomad version
       ansible.builtin.debug:
