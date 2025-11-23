@@ -34,23 +34,11 @@ if ! docker ps | grep -q $CONTAINER_NAME; then
     exit 1
 fi
 
-echo "Checking application health via HTTP (HOST)..."
+echo "Checking application health at http://localhost:$DEBUG_PORT/state..."
 if curl -v --max-time 5 http://localhost:$DEBUG_PORT/state; then
-    echo "Success: Application is reachable via curl!"
+    echo "Success: Application is healthy!"
 else
-    echo "Failure: Application is not responding to curl."
-fi
-
-echo "Checking application health via Python script (INTERNAL)..."
-# Simulate Nomad script check: Execute python inside container
-# We must pass the env var explicitly because docker exec doesn't inherit container env vars by default in the same way Nomad might expects?
-# Actually, docker exec DOES NOT use container env vars for the command unless they are exported in the entrypoint or passed.
-# But Nomad documentation says it runs in the task environment.
-# Let's test WITH explicit env var first to verify the script logic.
-if docker exec -e NOMAD_PORT_http=$DEBUG_PORT $CONTAINER_NAME /usr/local/bin/python -c "import httpx, os; httpx.get('http://127.0.0.1:' + os.environ['NOMAD_PORT_http'] + '/state').raise_for_status()"; then
-    echo "Success: Internal python script check passed!"
-else
-    echo "Failure: Internal python script check failed."
+    echo "Failure: Application is not responding."
 fi
 
 echo "=== Container Logs ==="
