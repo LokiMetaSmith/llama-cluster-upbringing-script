@@ -69,7 +69,27 @@ class Ansible_Tool:
             if process.returncode == 0:
                 return f"Playbook run completed successfully.\nOutput:\n{process.stdout}"
             else:
-                return f"Playbook run failed with return code {process.returncode}.\nSTDOUT:\n{process.stdout}\nSTDERR:\n{process.stderr}"
+                error_msg = f"Playbook run failed with return code {process.returncode}.\nSTDOUT:\n{process.stdout}\nSTDERR:\n{process.stderr}"
+
+                # Reinforcement: Add hints based on common errors
+                hints = []
+                combined_output = (process.stdout or "") + (process.stderr or "")
+
+                if "UNREACHABLE" in combined_output:
+                    hints.append("HINT: The target host is unreachable. Check your network connection, VPN, or SSH keys.")
+                if "syntax error" in combined_output.lower() or "yaml" in combined_output.lower():
+                    hints.append("HINT: There seems to be a syntax error in the playbook. Check for invalid YAML or Jinja2 syntax.")
+                if "undefined variable" in combined_output.lower():
+                    hints.append("HINT: A variable is undefined. Check group_vars, extra_vars, or default values.")
+                if "permission denied" in combined_output.lower():
+                    hints.append("HINT: Permission denied. Ensure you are using 'become: yes' if root privileges are needed.")
+                if "apt" in combined_output.lower() and "lock" in combined_output.lower():
+                    hints.append("HINT: Could not get lock /var/lib/dpkg/lock. Another process is using apt/dpkg. Wait a moment or kill the process.")
+
+                if hints:
+                    error_msg += "\n\n" + "\n".join(hints)
+
+                return error_msg
 
         except subprocess.TimeoutExpired as e:
             return f"Error: Ansible playbook run timed out after 15 minutes.\nSTDOUT:\n{e.stdout}\nSTDERR:\n{e.stderr}"

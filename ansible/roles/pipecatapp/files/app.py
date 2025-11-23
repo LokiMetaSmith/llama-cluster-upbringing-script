@@ -47,6 +47,8 @@ from tools.orchestrator_tool import OrchestratorTool
 from tools.llxprt_code_tool import LLxprt_Code_Tool
 from tools.claude_clone_tool import ClaudeCloneTool
 from tools.smol_agent_tool import SmolAgentTool
+from tools.final_answer_tool import FinalAnswerTool
+from tools.shell_tool import ShellTool
 from tools.prompt_improver_tool import PromptImproverTool
 from durable_execution import DurableExecutionEngine, durable_step
 
@@ -571,6 +573,8 @@ class TwinService(FrameProcessor):
             "orchestrator": OrchestratorTool(),
             "llxprt_code": LLxprt_Code_Tool(),
             "claude_clone": ClaudeCloneTool(),
+            "final_answer": FinalAnswerTool(),
+            "shell": ShellTool(),
             "prompt_improver": PromptImproverTool(self),
         }
 
@@ -793,7 +797,14 @@ class TwinService(FrameProcessor):
             self._contents.append({"role": "assistant", "content": [{"type": "text", "text": llm_response_text}]})
             try:
                 tool_call = json.loads(llm_response_text)
-                if tool_call.get("tool") == "task_complete":
+
+                # Handle explicit completion via FinalAnswerTool or legacy "task_complete"
+                if tool_call.get("tool") == "final_answer.submit_task":
+                    final_response = tool_call.get("args", {}).get("summary", "Task completed.")
+                    await self._send_response(final_response)
+                    self.short_term_memory.append(f"Assistant: {final_response}")
+                    return
+                elif tool_call.get("tool") == "task_complete": # Legacy fallback
                     final_response = await self.router_llm.process_text("Summarize what you did and why.")
                     await self._send_response(final_response)
                     self.short_term_memory.append(f"Assistant: {final_response}")
