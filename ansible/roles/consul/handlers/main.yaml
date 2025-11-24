@@ -3,3 +3,8 @@
   ansible.builtin.service:
     name: consul
     state: restarted
+
+- name: Wait for Consul to start up
+  wait_for:
+    port: 8500
+    delay: 10

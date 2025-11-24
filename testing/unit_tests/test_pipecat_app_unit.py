@@ -7,6 +7,13 @@ from unittest.mock import MagicMock, AsyncMock, patch
 # Add the parent directory of 'testing' to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files')))
 
+# Mock problematic modules before importing app
+sys.modules["pyaudio"] = MagicMock()
+sys.modules["faster_whisper"] = MagicMock()
+sys.modules["piper"] = MagicMock()
+sys.modules["piper.voice"] = MagicMock()
+sys.modules["pipecat.transports.local.audio"] = MagicMock()
+
 # Now we can import from the files in ansible/roles/pipecatapp/files
 from app import TwinService
 from web_server import app

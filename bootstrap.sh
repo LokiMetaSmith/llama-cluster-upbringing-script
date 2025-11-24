@@ -212,6 +212,9 @@ if [ -f "requirements-dev.txt" ]; then
 else
     echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
 fi
+echo "Installing essential Ansible dependencies..."
+pip install ansible-core
+echo "✅ Ansible dependencies installed."
 
 # --- Find Ansible Playbook executable ---
 # JULES: The original find_executable function was unreliable. This new approach

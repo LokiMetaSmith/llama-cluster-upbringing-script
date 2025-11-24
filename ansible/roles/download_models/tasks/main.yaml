@@ -6,6 +6,7 @@
     method: GET
     status_code: [200, 404]
     return_content: true
+  check_mode: no
   loop:
     - main
     - coding
@@ -24,11 +25,11 @@
 
 - name: Set model facts from Consul KV
   ansible.builtin.set_fact:
-    llm_models_to_download: "{{ consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'router']) | map(attribute='content') | map('from_json') | sum(start=[]) }}"
-    piper_voice_files: "{{ consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'piper_voice_files') | map(attribute='content') | map('from_json') | first | default([]) }}"
-    embedding_models: "{{ consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'embedding_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
-    stt_models: "{{ ((consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'stt_models') | first).content | default('{}')) | from_json }}"
-    vision_models: "{{ consul_models.results | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'vision_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
+    llm_models_to_download: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'router']) | map(attribute='content') | map('from_json') | sum(start=[]) }}"
+    piper_voice_files: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'piper_voice_files') | map(attribute='content') | map('from_json') | first | default([]) }}"
+    embedding_models: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'embedding_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
+    stt_models: "{{ ((consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'stt_models') | first).content | default('{}')) | from_json }}"
+    vision_models: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'vision_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
 
 
 # ---------------------------------------------------------------------------- #
