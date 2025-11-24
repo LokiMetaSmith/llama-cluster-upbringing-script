@@ -205,6 +205,13 @@ if [ "$DEBUG_MODE" = true ]; then
 fi
 
 # --- Install Python dependencies ---
+echo "Installing Python dependencies from requirements-dev.txt..."
+if [ -f "requirements-dev.txt" ]; then
+    pip install --no-cache-dir -r requirements-dev.txt
+    echo "✅ Python dependencies installed."
+else
+    echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
+fi
 echo "Installing essential Ansible dependencies..."
 pip install ansible-core
 echo "✅ Ansible dependencies installed."
