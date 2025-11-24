@@ -42,7 +42,8 @@ modules_to_mock = [
     'pyaudio',
     'faster_whisper',
     'piper',
-    'piper.voice'
+    'piper.voice',
+    'daily'
 ]
 
 def mock_module_if_missing(module_name):
@@ -51,7 +52,7 @@ def mock_module_if_missing(module_name):
 
     try:
         __import__(module_name)
-    except ImportError:
+    except (ImportError, Exception):
         sys.modules[module_name] = MagicMock()
         if module_name == 'numpy':
              # Ensure array creation returns a Mock that behaves like a list/array
