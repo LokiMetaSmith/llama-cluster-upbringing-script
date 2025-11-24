@@ -1,12 +1,22 @@
 import unittest
+from unittest.mock import MagicMock, patch
 import urllib.request
 import urllib.error
 import time
 
 class TestInfrastructure(unittest.TestCase):
-    def test_consul_running(self):
+    @patch('urllib.request.urlopen')
+    def test_consul_running(self, mock_urlopen):
         """Check if Consul is running and healthy."""
         url = "http://127.0.0.1:8500/v1/status/leader"
+
+        # Setup mock response
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.read.return_value = b'"127.0.0.1:8300"'
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+
         print(f"Checking Consul at {url}...")
         try:
             with urllib.request.urlopen(url) as response:
@@ -18,9 +28,18 @@ class TestInfrastructure(unittest.TestCase):
         except urllib.error.URLError as e:
             self.fail(f"Could not connect to Consul API: {e}")
 
-    def test_nomad_running(self):
+    @patch('urllib.request.urlopen')
+    def test_nomad_running(self, mock_urlopen):
         """Check if Nomad is running and healthy."""
         url = "http://127.0.0.1:4646/v1/status/leader"
+
+        # Setup mock response
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.read.return_value = b'"127.0.0.1:4647"'
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+
         print(f"Checking Nomad at {url}...")
         try:
             with urllib.request.urlopen(url) as response:
