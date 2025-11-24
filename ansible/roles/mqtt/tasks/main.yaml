@@ -26,6 +26,7 @@
       log_dest stdout
       log_type all
       listener 1883
+      bind_address {{ advertise_ip }}
       allow_anonymous true
       listener 9001
       protocol websockets
