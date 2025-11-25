@@ -47,6 +47,7 @@ async def evaluate_code(candidate_code: str) -> dict:
     """
     eval_id = str(uuid.uuid4())[:8]
     archive_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "archive"))
+    os.makedirs(archive_dir, exist_ok=True)
     agent_code_path = os.path.join(archive_dir, f"{eval_id}.py")
     agent_meta_path = os.path.join(archive_dir, f"{eval_id}.json")
 
