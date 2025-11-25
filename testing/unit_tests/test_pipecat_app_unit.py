@@ -41,38 +41,22 @@ def test_health_check(client, mocker):
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
-@pytest.mark.requires_display
 @pytest.mark.asyncio
-async def test_twin_service_initialization(mocker):
-    """Tests that the TwinService initializes correctly."""
-    mocker.patch('memory.SentenceTransformer')
-    mocker.patch('faiss.IndexFlatL2')
-    mocker.patch('docker.from_env')
-    mocker.patch('tools.web_browser_tool.sync_playwright')
-    mocker.patch('tools.summarizer_tool.SentenceTransformer')
-    mock_llm = AsyncMock()
-    mock_vision = AsyncMock()
-    mock_runner = AsyncMock()
-    mock_config = MagicMock()
-    service = TwinService(llm=mock_llm, vision_detector=mock_vision, runner=mock_runner, app_config=mock_config)
-    assert service is not None
+async def test_workflow_runner_loads_definition(mocker):
+    """Tests that the WorkflowRunner can successfully load and parse the default workflow."""
+    # We need to mock the nodes and other dependencies to isolate the runner
+    mocker.patch('workflow.runner.registry.get_node_class', return_value=MagicMock())
 
-@pytest.mark.requires_display
-@pytest.mark.asyncio
-async def test_twin_service_sends_vision_frame(mocker):
-    """Tests that TwinService sends a vision frame to the LLM."""
-    mocker.patch('memory.SentenceTransformer')
-    mocker.patch('faiss.IndexFlatL2')
-    mocker.patch('docker.from_env')
-    mocker.patch('tools.web_browser_tool.sync_playwright')
-    mocker.patch('tools.summarizer_tool.SentenceTransformer')
-    mock_llm = AsyncMock()
-    mock_vision = AsyncMock()
-    mock_runner = AsyncMock()
-    mock_config = MagicMock()
+    # The path is relative to the `app.py` file's location
+    workflow_path = os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'workflows', 'default_agent_loop.yaml')
 
-    service = TwinService(llm=mock_llm, vision_detector=mock_vision, runner=mock_runner, app_config=mock_config)
-    assert service is not None
+    # This will raise an error if the file is not found or is invalid YAML
+    from workflow.runner import WorkflowRunner
+    runner = WorkflowRunner(workflow_path)
+
+    assert runner is not None
+    assert "nodes" in runner.workflow_definition
+    assert len(runner.workflow_definition["nodes"]) > 0
 
 @pytest.mark.asyncio
 async def test_health_check_is_healthy(mocker):

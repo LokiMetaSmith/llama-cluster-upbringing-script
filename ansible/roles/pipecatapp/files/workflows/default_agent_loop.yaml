@@ -1,0 +1,80 @@
+# This workflow defines a single turn of the agent's reasoning loop.
+# It takes a user query, captures the screen, calls the LLM,
+# and then either executes a tool or returns a final text response.
+
+nodes:
+  - id: "input"
+    type: "InputNode"
+    outputs:
+      - name: "user_text"
+      - name: "tools_dict"
+
+  - id: "get_system_prompt"
+    type: "SystemPromptNode"
+    inputs:
+      - name: "tools"
+        connection:
+          from_node: "input"
+          from_output: "tools_dict"
+    outputs:
+      - name: "system_prompt"
+
+  - id: "capture_screenshot"
+    type: "ScreenshotNode"
+    inputs:
+      - name: "tools"
+        connection:
+          from_node: "input"
+          from_output: "tools_dict"
+    outputs:
+      - name: "screenshot_base64"
+
+  - id: "build_prompt"
+    type: "PromptBuilderNode"
+    inputs:
+      - name: "system_prompt"
+        connection:
+          from_node: "get_system_prompt"
+          from_output: "system_prompt"
+      - name: "user_text"
+        connection:
+          from_node: "input"
+          from_output: "user_text"
+      - name: "screenshot"
+        connection:
+          from_node: "capture_screenshot"
+          from_output: "screenshot_base64"
+    outputs:
+      - name: "messages"
+
+  - id: "call_vision_llm"
+    type: "VisionLLMNode"
+    inputs:
+      - name: "messages"
+        connection:
+          from_node: "build_prompt"
+          from_output: "messages"
+    outputs:
+      - name: "response_text"
+
+  - id: "parse_llm_response"
+    type: "ToolParserNode"
+    inputs:
+      - name: "llm_response"
+        connection:
+          from_node: "call_vision_llm"
+          from_output: "response_text"
+    outputs:
+      - name: "tool_call_data"
+      - name: "final_response"
+
+  # This is a placeholder for a more complex loop.
+  # For now, we just output the first response. A full implementation
+  # would feed the tool result back into the LLM.
+  - id: "output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_output"
+        connection:
+          from_node: "parse_llm_response"
+          from_output: "final_response"
