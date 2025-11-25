@@ -101,4 +101,18 @@ class ToolExecutorNode(Node):
         if inspect.iscoroutine(result):
             result = await result
 
+        # Quality control check for code-generating tools
+        if tool_name in ["code_runner", "smol_agent_computer", "llxprt_code"]:
+            if twin_service and hasattr(twin_service, 'quality_analyzer'):
+                analysis_result = twin_service.quality_analyzer.analyze(result)
+                # Format the structured result for the LLM
+                combined_result = (
+                    f"Tool output:\n```\n{result}\n```\n\n"
+                    f"Quality Analysis:\n"
+                    f"  - Score: {analysis_result['quality_score']}\n"
+                    f"  - Report:\n{analysis_result['pylint_report']}"
+                )
+                self.set_output(context, "tool_result", combined_result)
+                return
+
         self.set_output(context, "tool_result", str(result)) # Ensure result is a string
