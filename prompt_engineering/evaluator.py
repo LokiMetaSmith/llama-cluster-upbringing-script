@@ -46,6 +46,16 @@ async def evaluate_code(candidate_code: str) -> dict:
               fail), a boolean 'passed' status, and details from the test run.
     """
     eval_id = str(uuid.uuid4())[:8]
+    archive_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "archive"))
+    agent_code_path = os.path.join(archive_dir, f"{eval_id}.py")
+    agent_meta_path = os.path.join(archive_dir, f"{eval_id}.json")
+
+    # Save the candidate code to the archive
+    with open(agent_code_path, "w") as f:
+        f.write(candidate_code)
+    logging.info(f"Saved candidate agent to {agent_code_path}")
+
+
     temp_dir = f"/tmp/eval-{eval_id}"
     app_job_id = f"pipecat-app-eval-{eval_id}"
     service_name = f"llama-api-eval-{eval_id}"
@@ -114,17 +124,30 @@ async def evaluate_code(candidate_code: str) -> dict:
 
         logging.info(f"Evaluation finished. Fitness: {fitness}. Details: {results.get('details')}")
 
-        return {
+        evaluation_results = {
             "fitness": fitness,
             "passed": results.get("passed"),
             "details": results.get("details"),
             "log": results.get("log", "")
         }
+        return evaluation_results
 
     except Exception as e:
         logging.error(f"An error occurred during evaluation: {e}", exc_info=True)
-        return {"fitness": 0.0, "error": str(e)}
+        evaluation_results = {"fitness": 0.0, "error": str(e)}
+        return evaluation_results
     finally:
+        # Save metadata to the archive
+        if 'evaluation_results' in locals():
+            # Check for parent ID from the environment
+            parent_id = os.environ.get("PARENT_AGENT_ID")
+            if parent_id:
+                evaluation_results["parent"] = parent_id
+
+            with open(agent_meta_path, "w") as f:
+                json.dump(evaluation_results, f, indent=2)
+            logging.info(f"Saved agent metadata to {agent_meta_path}")
+
         # Cleanup successful jobs, leave failed ones for inspection
         cleanup(jobs_to_clean, temp_dir)
 
