@@ -7,6 +7,7 @@ from fastapi import FastAPI, WebSocket, Body, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict
+from workflow.runner import ActiveWorkflows
 
 
 # Configure logging
@@ -147,6 +148,12 @@ async def get_health(request: Request):
         return JSONResponse(content={"status": "ok"})
     else:
         return JSONResponse(status_code=503, content={"status": "initializing"})
+
+@app.get("/api/workflows/active", response_class=JSONResponse)
+async def get_active_workflows():
+    """Returns a snapshot of the state of all active workflows."""
+    active_workflows = ActiveWorkflows()
+    return active_workflows.get_all_states()
 
 @app.get("/api/web_uis")
 async def get_web_uis():
