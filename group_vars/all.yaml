@@ -23,7 +23,10 @@ cluster_subnet_prefix: "10.0.0"
 # In single-node or dev environments without a dedicated overlay network,
 # we bind to the primary interface IP to ensure services start.
 # Otherwise, we use the overlay network IP derived from the node ID.
-cluster_ip: "{{ advertise_ip if (groups['all'] | length == 1 or inventory_hostname == 'devbox') else (cluster_subnet_prefix + '.' + node_id) }}"
+#cluster_ip: "{{ advertise_ip if (groups['all'] | length == 1 or inventory_hostname == 'devbox') else (cluster_subnet_prefix + '.' + node_id) }}"
+# NEW: Always use the calculated static IP
+cluster_ip: "{{ cluster_subnet_prefix + '.' + node_id }}"
+
 
 ansible_python_interpreter: /usr/bin/python3
 
