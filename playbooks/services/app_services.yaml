@@ -87,6 +87,7 @@
         - llxprt_code
         - claude_clone
         - moe_gateway
+        - mcp_server
       loop_control:
         loop_var: role_name
       tags:
