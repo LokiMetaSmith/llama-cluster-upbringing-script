@@ -1,0 +1,3 @@
+- name: Run mcp server job
+  ansible.builtin.command: nomad job run /opt/nomad/jobs/mcp_server.nomad
+  changed_when: true
