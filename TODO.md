@@ -1,11 +1,34 @@
 # TODO
 
 ```markdown
-Last updated: 2025-11-06
+Last updated: 2025-11-26
 
 # TODO
 
 This document outlines the major refactoring, feature enhancement, and maintenance tasks for the project. It is divided into high-priority tasks for improving stability and a backlog of future enhancements.
+
+---
+
+## Prompt Engineering Enhancements
+
+This section tracks future improvements for the DGM-style evolutionary workflow.
+
+- [ ] **Implement Automated Testing for `prompt_engineering`:**
+    - Create a new test suite (e.g., `testing/unit_tests/test_prompt_engineering.py`).
+    - Add unit tests for the core logic in `run_campaign.py`, `visualize_archive.py`, and `promote_agent.py`.
+    - Mock the `subprocess` calls to `evolve.py` to test the campaign loop without running the full, slow evolution process.
+    - Create a small, temporary mock archive to test the analysis, visualization, and promotion scripts against a known, controlled dataset.
+
+- [ ] **Improve Parent Selection Algorithm:**
+    - Research alternative selection strategies from evolutionary computation (e.g., tournament selection, novelty search).
+    - Add a new command-line argument to `evolve.py` to allow the user to choose the selection strategy (e.g., `--selection-method tournament`).
+    - Implement the new selection logic in the `select_parent_from_archive` function.
+
+- [ ] **Web-Based UI for Campaign Analysis:**
+    - Create a new script `archive_server.py` using a lightweight web framework like Flask or FastAPI.
+    - The server should have an endpoint that reads the entire `archive/` directory and constructs a JSON representation of the evolutionary tree.
+    - Create a simple, single-page HTML/JavaScript frontend that fetches this JSON and uses a library (like D3.js or vis.js) to render an interactive evolutionary tree.
+    - The UI should allow clicking on a node to display the agent's full details (code, rationale, fitness, parent) in a side panel.
 
 ---
 
