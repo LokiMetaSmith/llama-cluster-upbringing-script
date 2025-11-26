@@ -125,6 +125,8 @@ nodes:
     inputs:
       - name: "expert_name"
         connection:
+          from_node: "branch_on_tool_type"
+          from_output: "output_true"
           from_node: "gate_expert_call"
           from_output: "output"
         transform: "extract_expert"
@@ -132,6 +134,8 @@ nodes:
         connection:
           from_node: "gate_expert_call"
           from_output: "output"
+          from_node: "branch_on_tool_type"
+          from_output: "output_true"
         transform: "extract_query"
     outputs:
       - name: "expert_response"
@@ -143,6 +147,8 @@ nodes:
         connection:
           from_node: "gate_tool_call"
           from_output: "output"
+          from_node: "branch_on_tool_type"
+          from_output: "output_false"
     outputs:
       - name: "tool_result"
 

@@ -23,7 +23,8 @@ cluster_subnet_prefix: "10.0.0"
 # In single-node or dev environments without a dedicated overlay network,
 # we bind to the primary interface IP to ensure services start.
 # Otherwise, we use the overlay network IP derived from the node ID.
-cluster_ip: "{{ advertise_ip if (groups['all'] | length == 1 or inventory_hostname == 'devbox') else (cluster_subnet_prefix + '.' + node_id) }}"
+cluster_ip: "{{ cluster_subnet_prefix + '.' + node_id }}"
+
 
 ansible_python_interpreter: /usr/bin/python3
 
@@ -68,6 +69,7 @@ pipecat_api_keys: ""
 #     - group_vars/secrets.yaml
 # For now, we'll place it here for simplicity.
 openai_api_key: "sk-your_openai_api_key_here"
+jules_api_key: "your_jules_api_key_here"
 
 # Home Assistant User and Group IDs
 # These should match the user ID and group ID that the Home Assistant

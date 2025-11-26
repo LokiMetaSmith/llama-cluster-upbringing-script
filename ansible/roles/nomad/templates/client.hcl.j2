@@ -3,6 +3,8 @@ bind_addr = "{{ cluster_ip }}" # Bind explicitly to the Private Alias IP
 
 addresses {
   http = "0.0.0.0" # Listen on all interfaces for UI/API access
+  rpc  = "{{ cluster_ip }}"
+  serf = "{{ cluster_ip }}"
 }
 
 advertise {
