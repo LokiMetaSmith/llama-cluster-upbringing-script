@@ -2,6 +2,7 @@ import os
 import json
 import glob
 import sys
+import textwrap
 from graphviz import Digraph
 
 def visualize_archive():
@@ -34,8 +35,11 @@ def visualize_archive():
 
                 # Add node with color based on fitness
                 fitness = meta.get("fitness", 0.0)
+                rationale = meta.get("rationale", "N/A")
                 color = get_color_for_fitness(fitness)
-                label = f"ID: {agent_id}\nFitness: {fitness:.4f}"
+                # Use textwrap to format the rationale for better display
+                wrapped_rationale = '\n'.join(textwrap.wrap(rationale, width=40))
+                label = f"ID: {agent_id}\nFitness: {fitness:.4f}\n\nRationale:\n{wrapped_rationale}"
                 dot.node(agent_id, label=label, style='filled', fillcolor=color)
 
         except (json.JSONDecodeError, IOError) as e:

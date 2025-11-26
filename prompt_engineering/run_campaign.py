@@ -72,7 +72,8 @@ def analyze_archive():
                     "id": agent_id,
                     "fitness": meta.get("fitness", 0.0),
                     "parent": meta.get("parent"),
-                    "passed": meta.get("passed", False)
+                    "passed": meta.get("passed", False),
+                    "rationale": meta.get("rationale")
                 })
         except (json.JSONDecodeError, IOError) as e:
             print(f"Warning: Could not read or parse metadata file {meta_file}: {e}", file=sys.stderr)
@@ -97,27 +98,35 @@ def _generate_report(top_agents: list):
         return
 
     print("\n--- Top 5 Performing Agents ---")
-    print("-" * 60)
-    header = f"{'Rank':<5} | {'Agent ID':<10} | {'Fitness':<10} | {'Passed':<7} | {'Parent ID':<10}"
+    # Dynamically adjust column width for rationale
+    max_rationale_len = max(len(agent.get('rationale', '')) for agent in top_agents) if top_agents else 20
+    header_rationale = "Rationale".ljust(max_rationale_len)
+
+    table_width = 80 + max_rationale_len
+    print("-" * table_width)
+    header = f"{'Rank':<5} | {'Agent ID':<10} | {'Fitness':<10} | {'Passed':<7} | {'Parent ID':<10} | {header_rationale}"
     print(header)
-    print("-" * 60)
+    print("-" * table_width)
 
     for i, agent in enumerate(top_agents):
         rank = i + 1
         agent_id = agent['id']
         fitness = f"{agent['fitness']:.4f}"
         passed = str(agent['passed'])
-        parent_id = agent.get('parent') or 'N/A' # Handle initial seed case
-        row = f"{rank:<5} | {agent_id:<10} | {fitness:<10} | {passed:<7} | {parent_id:<10}"
+        parent_id = agent.get('parent') or 'N/A'
+        rationale = agent.get('rationale', 'N/A').ljust(max_rationale_len)
+        row = f"{rank:<5} | {agent_id:<10} | {fitness:<10} | {passed:<7} | {parent_id:<10} | {rationale}"
         print(row)
 
-    print("-" * 60)
-    best_agent_id = top_agents[0]['id']
+    print("-" * table_width)
+    best_agent = top_agents[0]
+    best_agent_id = best_agent['id']
     print(f"\n🏆 Best agent found: {best_agent_id}")
-    print(f"   - Fitness: {top_agents[0]['fitness']:.4f}")
+    print(f"   - Fitness: {best_agent['fitness']:.4f}")
+    print(f"   - Rationale: {best_agent.get('rationale', 'N/A')}")
     best_agent_path = os.path.join(os.path.dirname(__file__), "archive", f"{best_agent_id}.py")
     print(f"   - To review, see file: {best_agent_path}")
-    print("-" * 60)
+    print("-" * table_width)
 
     # Automatically run the visualization script
     visualize_script_path = os.path.join(os.path.dirname(__file__), "visualize_archive.py")
