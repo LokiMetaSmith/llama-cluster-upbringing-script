@@ -119,6 +119,17 @@ def _generate_report(top_agents: list):
     print(f"   - To review, see file: {best_agent_path}")
     print("-" * 60)
 
+    # Automatically run the visualization script
+    visualize_script_path = os.path.join(os.path.dirname(__file__), "visualize_archive.py")
+    if os.path.exists(visualize_script_path):
+        print("\n--- Attempting to generate visualization ---")
+        try:
+            subprocess.run([sys.executable, visualize_script_path], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"--- WARNING: Visualization script failed with exit code {e.returncode} ---", file=sys.stderr)
+        except Exception as e:
+            print(f"--- ERROR: An unexpected error occurred while running the visualization script: {e} ---", file=sys.stderr)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
