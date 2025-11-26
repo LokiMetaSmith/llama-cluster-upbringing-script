@@ -27,6 +27,27 @@ class ActiveWorkflows:
     def get_all_states(self) -> Dict[str, Any]:
         return {runner_id: runner.context_to_dict() for runner_id, runner in self.runners.items()}
 
+class OpenGates:
+    """A simple singleton to track open gates that are waiting for approval."""
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(OpenGates, cls).__new__(cls)
+            # Maps: { "request_id": asyncio.Event() }
+            cls._instance.gates = {}
+        return cls._instance
+
+    def register_gate(self, request_id: str, event: asyncio.Event):
+        self.gates[request_id] = event
+
+    def approve(self, request_id: str):
+        if request_id in self.gates:
+            event = self.gates.pop(request_id)
+            event.set()
+            return True
+        return False
+
 class WorkflowRunner:
     """Loads and executes a workflow defined in a YAML file."""
 

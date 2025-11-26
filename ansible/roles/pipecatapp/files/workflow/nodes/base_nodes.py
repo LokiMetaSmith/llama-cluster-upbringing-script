@@ -56,3 +56,28 @@ class ConditionalBranchNode(Node):
         else:
             self.set_output(context, "output_true", None)
             self.set_output(context, "output_false", input_value)
+
+@registry.register
+class GateNode(Node):
+    """A node that can pause the workflow to wait for external approval."""
+    async def execute(self, context: WorkflowContext):
+        import asyncio
+        from ..workflow.runner import OpenGates
+
+        input_value = self.get_input(context, "input_value")
+        twin_service = context.global_inputs.get("twin_service")
+
+        # Only gate if there is a tool call to approve and we are in approval mode
+        if input_value and twin_service and twin_service.approval_mode:
+            request_id = twin_service.current_request_meta.get("request_id")
+            if request_id:
+                open_gates = OpenGates()
+                approval_event = asyncio.Event()
+                open_gates.register_gate(request_id, approval_event)
+
+                print(f"DEBUG: Workflow paused. Waiting for approval on request_id: {request_id}")
+                await approval_event.wait()
+                print(f"DEBUG: Workflow resumed for request_id: {request_id}")
+
+        # Passthrough the input value
+        self.set_output(context, "output", input_value)

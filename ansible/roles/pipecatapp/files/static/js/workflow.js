@@ -26,6 +26,16 @@ document.addEventListener('DOMContentLoaded', async function () {
                     'line-color': '#28a745',
                     'target-arrow-color': '#28a745',
                     'color': '#fff'
+
+                }
+            },
+            {
+                selector: '.gated',
+                style: {
+                    'background-color': '#ffc107', // Yellow for gated nodes
+                    'border-color': '#ffc107',
+                    'border-width': 2,
+                    'border-style': 'solid'
                 }
             }
         ],
@@ -48,6 +58,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             minTemp: 1.0
         }
     });
+
+
+    const approvalContainer = document.getElementById('approval-container');
 
     try {
         const response = await fetch('/api/workflows/definition/default_agent_loop.yaml');
@@ -76,6 +89,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                                 source: input.connection.from_node,
                                 target: node.id
                             }
+
                         });
                     }
                     if (input.value && typeof input.value === 'object') {
@@ -134,6 +148,46 @@ document.addEventListener('DOMContentLoaded', async function () {
                 console.error('Error polling for active workflows:', error);
             }
         }, 2000); // Poll every 2 seconds
+        
+        setInterval(async () => {
+            const activeResponse = await fetch('/api/workflows/active');
+            const activeWorkflows = await activeResponse.json();
+
+            const workflowIds = Object.keys(activeWorkflows);
+            if (workflowIds.length > 0) {
+                const requestId = workflowIds[0];
+                const activeState = activeWorkflows[requestId];
+                const executedNodeIds = Object.keys(activeState.node_outputs);
+
+                cy.nodes().removeClass('executed gated');
+
+                executedNodeIds.forEach(nodeId => cy.getElementById(nodeId).addClass('executed'));
+
+                // Check for a gated node
+                const lastNodeId = executedNodeIds[executedNodeIds.length - 1];
+                const lastNodeDef = workflow.nodes.find(n => n.id === lastNodeId);
+
+                if (lastNodeDef && lastNodeDef.type === 'GateNode') {
+                    cy.getElementById(lastNodeId).addClass('gated');
+                    approvalContainer.innerHTML = `<button id="approve-btn" data-request-id="${requestId}">Approve</button>`;
+
+                    document.getElementById('approve-btn').addEventListener('click', async (e) => {
+                        const reqId = e.target.dataset.requestId;
+                        await fetch('/api/gate/approve', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ request_id: reqId })
+                        });
+                        approvalContainer.innerHTML = ''; // Clear button
+                    });
+                } else {
+                    approvalContainer.innerHTML = '';
+                }
+            } else {
+                cy.nodes().removeClass('executed gated');
+                approvalContainer.innerHTML = '';
+            }
+        }, 2000);
 
     } catch (error) {
         console.error('Error fetching or rendering workflow:', error);

@@ -8,7 +8,7 @@ from fastapi import FastAPI, WebSocket, Body, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict
-from workflow.runner import ActiveWorkflows
+from workflow.runner import ActiveWorkflows, OpenGates
 
 
 # Configure logging
@@ -162,6 +162,19 @@ async def get_active_workflows():
     """Returns a snapshot of the state of all active workflows."""
     active_workflows = ActiveWorkflows()
     return active_workflows.get_all_states()
+
+@app.post("/api/gate/approve", response_class=JSONResponse)
+async def approve_gate(payload: Dict = Body(...)):
+    """Approves a paused gate, allowing the workflow to continue."""
+    request_id = payload.get("request_id")
+    if not request_id:
+        raise HTTPException(status_code=400, detail="request_id is required.")
+
+    open_gates = OpenGates()
+    if open_gates.approve(request_id):
+        return {"message": f"Gate for request {request_id} approved."}
+    else:
+        raise HTTPException(status_code=404, detail=f"No open gate found for request {request_id}.")
 
 @app.get("/api/workflows/definition/{workflow_name}", response_class=JSONResponse)
 async def get_workflow_definition(workflow_name: str):
