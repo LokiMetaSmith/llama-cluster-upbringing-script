@@ -227,7 +227,7 @@
 
 - name: Wait for Consul API to be ready
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:8500/v1/status/leader"
+    url: "http://{{ advertise_ip }}:8500/v1/status/leader"
   register: consul_status
   until: consul_status.status == 200
   retries: 30
