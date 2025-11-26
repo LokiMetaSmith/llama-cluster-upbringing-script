@@ -1,0 +1,155 @@
+# This workflow defines a single turn of the agent's reasoning loop.
+# It takes a user query and optional tool result, captures the screen,
+# calls the LLM, and then outputs either a tool call or a final text response.
+
+nodes:
+  - id: "input"
+    type: "InputNode"
+    outputs:
+      - name: "user_text"
+      - name: "tools_dict"
+      - name: "tool_result"
+      - name: "consul_http_addr"
+
+  - id: "discover_services"
+    type: "ConsulServiceDiscoveryNode"
+    inputs:
+      - name: "consul_http_addr"
+        connection:
+          from_node: "input"
+          from_output: "consul_http_addr"
+    outputs:
+      - name: "available_services"
+
+  - id: "get_system_prompt"
+    type: "SystemPromptNode"
+    inputs:
+      - name: "tools"
+        connection:
+          from_node: "input"
+          from_output: "tools_dict"
+      - name: "available_services"
+        connection:
+          from_node: "discover_services"
+          from_output: "available_services"
+    outputs:
+      - name: "system_prompt"
+
+  - id: "capture_screenshot"
+    type: "ScreenshotNode"
+    inputs:
+      - name: "tools"
+        connection:
+          from_node: "input"
+          from_output: "tools_dict"
+    outputs:
+      - name: "screenshot_base64"
+
+  - id: "build_prompt"
+    type: "PromptBuilderNode"
+    inputs:
+      - name: "system_prompt"
+        connection:
+          from_node: "get_system_prompt"
+          from_output: "system_prompt"
+      - name: "user_text"
+        connection:
+          from_node: "input"
+          from_output: "user_text"
+      - name: "screenshot"
+        connection:
+          from_node: "capture_screenshot"
+          from_output: "screenshot_base64"
+      - name: "tool_result"
+        connection:
+          from_node: "merge_tool_results"
+          from_output: "merged_output"
+    outputs:
+      - name: "messages"
+
+  - id: "call_vision_llm"
+    type: "VisionLLMNode"
+    inputs:
+      - name: "messages"
+        connection:
+          from_node: "build_prompt"
+          from_output: "messages"
+    outputs:
+      - name: "response_text"
+
+  - id: "parse_llm_response"
+    type: "ToolParserNode"
+    inputs:
+      - name: "llm_response"
+        connection:
+          from_node: "call_vision_llm"
+          from_output: "response_text"
+    outputs:
+      - name: "tool_call_data"
+      - name: "final_response"
+
+  - id: "branch_on_tool_type"
+    type: "ConditionalBranchNode"
+    check_if_tool_is: "route_to_expert"
+    inputs:
+      - name: "input_value"
+        connection:
+          from_node: "parse_llm_response"
+          from_output: "tool_call_data"
+    outputs:
+      - name: "output_true" # Is an expert call
+      - name: "output_false" # Is a normal tool call
+
+  - id: "route_to_expert"
+    type: "ExpertRouterNode"
+    inputs:
+      - name: "expert_name"
+        connection:
+          from_node: "branch_on_tool_type"
+          from_output: "output_true"
+        transform: "extract_expert" # We'll need to implement this transform
+      - name: "query"
+        connection:
+          from_node: "branch_on_tool_type"
+          from_output: "output_true"
+        transform: "extract_query"
+    outputs:
+      - name: "expert_response"
+
+  - id: "execute_tool"
+    type: "ToolExecutorNode"
+    inputs:
+      - name: "tool_call_data"
+        connection:
+          from_node: "branch_on_tool_type"
+          from_output: "output_false"
+    outputs:
+      - name: "tool_result"
+
+  - id: "merge_tool_results"
+    type: "MergeNode"
+    inputs:
+      - name: "in1" # Prioritize the result from the tool execution
+        connection:
+          from_node: "execute_tool"
+          from_output: "tool_result"
+      - name: "in2" # Fall back to the global input
+        connection:
+          from_node: "input"
+          from_output: "tool_result"
+    outputs:
+      - name: "merged_output"
+
+  - id: "output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_output"
+        value:
+          final_response:
+            connection:
+              from_node: "parse_llm_response"
+              from_output: "final_response"
+          tool_call:
+            connection:
+              from_node: "parse_llm_response"
+              from_output: "tool_call_data"

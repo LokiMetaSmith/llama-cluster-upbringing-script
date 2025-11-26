@@ -51,6 +51,13 @@ from tools.final_answer_tool import FinalAnswerTool
 from tools.shell_tool import ShellTool
 from tools.prompt_improver_tool import PromptImproverTool
 from durable_execution import DurableExecutionEngine, durable_step
+from workflow.runner import WorkflowRunner, ActiveWorkflows
+# Import all node classes to ensure they are registered
+from workflow.nodes.base_nodes import *
+from workflow.nodes.llm_nodes import *
+from workflow.nodes.tool_nodes import *
+from workflow.nodes.system_nodes import *
+
 
 import uvicorn
 
@@ -517,9 +524,8 @@ class TwinService(FrameProcessor):
     """Core conversational agent orchestrator.
 
     This class is the "brain" of the agent. It receives user input,
-    constructs prompts with context (memory, tool definitions, vision),
-    routes requests to the appropriate LLM (router or expert),
-    and executes tool calls.
+    initializes the workflow engine, and sends the final response.
+    The core logic is now managed by the declarative workflow system.
     """
     def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None):
         """Initializes the TwinService.
@@ -539,9 +545,6 @@ class TwinService(FrameProcessor):
         self.approval_queue = approval_queue
         self.short_term_memory = []
         self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
-        self.durable_engine = DurableExecutionEngine()
-        self.current_flow_id = None
-        self.step_counter = 0
 
         # This will hold metadata from incoming requests (e.g., from the gateway)
         self.current_request_meta = None
@@ -549,9 +552,6 @@ class TwinService(FrameProcessor):
         self.debug_mode = self.app_config.get("debug_mode", False)
         self.approval_mode = self.app_config.get("approval_mode", False)
         self.consul_http_addr = f"http://{self.app_config.get('consul_host', '127.0.0.1')}:{self.app_config.get('consul_port', 8500)}"
-
-        # External experts config can be provided via app_config
-        self.experts = self.app_config.get("external_experts_config", {})
 
         self.tools = {
             "ssh": SSH_Tool(),
@@ -581,131 +581,9 @@ class TwinService(FrameProcessor):
         if self.app_config.get("use_summarizer", False):
             self.tools["summarizer"] = SummarizerTool(self)
 
-        self._contents = []
-        self.vision_model_name = os.getenv("VISION_MODEL_NAME", "llava-llama-3")
-
-    def get_discovered_experts(self) -> list[str]:
-        """Discovers available expert services from Consul.
-
-        It queries Consul for services with specific tags or naming conventions
-        and merges them with any statically configured external experts.
-
-        Returns:
-            A sorted list of unique expert names.
-        """
-        expert_names = set(self.experts.keys())
-        try:
-            response = requests.get(f"{self.consul_http_addr}/v1/catalog/services")
-            response.raise_for_status()
-            services = response.json()
-
-            for name, service_info in services.items():
-                if name.startswith("llamacpp-rpc-"):
-                    expert_names.add(name.replace("llamacpp-rpc-", ""))
-
-                tags = service_info.get("Tags", [])
-                if "expert" in tags:
-                    for tag in tags:
-                        if tag not in ["expert", "llm"]:
-                            expert_names.add(tag)
-                            break
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Could not connect to Consul for expert discovery: {e}")
-
-        return sorted(list(expert_names))
-
-    def get_system_prompt(self, expert_name: str = "router") -> str:
-        """Constructs the system prompt for a given agent or expert.
-
-        This method reads a base prompt from a file and appends a dynamically
-        generated list of available tools and their descriptions.
-
-        Args:
-            expert_name (str): The name of the expert (e.g., "router", "coding").
-
-        Returns:
-            The complete system prompt string.
-        """
-        prompt_file = f"prompts/{expert_name}.txt"
-        try:
-            with open(prompt_file, "r") as f:
-                base_prompt = f.read()
-        except FileNotFoundError:
-            base_prompt = "You are a helpful AI assistant."
-        tools_prompt = "You have access to the following tools:\n"
-        for tool_name, tool in self.tools.items():
-            if tool_name == "vision":
-                tools_prompt += '- {"tool": "vision.get_observation"}: Get a real-time description of what is visible in the webcam.\n'
-            elif tool_name == "ha":
-                # Special handling for HA tool to ensure it's always included
-                tools_prompt += f'- {{"tool": "ha.call_ai_task", "args": {{"instructions": "<natural language command>"}}}}: {HA_Tool.call_ai_task.__doc__}\n'
-            else:
-                for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
-                    if not method_name.startswith('_'):
-                        tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
-
-        for expert in self.get_discovered_experts():
-            tools_prompt += f'- {{"tool": "route_to_expert", "args": {{"expert": "{expert}", "query": "<user_query>"}}}}: Use this for queries related to {expert}.\n'
-
-        return f"{base_prompt}\n\n{tools_prompt}\n\nIf the query doesn't fit a specific expert or tool, handle it yourself. Otherwise, respond with a JSON object with the \'tool\' and \'args\' keys."
-
-    async def get_expert_service(self, expert_name: str):
-        """Retrieves an LLM service client for a specific expert.
-
-        It handles both externally configured experts (like OpenAI) and
-        locally hosted experts discovered via Consul.
-
-        Args:
-            expert_name (str): The name of the expert.
-
-        Returns:
-            An instance of an LLM service client (e.g., OpenAILLMService) or
-            None if the service cannot be found or configured.
-        """
-        if expert_name in self.experts:
-            config = self.experts[expert_name]
-            api_key = os.getenv(config["api_key_env"])
-            if not api_key:
-                logging.error(f"API key not set for expert '{expert_name}'.")
-                return None
-            return OpenAILLMService(
-                base_url=config["base_url"],
-                api_key=api_key,
-                model=config.get("model", expert_name)
-            )
-
-        service_name = f"llamacpp-rpc-{expert_name}"
-        try:
-            response = requests.get(f"{self.consul_http_addr}/v1/health/service/{service_name}?passing")
-            response.raise_for_status()
-            services = response.json()
-            if not services:
-                return None
-            address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
-            return OpenAILLMService(base_url=f"http://{address}:{port}/v1", api_key="dummy", model=expert_name)
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Could not get address for local expert {expert_name}: {e}")
-            return None
-
-    async def _request_approval(self, tool_call_info: dict) -> bool:
-        """Sends a tool call to the web UI for user approval.
-
-        Args:
-            tool_call_info (dict): A dictionary describing the tool call.
-
-        Returns:
-            True if the user approved the action, False otherwise.
-        """
-        request_id = str(time.time())
-        await web_server.manager.broadcast(json.dumps({"type": "approval_request", "data": {"request_id": request_id, "tool_call": tool_call_info}}))
-        while True:
-            response = await self.approval_queue.get()
-            if response.get("data", {}).get("request_id") == request_id:
-                return response.get("data", {}).get("approved", False)
-
     async def process_frame(self, frame, direction):
         """Entry point for the agent's logic, triggered by a transcription frame.
-
+        This now uses the new workflow engine.
         Args:
             frame: The incoming frame from the pipeline.
             direction: The direction of the frame in the pipeline.
@@ -717,7 +595,56 @@ class TwinService(FrameProcessor):
         # Store meta for this request
         self.current_request_meta = frame.meta if hasattr(frame, 'meta') else None
 
-        await self.run_agent_loop(frame.text)
+        logging.info(f"Starting workflow for user query: {frame.text}")
+
+        active_workflows = ActiveWorkflows()
+        request_id = self.current_request_meta.get("request_id", str(time.time()))
+
+        try:
+            workflow_runner = WorkflowRunner("workflows/default_agent_loop.yaml")
+            active_workflows.add_runner(request_id, workflow_runner)
+
+            global_inputs = {
+                "user_text": frame.text,
+                "tools_dict": self.tools,
+                "tool_result": None, # Start with no tool result
+                "consul_http_addr": self.consul_http_addr,
+                "twin_service": self
+            }
+
+            for _ in range(10): # Allow up to 10 steps in the thought process
+                workflow_result = await workflow_runner.run(global_inputs)
+
+                final_response = workflow_result.get("final_response")
+                tool_call = workflow_result.get("tool_call")
+
+                if final_response:
+                    logging.info(f"Workflow produced final response: {final_response}")
+                    await self._send_response(final_response)
+                    self.long_term_memory.add_event(kind="assistant_message", content=final_response)
+                    self.short_term_memory.append(f"Assistant: {final_response}")
+                    return # End the loop
+
+                if tool_call:
+                    logging.info(f"Workflow produced tool call: {tool_call}")
+                    # The tool is executed within the workflow, so we just need to
+                    # grab the result and feed it back into the next iteration.
+                    global_inputs["tool_result"] = workflow_result.get("tool_result")
+                    # Continue the loop
+                else:
+                    # This case should not be reached if the workflow is designed correctly
+                    logging.error("Workflow ended without a final response or a tool call.")
+                    await self._send_response("I'm sorry, my thought process ended unexpectedly.")
+                    return
+
+            # If the loop completes without a final answer
+            await self._send_response("I seem to be stuck in a thought loop. Could you please clarify your request?")
+
+        except Exception as e:
+            logging.error(f"An error occurred during workflow execution: {e}", exc_info=True)
+            await self._send_response("I'm sorry, an internal error occurred while processing your request with the new workflow engine.")
+        finally:
+            active_workflows.remove_runner(request_id)
 
     async def _send_response(self, text: str):
         """Sends a response back to the appropriate channel (TTS or Gateway)."""
@@ -736,130 +663,21 @@ class TwinService(FrameProcessor):
             # Default to pushing to the audio pipeline
             await self.push_frame(TextFrame(text))
 
-    @durable_step
-    async def _execute_tool_and_capture(self, tool_name: str, method_name: str, args: dict):
-        """Executes a tool and captures a post-execution screenshot.
-
-        Returns:
-            tuple: (tool_result, screenshot_base64)
-        """
-        tool = self.tools[tool_name]
-        method = getattr(tool, method_name)
-
-        if self.approval_mode and tool_name in ["ssh", "code_runner", "ansible"]:
-            if not await self._request_approval({"tool": f"{tool_name}.{method_name}", "args": args}):
-                return f"Action denied. I cannot use the {tool_name} tool.", self.tools["desktop_control"].get_desktop_screenshot()
-
-        # Execute tool
-        result = method(**args)
-        if inspect.iscoroutine(result):
-            result = await result
-
-        # Capture screenshot
-        new_screenshot = self.tools["desktop_control"].get_desktop_screenshot()
-
-        return result, new_screenshot
-
-    async def run_agent_loop(self, user_text: str):
-        """Runs the main conversational loop for a single user turn.
-
-        This method takes a user's transcribed text, captures a screenshot,
-        and enters a loop of thinking, acting, and observing. It calls the
-        vision-capable LLM, parses the response for tool calls, executes them,
-        and continues until a final textual response is generated.
+    async def _request_approval(self, tool_call_info: dict) -> bool:
+        """Sends a tool call to the web UI for user approval.
 
         Args:
-            user_text (str): The transcribed text from the user.
-        """
-        logging.info(f"Starting agent loop for user query: {user_text}")
-
-        # Initialize flow ID for durable execution
-        if self.current_request_meta and "request_id" in self.current_request_meta:
-            self.current_flow_id = self.current_request_meta["request_id"]
-        else:
-            # Fallback to generating one based on time if not provided
-            # Ideally this should persist across restarts for the same logical task
-            import uuid
-            self.current_flow_id = str(uuid.uuid4())
-
-        self.step_counter = 0
-
-        screenshot = self.tools["desktop_control"].get_desktop_screenshot()
-        self._contents = [
-            {"role": "system", "content": [{"type": "text", "text": self.get_system_prompt("router")}]},
-            {"role": "user", "content": [{"type": "text", "text": user_text}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{screenshot}"}}]}
-        ]
-        self.long_term_memory.add_event(kind="user_message", content=user_text)
-        self.short_term_memory.append(f"User: {user_text}")
-
-        for _ in range(10):  # Max 10 turns
-            llm_response_text = await self._call_vision_llm()
-            self._contents.append({"role": "assistant", "content": [{"type": "text", "text": llm_response_text}]})
-            try:
-                tool_call = json.loads(llm_response_text)
-
-                # Handle explicit completion via FinalAnswerTool or legacy "task_complete"
-                if tool_call.get("tool") == "final_answer.submit_task":
-                    final_response = tool_call.get("args", {}).get("summary", "Task completed.")
-                    await self._send_response(final_response)
-                    self.short_term_memory.append(f"Assistant: {final_response}")
-                    return
-                elif tool_call.get("tool") == "task_complete": # Legacy fallback
-                    final_response = await self.router_llm.process_text("Summarize what you did and why.")
-                    await self._send_response(final_response)
-                    self.short_term_memory.append(f"Assistant: {final_response}")
-                    return
-
-                tool_name, method_name = tool_call.get("tool", "").split('.')
-                args = tool_call.get("args", {})
-
-                if tool_name == "route_to_expert":
-                    expert_name = args["expert"]
-                    query = args["query"]
-                    expert_llm = await self.get_expert_service(expert_name)
-                    if expert_llm:
-                        expert_prompt = self.get_system_prompt(expert_name)
-                        expert_response = await expert_llm.process_text(f"{expert_prompt}\n\nUser query: {query}")
-                        await self._send_response(expert_response)
-                        self.short_term_memory.append(f"Assistant ({expert_name}): {expert_response}")
-                    else:
-                        await self._send_response(f"Could not find expert {expert_name}.")
-                    return
-
-                # Durable execution of tool step
-                result, new_screenshot = await self._execute_tool_and_capture(tool_name, method_name, args)
-
-                self._contents.append({"role": "tool", "content": [{"type": "text", "text": result}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{new_screenshot}"}}]})
-                continue
-
-            except (json.JSONDecodeError, ValueError, KeyError) as e:
-                logging.info(f"No tool call detected or error processing: {e}")
-                await self._send_response(llm_response_text)
-                self.long_term_memory.add_event(kind="assistant_message", content=llm_response_text)
-                self.short_term_memory.append(f"Assistant: {llm_response_text}")
-                break
-
-        if len(self.short_term_memory) > 10:
-            self.short_term_memory.pop(0)
-
-    @durable_step
-    async def _call_vision_llm(self) -> str:
-        """Makes a direct HTTP request to the vision-capable LLM service.
+            tool_call_info (dict): A dictionary describing the tool call.
 
         Returns:
-            The text content of the LLM's response, or an error message.
+            True if the user approved the action, False otherwise.
         """
-        base_url = await discover_main_llm_service(self.consul_http_addr)
-        chat_url = f"{base_url}/chat/completions"
-        headers = {"Content-Type": "application/json"}
-        payload = {"model": self.vision_model_name, "messages": self._contents, "max_tokens": 1024, "temperature": 0.7}
-        try:
-            response = requests.post(chat_url, headers=headers, json=payload, timeout=120)
-            response.raise_for_status()
-            return response.json()["choices"][0]["message"]["content"]
-        except (requests.exceptions.RequestException, KeyError, IndexError) as e:
-            logging.error(f"Error calling/parsing vision LLM: {e}")
-            return "Error interacting with vision model."
+        request_id = str(time.time())
+        await web_server.manager.broadcast(json.dumps({"type": "approval_request", "data": {"request_id": request_id, "tool_call": tool_call_info}}))
+        while True:
+            response = await self.approval_queue.get()
+            if response.get("data", {}).get("request_id") == request_id:
+                return response.get("data", {}).get("approved", False)
 
 # -----------------------
 # Main entrypoint
