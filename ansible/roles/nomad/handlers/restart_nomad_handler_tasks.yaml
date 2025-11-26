@@ -11,5 +11,5 @@
     status_code: 200
   register: nomad_api_status
   until: nomad_api_status.status == 200
-  retries: 12
-  delay: 10
+  retries: 30
+  delay: 15

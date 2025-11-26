@@ -10,65 +10,55 @@ if [ -z "$INTERFACE" ]; then
 fi
 log "Using network interface: $INTERFACE"
 
-# --- Helper function to check if an element is in a bash array ---
-containsElement () {
-  local e match="$1"
-  shift
-  for e; do [[ "$e" == "$match" ]] && return 0; done
-  return 1
-}
-
 # --- Get current hostname ---
 CURRENT_HOSTNAME=$(hostname)
 
 # --- Derive NODE_ID for cluster network ---
-# If hostname is 'devbox', use 10. Otherwise extract number and add 10.
+# Logic: Extract number from hostname (e.g., worker1 -> 11). Default 'devbox' -> 10.
 if [ "$CURRENT_HOSTNAME" == "devbox" ]; then
     NODE_ID=10
 else
     NODE_ID_SUFFIX=$(echo "$CURRENT_HOSTNAME" | tr -dc '0-9')
     if [ -z "$NODE_ID_SUFFIX" ]; then
-        # Fallback if no number found, though this shouldn't happen with correct naming
-        NODE_ID=11
-        log "WARNING: Could not extract number from hostname $CURRENT_HOSTNAME. Defaulting to 11."
+        NODE_ID=11 # Fallback
     else
         NODE_ID=$((NODE_ID_SUFFIX + 10))
     fi
 fi
-log "Derived Node ID: $NODE_ID (Cluster IP: ${CLUSTER_SUBNET_PREFIX}.${NODE_ID})"
 
-# --- Configure Network Interfaces ---
-# All nodes use DHCP for the primary interface (WAN) and a static alias for the cluster (LAN).
+CLUSTER_IP="${CLUSTER_SUBNET_PREFIX}.${NODE_ID}"
+log "Configuring Dual-Stack Network on $INTERFACE..."
+log "  - WAN (Home): DHCP"
+log "  - LAN (Cluster): $CLUSTER_IP"
 
+# --- Configure Interfaces ---
 cat > /etc/network/interfaces <<EOL
-# This file is managed by the llama-cluster-upbringing-script
+# Managed by llama-cluster-upbringing-script
 
-# The loopback network interface
 auto lo
 iface lo inet loopback
 
-# Primary Interface (WAN) - Gets Internet from Home Router
+# Primary Interface: DHCP from Home Router (Internet Access)
 auto $INTERFACE
 iface $INTERFACE inet dhcp
 
-# Virtual Interface (Cluster LAN) - Private Static IP
+# Virtual Alias: Static Private IP (Cluster Traffic)
 auto $INTERFACE:0
 iface $INTERFACE:0 inet static
-    address ${CLUSTER_SUBNET_PREFIX}.${NODE_ID}
-    netmask ${CLUSTER_NETMASK}
+    address $CLUSTER_IP
+    netmask $CLUSTER_NETMASK
 EOL
 
-log "Network configuration written. WAN: DHCP, LAN: ${CLUSTER_SUBNET_PREFIX}.${NODE_ID}"
-
+log "Network configuration written."
 
 # --- Restart networking service ---
-log "Restarting networking service to apply changes..."
+log "Restarting networking service..."
 if systemctl list-units --type=service | grep -q 'networking.service'; then
     systemctl restart networking
 elif systemctl list-units --type=service | grep -q 'systemd-networkd.service'; then
     systemctl restart systemd-networkd
 else
-    log "Could not find networking.service or systemd-networkd.service to restart."
+    log "Could not find networking service to restart."
 fi
 
 log "Network configuration complete."
