@@ -92,7 +92,7 @@
 
 - name: Create Nomad models directory
   ansible.builtin.file:
-    path: /opt/nomad/models
+    path: "{{ nomad_models_dir }}"
     state: directory
     owner: root
     group: root
