@@ -277,6 +277,7 @@
   until: nomad_api_status.status == 200
   retries: 12
   delay: 5
+  ignore_errors: yes
 
 - name: Check Nomad service status if start task failed
   when: nomad_service_start.failed or nomad_api_status.failed
