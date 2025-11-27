@@ -1,5 +1,5 @@
 data_dir = "{{ consul_data_dir }}"
-bind_addr = "{{ advertise_ip }}"
+bind_addr = "{{ cluster_ip }}"
 client_addr = "0.0.0.0"
 leave_on_terminate = true
 primary_datacenter = "{{ consul_datacenter }}"
@@ -39,10 +39,10 @@ bootstrap_expect = 1
 {% else %}
 # For multi-node setups, we expect a quorum of controller nodes.
 bootstrap_expect = {{ groups['controller_nodes'] | length }}
-retry_join = ["{{ hostvars[groups['controller_nodes'][0]]['ansible_host'] }}"]
+retry_join = ["{{ hostvars[groups['controller_nodes'][0]]['cluster_ip'] }}"]
 {% endif %}
 {% else %}
 # This is a client node, so it should try to join the controller.
 server = false
-retry_join = ["{{ hostvars[groups['controller_nodes'][0]]['ansible_host'] }}"]
+retry_join = ["{{ hostvars[groups['controller_nodes'][0]]['cluster_ip'] }}"]
 {% endif %}
