@@ -1,6 +1,6 @@
 # Distributed Conversational AI Pipeline for Legacy CPU Clusters
 
-Last updated: 2025-11-06
+Last updated: 2025-11-26
 
 This project provides a complete solution for deploying a high-performance, low-latency conversational AI pipeline on a cluster of legacy, resource-constrained desktop computers. It uses Ansible for automated provisioning, Nomad for cluster orchestration, and a state-of-the-art AI stack to create a responsive, streaming, and embodied voice agent. For a detailed technical description of the system's layers, see the [Holistic Project Architecture](ARCHITECTURE.md) document.
 
@@ -140,16 +140,21 @@ The agent can use tools to perform actions and gather information. The `TwinServ
 - **Vision (`vision`)**: Gets a real-time description of what is visible via the webcam.
 - **Desktop Control (`desktop_control`)**: Provides full control over the desktop environment, including taking screenshots and performing mouse/keyboard actions.
 - **Code Runner (`code_runner`)**: Executes Python code in a secure, sandboxed environment.
+- **Smol Agent (`smol_agent_computer`)**: A tool for creating small, specialized agents.
 - **Web Browser (`web_browser`)**: Enables web navigation and content interaction.
 - **Ansible (`ansible`)**: Runs Ansible playbooks to manage the cluster.
 - **Power (`power`)**: Controls the cluster's power management policies.
-- **Summarizer (`summarizer`)**: Summarizes conversation history.
 - **Term Everything (`term_everything`)**: Provides a terminal interface for interacting with the system.
 - **RAG (`rag`)**: Searches the project's documentation to answer questions.
 - **Home Assistant (`ha`)**: Controls smart home devices via Home Assistant.
 - **Git (`git`)**: Interacts with Git repositories.
 - **Orchestrator (`orchestrator`)**: Dispatches high-priority, complex jobs to the cluster.
 - **LLxprt Code (`llxprt_code`)**: A specialized tool for code-related tasks.
+- **Claude Clone (`claude_clone`)**: A tool for interacting with a Claude-like model.
+- **Final Answer (`final_answer`)**: A tool to provide a final answer to the user.
+- **Shell (`shell`)**: Executes shell commands.
+- **Prompt Improver (`prompt_improver`)**: A tool for improving prompts.
+- **Summarizer (`summarizer`)**: Summarizes conversation history (enabled via config).
 
 ### 6.3. Mixture of Experts (MoE) Routing
 
@@ -330,3 +335,24 @@ View results in the job logs: `nomad job logs llama-benchmark`
 ## 13. Advanced Development: Prompt Evolution
 
 For advanced users, this project includes a workflow for automatically improving the agent's core prompt using evolutionary algorithms. See `prompt_engineering/PROMPT_ENGINEERING.md` for details.
+
+## 14. Project Roadmap
+
+This section outlines the major feature enhancements and maintenance tasks planned for the future.
+
+- **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model to ensure the expert service always starts with a basic capability.
+- **Re-evaluate Consul Connect Service Mesh:** Once the core system is stable, create a new feature branch to attempt to re-enable `sidecar_service` in the Nomad job files and document the process and performance overhead.
+- **Add Pre-flight System Health Checks:** Create a new Ansible role to perform non-destructive checks (filesystem writability, disk space, network connection) at the beginning of the main playbook.
+- **Investigate Advanced Power Management:** Research and prototype a more advanced power management system using Wake-on-LAN, triggered by the `power_agent.py`.
+- **Security Hardening:**
+  - Remove passwordless sudo and require a password for the `target_user`.
+  - Audit all services to ensure they run as dedicated, non-privileged users.
+- **Monitoring and Observability:** Deploy a monitoring stack like Prometheus and Grafana to collect and visualize metrics from Nomad, Consul, and the application itself.
+- **Web UI/UX Improvements:**
+    - Replace ASCII art with a more dynamic animated character.
+    - Add a "Clear Terminal" button to the UI.
+    - Improve the status display to be more readable than a raw JSON dump.
+- **Bolster Automated Testing:**
+    - Implement Ansible Molecule tests for critical roles.
+    - Expand end-to-end tests in `e2e-tests.yaml` to verify core agent functions.
+    - Increase unit test coverage for Python tools.
