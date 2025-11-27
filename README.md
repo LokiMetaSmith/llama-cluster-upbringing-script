@@ -349,10 +349,10 @@ This section outlines the major feature enhancements and maintenance tasks plann
   - Audit all services to ensure they run as dedicated, non-privileged users.
 - **Monitoring and Observability:** Deploy a monitoring stack like Prometheus and Grafana to collect and visualize metrics from Nomad, Consul, and the application itself.
 - **Web UI/UX Improvements:**
-    - Replace ASCII art with a more dynamic animated character.
-    - Add a "Clear Terminal" button to the UI.
-    - Improve the status display to be more readable than a raw JSON dump.
+  - Replace ASCII art with a more dynamic animated character.
+  - Add a "Clear Terminal" button to the UI.
+  - Improve the status display to be more readable than a raw JSON dump.
 - **Bolster Automated Testing:**
-    - Implement Ansible Molecule tests for critical roles.
-    - Expand end-to-end tests in `e2e-tests.yaml` to verify core agent functions.
-    - Increase unit test coverage for Python tools.
+  - Implement Ansible Molecule tests for critical roles.
+  - Expand end-to-end tests in `e2e-tests.yaml` to verify core agent functions.
+  - Increase unit test coverage for Python tools.

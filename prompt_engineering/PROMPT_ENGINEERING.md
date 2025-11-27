@@ -12,10 +12,10 @@ Each run of the evolution script selects a "parent" agent from the archive, muta
 
 ## Workflow
 
-1.  **Define Test Cases:**
+1. **Define Test Cases:**
     Add or modify the YAML test cases in the `evaluation_suite/` directory. Each test case defines a scenario and the expected outcome. The fitness of an agent is determined by how many of these test cases it passes.
 
-2.  **Run the Evolution Script (Repeatedly):**
+2. **Run the Evolution Script (Repeatedly):**
     Execute the `evolve.py` script. Each execution represents a single step in the evolutionary process:
     - It scans the `prompt_engineering/archive/` directory to find all existing agents and their fitness scores.
     - It selects a parent agent using fitness-proportionate random selection (fitter agents are more likely to be chosen). If the archive is empty, it uses the original `app.py` as the first parent.
@@ -24,10 +24,10 @@ Each run of the evolution script selects a "parent" agent from the archive, muta
 
     To build a robust archive, this script should be run many times.
 
-3.  **Analyze the Campaign Results:**
+3. **Analyze the Campaign Results:**
     At the end of a campaign, the `run_campaign.py` script will automatically print a report of the top 5 agents and generate a visualization of the evolutionary tree at `prompt_engineering/archive/evolution_tree.png`.
 
-4.  **Promote the Best Agent:**
+4. **Promote the Best Agent:**
     Once you have reviewed the report and identified a candidate for promotion, use the `promote_agent.py` script to automate the update process.
 
     ```bash
@@ -37,6 +37,7 @@ Each run of the evolution script selects a "parent" agent from the archive, muta
     # Or, promote a specific agent by its ID
     python prompt_engineering/promote_agent.py <agent_id_from_report>
     ```
+
     This script will handle backing up the current `app.py` and replacing it with the new, evolved code.
 
 ## Running the Workflow
