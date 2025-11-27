@@ -193,7 +193,7 @@
     owner: consul
     group: consul
     mode: '0640'
-  notify: restart consul
+  notify: Restart Consul
   tags:
     - consul_configure
 
@@ -204,15 +204,9 @@
     src: consul.service.j2
     dest: /etc/systemd/system/consul.service
     mode: '0644'
-  notify: restart consul
-  tags:
-    - consul_configure
-
-# Task 14: Reload systemd to recognize new service (from original file)
-- name: Reload systemd to recognize new service
-  become: true
-  ansible.builtin.systemd:
-    daemon_reload: yes
+  notify:
+    - Reload systemd
+    - Restart Consul
   tags:
     - consul_configure
 
