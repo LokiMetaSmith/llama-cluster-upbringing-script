@@ -263,7 +263,6 @@
     name: nomad
     state: started
     enabled: yes
-    daemon_reload: yes
   become: yes
   async: 45
   poll: 5
