@@ -25,10 +25,9 @@
       persistence_location /mosquitto/data
       log_dest stdout
       log_type all
-      listener 1883
-      bind_address {{ advertise_ip }}
+      listener 1883 0.0.0.0
       allow_anonymous true
-      listener 9001
+      listener 9001 0.0.0.0
       protocol websockets
     mode: '0644'
   become: yes
