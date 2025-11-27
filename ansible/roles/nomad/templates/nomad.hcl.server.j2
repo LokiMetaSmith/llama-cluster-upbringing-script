@@ -1,10 +1,14 @@
 data_dir  = "{{ nomad_data_dir }}"
-bind_addr = "{{ ansible_default_ipv4.address }}"
+bind_addr = "{{ cluster_ip }}"
+
+addresses {
+  http = "0.0.0.0"
+}
 
 advertise {
-  http = "{{ ansible_default_ipv4.address }}"
-  rpc  = "{{ ansible_default_ipv4.address }}"
-  serf = "{{ ansible_default_ipv4.address }}"
+  http = "{{ cluster_ip }}"
+  rpc  = "{{ cluster_ip }}"
+  serf = "{{ cluster_ip }}"
 }
 
 server {
@@ -28,7 +32,7 @@ plugin "docker" {
     volumes {
       enabled = true
     }
-    allow_caps = ["NET_RAW", "NET_ADMIN", "SETUID", "SETGID", "CHOWN"]
+    allow_caps = ["NET_RAW", "NET_ADMIN", "SETUID", "SETGID", "CHOWN", "NET_BIND_SERVICE"]
   }
 }
 
