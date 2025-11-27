@@ -44,12 +44,22 @@
   when: ansible_host == '127.0.0.1'
 
 - name: Find the default gateway interface
-  shell: "ip route | grep default | awk '{print $5}'"
+  shell: "ip route | grep default | awk '{print $5}' | head -n1"
   register: default_gw_interface
   changed_when: false
   check_mode: no
-  when: ansible_host != '127.0.0.1'
 
+- name: Check if cluster IP alias exists
+  shell: "ip addr show {{ default_gw_interface.stdout }} | grep {{ cluster_ip }}"
+  register: cluster_ip_alias_check
+  failed_when: false
+  changed_when: false
+  check_mode: no
+
+- name: Set up cluster IP alias
+  shell: "ip addr add {{ cluster_ip }}/24 dev {{ default_gw_interface.stdout }} label {{ default_gw_interface.stdout }}:0"
+  when: cluster_ip_alias_check.rc != 0
+  become: yes
 
 - name: Prevent system sleep but allow screen blanking
   lineinfile:
