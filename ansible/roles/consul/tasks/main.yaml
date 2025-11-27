@@ -232,6 +232,7 @@
 
 - name: Wait for Consul to be ready before ACL bootstrap
   ansible.builtin.wait_for:
+    host: "{{ advertise_ip }}"
     port: 8500
     delay: 10
 
