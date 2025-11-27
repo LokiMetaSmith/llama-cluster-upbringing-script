@@ -101,7 +101,7 @@
 
 - name: Create Nomad jobs directory
   ansible.builtin.file:
-    path: /opt/nomad/jobs
+    path: "{{ nomad_jobs_dir }}"
     state: directory
     owner: root
     group: root
@@ -238,7 +238,7 @@
 
 - name: Create Nomad volumes directory before service setup
   ansible.builtin.file:
-    path: /opt/nomad/volumes
+    path: "{{ nomad_volumes_dir }}"
     state: directory
     owner: "{{ target_user | default('pipecatapp') }}"
     group: "{{ target_user | default('pipecatapp') }}"
@@ -247,7 +247,7 @@
 
 - name: Create subdirectories for Nomad volumes
   ansible.builtin.file:
-    path: "/opt/nomad/volumes/{{ item }}"
+    path: "{{ nomad_volumes_dir }}/{{ item }}"
     state: directory
     owner: "{{ target_user | default('pipecatapp') }}"
     group: "{{ target_user | default('pipecatapp') }}"

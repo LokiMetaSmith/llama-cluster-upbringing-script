@@ -17,7 +17,7 @@
 - name: Create moe-gateway job file
   ansible.builtin.template:
     src: moe-gateway.nomad.j2
-    dest: /opt/nomad/jobs/moe-gateway.nomad
+    dest: "{{ nomad_jobs_dir }}/moe-gateway.nomad"
     owner: root
     group: root
     mode: "0644"
@@ -26,5 +26,5 @@
 
 - name: Ensure moe-gateway job is running
   ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run /opt/nomad/jobs/moe-gateway.nomad
+    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/moe-gateway.nomad
   changed_when: true

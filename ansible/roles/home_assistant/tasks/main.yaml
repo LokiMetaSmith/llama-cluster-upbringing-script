@@ -1,6 +1,6 @@
 - name: Ensure Home Assistant config directory exists
   ansible.builtin.file:
-    path: /opt/nomad/volumes/ha-config
+    path: "{{ nomad_volumes_dir }}/ha-config"
     state: directory
     owner: "{{ home_assistant_uid | default(568) }}"
     group: "{{ home_assistant_gid | default(568) }}"
@@ -11,14 +11,14 @@
 - name: Template home-assistant Nomad job file
   ansible.builtin.template:
     src: home_assistant.nomad.j2
-    dest: /opt/nomad/jobs/home-assistant.nomad
+    dest: "{{ nomad_jobs_dir }}/home-assistant.nomad"
     mode: '0644'
   become: yes
 
 - name: Template Home Assistant configuration
   ansible.builtin.template:
     src: configuration.yaml.j2
-    dest: /opt/nomad/volumes/ha-config/configuration.yaml
+    dest: "{{ nomad_volumes_dir }}/ha-config/configuration.yaml"
     mode: '0644'
   become: yes
 
@@ -60,7 +60,7 @@
 
 - name: Run home-assistant job asynchronously
   ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run /opt/nomad/jobs/home-assistant.nomad
+    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/home-assistant.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   changed_when: true
