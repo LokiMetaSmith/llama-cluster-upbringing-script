@@ -45,7 +45,7 @@ def test_health_check(client, mocker):
 async def test_workflow_runner_loads_definition(mocker):
     """Tests that the WorkflowRunner can successfully load and parse the default workflow."""
     # We need to mock the nodes and other dependencies to isolate the runner
-    mocker.patch('workflow.nodes.registry.registry.get_node_class', return_value=MagicMock())
+    mocker.patch('workflow.runner.registry.get_node_class', return_value=MagicMock())
 
     # The path is relative to the `app.py` file's location
     workflow_path = os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'workflows', 'default_agent_loop.yaml')

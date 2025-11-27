@@ -27,6 +27,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 async def evaluate_code(candidate_code: str) -> dict:
     """Evaluates candidate code by deploying it and running integration tests.
 
+    This function now expects the `candidate_code` to be a JSON string
+    containing both the code and the LLM's rationale for the change.
+
     This function orchestrates the end-to-end evaluation of a candidate code
     string. It performs the following steps:
     1. Creates a temporary directory and copies the application source code.
@@ -46,6 +49,28 @@ async def evaluate_code(candidate_code: str) -> dict:
               fail), a boolean 'passed' status, and details from the test run.
     """
     eval_id = str(uuid.uuid4())[:8]
+    archive_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "archive"))
+    os.makedirs(archive_dir, exist_ok=True)
+    agent_code_path = os.path.join(archive_dir, f"{eval_id}.py")
+    agent_meta_path = os.path.join(archive_dir, f"{eval_id}.json")
+
+    # Parse the incoming JSON from the LLM
+    try:
+        data = json.loads(candidate_code)
+        actual_code = data['code']
+        rationale = data.get('rationale', 'No rationale provided.')
+    except (json.JSONDecodeError, TypeError, KeyError):
+        # The LLM failed to produce valid JSON. Treat the whole thing as code.
+        logging.warning("Could not parse LLM output as JSON. Treating the entire response as code.")
+        actual_code = candidate_code
+        rationale = "N/A - Invalid JSON response from LLM."
+
+    # Save the candidate's code (only the code part) to the archive
+    with open(agent_code_path, "w") as f:
+        f.write(actual_code)
+    logging.info(f"Saved candidate agent to {agent_code_path}")
+
+
     temp_dir = f"/tmp/eval-{eval_id}"
     app_job_id = f"pipecat-app-eval-{eval_id}"
     service_name = f"llama-api-eval-{eval_id}"
@@ -58,7 +83,7 @@ async def evaluate_code(candidate_code: str) -> dict:
         logging.info(f"Creating temporary directory: {temp_dir}")
         shutil.copytree(APP_SOURCE_DIR, temp_dir)
         with open(os.path.join(temp_dir, "app.py"), "w") as f:
-            f.write(candidate_code)
+            f.write(actual_code)
 
         # Also copy the startup script, which is not in the source dir
         main_startup_script = "/opt/pipecatapp/start_pipecat.sh"
@@ -114,17 +139,33 @@ async def evaluate_code(candidate_code: str) -> dict:
 
         logging.info(f"Evaluation finished. Fitness: {fitness}. Details: {results.get('details')}")
 
-        return {
+        evaluation_results = {
             "fitness": fitness,
             "passed": results.get("passed"),
             "details": results.get("details"),
             "log": results.get("log", "")
         }
+        return evaluation_results
 
     except Exception as e:
         logging.error(f"An error occurred during evaluation: {e}", exc_info=True)
-        return {"fitness": 0.0, "error": str(e)}
+        evaluation_results = {"fitness": 0.0, "error": str(e)}
+        return evaluation_results
     finally:
+        # Save metadata to the archive
+        if 'evaluation_results' in locals():
+            # Add the rationale to the results dictionary
+            evaluation_results['rationale'] = rationale
+
+            # Check for parent ID from the environment
+            parent_id = os.environ.get("PARENT_AGENT_ID")
+            if parent_id:
+                evaluation_results["parent"] = parent_id
+
+            with open(agent_meta_path, "w") as f:
+                json.dump(evaluation_results, f, indent=2)
+            logging.info(f"Saved agent metadata to {agent_meta_path}")
+
         # Cleanup successful jobs, leave failed ones for inspection
         cleanup(jobs_to_clean, temp_dir)
 

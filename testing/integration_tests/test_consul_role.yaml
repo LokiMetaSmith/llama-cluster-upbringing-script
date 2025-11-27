@@ -14,7 +14,7 @@
 
     - name: Wait for consul to be healthy
       uri:
-        url: "http://localhost:8500/v1/status/leader"
+        url: "http://{{ advertise_ip }}:8500/v1/status/leader"
         method: GET
       register: result
       until: "result.status == 200"

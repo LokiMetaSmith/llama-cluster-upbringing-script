@@ -1,3 +1,4 @@
 openevolve
 python-nomad
 pytest
+graphviz

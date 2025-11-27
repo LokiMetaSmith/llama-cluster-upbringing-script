@@ -29,6 +29,7 @@ import requests
 import consul.aio
 import numpy as np
 from pmm_memory import PMMMemory
+from quality_control import CodeQualityAnalyzer
 import web_server
 from web_server import approval_queue, text_message_queue
 from tools.ssh_tool import SSH_Tool
@@ -545,6 +546,7 @@ class TwinService(FrameProcessor):
         self.approval_queue = approval_queue
         self.short_term_memory = []
         self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
+        self.quality_analyzer = CodeQualityAnalyzer()
 
         # This will hold metadata from incoming requests (e.g., from the gateway)
         self.current_request_meta = None
