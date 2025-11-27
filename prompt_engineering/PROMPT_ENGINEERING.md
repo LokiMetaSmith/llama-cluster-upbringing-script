@@ -24,11 +24,20 @@ Each run of the evolution script selects a "parent" agent from the archive, muta
 
     To build a robust archive, this script should be run many times.
 
-3.  **Analyze the Archive and Update the Agent:**
-    After running the evolution script multiple times, the `prompt_engineering/archive/` directory will contain many agents.
-    - Inspect the `.json` metadata files in the archive to find the agent with the highest fitness score.
-    - Review the code of the best-performing agent (e.g., `archive/<best-agent-id>.py`).
-    - Once you have verified that the changes are correct and beneficial, manually copy the new code into the main `ansible/roles/pipecatapp/files/app.py` file.
+3.  **Analyze the Campaign Results:**
+    At the end of a campaign, the `run_campaign.py` script will automatically print a report of the top 5 agents and generate a visualization of the evolutionary tree at `prompt_engineering/archive/evolution_tree.png`.
+
+4.  **Promote the Best Agent:**
+    Once you have reviewed the report and identified a candidate for promotion, use the `promote_agent.py` script to automate the update process.
+
+    ```bash
+    # Promote the absolute best agent found during the campaign
+    python prompt_engineering/promote_agent.py --best
+
+    # Or, promote a specific agent by its ID
+    python prompt_engineering/promote_agent.py <agent_id_from_report>
+    ```
+    This script will handle backing up the current `app.py` and replacing it with the new, evolved code.
 
 ## Running the Workflow
 

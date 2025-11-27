@@ -1,8 +1,35 @@
 # TODO
 
 Last updated: 2025-11-26
+```markdown
+Last updated: 2025-11-26
+
+# TODO
 
 This document outlines the major refactoring, feature enhancement, and maintenance tasks for the project. It is divided into high-priority tasks for improving stability and a backlog of future enhancements.
+
+---
+
+## Prompt Engineering Enhancements
+
+This section tracks future improvements for the DGM-style evolutionary workflow.
+
+- [ ] **Implement Automated Testing for `prompt_engineering`:**
+    - Create a new test suite (e.g., `testing/unit_tests/test_prompt_engineering.py`).
+    - Add unit tests for the core logic in `run_campaign.py`, `visualize_archive.py`, and `promote_agent.py`.
+    - Mock the `subprocess` calls to `evolve.py` to test the campaign loop without running the full, slow evolution process.
+    - Create a small, temporary mock archive to test the analysis, visualization, and promotion scripts against a known, controlled dataset.
+
+- [ ] **Improve Parent Selection Algorithm:**
+    - Research alternative selection strategies from evolutionary computation (e.g., tournament selection, novelty search).
+    - Add a new command-line argument to `evolve.py` to allow the user to choose the selection strategy (e.g., `--selection-method tournament`).
+    - Implement the new selection logic in the `select_parent_from_archive` function.
+
+- [ ] **Web-Based UI for Campaign Analysis:**
+    - Create a new script `archive_server.py` using a lightweight web framework like Flask or FastAPI.
+    - The server should have an endpoint that reads the entire `archive/` directory and constructs a JSON representation of the evolutionary tree.
+    - Create a simple, single-page HTML/JavaScript frontend that fetches this JSON and uses a library (like D3.js or vis.js) to render an interactive evolutionary tree.
+    - The UI should allow clicking on a node to display the agent's full details (code, rationale, fitness, parent) in a side panel.
 
 ---
 
@@ -71,6 +98,45 @@ This file tracks the implementation of a new self-adapting capability inspired b
 ---
 
 ## High-Priority: Harden the Core System
+#### Phase 3: Documentation and Cleanup [COMPLETED]
+
+**Goal:** Finalize the project by cleaning up obsolete files and creating clear documentation for the new features.
+
+1. **[COMPLETED] Remove Obsolete Scripts:**
+    - The `debian_service/` and `initial-setup/` directories have been removed and their logic migrated.
+
+2. **[COMPLETED] Create API Documentation:**
+    - `API_USAGE.md` has been created and documented.
+
+3. **[COMPLETED] Review and Finalize `TODO.md`:**
+    - The `TODO.md` has been reviewed and updated.
+
+---
+
+#### Phase 4: Implement the "ComfyUI for Agents" Workflow Engine
+
+**Goal:** Refactor the monolithic agent loop into a modular, declarative workflow engine, as outlined in `docs/TOOL_EVALUATION.md`.
+
+1.  **[COMPLETED] Refactor Core Logic into a Workflow Runner:**
+    - **[COMPLETED]** The main `run_agent_loop` in `app.py` has been replaced with a `WorkflowRunner` class.
+    - **[COMPLETED]** Agent behavior is now defined in `workflows/default_agent_loop.yaml`.
+    - **[COMPLETED]** Created a `nodes` directory with modular classes for each step (e.g., `LLMNode`, `ToolNode`, `GateNode`).
+
+2.  **[COMPLETED] Create a Real-time Visualization UI:**
+    - **[COMPLETED]** A new `/workflow` endpoint serves a web UI using Cytoscape.js.
+    - **[COMPLETED]** New API endpoints (`/api/workflows/definition/*` and `/api/workflows/active`) provide the UI with the graph structure and real-time execution state.
+    - **[COMPLETED]** The UI now includes an interactive modal to inspect the outputs of each executed node.
+
+3.  **[TODO] Persist and Expose Workflow History:**
+    - **[ ]** Modify the `WorkflowRunner` to save its final context to a persistent store (e.g., a local SQLite database or a JSONL file) upon completion.
+    - **[ ]** Create a new API endpoint (e.g., `/api/workflows/history`) to retrieve a list of past workflow runs.
+    - **[ ]** Add a history browser to the web UI to allow users to select and view the final state of previous runs.
+
+4.  **[TODO] Build a Visual Workflow Editor:**
+    - **[ ]** Integrate a library like `litegraph.js` or extend the existing Cytoscape UI to allow drag-and-drop creation and modification of workflows.
+    - **[ ]** Create a backend API endpoint (`/api/workflows/save`) to receive the new graph definition from the UI and save it as a YAML file.
+
+## 1. High-Priority: Harden the Core System
 
 These tasks are focused on addressing the brittleness of the deployment process and making the system more resilient, predictable, and maintainable.
 

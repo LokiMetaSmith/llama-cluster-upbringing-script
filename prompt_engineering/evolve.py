@@ -91,8 +91,21 @@ The user will provide you with a file and the results of a test run.
 Your task is to modify the file to fix the failing tests.
 The provided file is a Python script that is part of a larger application.
 The tests are run using pytest.
-You should only output the full, complete, modified Python code. Do not add any extra explanations, notes, or markdown formatting.
+
 Your goal is to make the tests pass. A fitness score of 1.0 means all tests passed.
+
+You must provide your response as a single JSON object containing two keys:
+1. "rationale": A single sentence explaining the change you made.
+2. "code": The full, complete, modified Python code.
+
+Do not add any extra explanations, notes, or markdown formatting outside of the JSON object.
+Example response:
+```json
+{
+  "rationale": "Added a null check to prevent a crash when the input is empty.",
+  "code": "import os\\n\\ndef my_function(data):\\n    if data is None:\\n        return\\n    # ... rest of the code"
+}
+```
 """,
         )
 

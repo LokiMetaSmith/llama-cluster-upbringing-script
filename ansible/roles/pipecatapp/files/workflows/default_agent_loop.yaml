@@ -100,6 +100,26 @@ nodes:
       - name: "output_true" # Is an expert call
       - name: "output_false" # Is a normal tool call
 
+  - id: "gate_expert_call"
+    type: "GateNode"
+    inputs:
+      - name: "input_value"
+        connection:
+          from_node: "branch_on_tool_type"
+          from_output: "output_true"
+    outputs:
+      - name: "output"
+
+  - id: "gate_tool_call"
+    type: "GateNode"
+    inputs:
+      - name: "input_value"
+        connection:
+          from_node: "branch_on_tool_type"
+          from_output: "output_false"
+    outputs:
+      - name: "output"
+
   - id: "route_to_expert"
     type: "ExpertRouterNode"
     inputs:
@@ -107,9 +127,13 @@ nodes:
         connection:
           from_node: "branch_on_tool_type"
           from_output: "output_true"
-        transform: "extract_expert" # We'll need to implement this transform
+          from_node: "gate_expert_call"
+          from_output: "output"
+        transform: "extract_expert"
       - name: "query"
         connection:
+          from_node: "gate_expert_call"
+          from_output: "output"
           from_node: "branch_on_tool_type"
           from_output: "output_true"
         transform: "extract_query"
@@ -121,6 +145,8 @@ nodes:
     inputs:
       - name: "tool_call_data"
         connection:
+          from_node: "gate_tool_call"
+          from_output: "output"
           from_node: "branch_on_tool_type"
           from_output: "output_false"
     outputs:
