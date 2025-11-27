@@ -41,7 +41,7 @@ job "mqtt" {
       config {
         image = "eclipse-mosquitto:2"
         ports = ["mqtt", "ws"]
-        cap_add = ["SETUID", "SETGID", "CHOWN"]
+        cap_add = ["SETUID", "SETGID", "CHOWN", "NET_BIND_SERVICE"]
 
         # By not specifying a command, we allow the container to use its
         # default entrypoint, which is a script that correctly initializes the
