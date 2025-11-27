@@ -1,6 +1,6 @@
 - name: run nomad llamacpp-rpc job
   ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run "/opt/nomad/jobs/llamacpp-rpc-{{ item.filename | regex_replace('\\.gguf$', '') }}.nomad"
+    cmd: /usr/local/bin/nomad job run "{{ nomad_jobs_dir }}/llamacpp-rpc-{{ item.filename | regex_replace('\\.gguf$', '') }}.nomad"
   loop: "{{ all_models_for_rpc }}"
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"

@@ -34,6 +34,8 @@ ansible_python_interpreter: /usr/bin/python3
 advertise_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
 
 nomad_namespace: "default"
+nomad_jobs_dir: "/opt/nomad/jobs"
+nomad_volumes_dir: "/opt/nomad/volumes"
 nomad_models_dir: "/opt/nomad/models"
 
 # Pipecat application settings

@@ -72,7 +72,7 @@
     - world_model_service
   ansible.builtin.template:
     src: "world_model.nomad.j2"
-    dest: "/opt/nomad/jobs/world_model.nomad"
+    dest: "{{ nomad_jobs_dir }}/world_model.nomad"
     owner: "root"
     group: "root"
     mode: "0644"
@@ -83,7 +83,7 @@
   tags:
     - world_model_service
   ansible.builtin.command:
-    cmd: "/usr/local/bin/nomad job run /opt/nomad/jobs/world_model.nomad"
+    cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/world_model.nomad"
   environment:
     NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
   changed_when: true
@@ -94,7 +94,7 @@
     - world_model_service
   ansible.builtin.template:
     src: "../../jobs/llamacpp-batch.nomad.j2"
-    dest: "/opt/nomad/jobs/llamacpp-batch.nomad"
+    dest: "{{ nomad_jobs_dir }}/llamacpp-batch.nomad"
     owner: "root"
     group: "root"
     mode: "0644"
@@ -103,7 +103,7 @@
 
 - name: "World Model Service : Register batch nomad job"
   ansible.builtin.command:
-    cmd: "/usr/local/bin/nomad job run /opt/nomad/jobs/llamacpp-batch.nomad"
+    cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/llamacpp-batch.nomad"
   environment:
     NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
   changed_when: true

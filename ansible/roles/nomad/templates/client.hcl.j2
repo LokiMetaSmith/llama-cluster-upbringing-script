@@ -63,17 +63,17 @@ client {
   }
 
   host_volume "mqtt-data" {
-    path      = "/opt/nomad/volumes/mqtt-data"
+    path      = "{{ nomad_volumes_dir }}/mqtt-data"
     read_only = false
   }
 
   host_volume "ha-config" {
-    path      = "/opt/nomad/volumes/ha-config"
+    path      = "{{ nomad_volumes_dir }}/ha-config"
     read_only = false
   }
   
   host_volume "world_model_storage" {
-    path      = "/opt/nomad/volumes/world_model_storage"
+    path      = "{{ nomad_volumes_dir }}/world_model_storage"
     read_only = false
   }
   

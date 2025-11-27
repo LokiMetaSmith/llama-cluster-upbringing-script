@@ -117,7 +117,7 @@
 
 - name: Create Nomad jobs directory
   ansible.builtin.file:
-    path: /opt/nomad/jobs
+    path: "{{ nomad_jobs_dir }}"
     state: directory
     mode: '0755'
   become: yes
