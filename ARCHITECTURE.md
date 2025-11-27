@@ -1,6 +1,6 @@
 # Holistic Project Architecture
 
-Last updated: 2025-11-06
+Last updated: 2025-11-26
 
 This document provides a detailed overview of the system architecture, from the hardware provisioning layer to the application logic and user interface. The system is designed as a multi-layered stack to deploy a responsive, distributed, and embodied conversational AI agent on a cluster of legacy machines.
 
@@ -63,10 +63,6 @@ This layer contains the core Python application that constitutes the agent itsel
   - **Memory:** A dual-component memory system with short-term conversational history and a long-term FAISS vector store for semantic search.
   - **Tools:** The `TwinService` can use a variety of tools, including `ssh`, a sandboxed `code_runner`, `vision`, and most importantly, `ansible`. The `ansible` tool allows the agent to call back to the Ansible control plane, enabling it to provision new nodes or reconfigure the cluster in response to conversational commands.
   - **Mixture of Experts (MoE) Routing:** The `TwinService` can act as a router, forwarding queries to specialized LLM backends discovered via Consul.
-- **Newly Implemented Features:**
-  - **Debug Mode:** Enables verbose logging of tool inputs and outputs.
-  - **Interactive Approval:** Pauses execution and prompts for user confirmation in the UI before running sensitive tools.
-  - **State Management:** Allows the agent's memory state to be saved and loaded from named snapshots via the UI.
 
 ## Layer 5: Web UI & Control Plane
 
@@ -133,3 +129,12 @@ To enhance security, the system now supports API key authentication for its cont
   curl -X GET http://<agent_ip>:8000/api/status \
        -H "Authorization: Bearer <your_new_key>"
   ```
+
+## Future Architecture
+
+This section outlines planned enhancements to the system architecture.
+
+- **Graceful LLM Failover:** The `llama-expert.nomad` job will be enhanced to include a final, lightweight fallback model to ensure the expert service always starts with a basic capability.
+- **Consul Connect Service Mesh:** Once the core system is stable, a new feature branch will be created to attempt to re-enable `sidecar_service` in the Nomad job files and document the process and performance overhead.
+- **Pre-flight System Health Checks:** A new Ansible role will be created to perform non-destructive checks (filesystem writability, disk space, network connection) at the beginning of the main playbook.
+- **Advanced Power Management:** A more advanced power management system using Wake-on-LAN will be researched and prototyped, triggered by the `power_agent.py`.
