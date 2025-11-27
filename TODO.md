@@ -127,20 +127,43 @@ This plan is broken into phases. Each phase is a self-contained set of tasks des
 
 ---
 
-#### Phase 3: Documentation and Cleanup
+#### Phase 3: Documentation and Cleanup [COMPLETED]
 
 **Goal:** Finalize the project by cleaning up obsolete files and creating clear documentation for the new features.
 
-1. **Remove Obsolete Scripts:**
-    - Delete the entire `debian_service/` directory and its contents.
-    - Review the `initial-setup/` scripts and migrate any remaining essential logic into the main Ansible roles, then remove the scripts.
+1. **[COMPLETED] Remove Obsolete Scripts:**
+    - The `debian_service/` and `initial-setup/` directories have been removed and their logic migrated.
 
-2. **Create API Documentation:**
-    - Create a new file, `API_USAGE.md`, in the root directory.
-    - This file should explain how to use the new OpenAI-compatible endpoint, including the URL, authentication method (API keys), and example `curl` or Python requests.
+2. **[COMPLETED] Create API Documentation:**
+    - `API_USAGE.md` has been created and documented.
 
-3. **Review and Finalize `TODO.md`:**
-    - Review the updated `TODO.md`, mark all completed refactoring tasks, and re-prioritize the remaining feature enhancements.
+3. **[COMPLETED] Review and Finalize `TODO.md`:**
+    - The `TODO.md` has been reviewed and updated.
+
+---
+
+#### Phase 4: Implement the "ComfyUI for Agents" Workflow Engine
+
+**Goal:** Refactor the monolithic agent loop into a modular, declarative workflow engine, as outlined in `docs/TOOL_EVALUATION.md`.
+
+1.  **[COMPLETED] Refactor Core Logic into a Workflow Runner:**
+    - **[COMPLETED]** The main `run_agent_loop` in `app.py` has been replaced with a `WorkflowRunner` class.
+    - **[COMPLETED]** Agent behavior is now defined in `workflows/default_agent_loop.yaml`.
+    - **[COMPLETED]** Created a `nodes` directory with modular classes for each step (e.g., `LLMNode`, `ToolNode`, `GateNode`).
+
+2.  **[COMPLETED] Create a Real-time Visualization UI:**
+    - **[COMPLETED]** A new `/workflow` endpoint serves a web UI using Cytoscape.js.
+    - **[COMPLETED]** New API endpoints (`/api/workflows/definition/*` and `/api/workflows/active`) provide the UI with the graph structure and real-time execution state.
+    - **[COMPLETED]** The UI now includes an interactive modal to inspect the outputs of each executed node.
+
+3.  **[TODO] Persist and Expose Workflow History:**
+    - **[ ]** Modify the `WorkflowRunner` to save its final context to a persistent store (e.g., a local SQLite database or a JSONL file) upon completion.
+    - **[ ]** Create a new API endpoint (e.g., `/api/workflows/history`) to retrieve a list of past workflow runs.
+    - **[ ]** Add a history browser to the web UI to allow users to select and view the final state of previous runs.
+
+4.  **[TODO] Build a Visual Workflow Editor:**
+    - **[ ]** Integrate a library like `litegraph.js` or extend the existing Cytoscape UI to allow drag-and-drop creation and modification of workflows.
+    - **[ ]** Create a backend API endpoint (`/api/workflows/save`) to receive the new graph definition from the UI and save it as a YAML file.
 
 ## 1. High-Priority: Harden the Core System
 

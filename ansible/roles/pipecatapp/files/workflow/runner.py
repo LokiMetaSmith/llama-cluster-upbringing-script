@@ -113,9 +113,21 @@ class WorkflowRunner:
         if not hasattr(self, 'context'):
             return {}
 
+        serializable_outputs = {}
+        for node_id, outputs in self.context.node_outputs.items():
+            serializable_outputs[node_id] = {}
+            for key, value in outputs.items():
+                # Attempt to serialize. If it fails, use the string representation.
+                try:
+                    import json
+                    json.dumps(value)
+                    serializable_outputs[node_id][key] = value
+                except (TypeError, OverflowError):
+                    serializable_outputs[node_id][key] = str(value)
+
         return {
             "global_inputs": self.context.global_inputs,
-            "node_outputs": self.context.node_outputs,
+            "node_outputs": serializable_outputs,
             "final_output": self.context.final_output
         }
 
