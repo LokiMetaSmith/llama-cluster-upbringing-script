@@ -52,7 +52,7 @@
 
         - name: Wait for Consul API to be ready after recovery
           uri:
-            url: "http://127.0.0.1:8500/v1/status/leader"
+            url: "http://{{ advertise_ip }}:8500/v1/status/leader"
           register: consul_status_recovery
           until: consul_status_recovery.status == 200
           retries: 30
