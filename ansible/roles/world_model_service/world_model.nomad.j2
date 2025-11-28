@@ -20,8 +20,7 @@ job "world-model-service" {
       driver = "docker"
 
       config {
-        image   = "localhost/world-model-service:latest"
-        ports   = ["http"]
+        image   = "world-model-service:latest"
         force_pull = false
       }
 

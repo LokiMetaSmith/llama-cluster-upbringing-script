@@ -31,13 +31,11 @@
 - name: "World Model Service : Build the docker image"
   tags:
     - world_model_service
-  community.docker.docker_image:
-    name: "world-model-service:latest"
-    build:
-      path: "/opt/world_model_service/"
-    source: build
-    force_source: true
-    state: present
+  ansible.builtin.command:
+    cmd: "docker build -t world-model-service:latest ."
+    chdir: "/opt/world_model_service/"
+  register: docker_build_result
+  changed_when: "'Successfully built' in docker_build_result.stdout or 'writing image' in docker_build_result.stdout"
   become: true
 
 - name: "World Model Service : Copy debug script"
