@@ -12,6 +12,7 @@ job "world-model-service" {
     }
 
     network {
+      mode = "host"
       port "http" {}
     }
 
@@ -19,7 +20,7 @@ job "world-model-service" {
       driver = "docker"
 
       config {
-        image   = "world-model-service:latest"
+        image   = "localhost/world-model-service:latest"
         ports   = ["http"]
         force_pull = false
       }
@@ -31,11 +32,11 @@ job "world-model-service" {
       }
 
       env {
-        MQTT_HOST = "{{ advertise_ip }}"
+        MQTT_HOST = "{{ cluster_ip }}"
         MQTT_PORT = "1883"
-        CONSUL_HOST = "{{ advertise_ip }}"
+        CONSUL_HOST = "{{ cluster_ip }}"
         CONSUL_PORT = "8500"
-        NOMAD_ADDR = "http://{{ advertise_ip }}:4646"
+        NOMAD_ADDR = "http://{{ cluster_ip }}:4646"
       }
 
       resources {
