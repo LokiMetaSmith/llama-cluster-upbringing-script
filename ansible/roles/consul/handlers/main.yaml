@@ -4,6 +4,7 @@
   ansible.builtin.service:
     name: consul
     state: restarted
+  when: not ansible_check_mode
 
 - name: Wait for Consul to start up
   listen: "Restart Consul"
@@ -11,6 +12,7 @@
     port: 8500
     delay: 10
     timeout: 300
+  when: not ansible_check_mode
 
 - name: Reload systemd
   become: yes
