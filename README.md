@@ -222,6 +222,23 @@ gemini /pipecat:send "Can you write a python script to list files in a directory
 
 The agent will process this message as if you had typed it in the web UI.
 
+### 7.3. Infrastructure Dashboards
+
+In addition to the agent's interface, you can access the dashboards for the underlying infrastructure services.
+
+#### 7.3.1. Consul UI (Service Mesh & KV Store)
+
+- **URL:** `http://<node_ip>:8500`
+- **Login:** Access requires the **SecretID** (management token).
+- **Retrieving the Token:** Run this command on your controller node:
+  ```bash
+  sudo cat /etc/consul.d/management_token
+  ```
+
+#### 7.3.2. Nomad UI (Cluster Orchestration)
+
+- **URL:** `http://<node_ip>:4646`
+
 ## 8. AI Service Deployment
 
 The system is designed to be self-bootstrapping. The `bootstrap.sh` script (or the main `playbook.yaml`) handles the deployment of the core AI services on the primary control node. This includes a default instance of the `llama-expert` job and the `pipecat` voice agent.
