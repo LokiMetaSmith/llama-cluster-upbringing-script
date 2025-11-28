@@ -312,7 +312,7 @@ A dedicated health check job exists to verify the status of all running LLM expe
 
 - **Run the check:** `ansible-playbook run_health_check.yaml`
 - **View results:** `nomad job logs health-check`
-- **Manual Test Scripts:** A set of scripts for manual testing of individual components is available in the `testing/` directory.
+- **Manual Test Scripts:** A set of scripts for manual testing of individual components is available in the `tests/scripts/` directory.
 
 ### 10.1. Code Quality and Linting
 

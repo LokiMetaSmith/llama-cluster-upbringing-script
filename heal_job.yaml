@@ -58,7 +58,7 @@
 
         - name: Validate the fix with a unit test
           ansible.builtin.script:
-            cmd: "python testing/unit_tests/test_pipecat_app.py {{ pipecat_ip }}"
+            cmd: "python {{ playbook_dir }}/tests/integration/test_pipecat_app.py {{ pipecat_ip }}"
           register: test_result
           changed_when: false
           when: pipecat_ip is defined
@@ -128,7 +128,7 @@
 
         - name: Validate the fix with a unit test
           ansible.builtin.script:
-            cmd: "python testing/unit_tests/test_pipecat_app.py {{ pipecat_ip }}"
+            cmd: "python {{ playbook_dir }}/tests/integration/test_pipecat_app.py {{ pipecat_ip }}"
           register: test_result
           changed_when: false
           when: pipecat_ip is defined

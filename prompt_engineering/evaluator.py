@@ -127,7 +127,7 @@ async def evaluate_code(candidate_code: str) -> dict:
         else:
             # Default behavior: run the whole suite
             logging.info("No dynamic test case provided. Running default test suite.")
-            test_job_env['PYTEST_TARGET'] = "testing/integration_tests/"
+            test_job_env['PYTEST_TARGET'] = "/app/tests/integration/"
 
 
         nomad_client.jobs.register_job({'Job': test_job_spec})
