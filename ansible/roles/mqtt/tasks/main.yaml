@@ -95,19 +95,34 @@
       register: mqtt_allocs
       ignore_errors: yes
 
+    - name: Save MQTT allocations to temp file
+      ansible.builtin.copy:
+        content: "{{ mqtt_allocs.stdout }}"
+        dest: "/tmp/mqtt_allocs.json"
+
+    - name: Extract Allocation ID
+      ansible.builtin.command: jq -r '.[0].ID' /tmp/mqtt_allocs.json
+      register: mqtt_alloc_id
+      ignore_errors: yes
+
     - name: Fetch MQTT logs
-      ansible.builtin.shell: |
-        ALLOC_ID=$(echo '{{ mqtt_allocs.stdout }}' | jq -r '.[0].ID')
-        /usr/local/bin/nomad alloc logs -stderr $ALLOC_ID
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ mqtt_alloc_id.stdout }}"
       environment:
         NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
       register: mqtt_logs
       ignore_errors: yes
-      when: mqtt_allocs.stdout is defined
+      when: mqtt_alloc_id.stdout | length > 0
 
     - name: Display MQTT logs
       ansible.builtin.debug:
         var: mqtt_logs.stdout
+      when: mqtt_logs is defined
+
+    - name: Clean up temp file
+      ansible.builtin.file:
+        path: "/tmp/mqtt_allocs.json"
+        state: absent
 
     - name: Fail after debugging
       ansible.builtin.fail:
