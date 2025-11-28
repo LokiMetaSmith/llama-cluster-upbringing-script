@@ -31,16 +31,27 @@ job "mqtt" {
         interval = "10s"
         timeout  = "2s"
         address_mode = "host"
+
+        check_restart {
+          limit = 3
+          grace = "90s"
+          ignore_warnings = false
+        }
       }
     }
 
+    restart {
+      attempts = 10
+      interval = "5m"
+      delay    = "25s"
+      mode     = "delay"
+    }
 
     task "mosquitto" {
       driver = "docker"
 
       config {
         image = "eclipse-mosquitto:2"
-        ports = ["mqtt", "ws"]
         cap_add = ["SETUID", "SETGID", "CHOWN", "NET_BIND_SERVICE"]
 
         # By not specifying a command, we allow the container to use its
