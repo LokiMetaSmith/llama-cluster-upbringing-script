@@ -12,7 +12,6 @@ job "world-model-service" {
     }
 
     network {
-      mode = "host"
       port "http" {}
     }
 
@@ -57,6 +56,7 @@ job "world-model-service" {
           timeout  = "10s"
           method   = "GET"
           port     = "http"
+          address_mode = "host"
         }
       }
     }
