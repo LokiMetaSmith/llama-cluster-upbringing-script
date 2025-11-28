@@ -51,7 +51,7 @@ job "world-model-service" {
         check {
           type     = "http"
           name     = "alive"
-          path     = "/state"
+          path     = "/health"
           interval = "15s"
           timeout  = "10s"
           method   = "GET"
