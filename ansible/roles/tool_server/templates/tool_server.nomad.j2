@@ -18,6 +18,7 @@ job "tool-server" {
         volumes = [
           "/opt/cluster-infra:/opt/cluster-infra",
           "/home/{{ target_user }}/.ssh:/root/.ssh:ro",
+          "/opt/mcp:/opt/mcp",
         ]
 
         command = "uvicorn"
@@ -26,6 +27,8 @@ job "tool-server" {
 
       env {
         TOOL_SERVER_API_KEY = "{{ openai_api_key }}"
+        HA_URL              = "{{ env_ha_url | default('') }}"
+        HA_TOKEN            = "{{ env_ha_token | default('') }}"
       }
 
       service {
