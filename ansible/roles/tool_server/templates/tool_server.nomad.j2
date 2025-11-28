@@ -25,9 +25,9 @@ job "tool-server" {
       }
 
       service {
-        name = "tool-server"
+        name = "tool-server-api"
         port = "http"
-        tags = ["tool-server", "http"]
+        tags = ["tool-server-api", "http"]
 
         check {
           type     = "http"
