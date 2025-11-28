@@ -183,7 +183,7 @@
 
 - name: Ensure Nomad jobs directory exists
   ansible.builtin.file:
-    path: /opt/nomad/jobs
+    path: "{{ nomad_jobs_dir }}"
     state: directory
     mode: '0755'
   become: yes
@@ -191,13 +191,13 @@
 - name: Copy pipecatapp Nomad job file
   ansible.builtin.template:
     src: pipecatapp.nomad.j2
-    dest: /opt/nomad/jobs/pipecatapp.nomad
+    dest: "{{ nomad_jobs_dir }}/pipecatapp.nomad"
   become: yes
 
 - name: Template prompt evolution Nomad job file
   ansible.builtin.template:
     src: ../../jobs/evolve-prompt.nomad.j2
-    dest: /opt/nomad/jobs/evolve-prompt.nomad
+    dest: "{{ nomad_jobs_dir }}/evolve-prompt.nomad"
   become: yes
 
 - name: Stop and purge any existing expert jobs to ensure idempotency
@@ -217,13 +217,13 @@
 - name: Create router job file from template
   ansible.builtin.template:
     src: ../../jobs/router.nomad.j2
-    dest: "/opt/nomad/jobs/router.nomad"
+    dest: "{{ nomad_jobs_dir }}/router.nomad"
   become: yes
 
 - name: Create expert job files from template for verified models
   ansible.builtin.template:
     src: ../../jobs/expert.nomad.j2
-    dest: "/opt/nomad/jobs/expert-{{ current_expert }}.nomad"
+    dest: "{{ nomad_jobs_dir }}/expert-{{ current_expert }}.nomad"
   loop: "{{ verified_experts | default([]) }}"
   loop_control:
     loop_var: current_expert # Using the previously updated loop variable name
@@ -263,12 +263,12 @@
     msg: >
       ⚠️  No verified experts found! Skipping expert job creation.
       (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
-  when: verified_experts is defined and verified_experts | length > 0
+  when: verified_experts is not defined or verified_experts | length == 0
 
 - name: Copy test runner Nomad job template
   ansible.builtin.copy:
     src: ../../jobs/test-runner.nomad.j2
-    dest: /opt/nomad/jobs/test-runner.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/test-runner.nomad.j2"
   become: yes
 
 - name: Install Playwright browsers using the virtual environment's python
@@ -306,7 +306,7 @@
 
 - name: Run router job
   ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run /opt/nomad/jobs/router.nomad
+    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/router.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   register: router_job_run
@@ -327,7 +327,7 @@
 
 - name: Run pipecat-app job
   ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run /opt/nomad/jobs/pipecatapp.nomad
+    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/pipecatapp.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
   register: router_job_run

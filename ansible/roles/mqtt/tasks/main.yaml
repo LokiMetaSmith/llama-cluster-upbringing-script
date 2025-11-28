@@ -1,6 +1,6 @@
 - name: Ensure Nomad volumes directory exists
   ansible.builtin.file:
-    path: /opt/nomad/volumes
+    path: "{{ nomad_volumes_dir }}"
     state: directory
     mode: '0755'
   become: yes
@@ -12,30 +12,29 @@
     mode: '0755'
   become: yes
   loop:
-    - /opt/nomad/volumes/mqtt-data
-    - /opt/nomad/volumes/mqtt-data/data
-    - /opt/nomad/volumes/mqtt-data/log
-    - /opt/nomad/volumes/mqtt-data/config
+    - "{{ nomad_volumes_dir }}/mqtt-data"
+    - "{{ nomad_volumes_dir }}/mqtt-data/data"
+    - "{{ nomad_volumes_dir }}/mqtt-data/log"
+    - "{{ nomad_volumes_dir }}/mqtt-data/config"
 
 - name: Create Mosquitto config file
   ansible.builtin.copy:
-    dest: /opt/nomad/volumes/mqtt-data/config/mosquitto.conf
+    dest: "{{ nomad_volumes_dir }}/mqtt-data/config/mosquitto.conf"
     content: |
       persistence true
       persistence_location /mosquitto/data
       log_dest stdout
       log_type all
-      listener 1883
-      bind_address {{ advertise_ip }}
+      listener 1883 0.0.0.0
       allow_anonymous true
-      listener 9001
+      listener 9001 0.0.0.0
       protocol websockets
     mode: '0644'
   become: yes
 
 - name: Set ownership for Mosquitto directories
   ansible.builtin.file:
-    path: /opt/nomad/volumes/mqtt-data
+    path: "{{ nomad_volumes_dir }}/mqtt-data"
     state: directory
     owner: "1883"
     group: "1883"
@@ -56,7 +55,7 @@
 - name: Template mqtt Nomad job file
   ansible.builtin.template:
     src: mqtt.nomad.j2
-    dest: /opt/nomad/jobs/mqtt.nomad
+    dest: "{{ nomad_jobs_dir }}/mqtt.nomad"
   become: yes
 
 - name: Wait for Nomad to be ready
@@ -67,7 +66,7 @@
 
 - name: Run mqtt job
   ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run /opt/nomad/jobs/mqtt.nomad
+    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/mqtt.nomad
   environment:
     NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
   changed_when: true

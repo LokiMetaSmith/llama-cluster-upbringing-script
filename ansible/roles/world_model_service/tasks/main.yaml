@@ -31,13 +31,11 @@
 - name: "World Model Service : Build the docker image"
   tags:
     - world_model_service
-  community.docker.docker_image:
-    name: "localhost/world-model-service:latest"
-    build:
-      path: "/opt/world_model_service/"
-    source: build
-    force_source: true
-    state: present
+  ansible.builtin.command:
+    cmd: "docker build -t world-model-service:latest ."
+    chdir: "/opt/world_model_service/"
+  register: docker_build_result
+  changed_when: "'Successfully built' in docker_build_result.stdout or 'writing image' in docker_build_result.stdout"
   become: true
 
 - name: "World Model Service : Copy debug script"
@@ -72,7 +70,7 @@
     - world_model_service
   ansible.builtin.template:
     src: "world_model.nomad.j2"
-    dest: "/opt/nomad/jobs/world_model.nomad"
+    dest: "{{ nomad_jobs_dir }}/world_model.nomad"
     owner: "root"
     group: "root"
     mode: "0644"
@@ -83,7 +81,7 @@
   tags:
     - world_model_service
   ansible.builtin.command:
-    cmd: "/usr/local/bin/nomad job run /opt/nomad/jobs/world_model.nomad"
+    cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/world_model.nomad"
   environment:
     NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
   changed_when: true
@@ -94,7 +92,7 @@
     - world_model_service
   ansible.builtin.template:
     src: "../../jobs/llamacpp-batch.nomad.j2"
-    dest: "/opt/nomad/jobs/llamacpp-batch.nomad"
+    dest: "{{ nomad_jobs_dir }}/llamacpp-batch.nomad"
     owner: "root"
     group: "root"
     mode: "0644"
@@ -103,7 +101,7 @@
 
 - name: "World Model Service : Register batch nomad job"
   ansible.builtin.command:
-    cmd: "/usr/local/bin/nomad job run /opt/nomad/jobs/llamacpp-batch.nomad"
+    cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/llamacpp-batch.nomad"
   environment:
     NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
   changed_when: true

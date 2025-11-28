@@ -44,4 +44,5 @@ uvicorn
 webrtcvad
 websockets
 wheel
+pylint
 llm-sandbox[docker]

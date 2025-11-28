@@ -57,7 +57,11 @@ RUN pip install --no-cache-dir \
     webrtcvad \
     websockets \
     ultralytics \
-    sentence_transformers
+    sentence_transformers \
+    pyautogui \
+    ansible
+
+COPY app.py .
+COPY tools ./tools
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]
-

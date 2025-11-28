@@ -1,0 +1,6 @@
+- name: Run mcp server job
+  ansible.builtin.template:
+    src: mcp_server.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/mcp_server.nomad"
+  notify:
+    - Run mcp server job

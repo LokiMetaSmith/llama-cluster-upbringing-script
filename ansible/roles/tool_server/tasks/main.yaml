@@ -1,7 +1,8 @@
-- name: Copy app.py into the build context
+- name: Copy tools directory into the build context
   ansible.builtin.copy:
-    src: app.py  # Looks for files/app.py inside the role
-    dest: "{{ role_path }}/app.py" # Copies it to .../roles/tool_server/app.py
+    src: "{{ role_path }}/../../roles/pipecatapp/files/tools"
+    dest: "{{ role_path }}/"
+    mode: '0755'
   become: no
   delegate_to: localhost
 
@@ -18,8 +19,8 @@
 - name: Template tool-server.nomad job file
   ansible.builtin.template:
     src: tool_server.nomad.j2
-    dest: /opt/nomad/jobs/tool_server.nomad
+    dest: "{{ nomad_jobs_dir }}/tool_server.nomad"
 
 - name: Run tool-server nomad job
-  ansible.builtin.command: /usr/local/bin/nomad job run /opt/nomad/jobs/tool_server.nomad
+  ansible.builtin.command: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/tool_server.nomad
   changed_when: true

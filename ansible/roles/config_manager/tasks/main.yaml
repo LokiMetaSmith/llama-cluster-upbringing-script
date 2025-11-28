@@ -3,14 +3,14 @@
 # --- Check for auth file instead of waiting ---
 - name: Check if Home Assistant auth file exists
   ansible.builtin.stat:
-    path: /opt/nomad/volumes/ha-config/.storage/auth_provider.homeassistant
+    path: "{{ nomad_volumes_dir }}/ha-config/.storage/auth_provider.homeassistant"
   register: ha_auth_file_stat
   become: yes
 
 # --- Make subsequent tasks conditional ---
 - name: Read Home Assistant auth file if it exists
   ansible.builtin.slurp:
-    src: /opt/nomad/volumes/ha-config/.storage/auth_provider.homeassistant
+    src: "{{ nomad_volumes_dir }}/ha-config/.storage/auth_provider.homeassistant"
   register: "ha_auth_file_content"
   become: yes
   when: ha_auth_file_stat.stat.exists # Only run if file exists
