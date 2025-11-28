@@ -59,5 +59,6 @@ RUN pip install --no-cache-dir \
     ultralytics \
     sentence_transformers
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]
+COPY app.py .
 
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]

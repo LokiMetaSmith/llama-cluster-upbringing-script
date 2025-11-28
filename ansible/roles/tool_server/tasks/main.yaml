@@ -1,10 +1,3 @@
-- name: Copy app.py into the build context
-  ansible.builtin.copy:
-    src: app.py  # Looks for files/app.py inside the role
-    dest: "{{ role_path }}/app.py" # Copies it to .../roles/tool_server/app.py
-  become: no
-  delegate_to: localhost
-
 - name: Build tool-server docker image
   community.docker.docker_image:
     name: tool-server:latest
