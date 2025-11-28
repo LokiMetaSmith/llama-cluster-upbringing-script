@@ -12,6 +12,7 @@ job "world-model-service" {
     }
 
     network {
+      mode = "host"
       port "http" {}
     }
 
@@ -20,7 +21,6 @@ job "world-model-service" {
 
       config {
         image   = "world-model-service:latest"
-        ports   = ["http"]
         force_pull = false
       }
 
