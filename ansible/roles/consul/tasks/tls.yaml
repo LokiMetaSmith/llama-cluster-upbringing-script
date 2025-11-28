@@ -1,3 +1,10 @@
+- name: Check if CA certificate exists (localhost)
+  stat:
+    path: "{{ consul_temp_cert_dir }}/ca.pem"
+  register: ca_cert_stat
+  delegate_to: localhost
+  check_mode: false
+
 - name: Copy CA certificate to all nodes
   copy:
     src: "{{ consul_temp_cert_dir }}/ca.pem"
@@ -5,6 +12,7 @@
     mode: '0644'
     remote_src: yes
   become: yes
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
 
 - name: Copy node certificate and key to each node
   copy:
@@ -16,3 +24,4 @@
     - { src: 'pem', dest: 'cert.pem' }
     - { src: 'key', dest: 'key.pem' }
   become: yes
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
