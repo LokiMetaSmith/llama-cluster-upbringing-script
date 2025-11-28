@@ -19,7 +19,7 @@ job "world-model-service" {
       driver = "docker"
 
       config {
-        image   = "localhost/world-model-service:latest"
+        image   = "world-model-service:latest"
         ports   = ["http"]
         force_pull = false
       }
@@ -51,7 +51,7 @@ job "world-model-service" {
         check {
           type     = "http"
           name     = "alive"
-          path     = "/state"
+          path     = "/health"
           interval = "15s"
           timeout  = "10s"
           method   = "GET"
