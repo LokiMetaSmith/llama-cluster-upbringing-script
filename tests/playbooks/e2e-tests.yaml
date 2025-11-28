@@ -67,7 +67,7 @@
       changed_when: "'Browsers installed' in playwright_install.stdout"
 
     - name: Run Playwright tests with pytest
-      ansible.builtin.command: python -m pytest e2e/
+      ansible.builtin.command: python -m pytest tests/e2e/
       register: playwright_test_results
       changed_when: false # This task only reports status, doesn't change state
 
@@ -94,4 +94,4 @@
           - "'Current pipeline status' in agent_response.json.text or 'No active pipelines' in agent_response.json.text"
         fail_msg: "Agent did not return a valid status report. Response: {{ agent_response.json.text }}"
 
-- import_playbook: testing/integration_tests/test_home_assistant.yaml
+- import_playbook: ../integration/test_home_assistant.yaml

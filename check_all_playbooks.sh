@@ -97,7 +97,7 @@ run_playbook_checks() {
       echo
     fi
   done < <(find . -type f \( -name "*.yaml" -o -name "*.yml" \) \
-      -not -path "./testing/*" \
+      -not -path "./tests/*" \
       -not -path "./prompt_engineering/*" \
       -print0) # <-- Process Substitution feeds the loop
 
