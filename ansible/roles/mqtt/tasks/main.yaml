@@ -22,7 +22,7 @@
     dest: "{{ nomad_volumes_dir }}/mqtt-data/config/mosquitto.conf"
     content: |
       persistence true
-      persistence_location /mosquitto/data
+      persistence_location /mosquitto/data/
       log_dest stdout
       log_type all
       listener 1883 0.0.0.0
@@ -64,14 +64,54 @@
     port: 4646
     timeout: 60
 
-- name: Run mqtt job
-  ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/mqtt.nomad
-  environment:
-    NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
-  changed_when: true
-  register: mqtt_job_run
-#  notify: Restart Home Assistant
+- name: Deploy MQTT Job
+  block:
+    - name: Run mqtt job
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/mqtt.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+      changed_when: true
+      register: mqtt_job_run
+      #  notify: Restart Home Assistant
+  rescue:
+    - name: Get MQTT job status
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status -verbose mqtt
+      environment:
+        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+      register: mqtt_job_status
+      ignore_errors: yes
+
+    - name: Display MQTT job status
+      ansible.builtin.debug:
+        var: mqtt_job_status.stdout
+
+    - name: Get MQTT allocations
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job allocs -json mqtt
+      environment:
+        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+      register: mqtt_allocs
+      ignore_errors: yes
+
+    - name: Fetch MQTT logs
+      ansible.builtin.shell: |
+        ALLOC_ID=$(echo '{{ mqtt_allocs.stdout }}' | jq -r '.[0].ID')
+        /usr/local/bin/nomad alloc logs -stderr $ALLOC_ID
+      environment:
+        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+      register: mqtt_logs
+      ignore_errors: yes
+      when: mqtt_allocs.stdout is defined
+
+    - name: Display MQTT logs
+      ansible.builtin.debug:
+        var: mqtt_logs.stdout
+
+    - name: Fail after debugging
+      ansible.builtin.fail:
+        msg: "MQTT job failed to start. See logs above."
 
 - name: Wait for MQTT port to be open
   ansible.builtin.wait_for:
