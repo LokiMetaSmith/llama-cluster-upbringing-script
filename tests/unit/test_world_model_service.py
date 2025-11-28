@@ -53,12 +53,14 @@ def test_run_mqtt_client_successful_connection(mock_sleep, mock_mqtt_client):
     mock_mqtt_client.connect.assert_called_once()
     mock_mqtt_client.loop_forever.assert_called_once()
 
+@patch('world_model_service.files.app.os._exit')
 @patch('world_model_service.files.app.time.sleep', return_value=None)
-def test_run_mqtt_client_connection_refused(mock_sleep, mock_mqtt_client):
+def test_run_mqtt_client_connection_refused(mock_sleep, mock_exit, mock_mqtt_client):
     """Tests the run_mqtt_client function with a ConnectionRefusedError."""
     mock_mqtt_client.connect.side_effect = ConnectionRefusedError
     run_mqtt_client()
-    assert mock_mqtt_client.connect.call_count == 5
+    assert mock_mqtt_client.connect.call_count == 50
+    mock_exit.assert_called_once_with(1)
 
 @pytest.mark.asyncio
 async def test_dispatch_job(client):
