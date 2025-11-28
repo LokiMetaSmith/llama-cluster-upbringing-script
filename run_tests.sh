@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -e
+
+# Function to display help
+show_help() {
+    echo "Usage: $0 [options]"
+    echo "Options:"
+    echo "  --unit          Run unit tests"
+    echo "  --integration   Run integration tests (Python only)"
+    echo "  --e2e           Run end-to-end tests (pytest)"
+    echo "  --all           Run all tests (unit, integration, e2e)"
+    echo "  --help          Display this help message"
+}
+
+# Default values
+RUN_UNIT=false
+RUN_INTEGRATION=false
+RUN_E2E=false
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --unit) RUN_UNIT=true ;;
+        --integration) RUN_INTEGRATION=true ;;
+        --e2e) RUN_E2E=true ;;
+        --all) RUN_UNIT=true; RUN_INTEGRATION=true; RUN_E2E=true ;;
+        --help) show_help; exit 0 ;;
+        *) echo "Unknown parameter passed: $1"; show_help; exit 1 ;;
+    esac
+    shift
+done
+
+# If no flags provided, show help
+if [ "$RUN_UNIT" = false ] && [ "$RUN_INTEGRATION" = false ] && [ "$RUN_E2E" = false ]; then
+    show_help
+    exit 1
+fi
+
+# Set path for pyenv shims if needed (copied from existing script)
+export PATH="/home/jules/.pyenv/shims:$PATH"
+
+# Run Unit Tests
+if [ "$RUN_UNIT" = true ]; then
+    echo "========================================"
+    echo "Running Unit Tests..."
+    echo "========================================"
+    python -m pytest tests/unit/
+fi
+
+# Run Integration Tests
+if [ "$RUN_INTEGRATION" = true ]; then
+    echo "========================================"
+    echo "Running Integration Tests..."
+    echo "========================================"
+    python -m pytest tests/integration/
+fi
+
+# Run E2E Tests
+if [ "$RUN_E2E" = true ]; then
+    echo "========================================"
+    echo "Running E2E Tests..."
+    echo "========================================"
+    # Use python -m pytest tests/e2e/ directly as e2e-tests.yaml might require full ansible environment
+    python -m pytest tests/e2e/
+fi
+
+echo "========================================"
+echo "Done."

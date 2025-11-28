@@ -2,4 +2,4 @@
 set -e
 
 export PATH="/home/jules/.pyenv/shims:$PATH"
-python -m pytest testing/unit_tests/
+python -m pytest tests/unit/
