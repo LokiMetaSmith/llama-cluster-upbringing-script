@@ -15,6 +15,11 @@ job "tool-server" {
       config {
         image = "tool-server:latest"
         ports = ["http"]
+        volumes = [
+          "/opt/cluster-infra:/opt/cluster-infra",
+          "/home/{{ target_user }}/.ssh:/root/.ssh:ro",
+          "/opt/mcp:/opt/mcp",
+        ]
 
         command = "uvicorn"
         args = ["app:app", "--host", "0.0.0.0", "--port", "${NOMAD_PORT_http}"]
@@ -22,12 +27,14 @@ job "tool-server" {
 
       env {
         TOOL_SERVER_API_KEY = "{{ openai_api_key }}"
+        HA_URL              = "{{ env_ha_url | default('') }}"
+        HA_TOKEN            = "{{ env_ha_token | default('') }}"
       }
 
       service {
-        name = "tool-server"
+        name = "tool-server-api"
         port = "http"
-        tags = ["tool-server", "http"]
+        tags = ["tool-server-api", "http"]
 
         check {
           type     = "http"
