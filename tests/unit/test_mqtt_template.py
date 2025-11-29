@@ -7,7 +7,7 @@ def test_mqtt_template():
     Tests that the mqtt.nomad.j2 template renders correctly and follows best practices.
     """
     # Adjust path to the template
-    # This file is in testing/unit_tests/
+    # This file is in tests/unit/
     # Template is in ansible/roles/mqtt/templates/
     base_dir = os.path.dirname(os.path.abspath(__file__))
     template_dir = os.path.abspath(os.path.join(base_dir, '../../ansible/roles/mqtt/templates'))

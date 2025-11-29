@@ -80,7 +80,7 @@ The Ansible playbook can hang on the 'Run mqtt job' task. If this occurs after r
 
 Global application variables, such as llama_api_service_name, are defined as the source of truth in group_vars/all.yaml and propagated to the application via the config_manager role writing to Consul.
 
-The unit tests in testing/unit_tests/test_pipecat_app.py focus on the Python application logic and do not cover the rendering of associated Ansible configuration templates.
+The unit tests in tests/unit/test_pipecat_app.py focus on the Python application logic and do not cover the rendering of associated Ansible configuration templates.
 
 The pipecat architecture includes a dedicated 'router' Nomad job, which provides a router-api service registered in Consul. The pipecat-app is configured via the LLAMA_API_SERVICE_NAME environment variable to use this service, and the Ansible deployment playbook waits for the router-api service to be healthy before starting the application.
 
@@ -148,7 +148,7 @@ Command-line arguments for bootstrap.sh (e.g., --flush-cache, --external-model-s
 
 The bootstrap.sh script can be run with the --flush-cache flag, which passes a flush_cache=true variable to the Ansible playbook to handle the deletion of the ~/.cache/torch directory.
 
-The command to run the unit test suite is python -m unittest discover testing/unit_tests.
+The command to run the unit test suite is python -m unittest discover tests/unit.
 
 The project's Python dependencies for testing are spread across multiple files: requirements-dev.txt (root), ansible/roles/python_deps/files/requirements.txt, and prompt_engineering/requirements-dev.txt.
 
@@ -202,7 +202,7 @@ The openevolve Python package, a dependency for some tests, is defined in prompt
 
 To run the unit test suite in a minimal environment, problematic modules like pyaudio, faster_whisper, piper.voice, and playwright must be mocked to bypass ImportError issues.
 
-To generate a test coverage report for the ansible and supervisor directories, run the command python -m pytest --cov=ansible --cov=supervisor --cov-report=term-missing testing/unit_tests/ within the activated virtual environment.
+To generate a test coverage report for the ansible and supervisor directories, run the command python -m pytest --cov=ansible --cov=supervisor --cov-report=term-missing tests/unit/ within the activated virtual environment.
 
 The testing environment is difficult to set up due to Python packages with heavy system-level dependencies (e.g., pyaudio, av, playwright). A full pip install of all requirements often fails.
 
@@ -242,7 +242,7 @@ The Home Assistant Nomad job template (home_assistant.nomad.j2) has a circular d
 
 Jinja2 templates that are converted to JSON cannot contain comments, as this will cause a templating error during the conversion.
 
-The unit test testing/unit_tests/test_home_assistant_template.py is fragile and will fail when run outside a full Ansible execution context because it depends on the hostvars variable. The test needs to be skipped or have hostvars mocked to pass.
+The unit test tests/unit/test_home_assistant_template.py is fragile and will fail when run outside a full Ansible execution context because it depends on the hostvars variable. The test needs to be skipped or have hostvars mocked to pass.
 
 To run Ansible commands, ansible-core must be installed in the pyenv environment via pip.
 
@@ -366,7 +366,7 @@ The nomad Ansible role defines its default data directory as /opt/nomad in roles
 
 The API endpoints are defined in ansible/roles/pipecatapp/files/web_server.py using the FastAPI framework.
 
-The project uses pytest as its testing framework. Unit tests for app.py are in testing/unit_tests/test_pipecat_app.py.
+The project uses pytest as its testing framework. Unit tests for app.py are in tests/unit/test_pipecat_app.py.
 
 The expert.nomad.j2 template requires both job_name and expert_name variables to be defined in the calling Ansible task.
 
@@ -476,7 +476,7 @@ Nomad batch jobs can be scheduled to run periodically using the periodic block w
 
 The project has an existing 'expert routing' system defined by prompts in ansible/roles/pipecatapp/files/prompts, which is distinct from the development workflow agents.
 
-Unit tests for agent definition markdown files are located in testing/unit_tests/test_agent_definitions.py and validate the schema of the files.
+Unit tests for agent definition markdown files are located in tests/unit/test_agent_definitions.py and validate the schema of the files.
 
 Async functions under test require their mocks to be AsyncMock instances to be awaitable.
 
@@ -502,11 +502,11 @@ The llama-server requires the --flash-attn flag to have a value (on, off, or aut
 
 The project's integration tests (testing/integration_tests/) require a running instance of the pipecat application and its dependencies, including the Consul service, to pass.
 
-The project contains multiple test files with the same name in different directories (e.g., in ansible/ vs docker/, and testing/unit_tests vs testing/integration_tests). To avoid import file mismatch errors, pytest should be run on specific directories rather than on the root.
+The project contains multiple test files with the same name in different directories (e.g., in ansible/ vs docker/, and tests/unit vs tests/integration). To avoid import file mismatch errors, pytest should be run on specific directories rather than on the root.
 
 The supervisor.py script is the core of a self-healing loop that uses Ansible playbooks to check, diagnose, and heal failed system jobs.
 
-Unit tests for supervisor.py are located in testing/unit_tests/test_supervisor.py.
+Unit tests for supervisor.py are located in tests/unit/test_supervisor.py.
 
 When running E2E tests, the pipecat application and its dependencies must be running.
 
