@@ -1,16 +1,38 @@
-# TODO: Re-add test case in a way that does not break the tests
 import os
 import yaml
 import pytest
 from jinja2 import Environment, FileSystemLoader
 
-@pytest.mark.skip(reason="This test fails in a standalone context because it depends on Ansible's hostvars")
 def test_home_assistant_template():
     """
     Tests that the home_assistant.nomad.j2 template renders correctly.
     """
-    j2_env = Environment(loader=FileSystemLoader('ansible/roles/home_assistant/templates'), trim_blocks=True)
-    template = j2_env.get_template('home_assistant.nomad.j2')
-    result = template.render()
+    # Adjust path to templates depending on where pytest is run from.
+    # Assuming run from repo root.
+    template_dir = 'ansible/roles/home_assistant/templates'
+    if not os.path.isdir(template_dir):
+        # Fallback if running from tests directory
+        template_dir = '../../ansible/roles/home_assistant/templates'
 
-    assert 'MQTT_BROKER = "mqtt.service.consul"' in result
+    j2_env = Environment(loader=FileSystemLoader(template_dir), trim_blocks=True)
+    template = j2_env.get_template('home_assistant.nomad.j2')
+
+    # Mock context variables
+    context = {
+        'home_assistant_debug_mode': False,
+        'use_host_network': False,
+        'home_assistant_token': 'test_token',
+        'hostvars': {
+            'controller_node_1': {
+                'ansible_host': '192.168.1.100'
+            }
+        },
+        'advertise_ip': '192.168.1.100'
+    }
+
+    result = template.render(context)
+
+    # Verify key configuration injections
+    assert 'MQTT_SERVER = "mqtt://192.168.1.100:1883"' in result
+    assert 'HA_TOKEN = "test_token"' in result
+    assert 'job "home-assistant"' in result
