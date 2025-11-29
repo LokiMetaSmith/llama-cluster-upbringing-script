@@ -27,10 +27,12 @@ job "mqtt" {
       provider = "consul"
 
       check {
-        type     = "tcp"
+        type     = "script"
+        name     = "mqtt_probe"
+        command  = "/usr/bin/python3"
+        args     = ["-c", "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.settimeout(2); s.connect(('127.0.0.1', 1883)); s.close()"]
         interval = "10s"
         timeout  = "2s"
-        address_mode = "host"
 
         check_restart {
           limit = 3
