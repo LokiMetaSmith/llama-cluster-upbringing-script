@@ -1,6 +1,7 @@
 import subprocess
 import os
 import shutil
+import re
 
 # This is a placeholder for the actual smolagents library.
 # We will assume it's available in the environment. In a real scenario,
@@ -98,17 +99,18 @@ class SmolAgentTool:
             # Use the agent to generate a plan and code.
             self.agent.run(task_description)
 
-            # TODO: The following code extraction logic is brittle, as it relies on
-            # parsing the internal `memory` log of the `smolagents` library.
-            # This should be replaced with a more stable method if the library
-            # provides a direct way to access the final generated code.
+            # Extract code using regex to handle variations (e.g. ```python, ```)
+            # and to be less brittle than simple string splitting.
+            code_pattern = re.compile(r"```(?:python)?\s*(.*?)```", re.DOTALL)
             code_to_execute = ""
+
             for message in reversed(self.agent.memory):
-                if message["role"] == "assistant" and "```python" in message["content"]:
-                    # This reliably extracts the code from the markdown block.
-                    code_block = message["content"].split("```python\\n", 1)[1]
-                    code_to_execute = code_block.split("```", 1)[0]
-                    break
+                if message["role"] == "assistant":
+                    matches = code_pattern.findall(message["content"])
+                    if matches:
+                        # Use the last code block found in the latest assistant message
+                        code_to_execute = matches[-1].strip()
+                        break
 
             if not code_to_execute:
                 return "Error: The agent did not generate any code to execute."

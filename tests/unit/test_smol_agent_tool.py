@@ -19,18 +19,18 @@ def test_run_success(mock_agent_cls, mock_model_cls, mock_which, smol_tool):
     mock_which.return_value = "/usr/bin/deno"
 
     mock_agent = mock_agent_cls.return_value
-    # Mock memory with escaped newlines as expected by the tool
+    # Mock memory with proper newlines
     mock_agent.memory = [
         {"role": "user", "content": "task"},
-        {"role": "assistant", "content": "```python\\nprint('hello')\\n```"}
+        {"role": "assistant", "content": "```python\nprint('hello')\n```"}
     ]
 
     with patch.object(smol_tool, '_execute_in_sandbox', return_value="Output: hello") as mock_exec:
         result = smol_tool.run("task description")
 
         assert result == "Output: hello"
-        # The extracted code will have \\n if split worked on \\n
-        mock_exec.assert_called_once_with("print('hello')\\n")
+        # The extracted code should be just the code
+        mock_exec.assert_called_once_with("print('hello')")
 
 @patch('smol_agent_tool.shutil.which')
 def test_deno_missing(mock_which, smol_tool):
