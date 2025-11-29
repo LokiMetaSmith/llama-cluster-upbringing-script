@@ -10,6 +10,7 @@ from workflow.runner import WorkflowRunner
 from workflow.context import WorkflowContext
 from workflow.nodes.base_nodes import InputNode, OutputNode
 from workflow.nodes.tool_nodes import ToolParserNode
+from workflow.node import Node
 
 @pytest.fixture
 def mock_registry(mocker):
@@ -52,7 +53,7 @@ def test_topological_sort_with_cycle(mocker):
         runner._get_execution_order()
 
 @pytest.mark.asyncio
-async def test_workflow_execution_data_flow(mock_registry):
+async def test_workflow_execution_data_flow(mock_registry, mocker):
     """Tests a simple workflow from end-to-end, verifying data is passed correctly."""
 
     # Define a simple workflow
@@ -143,10 +144,22 @@ async def test_tool_executor_node():
     context.set_output.assert_called_with("executor", "tool_result", "it worked")
 
 @pytest.mark.asyncio
-async def test_workflow_tool_loop(mock_registry):
+async def test_workflow_tool_loop(mock_registry, mocker):
     """Tests a workflow with a tool call and verifies the result is fed back."""
     from workflow.nodes.base_nodes import MergeNode
-    from workflow.nodes.tool_nodes import ToolExecutorNode, PromptBuilderNode
+    from workflow.nodes.tool_nodes import ToolExecutorNode
+
+    class PromptBuilderNode(Node):
+        """A simple mock PromptBuilderNode."""
+        async def execute(self, context: WorkflowContext):
+            tool_result = self.get_input(context, "tool_result")
+            message = [{"text": tool_result}] if tool_result else []
+            if not "messages" in context.node_outputs.get(self.id, {}):
+                self.set_output(context, "messages", [])
+
+            current_messages = context.node_outputs.get(self.id, {}).get("messages", [])
+            current_messages.append({"role": "user", "content": message})
+            self.set_output(context, "messages", current_messages)
 
     workflow_def = {
         "nodes": [
@@ -211,7 +224,7 @@ async def test_conditional_branch_node_tool_check(tool_name_to_check, input_tool
         assert outputs.get("output_false") == input_tool_call
 
 @pytest.mark.asyncio
-async def test_nested_output_resolution(mock_registry):
+async def test_nested_output_resolution(mock_registry, mocker):
     """Tests that a workflow with nested connections in the output resolves correctly."""
     workflow_def = {
         "nodes": [

@@ -2,7 +2,7 @@ import yaml
 import asyncio
 from typing import Dict, Any, List
 from .context import WorkflowContext
-from .nodes import registry  # We will create this registry next
+from .nodes.registry import registry
 
 class ActiveWorkflows:
     """A simple singleton to track active workflow runners."""

@@ -24,5 +24,5 @@ This agent can delegate tasks to specialized sub-agents to handle specific aspec
 
 ## Backing LLM Model
 
-- **Model:** `claude-3-opus`
+* **Model:** `claude-3-opus`
 - **Reasoning:** This agent requires a powerful and nuanced model to understand complex user requests, reason about code, and formulate insightful clarifying questions. The larger context window is also beneficial for analyzing large codebases.

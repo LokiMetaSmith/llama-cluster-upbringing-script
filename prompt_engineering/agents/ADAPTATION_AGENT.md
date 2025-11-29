@@ -24,3 +24,8 @@ The agent produces two primary outputs:
 
 1. **A YAML Test Case File**: A new file containing a structured test case that reproduces the failure.
 2. **A Subprocess Call**: An invocation of `prompt_engineering/evolve.py` with the path to the new test case file as an argument.
+
+## Backing LLM Model
+
+* **Model:** `claude-3-opus`
+- **Reasoning:** The adaptation agent requires high-level reasoning to infer the root cause of a failure from disparate diagnostic logs and construct a meaningful test case that captures the essence of the failure.

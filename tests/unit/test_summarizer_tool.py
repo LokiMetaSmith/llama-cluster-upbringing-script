@@ -14,13 +14,38 @@ def mock_sentence_transformer_module():
 
 @pytest.fixture
 def summarizer_tool(mock_sentence_transformer_module):
-    mock_twin_service = MagicMock()
-    mock_instance = MagicMock()
-    mock_sentence_transformer_module.SentenceTransformer.return_value = mock_instance
+    # Patch the SentenceTransformer class within summarizer_tool module
+    # to prevent instantiation of the real class and network calls
+    with patch('summarizer_tool.SentenceTransformer') as mock_st_class:
+        mock_twin_service = MagicMock()
+        mock_instance = MagicMock()
+        mock_st_class.return_value = mock_instance
 
+        # Since we are patching the class, when SummarizerTool is instantiated,
+        # it will use the mock class.
+        tool = SummarizerTool(mock_twin_service)
+
+        # We also need to ensure the test uses the same mock instance
+        # tool.model is already mock_instance because of the patch
+
+        # We yield the tool so the patch stays active during setup if needed,
+        # but here we return it. Wait, if we use context manager, we must yield.
+        # But fixture needs to return the tool.
+        # So we should start the patch manually.
+        pass
+
+    # Re-implementing correctly:
+    patcher = patch('summarizer_tool.SentenceTransformer')
+    mock_st_class = patcher.start()
+    mock_instance = MagicMock()
+    mock_st_class.return_value = mock_instance
+
+    mock_twin_service = MagicMock()
     tool = SummarizerTool(mock_twin_service)
-    tool.model = mock_instance
-    return tool
+
+    yield tool
+
+    patcher.stop()
 
 @pytest.mark.xfail(reason="Mocking complexity with util.cos_sim causing empty summary")
 def test_get_summary_with_history(summarizer_tool, mock_sentence_transformer_module):

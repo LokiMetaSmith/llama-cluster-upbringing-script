@@ -24,5 +24,5 @@ This agent can delegate tasks to specialized sub-agents to handle specific aspec
 
 ## Backing LLM Model
 
-- **Model:** `claude-3-opus`
+* **Model:** `claude-3-opus`
 - **Reasoning:** A powerful model is essential for this agent to understand the complexities of software architecture, reason about abstract design principles, and provide insightful recommendations. The ability to process large amounts of code is also critical.

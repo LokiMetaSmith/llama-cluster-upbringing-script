@@ -7,7 +7,10 @@ class InputNode(Node):
     """A node that introduces global inputs into the workflow."""
     async def execute(self, context: WorkflowContext):
         for output_config in self.config.get("outputs", []):
-            output_name = output_config["name"]
+            if isinstance(output_config, str):
+                output_name = output_config
+            else:
+                output_name = output_config["name"]
             value = context.global_inputs.get(output_name)
             self.set_output(context, output_name, value)
 
