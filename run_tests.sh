@@ -43,12 +43,19 @@ fi
 # Set path for pyenv shims if needed (copied from existing script)
 export PATH="/home/jules/.pyenv/shims:$PATH"
 
+# Function to run pytest with reporting
+run_pytest() {
+    local target="$1"
+    local report_file="$2"
+    python -m pytest "$target" --junitxml="$report_file"
+}
+
 # Run Unit Tests
 if [ "$RUN_UNIT" = true ]; then
     echo "========================================"
     echo "Running Unit Tests..."
     echo "========================================"
-    python -m pytest "$REPO_ROOT/tests/unit/"
+    run_pytest "$REPO_ROOT/tests/unit/" "$REPO_ROOT/report_unit.xml"
 fi
 
 # Run Integration Tests
@@ -56,7 +63,7 @@ if [ "$RUN_INTEGRATION" = true ]; then
     echo "========================================"
     echo "Running Integration Tests..."
     echo "========================================"
-    python -m pytest "$REPO_ROOT/tests/integration/"
+    run_pytest "$REPO_ROOT/tests/integration/" "$REPO_ROOT/report_integration.xml"
 fi
 
 # Run E2E Tests
@@ -64,9 +71,8 @@ if [ "$RUN_E2E" = true ]; then
     echo "========================================"
     echo "Running E2E Tests..."
     echo "========================================"
-    # Use python -m pytest tests/e2e/ directly
-    python -m pytest "$REPO_ROOT/tests/e2e/"
+    run_pytest "$REPO_ROOT/tests/e2e/" "$REPO_ROOT/report_e2e.xml"
 fi
 
 echo "========================================"
-echo "Done."
+echo "Done. Test reports generated in $REPO_ROOT/report_*.xml"

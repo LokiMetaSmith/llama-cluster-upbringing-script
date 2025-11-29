@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="15" skipped="3" tests="163" time="7.062" timestamp="2025-11-28T23:12:14.682101+00:00" hostname="devbox"><testcase classname="tests.unit.test_adaptation_manager.TestAdaptationManager" name="test_import" time="0.002" /><testcase classname="tests.unit.test_adaptation_manager.TestAdaptationManager" name="test_main_flow" time="0.008" /><testcase classname="tests.unit.test_agent_definitions" name="test_agent_definition_schema[architecture_review.md]" time="0.002"><failure message="AssertionError: Schema validation failed for architecture_review.md:&#10;  Missing 'Model' specification (e.g., '* **Model:** ...').&#10;assert not [&quot;Missing 'Model' specification (e.g., '* **Model:** ...').&quot;]">filename = 'architecture_review.md'
+
+    @pytest.mark.parametrize("filename", agent_files)
+    def test_agent_definition_schema(filename):
+        """
+        Validates the schema of an agent definition markdown file using a more robust parser.
+        """
+        filepath = os.path.join(AGENT_DEFS_DIR, filename)
+        with open(filepath, 'r') as f:
+            content = f.read()
+
+        errors = parse_and_validate_agent_def(content, filename)
+
+&gt;       assert not errors, f"Schema validation failed for {filename}:\n" + "\n".join(errors)
+E       AssertionError: Schema validation failed for architecture_review.md:
+E         Missing 'Model' specification (e.g., '* **Model:** ...').
+E       assert not ["Missing 'Model' specification (e.g., '* **Model:** ...')."]
+
+tests/unit/test_agent_definitions.py:64: AssertionError</failure></testcase><testcase classname="tests.unit.test_agent_definitions" name="test_agent_definition_schema[new_task_review.md]" time="0.001"><failure message="AssertionError: Schema validation failed for new_task_review.md:&#10;  Missing 'Model' specification (e.g., '* **Model:** ...').&#10;assert not [&quot;Missing 'Model' specification (e.g., '* **Model:** ...').&quot;]">filename = 'new_task_review.md'
+
+    @pytest.mark.parametrize("filename", agent_files)
+    def test_agent_definition_schema(filename):
+        """
+        Validates the schema of an agent definition markdown file using a more robust parser.
+        """
+        filepath = os.path.join(AGENT_DEFS_DIR, filename)
+        with open(filepath, 'r') as f:
+            content = f.read()
+
+        errors = parse_and_validate_agent_def(content, filename)
+
+&gt;       assert not errors, f"Schema validation failed for {filename}:\n" + "\n".join(errors)
+E       AssertionError: Schema validation failed for new_task_review.md:
+E         Missing 'Model' specification (e.g., '* **Model:** ...').
+E       assert not ["Missing 'Model' specification (e.g., '* **Model:** ...')."]
+
+tests/unit/test_agent_definitions.py:64: AssertionError</failure></testcase><testcase classname="tests.unit.test_agent_definitions" name="test_agent_definition_schema[README.md]" time="0.001"><failure message="AssertionError: Schema validation failed for README.md:&#10;  Missing '## Role' section.&#10;  Missing '## Backing LLM Model' section.&#10;  Missing 'Model' specification (e.g., '* **Model:** ...').&#10;assert not [&quot;Missing '## Role' section.&quot;, &quot;Missing '## Backing LLM Model' section.&quot;, &quot;Missing 'Model' specification (e.g., '* **Model:** ...').&quot;]">filename = 'README.md'
+
+    @pytest.mark.parametrize("filename", agent_files)
+    def test_agent_definition_schema(filename):
+        """
+        Validates the schema of an agent definition markdown file using a more robust parser.
+        """
+        filepath = os.path.join(AGENT_DEFS_DIR, filename)
+        with open(filepath, 'r') as f:
+            content = f.read()
+
+        errors = parse_and_validate_agent_def(content, filename)
+
+&gt;       assert not errors, f"Schema validation failed for {filename}:\n" + "\n".join(errors)
+E       AssertionError: Schema validation failed for README.md:
+E         Missing '## Role' section.
+E         Missing '## Backing LLM Model' section.
+E         Missing 'Model' specification (e.g., '* **Model:** ...').
+E       assert not ["Missing '## Role' section.", "Missing '## Backing LLM Model' section.", "Missing 'Model' specification (e.g., '* **Model:** ...')."]
+
+tests/unit/test_agent_definitions.py:64: AssertionError</failure></testcase><testcase classname="tests.unit.test_agent_definitions" name="test_agent_definition_schema[ADAPTATION_AGENT.md]" time="0.001"><failure message="AssertionError: Schema validation failed for ADAPTATION_AGENT.md:&#10;  Missing '## Backing LLM Model' section.&#10;  Missing 'Model' specification (e.g., '* **Model:** ...').&#10;assert not [&quot;Missing '## Backing LLM Model' section.&quot;, &quot;Missing 'Model' specification (e.g., '* **Model:** ...').&quot;]">filename = 'ADAPTATION_AGENT.md'
+
+    @pytest.mark.parametrize("filename", agent_files)
+    def test_agent_definition_schema(filename):
+        """
+        Validates the schema of an agent definition markdown file using a more robust parser.
+        """
+        filepath = os.path.join(AGENT_DEFS_DIR, filename)
+        with open(filepath, 'r') as f:
+            content = f.read()
+
+        errors = parse_and_validate_agent_def(content, filename)
+
+&gt;       assert not errors, f"Schema validation failed for {filename}:\n" + "\n".join(errors)
+E       AssertionError: Schema validation failed for ADAPTATION_AGENT.md:
+E         Missing '## Backing LLM Model' section.
+E         Missing 'Model' specification (e.g., '* **Model:** ...').
+E       assert not ["Missing '## Backing LLM Model' section.", "Missing 'Model' specification (e.g., '* **Model:** ...')."]
+
+tests/unit/test_agent_definitions.py:64: AssertionError</failure></testcase><testcase classname="tests.unit.test_agent_definitions" name="test_agent_definition_schema[code_clean_up.md]" time="0.001"><failure message="AssertionError: Schema validation failed for code_clean_up.md:&#10;  Missing 'Model' specification (e.g., '* **Model:** ...').&#10;assert not [&quot;Missing 'Model' specification (e.g., '* **Model:** ...').&quot;]">filename = 'code_clean_up.md'
+
+    @pytest.mark.parametrize("filename", agent_files)
+    def test_agent_definition_schema(filename):
+        """
+        Validates the schema of an agent definition markdown file using a more robust parser.
+        """
+        filepath = os.path.join(AGENT_DEFS_DIR, filename)
+        with open(filepath, 'r') as f:
+            content = f.read()
+
+        errors = parse_and_validate_agent_def(content, filename)
+
+&gt;       assert not errors, f"Schema validation failed for {filename}:\n" + "\n".join(errors)
+E       AssertionError: Schema validation failed for code_clean_up.md:
+E         Missing 'Model' specification (e.g., '* **Model:** ...').
+E       assert not ["Missing 'Model' specification (e.g., '* **Model:** ...')."]
+
+tests/unit/test_agent_definitions.py:64: AssertionError</failure></testcase><testcase classname="tests.unit.test_agent_definitions" name="test_agent_definition_schema[debug_and_analysis.md]" time="0.001"><failure message="AssertionError: Schema validation failed for debug_and_analysis.md:&#10;  Missing 'Model' specification (e.g., '* **Model:** ...').&#10;assert not [&quot;Missing 'Model' specification (e.g., '* **Model:** ...').&quot;]">filename = 'debug_and_analysis.md'
+
+    @pytest.mark.parametrize("filename", agent_files)
+    def test_agent_definition_schema(filename):
+        """
+        Validates the schema of an agent definition markdown file using a more robust parser.
+        """
+        filepath = os.path.join(AGENT_DEFS_DIR, filename)
+        with open(filepath, 'r') as f:
+            content = f.read()
+
+        errors = parse_and_validate_agent_def(content, filename)
+
+&gt;       assert not errors, f"Schema validation failed for {filename}:\n" + "\n".join(errors)
+E       AssertionError: Schema validation failed for debug_and_analysis.md:
+E         Missing 'Model' specification (e.g., '* **Model:** ...').
+E       assert not ["Missing 'Model' specification (e.g., '* **Model:** ...')."]
+
+tests/unit/test_agent_definitions.py:64: AssertionError</failure></testcase><testcase classname="tests.unit.test_agent_definitions" name="test_agent_definition_schema[EVALUATOR_GENERATOR.md]" time="0.001" /><testcase classname="tests.unit.test_agent_definitions" name="test_agent_definition_schema[problem_scope_framing.md]" time="0.001"><failure message="AssertionError: Schema validation failed for problem_scope_framing.md:&#10;  Missing 'Model' specification (e.g., '* **Model:** ...').&#10;assert not [&quot;Missing 'Model' specification (e.g., '* **Model:** ...').&quot;]">filename = 'problem_scope_framing.md'
+
+    @pytest.mark.parametrize("filename", agent_files)
+    def test_agent_definition_schema(filename):
+        """
+        Validates the schema of an agent definition markdown file using a more robust parser.
+        """
+        filepath = os.path.join(AGENT_DEFS_DIR, filename)
+        with open(filepath, 'r') as f:
+            content = f.read()
+
+        errors = parse_and_validate_agent_def(content, filename)
+
+&gt;       assert not errors, f"Schema validation failed for {filename}:\n" + "\n".join(errors)
+E       AssertionError: Schema validation failed for problem_scope_framing.md:
+E         Missing 'Model' specification (e.g., '* **Model:** ...').
+E       assert not ["Missing 'Model' specification (e.g., '* **Model:** ...')."]
+
+tests/unit/test_agent_definitions.py:64: AssertionError</failure></testcase><testcase classname="tests.unit.test_ansible_tool" name="test_ansible_tool_instantiation" time="0.000" /><testcase classname="tests.unit.test_ansible_tool" name="test_run_playbook_success" time="0.001" /><testcase classname="tests.unit.test_ansible_tool" name="test_run_playbook_with_args" time="0.001" /><testcase classname="tests.unit.test_ansible_tool" name="test_run_playbook_failure" time="0.001" /><testcase classname="tests.unit.test_ansible_tool" name="test_run_playbook_not_found" time="0.001" /><testcase classname="tests.unit.test_ansible_tool" name="test_run_playbook_timeout" time="0.001" /><testcase classname="tests.unit.test_ansible_tool" name="test_run_playbook_unexpected_error" time="0.001" /><testcase classname="tests.unit.test_claude_clone_tool" name="test_explain_success" time="0.004" /><testcase classname="tests.unit.test_claude_clone_tool" name="test_command_failure" time="0.003" /><testcase classname="tests.unit.test_claude_clone_tool" name="test_directory_not_found" time="0.002" /><testcase classname="tests.unit.test_claude_clone_tool" name="test_cli_not_found" time="0.002" /><testcase classname="tests.unit.test_code_runner_tool" name="test_run_code_in_sandbox_success" time="0.003" /><testcase classname="tests.unit.test_code_runner_tool" name="test_run_code_in_sandbox_with_libraries" time="0.004" /><testcase classname="tests.unit.test_code_runner_tool" name="test_run_code_in_sandbox_with_error" time="0.003" /><testcase classname="tests.unit.test_code_runner_tool" name="test_run_python_code_success" time="0.005" /><testcase classname="tests.unit.test_code_runner_tool" name="test_run_python_code_with_error" time="0.004" /><testcase classname="tests.unit.test_code_runner_tool" name="test_image_not_found_error" time="0.005" /><testcase classname="tests.unit.test_code_runner_tool" name="test_temp_file_cleanup_on_success" time="0.006" /><testcase classname="tests.unit.test_code_runner_tool" name="test_temp_file_cleanup_on_error" time="0.005" /><testcase classname="tests.unit.test_desktop_control_tool" name="test_get_desktop_screenshot" time="0.002" /><testcase classname="tests.unit.test_desktop_control_tool" name="test_click_at" time="0.001" /><testcase classname="tests.unit.test_desktop_control_tool" name="test_type_text" time="0.001" /><testcase classname="tests.unit.test_final_answer_tool" name="test_final_answer_tool_initialization" time="0.000" /><testcase classname="tests.unit.test_final_answer_tool" name="test_submit_task" time="0.001" /><testcase classname="tests.unit.test_gemini_cli" name="test_gemini_cli_interaction" time="0.359" /><testcase classname="tests.unit.test_get_nomad_job" name="test_get_nomad_job_definition_success" time="0.002" /><testcase classname="tests.unit.test_get_nomad_job" name="test_get_nomad_job_definition_failure" time="0.001" /><testcase classname="tests.unit.test_git_tool" name="test_clone_successful" time="0.001" /><testcase classname="tests.unit.test_git_tool" name="test_pull_successful" time="0.001" /><testcase classname="tests.unit.test_git_tool" name="test_push_successful" time="0.001" /><testcase classname="tests.unit.test_git_tool" name="test_commit_successful" time="0.001" /><testcase classname="tests.unit.test_git_tool" name="test_branch_creation_successful" time="0.001" /><testcase classname="tests.unit.test_git_tool" name="test_list_branches_successful" time="0.001" /><testcase classname="tests.unit.test_git_tool" name="test_checkout_successful" time="0.002" /><testcase classname="tests.unit.test_git_tool" name="test_status_successful" time="0.001" /><testcase classname="tests.unit.test_git_tool" name="test_command_failed" time="0.002" /><testcase classname="tests.unit.test_git_tool" name="test_directory_not_found" time="0.001" /><testcase classname="tests.unit.test_git_tool" name="test_diff_successful" time="0.001" /><testcase classname="tests.unit.test_git_tool" name="test_diff_with_commits_successful" time="0.001" /><testcase classname="tests.unit.test_git_tool" name="test_merge_successful" time="0.001" /><testcase classname="tests.unit.test_ha_tool" name="test_init_success" time="0.001" /><testcase classname="tests.unit.test_ha_tool" name="test_init_failure" time="0.001" /><testcase classname="tests.unit.test_ha_tool" name="test_call_ai_task_success" time="0.001" /><testcase classname="tests.unit.test_ha_tool" name="test_call_ai_task_failure" time="0.001" /><testcase classname="tests.unit.test_home_assistant_template" name="test_home_assistant_template" time="0.000"><skipped type="pytest.skip" message="This test fails in a standalone context because it depends on Ansible's hostvars">/app/tests/unit/test_home_assistant_template.py:7: This test fails in a standalone context because it depends on Ansible's hostvars</skipped></testcase><testcase classname="tests.unit.test_infrastructure.TestInfrastructure" name="test_consul_running" time="0.002" /><testcase classname="tests.unit.test_infrastructure.TestInfrastructure" name="test_nomad_running" time="0.002" /><testcase classname="tests.unit.test_lint_script.TestLintScript" name="test_lint_script" time="2.895"><failure message="AssertionError: 'bad.yaml' not found in &quot;--- Running YAML Linter ---\n⚠️  Warning: command 'yamllint' not found. Skipping.\n\n--- Running Markdown Linter ---\n\n⚠️  Warning: ansible-playbook not found. Skipping Nomad format check.\n\n--- Running Jinja2 Linter ---\n⚠️  Warning: command 'djlint' not found. Skipping.\n\n✅ All linters passed successfully!\n&quot;">self = &lt;test_lint_script.TestLintScript testMethod=test_lint_script&gt;
+
+    def test_lint_script(self):
+        # Run the lint.sh script from the temporary directory
+        process = subprocess.Popen(
+            ['/bin/bash', os.path.join(self.scripts_dir, 'lint.sh')],
+            cwd=self.test_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        stdout, stderr = process.communicate()
+
+        # Check the output
+&gt;       self.assertIn('bad.yaml', stdout)
+E       AssertionError: 'bad.yaml' not found in "--- Running YAML Linter ---\n⚠️  Warning: command 'yamllint' not found. Skipping.\n\n--- Running Markdown Linter ---\n\n⚠️  Warning: ansible-playbook not found. Skipping Nomad format check.\n\n--- Running Jinja2 Linter ---\n⚠️  Warning: command 'djlint' not found. Skipping.\n\n✅ All linters passed successfully!\n"
+
+tests/unit/test_lint_script.py:54: AssertionError</failure></testcase><testcase classname="tests.unit.test_llxprt_code_tool" name="test_run_success" time="0.002" /><testcase classname="tests.unit.test_llxprt_code_tool" name="test_run_with_args_success" time="0.001" /><testcase classname="tests.unit.test_llxprt_code_tool" name="test_run_failure" time="0.001" /><testcase classname="tests.unit.test_llxprt_code_tool" name="test_run_timeout" time="0.001" /><testcase classname="tests.unit.test_llxprt_code_tool" name="test_command_not_found" time="0.001" /><testcase classname="tests.unit.test_llxprt_code_tool" name="test_empty_command" time="0.001" /><testcase classname="tests.unit.test_mcp_tool" name="test_get_status_with_running_pipelines" time="0.004" /><testcase classname="tests.unit.test_mcp_tool" name="test_get_status_with_no_pipelines" time="0.001" /><testcase classname="tests.unit.test_mcp_tool" name="test_get_status_with_no_runner" time="0.001" /><testcase classname="tests.unit.test_mcp_tool" name="test_get_memory_summary" time="0.001" /><testcase classname="tests.unit.test_mcp_tool" name="test_clear_short_term_memory" time="0.002" /><testcase classname="tests.unit.test_mqtt_template" name="test_mqtt_template" time="0.004" /><testcase classname="tests.unit.test_orchestrator_tool" name="test_dispatch_job_success" time="0.003" /><testcase classname="tests.unit.test_orchestrator_tool" name="test_dispatch_job_failure" time="0.003" /><testcase classname="tests.unit.test_pipecat_app_unit" name="test_read_main" time="0.022" /><testcase classname="tests.unit.test_pipecat_app_unit" name="test_health_check" time="0.004" /><testcase classname="tests.unit.test_pipecat_app_unit" name="test_workflow_runner_loads_definition" time="0.002"><failure message="AttributeError: &lt;module 'workflow.nodes.registry' from '/app/ansible/roles/pipecatapp/files/workflow/nodes/registry.py'&gt; does not have the attribute 'get_node_class'">mocker = &lt;pytest_mock.plugin.MockerFixture object at 0x7fb5be443f80&gt;
+
+    @pytest.mark.asyncio
+    async def test_workflow_runner_loads_definition(mocker):
+        """Tests that the WorkflowRunner can successfully load and parse the default workflow."""
+        # We need to mock the nodes and other dependencies to isolate the runner
+&gt;       mocker.patch('workflow.runner.registry.get_node_class', return_value=MagicMock())
+
+tests/unit/test_pipecat_app_unit.py:48:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/site-packages/pytest_mock/plugin.py:448: in __call__
+    return self._start_patch(
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/site-packages/pytest_mock/plugin.py:266: in _start_patch
+    mocked: MockType = p.start()
+                       ^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/unittest/mock.py:1624: in start
+    result = self.__enter__()
+             ^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/unittest/mock.py:1467: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;unittest.mock._patch object at 0x7fb5be442fc0&gt;
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+
+        original = DEFAULT
+        local = False
+
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+
+        if not self.create and original is DEFAULT:
+&gt;           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: &lt;module 'workflow.nodes.registry' from '/app/ansible/roles/pipecatapp/files/workflow/nodes/registry.py'&gt; does not have the attribute 'get_node_class'
+
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/unittest/mock.py:1437: AttributeError</failure></testcase><testcase classname="tests.unit.test_pipecat_app_unit" name="test_health_check_is_healthy" time="0.100" /><testcase classname="tests.unit.test_pipecat_app_unit" name="test_main_page_loads" time="0.042" /><testcase classname="tests.unit.test_playbook_integration" name="test_playbook_integration_syntax_check" time="0.001"><failure message="Failed: ansible-playbook executable not found in PATH">def test_playbook_integration_syntax_check():
+        """
+        Tests that the main playbook is syntactically correct and that all roles,
+        including mqtt and home_assistant, can be found and parsed by Ansible.
+        This uses `ansible-playbook --syntax-check`, which is a more direct
+        validation of integration than linting.
+        """
+        # Find the ansible-playbook executable in the PATH
+        ansible_playbook_path = shutil.which("ansible-playbook")
+        if not ansible_playbook_path:
+&gt;           pytest.fail("ansible-playbook executable not found in PATH")
+E           Failed: ansible-playbook executable not found in PATH
+
+tests/unit/test_playbook_integration.py:15: Failed</failure></testcase><testcase classname="tests.unit.test_power_tool" name="test_set_idle_threshold_for_new_service" time="0.004" /><testcase classname="tests.unit.test_power_tool" name="test_set_idle_threshold_for_existing_service" time="0.006" /><testcase classname="tests.unit.test_power_tool" name="test_config_directory_not_found" time="0.001" /><testcase classname="tests.unit.test_power_tool" name="test_file_io_error" time="0.001" /><testcase classname="tests.unit.test_prompt_engineering" name="test_run_evolution_initializes_openevolve_correctly" time="0.004" /><testcase classname="tests.unit.test_prompt_engineering" name="test_create_evaluator_script" time="0.002" /><testcase classname="tests.unit.test_prompt_improver_tool.TestPromptImproverTool" name="test_create_prompt_plan" time="0.009" /><testcase classname="tests.unit.test_prompt_improver_tool.TestPromptImproverTool" name="test_discover_llm_failure" time="0.003" /><testcase classname="tests.unit.test_rag_tool" name="test_rag_tool_initialization" time="0.007" /><testcase classname="tests.unit.test_rag_tool" name="test_rag_tool_search" time="0.006"><failure message="AssertionError: assert 'From /fake/dir/test1.md' in 'I could not find any relevant information in the knowledge base to answer your question.'">mock_sentence_transformer = &lt;MagicMock name='SentenceTransformer' id='140418557885088'&gt;
+mock_faiss = &lt;MagicMock name='faiss' id='140418546331872'&gt;
+mock_pmm_memory = &lt;MagicMock id='140418546686608'&gt;
+
+    def test_rag_tool_search(mock_sentence_transformer, mock_faiss, mock_pmm_memory):
+        """Tests the search functionality of the RAG_Tool."""
+        # Simulate that documents already exist in memory
+        docs = [
+            {'content': "This is chunk 1.", 'meta': {"source": "/fake/dir/test1.md"}},
+            {'content': "This is chunk 2.", 'meta': {"source": "/fake/dir/test2.txt"}},
+            {'content': "This is chunk 3.", 'meta': {"source": "/fake/dir/test3.md"}}
+        ]
+        mock_pmm_memory.get_events.return_value = docs
+
+        with patch('os.walk') as mock_walk: # os.walk should not be called now
+            tool = RAG_Tool(pmm_memory=mock_pmm_memory, base_dir="/fake/dir")
+            assert tool.is_ready
+            mock_walk.assert_not_called()
+
+            # Perform a search
+            results = tool.search_knowledge_base("test query")
+
+            # Verify that the search method was called on the index
+            mock_faiss.IndexFlatL2.return_value.search.assert_called_once()
+&gt;           assert "From /fake/dir/test1.md" in results
+E           AssertionError: assert 'From /fake/dir/test1.md' in 'I could not find any relevant information in the knowledge base to answer your question.'
+
+tests/unit/test_rag_tool.py:97: AssertionError</failure></testcase><testcase classname="tests.unit.test_rag_tool" name="test_rag_tool_empty_knowledge_base" time="0.006" /><testcase classname="tests.unit.test_rag_tool" name="test_no_relevant_documents_found" time="0.006" /><testcase classname="tests.unit.test_rag_tool" name="test_rag_tool_search_with_fewer_than_k_results" time="0.006"><failure message="AssertionError: assert 'From /fake/dir/test1.md' in 'I could not find any relevant information in the knowledge base to answer your question.'">mock_sentence_transformer = &lt;MagicMock name='SentenceTransformer' id='140418546271536'&gt;
+mock_faiss = &lt;MagicMock name='faiss' id='140418558182560'&gt;
+mock_pmm_memory = &lt;MagicMock id='140418558221952'&gt;
+
+    def test_rag_tool_search_with_fewer_than_k_results(mock_sentence_transformer, mock_faiss, mock_pmm_memory):
+        """Tests that search works correctly when the knowledge base has fewer than k documents."""
+        # Simulate that documents already exist in memory
+        docs = [
+            {'content': "This is chunk 1.", 'meta': {"source": "/fake/dir/test1.md"}},
+            {'content': "This is chunk 2.", 'meta': {"source": "/fake/dir/test2.txt"}}
+        ]
+        mock_pmm_memory.get_events.return_value = docs
+
+        tool = RAG_Tool(pmm_memory=mock_pmm_memory, base_dir="/fake/dir")
+        assert tool.is_ready
+
+        # Mock the FAISS search to return only 2 valid results
+        mock_faiss.IndexFlatL2.return_value.search.return_value = (np.array([[1.0, 2.0, -1.0]]), np.array([[0, 1, -1]]))
+
+        # Perform a search
+        results = tool.search_knowledge_base("test query")
+
+        # Verify that the search method was called on the index
+        mock_faiss.IndexFlatL2.return_value.search.assert_called_once()
+&gt;       assert "From /fake/dir/test1.md" in results
+E       AssertionError: assert 'From /fake/dir/test1.md' in 'I could not find any relevant information in the knowledge base to answer your question.'
+
+tests/unit/test_rag_tool.py:157: AssertionError</failure></testcase><testcase classname="tests.unit.test_reflection.TestReflection" name="test_analyze_failure_out_of_memory_with_tool_use" time="0.003" /><testcase classname="tests.unit.test_reflection.TestReflection" name="test_analyze_failure_simple_restart" time="0.002" /><testcase classname="tests.unit.test_reflection.TestReflection" name="test_main_file_not_found" time="0.001" /><testcase classname="tests.unit.test_reflection.TestReflection" name="test_main_malformed_json" time="0.003" /><testcase classname="tests.unit.test_reflection.TestReflection" name="test_main_no_args" time="0.001" /><testcase classname="tests.unit.test_reflection.TestReflection" name="test_main_success" time="0.005" /><testcase classname="tests.unit.test_shell_tool" name="test_shell_tool_initialization" time="0.001" /><testcase classname="tests.unit.test_shell_tool" name="test_execute_command_success" time="0.061" /><testcase classname="tests.unit.test_shell_tool" name="test_execute_command_timeout" time="0.505" /><testcase classname="tests.unit.test_smol_agent_tool" name="test_run_success" time="0.003" /><testcase classname="tests.unit.test_smol_agent_tool" name="test_deno_missing" time="0.001" /><testcase classname="tests.unit.test_smol_agent_tool" name="test_empty_task" time="0.001" /><testcase classname="tests.unit.test_ssh_tool" name="test_run_command_with_key_success" time="0.005" /><testcase classname="tests.unit.test_ssh_tool" name="test_run_command_with_password_success" time="0.004" /><testcase classname="tests.unit.test_ssh_tool" name="test_run_command_with_error" time="0.004" /><testcase classname="tests.unit.test_ssh_tool" name="test_no_auth_method_provided" time="0.001" /><testcase classname="tests.unit.test_ssh_tool" name="test_connection_exception" time="0.004" /><testcase classname="tests.unit.test_summarizer_tool" name="test_get_summary_with_history" time="0.005"><skipped type="pytest.xfail" message="Mocking complexity with util.cos_sim causing empty summary" /></testcase><testcase classname="tests.unit.test_summarizer_tool" name="test_get_summary_no_history" time="0.001" /><testcase classname="tests.unit.test_summarizer_tool" name="test_get_summary_less_than_k_history" time="0.004"><skipped type="pytest.xfail" message="Mocking complexity with util.cos_sim causing empty summary" /></testcase><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_cleanup_files" time="0.002" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_main_diagnose_failure_playbook_fails" time="0.003" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_main_empty_unhealthy_jobs_list" time="0.003" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_main_failed_jobs_file_unreadable" time="0.004" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_main_full_successful_cycle" time="0.005" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_main_heal_job_playbook_fails" time="0.003" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_main_health_check_fails" time="0.001" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_main_job_missing_id" time="0.003" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_main_multiple_failed_jobs" time="0.003" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_main_no_failed_jobs" time="0.002" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_main_reflection_script_fails" time="0.003" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_run_playbook_failure" time="0.001" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_run_playbook_success" time="0.001" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_run_playbook_with_extra_vars" time="0.001" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_run_script_failure" time="0.001" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_run_script_success" time="0.001" /><testcase classname="tests.unit.test_supervisor.TestSupervisor" name="test_run_script_with_args" time="0.001" /><testcase classname="tests.unit.test_tap_service" name="test_process_frame" time="0.003" /><testcase classname="tests.unit.test_term_everything_tool" name="test_execute_command_success" time="0.002" /><testcase classname="tests.unit.test_term_everything_tool" name="test_execute_command_failure" time="0.002" /><testcase classname="tests.unit.test_term_everything_tool" name="test_execute_exception" time="0.002" /><testcase classname="tests.unit.test_web_browser_tool" name="test_goto_success" time="0.005" /><testcase classname="tests.unit.test_web_browser_tool" name="test_goto_failure" time="0.003" /><testcase classname="tests.unit.test_web_browser_tool" name="test_get_page_content_success" time="0.003" /><testcase classname="tests.unit.test_web_browser_tool" name="test_click_success" time="0.003" /><testcase classname="tests.unit.test_web_browser_tool" name="test_click_failure" time="0.003" /><testcase classname="tests.unit.test_web_browser_tool" name="test_type_success" time="0.003" /><testcase classname="tests.unit.test_web_browser_tool" name="test_close" time="0.003" /><testcase classname="tests.unit.test_web_browser_tool" name="test_get_screenshot" time="0.003" /><testcase classname="tests.unit.test_web_browser_tool" name="test_click_at" time="0.005" /><testcase classname="tests.unit.test_web_browser_tool" name="test_type_text_at" time="0.004" /><testcase classname="tests.unit.test_workflow" name="test_topological_sort_linear" time="0.004" /><testcase classname="tests.unit.test_workflow" name="test_topological_sort_with_cycle" time="0.004" /><testcase classname="tests.unit.test_workflow" name="test_workflow_execution_data_flow" time="0.002"><failure message="NameError: name 'mocker' is not defined">mock_registry = &lt;MagicMock id='140418536460448'&gt;
+
+    @pytest.mark.asyncio
+    async def test_workflow_execution_data_flow(mock_registry):
+        """Tests a simple workflow from end-to-end, verifying data is passed correctly."""
+
+        # Define a simple workflow
+        workflow_def = {
+            "nodes": [
+                {"id": "start", "type": "InputNode", "outputs": [{"name": "initial_data"}]},
+                {"id": "end", "type": "OutputNode", "inputs": [{"name": "final_output", "connection": {"from_node": "start", "from_output": "initial_data"}}]}
+            ]
+        }
+
+        # Mock node classes
+        mock_registry.get_node_class.side_effect = lambda type: {
+            "InputNode": InputNode,
+            "OutputNode": OutputNode
+        }.get(type)
+
+&gt;       mocker.patch('builtins.open', mocker.mock_open(read_data=str(workflow_def)))
+        ^^^^^^
+E       NameError: name 'mocker' is not defined
+
+tests/unit/test_workflow.py:72: NameError</failure></testcase><testcase classname="tests.unit.test_workflow" name="test_tool_parser_node[{&quot;tool&quot;: &quot;test.do_thing&quot;, &quot;args&quot;: {&quot;arg1&quot;: &quot;val1&quot;}}-expected_tool_call0-None]" time="0.003" /><testcase classname="tests.unit.test_workflow" name="test_tool_parser_node[This is a plain text response.-None-This is a plain text response.]" time="0.003" /><testcase classname="tests.unit.test_workflow" name="test_tool_parser_node[{&quot;not_a_tool&quot;: &quot;just_json&quot;}-None-{&quot;not_a_tool&quot;: &quot;just_json&quot;}]" time="0.003" /><testcase classname="tests.unit.test_workflow" name="test_tool_parser_node[This is not json.-None-This is not json.]" time="0.003" /><testcase classname="tests.unit.test_workflow" name="test_tool_executor_node" time="0.003" /><testcase classname="tests.unit.test_workflow" name="test_workflow_tool_loop" time="0.002"><failure message="ImportError: cannot import name 'PromptBuilderNode' from 'workflow.nodes.tool_nodes' (/app/ansible/roles/pipecatapp/files/workflow/nodes/tool_nodes.py)">mock_registry = &lt;MagicMock id='140418546536032'&gt;
+
+    @pytest.mark.asyncio
+    async def test_workflow_tool_loop(mock_registry):
+        """Tests a workflow with a tool call and verifies the result is fed back."""
+        from workflow.nodes.base_nodes import MergeNode
+&gt;       from workflow.nodes.tool_nodes import ToolExecutorNode, PromptBuilderNode
+E       ImportError: cannot import name 'PromptBuilderNode' from 'workflow.nodes.tool_nodes' (/app/ansible/roles/pipecatapp/files/workflow/nodes/tool_nodes.py)
+
+tests/unit/test_workflow.py:149: ImportError</failure></testcase><testcase classname="tests.unit.test_workflow" name="test_conditional_branch_node_tool_check[route_to_expert-input_tool_call0-output_true]" time="0.003" /><testcase classname="tests.unit.test_workflow" name="test_conditional_branch_node_tool_check[route_to_expert-input_tool_call1-output_false]" time="0.004" /><testcase classname="tests.unit.test_workflow" name="test_conditional_branch_node_tool_check[some_tool-input_tool_call2-output_false]" time="0.003" /><testcase classname="tests.unit.test_workflow" name="test_conditional_branch_node_tool_check[my_tool-None-output_false]" time="0.003" /><testcase classname="tests.unit.test_workflow" name="test_nested_output_resolution" time="0.002"><failure message="NameError: name 'mocker' is not defined">mock_registry = &lt;MagicMock id='140418536658400'&gt;
+
+    @pytest.mark.asyncio
+    async def test_nested_output_resolution(mock_registry):
+        """Tests that a workflow with nested connections in the output resolves correctly."""
+        workflow_def = {
+            "nodes": [
+                {"id": "source1", "type": "InputNode", "outputs": ["out1"]},
+                {"id": "source2", "type": "InputNode", "outputs": ["out2"]},
+                {"id": "output", "type": "OutputNode", "inputs": [{
+                    "name": "final_output",
+                    "value": {
+                        "key1": {"connection": {"from_node": "source1", "from_output": "out1"}},
+                        "key2": {"connection": {"from_node": "source2", "from_output": "out2"}}
+                    }
+                }]}
+            ]
+        }
+
+        mock_registry.get_node_class.side_effect = lambda type: {"InputNode": InputNode, "OutputNode": OutputNode}.get(type)
+&gt;       mocker.patch('builtins.open', mocker.mock_open(read_data=str(workflow_def)))
+        ^^^^^^
+E       NameError: name 'mocker' is not defined
+
+tests/unit/test_workflow.py:231: NameError</failure></testcase><testcase classname="tests.unit.test_world_model_service" name="test_health_check" time="0.007" /><testcase classname="tests.unit.test_world_model_service" name="test_on_connect_successful" time="0.002" /><testcase classname="tests.unit.test_world_model_service" name="test_on_connect_failed" time="0.002" /><testcase classname="tests.unit.test_world_model_service" name="test_on_message" time="0.001" /><testcase classname="tests.unit.test_world_model_service" name="test_run_mqtt_client_successful_connection" time="0.002" /><testcase classname="tests.unit.test_world_model_service" name="test_run_mqtt_client_connection_refused" time="0.008" /><testcase classname="tests.unit.test_world_model_service" name="test_dispatch_job" time="0.008" /></testsuite></testsuites>
