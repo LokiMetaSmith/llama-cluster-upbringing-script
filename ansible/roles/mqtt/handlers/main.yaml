@@ -2,5 +2,5 @@
   ansible.builtin.command:
     cmd: nomad job run {{ nomad_jobs_dir }}/home-assistant.nomad
   environment:
-    NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
   changed_when: true
