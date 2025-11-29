@@ -4,6 +4,7 @@
     state: restarted
     enabled: true
     daemon_reload: true
+  when: not ansible_check_mode
 
 - name: Wait for Nomad API to be ready after restart
   ansible.builtin.uri:
@@ -13,3 +14,4 @@
   until: nomad_api_status.status == 200
   retries: 30
   delay: 15
+  when: not ansible_check_mode

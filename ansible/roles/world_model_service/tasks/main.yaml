@@ -83,7 +83,7 @@
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/world_model.nomad"
   environment:
-    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
   changed_when: true
   become: no
 
@@ -103,6 +103,6 @@
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/llamacpp-batch.nomad"
   environment:
-    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
   changed_when: true
   become: no

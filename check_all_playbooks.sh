@@ -60,6 +60,11 @@ run_playbook_checks() {
       # --- FIX 1: Use an array for extra_args instead of eval ---
       local extra_args=()
 
+      # Use local_inventory.ini if it exists to avoid unreachable host errors in CI/Dev
+      if [[ -f "local_inventory.ini" ]]; then
+        extra_args+=("-i" "local_inventory.ini")
+      fi
+
       local playbook_filename
       playbook_filename=$(basename -- "$playbook")
 

@@ -22,7 +22,7 @@
     dest: "{{ nomad_volumes_dir }}/mqtt-data/config/mosquitto.conf"
     content: |
       persistence true
-      persistence_location /mosquitto/data
+      persistence_location /mosquitto/data/
       log_dest stdout
       log_type all
       listener 1883 0.0.0.0
@@ -64,14 +64,69 @@
     port: 4646
     timeout: 60
 
-- name: Run mqtt job
-  ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/mqtt.nomad
-  environment:
-    NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
-  changed_when: true
-  register: mqtt_job_run
-#  notify: Restart Home Assistant
+- name: Deploy MQTT Job
+  block:
+    - name: Run mqtt job
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/mqtt.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+      changed_when: true
+      register: mqtt_job_run
+      #  notify: Restart Home Assistant
+  rescue:
+    - name: Get MQTT job status
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status -verbose mqtt
+      environment:
+        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+      register: mqtt_job_status
+      ignore_errors: yes
+
+    - name: Display MQTT job status
+      ansible.builtin.debug:
+        var: mqtt_job_status.stdout
+
+    - name: Get MQTT allocations
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job allocs -json mqtt
+      environment:
+        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+      register: mqtt_allocs
+      ignore_errors: yes
+
+    - name: Save MQTT allocations to temp file
+      ansible.builtin.copy:
+        content: "{{ mqtt_allocs.stdout }}"
+        dest: "/tmp/mqtt_allocs.json"
+
+    - name: Extract Allocation ID
+      ansible.builtin.command: jq -r '.[0].ID' /tmp/mqtt_allocs.json
+      register: mqtt_alloc_id
+      ignore_errors: yes
+
+    - name: Fetch MQTT logs
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ mqtt_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+      register: mqtt_logs
+      ignore_errors: yes
+      when: mqtt_alloc_id.stdout | length > 0
+
+    - name: Display MQTT logs
+      ansible.builtin.debug:
+        var: mqtt_logs.stdout
+      when: mqtt_logs is defined
+
+    - name: Clean up temp file
+      ansible.builtin.file:
+        path: "/tmp/mqtt_allocs.json"
+        state: absent
+
+    - name: Fail after debugging
+      ansible.builtin.fail:
+        msg: "MQTT job failed to start. See logs above."
 
 - name: Wait for MQTT port to be open
   ansible.builtin.wait_for:

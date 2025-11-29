@@ -37,7 +37,10 @@ tools = {
     "power": Power_Tool(),
     "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
     "rag": RAG_Tool(base_dir="/"),
-    "ha": HA_Tool(ha_url=None, ha_token=None), # These will be configured via env vars inside the tool if adapted, or we can pass them here if available
+    "ha": HA_Tool(
+        ha_url=os.getenv("HA_URL"),
+        ha_token=os.getenv("HA_TOKEN")
+    ),
     "git": Git_Tool(),
     "orchestrator": OrchestratorTool(),
 }
