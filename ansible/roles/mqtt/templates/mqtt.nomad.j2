@@ -26,18 +26,6 @@ job "mqtt" {
       port     = "mqtt"
       provider = "consul"
 
-      check {
-        type     = "tcp"
-        interval = "10s"
-        timeout  = "2s"
-        address_mode = "host"
-
-        check_restart {
-          limit = 3
-          grace = "90s"
-          ignore_warnings = false
-        }
-      }
     }
 
     restart {
