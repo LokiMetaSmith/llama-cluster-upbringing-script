@@ -1,0 +1,13 @@
+[Unit]
+Description=Cluster IP Alias Setup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -c "if ! ip addr show {{ default_gw_interface.stdout }} | grep -q {{ cluster_ip }}; then ip addr add {{ cluster_ip }}/24 dev {{ default_gw_interface.stdout }} label {{ default_gw_interface.stdout }}:0; fi"
+ExecStop=/sbin/ip addr del {{ cluster_ip }}/24 dev {{ default_gw_interface.stdout }} label {{ default_gw_interface.stdout }}:0
+
+[Install]
+WantedBy=multi-user.target
