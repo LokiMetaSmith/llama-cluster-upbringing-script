@@ -21,7 +21,7 @@ for module in MOCK_MODULES:
 # Now it should be safe to import from app and other local files
 from app import FasterWhisperSTTService
 from stub_services import StubOutputService
-from pipecat.frames.frames import AudioRawFrame, TranscriptionFrame, UserStartedSpeakingFrame, UserStoppedSpeakingFrame
+from pipecat.frames.frames import AudioRawFrame, EndFrame, StartFrame, TranscriptionFrame, UserStartedSpeakingFrame, UserStoppedSpeakingFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
@@ -39,7 +39,7 @@ class MockListAudioSource(FrameProcessor):
         for frame in self._frames:
             await self.push_frame(frame)
         # Signal completion to downstream processors
-        await self.push_frame(None)
+        await self.push_frame(EndFrame())
 
 @pytest.mark.asyncio
 @patch('app.WhisperModel')  # Patch the WhisperModel where it's used in the 'app' module

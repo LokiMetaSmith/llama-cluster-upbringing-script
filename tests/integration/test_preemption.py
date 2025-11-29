@@ -44,7 +44,7 @@ class TestPreemption(unittest.TestCase):
 
     def test_preemption(self):
         # 1. Register and run the victim job
-        self.nomad.job.register_job(job=self.victim_job)
+        self.nomad.job.register_job(self.victim_job_name, self.victim_job)
         time.sleep(5) # give time for the job to be placed
 
         # 2. Dispatch the high-priority job

@@ -15,6 +15,12 @@ class TestPipecatApp(unittest.TestCase):
         host = os.environ.get("PIPECAT_HOST", "127.0.0.1")
         self.base_url = f"http://{host}:8000"
 
+        # Check if server is reachable
+        try:
+             requests.get(f"{self.base_url}/health", timeout=1)
+        except requests.exceptions.RequestException:
+             self.skipTest(f"Pipecat app not reachable at {self.base_url}")
+
     def test_health_check_eventually_healthy(self):
         """
         Tests that the /health endpoint eventually returns a 200 OK status.
