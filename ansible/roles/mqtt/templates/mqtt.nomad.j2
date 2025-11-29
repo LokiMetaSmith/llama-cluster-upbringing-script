@@ -28,9 +28,9 @@ job "mqtt" {
 
       check {
         type     = "tcp"
+        address  = "127.0.0.1"
         interval = "10s"
         timeout  = "2s"
-        address_mode = "host"
 
         check_restart {
           limit = 3
