@@ -18,7 +18,7 @@
   failed_when: false
   changed_when: false
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
 
 - name: Deploy the main Llama.cpp RPC service to Nomad
   ansible.builtin.command:
@@ -27,7 +27,7 @@
   changed_when: "'Eval ID' in llama_job_run.stdout"
   failed_when: llama_job_run.rc != 0
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
   when: job_file.changed or job_status.rc != 0
 
 - name: Wait for the main expert service to be healthy in Consul

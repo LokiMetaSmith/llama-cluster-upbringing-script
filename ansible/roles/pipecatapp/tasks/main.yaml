@@ -284,7 +284,7 @@
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "http://{{ ansible_default_ipv4.address }}:4646/v1/status/leader"
+    url: "http://{{ cluster_ip }}:4646/v1/status/leader"
     method: GET
     status_code: 200
   register: nomad_api_status
@@ -299,7 +299,7 @@
   changed_when: "pipecat_job_stop_status.rc == 0"
   failed_when: false
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
 
 - name: Flush handlers to ensure service is enabled and started
   ansible.builtin.meta: flush_handlers
@@ -308,14 +308,14 @@
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/router.nomad
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
   register: router_job_run
   changed_when: router_job_run.rc == 0
   ignore_errors: yes
 
 - name: Wait for the router service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://{{ ansible_default_ipv4.address }}:8500/v1/health/service/router-api"
+    url: "http://{{ cluster_ip }}:8500/v1/health/service/router-api"
     return_content: yes
   register: router_health
   until: >
@@ -329,14 +329,14 @@
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/pipecatapp.nomad
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
   register: router_job_run
   changed_when: router_job_run.rc == 0
   ignore_errors: yes
 
 - name: Wait for the pipecat-app service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://{{ ansible_default_ipv4.address }}:8500/v1/health/service/pipecat-app"
+    url: "http://{{ cluster_ip }}:8500/v1/health/service/pipecat-app"
     return_content: yes
   register: pipecat_health
   until: >

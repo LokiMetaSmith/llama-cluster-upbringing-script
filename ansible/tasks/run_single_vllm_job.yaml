@@ -12,7 +12,7 @@
   register: vllm_job_run
   changed_when: "'Eval ID' in vllm_job_run.stdout"
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
 
 - name: Clean up temporary job file for {{ model_item.filename }}
   ansible.builtin.file:

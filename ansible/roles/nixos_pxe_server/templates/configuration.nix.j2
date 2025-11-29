@@ -50,7 +50,7 @@ in
   networking.interfaces."{{ pxe_interface }}".useDHCP = false;
   networking.interfaces."{{ pxe_interface }}".ipv4.addresses = [
     {
-      address = "{{ ansible_default_ipv4.address }}";
+      address = "{{ cluster_ip }}";
       prefixLength = 24;
     }
   ];
@@ -76,7 +76,7 @@ in
 
         # Logic to serve the right iPXE bootloader
         if exists user-class and option user-class = "iPXE" {
-          filename "http://{{ ansible_default_ipv4.address }}/boot.ipxe";
+          filename "http://{{ cluster_ip }}/boot.ipxe";
         } else if option client-arch = 00:07 {
           # UEFI client
           filename "ipxe.efi";
