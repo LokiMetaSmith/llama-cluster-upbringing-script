@@ -25,16 +25,18 @@ job "mqtt" {
       name     = "mqtt"
       port     = "mqtt"
       provider = "consul"
+      address_mode = "host"
 
       check {
+        name     = "mqtt-tcp"
         type     = "tcp"
+        port     = "mqtt"
         interval = "10s"
         timeout  = "2s"
         address_mode = "host"
-
         check_restart {
           limit = 3
-          grace = "90s"
+          grace = "30s"
           ignore_warnings = false
         }
       }
