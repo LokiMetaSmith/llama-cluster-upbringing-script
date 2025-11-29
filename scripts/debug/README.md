@@ -38,3 +38,28 @@ Here are the steps to run it manually (e.g., in a development environment or on 
 *   **Verification**: Waits 5 seconds, then curls the `http://localhost:12345/health` endpoint to check if the service is up.
 *   **Logging**: Prints the container logs to the console if the health check fails.
 *   **Interactive Mode**: If successful, the script keeps running (tailing logs) until you press `Ctrl+C`. This allows you to interact with the service manually if needed.
+
+## MQTT Connectivity Test Script
+
+**Script Path:** `scripts/debug/test_mqtt_connection.py`
+
+This script helps diagnose connectivity issues with the MQTT broker, especially when experiencing health check failures or restart loops in Nomad.
+
+### Usage
+
+1.  **Navigate to the directory**:
+    ```bash
+    cd scripts/debug/
+    ```
+
+2.  **Run the script**:
+    ```bash
+    python3 test_mqtt_connection.py
+    ```
+
+### What the script does
+
+*   **IP Detection**: Automatically detects all IP addresses on the host (including `localhost` and `hostname -I`).
+*   **Connectivity Check**: Continuously attempts to connect to port `1883` on all detected IPs.
+*   **Loop**: Runs indefinitely (until `Ctrl+C`) to catch transient connectivity during service restart cycles.
+*   **Reporting**: Prints a success message with the timestamp and IP address whenever a connection is successful.
