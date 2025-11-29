@@ -2,7 +2,7 @@
 
 echo iPXE boot script for NixOS loaded
 
-set base-url http://{{ ansible_default_ipv4.address }}
+set base-url http://{{ cluster_ip }}
 kernel ${base-url}/bzImage
 initrd ${base-url}/initrd
 

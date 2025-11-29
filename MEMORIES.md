@@ -110,7 +110,7 @@ The python_deps Ansible role installs large, time-consuming Python packages (e.g
 
 To idempotently manage changes to systemd service files in Ansible without causing premature service restarts, create a dedicated handler that only performs a daemon-reload. The task that templates the service file should notify this daemon-reload handler. Handlers that restart the service can then be notified by subsequent configuration tasks.
 
-When using Ansible's ansible.builtin.uri module for service health checks, it may fail on hosts with IPv6 enabled due to malformed URLs. To ensure reliability, explicitly use ansible_default_ipv4.address in the URL.
+When using Ansible's ansible.builtin.uri module for service health checks, it may fail on hosts with IPv6 enabled due to malformed URLs. To ensure reliability, explicitly use cluster_ip in the URL.
 
 The project utilizes two distinct AI agent architectures, both documented in AGENTS.md: 1. A runtime "Mixture of Experts" (MoE) where a Router agent delegates to specialized Experts. 2. A development "Ensemble of Agents" (e.g., Problem Scope Framing, Code Clean Up) for workflow automation.
 
@@ -230,11 +230,11 @@ The Ansible playbook execution can time out in the interactive environment due t
 
 The llama.cpp Ansible role ensures idempotent builds by comparing the latest remote git commit hash with a locally stored version hash in /usr/local/etc/llama-cpp.version. Recompilation is skipped if the hashes match.
 
-When executing nomad commands via Ansible, the NOMAD_ADDR environment variable must be set, typically to http://{{ ansible_default_ipv4.address }}:4646.
+* When executing nomad commands via Ansible, the `NOMAD_ADDR` environment variable must be set, typically to `http://{{ cluster_ip }}:4646`.
 
 Ansible roles that deploy Nomad services follow a pattern: a task in tasks/main.yaml templates the Nomad job file to /opt/nomad/jobs/ and notifies a handler. The handler, defined in handlers/main.yaml, then executes nomad job run to apply the changes.
 
-The ansible_default_ipv4.address variable, defined in group_vars/all.yaml, should be used in service templates (e.g., Nomad jobs) for the host's IP address, particularly for connecting to host services like Consul.
+* The `cluster_ip` variable, defined in `group_vars/all.yaml`, should be used in service templates (e.g., Nomad jobs) for the host's IP address, particularly for connecting to host services like Consul.
 
 The Home Assistant deployment is configured to be asynchronous. The Ansible home_assistant role uses async: 300 and poll: 0 to run the Nomad job without waiting for it to become healthy. The config_manager role uses a non-blocking stat check to conditionally extract the auth token if/when it becomes available.
 

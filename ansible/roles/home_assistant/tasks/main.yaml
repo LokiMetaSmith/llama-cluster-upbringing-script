@@ -62,7 +62,7 @@
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/home-assistant.nomad
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
   changed_when: true
   become: no # Run nomad client as the ansible user
   async: 300
