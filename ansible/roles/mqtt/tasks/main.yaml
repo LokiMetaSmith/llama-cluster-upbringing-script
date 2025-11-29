@@ -49,7 +49,7 @@
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job stop -purge mqtt
   environment:
-    NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
   changed_when: true
   ignore_errors: yes
 
@@ -61,7 +61,7 @@
 
 - name: Wait for Nomad to be ready
   ansible.builtin.wait_for:
-    host: "{{ ansible_facts['default_ipv4']['address'] }}"
+    host: "{{ cluster_ip }}"
     port: 4646
     timeout: 60
 
@@ -71,7 +71,7 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/mqtt.nomad
       environment:
-        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       changed_when: true
       register: mqtt_job_run
       #  notify: Restart Home Assistant
@@ -80,7 +80,7 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose mqtt
       environment:
-        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       register: mqtt_job_status
       ignore_errors: yes
 
@@ -92,7 +92,7 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json mqtt
       environment:
-        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       register: mqtt_allocs
       ignore_errors: yes
 
@@ -110,7 +110,7 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ mqtt_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       register: mqtt_logs_stdout
       ignore_errors: yes
       when: mqtt_alloc_id.stdout | length > 0
@@ -124,7 +124,7 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ mqtt_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       register: mqtt_logs_stderr
       ignore_errors: yes
       when: mqtt_alloc_id.stdout | length > 0
@@ -145,7 +145,7 @@
 
 - name: Wait for MQTT port to be open
   ansible.builtin.wait_for:
-    host: "{{ ansible_facts['default_ipv4']['address'] }}"
+    host: "{{ cluster_ip }}"
     port: 1883
     timeout: 60
   become: no
