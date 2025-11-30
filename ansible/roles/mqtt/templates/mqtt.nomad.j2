@@ -27,20 +27,11 @@ job "mqtt" {
       port     = "mqtt"
       provider = "consul"
 
-      # Script Check (Internal)
-      # Verify local connectivity inside the container to avoid external network issues
-      check {
-        type     = "script"
-        name     = "mqtt_health"
-        command  = "/bin/sh"
-        args     = ["-c", "nc -z 127.0.0.1 1883"]
-        interval = "10s"
-        timeout  = "2s"
-
-        check_restart {
-          limit = 3
-          grace = "90s"
-          ignore_warnings = false
+        check {
+          type     = "tcp"
+          port     = "mqtt"  # Checks the port defined in the network block (1883)
+          interval = "10s"
+          timeout  = "2s"
         }
       }
     }
