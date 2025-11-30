@@ -28,19 +28,19 @@ job "mqtt" {
       provider = "consul"
 
       # Simple TCP Check
-      check {
-        type     = "tcp"
-        port     = "mqtt"
-        interval = "10s"
-        timeout  = "2s"
-        address_mode = "host"
+      #check {
+      #  type     = "tcp"
+      #  port     = "mqtt"
+      #  interval = "10s"
+      #  timeout  = "2s"
+      #  address_mode = "host"
 
-        check_restart {
-          limit = 3
-          grace = "90s"
-          ignore_warnings = false
-        }
-      }
+#        check_restart {
+#          limit = 3
+#          grace = "90s"
+#          ignore_warnings = false
+#        }
+#      }
     }
 
     task "mosquitto" {
