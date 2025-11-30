@@ -99,3 +99,51 @@
   ansible.builtin.command:
     cmd: /usr/local/bin/update-ssh-authorized-keys.sh
   when: sync_script.changed
+
+# --- Firewall Configuration ---
+
+- name: "Firewall : Allow SSH"
+  community.general.ufw:
+    rule: allow
+    name: OpenSSH
+    comment: "Allow SSH access from anywhere"
+
+- name: "Firewall : Allow all Loopback traffic"
+  community.general.ufw:
+    rule: allow
+    interface: lo
+    direction: in
+    comment: "Allow all loopback traffic (critical for local health checks)"
+
+- name: "Firewall : Allow all Cluster Internal Traffic"
+  community.general.ufw:
+    rule: allow
+    from_ip: "10.0.0.0/24"
+    comment: "Allow full communication between cluster nodes on the private network"
+
+- name: "Firewall : Allow Nomad/Consul UIs from Home Network"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+    comment: "Allow Management UIs"
+  loop:
+    - "4646" # Nomad HTTP
+    - "8500" # Consul HTTP
+
+- name: "Firewall : Allow MQTT/Application Ports"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+    comment: "Allow App Services"
+  loop:
+    - "1883" # MQTT
+    - "9001" # MQTT Websockets
+    - "8080" # Traefik / Router (if used)
+
+- name: "Firewall : Enable UFW"
+  community.general.ufw:
+    state: enabled
+    policy: deny
+    logging: low
