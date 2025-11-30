@@ -377,3 +377,7 @@ This section outlines the major feature enhancements and maintenance tasks plann
 ## 15. Troubleshooting
 
 For solutions to common issues, such as failing Nomad service checks or deployment errors, please refer to the **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)**.
+
+## 16. License
+
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
