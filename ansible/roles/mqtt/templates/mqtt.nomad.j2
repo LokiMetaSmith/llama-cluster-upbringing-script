@@ -25,7 +25,7 @@ job "mqtt" {
       name     = "mqtt"
       port     = "mqtt"
       provider = "consul"
-      address_mode = "host"
+  #    address_mode = "host"
 
       check {
         name     = "mqtt-tcp"
@@ -33,7 +33,9 @@ job "mqtt" {
         port     = "mqtt"
         interval = "10s"
         timeout  = "2s"
-        address_mode = "driver"
+        address_mode = "host"
+        address  = "127.0.0.1"
+        
         check_restart {
           limit = 3
           grace = "30s"
