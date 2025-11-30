@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", function() {
             ws.send(JSON.stringify({ type: "user_message", data: message }));
             logToTerminal(`<strong>You:</strong> ${message}`, "user-message");
             messageInput.value = "";
+            animateThinking();
         }
     }
 
@@ -51,14 +52,16 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const robotArt = document.getElementById("robot-art");
 
-    const idleFrames = ["d[o_0]b", "d[-_-]b"];
-    const typingFrame = "d[O_O]b";
-    const wanderingFrames = ["b[o_0]d", "d[0_o]b"];
+    const idleFrames = ["(^_^)", "(-_-)"];
+    const typingFrame = "(>_<)";
+    const wanderingFrames = ["(o_o)", "(O_O)"];
+    const thinkingFrames = ["(o.o?)", "(o.O?)", "(O.o?)", "(O.O!)"];
 
     let currentFrame = 0;
     let idleAnimation;
     let typingTimeout;
     let wanderTimeout;
+    let thinkingAnimation;
 
     function animateIdle() {
         currentFrame = (currentFrame + 1) % idleFrames.length;
@@ -69,6 +72,7 @@ document.addEventListener("DOMContentLoaded", function() {
         clearInterval(idleAnimation);
         clearTimeout(typingTimeout);
         clearTimeout(wanderTimeout);
+        clearInterval(thinkingAnimation);
     }
 
     function triggerWander() {
@@ -81,6 +85,15 @@ document.addEventListener("DOMContentLoaded", function() {
                 startIdleAnimation(); // Return to idle state, which will schedule the next wander
             }, 1000);
         }, 1000);
+    }
+
+    function animateThinking() {
+        stopAllAnimations();
+        let frame = 0;
+        thinkingAnimation = setInterval(() => {
+            robotArt.textContent = thinkingFrames[frame];
+            frame = (frame + 1) % thinkingFrames.length;
+        }, 500);
     }
 
     function startIdleAnimation() {
@@ -169,7 +182,8 @@ document.addEventListener("DOMContentLoaded", function() {
         } else if (type === "user") {
             logToTerminal(`<strong>You:</strong> ${data}`, "user-message");
         } else if (type === "agent") {
-            logToTerminal(`<strong>Agent:</strong> ${data}`, "agent-message");
+            logToTerminal(`<strong>Agent:</strong> ${data}`, "agent-message breathing-shimmering");
+            startIdleAnimation();
         } else if (type === "display") {
             renderEffect(data.text, data.effect);
         } else if (type === "approval_request") {
