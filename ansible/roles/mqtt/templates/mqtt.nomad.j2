@@ -33,7 +33,7 @@ job "mqtt" {
         port     = "mqtt"
         interval = "10s"
         timeout  = "2s"
-        address_mode = "host"
+        address_mode = "driver"
         check_restart {
           limit = 3
           grace = "30s"
