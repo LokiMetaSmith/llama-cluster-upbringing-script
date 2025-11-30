@@ -39,21 +39,6 @@ job "mqtt" {
 
     task "mosquitto" {
       driver = "docker"
-      check {
-        name     = "mqtt-tcp"
-        type     = "tcp"
-        port     = "mqtt"
-        interval = "10s"
-        timeout  = "2s"
-        address_mode = "host"
-        #address  = "127.0.0.1"
-        
-        check_restart {
-          limit = 3
-          grace = "30s"
-          ignore_warnings = false
-        }
-      }
       config {
         image = "eclipse-mosquitto:2"
         # When network mode is "host", port mapping in the driver config is not used/required
@@ -75,6 +60,21 @@ job "mqtt" {
         cpu    = 200 # 200 MHz
         memory = 128 # 128 MB
       }
+      check {
+        name     = "mqtt_internal_check"
+        type     = "script"
+        interval = "10s"
+        timeout  = "5s"
+        command  = "/usr/bin/mosquitto_sub"
+        args     = ["-h", "127.0.0.1", "-p", "1883", "-t", "$SYS/broker/version", "-C", "1", "-W", "2"]
+        
+        check_restart {
+          limit = 3
+          grace = "30s"
+          ignore_warnings = false
+        }
+      }
+
     }
   }
 }
