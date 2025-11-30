@@ -27,13 +27,15 @@ job "mqtt" {
       port     = "mqtt"
       provider = "consul"
 
-      # Simple TCP Check
+      # Script Check (Internal)
+      # Verify local connectivity inside the container to avoid external network issues
       check {
-        type     = "tcp"
-        port     = "mqtt"
+        type     = "script"
+        name     = "mqtt_health"
+        command  = "/bin/sh"
+        args     = ["-c", "nc -z 127.0.0.1 1883"]
         interval = "10s"
         timeout  = "2s"
-        address_mode = "host"
 
         check_restart {
           limit = 3
