@@ -143,7 +143,7 @@ These tasks are focused on addressing the brittleness of the deployment process 
 
 ### 1.1. Refactor for Strict Idempotency in Ansible
 
-- [ ] **Apply `creates` argument to compilation tasks:** In roles like `llama_cpp` and `whisper_cpp`, the `cmake` and `make` tasks should be skipped if the final binary artifacts already exist. This will prevent unnecessary and potentially error-prone recompilation on every playbook run.
+- [X] **Apply `creates` argument to compilation tasks:** In roles like `llama_cpp` and `whisper_cpp`, the `cmake` and `make` tasks should be skipped if the final binary artifacts already exist. This will prevent unnecessary and potentially error-prone recompilation on every playbook run.
   - *Example (`ansible/roles/llama_cpp/tasks/main.yaml`):*
 
     ```yaml
@@ -155,7 +155,7 @@ These tasks are focused on addressing the brittleness of the deployment process 
         creates: /opt/llama.cpp-build/build/bin/llama-server # This line prevents re-running
     ```
 
-- [ ] **Audit all roles for idempotency:** Systematically review every task in every role (`common`, `docker`, `nomad`, `consul`, etc.) and apply idempotency checks where they are missing.
+- [X] **Audit all roles for idempotency:** Systematically review every task in every role (`common`, `docker`, `nomad`, `consul`, etc.) and apply idempotency checks where they are missing.
 
 ### 1.2. Centralize All Configuration
 
@@ -227,5 +227,5 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [X] **Fix Skipped Test:**
   - `tests/unit/test_home_assistant_template.py`: Test is currently skipped and contains a TODO to re-add it without breaking tests.
 
-- [ ] **Reconcile Stale Artifacts:**
+- [X] **Reconcile Stale Artifacts:**
   - `docker/pipecatapp/app.py` contains code and TODOs (e.g., vision model failover) that are not present in the source `ansible/roles/pipecatapp/files/app.py`. Determine if these changes should be merged or if the artifact should be regenerated.

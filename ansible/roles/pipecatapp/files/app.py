@@ -743,6 +743,7 @@ async def main():
     )
 
     runner = PipelineRunner()
+    # TODO: Implement failover or selection logic for vision models
     vision_detector = YOLOv8Detector()
     logging.info("Using YOLOv8 for vision.")
 

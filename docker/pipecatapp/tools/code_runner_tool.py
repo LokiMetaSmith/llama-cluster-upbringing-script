@@ -1,6 +1,8 @@
 import docker
 import os
 import tempfile
+from llm_sandbox import SandboxSession
+from typing import List, Optional
 
 class CodeRunnerTool:
     """A tool for executing Python code in a sandboxed Docker container.
@@ -62,3 +64,38 @@ class CodeRunnerTool:
         finally:
             if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
                 os.unlink(tmp_file_path)
+
+    def run_code_in_sandbox(
+        self,
+        code: str,
+        language: str = "python",
+        libraries: Optional[List[str]] = None
+    ) -> str:
+        """Runs code in a secure llm-sandbox, with support for multiple languages.
+
+        Args:
+            code (str): The code to execute.
+            language (str): The programming language. Defaults to "python".
+                            Supported: python, javascript, java, cpp, go, r.
+            libraries (Optional[List[str]]): A list of libraries to install.
+
+        Returns:
+            str: The execution output or an error message.
+        """
+        if libraries is None:
+            libraries = []
+
+        try:
+            with SandboxSession(lang=language) as session:
+                result = session.run(code, libraries=libraries)
+                if result.exit_code == 0:
+                    output = result.stdout
+                else:
+                    output = f"Exit Code: {result.exit_code}\n---STDERR---\n{result.stderr}\n---STDOUT---\n{result.stdout}"
+
+                if result.plots:
+                    output += "\n\nGenerated plots are available."
+
+                return output
+        except Exception as e:
+            return f"An unexpected error occurred: {e}"

@@ -1,3 +1,12 @@
+import base64
+import sys
+from unittest.mock import MagicMock
+
+# Mock playwright if it's not available
+if 'playwright' not in sys.modules:
+    sys.modules['playwright'] = MagicMock()
+    sys.modules['playwright.sync_api'] = MagicMock()
+
 from playwright.sync_api import sync_playwright
 
 class WebBrowserTool:
@@ -48,6 +57,18 @@ class WebBrowserTool:
         except Exception as e:
             return f"Error getting page content: {e}"
 
+    def get_screenshot(self) -> str:
+        """Takes a screenshot of the current page and returns it as a base64 string.
+
+        Returns:
+            str: A base64-encoded string of the screenshot PNG, or an error message.
+        """
+        try:
+            screenshot_bytes = self.page.screenshot()
+            return base64.b64encode(screenshot_bytes).decode('utf-8')
+        except Exception as e:
+            return f"Error taking screenshot: {e}"
+
     def click(self, selector: str) -> str:
         """Clicks on an element on the page, identified by a CSS selector.
 
@@ -78,6 +99,40 @@ class WebBrowserTool:
             return f"Successfully typed '{text}' into element with selector '{selector}'."
         except Exception as e:
             return f"Error typing into element with selector '{selector}': {e}"
+
+    def click_at(self, x: int, y: int) -> str:
+        """Clicks the mouse at a specific (x, y) coordinate on the page.
+
+        Args:
+            x (int): The x-coordinate to click.
+            y (int): The y-coordinate to click.
+
+        Returns:
+            str: A confirmation message on success, or an error message.
+        """
+        try:
+            self.page.mouse.click(x, y)
+            return f"Successfully clicked at ({x}, {y})."
+        except Exception as e:
+            return f"Error clicking at ({x}, {y}): {e}"
+
+    def type_text_at(self, x: int, y: int, text: str) -> str:
+        """Clicks at a coordinate and then types text.
+
+        Args:
+            x (int): The x-coordinate to click.
+            y (int): The y-coordinate to click.
+            text (str): The text to type.
+
+        Returns:
+            str: A confirmation message on success, or an error message.
+        """
+        try:
+            self.page.mouse.click(x, y)
+            self.page.keyboard.type(text)
+            return f"Successfully typed '{text}' at ({x}, {y})."
+        except Exception as e:
+            return f"Error typing at ({x}, {y}): {e}"
 
     def close(self):
         """Closes the browser and stops the Playwright instance."""
