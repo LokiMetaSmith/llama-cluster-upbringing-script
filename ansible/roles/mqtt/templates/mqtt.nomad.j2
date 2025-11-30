@@ -27,6 +27,18 @@ job "mqtt" {
       provider = "consul"
   #    address_mode = "host"
 
+
+    }
+
+    restart {
+      attempts = 10
+      interval = "5m"
+      delay    = "25s"
+      mode     = "delay"
+    }
+
+    task "mosquitto" {
+      driver = "docker"
       check {
         name     = "mqtt-tcp"
         type     = "tcp"
@@ -42,18 +54,6 @@ job "mqtt" {
           ignore_warnings = false
         }
       }
-    }
-
-    restart {
-      attempts = 10
-      interval = "5m"
-      delay    = "25s"
-      mode     = "delay"
-    }
-
-    task "mosquitto" {
-      driver = "docker"
-
       config {
         image = "eclipse-mosquitto:2"
         # When network mode is "host", port mapping in the driver config is not used/required
