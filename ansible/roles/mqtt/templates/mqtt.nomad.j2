@@ -37,7 +37,7 @@ job "mqtt" {
           type     = "script"
           name     = "mqtt_health"
           command  = "/bin/sh"
-          args     = ["-c", "nc -z ${NOMAD_IP_mqtt} ${NOMAD_PORT_mqtt}"]
+          args     = ["-c", "nc -z 127.0.0.1 1883"]
           interval = "10s"
           timeout  = "2s"
           task     = "mosquitto"
