@@ -21,49 +21,32 @@ job "mqtt" {
       read_only = false
     }
 
-    # Service Block at Group Level (Correct Placement)
     service {
       name     = "mqtt"
       port     = "mqtt"
       provider = "consul"
-      #check {
-      #  type     = "tcp"
-      #  name     = "mqtt_tcp_health"
-      #  port     = "mqtt"
-      #  interval = "10s"
-      #  timeout  = "2s"
-      #}
-        check {
-          type     = "script"
-          name     = "mqtt_health"
-          command  = "/bin/sh"
-          args     = ["-c", "nc -z ${NOMAD_IP_mqtt} ${NOMAD_PORT_mqtt}"]
-          interval = "10s"
-          timeout  = "2s"
-          task     = "mosquitto"
-          check_restart {
-            limit = 3
-            grace = "90s"
-            ignore_warnings = false
-          }
-        }
-      
+
+      check {
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "4s"
+        address_mode = "host"
+      }
     }
-    restart {
-      attempts = 10
-      interval = "5m"
-      delay    = "25s"
-      mode     = "delay"
-    }
+
+
     task "mosquitto" {
       driver = "docker"
 
       config {
         image = "eclipse-mosquitto:2"
-        # Host mode networking requires no port map here
-        cap_add = ["SETUID", "SETGID", "CHOWN", "NET_BIND_SERVICE"]
-        command = "mosquitto"
-        args    = ["-c", "/mosquitto/config/mosquitto.conf"]
+        ports = ["mqtt", "ws"]
+        cap_add = ["SETUID", "SETGID", "CHOWN"]
+
+        # By not specifying a
+        # command, we allow the container to use its
+        # default entrypoint, which is a script that correctly initializes the
+        # Mosquitto service, including setting file permissions.
       }
 
       volume_mount {
@@ -73,11 +56,9 @@ job "mqtt" {
       }
 
       resources {
-        cpu    = 200
-        memory = 128
+        cpu    = 200 # 200 MHz
+        memory = 128 # 128 MB
       }
-
-      user = "1883"
     }
   }
 }
