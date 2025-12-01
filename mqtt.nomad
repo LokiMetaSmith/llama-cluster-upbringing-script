@@ -6,11 +6,12 @@ job "mqtt" {
     count = 1
 
     network {
+      mode = "host"
       port "mqtt" {
-        to = 1883
+        static = 1883
       }
       port "ws" {
-        to = 9001
+        static = 9001
       }
     }
 
@@ -20,32 +21,46 @@ job "mqtt" {
       read_only = false
     }
 
+    # Service Block at Group Level (Correct Placement)
     service {
       name     = "mqtt"
       port     = "mqtt"
       provider = "consul"
-
+      
       check {
-        type     = "tcp"
+        type     = "script"
+        name     = "mqtt_health"
+        command  = "/bin/sh"
+        # Use 127.0.0.1 because mode=host implies localhost connectivity is available
+        args     = ["-c", "nc -z 127.0.0.1 1883"]
         interval = "10s"
         timeout  = "2s"
+        task     = "mosquitto"
+        
+        check_restart {
+          limit = 3
+          grace = "90s"
+          ignore_warnings = false
+        }
       }
     }
 
+    restart {
+      attempts = 10
+      interval = "5m"
+      delay    = "25s"
+      mode     = "delay"
+    }
 
     task "mosquitto" {
       driver = "docker"
 
       config {
         image = "eclipse-mosquitto:2"
-        ports = ["mqtt", "ws"]
-
-        # The entrypoint is overridden to explicitly load the config file.
-        # The config file itself is created by Ansible and placed in the host volume.
-        # The entrypoint is overridden to explicitly load the config file.
-        # The config file itself is created by Ansible and placed in the host volume.
+        # Host mode networking requires no port map here
+        cap_add = ["SETUID", "SETGID", "CHOWN", "NET_BIND_SERVICE"]
         command = "mosquitto"
-        args = ["-c", "/mosquitto/mosquitto.conf"]
+        args    = ["-c", "/mosquitto/config/mosquitto.conf"]
       }
 
       volume_mount {
@@ -55,11 +70,11 @@ job "mqtt" {
       }
 
       resources {
-        cpu    = 200 # 200 MHz
-        memory = 128 # 128 MB
+        cpu    = 200
+        memory = 128
       }
 
-      user = "1000"
+      user = "1883"
     }
   }
 }

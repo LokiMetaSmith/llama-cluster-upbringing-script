@@ -142,11 +142,15 @@
       ansible.builtin.fail:
         msg: "MQTT job failed to start. See logs above."
 
-- name: Wait for MQTT port to be open
-  ansible.builtin.wait_for:
-    host: "127.0.0.1"  # Force check on localhost to bypass alias/hairpin issues
-    port: 1883
-    timeout: 60
+- name: Wait for MQTT service to be healthy in Consul
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8500/v1/health/service/mqtt?passing"
+    method: GET
+    status_code: 200
+  register: mqtt_consul_health
+  until: mqtt_consul_health.json is defined and mqtt_consul_health.json | length > 0
+  retries: 30
+  delay: 5
   become: no
 
 - name: Debug mqtt job run
