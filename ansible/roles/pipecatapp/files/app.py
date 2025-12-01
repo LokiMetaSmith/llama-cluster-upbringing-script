@@ -51,6 +51,7 @@ from tools.smol_agent_tool import SmolAgentTool
 from tools.final_answer_tool import FinalAnswerTool
 from tools.shell_tool import ShellTool
 from tools.prompt_improver_tool import PromptImproverTool
+from tools.council_tool import CouncilTool
 from durable_execution import DurableExecutionEngine, durable_step
 from workflow.runner import WorkflowRunner, ActiveWorkflows
 # Import all node classes to ensure they are registered
@@ -578,6 +579,7 @@ class TwinService(FrameProcessor):
             "final_answer": FinalAnswerTool(),
             "shell": ShellTool(),
             "prompt_improver": PromptImproverTool(self),
+            "council": CouncilTool(self),
         }
 
         if self.app_config.get("use_summarizer", False):

@@ -69,6 +69,7 @@ pipecat_api_keys: ""
 #     - group_vars/secrets.yaml
 # For now, we'll place it here for simplicity.
 openai_api_key: "sk-your_openai_api_key_here"
+openrouter_api_key: ""
 jules_api_key: "your_jules_api_key_here"
 
 # Home Assistant User and Group IDs
