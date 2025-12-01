@@ -26,35 +26,32 @@ job "mqtt" {
       name     = "mqtt"
       port     = "mqtt"
       provider = "consul"
-      #check {
-      #  type     = "tcp"
-      #  name     = "mqtt_tcp_health"
-      #  port     = "mqtt"
-      #  interval = "10s"
-      #  timeout  = "2s"
-      #}
-        check {
-          type     = "script"
-          name     = "mqtt_health"
-          command  = "/bin/sh"
-          args     = ["-c", "nc -z ${NOMAD_IP_mqtt} ${NOMAD_PORT_mqtt}"]
-          interval = "10s"
-          timeout  = "2s"
-          task     = "mosquitto"
-          check_restart {
-            limit = 3
-            grace = "90s"
-            ignore_warnings = false
-          }
-        }
       
+      check {
+        type     = "script"
+        name     = "mqtt_health"
+        command  = "/bin/sh"
+        # Use 127.0.0.1 because mode=host implies localhost connectivity is available
+        args     = ["-c", "nc -z 127.0.0.1 1883"]
+        interval = "10s"
+        timeout  = "2s"
+        task     = "mosquitto"
+
+        check_restart {
+          limit = 3
+          grace = "90s"
+          ignore_warnings = false
+        }
+      }
     }
+
     restart {
       attempts = 10
       interval = "5m"
       delay    = "25s"
       mode     = "delay"
     }
+
     task "mosquitto" {
       driver = "docker"
 
