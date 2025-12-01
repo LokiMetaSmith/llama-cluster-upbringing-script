@@ -144,8 +144,7 @@
 
 - name: Wait for MQTT port to be open
   ansible.builtin.wait_for:
-   # host: "{{ cluster_ip }}"
-    host: "127.0.0.1"
+    host: "127.0.0.1"  # Force check on localhost to bypass alias/hairpin issues
     port: 1883
     timeout: 60
   become: no
