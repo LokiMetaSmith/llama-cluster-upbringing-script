@@ -2,3 +2,9 @@
   systemd:
     name: systemd-logind.service
     state: restarted
+
+- name: restart cluster-ip-alias
+  systemd:
+    name: cluster-ip-alias.service
+    state: restarted
+    daemon_reload: yes
