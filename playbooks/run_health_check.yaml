@@ -6,7 +6,7 @@
   tasks:
     - name: Render the health check Nomad job
       ansible.builtin.template:
-        src: ansible/jobs/health-check.nomad.j2
+        src: ../ansible/jobs/health-check.nomad.j2
         dest: /tmp/health-check.nomad
         mode: '0644'
 

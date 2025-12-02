@@ -171,7 +171,7 @@
         all_models_to_benchmark: "{{ expert_models.values() | sum(start=[]) | unique(attribute='filename') }}"
 
     - name: Benchmark each available model and record results
-      ansible.builtin.include_tasks: ../../../benchmark_single_model.yaml
+      ansible.builtin.include_tasks: ../../../../playbooks/benchmark_single_model.yaml
       loop: "{{ all_models_to_benchmark }}"
       loop_control:
         loop_var: model_item

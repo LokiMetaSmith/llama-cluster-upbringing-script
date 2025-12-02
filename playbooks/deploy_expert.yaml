@@ -59,8 +59,8 @@
     - name: Render the Llama Expert job template with custom variables
       ansible.builtin.shell:
         cmd: |
-          /tmp/jinja2_venv/bin/python {{ playbook_dir }}/render_template.py \
-          {{ playbook_dir }}/ansible/jobs/expert.nomad.j2 \
+          /tmp/jinja2_venv/bin/python {{ playbook_dir }}/../render_template.py \
+          {{ playbook_dir }}/../ansible/jobs/expert.nomad.j2 \
           {{ playbook_dir }}/tmp/expert-{{ current_expert }}-vars.json \
           > {{ playbook_dir }}/tmp/expert-{{ current_expert }}.nomad
 
