@@ -36,6 +36,11 @@ expert_models:
       url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
       filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
       memory_mb: 4096
+  cynic:
+    - name: "Llama-3-8B-Instruct"
+      url: "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF-v2/resolve/main/Meta-Llama-3-8B-Instruct-v2.Q4_K_M.gguf"
+      filename: "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
+      memory_mb: 8192
 
 vllm_expert_models:
   - name: "vllm-main"
