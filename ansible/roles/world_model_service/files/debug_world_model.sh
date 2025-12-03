@@ -29,6 +29,11 @@ trap cleanup EXIT
 docker stop $CONTAINER_NAME 2>/dev/null || true
 docker rm $CONTAINER_NAME 2>/dev/null || true
 
+# Ensure NOMAD_ADDR is set correctly by sourcing the profile script
+if [ -f "/etc/profile.d/nomad.sh" ]; then
+    source "/etc/profile.d/nomad.sh"
+fi
+
 # Check for MQTT
 echo "Checking for MQTT broker on port 1883..."
 if nc -z localhost 1883 2>/dev/null; then
@@ -76,7 +81,7 @@ docker run -d --name $CONTAINER_NAME \
   -e NOMAD_PORT_http=$DEBUG_PORT \
   -e PYTHONUNBUFFERED=1 \
   -e MQTT_HOST="$HOST_IP" \
-  -e NOMAD_ADDR="http://$HOST_IP:4646" \
+  -e NOMAD_ADDR="${NOMAD_ADDR:-http://$HOST_IP:4646}" \
   $IMAGE_NAME
 
 echo "Waiting for container to start..."
