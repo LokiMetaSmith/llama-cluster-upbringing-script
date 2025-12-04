@@ -157,6 +157,8 @@
   ansible.builtin.uri:
     url: "http://127.0.0.1:8500/v1/health/service/mqtt?passing"
     method: GET
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token }}"
     return_content: yes
     status_code: 200
   register: consul_check
