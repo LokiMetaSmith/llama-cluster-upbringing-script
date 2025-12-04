@@ -26,10 +26,12 @@ show_help() {
     echo "  --benchmark                  Run benchmark tests."
     echo "  --deploy-docker              Deploy the pipecat application using Docker."
     echo "  --home-assistant-debug       Enable debug mode for Home Assistant."
+    echo "  --container                  Run the entire infrastructure inside a single large container."
     echo "  -h, --help                   Display this help message and exit."
 }
 
 # --- Initialize flags ---
+USE_CONTAINER=false
 CLEAN_REPO=false
 DEBUG_MODE=false
 EXTERNAL_MODEL_SERVER=false
@@ -43,6 +45,7 @@ LOG_FILE="playbook_output.log"
 STATE_FILE=".bootstrap_state"
 
 # --- Parse command-line arguments ---
+ORIGINAL_ARGS=("$@")
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -102,6 +105,10 @@ while [[ $# -gt 0 ]]; do
         ANSIBLE_ARGS+=(--extra-vars "home_assistant_debug_mode=true")
         shift
         ;;
+        --container)
+        USE_CONTAINER=true
+        shift
+        ;;
         -h|--help)
         show_help
         exit 0
@@ -124,14 +131,80 @@ fi
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR"
 
+# --- Container Mode ---
+if [ "$USE_CONTAINER" = true ]; then
+    echo "--- Running in Container Mode ---"
+
+    # Check if we are already inside the container
+    if [ -f "/.dockerenv" ] && [ "$(hostname)" = "pipecat-dev-runner" ]; then
+        echo "✅ Already inside the container. Proceeding with bootstrap..."
+    else
+        IMAGE_NAME="pipecat-dev-container"
+        CONTAINER_NAME="pipecat-dev-runner"
+
+        echo "Building container image: $IMAGE_NAME..."
+        if ! docker build -t "$IMAGE_NAME" docker/dev_container/; then
+            echo "❌ Failed to build container image."
+            exit 1
+        fi
+
+        echo "Checking for existing container..."
+        if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+            echo "Removing existing container..."
+            docker rm -f "$CONTAINER_NAME"
+        fi
+
+        echo "Starting container: $CONTAINER_NAME..."
+        # We run with privileged mode and cgroup mapping for systemd support
+        # We also mount the current directory to /opt/cluster-infra
+        if ! docker run -d --privileged --name "$CONTAINER_NAME" \
+            --hostname "$CONTAINER_NAME" \
+            -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+            --cgroupns=host \
+            -v "$SCRIPT_DIR":/opt/cluster-infra \
+            -p 4646:4646 -p 8500:8500 -p 8080:8080 -p 8000:8000 \
+            "$IMAGE_NAME"; then
+            echo "❌ Failed to start container."
+            exit 1
+        fi
+
+        echo "Waiting for container to initialize..."
+        sleep 5
+
+        echo "Executing bootstrap inside the container..."
+
+        ARGS_WITHOUT_CONTAINER=()
+        for arg in "${ORIGINAL_ARGS[@]}"; do
+            if [ "$arg" != "--container" ]; then
+                ARGS_WITHOUT_CONTAINER+=("$arg")
+            fi
+        done
+
+        # Execute the script inside the container
+        docker exec -it "$CONTAINER_NAME" /bin/bash -c "cd /opt/cluster-infra && ./bootstrap.sh ${ARGS_WITHOUT_CONTAINER[*]}"
+        EXIT_CODE=$?
+
+        echo "Container bootstrap finished with exit code: $EXIT_CODE"
+        echo "You can access the container using: docker exec -it $CONTAINER_NAME /bin/bash"
+        echo "To stop and remove the container: docker rm -f $CONTAINER_NAME"
+
+        exit $EXIT_CODE
+    fi
+fi
+
 # --- Run Initial Machine Setup based on Role ---
 # This script handles pre-Ansible configuration like network and hostname.
 # It's run for all roles, and the script itself determines what to do based on the config.
 echo "--- Running Initial Machine Setup ---"
+# Skip setup.sh if running inside the dev container
 if [ -f "initial-setup/setup.sh" ]; then
-    echo "You may be prompted for your sudo password to run the initial setup script."
-    sudo bash "initial-setup/setup.sh"
-    echo "✅ Initial machine setup complete."
+    if [ -f "/.dockerenv" ] && [ "$(hostname)" = "pipecat-dev-runner" ]; then
+         echo "🐳 Container environment detected. Skipping initial machine setup (setup.sh)."
+    else
+        echo "You may be prompted for your sudo password to run the initial setup script."
+        sudo bash "initial-setup/setup.sh"
+        echo "✅ Initial machine setup complete."
+    fi
 else
     echo "⚠️  Warning: initial-setup/setup.sh not found. Skipping pre-configuration."
 fi
