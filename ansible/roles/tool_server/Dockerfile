@@ -19,6 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libavfilter-dev \
     libswscale-dev \
     libswresample-dev \
+    git \
+    rsync \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir --upgrade pip
@@ -63,5 +65,9 @@ RUN pip install --no-cache-dir \
 
 COPY app.py .
 COPY tools ./tools
+COPY entrypoint.sh /entrypoint.sh
 
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]
