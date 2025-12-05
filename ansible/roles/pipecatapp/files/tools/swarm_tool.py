@@ -54,7 +54,15 @@ class SwarmTool:
                                         "Config": {
                                             "image": image,
                                             "command": "python",
-                                            "args": ["/opt/pipecatapp/worker_agent.py"]
+                                            "args": ["/opt/pipecatapp/worker_agent.py"],
+                                            "mounts": [
+                                                {
+                                                    "type": "bind",
+                                                    "source": "/opt/pipecatapp",
+                                                    "target": "/opt/pipecatapp",
+                                                    "readonly": True
+                                                }
+                                            ]
                                         },
                                         "Env": {
                                             "WORKER_PROMPT": task.get("prompt"),

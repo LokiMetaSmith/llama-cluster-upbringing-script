@@ -7,7 +7,8 @@ job "memory-service" {
 
     network {
       port "http" {
-        to = 8000
+        static = 8000
+        to     = 8000
       }
     }
 
@@ -44,7 +45,9 @@ job "memory-service" {
       }
 
       env {
-        PORT = "${NOMAD_PORT_http}"
+        # App listens on 8000 inside the container
+        PORT = "8000"
+       # PORT = "${NOMAD_PORT_http}"
         MEMORY_DB_PATH = "/data/pmm_memory.db"
       }
 
