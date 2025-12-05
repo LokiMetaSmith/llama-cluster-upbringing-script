@@ -13,6 +13,9 @@
     - role: term_everything
       tags:
         - term_everything
+    - role: memory_service
+      tags:
+        - memory_service
     - role: pipecatapp
       tags:
         - pipecatapp
