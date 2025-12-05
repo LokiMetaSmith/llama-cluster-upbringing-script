@@ -82,9 +82,21 @@ else
 fi
 
 # Jinja2 Linter
-# Word splitting is intentional for exclude args.
-# shellcheck disable=SC2086
-run_linter "Jinja2 Linter" djlint . $DJLINT_EXCLUDE_ARGS
+JINJA_FILES_TO_LINT=$(find . -type f \( -name "*.html" \))
+if [ -f "$EXCLUDE_FILE" ]; then
+    EXCLUDE_PATTERNS=$(grep -v '^#' "$EXCLUDE_FILE" | grep -v '^$')
+    if [ -n "$EXCLUDE_PATTERNS" ]; then
+        JINJA_FILES_TO_LINT=$(echo "$JINJA_FILES_TO_LINT" | grep -vFf <(echo "$EXCLUDE_PATTERNS"))
+    fi
+fi
+# Also exclude node_modules and venv
+JINJA_FILES_TO_LINT=$(echo "$JINJA_FILES_TO_LINT" | grep -v "node_modules" | grep -v "venv")
+
+if [ -n "$JINJA_FILES_TO_LINT" ]; then
+    # Word splitting is intentional
+    # shellcheck disable=SC2086
+    run_linter "Jinja2 Linter" djlint $JINJA_FILES_TO_LINT
+fi
 
 
 # --- Final Exit Status ---

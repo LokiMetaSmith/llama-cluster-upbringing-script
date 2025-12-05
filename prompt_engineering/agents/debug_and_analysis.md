@@ -25,5 +25,5 @@ This agent can delegate tasks to specialized sub-agents to handle specific aspec
 
 ## Backing LLM Model
 
-* **Model:** `claude-3-opus`
+- **Model:** `claude-3-opus`
 - **Reasoning:** Debugging and analysis require strong logical deduction, pattern recognition, and problem-solving skills. A powerful model is essential for this agent to effectively diagnose complex issues and devise effective solutions.

@@ -18,5 +18,5 @@ This directory defines the roles and responsibilities of the various agents in t
 
 ## Backing LLM Model
 
-* **Model:** `claude-3-opus` (default)
+- **Model:** `claude-3-opus` (default)
 - **Reasoning:** Unless otherwise specified, `claude-3-opus` is used for its superior reasoning and coding capabilities.
