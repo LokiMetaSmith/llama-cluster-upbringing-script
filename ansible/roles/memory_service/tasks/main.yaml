@@ -1,0 +1,22 @@
+---
+- name: Create memory service directory
+  ansible.builtin.file:
+    path: /opt/memory_service
+    state: directory
+    mode: '0755'
+
+- name: Copy memory service files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/opt/memory_service/{{ item }}"
+    mode: '0644'
+  loop:
+    - app.py
+    - pmm_memory.py
+
+- name: Template memory service Nomad job
+  ansible.builtin.template:
+    src: memory_service.nomad.j2
+    dest: /opt/nomad/jobs/memory_service.nomad
+    mode: '0644'
+  notify: Run memory service job

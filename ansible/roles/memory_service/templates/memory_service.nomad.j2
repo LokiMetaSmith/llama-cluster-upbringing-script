@@ -1,0 +1,72 @@
+job "memory-service" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "memory-api" {
+    count = 1
+
+    network {
+      port "http" {
+        static = 8000
+        to     = 8000
+      }
+    }
+
+    # Create a persistent volume for the database
+    # In a real setup, this should be a host_volume defined in Nomad client config
+    volume "memory-data" {
+      type      = "host"
+      source    = "nomad-data" # Assuming a generic data volume exists or created via Ansible
+      read_only = false
+    }
+
+    task "api" {
+      driver = "docker"
+
+      config {
+        image = "python:3.11-slim"
+        command = "/bin/bash"
+        args = ["-c", "pip install fastapi uvicorn pydantic && python /app/app.py"]
+
+        # Mount the app code
+        mount {
+          type   = "bind"
+          source = "/opt/memory_service"
+          target = "/app"
+        }
+
+        ports = ["http"]
+      }
+
+      volume_mount {
+        volume      = "memory-data"
+        destination = "/data"
+        read_only   = false
+      }
+
+      env {
+        # App listens on 8000 inside the container
+        PORT = "8000"
+        MEMORY_DB_PATH = "/data/pmm_memory.db"
+      }
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+
+      service {
+        name = "memory-service"
+        port = "http"
+
+        check {
+          name     = "alive"
+          type     = "http"
+          path     = "/health"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}
