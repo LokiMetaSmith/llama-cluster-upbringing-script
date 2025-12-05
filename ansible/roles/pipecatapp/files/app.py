@@ -29,6 +29,7 @@ import requests
 import consul.aio
 import numpy as np
 from pmm_memory import PMMMemory
+from pmm_memory_client import PMMMemoryClient
 from quality_control import CodeQualityAnalyzer
 import web_server
 from web_server import approval_queue, text_message_queue
@@ -52,6 +53,10 @@ from tools.final_answer_tool import FinalAnswerTool
 from tools.shell_tool import ShellTool
 from tools.prompt_improver_tool import PromptImproverTool
 from tools.council_tool import CouncilTool
+from tools.swarm_tool import SwarmTool
+from tools.project_mapper_tool import ProjectMapperTool
+from tools.planner_tool import PlannerTool
+from agent_factory import create_tools
 from durable_execution import DurableExecutionEngine, durable_step
 from workflow.runner import WorkflowRunner, ActiveWorkflows
 # Import all node classes to ensure they are registered
@@ -546,7 +551,16 @@ class TwinService(FrameProcessor):
         self.app_config = app_config or {}
         self.approval_queue = approval_queue
         self.short_term_memory = []
-        self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
+
+        # Use Remote Memory if available (via Consul discovery or env var), otherwise fallback to local
+        memory_service_url = os.getenv("MEMORY_SERVICE_URL")
+        if memory_service_url:
+             logging.info(f"Using Remote Memory Service at {memory_service_url}")
+             self.long_term_memory = PMMMemoryClient(base_url=memory_service_url)
+        else:
+             logging.info("Using Local PMMMemory (SQLite)")
+             self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
+
         self.quality_analyzer = CodeQualityAnalyzer()
 
         # This will hold metadata from incoming requests (e.g., from the gateway)
@@ -556,34 +570,10 @@ class TwinService(FrameProcessor):
         self.approval_mode = self.app_config.get("approval_mode", False)
         self.consul_http_addr = f"http://{self.app_config.get('consul_host', '127.0.0.1')}:{self.app_config.get('consul_port', 8500)}"
 
-        self.tools = {
-            "ssh": SSH_Tool(),
-            "mcp": MCP_Tool(self, self.runner),
-            "vision": self.vision_detector,
-            "desktop_control": DesktopControlTool(),
-            "code_runner": CodeRunnerTool(),
-            "smol_agent_computer": SmolAgentTool(),
-            "web_browser": WebBrowserTool(),
-            "ansible": Ansible_Tool(),
-            "power": Power_Tool(),
-            "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
-            "rag": RAG_Tool(pmm_memory=self.long_term_memory, base_dir="/"),
-            "ha": HA_Tool(
-                ha_url=self.app_config.get("ha_url"),
-                ha_token=self.app_config.get("ha_token")
-            ),
-            "git": Git_Tool(),
-            "orchestrator": OrchestratorTool(),
-            "llxprt_code": LLxprt_Code_Tool(),
-            "claude_clone": ClaudeCloneTool(),
-            "final_answer": FinalAnswerTool(),
-            "shell": ShellTool(),
-            "prompt_improver": PromptImproverTool(self),
-            "council": CouncilTool(self),
-        }
-
-        if self.app_config.get("use_summarizer", False):
-            self.tools["summarizer"] = SummarizerTool(self)
+        # Initialize tools via factory
+        self.tools = create_tools(self.app_config, twin_service=self, runner=self.runner)
+        # Add vision detector explicitly as it is a special case (frame processor)
+        self.tools["vision"] = self.vision_detector
 
     async def process_frame(self, frame, direction):
         """Entry point for the agent's logic, triggered by a transcription frame.
