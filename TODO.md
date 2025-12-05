@@ -1,8 +1,8 @@
 # TODO
 
 ## Immediate Actions
-- [ ] Fix Memory Service networking (Port 8000 conflict).
-- [ ] Implement real LLM calls in `worker_agent.py` (replace mock).
+- [x] Fix Memory Service networking (Port 8000 conflict).
+- [x] Implement real LLM calls in `worker_agent.py` (replace mock).
 - [ ] Connect `PlannerTool` to real LLM for robust plan generation.
 
 ## Frontier Agent Roadmap (In Progress)
