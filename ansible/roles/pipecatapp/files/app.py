@@ -29,6 +29,7 @@ import requests
 import consul.aio
 import numpy as np
 from pmm_memory import PMMMemory
+from pmm_memory_client import PMMMemoryClient
 from quality_control import CodeQualityAnalyzer
 import web_server
 from web_server import approval_queue, text_message_queue
@@ -547,7 +548,16 @@ class TwinService(FrameProcessor):
         self.app_config = app_config or {}
         self.approval_queue = approval_queue
         self.short_term_memory = []
-        self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
+
+        # Use Remote Memory if available (via Consul discovery or env var), otherwise fallback to local
+        memory_service_url = os.getenv("MEMORY_SERVICE_URL")
+        if memory_service_url:
+             logging.info(f"Using Remote Memory Service at {memory_service_url}")
+             self.long_term_memory = PMMMemoryClient(base_url=memory_service_url)
+        else:
+             logging.info("Using Local PMMMemory (SQLite)")
+             self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
+
         self.quality_analyzer = CodeQualityAnalyzer()
 
         # This will hold metadata from incoming requests (e.g., from the gateway)

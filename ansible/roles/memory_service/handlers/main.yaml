@@ -1,0 +1,5 @@
+- name: Run memory service job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/memory_service.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"

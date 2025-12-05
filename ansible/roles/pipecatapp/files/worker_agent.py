@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import time
+import requests
 
 # Configure logging
 logging.basicConfig(
@@ -29,6 +30,25 @@ def main():
     logger.info(f"Received Prompt: {prompt}")
     logger.info(f"Received Context length: {len(context)} chars")
 
+    # Discover Memory Service
+    consul_addr = os.getenv("CONSUL_HTTP_ADDR", "http://10.0.0.1:8500")
+    memory_url = None
+    try:
+        # Simple service discovery via Consul HTTP API
+        # We look for 'memory-service'
+        resp = requests.get(f"{consul_addr}/v1/catalog/service/memory-service")
+        if resp.status_code == 200:
+            services = resp.json()
+            if services:
+                # Just pick the first one
+                svc = services[0]
+                addr = svc.get("ServiceAddress", "localhost")
+                port = svc.get("ServicePort", 8000)
+                memory_url = f"http://{addr}:{port}"
+                logger.info(f"Discovered Memory Service at {memory_url}")
+    except Exception as e:
+        logger.warning(f"Failed to discover memory service: {e}")
+
     # In a full implementation, this would:
     # 1. Initialize an LLM client (OpenAI/Local)
     # 2. Query the LLM with the prompt + context
@@ -41,7 +61,17 @@ def main():
         # Simulate thinking/working time
         time.sleep(2)
 
-        # TODO: Connect to the 'Shared Brain' here to report results
+        # Report to Shared Brain
+        if memory_url:
+            try:
+                requests.post(f"{memory_url}/events", json={
+                    "kind": "worker_result",
+                    "content": f"Task {task_id} completed.",
+                    "meta": {"task_id": task_id, "status": "success"}
+                })
+                logger.info("Reported result to Memory Service.")
+            except Exception as e:
+                logger.error(f"Failed to report to memory service: {e}")
 
         logger.info(f"Task {task_id} completed successfully.")
 
