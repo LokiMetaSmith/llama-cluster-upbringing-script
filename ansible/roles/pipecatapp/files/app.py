@@ -56,6 +56,7 @@ from tools.council_tool import CouncilTool
 from tools.swarm_tool import SwarmTool
 from tools.project_mapper_tool import ProjectMapperTool
 from tools.planner_tool import PlannerTool
+from agent_factory import create_tools
 from durable_execution import DurableExecutionEngine, durable_step
 from workflow.runner import WorkflowRunner, ActiveWorkflows
 # Import all node classes to ensure they are registered
@@ -569,6 +570,10 @@ class TwinService(FrameProcessor):
         self.approval_mode = self.app_config.get("approval_mode", False)
         self.consul_http_addr = f"http://{self.app_config.get('consul_host', '127.0.0.1')}:{self.app_config.get('consul_port', 8500)}"
 
+        # Initialize tools via factory
+        self.tools = create_tools(self.app_config, twin_service=self, runner=self.runner)
+        # Add vision detector explicitly as it is a special case (frame processor)
+        self.tools["vision"] = self.vision_detector
         self.tools = {
             "ssh": SSH_Tool(),
             "mcp": MCP_Tool(self, self.runner),

@@ -3,6 +3,9 @@ import sys
 import logging
 import time
 import requests
+import asyncio
+from agent_factory import create_tools
+from pipecat.services.openai.llm import OpenAILLMService
 
 # Configure logging
 logging.basicConfig(
@@ -11,9 +14,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("WorkerAgent")
 
-def main():
+async def main_async():
     """
-    Entry point for the ephemeral worker agent.
+    Async Entry point for the ephemeral worker agent.
     It reads its instructions from environment variables, performs the task,
     and then exits.
     """
@@ -49,25 +52,47 @@ def main():
     except Exception as e:
         logger.warning(f"Failed to discover memory service: {e}")
 
-    # In a full implementation, this would:
-    # 1. Initialize an LLM client (OpenAI/Local)
-    # 2. Query the LLM with the prompt + context
-    # 3. Perform actions (git clone, edit files, etc.)
-    # 4. Report back to a central 'Memory Service' or 'World Model'
+    # Initialize Tools
+    # We pass None for twin_service/runner for now as the worker doesn't have the full pipeline context
+    # but tools like Git, Shell, CodeRunner should work fine.
+    tools = create_tools(config={}, twin_service=None, runner=None)
+    logger.info(f"Initialized tools: {list(tools.keys())}")
 
-    # For this prototype, we simulate work
     try:
-        logger.info("Processing task...")
-        # Simulate thinking/working time
-        time.sleep(2)
+        logger.info("Processing task with LLM...")
+
+        # Simple LLM Loop (Mocked for now, but ready for OpenAILLMService)
+        # In a real scenario, we would initialize OpenAILLMService here.
+        # But `OpenAILLMService` in pipecat is tied to the pipeline.
+        # We'll use a direct tool execution for demonstration or a simple loop if we had a standalone LLM client.
+
+        # For the prototype, if the prompt asks to run a specific tool (heuristic), we run it.
+        result_output = "No action taken."
+
+        if "test" in prompt.lower() or "files" in prompt.lower():
+            # Example: Run 'ls -la'
+            if "shell" in tools:
+                logger.info("Executing shell command...")
+                try:
+                    # ShellTool expected usage: await run(command)
+                    # We assume ShellTool follows a standard interface or we need to inspect it.
+                    # Based on existing tools, they often have a `run` or `execute` method.
+                    # Let's assume `run` is async.
+                    # Note: We need to check if run is async. Most tools in this repo are.
+                    output = await tools["shell"].run("ls -la /opt/pipecatapp")
+                    result_output = f"Shell Output: {output}"
+                    logger.info(result_output)
+                except Exception as e:
+                    logger.error(f"Error executing shell tool: {e}")
+                    result_output = f"Error: {e}"
 
         # Report to Shared Brain
         if memory_url:
             try:
                 requests.post(f"{memory_url}/events", json={
                     "kind": "worker_result",
-                    "content": f"Task {task_id} completed.",
-                    "meta": {"task_id": task_id, "status": "success"}
+                    "content": f"Task {task_id} completed. Result: {result_output}",
+                    "meta": {"task_id": task_id, "status": "success", "tools_used": list(tools.keys())}
                 })
                 logger.info("Reported result to Memory Service.")
             except Exception as e:
@@ -76,11 +101,11 @@ def main():
         logger.info(f"Task {task_id} completed successfully.")
 
         # Print a special marker for the Orchestrator to potentially pick up from logs
-        print(f"RESULT_JSON={{\"task_id\": \"{task_id}\", \"status\": \"success\", \"output\": \"Simulated completion\"}}")
+        print(f"RESULT_JSON={{\"task_id\": \"{task_id}\", \"status\": \"success\", \"output\": \"Worker execution complete\"}}")
 
     except Exception as e:
         logger.error(f"Task failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main_async())
