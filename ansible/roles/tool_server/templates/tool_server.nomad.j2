@@ -15,10 +15,25 @@ job "tool-server" {
       config {
         image = "tool-server:latest"
         ports = ["http"]
+
+        # Volatile RAM disk for workspace
+        mounts = [
+          {
+            type   = "tmpfs"
+            target = "/opt/cluster-infra"
+            tmpfs_options = {
+              size = 1073741824 # 1GB
+            }
+          }
+        ]
+
         volumes = [
-          "/opt/cluster-infra:/opt/cluster-infra",
-          "/home/{{ target_user }}/.ssh:/root/.ssh:ro",
+          # Read-only source of truth from host
+          "/opt/cluster-infra:/mnt/host_repo:ro",
+          # MCP tools configuration
           "/opt/mcp:/opt/mcp",
+          # Uncomment below to enable host SSH keys (Not recommended for isolation)
+          # "/home/{{ target_user }}/.ssh:/root/.ssh:ro",
         ]
 
         command = "uvicorn"
@@ -29,6 +44,9 @@ job "tool-server" {
         TOOL_SERVER_API_KEY = "{{ openai_api_key }}"
         HA_URL              = "{{ env_ha_url | default('') }}"
         HA_TOKEN            = "{{ env_ha_token | default('') }}"
+        GITHUB_TOKEN        = "{{ github_token | default('') }}"
+        GIT_USERNAME        = "{{ git_username | default('Pipecat Agent') }}"
+        GIT_EMAIL           = "{{ git_email | default('agent@pipecat.ai') }}"
       }
 
       service {
