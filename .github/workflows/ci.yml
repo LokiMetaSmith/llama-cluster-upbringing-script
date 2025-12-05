@@ -49,6 +49,9 @@ jobs:
       - name: "Install test dependencies"
         run: pip install -r requirements-dev.txt
 
+      - name: "Install Ansible collections"
+        run: ansible-galaxy collection install community.general ansible.posix community.docker
+
       - name: "Run unit tests"
         run: python -m pytest tests/unit/
 
