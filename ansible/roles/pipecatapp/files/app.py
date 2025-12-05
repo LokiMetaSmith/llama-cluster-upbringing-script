@@ -52,6 +52,7 @@ from tools.final_answer_tool import FinalAnswerTool
 from tools.shell_tool import ShellTool
 from tools.prompt_improver_tool import PromptImproverTool
 from tools.council_tool import CouncilTool
+from tools.swarm_tool import SwarmTool
 from durable_execution import DurableExecutionEngine, durable_step
 from workflow.runner import WorkflowRunner, ActiveWorkflows
 # Import all node classes to ensure they are registered
@@ -580,6 +581,7 @@ class TwinService(FrameProcessor):
             "shell": ShellTool(),
             "prompt_improver": PromptImproverTool(self),
             "council": CouncilTool(self),
+            "swarm": SwarmTool(),
         }
 
         if self.app_config.get("use_summarizer", False):
