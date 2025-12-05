@@ -10,7 +10,8 @@ This document provides solutions to common issues encountered when operating the
 When viewing the Consul UI or running `consul monitor`, you see Nomad server or client services with the status "All service checks failing". This often appears alongside valid, passing checks for other Nomad instances.
 
 **Example Output:**
-```
+
+```text
 _nomad-server-chx5chd3agtnx24itv4quxsopdgskyme
 All service checks failing
 All node checks passing
@@ -63,11 +64,13 @@ Wait for the background process to finish, or if you are sure no other process s
 Jobs submitted to Nomad stay in the "Pending" state and are not placed on any nodes.
 
 **Cause:**
+
 - Lack of resources (CPU/Memory).
 - Constraint mismatches (e.g., job requires a specific device or kernel capability).
 - Nodes are down or ineligible.
 
 **Solution:**
+
 - Run `nomad job allocs <job_name>` to see allocation status.
 - Check `nomad node status` to ensure workers are ready.
 - Check `nomad alloc status <alloc_id>` for placement failure reasons.

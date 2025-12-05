@@ -3,3 +3,4 @@
 
 # Excluded because it has pre-existing style and meta tag issues that are out of scope for the current task.
 ansible/roles/pipecatapp/files/static/index.html
+docker/pipecatapp/static/index.html

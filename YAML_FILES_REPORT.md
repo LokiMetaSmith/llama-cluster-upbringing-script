@@ -58,7 +58,7 @@ These files are critical for the `supervisor.py` script which runs in the root.
 
 ## Summary
 
-*   **Essential in Root**: `playbook.yaml`, `inventory.yaml`.
-*   **Locked by Code Dependencies**: `health_check.yaml`, `diagnose_failure.yaml`, `heal_job.yaml` (supervisor.py), `benchmark_single_model.yaml` (llama_cpp role).
-*   **Locked by Documentation**: `deploy_expert.yaml` (README.md).
-*   **Candidates for Move**: All other files (approx. 13 files) can be moved to subdirectories within `playbooks/` to declutter the root, provided that `check_all_playbooks.sh` and any manual documentation are updated.
+* **Essential in Root**: `playbook.yaml`, `inventory.yaml`.
+* **Locked by Code Dependencies**: `health_check.yaml`, `diagnose_failure.yaml`, `heal_job.yaml` (supervisor.py), `benchmark_single_model.yaml` (llama_cpp role).
+* **Locked by Documentation**: `deploy_expert.yaml` (README.md).
+* **Candidates for Move**: All other files (approx. 13 files) can be moved to subdirectories within `playbooks/` to declutter the root, provided that `check_all_playbooks.sh` and any manual documentation are updated.

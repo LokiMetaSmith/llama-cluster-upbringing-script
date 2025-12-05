@@ -231,6 +231,7 @@ In addition to the agent's interface, you can access the dashboards for the unde
 - **URL:** `http://<node_ip>:8500`
 - **Login:** Access requires the **SecretID** (management token).
 - **Retrieving the Token:** Run this command on your controller node:
+
   ```bash
   sudo cat /etc/consul.d/management_token
   ```

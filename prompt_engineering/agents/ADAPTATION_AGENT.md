@@ -27,5 +27,5 @@ The agent produces two primary outputs:
 
 ## Backing LLM Model
 
-* **Model:** `claude-3-opus`
+- **Model:** `claude-3-opus`
 - **Reasoning:** The adaptation agent requires high-level reasoning to infer the root cause of a failure from disparate diagnostic logs and construct a meaningful test case that captures the essence of the failure.
