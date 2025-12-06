@@ -535,7 +535,7 @@ class TwinService(FrameProcessor):
     initializes the workflow engine, and sends the final response.
     The core logic is now managed by the declarative workflow system.
     """
-    def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None):
+    def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None, llm_base_url=None):
         """Initializes the TwinService.
 
         Args:
@@ -544,9 +544,11 @@ class TwinService(FrameProcessor):
             runner: The Pipecat PipelineRunner instance.
             app_config (dict): The application's configuration loaded from Consul.
             approval_queue: The queue for handling tool use approval requests.
+            llm_base_url (str, optional): The base URL of the LLM service.
         """
         super().__init__()
         self.router_llm = llm
+        self.llm_base_url = llm_base_url
         self.vision_detector = vision_detector
         self.runner = runner
         self.app_config = app_config or {}
@@ -787,7 +789,8 @@ async def main():
         vision_detector=vision_detector,
         runner=runner,
         app_config=app_config,
-        approval_queue=approval_queue
+        approval_queue=approval_queue,
+        llm_base_url=llm_base_url
     )
     web_server.app.state.twin_service_instance = twin
 
