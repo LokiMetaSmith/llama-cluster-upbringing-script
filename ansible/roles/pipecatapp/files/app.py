@@ -629,7 +629,7 @@ class TwinService(FrameProcessor):
         request_id = self.current_request_meta.get("request_id", str(time.time()))
 
         try:
-            workflow_runner = WorkflowRunner("workflows/default_agent_loop.yaml")
+            workflow_runner = WorkflowRunner("workflows/default_agent_loop.yaml", runner_id=request_id)
             active_workflows.add_runner(request_id, workflow_runner)
 
             global_inputs = {

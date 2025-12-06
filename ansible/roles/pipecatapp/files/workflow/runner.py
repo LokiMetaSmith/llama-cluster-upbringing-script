@@ -1,8 +1,12 @@
 import yaml
 import asyncio
-from typing import Dict, Any, List
+import time
+import os
+import uuid
+from typing import Dict, Any, List, Optional
 from .context import WorkflowContext
 from .nodes.registry import registry
+from .history import WorkflowHistory
 
 class ActiveWorkflows:
     """A simple singleton to track active workflow runners."""
@@ -51,10 +55,12 @@ class OpenGates:
 class WorkflowRunner:
     """Loads and executes a workflow defined in a YAML file."""
 
-    def __init__(self, workflow_path: str):
+    def __init__(self, workflow_path: str, runner_id: Optional[str] = None):
         with open(workflow_path, 'r') as f:
             self.workflow_definition = yaml.safe_load(f)
         self.nodes = {}
+        self.workflow_name = os.path.basename(workflow_path)
+        self.runner_id = runner_id if runner_id else str(uuid.uuid4())
 
     def _instantiate_nodes(self):
         """Instantiate all nodes defined in the workflow."""
@@ -140,15 +146,48 @@ class WorkflowRunner:
         Returns:
             A dictionary containing the final output(s) of the workflow.
         """
-        self._instantiate_nodes()
-        self.context = WorkflowContext(self.workflow_definition)
-        for name, value in global_inputs.items():
-            self.context.set_global_input(name, value)
+        start_time = time.time()
+        status = "COMPLETED"
+        error = None
 
-        execution_order = self._get_execution_order()
+        try:
+            self._instantiate_nodes()
+            self.context = WorkflowContext(self.workflow_definition)
+            for name, value in global_inputs.items():
+                self.context.set_global_input(name, value)
 
-        for node_id in execution_order:
-            node = self.nodes[node_id]
-            await node.execute(self.context)
+            execution_order = self._get_execution_order()
 
-        return self.context.final_output
+            for node_id in execution_order:
+                node = self.nodes[node_id]
+                await node.execute(self.context)
+
+            return self.context.final_output
+
+        except Exception as e:
+            status = "FAILED"
+            error = str(e)
+            raise e
+
+        finally:
+            end_time = time.time()
+            # Persist history
+            try:
+                history = WorkflowHistory()
+                context_data = self.context_to_dict() if hasattr(self, 'context') else {}
+
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(
+                    None,
+                    lambda: history.save_run(
+                        runner_id=self.runner_id,
+                        workflow_name=self.workflow_name,
+                        start_time=start_time,
+                        end_time=end_time,
+                        status=status,
+                        context=context_data,
+                        error=error
+                    )
+                )
+            except Exception as h_e:
+                print(f"Failed to save workflow history: {h_e}")
