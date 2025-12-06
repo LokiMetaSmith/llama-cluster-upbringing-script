@@ -12,5 +12,8 @@
 - [ ] Phase 4: Continuous Evolution (Self-correction loop).
 
 ## Backlog
-- [ ] Add `frontend_verification_instructions` for UI changes.
+- [x] Add `frontend_verification_instructions` for UI changes.
 - [ ] Refactor `pipecatapp` role to use Docker image for memory service in production.
+
+## Notes
+> "The Planner has awakened. No longer bound by hardcoded heuristics, it now contemplates the codebase with the full depth of a Large Language Model. It does not just execute; it *understands*. Or so we hope. The first step towards a truly autonomous architect has been taken."
