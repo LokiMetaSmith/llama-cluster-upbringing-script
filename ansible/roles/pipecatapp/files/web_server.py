@@ -118,6 +118,17 @@ async def internal_chat(payload: Dict = Body(...)):
     return JSONResponse(status_code=202, content={"message": "Request accepted"})
 
 
+@app.post("/internal/system_message", summary="Process System Alert", description="Receives a system alert (e.g., from Supervisor), injecting it into the agent's workflow.", tags=["Internal"])
+async def internal_system_message(payload: Dict = Body(..., examples=[{"text": "Job X failed with error Y", "priority": "high"}])):
+    """
+    Handles a system alert. These are treated as high-priority inputs from the infrastructure.
+    """
+    # Mark it as a system alert for special handling in TwinService
+    payload["is_system_alert"] = True
+    await text_message_queue.put(payload)
+    return JSONResponse(status_code=202, content={"message": "System alert accepted"})
+
+
 @app.get("/", summary="Serve Web UI", description="Serves the main `index.html` file for the web user interface.", tags=["UI"])
 async def get():
     """Serves the main `index.html` file for the web UI."""

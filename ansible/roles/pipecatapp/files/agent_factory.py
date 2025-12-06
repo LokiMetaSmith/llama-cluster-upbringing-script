@@ -22,6 +22,7 @@ from tools.council_tool import CouncilTool
 from tools.swarm_tool import SwarmTool
 from tools.project_mapper_tool import ProjectMapperTool
 from tools.planner_tool import PlannerTool
+from tools.file_editor_tool import FileEditorTool
 
 def create_tools(config: dict, twin_service=None, runner=None) -> dict:
     """
@@ -65,6 +66,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "swarm": SwarmTool(),
         "project_mapper": ProjectMapperTool(),
         "planner": PlannerTool(twin_service) if twin_service else None,
+        "file_editor": FileEditorTool(root_dir="/opt/pipecatapp"), # Allow editing within the app dir
     }
 
     if config.get("use_summarizer", False) and twin_service:
