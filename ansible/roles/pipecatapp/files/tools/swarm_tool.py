@@ -96,3 +96,14 @@ class SwarmTool:
             result_msg += f" Errors: {'; '.join(errors)}"
 
         return result_msg
+
+    async def kill_worker(self, job_id: str) -> str:
+        """Kills a specific worker job."""
+        async with httpx.AsyncClient() as client:
+            try:
+                # Use query param purge=true to clean up immediately
+                resp = await client.delete(f"{self.nomad_url}/v1/job/{job_id}?purge=true")
+                resp.raise_for_status()
+                return f"Successfully killed worker: {job_id}"
+            except Exception as e:
+                return f"Failed to kill worker {job_id}: {str(e)}"

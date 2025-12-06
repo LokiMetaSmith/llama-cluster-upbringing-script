@@ -57,6 +57,7 @@ from tools.swarm_tool import SwarmTool
 from tools.project_mapper_tool import ProjectMapperTool
 from tools.planner_tool import PlannerTool
 from agent_factory import create_tools
+from task_supervisor import TaskSupervisor
 from durable_execution import DurableExecutionEngine, durable_step
 from workflow.runner import WorkflowRunner, ActiveWorkflows
 # Import all node classes to ensure they are registered
@@ -603,8 +604,8 @@ class TwinService(FrameProcessor):
        #    "planner": PlannerTool(self),
        #}
 
-        if self.app_config.get("use_summarizer", False):
-            self.tools["summarizer"] = SummarizerTool(self)
+        #if self.app_config.get("use_summarizer", False):
+       #     self.tools["summarizer"] = SummarizerTool(self)
 
     async def process_frame(self, frame, direction):
         """Entry point for the agent's logic, triggered by a transcription frame.
@@ -799,6 +800,10 @@ async def main():
     )
     server = uvicorn.Server(config)
     threading.Thread(target=server.run, daemon=True).start()
+
+    # Start Task Supervisor
+    task_supervisor = TaskSupervisor(twin)
+    asyncio.create_task(task_supervisor.start())
 
     # Now that the twin service is initialized and the web server is starting,
     # we can mark the application as ready.

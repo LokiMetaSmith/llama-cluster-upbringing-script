@@ -66,6 +66,23 @@ async def main_async():
     except Exception as e:
         logger.warning(f"Failed to discover services: {e}")
 
+    # Report Startup to Shared Brain
+    if memory_url:
+        try:
+            requests.post(f"{memory_url}/events", json={
+                "kind": "worker_started",
+                "content": f"Task {task_id} started.",
+                "meta": {
+                    "task_id": task_id,
+                    "prompt": prompt,
+                    "context": context,
+                    "status": "started"
+                }
+            })
+            logger.info("Reported start to Memory Service.")
+        except Exception as e:
+            logger.error(f"Failed to report start to memory service: {e}")
+
     # Initialize Tools
     # We pass None for twin_service/runner for now as the worker doesn't have the full pipeline context
     # but tools like Git, Shell, CodeRunner should work fine.

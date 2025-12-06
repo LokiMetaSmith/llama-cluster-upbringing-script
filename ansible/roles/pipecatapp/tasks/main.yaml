@@ -75,6 +75,14 @@
   tags:
     - deploy_app
 
+- name: Copy task supervisor
+  ansible.builtin.copy:
+    src: task_supervisor.py
+    dest: /opt/pipecatapp/task_supervisor.py
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy agent factory
   ansible.builtin.copy:
     src: agent_factory.py
