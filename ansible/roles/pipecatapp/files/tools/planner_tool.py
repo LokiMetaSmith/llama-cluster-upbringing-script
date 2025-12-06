@@ -23,11 +23,12 @@ class PlannerTool:
              except Exception:
                  pass
 
+        # Fallback to app_config if stored
+        app_config = getattr(self.twin_service, 'app_config', {})
+
         # Fallback to Consul discovery
         try:
             consul_addr = getattr(self.twin_service, 'consul_http_addr', 'http://localhost:8500')
-            # Use app_config to get service name
-            app_config = getattr(self.twin_service, 'app_config', {})
             service_name = app_config.get("llama_api_service_name", "llamacpp-rpc-api")
 
             async with httpx.AsyncClient() as client:
@@ -41,12 +42,25 @@ class PlannerTool:
         except Exception as e:
             self.logger.warning(f"Failed to discover LLM via Consul: {e}")
 
+        # Check twin_service.llm_base_url (from other merge path)
+        llm_base_url = getattr(self.twin_service, 'llm_base_url', None)
+        if llm_base_url:
+            return llm_base_url
+
         # Final fallback
-        return "http://localhost:8000/v1"
+        return "http://localhost:8080/v1"
 
     async def _call_llm(self, prompt: str) -> list:
         """Calls the LLM to generate a plan."""
         base_url = await self._discover_llm_url()
+        # Clean URL
+        base_url = base_url.rstrip("/")
+        if not base_url.endswith("/v1"):
+            # Assume it needs /v1 if not present, unless it's a raw route
+            # But standard is usually base_url/chat/completions where base_url ends in v1
+            # If discovery returned http://addr:port/v1, we are good.
+            pass
+
         url = f"{base_url}/chat/completions"
 
         headers = {"Content-Type": "application/json"}
@@ -70,12 +84,14 @@ class PlannerTool:
 
                 # Attempt to parse JSON from content (it might be wrapped in markdown code blocks)
                 content = content.strip()
-                if content.startswith("```json"):
-                    content = content[7:]
-                if content.startswith("```"):
-                    content = content[3:]
-                if content.endswith("```"):
-                    content = content[:-3]
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
+
+                # Cleanup common JSON markdown issues
+                content = re.sub(r'```json\s*', '', content)
+                content = re.sub(r'```\s*', '', content).strip()
 
                 return json.loads(content.strip())
         except Exception as e:
@@ -118,123 +134,18 @@ class PlannerTool:
         ]
         """
 
-        plan = []
-        llm_error = None
-
-        try:
-            # Attempt to determine LLM Base URL
-            # 1. Try to get it from the router_llm if exposed
-            llm_url = None
-            if hasattr(self.twin_service, 'router_llm') and hasattr(self.twin_service.router_llm, '_client') and hasattr(self.twin_service.router_llm._client, 'base_url'):
-                # Note: This is internal API of OpenAILLMService/OpenAI client, might be risky
-                 llm_url = str(self.twin_service.router_llm._client.base_url)
-
-            # 2. Fallback to app_config if stored
-            if not llm_url and hasattr(self.twin_service, 'app_config'):
-                 # We might store it there in future or passed in discover
-                 # app.py: llm_base_url = await discover_service(...)
-                 # but it doesn't seem to persist it in app_config clearly,
-                 # except maybe twin_service doesn't store the raw URL publicly.
-                 pass
-
-            # 3. Fallback to discovery logic similar to worker_agent or just hardcoded default in dev
-            if not llm_url:
-                 # Assume local router default
-                 llm_url = "http://localhost:8080/v1"
-
-            # Clean URL
-            llm_url = llm_url.rstrip("/")
-            if not llm_url.endswith("/v1"):
-                 # It might be base without v1, or with.
-                 # Let's assume standard OpenAI compat if we append /chat/completions
-                 pass
-
-            # If it ends with v1, strip it to append chat/completions correctly if needed, or just append.
-            # Usually base_url includes /v1 for openai client.
-            chat_url = f"{llm_url}/chat/completions"
-
-            messages = [{"role": "user", "content": prompt}]
-
-            self.logger.info(f"Querying Planner LLM at {chat_url}...")
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    chat_url,
-                    json={
-                        "model": "gpt-4", # Intelligent planner needed
-                        "messages": messages,
-                        "temperature": 0.2
-                    },
-                    timeout=60.0
-                )
-                response.raise_for_status()
-                content = response.json()['choices'][0]['message']['content']
-
-                # Parse JSON from content
-                # Handle potential markdown fencing
-                if "```json" in content:
-                    content = content.split("```json")[1].split("```")[0].strip()
-                elif "```" in content:
-                    content = content.split("```")[1].split("```")[0].strip()
-
-                plan = json.loads(content)
-                self.logger.info(f"Generated Plan: {json.dumps(plan, indent=2)}")
-
-        except Exception as e:
-            self.logger.error(f"Planner LLM failed: {e}")
-            llm_error = str(e)
-
-        # Fallback if LLM failed
-        if not plan:
-            self.logger.warning("Falling back to heuristic plan.")
-            plan.append({"id": "fallback_task", "prompt": f"Analyze goal: {goal}. (Planner failed: {llm_error})", "context": "all files"})
-        llm_base_url = getattr(self.twin_service, 'llm_base_url', None)
-
-        if llm_base_url:
-            self.logger.info(f"Using LLM at {llm_base_url} for planning.")
-            try:
-                async with httpx.AsyncClient(timeout=60.0) as client:
-                    response = await client.post(
-                        f"{llm_base_url}/chat/completions",
-                        json={
-                            "messages": [{"role": "user", "content": prompt}],
-                            "temperature": 0.2, # Low temperature for structured output
-                            "max_tokens": 1024,
-                            "stream": False
-                        }
-                    )
-                    response.raise_for_status()
-                    result_json = response.json()
-
-                    # Ensure result_json is a dict and has 'choices'
-                    if isinstance(result_json, dict) and "choices" in result_json:
-                         content = result_json['choices'][0]['message']['content']
-
-                         # Clean up content if it contains markdown code blocks
-                         content = re.sub(r'```json\s*', '', content)
-                         content = re.sub(r'```\s*', '', content).strip()
-
-                         try:
-                             plan = json.loads(content)
-                             self.logger.info(f"LLM generated plan: {plan}")
-                         except json.JSONDecodeError as e:
-                             self.logger.error(f"Failed to decode LLM JSON response: {e}. Content: {content}")
-                    else:
-                        self.logger.error(f"Unexpected LLM response format: {result_json}")
-
-            except Exception as e:
-                self.logger.error(f"Error calling LLM for planning: {e}")
-                # Fallback handled below
-        else:
-             self.logger.warning("No LLM base URL available. Falling back to heuristic planning.")
+        plan = await self._call_llm(prompt)
 
         # Fallback if plan is still empty
         if not plan:
             self.logger.info("Using heuristic fallback plan.")
             if "swarmer" in goal.lower() or "test" in goal.lower():
-                 plan.append({"id": "task_1", "prompt": "Check frontend files", "context": str(files_list[:10])})
-                 plan.append({"id": "task_2", "prompt": "Check backend files", "context": str(files_list[10:20])})
+                 plan = [
+                     {"id": "task_1", "prompt": "Check frontend files", "context": str(files_list[:10])},
+                     {"id": "task_2", "prompt": "Check backend files", "context": str(files_list[10:20])}
+                 ]
             else:
-                 plan.append({"id": "default_task", "prompt": f"Analyze goal: {goal}", "context": "all files"})
+                 plan = [{"id": "default_task", "prompt": f"Analyze goal: {goal}", "context": "all files"}]
 
         # 3. Dispatch to Swarm
         swarm = self.twin_service.tools.get("swarm")
