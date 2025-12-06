@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict
 from workflow.runner import ActiveWorkflows, OpenGates
+from workflow.history import WorkflowHistory
 
 
 # Configure logging
@@ -162,6 +163,23 @@ async def get_active_workflows():
     """Returns a snapshot of the state of all active workflows."""
     active_workflows = ActiveWorkflows()
     return active_workflows.get_all_states()
+
+@app.get("/api/workflows/history", response_class=JSONResponse, summary="Get Workflow History", description="Retrieves a list of past workflow runs.", tags=["Workflow"])
+async def get_workflow_history(limit: int = 50):
+    """Retrieves a list of past workflow runs."""
+    history = WorkflowHistory()
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, lambda: history.get_all_runs(limit=limit))
+
+@app.get("/api/workflows/history/{runner_id}", response_class=JSONResponse, summary="Get Workflow Run Details", description="Retrieves the full details of a specific workflow run.", tags=["Workflow"])
+async def get_workflow_run(runner_id: str):
+    """Retrieves the full details of a specific workflow run."""
+    history = WorkflowHistory()
+    loop = asyncio.get_running_loop()
+    run_details = await loop.run_in_executor(None, lambda: history.get_run(runner_id))
+    if not run_details:
+        raise HTTPException(status_code=404, detail="Workflow run not found.")
+    return run_details
 
 @app.post("/api/gate/approve", response_class=JSONResponse)
 async def approve_gate(payload: Dict = Body(...)):
