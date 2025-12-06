@@ -12,7 +12,7 @@
 - [ ] Phase 4: Continuous Evolution (Self-correction loop).
 
 ## Backlog
-- [ ] Add `frontend_verification_instructions` for UI changes.
+- [x] Add `frontend_verification_instructions` for UI changes.
 - [ ] Refactor `pipecatapp` role to use Docker image for memory service in production.
 
 ## Notes

@@ -8,6 +8,7 @@ This directory contains detailed documentation for the Distributed Conversationa
 - **[System Architecture](ARCHITECTURE.md)**: A holistic view of the system's layers and components.
 - **[Benchmarking](BENCHMARKING.MD)**: How to run and interpret benchmarks.
 - **[Deployment & Profiling](DEPLOYMENT_AND_PROFILING.md)**: Guides for deploying and profiling the application.
+- **[Frontend Verification](FRONTEND_VERIFICATION.md)**: Instructions for verifying UI changes with Playwright.
 - **[Gemini CLI](GEMINI.md)**: Setup and usage of the Gemini CLI extension.
 - **[MCP Server](MCP_SERVER_SETUP.md)**: Setup guide for the Model Context Protocol server.
 - **[Memories](MEMORIES.md)**: Details on the short-term and long-term memory systems.
