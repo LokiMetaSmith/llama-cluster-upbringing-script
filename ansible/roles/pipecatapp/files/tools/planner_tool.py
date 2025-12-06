@@ -1,6 +1,8 @@
 import json
 import logging
 import asyncio
+import httpx
+import os
 
 class PlannerTool:
     """
@@ -48,74 +50,75 @@ class PlannerTool:
         ]
         """
 
-        try:
-            # We reuse the twin_service's router_llm for this planning step
-            messages = [{"role": "user", "content": prompt}]
-            # Note: This assumes the LLM service interface supports 'chat' or similar.
-            # Looking at app.py, twin_service has self.router_llm. But app.py constructs the prompt manually usually.
-            # Let's check OpenAILLMService usage.
-            # It usually returns a stream or text.
-            # We'll assume a method exists or we fake it via the main pipeline runner?
-            # Actually, `twin_service.router_llm` is `OpenAILLMService`.
-            # We'll use a direct call if possible, or we might need to rely on the `TwinService` to expose a helper.
-            # For this prototype, let's assume `process_frame` style is not suitable.
-            # We need a direct generation.
-
-            # Use `await self.twin_service.router_llm.get_response(messages)` if it exists?
-            # Let's peek at `ansible/roles/pipecatapp/files/app.py` again or `pipecat` lib usage.
-            # The `OpenAILLMService` in pipecat is a FrameProcessor. It doesn't typically have a simple 'generate' method exposed publicly easily for tools.
-            # However, for a "Frontier" agent, we often have a 'tools' library that has its own LLM client.
-            # Let's fallback to using a fresh LLM client here or checking if we can reuse one.
-            pass
-        except Exception:
-            pass
-
-        # For the prototype, we will MOCK the LLM planning part if we can't easily access the LLM service method.
-        # But wait, `TwinService` has `self.router_llm`.
-        # Let's look at `ansible/roles/pipecatapp/files/app.py` imports.
-        # It uses `OpenAILLMService`.
-
-        # If we can't easily invoke the LLM, we can't implement the planner fully.
-        # Let's assume we can instantiate a simple client or use a helper.
-
-        # Re-reading app.py:
-        # `llm = OpenAILLMService(base_url=llm_base_url, ...)`
-        # This class inherits from `LLMService`.
-
-        # Let's just use `requests` to hit the LLM API directly, as we know the `base_url` from `twin_service.app_config` or discovery.
-        # `twin_service.router_llm` has `_client` potentially?
-        # Safer: use `discover_service` logic or just `twin_service.consul_http_addr`.
-
-        # Let's try to get the LLM URL from the twin_service if possible.
-        # `twin_service.router_llm._base_url` might be accessible?
-        # Or `discover_main_llm_service` helper in `app.py`.
-
-        # Simpler approach: Just hardcode a heuristic or use a "planning" string for now if LLM access is hard.
-        # But the user wants a "Frontier Agent". It needs to actually plan.
-
-        # Let's try to use `httpx` to call the LLM API directly.
-        llm_url = "http://localhost:8000/v1/chat/completions" # Default assumption or we find it.
-
-        # Actually, let's look at how `app.py` discovers it.
-        # `llm_base_url = await discover_service(...)`
-        # `TwinService` doesn't seem to store `llm_base_url` explicitly, just the `llm` object.
-        # But we can re-discover it or just assume standard ports if we are inside the cluster.
-
-        # Mocking the plan for this prototype to ensure stability, as connecting to a real LLM inside this environment
-        # without a running model server (which might be the case in test/check mode) is risky.
-        # Wait, the prompt says "Current AI... require engineers to drive... Frontier agents... decide which repos need changes".
-
-        # I will implement a "heuristic planner" that just splits the goal by keywords for now,
-        # to prove the *architectural* capability of the tool, rather than the *intelligence* of the model.
-        # "If goal contains 'frontend', spawn frontend task. If 'backend', spawn backend task."
-
         plan = []
-        if "swarmer" in goal.lower() or "test" in goal.lower():
-             plan.append({"id": "task_1", "prompt": "Check frontend files", "context": str(files_list[:10])})
-             plan.append({"id": "task_2", "prompt": "Check backend files", "context": str(files_list[10:20])})
-        else:
-             # Default plan
-             plan.append({"id": "default_task", "prompt": f"Analyze goal: {goal}", "context": "all files"})
+        llm_error = None
+
+        try:
+            # Attempt to determine LLM Base URL
+            # 1. Try to get it from the router_llm if exposed
+            llm_url = None
+            if hasattr(self.twin_service, 'router_llm') and hasattr(self.twin_service.router_llm, '_client') and hasattr(self.twin_service.router_llm._client, 'base_url'):
+                # Note: This is internal API of OpenAILLMService/OpenAI client, might be risky
+                 llm_url = str(self.twin_service.router_llm._client.base_url)
+
+            # 2. Fallback to app_config if stored
+            if not llm_url and hasattr(self.twin_service, 'app_config'):
+                 # We might store it there in future or passed in discover
+                 # app.py: llm_base_url = await discover_service(...)
+                 # but it doesn't seem to persist it in app_config clearly,
+                 # except maybe twin_service doesn't store the raw URL publicly.
+                 pass
+
+            # 3. Fallback to discovery logic similar to worker_agent or just hardcoded default in dev
+            if not llm_url:
+                 # Assume local router default
+                 llm_url = "http://localhost:8080/v1"
+
+            # Clean URL
+            llm_url = llm_url.rstrip("/")
+            if not llm_url.endswith("/v1"):
+                 # It might be base without v1, or with.
+                 # Let's assume standard OpenAI compat if we append /chat/completions
+                 pass
+
+            # If it ends with v1, strip it to append chat/completions correctly if needed, or just append.
+            # Usually base_url includes /v1 for openai client.
+            chat_url = f"{llm_url}/chat/completions"
+
+            messages = [{"role": "user", "content": prompt}]
+
+            self.logger.info(f"Querying Planner LLM at {chat_url}...")
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    chat_url,
+                    json={
+                        "model": "gpt-4", # Intelligent planner needed
+                        "messages": messages,
+                        "temperature": 0.2
+                    },
+                    timeout=60.0
+                )
+                response.raise_for_status()
+                content = response.json()['choices'][0]['message']['content']
+
+                # Parse JSON from content
+                # Handle potential markdown fencing
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
+
+                plan = json.loads(content)
+                self.logger.info(f"Generated Plan: {json.dumps(plan, indent=2)}")
+
+        except Exception as e:
+            self.logger.error(f"Planner LLM failed: {e}")
+            llm_error = str(e)
+
+        # Fallback if LLM failed
+        if not plan:
+            self.logger.warning("Falling back to heuristic plan.")
+            plan.append({"id": "fallback_task", "prompt": f"Analyze goal: {goal}. (Planner failed: {llm_error})", "context": "all files"})
 
         # 3. Dispatch to Swarm
         swarm = self.twin_service.tools.get("swarm")

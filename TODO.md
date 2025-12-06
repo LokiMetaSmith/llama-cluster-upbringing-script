@@ -3,7 +3,7 @@
 ## Immediate Actions
 - [x] Fix Memory Service networking (Port 8000 conflict).
 - [x] Implement real LLM calls in `worker_agent.py` (replace mock).
-- [ ] Connect `PlannerTool` to real LLM for robust plan generation.
+- [x] Connect `PlannerTool` to real LLM for robust plan generation.
 
 ## Frontier Agent Roadmap (In Progress)
 - [x] Phase 1: Foundation (SwarmTool, Worker Agent).
