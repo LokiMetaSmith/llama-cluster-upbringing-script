@@ -535,7 +535,7 @@ class TwinService(FrameProcessor):
     initializes the workflow engine, and sends the final response.
     The core logic is now managed by the declarative workflow system.
     """
-    def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None):
+    def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None, llm_base_url=None):
         """Initializes the TwinService.
 
         Args:
@@ -544,9 +544,11 @@ class TwinService(FrameProcessor):
             runner: The Pipecat PipelineRunner instance.
             app_config (dict): The application's configuration loaded from Consul.
             approval_queue: The queue for handling tool use approval requests.
+            llm_base_url (str, optional): The base URL of the LLM service.
         """
         super().__init__()
         self.router_llm = llm
+        self.llm_base_url = llm_base_url
         self.vision_detector = vision_detector
         self.runner = runner
         self.app_config = app_config or {}
@@ -575,6 +577,37 @@ class TwinService(FrameProcessor):
         self.tools = create_tools(self.app_config, twin_service=self, runner=self.runner)
         # Add vision detector explicitly as it is a special case (frame processor)
         self.tools["vision"] = self.vision_detector
+       # self.tools = {
+       #     "ssh": SSH_Tool(),
+       #     "mcp": MCP_Tool(self, self.runner),
+       #     "vision": self.vision_detector,
+       #     "desktop_control": DesktopControlTool(),
+       #     "code_runner": CodeRunnerTool(),
+       #     "smol_agent_computer": SmolAgentTool(),
+       #     "web_browser": WebBrowserTool(),
+       #     "ansible": Ansible_Tool(),
+       #    "power": Power_Tool(),
+       #    "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
+       #    "rag": RAG_Tool(pmm_memory=self.long_term_memory, base_dir="/"),
+       #    "ha": HA_Tool(
+       #        ha_url=self.app_config.get("ha_url"),
+       #        ha_token=self.app_config.get("ha_token")
+       #   ),
+       #   "git": Git_Tool(),
+       #    "orchestrator": OrchestratorTool(),
+       #    "llxprt_code": LLxprt_Code_Tool(),
+       #    "claude_clone": ClaudeCloneTool(),
+       #    "final_answer": FinalAnswerTool(),
+       #    "shell": ShellTool(),
+       #    "prompt_improver": PromptImproverTool(self),
+       #    "council": CouncilTool(self),
+       #    "swarm": SwarmTool(),
+       #    "project_mapper": ProjectMapperTool(),
+       #    "planner": PlannerTool(self),
+       #}
+
+        #if self.app_config.get("use_summarizer", False):
+       #     self.tools["summarizer"] = SummarizerTool(self)
 
     async def process_frame(self, frame, direction):
         """Entry point for the agent's logic, triggered by a transcription frame.
@@ -756,7 +789,8 @@ async def main():
         vision_detector=vision_detector,
         runner=runner,
         app_config=app_config,
-        approval_queue=approval_queue
+        approval_queue=approval_queue,
+        llm_base_url=llm_base_url
     )
     web_server.app.state.twin_service_instance = twin
 
