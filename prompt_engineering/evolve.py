@@ -5,6 +5,10 @@ import asyncio
 import json
 import random
 import glob
+try:
+    from . import promote_agent
+except ImportError:
+    import promote_agent
 
 def select_parent_from_archive():
     """Selects a parent agent from the archive using weighted random sampling.
@@ -50,7 +54,7 @@ def select_parent_from_archive():
     return parent_program_path, selected_agent_id
 
 
-async def run_evolution(test_case_path=None):
+async def run_evolution(test_case_path=None, auto_promote=False):
     """Initializes and runs the OpenEvolve algorithm with a DGM-style archive.
 
     This function implements the core loop of the Darwin Gödel Machine. It:
@@ -117,7 +121,22 @@ Example response:
         if new_program and new_program.metrics:
             print("New program metrics:")
             for name, value in new_program.metrics.items():
-                print(f"  {name}: {value:.4f}")
+                if isinstance(value, (int, float)):
+                    print(f"  {name}: {value:.4f}")
+                else:
+                    print(f"  {name}: {value}")
+
+            # Check for auto-promotion
+            if auto_promote and new_program.metrics.get("fitness") == 1.0:
+                agent_id = new_program.metrics.get("agent_id")
+                if agent_id:
+                    print(f"\n--- Auto-promoting successful agent {agent_id} ---")
+                    try:
+                        promote_agent.promote_agent(agent_id, is_best=False)
+                    except Exception as e:
+                        print(f"Error during auto-promotion: {e}")
+                else:
+                    print("Warning: High fitness agent found but no agent_id returned by evaluator.")
 
 
     finally:
@@ -135,6 +154,11 @@ if __name__ == "__main__":
         type=str,
         help="Path to a specific YAML test case file to use for evaluation."
     )
+    parser.add_argument(
+        "--auto-promote",
+        action="store_true",
+        help="Automatically promote the new agent if it passes all tests (fitness 1.0)."
+    )
     args = parser.parse_args()
 
-    asyncio.run(run_evolution(test_case_path=args.test_case))
+    asyncio.run(run_evolution(test_case_path=args.test_case, auto_promote=args.auto_promote))

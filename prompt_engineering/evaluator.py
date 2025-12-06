@@ -143,7 +143,8 @@ async def evaluate_code(candidate_code: str) -> dict:
             "fitness": fitness,
             "passed": results.get("passed"),
             "details": results.get("details"),
-            "log": results.get("log", "")
+            "log": results.get("log", ""),
+            "agent_id": eval_id
         }
         return evaluation_results
 
