@@ -384,6 +384,14 @@ class TextMessageInjector(FrameProcessor):
                 # The message can be a simple string (from UI) or a dict (from gateway)
                 if isinstance(message, dict):
                     text = message.get("text")
+                    is_system_alert = message.get("is_system_alert", False)
+
+                    if is_system_alert:
+                        prefix = "SYSTEM ALERT: "
+                        logging.warning(f"Injecting system alert: {text}")
+                        # Prepend alert tag to text to ensure the agent takes it seriously
+                        text = f"{prefix}{text}"
+
                     # Pass the whole dict along in the frame's meta attribute
                     if text:
                         logging.info(f"Injecting text message from gateway: {text}")
