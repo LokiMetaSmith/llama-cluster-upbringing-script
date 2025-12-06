@@ -75,6 +75,38 @@
   tags:
     - deploy_app
 
+- name: Copy task supervisor
+  ansible.builtin.copy:
+    src: task_supervisor.py
+    dest: /opt/pipecatapp/task_supervisor.py
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy agent factory
+  ansible.builtin.copy:
+    src: agent_factory.py
+    dest: /opt/pipecatapp/agent_factory.py
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy worker agent
+  ansible.builtin.copy:
+    src: worker_agent.py
+    dest: /opt/pipecatapp/worker_agent.py
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy pmm memory client
+  ansible.builtin.copy:
+    src: pmm_memory_client.py
+    dest: /opt/pipecatapp/pmm_memory_client.py
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Create pipecat environment file from template
   ansible.builtin.template:
     src: pipecat.env.j2
