@@ -6,6 +6,7 @@ job "memory-service" {
     count = 1
 
     network {
+      mode = "bridge"
       port "http" {
         static = 8000
         to     = 8000
@@ -24,17 +25,8 @@ job "memory-service" {
       driver = "docker"
 
       config {
-        image = "python:3.11-slim"
-        command = "/bin/bash"
-        args = ["-c", "pip install fastapi uvicorn pydantic && python /app/app.py"]
-
-        # Mount the app code
-        mount {
-          type   = "bind"
-          source = "/opt/memory_service"
-          target = "/app"
-        }
-
+        image = "memory_service:local"
+        force_pull = false
         ports = ["http"]
       }
 
@@ -45,9 +37,7 @@ job "memory-service" {
       }
 
       env {
-        # App listens on 8000 inside the container
         PORT = "8000"
-       # PORT = "${NOMAD_PORT_http}"
         MEMORY_DB_PATH = "/data/pmm_memory.db"
       }
 
@@ -66,6 +56,7 @@ job "memory-service" {
           path     = "/health"
           interval = "10s"
           timeout  = "2s"
+          address_mode = "host"
         }
       }
     }
