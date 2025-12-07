@@ -24,7 +24,7 @@
   register: rpc_job_run
   changed_when: "'Eval ID' in rpc_job_run.stdout"
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
 
 - name: Clean up temporary job file for {{ model_item.filename }}
   ansible.builtin.file:

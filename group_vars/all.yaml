@@ -36,6 +36,23 @@ nomad_jobs_dir: "/opt/nomad/jobs"
 nomad_volumes_dir: "/opt/nomad/volumes"
 nomad_models_dir: "/opt/nomad/models"
 
+# Standard Ports
+consul_http_port: 8500
+nomad_http_port: 4646
+mqtt_port: 1883
+mqtt_websocket_port: 9001
+provisioning_api_port: 8002
+home_assistant_port: 8123
+router_port: 8080
+
+# Standard Paths
+consul_data_dir: "/opt/consul"
+llxprt_code_dir: "/opt/llxprt-code"
+llama_cpp_build_dir: "/opt/llama.cpp-build"
+provisioning_api_dir: "/opt/provisioning_api"
+cluster_infra_dir: "/opt/cluster-infra"
+mcp_dir: "/opt/mcp"
+
 # Pipecat application settings
 pipecat_deployment_style: 'docker' # Can be 'raw_exec' or 'docker'
 llama_api_service_name: "router-api"

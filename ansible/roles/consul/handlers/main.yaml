@@ -9,7 +9,7 @@
 - name: Wait for Consul to start up
   listen: "Restart Consul"
   ansible.builtin.wait_for:
-    port: 8500
+    port: "{{ consul_http_port }}"
     delay: 10
     timeout: 300
   when: not ansible_check_mode
