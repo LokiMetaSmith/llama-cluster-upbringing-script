@@ -29,9 +29,9 @@ job "tool-server" {
 
         volumes = [
           # Read-only source of truth from host
-          "/opt/cluster-infra:/mnt/host_repo:ro",
+          "{{ cluster_infra_dir }}:/mnt/host_repo:ro",
           # MCP tools configuration
-          "/opt/mcp:/opt/mcp",
+          "{{ mcp_dir }}:/opt/mcp",
           # Uncomment below to enable host SSH keys (Not recommended for isolation)
           # "/home/{{ target_user }}/.ssh:/root/.ssh:ro",
         ]

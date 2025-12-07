@@ -12,7 +12,7 @@ set -eo pipefail
 
 echo "--- Starting Cluster-Wide LLM Health Check ---"
 FAILURES=0
-SERVICES=$(curl -s "http://127.0.0.1:8500/v1/catalog/services" | jq -r 'keys[] | select(. | startswith("llama-api-"))')
+SERVICES=$(curl -s "http://127.0.0.1:{{ consul_http_port }}/v1/catalog/services" | jq -r 'keys[] | select(. | startswith("llama-api-"))')
 
 if [ -z "$SERVICES" ]; then
   echo "No 'llama-api-*' services found in Consul. Exiting."
@@ -23,7 +23,7 @@ echo "Found services to check: $SERVICES"
 
 for SERVICE in $SERVICES; do
   echo "--- Checking service: $SERVICE ---"
-  HEALTHY_INSTANCE=$(curl -s "http://127.0.0.1:8500/v1/health/service/$SERVICE?passing" | jq -r '.[0] | "\(.Service.Address):\(.Service.Port)"')
+  HEALTHY_INSTANCE=$(curl -s "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/$SERVICE?passing" | jq -r '.[0] | "\(.Service.Address):\(.Service.Port)"')
 
   if [ -z "$HEALTHY_INSTANCE" ] || [ "$HEALTHY_INSTANCE" == "null" ]; then
     echo "❌ FAILED: No healthy instances found for service '$SERVICE'."

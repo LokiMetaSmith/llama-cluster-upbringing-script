@@ -128,8 +128,8 @@
     proto: tcp
     comment: "Allow Management UIs"
   loop:
-    - "4646" # Nomad HTTP
-    - "8500" # Consul HTTP
+    - "{{ nomad_http_port }}" # Nomad HTTP
+    - "{{ consul_http_port }}" # Consul HTTP
 
 - name: "Firewall : Allow MQTT/Application Ports"
   community.general.ufw:
@@ -138,9 +138,9 @@
     proto: tcp
     comment: "Allow App Services"
   loop:
-    - "1883" # MQTT
-    - "9001" # MQTT Websockets
-    - "8080" # Traefik / Router (if used)
+    - "{{ mqtt_port }}" # MQTT
+    - "{{ mqtt_websocket_port }}" # MQTT Websockets
+    - "{{ router_port }}" # Traefik / Router (if used)
 
 - name: "Firewall : Enable UFW"
   community.general.ufw:

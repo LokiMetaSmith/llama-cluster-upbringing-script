@@ -25,9 +25,9 @@
       persistence_location /mosquitto/data/
       log_dest stdout
       log_type all
-      listener 1883 0.0.0.0
+      listener {{ mqtt_port }} 0.0.0.0
       allow_anonymous true
-      listener 9001 0.0.0.0
+      listener {{ mqtt_websocket_port }} 0.0.0.0
       protocol websockets
     mode: '0644'
   become: yes
@@ -48,7 +48,7 @@
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job stop -purge mqtt
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
   changed_when: true
   ignore_errors: yes
 
@@ -61,7 +61,7 @@
 - name: Wait for Nomad to be ready
   ansible.builtin.wait_for:
     host: "{{ cluster_ip }}"
-    port: 4646
+    port: "{{ nomad_http_port }}"
     timeout: 60
 
 - name: Deploy MQTT Job
@@ -70,7 +70,7 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/mqtt.nomad
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       changed_when: true
       register: mqtt_job_run
       #  notify: Restart Home Assistant
@@ -79,7 +79,7 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose mqtt
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: mqtt_job_status
       ignore_errors: yes
 
@@ -91,7 +91,7 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json mqtt
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: mqtt_allocs
       ignore_errors: yes
 
@@ -109,7 +109,7 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ mqtt_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: mqtt_logs_stdout
       ignore_errors: yes
       when: mqtt_alloc_id.stdout | length > 0
@@ -123,7 +123,7 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ mqtt_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: mqtt_logs_stderr
       ignore_errors: yes
       when: mqtt_alloc_id.stdout | length > 0
@@ -145,7 +145,7 @@
 - name: Wait for MQTT port to be open
   ansible.builtin.wait_for:
     host: "127.0.0.1"  # Force check on localhost to bypass alias/hairpin issues
-    port: 1883
+    port: "{{ mqtt_port }}"
     timeout: 60
   become: no
 
@@ -155,7 +155,7 @@
 
 - name: Wait for MQTT service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/mqtt?passing"
+    url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/mqtt?passing"
     method: GET
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token }}"

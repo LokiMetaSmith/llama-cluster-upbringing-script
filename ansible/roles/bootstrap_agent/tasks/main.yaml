@@ -34,7 +34,7 @@
 
     - name: Wait for at least 1 Nomad peer
       ansible.builtin.uri:
-        url: "http://{{ inventory_hostname }}:4646/v1/status/peers"
+        url: "http://{{ inventory_hostname }}:{{ nomad_http_port }}/v1/status/peers"
         return_content: yes
       register: nomad_peers
       until: nomad_peers.json | length >= 1
@@ -55,7 +55,7 @@
 
 - name: Get Nomad peer status for summary
   ansible.builtin.uri:
-    url: "http://127.0.0.1:4646/v1/status/peers"
+    url: "http://127.0.0.1:{{ nomad_http_port }}/v1/status/peers"
     return_content: yes
   register: nomad_peers_summary
   when: ansible_connection == "local"
