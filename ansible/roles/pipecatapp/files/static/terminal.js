@@ -41,7 +41,38 @@ document.addEventListener("DOMContentLoaded", function() {
         fetch("/api/status")
             .then(response => response.json())
             .then(data => {
-                statusDisplay.innerHTML = `<pre>${JSON.stringify(data.status, null, 2)}</pre>`;
+                const statusText = data.status;
+
+                if (!statusText || statusText === "No active pipelines." || statusText === "MCP tool or runner not available." || statusText.startsWith("Agent not fully initialized")) {
+                     statusDisplay.innerHTML = `<p>${statusText}</p>`;
+                     return;
+                }
+
+                // Parse the string based on "Task {name}: {status}" format
+                // Expected format: "Current pipeline status:\n- Task {name}: {state}\n..."
+                const lines = statusText.split('\n').filter(line => line.trim().startsWith('- Task '));
+
+                if (lines.length === 0) {
+                     // Fallback if parsing fails or format is unexpected
+                     statusDisplay.innerHTML = `<pre>${statusText}</pre>`;
+                     return;
+                }
+
+                let html = '<table class="status-table">';
+                html += '<thead><tr><th>Task</th><th>State</th></tr></thead>';
+                html += '<tbody>';
+
+                lines.forEach(line => {
+                    const match = line.match(/- Task (.+): (.+)/);
+                    if (match) {
+                        const taskName = match[1];
+                        const taskState = match[2];
+                        html += `<tr><td>${taskName}</td><td>${taskState}</td></tr>`;
+                    }
+                });
+
+                html += '</tbody></table>';
+                statusDisplay.innerHTML = html;
             })
             .catch(error => {
                 statusDisplay.innerText = `Error fetching status: ${error}`;
