@@ -1,0 +1,41 @@
+- name: Check free disk space on root
+  ansible.builtin.assert:
+    that:
+      - item.mount != '/' or item.size_available > 2147483648
+    fail_msg: "Insufficient disk space on / (needs at least 2GB)"
+    success_msg: "Disk space on / is sufficient"
+  loop: "{{ ansible_mounts }}"
+  when: item.mount == '/'
+
+- name: Check filesystem writability
+  block:
+    - name: Create a temporary test file
+      ansible.builtin.copy:
+        content: "test"
+        dest: "/tmp/ansible_preflight_write_test"
+        mode: '0644'
+      check_mode: false # Force this to actually run to verify writability
+
+    - name: Remove temporary file
+      ansible.builtin.file:
+        path: "/tmp/ansible_preflight_write_test"
+        state: absent
+      check_mode: false
+  rescue:
+    - name: Fail if filesystem is not writable
+      ansible.builtin.fail:
+        msg: "Filesystem writability check failed."
+
+- name: Check internet connectivity
+  ansible.builtin.uri:
+    url: https://www.google.com
+    method: HEAD
+    timeout: 5
+  register: preflight_checks_internet_check
+  check_mode: false # Force this to run even in check mode
+  failed_when: false # Do not fail the task if internet is down, just record it
+
+- name: Warn if no internet connection
+  ansible.builtin.debug:
+    msg: "Warning: No internet connectivity detected. Some tasks may fail."
+  when: preflight_checks_internet_check.status | default(-1) != 200
