@@ -1,3 +1,7 @@
+- name: Include Network Repair Tasks
+  include_tasks: network_repair.yaml
+  tags: [network]
+
 - name: Kill any existing apt processes
   shell: "killall apt apt-get || true"
   become: yes
