@@ -1,0 +1,8 @@
+- name: Pre-flight System Checks
+  hosts: all
+  gather_facts: yes
+  tags:
+    - preflight
+
+  roles:
+    - preflight_checks

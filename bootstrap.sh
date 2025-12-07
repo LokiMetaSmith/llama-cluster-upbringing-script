@@ -399,6 +399,7 @@ fi
 
 # --- Define Role-Specific Playbooks ---
 ALL_PLAYBOOKS=(
+    "playbooks/preflight/checks.yaml"
     "playbooks/common_setup.yaml"
     "playbooks/services/core_infra.yaml"
     "playbooks/services/consul.yaml"
@@ -412,6 +413,7 @@ ALL_PLAYBOOKS=(
 )
 
 CONTROLLER_PLAYBOOKS=(
+    "playbooks/preflight/checks.yaml"
     "playbooks/common_setup.yaml"
     "playbooks/services/core_infra.yaml"
     "playbooks/services/consul.yaml"
