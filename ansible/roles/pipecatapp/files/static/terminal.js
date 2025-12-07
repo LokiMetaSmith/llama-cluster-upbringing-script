@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const saveNameInput = document.getElementById("save-name-input");
     const saveStateBtn = document.getElementById("save-state-btn");
     const loadStateBtn = document.getElementById("load-state-btn");
+    const clearTerminalBtn = document.getElementById("clear-terminal-btn");
     const statusLight = document.getElementById("status-light");
     const testAndEvaluationBtn = document.getElementById("test-and-evaluation-btn");
     const statusDisplay = document.getElementById("status-display");
@@ -153,6 +154,19 @@ document.addEventListener("DOMContentLoaded", function() {
             logToTerminal("--- State loaded. You may need to refresh the page to see changes in memory. ---");
         })
         .catch(error => logToTerminal(`Error loading state: ${error}`, "error"));
+    };
+
+    clearTerminalBtn.onclick = function() {
+        // Find the robot art element within the terminal
+        const robotArt = document.getElementById("robot-art");
+
+        // Clear all content of the terminal
+        terminal.innerHTML = '';
+
+        // Re-append the robot art if it was found
+        if (robotArt) {
+            terminal.appendChild(robotArt);
+        }
     };
 
     ws.onmessage = function(event) {
