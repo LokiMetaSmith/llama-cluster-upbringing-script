@@ -128,10 +128,10 @@ This file tracks the implementation of a new self-adapting capability inspired b
     - **[COMPLETED]** New API endpoints (`/api/workflows/definition/*` and `/api/workflows/active`) provide the UI with the graph structure and real-time execution state.
     - **[COMPLETED]** The UI now includes an interactive modal to inspect the outputs of each executed node.
 
-3.  **[TODO] Persist and Expose Workflow History:**
-    - **[ ]** Modify the `WorkflowRunner` to save its final context to a persistent store (e.g., a local SQLite database or a JSONL file) upon completion.
-    - **[ ]** Create a new API endpoint (e.g., `/api/workflows/history`) to retrieve a list of past workflow runs.
-    - **[ ]** Add a history browser to the web UI to allow users to select and view the final state of previous runs.
+3.  **[COMPLETED] Persist and Expose Workflow History:**
+    - **[X]** Modify the `WorkflowRunner` to save its final context to a persistent store (e.g., a local SQLite database or a JSONL file) upon completion.
+    - **[X]** Create a new API endpoint (e.g., `/api/workflows/history`) to retrieve a list of past workflow runs.
+    - **[X]** Add a history browser to the web UI to allow users to select and view the final state of previous runs.
 
 4.  **[TODO] Build a Visual Workflow Editor:**
     - **[ ]** Integrate a library like `litegraph.js` or extend the existing Cytoscape UI to allow drag-and-drop creation and modification of workflows.

@@ -8,9 +8,34 @@
     <title>Workflow Visualization</title>
     <link rel="stylesheet" href="/static/css/styles.css">
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        #sidebar {
+            width: 300px;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+        }
+        #main-content {
+            flex-grow: 1;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
         #cy {
             width: 100%;
-            height: 80vh;
+            flex-grow: 1;
             border: 1px solid #ccc;
         }
         /* Modal styles */
@@ -45,19 +70,56 @@
             text-decoration: none;
             cursor: pointer;
         }
+
+        /* History List Styles */
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .history-item:hover {
+            background-color: #e9ecef;
+        }
+        .history-item.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .history-meta {
+            font-size: 0.8em;
+            color: #666;
+        }
+        .history-item.active .history-meta {
+            color: #ddd;
+        }
+        .status-completed { color: green; }
+        .status-failed { color: red; }
+
+        #controls {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Workflow Visualization</h1>
-        <div id="approval-container"></div>
-        <div id="cy"></div>
+        <div id="sidebar">
+            <div id="controls">
+                <button id="live-btn">Go Live</button>
+                <button id="refresh-history-btn">Refresh History</button>
+            </div>
+            <h2>History</h2>
+            <ul id="history-list" style="list-style: none; padding: 0;"></ul>
+        </div>
+        <div id="main-content">
+            <h1 id="view-title">Workflow Visualization (Live)</h1>
+            <div id="approval-container"></div>
+            <div id="cy"></div>
+        </div>
     </div>
 
     <!-- The Modal -->
     <div id="nodeModal" class="modal">
       <div class="modal-content">
-        <span class="close">X</span>
+        <span class="close">&times;</span>
         <h2>Node Output</h2>
         <pre id="node-output-content"></pre>
       </div>
