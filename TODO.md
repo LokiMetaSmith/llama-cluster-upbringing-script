@@ -42,8 +42,8 @@
 
 ### Improve Web UI and User Experience
 - [ ] **Replace ASCII art:** Create a more dynamic and expressive animated character or graphic.
-- [ ] **Add a "Clear Terminal" button:** Provide a simple way for the user to clear the log history in the UI.
-- [ ] **Improve status display:** Format the status display into a more readable table or list.
+- [x] **Add a "Clear Terminal" button:** Provide a simple way for the user to clear the log history in the UI.
+- [x] **Improve status display:** Format the status display into a more readable table or list.
 
 ## Future Enhancements and Backlog
 - [ ] **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model.
