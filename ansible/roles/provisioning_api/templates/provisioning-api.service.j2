@@ -7,8 +7,8 @@ Wants=network-online.target consul.service
 [Service]
 User=pipecatapp
 Group=pipecatapp
-WorkingDirectory=/opt/provisioning_api
-ExecStart=/opt/pipecatapp/venv/bin/python3 -m uvicorn provisioning_api:app --host 0.0.0.0 --port 8002
+WorkingDirectory={{ provisioning_api_dir }}
+ExecStart={{ pipecat_app_dir }}/venv/bin/python3 -m uvicorn provisioning_api:app --host 0.0.0.0 --port {{ provisioning_api_port }}
 Restart=always
 
 [Install]

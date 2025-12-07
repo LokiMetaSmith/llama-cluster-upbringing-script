@@ -13,8 +13,8 @@ job "moe-gateway" {
       driver = "raw_exec"
 
       config {
-        command = "/opt/pipecatapp/venv/bin/python"
-        args    = ["/opt/pipecatapp/moe_gateway/gateway.py"]
+        command = "{{ pipecat_app_dir }}/venv/bin/python"
+        args    = ["{{ pipecat_app_dir }}/moe_gateway/gateway.py"]
       }
 
       service {

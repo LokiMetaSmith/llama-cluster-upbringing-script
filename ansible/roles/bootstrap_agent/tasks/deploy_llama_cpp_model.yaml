@@ -18,7 +18,7 @@
   failed_when: false
   changed_when: false
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
 
 - name: Deploy the main Llama.cpp RPC service to Nomad
   ansible.builtin.command:
@@ -27,12 +27,12 @@
   changed_when: "'Eval ID' in llama_job_run.stdout"
   failed_when: llama_job_run.rc != 0
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
   when: job_file.changed or job_status.rc != 0
 
 - name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-api"
+    url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/llamacpp-rpc-api"
     return_content: yes
   register: expert_health
   until: >

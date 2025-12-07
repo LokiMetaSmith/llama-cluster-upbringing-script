@@ -1,6 +1,6 @@
 - name: Ensure gateway application directory exists
   ansible.builtin.file:
-    path: /opt/pipecatapp/moe_gateway
+    path: "{{ pipecat_app_dir }}/moe_gateway"
     state: directory
     owner: root
     group: root
@@ -9,7 +9,7 @@
 - name: Copy gateway application file
   ansible.builtin.copy:
     src: gateway.py
-    dest: /opt/pipecatapp/moe_gateway/gateway.py
+    dest: "{{ pipecat_app_dir }}/moe_gateway/gateway.py"
     owner: root
     group: root
     mode: "0755"

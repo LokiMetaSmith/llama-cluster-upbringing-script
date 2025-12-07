@@ -1,23 +1,23 @@
 - name: Clone llxprt-code repository
   ansible.builtin.git:
     repo: 'https://github.com/vybestack/llxprt-code.git'
-    dest: /opt/llxprt-code
+    dest: "{{ llxprt_code_dir }}"
     version: main
 
 - name: Install llxprt-code dependencies
   ansible.builtin.npm:
-    path: /opt/llxprt-code
+    path: "{{ llxprt_code_dir }}"
     state: present
 
 - name: Install llxprt-code globally
   ansible.builtin.npm:
-    path: /opt/llxprt-code
+    path: "{{ llxprt_code_dir }}"
     state: present
     global: yes
 
 - name: Discover tool-server-api address
   ansible.builtin.uri:
-    url: "http://localhost:8500/v1/health/service/tool-server-api?passing"
+    url: "http://localhost:{{ consul_http_port }}/v1/health/service/tool-server-api?passing"
     return_content: yes
   register: tool_server_service
   until: tool_server_service.json | length > 0
@@ -27,7 +27,7 @@
 - name: Configure llxprt-code
   ansible.builtin.template:
     src: llxprt-code.env.j2
-    dest: /opt/llxprt-code/.env
+    dest: "{{ llxprt_code_dir }}/.env"
 
 - name: Template MCP config
   ansible.builtin.template:

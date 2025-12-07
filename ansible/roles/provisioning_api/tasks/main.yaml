@@ -1,6 +1,6 @@
 - name: Create provisioning API directory
   file:
-    path: /opt/provisioning_api
+    path: "{{ provisioning_api_dir }}"
     state: directory
   become: yes
   when: inventory_hostname in groups['controller_nodes']
@@ -8,7 +8,7 @@
 - name: Copy provisioning API script
   copy:
     src: provisioning_api.py
-    dest: /opt/provisioning_api/provisioning_api.py
+    dest: "{{ provisioning_api_dir }}/provisioning_api.py"
   become: yes
   when: inventory_hostname in groups['controller_nodes']
 

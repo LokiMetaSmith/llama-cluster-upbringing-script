@@ -21,7 +21,7 @@ chown "$USERNAME":"$USERNAME" "$USER_HOME/.ssh"
 chmod 700 "$USER_HOME/.ssh"
 
 # Fetch all keys from Consul and decode them into a temporary file.
-curl -s "http://127.0.0.1:8500/v1/kv/ssh-keys?recurse" | jq -r '.[].Value' | while read -r val; do
+curl -s "http://127.0.0.1:{{ consul_http_port }}/v1/kv/ssh-keys?recurse" | jq -r '.[].Value' | while read -r val; do
     echo "$val" | base64 -d >> "$TEMP_KEYS_FILE"
     echo >> "$TEMP_KEYS_FILE" # Ensure a newline after each key
 done
