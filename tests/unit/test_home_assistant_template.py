@@ -27,7 +27,9 @@ def test_home_assistant_template():
                 'ansible_host': '192.168.1.100'
             }
         },
-        'advertise_ip': '192.168.1.100'
+        'advertise_ip': '192.168.1.100',
+        'mqtt_port': 1883,
+        'home_assistant_port': 8123
     }
 
     result = template.render(context)

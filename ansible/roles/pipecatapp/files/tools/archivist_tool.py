@@ -47,5 +47,6 @@ class ArchivistTool(MCP_Tool):
 
     # Compatibility with sync tool execution if needed (the agent runner handles async)
     def __call__(self, query: str):
-        import asyncio
-        return asyncio.run(self.run(query))
+        # We assume the caller handles the loop or we are in a thread where we can run new loop.
+        # But safest is to just point to run and expect caller to await.
+        return self.run(query)

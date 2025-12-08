@@ -28,7 +28,7 @@
 - [ ] **Establish a clear variable hierarchy:** Use `group_vars/all.yaml` for system-wide defaults and consider `host_vars/<hostname>.yaml` for machine-specific overrides.
 
 ### Pre-build a Docker Image for `pipecatapp`
-- [ ] **Add a flag to `bootstrap.sh`:** Add a `--run-local` or similar flag to the bootstrap script to allow switching between a Docker-based deployment and the old `raw_exec` method for debugging.
+- [x] **Add a flag to `bootstrap.sh`:** Add a `--run-local` or similar flag to the bootstrap script to allow switching between a Docker-based deployment and the old `raw_exec` method for debugging.
 - [ ] **Create a `Dockerfile` for the `pipecatapp` application.**
 - [ ] **Build and push the image to a registry as part of the development process.**
 - [ ] **Simplify the Nomad job to use the `docker` driver with the pre-built image.**
@@ -36,7 +36,7 @@
 ## Testing and Usability
 
 ### Bolster Automated Testing
-- [ ] **Implement Ansible Molecule tests:** Create a Molecule test scenario for at least one critical role (e.g., `nomad` or `docker`).
+- [x] **Implement Ansible Molecule tests:** Create a Molecule test scenario for at least one critical role (e.g., `nomad` or `docker`).
 - [x] **Expand end-to-end tests:** Add a new test case to `e2e-tests.yaml` that verifies a core function of the agent.
 - [ ] **Increase unit test coverage:** Write unit tests for the remaining Python tools in the `tools/` directory. (Partially completed: added tests for `project_mapper_tool.py`)
 
@@ -46,9 +46,9 @@
 - [x] **Improve status display:** Format the status display into a more readable table or list.
 
 ## Future Enhancements and Backlog
-- [ ] **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model.
+- [x] **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model.
 - [ ] **Re-evaluate Consul Connect Service Mesh:** Create a new feature branch to attempt to re-enable `sidecar_service` in the Nomad job files and document the process.
-- [ ] **Add Pre-flight System Health Checks:** Create a new Ansible role to perform non-destructive checks at the beginning of `playbook.yaml`.
+- [x] **Add Pre-flight System Health Checks:** Create a new Ansible role to perform non-destructive checks at the beginning of `playbook.yaml`.
 - [ ] **Investigate Advanced Power Management:** Research and prototype a more advanced version that uses Wake-on-LAN.
 - [ ] **Expand the Model Collection:** Systematically test and add the remaining LiquidAI nano models to `group_vars/models.yaml`.
 - [ ] **Security Hardening:**
@@ -56,7 +56,7 @@
   - **Run services as non-root users:** Audit all services and ensure they are running as dedicated, non-privileged users where possible.
 - [ ] **Robust Remote Node Recovery:** Add mechanism to recover remote nodes even if network stack is completely broken (possibly via serial console or IPMI automation).
 - [ ] **Monitoring and Observability:** Deploy a monitoring stack like Prometheus and Grafana.
-- [ ] Add a `wait_for` to the `home_assistant` role to ensure the `mqtt` service is running before starting the `home-assistant` service.
+- [x] Add a `wait_for` to the `home_assistant` role to ensure the `mqtt` service is running before starting the `home-assistant` service.
 - [ ] Create a new integration test file for home assistant.
 - [ ] Add the new test to `e2e-tests.yaml`.
 - [ ] Modify `start_services.sh` to include the home assistant job.
