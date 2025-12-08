@@ -224,6 +224,28 @@ async def get_workflow_definition(workflow_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading workflow: {e}")
 
+@app.post("/api/workflows/save", summary="Save Workflow", description="Saves a workflow definition to a YAML file.", tags=["Workflow"])
+async def save_workflow(payload: Dict = Body(..., examples=[{"filename": "my_workflow.yaml", "definition": {}}])):
+    """Saves a workflow definition to a YAML file."""
+    filename = payload.get("filename")
+    definition = payload.get("definition")
+
+    if not filename or "definition" not in payload:
+        raise HTTPException(status_code=400, detail="filename and definition are required.")
+
+    if ".." in filename or not filename.endswith((".yaml", ".yml")):
+        raise HTTPException(status_code=400, detail="Invalid workflow name.")
+
+    workflow_dir = os.path.join(script_dir, "workflows")
+    file_path = os.path.join(workflow_dir, filename)
+
+    try:
+        with open(file_path, 'w') as f:
+            yaml.dump(definition, f, default_flow_style=False)
+        return JSONResponse(content={"message": "Workflow saved successfully."})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving workflow: {e}")
+
 @app.get("/api/web_uis")
 async def get_web_uis():
     """
