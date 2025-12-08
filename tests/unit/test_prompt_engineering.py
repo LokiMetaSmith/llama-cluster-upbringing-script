@@ -3,7 +3,8 @@ import sys
 import json
 import pytest
 import tempfile
-from unittest.mock import MagicMock, patch, mock_open, AsyncMock
+import textwrap
+from unittest.mock import MagicMock, patch, mock_open, AsyncMock, call
 
 # Ensure the prompt_engineering directory is in the path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../prompt_engineering')))

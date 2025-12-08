@@ -37,13 +37,13 @@
 
 ### Bolster Automated Testing
 - [ ] **Implement Ansible Molecule tests:** Create a Molecule test scenario for at least one critical role (e.g., `nomad` or `docker`).
-- [ ] **Expand end-to-end tests:** Add a new test case to `e2e-tests.yaml` that verifies a core function of the agent.
-- [ ] **Increase unit test coverage:** Write unit tests for the remaining Python tools in the `tools/` directory.
+- [x] **Expand end-to-end tests:** Add a new test case to `e2e-tests.yaml` that verifies a core function of the agent.
+- [ ] **Increase unit test coverage:** Write unit tests for the remaining Python tools in the `tools/` directory. (Partially completed: added tests for `project_mapper_tool.py`)
 
 ### Improve Web UI and User Experience
 - [ ] **Replace ASCII art:** Create a more dynamic and expressive animated character or graphic.
-- [ ] **Add a "Clear Terminal" button:** Provide a simple way for the user to clear the log history in the UI.
-- [ ] **Improve status display:** Format the status display into a more readable table or list.
+- [x] **Add a "Clear Terminal" button:** Provide a simple way for the user to clear the log history in the UI.
+- [x] **Improve status display:** Format the status display into a more readable table or list.
 
 ## Future Enhancements and Backlog
 - [ ] **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model.
@@ -54,6 +54,7 @@
 - [ ] **Security Hardening:**
   - **Remove passwordless sudo:** Modify the sudoers file configuration to require a password for the `target_user`.
   - **Run services as non-root users:** Audit all services and ensure they are running as dedicated, non-privileged users where possible.
+- [ ] **Robust Remote Node Recovery:** Add mechanism to recover remote nodes even if network stack is completely broken (possibly via serial console or IPMI automation).
 - [ ] **Monitoring and Observability:** Deploy a monitoring stack like Prometheus and Grafana.
 - [ ] Add a `wait_for` to the `home_assistant` role to ensure the `mqtt` service is running before starting the `home-assistant` service.
 - [ ] Create a new integration test file for home assistant.
