@@ -1,0 +1,10 @@
+---
+nanochat_repo: "https://github.com/LokiMetaSmith/nanochat.git"
+nanochat_version: "main"
+nanochat_install_dir: "/opt/nanochat"
+nanochat_venv_dir: "{{ nanochat_install_dir }}/venv"
+nanochat_port: 8005
+# Platform options: 'cpu', 'gpu' (nvidia), 'amd' (rocm)
+nanochat_platform: "gpu"
+# Set to true to enable the role on a host
+enable_nanochat: false
