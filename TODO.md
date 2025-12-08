@@ -56,7 +56,7 @@
   - **Run services as non-root users:** Audit all services and ensure they are running as dedicated, non-privileged users where possible.
 - [ ] **Robust Remote Node Recovery:** Add mechanism to recover remote nodes even if network stack is completely broken (possibly via serial console or IPMI automation).
 - [ ] **Monitoring and Observability:** Deploy a monitoring stack like Prometheus and Grafana.
-- [ ] Add a `wait_for` to the `home_assistant` role to ensure the `mqtt` service is running before starting the `home-assistant` service.
+- [x] Add a `wait_for` to the `home_assistant` role to ensure the `mqtt` service is running before starting the `home-assistant` service.
 - [ ] Create a new integration test file for home assistant.
 - [ ] Add the new test to `e2e-tests.yaml`.
 - [ ] Modify `start_services.sh` to include the home assistant job.
