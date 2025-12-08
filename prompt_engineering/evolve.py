@@ -10,62 +10,116 @@ try:
 except ImportError:
     import promote_agent
 
-def select_parent_from_archive():
-    """Selects a parent agent from the archive using weighted random sampling.
-
-    This function scans the agent archive for metadata files, extracts their
-    fitness scores, and uses these scores to perform a weighted random
-
-    selection. Agents with higher fitness have a higher chance of being
-    selected. This encourages "survival of the fittest" while still allowing
-    for exploration from less optimal agents.
-
-    If the archive is empty, it returns the path to the original `app.py`
-    script as the seed for the first generation.
+def load_archive_metadata():
+    """Loads metadata for all agents in the archive.
 
     Returns:
-        tuple: A tuple containing the path to the selected parent's code
-               and the parent's ID (or None for the initial seed).
+        list: A list of dictionaries, where each dictionary contains the metadata
+              for an agent, including its 'id' and 'path'.
     """
     archive_dir = os.path.join(os.path.dirname(__file__), "archive")
     meta_files = glob.glob(os.path.join(archive_dir, "*.json"))
+    archive = []
 
-    if not meta_files:
+    for meta_file in meta_files:
+        try:
+            with open(meta_file, 'r') as f:
+                meta = json.load(f)
+                agent_id = os.path.basename(meta_file).replace(".json", "")
+                meta['id'] = agent_id
+                meta['path'] = os.path.join(archive_dir, f"{agent_id}.py")
+                archive.append(meta)
+        except json.JSONDecodeError:
+            print(f"Warning: Could not parse metadata file {meta_file}. Skipping.")
+        except Exception as e:
+            print(f"Warning: Error loading metadata file {meta_file}: {e}. Skipping.")
+
+    return archive
+
+def select_parent(archive, selection_method="weighted", tournament_size=3):
+    """
+    Selects a parent from the archive based on the chosen strategy.
+
+    Args:
+        archive (list): List of agent metadata dicts.
+        selection_method (str): 'weighted', 'tournament', or 'random'.
+        tournament_size (int): 'k' parameter for tournament selection.
+
+    Returns:
+        dict: The selected parent metadata.
+    """
+    if not archive:
+        raise ValueError("Archive is empty. Cannot select a parent.")
+
+    # 1. Random Selection (Pure Exploration)
+    if selection_method == "random":
+        return random.choice(archive)
+
+    # Helper: Normalize fitness to a number if it is boolean or missing
+    def get_fitness_score(agent):
+        f = agent.get("fitness", 0)
+        if isinstance(f, bool):
+            return 1.0 if f else 0.0
+        return float(f)
+
+    # 2. Tournament Selection
+    if selection_method == "tournament":
+        # Ensure k is not larger than the population
+        k = min(tournament_size, len(archive))
+
+        # Pick k random candidates
+        candidates = random.sample(archive, k)
+
+        # Return the one with the highest fitness
+        # specific sort ensures stability if fitness is equal
+        best_candidate = max(candidates, key=get_fitness_score)
+        return best_candidate
+
+    # 3. Weighted Random (Roulette Wheel) - Existing Logic
+    elif selection_method == "weighted":
+        # Filter for candidates with positive fitness to avoid zero-division or useless selection
+        scored_archive = [(agent, get_fitness_score(agent)) for agent in archive]
+
+        # If all fitnesses are zero, fallback to random
+        total_fitness = sum(score for _, score in scored_archive)
+        if total_fitness == 0:
+            return random.choice(archive)
+
+        pick = random.uniform(0, total_fitness)
+        current = 0
+        for agent, score in scored_archive:
+            current += score
+            if current > pick:
+                return agent
+        return archive[-1] # Fallback
+
+    # Default fallback
+    return random.choice(archive)
+
+def select_parent_from_archive(selection_method="weighted", tournament_size=3):
+    """Wrapper function to maintain backward compatibility and orchestrate selection."""
+    archive = load_archive_metadata()
+
+    if not archive:
         print("--- Archive is empty. Seeding evolution with initial app.py ---")
         initial_program_path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "ansible", "roles", "pipecatapp", "files", "app.py")
         )
         return initial_program_path, None
 
-    agents = []
-    weights = []
-    for meta_file in meta_files:
-        with open(meta_file, 'r') as f:
-            meta = json.load(f)
-            # We add a small epsilon to fitness to allow agents with 0.0 fitness to be selected
-            fitness = meta.get("fitness", 0.0) + 1e-6
-            agent_id = os.path.basename(meta_file).replace(".json", "")
-            agents.append(agent_id)
-            weights.append(fitness)
+    selected_agent = select_parent(archive, selection_method, tournament_size)
 
-    selected_agent_id = random.choices(agents, weights=weights, k=1)[0]
-    parent_program_path = os.path.join(archive_dir, f"{selected_agent_id}.py")
-    print(f"--- Selected parent agent {selected_agent_id} with fitness {weights[agents.index(selected_agent_id)]-1e-6:.4f} ---")
-    return parent_program_path, selected_agent_id
+    # Calculate fitness for logging
+    fitness = selected_agent.get("fitness", 0.0)
+    if isinstance(fitness, bool):
+        fitness = 1.0 if fitness else 0.0
+
+    print(f"--- Selected parent agent {selected_agent['id']} with fitness {fitness:.4f} using {selection_method} ---")
+    return selected_agent['path'], selected_agent['id']
 
 
-async def run_evolution(test_case_path=None, auto_promote=False):
-    """Initializes and runs the OpenEvolve algorithm with a DGM-style archive.
-
-    This function implements the core loop of the Darwin Gödel Machine. It:
-    1. Selects a parent agent from the archive based on fitness.
-    2. Passes the parent's ID to the evaluator via an environment variable
-       to establish lineage.
-    3. Uses OpenEvolve to mutate the selected parent.
-    4. The evaluator saves the new agent and its metadata (including the
-       parent's ID) back to the archive.
-    5. The process repeats, creating a branching tree of agent evolution.
-    """
+async def run_evolution(test_case_path=None, auto_promote=False, selection_method="weighted", tournament_size=3):
+    """Initializes and runs the OpenEvolve algorithm with a DGM-style archive."""
     # Ensure API key is set
     if not os.environ.get("OPENAI_API_KEY"):
         raise ValueError("Please set OPENAI_API_KEY environment variable")
@@ -77,7 +131,8 @@ async def run_evolution(test_case_path=None, auto_promote=False):
             os.environ["DYNAMIC_TEST_CASE_PATH"] = os.path.abspath(test_case_path)
 
         # 1. Select parent from archive
-        initial_program_path, parent_id = select_parent_from_archive()
+        initial_program_path, parent_id = select_parent_from_archive(selection_method, tournament_size)
+
         if not os.path.exists(initial_program_path):
             raise FileNotFoundError(f"Parent program file not found at {initial_program_path}")
 
@@ -113,9 +168,6 @@ Example response:
 """,
         )
 
-        # The openevolve `run` function returns the best program it found in the
-        # single iteration. Since our evaluator saves every agent, we don't
-        # need the return value here, but we can still print it for logging.
         new_program = await evolve.run(iterations=1) # Only 1 iteration per parent
         print("\n--- Mutation complete. New agent saved to archive by evaluator. ---")
         if new_program and new_program.metrics:
@@ -159,6 +211,23 @@ if __name__ == "__main__":
         action="store_true",
         help="Automatically promote the new agent if it passes all tests (fitness 1.0)."
     )
+    parser.add_argument(
+        "--selection-method",
+        choices=["weighted", "tournament", "random"],
+        default="weighted",
+        help="Strategy for selecting the parent from the archive."
+    )
+    parser.add_argument(
+        "--tournament-size",
+        type=int,
+        default=3,
+        help="Number of candidates to compare in tournament selection (k). Larger k = higher selection pressure."
+    )
     args = parser.parse_args()
 
-    asyncio.run(run_evolution(test_case_path=args.test_case, auto_promote=args.auto_promote))
+    asyncio.run(run_evolution(
+        test_case_path=args.test_case,
+        auto_promote=args.auto_promote,
+        selection_method=args.selection_method,
+        tournament_size=args.tournament_size
+    ))
