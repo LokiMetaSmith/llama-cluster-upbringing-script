@@ -2,7 +2,6 @@ import os
 import sys
 import json
 import pytest
-import shutil
 import tempfile
 import textwrap
 from unittest.mock import MagicMock, patch, mock_open, AsyncMock, call
@@ -90,7 +89,7 @@ class TestRunCampaign:
 
             # Verify arguments of the first call
             # Should be [sys.executable, /path/to/evolve.py]
-            args, kwargs = mock_popen.call_args
+            args, kwargs = mock_popen.call_args_list[0]
             cmd_list = args[0]
             assert cmd_list[0] == sys.executable
             assert cmd_list[1].endswith("evolve.py")

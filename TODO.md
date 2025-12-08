@@ -1,7 +1,7 @@
 # TODO
 
 ## Prompt Engineering Enhancements
-- [ ] **Implement Automated Testing for `prompt_engineering`:**
+- [x] **Implement Automated Testing for `prompt_engineering`:**
     - Create a new test suite (e.g., `tests/unit/test_prompt_engineering.py`).
     - Add unit tests for the core logic in `run_campaign.py`, `visualize_archive.py`, and `promote_agent.py`.
     - Mock the `subprocess` calls to `evolve.py` to test the campaign loop without running the full, slow evolution process.
