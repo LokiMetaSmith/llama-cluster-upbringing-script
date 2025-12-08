@@ -4,8 +4,49 @@
       - item.mount != '/' or item.size_available > 2147483648
     fail_msg: "Insufficient disk space on / (needs at least 2GB)"
     success_msg: "Disk space on / is sufficient"
-  loop: "{{ ansible_mounts }}"
+  loop: "{{ ansible_facts['mounts'] }}"
   when: item.mount == '/'
+
+- name: Check available RAM
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['memtotal_mb'] >= 4096
+    fail_msg: "Insufficient RAM. Detected {{ ansible_facts['memtotal_mb'] }} MB, but at least 4096 MB (4 GB) is required."
+    success_msg: "RAM is sufficient ({{ ansible_facts['memtotal_mb'] }} MB detected)."
+
+- name: Check Python version
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['python']['version']['major'] == 3
+      - ansible_facts['python']['version']['minor'] >= 10
+    fail_msg: "Python version must be 3.10 or higher. Detected: {{ ansible_facts['python']['version']['major'] }}.{{ ansible_facts['python']['version']['minor'] }}"
+    success_msg: "Python version is compatible ({{ ansible_facts['python']['version']['major'] }}.{{ ansible_facts['python']['version']['minor'] }})."
+
+- name: Check Linux distribution
+  ansible.builtin.debug:
+    msg: "Warning: Detected OS '{{ ansible_facts['distribution'] }}'. This playbook is optimized for Debian, Ubuntu, or NixOS."
+  when: ansible_facts['distribution'] not in ['Debian', 'Ubuntu', 'NixOS']
+
+- name: Check if critical ports are in use
+  ansible.builtin.wait_for:
+    port: "{{ item }}"
+    timeout: 1
+  register: preflight_port_check
+  ignore_errors: true
+  loop:
+    - 4646 # Nomad
+    - 8500 # Consul
+    - 1883 # MQTT
+
+- name: Warn about occupied ports
+  ansible.builtin.debug:
+    msg: "Note: Port {{ item.item }} is currently in use. This is expected if re-running on an active cluster."
+  loop: "{{ preflight_port_check.results }}"
+  when: item.failed is false
+
+- name: Check user identity
+  ansible.builtin.debug:
+    msg: "Running as user '{{ ansible_facts['user_id'] }}'. Ensure this user has sudo privileges for system setup."
 
 - name: Check filesystem writability
   block:
