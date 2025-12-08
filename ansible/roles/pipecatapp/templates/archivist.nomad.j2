@@ -1,0 +1,51 @@
+job "archivist" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "archivist-group" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" {
+        to = 8008
+      }
+    }
+
+    service {
+      name     = "archivist-api"
+      port     = "http"
+      provider = "consul"
+      tags     = ["archivist", "memory"]
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "10s"
+        timeout  = "2s"
+        address_mode = "host"
+      }
+    }
+
+    task "archivist-task" {
+      driver = "raw_exec"
+
+      env {
+        ARCHIVIST_PORT = "${NOMAD_PORT_http}"
+        DB_PATH        = "{{ target_user_home }}/.config/pipecat/pypicat_memory.db"
+        INDEX_DIR      = "{{ target_user_home }}/.config/pipecat/archivist_data"
+        CONSUL_HOST    = "{{ ansible_default_ipv4.address }}"
+        CONSUL_PORT    = "8500"
+      }
+
+      config {
+        command = "{{ workspace_root }}/ansible/roles/pipecatapp/files/start_archivist.sh"
+      }
+
+      resources {
+        cpu    = 1000 # 1 GHz
+        memory = 4096 # 4 GB for BGE-Large
+      }
+    }
+  }
+}
