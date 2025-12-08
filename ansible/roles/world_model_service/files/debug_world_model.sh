@@ -13,6 +13,11 @@ START_MQTT=false
 
 # Cleanup function
 cleanup() {
+    if [ "$DEBUG_KEEP_ALIVE" = "true" ]; then
+        echo "Skipping cleanup (DEBUG_KEEP_ALIVE=true). Containers left running."
+        return
+    fi
+
     echo "Stopping debug container..."
     docker stop $CONTAINER_NAME 2>/dev/null || true
     docker rm $CONTAINER_NAME 2>/dev/null || true
@@ -107,6 +112,3 @@ fi
 echo "=== Container Logs (tail) ==="
 docker logs --tail 50 $CONTAINER_NAME
 echo "======================"
-echo "Press Ctrl+C to stop debugging (containers will be cleaned up)."
-# Wait indefinitely so user can interact/inspect until they kill it
-sleep infinity

@@ -28,6 +28,7 @@ show_help() {
     echo "  --run-local                  Deploy the pipecat application using local raw_exec (for debugging)."
     echo "  --home-assistant-debug       Enable debug mode for Home Assistant."
     echo "  --container                  Run the entire infrastructure inside a single large container."
+    echo "  --watch <target>             Pause for inspection after the specified target (task/role) completes."
     echo "  -h, --help                   Display this help message and exit."
 }
 
@@ -112,6 +113,12 @@ while [[ $# -gt 0 ]]; do
         ;;
         --container)
         USE_CONTAINER=true
+        shift
+        ;;
+        --watch)
+        WATCH_TARGET="$2"
+        ANSIBLE_ARGS+=(--extra-vars "watch_target=$WATCH_TARGET")
+        shift
         shift
         ;;
         -h|--help)
