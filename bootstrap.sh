@@ -24,7 +24,8 @@ show_help() {
     echo "  --external-model-server      Skip large model downloads and builds, assuming an external server."
     echo "  --continue                   Resume from the last successfully completed playbook."
     echo "  --benchmark                  Run benchmark tests."
-    echo "  --deploy-docker              Deploy the pipecat application using Docker."
+    echo "  --deploy-docker              Deploy the pipecat application using Docker (Default)."
+    echo "  --run-local                  Deploy the pipecat application using local raw_exec (for debugging)."
     echo "  --home-assistant-debug       Enable debug mode for Home Assistant."
     echo "  --container                  Run the entire infrastructure inside a single large container."
     echo "  -h, --help                   Display this help message and exit."
@@ -99,6 +100,10 @@ while [[ $# -gt 0 ]]; do
         ;;
         --deploy-docker)
         ANSIBLE_ARGS+=(--extra-vars "pipecat_deployment_style=docker")
+        shift
+        ;;
+        --run-local)
+        ANSIBLE_ARGS+=(--extra-vars "pipecat_deployment_style=raw_exec")
         shift
         ;;
         --home-assistant-debug)

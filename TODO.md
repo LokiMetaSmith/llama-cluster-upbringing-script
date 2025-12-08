@@ -28,7 +28,7 @@
 - [ ] **Establish a clear variable hierarchy:** Use `group_vars/all.yaml` for system-wide defaults and consider `host_vars/<hostname>.yaml` for machine-specific overrides.
 
 ### Pre-build a Docker Image for `pipecatapp`
-- [ ] **Add a flag to `bootstrap.sh`:** Add a `--run-local` or similar flag to the bootstrap script to allow switching between a Docker-based deployment and the old `raw_exec` method for debugging.
+- [x] **Add a flag to `bootstrap.sh`:** Add a `--run-local` or similar flag to the bootstrap script to allow switching between a Docker-based deployment and the old `raw_exec` method for debugging.
 - [ ] **Create a `Dockerfile` for the `pipecatapp` application.**
 - [ ] **Build and push the image to a registry as part of the development process.**
 - [ ] **Simplify the Nomad job to use the `docker` driver with the pre-built image.**
