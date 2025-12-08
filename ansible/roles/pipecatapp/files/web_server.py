@@ -4,6 +4,7 @@ import asyncio
 import logging
 import requests
 import yaml
+import time  # Added back for the backup timestamp
 from fastapi import FastAPI, WebSocket, Body, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -225,33 +226,31 @@ async def get_workflow_definition(workflow_name: str):
         raise HTTPException(status_code=500, detail=f"Error loading workflow: {e}")
 
 @app.post("/api/workflows/save", summary="Save Workflow", description="Saves a workflow definition to a YAML file.", tags=["Workflow"])
-async def save_workflow_definition(payload: Dict = Body(...)):
+async def save_workflow(payload: Dict = Body(..., examples=[{"filename": "my_workflow.yaml", "definition": {}}])):
     """
     Saves a workflow definition.
-    Payload: { "name": "filename.yaml", "definition": { ... } }
+    Payload: { "filename": "filename.yaml", "definition": { ... } }
     """
-    workflow_name = payload.get("name")
+    # Normalized key to 'filename' to match main branch convention, 
+    # but kept the backup logic from err-slow branch.
+    filename = payload.get("filename") or payload.get("name") 
     definition = payload.get("definition")
 
-    if not workflow_name or not definition:
-        raise HTTPException(status_code=400, detail="Name and definition are required.")
+    if not filename or not definition:
+        raise HTTPException(status_code=400, detail="Filename and definition are required.")
 
-    if ".." in workflow_name or not workflow_name.endswith((".yaml", ".yml")):
+    if ".." in filename or not filename.endswith((".yaml", ".yml")):
         raise HTTPException(status_code=400, detail="Invalid workflow name.")
 
     workflow_dir = os.path.join(script_dir, "workflows")
     # Ensure directory exists
     os.makedirs(workflow_dir, exist_ok=True)
 
-    file_path = os.path.join(workflow_dir, workflow_name)
+    file_path = os.path.join(workflow_dir, filename)
 
-    # Optional: Versioning
-    # If file exists, maybe backup? For now, we overwrite as per "Live Edit" requirement,
-    # but the frontend can handle "Save As" logic or we can add timestamp here.
-    # The user asked for "history versions", which usually implies the Run History.
-    # But for "rollback", let's create a backup if it exists.
+    # Backup existing file before overwriting (Logic from err-slow)
     if os.path.exists(file_path):
-        backup_name = f"{workflow_name}.{int(time.time())}.bak"
+        backup_name = f"{filename}.{int(time.time())}.bak"
         backup_path = os.path.join(workflow_dir, backup_name)
         try:
             os.rename(file_path, backup_path)
@@ -262,7 +261,7 @@ async def save_workflow_definition(payload: Dict = Body(...)):
     try:
         with open(file_path, 'w') as f:
             yaml.dump(definition, f, default_flow_style=False, sort_keys=False)
-        return {"message": f"Workflow {workflow_name} saved successfully."}
+        return JSONResponse(content={"message": f"Workflow {filename} saved successfully."})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving workflow: {e}")
 
