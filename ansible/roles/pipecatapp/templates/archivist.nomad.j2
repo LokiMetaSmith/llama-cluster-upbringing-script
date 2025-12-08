@@ -39,7 +39,7 @@ job "archivist" {
       }
 
       config {
-        command = "{{ workspace_root }}/ansible/roles/pipecatapp/files/start_archivist.sh"
+        command = "/opt/pipecatapp/start_archivist.sh"
       }
 
       resources {
