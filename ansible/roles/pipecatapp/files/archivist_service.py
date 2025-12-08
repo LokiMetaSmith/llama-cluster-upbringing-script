@@ -256,12 +256,9 @@ class Memorizer:
                 if not header or header.startswith("Error"):
                     header = f"Session ending at event {end_id}"
 
-                # 3. Store Page
+                # 3. Prepare Page
                 page_id = str(end_id)
                 page = Page(id=page_id, header=header, content=chunk_content, timestamp=time.time())
-
-                self.pages[page_id] = page
-                self.page_ids_list.append(page_id)
 
                 # 4. Update Indices (Blocking, run in thread)
                 def update_indices():
@@ -272,11 +269,17 @@ class Memorizer:
                     tokenized_doc = text_to_embed.lower().split()
                     self.bm25_corpus.append(tokenized_doc)
                     self.bm25 = BM25Okapi(self.bm25_corpus)
-                    self._save_state()
 
                 await loop.run_in_executor(executor, update_indices)
 
+                # 5. Update Memory State (Main Thread)
+                self.pages[page_id] = page
+                self.page_ids_list.append(page_id)
                 self.last_processed_id = end_id
+
+                # Save
+                await loop.run_in_executor(executor, self._save_state)
+
                 logger.info(f"Archived page {page_id}. Total pages: {len(self.pages)}")
 
             except Exception as e:
