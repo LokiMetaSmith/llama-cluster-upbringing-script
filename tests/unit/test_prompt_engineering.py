@@ -4,7 +4,8 @@ import json
 import pytest
 import shutil
 import tempfile
-from unittest.mock import MagicMock, patch, mock_open, AsyncMock
+import textwrap
+from unittest.mock import MagicMock, patch, mock_open, AsyncMock, call
 
 # Ensure the prompt_engineering directory is in the path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../prompt_engineering')))
@@ -57,15 +58,8 @@ class TestEvolve:
 
                     with patch("evolve.OpenEvolve", return_value=mock_openevolve):
                         # We need to verify os.environ *during* execution, not after
-                        # because run_evolution cleans up env vars in finally block
                         with patch("evolve.OpenEvolve.run", new_callable=AsyncMock) as mock_run:
                             mock_run.return_value = mock_run_result
-
-                            # We can check if env var was set by inspecting what happened inside
-                            # But since run_evolution instantiates OpenEvolve, we need to be careful.
-                            # The simplest way is to check if it was set before cleanup.
-                            # We can mock the finally block or check inside the mocked run?
-                            # Let's check inside the mocked run.
 
                             async def side_effect(*args, **kwargs):
                                 assert os.environ["PARENT_AGENT_ID"] == "parent_id"
@@ -78,12 +72,13 @@ class TestEvolve:
                             mock_openevolve.run.assert_called_once()
 
 class TestRunCampaign:
-    def test_run_campaign(self):
-        generations = 3
+    def test_run_campaign_args(self):
+        """Verifies that subprocess.Popen is called with the correct arguments to launch evolve.py."""
+        generations = 2
         with patch("subprocess.Popen") as mock_popen:
             # Mock the process output and wait
             process_mock = MagicMock()
-            process_mock.stdout = ["Generation output line 1\n", "Generation output line 2\n"]
+            process_mock.stdout = ["Gen output\n"]
             process_mock.wait.return_value = None
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
@@ -93,22 +88,73 @@ class TestRunCampaign:
 
             assert mock_popen.call_count == generations
 
-    def test_analyze_archive(self, tmp_path):
+            # Verify arguments of the first call
+            # Should be [sys.executable, /path/to/evolve.py]
+            args, kwargs = mock_popen.call_args
+            cmd_list = args[0]
+            assert cmd_list[0] == sys.executable
+            assert cmd_list[1].endswith("evolve.py")
+
+    def test_analyze_archive_report(self, tmp_path, capsys):
+        """Tests that analyze_archive generates the correct report output."""
         archive_dir = tmp_path / "archive"
         archive_dir.mkdir()
 
-        # Create dummy agents
-        for i in range(3):
-            meta = {"fitness": 0.1 * i, "id": f"agent_{i}", "rationale": "test"}
-            with open(archive_dir / f"agent_{i}.json", "w") as f:
-                json.dump(meta, f)
+        # Create dummy agents with varying fitness
+        agents = [
+            {"id": "agent_high", "fitness": 0.95, "parent": "root", "passed": True, "rationale": "Excellent"},
+            {"id": "agent_mid", "fitness": 0.5, "parent": "agent_high", "passed": True, "rationale": "Okay"},
+            {"id": "agent_low", "fitness": 0.1, "parent": "root", "passed": False, "rationale": "Bad"},
+        ]
 
+        for agent in agents:
+            with open(archive_dir / f"{agent['id']}.json", "w") as f:
+                json.dump(agent, f)
+            # Create dummy python file
+            (archive_dir / f"{agent['id']}.py").touch()
+
+        # Mock glob to find our files in tmp_path, and run_campaign directory context
         with patch("run_campaign.glob.glob", return_value=[str(p) for p in archive_dir.glob("*.json")]):
-             with patch("run_campaign._generate_report") as mock_report:
-                 run_campaign.analyze_archive()
-                 mock_report.assert_called_once()
-                 args, _ = mock_report.call_args
-                 assert len(args[0]) == 3 # Should contain all 3 agents (since we take top 5)
+             with patch("run_campaign.os.path.dirname", return_value=str(tmp_path)):
+                 # Also mock visualize_archive call to avoid actual execution or errors
+                 with patch("subprocess.run"):
+                     run_campaign.analyze_archive()
+
+        captured = capsys.readouterr()
+        output = captured.out
+
+        # Verify Report Headers
+        assert "Rank  | Agent ID   | Fitness    | Passed  | Parent ID  | Rationale" in output
+        assert "Top 5 Performing Agents" in output
+
+        # Verify content presence and order (descending fitness)
+        lines = output.split('\n')
+
+        # Helper to find line containing specific agent stats
+        def get_line_for_agent(agent_id):
+            for l in lines:
+                if agent_id in l and "|" in l: # Ensure it's a table row
+                    return l
+            return None
+
+        line_high = get_line_for_agent("agent_high")
+        assert line_high is not None
+        assert "0.9500" in line_high
+        assert "True" in line_high
+        assert "root" in line_high
+
+        line_mid = get_line_for_agent("agent_mid")
+        assert line_mid is not None
+        assert "0.5000" in line_mid
+        assert "agent_high" in line_mid
+
+        line_low = get_line_for_agent("agent_low")
+        assert line_low is not None
+        assert "0.1000" in line_low
+
+        # Verify Best Agent summary
+        assert "Best agent found: agent_high" in output
+        assert "Fitness: 0.9500" in output
 
 class TestPromoteAgent:
     @pytest.fixture
@@ -154,7 +200,7 @@ class TestPromoteAgent:
                  assert fitness == 0.9
 
 class TestVisualizeArchive:
-    def test_visualize_archive(self, tmp_path):
+    def test_visualize_archive_logic(self, tmp_path):
         archive_dir = tmp_path / "archive"
         archive_dir.mkdir()
 
@@ -165,8 +211,19 @@ class TestVisualizeArchive:
 
             # With mock graphviz
             with patch("visualize_archive.glob.glob", return_value=["dummy.json"]):
-                 with patch("builtins.open", mock_open(read_data='{"fitness": 0.5, "parent": "root"}')):
+                 with patch("builtins.open", mock_open(read_data='{"fitness": 0.5, "parent": "root", "rationale": "test"}')):
                      mock_dot = MagicMock()
                      with patch("visualize_archive.Digraph", return_value=mock_dot):
                          visualize_archive.visualize_archive()
                          mock_dot.render.assert_called_once()
+
+                         # Check if node was added with correct label
+                         mock_dot.node.assert_called()
+
+    def test_get_color_for_fitness(self):
+        assert visualize_archive.get_color_for_fitness(0.95) == "#a1d99b" # Green
+        assert visualize_archive.get_color_for_fitness(0.90) == "#a1d99b" # Green
+        assert visualize_archive.get_color_for_fitness(0.89) == "#fee08b" # Yellow
+        assert visualize_archive.get_color_for_fitness(0.50) == "#fee08b" # Yellow
+        assert visualize_archive.get_color_for_fitness(0.49) == "#fc8d59" # Red
+        assert visualize_archive.get_color_for_fitness(0.00) == "#fc8d59" # Red
