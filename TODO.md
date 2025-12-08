@@ -19,8 +19,8 @@
 ## Harden the Core System
 
 ### Phase 4: Implement the "ComfyUI for Agents" Workflow Engine
-- [ ] **Build a Visual Workflow Editor:**
-    - [ ] Integrate a library like `litegraph.js` or extend the existing Cytoscape UI to allow drag-and-drop creation and modification of workflows.
+- [x] **Build a Visual Workflow Editor:**
+    - [x] Integrate a library like `litegraph.js` or extend the existing Cytoscape UI to allow drag-and-drop creation and modification of workflows.
     - [x] Create a backend API endpoint (`/api/workflows/save`) to receive the new graph definition from the UI and save it as a YAML file.
 
 ### Centralize All Configuration
