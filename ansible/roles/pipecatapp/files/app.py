@@ -316,9 +316,14 @@ class YOLOv8Detector(FrameProcessor):
         """Initializes the YOLOv8 detector."""
         super().__init__()
         model_path = os.getenv("YOLO_MODEL_PATH", "/opt/nomad/models/vision/yolov8n.pt")
-        self.model = YOLO(model_path)
         self.latest_observation = "I don't see anything."
         self.last_detected_objects = set()
+        try:
+            self.model = YOLO(model_path)
+        except Exception as e:
+            logging.error(f"Failed to load YOLOv8 model from {model_path}: {e}")
+            self.model = None
+            self.latest_observation = "Vision system unavailable."
 
     async def process_frame(self, frame, direction):
         """Processes an image frame to detect objects.
@@ -330,6 +335,12 @@ class YOLOv8Detector(FrameProcessor):
         if not isinstance(frame, VisionImageRawFrame):
             await self.push_frame(frame, direction)
             return
+
+        if self.model is None:
+            # Pass frame through without processing if vision is unavailable
+            await self.push_frame(frame, direction)
+            return
+
         try:
             # run model; returns list of results; boxes.cls may be torch tensors or arrays
             detected_objects = {self.model.names[int(c)] for r in self.model(frame.image) for c in r.boxes.cls}
