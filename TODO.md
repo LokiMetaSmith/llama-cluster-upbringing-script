@@ -21,7 +21,7 @@
 ### Phase 4: Implement the "ComfyUI for Agents" Workflow Engine
 - [ ] **Build a Visual Workflow Editor:**
     - [ ] Integrate a library like `litegraph.js` or extend the existing Cytoscape UI to allow drag-and-drop creation and modification of workflows.
-    - [ ] Create a backend API endpoint (`/api/workflows/save`) to receive the new graph definition from the UI and save it as a YAML file.
+    - [x] Create a backend API endpoint (`/api/workflows/save`) to receive the new graph definition from the UI and save it as a YAML file.
 
 ### Centralize All Configuration
 - [ ] **Convert all configuration files to templates:** Any file that contains a variable should be a Jinja2 template (`.j2`).
