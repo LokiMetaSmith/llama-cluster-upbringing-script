@@ -23,6 +23,10 @@ variable "rpc_pool_job_name" {
 {% set suitable_models = suitable_models_unsorted | sort(attribute='memory_mb', reverse=true) | list %}
 {% set rpc_service_name = rpc_pool_job_name | default('llamacpp-rpc-pool') ~ '-' ~ current_expert ~ '-provider' %}
 {% set args_list = ["/opt/pipecatapp/supervisor.py", "--expert-id=" ~ job_name] %}
+{% set service_list = [] %}
+{% for model in suitable_models %}
+  {% set _ = service_list.append("llamacpp-rpc-" ~ (model.filename | regex_replace('[^a-zA-Z0-9-]', '-')) ~ "-provider") %}
+{% endfor %}
 
 
 job "{{ job_name }}" {
@@ -102,7 +106,8 @@ job "{{ job_name }}" {
 
       env {
         STT_SERVICE = "faster-whisper"
-        LLAMA_API_SERVICE_NAME = "{{ rpc_pool_job_name }}-provider"
+        # Comma-separated list of services for failover (primary, backup, etc.)
+        LLAMA_API_SERVICE_NAME = "{{ service_list | join(',') }}"
       }
 
       resources {
