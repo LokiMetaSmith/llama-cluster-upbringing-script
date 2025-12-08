@@ -2,130 +2,166 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="description" content="Workflow Visualization">
-    <meta name="keywords" content="Workflow, Visualization, Ansible, Nomad">
+    <meta name="description" content="Workflow Editor">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Workflow Visualization</title>
+    <title>Workflow Editor</title>
+    <link rel="stylesheet" href="/static/css/litegraph.css">
     <link rel="stylesheet" href="/static/css/styles.css">
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        .container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
+        body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .container { display: flex; flex: 1; overflow: hidden; height: 100%; }
         #sidebar {
-            width: 300px;
-            border-right: 1px solid #ccc;
-            padding: 10px;
-            overflow-y: auto;
-            background-color: #f8f9fa;
-        }
-        #main-content {
-            flex-grow: 1;
-            padding: 10px;
+            width: 250px;
+            border-right: 1px solid #333;
+            background-color: #1e1e1e;
+            color: #ddd;
             display: flex;
             flex-direction: column;
         }
-        #cy {
-            width: 100%;
-            flex-grow: 1;
-            border: 1px solid #ccc;
-        }
-        /* Modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgb(0,0,0);
-            background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-        }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
+        #sidebar h2 { padding: 10px; margin: 0; background: #252526; font-size: 14px; text-transform: uppercase; }
+        #history-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
+        .history-item { padding: 8px 10px; border-bottom: 1px solid #333; cursor: pointer; font-size: 12px; }
+        .history-item:hover { background-color: #2a2d2e; }
+        .history-item.active { background-color: #37373d; border-left: 3px solid #007acc; }
+        .history-meta { color: #888; font-size: 10px; margin-top: 2px; }
 
-        /* History List Styles */
-        .history-item {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
+        #main-content { flex-grow: 1; position: relative; display: flex; flex-direction: column; }
+        #toolbar {
+            height: 40px;
+            background-color: #252526;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
         }
-        .history-item:hover {
-            background-color: #e9ecef;
-        }
-        .history-item.active {
-            background-color: #007bff;
+        #toolbar button {
+            background: #0e639c;
+            border: none;
             color: white;
+            padding: 6px 12px;
+            margin-right: 10px;
+            cursor: pointer;
+            font-size: 12px;
+            border-radius: 2px;
         }
-        .history-meta {
-            font-size: 0.8em;
-            color: #666;
-        }
-        .history-item.active .history-meta {
-            color: #ddd;
-        }
-        .status-completed { color: green; }
-        .status-failed { color: red; }
+        #toolbar button:hover { background: #1177bb; }
+        #toolbar span { color: #ccc; margin-left: auto; font-size: 12px; }
 
-        #controls {
-            margin-bottom: 10px;
-        }
+        #editor-canvas { width: 100%; height: 100%; background-color: #1e1e1e; }
     </style>
 </head>
 <body>
     <div class="container">
         <div id="sidebar">
-            <div id="controls">
-                <button id="live-btn">Go Live</button>
-                <button id="refresh-history-btn">Refresh History</button>
+            <div id="controls" style="padding: 10px; border-bottom: 1px solid #333;">
+                <button id="live-btn" style="width: 100%; margin-bottom: 5px;">Go Live / Poll</button>
+                <button id="refresh-history-btn" style="width: 100%;">Refresh History</button>
             </div>
-            <h2>History</h2>
-            <ul id="history-list" style="list-style: none; padding: 0;"></ul>
+            <h2>Run History</h2>
+            <ul id="history-list"></ul>
         </div>
         <div id="main-content">
-            <h1 id="view-title">Workflow Visualization (Live)</h1>
-            <div id="approval-container"></div>
-            <div id="cy"></div>
+            <div id="toolbar">
+                <button id="save-btn">Save / Deploy</button>
+                <button id="arrange-btn">Auto Arrange</button>
+                <span id="status-text">Ready</span>
+            </div>
+            <canvas id="editor-canvas"></canvas>
         </div>
     </div>
 
-    <!-- The Modal -->
-    <div id="nodeModal" class="modal">
-      <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2>Node Output</h2>
-        <pre id="node-output-content"></pre>
-      </div>
-    </div>
+    <script src="/static/js/litegraph.js"></script>
+    <script src="/static/js/editor.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize Editor
+            WorkflowEditor.init("editor-canvas");
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
-    <script src="/static/js/workflow.js"></script>
+            // Load Default Workflow
+            try {
+                const response = await fetch('/api/workflows/definition/default_agent_loop.yaml');
+                const yamlData = await response.json();
+                WorkflowEditor.importWorkflow(yamlData);
+            } catch (e) {
+                console.error("Failed to load default workflow", e);
+            }
+
+            // Buttons
+            document.getElementById('save-btn').addEventListener('click', () => {
+                WorkflowEditor.saveWorkflow();
+            });
+
+            document.getElementById('arrange-btn').addEventListener('click', () => {
+                WorkflowEditor.autoLayout();
+            });
+
+            // Live Polling Logic
+            let pollingInterval = null;
+            const liveBtn = document.getElementById('live-btn');
+
+            function startPolling() {
+                liveBtn.textContent = "Stop Live View";
+                liveBtn.style.backgroundColor = "#28a745";
+                pollingInterval = setInterval(async () => {
+                    try {
+                        const res = await fetch('/api/workflows/active');
+                        const data = await res.json();
+                        // Get first active workflow state
+                        const runIds = Object.keys(data);
+                        if (runIds.length > 0) {
+                            WorkflowEditor.updateLiveStatus(data[runIds[0]]);
+                            document.getElementById('status-text').textContent = "Running: " + runIds[0];
+                        } else {
+                            document.getElementById('status-text').textContent = "No active workflows";
+                        }
+                    } catch (e) { console.error(e); }
+                }, 1000);
+            }
+
+            function stopPolling() {
+                liveBtn.textContent = "Go Live / Poll";
+                liveBtn.style.backgroundColor = "";
+                if (pollingInterval) clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+
+            liveBtn.addEventListener('click', () => {
+                if (pollingInterval) stopPolling();
+                else startPolling();
+            });
+
+            // History Logic
+            const historyList = document.getElementById('history-list');
+
+            async function loadHistory() {
+                const res = await fetch('/api/workflows/history?limit=20');
+                const runs = await res.json();
+                historyList.innerHTML = '';
+                runs.forEach(run => {
+                    const li = document.createElement('li');
+                    li.className = 'history-item';
+                    li.innerHTML = `
+                        <div>${new Date(run.start_time * 1000).toLocaleTimeString()}</div>
+                        <div class="history-meta">${run.id.substring(0,8)}...</div>
+                    `;
+                    li.onclick = () => {
+                        // Load this run's state/definition if we stored the definition snapshop
+                        // For now we might only have the definition name in the run object?
+                        // Assuming run.workflow_name
+                        console.log("Loading run", run);
+                        // TODO: Ideally we load the exact definition snapshot used in this run
+                        // For now just load the named workflow
+                        fetch(`/api/workflows/definition/${run.workflow_name}`)
+                            .then(r => r.json())
+                            .then(def => WorkflowEditor.importWorkflow(def));
+                    };
+                    historyList.appendChild(li);
+                });
+            }
+
+            document.getElementById('refresh-history-btn').addEventListener('click', loadHistory);
+            loadHistory();
+        });
+    </script>
 </body>
 </html>

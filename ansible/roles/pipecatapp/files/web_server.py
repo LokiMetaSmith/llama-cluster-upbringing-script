@@ -224,6 +224,48 @@ async def get_workflow_definition(workflow_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading workflow: {e}")
 
+@app.post("/api/workflows/save", summary="Save Workflow", description="Saves a workflow definition to a YAML file.", tags=["Workflow"])
+async def save_workflow_definition(payload: Dict = Body(...)):
+    """
+    Saves a workflow definition.
+    Payload: { "name": "filename.yaml", "definition": { ... } }
+    """
+    workflow_name = payload.get("name")
+    definition = payload.get("definition")
+
+    if not workflow_name or not definition:
+        raise HTTPException(status_code=400, detail="Name and definition are required.")
+
+    if ".." in workflow_name or not workflow_name.endswith((".yaml", ".yml")):
+        raise HTTPException(status_code=400, detail="Invalid workflow name.")
+
+    workflow_dir = os.path.join(script_dir, "workflows")
+    # Ensure directory exists
+    os.makedirs(workflow_dir, exist_ok=True)
+
+    file_path = os.path.join(workflow_dir, workflow_name)
+
+    # Optional: Versioning
+    # If file exists, maybe backup? For now, we overwrite as per "Live Edit" requirement,
+    # but the frontend can handle "Save As" logic or we can add timestamp here.
+    # The user asked for "history versions", which usually implies the Run History.
+    # But for "rollback", let's create a backup if it exists.
+    if os.path.exists(file_path):
+        backup_name = f"{workflow_name}.{int(time.time())}.bak"
+        backup_path = os.path.join(workflow_dir, backup_name)
+        try:
+            os.rename(file_path, backup_path)
+            logging.info(f"Backed up existing workflow to {backup_name}")
+        except OSError as e:
+            logging.warning(f"Failed to backup workflow: {e}")
+
+    try:
+        with open(file_path, 'w') as f:
+            yaml.dump(definition, f, default_flow_style=False, sort_keys=False)
+        return {"message": f"Workflow {workflow_name} saved successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving workflow: {e}")
+
 @app.get("/api/web_uis")
 async def get_web_uis():
     """
