@@ -1,0 +1,7 @@
+---
+- name: Run Nanochat Nomad job
+  ansible.builtin.command:
+    cmd: "nomad job run {{ nomad_jobs_dir }}/nanochat.nomad"
+  environment:
+    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
+  become: yes

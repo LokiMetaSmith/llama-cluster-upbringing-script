@@ -1,0 +1,78 @@
+job "nanochat" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "nanochat-server" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" {
+        static = {{ nanochat_port }}
+      }
+    }
+
+    volume "models" {
+      type      = "host"
+      read_only = false
+      source    = "models"
+    }
+
+    task "nanochat" {
+      driver = "exec"
+
+      config {
+        command = "{{ nanochat_venv_dir }}/bin/python"
+        args = [
+          "-m", "scripts.serve",
+          "--port", "{{ nanochat_port }}",
+          "--host", "0.0.0.0",
+          "--source", "sft"
+        ]
+      }
+
+      env {
+        PYTHONPATH = "{{ nanochat_install_dir }}"
+        # Ensure the venv is in the path if needed, though we invoke python directly
+        PATH = "{{ nanochat_venv_dir }}/bin:${PATH}"
+      }
+
+      volume_mount {
+        volume      = "models"
+        destination = "/opt/nomad/models"
+        read_only   = false
+      }
+
+      resources {
+        cpu    = 2000
+        memory = 4096
+
+        {% if nanochat_platform == 'gpu' %}
+        device "nvidia/gpu" {
+          count = 1
+        }
+        {% endif %}
+
+        {% if nanochat_platform == 'amd' %}
+        device "amd/gpu" {
+           count = 1
+        }
+        {% endif %}
+      }
+
+      service {
+        name = "nanochat"
+        port = "http"
+        tags = ["ai", "nanochat", "training"]
+
+        check {
+          type     = "http"
+          path     = "/health"
+          interval = "10s"
+          timeout  = "2s"
+          method   = "GET"
+        }
+      }
+    }
+  }
+}
