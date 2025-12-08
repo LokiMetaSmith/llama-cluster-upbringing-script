@@ -109,6 +109,50 @@ else
     exit 1
 fi
 
+echo "Verifying MQTT and State update..."
+# Publish a test message using python inside the debug container (guaranteed to have paho-mqtt)
+TEST_TOPIC="test/topic"
+TEST_VALUE="verification_$(date +%s)"
+TEST_PAYLOAD="{\"value\": \"$TEST_VALUE\"}"
+
+echo "Publishing to $TEST_TOPIC with payload $TEST_PAYLOAD..."
+
+# We use a python one-liner inside the container to publish
+docker exec $CONTAINER_NAME python3 -c "
+import paho.mqtt.client as mqtt
+import os
+import time
+
+host = os.getenv('MQTT_HOST', 'localhost')
+try:
+    port = int(os.getenv('MQTT_PORT', '1883'))
+except:
+    port = 1883
+
+print(f'Connecting to {host}:{port}...')
+client = mqtt.Client()
+client.connect(host, port, 60)
+client.publish('$TEST_TOPIC', '$TEST_PAYLOAD', retain=True)
+client.disconnect()
+print('Message published.')
+"
+
+echo "Waiting for state update..."
+sleep 2
+
+echo "Querying state..."
+STATE_RESPONSE=$(curl -s http://localhost:$DEBUG_PORT/state)
+echo "State response: $STATE_RESPONSE"
+
+if echo "$STATE_RESPONSE" | grep -q "$TEST_VALUE"; then
+    echo "Success: State successfully updated via MQTT!"
+else
+    echo "Failure: State did not contain expected value '$TEST_VALUE'."
+    echo "Container Logs:"
+    docker logs --tail 50 $CONTAINER_NAME
+    exit 1
+fi
+
 echo "=== Container Logs (tail) ==="
 docker logs --tail 50 $CONTAINER_NAME
 echo "======================"
