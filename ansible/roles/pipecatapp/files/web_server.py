@@ -4,6 +4,7 @@ import asyncio
 import logging
 import requests
 import yaml
+import time  # Added back for the backup timestamp
 from fastapi import FastAPI, WebSocket, Body, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -226,23 +227,41 @@ async def get_workflow_definition(workflow_name: str):
 
 @app.post("/api/workflows/save", summary="Save Workflow", description="Saves a workflow definition to a YAML file.", tags=["Workflow"])
 async def save_workflow(payload: Dict = Body(..., examples=[{"filename": "my_workflow.yaml", "definition": {}}])):
-    """Saves a workflow definition to a YAML file."""
-    filename = payload.get("filename")
+    """
+    Saves a workflow definition.
+    Payload: { "filename": "filename.yaml", "definition": { ... } }
+    """
+    # Normalized key to 'filename' to match main branch convention, 
+    # but kept the backup logic from err-slow branch.
+    filename = payload.get("filename") or payload.get("name") 
     definition = payload.get("definition")
 
-    if not filename or "definition" not in payload:
-        raise HTTPException(status_code=400, detail="filename and definition are required.")
+    if not filename or not definition:
+        raise HTTPException(status_code=400, detail="Filename and definition are required.")
 
     if ".." in filename or not filename.endswith((".yaml", ".yml")):
         raise HTTPException(status_code=400, detail="Invalid workflow name.")
 
     workflow_dir = os.path.join(script_dir, "workflows")
+    # Ensure directory exists
+    os.makedirs(workflow_dir, exist_ok=True)
+
     file_path = os.path.join(workflow_dir, filename)
+
+    # Backup existing file before overwriting (Logic from err-slow)
+    if os.path.exists(file_path):
+        backup_name = f"{filename}.{int(time.time())}.bak"
+        backup_path = os.path.join(workflow_dir, backup_name)
+        try:
+            os.rename(file_path, backup_path)
+            logging.info(f"Backed up existing workflow to {backup_name}")
+        except OSError as e:
+            logging.warning(f"Failed to backup workflow: {e}")
 
     try:
         with open(file_path, 'w') as f:
-            yaml.dump(definition, f, default_flow_style=False)
-        return JSONResponse(content={"message": "Workflow saved successfully."})
+            yaml.dump(definition, f, default_flow_style=False, sort_keys=False)
+        return JSONResponse(content={"message": f"Workflow {filename} saved successfully."})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving workflow: {e}")
 

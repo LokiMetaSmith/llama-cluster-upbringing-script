@@ -1,0 +1,343 @@
+// Editor logic using LiteGraph.js
+
+const WorkflowEditor = {
+    graph: null,
+    canvas: null,
+    nodeTypes: {},
+    currentWorkflowName: 'default_agent_loop.yaml',
+
+    init: function(containerId) {
+        this.graph = new LGraph();
+        this.canvas = new LGraphCanvas(containerId, this.graph);
+        this.canvas.allow_searchbox = true; // enable search box with double click
+
+        // Fix for search box z-index issues if any
+        this.canvas.onSearchBox = function(helper, value, graphcanvas) {
+             // You can customize search box logic here if needed
+        };
+
+        this.registerNodeTypes();
+
+        // Adjust canvas on resize
+        window.addEventListener("resize", () => {
+            const parent = document.getElementById(containerId).parentNode;
+            this.canvas.resize(parent.clientWidth, parent.clientHeight);
+        });
+
+        // Initial resize
+        setTimeout(() => {
+             const parent = document.getElementById(containerId).parentNode;
+             this.canvas.resize(parent.clientWidth, parent.clientHeight);
+        }, 100);
+    },
+
+    registerNodeTypes: function() {
+        // Generic function to create node classes based on our YAML types
+        const createGenericNode = (type, title, inputs, outputs, properties) => {
+            function GenericNode() {
+                if (inputs) {
+                    inputs.forEach(i => this.addInput(i.name, i.type));
+                }
+                if (outputs) {
+                    outputs.forEach(o => this.addOutput(o.name, o.type));
+                }
+                if (properties) {
+                    for (const [key, value] of Object.entries(properties)) {
+                        this.addProperty(key, value);
+                        // Add widgets for properties for easier editing
+                        if (typeof value === 'boolean') {
+                            this.addWidget("toggle", key, value, (v) => { this.properties[key] = v; });
+                        } else {
+                            this.addWidget("text", key, String(value), (v) => { this.properties[key] = v; });
+                        }
+                    }
+                }
+                this.size = this.computeSize();
+                this.agentNodeType = type; // Store original type
+            }
+
+            GenericNode.title = title;
+            GenericNode.desc = type;
+
+            // Custom serialize to ensure agentNodeType is preserved
+            GenericNode.prototype.onSerialize = function(o) {
+                o.agentNodeType = this.agentNodeType;
+            };
+
+            GenericNode.prototype.onConfigure = function(o) {
+                this.agentNodeType = o.agentNodeType || type;
+            };
+
+            LiteGraph.registerNodeType("agent/" + type, GenericNode);
+            this.nodeTypes[type] = GenericNode;
+        };
+
+        // Define known node types from the backend
+        // Ideally we would fetch this schema from the backend, but for now we hardcode based on knowledge
+        createGenericNode("InputNode", "Input", [], [{name: "user_text", type: "string"}, {name: "tools_dict", type: "object"}, {name: "tool_result", type: "object"}, {name: "consul_http_addr", type: "string"}]);
+        createGenericNode("ConsulServiceDiscoveryNode", "Service Discovery", [{name: "consul_http_addr", type: "string"}], [{name: "available_services", type: "object"}]);
+        createGenericNode("SystemPromptNode", "System Prompt", [{name: "tools", type: "object"}, {name: "available_services", type: "object"}], [{name: "system_prompt", type: "string"}]);
+        createGenericNode("ScreenshotNode", "Screenshot", [{name: "tools", type: "object"}], [{name: "screenshot_base64", type: "string"}]);
+        createGenericNode("PromptBuilderNode", "Prompt Builder", [{name: "system_prompt", type: "string"}, {name: "user_text", type: "string"}, {name: "screenshot", type: "string"}, {name: "tool_result", type: "object"}], [{name: "messages", type: "array"}]);
+        createGenericNode("VisionLLMNode", "Vision LLM", [{name: "messages", type: "array"}], [{name: "response_text", type: "string"}]);
+        createGenericNode("ToolParserNode", "Tool Parser", [{name: "llm_response", type: "string"}], [{name: "tool_call_data", type: "object"}, {name: "final_response", type: "string"}]);
+        createGenericNode("ConditionalBranchNode", "Branch", [{name: "input_value", type: "object"}], [{name: "output_true", type: "object"}, {name: "output_false", type: "object"}], {check_if_tool_is: ""});
+        createGenericNode("GateNode", "Gate", [{name: "input_value", type: "object"}], [{name: "output", type: "object"}]);
+        createGenericNode("ExpertRouterNode", "Expert Router", [{name: "expert_name", type: "string"}, {name: "query", type: "string"}], [{name: "expert_response", type: "string"}]);
+        createGenericNode("ToolExecutorNode", "Tool Executor", [{name: "tool_call_data", type: "object"}], [{name: "tool_result", type: "object"}]);
+        createGenericNode("MergeNode", "Merge", [{name: "in1", type: "object"}, {name: "in2", type: "object"}], [{name: "merged_output", type: "object"}]);
+        createGenericNode("OutputNode", "Output", [{name: "final_output", type: "object"}], []);
+
+    },
+
+    importWorkflow: function(yamlData) {
+        this.graph.clear();
+
+        const nodesMap = {};
+        const yamlNodes = yamlData.nodes;
+
+        // 1. Create Nodes
+        yamlNodes.forEach(n => {
+            const nodeTypeString = "agent/" + n.type;
+            const node = LiteGraph.createNode(nodeTypeString);
+
+            if (!node) {
+                console.error(`Unknown node type: ${n.type}`);
+                return;
+            }
+
+            node.title = n.id; // Use ID as title for clarity
+            node.properties.id = n.id; // Store ID in properties
+
+            // Set properties from YAML
+            if (n) {
+                for (const key in n) {
+                    if (key !== 'id' && key !== 'type' && key !== 'inputs' && key !== 'outputs') {
+                        node.properties[key] = n[key];
+                        // Update widgets if they exist
+                        const widget = node.widgets?.find(w => w.name === key);
+                        if (widget) {
+                            widget.value = n[key];
+                        }
+                    }
+                }
+            }
+
+            // Attempt to layout nodes roughly (Auto-layout would be better)
+            // For now, place them randomly or in a grid
+            node.pos = [Math.random() * 800 + 100, Math.random() * 600 + 100];
+
+            this.graph.add(node);
+            nodesMap[n.id] = node;
+        });
+
+        // 2. Connect Edges
+        yamlNodes.forEach(n => {
+            const sourceNode = nodesMap[n.id];
+            if (!sourceNode) return;
+
+            if (n.inputs) {
+                n.inputs.forEach(inputDef => {
+                    const inputName = inputDef.name;
+                    const inputIndex = sourceNode.findInputSlot(inputName);
+
+                    if (inputIndex === -1) {
+                        console.warn(`Input slot '${inputName}' not found on node '${n.id}'`);
+                        return;
+                    }
+
+                    // Handle connection object or nested value structure
+                    let connections = [];
+
+                    if (inputDef.connection) {
+                        connections.push(inputDef.connection);
+                    } else if (inputDef.value) {
+                         // Traverse nested value to find connections (like OutputNode)
+                         const findConnectionsRecursively = (obj) => {
+                             if (obj && typeof obj === 'object') {
+                                 if (obj.connection) {
+                                     connections.push(obj.connection);
+                                 } else {
+                                     Object.values(obj).forEach(findConnectionsRecursively);
+                                 }
+                             }
+                         };
+                         findConnectionsRecursively(inputDef.value);
+                    }
+
+                    connections.forEach(conn => {
+                        const targetNodeId = conn.from_node;
+                        const targetOutputName = conn.from_output;
+
+                        const targetNode = nodesMap[targetNodeId];
+                        if (targetNode) {
+                            const outputIndex = targetNode.findOutputSlot(targetOutputName);
+                            if (outputIndex !== -1) {
+                                targetNode.connect(outputIndex, sourceNode, inputIndex);
+                            } else {
+                                console.warn(`Output slot '${targetOutputName}' not found on node '${targetNodeId}'`);
+                            }
+                        }
+                    });
+                });
+            }
+        });
+
+        // Simple auto-layout to untangle
+        this.autoLayout();
+    },
+
+    autoLayout: function() {
+        // A very basic layout algorithm
+        const nodes = this.graph._nodes;
+        const columns = {};
+
+        // 1. Assign levels (topological sort approximation)
+        const visited = new Set();
+        const levelMap = {};
+
+        const calcLevel = (node) => {
+            if (visited.has(node.id)) return levelMap[node.id];
+            visited.add(node.id);
+
+            let maxParentLevel = -1;
+            if (node.inputs) {
+                for (let i = 0; i < node.inputs.length; i++) {
+                    const linkId = node.inputs[i].link;
+                    if (linkId !== null) {
+                        const link = this.graph.links[linkId];
+                        const parent = this.graph.getNodeById(link.origin_id);
+                        if (parent) {
+                            const parentLvl = calcLevel(parent);
+                            if (parentLvl > maxParentLevel) maxParentLevel = parentLvl;
+                        }
+                    }
+                }
+            }
+            const lvl = maxParentLevel + 1;
+            levelMap[node.id] = lvl;
+            return lvl;
+        };
+
+        nodes.forEach(n => calcLevel(n));
+
+        // 2. Group by level
+        nodes.forEach(n => {
+            const lvl = levelMap[n.id] || 0;
+            if (!columns[lvl]) columns[lvl] = [];
+            columns[lvl].push(n);
+        });
+
+        // 3. Position
+        const xSpacing = 250;
+        const ySpacing = 150;
+
+        Object.keys(columns).forEach(lvl => {
+            const colNodes = columns[lvl];
+            const startX = lvl * xSpacing + 100;
+            let startY = 100;
+
+            colNodes.forEach((node, idx) => {
+                node.pos = [startX, startY + idx * ySpacing];
+            });
+        });
+
+        this.graph.setDirtyCanvas(true, true);
+    },
+
+    exportWorkflow: function() {
+        const nodes = this.graph._nodes;
+        const yamlNodes = [];
+
+        nodes.forEach(node => {
+            const yamlNode = {
+                id: node.title, // Assuming title is kept as ID
+                type: node.agentNodeType.replace("agent/", "") // Strip prefix
+            };
+
+            // Properties
+            for (const key in node.properties) {
+                if (key !== 'id') {
+                    yamlNode[key] = node.properties[key];
+                }
+            }
+
+            // Inputs
+            if (node.inputs && node.inputs.length > 0) {
+                yamlNode.inputs = [];
+                node.inputs.forEach((input, index) => {
+                    const linkId = input.link;
+                    if (linkId !== null) {
+                        const link = this.graph.links[linkId];
+                        const originNode = this.graph.getNodeById(link.origin_id);
+
+                        // Find the output name on the origin node
+                        const originOutputName = originNode.outputs[link.origin_slot].name;
+
+                        const inputDef = {
+                            name: input.name,
+                            connection: {
+                                from_node: originNode.title, // ID
+                                from_output: originOutputName
+                            }
+                        };
+                        yamlNode.inputs.push(inputDef);
+                    } else if (node.agentNodeType === 'agent/OutputNode' && input.name === 'final_output') {
+                         // Special case for OutputNode value structure if needed,
+                         // but for now LiteGraph won't easily support the complex nested value structure visually.
+                         // We might need to assume OutputNode inputs are flat for this editor or implement custom widget.
+                         // FOR NOW: Skip complex values if not linked.
+                    }
+                });
+
+                // Cleanup empty inputs array
+                if (yamlNode.inputs.length === 0) delete yamlNode.inputs;
+            }
+
+            yamlNodes.push(yamlNode);
+        });
+
+        return { nodes: yamlNodes };
+    },
+
+    updateLiveStatus: function(activeState) {
+        // Clear previous status
+        this.graph._nodes.forEach(n => {
+            n.boxcolor = "#666"; // Default
+        });
+
+        if (!activeState || !activeState.node_outputs) return;
+
+        // Highlight executed nodes
+        Object.keys(activeState.node_outputs).forEach(nodeId => {
+            const node = this.graph.findNodesByTitle(nodeId)[0];
+            if (node) {
+                node.boxcolor = "#28a745"; // Green
+            }
+        });
+
+        // Highlight active/gated nodes (heuristic: last executed might be active)
+        // Ideally backend provides 'current_node'
+    },
+
+    saveWorkflow: async function() {
+        const workflowData = this.exportWorkflow();
+        try {
+            const response = await fetch('/api/workflows/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: this.currentWorkflowName,
+                    definition: workflowData
+                })
+            });
+            const res = await response.json();
+            alert(res.message);
+        } catch (error) {
+            console.error("Save failed", error);
+            alert("Save failed: " + error);
+        }
+    }
+};
+
+window.WorkflowEditor = WorkflowEditor;
