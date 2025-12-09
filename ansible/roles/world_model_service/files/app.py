@@ -79,8 +79,17 @@ def on_connect(client, userdata, flags, rc, properties=None):
         logger.error(f"Failed to connect, return code {rc}")
         mqtt_connected = False
 
-def on_disconnect(client, userdata, rc):
+def on_disconnect(client, userdata, *args):
     global mqtt_connected
+    rc = "unknown"
+
+    # Handle paho-mqtt v1 (3 args total: client, userdata, rc)
+    if len(args) == 1:
+        rc = args[0]
+    # Handle paho-mqtt v2 (5 args total: client, userdata, flags, rc, properties)
+    elif len(args) >= 2:
+        rc = args[1]
+
     logger.warning(f"Disconnected from MQTT Broker with return code {rc}")
     mqtt_connected = False
 
