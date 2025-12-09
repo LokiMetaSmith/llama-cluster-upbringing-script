@@ -46,7 +46,7 @@ If your Playwright script fails to run, **do not guess**. Systematically debug t
 | **Assertion Failed** | The element was found, but it's in the wrong state (e.g., wrong text, not visible). **Solution:** Your web application code is likely incorrect. The element exists, but your change didn't produce the right result. Fix your application code. |
 | **Navigation or Network Error** | The script couldn't load the page. **Solution:** Ensure the dev server is running (Step 1) and the URL in your `page.goto()` call is correct. |
 
-If you are having trouble, you can visit https://playwright.dev/python/docs/library and browse the website to learn more.
+If you are having trouble, you can visit <https://playwright.dev/python/docs/library> and browse the website to learn more.
 
 ## Playwright Best Practices
 
