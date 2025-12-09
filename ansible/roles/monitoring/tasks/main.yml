@@ -1,0 +1,97 @@
+- name: Ensure Grafana dashboard directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/grafana/dashboards"
+    state: directory
+    mode: '0755'
+    recurse: yes
+  become: yes
+
+- name: Download Node Exporter Full Dashboard
+  ansible.builtin.get_url:
+    url: https://grafana.com/api/dashboards/1860/revisions/37/download
+    dest: "{{ nomad_volumes_dir }}/grafana/dashboards/node-exporter-full.json"
+    mode: '0644'
+  become: yes
+
+- name: Download Nomad Dashboard
+  ansible.builtin.get_url:
+    url: https://grafana.com/api/dashboards/19154/revisions/1/download
+    dest: "{{ nomad_volumes_dir }}/grafana/dashboards/nomad.json"
+    mode: '0644'
+  become: yes
+
+# Consul Dashboard (ID 12049 is common)
+- name: Download Consul Dashboard
+  ansible.builtin.get_url:
+    url: https://grafana.com/api/dashboards/12049/revisions/1/download
+    dest: "{{ nomad_volumes_dir }}/grafana/dashboards/consul.json"
+    mode: '0644'
+  become: yes
+
+# MQTT Dashboard (Using a generic MQTT dashboard as a base, e.g., ID 11288)
+- name: Download MQTT Dashboard
+  ansible.builtin.get_url:
+    url: https://grafana.com/api/dashboards/11288/revisions/1/download
+    dest: "{{ nomad_volumes_dir }}/grafana/dashboards/mqtt.json"
+    mode: '0644'
+  become: yes
+
+- name: Deploy Node Exporter
+  block:
+    - name: Template node-exporter job
+      ansible.builtin.template:
+        src: node-exporter.nomad.j2
+        dest: "{{ nomad_jobs_dir }}/node-exporter.nomad"
+      become: yes
+
+    - name: Run node-exporter job
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/node-exporter.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true
+
+- name: Deploy MQTT Exporter
+  block:
+    - name: Template mqtt-exporter job
+      ansible.builtin.template:
+        src: mqtt-exporter.nomad.j2
+        dest: "{{ nomad_jobs_dir }}/mqtt-exporter.nomad"
+      become: yes
+
+    - name: Run mqtt-exporter job
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/mqtt-exporter.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true
+
+- name: Deploy Prometheus
+  block:
+    - name: Template prometheus job
+      ansible.builtin.template:
+        src: prometheus.nomad.j2
+        dest: "{{ nomad_jobs_dir }}/prometheus.nomad"
+      become: yes
+
+    - name: Run prometheus job
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/prometheus.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true
+
+- name: Deploy Grafana
+  block:
+    - name: Template grafana job
+      ansible.builtin.template:
+        src: grafana.nomad.j2
+        dest: "{{ nomad_jobs_dir }}/grafana.nomad"
+      become: yes
+
+    - name: Run grafana job
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/grafana.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true

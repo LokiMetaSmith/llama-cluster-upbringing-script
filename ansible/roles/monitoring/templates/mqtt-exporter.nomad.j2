@@ -1,0 +1,48 @@
+job "mqtt-exporter" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "mqtt-exporter" {
+    count = 1
+
+    network {
+      port "metrics" {
+        to = 9000
+      }
+    }
+
+    task "mqtt-exporter" {
+      driver = "docker"
+
+      config {
+        image = "kpetremann/mqtt-exporter:{{ mqtt_exporter_version }}"
+        ports = ["metrics"]
+      }
+
+      env {
+        MQTT_ADDRESS = "{{ cluster_ip }}"
+        MQTT_PORT = "{{ mqtt_port }}"
+        PROMETHEUS_PORT = "9000"
+        # Optional: MQTT_TOPIC_IGNORED, etc.
+      }
+
+      resources {
+        cpu    = 50
+        memory = 64
+      }
+
+      service {
+        name = "mqtt-exporter"
+        port = "metrics"
+        tags = ["metrics"]
+
+        check {
+          type     = "http"
+          path     = "/metrics"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}

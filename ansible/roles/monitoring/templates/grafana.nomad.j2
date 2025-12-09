@@ -1,0 +1,92 @@
+job "grafana" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "grafana" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 3000
+      }
+    }
+
+    task "grafana" {
+      driver = "docker"
+
+      config {
+        image = "grafana/grafana:{{ grafana_version }}"
+        ports = ["http"]
+      }
+
+      env {
+        GF_SECURITY_ADMIN_PASSWORD = "{{ grafana_admin_password | default('admin') }}"
+        GF_USERS_ALLOW_SIGN_UP = "false"
+        # Provisioning paths
+        GF_PATHS_PROVISIONING = "/local/provisioning"
+      }
+
+      template {
+        data = <<EOF
+{{ lookup('template', 'datasource.yaml.j2') }}
+EOF
+        destination = "local/provisioning/datasources/datasource.yaml"
+      }
+
+      template {
+        data = <<EOF
+{{ lookup('template', 'dashboards.yaml.j2') }}
+EOF
+        destination = "local/provisioning/dashboards/dashboards.yaml"
+      }
+
+      artifact {
+        source = "http://{{ cluster_ip }}:{{ nomad_http_port }}/v1/alloc/{{ env "NOMAD_ALLOC_ID" }}/fs/local/dashboards"
+        destination = "local/dashboards"
+        mode = "dir"
+        # This artifact trick doesn't work well because we can't self-reference easily before starting.
+        # Instead, we should mount the dashboards directory from the host or embed them.
+        # Given we are generating them in ansible on the host, we should use a host_volume or just `template` them if they are small.
+        # But dashboards are large JSONs.
+        # Better approach: Use `template` to write the JSON files into `local/dashboards/`.
+        # But we need to get the JSON content into the template.
+      }
+
+      # Re-thinking dashboard delivery:
+      # We will write the dashboard JSON files to a directory on the host using Ansible.
+      # Then mount that directory into the container.
+      # The `monitoring` role will ensure `/opt/nomad/volumes/grafana/dashboards` exists and has the JSONs.
+      # Then we map it.
+
+      volume_mount {
+        volume      = "grafana-dashboards"
+        destination = "/local/dashboards"
+        read_only   = true
+      }
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+
+      service {
+        name = "grafana"
+        port = "http"
+        tags = ["urlprefix-/"]
+
+        check {
+          type     = "http"
+          path     = "/api/health"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+
+    volume "grafana-dashboards" {
+      type      = "host"
+      source    = "grafana-dashboards"
+      read_only = true
+    }
+  }
+}

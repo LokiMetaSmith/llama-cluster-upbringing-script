@@ -1,0 +1,55 @@
+job "prometheus" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "prometheus" {
+    count = 1
+
+    network {
+      port "http" {
+        static = {{ prometheus_port }}
+      }
+    }
+
+    task "prometheus" {
+      driver = "docker"
+
+      config {
+        image = "prom/prometheus:v{{ prometheus_version }}"
+        ports = ["http"]
+        args = [
+          "--config.file=/local/prometheus.yml",
+          "--storage.tsdb.path=/prometheus",
+          "--web.console.libraries=/usr/share/prometheus/console_libraries",
+          "--web.console.templates=/usr/share/prometheus/consoles"
+        ]
+      }
+
+      template {
+        data = <<EOF
+{{ lookup('template', 'prometheus.yml.j2') }}
+EOF
+        destination = "local/prometheus.yml"
+        change_mode = "restart"
+      }
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+
+      service {
+        name = "prometheus"
+        port = "http"
+        tags = ["urlprefix-/prometheus", "metrics"]
+
+        check {
+          type     = "http"
+          path     = "/-/healthy"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}

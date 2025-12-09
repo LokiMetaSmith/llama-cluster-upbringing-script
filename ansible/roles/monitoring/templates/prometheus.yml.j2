@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'nomad'
+    consul_sd_configs:
+      - server: '{{ cluster_ip }}:{{ consul_http_port }}'
+        services: ['nomad-client', 'nomad']
+    relabel_configs:
+      - source_labels: ['__meta_consul_tags']
+        regex: '(.*)http(.*)'
+        action: keep
+      - source_labels: ['__meta_consul_service_metadata_http_addr']
+        target_label: '__address__'
+        regex: '(.*)'
+        replacement: '$1'
+    metrics_path: /v1/metrics
+    params:
+      format: ['prometheus']
+
+  - job_name: 'consul'
+    consul_sd_configs:
+      - server: '{{ cluster_ip }}:{{ consul_http_port }}'
+        services: ['consul']
+    metrics_path: /v1/agent/metrics
+    params:
+      format: ['prometheus']
+
+  - job_name: 'node-exporter'
+    consul_sd_configs:
+      - server: '{{ cluster_ip }}:{{ consul_http_port }}'
+        services: ['node-exporter']
+
+  - job_name: 'mqtt-exporter'
+    consul_sd_configs:
+      - server: '{{ cluster_ip }}:{{ consul_http_port }}'
+        services: ['mqtt-exporter']
