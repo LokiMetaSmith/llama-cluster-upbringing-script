@@ -4,7 +4,7 @@ set -e
 echo "Starting World Model Service Debug..."
 
 CONTAINER_NAME="world-model-debug"
-IMAGE_NAME="world-model-service:latest"
+IMAGE_NAME="world-model-service:local"
 DEBUG_PORT=12345
 
 MQTT_CONTAINER_NAME="world-model-debug-mqtt"
