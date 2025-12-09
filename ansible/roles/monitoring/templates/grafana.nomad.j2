@@ -1,0 +1,81 @@
+job "grafana" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "grafana" {
+    count = 1
+
+    # Ensure Grafana runs on the node where dashboards are provisioned
+    # We use a unique constraint on the hostname matching the inventory hostname (controller node)
+    constraint {
+      attribute = "${attr.unique.hostname}"
+      value     = "{{ inventory_hostname }}"
+    }
+
+    network {
+      port "http" {
+        static = {{ grafana_port }}
+      }
+    }
+
+    task "grafana" {
+      driver = "docker"
+
+      config {
+        image = "grafana/grafana:{{ grafana_version }}"
+        ports = ["http"]
+      }
+
+      env {
+        GF_SECURITY_ADMIN_PASSWORD = "{{ grafana_admin_password | default('admin') }}"
+        GF_USERS_ALLOW_SIGN_UP = "false"
+        # Provisioning paths
+        GF_PATHS_PROVISIONING = "/local/provisioning"
+      }
+
+      template {
+        data = <<EOF
+{{ lookup('template', 'datasource.yaml.j2') }}
+EOF
+        destination = "local/provisioning/datasources/datasource.yaml"
+      }
+
+      template {
+        data = <<EOF
+{{ lookup('template', 'dashboards.yaml.j2') }}
+EOF
+        destination = "local/provisioning/dashboards/dashboards.yaml"
+      }
+
+      # Mount the dashboard directory from the host directly
+      # This avoids the circular dependency of needing a host_volume defined in client.hcl (which requires directory existence + restart)
+      mounts = [
+          {
+              type = "bind"
+              target = "/local/dashboards"
+              source = "{{ nomad_volumes_dir }}/grafana/dashboards"
+              readonly = true
+          }
+      ]
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+
+      service {
+        name = "grafana"
+        port = "http"
+        tags = ["urlprefix-/"]
+
+        check {
+          type     = "http"
+          path     = "/api/health"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+
+  }
+}

@@ -1,0 +1,70 @@
+job "node-exporter" {
+  datacenters = ["dc1"]
+  type        = "system"
+
+  group "node-exporter" {
+    network {
+      port "metrics" {
+        static = {{ node_exporter_port }}
+      }
+    }
+
+    task "node-exporter" {
+      driver = "docker"
+
+      config {
+        image = "prom/node-exporter:v{{ node_exporter_version }}"
+        args = [
+          "--path.procfs=/host/proc",
+          "--path.sysfs=/host/sys",
+          "--path.rootfs=/host/root",
+          "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+        ]
+
+        # We need pid="host" to get meaningful metrics, but Nomad docker driver support varies.
+        # Usually mounting paths is enough for basic metrics.
+        # But for network metrics of the host, we might need network_mode = "host".
+        network_mode = "host"
+
+        mounts = [
+            {
+                type = "bind"
+                target = "/host/proc"
+                source = "/proc"
+                readonly = true
+            },
+            {
+                type = "bind"
+                target = "/host/sys"
+                source = "/sys"
+                readonly = true
+            },
+            {
+                type = "bind"
+                target = "/host/root"
+                source = "/"
+                readonly = true
+            }
+        ]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 64
+      }
+
+      service {
+        name = "node-exporter"
+        port = "metrics"
+        tags = ["metrics"]
+
+        check {
+          type     = "http"
+          path     = "/metrics"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}
