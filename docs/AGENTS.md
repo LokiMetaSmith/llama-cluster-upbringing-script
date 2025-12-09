@@ -47,17 +47,22 @@ The following tools are available:
 - **`git`**: Interacts with Git repositories.
 - **`orchestrator`**: Dispatches high-priority, complex jobs to the cluster.
 - **`llxprt_code`**: A specialized tool for code-related tasks.
+- **`council`**: Convenes a council of AI experts to deliberate on a query.
+- **`swarm`**: Spawns multiple worker agents to perform tasks in parallel.
+- **`project_mapper`**: Scans the codebase to generate a project structure map.
+- **`planner`**: Plans complex tasks and executes them using the SwarmTool.
+- **`file_editor`**: Reads, writes, and patches files in the codebase.
+- **`archivist`**: Performs deep research on the agent's long-term memory.
 
 ### Configuration and Customization
 
-The modular design makes the system highly extensible and easy to adapt to new tasks and domains. The personality, instructions, and capabilities of each agent are defined in simple text files and YAML configuration.
+The modular design makes the system highly extensible and easy to adapt to new tasks and domains. The system configuration is primarily handled through YAML files.
 
 You can easily create new experts by following these steps:
 
-1. **Add a new prompt file** to the `ansible/roles/pipecatapp/files/prompts/` directory (e.g., `legal_expert.txt`).
-2. **Define a new model list** for it in `group_vars/models.yaml` under the `expert_models` dictionary.
-3. **Add the new expert's name** to the `experts` list in `group_vars/all.yaml`.
-4. The ansible playbooks will automatically deploy a new service for your expert.
+1. **Define a new model list** for it in `group_vars/models.yaml` under the `expert_models` dictionary.
+2. **Add the new expert's name** to the `experts` list in `group_vars/all.yaml`.
+3. The ansible playbooks will automatically deploy a new service for your expert.
 
 ---
 

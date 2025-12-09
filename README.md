@@ -109,7 +109,7 @@ This cluster is designed for resilience and scalability. As your needs grow, you
 2. **Run the promotion playbook:**
 
    ```bash
-   ansible-playbook promote_controller.yaml
+   ansible-playbook playbooks/promote_controller.yaml
    ```
 
 3. **Enter the hostname:** You will be prompted to enter the exact hostname of the worker node you want to promote (e.g., `worker1`).
@@ -154,6 +154,12 @@ The agent can use tools to perform actions and gather information. The `TwinServ
 - **Final Answer (`final_answer`)**: A tool to provide a final answer to the user.
 - **Shell (`shell`)**: Executes shell commands.
 - **Prompt Improver (`prompt_improver`)**: A tool for improving prompts.
+- **Council (`council`)**: Convenes a council of AI experts to deliberate on a query.
+- **Swarm (`swarm`)**: Spawns multiple worker agents to perform tasks in parallel.
+- **Project Mapper (`project_mapper`)**: Scans the codebase to generate a project structure map.
+- **Planner (`planner`)**: Plans complex tasks and executes them using the SwarmTool.
+- **File Editor (`file_editor`)**: Reads, writes, and patches files in the codebase.
+- **Archivist (`archivist`)**: Performs deep research on the agent's long-term memory.
 - **Summarizer (`summarizer`)**: Summarizes conversation history (enabled via config).
 
 ### 6.3. Mixture of Experts (MoE) Routing
@@ -165,7 +171,7 @@ The agent is designed to function as a "Mixture of Experts." The primary `pipeca
 
 ### 6.4. Configuring Agent Personas
 
-The personality and instructions for the main router agent and each expert agent are defined in simple text files located in the `ansible/roles/pipecatapp/files/prompts/` directory. You can edit these files to customize the behavior of each agent. For example, you can edit `coding_expert.txt` to give it a different programming specialty.
+The personality and instructions for the main router agent are defined in `ansible/roles/pipecatapp/files/prompts/router.txt`. You can edit this file to customize the behavior of the main agent. Expert agents are configured via the `group_vars/models.yaml` file, where you can define the models they use.
 
 ## 7. Interacting with the Agent
 
@@ -249,7 +255,7 @@ The system is designed to be self-bootstrapping. The `bootstrap.sh` script (or t
 If a job has been stopped, or you just want to verify that everything is running as it should be, you now use your new, lightweight playbook. It will skip all the system setup and only manage the Nomad jobs.
 
 ```bash
-ansible-playbook heal_cluster.yaml
+ansible-playbook playbooks/heal_cluster.yaml
 ```
 
 If you make a change to a job file or need to restart the services from a clean state, it's best to purge the old jobs before running the start script again.
@@ -273,12 +279,12 @@ The true power of this architecture is the ability to deploy multiple, specializ
    ```
 
 2. **Deploy the Expert with Ansible:**
-   Use the `deploy_expert.yaml` playbook to render the Nomad job with your custom parameters and launch it. You pass variables on the command line using the `-e` flag.
+   Use the `playbooks/deploy_expert.yaml` playbook to render the Nomad job with your custom parameters and launch it. You pass variables on the command line using the `-e` flag.
 
    - **Example: Deploying a `creative-writing` expert to the `creative` namespace:**
 
      ```bash
-     ansible-playbook deploy_expert.yaml -e "job_name=creative-expert service_name=llama-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
+     ansible-playbook playbooks/deploy_expert.yaml -e "job_name=creative-expert service_name=llama-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
      ```
 
 The `TwinService` in the `pipecatapp` will automatically discover any service registered in Consul with the `llama-api-` prefix and make it available for routing.
@@ -311,7 +317,7 @@ This project includes a web-based dashboard for real-time display and debugging.
 
 A dedicated health check job exists to verify the status of all running LLM experts. This provides a quick way to ensure the entire cluster is operational.
 
-- **Run the check:** `ansible-playbook run_health_check.yaml`
+- **Run the check:** `ansible-playbook playbooks/run_health_check.yaml`
 - **View results:** `nomad job logs health-check`
 - **Manual Test Scripts:** A set of scripts for manual testing of individual components is available in the `tests/scripts/` directory.
 
