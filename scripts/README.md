@@ -53,7 +53,7 @@ To exclude a new file, simply add its full path (from the repository root) to a 
 The following files are currently excluded from linting:
 
 - **`ansible/lint_nomad.yaml`**: Excluded from `yamllint` due to a persistent `no-new-line-at-end-of-file` warning that is difficult to resolve reliably across different environments.
-- **`ansible/jobs/llama-expert.nomad`**: Excluded from `djlint` because the linter incorrectly flags the `http://` URLs used for local Consul communication (Rule `H022`). This is a false positive, as these URLs are internal to the cluster.
+- **`ansible/jobs/expert.nomad.j2`**: Excluded from `djlint` because the linter incorrectly flags the `http://` URLs used for local Consul communication (Rule `H022`). This is a false positive, as these URLs are internal to the cluster.
 
 These exclusions ensure that the linting process can complete successfully while still providing value for the rest of the codebase. They should be revisited periodically to see if updates to the linters or the files themselves can resolve the underlying issues.
 
