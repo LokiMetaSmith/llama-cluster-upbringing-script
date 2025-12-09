@@ -63,6 +63,33 @@
 - [ ] Add the new test to `e2e-tests.yaml`.
 - [ ] Modify `start_services.sh` to include the home assistant job.
 - [ ] Investigate https://github.com/microsoft/agent-lightning as a possible agent improvement method.
+
+## 4. Maintenance & Clean Up
+
+This section tracks identified placeholder files, corrupted binaries, and code that needs to be fixed or removed.
+
+- [ ] **Remove or Implement Empty Handler:**
+  - `ansible/roles/bootstrap_agent/handlers/main.yaml` is currently empty.
+
+- [ ] **Fix Corrupted Model Files:**
+  - The following files are 0 bytes and appear to be corrupted:
+    - `en_US-lessac-medium.onnx`
+    - `chat.prompt.bin`
+    - `bob.prompt.bin`
+
+- [ ] **Fix Corrupted Binaries:**
+  - The following executable files are 0 bytes:
+    - `distributed-llama-repo/dllama`
+    - `distributed-llama-repo/dllama-api`
+
+- [ ] **Refactor Brittle Code:**
+  - `ansible/roles/pipecatapp/files/tools/smol_agent_tool.py`: Contains a TODO about brittle code extraction logic.
+
+- [ ] **Fix Skipped Test:**
+  - `tests/unit/test_home_assistant_template.py`: Test is currently skipped and contains a TODO to re-add it without breaking tests.
+
+- [ ] **Reconcile Stale Artifacts:**
+  - `docker/pipecatapp/app.py` contains code and TODOs (e.g., vision model failover) that are not present in the source `ansible/roles/pipecatapp/files/app.py`. Determine if these changes should be merged or if the artifact should be regenerated.
 - [ ] **Vision Model Failover**: Implement failover or selection logic for vision models (see `ansible/roles/pipecatapp/files/app.py`).
 
 ## Completed History
