@@ -109,16 +109,80 @@
   become: true
   register: nomad_job_template
 
-- name: "World Model Service : Run nomad job"
+- name: "World Model Service : Deploy World Model Job"
   tags:
     - world_model_service
-  ansible.builtin.command:
-    cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/world_model.nomad"
-  #environment:
-    #NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
-  #  NOMAD_ADDR: "http://127.0.0.1:4646"
-  changed_when: true
-  become: no
+  block:
+    - name: "World Model Service : Run nomad job"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/world_model.nomad"
+      changed_when: true
+      become: no
+      register: world_model_job_run
+
+  rescue:
+    - name: "World Model Service : Get World Model job status"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status -verbose world-model-service
+      register: wm_job_status
+      ignore_errors: yes
+      become: no
+
+    - name: "World Model Service : Display World Model job status"
+      ansible.builtin.debug:
+        var: wm_job_status.stdout
+
+    - name: "World Model Service : Get World Model allocations"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job allocs -json world-model-service
+      register: wm_allocs
+      ignore_errors: yes
+      become: no
+
+    - name: "World Model Service : Save World Model allocations to temp file"
+      ansible.builtin.copy:
+        content: "{{ wm_allocs.stdout }}"
+        dest: "/tmp/wm_allocs.json"
+
+    - name: "World Model Service : Extract Allocation ID"
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/wm_allocs.json
+      register: wm_alloc_id
+      ignore_errors: yes
+
+    - name: "World Model Service : Fetch World Model logs (stdout)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs {{ wm_alloc_id.stdout }}"
+      register: wm_logs_stdout
+      ignore_errors: yes
+      become: no
+      when: wm_alloc_id.stdout | length > 0
+
+    - name: "World Model Service : Display World Model logs (stdout)"
+      ansible.builtin.debug:
+        var: wm_logs_stdout.stdout
+      when: wm_logs_stdout is defined
+
+    - name: "World Model Service : Fetch World Model logs (stderr)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ wm_alloc_id.stdout }}"
+      register: wm_logs_stderr
+      ignore_errors: yes
+      become: no
+      when: wm_alloc_id.stdout | length > 0
+
+    - name: "World Model Service : Display World Model logs (stderr)"
+      ansible.builtin.debug:
+        var: wm_logs_stderr.stdout
+      when: wm_logs_stderr is defined
+
+    - name: "World Model Service : Clean up temp file"
+      ansible.builtin.file:
+        path: "/tmp/wm_allocs.json"
+        state: absent
+
+    - name: "World Model Service : Fail after debugging"
+      ansible.builtin.fail:
+        msg: "World Model job failed to start. See logs above."
 
 - name: "World Model Service : Deploy llamacpp-batch.nomad job"
   tags:
