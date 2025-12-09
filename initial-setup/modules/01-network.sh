@@ -33,6 +33,18 @@ log "  - LAN (Cluster): $CLUSTER_IP"
 
 # --- Configure Interfaces ---
 
+# Helper function to add runtime IP safely
+add_runtime_ip() {
+    local ip_cidr="$1"
+    local dev="$2"
+    log "Attempting runtime configuration: ip addr add $ip_cidr dev $dev"
+    if ip addr show dev "$dev" | grep -q "$CLUSTER_IP"; then
+         log "IP $CLUSTER_IP is already assigned to $dev."
+    else
+         ip addr add "$ip_cidr" dev "$dev" || log "Warning: Failed to add IP address."
+    fi
+}
+
 # Check if NetworkManager is active
 if command -v nmcli >/dev/null && nmcli general status | grep -q "connected"; then
     log "NetworkManager detected. Using nmcli to configure secondary IP..."
@@ -47,20 +59,17 @@ if command -v nmcli >/dev/null && nmcli general status | grep -q "connected"; th
         CURRENT_IPV4=$(nmcli -g ipv4.addresses connection show "$CON_NAME")
         if [[ "$CURRENT_IPV4" != *"$CLUSTER_IP"* ]]; then
              # We want to ADD the IP, not replace.
-             # Note: +ipv4.addresses works for adding.
              nmcli connection modify "$CON_NAME" +ipv4.addresses "$CLUSTER_IP/$CLUSTER_NETMASK"
 
-             # Reapply the connection to take effect (might briefly drop connection, but safer than restarting service)
-             # However, bringing up the connection again might be disruptive.
-             # Let's try to just bring it up which re-applies changes.
+             # Reapply the connection
              nmcli connection up "$CON_NAME"
              log "Secondary IP $CLUSTER_IP added to connection '$CON_NAME'."
         else
              log "IP $CLUSTER_IP already configured on '$CON_NAME'."
         fi
     else
-        log "No active NetworkManager connection found for $INTERFACE. Attempting runtime configuration..."
-        ip addr add "$CLUSTER_IP/$CLUSTER_NETMASK" dev "$INTERFACE" || log "Failed to add IP address."
+        log "No active NetworkManager connection found for $INTERFACE."
+        add_runtime_ip "$CLUSTER_IP/$CLUSTER_NETMASK" "$INTERFACE"
     fi
 
 elif [ -d "/etc/network/interfaces.d" ] || [ -f "/etc/network/interfaces" ]; then
@@ -70,8 +79,7 @@ elif [ -d "/etc/network/interfaces.d" ] || [ -f "/etc/network/interfaces" ]; the
 
     if [[ "$INTERFACE" == wl* ]]; then
         log "Wireless interface detected ($INTERFACE). Skipping /etc/network/interfaces overwrite to prevent breaking WiFi."
-        log "Adding runtime IP alias instead..."
-        ip addr add "$CLUSTER_IP/$CLUSTER_NETMASK" dev "$INTERFACE" || true
+        add_runtime_ip "$CLUSTER_IP/$CLUSTER_NETMASK" "$INTERFACE"
     else
         log "Configuring /etc/network/interfaces for wired interface..."
         cat > /etc/network/interfaces <<EOL
@@ -92,17 +100,30 @@ iface $INTERFACE:0 inet static
 EOL
         log "Network configuration written to /etc/network/interfaces."
 
+        # We wrote to a config file, so we really should try to restart the service to apply it.
+        # But we only do this in the 'ifupdown' block.
         log "Restarting networking service..."
         if systemctl list-units --type=service | grep -q 'networking.service'; then
             systemctl restart networking
         else
-            log "networking.service not found. You may need to manually restart networking."
+            log "networking.service not found. Manual restart may be required."
         fi
     fi
 else
-    # Universal fallback
+    # Universal fallback (NixOS, or others)
     log "No supported network manager detected (NetworkManager or ifupdown). Using runtime configuration."
-    ip addr add "$CLUSTER_IP/$CLUSTER_NETMASK" dev "$INTERFACE" || true
+    add_runtime_ip "$CLUSTER_IP/$CLUSTER_NETMASK" "$INTERFACE"
 fi
+
+# --- Final Service Restart Attempt (Generic) ---
+# This ensures that if we made changes (or if the system state is inconsistent),
+# we try to poke relevant services, ignoring failures if they don't exist.
+log "Ensuring network services are in consistent state..."
+for service in networking NetworkManager systemd-networkd; do
+    if systemctl is-active --quiet "$service"; then
+        log "Restarting active service: $service"
+        systemctl restart "$service" || true
+    fi
+done
 
 log "Network configuration complete."
