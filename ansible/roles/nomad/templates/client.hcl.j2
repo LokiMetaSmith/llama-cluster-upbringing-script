@@ -84,10 +84,5 @@ client {
     path      = "{{ nomad_volumes_dir }}/world_model_storage"
     read_only = false
   }
-
-  host_volume "grafana-dashboards" {
-    path      = "{{ nomad_volumes_dir }}/grafana/dashboards"
-    read_only = true
-  }
   
 }

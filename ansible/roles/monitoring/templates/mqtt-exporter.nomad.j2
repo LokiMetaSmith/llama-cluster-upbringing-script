@@ -21,7 +21,7 @@ job "mqtt-exporter" {
 
       env {
         MQTT_ADDRESS = "{{ cluster_ip }}"
-        MQTT_PORT = "{{ mqtt_port }}"
+        MQTT_PORT = "{{ mqtt_port | default(1883) }}"
         PROMETHEUS_PORT = "9000"
         # Optional: MQTT_TOPIC_IGNORED, etc.
       }

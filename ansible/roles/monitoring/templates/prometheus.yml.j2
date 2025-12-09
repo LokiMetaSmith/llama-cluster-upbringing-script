@@ -11,10 +11,6 @@ scrape_configs:
       - source_labels: ['__meta_consul_tags']
         regex: '(.*)http(.*)'
         action: keep
-      - source_labels: ['__meta_consul_service_metadata_http_addr']
-        target_label: '__address__'
-        regex: '(.*)'
-        replacement: '$1'
     metrics_path: /v1/metrics
     params:
       format: ['prometheus']

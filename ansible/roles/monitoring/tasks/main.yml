@@ -20,10 +20,10 @@
     mode: '0644'
   become: yes
 
-# Consul Dashboard (ID 12049 is common)
+# Consul Dashboard (ID 13627 is for Native Metrics)
 - name: Download Consul Dashboard
   ansible.builtin.get_url:
-    url: https://grafana.com/api/dashboards/12049/revisions/1/download
+    url: https://grafana.com/api/dashboards/13627/revisions/1/download
     dest: "{{ nomad_volumes_dir }}/grafana/dashboards/consul.json"
     mode: '0644'
   become: yes

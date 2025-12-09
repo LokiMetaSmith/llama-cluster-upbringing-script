@@ -4,5 +4,5 @@ datasources:
   - name: Prometheus
     type: prometheus
     access: proxy
-    url: http://{{ cluster_ip }}:{{ prometheus_port }}
+    url: http://{{ cluster_ip }}:{{ prometheus_port }}/prometheus
     isDefault: true
