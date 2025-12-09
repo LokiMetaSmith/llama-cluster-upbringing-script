@@ -24,5 +24,5 @@ This agent can delegate tasks to specialized sub-agents to handle specific aspec
 
 ## Backing LLM Model
 
-* **Model:** `claude-3-opus`
+- **Model:** `claude-3-opus`
 - **Reasoning:** This agent needs a powerful model to understand the nuances of code quality, identify potential issues, and provide constructive feedback. The ability to reason about code and its implications is crucial for this role.

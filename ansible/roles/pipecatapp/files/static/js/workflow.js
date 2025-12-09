@@ -6,7 +6,12 @@ document.addEventListener('DOMContentLoaded', async function () {
                 selector: 'node',
                 style: {
                     'background-color': '#666',
-                    'label': 'data(id)'
+                    'label': 'data(id)',
+                    'text-valign': 'center',
+                    'text-halign': 'center',
+                    'color': '#fff',
+                    'text-outline-width': 2,
+                    'text-outline-color': '#666'
                 }
             },
             {
@@ -25,8 +30,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     'background-color': '#28a745', // Green for executed nodes
                     'line-color': '#28a745',
                     'target-arrow-color': '#28a745',
-                    'color': '#fff'
-
+                    'text-outline-color': '#28a745'
                 }
             },
             {
@@ -35,7 +39,17 @@ document.addEventListener('DOMContentLoaded', async function () {
                     'background-color': '#ffc107', // Yellow for gated nodes
                     'border-color': '#ffc107',
                     'border-width': 2,
-                    'border-style': 'solid'
+                    'border-style': 'solid',
+                    'text-outline-color': '#ffc107'
+                }
+            },
+            {
+                selector: '.failed',
+                style: {
+                    'background-color': '#dc3545', // Red for failed nodes (if we can detect them)
+                    'line-color': '#dc3545',
+                    'target-arrow-color': '#dc3545',
+                    'text-outline-color': '#dc3545'
                 }
             }
         ],
@@ -59,17 +73,49 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
-
     const approvalContainer = document.getElementById('approval-container');
+    const historyList = document.getElementById('history-list');
+    const viewTitle = document.getElementById('view-title');
+    const nodeModal = document.getElementById('nodeModal');
+    const nodeOutputContent = document.getElementById('node-output-content');
+    const closeModalSpan = document.getElementsByClassName("close")[0];
 
-    try {
-        const response = await fetch('/api/workflows/definition/default_agent_loop.yaml');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+    let isLive = true;
+    let pollingInterval = null;
+    let currentWorkflowDefinition = null;
+    let currentNodeOutputs = {};
+
+    // --- Workflow Loading and Rendering ---
+
+    async function loadWorkflowDefinition(workflowName) {
+        if (currentWorkflowDefinition && currentWorkflowDefinition.name === workflowName) {
+            return; // Already loaded
         }
-        const workflow = await response.json();
 
-        // Add nodes to the graph
+        try {
+            // Assuming workflowName corresponds to a file in workflows/ dir, accessible via API
+            // The API might expect just the filename.
+            const response = await fetch(`/api/workflows/definition/${workflowName}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const workflow = await response.json();
+            currentWorkflowDefinition = { name: workflowName, ...workflow };
+            renderGraph(workflow);
+        } catch (error) {
+            console.error('Error loading workflow definition:', error);
+            // Fallback to default if not found
+             if (workflowName !== 'default_agent_loop.yaml') {
+                 console.log("Falling back to default_agent_loop.yaml");
+                 await loadWorkflowDefinition('default_agent_loop.yaml');
+             }
+        }
+    }
+
+    function renderGraph(workflow) {
+        cy.elements().remove(); // Clear existing graph
+
+        // Add nodes
         workflow.nodes.forEach(node => {
             cy.add({
                 group: 'nodes',
@@ -77,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             });
         });
 
-        // Add edges based on connections
+        // Add edges
         workflow.nodes.forEach(node => {
             if (node.inputs) {
                 node.inputs.forEach(input => {
@@ -89,9 +135,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                                 source: input.connection.from_node,
                                 target: node.id
                             }
-
                         });
                     }
+                     // Handle nested inputs
                     if (input.value && typeof input.value === 'object') {
                         const findConnections = (obj, targetNodeId) => {
                             for (const key in obj) {
@@ -120,77 +166,183 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
 
         cy.layout({ name: 'cose' }).run();
+    }
 
-        // Start polling for active workflow state
-        setInterval(async () => {
-            try {
-                const activeResponse = await fetch('/api/workflows/active');
-                const activeWorkflows = await activeResponse.json();
+    function updateGraphState(nodeOutputs) {
+        currentNodeOutputs = nodeOutputs;
+        const executedNodeIds = Object.keys(nodeOutputs);
 
-                // For simplicity, we'll just look at the first active workflow
-                const workflowIds = Object.keys(activeWorkflows);
-                if (workflowIds.length > 0) {
-                    const activeState = activeWorkflows[workflowIds[0]];
-                    const executedNodeIds = Object.keys(activeState.node_outputs);
+        cy.nodes().removeClass('executed gated failed');
 
-                    // Reset all nodes to default style
-                    cy.nodes().removeClass('executed');
+        executedNodeIds.forEach(nodeId => {
+            cy.getElementById(nodeId).addClass('executed');
+        });
 
-                    // Highlight executed nodes
-                    executedNodeIds.forEach(nodeId => {
-                        cy.getElementById(nodeId).addClass('executed');
-                    });
-                } else {
-                    // No active workflows, reset all styles
-                    cy.nodes().removeClass('executed');
-                }
-            } catch (error) {
-                console.error('Error polling for active workflows:', error);
-            }
-        }, 2000); // Poll every 2 seconds
+        // Handling gate nodes or failures would go here if specific metadata is available
+    }
+
+    // --- Modal Logic ---
+
+    cy.on('tap', 'node', function(evt){
+        const node = evt.target;
+        const nodeId = node.id();
+        const output = currentNodeOutputs[nodeId];
         
-        setInterval(async () => {
+        if (output !== undefined) {
+             nodeOutputContent.textContent = JSON.stringify(output, null, 2);
+             nodeModal.style.display = "block";
+        }
+    });
+
+    closeModalSpan.onclick = function() {
+        nodeModal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        if (event.target == nodeModal) {
+             nodeModal.style.display = "none";
+        }
+    }
+
+    // --- History Logic ---
+
+    async function fetchHistory() {
+        try {
+            const response = await fetch('/api/workflows/history?limit=50');
+            if (response.ok) {
+                const history = await response.json();
+                renderHistoryList(history);
+            }
+        } catch (error) {
+            console.error('Error fetching history:', error);
+        }
+    }
+
+    function renderHistoryList(history) {
+        historyList.innerHTML = '';
+        history.forEach(run => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            li.dataset.runId = run.id; // Add data attribute for easier selection
+            const date = new Date(run.start_time * 1000).toLocaleString();
+            li.innerHTML = `
+                <div><strong>${run.workflow_name}</strong></div>
+                <div class="history-meta">
+                    ${date}<br>
+                    Status: <span class="status-${run.status.toLowerCase()}">${run.status}</span>
+                </div>
+            `;
+            li.onclick = () => loadHistoricalRun(run.id);
+            historyList.appendChild(li);
+        });
+    }
+
+    async function loadHistoricalRun(runId) {
+        stopPolling();
+        isLive = false;
+        viewTitle.textContent = `Workflow Visualization (Run: ${runId})`;
+        document.querySelectorAll('.history-item').forEach(el => {
+            el.classList.remove('active');
+            if (el.dataset.runId === runId) {
+                el.classList.add('active');
+            }
+        });
+
+        try {
+            const response = await fetch(`/api/workflows/history/${runId}`);
+            if (response.ok) {
+                const runData = await response.json();
+                // Ensure correct workflow definition is loaded
+                await loadWorkflowDefinition(runData.workflow_name);
+
+                // Extract node outputs from final_state
+                const nodeOutputs = runData.final_state.node_outputs || {};
+                updateGraphState(nodeOutputs);
+            }
+        } catch (error) {
+            console.error('Error loading historical run:', error);
+        }
+    }
+
+    // --- Live Mode Logic ---
+
+    async function pollActiveWorkflows() {
+        try {
             const activeResponse = await fetch('/api/workflows/active');
             const activeWorkflows = await activeResponse.json();
-
             const workflowIds = Object.keys(activeWorkflows);
+
             if (workflowIds.length > 0) {
+                // Focus on the first active workflow
                 const requestId = workflowIds[0];
                 const activeState = activeWorkflows[requestId];
+
+                // Assuming default workflow for active ones for now, or fetch if state has name
+                // Ideally activeState should include workflow_name
+                // For now, assume default_agent_loop.yaml if not specified
+                await loadWorkflowDefinition('default_agent_loop.yaml');
+
+                updateGraphState(activeState.node_outputs);
+
+                // Check for gates
                 const executedNodeIds = Object.keys(activeState.node_outputs);
-
-                cy.nodes().removeClass('executed gated');
-
-                executedNodeIds.forEach(nodeId => cy.getElementById(nodeId).addClass('executed'));
-
-                // Check for a gated node
                 const lastNodeId = executedNodeIds[executedNodeIds.length - 1];
-                const lastNodeDef = workflow.nodes.find(n => n.id === lastNodeId);
+                // Simple heuristic: if last executed node is a GateNode, it might be waiting
+                // Better would be to have explicit "status" in activeState
+                 const lastNodeDef = currentWorkflowDefinition.nodes.find(n => n.id === lastNodeId);
 
                 if (lastNodeDef && lastNodeDef.type === 'GateNode') {
-                    cy.getElementById(lastNodeId).addClass('gated');
-                    approvalContainer.innerHTML = `<button id="approve-btn" data-request-id="${requestId}">Approve</button>`;
-
-                    document.getElementById('approve-btn').addEventListener('click', async (e) => {
-                        const reqId = e.target.dataset.requestId;
-                        await fetch('/api/gate/approve', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ request_id: reqId })
+                     cy.getElementById(lastNodeId).addClass('gated');
+                     if (approvalContainer.innerHTML === '') {
+                        approvalContainer.innerHTML = `<button id="approve-btn" data-request-id="${requestId}">Approve</button>`;
+                        document.getElementById('approve-btn').addEventListener('click', async (e) => {
+                            const reqId = e.target.dataset.requestId;
+                            await fetch('/api/gate/approve', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({ request_id: reqId })
+                            });
+                            approvalContainer.innerHTML = '';
                         });
-                        approvalContainer.innerHTML = ''; // Clear button
-                    });
+                     }
                 } else {
                     approvalContainer.innerHTML = '';
                 }
-            } else {
-                cy.nodes().removeClass('executed gated');
-                approvalContainer.innerHTML = '';
-            }
-        }, 2000);
 
-    } catch (error) {
-        console.error('Error fetching or rendering workflow:', error);
-        document.getElementById('cy').textContent = 'Error loading workflow definition.';
+            } else {
+                 // No active workflow
+                 // Optionally clear graph or show empty state
+            }
+        } catch (error) {
+            console.error('Error polling active workflows:', error);
+        }
     }
+
+    function startPolling() {
+        if (!pollingInterval) {
+            pollingInterval = setInterval(pollActiveWorkflows, 2000);
+            viewTitle.textContent = "Workflow Visualization (Live)";
+            isLive = true;
+            approvalContainer.innerHTML = '';
+            // Load default immediately
+            loadWorkflowDefinition('default_agent_loop.yaml');
+        }
+    }
+
+    function stopPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+    }
+
+    // --- Initialization ---
+
+    document.getElementById('live-btn').addEventListener('click', startPolling);
+    document.getElementById('refresh-history-btn').addEventListener('click', fetchHistory);
+
+    // Initial load
+    await loadWorkflowDefinition('default_agent_loop.yaml');
+    startPolling();
+    fetchHistory();
 });

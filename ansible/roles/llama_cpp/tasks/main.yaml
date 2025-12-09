@@ -51,14 +51,14 @@
   block:
     - name: Create build directory for llama.cpp
       ansible.builtin.file:
-        path: /opt/llama.cpp-build
+        path: "{{ llama_cpp_build_dir }}"
         state: directory
         mode: '0755'
 
     - name: Clone llama.cpp repository
       ansible.builtin.git:
         repo: 'https://github.com/ggml-org/llama.cpp.git'
-        dest: /opt/llama.cpp-build
+        dest: "{{ llama_cpp_build_dir }}"
         version: "{{ latest_commit_hash }}"
         update: yes
 
@@ -66,19 +66,19 @@
       ansible.builtin.command:
         cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON -DBUILD_SHARED_LIBS=ON
       args:
-        chdir: /opt/llama.cpp-build
-        creates: /opt/llama.cpp-build/build/Makefile
+        chdir: "{{ llama_cpp_build_dir }}"
+        creates: "{{ llama_cpp_build_dir }}/build/Makefile"
 
     - name: Build llama.cpp
       ansible.builtin.command:
         cmd: cmake --build build --config Release -j 2
       args:
-        chdir: /opt/llama.cpp-build
-        creates: /opt/llama.cpp-build/build/bin/llama-server
+        chdir: "{{ llama_cpp_build_dir }}"
+        creates: "{{ llama_cpp_build_dir }}/build/bin/llama-server"
 
     - name: Find all compiled binaries and libraries
       ansible.builtin.find:
-        paths: "/opt/llama.cpp-build/build/bin"
+        paths: "{{ llama_cpp_build_dir }}/build/bin"
         patterns: '*'
         file_type: any
       register: llama_artifacts
@@ -111,7 +111,7 @@
 
     - name: Clean up llama.cpp build directory
       ansible.builtin.file:
-        path: /opt/llama.cpp-build
+        path: "{{ llama_cpp_build_dir }}"
         state: absent
   when: build_llama_cpp
 
@@ -134,7 +134,7 @@
   changed_when: "'Running' in rpc_job_stop_status.stdout"
   failed_when: false # Don't fail if the job doesn't exist
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
   when: build_llama_cpp
 
 - name: Stop and purge any existing expert jobs if llama.cpp was rebuilt
@@ -145,7 +145,7 @@
   changed_when: "'Running' in expert_job_stop_status.stdout"
   failed_when: false # Don't fail if the job doesn't exist
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
   when: build_llama_cpp
 
 - name: Run model benchmarking if enabled
@@ -171,7 +171,7 @@
         all_models_to_benchmark: "{{ expert_models.values() | sum(start=[]) | unique(attribute='filename') }}"
 
     - name: Benchmark each available model and record results
-      ansible.builtin.include_tasks: ../../../benchmark_single_model.yaml
+      ansible.builtin.include_tasks: ../../../../playbooks/benchmark_single_model.yaml
       loop: "{{ all_models_to_benchmark }}"
       loop_control:
         loop_var: model_item

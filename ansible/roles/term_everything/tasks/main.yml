@@ -81,7 +81,7 @@
 
     - name: Create tools directory
       ansible.builtin.file:
-        path: /opt/mcp/tools
+        path: "{{ mcp_dir }}/tools"
         state: directory
         mode: "0755"
 
@@ -94,7 +94,7 @@
     - name: Move AppImage to tools directory
       ansible.builtin.copy:
         src: "{{ item.path }}"
-        dest: "/opt/mcp/tools/termeverything.AppImage"
+        dest: "{{ mcp_dir }}/tools/termeverything.AppImage"
         remote_src: yes
         mode: "0755"
       loop: "{{ find_result.files }}"

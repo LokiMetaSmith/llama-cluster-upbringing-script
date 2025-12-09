@@ -94,4 +94,25 @@
           - "'Current pipeline status' in agent_response.json.text or 'No active pipelines' in agent_response.json.text"
         fail_msg: "Agent did not return a valid status report. Response: {{ agent_response.json.text }}"
 
+- name: E2E Project Mapper Tool Test
+  hosts: controller_nodes
+  tasks:
+    - name: Ask the agent to map the project structure
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}:8000/agent/chat"
+        method: POST
+        body_format: json
+        body:
+          text: "Use the project_mapper_tool to map the current directory structure."
+        return_content: yes
+      register: mapper_response
+      retries: 3
+      delay: 5
+
+    - name: Assert that the agent returned a project map
+      ansible.builtin.assert:
+        that:
+          - "'files' in mapper_response.json.text or 'structure' in mapper_response.json.text or 'ansible' in mapper_response.json.text"
+        fail_msg: "Agent did not return a valid project map. Response: {{ mapper_response.json.text }}"
+
 - import_playbook: ../integration/test_home_assistant.yaml

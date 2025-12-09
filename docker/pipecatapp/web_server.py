@@ -1,22 +1,28 @@
 import os
 import json
+import asyncio
 import logging
 import requests
-import asyncio
-from fastapi import FastAPI, WebSocket, Body, Depends
+import yaml
+from fastapi import FastAPI, WebSocket, Body, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict
+from workflow.runner import ActiveWorkflows, OpenGates
 
-from api_keys import get_api_key
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
+app = FastAPI(
+    title="Pipecat Agent API",
+    description="This API exposes endpoints to interact with the Pipecat agent, including real-time communication, status checks, and state management.",
+    version="1.0.0",
+)
+
 # Create queues to communicate between the web server and the TwinService
 approval_queue = asyncio.Queue()
 text_message_queue = asyncio.Queue()
-
 
 class WebSocketManager:
     """Manages active WebSocket connections.
@@ -28,7 +34,6 @@ class WebSocketManager:
     Attributes:
         active_connections (List[WebSocket]): A list of active WebSocket connections.
     """
-
     def __init__(self):
         """Initializes the ConnectionManager."""
         self.active_connections: List[WebSocket] = []
@@ -67,27 +72,13 @@ class WebSocketManager:
         for connection in self.active_connections:
             await connection.send_text(message)
 
-
 manager = WebSocketManager()
 
-app = FastAPI()
-
-# This will be set by the main application
-twin_service_instance = None
-
-# Get the absolute path to the directory containing this script
 script_dir = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.join(script_dir, "static")
 index_html_path = os.path.join(static_dir, "index.html")
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-
-@app.get("/")
-async def get():
-    """Serves the main `index.html` file for the web UI."""
-    with open(index_html_path) as f:
-        return HTMLResponse(f.read())
 
 
 @app.websocket("/ws")
@@ -97,7 +88,7 @@ async def websocket_endpoint(websocket: WebSocket):
     This endpoint manages the lifecycle of a WebSocket connection. It listens
     for incoming messages and, if a message is an "approval_response", it
     puts the message onto the `approval_queue` to be processed by the
-    `TwinService`.
+    `TwinService`. It also handles user text messages.
 
     Args:
         websocket (WebSocket): The client's WebSocket connection.
@@ -106,7 +97,6 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            # Assuming the data is JSON
             message = json.loads(data)
             if message.get("type") == "approval_response":
                 await approval_queue.put(message)
@@ -116,11 +106,36 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-@app.get("/api/status", dependencies=[Depends(get_api_key)])
-async def get_status():
+@app.post("/internal/chat", summary="Process Internal Chat Message", description="Receives a chat message from an internal service like the MoE Gateway, processes it, and sends the response to a specified callback URL.", tags=["Internal"])
+async def internal_chat(payload: Dict = Body(...)):
+    """
+    Handles a chat message from another internal service.
+    The payload should contain the user's text, a unique request_id,
+    and a response_url where the final agent message should be sent.
+    """
+    await text_message_queue.put(payload)
+    return JSONResponse(status_code=202, content={"message": "Request accepted"})
+
+
+@app.get("/", summary="Serve Web UI", description="Serves the main `index.html` file for the web user interface.", tags=["UI"])
+async def get():
+    """Serves the main `index.html` file for the web UI."""
+    with open(index_html_path) as f:
+        return HTMLResponse(f.read())
+
+@app.get("/workflow", summary="Serve Workflow UI", description="Serves the `workflow.html` file for the workflow visualization UI.", tags=["UI"])
+async def get_workflow_ui():
+    """Serves the workflow visualization UI."""
+    workflow_html_path = os.path.join(static_dir, "workflow.html")
+    with open(workflow_html_path) as f:
+        return HTMLResponse(f.read())
+
+@app.get("/api/status", summary="Get Agent Status", description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks.", tags=["Agent"])
+async def get_status(request: Request):
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
-    if twin_service_instance and hasattr(twin_service_instance, 'tools'):
-        mcp = twin_service_instance.tools.get('mcp')
+    twin_service = request.app.state.twin_service_instance
+    if twin_service and hasattr(twin_service, 'tools'):
+        mcp = twin_service.tools.get('mcp')
         if mcp and hasattr(mcp, 'runner') and mcp.runner:
             tasks = mcp.runner.get_tasks()
             if not tasks:
@@ -134,19 +149,51 @@ async def get_status():
             return {"status": "MCP tool or runner not available."}
     return {"status": "Agent not fully initialized. Please wait..."}
 
-
-@app.get("/health")
-async def get_health():
+@app.get("/health", summary="Health Check", description="Provides a health check endpoint. It returns a 200 OK if the agent is initialized and ready, otherwise a 503 Service Unavailable. This is used by Nomad for service health checks.", tags=["System"])
+async def get_health(request: Request):
     """A health check endpoint that verifies the agent is fully initialized."""
-    if twin_service_instance and twin_service_instance.router_llm:
-        # The presence of the router_llm indicates that the LLM service
-        # has been successfully discovered and the agent is ready.
+    if getattr(request.app.state, "is_ready", False):
         return JSONResponse(content={"status": "ok"})
     else:
-        # Return a 503 Service Unavailable status if the agent is not ready.
-        # This prevents Nomad from marking the allocation as healthy prematurely.
         return JSONResponse(status_code=503, content={"status": "initializing"})
 
+@app.get("/api/workflows/active", response_class=JSONResponse)
+async def get_active_workflows():
+    """Returns a snapshot of the state of all active workflows."""
+    active_workflows = ActiveWorkflows()
+    return active_workflows.get_all_states()
+
+@app.post("/api/gate/approve", response_class=JSONResponse)
+async def approve_gate(payload: Dict = Body(...)):
+    """Approves a paused gate, allowing the workflow to continue."""
+    request_id = payload.get("request_id")
+    if not request_id:
+        raise HTTPException(status_code=400, detail="request_id is required.")
+
+    open_gates = OpenGates()
+    if open_gates.approve(request_id):
+        return {"message": f"Gate for request {request_id} approved."}
+    else:
+        raise HTTPException(status_code=404, detail=f"No open gate found for request {request_id}.")
+
+@app.get("/api/workflows/definition/{workflow_name}", response_class=JSONResponse)
+async def get_workflow_definition(workflow_name: str):
+    """Loads a workflow definition from a YAML file and returns it as JSON."""
+    # Basic security to prevent directory traversal
+    if ".." in workflow_name or not workflow_name.endswith((".yaml", ".yml")):
+        raise HTTPException(status_code=400, detail="Invalid workflow name.")
+
+    workflow_dir = os.path.join(script_dir, "workflows")
+    file_path = os.path.join(workflow_dir, workflow_name)
+
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="Workflow not found.")
+
+    try:
+        with open(file_path, 'r') as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading workflow: {e}")
 
 @app.get("/api/web_uis")
 async def get_web_uis():
@@ -163,15 +210,12 @@ async def get_web_uis():
         web_uis.append({"name": "Consul", "url": f"{consul_url}/ui"})
 
         # 2. Add Nomad UI
-        nomad_service_response = requests.get(
-            f"{consul_url}/v1/catalog/service/nomad")
+        nomad_service_response = requests.get(f"{consul_url}/v1/catalog/service/nomad")
         nomad_service_response.raise_for_status()
         nomad_services = nomad_service_response.json()
         if nomad_services:
-            nomad_address = nomad_services[0].get(
-                "ServiceAddress") or nomad_services[0].get("Address")
-            web_uis.append(
-                {"name": "Nomad", "url": f"http://{nomad_address}:4646"})
+            nomad_address = nomad_services[0].get("ServiceAddress") or nomad_services[0].get("Address")
+            web_uis.append({"name": "Nomad", "url": f"http://{nomad_address}:4646"})
 
         # 3. Discover other HTTP services
         services_response = requests.get(f"{consul_url}/v1/catalog/services")
@@ -182,8 +226,7 @@ async def get_web_uis():
             if service_name in ["nomad", "consul"] or "pipecat" in service_name:
                 continue
 
-            health_response = requests.get(
-                f"{consul_url}/v1/health/service/{service_name}?passing")
+            health_response = requests.get(f"{consul_url}/v1/health/service/{service_name}?passing")
             if health_response.status_code != 200:
                 continue
 
@@ -200,13 +243,10 @@ async def get_web_uis():
             if has_http_check:
                 instance = service_instances[0]
                 service_info = instance.get("Service", {})
-                address = service_info.get(
-                    "Address") or instance.get(
-                    "Node", {}).get("Address")
+                address = service_info.get("Address") or instance.get("Node", {}).get("Address")
                 port = service_info.get("Port")
                 if address and port:
-                    web_uis.append(
-                        {"name": service_name, "url": f"http://{address}:{port}"})
+                    web_uis.append({"name": service_name, "url": f"http://{address}:{port}"})
 
     except requests.RequestException as e:
         print(f"Could not connect to Consul to discover UIs: {e}")
@@ -223,9 +263,8 @@ async def get_web_uis():
 
     return JSONResponse(content=sorted_uis)
 
-
-@app.post("/api/state/save", dependencies=[Depends(get_api_key)])
-async def save_state_endpoint(payload: Dict = Body(...)):
+@app.post("/api/state/save", summary="Save Agent State", description="Saves the agent's current conversation and internal state to a named snapshot.", tags=["Agent"])
+async def save_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}])):
     """API endpoint to save the agent's current state to a named snapshot.
 
     Args:
@@ -236,17 +275,16 @@ async def save_state_endpoint(payload: Dict = Body(...)):
     """
     save_name = payload.get("save_name")
     if not save_name:
-        return JSONResponse(status_code=400,
-                            content={"message": "save_name is required"})
-    if twin_service_instance:
-        result = twin_service_instance.save_state(save_name)
+        return JSONResponse(status_code=400, content={"message": "save_name is required"})
+
+    twin_service = request.app.state.twin_service_instance
+    if twin_service:
+        result = twin_service.save_state(save_name)
         return {"message": result}
-    return JSONResponse(status_code=503, content={
-                        "message": "Agent not fully initialized."})
+    return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
-
-@app.post("/api/state/load", dependencies=[Depends(get_api_key)])
-async def load_state_endpoint(payload: Dict = Body(...)):
+@app.post("/api/state/load", summary="Load Agent State", description="Loads the agent's state from a previously saved snapshot.", tags=["Agent"])
+async def load_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}])):
     """API endpoint to load the agent's state from a named snapshot.
 
     Args:
@@ -257,17 +295,14 @@ async def load_state_endpoint(payload: Dict = Body(...)):
     """
     save_name = payload.get("save_name")
     if not save_name:
-        return JSONResponse(status_code=400,
-                            content={"message": "save_name is required"})
-    if twin_service_instance:
-        result = twin_service_instance.load_state(save_name)
+        return JSONResponse(status_code=400, content={"message": "save_name is required"})
+
+    twin_service = request.app.state.twin_service_instance
+    if twin_service:
+        result = twin_service.load_state(save_name)
         return {"message": result}
-    return JSONResponse(status_code=503, content={
-                        "message": "Agent not fully initialized."})
+    return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
-
-# This is a placeholder for the main application logic
-# that would use this web server.
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

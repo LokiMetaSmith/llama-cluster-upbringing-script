@@ -1,0 +1,26 @@
+- name: Run Cluster-Wide LLM Health Check
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: Render the health check Nomad job
+      ansible.builtin.template:
+        src: ../ansible/jobs/health-check.nomad.j2
+        dest: /tmp/health-check.nomad
+        mode: '0644'
+
+    - name: Run the health check job
+      ansible.builtin.command:
+        cmd: nomad job run /tmp/health-check.nomad
+      register: job_run_result
+      changed_when: "'Evalutaion' in job_run_result.stdout"
+
+    - name: Clean up temporary job file
+      ansible.builtin.file:
+        path: /tmp/health-check.nomad
+        state: absent
+
+    - name: Display instructions to view logs
+      ansible.builtin.debug:
+        msg: "Health check job submitted. View results with 'nomad job logs health-check'"

@@ -1,0 +1,100 @@
+---
+- name: Install system dependencies for Nanochat
+  ansible.builtin.apt:
+    name:
+      - git
+      - python3-venv
+      - python3-pip
+      - cargo
+      - build-essential
+      - python3-dev
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Install uv
+  ansible.builtin.pip:
+    name: uv
+    state: present
+    executable: pip3
+  become: yes
+
+- name: Ensure install directory exists
+  ansible.builtin.file:
+    path: "{{ nanochat_install_dir }}"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+  become: yes
+
+- name: Clone Nanochat repository
+  ansible.builtin.git:
+    repo: "{{ nanochat_repo }}"
+    dest: "{{ nanochat_install_dir }}"
+    version: "{{ nanochat_version }}"
+    force: yes
+  become: yes
+  become_user: "{{ target_user }}"
+  register: nanochat_git_clone
+
+- name: Create virtual environment with uv
+  ansible.builtin.command:
+    cmd: "uv venv {{ nanochat_venv_dir }}"
+    creates: "{{ nanochat_venv_dir }}"
+  args:
+    chdir: "{{ nanochat_install_dir }}"
+  become: yes
+  become_user: "{{ target_user }}"
+
+- name: Install Nanochat dependencies with uv (GPU)
+  ansible.builtin.command:
+    cmd: "uv pip install .[gpu]"
+  args:
+    chdir: "{{ nanochat_install_dir }}"
+  environment:
+    VIRTUAL_ENV: "{{ nanochat_venv_dir }}"
+  become: yes
+  become_user: "{{ target_user }}"
+  when: nanochat_platform == 'gpu'
+
+- name: Install Nanochat dependencies with uv (AMD/ROCm)
+  ansible.builtin.command:
+    cmd: "uv pip install .[amd]"
+  args:
+    chdir: "{{ nanochat_install_dir }}"
+  environment:
+    VIRTUAL_ENV: "{{ nanochat_venv_dir }}"
+  become: yes
+  become_user: "{{ target_user }}"
+  when: nanochat_platform == 'amd'
+
+- name: Install Nanochat dependencies with uv (CPU)
+  ansible.builtin.command:
+    cmd: "uv pip install .[cpu]"
+  args:
+    chdir: "{{ nanochat_install_dir }}"
+  environment:
+    VIRTUAL_ENV: "{{ nanochat_venv_dir }}"
+  become: yes
+  become_user: "{{ target_user }}"
+  when: nanochat_platform == 'cpu'
+
+- name: Ensure Nomad jobs directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_jobs_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: Template Nanochat Nomad job
+  ansible.builtin.template:
+    src: nanochat.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/nanochat.nomad"
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Run Nanochat Nomad job

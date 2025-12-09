@@ -6,12 +6,14 @@ job "mqtt" {
     count = 1
 
     network {
-      mode = "host"
+      mode = "bridge"
       port "mqtt" {
-        static = 1883
+        to     = {{ mqtt_port }}
+        static = {{ mqtt_port }}
       }
       port "ws" {
-        static = 9001
+        to     = {{ mqtt_websocket_port }}
+        static = {{ mqtt_websocket_port }}
       }
     }
 
@@ -21,46 +23,47 @@ job "mqtt" {
       read_only = false
     }
 
+    # Service Block at Group Level (Correct Placement)
     service {
       name     = "mqtt"
       port     = "mqtt"
       provider = "consul"
-      address_mode = "host"
-
-      check {
-        name     = "mqtt-tcp"
-        type     = "tcp"
-        port     = "mqtt"
-        interval = "10s"
-        timeout  = "2s"
-        address_mode = "host"
-        check_restart {
-          limit = 3
-          grace = "30s"
-          ignore_warnings = false
+      #check {
+      #  type     = "tcp"
+      #  name     = "mqtt_tcp_health"
+      #  port     = "mqtt"
+      #  interval = "10s"
+      #  timeout  = "2s"
+      #}
+        check {
+          type     = "tcp"
+          name     = "mqtt_health"
+          port     = "mqtt"
+          interval = "10s"
+          timeout  = "2s"
+          check_restart {
+            limit = 3
+            grace = "90s"
+            ignore_warnings = false
+          }
         }
-      }
+      
     }
-
     restart {
       attempts = 10
       interval = "5m"
       delay    = "25s"
       mode     = "delay"
     }
-
     task "mosquitto" {
       driver = "docker"
 
       config {
         image = "eclipse-mosquitto:2"
-        # When network mode is "host", port mapping in the driver config is not used/required
-        # and can cause binding conflicts or warnings. We rely on the network stanza.
+        # Host mode networking requires no port map here
         cap_add = ["SETUID", "SETGID", "CHOWN", "NET_BIND_SERVICE"]
-
-        # By not specifying a command, we allow the container to use its
-        # default entrypoint, which is a script that correctly initializes the
-        # Mosquitto service, including setting file permissions.
+        command = "mosquitto"
+        args    = ["-c", "/mosquitto/config/mosquitto.conf"]
       }
 
       volume_mount {
@@ -70,9 +73,11 @@ job "mqtt" {
       }
 
       resources {
-        cpu    = 200 # 200 MHz
-        memory = 128 # 128 MB
+        cpu    = 200
+        memory = 128
       }
+
+      user = "1883"
     }
   }
 }

@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import time
+import requests
 
 def run_playbook(playbook_path, extra_vars=None):
     """Executes an Ansible playbook as a subprocess.
@@ -141,13 +142,32 @@ def main():
                 continue
 
             if action == "error":
-                # 5a. If reflection fails, trigger self-adaptation
+                # 5a. If reflection fails, trigger self-adaptation AND notify the agent
                 print(f"--- Reflection could not find a direct solution. Triggering self-adaptation for job {job_id}. ---")
                 run_script("reflection/adaptation_manager.py", [diagnostics_file])
+
+                # Notify TwinService
+                try:
+                    alert_msg = f"Job {job_id} failed and automated reflection could not find a solution. Please investigate."
+                    requests.post("http://localhost:8000/internal/system_message",
+                                  json={"text": alert_msg, "priority": "high", "job_id": job_id},
+                                  timeout=5)
+                    print(f"Notified TwinService about {job_id}")
+                except Exception as e:
+                    print(f"Failed to notify TwinService: {e}")
+
             else:
                 # 5b. Otherwise, attempt to heal the job directly
                 if not run_playbook("heal_job.yaml", extra_vars={"solution_json": json.dumps(solution)}):
                     print(f"Healing attempt failed for {job_id}.")
+                    # Notify TwinService on healing failure
+                    try:
+                         alert_msg = f"Automated healing failed for {job_id} (Action: {action}). Please intervene."
+                         requests.post("http://localhost:8000/internal/system_message",
+                                       json={"text": alert_msg, "priority": "high", "job_id": job_id},
+                                       timeout=5)
+                    except Exception:
+                        pass
                 else:
                     print(f"Healing attempt completed for {job_id}.")
 

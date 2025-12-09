@@ -2,7 +2,7 @@
 
 Last updated: 2025-11-26
 
-This project provides a complete solution for deploying a high-performance, low-latency conversational AI pipeline on a cluster of legacy, resource-constrained desktop computers. It uses Ansible for automated provisioning, Nomad for cluster orchestration, and a state-of-the-art AI stack to create a responsive, streaming, and embodied voice agent. For a detailed technical description of the system's layers, see the [Holistic Project Architecture](ARCHITECTURE.md) document.
+It uses Ansible for automated provisioning, Nomad for cluster orchestration, and a state-of-the-art AI stack to create a responsive, streaming, and embodied voice agent. For a detailed technical description of the system's layers, see the [Holistic Project Architecture](docs/ARCHITECTURE.md) document.
 
 ## 1. System Requirements
 
@@ -44,7 +44,7 @@ After rebooting, this node is ready for Ansible provisioning (see Section 4). It
 
 Once your first node has been provisioned by Ansible and the `pxe_server` role has been applied to it, you can automatically install Debian on all other bare-metal machines in your cluster.
 
-This system uses an advanced iPXE-over-HTTP method that is significantly faster and more reliable than traditional PXE. For detailed instructions on how to apply the Ansible role and prepare the client machines for network booting, see the **[iPXE Boot Server Setup Guide](PXE_BOOT_SETUP.md)**.
+This system uses an advanced iPXE-over-HTTP method that is significantly faster and more reliable than traditional PXE. For detailed instructions on how to apply the Ansible role and prepare the client machines for network booting, see the **[iPXE Boot Server Setup Guide](docs/PXE_BOOT_SETUP.md)**.
 
 ## 4. Easy Bootstrap (Single-Server Setup)
 
@@ -109,7 +109,7 @@ This cluster is designed for resilience and scalability. As your needs grow, you
 2. **Run the promotion playbook:**
 
    ```bash
-   ansible-playbook promote_controller.yaml
+   ansible-playbook playbooks/promote_controller.yaml
    ```
 
 3. **Enter the hostname:** You will be prompted to enter the exact hostname of the worker node you want to promote (e.g., `worker1`).
@@ -154,6 +154,12 @@ The agent can use tools to perform actions and gather information. The `TwinServ
 - **Final Answer (`final_answer`)**: A tool to provide a final answer to the user.
 - **Shell (`shell`)**: Executes shell commands.
 - **Prompt Improver (`prompt_improver`)**: A tool for improving prompts.
+- **Council (`council`)**: Convenes a council of AI experts to deliberate on a query.
+- **Swarm (`swarm`)**: Spawns multiple worker agents to perform tasks in parallel.
+- **Project Mapper (`project_mapper`)**: Scans the codebase to generate a project structure map.
+- **Planner (`planner`)**: Plans complex tasks and executes them using the SwarmTool.
+- **File Editor (`file_editor`)**: Reads, writes, and patches files in the codebase.
+- **Archivist (`archivist`)**: Performs deep research on the agent's long-term memory.
 - **Summarizer (`summarizer`)**: Summarizes conversation history (enabled via config).
 
 ### 6.3. Mixture of Experts (MoE) Routing
@@ -165,7 +171,7 @@ The agent is designed to function as a "Mixture of Experts." The primary `pipeca
 
 ### 6.4. Configuring Agent Personas
 
-The personality and instructions for the main router agent and each expert agent are defined in simple text files located in the `ansible/roles/pipecatapp/files/prompts/` directory. You can edit these files to customize the behavior of each agent. For example, you can edit `coding_expert.txt` to give it a different programming specialty.
+The personality and instructions for the main router agent are defined in `ansible/roles/pipecatapp/files/prompts/router.txt`. You can edit this file to customize the behavior of the main agent. Expert agents are configured via the `group_vars/models.yaml` file, where you can define the models they use.
 
 ## 7. Interacting with the Agent
 
@@ -231,6 +237,7 @@ In addition to the agent's interface, you can access the dashboards for the unde
 - **URL:** `http://<node_ip>:8500`
 - **Login:** Access requires the **SecretID** (management token).
 - **Retrieving the Token:** Run this command on your controller node:
+
   ```bash
   sudo cat /etc/consul.d/management_token
   ```
@@ -248,7 +255,7 @@ The system is designed to be self-bootstrapping. The `bootstrap.sh` script (or t
 If a job has been stopped, or you just want to verify that everything is running as it should be, you now use your new, lightweight playbook. It will skip all the system setup and only manage the Nomad jobs.
 
 ```bash
-ansible-playbook heal_cluster.yaml
+ansible-playbook playbooks/heal_cluster.yaml
 ```
 
 If you make a change to a job file or need to restart the services from a clean state, it's best to purge the old jobs before running the start script again.
@@ -272,12 +279,12 @@ The true power of this architecture is the ability to deploy multiple, specializ
    ```
 
 2. **Deploy the Expert with Ansible:**
-   Use the `deploy_expert.yaml` playbook to render the Nomad job with your custom parameters and launch it. You pass variables on the command line using the `-e` flag.
+   Use the `playbooks/deploy_expert.yaml` playbook to render the Nomad job with your custom parameters and launch it. You pass variables on the command line using the `-e` flag.
 
    - **Example: Deploying a `creative-writing` expert to the `creative` namespace:**
 
      ```bash
-     ansible-playbook deploy_expert.yaml -e "job_name=creative-expert service_name=llama-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
+     ansible-playbook playbooks/deploy_expert.yaml -e "job_name=creative-expert service_name=llama-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
      ```
 
 The `TwinService` in the `pipecatapp` will automatically discover any service registered in Consul with the `llama-api-` prefix and make it available for routing.
@@ -310,7 +317,7 @@ This project includes a web-based dashboard for real-time display and debugging.
 
 A dedicated health check job exists to verify the status of all running LLM experts. This provides a quick way to ensure the entire cluster is operational.
 
-- **Run the check:** `ansible-playbook run_health_check.yaml`
+- **Run the check:** `ansible-playbook playbooks/run_health_check.yaml`
 - **View results:** `nomad job logs health-check`
 - **Manual Test Scripts:** A set of scripts for manual testing of individual components is available in the `tests/scripts/` directory.
 
@@ -367,7 +374,7 @@ This section outlines the major feature enhancements and maintenance tasks plann
 - **Monitoring and Observability:** Deploy a monitoring stack like Prometheus and Grafana to collect and visualize metrics from Nomad, Consul, and the application itself.
 - **Web UI/UX Improvements:**
   - Replace ASCII art with a more dynamic animated character.
-  - Add a "Clear Terminal" button to the UI.
+  - [x] Add a "Clear Terminal" button to the UI.
   - Improve the status display to be more readable than a raw JSON dump.
 - **Bolster Automated Testing:**
   - Implement Ansible Molecule tests for critical roles.
@@ -377,3 +384,7 @@ This section outlines the major feature enhancements and maintenance tasks plann
 ## 15. Troubleshooting
 
 For solutions to common issues, such as failing Nomad service checks or deployment errors, please refer to the **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)**.
+
+## 16. License
+
+This project is licensed under the [GNU General Public License v3.0](LICENSE).

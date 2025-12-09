@@ -36,6 +36,24 @@ nomad_jobs_dir: "/opt/nomad/jobs"
 nomad_volumes_dir: "/opt/nomad/volumes"
 nomad_models_dir: "/opt/nomad/models"
 
+# Standard Ports
+consul_http_port: 8500
+nomad_http_port: 4646
+mqtt_port: 1883
+mqtt_websocket_port: 9001
+provisioning_api_port: 8002
+home_assistant_port: 8123
+router_port: 8080
+nanochat_port: 8005
+
+# Standard Paths
+consul_data_dir: "/opt/consul"
+llxprt_code_dir: "/opt/llxprt-code"
+llama_cpp_build_dir: "/opt/llama.cpp-build"
+provisioning_api_dir: "/opt/provisioning_api"
+cluster_infra_dir: "/opt/cluster-infra"
+mcp_dir: "/opt/mcp"
+
 # Pipecat application settings
 pipecat_deployment_style: 'docker' # Can be 'raw_exec' or 'docker'
 llama_api_service_name: "router-api"
@@ -69,6 +87,7 @@ pipecat_api_keys: ""
 #     - group_vars/secrets.yaml
 # For now, we'll place it here for simplicity.
 openai_api_key: "sk-your_openai_api_key_here"
+openrouter_api_key: ""
 jules_api_key: "your_jules_api_key_here"
 
 # Home Assistant User and Group IDs
@@ -89,6 +108,10 @@ home_assistant_token: "your_long_lived_access_token_here"
 home_assistant_debug_mode: false
 
 # Model definitions have been moved to group_vars/models.yaml
+
+# Nanochat configuration
+enable_nanochat: false
+nanochat_platform: "gpu"
 
 # The default user for remote connections and service execution.
 target_user: ubuntu

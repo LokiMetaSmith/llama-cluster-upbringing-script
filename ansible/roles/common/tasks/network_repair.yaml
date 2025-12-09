@@ -1,0 +1,107 @@
+- name: "Network Repair : Detect OS"
+  ansible.builtin.debug:
+    msg: "Detected OS: {{ ansible_distribution }} ({{ ansible_os_family }})"
+
+- name: "Network Repair : Gather Network Facts"
+  ansible.builtin.setup:
+    gather_subset:
+      - network
+
+- name: "Network Repair : Check Connectivity (Pre-Repair)"
+  ansible.builtin.command: ping -c 1 8.8.8.8
+  register: pre_repair_internet
+  ignore_errors: yes
+  changed_when: false
+
+- name: "Network Repair : Identify Physical Interfaces"
+  ansible.builtin.set_fact:
+    physical_interfaces: "{{ ansible_interfaces | map('regex_search', '^(e|w).*') | select('string') | list }}"
+
+- name: "Network Repair : Identify Down Interfaces"
+  ansible.builtin.set_fact:
+    down_interfaces: "{{ physical_interfaces | select('in', hostvars[inventory_hostname]) | reject('equalto', 'lo') | reject('in', active_interfaces) | list }}"
+  vars:
+    # Use ansible_facts keys which typically match the interface name directly (e.g. 'eth0')
+    # But sometimes they are prefixed with 'ansible_'.
+    # We construct a list of active interfaces first to simplify rejection.
+    active_interfaces: >-
+      {{
+        ansible_interfaces
+        | select('in', hostvars[inventory_hostname])
+        | selectattr('active', 'defined', hostvars[inventory_hostname])
+        | selectattr('active', 'equalto', true, hostvars[inventory_hostname])
+        | list
+      }}
+  # Note: The above logic is still complex to express in Jinja2 without proper context access.
+  # Let's use a simpler task-based loop approach to register the status.
+
+- name: "Network Repair : Check Interface Status"
+  ansible.builtin.command: "cat /sys/class/net/{{ item }}/operstate"
+  loop: "{{ physical_interfaces }}"
+  register: interface_states
+  changed_when: false
+  ignore_errors: yes
+
+- name: "Network Repair : Filter Down Interfaces"
+  ansible.builtin.set_fact:
+    down_interfaces: "{{ interface_states.results | selectattr('stdout', 'match', 'down') | map(attribute='item') | list }}"
+
+# --- Ubuntu/Debian Logic ---
+- block:
+    - name: "Network Repair (Debian/Ubuntu) : Check for NetworkManager"
+      ansible.builtin.service_facts:
+
+    - name: "Network Repair (Debian/Ubuntu) : Bring up interfaces with NetworkManager"
+      ansible.builtin.command: "nmcli device connect {{ item }}"
+      loop: "{{ down_interfaces }}"
+      when:
+        - "'NetworkManager.service' in ansible_facts.services"
+        - "ansible_facts.services['NetworkManager.service'].state == 'running'"
+      ignore_errors: yes
+      register: nmcli_result
+      become: yes
+
+    - name: "Network Repair (Debian/Ubuntu) : Bring up interfaces manually (Fallback)"
+      ansible.builtin.shell: |
+        ip link set {{ item }} up
+        # Attempt dhclient only if not already running for this interface
+        if ! pgrep -f "dhclient {{ item }}"; then
+          dhclient {{ item }} -v || true
+        fi
+      loop: "{{ down_interfaces }}"
+      when:
+        - "('NetworkManager.service' not in ansible_facts.services or ansible_facts.services['NetworkManager.service'].state != 'running') or (nmcli_result is defined and nmcli_result.results | selectattr('item', 'equalto', item) | map(attribute='failed') | first | default(false))"
+      ignore_errors: yes
+      become: yes
+
+  when: ansible_os_family == 'Debian'
+
+# --- NixOS Logic ---
+- block:
+    - name: "Network Repair (NixOS) : Restart network service"
+      ansible.builtin.systemd:
+        name: network
+        state: restarted
+      ignore_errors: yes
+      become: yes
+  when: ansible_os_family == 'NixOS' or ansible_distribution == 'NixOS'
+
+# --- Post-Repair Checks ---
+- name: "Network Repair : Check Internet Connectivity (8.8.8.8)"
+  ansible.builtin.command: ping -c 1 8.8.8.8
+  register: post_repair_internet
+  ignore_errors: yes
+  changed_when: false
+
+- name: "Network Repair : Check Cluster Connectivity (10.0.0.1)"
+  ansible.builtin.command: ping -c 1 10.0.0.1
+  register: post_repair_cluster
+  ignore_errors: yes
+  changed_when: false
+
+- name: "Network Repair : Status Report"
+  ansible.builtin.debug:
+    msg:
+      - "Internet (Pre-Repair): {{ 'OK' if pre_repair_internet.rc == 0 else 'FAIL' }}"
+      - "Internet (Post-Repair): {{ 'OK' if post_repair_internet.rc == 0 else 'FAIL' }}"
+      - "Cluster (10.0.0.1): {{ 'OK' if post_repair_cluster.rc == 0 else 'FAIL' }}"

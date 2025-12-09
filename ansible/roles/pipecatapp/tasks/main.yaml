@@ -61,7 +61,7 @@
 
 - name: Ensure correct ownership of the application directory
   ansible.builtin.file:
-    path: /opt/pipecatapp
+    path: "{{ pipecat_app_dir }}"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
     recurse: yes
@@ -70,7 +70,39 @@
 - name: Copy pipecat app
   ansible.builtin.copy:
     src: app.py
-    dest: /opt/pipecatapp/app.py
+    dest: "{{ pipecat_app_dir }}/app.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy task supervisor
+  ansible.builtin.copy:
+    src: task_supervisor.py
+    dest: "{{ pipecat_app_dir }}/task_supervisor.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy agent factory
+  ansible.builtin.copy:
+    src: agent_factory.py
+    dest: "{{ pipecat_app_dir }}/agent_factory.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy worker agent
+  ansible.builtin.copy:
+    src: worker_agent.py
+    dest: "{{ pipecat_app_dir }}/worker_agent.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy pmm memory client
+  ansible.builtin.copy:
+    src: pmm_memory_client.py
+    dest: "{{ pipecat_app_dir }}/pmm_memory_client.py"
   become: yes
   tags:
     - deploy_app
@@ -87,7 +119,7 @@
 - name: Copy pipecat startup script
   ansible.builtin.template:
     src: start_pipecatapp.sh.j2
-    dest: /opt/pipecatapp/start_pipecat.sh
+    dest: "{{ pipecat_app_dir }}/start_pipecat.sh"
     mode: '0755'
   become: yes
   tags:
@@ -96,7 +128,24 @@
 - name: Copy memory module
   ansible.builtin.copy:
     src: memory.py
-    dest: /opt/pipecatapp/memory.py
+    dest: "{{ pipecat_app_dir }}/memory.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy archivist service
+  ansible.builtin.copy:
+    src: archivist_service.py
+    dest: "{{ pipecat_app_dir }}/archivist_service.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy archivist startup script
+  ansible.builtin.copy:
+    src: start_archivist.sh
+    dest: "{{ pipecat_app_dir }}/start_archivist.sh"
+    mode: '0755'
   become: yes
   tags:
     - deploy_app
@@ -104,7 +153,7 @@
 - name: Copy web_server module
   ansible.builtin.copy:
     src: web_server.py
-    dest: /opt/pipecatapp/web_server.py
+    dest: "{{ pipecat_app_dir }}/web_server.py"
   become: yes
   tags:
     - deploy_app
@@ -112,7 +161,7 @@
 - name: Copy static assets
   ansible.builtin.copy:
     src: static
-    dest: /opt/pipecatapp/
+    dest: "{{ pipecat_app_dir }}/"
   become: yes
   tags:
     - deploy_app
@@ -120,7 +169,7 @@
 - name: Copy tools directory
   ansible.builtin.copy:
     src: tools
-    dest: /opt/pipecatapp/
+    dest: "{{ pipecat_app_dir }}/"
   become: yes
   tags:
     - deploy_app
@@ -128,7 +177,7 @@
 - name: Copy moondream_detector module
   ansible.builtin.copy:
     src: moondream_detector.py
-    dest: /opt/pipecatapp/moondream_detector.py
+    dest: "{{ pipecat_app_dir }}/moondream_detector.py"
   become: yes
   tags:
     - deploy_app
@@ -136,7 +185,7 @@
 - name: Copy prompts directory
   ansible.builtin.copy:
     src: prompts
-    dest: /opt/pipecatapp/
+    dest: "{{ pipecat_app_dir }}/"
   become: yes
   tags:
     - deploy_app
@@ -200,6 +249,12 @@
     dest: "{{ nomad_jobs_dir }}/evolve-prompt.nomad"
   become: yes
 
+- name: Template archivist Nomad job file
+  ansible.builtin.template:
+    src: archivist.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/archivist.nomad"
+  become: yes
+
 - name: Stop and purge any existing expert jobs to ensure idempotency
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job stop -purge "expert-{{ item }}"
@@ -208,7 +263,7 @@
   changed_when: "'Running' in expert_job_stop_status.stdout"
   failed_when: false
   environment:
-    NOMAD_ADDR: "http://{{ advertise_ip }}:4646"
+    NOMAD_ADDR: "http://{{ advertise_ip }}:{{ nomad_http_port }}"
 
 - name: Debug Nomad namespace
   debug:
@@ -284,7 +339,7 @@
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:4646/v1/status/leader"
+    url: "http://{{ cluster_ip }}:{{ nomad_http_port }}/v1/status/leader"
     method: GET
     status_code: 200
   register: nomad_api_status
@@ -299,23 +354,32 @@
   changed_when: "pipecat_job_stop_status.rc == 0"
   failed_when: false
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
 
 - name: Flush handlers to ensure service is enabled and started
   ansible.builtin.meta: flush_handlers
+
+- name: Run archivist job
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/archivist.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+  register: archivist_job_run
+  changed_when: archivist_job_run.rc == 0
+  ignore_errors: yes
 
 - name: Run router job
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/router.nomad
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
   register: router_job_run
   changed_when: router_job_run.rc == 0
   ignore_errors: yes
 
 - name: Wait for the router service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:8500/v1/health/service/router-api"
+    url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/router-api"
     return_content: yes
   register: router_health
   until: >
@@ -329,14 +393,14 @@
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/pipecatapp.nomad
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
   register: router_job_run
   changed_when: router_job_run.rc == 0
   ignore_errors: yes
 
 - name: Wait for the pipecat-app service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:8500/v1/health/service/pipecat-app"
+    url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/pipecat-app"
     return_content: yes
   register: pipecat_health
   until: >

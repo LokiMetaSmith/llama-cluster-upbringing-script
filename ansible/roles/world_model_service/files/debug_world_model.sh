@@ -4,7 +4,7 @@ set -e
 echo "Starting World Model Service Debug..."
 
 CONTAINER_NAME="world-model-debug"
-IMAGE_NAME="world-model-service:latest"
+IMAGE_NAME="world-model-service:local"
 DEBUG_PORT=12345
 
 MQTT_CONTAINER_NAME="world-model-debug-mqtt"
@@ -13,6 +13,11 @@ START_MQTT=false
 
 # Cleanup function
 cleanup() {
+    if [ "$DEBUG_KEEP_ALIVE" = "true" ]; then
+        echo "Skipping cleanup (DEBUG_KEEP_ALIVE=true). Containers left running."
+        return
+    fi
+
     echo "Stopping debug container..."
     docker stop $CONTAINER_NAME 2>/dev/null || true
     docker rm $CONTAINER_NAME 2>/dev/null || true
@@ -28,6 +33,11 @@ trap cleanup EXIT
 # Clean up previous run immediately
 docker stop $CONTAINER_NAME 2>/dev/null || true
 docker rm $CONTAINER_NAME 2>/dev/null || true
+
+# Ensure NOMAD_ADDR is set correctly by sourcing the profile script
+if [ -f "/etc/profile.d/nomad.sh" ]; then
+    source "/etc/profile.d/nomad.sh"
+fi
 
 # Check for MQTT
 echo "Checking for MQTT broker on port 1883..."
@@ -76,7 +86,7 @@ docker run -d --name $CONTAINER_NAME \
   -e NOMAD_PORT_http=$DEBUG_PORT \
   -e PYTHONUNBUFFERED=1 \
   -e MQTT_HOST="$HOST_IP" \
-  -e NOMAD_ADDR="http://$HOST_IP:4646" \
+  -e NOMAD_ADDR="${NOMAD_ADDR:-http://$HOST_IP:4646}" \
   $IMAGE_NAME
 
 echo "Waiting for container to start..."
@@ -99,9 +109,50 @@ else
     exit 1
 fi
 
+echo "Verifying MQTT and State update..."
+# Publish a test message using python inside the debug container (guaranteed to have paho-mqtt)
+TEST_TOPIC="test/topic"
+TEST_VALUE="verification_$(date +%s)"
+TEST_PAYLOAD="{\"value\": \"$TEST_VALUE\"}"
+
+echo "Publishing to $TEST_TOPIC with payload $TEST_PAYLOAD..."
+
+# We use a python one-liner inside the container to publish
+docker exec $CONTAINER_NAME python3 -c "
+import paho.mqtt.client as mqtt
+import os
+import time
+
+host = os.getenv('MQTT_HOST', 'localhost')
+try:
+    port = int(os.getenv('MQTT_PORT', '1883'))
+except:
+    port = 1883
+
+print(f'Connecting to {host}:{port}...')
+client = mqtt.Client()
+client.connect(host, port, 60)
+client.publish('$TEST_TOPIC', '$TEST_PAYLOAD', retain=True)
+client.disconnect()
+print('Message published.')
+"
+
+echo "Waiting for state update..."
+sleep 2
+
+echo "Querying state..."
+STATE_RESPONSE=$(curl -s http://localhost:$DEBUG_PORT/state)
+echo "State response: $STATE_RESPONSE"
+
+if echo "$STATE_RESPONSE" | grep -q "$TEST_VALUE"; then
+    echo "Success: State successfully updated via MQTT!"
+else
+    echo "Failure: State did not contain expected value '$TEST_VALUE'."
+    echo "Container Logs:"
+    docker logs --tail 50 $CONTAINER_NAME
+    exit 1
+fi
+
 echo "=== Container Logs (tail) ==="
 docker logs --tail 50 $CONTAINER_NAME
 echo "======================"
-echo "Press Ctrl+C to stop debugging (containers will be cleaned up)."
-# Wait indefinitely so user can interact/inspect until they kill it
-sleep infinity

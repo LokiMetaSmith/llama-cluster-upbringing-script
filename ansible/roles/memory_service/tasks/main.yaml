@@ -1,0 +1,37 @@
+- name: Create memory service build directory
+  ansible.builtin.file:
+    path: /opt/memory_service/build
+    state: directory
+    mode: '0755'
+
+- name: Copy memory service source files to build directory
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/opt/memory_service/build/{{ item }}"
+    mode: '0644'
+  loop:
+    - app.py
+    - pmm_memory.py
+
+- name: Copy Dockerfile to build directory
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../docker/memory_service/Dockerfile"
+    dest: "/opt/memory_service/build/Dockerfile"
+    mode: '0644'
+
+- name: Build memory_service Docker image
+  community.docker.docker_image:
+    name: memory_service
+    tag: local
+    build:
+      path: "/opt/memory_service/build"
+      nocache: true
+    source: build
+    force_source: true
+
+- name: Template memory service Nomad job
+  ansible.builtin.template:
+    src: memory_service.nomad.j2
+    dest: /opt/nomad/jobs/memory_service.nomad
+    mode: '0644'
+  notify: Run memory service job

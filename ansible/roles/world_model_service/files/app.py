@@ -2,6 +2,7 @@ import os
 import json
 import threading
 import httpx
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -53,8 +54,18 @@ world_state = {}
 state_lock = threading.Lock()
 mqtt_connected = False
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Start the MQTT client in a background thread on app startup."""
+    logger.info("Starting up World Model Service...")
+    logger.info(f"Config: MQTT_HOST={MQTT_HOST}, MQTT_PORT={MQTT_PORT}, NOMAD_ADDR={NOMAD_ADDR}")
+    mqtt_thread = threading.Thread(target=run_mqtt_client, daemon=True)
+    mqtt_thread.start()
+    yield
+    logger.info("Shutting down World Model Service...")
+
 # --- FastAPI App ---
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 # --- MQTT Client ---
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -149,14 +160,6 @@ async def get_state():
     """Returns the current world state."""
     with state_lock:
         return world_state
-
-@app.on_event("startup")
-async def startup_event():
-    """Start the MQTT client in a background thread on app startup."""
-    logger.info("Starting up World Model Service...")
-    logger.info(f"Config: MQTT_HOST={MQTT_HOST}, MQTT_PORT={MQTT_PORT}, NOMAD_ADDR={NOMAD_ADDR}")
-    mqtt_thread = threading.Thread(target=run_mqtt_client, daemon=True)
-    mqtt_thread.start()
 
 class DispatchJobRequest(BaseModel):
     model_name: str

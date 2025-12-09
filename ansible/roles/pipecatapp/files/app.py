@@ -29,6 +29,7 @@ import requests
 import consul.aio
 import numpy as np
 from pmm_memory import PMMMemory
+from pmm_memory_client import PMMMemoryClient
 from quality_control import CodeQualityAnalyzer
 import web_server
 from web_server import approval_queue, text_message_queue
@@ -51,6 +52,12 @@ from tools.smol_agent_tool import SmolAgentTool
 from tools.final_answer_tool import FinalAnswerTool
 from tools.shell_tool import ShellTool
 from tools.prompt_improver_tool import PromptImproverTool
+from tools.council_tool import CouncilTool
+from tools.swarm_tool import SwarmTool
+from tools.project_mapper_tool import ProjectMapperTool
+from tools.planner_tool import PlannerTool
+from agent_factory import create_tools
+from task_supervisor import TaskSupervisor
 from durable_execution import DurableExecutionEngine, durable_step
 from workflow.runner import WorkflowRunner, ActiveWorkflows
 # Import all node classes to ensure they are registered
@@ -309,9 +316,14 @@ class YOLOv8Detector(FrameProcessor):
         """Initializes the YOLOv8 detector."""
         super().__init__()
         model_path = os.getenv("YOLO_MODEL_PATH", "/opt/nomad/models/vision/yolov8n.pt")
-        self.model = YOLO(model_path)
         self.latest_observation = "I don't see anything."
         self.last_detected_objects = set()
+        try:
+            self.model = YOLO(model_path)
+        except Exception as e:
+            logging.error(f"Failed to load YOLOv8 model from {model_path}: {e}")
+            self.model = None
+            self.latest_observation = "Vision system unavailable."
 
     async def process_frame(self, frame, direction):
         """Processes an image frame to detect objects.
@@ -323,6 +335,12 @@ class YOLOv8Detector(FrameProcessor):
         if not isinstance(frame, VisionImageRawFrame):
             await self.push_frame(frame, direction)
             return
+
+        if self.model is None:
+            # Pass frame through without processing if vision is unavailable
+            await self.push_frame(frame, direction)
+            return
+
         try:
             # run model; returns list of results; boxes.cls may be torch tensors or arrays
             detected_objects = {self.model.names[int(c)] for r in self.model(frame.image) for c in r.boxes.cls}
@@ -377,6 +395,14 @@ class TextMessageInjector(FrameProcessor):
                 # The message can be a simple string (from UI) or a dict (from gateway)
                 if isinstance(message, dict):
                     text = message.get("text")
+                    is_system_alert = message.get("is_system_alert", False)
+
+                    if is_system_alert:
+                        prefix = "SYSTEM ALERT: "
+                        logging.warning(f"Injecting system alert: {text}")
+                        # Prepend alert tag to text to ensure the agent takes it seriously
+                        text = f"{prefix}{text}"
+
                     # Pass the whole dict along in the frame's meta attribute
                     if text:
                         logging.info(f"Injecting text message from gateway: {text}")
@@ -462,31 +488,37 @@ def find_workable_audio_input_device():
 # -----------------------
 # Service discovery helpers
 # -----------------------
-async def discover_service(service_name: str, consul_http_addr: str, delay=10):
-    """Periodically queries Consul to find a healthy instance of a service.
+async def discover_services(service_names: list, consul_http_addr: str, delay=10):
+    """Periodically queries Consul to find a healthy instance of a service, with failover support.
 
     Args:
-        service_name (str): The name of the service to discover.
+        service_names (list): A list of service names to discover, in order of preference.
         consul_http_addr (str): The HTTP address of the Consul agent.
         delay (int): The number of seconds to wait between retries.
 
     Returns:
-        The base URL (e.g., "http://1.2.3.4:5678/v1") of the discovered service.
+        The base URL (e.g., "http://1.2.3.4:5678/v1") of the first discovered service.
     """
-    logging.info(f"Attempting to discover service: {service_name}")
+    logging.info(f"Attempting to discover services: {service_names}")
+
     while True:
-        try:
-            response = requests.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
-            response.raise_for_status()
-            services = response.json()
-            if services:
-                address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
-                base_url = f"http://{address}:{port}/v1"
-                logging.info(f"Successfully discovered {service_name} at {base_url}")
-                return base_url
-        except requests.exceptions.RequestException as e:
-            logging.warning(f"Could not connect to Consul or find service {service_name}: {e}")
-        logging.info(f"Service {service_name} not found, retrying in {delay} seconds...")
+        for service_name in service_names:
+            try:
+                logging.debug(f"Checking status of service: {service_name}")
+                response = requests.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing", timeout=5)
+                response.raise_for_status()
+                services = response.json()
+                if services:
+                    address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
+                    base_url = f"http://{address}:{port}/v1"
+                    logging.info(f"Successfully discovered {service_name} at {base_url}")
+                    return base_url
+            except requests.exceptions.RequestException as e:
+                logging.warning(f"Could not connect to Consul or find service {service_name}: {e}")
+            except Exception as e:
+                logging.error(f"Unexpected error discovering {service_name}: {e}")
+
+        logging.info(f"No healthy services found in list {service_names}, retrying in {delay} seconds...")
         await asyncio.sleep(delay)
 
 async def discover_main_llm_service(consul_http_addr="http://localhost:8500", delay=10):
@@ -528,7 +560,7 @@ class TwinService(FrameProcessor):
     initializes the workflow engine, and sends the final response.
     The core logic is now managed by the declarative workflow system.
     """
-    def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None):
+    def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None, llm_base_url=None):
         """Initializes the TwinService.
 
         Args:
@@ -537,15 +569,26 @@ class TwinService(FrameProcessor):
             runner: The Pipecat PipelineRunner instance.
             app_config (dict): The application's configuration loaded from Consul.
             approval_queue: The queue for handling tool use approval requests.
+            llm_base_url (str, optional): The base URL of the LLM service.
         """
         super().__init__()
         self.router_llm = llm
+        self.llm_base_url = llm_base_url
         self.vision_detector = vision_detector
         self.runner = runner
         self.app_config = app_config or {}
         self.approval_queue = approval_queue
         self.short_term_memory = []
-        self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
+
+        # Use Remote Memory if available (via Consul discovery or env var), otherwise fallback to local
+        memory_service_url = os.getenv("MEMORY_SERVICE_URL")
+        if memory_service_url:
+             logging.info(f"Using Remote Memory Service at {memory_service_url}")
+             self.long_term_memory = PMMMemoryClient(base_url=memory_service_url)
+        else:
+             logging.info("Using Local PMMMemory (SQLite)")
+             self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
+
         self.quality_analyzer = CodeQualityAnalyzer()
 
         # This will hold metadata from incoming requests (e.g., from the gateway)
@@ -555,33 +598,41 @@ class TwinService(FrameProcessor):
         self.approval_mode = self.app_config.get("approval_mode", False)
         self.consul_http_addr = f"http://{self.app_config.get('consul_host', '127.0.0.1')}:{self.app_config.get('consul_port', 8500)}"
 
-        self.tools = {
-            "ssh": SSH_Tool(),
-            "mcp": MCP_Tool(self, self.runner),
-            "vision": self.vision_detector,
-            "desktop_control": DesktopControlTool(),
-            "code_runner": CodeRunnerTool(),
-            "smol_agent_computer": SmolAgentTool(),
-            "web_browser": WebBrowserTool(),
-            "ansible": Ansible_Tool(),
-            "power": Power_Tool(),
-            "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
-            "rag": RAG_Tool(pmm_memory=self.long_term_memory, base_dir="/"),
-            "ha": HA_Tool(
-                ha_url=self.app_config.get("ha_url"),
-                ha_token=self.app_config.get("ha_token")
-            ),
-            "git": Git_Tool(),
-            "orchestrator": OrchestratorTool(),
-            "llxprt_code": LLxprt_Code_Tool(),
-            "claude_clone": ClaudeCloneTool(),
-            "final_answer": FinalAnswerTool(),
-            "shell": ShellTool(),
-            "prompt_improver": PromptImproverTool(self),
-        }
+        # Initialize tools via factory
+        self.tools = create_tools(self.app_config, twin_service=self, runner=self.runner)
+        # Add vision detector explicitly as it is a special case (frame processor)
+        self.tools["vision"] = self.vision_detector
+       # self.tools = {
+       #     "ssh": SSH_Tool(),
+       #     "mcp": MCP_Tool(self, self.runner),
+       #     "vision": self.vision_detector,
+       #     "desktop_control": DesktopControlTool(),
+       #     "code_runner": CodeRunnerTool(),
+       #     "smol_agent_computer": SmolAgentTool(),
+       #     "web_browser": WebBrowserTool(),
+       #     "ansible": Ansible_Tool(),
+       #    "power": Power_Tool(),
+       #    "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
+       #    "rag": RAG_Tool(pmm_memory=self.long_term_memory, base_dir="/"),
+       #    "ha": HA_Tool(
+       #        ha_url=self.app_config.get("ha_url"),
+       #        ha_token=self.app_config.get("ha_token")
+       #   ),
+       #   "git": Git_Tool(),
+       #    "orchestrator": OrchestratorTool(),
+       #    "llxprt_code": LLxprt_Code_Tool(),
+       #    "claude_clone": ClaudeCloneTool(),
+       #    "final_answer": FinalAnswerTool(),
+       #    "shell": ShellTool(),
+       #    "prompt_improver": PromptImproverTool(self),
+       #    "council": CouncilTool(self),
+       #    "swarm": SwarmTool(),
+       #    "project_mapper": ProjectMapperTool(),
+       #    "planner": PlannerTool(self),
+       #}
 
-        if self.app_config.get("use_summarizer", False):
-            self.tools["summarizer"] = SummarizerTool(self)
+        #if self.app_config.get("use_summarizer", False):
+       #     self.tools["summarizer"] = SummarizerTool(self)
 
     async def process_frame(self, frame, direction):
         """Entry point for the agent's logic, triggered by a transcription frame.
@@ -603,7 +654,7 @@ class TwinService(FrameProcessor):
         request_id = self.current_request_meta.get("request_id", str(time.time()))
 
         try:
-            workflow_runner = WorkflowRunner("workflows/default_agent_loop.yaml")
+            workflow_runner = WorkflowRunner("workflows/default_agent_loop.yaml", runner_id=request_id)
             active_workflows.add_runner(request_id, workflow_runner)
 
             global_inputs = {
@@ -731,10 +782,18 @@ async def main():
     # Run the robust, silent pre-flight check
     audio_device_index = find_workable_audio_input_device()
 
-    # Discover main LLM from Consul
-    main_llm_service_name = app_config.get("llama_api_service_name", "llamacpp-rpc-api")
+    # Discover main LLM from Consul or Environment
+    # We prefer environment variables which can contain a comma-separated list of services for failover
+    env_service_names = os.getenv("LLAMA_API_SERVICE_NAME")
+    if env_service_names:
+        # Split by comma and strip whitespace
+        main_llm_service_names = [s.strip() for s in env_service_names.split(",") if s.strip()]
+    else:
+        # Fallback to single service from Consul config or default
+        main_llm_service_names = [app_config.get("llama_api_service_name", "llamacpp-rpc-api")]
+
     consul_http_addr = f"http://{consul_host}:{consul_port}"
-    llm_base_url = await discover_service(main_llm_service_name, consul_http_addr)
+    llm_base_url = await discover_services(main_llm_service_names, consul_http_addr)
 
     llm = OpenAILLMService(
         base_url=llm_base_url,
@@ -743,6 +802,7 @@ async def main():
     )
 
     runner = PipelineRunner()
+    # TODO: Implement failover or selection logic for vision models
     vision_detector = YOLOv8Detector()
     logging.info("Using YOLOv8 for vision.")
 
@@ -762,7 +822,8 @@ async def main():
         vision_detector=vision_detector,
         runner=runner,
         app_config=app_config,
-        approval_queue=approval_queue
+        approval_queue=approval_queue,
+        llm_base_url=llm_base_url
     )
     web_server.app.state.twin_service_instance = twin
 
@@ -775,6 +836,10 @@ async def main():
     )
     server = uvicorn.Server(config)
     threading.Thread(target=server.run, daemon=True).start()
+
+    # Start Task Supervisor
+    task_supervisor = TaskSupervisor(twin)
+    asyncio.create_task(task_supervisor.start())
 
     # Now that the twin service is initialized and the web server is starting,
     # we can mark the application as ready.

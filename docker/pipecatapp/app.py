@@ -6,17 +6,16 @@ import json
 import io
 import wave
 import os
-import shutil
 import inspect
 import threading
 
 from pipecat.frames.frames import (
     AudioRawFrame,
     TextFrame,
+    UserImageRawFrame as VisionImageRawFrame,
     UserStartedSpeakingFrame,
     UserStoppedSpeakingFrame,
     TranscriptionFrame,
-    InputImageRawFrame,
 )
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
@@ -27,101 +26,94 @@ from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransp
 from faster_whisper import WhisperModel
 from piper.voice import PiperVoice
 import requests
+import consul.aio
 import numpy as np
-from memory import MemoryStore
+from pmm_memory import PMMMemory
+from quality_control import CodeQualityAnalyzer
 import web_server
 from web_server import approval_queue, text_message_queue
-from api_keys import initialize_api_keys
 from tools.ssh_tool import SSH_Tool
 from tools.mcp_tool import MCP_Tool
+from tools.desktop_control_tool import DesktopControlTool
 from tools.code_runner_tool import CodeRunnerTool
 from tools.web_browser_tool import WebBrowserTool
 from tools.ansible_tool import Ansible_Tool
 from tools.power_tool import Power_Tool
 from tools.summarizer_tool import SummarizerTool
-from llm_clients import ExternalLLMClient
-from expert_tracker import ExpertTracker
+from tools.term_everything_tool import TermEverythingTool
+from tools.rag_tool import RAG_Tool
+from tools.ha_tool import HA_Tool
+from tools.git_tool import Git_Tool
+from tools.orchestrator_tool import OrchestratorTool
+from tools.llxprt_code_tool import LLxprt_Code_Tool
+from tools.claude_clone_tool import ClaudeCloneTool
+from tools.smol_agent_tool import SmolAgentTool
+from tools.final_answer_tool import FinalAnswerTool
+from tools.shell_tool import ShellTool
+from tools.prompt_improver_tool import PromptImproverTool
+from durable_execution import DurableExecutionEngine, durable_step
+from workflow.runner import WorkflowRunner, ActiveWorkflows
+# Import all node classes to ensure they are registered
+from workflow.nodes.base_nodes import *
+from workflow.nodes.llm_nodes import *
+from workflow.nodes.tool_nodes import *
+from workflow.nodes.system_nodes import *
+
 
 import uvicorn
-import contextlib
-import sys
 
-@contextlib.contextmanager
-def suppress_stderr():
-    """
-    A context manager to temporarily redirect stderr to /dev/null.
-    This is used to silence the C-level spam from PortAudio/ALSA.
-    """
-    stderr = sys.stderr
-    devnull = open(os.devnull, 'w')
-    sys.stderr = devnull
-    try:
-        yield
-    finally:
-        sys.stderr = stderr  # Restore stderr
-        devnull.close()
-
-# Custom logging handler to broadcast logs to the web UI
+# -----------------------
+# Logging -> web UI bridge
+# -----------------------
 class WebSocketLogHandler(logging.Handler):
-    """A custom logging handler that broadcasts log records to the web UI.
+    """A logging handler that forwards records to a WebSocket connection.
 
-    This handler integrates with the application's WebSocket manager to send
-    formatted log messages to all connected web clients, enabling real-time
-    log monitoring from the browser.
+    This class allows the application's logs to be streamed in real-time
+    to a web-based user interface.
     """
+
     def emit(self, record):
-        """Formats and broadcasts a log record.
+        """Formats the log record and broadcasts it to WebSocket clients.
 
         Args:
             record: The log record to be emitted.
         """
         log_entry = self.format(record)
         try:
-            # Get the running event loop and schedule the broadcast.
-            # This is the correct way to call an async function from a sync context
-            # when an event loop is already running.
+            # Get the running asyncio loop to safely schedule the broadcast.
             loop = asyncio.get_running_loop()
             loop.create_task(web_server.manager.broadcast(json.dumps({"type": "log", "data": log_entry})))
         except RuntimeError:
-            # This can happen if a log is emitted when the event loop is not running
-            # (e.g., before app startup or after shutdown). In this case, we just drop the log
-            # for the UI, as there's no way to send it.
+            # If no event loop is running (e.g., during shutdown), do nothing.
             pass
 
 logger = logging.getLogger()
 logger.addHandler(WebSocketLogHandler())
 
-# Custom frame processor to broadcast conversation to the web UI
-class TapService(FrameProcessor):
-    """A simple Pipecat frame processor that logs frames for debugging."""
-    def __init__(self, prefix: str = ""):
-        super().__init__()
-        self.prefix = prefix
-
-    async def process_frame(self, frame, direction):
-        logging.debug(f"[{self.prefix}] Frame received: {frame}")
-        await self.push_frame(frame, direction)
-
+# -----------------------
+# Frame processors
+# -----------------------
 class UILogger(FrameProcessor):
-    """A Pipecat frame processor to broadcast conversation text to the web UI.
+    """A Pipecat frame processor that logs frames to the web UI.
 
-    This processor intercepts transcription and text frames to send their
-    contents to the web UI, allowing real-time display of the conversation.
+    This processor intercepts transcription and text frames and sends their
+    content to the WebSocket manager for display in the UI.
 
     Attributes:
-        sender (str): A label to identify the origin of the message (e.g., "user" or "agent").
+        sender (str): A string identifier ('user' or 'agent') to label
+                      the source of the message in the UI.
     """
     def __init__(self, sender: str):
         """Initializes the UILogger.
 
         Args:
-            sender (str): The identifier for the message sender (e.g., "user", "agent").
+            sender (str): The identifier for the message source (e.g., "user").
         """
         super().__init__()
         self.sender = sender
 
     async def process_frame(self, frame, direction):
-        """Processes incoming frames and broadcasts text-based ones to the UI.
+        """Processes incoming frames and logs relevant ones to the UI.
 
         Args:
             frame: The frame to process.
@@ -132,29 +124,22 @@ class UILogger(FrameProcessor):
         await self.push_frame(frame, direction)
 
 class BenchmarkCollector(FrameProcessor):
-    """A Pipecat frame processor for measuring and logging pipeline latency.
+    """A Pipecat frame processor for measuring pipeline latency.
 
-    This processor captures timestamps at key stages of the conversational AI
-    pipeline (user speech end, STT transcription, LLM first token, TTS first
-
-    audio) to calculate and log performance metrics.
-
-    Attributes:
-        start_time (float): Timestamp when the user stops speaking.
-        stt_end_time (float): Timestamp when transcription is received.
-        llm_first_token_time (float): Timestamp of the first LLM text token.
-        tts_first_audio_time (float): Timestamp of the first TTS audio frame.
+    This captures timestamps at key stages of the conversational pipeline
+    (speech detection, transcription, LLM response, audio synthesis) to
+    calculate and log performance metrics.
     """
     def __init__(self):
-        """Initializes the BenchmarkCollector."""
+        """Initializes the BenchmarkCollector and resets its state."""
         super().__init__()
         self.reset()
 
     async def process_frame(self, frame, direction):
-        """Captures timestamps as specific frames pass through the pipeline.
+        """Processes frames to capture timing information.
 
         Args:
-            frame: The frame being processed.
+            frame: The frame to process.
             direction: The direction of the frame in the pipeline.
         """
         if isinstance(frame, UserStoppedSpeakingFrame):
@@ -167,7 +152,6 @@ class BenchmarkCollector(FrameProcessor):
             self.tts_first_audio_time = time.time()
             self.log_benchmarks()
             self.reset()
-
         await self.push_frame(frame, direction)
 
     def log_benchmarks(self):
@@ -176,115 +160,122 @@ class BenchmarkCollector(FrameProcessor):
         llm_ttft = self.llm_first_token_time - self.stt_end_time
         tts_ttfa = self.tts_first_audio_time - self.llm_first_token_time
         total_latency = self.tts_first_audio_time - self.start_time
-
-        logging.info("--- BENCHMARK RESULTS ---")
-        logging.info(f"STT Latency: {stt_latency:.4f}s")
-        logging.info(f"LLM Time to First Token: {llm_ttft:.4f}s")
-        logging.info(f"TTS Time to First Audio: {tts_ttfa:.4f}s")
-        logging.info(f"Total Pipeline Latency: {total_latency:.4f}s")
-        logging.info("-------------------------")
+        logging.info(
+            f"--- BENCHMARK RESULTS ---\n"
+            f"STT Latency: {stt_latency:.4f}s\n"
+            f"LLM Time to First Token: {llm_ttft:.4f}s\n"
+            f"TTS Time to First Audio: {tts_ttfa:.4f}s\n"
+            f"Total Pipeline Latency: {total_latency:.4f}s\n"
+            f"-------------------------"
+        )
 
     def reset(self):
-        """Resets all timestamps to zero for the next measurement."""
+        """Resets all benchmark timestamps to zero."""
         self.start_time = 0
         self.stt_end_time = 0
         self.llm_first_token_time = 0
         self.tts_first_audio_time = 0
 
 class FasterWhisperSTTService(FrameProcessor):
-    """A Pipecat FrameProcessor for Speech-to-Text using a local FasterWhisper model.
+    """A Pipecat processor for Speech-to-Text using Faster-Whisper.
 
-    This service buffers audio frames and transcribes them into text when the user
-    stops speaking. This implementation avoids using external recorders and relies
-    solely on the audio stream provided by the Pipecat pipeline.
+    This service buffers incoming audio frames and, upon detecting the end of
+    speech, transcribes the audio using a CPU-optimized Whisper model.
 
     Attributes:
-        model: The loaded `faster_whisper` model.
-        audio_buffer (bytearray): A buffer to accumulate raw audio data.
-        sample_rate (int): The sample rate of the audio stream.
+        model: The loaded Faster-Whisper model.
+        audio_buffer (bytearray): A buffer to accumulate audio data.
+        sample_rate (int): The audio sample rate required by the model.
     """
     def __init__(self, model_path: str, sample_rate: int = 16000):
-        """Initializes the FasterWhisperSTTService.
+        """Initializes the STT service.
 
         Args:
-            model_path (str): The path to the FasterWhisper model directory.
-            sample_rate (int, optional): The sample rate of the incoming audio.
-                                         Defaults to 16000.
+            model_path (str): The path to the Faster-Whisper model directory.
+            sample_rate (int): The sample rate of the input audio.
         """
         super().__init__()
-        # Using "cpu" and "int8" for broad compatibility.
-        # For better performance on compatible hardware, consider "cuda" and "float16".
-        self.model = WhisperModel(model_path, device="cpu", compute_type="int8")
+        # Use CPU int8 to reduce memory; adjust if you want GPU
+        if not os.path.isdir(model_path):
+            logging.error(f"Model directory not found at: {model_path}")
+            # Fallback to model name if path doesn't exist
+            model_identifier = os.path.basename(model_path)
+            logging.info(f"Attempting to load model by name: {model_identifier}")
+        else:
+            model_identifier = model_path
+
+        try:
+            self.model = WhisperModel(
+                model_identifier,
+                device="cpu",
+                compute_type="int8"
+            )
+        except Exception as e:
+            logging.error(f"Fatal error loading WhisperModel with identifier '{model_identifier}': {e}")
+            raise e
+
         self.audio_buffer = bytearray()
         self.sample_rate = sample_rate
-        logging.info(f"FasterWhisperSTTService initialized with model '{model_path}'")
+        logging.info(f"FasterWhisperSTTService initialized with model identifier '{model_identifier}'")
 
     def _convert_audio_bytes_to_float_array(self, audio_bytes: bytes) -> np.ndarray:
-        """Converts raw s16le audio bytes to a NumPy array of f32 samples."""
+        """Converts raw 16-bit PCM audio bytes to a 32-bit float NumPy array.
+
+        Args:
+            audio_bytes (bytes): The raw audio data.
+
+        Returns:
+            np.ndarray: The audio data as a normalized float array.
+        """
         audio_s16 = np.frombuffer(audio_bytes, dtype=np.int16)
-        audio_f32 = audio_s16.astype(np.float32) / 32768.0
-        return audio_f32
+        return audio_s16.astype(np.float32) / 32768.0
 
     async def process_frame(self, frame, direction):
-        """Processes audio and user speaking status frames.
-
-        This method buffers audio frames when the user is speaking and triggers
-        transcription when the user stops.
+        """Processes audio frames, buffering and transcribing them.
 
         Args:
             frame: The frame to process.
             direction: The direction of the frame in the pipeline.
         """
         if isinstance(frame, UserStartedSpeakingFrame):
-            logging.debug("User started speaking, clearing audio buffer.")
             self.audio_buffer.clear()
         elif isinstance(frame, AudioRawFrame):
+            # append incoming audio bytes (signed int16)
             self.audio_buffer.extend(frame.audio)
         elif isinstance(frame, UserStoppedSpeakingFrame):
-            logging.debug("User stopped speaking, transcribing buffered audio.")
             if not self.audio_buffer:
-                logging.warning("User stopped speaking but audio buffer is empty.")
                 return
-
             audio_f32 = self._convert_audio_bytes_to_float_array(self.audio_buffer)
             self.audio_buffer.clear()
-
             segments, _ = self.model.transcribe(audio_f32, language="en")
-
             full_text = "".join(segment.text for segment in segments).strip()
-
             if full_text:
-                logging.info(f"Transcription result: {full_text}")
                 await self.push_frame(TranscriptionFrame(full_text))
-            else:
-                logging.info("Transcription resulted in empty text.")
         else:
             await self.push_frame(frame, direction)
 
 class PiperTTSService(FrameProcessor):
-    """A FrameProcessor that uses a local Piper model for Text-to-Speech.
+    """A Pipecat processor for Text-to-Speech using Piper.
 
-    This service converts TextFrames into AudioRawFrames by synthesizing speech
-    using a Piper TTS model.
+    This service synthesizes speech from text frames and pushes the resulting
+    raw audio frames back into the pipeline.
 
     Attributes:
-        voice (PiperVoice): The loaded Piper voice model for synthesis.
+        voice: The loaded Piper voice model.
         sample_rate (int): The sample rate of the synthesized audio.
     """
-
-    def __init__(self, model_path: str, config_path: str):
-        """Initializes the PiperTTSService.
+    def __init__(self, model_path: str):
+        """Initializes the TTS service.
 
         Args:
-            model_path (str): The file path to the Piper .onnx model.
-            config_path (str): The file path to the Piper .json config.
+            model_path (str): The path to the Piper TTS model file.
         """
         super().__init__()
-        self.voice = PiperVoice.from_files(model_path, config_path)
+        self.voice = PiperVoice.load(model_path)
         self.sample_rate = self.voice.config.sample_rate
 
     async def process_frame(self, frame, direction):
-        """Processes TextFrames to synthesize audio and pushes AudioRawFrames.
+        """Processes text frames to synthesize audio.
 
         Args:
             frame: The frame to process.
@@ -293,710 +284,567 @@ class PiperTTSService(FrameProcessor):
         if not isinstance(frame, TextFrame):
             await self.push_frame(frame, direction)
             return
-
-        logging.info(f"PiperTTS synthesizing audio for: '{frame.text}'")
-
-        # Synthesize audio to an in-memory WAV stream
         audio_stream = io.BytesIO()
         self.voice.synthesize(frame.text, audio_stream)
         audio_stream.seek(0)
-
-        # Read the raw audio bytes from the WAV stream
         with wave.open(audio_stream, "rb") as wf:
             audio_bytes = wf.readframes(wf.getnframes())
-
         await self.push_frame(AudioRawFrame(audio_bytes))
 
-
-class TwinService(FrameProcessor):
-    """The core logic unit ("brain") of the conversational AI agent.
-
-    This service orchestrates the agent's behavior by processing user input,
-    managing memory, using tools, routing to specialized experts, and generating
-    responses. It acts as a central hub in the Pipecat pipeline.
-
-    Attributes:
-        router_llm: The primary LLM service used for routing and general conversation.
-        vision_detector: The service responsible for visual perception.
-        runner: The PipelineRunner instance, used for managing pipeline tasks.
-        debug_mode (bool): If True, enables verbose logging.
-        approval_mode (bool): If True, requires user approval for sensitive tool actions.
-        approval_queue: A queue for receiving approval status from the UI.
-        short_term_memory (list): A list storing the recent conversation history.
-        long_term_memory (MemoryStore): A vector store for long-term knowledge.
-        consul_http_addr (str): The address of the Consul agent for service discovery.
-        experts (dict): A dictionary to cache discovered expert services.
-        tools (dict): A dictionary of available tools for the agent.
-    """
-    def __init__(self, llm, vision_detector, runner, external_experts_config=None, debug_mode=False, approval_mode=False, approval_queue=None):
-        """Initializes the TwinService.
-
-        Args:
-            llm: The primary LLM service.
-            vision_detector: The vision processing service.
-            runner: The Pipecat PipelineRunner.
-            external_experts_config (dict): Configuration for external LLM APIs.
-            debug_mode (bool): Enables or disables debug logging.
-            approval_mode (bool): Enables or disables the need for user approval.
-            approval_queue: The queue for UI approval messages.
-        """
-        super().__init__()
-        self.router_llm = llm # The main LLM acts as a router
-        self.vision_detector = vision_detector
-        self.runner = runner
-        self.debug_mode = debug_mode
-        self.approval_mode = approval_mode
-        self.approval_queue = approval_queue
-        self.short_term_memory = []
-        self.long_term_memory = MemoryStore()
-        self.external_experts_config = external_experts_config or {}
-        self.expert_tracker = ExpertTracker()
-
-        self.consul_http_addr = os.getenv("CONSUL_HTTP_ADDR", "http://localhost:8500")
-        self.experts = {} # Experts will be discovered dynamically
-
-        # Register all experts with the tracker
-        for expert_name in self.get_discovered_experts():
-            expert_type = "external" if expert_name in self.external_experts_config else "local"
-            self.expert_tracker.register_expert(expert_name, expert_type)
-
-        self.tools = {
-            "ssh": SSH_Tool(),
-            "mcp": MCP_Tool(self, self.runner),
-            "vision": self.vision_detector,
-            "code_runner": CodeRunnerTool(),
-            "web_browser": WebBrowserTool(),
-            "ansible": Ansible_Tool(),
-            "power": Power_Tool(),
-        }
-
-        if os.getenv("USE_SUMMARIZER", "false").lower() == "true":
-            self.tools["summarizer"] = SummarizerTool(self)
-            logging.info("Summarizer tool enabled.")
-
-    def get_discovered_experts(self) -> list[str]:
-        """Discovers available local 'expert' services from Consul and adds
-        configured external experts.
-
-        Returns:
-            list[str]: A list of all available expert names.
-        """
-        local_expert_names = []
-        try:
-            response = requests.get(f"{self.consul_http_addr}/v1/catalog/services")
-            response.raise_for_status()
-            services = response.json()
-            # Filter for local services and strip the prefix
-            local_expert_names = [name.replace("llama-api-", "") for name in services.keys() if name.startswith("llama-api-")]
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Could not connect to Consul to discover local experts: {e}")
-
-        # Get external expert names from the configuration
-        external_expert_names = list(self.external_experts_config.keys())
-
-        # Combine and return a unique list
-        all_experts = sorted(list(set(local_expert_names + external_expert_names)))
-        logging.info(f"Discovered experts: {all_experts}")
-        return all_experts
-
-    def get_system_prompt(self, expert_name: str = "router") -> str:
-        """Constructs the system prompt for a given agent or expert.
-
-        The prompt is assembled from a base prompt file and a dynamically
-        generated list of available tools and experts.
-
-        Args:
-            expert_name (str, optional): The name of the expert to get the
-                prompt for. Defaults to "router".
-
-        Returns:
-            str: The fully constructed system prompt.
-        """
-        prompt_file = f"prompts/{expert_name}.txt"
-        try:
-            with open(prompt_file, "r") as f:
-                base_prompt = f.read()
-        except FileNotFoundError:
-            base_prompt = "You are a helpful AI assistant."
-
-        # Get performance metrics to help the LLM make a routing decision
-        performance_metrics = self.expert_tracker.get_metrics_for_prompt()
-
-        tools_prompt = "You have access to the following tools and experts:\n"
-        for tool_name, tool in self.tools.items():
-            if tool_name == "vision":
-                tools_prompt += '- {"tool": "vision.get_observation"}: Get a real-time description of what is visible in the webcam.\n'
-            else:
-                for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
-                    if not method_name.startswith('_'):
-                        tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\n'
-
-        for expert_name in self.get_discovered_experts():
-            tools_prompt += f'- {{"tool": "route_to_expert", "args": {{"expert": "{expert_name}", "query": "<user_query>"}}}}: Use this for queries related to {expert_name}.\n'
-
-        return f"{base_prompt}\n\n{performance_metrics}\n\n{tools_prompt}\n\nBased on the user's query and the expert performance data, decide whether to handle it yourself, use a tool, or route to the most appropriate expert. Prioritize healthy and fast experts. Respond with a JSON object with the 'tool' and 'args' keys."
-
-    async def get_expert_service(self, expert_name: str):
-        """Retrieves a client for a given expert, which can be local or external.
-
-        Args:
-            expert_name (str): The name of the expert (e.g., "coding", "openai_gpt4").
-
-        Returns:
-            A client instance (ExternalLLMClient or OpenAILLMService) or None.
-        """
-        # Check if the expert is in the external configuration
-        if expert_name in self.external_experts_config:
-            logging.info(f"Creating client for external expert: {expert_name}")
-            config = self.external_experts_config[expert_name]
-            api_key_env_var = config.get("api_key_env")
-            api_key = os.getenv(api_key_env_var) if api_key_env_var else None
-
-            if not api_key:
-                logging.error(f"API key environment variable '{api_key_env_var}' not set for expert '{expert_name}'.")
-                return None
-
-            return ExternalLLMClient(
-                base_url=config["base_url"],
-                api_key=api_key,
-                model=expert_name  # The model name is the expert name
-            )
-
-        # If not external, assume it's a local expert discovered via Consul
-        logging.info(f"Looking up local expert in Consul: {expert_name}")
-        service_name = f"llama-api-{expert_name}"
-        try:
-            response = requests.get(f"{self.consul_http_addr}/v1/health/service/{service_name}?passing=true")
-            response.raise_for_status()
-            services = response.json()
-            if not services:
-                logging.warning(f"No healthy instances of local expert '{expert_name}' found in Consul.")
-                return None
-
-            # Get the first healthy service instance
-            address = services[0]['Service']['Address']
-            port = services[0]['Service']['Port']
-            base_url = f"http://{address}:{port}/v1"
-
-            return OpenAILLMService(base_url=base_url, api_key="dummy", model=expert_name)
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Could not get address for local expert {expert_name} from Consul: {e}")
-            return None
-
-    async def _request_approval(self, tool_call_info: dict) -> bool:
-        """Sends a tool use request to the UI for approval and waits for a response.
-
-        Args:
-            tool_call_info (dict): A dictionary describing the tool call.
-
-        Returns:
-            bool: True if the action is approved, False otherwise.
-        """
-        request_id = str(time.time())
-        approval_request = {
-            "type": "approval_request",
-            "data": {
-                "request_id": request_id,
-                "tool_call": tool_call_info
-            }
-        }
-        await web_server.manager.broadcast(json.dumps(approval_request))
-
-        # Wait for a response from the queue
-        while True:
-            response = await self.approval_queue.get()
-            if response.get("data", {}).get("request_id") == request_id:
-                approved = response.get("data", {}).get("approved", False)
-                logging.info(f"Received approval response: {'Approved' if approved else 'Denied'}")
-                return approved
-
-    def save_state(self, save_name: str) -> str:
-        """Saves the current agent state to a named snapshot.
-
-        This includes the short-term and long-term memory.
-
-        Args:
-            save_name (str): The name for the saved state snapshot.
-
-        Returns:
-            str: A message indicating success or failure.
-        """
-        try:
-            state_dir = os.path.join("saved_states", save_name)
-            os.makedirs(state_dir, exist_ok=True)
-
-            # Save long-term memory files
-            shutil.copy("long_term_memory.faiss", os.path.join(state_dir, "long_term_memory.faiss"))
-            shutil.copy("long_term_memory.json", os.path.join(state_dir, "long_term_memory.json"))
-
-            # Save short-term memory
-            with open(os.path.join(state_dir, "short_term_memory.json"), "w") as f:
-                json.dump(self.short_term_memory, f)
-
-            logging.info(f"Successfully saved state to '{save_name}'")
-            return f"Successfully saved state to '{save_name}'"
-        except Exception as e:
-            logging.error(f"Failed to save state '{save_name}': {e}")
-            return f"Error saving state: {e}"
-
-    def load_state(self, save_name: str) -> str:
-        """Loads agent state from a named snapshot.
-
-        This restores the short-term and long-term memory from a saved state.
-
-        Args:
-            save_name (str): The name of the state snapshot to load.
-
-        Returns:
-            str: A message indicating success or failure.
-        """
-        try:
-            state_dir = os.path.join("saved_states", save_name)
-            if not os.path.isdir(state_dir):
-                return f"Error: Save state '{save_name}' not found."
-
-            # Load long-term memory files
-            shutil.copy(os.path.join(state_dir, "long_term_memory.faiss"), "long_term_memory.faiss")
-            shutil.copy(os.path.join(state_dir, "long_term_memory.json"), "long_term_memory.json")
-
-            # Load short-term memory
-            with open(os.path.join(state_dir, "short_term_memory.json"), "r") as f:
-                self.short_term_memory = json.load(f)
-
-            # Re-initialize the memory store to load the new files
-            self.long_term_memory = MemoryStore()
-
-            logging.info(f"Successfully loaded state from '{save_name}'")
-            return f"Successfully loaded state from '{save_name}'"
-        except Exception as e:
-            logging.error(f"Failed to load state '{save_name}': {e}")
-            return f"Error loading state: {e}"
-
-    async def process_frame(self, frame, direction):
-        """The main processing loop for the agent's logic.
-
-        This method is called for each frame in the pipeline. It handles
-        TranscriptionFrames by generating a response, which may involve
-        memory retrieval, tool use, or routing to an expert.
-
-        Args:
-            frame: The frame to process.
-            direction: The direction of the frame in the pipeline.
-        """
-        if not isinstance(frame, TranscriptionFrame):
-            await self.push_frame(frame, direction)
-            return
-
-        user_text = frame.text
-        logging.info(f"TwinService received: {user_text}")
-
-        retrieved_memories = self.long_term_memory.search(user_text)
-        short_term_context = "\n".join(self.short_term_memory)
-        system_prompt = self.get_system_prompt("router")
-
-        prompt = f"""
-        {system_prompt}
-        Short-term conversation history:
-        {short_term_context}
-        Relevant long-term memories:
-        {retrieved_memories}
-        Current user query: {user_text}
-        """
-
-        llm_response_text = await self.router_llm.process_text(prompt)
-
-        try:
-            tool_call = json.loads(llm_response_text)
-            tool_parts = tool_call.get("tool", "").split('.')
-
-            if tool_parts[0] == "route_to_expert":
-                expert_name = tool_call["args"]["expert"]
-                query = tool_call["args"]["query"]
-
-                start_time = time.time()
-                expert_llm = await self.get_expert_service(expert_name)
-
-                if expert_llm:
-                    logging.info(f"Routing to {expert_name} with query: {query}")
-                    expert_prompt = self.get_system_prompt(expert_name)
-                    final_expert_prompt = f"{expert_prompt}\n\nUser query: {query}"
-
-                    expert_response = await expert_llm.process_text(final_expert_prompt)
-
-                    latency = time.time() - start_time
-                    self.expert_tracker.record_success(expert_name, latency)
-
-                    await self.push_frame(TextFrame(expert_response))
-                    self.short_term_memory.append(f"Assistant ({expert_name}): {expert_response}")
-                else:
-                    self.expert_tracker.record_failure(expert_name)
-                    final_response = await self.router_llm.process_text(f"I could not find or connect to the {expert_name} expert. Please try again later.")
-                    await self.push_frame(TextFrame(final_response))
-            elif tool_parts[0] in self.tools:
-                tool_name = tool_parts[0]
-                method_name = tool_parts[1]
-                args = tool_call.get("args", {})
-                tool = self.tools[tool_name]
-                method = getattr(tool, method_name)
-
-                sensitive_tools = ["ssh", "code_runner", "ansible"]
-                if self.approval_mode and tool_name in sensitive_tools:
-                    logging.info(f"Requesting approval for sensitive tool: {tool_name}")
-                    approved = await self._request_approval(tool_call)
-                    if not approved:
-                        logging.warning(f"Execution of tool {tool_name} denied by user.")
-                        await self.push_frame(TextFrame(f"Action denied. I cannot use the {tool_name} tool."))
-                        # We need to make sure the user's text is re-added to memory to avoid losing context
-                        self.short_term_memory.append(f"User: {user_text}")
-                        if len(self.short_term_memory) > 10:
-                            self.short_term_memory.pop(0)
-                        return
-
-                logging.info(f"LLM requested to use tool: {tool_name}.{method_name} with args: {args}")
-                result = method(**args)
-
-                if self.debug_mode:
-                    logging.debug(f"Tool {tool_name}.{method_name} returned: {result}")
-
-                final_prompt = f"The result of using the tool {tool_name}.{method_name} is: {result}. Now, answer the user's original question based on this."
-                final_response = await self.router_llm.process_text(final_prompt)
-                await self.push_frame(TextFrame(final_response))
-                self.short_term_memory.append(f"Assistant: {final_response}")
-            else:
-                await self.push_frame(TextFrame(llm_response_text))
-                self.short_term_memory.append(f"Assistant: {llm_response_text}")
-        except Exception:
-            await self.push_frame(TextFrame(llm_response_text))
-            self.short_term_memory.append(f"Assistant: {llm_response_text}")
-
-        self.short_term_memory.append(f"User: {user_text}")
-        if len(self.short_term_memory) > 10:
-            self.short_term_memory.pop(0)
-
+# -----------------------
+# YOLO Vision Detector
+# -----------------------
 class YOLOv8Detector(FrameProcessor):
-    """A Pipecat FrameProcessor for real-time object detection using YOLOv8.
+    """A Pipecat processor for real-time object detection using YOLOv8.
 
-    This class processes VisionImageRawFrames, runs object detection on them
-    using a YOLOv8 model, and maintains the latest observation as a text
-    description.
+    This processor analyzes incoming video frames to detect objects and maintains
+    a textual description of the current scene.
 
     Attributes:
-        model: The loaded YOLO model object.
-        latest_observation (str): A human-readable string of the latest detected objects.
-        last_detected_objects (set): A set of object names from the last frame to
-            avoid redundant logging.
+        model: The loaded YOLOv8 model.
+        latest_observation (str): A human-readable string of detected objects.
+        last_detected_objects (set): The set of objects detected in the last frame.
     """
     def __init__(self):
-        """Initializes the YOLOv8Detector and loads the model."""
+        """Initializes the YOLOv8 detector."""
         super().__init__()
-        # The model is now managed by Ansible and placed in a predictable location.
-        model_path = "/opt/nomad/models/vision/yolov8n.pt"
+        model_path = os.getenv("YOLO_MODEL_PATH", "/opt/nomad/models/vision/yolov8n.pt")
         self.model = YOLO(model_path)
         self.latest_observation = "I don't see anything."
         self.last_detected_objects = set()
 
     async def process_frame(self, frame, direction):
-        """Processes a vision frame to detect objects.
+        """Processes an image frame to detect objects.
 
         Args:
-            frame: The frame to process.
+            frame: The image frame to process.
             direction: The direction of the frame in the pipeline.
         """
-        if not isinstance(frame, InputImageRawFrame):
+        if not isinstance(frame, VisionImageRawFrame):
             await self.push_frame(frame, direction)
             return
-
-        img = frame.image
-        results = self.model(img)
-
-        detected_objects = set()
-        for r in results:
-            for c in r.boxes.cls:
-                detected_objects.add(self.model.names[int(c)])
-
+        try:
+            # run model; returns list of results; boxes.cls may be torch tensors or arrays
+            detected_objects = {self.model.names[int(c)] for r in self.model(frame.image) for c in r.boxes.cls}
+        except Exception as e:
+            logging.error(f"YOLOv8 detection error: {e}")
+            detected_objects = set()
         if detected_objects != self.last_detected_objects:
             self.last_detected_objects = detected_objects
-            if detected_objects:
-                self.latest_observation = f"I see {', '.join(detected_objects)}."
-            else:
-                self.latest_observation = "I don't see anything."
+            self.latest_observation = f"I see {', '.join(detected_objects)}." if detected_objects else "I don't see anything."
             logging.info(f"YOLOv8Detector updated observation: {self.latest_observation}")
 
     def get_observation(self) -> str:
-        """Returns the latest observation from the vision detector.
-
-        This method is intended to be called by other services (like the
-        TwinService's vision tool) to get the current state of what the
-        agent "sees."
+        """Returns the latest observation of detected objects.
 
         Returns:
-            str: A text description of the detected objects.
+            A string describing the objects currently visible.
         """
         return self.latest_observation
 
+# -----------------------
+# Text message injector (UI -> pipeline)
+# -----------------------
 class TextMessageInjector(FrameProcessor):
-    """A custom FrameProcessor to inject text messages from the web UI into the pipeline.
+    """A processor to inject text from the UI into the Pipecat pipeline.
 
-    This processor listens to a queue for incoming text messages and pushes them
-    downstream as TranscriptionFrames, allowing the agent to process text input.
+    This allows a user to type messages in a web interface and have them
+    processed by the agent as if they were spoken.
+
+    Attributes:
+        queue (asyncio.Queue): The queue for receiving messages from the UI.
     """
     def __init__(self, queue: asyncio.Queue):
+        """Initializes the TextMessageInjector.
+
+        Args:
+            queue (asyncio.Queue): The queue to listen on for new messages.
+        """
         super().__init__()
         self.queue = queue
         self._task = None
 
     def start_listening(self):
-        """Starts the background task to listen for messages from the queue."""
+        """Starts the background task that listens for messages on the queue."""
         if not self._task:
             self._task = asyncio.create_task(self._run())
 
     async def _run(self):
-        """The main loop that waits for messages and pushes them as frames."""
+        """The main loop that waits for messages and pushes them into the pipeline."""
         while True:
             try:
                 message = await self.queue.get()
-                text = message.get("data")
-                if text:
-                    logging.info(f"Injecting text message from UI: {text}")
-                    await self.push_frame(TranscriptionFrame(text))
+                # The message can be a simple string (from UI) or a dict (from gateway)
+                if isinstance(message, dict):
+                    text = message.get("text")
+                    # Pass the whole dict along in the frame's meta attribute
+                    if text:
+                        logging.info(f"Injecting text message from gateway: {text}")
+                        await self.push_frame(TranscriptionFrame(text, meta=message))
+                elif isinstance(message, str):
+                     # Legacy support for simple text messages
+                    logging.info(f"Injecting text message from UI: {message}")
+                    await self.push_frame(TranscriptionFrame(message))
             except Exception as e:
                 logging.error(f"Error in TextMessageInjector: {e}")
 
     async def process_frame(self, frame, direction):
-        """Processes frames from upstream (i.e., the audio STT).
+        """Passes frames through without modification.
 
-        This method simply passes through any frames it receives from the
-        previous step in the pipeline.
+        Args:
+            frame: The frame to process.
+            direction: The direction of the frame in the pipeline.
         """
         await self.push_frame(frame, direction)
 
     def stop_listening(self):
-        """Stops the listening task."""
+        """Stops the background listening task."""
         if self._task:
             self._task.cancel()
             self._task = None
 
-def find_workable_audio_config():
+# -----------------------
+# Helper: find workable audio config
+# -----------------------
+import contextlib
+import sys
+
+@contextlib.contextmanager
+def suppress_stderr():
+    """A context manager to temporarily redirect stderr to /dev/null."""
+    stderr = sys.stderr
+    devnull = open(os.devnull, 'w')
+    sys.stderr = devnull
+    try:
+        yield
+    finally:
+        sys.stderr = stderr  # Restore stderr
+        devnull.close()
+
+def find_workable_audio_input_device():
     """
-    Iterates through all available audio devices and common sample rates to
-    find a working configuration for audio input.
+    Silently scans for a workable PyAudio input device.
 
     Returns:
-        tuple[int, int]: A tuple containing the device index and a supported
-                         sample rate. Returns (None, 16000) if no workable
-                         combination is found.
+        An integer (device_index) if a workable device is found.
+        None if no workable device is found.
     """
-    logging.info("Initializing audio subsystem. Suppressing expected C-library noise...")
-    with suppress_stderr():
-        try:
-            import pyaudio
-        except ImportError:
-            logging.error("PyAudio is not installed. Please install it to enable dynamic audio configuration.")
-            return None, 16000  # Default fallback
-
-        p = pyaudio.PyAudio()
-
-    logging.info("PyAudio initialized. Starting robust device scan...")
-    common_rates = [16000, 48000, 44100, 32000, 8000]
-
+    logging.info("Starting silent audio device scan...")
+    pa = None
     try:
-        device_count = p.get_device_count()
-        logging.info(f"Found {device_count} audio devices.")
+        import pyaudio
+        # 1. Suppress C-level spam during init
+        with suppress_stderr():
+            pa = pyaudio.PyAudio()
 
-        for i in range(device_count):
-            device_info = p.get_device_info_by_index(i)
-            if device_info.get('maxInputChannels', 0) > 0:
-                logging.info(f"Checking device {i}: {device_info.get('name')}")
-                for rate in common_rates:
-                    try:
-                        if p.is_format_supported(
-                            rate,
-                            input_device=device_info['index'],
-                            input_channels=1,
-                            input_format=pyaudio.paInt16
-                        ):
-                            logging.info(f"Found workable config: Device Index {device_info['index']}, Sample Rate {rate}Hz")
-                            return device_info['index'], rate
-                    except ValueError:
-                        continue # This combination is not supported
+        # 2. Scan devices for a workable input
+        for i in range(pa.get_device_count()):
+            device_info = pa.get_device_info_by_index(i)
+            # This is a basic check. You can make this more robust
+            # (e.g., check for sample rate, "USB", "Analog", etc.)
+            if device_info.get('maxInputChannels') > 0:
+                logging.info(f"Found workable audio device: [Index {i}] {device_info.get('name')}")
+                return i  # Return the first workable device index
 
-        logging.warning("Could not find a workable audio input configuration. Falling back to defaults.")
-        return None, 16000
+        logging.warning("No workable audio input device found after full scan.")
+        return None
 
-    except Exception as e:
-        logging.error(f"An error occurred during audio device discovery: {e}. Falling back to defaults.")
-        return None, 16000
+    except (ImportError, Exception) as e:
+        # This catches errors like "No Default Input Device" on truly headless systems
+        logging.warning(f"Audio subsystem scan failed (this is OK for headless): {e}")
+        return None
+
     finally:
-        p.terminate()
+        # 3. Always terminate PyAudio to release resources
+        if pa:
+            pa.terminate()
 
+# -----------------------
+# Service discovery helpers
+# -----------------------
+async def discover_service(service_name: str, consul_http_addr: str, delay=10):
+    """Periodically queries Consul to find a healthy instance of a service.
 
-async def discover_main_llm_service(consul_http_addr="http://localhost:8500", delay=10):
-    """Discovers the main LLM service from Consul, retrying indefinitely."""
-    service_name = os.getenv("LLAMA_API_SERVICE_NAME", "llamacpp-rpc-api")
-    logging.info(f"Attempting to discover main LLM service: {service_name}")
+    Args:
+        service_name (str): The name of the service to discover.
+        consul_http_addr (str): The HTTP address of the Consul agent.
+        delay (int): The number of seconds to wait between retries.
+
+    Returns:
+        The base URL (e.g., "http://1.2.3.4:5678/v1") of the discovered service.
+    """
+    logging.info(f"Attempting to discover service: {service_name}")
     while True:
         try:
             response = requests.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
             response.raise_for_status()
             services = response.json()
             if services:
-                address = services[0]['Service']['Address']
-                port = services[0]['Service']['Port']
+                address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
                 base_url = f"http://{address}:{port}/v1"
-                logging.info(f"Successfully discovered main LLM service at {base_url}")
+                logging.info(f"Successfully discovered {service_name} at {base_url}")
                 return base_url
         except requests.exceptions.RequestException as e:
             logging.warning(f"Could not connect to Consul or find service {service_name}: {e}")
-
-        logging.info(f"LLM service not found, retrying in {delay} seconds...")
+        logging.info(f"Service {service_name} not found, retrying in {delay} seconds...")
         await asyncio.sleep(delay)
 
-async def main():
-    """The main entry point for the conversational AI application.
+async def discover_main_llm_service(consul_http_addr="http://localhost:8500", delay=10):
+    """Discovers the main LLM service used for vision-related tasks.
 
-    This function initializes all components, including the web server,
-    transport layers, and Pipecat pipelines (main, vision, and interrupt).
-    It then starts the PipelineRunner to run all pipelines concurrently.
+    This is a specialized wrapper around `discover_service` for the primary
+    vision-capable LLM.
+
+    Args:
+        consul_http_addr (str): The HTTP address of the Consul agent.
+        delay (int): The number of seconds to wait between retries.
+
+    Returns:
+        The base URL of the discovered LLM service.
     """
-    # Dynamically find a workable audio configuration to avoid hardware issues
-    device_index, sample_rate = find_workable_audio_config()
+    # This is useful for vision-specific LLM calls (used by TwinService._call_vision_llm)
+    service_name = os.getenv("PRIMA_API_SERVICE_NAME", "llama-api-main")
+    while True:
+        try:
+            response = requests.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
+            response.raise_for_status()
+            services = response.json()
+            if services:
+                address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
+                base_url = f"http://{address}:{port}/v1"
+                logging.info(f"Discovered main LLM service at {base_url}")
+                return base_url
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"Could not find service {service_name}: {e}")
+        await asyncio.sleep(delay)
 
-    transport_params = LocalAudioTransportParams(
-        audio_in_enabled=True,
-        audio_out_enabled=True,
-        audio_in_device_index=device_index,
-        audio_in_sample_rate=sample_rate,
-        audio_out_sample_rate=sample_rate,
-    )
-    transport = LocalAudioTransport(transport_params)
+# -----------------------
+# TwinService (keeps the richer app_config-aware version)
+# -----------------------
+class TwinService(FrameProcessor):
+    """Core conversational agent orchestrator.
 
-    # Start the web server in a separate thread
-    config = uvicorn.Config(web_server.app, host="0.0.0.0", port=8000, log_level="info")
-    server = uvicorn.Server(config)
-    threading.Thread(target=server.run).start()
+    This class is the "brain" of the agent. It receives user input,
+    initializes the workflow engine, and sends the final response.
+    The core logic is now managed by the declarative workflow system.
+    """
+    def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None):
+        """Initializes the TwinService.
 
-    # Initialize API keys from environment variable
-    hashed_api_keys_str = os.getenv("PIECAT_API_KEYS", "")
-    if hashed_api_keys_str:
-        hashed_keys = [key.strip() for key in hashed_api_keys_str.split(',')]
-        initialize_api_keys(hashed_keys)
-    else:
-        logging.warning("PIECAT_API_KEYS environment variable not set. The API will be unsecured.")
+        Args:
+            llm: The primary LLM service client.
+            vision_detector: An instance of YOLOv8Detector for scene analysis.
+            runner: The Pipecat PipelineRunner instance.
+            app_config (dict): The application's configuration loaded from Consul.
+            approval_queue: The queue for handling tool use approval requests.
+        """
+        super().__init__()
+        self.router_llm = llm
+        self.vision_detector = vision_detector
+        self.runner = runner
+        self.app_config = app_config or {}
+        self.approval_queue = approval_queue
+        self.short_term_memory = []
+        self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
+        self.quality_analyzer = CodeQualityAnalyzer()
 
-    # Load configuration from the JSON file created by Ansible
-    pipecat_config = {}
+        # This will hold metadata from incoming requests (e.g., from the gateway)
+        self.current_request_meta = None
+
+        self.debug_mode = self.app_config.get("debug_mode", False)
+        self.approval_mode = self.app_config.get("approval_mode", False)
+        self.consul_http_addr = f"http://{self.app_config.get('consul_host', '127.0.0.1')}:{self.app_config.get('consul_port', 8500)}"
+
+        self.tools = {
+            "ssh": SSH_Tool(),
+            "mcp": MCP_Tool(self, self.runner),
+            "vision": self.vision_detector,
+            "desktop_control": DesktopControlTool(),
+            "code_runner": CodeRunnerTool(),
+            "smol_agent_computer": SmolAgentTool(),
+            "web_browser": WebBrowserTool(),
+            "ansible": Ansible_Tool(),
+            "power": Power_Tool(),
+            "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
+            "rag": RAG_Tool(pmm_memory=self.long_term_memory, base_dir="/"),
+            "ha": HA_Tool(
+                ha_url=self.app_config.get("ha_url"),
+                ha_token=self.app_config.get("ha_token")
+            ),
+            "git": Git_Tool(),
+            "orchestrator": OrchestratorTool(),
+            "llxprt_code": LLxprt_Code_Tool(),
+            "claude_clone": ClaudeCloneTool(),
+            "final_answer": FinalAnswerTool(),
+            "shell": ShellTool(),
+            "prompt_improver": PromptImproverTool(self),
+        }
+
+        if self.app_config.get("use_summarizer", False):
+            self.tools["summarizer"] = SummarizerTool(self)
+
+    async def process_frame(self, frame, direction):
+        """Entry point for the agent's logic, triggered by a transcription frame.
+        This now uses the new workflow engine.
+        Args:
+            frame: The incoming frame from the pipeline.
+            direction: The direction of the frame in the pipeline.
+        """
+        if not isinstance(frame, TranscriptionFrame):
+            await self.push_frame(frame, direction)
+            return
+
+        # Store meta for this request
+        self.current_request_meta = frame.meta if hasattr(frame, 'meta') else None
+
+        logging.info(f"Starting workflow for user query: {frame.text}")
+
+        active_workflows = ActiveWorkflows()
+        request_id = self.current_request_meta.get("request_id", str(time.time()))
+
+        try:
+            workflow_runner = WorkflowRunner("workflows/default_agent_loop.yaml")
+            active_workflows.add_runner(request_id, workflow_runner)
+
+            global_inputs = {
+                "user_text": frame.text,
+                "tools_dict": self.tools,
+                "tool_result": None, # Start with no tool result
+                "consul_http_addr": self.consul_http_addr,
+                "twin_service": self
+            }
+
+            for _ in range(10): # Allow up to 10 steps in the thought process
+                workflow_result = await workflow_runner.run(global_inputs)
+
+                final_response = workflow_result.get("final_response")
+                tool_call = workflow_result.get("tool_call")
+
+                if final_response:
+                    logging.info(f"Workflow produced final response: {final_response}")
+                    await self._send_response(final_response)
+                    self.long_term_memory.add_event(kind="assistant_message", content=final_response)
+                    self.short_term_memory.append(f"Assistant: {final_response}")
+                    return # End the loop
+
+                if tool_call:
+                    logging.info(f"Workflow produced tool call: {tool_call}")
+                    # The tool is executed within the workflow, so we just need to
+                    # grab the result and feed it back into the next iteration.
+                    global_inputs["tool_result"] = workflow_result.get("tool_result")
+                    # Continue the loop
+                else:
+                    # This case should not be reached if the workflow is designed correctly
+                    logging.error("Workflow ended without a final response or a tool call.")
+                    await self._send_response("I'm sorry, my thought process ended unexpectedly.")
+                    return
+
+            # If the loop completes without a final answer
+            await self._send_response("I seem to be stuck in a thought loop. Could you please clarify your request?")
+
+        except Exception as e:
+            logging.error(f"An error occurred during workflow execution: {e}", exc_info=True)
+            await self._send_response("I'm sorry, an internal error occurred while processing your request with the new workflow engine.")
+        finally:
+            active_workflows.remove_runner(request_id)
+
+    async def _send_response(self, text: str):
+        """Sends a response back to the appropriate channel (TTS or Gateway)."""
+        if self.current_request_meta and "response_url" in self.current_request_meta:
+            response_url = self.current_request_meta["response_url"]
+            request_id = self.current_request_meta["request_id"]
+            try:
+                # Use a standard library HTTP client for this async context
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    await client.post(response_url, json={"request_id": request_id, "content": text})
+                logging.info(f"Sent response for request {request_id} to gateway.")
+            except Exception as e:
+                logging.error(f"Failed to send response to gateway: {e}")
+        else:
+            # Default to pushing to the audio pipeline
+            await self.push_frame(TextFrame(text))
+
+    async def _request_approval(self, tool_call_info: dict) -> bool:
+        """Sends a tool call to the web UI for user approval.
+
+        Args:
+            tool_call_info (dict): A dictionary describing the tool call.
+
+        Returns:
+            True if the user approved the action, False otherwise.
+        """
+        request_id = str(time.time())
+        await web_server.manager.broadcast(json.dumps({"type": "approval_request", "data": {"request_id": request_id, "tool_call": tool_call_info}}))
+        while True:
+            response = await self.approval_queue.get()
+            if response.get("data", {}).get("request_id") == request_id:
+                return response.get("data", {}).get("approved", False)
+
+# -----------------------
+# Main entrypoint
+# -----------------------
+async def load_config_from_consul(consul_host, consul_port):
+    """Loads application and model configuration from the Consul KV store.
+
+    Args:
+        consul_host (str): The hostname or IP address of the Consul agent.
+        consul_port (int): The port of the Consul agent.
+
+    Returns:
+        A dictionary containing the loaded configuration.
+    """
+    logging.info("Loading configuration from Consul KV store...")
+    config = {}
+    c = consul.aio.Consul(host=consul_host, port=consul_port)
     try:
-        with open("pipecat_config.json", "r") as f:
-            pipecat_config = json.load(f)
-    except FileNotFoundError:
-        logging.warning("pipecat_config.json not found, using defaults.")
+        index, data = await c.kv.get('config/app/settings')
+        if data:
+            app_settings = json.loads(data['Value'].decode('utf-8'))
+            config.update(app_settings)
+            logging.info("Successfully loaded application settings from Consul.")
+        else:
+            logging.error("Could not find 'config/app/settings' in Consul KV.")
 
-    tts_voices = pipecat_config.get("tts_voices", [])
-    stt_service_name = os.getenv("STT_SERVICE")
-    if stt_service_name == "faster-whisper":
-        model_path = "/opt/models/stt/faster-whisper/" # docker container doesn't have a nomad directory
-        print(f"DEBUG: model_path before WhisperModel: {model_path}")
-        stt = FasterWhisperSTTService(model_path=model_path, sample_rate=sample_rate)
-        logging.info(f"Configured FasterWhisper for STT with sample rate {sample_rate}Hz.")
-    else:
-        raise RuntimeError(f"STT_SERVICE environment variable not set to a valid value. Got '{stt_service_name}'")
+        index, data = await c.kv.get('config/models/tts_voices')
+        if data:
+            config['tts_voices'] = json.loads(data['Value'].decode('utf-8'))
+            logging.info("Successfully loaded TTS voices from Consul.")
+        else:
+            logging.warning("Could not find 'config/models/tts_voices' in Consul KV.")
 
-    # Discover the main LLM service from Consul
-    llm_base_url = await discover_main_llm_service()
+    except Exception as e:
+        logging.error(f"Error loading configuration from Consul: {e}")
+    return config
+
+async def main():
+    """The main entry point for the conversational AI application."""
+    # Load configuration from Consul
+    consul_host = os.getenv("CONSUL_HOST", "127.0.0.1")
+    consul_port = int(os.getenv("CONSUL_PORT", "8500"))
+    app_config = await load_config_from_consul(consul_host, consul_port)
+
+    # Add consul host/port to app_config
+    app_config['consul_host'] = consul_host
+    app_config['consul_port'] = consul_port
+
+    # Run the robust, silent pre-flight check
+    audio_device_index = find_workable_audio_input_device()
+
+    # Discover main LLM from Consul
+    main_llm_service_name = app_config.get("llama_api_service_name", "llamacpp-rpc-api")
+    consul_http_addr = f"http://{consul_host}:{consul_port}"
+    llm_base_url = await discover_service(main_llm_service_name, consul_http_addr)
 
     llm = OpenAILLMService(
         base_url=llm_base_url,
         api_key="dummy",
-        model="dummy" # The model is selected by the llama-expert job, not here.
+        model="dummy"
     )
 
-    # --- FINAL FIX FOR TTS ---
-    # Use the local Piper TTS service with the configured voices
-    model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
-    config_path = f"/opt/nomad/models/tts/{tts_voices[0]['config']}"
-    tts = PiperTTSService(model_path=model_path, config_path=config_path)
     runner = PipelineRunner()
-
     # TODO: Implement failover or selection logic for vision models
     vision_detector = YOLOv8Detector()
     logging.info("Using YOLOv8 for vision.")
 
-    # Load external experts configuration from environment variable
-    external_experts_config = {}
-    external_experts_config_json = os.getenv("EXTERNAL_EXPERTS_CONFIG")
-    if external_experts_config_json:
-        try:
-            external_experts_config = json.loads(external_experts_config_json)
-            logging.info(f"Loaded configuration for {len(external_experts_config)} external expert(s).")
-        except json.JSONDecodeError:
-            logging.error(f"Failed to decode EXTERNAL_EXPERTS_CONFIG JSON: {external_experts_config_json}")
-
-    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-    if debug_mode:
+    if app_config.get("debug_mode", False):
         logging.getLogger().setLevel(logging.DEBUG)
         logging.debug("Debug mode enabled.")
 
-    approval_mode = os.getenv("APPROVAL_MODE", "false").lower() == "true"
-    if approval_mode:
+    if app_config.get("approval_mode", False):
         logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
+
+    # Set initial state for web server
+    web_server.app.state.is_ready = False
+    web_server.app.state.twin_service_instance = None
 
     twin = TwinService(
         llm=llm,
         vision_detector=vision_detector,
         runner=runner,
-        external_experts_config=external_experts_config,
-        debug_mode=debug_mode,
-        approval_mode=approval_mode,
+        app_config=app_config,
         approval_queue=approval_queue
     )
-    web_server.twin_service_instance = twin
+    web_server.app.state.twin_service_instance = twin
+
+    # Start web server (uvicorn) in its own thread, now that TwinService is initialized
+    config = uvicorn.Config(
+        web_server.app,
+        host="0.0.0.0",
+        port=int(os.getenv("WEB_PORT", "8000")),
+        log_level="info"
+    )
+    server = uvicorn.Server(config)
+    threading.Thread(target=server.run, daemon=True).start()
+
+    # Now that the twin service is initialized and the web server is starting,
+    # we can mark the application as ready.
+    web_server.app.state.is_ready = True
+    logging.info("Application is fully initialized and ready.")
 
     text_injector = TextMessageInjector(text_message_queue)
 
-    pipeline_steps = [
-        transport.input(),
-        stt,
-    ]
-    if debug_mode:
-        pipeline_steps.append(TapService("after-stt"))
-    pipeline_steps.extend([
-        text_injector,
-        UILogger(sender="user"),
-        twin,
-    ])
-    if debug_mode:
-        pipeline_steps.append(TapService("after-twin"))
-    pipeline_steps.extend([
-        UILogger(sender="agent"),
-        tts,
-        transport.output()
-    ])
-    if os.getenv("BENCHMARK_MODE", "false").lower() == "true":
+    pipeline_steps = []
+
+    if audio_device_index is not None:
+        logging.info("Audio device detected. Starting audio pipeline.")
+        transport_params = LocalAudioTransportParams(
+            audio_in_enabled=True,
+            audio_out_enabled=True,
+            audio_in_device_index=audio_device_index,
+            audio_in_sample_rate=16000,
+            audio_out_sample_rate=16000,
+        )
+        transport = LocalAudioTransport(transport_params)
+
+        stt_service_name = app_config.get("stt_service")
+        if stt_service_name == "faster-whisper":
+            stt_provider = app_config.get("active_stt_provider", "faster-whisper")
+            stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
+            # Sanitize the model name if it contains the provider name as a prefix
+            if stt_model_name.startswith(f"{stt_provider}-"):
+                stt_model_name = stt_model_name[len(stt_provider) + 1:]
+            model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
+            stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
+            logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate 16000Hz.")
+        else:
+            raise RuntimeError(f"STT_SERVICE not configured correctly in Consul. Got '{stt_service_name}'")
+
+        tts_voices = app_config.get("tts_voices", [])
+        if not tts_voices:
+            raise RuntimeError("TTS voices not configured in Consul.")
+        model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
+        tts = PiperTTSService(model_path=model_path)
+
+        pipeline_steps.extend([
+            transport.input(),
+            stt,
+            UILogger(sender="user"),
+            twin,
+            UILogger(sender="agent"),
+            tts,
+            transport.output()
+        ])
+    else:
+        logging.warning("No audio device found. Starting in headless mode (no audio source, no STT).")
+        pipeline_steps.append(twin)
+
+    pipeline_steps.insert(0, text_injector)
+
+    # Optionally insert benchmark collector
+    if app_config.get("benchmark_mode", False):
         pipeline_steps.insert(1, BenchmarkCollector())
 
     main_pipeline = Pipeline(pipeline_steps)
-
-    # Vision pipeline (runs in parallel to update the detector's state)
-    vision_pipeline = Pipeline([vision_detector])
-
     main_task = PipelineTask(main_pipeline)
 
-    # Interruption handling
-    async def handle_interrupt(frame):
-        if isinstance(frame, TextFrame) and frame.text.strip():
-            logging.info(f"User interrupted with: {frame.text}")
-            await main_task.cancel()
-
-    interrupt_pipeline = Pipeline([
-        transport.input(),
-        stt,
-        PipelineTask(handle_interrupt)
-    ])
+    # Vision pipeline (parallel)
+    vision_pipeline = Pipeline([vision_detector])
 
     text_injector.start_listening()
 
     await runner.run(
-        [main_task, PipelineTask(vision_pipeline), PipelineTask(interrupt_pipeline)]
+        [main_task, PipelineTask(vision_pipeline)]
     )
 
 if __name__ == "__main__":

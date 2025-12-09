@@ -1,0 +1,8 @@
+- hosts: all
+  become: yes
+  vars_files:
+    - ../../group_vars/all.yaml
+  roles:
+    - role: nanochat
+      when: enable_nanochat | default(false)
+      tags: [nanochat, training]

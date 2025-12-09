@@ -222,7 +222,7 @@
 
 - name: Wait for Consul API to be ready
   ansible.builtin.uri:
-    url: "http://{{ advertise_ip }}:8500/v1/status/leader"
+    url: "http://{{ advertise_ip }}:{{ consul_http_port }}/v1/status/leader"
   register: consul_status
   until: consul_status.status == 200
   retries: 30
@@ -234,7 +234,7 @@
 - name: Wait for Consul to be ready before ACL bootstrap
   ansible.builtin.wait_for:
     host: "{{ advertise_ip }}"
-    port: 8500
+    port: "{{ consul_http_port }}"
     delay: 10
 
 - name: Include ACL tasks

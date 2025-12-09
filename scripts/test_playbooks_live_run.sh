@@ -3,9 +3,9 @@
 set -e
 
 PLAYBOOKS=(
-    "e2e-tests.yaml"
-    "heal_job.yaml"
-    "promote_controller.yaml"
+    "tests/playbooks/e2e-tests.yaml"
+    "playbooks/heal_job.yaml"
+    "playbooks/promote_controller.yaml"
 )
 
 # Find the ansible-playbook executable

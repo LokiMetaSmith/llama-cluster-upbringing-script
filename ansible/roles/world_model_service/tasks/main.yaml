@@ -32,7 +32,7 @@
   tags:
     - world_model_service
   ansible.builtin.command:
-    cmd: "docker build -t world-model-service:latest ."
+    cmd: "docker build -t world-model-service:local ."
     chdir: "/opt/world_model_service/"
   register: docker_build_result
   changed_when: "'Successfully built' in docker_build_result.stdout or 'writing image' in docker_build_result.stdout"
@@ -54,10 +54,42 @@
     - world_model_service
   ansible.builtin.command:
     cmd: "/opt/world_model_service/debug_world_model.sh"
+  environment:
+    DEBUG_KEEP_ALIVE: "{{ 'true' if watch_target is defined and (watch_target in ansible_role_name or watch_target in 'World Model Service : Run debug script (verify container)') else 'false' }}"
   become: true
   register: debug_output
   changed_when: false
   failed_when: false
+
+- name: "World Model Service : Pause for inspection"
+  tags:
+    - world_model_service
+  ansible.builtin.pause:
+    prompt: "Paused for inspection of {{ ansible_role_name }}. [s]tep to continue, [r]un to disable waiting"
+  register: pause_result
+  when:
+    - watch_target is defined
+    - watch_target in ansible_role_name or watch_target in 'World Model Service : Run debug script (verify container)'
+
+- name: "World Model Service : Disable Watch Mode"
+  tags:
+    - world_model_service
+  ansible.builtin.set_fact:
+    watch_target: ""
+  when:
+    - pause_result.user_input is defined
+    - pause_result.user_input | trim == 'r'
+
+- name: "World Model Service : Cleanup debug container"
+  tags:
+    - world_model_service
+  ansible.builtin.command:
+    cmd: "docker rm -f world-model-debug world-model-debug-mqtt"
+  become: true
+  when:
+    - watch_target is defined
+  failed_when: false
+  changed_when: true
 
 - name: "World Model Service : Display debug output"
   tags:
@@ -83,7 +115,8 @@
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/world_model.nomad"
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    #NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "http://127.0.0.1:4646"
   changed_when: true
   become: no
 
@@ -103,6 +136,7 @@
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/llamacpp-batch.nomad"
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    #NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "http://127.0.0.1:4646"
   changed_when: true
   become: no

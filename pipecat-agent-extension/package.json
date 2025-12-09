@@ -2,6 +2,7 @@
   "name": "mcp-server-example",
   "version": "1.0.0",
   "description": "Example MCP Server for Gemini CLI Extension",
+  "license": "GPL-3.0",
   "type": "module",
   "main": "example.js",
   "scripts": {
