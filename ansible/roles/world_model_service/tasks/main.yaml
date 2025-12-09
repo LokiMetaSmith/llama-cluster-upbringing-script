@@ -114,9 +114,9 @@
     - world_model_service
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/world_model.nomad"
-  environment:
+  #environment:
     #NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
-    NOMAD_ADDR: "http://127.0.0.1:4646"
+  #  NOMAD_ADDR: "http://127.0.0.1:4646"
   changed_when: true
   become: no
 
@@ -135,8 +135,8 @@
 - name: "World Model Service : Register batch nomad job"
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/llamacpp-batch.nomad"
-  environment:
+  #environment:
     #NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
-    NOMAD_ADDR: "http://127.0.0.1:4646"
+    #NOMAD_ADDR: "http://127.0.0.1:4646"
   changed_when: true
   become: no
