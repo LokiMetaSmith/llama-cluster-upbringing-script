@@ -289,7 +289,21 @@ if [ "$DEBUG_MODE" = true ]; then
     ANSIBLE_ARGS+=("-vvvv")
 fi
 
-# --- Install Python dependencies ---
+# --- Install Python dependencies (Virtual Environment) ---
+echo "Setting up Python virtual environment..."
+VENV_DIR="$SCRIPT_DIR/.venv"
+
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating virtual environment at $VENV_DIR..."
+    python3 -m venv "$VENV_DIR"
+fi
+
+# Activate venv for this script execution
+source "$VENV_DIR/bin/activate"
+
+# Upgrade pip
+pip install --upgrade pip
+
 echo "Installing Python dependencies from requirements-dev.txt..."
 if [ -f "requirements-dev.txt" ]; then
     pip install --no-cache-dir -r requirements-dev.txt
@@ -297,36 +311,19 @@ if [ -f "requirements-dev.txt" ]; then
 else
     echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
 fi
+
 echo "Installing essential Ansible dependencies..."
 pip install ansible-core
 echo "✅ Ansible dependencies installed."
 
 # --- Find Ansible Playbook executable ---
-# JULES: The original find_executable function was unreliable. This new approach
-# dynamically finds the active python interpreter's bin directory, making it
-# portable across different environments (system, venv, pyenv).
+# Since we are in a venv, these are guaranteed to be in the path
+ANSIBLE_PLAYBOOK_EXEC="$(which ansible-playbook)"
+ANSIBLE_GALAXY_EXEC="$(which ansible-galaxy)"
 
-# Find the directory containing the active python executable
-PYTHON_EXEC=$(command -v python || command -v python3)
-if [ -z "$PYTHON_EXEC" ]; then
-    echo "Error: Could not find 'python' or 'python3' in the PATH." >&2
-    exit 1
-fi
-PYTHON_BIN_DIR=$(dirname "$PYTHON_EXEC")
-
-ANSIBLE_PLAYBOOK_EXEC="$PYTHON_BIN_DIR/ansible-playbook"
-ANSIBLE_GALAXY_EXEC="$PYTHON_BIN_DIR/ansible-galaxy"
-
-# Check if Ansible executables exist, if not, install ansible-core
-if [ ! -x "$ANSIBLE_PLAYBOOK_EXEC" ] || [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
-    echo "Ansible executables not found. Attempting to install ansible-core..."
-    "$PYTHON_EXEC" -m pip install ansible-core
-    # Verify after installation
-    if [ ! -x "$ANSIBLE_PLAYBOOK_EXEC" ] || [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
-        echo "Error: Failed to locate Ansible executables even after pip install." >&2
-        echo "Looked for: $ANSIBLE_PLAYBOOK_EXEC"
-        exit 1
-    fi
+if [ -z "$ANSIBLE_PLAYBOOK_EXEC" ] || [ -z "$ANSIBLE_GALAXY_EXEC" ]; then
+     echo "Error: Ansible executables not found in virtual environment." >&2
+     exit 1
 fi
 
 echo "Found ansible-playbook: $ANSIBLE_PLAYBOOK_EXEC"

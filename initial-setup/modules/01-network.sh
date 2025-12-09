@@ -32,7 +32,49 @@ log "  - WAN (Home): DHCP"
 log "  - LAN (Cluster): $CLUSTER_IP"
 
 # --- Configure Interfaces ---
-cat > /etc/network/interfaces <<EOL
+
+# Check if NetworkManager is active
+if command -v nmcli >/dev/null && nmcli general status | grep -q "connected"; then
+    log "NetworkManager detected. Using nmcli to configure secondary IP..."
+
+    # Find the active connection for the interface
+    CON_NAME=$(nmcli -t -f NAME,DEVICE connection show --active | grep ":$INTERFACE" | cut -d: -f1 | head -n1)
+
+    if [ -n "$CON_NAME" ]; then
+        log "Active connection found: '$CON_NAME'. Adding alias IP if missing..."
+
+        # Check if IP is already added to avoid duplication
+        CURRENT_IPV4=$(nmcli -g ipv4.addresses connection show "$CON_NAME")
+        if [[ "$CURRENT_IPV4" != *"$CLUSTER_IP"* ]]; then
+             # We want to ADD the IP, not replace.
+             # Note: +ipv4.addresses works for adding.
+             nmcli connection modify "$CON_NAME" +ipv4.addresses "$CLUSTER_IP/$CLUSTER_NETMASK"
+
+             # Reapply the connection to take effect (might briefly drop connection, but safer than restarting service)
+             # However, bringing up the connection again might be disruptive.
+             # Let's try to just bring it up which re-applies changes.
+             nmcli connection up "$CON_NAME"
+             log "Secondary IP $CLUSTER_IP added to connection '$CON_NAME'."
+        else
+             log "IP $CLUSTER_IP already configured on '$CON_NAME'."
+        fi
+    else
+        log "No active NetworkManager connection found for $INTERFACE. Attempting runtime configuration..."
+        ip addr add "$CLUSTER_IP/$CLUSTER_NETMASK" dev "$INTERFACE" || log "Failed to add IP address."
+    fi
+
+elif [ -d "/etc/network/interfaces.d" ] || [ -f "/etc/network/interfaces" ]; then
+    # Fallback to ifupdown ONLY if we are sure it's safe.
+    # If the interface looks like wireless (wl*), overwriting /etc/network/interfaces with a simple 'dhcp' stanza
+    # will break WPA authentication unless wpa-conf is handled.
+
+    if [[ "$INTERFACE" == wl* ]]; then
+        log "Wireless interface detected ($INTERFACE). Skipping /etc/network/interfaces overwrite to prevent breaking WiFi."
+        log "Adding runtime IP alias instead..."
+        ip addr add "$CLUSTER_IP/$CLUSTER_NETMASK" dev "$INTERFACE" || true
+    else
+        log "Configuring /etc/network/interfaces for wired interface..."
+        cat > /etc/network/interfaces <<EOL
 # Managed by llama-cluster-upbringing-script
 
 auto lo
@@ -48,17 +90,19 @@ iface $INTERFACE:0 inet static
     address $CLUSTER_IP
     netmask $CLUSTER_NETMASK
 EOL
+        log "Network configuration written to /etc/network/interfaces."
 
-log "Network configuration written."
-
-# --- Restart networking service ---
-log "Restarting networking service..."
-if systemctl list-units --type=service | grep -q 'networking.service'; then
-    systemctl restart networking
-elif systemctl list-units --type=service | grep -q 'systemd-networkd.service'; then
-    systemctl restart systemd-networkd
+        log "Restarting networking service..."
+        if systemctl list-units --type=service | grep -q 'networking.service'; then
+            systemctl restart networking
+        else
+            log "networking.service not found. You may need to manually restart networking."
+        fi
+    fi
 else
-    log "Could not find networking service to restart."
+    # Universal fallback
+    log "No supported network manager detected (NetworkManager or ifupdown). Using runtime configuration."
+    ip addr add "$CLUSTER_IP/$CLUSTER_NETMASK" dev "$INTERFACE" || true
 fi
 
 log "Network configuration complete."
