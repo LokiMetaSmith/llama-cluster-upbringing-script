@@ -38,7 +38,7 @@
 ### Bolster Automated Testing
 - [x] **Implement Ansible Molecule tests:** Create a Molecule test scenario for at least one critical role (e.g., `nomad` or `docker`).
 - [x] **Expand end-to-end tests:** Add a new test case to `e2e-tests.yaml` that verifies a core function of the agent.
-- [ ] **Increase unit test coverage:** Write unit tests for the remaining Python tools in the `tools/` directory. (Partially completed: added tests for `project_mapper_tool.py`)
+- [x] **Increase unit test coverage:** Write unit tests for the remaining Python tools in the `tools/` directory. (Completed: added tests for `archivist_tool.py` and `swarm_tool.py`)
 
 ### Improve Web UI and User Experience
 - [ ] **Replace ASCII art:** Create a more dynamic and expressive animated character or graphic.
