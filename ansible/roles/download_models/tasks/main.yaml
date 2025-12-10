@@ -13,6 +13,7 @@
     - math
     - extract
     - router
+    - vllm_expert_models
     - piper_voice_files
     - embedding_models
     - stt_models
@@ -26,6 +27,7 @@
 - name: Set model facts from Consul KV
   ansible.builtin.set_fact:
     llm_models_to_download: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'router']) | map(attribute='content') | map('from_json') | sum(start=[]) }}"
+    vllm_expert_models: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'vllm_expert_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
     piper_voice_files: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'piper_voice_files') | map(attribute='content') | map('from_json') | first | default([]) }}"
     embedding_models: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'embedding_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
     stt_models: "{{ ((consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'stt_models') | first).content | default('{}')) | from_json }}"
@@ -60,6 +62,34 @@
   become: yes
   loop_control:
     loop_var: item
+
+- name: Ensure vLLM model directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_models_dir }}/vllm"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Check for existing vLLM models (Hub-based)
+  ansible.builtin.stat:
+    path: "{{ nomad_models_dir }}/vllm/{{ item.repo_id.split('/')[-1] }}" # Basic assumption for folder name
+  loop: "{{ vllm_expert_models | selectattr('repo_id', 'defined') | list }}"
+  register: vllm_model_files_hub
+  become: yes
+
+- name: Download all vLLM models (Hub-based) if they do not exist
+  ansible.builtin.command:
+    cmd: >
+      /opt/pipecatapp/venv/bin/python3
+      {{ role_path }}/files/download_hf_repo.py
+      "{{ item.item.repo_id }}"
+      "{{ nomad_models_dir }}/vllm/{{ item.item.repo_id.split('/')[-1] }}"
+  loop: "{{ vllm_model_files_hub.results }}"
+  when: not item.stat.exists
+  become: yes
+  loop_control:
+    loop_var: item
+
 # ---------------------------------------------------------------------------- #
 #                                  STT Models                                  #
 # ---------------------------------------------------------------------------- #
@@ -99,6 +129,7 @@
 - name: Download all STT models (Hub-based) if they do not exist
   ansible.builtin.command:
     cmd: >
+      /opt/pipecatapp/venv/bin/python3
       {{ role_path }}/files/download_hf_repo.py
       "{{ item.item[1].repo_id }}"
       "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
@@ -171,6 +202,7 @@
 - name: Download all Vision models (Hub-based) if they do not exist
   ansible.builtin.command:
     cmd: >
+      /opt/pipecatapp/venv/bin/python3
       {{ role_path }}/files/download_hf_repo.py
       "{{ item.item.repo_id }}"
       "{{ nomad_models_dir }}/vision/{{ item.item.name }}"
@@ -199,6 +231,7 @@
 - name: Download all Embedding models (Hub-based) if they do not exist
   ansible.builtin.command:
     cmd: >
+      /opt/pipecatapp/venv/bin/python3
       {{ role_path }}/files/download_hf_repo.py
       "{{ item.item.repo_id }}"
       "{{ nomad_models_dir }}/embedding/{{ item.item.name }}"

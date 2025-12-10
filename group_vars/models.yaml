@@ -44,7 +44,7 @@ expert_models:
 
 vllm_expert_models:
   - name: "vllm-main"
-    filename: "meta-llama/Llama-2-7b-hf"
+    repo_id: "meta-llama/Llama-2-7b-hf"
     memory_mb: 8192
 
 # A list of voices for the PiperTTSService to use, in order of preference.

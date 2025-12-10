@@ -1,0 +1,25 @@
+# tasks/run_single_vllm_job.yaml
+
+- name: Template vLLM nomad job for {{ model_item.name }}
+  ansible.builtin.template:
+    src: vllm-expert.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/{{ model_item.name }}.nomad"
+    mode: '0644'
+  become: yes
+  vars:
+    job_name: "{{ model_item.name }}"
+    model_repo_id: "{{ model_item.repo_id }}"
+    model_folder_name: "{{ model_item.repo_id.split('/')[-1] }}"
+    memory_mb: "{{ model_item.memory_mb }}"
+    # You might want to parameterize ports or use dynamic ports.
+    # For now, let's assume we use dynamic ports and map them.
+  register: vllm_job_template
+
+- name: Run vLLM nomad job for {{ model_item.name }}
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job run "{{ nomad_jobs_dir }}/{{ model_item.name }}.nomad"
+  environment:
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+  register: nomad_job_run_result
+  changed_when: "'Job registration successful' in nomad_job_run_result.stdout"
+  failed_when: nomad_job_run_result.rc != 0 and 'Job registration successful' not in nomad_job_run_result.stdout

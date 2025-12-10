@@ -1,0 +1,71 @@
+job "{{ job_name }}" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "vllm" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" {} # Dynamic port allocation
+    }
+
+    volume "model" {
+      type      = "host"
+      read_only = true
+      source    = "{{ nomad_models_dir }}/vllm/{{ model_folder_name }}"
+    }
+
+    task "vllm-server" {
+      driver = "docker"
+
+      config {
+        image = "vllm/vllm-openai:latest"
+
+        # This is critical for GPU access in Docker
+        device_requests = [
+          {
+            count = -1 # All
+            capabilities = [["gpu"]]
+          }
+        ]
+
+        # Shared memory size might need to be increased for large models
+        shm_size = "2g" # Adjust as needed
+
+        ports = ["http"]
+
+        args = [
+          "--model", "/model",
+          "--served-model-name", "{{ job_name }}",
+          "--port", "${NOMAD_PORT_http}"
+        ]
+
+        volume_mount {
+          volume      = "model"
+          destination = "/model"
+          read_only   = true
+        }
+      }
+
+      resources {
+        cpu    = 4000
+        memory = {{ memory_mb }}
+      }
+
+      service {
+        name = "{{ job_name }}"
+        port = "http"
+
+        check {
+          name     = "vLLM HTTP Health Check"
+          type     = "http"
+          path     = "/health"
+          interval = "10s"
+          timeout  = "2s"
+          address_mode = "host"
+        }
+      }
+    }
+  }
+}
