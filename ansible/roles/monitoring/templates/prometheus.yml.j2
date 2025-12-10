@@ -32,3 +32,11 @@ scrape_configs:
     consul_sd_configs:
       - server: '{{ cluster_ip }}:{{ consul_http_port }}'
         services: ['mqtt-exporter']
+
+  - job_name: 'llama-server'
+    consul_sd_configs:
+      - server: '{{ cluster_ip }}:{{ consul_http_port }}'
+        services: ['router-api']
+    metrics_path: /metrics
+    params:
+      format: ['prometheus']

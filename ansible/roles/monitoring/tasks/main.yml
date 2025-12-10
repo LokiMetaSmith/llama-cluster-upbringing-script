@@ -36,6 +36,13 @@
     mode: '0644'
   become: yes
 
+- name: Copy LLM Performance Dashboard
+  ansible.builtin.copy:
+    src: llm_dashboard.json
+    dest: "{{ nomad_volumes_dir }}/grafana/dashboards/llm_dashboard.json"
+    mode: '0644'
+  become: yes
+
 - name: Deploy Node Exporter
   block:
     - name: Template node-exporter job
