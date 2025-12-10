@@ -4,18 +4,31 @@ import os
 import json
 import glob
 import sys
+try:
+    from challenger import Challenger
+except ImportError:
+    # If run as a script from root, we might need to adjust path or use relative import if in package
+    sys.path.append(os.path.dirname(__file__))
+    from challenger import Challenger
 
-def run_campaign(generations: int):
+
+def run_campaign(generations: int, use_challenger: bool = False, seed_test: str = None):
     """
     Runs an evolutionary campaign for a specified number of generations.
 
     This function calls the `evolve.py` script in a loop to generate new
-    agents and populate the archive.
+    agents and populate the archive. Supports R-Few Challenger mode.
 
     Args:
         generations (int): The number of evolutionary steps to run.
+        use_challenger (bool): Whether to use the Challenger agent to generate synthetic tests.
+        seed_test (str): Path to the seed test file (required if use_challenger is True).
     """
     print(f"--- Starting evolutionary campaign for {generations} generations ---")
+    if use_challenger:
+        print(f"--- Mode: R-Few Challenger (Seed: {seed_test}) ---")
+        challenger = Challenger()
+
     evolve_script_path = os.path.join(os.path.dirname(__file__), "evolve.py")
 
     if not os.path.exists(evolve_script_path):
@@ -24,11 +37,26 @@ def run_campaign(generations: int):
 
     for i in range(generations):
         print(f"\n--- Running Generation {i+1}/{generations} ---")
+
+        current_test_case = None
+        if use_challenger and seed_test:
+            try:
+                current_test_case = challenger.generate_challenge(seed_test)
+                print(f"Generated synthetic challenge: {current_test_case}")
+            except Exception as e:
+                print(f"Error generating challenge: {e}. Skipping generation.", file=sys.stderr)
+                continue
+
         try:
             # We use sys.executable to ensure we're using the same Python interpreter
             # that's running this script.
+            cmd = [sys.executable, evolve_script_path]
+
+            if current_test_case:
+                cmd.extend(["--test-case", current_test_case])
+
             process = subprocess.Popen(
-                [sys.executable, evolve_script_path],
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -150,10 +178,23 @@ if __name__ == "__main__":
         default=10,
         help="The number of generations (evolutionary steps) to run."
     )
+    parser.add_argument(
+        "--use-challenger",
+        action="store_true",
+        help="Enable R-Few Challenger mode to generate synthetic tests."
+    )
+    parser.add_argument(
+        "--seed-test",
+        type=str,
+        help="Path to the seed test file for Challenger mode."
+    )
     args = parser.parse_args()
 
+    if args.use_challenger and not args.seed_test:
+        parser.error("--seed-test is required when --use-challenger is set.")
+
     try:
-        run_campaign(args.generations)
+        run_campaign(args.generations, args.use_challenger, args.seed_test)
         analyze_archive()
     except KeyboardInterrupt:
         print("\nCampaign interrupted by user. Analyzing partial results...", file=sys.stderr)
