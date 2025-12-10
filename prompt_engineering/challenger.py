@@ -31,7 +31,9 @@ class Challenger:
 
         self.client = OpenAI(base_url=base_url, api_key=api_key)
         self.model = model
-        self.synthetic_tests_dir = os.path.join(os.getcwd(), "tests", "integration", "synthetic")
+        # Use path relative to this file to ensure correct location regardless of CWD
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        self.synthetic_tests_dir = os.path.join(repo_root, "tests", "integration", "synthetic")
         os.makedirs(self.synthetic_tests_dir, exist_ok=True)
 
     def generate_challenge(self, seed_test_path: str) -> str:
