@@ -13,6 +13,9 @@
     - role: term_everything
       tags:
         - term_everything
+    - role: opencode
+      tags:
+        - opencode
     - role: memory_service
       tags:
         - memory_service

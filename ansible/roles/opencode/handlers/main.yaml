@@ -1,0 +1,6 @@
+---
+- name: Run Opencode Job
+  ansible.builtin.command: nomad job run /opt/nomad/jobs/opencode.nomad
+  become: yes
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"

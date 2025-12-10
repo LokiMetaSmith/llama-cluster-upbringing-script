@@ -1,0 +1,26 @@
+---
+- name: Install opencode-ai via npm
+  community.general.npm:
+    name: opencode-ai
+    global: yes
+    state: latest
+  become: yes
+
+- name: Find opencode binary path
+  ansible.builtin.shell: npm bin -g
+  register: npm_bin_path
+  changed_when: false
+
+- name: Set opencode binary path
+  ansible.builtin.set_fact:
+    opencode_bin_path: "{{ npm_bin_path.stdout }}/opencode"
+
+- name: Create Opencode Nomad job file
+  ansible.builtin.template:
+    src: opencode.nomad.j2
+    dest: /opt/nomad/jobs/opencode.nomad
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Run Opencode Job
