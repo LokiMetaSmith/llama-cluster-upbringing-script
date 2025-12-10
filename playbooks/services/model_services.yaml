@@ -20,6 +20,7 @@
       loop:
         - download_models
         - llama_cpp
+        - vllm
         - whisper_cpp
       loop_control:
         loop_var: role_name
@@ -27,6 +28,7 @@
       tags:
         - download_models
         - llama_cpp
+        - vllm
         - whisper_cpp
 
     - name: Flush handlers to ensure all services are started
