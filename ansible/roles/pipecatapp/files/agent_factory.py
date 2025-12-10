@@ -24,6 +24,7 @@ from tools.project_mapper_tool import ProjectMapperTool
 from tools.planner_tool import PlannerTool
 from tools.file_editor_tool import FileEditorTool
 from tools.archivist_tool import ArchivistTool
+from tools.opencode_tool import OpencodeTool
 
 def create_tools(config: dict, twin_service=None, runner=None) -> dict:
     """
@@ -69,6 +70,11 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "planner": PlannerTool(twin_service) if twin_service else None,
         "file_editor": FileEditorTool(root_dir="/opt/pipecatapp"), # Allow editing within the app dir
         "archivist": ArchivistTool(),
+        "opencode": OpencodeTool(
+            base_url=config.get("opencode_api_url"),
+            provider_id=config.get("opencode_provider", "openai"),
+            model_id=config.get("opencode_model", "gpt-4o")
+        ),
     }
 
     if config.get("use_summarizer", False) and twin_service:

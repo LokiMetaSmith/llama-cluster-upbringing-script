@@ -1,0 +1,53 @@
+job "opencode" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "opencode" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 8083
+      }
+    }
+
+    task "opencode-server" {
+      driver = "raw_exec"
+
+      config {
+        command = "{{ opencode_bin_path | default('/usr/bin/opencode') }}"
+        args    = [
+          "serve",
+          "--port", "${NOMAD_PORT_http}",
+          "--hostname", "0.0.0.0"
+        ]
+      }
+
+      # Mount the cluster infrastructure directory to allow the agent to edit it
+      # Note: raw_exec runs as root/host user, so it has access to the filesystem.
+      # We just need to make sure it runs in the right directory or we pass the project path.
+      # The help says `opencode [project]`. `opencode serve` might not take a project arg directly
+      # but it probably serves the current directory or allows opening projects via API.
+      # For now, we set the working directory to the cluster infra.
+
+      env {
+        OPENAI_API_KEY      = "{{ openai_api_key | default('') }}"
+        ANTHROPIC_API_KEY   = "{{ anthropic_api_key | default('') }}"
+        # Add other providers as needed
+      }
+    }
+
+    service {
+      name = "opencode-api"
+      port = "http"
+      tags = ["opencode", "api"]
+
+      check {
+        type     = "http"
+        path     = "/" # Verify health endpoint
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+  }
+}

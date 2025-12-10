@@ -53,3 +53,4 @@ python-consul2
 aiohttp
 faiss-cpu
 sentence-transformers
+opencode-ai
