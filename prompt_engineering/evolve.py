@@ -93,6 +93,25 @@ def select_parent(archive, selection_method="weighted", tournament_size=3):
                 return agent
         return archive[-1] # Fallback
 
+    # 4. Power Law Selection (ShinkaEvolve Strategy)
+    elif selection_method == "power_law":
+        # Sort archive by fitness descending
+        sorted_archive = sorted(archive, key=get_fitness_score, reverse=True)
+        N = len(sorted_archive)
+        alpha = 1.0  # Power law exponent, Shinka defaults to 1.0 (Zipf's law like)
+
+        # Calculate weights: (rank + 1) ^ -alpha
+        weights = [(i + 1) ** -alpha for i in range(N)]
+        total_weight = sum(weights)
+
+        pick = random.uniform(0, total_weight)
+        current = 0
+        for i, weight in enumerate(weights):
+            current += weight
+            if current > pick:
+                return sorted_archive[i]
+        return sorted_archive[-1]
+
     # Default fallback
     return random.choice(archive)
 
@@ -152,6 +171,7 @@ The provided file is a Python script that is part of a larger application.
 The tests are run using pytest.
 
 Your goal is to make the tests pass. A fitness score of 1.0 means all tests passed.
+Partial credit is given for passing some tests, so try to fix as many as possible even if you cannot fix all of them.
 
 You must provide your response as a single JSON object containing two keys:
 1. "rationale": A single sentence explaining the change you made.
@@ -213,7 +233,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--selection-method",
-        choices=["weighted", "tournament", "random"],
+        choices=["weighted", "tournament", "random", "power_law"],
         default="weighted",
         help="Strategy for selecting the parent from the archive."
     )

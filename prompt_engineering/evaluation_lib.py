@@ -3,6 +3,7 @@ import os
 import time
 import logging
 import shutil
+import re
 import jinja2
 import nomad
 import requests
@@ -82,7 +83,7 @@ def wait_for_service_healthy(service_name: str, retries: int, delay: int) -> boo
 
 
 def get_test_results(job_id: str, evaluation_timeout_seconds: int) -> dict:
-    """Monitors a Nomad batch job and retrieves its final logs."""
+    """Monitors a Nomad batch job and retrieves its final logs with granular stats."""
     try:
         # Wait for the job to complete
         nomad_client.job.monitor(job_id, timeout=evaluation_timeout_seconds)
@@ -98,17 +99,56 @@ def get_test_results(job_id: str, evaluation_timeout_seconds: int) -> dict:
         # Get logs
         logs = nomad_client.allocation.logs(alloc_id, task="run-tests", stderr=True, plain=True)
 
-        # Simple check for pytest summary
-        if "failed" in logs or "error" in logs:
-            return {"passed": False, "details": "Pytest reported failures or errors.", "log": logs}
-        elif "passed" in logs:
-            return {"passed": True, "details": "Pytest reported all tests passed.", "log": logs}
-        else:
-            return {"passed": False, "details": "Could not determine test outcome from logs.", "log": logs}
+        # Parse pytest summary for granular stats
+        # Find all blocks of === ... === and look for the last one with status keywords
+        matches = re.findall(r'={3,} (.*?) ={3,}', logs, re.DOTALL)
+        passed = 0
+        failed = 0
+        errors = 0
+
+        summary = None
+        for m in reversed(matches):
+            if "passed" in m or "failed" in m or "error" in m or "skipped" in m:
+                summary = m
+                break
+
+        if summary:
+            # Extract passed
+            m_passed = re.search(r'(\d+) passed', summary)
+            if m_passed:
+                passed = int(m_passed.group(1))
+
+            # Extract failed
+            m_failed = re.search(r'(\d+) failed', summary)
+            if m_failed:
+                failed = int(m_failed.group(1))
+
+            # Extract errors (treat as failures)
+            m_errors = re.search(r'(\d+) error', summary)
+            if m_errors:
+                errors = int(m_errors.group(1))
+
+        total = passed + failed + errors
+        is_passed = (total > 0 and failed == 0 and errors == 0)
+
+        details = f"Tests: {passed}/{total} passed."
+        if failed > 0 or errors > 0:
+            details += f" ({failed} failed, {errors} errors)"
+
+        if not summary and "passed" not in logs and "failed" not in logs:
+             # Fallback if no summary found (e.g. critical crash before tests ran)
+             return {"passed": False, "details": "Could not determine test outcome from logs.", "log": logs, "stats": (0, 0, 0)}
+
+        return {
+            "passed": is_passed,
+            "details": details,
+            "log": logs,
+            "stats": (passed, failed, errors)
+        }
 
     except Exception as e:
         logging.error(f"Error getting test results for job '{job_id}': {e}")
-        return {"passed": False, "details": str(e)}
+        return {"passed": False, "details": str(e), "stats": (0, 0, 0)}
 
 
 def cleanup(job_ids: list, temp_dir: str):

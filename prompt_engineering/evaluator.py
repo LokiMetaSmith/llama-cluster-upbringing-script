@@ -135,9 +135,18 @@ async def evaluate_code(candidate_code: str) -> dict:
 
         # 5. Get test results
         results = get_test_results(test_job_id, EVALUATION_TIMEOUT_SECONDS)
-        fitness = 1.0 if results.get("passed") else 0.0
 
-        logging.info(f"Evaluation finished. Fitness: {fitness}. Details: {results.get('details')}")
+        # Calculate granular fitness
+        stats = results.get("stats", (0, 0, 0)) # passed, failed, errors
+        passed_count, failed_count, error_count = stats
+        total_tests = passed_count + failed_count + error_count
+
+        if total_tests > 0:
+            fitness = passed_count / total_tests
+        else:
+            fitness = 0.0
+
+        logging.info(f"Evaluation finished. Fitness: {fitness:.4f}. Details: {results.get('details')}")
 
         evaluation_results = {
             "fitness": fitness,
