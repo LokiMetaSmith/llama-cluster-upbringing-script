@@ -32,7 +32,7 @@
   tags:
     - world_model_service
   ansible.builtin.command:
-    cmd: "docker build -t world-model-service:local ."
+    cmd: "docker build --no-cache -t world-model-service:local ."
     chdir: "/opt/world_model_service/"
   register: docker_build_result
   changed_when: "'Successfully built' in docker_build_result.stdout or 'writing image' in docker_build_result.stdout"
