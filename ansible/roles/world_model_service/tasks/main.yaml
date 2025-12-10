@@ -113,6 +113,13 @@
   tags:
     - world_model_service
   block:
+    - name: "World Model Service : Purge existing nomad job (force image update)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job stop -purge world-model-service"
+      ignore_errors: yes
+      changed_when: true
+      become: no
+
     - name: "World Model Service : Run nomad job"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/world_model.nomad"
