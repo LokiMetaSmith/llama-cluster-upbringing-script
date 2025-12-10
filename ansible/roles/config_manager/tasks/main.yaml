@@ -37,6 +37,7 @@
     {{
       (expert_models | dict2items) +
       [
+        { 'key': 'vllm_expert_models', 'value': vllm_expert_models },
         { 'key': 'tts_voices', 'value': tts_voices },
         { 'key': 'piper_voice_files', 'value': piper_voice_files },
         { 'key': 'embedding_models', 'value': embedding_models },

@@ -1,0 +1,28 @@
+# tasks file for vllm
+
+- name: Check for Nvidia GPU
+  ansible.builtin.shell: nvidia-smi
+  register: nvidia_smi_result
+  changed_when: false
+  failed_when: false
+
+- name: Debug GPU status
+  ansible.builtin.debug:
+    msg: "GPU detected: {{ nvidia_smi_result.rc == 0 }}. vLLM will be deployed."
+  when: nvidia_smi_result.rc == 0
+
+- name: Deploy vLLM
+  block:
+    - name: Ensure Nomad jobs directory exists
+      ansible.builtin.file:
+        path: "{{ nomad_jobs_dir }}"
+        state: directory
+        mode: '0755'
+      become: yes
+
+    - name: Template and run vLLM Nomad job for each model
+      ansible.builtin.include_tasks: run_single_vllm_job.yaml
+      loop: "{{ vllm_expert_models }}"
+      loop_control:
+        loop_var: model_item
+  when: nvidia_smi_result.rc == 0
