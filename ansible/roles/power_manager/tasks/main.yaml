@@ -87,6 +87,14 @@
   tags:
     - iptables
 
+- name: Allow traffic from Cluster IP (Backstage Network)
+  become: yes
+  ansible.builtin.command:
+    # This allows traffic from the internal 10.0.0.x network
+    cmd: "iptables -t mangle -A PREROUTING -s 10.0.0.0/24 -p tcp -j MARK --set-mark 0x1 -m comment --comment 'Allow Backstage Cluster Traffic'"
+  tags:
+    - iptables
+
 - name: Enable and start the power agent service
   become: yes
   ansible.builtin.systemd:
