@@ -19,6 +19,7 @@ import os
 import subprocess
 import sys
 import ctypes as ct
+import socket
 
 # --- Dummy HTTP Server for Health Check Spoofing ---
 class HealthCheckHandler(BaseHTTPRequestHandler):
@@ -157,7 +158,9 @@ def main():
             for port, config in MONITORED_SERVICES.items():
                 if config["status"] == "running":
                     # Correctly handle ctypes instances from the BPF table
-                    current_count_obj = packet_counts.get(ct.c_ushort(port))
+                    # Convert port to network byte order (Big Endian) to match BPF
+                    port_ns = socket.htons(port)
+                    current_count_obj = packet_counts.get(ct.c_ushort(port_ns))
                     current_count = current_count_obj.value if current_count_obj else 0
                     last_count = last_known_counts.get(port, 0)
 
@@ -172,7 +175,9 @@ def main():
 
             for port, config in MONITORED_SERVICES.items():
                 if config["status"] == "sleeping":
-                    current_count_obj = packet_counts.get(ct.c_ushort(port))
+                    # Convert port to network byte order (Big Endian) to match BPF
+                    port_ns = socket.htons(port)
+                    current_count_obj = packet_counts.get(ct.c_ushort(port_ns))
                     current_count = current_count_obj.value if current_count_obj else 0
                     last_count = last_known_counts.get(port, 0)
                     if current_count > last_count:
