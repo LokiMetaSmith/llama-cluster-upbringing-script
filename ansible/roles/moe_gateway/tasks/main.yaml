@@ -14,6 +14,14 @@
     group: root
     mode: "0755"
 
+- name: Copy gateway static files
+  ansible.builtin.copy:
+    src: static/
+    dest: "{{ pipecat_app_dir }}/moe_gateway/static/"
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Create moe-gateway job file
   ansible.builtin.template:
     src: moe-gateway.nomad.j2

@@ -63,6 +63,7 @@
 - [ ] Add the new test to `e2e-tests.yaml`.
 - [ ] Modify `start_services.sh` to include the home assistant job.
 - [ ] Investigate https://github.com/microsoft/agent-lightning as a possible agent improvement method.
+- [ ] **Investigate RPC Provider Monitoring:** Research how to expose or scrape metrics from `llamacpp-rpc` providers to aggregate backend performance data.
 
 ## 4. Maintenance & Clean Up
 
