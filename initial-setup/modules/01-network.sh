@@ -126,4 +126,15 @@ for service in networking NetworkManager systemd-networkd; do
     fi
 done
 
+# Wait for DNS/Internet connectivity to be restored
+log "Waiting for network connectivity..."
+for i in {1..30}; do
+    if ping -c 1 -W 2 google.com &>/dev/null; then
+        log "Network connectivity verified."
+        break
+    fi
+    log "Waiting for network (attempt $i/30)..."
+    sleep 2
+done
+
 log "Network configuration complete."
