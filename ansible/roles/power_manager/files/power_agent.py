@@ -20,6 +20,7 @@ import subprocess
 import sys
 import ctypes as ct
 import socket
+import struct
 
 # --- Dummy HTTP Server for Health Check Spoofing ---
 class HealthCheckHandler(BaseHTTPRequestHandler):
@@ -157,11 +158,11 @@ def main():
 
             for port, config in MONITORED_SERVICES.items():
                 if config["status"] == "running":
-                    # Correctly handle ctypes instances from the BPF table
-                    # Convert port to network byte order (Big Endian) to match BPF
-                    # Note: BPF maps store keys in network byte order.
+                    # --- FIX START ---
+                    # Convert port to Network Byte Order to match the BPF map key
                     port_ns = socket.htons(port)
                     current_count_obj = packet_counts.get(ct.c_ushort(port_ns))
+                    # --- FIX END ---
                     current_count = current_count_obj.value if current_count_obj else 0
                     last_count = last_known_counts.get(port, 0)
 
