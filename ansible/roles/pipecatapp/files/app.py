@@ -59,6 +59,7 @@ from tools.planner_tool import PlannerTool
 from agent_factory import create_tools
 from task_supervisor import TaskSupervisor
 from durable_execution import DurableExecutionEngine, durable_step
+from moondream_detector import MoondreamDetector
 from workflow.runner import WorkflowRunner, ActiveWorkflows
 # Import all node classes to ensure they are registered
 from workflow.nodes.base_nodes import *
@@ -735,6 +736,45 @@ class TwinService(FrameProcessor):
 # -----------------------
 # Main entrypoint
 # -----------------------
+def initialize_vision_detector(app_config: dict) -> FrameProcessor:
+    """Initializes the vision detector based on configuration with failover.
+
+    This function selects a primary vision model (e.g., YOLOv8, Moondream)
+    based on the `app_config`. If the primary model fails to initialize,
+    it attempts to load a fallback model. If both fail, it returns a dummy
+    processor that indicates the vision system is unavailable.
+
+    Args:
+        app_config (dict): The application configuration dictionary.
+
+    Returns:
+        An instance of a vision detector (e.g., YOLOv8Detector, MoondreamDetector)
+        or a dummy FrameProcessor if initialization fails.
+    """
+    vision_model_name = app_config.get("vision_model", "yolov8")
+    primary_model, fallback_model = (YOLOv8Detector, MoondreamDetector) if vision_model_name == "yolov8" else (MoondreamDetector, YOLOv8Detector)
+
+    try:
+        logging.info(f"Attempting to initialize primary vision model: {primary_model.__name__}")
+        detector = primary_model()
+        logging.info(f"Successfully initialized {primary_model.__name__}")
+        return detector
+    except Exception as e:
+        logging.warning(f"Failed to initialize {primary_model.__name__}: {e}. Attempting fallback.")
+        try:
+            logging.info(f"Attempting to initialize fallback vision model: {fallback_model.__name__}")
+            detector = fallback_model()
+            logging.info(f"Successfully initialized {fallback_model.__name__}")
+            return detector
+        except Exception as e_fallback:
+            logging.error(f"Failed to initialize fallback vision model {fallback_model.__name__}: {e_fallback}")
+            class VisionUnavailable(FrameProcessor):
+                def get_observation(self) -> str:
+                    return "Vision system is completely unavailable."
+            detector = VisionUnavailable()
+            logging.info("Initialized with a dummy vision processor.")
+            return detector
+
 async def load_config_from_consul(consul_host, consul_port):
     """Loads application and model configuration from the Consul KV store.
 
@@ -802,9 +842,9 @@ async def main():
     )
 
     runner = PipelineRunner()
-    # TODO: Implement failover or selection logic for vision models
-    vision_detector = YOLOv8Detector()
-    logging.info("Using YOLOv8 for vision.")
+
+    vision_detector = initialize_vision_detector(app_config)
+
 
     if app_config.get("debug_mode", False):
         logging.getLogger().setLevel(logging.DEBUG)
