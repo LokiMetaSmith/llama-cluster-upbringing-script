@@ -52,14 +52,12 @@ job "world-model-service" {
         port = "http"
 
         check {
-          type     = "http"
+          type     = "script"
           name     = "alive"
-          path     = "/health"
+          command  = "/usr/bin/curl"
+          args     = ["-f", "-s", "http://127.0.0.1:${NOMAD_PORT_http}/health"]
           interval = "15s"
           timeout  = "10s"
-          method   = "GET"
-          port     = "http"
-          address_mode = "host"
         }
       }
     }
