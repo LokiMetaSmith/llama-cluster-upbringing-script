@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoE Gateway Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --border-color: #30363d;
+            --accent-color: #58a6ff;
+            --card-bg: #161b22;
+            --success-color: #238636;
+            --error-color: #da3633;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #8b949e;
+        }
+        .split-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .request-list {
+            height: 600px;
+            overflow-y: auto;
+        }
+        .request-item {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .request-item:hover, .request-item.active {
+            background-color: #21262d;
+        }
+        .request-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .status-badge {
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-200 { background-color: rgba(35, 134, 54, 0.2); color: #3fb950; }
+        .status-500, .status-503, .status-504 { background-color: rgba(218, 54, 51, 0.2); color: #f85149; }
+
+        .detail-view {
+            padding: 20px;
+        }
+        pre {
+            background-color: #0d1117;
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SectorFlux-ish Gateway</h1>
+            <div id="connection-status" style="color: var(--success-color);">Connected</div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="card">
+                <div class="metric-label">Total Requests</div>
+                <div class="metric-value" id="total-requests">0</div>
+            </div>
+            <div class="card">
+                <div class="metric-label">Avg Latency</div>
+                <div class="metric-value" id="avg-latency">0ms</div>
+            </div>
+            <div class="card">
+                <div class="metric-label">Last 200</div>
+                <div class="metric-value" id="last-status">-</div>
+            </div>
+        </div>
+
+        <div class="split-view">
+            <div class="card request-list" id="request-list">
+                <!-- Request items will be populated here -->
+                <div style="padding: 20px; text-align: center; color: #8b949e;">Loading requests...</div>
+            </div>
+            <div class="card detail-view" id="detail-view">
+                <h3 style="margin-top: 0;">Select a request to view details</h3>
+                <div style="color: #8b949e;">Click on any request in the list to inspect headers, payload, and response.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let requests = [];
+        let selectedRequestId = null;
+
+        async function fetchMetrics() {
+            try {
+                const response = await fetch('/api/metrics');
+                const data = await response.json();
+                document.getElementById('total-requests').textContent = data.total_requests;
+                document.getElementById('avg-latency').textContent = Math.round(data.avg_latency) + 'ms';
+                // You could add more metrics here
+            } catch (e) {
+                console.error("Failed to fetch metrics", e);
+            }
+        }
+
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/api/logs?limit=50');
+                const data = await response.json();
+
+                // Only update if data changed (naive check, but keeps scroll position better than full replace)
+                const currentIds = requests.map(r => r.request_id).join(',');
+                const newIds = data.map(r => r.request_id).join(',');
+
+                if (currentIds !== newIds) {
+                    requests = data;
+                    renderRequestList();
+                }
+            } catch (e) {
+                console.error("Failed to fetch logs", e);
+            }
+        }
+
+        function renderRequestList() {
+            const listEl = document.getElementById('request-list');
+            listEl.innerHTML = '';
+
+            if (requests.length === 0) {
+                listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #8b949e;">No requests recorded yet.</div>';
+                return;
+            }
+
+            requests.forEach(req => {
+                const item = document.createElement('div');
+                item.className = `request-item ${req.request_id === selectedRequestId ? 'active' : ''}`;
+                item.onclick = () => selectRequest(req);
+
+                const date = new Date(req.timestamp * 1000);
+                const timeStr = date.toLocaleTimeString();
+                const statusClass = req.status_code >= 200 && req.status_code < 300 ? 'status-200' : 'status-500';
+
+                item.innerHTML = `
+                    <div class="request-header">
+                        <span class="status-badge ${statusClass}">${req.status_code || '---'}</span>
+                        <span class="timestamp">${timeStr}</span>
+                    </div>
+                    <div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        ${req.user_input ? req.user_input.substring(0, 40) + '...' : 'No input captured'}
+                    </div>
+                    <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">
+                        ${req.latency ? Math.round(req.latency * 1000) + 'ms' : 'In Progress'}
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+
+        function selectRequest(req) {
+            selectedRequestId = req.request_id;
+            renderRequestList(); // Re-render to update active state
+
+            const detailEl = document.getElementById('detail-view');
+
+            // Try to parse JSON for better display
+            let prettyInput = req.user_input;
+            try { prettyInput = JSON.stringify(JSON.parse(req.user_input), null, 2); } catch(e){}
+
+            let prettyResponse = req.response;
+            try { prettyResponse = JSON.stringify(JSON.parse(req.response), null, 2); } catch(e){}
+
+            detailEl.innerHTML = `
+                <h3 style="margin-top: 0;">Request Details</h3>
+                <div><strong>ID:</strong> ${req.request_id}</div>
+                <div><strong>Timestamp:</strong> ${new Date(req.timestamp * 1000).toLocaleString()}</div>
+                <div><strong>Status:</strong> ${req.status_code}</div>
+                <div><strong>Latency:</strong> ${req.latency ? (req.latency * 1000).toFixed(2) + 'ms' : 'N/A'}</div>
+
+                <h4>User Input</h4>
+                <pre>${prettyInput || 'None'}</pre>
+
+                <h4>Response</h4>
+                <pre>${prettyResponse || 'None'}</pre>
+            `;
+        }
+
+        // Poll every 2 seconds
+        setInterval(() => {
+            fetchMetrics();
+            fetchLogs();
+        }, 2000);
+
+        // Initial load
+        fetchMetrics();
+        fetchLogs();
+    </script>
+</body>
+</html>
