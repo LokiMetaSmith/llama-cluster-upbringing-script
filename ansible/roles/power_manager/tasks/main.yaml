@@ -95,6 +95,20 @@
   tags:
     - iptables
 
+- name: Allow Backstage Cluster Traffic (UFW)
+  become: yes
+  ansible.builtin.command:
+    cmd: "ufw allow from 10.0.0.0/24 proto tcp"
+  tags:
+    - iptables
+
+- name: Allow Nomad Ephemeral Ports (UFW)
+  become: yes
+  ansible.builtin.command:
+    cmd: "ufw allow 20000:32000/tcp"
+  tags:
+    - iptables
+
 - name: Enable and start the power agent service
   become: yes
   ansible.builtin.systemd:

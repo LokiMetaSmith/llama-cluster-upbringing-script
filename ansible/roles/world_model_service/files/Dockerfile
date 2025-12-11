@@ -7,9 +7,6 @@ WORKDIR /app
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 
-# Install curl for health checks
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-
 # Copy the requirements file into the container at /app
 COPY requirements.txt .
 
