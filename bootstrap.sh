@@ -166,6 +166,17 @@ if [ "$USE_CONTAINER" = true ]; then
             docker rm -f "$CONTAINER_NAME"
         fi
 
+        echo "Checking for port conflicts..."
+        for port in 4646 8500 8080 8000; do
+            if lsof -i :$port >/dev/null; then
+                echo "❌ Error: Port $port is already in use."
+                echo "Please stop the process using this port and try again."
+                lsof -i :$port
+                exit 1
+            fi
+        done
+        echo "✅ All required ports are clear."
+
         echo "Starting container: $CONTAINER_NAME..."
         # We run with privileged mode and cgroup mapping for systemd support
         # We also mount the current directory to /opt/cluster-infra
