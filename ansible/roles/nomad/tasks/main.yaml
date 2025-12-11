@@ -211,6 +211,10 @@
     dest: /tmp/cni-plugins.tgz
     mode: '0644'
     timeout: 30
+  register: download_cni
+  until: download_cni is success
+  retries: 5
+  delay: 10
   check_mode: no
 
 - name: Extract CNI plugins into /opt/cni/bin
