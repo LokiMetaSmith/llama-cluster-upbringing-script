@@ -1,2 +1,4 @@
 # defaults file for power_manager
-power_manager_interface: "eth0"
+# Default interface for the power agent to monitor.
+# Defaults to the primary network interface found by Ansible.
+power_agent_interface: "{{ ansible_default_ipv4.interface }}"

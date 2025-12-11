@@ -159,6 +159,7 @@ def main():
                 if config["status"] == "running":
                     # Correctly handle ctypes instances from the BPF table
                     # Convert port to network byte order (Big Endian) to match BPF
+                    # Note: BPF maps store keys in network byte order.
                     port_ns = socket.htons(port)
                     current_count_obj = packet_counts.get(ct.c_ushort(port_ns))
                     current_count = current_count_obj.value if current_count_obj else 0
@@ -176,6 +177,7 @@ def main():
             for port, config in MONITORED_SERVICES.items():
                 if config["status"] == "sleeping":
                     # Convert port to network byte order (Big Endian) to match BPF
+                    # Note: BPF maps store keys in network byte order.
                     port_ns = socket.htons(port)
                     current_count_obj = packet_counts.get(ct.c_ushort(port_ns))
                     current_count = current_count_obj.value if current_count_obj else 0
