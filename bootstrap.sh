@@ -166,14 +166,23 @@ if [ "$USE_CONTAINER" = true ]; then
             docker rm -f "$CONTAINER_NAME"
         fi
 
-        echo "Checking for port conflicts..."
+        echo "Waiting for required ports (4646, 8500, 8080, 8000) to be free..."
         for port in 4646 8500 8080 8000; do
-            if lsof -i :$port >/dev/null; then
-                echo "❌ Error: Port $port is already in use."
-                echo "Please stop the process using this port and try again."
-                lsof -i :$port
-                exit 1
-            fi
+            for i in {1..10}; do
+                if ! lsof -i :$port >/dev/null 2>&1; then
+                    break # Port is free, exit inner loop
+                fi
+                if [ "$i" -eq 1 ]; then
+                    echo "Port $port is in use. Waiting up to 10 seconds..."
+                fi
+                if [ "$i" -eq 10 ]; then
+                    echo "❌ Error: Port $port is still in use after 10 seconds."
+                    echo "Please stop the following process and try again:"
+                    lsof -i :$port
+                    exit 1
+                fi
+                sleep 1
+            done
         done
         echo "✅ All required ports are clear."
 
