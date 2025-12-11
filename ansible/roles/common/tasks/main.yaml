@@ -150,6 +150,13 @@
     - "{{ mqtt_websocket_port }}" # MQTT Websockets
     - "{{ router_port }}" # Traefik / Router (if used)
 
+- name: "Firewall : Allow Nomad Ephemeral Ports"
+  community.general.ufw:
+    rule: allow
+    port: "20000:32000"
+    proto: tcp
+    comment: "Allow Nomad ephemeral ports for dynamic allocations"
+
 - name: "Firewall : Enable UFW"
   community.general.ufw:
     state: enabled
