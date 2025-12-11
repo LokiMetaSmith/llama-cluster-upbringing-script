@@ -161,7 +161,7 @@ def main():
                     # Convert port to network byte order (Big Endian) to match BPF
                     # Note: BPF maps store keys in network byte order.
                     port_ns = socket.htons(port)
-                    current_count_obj = packet_counts.get(ct.c_ushort(port_ns))
+                    current_count_obj = current_count_obj = packet_counts.get(ct.c_ushort(socket.htons(port_ns)))
                     current_count = current_count_obj.value if current_count_obj else 0
                     last_count = last_known_counts.get(port, 0)
 
