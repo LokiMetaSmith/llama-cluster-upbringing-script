@@ -71,6 +71,14 @@
   tags:
     - iptables
 
+- name: Mark Nomad health check packets (Host IP - PREROUTING)
+  become: yes
+  ansible.builtin.command:
+    cmd: "iptables -t mangle -A PREROUTING -s {{ ansible_default_ipv4.address }} -p tcp -j MARK --set-mark 0x1 -m comment --comment 'Mark packets from Host IP for health checks (PREROUTING)'"
+  when: "'Mark packets from Host IP for health checks (PREROUTING)' not in iptables_mangle_rules.stdout"
+  tags:
+    - iptables
+
 - name: Mark Nomad health check packets (Host IP - OUTPUT)
   become: yes
   ansible.builtin.command:
