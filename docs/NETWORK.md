@@ -20,6 +20,47 @@ To understand this structure, it helps to visualize the cluster node as a venue:
 * **Use Case:** Nomad Client talking to Nomad Server, Consul syncing data, Raft Consensus.
 * **Why it's stable:** Even if the "Billboard" (`advertise_ip`) changes or the front door moves, the band members (nodes) can still keep playing because they are on a dedicated, static channel.
 
+### Visual Diagram
+
+```mermaid
+graph TD
+    subgraph Front_of_House ["Front of House (Public/User Access)"]
+        direction TB
+        User((User/Admin))
+        Router[Home Router / DHCP]
+    end
+
+    subgraph Cluster_Node ["Cluster Node (Venue)"]
+        subgraph Network_Interfaces ["Network Interfaces"]
+            Eth0["Physical Interface<br>(advertise_ip / DHCP)"]
+            Alias["Alias Interface<br>(cluster_ip / Static)"]
+        end
+
+        subgraph Services ["Services"]
+            Public_Services["Public APIs & UI<br>(Nomad/Consul HTTP)<br>Binds: 0.0.0.0"]
+            Internal_Services["Internal Sync/RPC<br>(Gossip, Raft)<br>Binds: cluster_ip"]
+        end
+    end
+
+    subgraph Backstage ["Backstage (Cluster Private Network)"]
+        Other_Nodes[Other Cluster Nodes]
+    end
+
+    %% Connections
+    User -- "SSH / HTTP Access" --> Eth0
+    Router -- "Assigns Dynamic IP" --> Eth0
+
+    Eth0 -.-> Public_Services
+    Alias -.-> Internal_Services
+
+    Alias <== "Stable Internal Comm" ==> Other_Nodes
+
+    %% Styling
+    style Front_of_House fill:#e1f5fe,stroke:#01579b
+    style Backstage fill:#f3e5f5,stroke:#4a148c
+    style Cluster_Node fill:#fff3e0,stroke:#e65100
+```
+
 ---
 
 ## Technical Implementation
