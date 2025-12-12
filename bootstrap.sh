@@ -147,12 +147,26 @@ cd "$SCRIPT_DIR"
 if [ "$USE_CONTAINER" = true ]; then
     echo "--- Running in Container Mode ---"
 
+    # --- Host-side Cluster Detection ---
+    check_for_existing_cluster() {
+        echo "--- Checking for existing cluster on host ---"
+        CLUSTER_EXISTS=false
+        if nc -z localhost 4646 2>/dev/null || nc -z localhost 8500 2>/dev/null; then
+            echo "✅ Detected existing Nomad/Consul service on the host."
+            CLUSTER_EXISTS=true
+        else
+            echo "ℹ️  No existing cluster detected on the host. Will start a new one."
+        fi
+    }
+
     # Check if we are already inside the container
     if [ -f "/.dockerenv" ] && [ "$(hostname)" = "pipecat-dev-runner" ]; then
         echo "✅ Already inside the container. Proceeding with bootstrap..."
     else
         IMAGE_NAME="pipecat-dev-container"
-        CONTAINER_NAME="pipecat-dev-runner"
+        CONTAINER_NAME="pipecat-dev-runner" # Keep original name to avoid regression
+
+        check_for_existing_cluster
 
         echo "Building container image: $IMAGE_NAME..."
         if ! docker build -t "$IMAGE_NAME" docker/dev_container/; then
@@ -166,36 +180,34 @@ if [ "$USE_CONTAINER" = true ]; then
             docker rm -f "$CONTAINER_NAME"
         fi
 
-        echo "Waiting for required ports (4646, 8500, 8080, 8000) to be free..."
-        for port in 4646 8500 8080 8000; do
-            for i in {1..10}; do
-                if ! lsof -i :$port >/dev/null 2>&1; then
-                    break # Port is free, exit inner loop
-                fi
-                if [ "$i" -eq 1 ]; then
-                    echo "Port $port is in use. Waiting up to 10 seconds..."
-                fi
-                if [ "$i" -eq 10 ]; then
-                    echo "❌ Error: Port $port is still in use after 10 seconds."
-                    echo "Please stop the following process and try again:"
-                    lsof -i :$port
-                    exit 1
-                fi
-                sleep 1
-            done
-        done
-        echo "✅ All required ports are clear."
+        # --- Dynamically configure and start container ---
+        HOST_IP=$(hostname -I | awk '{print $1}')
+        if [ -z "$HOST_IP" ]; then
+            echo "❌ Error: Could not determine host IP address."
+            exit 1
+        fi
 
-        echo "Starting container: $CONTAINER_NAME..."
-        # We run with privileged mode and cgroup mapping for systemd support
-        # We also mount the current directory to /opt/cluster-infra
-        if ! docker run -d --privileged --name "$CONTAINER_NAME" \
+        DOCKER_RUN_CMD=(docker run -d --privileged --name "$CONTAINER_NAME" \
             --hostname "$CONTAINER_NAME" \
-            -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-            --cgroupns=host \
-            -v "$SCRIPT_DIR":/opt/cluster-infra \
-            -p 4646:4646 -p 8500:8500 -p 8080:8080 -p 8000:8000 \
-            "$IMAGE_NAME"; then
+            -v /sys/fs/cgroup:/sys/fs/cgroup:rw --cgroupns=host \
+            -v "$SCRIPT_DIR":/opt/cluster-infra -e "HOST_IP=$HOST_IP")
+
+        if [ "$CLUSTER_EXISTS" = true ]; then
+            echo "Configuring container as a WORKER to join the existing cluster."
+            CONTAINER_ROLE="worker"
+            CONTAINER_CONTROLLER_IP="$HOST_IP"
+            # No port mappings needed for a worker node
+        else
+            echo "Configuring container as a new CONTROLLER."
+            CONTAINER_ROLE="all"
+            CONTAINER_CONTROLLER_IP="" # This will be set inside the container
+            DOCKER_RUN_CMD+=(-p 4646:4646 -p 8500:8500 -p 8080:8080 -p 8000:8000)
+        fi
+
+        DOCKER_RUN_CMD+=("$IMAGE_NAME")
+
+        echo "Starting container with role: $CONTAINER_ROLE..."
+        if ! "${DOCKER_RUN_CMD[@]}"; then
             echo "❌ Failed to start container."
             exit 1
         fi
@@ -204,16 +216,16 @@ if [ "$USE_CONTAINER" = true ]; then
         sleep 5
 
         echo "Executing bootstrap inside the container..."
-
         ARGS_WITHOUT_CONTAINER=()
         for arg in "${ORIGINAL_ARGS[@]}"; do
-            if [ "$arg" != "--container" ]; then
+            if [[ "$arg" != "--container" && "$arg" != "--role" && "$arg" != "--controller-ip" ]]; then
+                # Filter out container-specific or now-determined args
                 ARGS_WITHOUT_CONTAINER+=("$arg")
             fi
         done
 
-        # Execute the script inside the container
-        docker exec -it "$CONTAINER_NAME" /bin/bash -c "cd /opt/cluster-infra && ./bootstrap.sh ${ARGS_WITHOUT_CONTAINER[*]}"
+        # Explicitly pass the determined role and controller IP to the script inside the container
+        docker exec -it "$CONTAINER_NAME" /bin/bash -c "cd /opt/cluster-infra && ./bootstrap.sh --role ${CONTAINER_ROLE} --controller-ip ${CONTAINER_CONTROLLER_IP} ${ARGS_WITHOUT_CONTAINER[*]}"
         EXIT_CODE=$?
 
         echo "Container bootstrap finished with exit code: $EXIT_CODE"
