@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y \
     dnsutils \
     vim \
     nano \
+    rsync \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Docker CE (Client and Engine)
