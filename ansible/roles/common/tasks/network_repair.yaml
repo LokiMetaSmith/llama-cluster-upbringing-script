@@ -15,7 +15,8 @@
 
 - name: "Network Repair : Identify Physical Interfaces"
   ansible.builtin.set_fact:
-    physical_interfaces: "{{ ansible_interfaces | map('regex_search', '^(e|w).*') | select('string') | list }}"
+    # Use alphanumeric regex to exclude aliases (e.g. eth0:0 -> eth0_0) and VLANs (eth0.100) which lack /sys/class/net entries
+    physical_interfaces: "{{ ansible_interfaces | map('regex_search', '^(e|w)[a-zA-Z0-9]+$') | select('string') | list }}"
 
 - name: "Network Repair : Identify Down Interfaces"
   ansible.builtin.set_fact:
