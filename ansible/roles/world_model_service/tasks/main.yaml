@@ -115,14 +115,14 @@
   block:
     - name: "World Model Service : Purge existing nomad job (force image update)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad job stop -purge world-model-service"
+        cmd: "nomad job stop -purge world-model-service"
       ignore_errors: yes
       changed_when: true
       become: no
 
     - name: "World Model Service : Run nomad job"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/world_model.nomad"
+        cmd: "nomad job run {{ nomad_jobs_dir }}/world_model.nomad"
       changed_when: true
       become: no
       register: world_model_job_run
@@ -130,7 +130,7 @@
   rescue:
     - name: "World Model Service : Get World Model job status"
       ansible.builtin.command:
-        cmd: /usr/local/bin/nomad job status -verbose world-model-service
+        cmd: nomad job status -verbose world-model-service
       register: wm_job_status
       ignore_errors: yes
       become: no
