@@ -97,6 +97,17 @@
   ansible.builtin.debug:
     var: debug_output.stdout_lines
 
+- name: "World Model Service : Ensure Nomad jobs directory exists"
+  tags:
+    - world_model_service
+  ansible.builtin.file:
+    path: "{{ nomad_jobs_dir }}"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  become: true
+
 - name: "World Model Service : Deploy world_model.nomad job"
   tags:
     - world_model_service
