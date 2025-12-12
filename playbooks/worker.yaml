@@ -1,36 +1,22 @@
-- hosts: all
-  become: yes
-  gather_facts: yes
+- import_playbook: "{{ playbook_dir }}/common_setup.yaml"
 
-  tasks:
-    - name: Include Common Setup
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/common_setup.yaml"
+- import_playbook: "{{ playbook_dir }}/services/core_infra.yaml"
 
-    - name: Include Core Infrastructure Setup
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/services/core_infra.yaml"
+- import_playbook: "{{ playbook_dir }}/services/docker.yaml"
 
-    - name: Include Docker Setup
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/services/docker.yaml"
+- import_playbook: "{{ playbook_dir }}/services/nomad_client.yaml"
 
-    - name: Include Nomad Client Setup
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/services/nomad_client.yaml"
+- import_playbook: "{{ playbook_dir }}/services/app_services.yaml"
+  tags: [app_services]
 
-    - name: Include App Services Setup
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/services/app_services.yaml"
-      tags: [app_services]
+- import_playbook: "{{ playbook_dir }}/services/model_services.yaml"
+  tags: [model_services]
 
-    - name: Include Model Services Setup
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/services/model_services.yaml"
-      tags: [model_services]
+- import_playbook: "{{ playbook_dir }}/services/core_ai_services.yaml"
+  tags: [core_ai_services]
 
-    - name: Include Core AI Services Setup
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/services/core_ai_services.yaml"
-      tags: [core_ai_services]
+- import_playbook: "{{ playbook_dir }}/services/ai_experts.yaml"
+  tags: [ai_experts]
 
-    - name: Include AI Experts Setup
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/services/ai_experts.yaml"
-      tags: [ai_experts]
-
-    - name: Include Final Verification
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/services/final_verification.yaml"
-      tags: [final_verification]
+- import_playbook: "{{ playbook_dir }}/services/final_verification.yaml"
+  tags: [final_verification]
