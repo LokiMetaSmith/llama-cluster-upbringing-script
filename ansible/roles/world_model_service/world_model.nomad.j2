@@ -52,12 +52,13 @@ job "world-model-service" {
         port = "http"
 
         check {
-          type     = "script"
+          type     = "http"
           name     = "alive"
+          path     = "/health"
           interval = "15s"
           timeout  = "10s"
-          command  = "/bin/bash"
-          args     = ["-c", "nc -z 127.0.0.1 $NOMAD_PORT_http"]
+          method   = "GET"
+          port     = "http"
         }
       }
     }
