@@ -4,6 +4,7 @@ import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import threading
+from typing import Optional
 from pmm_memory import PMMMemory
 
 class RAG_Tool:
@@ -14,24 +15,41 @@ class RAG_Tool:
     the agent to find relevant information to answer user queries about the
     project.
     """
-    def __init__(self, pmm_memory: PMMMemory, base_dir="/", model_name="all-MiniLM-L6-v2"):
+    def __init__(self, pmm_memory: Optional[PMMMemory] = None, base_dir="/", model_name="all-MiniLM-L6-v2"):
         """Initializes the RAG_Tool.
 
         Args:
-            pmm_memory (PMMMemory): The PMMMemory object for persistent storage.
+            pmm_memory (Optional[PMMMemory]): The PMMMemory object for persistent storage.
+                If None, a local PMMMemory instance will be created.
             base_dir (str): The root directory to start scanning for documents.
             model_name (str): The name of the SentenceTransformer model to use.
         """
         self.name = "rag"
         self.description = "Searches the project's documentation to answer questions."
-        self.pmm_memory = pmm_memory
+
+        if pmm_memory:
+            self.pmm_memory = pmm_memory
+        else:
+            # Import here to avoid circular dependencies if this is used elsewhere
+            try:
+                from pmm_memory import PMMMemory as LocalPMMMemory
+                # Use a local database file for standalone operation
+                self.pmm_memory = LocalPMMMemory(db_path="rag_knowledge_base.db")
+            except ImportError:
+                logging.error("Could not import PMMMemory. RAG tool will not function.")
+                self.pmm_memory = None
+
         self.base_dir = base_dir
         self.model = SentenceTransformer(model_name)
         self.documents = []
         self.index = None
         self.is_ready = False
-        # Run knowledge base build in a separate thread
-        threading.Thread(target=self._build_knowledge_base, daemon=True).start()
+
+        if self.pmm_memory:
+            # Run knowledge base build in a separate thread
+            threading.Thread(target=self._build_knowledge_base, daemon=True).start()
+        else:
+             logging.warning("RAG Tool disabled: PMMMemory unavailable.")
 
     def _build_knowledge_base(self):
         """Scans for documents, chunks them, and builds the FAISS index."""

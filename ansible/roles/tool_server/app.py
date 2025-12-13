@@ -18,6 +18,7 @@ from tools.rag_tool import RAG_Tool
 from tools.ha_tool import HA_Tool
 from tools.git_tool import Git_Tool
 from tools.orchestrator_tool import OrchestratorTool
+from pmm_memory import PMMMemory
 
 app = FastAPI()
 
@@ -35,8 +36,9 @@ tools = {
     "web_browser": WebBrowserTool(),
     "ansible": Ansible_Tool(),
     "power": Power_Tool(),
+    "summarizer": SummarizerTool(twin_service=None),
     "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
-    "rag": RAG_Tool(base_dir="/"),
+    "rag": RAG_Tool(pmm_memory=None, base_dir="/mnt/host_repo"),
     "ha": HA_Tool(
         ha_url=os.getenv("HA_URL"),
         ha_token=os.getenv("HA_TOKEN")

@@ -6,6 +6,14 @@
   become: no
   delegate_to: localhost
 
+- name: Copy pmm_memory.py into the build context
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../roles/pipecatapp/files/pmm_memory.py"
+    dest: "{{ role_path }}/pmm_memory.py"
+    mode: '0644'
+  become: no
+  delegate_to: localhost
+
 - name: Build tool-server docker image
   community.docker.docker_image:
     name: tool-server:latest

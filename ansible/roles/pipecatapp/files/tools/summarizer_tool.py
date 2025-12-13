@@ -14,11 +14,11 @@ class SummarizerTool:
         description (str): A brief description of the tool's purpose.
         model: The SentenceTransformer model used for embeddings.
     """
-    def __init__(self, twin_service):
+    def __init__(self, twin_service=None):
         """Initializes the SummarizerTool.
 
         Args:
-            twin_service: The instance of the main TwinService.
+            twin_service: The instance of the main TwinService (optional).
         """
         self.twin_service = twin_service
         self.name = "summarizer"
@@ -26,7 +26,7 @@ class SummarizerTool:
         # Using a smaller, efficient model as requested.
         self.model = SentenceTransformer("google/embeddinggemma-300m")
 
-    def get_summary(self, query: str) -> str:
+    def get_summary(self, query: str, conversation_history: list = None) -> str:
         """Returns the most relevant parts of the conversation related to a query.
 
         This method performs extractive summarization. It embeds the user's query
@@ -35,12 +35,19 @@ class SummarizerTool:
 
         Args:
             query (str): The topic or question to summarize the conversation around.
+            conversation_history (list, optional): A list of conversation turns.
+                If not provided, attempts to use twin_service.short_term_memory.
 
         Returns:
             str: A formatted string containing the most relevant conversational
                  turns, or a message if there is no history.
         """
-        conversation_history = self.twin_service.short_term_memory
+        if conversation_history is None:
+            if self.twin_service:
+                conversation_history = self.twin_service.short_term_memory
+            else:
+                return "Error: No conversation history provided and no TwinService attached."
+
         if not conversation_history:
             return "There is no conversation history to summarize."
 
