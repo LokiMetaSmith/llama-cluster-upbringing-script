@@ -24,7 +24,8 @@ class SummarizerTool:
         self.name = "summarizer"
         self.description = "A tool to provide summaries of the conversation."
         # Using a smaller, efficient model as requested.
-        self.model = SentenceTransformer("google/embeddinggemma-300m")
+        # Switched to all-MiniLM-L6-v2 to avoid Hugging Face gating/token requirements
+        self.model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
     def get_summary(self, query: str, conversation_history: list = None) -> str:
         """Returns the most relevant parts of the conversation related to a query.
