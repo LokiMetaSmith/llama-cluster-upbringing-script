@@ -86,6 +86,7 @@ const WorkflowEditor = {
 
                 // Add a text widget to display output data if needed
                 this.outputWidget = this.addWidget("text", "Output", "", null, { disabled: true });
+                this.image = null; // Store image object for rendering
             }
 
             GenericNode.title = title;
@@ -100,6 +101,31 @@ const WorkflowEditor = {
                 this.agentNodeType = o.agentNodeType || type;
             };
 
+            // Override onDrawForeground to render image
+            GenericNode.prototype.onDrawForeground = function(ctx) {
+                if (this.flags.collapsed) return;
+
+                if (this.image) {
+                    // Draw image scaled to fit node width, maintaining aspect ratio
+                    const margin = 10;
+                    const contentWidth = this.size[0] - margin * 2;
+                    // Calculate height based on aspect ratio
+                    const aspectRatio = this.image.height / this.image.width;
+                    const contentHeight = contentWidth * aspectRatio;
+
+                    // Center the image vertically in the available space below inputs/widgets?
+                    // For simplicity, just draw it at the bottom of the node
+                    // We might need to resize the node to fit it
+
+                    const yOffset = this.size[1] - contentHeight - margin;
+
+                    // Only draw if there is space, or if we resized the node
+                    if (contentHeight > 0) {
+                        ctx.drawImage(this.image, margin, yOffset > 40 ? yOffset : 40, contentWidth, contentHeight);
+                    }
+                }
+            };
+
             // Allow setting status for visualization
             GenericNode.prototype.setExecutionStatus = function(status, outputData) {
                 if (status === 'executed') {
@@ -111,18 +137,60 @@ const WorkflowEditor = {
                 }
 
                 if (outputData) {
-                    // Update the widget or just properties
-                    // Simplify object for display
-                    let displayVal = "";
-                    if (typeof outputData === 'object') {
-                        displayVal = JSON.stringify(outputData).substring(0, 50) + "...";
-                    } else {
-                        displayVal = String(outputData);
+                    // Check for Image
+                    let isImage = false;
+                    let imageSrc = "";
+
+                    if (typeof outputData === 'string') {
+                         if (outputData.startsWith("data:image")) {
+                             isImage = true;
+                             imageSrc = outputData;
+                         } else if (outputData.length > 500 && /^[A-Za-z0-9+/=]+$/.test(outputData)) {
+                             // Assume raw base64 png if really long
+                             isImage = true;
+                             imageSrc = "data:image/png;base64," + outputData;
+                         }
                     }
 
-                    if(this.outputWidget) {
-                        this.outputWidget.value = displayVal;
+                    if (isImage) {
+                        const img = new Image();
+                        img.src = imageSrc;
+                        img.onload = () => {
+                            this.image = img;
+                            // Resize node to fit image + standard height
+                            const margin = 10;
+                            const requiredWidth = 240; // min width
+                            const aspectRatio = img.height / img.width;
+                            const imageH = (requiredWidth - margin*2) * aspectRatio;
+
+                            // Ensure node is at least large enough
+                            if (this.size[0] < requiredWidth) this.size[0] = requiredWidth;
+                            if (this.size[1] < imageH + 60) this.size[1] = imageH + 60; // 60 for header/widgets
+
+                            this.setDirtyCanvas(true, true);
+                        };
+
+                        if (this.outputWidget) {
+                            this.outputWidget.value = "[Image Data]";
+                        }
+                    } else {
+                        // Standard Text Output
+                        this.image = null;
+
+                        // Update the widget or just properties
+                        // Simplify object for display
+                        let displayVal = "";
+                        if (typeof outputData === 'object') {
+                            displayVal = JSON.stringify(outputData).substring(0, 50) + "...";
+                        } else {
+                            displayVal = String(outputData);
+                        }
+
+                        if(this.outputWidget) {
+                            this.outputWidget.value = displayVal;
+                        }
                     }
+
                     this.properties._last_output = outputData; // Store full output
                 }
             };
