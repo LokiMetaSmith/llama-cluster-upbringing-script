@@ -28,6 +28,10 @@ RUN pip install --no-cache-dir --upgrade pip
 # Install pipecat-ai and its extras first
 RUN pip install --no-cache-dir "pipecat-ai[all]"
 
+# Install Playwright dependencies
+RUN pip install --no-cache-dir playwright && \
+    playwright install --with-deps chromium
+
 # Now install the other requirements
 RUN pip install --no-cache-dir \
     av==16.0.1 \
@@ -46,7 +50,6 @@ RUN pip install --no-cache-dir \
     opencv-python-headless \
     paramiko \
     piper-tts \
-    playwright \
     python-consul2 \
     python-dotenv \
     pyvips \

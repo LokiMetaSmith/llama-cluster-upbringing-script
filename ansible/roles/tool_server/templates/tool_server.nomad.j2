@@ -32,6 +32,8 @@ job "tool-server" {
           "{{ cluster_infra_dir }}:/mnt/host_repo:ro",
           # MCP tools configuration
           "{{ mcp_dir }}:/opt/mcp",
+          # Docker socket for CodeRunnerTool
+          "/var/run/docker.sock:/var/run/docker.sock",
           # Uncomment below to enable host SSH keys (Not recommended for isolation)
           # "/home/{{ target_user }}/.ssh:/root/.ssh:ro",
         ]

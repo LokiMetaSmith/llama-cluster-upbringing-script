@@ -3,11 +3,12 @@ import sys
 from unittest.mock import MagicMock
 
 # Mock playwright if it's not available
-if 'playwright' not in sys.modules:
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:
     sys.modules['playwright'] = MagicMock()
     sys.modules['playwright.sync_api'] = MagicMock()
-
-from playwright.sync_api import sync_playwright
+    sync_playwright = MagicMock()
 
 class WebBrowserTool:
     """A tool for browsing the web to answer questions and interact with sites.
