@@ -25,8 +25,8 @@ job "llamacpp-batch" {
       }
 
       resources {
-        cpu    = tonumber(meta.cpu)
-        memory = tonumber(meta.memory)
+        cpu    = {{ llamacpp_batch_cpu | default(4000) }}
+        memory = {{ llamacpp_batch_memory | default(8192) }}
       }
     }
   }
