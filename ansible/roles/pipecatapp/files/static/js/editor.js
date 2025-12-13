@@ -6,16 +6,17 @@ const WorkflowEditor = {
     nodeTypes: {},
     currentWorkflowName: 'default_agent_loop.yaml',
 
+    // Dynamically derive the list of node types from nodeTypes object
+    getRegisteredNodeTypes: function() {
+        return Object.keys(this.nodeTypes).map(type => "agent/" + type);
+    },
+
     init: function(containerId) {
         this.graph = new LGraph();
         this.canvas = new LGraphCanvas(containerId, this.graph);
         this.canvas.allow_searchbox = true; // enable search box with double click
 
-        // Fix for search box z-index issues if any
-        this.canvas.onSearchBox = function(helper, value, graphcanvas) {
-             // You can customize search box logic here if needed
-        };
-
+        // Register custom nodes
         this.registerNodeTypes();
 
         // Adjust canvas on resize
@@ -29,6 +30,34 @@ const WorkflowEditor = {
              const parent = document.getElementById(containerId).parentNode;
              this.canvas.resize(parent.clientWidth, parent.clientHeight);
         }, 100);
+
+        // Setup Drag and Drop
+        this.setupDragAndDrop(containerId);
+    },
+
+    setupDragAndDrop: function(containerId) {
+        const canvasElement = document.getElementById(containerId);
+
+        canvasElement.addEventListener("dragover", (e) => {
+            e.preventDefault();
+        });
+
+        canvasElement.addEventListener("drop", (e) => {
+            e.preventDefault();
+            const nodeType = e.dataTransfer.getData("nodeType");
+            if (nodeType && this.nodeTypes[nodeType.replace("agent/", "")]) {
+                const rect = canvasElement.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                // Convert screen coordinates to graph coordinates
+                const pos = this.canvas.convertEventToCanvasOffset(e);
+
+                const node = LiteGraph.createNode(nodeType);
+                node.pos = [pos[0], pos[1]];
+                this.graph.add(node);
+            }
+        });
     },
 
     registerNodeTypes: function() {
@@ -54,6 +83,9 @@ const WorkflowEditor = {
                 }
                 this.size = this.computeSize();
                 this.agentNodeType = type; // Store original type
+
+                // Add a text widget to display output data if needed
+                this.outputWidget = this.addWidget("text", "Output", "", null, { disabled: true });
             }
 
             GenericNode.title = title;
@@ -68,12 +100,38 @@ const WorkflowEditor = {
                 this.agentNodeType = o.agentNodeType || type;
             };
 
+            // Allow setting status for visualization
+            GenericNode.prototype.setExecutionStatus = function(status, outputData) {
+                if (status === 'executed') {
+                    this.boxcolor = "#28a745"; // Green
+                } else if (status === 'failed') {
+                    this.boxcolor = "#dc3545"; // Red
+                } else {
+                    this.boxcolor = "#666"; // Default
+                }
+
+                if (outputData) {
+                    // Update the widget or just properties
+                    // Simplify object for display
+                    let displayVal = "";
+                    if (typeof outputData === 'object') {
+                        displayVal = JSON.stringify(outputData).substring(0, 50) + "...";
+                    } else {
+                        displayVal = String(outputData);
+                    }
+
+                    if(this.outputWidget) {
+                        this.outputWidget.value = displayVal;
+                    }
+                    this.properties._last_output = outputData; // Store full output
+                }
+            };
+
             LiteGraph.registerNodeType("agent/" + type, GenericNode);
             this.nodeTypes[type] = GenericNode;
         };
 
         // Define known node types from the backend
-        // Ideally we would fetch this schema from the backend, but for now we hardcode based on knowledge
         createGenericNode("InputNode", "Input", [], [{name: "user_text", type: "string"}, {name: "tools_dict", type: "object"}, {name: "tool_result", type: "object"}, {name: "consul_http_addr", type: "string"}]);
         createGenericNode("ConsulServiceDiscoveryNode", "Service Discovery", [{name: "consul_http_addr", type: "string"}], [{name: "available_services", type: "object"}]);
         createGenericNode("SystemPromptNode", "System Prompt", [{name: "tools", type: "object"}, {name: "available_services", type: "object"}], [{name: "system_prompt", type: "string"}]);
@@ -257,7 +315,7 @@ const WorkflowEditor = {
 
             // Properties
             for (const key in node.properties) {
-                if (key !== 'id') {
+                if (key !== 'id' && !key.startsWith('_')) { // Skip internal properties like _last_output
                     yamlNode[key] = node.properties[key];
                 }
             }
@@ -282,11 +340,6 @@ const WorkflowEditor = {
                             }
                         };
                         yamlNode.inputs.push(inputDef);
-                    } else if (node.agentNodeType === 'agent/OutputNode' && input.name === 'final_output') {
-                         // Special case for OutputNode value structure if needed,
-                         // but for now LiteGraph won't easily support the complex nested value structure visually.
-                         // We might need to assume OutputNode inputs are flat for this editor or implement custom widget.
-                         // FOR NOW: Skip complex values if not linked.
                     }
                 });
 
@@ -301,23 +354,26 @@ const WorkflowEditor = {
     },
 
     updateLiveStatus: function(activeState) {
-        // Clear previous status
-        this.graph._nodes.forEach(n => {
-            n.boxcolor = "#666"; // Default
-        });
+       this.visualizeRun({ final_state: activeState });
+    },
 
-        if (!activeState || !activeState.node_outputs) return;
+    visualizeRun: function(runData) {
+        if (!runData || !runData.final_state) return;
+        const context = runData.final_state;
+        const nodeOutputs = context.node_outputs || {};
 
-        // Highlight executed nodes
-        Object.keys(activeState.node_outputs).forEach(nodeId => {
-            const node = this.graph.findNodesByTitle(nodeId)[0];
-            if (node) {
-                node.boxcolor = "#28a745"; // Green
+        // Reset all nodes first
+        this.graph._nodes.forEach(n => n.setExecutionStatus('default'));
+
+        // Loop through all nodes in the graph
+        this.graph._nodes.forEach(node => {
+            const nodeId = node.title; // Using title as ID per import logic
+            if (nodeOutputs[nodeId]) {
+                node.setExecutionStatus('executed', nodeOutputs[nodeId]);
             }
         });
 
-        // Highlight active/gated nodes (heuristic: last executed might be active)
-        // Ideally backend provides 'current_node'
+        this.graph.setDirtyCanvas(true, true);
     },
 
     saveWorkflow: async function() {
