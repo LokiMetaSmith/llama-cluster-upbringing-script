@@ -52,14 +52,12 @@ job "world-model-service" {
         port = "http"
 
         check {
-          type     = "http"
+          type     = "script"
           name     = "alive"
-          path     = "/health"
+          command  = "python"
+          args     = ["-c", "import os, urllib.request; port = os.getenv('NOMAD_PORT_http'); urllib.request.urlopen(f'http://127.0.0.1:{port}/health')"]
           interval = "15s"
           timeout  = "10s"
-          method   = "GET"
-          port     = "http"
-          address_mode = "host"
         }
       }
     }
