@@ -63,6 +63,9 @@ RUN pip install --no-cache-dir \
     pyautogui \
     ansible
 
+COPY preload_models.py .
+RUN python preload_models.py
+
 COPY app.py .
 COPY pmm_memory.py .
 COPY tools ./tools

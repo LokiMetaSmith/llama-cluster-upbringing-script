@@ -37,7 +37,7 @@ tools = {
     "ansible": Ansible_Tool(),
     "power": Power_Tool(),
     "summarizer": SummarizerTool(twin_service=None),
-    "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
+    "term_everything": TermEverythingTool(app_image_path="/opt/mcp/tools/termeverything.AppImage"),
     "rag": RAG_Tool(pmm_memory=None, base_dir="/mnt/host_repo"),
     "ha": HA_Tool(
         ha_url=os.getenv("HA_URL"),
