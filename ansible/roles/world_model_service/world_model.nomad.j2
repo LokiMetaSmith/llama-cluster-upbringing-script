@@ -59,6 +59,7 @@ job "world-model-service" {
           timeout  = "10s"
           method   = "GET"
           port     = "http"
+          address_mode = "host"
         }
       }
     }
