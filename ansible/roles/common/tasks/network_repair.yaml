@@ -10,7 +10,7 @@
 - name: "Network Repair : Check Connectivity (Pre-Repair)"
   ansible.builtin.command: ping -c 1 8.8.8.8
   register: pre_repair_internet
-  ignore_errors: yes
+  failed_when: false
   changed_when: false
 
 - name: "Network Repair : Identify Physical Interfaces"
@@ -91,13 +91,13 @@
 - name: "Network Repair : Check Internet Connectivity (8.8.8.8)"
   ansible.builtin.command: ping -c 1 8.8.8.8
   register: post_repair_internet
-  ignore_errors: yes
+  failed_when: false
   changed_when: false
 
-- name: "Network Repair : Check Cluster Connectivity (10.0.0.1)"
-  ansible.builtin.command: ping -c 1 10.0.0.1
+- name: "Network Repair : Check Cluster Connectivity ({{ pxe_router | default('10.0.0.1') }})"
+  ansible.builtin.command: ping -c 1 {{ pxe_router | default('10.0.0.1') }}
   register: post_repair_cluster
-  ignore_errors: yes
+  failed_when: false
   changed_when: false
 
 - name: "Network Repair : Status Report"
@@ -105,4 +105,4 @@
     msg:
       - "Internet (Pre-Repair): {{ 'OK' if pre_repair_internet.rc == 0 else 'FAIL' }}"
       - "Internet (Post-Repair): {{ 'OK' if post_repair_internet.rc == 0 else 'FAIL' }}"
-      - "Cluster (10.0.0.1): {{ 'OK' if post_repair_cluster.rc == 0 else 'FAIL' }}"
+      - "Cluster ({{ pxe_router | default('10.0.0.1') }}): {{ 'OK' if post_repair_cluster.rc == 0 else 'FAIL' }}"
