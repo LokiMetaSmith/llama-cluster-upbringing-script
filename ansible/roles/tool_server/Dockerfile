@@ -64,6 +64,7 @@ RUN pip install --no-cache-dir \
     ansible
 
 COPY app.py .
+COPY pmm_memory.py .
 COPY tools ./tools
 COPY entrypoint.sh /entrypoint.sh
 
