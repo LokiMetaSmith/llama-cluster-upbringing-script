@@ -52,6 +52,9 @@ job "home-assistant" {
         path     = "/"
         interval = "30s"
         timeout  = "5s"
+        {% if use_host_network | default(false) %}
+        address_mode = "host"
+        {% endif %}
       }
     }
 
