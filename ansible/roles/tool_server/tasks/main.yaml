@@ -29,6 +29,82 @@
     src: tool_server.nomad.j2
     dest: "{{ nomad_jobs_dir }}/tool_server.nomad"
 
-- name: Run tool-server nomad job
-  ansible.builtin.command: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/tool_server.nomad
-  changed_when: true
+- name: "Tool Server : Deploy Tool Server Job"
+  block:
+    - name: "Tool Server : Purge existing nomad job (force image update)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job stop -purge tool-server"
+      ignore_errors: yes
+      changed_when: true
+      become: no
+
+    - name: "Tool Server : Run nomad job"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/tool_server.nomad"
+      changed_when: true
+      become: no
+      register: tool_server_job_run
+
+  rescue:
+    - name: "Tool Server : Get Tool Server job status"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status -verbose tool-server
+      register: ts_job_status
+      ignore_errors: yes
+      become: no
+
+    - name: "Tool Server : Display Tool Server job status"
+      ansible.builtin.debug:
+        var: ts_job_status.stdout
+
+    - name: "Tool Server : Get Tool Server allocations"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job allocs -json tool-server
+      register: ts_allocs
+      ignore_errors: yes
+      become: no
+
+    - name: "Tool Server : Save Tool Server allocations to temp file"
+      ansible.builtin.copy:
+        content: "{{ ts_allocs.stdout }}"
+        dest: "/tmp/ts_allocs.json"
+
+    - name: "Tool Server : Extract Allocation ID"
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/ts_allocs.json
+      register: ts_alloc_id
+      ignore_errors: yes
+
+    - name: "Tool Server : Fetch Tool Server logs (stdout)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs {{ ts_alloc_id.stdout }}"
+      register: ts_logs_stdout
+      ignore_errors: yes
+      become: no
+      when: ts_alloc_id.stdout | length > 0
+
+    - name: "Tool Server : Display Tool Server logs (stdout)"
+      ansible.builtin.debug:
+        var: ts_logs_stdout.stdout
+      when: ts_logs_stdout is defined
+
+    - name: "Tool Server : Fetch Tool Server logs (stderr)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ ts_alloc_id.stdout }}"
+      register: ts_logs_stderr
+      ignore_errors: yes
+      become: no
+      when: ts_alloc_id.stdout | length > 0
+
+    - name: "Tool Server : Display Tool Server logs (stderr)"
+      ansible.builtin.debug:
+        var: ts_logs_stderr.stdout
+      when: ts_logs_stderr is defined
+
+    - name: "Tool Server : Clean up temp file"
+      ansible.builtin.file:
+        path: "/tmp/ts_allocs.json"
+        state: absent
+
+    - name: "Tool Server : Fail after debugging"
+      ansible.builtin.fail:
+        msg: "Tool Server job failed to start. See logs above."
