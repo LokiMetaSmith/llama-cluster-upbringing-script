@@ -359,23 +359,167 @@
 - name: Flush handlers to ensure service is enabled and started
   ansible.builtin.meta: flush_handlers
 
-- name: Run archivist job
-  ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/archivist.nomad
-  environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
-  register: archivist_job_run
-  changed_when: archivist_job_run.rc == 0
-  ignore_errors: yes
+- name: "Archivist : Deploy Archivist Job"
+  block:
+    - name: "Archivist : Purge existing nomad job (force image update)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job stop -purge archivist"
+      ignore_errors: yes
+      changed_when: true
+      become: no
 
-- name: Run router job
-  ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/router.nomad
-  environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
-  register: router_job_run
-  changed_when: router_job_run.rc == 0
-  ignore_errors: yes
+    - name: "Archivist : Run nomad job"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/archivist.nomad"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true
+      become: no
+      register: archivist_job_run
+  rescue:
+    - name: "Archivist : Get Archivist job status"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status -verbose archivist
+      register: arch_job_status
+      ignore_errors: yes
+      become: no
+
+    - name: "Archivist : Display Archivist job status"
+      ansible.builtin.debug:
+        var: arch_job_status.stdout
+
+    - name: "Archivist : Get Archivist allocations"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job allocs -json archivist
+      register: arch_allocs
+      ignore_errors: yes
+      become: no
+
+    - name: "Archivist : Save Archivist allocations to temp file"
+      ansible.builtin.copy:
+        content: "{{ arch_allocs.stdout }}"
+        dest: "/tmp/arch_allocs.json"
+
+    - name: "Archivist : Extract Allocation ID"
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/arch_allocs.json
+      register: arch_alloc_id
+      ignore_errors: yes
+
+    - name: "Archivist : Fetch Archivist logs (stdout)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs {{ arch_alloc_id.stdout }}"
+      register: arch_logs_stdout
+      ignore_errors: yes
+      become: no
+      when: arch_alloc_id.stdout | length > 0
+
+    - name: "Archivist : Display Archivist logs (stdout)"
+      ansible.builtin.debug:
+        var: arch_logs_stdout.stdout
+      when: arch_logs_stdout is defined
+
+    - name: "Archivist : Fetch Archivist logs (stderr)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ arch_alloc_id.stdout }}"
+      register: arch_logs_stderr
+      ignore_errors: yes
+      become: no
+      when: arch_alloc_id.stdout | length > 0
+
+    - name: "Archivist : Display Archivist logs (stderr)"
+      ansible.builtin.debug:
+        var: arch_logs_stderr.stdout
+      when: arch_logs_stderr is defined
+
+    - name: "Archivist : Clean up temp file"
+      ansible.builtin.file:
+        path: "/tmp/arch_allocs.json"
+        state: absent
+
+    - name: "Archivist : Fail after debugging"
+      ansible.builtin.fail:
+        msg: "Archivist job failed to start. See logs above."
+
+- name: "Router : Deploy Router Job"
+  block:
+    - name: "Router : Purge existing nomad job (force image update)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job stop -purge router-api"
+      ignore_errors: yes
+      changed_when: true
+      become: no
+
+    - name: "Router : Run nomad job"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/router.nomad"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true
+      become: no
+      register: router_job_run
+  rescue:
+    - name: "Router : Get Router job status"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status -verbose router-api
+      register: router_job_status
+      ignore_errors: yes
+      become: no
+
+    - name: "Router : Display Router job status"
+      ansible.builtin.debug:
+        var: router_job_status.stdout
+
+    - name: "Router : Get Router allocations"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job allocs -json router-api
+      register: router_allocs
+      ignore_errors: yes
+      become: no
+
+    - name: "Router : Save Router allocations to temp file"
+      ansible.builtin.copy:
+        content: "{{ router_allocs.stdout }}"
+        dest: "/tmp/router_allocs.json"
+
+    - name: "Router : Extract Allocation ID"
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/router_allocs.json
+      register: router_alloc_id
+      ignore_errors: yes
+
+    - name: "Router : Fetch Router logs (stdout)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs {{ router_alloc_id.stdout }}"
+      register: router_logs_stdout
+      ignore_errors: yes
+      become: no
+      when: router_alloc_id.stdout | length > 0
+
+    - name: "Router : Display Router logs (stdout)"
+      ansible.builtin.debug:
+        var: router_logs_stdout.stdout
+      when: router_logs_stdout is defined
+
+    - name: "Router : Fetch Router logs (stderr)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ router_alloc_id.stdout }}"
+      register: router_logs_stderr
+      ignore_errors: yes
+      become: no
+      when: router_alloc_id.stdout | length > 0
+
+    - name: "Router : Display Router logs (stderr)"
+      ansible.builtin.debug:
+        var: router_logs_stderr.stdout
+      when: router_logs_stderr is defined
+
+    - name: "Router : Clean up temp file"
+      ansible.builtin.file:
+        path: "/tmp/router_allocs.json"
+        state: absent
+
+    - name: "Router : Fail after debugging"
+      ansible.builtin.fail:
+        msg: "Router job failed to start. See logs above."
 
 - name: Wait for the router service to be healthy in Consul
   ansible.builtin.uri:
@@ -389,14 +533,79 @@
   delay: 10
   changed_when: false
 
-- name: Run pipecat-app job
-  ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/pipecatapp.nomad
-  environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
-  register: router_job_run
-  changed_when: router_job_run.rc == 0
-  ignore_errors: yes
+- name: "Pipecat App : Deploy Pipecat Job"
+  block:
+    - name: "Pipecat App : Run nomad job"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/pipecatapp.nomad"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true
+      become: no
+      register: pipecat_job_run
+  rescue:
+    - name: "Pipecat App : Get Pipecat App job status"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status -verbose pipecat-app
+      register: pipecat_job_status
+      ignore_errors: yes
+      become: no
+
+    - name: "Pipecat App : Display Pipecat App job status"
+      ansible.builtin.debug:
+        var: pipecat_job_status.stdout
+
+    - name: "Pipecat App : Get Pipecat App allocations"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job allocs -json pipecat-app
+      register: pipecat_allocs
+      ignore_errors: yes
+      become: no
+
+    - name: "Pipecat App : Save Pipecat App allocations to temp file"
+      ansible.builtin.copy:
+        content: "{{ pipecat_allocs.stdout }}"
+        dest: "/tmp/pipecat_allocs.json"
+
+    - name: "Pipecat App : Extract Allocation ID"
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/pipecat_allocs.json
+      register: pipecat_alloc_id
+      ignore_errors: yes
+
+    - name: "Pipecat App : Fetch Pipecat App logs (stdout)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs {{ pipecat_alloc_id.stdout }}"
+      register: pipecat_logs_stdout
+      ignore_errors: yes
+      become: no
+      when: pipecat_alloc_id.stdout | length > 0
+
+    - name: "Pipecat App : Display Pipecat App logs (stdout)"
+      ansible.builtin.debug:
+        var: pipecat_logs_stdout.stdout
+      when: pipecat_logs_stdout is defined
+
+    - name: "Pipecat App : Fetch Pipecat App logs (stderr)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ pipecat_alloc_id.stdout }}"
+      register: pipecat_logs_stderr
+      ignore_errors: yes
+      become: no
+      when: pipecat_alloc_id.stdout | length > 0
+
+    - name: "Pipecat App : Display Pipecat App logs (stderr)"
+      ansible.builtin.debug:
+        var: pipecat_logs_stderr.stdout
+      when: pipecat_logs_stderr is defined
+
+    - name: "Pipecat App : Clean up temp file"
+      ansible.builtin.file:
+        path: "/tmp/pipecat_allocs.json"
+        state: absent
+
+    - name: "Pipecat App : Fail after debugging"
+      ansible.builtin.fail:
+        msg: "Pipecat App job failed to start. See logs above."
 
 - name: Wait for the pipecat-app service to be healthy in Consul
   ansible.builtin.uri:
