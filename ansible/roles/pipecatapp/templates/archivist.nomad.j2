@@ -34,7 +34,7 @@ job "archivist" {
         ARCHIVIST_PORT = "${NOMAD_PORT_http}"
         DB_PATH        = "{{ target_user_home }}/.config/pipecat/pypicat_memory.db"
         INDEX_DIR      = "{{ target_user_home }}/.config/pipecat/archivist_data"
-        CONSUL_HOST    = "{{ ansible_default_ipv4.address }}"
+        CONSUL_HOST    = "{{ ansible_facts['default_ipv4']['address'] }}"
         CONSUL_PORT    = "8500"
       }
 
