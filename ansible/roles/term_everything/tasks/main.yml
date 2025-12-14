@@ -95,7 +95,13 @@
       ansible.builtin.find:
         paths: /tmp/term.everything/dist
         patterns: "*.AppImage"
+        recurse: yes
       register: find_result
+
+    - name: Fail if AppImage not found
+      ansible.builtin.fail:
+        msg: "Build succeeded but no AppImage found in /tmp/term.everything/dist"
+      when: find_result.files | length == 0
 
     - name: Move AppImage to tools directory
       ansible.builtin.copy:
