@@ -1,24 +1,66 @@
-- name: Copy tools directory into the build context
-  ansible.builtin.copy:
-    src: "{{ role_path }}/../../roles/pipecatapp/files/tools"
-    dest: "{{ role_path }}/"
-    mode: '0755'
-  become: no
-  delegate_to: localhost
+- name: "Tool Server : Ensure tool_server directories exist"
+  ansible.builtin.file:
+    path: "/opt/tool_server"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0755"
+  become: true
 
-- name: Copy pmm_memory.py into the build context
+- name: "Tool Server : Copy build files"
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/opt/tool_server/"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0644"
+  loop:
+    - "app.py"
+    - "Dockerfile"
+    - "preload_models.py"
+  become: true
+
+- name: "Tool Server : Copy entrypoint.sh"
+  ansible.builtin.copy:
+    src: "entrypoint.sh"
+    dest: "/opt/tool_server/"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0755"
+  become: true
+
+- name: "Tool Server : Copy pmm_memory.py"
   ansible.builtin.copy:
     src: "{{ role_path }}/../../roles/pipecatapp/files/pmm_memory.py"
-    dest: "{{ role_path }}/pmm_memory.py"
-    mode: '0644'
-  become: no
-  delegate_to: localhost
+    dest: "/opt/tool_server/pmm_memory.py"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0644"
+  become: true
 
-- name: Build tool-server docker image
+- name: "Tool Server : Copy tools directory"
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../roles/pipecatapp/files/tools"
+    dest: "/opt/tool_server/"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0755"
+  become: true
+
+- name: "Tool Server : Build tool-server docker image"
   ansible.builtin.command:
-    cmd: "docker build -t tool-server:latest -f {{ role_path }}/Dockerfile {{ role_path }}"
-  become: yes
+    cmd: "docker build -t tool-server:latest ."
+    chdir: "/opt/tool_server"
+  become: true
   changed_when: true
+
+- name: "Tool Server : Verify Docker image exists"
+  ansible.builtin.command:
+    cmd: "docker images -q tool-server:latest"
+  register: docker_image_check
+  failed_when: docker_image_check.stdout | length == 0
+  changed_when: false
+  become: true
 
 - name: Template tool-server.nomad job file
   ansible.builtin.template:
