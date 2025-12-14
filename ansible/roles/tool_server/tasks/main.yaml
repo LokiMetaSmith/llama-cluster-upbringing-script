@@ -15,14 +15,10 @@
   delegate_to: localhost
 
 - name: Build tool-server docker image
-  community.docker.docker_image:
-    name: tool-server:latest
-    build:
-      path: "{{ role_path }}"
-      dockerfile: "{{ role_path }}/Dockerfile"
-    source: build
-    force_source: yes
+  ansible.builtin.command:
+    cmd: "docker build -t tool-server:latest -f {{ role_path }}/Dockerfile {{ role_path }}"
   become: yes
+  changed_when: true
 
 - name: Template tool-server.nomad job file
   ansible.builtin.template:
