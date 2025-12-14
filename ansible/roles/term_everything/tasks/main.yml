@@ -34,9 +34,15 @@
   ansible.builtin.set_fact:
     installed_version: "{{ (installed_version_raw.content | b64decode | trim) if 'content' in installed_version_raw else 'none' }}"
 
+- name: Check for existing AppImage
+  ansible.builtin.stat:
+    path: "{{ mcp_dir }}/tools/termeverything.AppImage"
+  register: appimage_stat
+  become: yes
+
 - name: Decide if term.everything needs to be built
   ansible.builtin.set_fact:
-    build_term_everything: "{{ installed_version != latest_commit_hash }}"
+    build_term_everything: "{{ installed_version != latest_commit_hash or not appimage_stat.stat.exists }}"
   when: latest_commit_hash is defined
 
 - name: Print versions for debugging

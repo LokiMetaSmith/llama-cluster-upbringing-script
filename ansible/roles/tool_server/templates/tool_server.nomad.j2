@@ -14,6 +14,7 @@ job "tool-server" {
 
       config {
         image = "tool-server:latest"
+        force_pull = false
         ports = ["http"]
 
         # Volatile RAM disk for workspace
