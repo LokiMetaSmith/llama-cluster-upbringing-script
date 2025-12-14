@@ -100,7 +100,7 @@
 
     - name: Fail if AppImage not found
       ansible.builtin.fail:
-        msg: "Build succeeded but no AppImage found in /tmp/term.everything/dist"
+        msg: "Build succeeded but no binary found in /tmp/term.everything/dist"
       when: find_result.files | length == 0
 
     - name: Move AppImage to tools directory
