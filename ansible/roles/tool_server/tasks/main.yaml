@@ -53,7 +53,7 @@
 
 - name: Build tool-server docker image
   ansible.builtin.shell:
-    cmd: "docker build -t tool-server:latest -f {{ role_path }}/Dockerfile {{ role_path }} > /tmp/tool_server_build.log 2>&1"
+    cmd: "docker build -t tool-server:latest /opt/tool_server > /tmp/tool_server_build.log 2>&1"
   become: yes
   register: build_result
   failed_when: build_result.rc != 0
