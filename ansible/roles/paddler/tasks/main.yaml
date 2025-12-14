@@ -10,10 +10,11 @@
     paddler_url: "https://github.com/distantmagic/paddler/releases/download/{{ paddler_version }}/{{ paddler_binary }}"
 
 - name: Download Paddler binary
-  get_url:
+  ansible.builtin.get_url:
     url: "{{ paddler_url }}"
     dest: "/tmp/{{ paddler_binary }}"
     mode: '0755' # Set executable permissions immediately on download
+    timeout: 300
 
 # The 'unarchive' task is no longer needed as the file is a binary.
 
