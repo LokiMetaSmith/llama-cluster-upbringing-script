@@ -94,7 +94,7 @@
     - name: Find the AppImage file
       ansible.builtin.find:
         paths: /tmp/term.everything/dist
-        patterns: "*.AppImage"
+        patterns: "term.everything*"
         recurse: yes
       register: find_result
 
