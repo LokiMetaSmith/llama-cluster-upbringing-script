@@ -13,7 +13,7 @@ job "tool-server" {
       driver = "docker"
 
       config {
-        image = "tool-server:latest"
+        image = "tool-server:local"
         force_pull = false
         ports = ["http"]
 
