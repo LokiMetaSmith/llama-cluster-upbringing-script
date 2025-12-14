@@ -100,6 +100,19 @@
         var: ts_logs_stderr.stdout
       when: ts_logs_stderr is defined
 
+    - name: "Tool Server : Get Allocation Status (Detailed)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc status -verbose {{ ts_alloc_id.stdout }}"
+      register: ts_alloc_status
+      ignore_errors: yes
+      become: no
+      when: ts_alloc_id.stdout | length > 0
+
+    - name: "Tool Server : Display Allocation Status"
+      ansible.builtin.debug:
+        var: ts_alloc_status.stdout
+      when: ts_alloc_status is defined
+
     - name: "Tool Server : Clean up temp file"
       ansible.builtin.file:
         path: "/tmp/ts_allocs.json"
