@@ -56,6 +56,7 @@ RUN pip install --no-cache-dir \
     pyvips-binary \
     realtimestt \
     langchain \
+    llm-sandbox \
     soundfile \
     spacy \
     uvicorn \
