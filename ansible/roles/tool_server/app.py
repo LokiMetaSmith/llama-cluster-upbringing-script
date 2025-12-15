@@ -39,13 +39,18 @@ tools = {
     "summarizer": SummarizerTool(twin_service=None),
     "term_everything": TermEverythingTool(app_image_path="/opt/mcp/tools/termeverything.AppImage"),
     "rag": RAG_Tool(pmm_memory=None, base_dir="/mnt/host_repo"),
-    "ha": HA_Tool(
-        ha_url=os.getenv("HA_URL"),
-        ha_token=os.getenv("HA_TOKEN")
-    ),
     "git": Git_Tool(),
     "orchestrator": OrchestratorTool(),
 }
+
+if os.getenv("HA_URL") and os.getenv("HA_TOKEN"):
+    try:
+        tools["ha"] = HA_Tool(
+            ha_url=os.getenv("HA_URL"),
+            ha_token=os.getenv("HA_TOKEN")
+        )
+    except ValueError as e:
+        print(f"Warning: Failed to initialize HA_Tool: {e}")
 
 API_KEY = os.getenv("TOOL_SERVER_API_KEY")
 
