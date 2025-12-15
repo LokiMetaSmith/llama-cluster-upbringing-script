@@ -30,7 +30,13 @@ if [ -d "$SOURCE_REPO" ]; then
     # -l: copy symlinks
     # -p: preserve permissions
     # -D: preserve devices/specials
-    rsync -rlpD --info=progress2 "$SOURCE_REPO/" "$WORKSPACE_DIR/"
+    rsync -rlpD --info=progress2 \
+        --exclude '.venv' \
+        --exclude 'venv' \
+        --exclude 'node_modules' \
+        --exclude '__pycache__' \
+        --exclude '*.pyc' \
+        "$SOURCE_REPO/" "$WORKSPACE_DIR/"
     echo "✅ Workspace populated."
 else
     echo "❌ Source repo $SOURCE_REPO not found! Agent will have an empty workspace."
