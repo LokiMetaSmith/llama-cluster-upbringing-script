@@ -53,19 +53,19 @@
 
 - name: Build tool-server docker image
   ansible.builtin.shell:
-    cmd: "docker build -t tool-server:latest /opt/tool_server > /tmp/tool_server_build.log 2>&1"
+    cmd: "docker build -t tool-server:local /opt/tool_server > /tmp/tool_server_build.log 2>&1"
   become: yes
   register: build_result
   failed_when: build_result.rc != 0
 
 - name: Verify tool-server image exists
-  ansible.builtin.command: docker image inspect tool-server:latest
+  ansible.builtin.command: docker image inspect tool-server:local
   become: yes
   changed_when: false
 
 - name: "Tool Server : Verify Docker image exists"
   ansible.builtin.command:
-    cmd: "docker images -q tool-server:latest"
+    cmd: "docker images -q tool-server:local"
   register: docker_image_check
   failed_when: docker_image_check.stdout | length == 0
   changed_when: false
