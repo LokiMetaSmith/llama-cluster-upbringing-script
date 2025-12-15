@@ -15,14 +15,22 @@ else
     echo "⚠️  $WORKSPACE_DIR does not appear to be a separate mount. Proceeding anyway."
 fi
 
+# Ensure Workspace is writable
+echo "🔧 Ensuring workspace is writable..."
+chmod 777 "$WORKSPACE_DIR" || echo "⚠️ Failed to chmod $WORKSPACE_DIR"
+
 # 2. Populate Workspace
 # We use rsync to efficiently copy the read-only host repo to the RAM disk.
 # We copy .git to allow immediate git commands.
 echo "🔄 Populating volatile workspace from $SOURCE_REPO..."
 if [ -d "$SOURCE_REPO" ]; then
-    # We use rsync with -a (archive) to preserve permissions/times
-    # We use --delete to ensure the workspace matches the source exactly at startup
-    rsync -a --info=progress2 "$SOURCE_REPO/" "$WORKSPACE_DIR/"
+    # We use rsync with -rlpD (no owner, no group, no times) to avoid permission issues
+    # on the tmpfs mount.
+    # -r: recursive
+    # -l: copy symlinks
+    # -p: preserve permissions
+    # -D: preserve devices/specials
+    rsync -rlpD --info=progress2 "$SOURCE_REPO/" "$WORKSPACE_DIR/"
     echo "✅ Workspace populated."
 else
     echo "❌ Source repo $SOURCE_REPO not found! Agent will have an empty workspace."
