@@ -4,7 +4,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-Environment="POWER_AGENT_INTERFACE={{ power_agent_interface | default(ansible_default_ipv4.interface) }}"
+Environment="POWER_AGENT_INTERFACE={{ power_agent_interface | default(ansible_facts['default_ipv4']['interface']) }}"
 ExecStart=/usr/bin/python3 /opt/power_manager/power_agent.py
 WorkingDirectory=/opt/power_manager
 Restart=on-failure

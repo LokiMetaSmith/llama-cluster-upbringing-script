@@ -18,7 +18,7 @@ paddler_agent_local_llamacpp_api_key: "" # Set this if your llama.cpp server use
 # This should be the inventory hostname of the node running the paddler balancer
 paddler_balancer_host: "controller_node" # Or your specific inventory name for the balancer
 paddler_balancer_management_port: 8085
-paddler_agent_management_addr: "{{ hostvars[paddler_balancer_host]['ansible_default_ipv4']['address'] }}:{{ paddler_balancer_management_port }}"
+paddler_agent_management_addr: "{{ hostvars[paddler_balancer_host]['ansible_facts']['default_ipv4']['address'] }}:{{ paddler_balancer_management_port }}"
 
 # Path to the paddler executable
 paddler_executable_path: "/usr/local/bin/paddler"

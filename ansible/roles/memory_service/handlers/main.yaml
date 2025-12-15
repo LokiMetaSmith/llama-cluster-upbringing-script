@@ -2,4 +2,4 @@
   ansible.builtin.command:
     cmd: nomad job run /opt/nomad/jobs/memory_service.nomad
   environment:
-    NOMAD_ADDR: "http://{{ ansible_default_ipv4.address }}:4646"
+    NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"
