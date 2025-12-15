@@ -1,11 +1,17 @@
-```bash
 #!/bin/bash
 
-# This script starts the necessary Nomad jobs for the AI digital twin application.
-# It should be run from the user's home directory on a controller node.
+# This script is a legacy utility for manually starting services.
+# ⚠️  DEPRECATED: Please use Ansible to deploy services to ensure consistency.
+# Example: ansible-playbook playbook.yaml --tags ai-experts
 
-#NOTE: DO NOT RUN THIS FROM AN AUTOMATED SCRIPT
+echo "⚠️  WARNING: This script is deprecated and may not reflect the latest deployment logic."
+echo "Use at your own risk. For proper deployment, run:"
+echo "  ansible-playbook playbook.yaml --tags ai-experts,app-services"
+echo ""
+echo "Press output any key to continue or Ctrl+C to abort..."
+read -r -n 1 -s
 
+# Legacy logic below (best effort)
 set -e
 
 echo "🚀 Starting the main Llama Expert service..."
@@ -14,7 +20,9 @@ if [ -f /opt/nomad/jobs/expert-main.nomad ]; then
 fi
 
 echo "🚀 Starting the Pipecat application service..."
-nomad job run /opt/nomad/jobs/pipecatapp.nomad
+if [ -f /opt/nomad/jobs/pipecatapp.nomad ]; then
+    nomad job run /opt/nomad/jobs/pipecatapp.nomad
+fi
 
 echo "🚀 Starting the Home Assistant service..."
 if [ -f /opt/nomad/jobs/home-assistant.nomad ]; then
@@ -25,4 +33,3 @@ echo "✅ All services have been submitted to Nomad."
 echo "Use 'nomad status' to monitor their deployment."
 
 nomad status
-```
