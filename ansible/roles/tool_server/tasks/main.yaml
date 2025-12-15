@@ -56,9 +56,8 @@
     cmd: "docker build --no-cache -t tool-server:local ."
     chdir: "/opt/tool_server"
   become: yes
-  register: docker_build_result
-  changed_when: "'Successfully built' in docker_build_result.stdout or 'writing image' in docker_build_result.stdout"
-
+  register: tool_server_docker_build_result
+  changed_when: "'Successfully built' in tool_server_docker_build_result.stdout or 'writing image' in tool_server_docker_build_result.stdout"
 
 - name: Verify tool-server image exists
   ansible.builtin.command: docker image inspect tool-server:local
