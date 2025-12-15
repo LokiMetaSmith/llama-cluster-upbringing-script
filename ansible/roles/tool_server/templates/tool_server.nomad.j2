@@ -52,6 +52,11 @@ job "tool-server" {
         GIT_EMAIL           = "{{ git_email | default('agent@pipecat.ai') }}"
       }
 
+      resources {
+        cpu    = 500
+        memory = 1024
+      }
+      
       service {
         name = "tool-server-api"
         port = "http"
