@@ -39,6 +39,8 @@ We propose a tiered architecture where components can be "Colocated" (Monolith) 
 
 ## 4. Implementation Plan
 
+> **Note:** A detailed engineering checklist for these phases is available in [TODO_Hybrid_Architecture.md](./TODO_Hybrid_Architecture.md).
+
 ### Phase 1: Configurable Tool Factory (Local vs Remote)
 *   **Goal:** Allow `agent_factory.py` to instantiate tools either locally or as proxies to a remote server.
 *   **Files:** `ansible/roles/pipecatapp/files/agent_factory.py`
