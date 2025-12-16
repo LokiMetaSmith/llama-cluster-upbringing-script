@@ -50,19 +50,19 @@ If you are having trouble, you can visit <https://playwright.dev/python/docs/lib
 
 ## Playwright Best Practices
 
--   **Use Web-First Assertions:** Always use `expect(locator)` with matchers like `.to_be_visible()` or `.to_have_text()`. This makes Playwright automatically wait for the condition to be true, preventing flaky tests.
--   **Prefer User-Facing Locators:** Select elements like a user would. Use this priority:
-    1.  `page.get_by_role()` (e.g., `button`, `heading`)
-    2.  `page.get_by_text()`
-    3.  `page.get_by_label()`
--   **Avoid Brittle Selectors:** Do not use auto-generated class names or long, complex CSS paths (e.g., `div > div > div:nth-child(3)`). They break easily.
+- **Use Web-First Assertions:** Always use `expect(locator)` with matchers like `.to_be_visible()` or `.to_have_text()`. This makes Playwright automatically wait for the condition to be true, preventing flaky tests.
+- **Prefer User-Facing Locators:** Select elements like a user would. Use this priority:
+    1. `page.get_by_role()` (e.g., `button`, `heading`)
+    2. `page.get_by_text()`
+    3. `page.get_by_label()`
+- **Avoid Brittle Selectors:** Do not use auto-generated class names or long, complex CSS paths (e.g., `div > div > div:nth-child(3)`). They break easily.
 
 ## Important: Playwright Verification Scripts vs. Repository Tests
 
 It's crucial to understand the difference between the two types of scripts you might write.
 
--   **Verification Scripts (Temporary):** This is what you'll create for **this workflow**. They live in `/home/jules/verification`, are often simple, and their only goal is to help you take a screenshot to verify your work and show the user what you built or fixed. **They are disposable.**
--   **Repository Tests (Permanent):** You write these as part of your typical code changes you have already made by now. You should follow typical unit testing patterns you observe in the repository. You may write playwright tests in the repository if the user asks you to, or if exsiting tests in the repository indicate you should.
+- **Verification Scripts (Temporary):** This is what you'll create for **this workflow**. They live in `/home/jules/verification`, are often simple, and their only goal is to help you take a screenshot to verify your work and show the user what you built or fixed. **They are disposable.**
+- **Repository Tests (Permanent):** You write these as part of your typical code changes you have already made by now. You should follow typical unit testing patterns you observe in the repository. You may write playwright tests in the repository if the user asks you to, or if exsiting tests in the repository indicate you should.
 
 ## Example Playwright Script
 

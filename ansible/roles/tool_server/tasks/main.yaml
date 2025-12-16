@@ -1,10 +1,14 @@
 - name: "Tool Server : Ensure tool_server directories exist"
   ansible.builtin.file:
-    path: "/opt/tool_server"
+    path: "{{ item }}"
     state: directory
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
     mode: "0755"
+  loop:
+    - "/opt/tool_server"
+    - "{{ cluster_infra_dir }}"
+    - "{{ mcp_dir }}"
   become: true
 
 - name: "Tool Server : Copy build files"

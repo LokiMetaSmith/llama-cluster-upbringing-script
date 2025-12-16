@@ -21,7 +21,7 @@
     return_content: yes
   register: tool_server_service
   until: tool_server_service.json | length > 0
-  retries: 12
+  retries: 30
   delay: 5
 
 - name: Configure llxprt-code
