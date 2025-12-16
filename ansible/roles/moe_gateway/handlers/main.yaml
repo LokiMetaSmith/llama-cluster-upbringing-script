@@ -1,0 +1,4 @@
+- name: Run moe-gateway job
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/moe-gateway.nomad
+  changed_when: true
