@@ -4,23 +4,13 @@
     dest: "/tmp/llamacpp-rpc-pool-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
     mode: '0644'
   vars:
-    job_name: "llamacpp-rpc-pool-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
-    # Service name is derived inside the template as {{ job_name }}-provider
-    # So it will be llamacpp-rpc-pool-<model>-provider
-    # BUT expert.nomad.j2 expects llamacpp-rpc-<model>-provider (no 'pool' in the prefix usually?)
-    # Let's check expert.nomad.j2 again.
-    # expert.nomad.j2: "llamacpp-rpc-" ~ (model.filename...) ~ "-provider"
-    # So we should name the job "llamacpp-rpc-<model>" to match the service expectation?
-    # Or just override service name.
+    # We construct the job name to match the service name expected by the expert orchestrator.
     # The template uses: name = "{{ job_name }}-provider".
-    # So if job_name is "llamacpp-rpc-<model>", service is "llamacpp-rpc-<model>-provider".
-    # This matches expert.nomad.j2!
-    job_name_clean: "llamacpp-rpc-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
-
-    # We need to override the job_name passed to template to match what we want
-    job_name: "{{ job_name_clean }}"
+    # Expert expects: "llamacpp-rpc-<model>-provider".
+    # Therefore, we set job_name to "llamacpp-rpc-<model>".
+    job_name: "llamacpp-rpc-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
     worker_count: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
-    # model variable is passed in implicitly or explicitly
+    # model variable is passed in implicitly
 
   when: model is defined
 
@@ -29,15 +19,15 @@
     cmd: "nomad job run /tmp/llamacpp-rpc-pool-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
   changed_when: true
   vars:
-     job_name_clean: "llamacpp-rpc-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
+    # Used only for logging/reporting if needed, but not strictly required here as the file path is constructed from model.filename
+    # We kept the file path consistent with the first task: /tmp/llamacpp-rpc-pool-...
+    pass
 
 - name: "Wait for GPU Provider for {{ model.name }} to become healthy in Consul"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/{{ job_name_clean }}-provider?passing"
+    url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/llamacpp-rpc-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}-provider?passing"
     return_content: yes
   register: consul_health
   until: "consul_health.json | length >= expected_worker_count | int"
   retries: 30
   delay: 10
-  vars:
-     job_name_clean: "llamacpp-rpc-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"

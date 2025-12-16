@@ -21,6 +21,26 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
   group "rpc-provider" {
     count = {{ worker_count | default(1) }}
 
+    scaling {
+      enabled = true
+      min     = {{ worker_count | default(1) }}
+      max     = {{ (worker_count | default(1) | int) * 4 }} # Allow scaling up to 4x the base worker count
+
+      policy {
+        cooldown = "1m"
+        evaluation_interval = "30s"
+
+        check "cpu_usage" {
+          source = "nomad"
+          query  = "avg(nomad.client.allocs.cpu.total_percent)"
+
+          strategy "target-value" {
+            target = 80
+          }
+        }
+      }
+    }
+
     update {
       max_parallel = 1
       min_healthy_time = "10s"
