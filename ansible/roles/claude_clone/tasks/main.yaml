@@ -3,6 +3,7 @@
     repo: 'https://github.com/LokiMetaSmith/Claude_Clone.git'
     dest: /opt/claude_clone
     version: main
+    force: yes
 
 - name: Install Claude_Clone dependencies
   ansible.builtin.npm:
