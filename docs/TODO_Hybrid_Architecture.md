@@ -68,6 +68,11 @@ Objective: Allow the application to seamlessly switch between finding services o
         - [ ] If `node_tier == 'mid'` (Monolith), set `LLAMA_API_URL_OVERRIDE = "http://localhost:8080"` (or internal pointer).
         - [ ] If `node_tier == 'edge'`, set `LLAMA_API_URL_OVERRIDE` to the Core Node's address.
 
+- [ ] **Update Bootstrap CLI (`bootstrap.sh`)**
+    - [ ] Add a new flag `--tier [edge|mid|core]` to `bootstrap.sh`.
+    - [ ] Pass this flag as an extra-var `node_tier` to the Ansible playbook.
+    - [ ] Update the help menu to explain the new tier options.
+
 ## Phase 4: Docker Image Optimization
 
 Objective: Create a single, flexible Docker image that can run in any of the three modes.
