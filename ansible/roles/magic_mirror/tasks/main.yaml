@@ -1,0 +1,32 @@
+- name: Install Magic Mirror runtime dependencies
+  ansible.builtin.apt:
+    name:
+      - libxkbcommon0
+      - libwayland-client0
+      - libasound2
+    state: present
+    update_cache: yes
+
+- name: Create Magic Mirror install directory
+  ansible.builtin.file:
+    path: "{{ magic_mirror_install_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Download and unarchive Magic Mirror server
+  ansible.builtin.unarchive:
+    src: "{{ magic_mirror_url }}"
+    dest: "{{ magic_mirror_install_dir }}"
+    remote_src: yes
+    creates: "{{ magic_mirror_install_dir }}/mmserver"
+
+- name: Ensure mmserver is executable
+  ansible.builtin.file:
+    path: "{{ magic_mirror_install_dir }}/mmserver"
+    mode: '0755'
+
+- name: Render Magic Mirror Nomad job file
+  ansible.builtin.template:
+    src: magic_mirror.nomad.j2
+    dest: /opt/nomad/jobs/magic_mirror.nomad
+  notify: Run Magic Mirror Job

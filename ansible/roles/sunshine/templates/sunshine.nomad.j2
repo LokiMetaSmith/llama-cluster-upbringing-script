@@ -1,0 +1,54 @@
+job "sunshine" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "sunshine" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "web" {
+        static = 47990
+      }
+    }
+
+    task "sunshine" {
+      driver = "docker"
+
+      config {
+        image        = "lizardbyte/sunshine:{{ sunshine_version }}"
+        network_mode = "host"
+        ipc_mode     = "host"
+        privileged   = true
+
+        volumes = [
+          "/opt/nomad/volumes/sunshine:/config"
+        ]
+
+        # Device mapping requires privileged mode or specific device allow listing in Nomad client config.
+        # Assuming privileged is allowed or configured.
+      }
+
+      env {
+        TZ   = "{{ sunshine_timezone }}"
+        PUID = "0" # Running as root inside container for simplicity with host devices
+        PGID = "0"
+      }
+
+      resources {
+        cpu    = 2000
+        memory = 4096
+      }
+
+      service {
+        name = "sunshine-web"
+        port = "web"
+        check {
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}

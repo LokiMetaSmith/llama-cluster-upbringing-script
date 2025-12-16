@@ -1,0 +1,11 @@
+- name: Ensure Sunshine config directory exists
+  ansible.builtin.file:
+    path: /opt/nomad/volumes/sunshine
+    state: directory
+    mode: '0755'
+
+- name: Render Sunshine Nomad job file
+  ansible.builtin.template:
+    src: sunshine.nomad.j2
+    dest: /opt/nomad/jobs/sunshine.nomad
+  notify: Run Sunshine Job

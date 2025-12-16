@@ -1,0 +1,4 @@
+- name: Run Magic Mirror Job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/magic_mirror.nomad
+  listen: "Run Magic Mirror Job"

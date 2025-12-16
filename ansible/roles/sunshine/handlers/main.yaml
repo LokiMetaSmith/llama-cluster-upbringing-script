@@ -1,0 +1,4 @@
+- name: Run Sunshine Job
+  ansible.builtin.command:
+    cmd: nomad job run /opt/nomad/jobs/sunshine.nomad
+  listen: "Run Sunshine Job"
