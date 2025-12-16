@@ -10,17 +10,20 @@
   vars:
     experts: "{{ expert_models.keys() | reject('equalto', 'router') | list }}"
     expected_worker_count: "{{ ((groups['workers'] | default([]) | length) if (groups['workers'] | default([]) | length) > 0 else 1) | int }}"
-    # This creates a new list containing only the first model object from each expert's list.
-    # The template needs the full object (name, filename, memory_mb, etc.), not just the name.
-    expert_primary_models: "{{ expert_models.values() | map('first') | list }}"
+    # Extract all models from all experts, then deduplicate based on filename.
+    # 1. Flatten the list of lists of models
+    # 2. Use 'unique' filter on the objects (requires hashable objects, dicts might work if identical)
+    # Better: grouping by filename
+    all_models: "{{ expert_models.values() | flatten }}"
+    unique_models: "{{ all_models | unique(attribute='filename') }}"
 
   tasks:
-    - name: Deploy and run the GPU Provider Pool job for each expert
+    - name: Deploy and run the GPU Provider Pool job for each Unique Model
       include_tasks:
-        file: "{{ playbook_dir }}/../../ansible/tasks/deploy_expert_gpu_provider.yaml"
-      loop: "{{ expert_models.keys() | list }}"
+        file: "{{ playbook_dir }}/../../ansible/tasks/deploy_model_gpu_provider.yaml"
+      loop: "{{ unique_models }}"
       loop_control:
-        loop_var: item
+        loop_var: model
       tags:
         - deploy-gpu-provider
 
@@ -145,20 +148,6 @@
       tags:
         - benchmark
 
-    - name: Wait for the llamacpp-rpc-pool service to be healthy in Consul
-      ansible.builtin.uri:
-        url: "http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-pool-provider"
-        return_content: yes
-      register: rpc_pool_health
-      until: >
-        rpc_pool_health.json is defined and
-        rpc_pool_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
-      retries: 60
-      delay: 10
-      changed_when: false
-      when: benchmark_results is defined
-      tags:
-        - healthcheck
 
     - name: Create Expert Orchestrator job files
       include_tasks:
