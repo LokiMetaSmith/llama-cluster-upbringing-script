@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libswresample-dev \
     git \
     rsync \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir --upgrade pip
@@ -50,6 +51,8 @@ RUN pip install --no-cache-dir \
     opencv-python-headless \
     paramiko \
     piper-tts \
+    httpx \
+    requests \
     python-consul2 \
     python-dotenv \
     pyvips \
