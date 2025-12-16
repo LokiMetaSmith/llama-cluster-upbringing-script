@@ -65,8 +65,8 @@ job "tool-server" {
         check {
           type     = "http"
           path     = "/health"
-          interval = "10s"
-          timeout  = "2s"
+          interval = "15s"
+          timeout  = "5s"
         }
       }
     }
