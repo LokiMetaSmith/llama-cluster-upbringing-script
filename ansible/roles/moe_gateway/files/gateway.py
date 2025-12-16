@@ -297,5 +297,6 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    # The port should be configured via environment variables in a real deployment
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    # Configure the port from Nomad environment variables, defaulting to 8001 for local dev
+    port = int(os.getenv("NOMAD_PORT_http", 8001))
+    uvicorn.run(app, host="0.0.0.0", port=port)
