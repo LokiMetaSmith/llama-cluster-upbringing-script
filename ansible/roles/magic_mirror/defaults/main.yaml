@@ -1,0 +1,3 @@
+magic_mirror_version: "v0.8.4"
+magic_mirror_url: "https://github.com/colinmarc/magic-mirror/releases/download/mmserver-{{ magic_mirror_version }}/mmserver-{{ magic_mirror_version }}-linux-amd64.tar.gz"
+magic_mirror_install_dir: "/opt/magic_mirror"

@@ -1,0 +1,7 @@
+- hosts: all
+  become: yes
+  vars_files:
+    - ../../group_vars/all.yaml
+  roles:
+    - { role: sunshine, tags: ['sunshine', 'streaming'] }
+    - { role: magic_mirror, tags: ['magic_mirror', 'streaming'] }

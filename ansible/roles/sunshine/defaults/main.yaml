@@ -1,0 +1,4 @@
+sunshine_version: "latest-ubuntu-24.04"
+sunshine_user: "root"
+sunshine_group: "root"
+sunshine_timezone: "UTC"

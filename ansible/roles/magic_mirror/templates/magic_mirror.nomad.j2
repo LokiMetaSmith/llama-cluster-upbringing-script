@@ -1,0 +1,39 @@
+job "magic_mirror" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "server" {
+    count = 1
+
+    network {
+      mode = "host" # Needs host networking to handle namespaces and ports properly
+    }
+
+    task "mmserver" {
+      driver = "raw_exec"
+
+      config {
+        command = "{{ magic_mirror_install_dir }}/mmserver"
+        args    = [
+            "--address", "0.0.0.0",
+            "--port", "41111" # Explicitly setting port to match health check
+        ]
+      }
+
+      resources {
+        cpu    = 1000
+        memory = 1024
+      }
+
+      service {
+        name = "magic-mirror"
+        check {
+          type     = "tcp"
+          port     = "41111"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}
