@@ -70,11 +70,21 @@
     src: llxprt-code.env.j2
     dest: "{{ llxprt_code_dir }}/.env"
 
-- name: Template MCP config
-  ansible.builtin.template:
-    src: mcp_config.json.j2
-    dest: /tmp/mcp_config.json
+- name: Remove existing MCP server from llxprt-code
+  ansible.builtin.command: llxprt mcp remove tool-server
+  ignore_errors: true
+  changed_when: true
 
 - name: Add MCP server to llxprt-code
-  ansible.builtin.command: llxprt mcp add-json tool-server /tmp/mcp_config.json
+  ansible.builtin.command:
+    argv:
+      - llxprt
+      - mcp
+      - add
+      - tool-server
+      - npx
+      - mcp-remote@latest
+      - "http://{{ (tool_server_service.json[0].Service.Address) }}:{{ (tool_server_service.json[0].Service.Port) }}/run_tool/"
+      - --header
+      - "Authorization: Bearer {{ openai_api_key }}"
   changed_when: true
