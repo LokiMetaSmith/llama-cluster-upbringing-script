@@ -183,7 +183,10 @@ async def discover_pipecat_service():
 @app.on_event("startup")
 async def startup_event():
     """On startup, discover the pipecat service."""
-    await discover_pipecat_service()
+    try:
+        await discover_pipecat_service()
+    except Exception as e:
+        logger.warning(f"Startup service discovery failed: {e}. Continuing to allow health checks.")
 
 # --- Health Check Endpoint ---
 @app.get("/health", status_code=200)
