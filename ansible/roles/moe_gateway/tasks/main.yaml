@@ -32,7 +32,84 @@
   notify:
     - Run moe-gateway job
 
-- name: Ensure moe-gateway job is running
-  ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/moe-gateway.nomad
-  changed_when: true
+- name: Deploy moe-gateway Job
+  block:
+    - name: Ensure moe-gateway job is running
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/moe-gateway.nomad"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true
+      become: no
+      register: moe_gateway_job_run
+  rescue:
+    - name: Get moe-gateway job status
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status -verbose moe-gateway
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: moe_job_status
+      ignore_errors: yes
+      become: no
+
+    - name: Display moe-gateway job status
+      ansible.builtin.debug:
+        var: moe_job_status.stdout
+
+    - name: Get moe-gateway allocations
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job allocs -json moe-gateway
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: moe_allocs
+      ignore_errors: yes
+      become: no
+
+    - name: Save moe-gateway allocations to temp file
+      ansible.builtin.copy:
+        content: "{{ moe_allocs.stdout }}"
+        dest: "/tmp/moe_allocs.json"
+
+    - name: Extract Allocation ID
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/moe_allocs.json
+      register: moe_alloc_id
+      ignore_errors: yes
+
+    - name: Fetch moe-gateway logs (stdout)
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs {{ moe_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: moe_logs_stdout
+      ignore_errors: yes
+      become: no
+      when: moe_alloc_id.stdout | length > 0
+
+    - name: Display moe-gateway logs (stdout)
+      ansible.builtin.debug:
+        var: moe_logs_stdout.stdout
+      when: moe_logs_stdout is defined
+
+    - name: Fetch moe-gateway logs (stderr)
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ moe_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: moe_logs_stderr
+      ignore_errors: yes
+      become: no
+      when: moe_alloc_id.stdout | length > 0
+
+    - name: Display moe-gateway logs (stderr)
+      ansible.builtin.debug:
+        var: moe_logs_stderr.stdout
+      when: moe_logs_stderr is defined
+
+    - name: Clean up temp file
+      ansible.builtin.file:
+        path: "/tmp/moe_allocs.json"
+        state: absent
+
+    - name: Fail after debugging
+      ansible.builtin.fail:
+        msg: "moe-gateway job failed to start. See logs above."
