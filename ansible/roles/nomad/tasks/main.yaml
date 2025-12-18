@@ -70,16 +70,24 @@
     path: /usr/local/bin/nomad
   register: nomad_binary_stat
 
-- name: Ensure old, conflicting Nomad config files are removed
+- name: Remove conflicting server/client configs when in local bootstrap mode
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent
   loop:
-    - /etc/nomad.d/client.hcl
-    - /etc/nomad.d/server.hcl
-    - /etc/nomad.d/nomad.hcl
-  when: not nomad_binary_stat.stat.exists
+    - "{{ nomad_config_dir }}/client.hcl"
+    - "{{ nomad_config_dir }}/server.hcl"
+  when: "inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names"
   become: yes
+  notify: Restart nomad
+
+- name: Remove conflicting bootstrap config when not in local bootstrap mode
+  ansible.builtin.file:
+    path: "{{ nomad_config_dir }}/nomad.hcl"
+    state: absent
+  when: "not (inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names)"
+  become: yes
+  notify: Restart nomad
 
 - name: Create Nomad config directory
   ansible.builtin.file:
