@@ -6,6 +6,7 @@ job "moe-gateway" {
     count = 1
 
     network {
+      mode = "host"
       port "http" {}
     }
 
@@ -22,10 +23,11 @@ job "moe-gateway" {
         port = "http"
 
         check {
-          type     = "http"
-          path     = "/health"
-          interval = "10s"
-          timeout  = "2s"
+          type         = "http"
+          path         = "/health"
+          interval     = "10s"
+          timeout      = "2s"
+          address_mode = "host"
         }
       }
 

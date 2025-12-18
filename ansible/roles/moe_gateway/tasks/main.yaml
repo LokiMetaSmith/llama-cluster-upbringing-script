@@ -46,6 +46,17 @@
   retries: 12 # Total wait time = retries * delay = 60 seconds
   delay: 5   # Wait 5 seconds between retries
 
+- name: Verify Python virtual environment exists
+  ansible.builtin.stat:
+    path: "{{ pipecat_app_dir }}/venv/bin/python"
+  register: venv_python_check
+  become: no
+
+- name: Fail if Python virtual environment is missing
+  ansible.builtin.fail:
+    msg: "Python executable not found at {{ pipecat_app_dir }}/venv/bin/python. Ensure python_deps role ran successfully."
+  when: not venv_python_check.stat.exists
+
 - name: Stop and purge any existing moe-gateway job to ensure idempotency
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job stop -purge moe-gateway
@@ -59,7 +70,7 @@
   block:
     - name: Ensure moe-gateway job is running
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/moe-gateway.nomad"
+        cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/moe-gateway.nomad"
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       changed_when: true
@@ -136,3 +147,15 @@
     - name: Fail after debugging
       ansible.builtin.fail:
         msg: "moe-gateway job failed to start. See logs above."
+
+- name: Wait for the moe-gateway service to be healthy in Consul
+  ansible.builtin.uri:
+    url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/moe-gateway"
+    return_content: yes
+  register: moe_gateway_health
+  until: >
+    moe_gateway_health.json is defined and
+    moe_gateway_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
+  retries: 60
+  delay: 2
+  changed_when: false
