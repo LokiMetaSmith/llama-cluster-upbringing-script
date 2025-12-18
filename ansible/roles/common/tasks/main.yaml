@@ -108,6 +108,15 @@
     cmd: /usr/local/bin/update-ssh-authorized-keys.sh
   when: sync_script.changed
 
+- name: Disable password authentication for SSH
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication no'
+    state: present
+  notify: restart ssh
+  become: yes
+
 # --- Firewall Configuration ---
 
 - name: "Firewall : Allow SSH"
@@ -149,6 +158,16 @@
     - "{{ mqtt_port }}" # MQTT
     - "{{ mqtt_websocket_port }}" # MQTT Websockets
     - "{{ router_port }}" # Traefik / Router (if used)
+
+- name: "Firewall : Allow Web Traffic (HTTP/HTTPS)"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+    comment: "Allow Standard Web Traffic"
+  loop:
+    - 80
+    - 443
 
 - name: "Firewall : Allow Nomad Ephemeral Ports"
   community.general.ufw:
