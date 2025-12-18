@@ -36,11 +36,15 @@ plugin "docker" {
 }
 
 plugin "raw_exec" {
-  enabled = true
+  config {
+    enabled = true
+  }
 }
 
 plugin "exec" {
-  enabled = true
+  config {
+    enabled = true
+  }
 }
 
 client {
