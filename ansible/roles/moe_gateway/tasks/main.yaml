@@ -32,6 +32,29 @@
   notify:
     - Run moe-gateway job
 
+- name: Debug Nomad Address
+  ansible.builtin.debug:
+    msg: "NOMAD_ADDR is http://{{ cluster_ip }}:{{ nomad_http_port }}"
+
+- name: Wait for Nomad API to be ready
+  ansible.builtin.uri:
+    url: "http://{{ cluster_ip }}:{{ nomad_http_port }}/v1/status/leader"
+    method: GET
+    status_code: 200
+  register: nomad_api_status
+  until: nomad_api_status.status == 200
+  retries: 12 # Total wait time = retries * delay = 60 seconds
+  delay: 5   # Wait 5 seconds between retries
+
+- name: Stop and purge any existing moe-gateway job to ensure idempotency
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job stop -purge moe-gateway
+  register: moe_gateway_job_stop_status
+  changed_when: "moe_gateway_job_stop_status.rc == 0"
+  failed_when: false
+  environment:
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+
 - name: Deploy moe-gateway Job
   block:
     - name: Ensure moe-gateway job is running
