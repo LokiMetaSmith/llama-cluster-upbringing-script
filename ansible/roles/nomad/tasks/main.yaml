@@ -116,19 +116,6 @@
     mode: '0755'
   become: yes
 
-- name: Copy Nomad systemd service file
-  ansible.builtin.template:
-    src: nomad.service.j2
-    dest: /etc/systemd/system/nomad.service
-    mode: '0644'
-  become: yes
-  notify:
-    - Reload systemd
-    - Restart nomad
-
-- name: Force immediate handler flush to ensure systemd is reloaded
-  meta: flush_handlers
-
 - name: Fetch Consul management token
   ansible.builtin.slurp:
     src: /etc/consul.d/management_token
@@ -182,6 +169,19 @@
   when: "'workers' in groups and inventory_hostname in groups['workers']"
   notify:
     - Restart nomad
+
+- name: Copy Nomad systemd service file
+  ansible.builtin.template:
+    src: nomad.service.j2
+    dest: /etc/systemd/system/nomad.service
+    mode: '0644'
+  become: yes
+  notify:
+    - Reload systemd
+    - Restart nomad
+
+- name: Force immediate handler flush to ensure systemd is reloaded
+  meta: flush_handlers
 
 - name: Create systemd override directory for Nomad service
   ansible.builtin.file:
