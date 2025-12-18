@@ -8,3 +8,8 @@
     name: cluster-ip-alias.service
     state: restarted
     daemon_reload: yes
+
+- name: restart ssh
+  service:
+    name: ssh
+    state: restarted
