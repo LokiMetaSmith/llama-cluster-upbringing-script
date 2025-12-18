@@ -76,6 +76,19 @@
       changed_when: true
       become: no
       register: moe_gateway_job_run
+
+    - name: Wait for the moe-gateway service to be healthy in Consul
+      ansible.builtin.uri:
+        url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/moe-gateway"
+        return_content: yes
+      register: moe_gateway_health
+      until: >
+        moe_gateway_health.json is defined and
+        moe_gateway_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
+      retries: 60
+      delay: 2
+      changed_when: false
+
   rescue:
     - name: Get moe-gateway job status
       ansible.builtin.command:
@@ -147,15 +160,3 @@
     - name: Fail after debugging
       ansible.builtin.fail:
         msg: "moe-gateway job failed to start. See logs above."
-
-- name: Wait for the moe-gateway service to be healthy in Consul
-  ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/moe-gateway"
-    return_content: yes
-  register: moe_gateway_health
-  until: >
-    moe_gateway_health.json is defined and
-    moe_gateway_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
-  retries: 60
-  delay: 2
-  changed_when: false
