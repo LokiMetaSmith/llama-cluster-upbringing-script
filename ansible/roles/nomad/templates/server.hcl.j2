@@ -60,10 +60,10 @@ client {
   # Nomad from starting on machines without a sound device. It is commented
   # out to allow for more flexible deployment. The pipecat job itself will
   # still require this volume to be present on the target node.
-  host_volume "snd" {
-    path      = "/dev/snd"
-    read_only = false
-  }
+  # host_volume "snd" {
+  #   path      = "/dev/snd"
+  #   read_only = false
+  # }
 
   host_volume "models" {
     path      = "{{ nomad_models_dir }}"
