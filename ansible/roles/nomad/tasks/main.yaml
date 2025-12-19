@@ -135,6 +135,19 @@
   tags:
     - nomad
 
+- name: Check for /dev/snd device
+  ansible.builtin.stat:
+    path: /dev/snd
+  register: snd_device_stat
+  tags:
+    - nomad
+
+- name: Set sound_enabled fact
+  set_fact:
+    sound_enabled: "{{ snd_device_stat.stat.exists }}"
+  tags:
+    - nomad
+
 - name: Deploy Nomad server configuration for controller nodes
   ansible.builtin.template:
     src: server.hcl.j2
@@ -233,13 +246,6 @@
     creates: /opt/cni/bin/bridge
   become: yes
   check_mode: no
-
-- name: Ensure /dev/snd directory exists for Nomad volume
-  ansible.builtin.file:
-    path: /dev/snd
-    state: directory
-    mode: '0755'
-  become: yes
 
 - name: Ensure /opt/pipecatapp directory exists for Nomad volume
   ansible.builtin.file:
