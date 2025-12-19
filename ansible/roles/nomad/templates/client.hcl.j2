@@ -1,5 +1,5 @@
 data_dir  = "{{ nomad_data_dir }}"
-bind_addr = "{{ cluster_ip }}" # Bind explicitly to the Private Alias IP
+bind_addr = "0.0.0.0" # Bind to all interfaces to ensure startup even if alias is missing
 
 addresses {
   http = "0.0.0.0" # Listen on all interfaces for UI/API access
