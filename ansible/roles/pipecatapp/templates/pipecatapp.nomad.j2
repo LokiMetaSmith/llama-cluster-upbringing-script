@@ -13,10 +13,12 @@ job "{{ job_name | default('pipecat-app') }}" {
       }
     }
 
+    {% if sound_enabled | default(false) %}
     volume "snd" {
       type   = "host"
       source = "snd"
     }
+    {% endif %}
     {% else %}
     network {
       mode = "host"
@@ -53,12 +55,14 @@ job "{{ job_name | default('pipecat-app') }}" {
           "/opt/pipecatapp/pipecat_config.json:/app/pipecat_config.json:ro",
         ]
         # Pass through the sound device to the container
+        {% if sound_enabled | default(false) %}
         devices = [
           {
             host_path      = "/dev/snd"
             container_path = "/dev/snd"
           }
         ]
+        {% endif %}
       }
 
       resources {
