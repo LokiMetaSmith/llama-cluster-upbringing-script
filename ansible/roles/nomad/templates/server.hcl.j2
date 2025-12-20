@@ -41,12 +41,6 @@ plugin "raw_exec" {
   }
 }
 
-plugin "exec" {
-  config {
-    enabled = true
-  }
-}
-
 client {
   enabled = true
   servers = ["{{ cluster_ip }}"]
