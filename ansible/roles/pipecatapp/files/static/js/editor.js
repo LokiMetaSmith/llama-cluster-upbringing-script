@@ -205,6 +205,7 @@ const WorkflowEditor = {
         createGenericNode("SystemPromptNode", "System Prompt", [{name: "tools", type: "object"}, {name: "available_services", type: "object"}], [{name: "system_prompt", type: "string"}]);
         createGenericNode("ScreenshotNode", "Screenshot", [{name: "tools", type: "object"}], [{name: "screenshot_base64", type: "string"}]);
         createGenericNode("PromptBuilderNode", "Prompt Builder", [{name: "system_prompt", type: "string"}, {name: "user_text", type: "string"}, {name: "screenshot", type: "string"}, {name: "tool_result", type: "object"}], [{name: "messages", type: "array"}]);
+        createGenericNode("SimpleLLMNode", "Simple LLM", [{name: "messages", type: "array"}, {name: "user_text", type: "string"}], [{name: "response", type: "string"}], {model_tier: "balanced", system_prompt: "You are a helpful assistant."});
         createGenericNode("VisionLLMNode", "Vision LLM", [{name: "messages", type: "array"}], [{name: "response_text", type: "string"}]);
         createGenericNode("ToolParserNode", "Tool Parser", [{name: "llm_response", type: "string"}], [{name: "tool_call_data", type: "object"}, {name: "final_response", type: "string"}]);
         createGenericNode("ConditionalBranchNode", "Branch", [{name: "input_value", type: "object"}], [{name: "output_true", type: "object"}, {name: "output_false", type: "object"}], {check_if_tool_is: ""});
