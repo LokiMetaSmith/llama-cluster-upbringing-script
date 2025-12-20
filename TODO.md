@@ -99,6 +99,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [ ] **Reconcile Stale Artifacts:**
   - `docker/pipecatapp/app.py` contains code and TODOs (e.g., vision model failover) that are not present in the source `ansible/roles/pipecatapp/files/app.py`. Determine if these changes should be merged or if the artifact should be regenerated.
 - [ ] **Vision Model Failover**: Implement failover or selection logic for vision models (see `ansible/roles/pipecatapp/files/app.py`).
+- [ ] **Refactor Vision Role**: The `vision` role is currently minimal (only installs `libgl1`) and does not deploy Frigate as implied by the `frigate_port` variable. It needs to be refactored to actually deploy the service.
 
 ## Completed History
 

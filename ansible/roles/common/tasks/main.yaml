@@ -159,6 +159,38 @@
     - "{{ mqtt_websocket_port }}" # MQTT Websockets
     - "{{ router_port }}" # Traefik / Router (if used)
 
+- name: "Firewall : Allow Provisioning API"
+  community.general.ufw:
+    rule: allow
+    port: "{{ provisioning_api_port }}"
+    proto: tcp
+    comment: "Allow Provisioning API"
+  when: enable_provisioning_api | default(true)
+
+- name: "Firewall : Allow Home Assistant"
+  community.general.ufw:
+    rule: allow
+    port: "{{ home_assistant_port }}"
+    proto: tcp
+    comment: "Allow Home Assistant UI"
+  when: enable_home_assistant | default(true)
+
+- name: "Firewall : Allow Nanochat"
+  community.general.ufw:
+    rule: allow
+    port: "{{ nanochat_port }}"
+    proto: tcp
+    comment: "Allow Nanochat UI"
+  when: enable_nanochat | default(false)
+
+- name: "Firewall : Allow Frigate (Vision)"
+  community.general.ufw:
+    rule: allow
+    port: "{{ frigate_port }}"
+    proto: tcp
+    comment: "Allow Frigate UI"
+  when: enable_frigate | default(false)
+
 - name: "Firewall : Allow Web Traffic (HTTP/HTTPS)"
   community.general.ufw:
     rule: allow

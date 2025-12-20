@@ -72,12 +72,19 @@
         - name: Fail the playbook after diagnostics
           ansible.builtin.fail:
             msg: "Home Assistant deployment failed. Diagnostic log has been created at {{ playbook_dir }}/home_assistant_debug.log"
+      when: enable_home_assistant | default(true)
+
+    - name: Run Provisioning API
+      ansible.builtin.include_role:
+        name: provisioning_api
+      when: enable_provisioning_api | default(true)
+      tags:
+        - provisioning_api
 
     - name: Run post-Home Assistant application roles
       ansible.builtin.include_role:
         name: "{{ role_name }}"
       loop:
-        - provisioning_api
         - desktop_extras
         - paddler
         - vision
