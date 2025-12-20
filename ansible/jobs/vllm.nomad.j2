@@ -45,7 +45,8 @@ job "vllm-server-{{ model.name }}" {
         ports = ["http"]
         args = [
           "--model", "{{ model.filename }}",
-          "--host", "0.0.0.0"
+          "--host", "0.0.0.0",
+          "--enable-prefix-caching"
         ]
       }
 

@@ -38,7 +38,8 @@ job "{{ job_name }}" {
         args = [
           "--model", "/model",
           "--served-model-name", "{{ job_name }}",
-          "--port", "${NOMAD_PORT_http}"
+          "--port", "${NOMAD_PORT_http}",
+          "--enable-prefix-caching"
         ]
 
         volume_mount {

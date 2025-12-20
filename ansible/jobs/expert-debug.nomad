@@ -50,6 +50,7 @@ echo "Attempting to start llama-server with hardcoded model: Llama-3-8B-Instruct
   --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
   --n-gpu-layers 999 \
   --flash-attn auto \
+  --cache-prompt \
   --mlock \
   2>&1
 
