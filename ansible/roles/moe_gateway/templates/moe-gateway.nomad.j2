@@ -10,25 +10,33 @@ job "moe-gateway" {
       port "http" {}
     }
 
+    service {
+      name = "moe-gateway"
+      port = "http"
+      tags = ["moe-gateway", "http"]
+      address_mode = "host"
+
+      check {
+        type         = "http"
+        path         = "/health"
+        interval     = "10s"
+        timeout      = "2s"
+        address_mode = "host"
+
+        check_restart {
+          limit = 3
+          grace = "30s"
+          ignore_warnings = false
+        }
+      }
+    }
+
     task "gateway-server" {
       driver = "raw_exec"
 
       config {
         command = "{{ pipecat_app_dir }}/venv/bin/python"
         args    = ["{{ pipecat_app_dir }}/moe_gateway/gateway.py"]
-      }
-
-      service {
-        name = "moe-gateway"
-        port = "http"
-
-        check {
-          type         = "http"
-          path         = "/health"
-          interval     = "10s"
-          timeout      = "2s"
-          address_mode = "host"
-        }
       }
 
       template {
