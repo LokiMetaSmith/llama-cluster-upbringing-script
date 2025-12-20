@@ -59,6 +59,71 @@ class PromptBuilderNode(Node):
         self.set_output(context, "messages", messages)
 
 @registry.register
+class SimpleLLMNode(Node):
+    """A simple LLM node with configurable model tiers."""
+    async def execute(self, context: WorkflowContext):
+        # 1. Gather Inputs
+        messages = self.get_input(context, "messages")
+        if not messages:
+            # Fallback to constructing messages from user_text if raw messages aren't provided
+            user_text = self.get_input(context, "user_text") or "Hello"
+            system_prompt = self.config.get("system_prompt", "You are a helpful assistant.")
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_text}
+            ]
+
+        # 2. Determine Service based on Tier
+        tier = self.config.get("model_tier", "balanced")
+        consul_http_addr = context.global_inputs.get("consul_http_addr")
+
+        # Mapping logic (simplified for now, ideally strictly matches Consul service names)
+        if tier == "fast":
+            # Phi-3 is usually the 'fast' or 'router' expert
+            target_service = "llamacpp-rpc-router"
+        elif tier == "capable":
+            # CodeLlama or similar high-end
+            target_service = "llamacpp-rpc-coding"
+        else: # balanced / default
+            # Llama-3-8B is the main expert
+            target_service = "llamacpp-rpc-main"
+
+        response_text = f"Error: Could not reach {tier} service."
+
+        # 3. Call Service
+        if consul_http_addr:
+            try:
+                async with httpx.AsyncClient() as client:
+                    # Discovery
+                    response = await client.get(f"{consul_http_addr}/v1/health/service/{target_service}?passing")
+                    response.raise_for_status()
+                    services = response.json()
+
+                    if services:
+                        address = services[0]['Service']['Address']
+                        port = services[0]['Service']['Port']
+                        base_url = f"http://{address}:{port}/v1"
+
+                        # Call Chat Completion
+                        payload = {
+                            "model": target_service, # Model name often ignored by llama.cpp rpc, but good practice
+                            "messages": messages,
+                            "temperature": 0.7
+                        }
+                        chat_url = f"{base_url}/chat/completions"
+                        llm_res = await client.post(chat_url, json=payload, timeout=120)
+                        llm_res.raise_for_status()
+                        response_text = llm_res.json()["choices"][0]["message"]["content"]
+                    else:
+                         response_text = f"Error: Service {target_service} not found in Consul."
+
+            except Exception as e:
+                print(f"Error in SimpleLLMNode ({tier}): {e}")
+                response_text = f"Error interacting with {tier} model: {e}"
+
+        self.set_output(context, "response", response_text)
+
+@registry.register
 class ExpertRouterNode(Node):
     """A node that routes a query to a specific expert LLM service."""
     async def execute(self, context: WorkflowContext):
