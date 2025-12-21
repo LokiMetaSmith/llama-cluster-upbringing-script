@@ -1,0 +1,61 @@
+job "exo" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "exo" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" {
+        static = {{ exo_port }}
+      }
+    }
+
+    task "exo" {
+      driver = "docker"
+
+      config {
+        image = "{{ exo_docker_image_name }}"
+        force_pull = false # We build locally
+
+        # In host mode, ports are mapped directly
+        args = [
+          "run",
+          "--host", "0.0.0.0",
+          "--port", "{{ exo_port }}",
+          "{{ exo_model }}"
+        ]
+
+        # Use direct bind mounts for simplicity
+        volumes = [
+          "{{ exo_data_dir }}:/root/.cache/huggingface",
+          "{{ exo_home_dir }}:/root/.exo"
+        ]
+      }
+
+      resources {
+        cpu    = 2000 # MHz
+        memory = 4096 # MB - adjust based on model
+      }
+
+      service {
+        name = "exo"
+        port = "http"
+
+        check {
+          name     = "alive"
+          type     = "http"
+          path     = "/"
+          interval = "10s"
+          timeout  = "2s"
+          address_mode = "host"
+        }
+      }
+
+      env {
+        HF_HOME = "/root/.cache/huggingface"
+      }
+    }
+  }
+}

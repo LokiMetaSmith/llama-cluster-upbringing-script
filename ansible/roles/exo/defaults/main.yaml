@@ -1,0 +1,8 @@
+exo_enable: false
+exo_port: 52415
+exo_repo_url: "https://github.com/exo-explore/exo.git"
+exo_version: "main"
+exo_docker_image_name: "exo:latest"
+exo_data_dir: "/opt/exo/data"
+exo_home_dir: "/opt/exo/home"
+exo_model: "llama-3.2-1b" # Default model to start with, can be overridden

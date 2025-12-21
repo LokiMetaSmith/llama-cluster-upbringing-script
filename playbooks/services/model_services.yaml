@@ -22,6 +22,7 @@
         - llama_cpp
         - vllm
         - whisper_cpp
+        - exo
       loop_control:
         loop_var: role_name
       when: not external_model_server

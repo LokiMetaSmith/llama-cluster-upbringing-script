@@ -1,0 +1,73 @@
+- name: Ensure Exo directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  loop:
+    - "{{ exo_data_dir }}"
+    - "{{ exo_home_dir }}"
+  become: yes
+  when: exo_enable
+
+- name: Create build directory for Exo
+  ansible.builtin.file:
+    path: /tmp/exo_build
+    state: directory
+    mode: '0755'
+  become: yes
+  when: exo_enable
+
+- name: Copy Dockerfile to build directory
+  ansible.builtin.copy:
+    src: "{{ role_path }}/files/Dockerfile"
+    dest: /tmp/exo_build/Dockerfile
+    mode: '0644'
+  become: yes
+  when: exo_enable
+
+- name: Build Exo Docker image
+  become: yes
+  community.docker.docker_image:
+    name: "{{ exo_docker_image_name }}"
+    build:
+      path: /tmp/exo_build
+      args:
+        EXO_REPO_URL: "{{ exo_repo_url }}"
+        EXO_VERSION: "{{ exo_version }}"
+    source: build
+    force_source: true # Ensure we rebuild if files change
+  when: exo_enable
+
+- name: Cleanup build directory
+  ansible.builtin.file:
+    path: /tmp/exo_build
+    state: absent
+  become: yes
+  when: exo_enable
+
+- name: Create Nomad jobs directory
+  ansible.builtin.file:
+    path: "{{ nomad_jobs_dir }}"
+    state: directory
+    mode: '0755'
+  become: yes
+  when: exo_enable
+
+- name: Template Exo Nomad job
+  ansible.builtin.template:
+    src: exo.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/exo.nomad"
+    mode: '0644'
+  become: yes
+  when: exo_enable
+
+- name: Run Exo Nomad job
+  ansible.builtin.command:
+    cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/exo.nomad"
+  environment:
+    NOMAD_ADDR: "http://{{ advertise_ip }}:{{ nomad_http_port }}"
+  register: exo_job_run
+  changed_when: "'Eval ID' in exo_job_run.stdout"
+  when: exo_enable

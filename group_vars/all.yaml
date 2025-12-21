@@ -116,6 +116,12 @@ nanochat_platform: "gpu"
 # The default user for remote connections and service execution.
 target_user: ubuntu
 
+# --- Exo Configuration ---
+# By default, Exo is disabled. To enable it, set this to true.
+exo_enable: false
+# The model Exo should run.
+exo_model: "llama-3.2-1b"
+
 # A list of all available experts. This is used to dynamically generate
 # the Nomad jobs for each expert model.
 experts:
