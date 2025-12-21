@@ -157,9 +157,15 @@ async def discover_pipecat_service():
     global PIPECAT_SERVICE_URL
     consul_url = f"{CONSUL_HTTP_ADDR}/v1/health/service/pipecat-app?passing"
     logger.info(f"Attempting to discover 'pipecat-app' service from Consul at {consul_url}")
+
+    headers = {}
+    token = os.getenv("CONSUL_HTTP_TOKEN")
+    if token:
+        headers["X-Consul-Token"] = token
+
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(consul_url, timeout=5.0)
+            response = await client.get(consul_url, headers=headers, timeout=5.0)
             response.raise_for_status()
             services = response.json()
             if services:

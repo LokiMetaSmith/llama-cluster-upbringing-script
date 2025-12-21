@@ -34,6 +34,10 @@ job "moe-gateway" {
     task "gateway-server" {
       driver = "raw_exec"
 
+      env {
+        CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token }}"
+      }
+
       config {
         command = "{{ pipecat_app_dir }}/venv/bin/python"
         args    = ["{{ pipecat_app_dir }}/moe_gateway/gateway.py"]

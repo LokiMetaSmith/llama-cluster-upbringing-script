@@ -80,6 +80,9 @@
     - name: Wait for the moe-gateway service to be healthy in Consul
       ansible.builtin.uri:
         url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/moe-gateway"
+        method: GET
+        headers:
+          X-Consul-Token: "{{ consul_bootstrap_token }}"
         return_content: yes
       register: moe_gateway_health
       until: >
