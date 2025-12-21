@@ -2,6 +2,7 @@ import subprocess
 import os
 import shutil
 import re
+import ast
 
 # This is a placeholder for the actual smolagents library.
 # We will assume it's available in the environment. In a real scenario,
@@ -99,9 +100,14 @@ class SmolAgentTool:
             # Use the agent to generate a plan and code.
             self.agent.run(task_description)
 
-            # Extract code using regex to handle variations (e.g. ```python, ```)
+            # Extract code using regex to handle variations (e.g. ```python, ```, ```py)
             # and to be less brittle than simple string splitting.
-            code_pattern = re.compile(r"```(?:python)?\s*(.*?)```", re.DOTALL)
+            # Updated regex:
+            # 1. (?:python|py)? : matches optional 'python' or 'py', non-capturing group.
+            # 2. \s* : matches any whitespace after the backticks/language identifier.
+            # 3. (.*?) : matches the content (code) minimally.
+            # 4. re.IGNORECASE : ensures PYTHON/Py are matched.
+            code_pattern = re.compile(r"```(?:python|py)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
             code_to_execute = ""
 
             for message in reversed(self.agent.memory):
@@ -115,6 +121,12 @@ class SmolAgentTool:
 
             if not code_to_execute:
                 return "Error: The agent did not generate any code to execute."
+
+            # Verify syntax before execution
+            try:
+                ast.parse(code_to_execute)
+            except SyntaxError as e:
+                return f"Error: The generated code has a syntax error: {e}"
 
             return self._execute_in_sandbox(code_to_execute)
 
