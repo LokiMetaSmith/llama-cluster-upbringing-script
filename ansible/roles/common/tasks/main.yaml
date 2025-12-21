@@ -159,6 +159,13 @@
     - "{{ mqtt_websocket_port }}" # MQTT Websockets
     - "{{ router_port }}" # Traefik / Router (if used)
 
+- name: "Firewall : Allow Exo Port"
+  community.general.ufw:
+    rule: allow
+    port: "{{ exo_port }}"
+    proto: tcp
+    comment: "Allow Exo P2P/API"
+  when: exo_enable | default(false)
 - name: "Firewall : Allow Provisioning API"
   community.general.ufw:
     rule: allow
