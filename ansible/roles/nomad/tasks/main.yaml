@@ -69,7 +69,18 @@
   ansible.builtin.stat:
     path: /usr/local/bin/nomad
   register: nomad_binary_stat
-
+  
+- name: Ensure old, conflicting Nomad config files are removed
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ nomad_config_dir }}/client.hcl"
+    - "{{ nomad_config_dir }}/server.hcl"
+    - "{{ nomad_config_dir }}/nomad.hcl"
+  when: not nomad_binary_stat.stat.exists
+  become: yes
+  
 - name: Remove conflicting server/client configs when in local bootstrap mode
   ansible.builtin.file:
     path: "{{ item }}"

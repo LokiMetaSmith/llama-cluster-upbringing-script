@@ -45,6 +45,7 @@ provisioning_api_port: 8002
 home_assistant_port: 8123
 router_port: 8080
 nanochat_port: 8005
+frigate_port: 5000
 
 # Standard Paths
 consul_data_dir: "/opt/consul"
@@ -112,6 +113,11 @@ home_assistant_debug_mode: false
 # Nanochat configuration
 enable_nanochat: false
 nanochat_platform: "gpu"
+
+# Service Enablement Flags
+enable_provisioning_api: true
+enable_home_assistant: true
+enable_frigate: false
 
 # The default user for remote connections and service execution.
 target_user: ubuntu

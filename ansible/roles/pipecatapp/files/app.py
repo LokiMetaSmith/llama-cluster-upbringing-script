@@ -316,7 +316,10 @@ class YOLOv8Detector(FrameProcessor):
     def __init__(self):
         """Initializes the YOLOv8 detector."""
         super().__init__()
-        model_path = os.getenv("YOLO_MODEL_PATH", "/opt/nomad/models/vision/yolov8n.pt")
+        model_path = os.getenv("YOLO_MODEL_PATH")
+        if not model_path:
+             logging.error("YOLO_MODEL_PATH environment variable not set.")
+             model_path = "/opt/nomad/models/vision/yolov8n.pt" # Last resort fallback
         self.latest_observation = "I don't see anything."
         self.last_detected_objects = set()
         try:
@@ -536,7 +539,11 @@ async def discover_main_llm_service(consul_http_addr="http://localhost:8500", de
         The base URL of the discovered LLM service.
     """
     # This is useful for vision-specific LLM calls (used by TwinService._call_vision_llm)
-    service_name = os.getenv("PRIMA_API_SERVICE_NAME", "llama-api-main")
+    service_name = os.getenv("PRIMA_API_SERVICE_NAME")
+    if not service_name:
+         logging.warning("PRIMA_API_SERVICE_NAME not set, defaulting to llama-api-main")
+         service_name = "llama-api-main"
+
     while True:
         try:
             response = requests.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
@@ -811,8 +818,15 @@ async def load_config_from_consul(consul_host, consul_port):
 async def main():
     """The main entry point for the conversational AI application."""
     # Load configuration from Consul
-    consul_host = os.getenv("CONSUL_HOST", "127.0.0.1")
-    consul_port = int(os.getenv("CONSUL_PORT", "8500"))
+    consul_host = os.getenv("CONSUL_HOST")
+    if not consul_host:
+         raise RuntimeError("CONSUL_HOST environment variable not set")
+
+    consul_port_str = os.getenv("CONSUL_PORT")
+    if not consul_port_str:
+         raise RuntimeError("CONSUL_PORT environment variable not set")
+    consul_port = int(consul_port_str)
+
     app_config = await load_config_from_consul(consul_host, consul_port)
 
     # Add consul host/port to app_config
@@ -830,6 +844,7 @@ async def main():
         main_llm_service_names = [s.strip() for s in env_service_names.split(",") if s.strip()]
     else:
         # Fallback to single service from Consul config or default
+        logging.warning("LLAMA_API_SERVICE_NAME not set, falling back to Consul config or default.")
         main_llm_service_names = [app_config.get("llama_api_service_name", "llamacpp-rpc-api")]
 
     consul_http_addr = f"http://{consul_host}:{consul_port}"
@@ -868,10 +883,17 @@ async def main():
     web_server.app.state.twin_service_instance = twin
 
     # Start web server (uvicorn) in its own thread, now that TwinService is initialized
+    web_port_str = os.getenv("WEB_PORT")
+    if not web_port_str:
+        logging.warning("WEB_PORT not set, defaulting to 8000")
+        web_port = 8000
+    else:
+        web_port = int(web_port_str)
+
     config = uvicorn.Config(
         web_server.app,
         host="0.0.0.0",
-        port=int(os.getenv("WEB_PORT", "8000")),
+        port=web_port,
         log_level="info"
     )
     server = uvicorn.Server(config)

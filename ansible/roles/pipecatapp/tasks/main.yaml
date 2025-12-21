@@ -182,10 +182,52 @@
   tags:
     - deploy_app
 
-- name: Copy prompts directory
-  ansible.builtin.copy:
-    src: prompts
-    dest: "{{ pipecat_app_dir }}/"
+- name: Ensure prompts directory exists
+  ansible.builtin.file:
+    path: "{{ pipecat_app_dir }}/prompts"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Template prompt files
+  ansible.builtin.template:
+    src: "prompts/{{ item }}.j2"
+    dest: "{{ pipecat_app_dir }}/prompts/{{ item }}"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  with_items:
+    - coding_expert.txt
+    - creative_expert.txt
+    - cynic_expert.txt
+    - router.txt
+    - tron_agent.txt
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Ensure workflows directory exists
+  ansible.builtin.file:
+    path: "{{ pipecat_app_dir }}/workflows"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Template workflow files
+  ansible.builtin.template:
+    src: "workflows/default_agent_loop.yaml.j2"
+    dest: "{{ pipecat_app_dir }}/workflows/default_agent_loop.yaml"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
   become: yes
   tags:
     - deploy_app
