@@ -17,11 +17,38 @@ job "mcp-server" {
         force_pull = false
         command = "uvicorn"
         args = ["app:app", "--host", "0.0.0.0", "--port", "${NOMAD_PORT_http}"]
+
+        # Volatile RAM disk for workspace
+        mounts = [
+          {
+            type   = "tmpfs"
+            target = "/opt/cluster-infra"
+            tmpfs_options = {
+              size = 2147483648 # 2GB
+            }
+          }
+        ]
+
+        volumes = [
+          # Read-only source of truth from host
+          "{{ cluster_infra_dir }}:/mnt/host_repo:ro",
+          # MCP tools configuration
+          "{{ mcp_dir }}:/opt/mcp",
+          # Docker socket for CodeRunnerTool
+          "/var/run/docker.sock:/var/run/docker.sock",
+          # Uncomment below to enable host SSH keys (Not recommended for isolation)
+          # "/home/{{ target_user }}/.ssh:/root/.ssh:ro",
+        ]
       }
 
       env {
         # Adapting to tool-server:local expectations
         TOOL_SERVER_API_KEY = "{{ jules_api_key }}"
+        HA_URL              = "{{ env_ha_url | default('') }}"
+        HA_TOKEN            = "{{ env_ha_token | default('') }}"
+        GITHUB_TOKEN        = "{{ github_token | default('') }}"
+        GIT_USERNAME        = "{{ git_username | default('Pipecat Agent') }}"
+        GIT_EMAIL           = "{{ git_email | default('agent@pipecat.ai') }}"
 
         # Keep original env vars in case they are needed for other reasons,
         # or if the image is switched back to something else.
