@@ -105,6 +105,9 @@
         - vision
         - power_manager
         - world_model_service
+        - term_everything
         - tool_server
         - llxprt_code
         - claude_clone
+        - moe_gateway
+        - mcp_server
