@@ -1,5 +1,17 @@
 # tasks file for ansible/roles/config_manager/tasks/main.yaml
 
+- name: Read Consul management token
+  ansible.builtin.slurp:
+    src: "{{ consul_config_dir | default('/etc/consul.d') }}/management_token"
+  register: consul_token_file
+  become: yes
+  ignore_errors: yes
+
+- name: Set consul_token fact
+  ansible.builtin.set_fact:
+    consul_token: "{{ consul_token_file.content | b64decode | trim }}"
+  when: consul_token_file.content is defined
+
 # --- Check for auth file instead of waiting ---
 - name: Check if Home Assistant auth file exists
   ansible.builtin.stat:
@@ -33,6 +45,8 @@
     method: PUT
     body: "{{ item.value | to_json }}"
     status_code: 200
+    headers:
+      X-Consul-Token: "{{ consul_token | default('') }}"
   loop: >
     {{
       (expert_models | dict2items) +
@@ -54,6 +68,8 @@
     method: PUT
     body: "{{ ha_token }}"
     status_code: 200
+    headers:
+      X-Consul-Token: "{{ consul_token | default('') }}"
   when: ha_token is defined and ha_token is not none # Only run if token was successfully extracted
 
 - name: Report if HA token was populated
@@ -92,5 +108,7 @@
         } | to_json
       }}
     status_code: 200
+    headers:
+      X-Consul-Token: "{{ consul_token | default('') }}"
 
 # --- End Conditional Tasks ---
