@@ -20,6 +20,8 @@ job "mcp-server" {
 
       env {
         JULES_API_KEY = "{{ jules_api_key }}"
+        HOST          = "0.0.0.0"
+        PORT          = "8000"
       }
 
       service {
