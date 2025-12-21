@@ -21,11 +21,11 @@ job "mcp-server" {
 
       env {
         # Adapting to tool-server:local expectations
-        TOOL_SERVER_API_KEY = "{{ jules_api_key }}"
+        TOOL_SERVER_API_KEY = "{{ jules_api_key | default('') }}"
 
         # Keep original env vars in case they are needed for other reasons,
         # or if the image is switched back to something else.
-        JULES_API_KEY = "{{ jules_api_key }}"
+        JULES_API_KEY = "{{ jules_api_key | default('') }}"
         HOST          = "0.0.0.0"
         PORT          = "${NOMAD_PORT_http}"
       }
