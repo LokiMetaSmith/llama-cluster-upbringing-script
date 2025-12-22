@@ -86,6 +86,8 @@
       {{ role_path }}/files/download_hf_repo.py
       "{{ item.item.repo_id }}"
       "{{ nomad_models_dir }}/vllm/{{ item.item.repo_id.split('/')[-1] }}"
+  environment:
+    HF_TOKEN: "{{ hf_token }}"
   loop: "{{ vllm_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
@@ -135,6 +137,8 @@
       {{ role_path }}/files/download_hf_repo.py
       "{{ item.item[1].repo_id }}"
       "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
+  environment:
+    HF_TOKEN: "{{ hf_token }}"
   loop: "{{ stt_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
@@ -208,6 +212,8 @@
       {{ role_path }}/files/download_hf_repo.py
       "{{ item.item.repo_id }}"
       "{{ nomad_models_dir }}/vision/{{ item.item.name }}"
+  environment:
+    HF_TOKEN: "{{ hf_token }}"
   loop: "{{ vision_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
@@ -237,6 +243,8 @@
       {{ role_path }}/files/download_hf_repo.py
       "{{ item.item.repo_id }}"
       "{{ nomad_models_dir }}/embedding/{{ item.item.name }}"
+  environment:
+    HF_TOKEN: "{{ hf_token }}"
   loop: "{{ embedding_model_files_hub.results }}"
   when: not item.stat.exists
   become: yes
