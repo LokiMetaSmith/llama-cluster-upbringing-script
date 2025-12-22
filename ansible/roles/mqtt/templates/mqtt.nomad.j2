@@ -41,7 +41,6 @@ job "mqtt" {
           port     = "mqtt"
           interval = "10s"
           timeout  = "2s"
-          deregister_critical_service_after = "10m"
           check_restart {
             limit = 3
             grace = "90s"
