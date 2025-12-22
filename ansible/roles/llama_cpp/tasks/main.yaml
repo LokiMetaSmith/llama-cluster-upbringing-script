@@ -27,6 +27,12 @@
   register: version_file_stat
   become: yes
 
+- name: Check for existing rpc-server binary
+  ansible.builtin.stat:
+    path: /usr/local/bin/rpc-server
+  register: rpc_server_stat
+  become: yes
+
 - name: Read installed llama.cpp version
   ansible.builtin.slurp:
     src: /usr/local/etc/llama-cpp.version
@@ -40,7 +46,7 @@
 
 - name: Decide if llama.cpp needs to be built
   ansible.builtin.set_fact:
-    build_llama_cpp: "{{ installed_version != latest_commit_hash }}"
+    build_llama_cpp: "{{ installed_version != latest_commit_hash or not rpc_server_stat.stat.exists }}"
 
 - name: Print versions for debugging
   ansible.builtin.debug:
@@ -49,6 +55,11 @@
 - name: Build and install llama.cpp
   become: yes
   block:
+    - name: Ensure clean build directory for llama.cpp
+      ansible.builtin.file:
+        path: "{{ llama_cpp_build_dir }}"
+        state: absent
+
     - name: Create build directory for llama.cpp
       ansible.builtin.file:
         path: "{{ llama_cpp_build_dir }}"
