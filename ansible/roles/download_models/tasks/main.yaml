@@ -4,6 +4,8 @@
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ consul_http_port }}/v1/kv/config/models/{{ item }}?raw=true"
     method: GET
+    headers:
+      X-Consul-Token: "{{ consul_token }}"
     status_code: [200, 404]
     return_content: true
   check_mode: no
