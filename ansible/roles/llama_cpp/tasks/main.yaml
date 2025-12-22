@@ -33,6 +33,21 @@
   register: rpc_server_stat
   become: yes
 
+- name: Check for misplaced libllama.so
+  ansible.builtin.find:
+    paths: /usr/local/bin
+    patterns: 'libllama.so*'
+  register: misplaced_lib_llama
+  become: yes
+
+- name: Remove misplaced libllama.so if found
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ misplaced_lib_llama.files }}"
+  when: misplaced_lib_llama.matched > 0
+  become: yes
+
 - name: Read installed llama.cpp version
   ansible.builtin.slurp:
     src: /usr/local/etc/llama-cpp.version
@@ -46,7 +61,7 @@
 
 - name: Decide if llama.cpp needs to be built
   ansible.builtin.set_fact:
-    build_llama_cpp: "{{ installed_version != latest_commit_hash or not rpc_server_stat.stat.exists }}"
+    build_llama_cpp: "{{ installed_version != latest_commit_hash or not rpc_server_stat.stat.exists or misplaced_lib_llama.matched > 0 }}"
 
 - name: Print versions for debugging
   ansible.builtin.debug:
@@ -100,7 +115,7 @@
         dest: "/usr/local/bin/{{ item.path | basename }}"
         mode: '0755'
         remote_src: yes
-      loop: "{{ llama_artifacts.files | rejectattr('path', 'match', '.*\\.so$') | list }}"
+      loop: "{{ llama_artifacts.files | rejectattr('path', 'match', '.*\\.so(\\..+)?$') | list }}"
 
     - name: Install shared libraries to /usr/local/lib
       ansible.builtin.copy:
@@ -108,7 +123,7 @@
         dest: "/usr/local/lib/{{ item.path | basename }}"
         mode: '0755'
         remote_src: yes
-      loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so$') | list }}"
+      loop: "{{ llama_artifacts.files | selectattr('path', 'match', '.*\\.so(\\..+)?$') | list }}"
       notify: update ld cache
 
 #    - name: Flush handlers to update ldconfig
