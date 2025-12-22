@@ -1,6 +1,12 @@
 from transformers import AutoModelForCausalLM
 import torch
 from pipecat.processors.frame_processor import FrameProcessor
+
+# Enable high precision for matmul operations on Ampere+ GPUs
+try:
+    torch.set_float32_matmul_precision('high')
+except Exception:
+    pass  # Likely CPU-only or older torch version
 from pipecat.frames.frames import UserImageRawFrame as VisionImageRawFrame
 
 class MoondreamDetector(FrameProcessor):
@@ -24,13 +30,28 @@ class MoondreamDetector(FrameProcessor):
         super().__init__()
         # The model is now managed by Ansible and placed in a predictable location.
         model_path = "/opt/nomad/models/vision/moondream2"
+
+        # Select the best available precision
+        dtype = torch.float16
+        if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
+            dtype = torch.bfloat16
+
         self.model = AutoModelForCausalLM.from_pretrained(
             model_path,
             trust_remote_code=True,
-            torch_dtype=torch.float16,
+            torch_dtype=dtype,
             # Use CUDA if available, otherwise CPU
             device_map={"": "cuda"} if torch.cuda.is_available() else {"": "cpu"}
         )
+
+        # Optimize the model with torch.compile if available
+        # This adds startup latency but improves inference speed
+        if hasattr(torch, "compile"):
+            try:
+                self.model = torch.compile(self.model)
+            except Exception as e:
+                print(f"Failed to compile model: {e}")
+
         self.latest_observation = "I don't see anything."
         print("MoondreamDetector initialized.")
 
