@@ -58,6 +58,7 @@ job "world-model-service" {
           args     = ["-c", "import os, urllib.request; port = os.getenv('NOMAD_PORT_http'); urllib.request.urlopen(f'http://127.0.0.1:{port}/health')"]
           interval = "15s"
           timeout  = "10s"
+          deregister_critical_service_after = "10m"
         }
       }
     }

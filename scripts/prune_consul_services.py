@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 """
-Prune Stale Nomad Services from Consul
+Prune Stale Critical Services from Consul
 
-This script identifies and deregisters stale Nomad services in Consul.
-It specifically targets 'nomad-server' and 'nomad-client' services (and their
-internal '_nomad-server-*' representations) that are in a CRITICAL state.
-
-This is useful when Nomad node IDs change (e.g. after wiping data dir) but
-Consul still retains the old service registrations.
+This script identifies and deregisters stale services in Consul that are in a
+CRITICAL state. It can target specific services or find all critical services.
 
 Usage:
-    python3 prune_consul_services.py [--dry-run] [--force]
+    python3 prune_consul_services.py [--service SERVICE_NAME] [--dry-run] [--force]
 """
 
 import urllib.request
@@ -65,8 +61,9 @@ def consul_request(base_url, path, method='GET', token=None, data=None):
         return None
 
 def main():
-    parser = argparse.ArgumentParser(description="Prune stale Nomad services from Consul.")
+    parser = argparse.ArgumentParser(description="Prune stale services from Consul.")
     parser.add_argument("--url", default=DEFAULT_CONSUL_URL, help="Consul Agent URL (default: http://localhost:8500)")
+    parser.add_argument("--service", help="Filter by specific service name (partial match on ServiceName)")
     parser.add_argument("--dry-run", action="store_true", help="Print actions without executing them (default)")
     parser.add_argument("--force", action="store_true", help="Actually execute the deregistration")
 
@@ -88,16 +85,18 @@ def main():
         sys.exit(1)
 
     # Group checks by ServiceID
-    service_health = {} # ServiceID -> {'all_critical': True, 'checks': []}
+    # Structure: ServiceID -> {'name': ServiceName, 'checks': [status1, status2, ...]}
+    service_health = {}
 
     for check_id, check in checks.items():
         service_id = check.get("ServiceID")
+        service_name = check.get("ServiceName")
         if not service_id:
             continue
 
         status = check.get("Status")
         if service_id not in service_health:
-            service_health[service_id] = {'checks': []}
+            service_health[service_id] = {'name': service_name, 'checks': []}
 
         service_health[service_id]['checks'].append(status)
 
@@ -105,34 +104,35 @@ def main():
     services_to_prune = []
 
     for service_id, data in service_health.items():
-        # Check if it looks like a Nomad internal service
-        # Nomad server/client IDs usually start with _nomad-server- or _nomad-client-
-        # Or sometimes just match the node ID pattern if registered differently.
-        # We target the specific pattern seen in the issue.
-        if service_id.startswith("_nomad-server-") or service_id.startswith("_nomad-client-"):
-            check_statuses = data['checks']
-            if not check_statuses:
-                continue
+        service_name = data['name']
+        check_statuses = data['checks']
 
-            # If ALL checks are critical, it's a candidate for pruning
-            if all(s == "critical" for s in check_statuses):
-                services_to_prune.append(service_id)
+        # If user specified a service name, filter by it
+        if args.service and args.service not in service_name:
+            continue
+
+        if not check_statuses:
+            continue
+
+        # If ALL checks are critical, it's a candidate for pruning
+        if all(s == "critical" for s in check_statuses):
+            services_to_prune.append({'id': service_id, 'name': service_name})
 
     if not services_to_prune:
-        print("No stale Nomad services found.")
+        print("No stale critical services found.")
         return
 
-    print(f"Found {len(services_to_prune)} stale Nomad services:")
-    for svc_id in services_to_prune:
-        print(f" - {svc_id}")
+    print(f"Found {len(services_to_prune)} stale critical services:")
+    for svc in services_to_prune:
+        print(f" - {svc['name']} (ID: {svc['id']})")
 
     if args.dry_run:
         print("\n[DRY-RUN] Would deregister the above services.")
     else:
         print("\nDeregistering services...")
-        for svc_id in services_to_prune:
-            print(f"Deregistering {svc_id}...", end=" ")
-            res = consul_request(args.url, f"v1/agent/service/deregister/{svc_id}", method="PUT", token=token)
+        for svc in services_to_prune:
+            print(f"Deregistering {svc['name']} (ID: {svc['id']})...", end=" ")
+            res = consul_request(args.url, f"v1/agent/service/deregister/{svc['id']}", method="PUT", token=token)
             if res is not None:
                 print("OK")
             else:
