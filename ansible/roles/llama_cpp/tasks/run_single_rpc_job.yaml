@@ -19,12 +19,40 @@
     worker_count: 1 # Assuming 1 worker per model for RPC? Adjust if needed.
 
 - name: Run llamacpp-rpc job for {{ model_item.filename }}
-  ansible.builtin.command:
-    cmd: "/usr/local/bin/nomad job run /tmp/llamacpp-rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
-  register: rpc_job_run
-  changed_when: "'Eval ID' in rpc_job_run.stdout"
-  environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+  block:
+    - name: Deploy llamacpp-rpc job
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job run /tmp/llamacpp-rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
+      register: rpc_job_run
+      changed_when: "'Eval ID' in rpc_job_run.stdout"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+  rescue:
+    - name: Fetch Nomad allocations for debugging
+      ansible.builtin.shell: >
+        /usr/local/bin/nomad job allocs -json llamacpp-rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }} | jq -r 'sort_by(.CreateTime) | reverse | .[0].ID'
+      register: alloc_id
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      ignore_errors: yes
+
+    - name: Fetch Nomad allocation logs
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs {{ alloc_id.stdout }}"
+      register: alloc_logs
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      when: alloc_id.stdout != ""
+      ignore_errors: yes
+
+    - name: Display allocation logs
+      ansible.builtin.debug:
+        msg: "{{ alloc_logs.stdout_lines + alloc_logs.stderr_lines }}"
+      when: alloc_id.stdout != "" and alloc_logs is defined
+
+    - name: Fail task
+      ansible.builtin.fail:
+        msg: "Failed to deploy llamacpp-rpc job for {{ model_item.filename }}. Check logs above."
 
 - name: Clean up temporary job file for {{ model_item.filename }}
   ansible.builtin.file:
