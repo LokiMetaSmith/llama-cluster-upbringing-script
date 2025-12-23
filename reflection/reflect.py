@@ -35,7 +35,7 @@ def load_llm_config():
         print(f"Error loading LLM config from {config_path}: {e}", file=sys.stderr)
         return None
 
-def call_openai_llm(messages):
+def call_openai_llm(messages, reasoning_config=None):
     """Sends a request to the OpenAI Chat Completions API.
 
     This function constructs and sends a request to the configured OpenAI
@@ -44,6 +44,8 @@ def call_openai_llm(messages):
     Args:
         messages (list): A list of message dictionaries conforming to the
             OpenAI API schema.
+        reasoning_config (dict, optional): Configuration for reasoning tokens
+            (e.g., {"effort": "high"} or {"max_tokens": 1000}).
 
     Returns:
         str: The JSON content of the API response as a string, or a JSON
@@ -73,6 +75,9 @@ def call_openai_llm(messages):
         "response_format": {"type": "json_object"},
         "temperature": 0.2, # Lower temperature for more deterministic, factual responses
     }
+
+    if reasoning_config:
+        payload["reasoning"] = reasoning_config
 
     endpoint = f"{config['base_url'].rstrip('/')}/chat/completions"
 
