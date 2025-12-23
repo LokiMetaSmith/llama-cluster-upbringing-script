@@ -63,7 +63,8 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
 
     network {
       mode = "host"
-      port "rpc" {} # Nomad will assign a dynamic port.
+      port "rpc" {} # Nomad will assign a dynamic port (public).
+      port "internal" {} # Internal port for binding to localhost.
     }
 
     # Register the RPC provider in Consul for discovery by the orchestrator.
@@ -95,13 +96,14 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
 
       env {
         NOMAD_PORT_rpc = "${NOMAD_PORT_rpc}"
+        NOMAD_PORT_internal = "${NOMAD_PORT_internal}"
       }
 
       config {
         command = "/bin/bash"
         args = [
           "-c",
-          "/usr/local/bin/rpc-server -H 0.0.0.0 -p $NOMAD_PORT_rpc"
+          "/usr/local/bin/rpc-server -p $NOMAD_PORT_internal & PID=$!; socat TCP-LISTEN:$NOMAD_PORT_rpc,bind=0.0.0.0,fork TCP:127.0.0.1:$NOMAD_PORT_internal & wait $PID"
         ]
       }
 
