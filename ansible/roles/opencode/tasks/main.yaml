@@ -1,4 +1,3 @@
----
 - name: Install opencode-ai via npm
   community.general.npm:
     name: opencode-ai
@@ -7,13 +6,13 @@
   become: yes
 
 - name: Find opencode binary path
-  ansible.builtin.shell: npm bin -g
-  register: npm_bin_path
+  ansible.builtin.command: npm prefix -g
+  register: opencode_npm_prefix_path
   changed_when: false
 
 - name: Set opencode binary path
   ansible.builtin.set_fact:
-    opencode_bin_path: "{{ npm_bin_path.stdout }}/opencode"
+    opencode_bin_path: "{{ opencode_npm_prefix_path.stdout }}/bin/opencode"
 
 - name: Create Opencode Nomad job file
   ansible.builtin.template:
