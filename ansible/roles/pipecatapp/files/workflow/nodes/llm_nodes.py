@@ -110,10 +110,34 @@ class SimpleLLMNode(Node):
                             "messages": messages,
                             "temperature": 0.7
                         }
+
+                        # Check for reasoning config in input or self.config
+                        reasoning_config = self.get_input(context, "reasoning") or self.config.get("reasoning")
+                        if reasoning_config:
+                            # Standard OpenRouter/OpenAI 'reasoning' parameter or 'extra_body'
+                            # Some backends expect it in 'extra_body', others top-level (OpenRouter unified)
+                            # We'll put it top-level as per OpenRouter docs for direct API calls,
+                            # but some libraries wrap it. Since we are using raw httpx, top-level is correct for OpenRouter.
+                            # However, standard OpenAI API puts it in extra_body or specialized fields.
+                            # If we are calling OpenRouter directly, top-level `reasoning` is fine.
+                            # If we are calling a local llama-server that mimics OpenAI, it might just ignore it or
+                            # support it if it's a newer version.
+                            # Let's support both by injecting it into the payload.
+                            payload["reasoning"] = reasoning_config
+
                         chat_url = f"{base_url}/chat/completions"
                         llm_res = await client.post(chat_url, json=payload, timeout=120)
                         llm_res.raise_for_status()
-                        response_text = llm_res.json()["choices"][0]["message"]["content"]
+                        response_data = llm_res.json()
+                        response_text = response_data["choices"][0]["message"]["content"]
+
+                        # Preserve reasoning details if present, for future turns (though SimpleLLMNode is usually one-off)
+                        # We could store it in context if needed.
+                        reasoning_details = response_data["choices"][0]["message"].get("reasoning_details") or \
+                                            response_data["choices"][0]["message"].get("reasoning")
+                        if reasoning_details:
+                             self.set_output(context, "reasoning_details", reasoning_details)
+
                     else:
                          response_text = f"Error: Service {target_service} not found in Consul."
 
@@ -152,11 +176,23 @@ class ExpertRouterNode(Node):
                     # We need a way to get the system prompt for the expert
                     # For now, we'll just send the query.
                     payload = {"model": expert_name, "messages": [{"role": "user", "content": query}]}
+
+                    # Check for reasoning config
+                    reasoning_config = self.get_input(context, "reasoning") or self.config.get("reasoning")
+                    if reasoning_config:
+                        payload["reasoning"] = reasoning_config
+
                     chat_url = f"{base_url}/chat/completions"
 
                     expert_res = await client.post(chat_url, json=payload, timeout=120)
                     expert_res.raise_for_status()
-                    expert_response = expert_res.json()["choices"][0]["message"]["content"]
+                    expert_data = expert_res.json()
+                    expert_response = expert_data["choices"][0]["message"]["content"]
+
+                    reasoning_details = expert_data["choices"][0]["message"].get("reasoning_details") or \
+                                        expert_data["choices"][0]["message"].get("reasoning")
+                    if reasoning_details:
+                        self.set_output(context, "reasoning_details", reasoning_details)
 
         except (httpx.RequestError, KeyError, IndexError) as e:
             print(f"Error routing to expert {expert_name}: {e}")
