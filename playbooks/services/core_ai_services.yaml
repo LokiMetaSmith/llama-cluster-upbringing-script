@@ -5,6 +5,7 @@
 
   vars_files:
     - "../../group_vars/models.yaml"
+    - "../../group_vars/external_experts.yaml"
 
   tags:
     - core-ai-services
