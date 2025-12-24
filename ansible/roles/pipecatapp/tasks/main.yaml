@@ -46,7 +46,7 @@
   loop: "{{ experts }}"
   vars:
     # Get the list of model filenames for the current expert
-    expert_model_files: "{{ expert_models[item] | map(attribute='filename') | list }}"
+    expert_model_files: "{{ (expert_models[item] | default([])) | map(attribute='filename') | list }}"
     # Check if any of the expert's models are in the list of successful models
     is_verified: "{{ expert_model_files | intersect(successful_models) | length > 0 }}"
   when: is_verified
