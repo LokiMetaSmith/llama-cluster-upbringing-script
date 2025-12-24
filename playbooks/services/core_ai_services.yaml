@@ -3,6 +3,9 @@
   connection: local
   gather_facts: yes
 
+  vars_files:
+    - "../../group_vars/models.yaml"
+
   tags:
     - core-ai-services
 
