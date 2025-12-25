@@ -122,6 +122,7 @@ enable_frigate: false
 
 # The default user for remote connections and service execution.
 target_user: ubuntu
+target_user_home: "/home/{{ target_user }}"
 
 # --- Exo Configuration ---
 # By default, Exo is disabled. To enable it, set this to true.
