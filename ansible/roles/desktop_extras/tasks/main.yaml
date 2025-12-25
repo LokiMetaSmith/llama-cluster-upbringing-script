@@ -17,7 +17,7 @@
   ansible.builtin.git:
     repo: 'https://github.com/xero/figlet-fonts.git'
     dest: "{{ ansible_user_dir }}/.local/share/fonts"
-    version: master
+    version: main
     update: yes
   register: clone_figlet
   until: clone_figlet is success
