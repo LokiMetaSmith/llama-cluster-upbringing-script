@@ -16,9 +16,13 @@
 - name: Clone figlet-fonts repository
   ansible.builtin.git:
     repo: 'https://github.com/xero/figlet-fonts.git'
-    dest: /home/user/.local/share/fonts
+    dest: "{{ ansible_user_dir }}/.local/share/fonts"
     version: master
     update: yes
+  register: clone_figlet
+  until: clone_figlet is success
+  retries: 5
+  delay: 10
 
 - name: Create a temporary build directory for no-more-secrets
   ansible.builtin.tempfile:
@@ -32,6 +36,10 @@
     dest: "{{ nms_build_dir.path }}"
     version: master
     update: yes
+  register: clone_nms
+  until: clone_nms is success
+  retries: 5
+  delay: 10
 
 - name: Build no-more-secrets
   ansible.builtin.command:
