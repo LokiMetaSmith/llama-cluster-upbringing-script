@@ -11,6 +11,11 @@ set -e
 # Change to the application directory
 cd "{{ pipecat_app_dir }}"
 
+# Source environment variables if present
+if [ -f "{{ pipecat_app_dir }}/pipecat.env" ]; then
+    source "{{ pipecat_app_dir }}/pipecat.env"
+fi
+
 # Activate the virtual environment
 source "{{ pipecat_app_dir }}/venv/bin/activate"
 
