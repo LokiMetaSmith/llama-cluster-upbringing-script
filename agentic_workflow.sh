@@ -127,23 +127,80 @@ jobs:
     runs-on: ubuntu-latest
     permissions: { issues: write, contents: read }
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
-      - name: Process
+      - name: Create issues from ISSUES dir
         env: { GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} }
+        shell: bash
         run: |
-          gh issue list --label "auto-generated" --state all --limit 1000 --json title --jq '.[].title' > existing.txt
+          # 0. ENSURE LABEL EXISTS
+          gh label create "auto-generated" \
+            --repo "$GITHUB_REPOSITORY" \
+            --description "Issues created from files" \
+            --color "ededed" || true
+
+          # 1. BATCH FETCH EXISTING ISSUES
+          echo "Fetching existing issues..."
+          gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --label "auto-generated" \
+            --state all \
+            --limit 1000 \
+            --json title \
+            --jq '.[].title' > existing_titles.txt
+
+          # 2. GENERATE SORTED FILE LIST (safe guard)
+          echo "Identifying and sorting files..."
           files=$(find ISSUES issues -maxdepth 1 -name "*.md" -type f 2>/dev/null | sort -V || true)
-          if [ -z "$files" ]; then exit 0; fi
+          if [ -z "$files" ]; then
+              echo "No markdown files found in ISSUES/ or issues/. Exiting gracefully."
+              exit 0
+          fi
+          printf "%s\n" "$files" > sorted_files.txt
+
+          # 3. LOOP THROUGH SORTED LIST
           while IFS= read -r file; do
               filename=$(basename "$file")
-              expected="Issue for $filename"
-              if grep -Fxq "$expected" existing.txt; then continue; fi
+              expected_title="Issue for $filename"
+              if grep -Fxq "$expected_title" existing_titles.txt; then
+                  echo "Skipping: $filename (exists)"
+                  continue
+              fi
+
+              echo "Creating issue for: $filename"
               body_file=$(mktemp)
-              { echo "Auto-created for: \`$file\`"; echo -e "\n### Content\n\`\`\`"; cat "$file"; echo -e "\n\`\`\`\n---\n### Directive: Recursive Task Generation"; echo "Every task MUST generate a successor in ISSUES/ to maintain forward motion."; } > "$body_file"
-              gh issue create --title "$expected" --body-file "$body_file" --label "auto-generated"
+              {
+                  echo "This issue was automatically created for file: \`$file\`."
+                  echo ""
+                  echo "### Content"
+                  echo "\`\`\`"
+                  cat "$file"
+                  echo ""
+                  echo "\`\`\`"
+                  echo ""
+                  echo "---"
+                  echo "### Directive: Recursive Task Generation"
+                  echo ""
+                  echo "**Context:** Every task MUST be analyzed for:"
+                  echo "- Dependencies (code, infra, configs)"
+                  echo "- Refactoring (duplication, naming, structure)"
+                  echo "- Extensions (tests, docs, automation)."
+                  echo ""
+                  echo "**Requirement:** Do not inline future work in comments. At least ONE follow-up issue MUST be created for every task, we can always improve something"
+                  echo ""
+                  echo "**Output Specification:**"
+                  echo "1. **Action:** Create one or more markdown files."
+                  echo "2. **Path:** \`ISSUES/<kebab-case-description>.md\`"
+                  echo "3. **Content:** Detailed technical scope and acceptance criteria."
+              } > "$body_file"
+
+              gh issue create \
+                --title "$expected_title" \
+                --body-file "$body_file" \
+                --label "auto-generated" \
+                --repo "$GITHUB_REPOSITORY"
               sleep 2
-          done < <(printf "%s\n" "$files")
+          done < sorted_files.txt
 EOF
 
     # --- QUEUE MANAGER (Stall check & native log parser) ---
@@ -156,15 +213,45 @@ on:
 jobs:
   enforce-jules:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     env: { GH_TOKEN: ${{ secrets.IMPERSONATION_PAT }}, MAX_RUNS: ${{ vars.JULES_MAX_DAILY_RUNS || '10' }} }
     steps:
-      - name: Rate Limit & Stall Check
+      - name: Manage Jules Label
         run: |
+          # 1. RATE LIMIT CHECK
           SINCE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
-          RECENT=$(gh search issues --repo "${{ github.repository }}" --label "jules" --updated ">$SINCE" --json number --jq 'length')
-          [ "${RECENT:-0}" -ge "$MAX_RUNS" ] && exit 0
-          active=$(gh issue list --label "jules" --state open --json number --jq '.[0]')
-          [ -n "$active" ] && exit 0
+          RECENT_COUNT=$(gh search issues --repo "${{ github.repository }}" --label "jules" --updated ">$SINCE" --json number --jq 'length')
+          RECENT_COUNT=${RECENT_COUNT:-0}
+          echo "[INFO] Activity Monitor: $RECENT_COUNT issues processed in last 24h."
+
+          if [ "$RECENT_COUNT" -ge "$MAX_RUNS" ]; then
+             echo "[LIMIT] Daily limit of $MAX_RUNS reached. Sleeping until activity cools down."
+             exit 0
+          fi
+
+          # 2. CHECK ACTIVE ISSUE & STALL DETECTION
+          active=$(gh issue list --repo "${{ github.repository }}" --label "jules" --state open --json number,updatedAt --jq '.[0]')
+
+          if [ -n "$active" ]; then
+              issue_num=$(echo "$active" | jq '.number')
+              updated_at=$(echo "$active" | jq -r '.updatedAt')
+              echo "[INFO] Issue #$issue_num is currently active."
+
+              # Stall Detection (2 hours)
+              STALL_THRESHOLD=7200
+              current_time=$(date +%s)
+              last_update=$(date -d "$updated_at" +%s)
+              diff=$((current_time - last_update))
+
+              if [ "$diff" -gt "$STALL_THRESHOLD" ]; then
+                  echo "[WARNING] Issue #$issue_num has been stuck for $diff seconds."
+                  gh issue comment "$issue_num" --repo "${{ github.repository }}" \
+                    --body "[SYSTEM ALERT] This issue has held the 'jules' label for over 2 hours without closing. The automation pipeline may be stuck. Please investigate." || true
+              fi
+              echo "[INFO] Waiting for issue #$issue_num to be processed. Done."
+              exit 0
+          fi
 
       - name: Evaluate Native Playbook Logs
         run: |
@@ -177,10 +264,16 @@ jobs:
                 exit 1
             fi
           fi
+
       - name: Promote Next
         run: |
-          next=$(gh issue list --state open --json number --jq 'min_by(.number).number')
-          [ -n "$next" ] && gh issue edit "$next" --add-label "jules"
+          next=$(gh issue list --repo "${{ github.repository }}" --state open --json number --jq 'min_by(.number).number')
+          if [ -n "$next" ]; then
+              echo "[ACTION] Promoting issue #$next to jules."
+              gh issue edit "$next" --repo "${{ github.repository }}" --add-label "jules"
+          else
+              echo "[INFO] No open issues available to tag."
+          fi
 EOF
 
     # --- REMOTE VERIFY (Isolated Cluster Execution) ---
@@ -221,15 +314,40 @@ jobs:
       - name: Verify Motion and Merge
         env: { GH_TOKEN: ${{ secrets.IMPERSONATION_PAT }}, HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}, REPO: ${{ github.repository }} }
         run: |
+          echo "Triggered by CI success on branch $HEAD_BRANCH"
           PR_URL=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state open --json url --jq '.[0].url')
-          if [ -z "$PR_URL" ]; then exit 0; fi
-          if gh pr diff "$PR_URL" --name-only | grep -Ei "^(ISSUES|issues)/"; then
-            gh pr merge --merge "$PR_URL"
-            ISSUE_NUM=$(gh pr view "$PR_URL" --json body -q .body | grep -oEi '(close|closes|closed|fix|fixes|fixed) #[0-9]+' | grep -oE '[0-9]+' | head -n 1)
-            [ -n "$ISSUE_NUM" ] && gh issue close "$ISSUE_NUM" --comment "Auto-closed via validation loop."
+
+          if [ -z "$PR_URL" ]; then
+              echo "::notice ::No open PR found for branch $HEAD_BRANCH. Skipping auto-merge."
+              exit 0
+          fi
+
+          echo "Found PR: $PR_URL"
+          CHANGES=$(gh pr diff "$PR_URL" --name-only)
+
+          if echo "$CHANGES" | grep -q "^\(ISSUES\|issues\)/"; then
+              echo "[SUCCESS] Valid Issue Definition found."
+              gh pr merge --merge "$PR_URL"
+
+              PR_BODY=$(gh pr view "$PR_URL" --json body -q .body)
+              ISSUE_NUMBER=$(echo "$PR_BODY" | grep -oEi '(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved) #[0-9]+' | grep -oE '[0-9]+' | head -n 1)
+
+              if [ -n "$ISSUE_NUMBER" ]; then
+                  echo "Closing linked issue #$ISSUE_NUMBER..."
+                  gh issue close "$ISSUE_NUMBER" --repo "$REPO" --comment "Auto-closed via validation loop."
+              fi
           else
-            gh pr comment "$PR_URL" --body "**[FAILURE] Entropy Detected**: This PR lacks a successor task in \`ISSUES/\`."
-            exit 1
+              echo "[FAILURE] Violation: No changes detected in 'issues/' directory."
+              gh pr comment "$PR_URL" --body "**[FAILURE] Entropy Detected**: This PR does not include a corresponding Issue Definition in \`issues/\`.
+              **Action Required:**
+              This project requires continuous forward motion. This PR cannot be merged until a **new** issue definition is created for the next logical step.
+              **Agent Instructions:**
+              1. Analyze the changes in this PR.
+              2. Identify a logical follow-up task.
+              3. **Create a new file** in \`ISSUES/\` with the format \`ISSUES/$(date --iso)-{topic}.md\`.
+              4. The file must contain Title, Context, and Acceptance Criteria.
+              **Auto-merge is blocked until this new file is detected.**"
+              exit 1
           fi
 EOF
 
@@ -242,13 +360,75 @@ EOF
 ignite_workflow() {
     echo "🚀 Starting Project Ignition..."
     REPO_NAME=$(basename "$(pwd)")
+
+    echo "[1/3] Generating Mission Brief..."
+    mkdir -p .github/context
+    cat <<'EOT' > .github/context/MISSION_BRIEF.md
+### Mission Brief (User Requirements)
+This is a placeholder mission brief.
+
+CORE CONCEPT:
+Describe the main idea of the project here in abstract terms.
+Example: "Users interact with a system that provides value based on defined attributes."
+
+TECH STACK:
+- Placeholder frontend technology
+- Placeholder backend/database technology
+- Placeholder supporting services
+
+PHASE 1 (MVP):
+- Define the initial scope in abstract terms (e.g., "Start with a single region or dataset").
+- Provide 2–3 sample placeholder items for demonstration only.
+- Example Feature: "Filter by a generic attribute."
+
+SCALING:
+Architecture should be designed to support future expansion in a general sense.
+
+---
+### Agent Instructions
+**Goal:** Initialize this repository and plan the next steps.
+**Protocol:** Please strictly follow the steps defined in .github/context/SCAFFOLD_PROTOCOL.md.
+EOT
+
+    echo "[2/3] Generating Scaffolding Protocol..."
+    cat <<'EOT' > .github/context/SCAFFOLD_PROTOCOL.md
+# SCAFFOLDING PROTOCOL (AGENT INSTRUCTIONS)
+
+## CONTEXT
+You are the Lead Architect. You have been assigned the first issue in this repository.
+Your goal is to initialize the repository structure based on the "Mission Brief".
+
+## REQUIRED DELIVERABLES (The Definition of Done)
+1. **The Foundation (Files)**
+   - Create a .gitignore specific to the tech stack defined in the issue.
+   - Create a README.md with the project name and "How to Run" instructions.
+   - Create the physical directory structure (e.g., src/, tests/).
+
+2. **The Standards (Linting & Style)**
+   - CRITICAL: Create a .editorconfig to enforce line endings and indentation.
+   - Set up the linter/formatter config (e.g., .eslintrc, rustfmt.toml, .prettierrc).
+
+3. **The Governance (Memory)**
+   - Create a file named .github/AI_CONTEXT.md.
+   - In this file, summarize the decisions you made. Future Agents will read this.
+
+## PROPAGATION (The Perpetual Engine)
+You are responsible for keeping this project alive.
+
+1. **Analyze:** Look at the scaffold you just built. What is missing?
+2. **Create Task Files:**
+   - Create a directory named `ISSUES` if it does not exist.
+   - Create 2-3 new markdown files inside `ISSUES/` for the next logical steps.
+   - **Ordering:** If the execution order of these new tasks is important, they MUST be ordered **relative to each other only**. Use numeric filename prefixes to enforce this sequence (e.g., `01-setup-database.md`, `02-run-migrations.md`).
+   - **Format:** Each file MUST start with YAML frontmatter containing a `status: open` and `label: jules` field.
+   - **Content:** Describe the task requirements in the file body.
+EOT
+
+    echo "[3/3] Creating First Issue..."
     gh issue create \
         --title "Scaffold: Initialize $REPO_NAME" \
         --label "jules" \
-        --body "### Mission: Initialize Isolated Loop
-- Verify bootstrap.sh --container functionality on host.
-- Establish follow-up task sequence in ISSUES/.
-- Ensure continuous motion by requiring successors for every PR."
+        --body-file .github/context/MISSION_BRIEF.md
 }
 
 # ==========================================
