@@ -923,7 +923,7 @@ async def main():
         )
         transport = LocalAudioTransport(transport_params)
 
-        stt_service_name = app_config.get("stt_service")
+        stt_service_name = app_config.get("stt_service") or os.getenv("STT_SERVICE")
         if stt_service_name == "faster-whisper":
             stt_provider = app_config.get("active_stt_provider", "faster-whisper")
             stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
