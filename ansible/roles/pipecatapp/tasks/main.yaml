@@ -486,7 +486,7 @@
   block:
     - name: "Router : Purge existing nomad job (force image update)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad job stop -purge router-api"
+        cmd: "/usr/local/bin/nomad job stop -purge router"
       ignore_errors: yes
       changed_when: true
       become: no
@@ -500,9 +500,13 @@
       become: no
       register: router_job_run
   rescue:
+    - name: "Router : Display job run error"
+      ansible.builtin.debug:
+        var: router_job_run
+
     - name: "Router : Get Router job status"
       ansible.builtin.command:
-        cmd: /usr/local/bin/nomad job status -verbose router-api
+        cmd: /usr/local/bin/nomad job status -verbose router
       register: router_job_status
       ignore_errors: yes
       become: no
@@ -513,7 +517,7 @@
 
     - name: "Router : Get Router allocations"
       ansible.builtin.command:
-        cmd: /usr/local/bin/nomad job allocs -json router-api
+        cmd: /usr/local/bin/nomad job allocs -json router
       register: router_allocs
       ignore_errors: yes
       become: no
