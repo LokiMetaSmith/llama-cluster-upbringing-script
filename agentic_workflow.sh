@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # --- Configuration & Metadata ---
-# Repo URL detection for label creation
 REPO_FULL_NAME=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
 
 # --- Help Menu ---
@@ -12,7 +11,7 @@ show_help() {
     echo "Usage: $0 [options]"
     echo ""
     echo "Options:"
-    echo "  --setup      Install robust workflows, protocol, and required labels."
+    echo "  --setup      Install robust workflows with CONTAINER ISOLATION."
     echo "  --ignite     Create the first issue to trigger the AI Agent."
     echo "  --status     Check Jules queue state and hardware stall detection."
     echo "  --uninstall  Remove all workflow files and clean GitHub labels."
@@ -42,7 +41,7 @@ if [ -z "$ACTION" ]; then
 fi
 
 # ==========================================
-# STATUS LOGIC (Workstation Dashboard)
+# STATUS LOGIC
 # ==========================================
 check_status() {
     echo "--- Agentic Workflow Status ---"
@@ -71,7 +70,7 @@ check_status() {
             echo "✅ STATUS: ACTIVE"
         fi
     else
-        echo "📭 STATUS: IDLE (No active 'jules' tasks)"
+        echo "📭 STATUS: IDLE"
     fi
 
     QUEUE_COUNT=$(gh issue list --state open --limit 100 --json number --jq 'length')
@@ -79,7 +78,7 @@ check_status() {
 }
 
 # ==========================================
-# SETUP LOGIC (Robust Engine Installation)
+# SETUP LOGIC (Now with Containerized Verification)
 # ==========================================
 setup_workflow() {
     echo "[1/5] Checking GitHub CLI Auth..."
@@ -99,21 +98,20 @@ setup_workflow() {
 
     # --- ARCHITECTURE DOC ---
     cat <<'EOF' > .github/AGENTIC_README.md
-# Agentic Validation Loop Architecture
+# Agentic Validation Loop Architecture (CONTAINERIZED)
 
-This repository uses a "Validation Loop" to bridge AI agents with local workstation hardware.
+This repository uses a "Validation Loop" to bridge AI agents with local workstation hardware via an isolated container environment.
 
 ## The Loop
 1. **Agent Implementation:** Jules pushes code changes to a branch.
 2. **Remote Verification:** The `remote-verify.yml` workflow triggers on a **Self-Hosted Runner**.
-3. **Execution:** The workstation runs `./bootstrap.sh --debug`, generating `playbook_output.log`.
-4. **Log Evaluation:** `jules-queue.yml` inspects logs. If errors (like Ansible `failed=1` or `unreachable=1`) exist, it posts feedback to the issue and halts the pipeline for the agent to fix.
+3. **ISOLATED Execution:** The workstation runs `./bootstrap.sh --container --debug`, spawning a privileged Docker container.
+4. **Log Evaluation:** `jules-queue.yml` inspects logs generated inside the container.
 5. **Auto-Merge:** Once logs are clean and checks pass, `auto-merge.yml` merges the PR and closes the task.
 
-## Requirements
-- GitHub Self-Hosted Runner (tagged `self-hosted`).
-- Secret `IMPERSONATION_PAT` (scopes: `repo`, `workflow`).
-- Variable `JULES_MAX_DAILY_RUNS` (limits workstation wear and tear).
+## Security & Isolation
+- **Containerization:** By using the `--container` flag, Ansible playbooks run within `pipecat-dev-container`.
+- **Host Safety:** The agent cannot modify host system files outside the repository volume mapping.
 EOF
 
     # --- WORKFLOW: CREATE ISSUES ---
@@ -171,7 +169,7 @@ jobs:
             if [ -f "./remote_logs/playbook_output.log" ]; then
               if grep -Ei "failed=[1-9]|unreachable=[1-9]|DEPLOYMENT_FAILED" ./remote_logs/playbook_output.log > /dev/null; then
                 ISSUE_NUM=$(gh issue list --label "jules" --state open --json number -q '.[0].number')
-                gh issue comment "$ISSUE_NUM" --body "### ❌ Remote Run Failed\nHardware or Ansible reported an error:\n\`\`\`text\n$(tail -n 25 ./remote_logs/playbook_output.log)\n\`\`\`"
+                gh issue comment "$ISSUE_NUM" --body "### ❌ Isolated Remote Run Failed\nHardware reported an error inside the container:\n\`\`\`text\n$(tail -n 25 ./remote_logs/playbook_output.log)\n\`\`\`"
                 exit 1
               fi
             fi
@@ -182,7 +180,7 @@ jobs:
           [ -n "$next" ] && gh issue edit "$next" --add-label "jules"
 EOF
 
-    # --- WORKFLOW: REMOTE VERIFY ---
+    # --- WORKFLOW: REMOTE VERIFY (CONTAINERIZED) ---
     cat <<'EOF' > .github/workflows/remote-verify.yml
 name: Remote Verification
 on:
@@ -193,14 +191,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Run Cluster Upbringing
+      - name: Run Isolated Cluster Upbringing
         run: |
           chmod +x ./bootstrap.sh
-          ./bootstrap.sh --debug --run-local --tags "app,verification" || {
+          # Added --container for isolation
+          ./bootstrap.sh --container --debug --run-local --tags "app,verification" || {
             echo "DEPLOYMENT_FAILED" >> playbook_output.log
             exit 1
           }
-      - name: Upload Native Logs
+      - name: Upload Logs
         if: always()
         uses: actions/upload-artifact@v4
         with: { name: execution-logs, path: playbook_output.log }
@@ -224,17 +223,17 @@ jobs:
           PR_URL="${{ github.event.pull_request.html_url }}"
           ISSUE_NUM=$(gh pr view "$PR_URL" --json body -q '.body' | grep -oEi '(closes|fixes) #[0-9]+' | grep -oE '[0-9]+' | head -n 1)
           gh pr merge --auto --merge "$PR_URL"
-          [ -n "$ISSUE_NUM" ] && gh issue close "$ISSUE_NUM" --comment "Auto-closed via PR."
+          [ -n "$ISSUE_NUM" ] && gh issue close "$ISSUE_NUM" --comment "Auto-closed via containerized validation loop."
 EOF
 
     echo "[5/5] Setup Complete! Next steps:"
-    echo "1. git add . && git commit -m 'chore: bootstrap agentic workflow' && git push"
+    echo "1. git add . && git commit -m 'chore: setup isolated agentic workflow' && git push"
     echo "2. Add secret IMPERSONATION_PAT to GitHub Repo Settings."
     echo "3. Run: ./agentic_workflow.sh --ignite"
 }
 
 # ==========================================
-# IGNITE LOGIC (Start Issue #1)
+# IGNITE LOGIC
 # ==========================================
 ignite_workflow() {
     echo "🚀 Starting Project Ignition..."
@@ -242,11 +241,11 @@ ignite_workflow() {
     gh issue create \
         --title "Scaffold: Initialize $REPO_NAME" \
         --label "jules" \
-        --body "### Mission: Initialize Cluster Upbringing
-- Verify bootstrap.sh permissions on workstation.
+        --body "### Mission: Initialize Cluster Upbringing (Containerized)
+- Verify bootstrap.sh --container logic works on host.
 - Confirm folder structure (src/, tests/, ISSUES/).
-- Generate the next task file in ISSUES/ for core infra services."
-    echo "✅ Issue #1 created. Automation engine is now live."
+- Generate follow-up tasks in ISSUES/ for core services."
+    echo "✅ Issue #1 created. Automation engine is live with CONTAINER ISOLATION."
 }
 
 # ==========================================
