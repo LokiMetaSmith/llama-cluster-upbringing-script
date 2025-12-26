@@ -158,6 +158,7 @@
     - "{{ mqtt_port }}" # MQTT
     - "{{ mqtt_websocket_port }}" # MQTT Websockets
     - "{{ router_port }}" # Traefik / Router (if used)
+    - "{{ archivist_port }}" # Archivist Service
 
 - name: "Firewall : Allow Exo Port"
   community.general.ufw:

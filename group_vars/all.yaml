@@ -46,6 +46,7 @@ home_assistant_port: 8123
 router_port: 8080
 nanochat_port: 8005
 frigate_port: 5000
+archivist_port: 8008
 
 # Standard Paths
 consul_data_dir: "/opt/consul"
