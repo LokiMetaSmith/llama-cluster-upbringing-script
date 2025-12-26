@@ -7,7 +7,8 @@ show_help() {
     echo "Options:"
     echo "  --setup      Install the Agentic Workflow (Jules) infrastructure."
     echo "  --uninstall  Remove all Agentic Workflow files and clean GitHub labels."
-    echo "  --purge      (Used with --uninstall) Also purge all Nomad jobs using bootstrap.sh."
+    echo "  --status     Check the current state of the Jules queue and detect stalls."
+    echo "  --purge      (Used with --uninstall) Also purge Nomad jobs via bootstrap.sh."
     echo "  -h, --help   Display this help message."
 }
 
@@ -19,6 +20,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --setup) ACTION="setup" ; shift ;;
         --uninstall) ACTION="uninstall" ; shift ;;
+        --status) ACTION="status" ; shift ;;
         --purge) PURGE_NOMAD=true ; shift ;;
         -h|--help) show_help ; exit 0 ;;
         *) echo "Unknown option: $1" ; show_help ; exit 1 ;;
@@ -31,22 +33,63 @@ if [ -z "$ACTION" ]; then
 fi
 
 # ==========================================
+# STATUS LOGIC
+# ==========================================
+check_status() {
+    echo "--- Agentic Workflow Status ---"
+    if ! command -v gh &> /dev/null; then
+        echo "❌ Error: 'gh' CLI not found. Status check requires GitHub CLI."
+        return 1
+    fi
+
+    # 1. Fetch the currently active task
+    ACTIVE_ISSUE=$(gh issue list --label "jules" --state open --json number,title,updatedAt --jq '.[0]')
+    
+    if [ -n "$ACTIVE_ISSUE" ] && [ "$ACTIVE_ISSUE" != "null" ]; then
+        ISSUE_NUM=$(echo "$ACTIVE_ISSUE" | jq -r '.number')
+        ISSUE_TITLE=$(echo "$ACTIVE_ISSUE" | jq -r '.title')
+        UPDATED_AT=$(echo "$ACTIVE_ISSUE" | jq -r '.updatedAt')
+        
+        # Calculate time difference
+        CURRENT_TS=$(date +%s)
+        # Attempt portable date parsing for Linux/macOS
+        LAST_TS=$(date -d "$UPDATED_AT" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$UPDATED_AT" +%s)
+        DIFF=$((CURRENT_TS - LAST_TS))
+        HOURS=$((DIFF / 3600))
+        MINS=$(((DIFF % 3600) / 60))
+        
+        echo "📍 Active Task: Issue #$ISSUE_NUM - $ISSUE_TITLE"
+        echo "🕒 Last Activity: $HOURS hours, $MINS minutes ago"
+        
+        # Check against the 2-hour (7200s) threshold
+        if [ "$DIFF" -gt 7200 ]; then
+            echo "⚠️  STATUS: STALLED (No activity for >2 hours)"
+        else
+            echo "✅ STATUS: ACTIVE"
+        fi
+    else
+        echo "📭 STATUS: IDLE (No issue currently has the 'jules' label)"
+    fi
+
+    # 2. Queue Depth
+    QUEUE_COUNT=$(gh issue list --state open --limit 100 --json number --jq 'length')
+    echo "📊 Queue Depth: $QUEUE_COUNT open issues"
+}
+
+# ==========================================
 # SETUP LOGIC
 # ==========================================
 setup_workflow() {
     echo "[1/4] Creating directory structure..."
-    mkdir -p .github/workflows
-    mkdir -p .github/context
-    mkdir -p ISSUES
+    mkdir -p .github/workflows .github/context ISSUES
 
     echo "[2/4] Writing GitHub Action workflows..."
 
-    # --- 1. CREATE ISSUES FROM FILES ---
+    # 1. CREATE ISSUES
     cat <<'EOF' > .github/workflows/create-issues-from-files.yml
 name: Create Issues from Files
 on:
-  push:
-    paths: ["ISSUES/**", "issues/**"]
+  push: { paths: ["ISSUES/**", "issues/**"] }
 jobs:
   create-issues:
     runs-on: ubuntu-latest
@@ -64,7 +107,7 @@ jobs:
           done
 EOF
 
-    # --- 2. JULES QUEUE (LOG EVALUATOR) ---
+    # 2. QUEUE MANAGER (Logs native playbook_output.log)
     cat <<'EOF' > .github/workflows/jules-queue.yml
 name: Jules Label Queue
 on:
@@ -94,7 +137,7 @@ jobs:
           if [ -n "$next" ]; then gh issue edit "$next" --add-label "jules"; fi
 EOF
 
-    # --- 3. REMOTE VERIFY (CALLS BOOTSTRAP.SH DIRECTLY) ---
+    # 3. REMOTE VERIFY (Calls bootstrap.sh --debug directly)
     cat <<'EOF' > .github/workflows/remote-verify.yml
 name: Remote Verification
 on:
@@ -118,7 +161,7 @@ jobs:
         with: { name: execution-logs, path: playbook_output.log }
 EOF
 
-    # --- 4. AUTO MERGE ---
+    # 4. AUTO MERGE
     cat <<'EOF' > .github/workflows/auto-merge.yml
 name: Auto Merge and Close
 on:
@@ -143,8 +186,7 @@ EOF
 3. Create new tasks in ISSUES/ with status: open and label: jules.
 EOF
 
-    echo "[4/4] Installation Complete!"
-    echo "Next: Push these changes and set your IMPERSONATION_PAT secret in GitHub."
+    echo "[4/4] Installation Complete! Push these changes to GitHub."
 }
 
 # ==========================================
@@ -152,36 +194,21 @@ EOF
 # ==========================================
 uninstall_workflow() {
     echo "[1/3] Removing Workflow and Context files..."
-    rm -f .github/workflows/create-issues-from-files.yml
-    rm -f .github/workflows/jules-queue.yml
-    rm -f .github/workflows/remote-verify.yml
-    rm -f .github/workflows/auto-merge.yml
-    rm -rf .github/context/
-    rm -rf ISSUES/
+    rm -f .github/workflows/create-issues-from-files.yml .github/workflows/jules-queue.yml .github/workflows/remote-verify.yml .github/workflows/auto-merge.yml
+    rm -rf .github/context/ ISSUES/
 
     echo "[2/3] Cleaning up GitHub labels..."
-    if command -v gh &> /dev/null; then
-        gh label delete "jules" --yes || true
-        gh label delete "auto-generated" --yes || true
-    else
-        echo "⚠️  gh CLI not found; delete 'jules' label manually."
-    fi
+    gh label delete "jules" --yes || true
+    gh label delete "auto-generated" --yes || true
 
     if [ "$PURGE_NOMAD" = true ]; then
         echo "[3/3] Purging Nomad jobs via bootstrap.sh..."
-        if [ -f "./bootstrap.sh" ]; then
-            ./bootstrap.sh --purge-jobs
-        else
-            echo "❌ bootstrap.sh not found; could not purge jobs."
-        fi
+        ./bootstrap.sh --purge-jobs
     fi
-
     echo "✅ Agentic workflow disabled."
 }
 
 # Execute based on flag
-if [ "$ACTION" == "setup" ]; then
-    setup_workflow
-else
-    uninstall_workflow
-fi
+if [ "$ACTION" == "setup" ]; then setup_workflow;
+elif [ "$ACTION" == "uninstall" ]; then uninstall_workflow;
+elif [ "$ACTION" == "status" ]; then check_status; fi
