@@ -27,9 +27,33 @@ else
 fi
 
 CLUSTER_IP="${CLUSTER_SUBNET_PREFIX}.${NODE_ID}"
+
+# Helper function to convert netmask to CIDR prefix length
+mask2cidr() {
+    local nb=0
+    local IFS=.
+    for dec in $1; do
+        case $dec in
+            255) nb=$((nb+8));;
+            254) nb=$((nb+7)); break;;
+            252) nb=$((nb+6)); break;;
+            248) nb=$((nb+5)); break;;
+            240) nb=$((nb+4)); break;;
+            224) nb=$((nb+3)); break;;
+            192) nb=$((nb+2)); break;;
+            128) nb=$((nb+1)); break;;
+            0);;
+            *) log "Error: Invalid netmask $1"; return 1;;
+        esac
+    done
+    echo "$nb"
+}
+
+CLUSTER_PREFIX_LEN=$(mask2cidr "$CLUSTER_NETMASK")
+
 log "Configuring Dual-Stack Network on $INTERFACE..."
 log "  - WAN (Home): DHCP"
-log "  - LAN (Cluster): $CLUSTER_IP"
+log "  - LAN (Cluster): $CLUSTER_IP/$CLUSTER_PREFIX_LEN"
 
 # --- Configure Interfaces ---
 
@@ -59,7 +83,7 @@ if command -v nmcli >/dev/null && nmcli general status | grep -q "connected"; th
         CURRENT_IPV4=$(nmcli -g ipv4.addresses connection show "$CON_NAME")
         if [[ "$CURRENT_IPV4" != *"$CLUSTER_IP"* ]]; then
              # We want to ADD the IP, not replace.
-             nmcli connection modify "$CON_NAME" +ipv4.addresses "$CLUSTER_IP/$CLUSTER_NETMASK"
+             nmcli connection modify "$CON_NAME" +ipv4.addresses "$CLUSTER_IP/$CLUSTER_PREFIX_LEN"
 
              # Reapply the connection
              nmcli connection up "$CON_NAME"
@@ -69,7 +93,7 @@ if command -v nmcli >/dev/null && nmcli general status | grep -q "connected"; th
         fi
     else
         log "No active NetworkManager connection found for $INTERFACE."
-        add_runtime_ip "$CLUSTER_IP/$CLUSTER_NETMASK" "$INTERFACE"
+        add_runtime_ip "$CLUSTER_IP/$CLUSTER_PREFIX_LEN" "$INTERFACE"
     fi
 
 elif [ -d "/etc/network/interfaces.d" ] || [ -f "/etc/network/interfaces" ]; then
@@ -79,7 +103,7 @@ elif [ -d "/etc/network/interfaces.d" ] || [ -f "/etc/network/interfaces" ]; the
 
     if [[ "$INTERFACE" == wl* ]]; then
         log "Wireless interface detected ($INTERFACE). Skipping /etc/network/interfaces overwrite to prevent breaking WiFi."
-        add_runtime_ip "$CLUSTER_IP/$CLUSTER_NETMASK" "$INTERFACE"
+        add_runtime_ip "$CLUSTER_IP/$CLUSTER_PREFIX_LEN" "$INTERFACE"
     else
         log "Configuring /etc/network/interfaces for wired interface..."
         cat > /etc/network/interfaces <<EOL
@@ -112,7 +136,7 @@ EOL
 else
     # Universal fallback (NixOS, or others)
     log "No supported network manager detected (NetworkManager or ifupdown). Using runtime configuration."
-    add_runtime_ip "$CLUSTER_IP/$CLUSTER_NETMASK" "$INTERFACE"
+    add_runtime_ip "$CLUSTER_IP/$CLUSTER_PREFIX_LEN" "$INTERFACE"
 fi
 
 # --- Final Service Restart Attempt (Generic) ---
