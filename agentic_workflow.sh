@@ -1,91 +1,122 @@
 #!/bin/bash
 
+# --- Configuration & Metadata ---
+# Repo URL detection for label creation
+REPO_FULL_NAME=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
+
 # --- Help Menu ---
 show_help() {
-    echo "Agentic Workflow Manager for Llama-Cluster"
+    echo "======================================================"
+    echo " Llama-Cluster Agentic Workflow Manager (Jules)"
+    echo "======================================================"
     echo "Usage: $0 [options]"
     echo ""
     echo "Options:"
-    echo "  --setup      Install robust workflows, protocol, and README."
-    echo "  --uninstall  Remove workflow files and clean GitHub labels."
-    echo "  --status     Check Jules queue state and stall detection."
-    echo "  --purge      (With --uninstall) Purge Nomad jobs via bootstrap.sh."
+    echo "  --setup      Install robust workflows, protocol, and required labels."
+    echo "  --ignite     Create the first issue to trigger the AI Agent."
+    echo "  --status     Check Jules queue state and hardware stall detection."
+    echo "  --uninstall  Remove all workflow files and clean GitHub labels."
+    echo "  --purge      (Used with --uninstall) Also purge Nomad jobs via bootstrap.sh."
+    echo "  -h, --help   Display this help message."
 }
 
 # --- Initialization ---
 ACTION=""
 PURGE_NOMAD=false
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --setup) ACTION="setup" ; shift ;;
+        --ignite) ACTION="ignite" ; shift ;;
         --uninstall) ACTION="uninstall" ; shift ;;
         --status) ACTION="status" ; shift ;;
         --purge) PURGE_NOMAD=true ; shift ;;
-        *) show_help ; exit 1 ;;
+        -h|--help) show_help ; exit 0 ;;
+        *) echo "Unknown option: $1" ; show_help ; exit 1 ;;
     esac
 done
 
-if [ -z "$ACTION" ]; then show_help ; exit 1 ; fi
+if [ -z "$ACTION" ]; then
+    show_help
+    exit 1
+fi
 
 # ==========================================
-# STATUS LOGIC
+# STATUS LOGIC (Workstation Dashboard)
 # ==========================================
 check_status() {
     echo "--- Agentic Workflow Status ---"
-    if ! command -v gh &> /dev/null; then echo "❌ gh CLI not found" ; return 1 ; fi
+    if ! command -v gh &> /dev/null; then
+        echo "❌ Error: 'gh' CLI not found. Status check requires GitHub CLI."
+        return 1
+    fi
 
     ACTIVE_ISSUE=$(gh issue list --label "jules" --state open --json number,title,updatedAt --jq '.[0]')
     
     if [ -n "$ACTIVE_ISSUE" ] && [ "$ACTIVE_ISSUE" != "null" ]; then
         ISSUE_NUM=$(echo "$ACTIVE_ISSUE" | jq -r '.number')
+        ISSUE_TITLE=$(echo "$ACTIVE_ISSUE" | jq -r '.title')
         UPDATED_AT=$(echo "$ACTIVE_ISSUE" | jq -r '.updatedAt')
         
         CURRENT_TS=$(date +%s)
         LAST_TS=$(date -d "$UPDATED_AT" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$UPDATED_AT" +%s)
         DIFF=$((CURRENT_TS - LAST_TS))
         
-        echo "📍 Active Task: Issue #$ISSUE_NUM"
+        echo "📍 Active Task: Issue #$ISSUE_NUM - $ISSUE_TITLE"
         echo "🕒 Last Activity: $((DIFF / 3600))h $(((DIFF % 3600) / 60))m ago"
-        [ "$DIFF" -gt 7200 ] && echo "⚠️  STATUS: STALLED (Threshold >2h)" || echo "✅ STATUS: ACTIVE"
+        
+        if [ "$DIFF" -gt 7200 ]; then
+            echo "⚠️  STATUS: STALLED (No activity for >2 hours - Check hardware runner)"
+        else
+            echo "✅ STATUS: ACTIVE"
+        fi
     else
-        echo "📭 STATUS: IDLE"
+        echo "📭 STATUS: IDLE (No active 'jules' tasks)"
     fi
-    echo "📊 Queue Depth: $(gh issue list --state open --limit 100 --json number --jq 'length') issues"
+
+    QUEUE_COUNT=$(gh issue list --state open --limit 100 --json number --jq 'length')
+    echo "📊 Queue Depth: $QUEUE_COUNT open issues"
 }
 
 # ==========================================
-# SETUP LOGIC
+# SETUP LOGIC (Robust Engine Installation)
 # ==========================================
 setup_workflow() {
-    echo "[1/5] Creating directory structure..."
+    echo "[1/5] Checking GitHub CLI Auth..."
+    if ! gh auth status &>/dev/null; then
+        echo "❌ Error: Not logged into 'gh' CLI. Run 'gh auth login' first."
+        exit 1
+    fi
+
+    echo "[2/5] Creating structure..."
     mkdir -p .github/workflows .github/context ISSUES src tests
 
-    echo "[2/5] Generating Agentic README & Validation Loop Guide..."
+    echo "[3/5] Initializing REQUIRED GitHub Labels..."
+    gh label create "jules" --color "0052cc" --description "Active AI Agent Task" --force || true
+    gh label create "auto-generated" --color "ededed" --description "Tasks created from files" --force || true
+
+    echo "[4/5] Generating Workflows & Architecture Docs..."
+
+    # --- ARCHITECTURE DOC ---
     cat <<'EOF' > .github/AGENTIC_README.md
 # Agentic Validation Loop Architecture
 
-This repository utilizes a "Validation Loop" to bridge the AI agent with your local workstation hardware.
+This repository uses a "Validation Loop" to bridge AI agents with local workstation hardware.
 
-## 1. The Architecture
-- **Step A:** Jules implements code changes and pushes them.
-- **Step B:** A Verification Workflow triggers on your **Self-Hosted Runner**.
-- **Step C:** The workstation executes `./bootstrap.sh --debug`, capturing logs to `playbook_output.log`.
-- **Step D:** Jules evaluates the logs. If errors exist (e.g., Ansible `failed=1`), it iterates; otherwise, it merges.
+## The Loop
+1. **Agent Implementation:** Jules pushes code changes to a branch.
+2. **Remote Verification:** The `remote-verify.yml` workflow triggers on a **Self-Hosted Runner**.
+3. **Execution:** The workstation runs `./bootstrap.sh --debug`, generating `playbook_output.log`.
+4. **Log Evaluation:** `jules-queue.yml` inspects logs. If errors (like Ansible `failed=1` or `unreachable=1`) exist, it posts feedback to the issue and halts the pipeline for the agent to fix.
+5. **Auto-Merge:** Once logs are clean and checks pass, `auto-merge.yml` merges the PR and closes the task.
 
-## 2. Requirements
-- **GitHub Self-Hosted Runner:** Must be installed on the workstation.
-- **Secret `IMPERSONATION_PAT`:** Classic PAT with `repo` and `workflow` scopes.
-- **Variable `JULES_MAX_DAILY_RUNS`:** Default is 10 to prevent infinite loops.
-
-## 3. The Workflows
-- `remote-verify.yml`: Executes the actual cluster upbringing on your hardware.
-- `jules-queue.yml`: Orchestrates task priority and inspects remote logs.
-- `auto-merge.yml`: Finalizes the PR once the validation loop passes.
+## Requirements
+- GitHub Self-Hosted Runner (tagged `self-hosted`).
+- Secret `IMPERSONATION_PAT` (scopes: `repo`, `workflow`).
+- Variable `JULES_MAX_DAILY_RUNS` (limits workstation wear and tear).
 EOF
 
-    echo "[3/5] Writing robust workflow files..."
-
-    # CREATE ISSUES (With Duplicate Check)
+    # --- WORKFLOW: CREATE ISSUES ---
     cat <<'EOF' > .github/workflows/create-issues-from-files.yml
 name: Create Issues from Files
 on:
@@ -98,26 +129,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Process Files
+      - name: Process
         env: { GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} }
         run: |
-          gh label create "auto-generated" --repo "$GITHUB_REPOSITORY" --color "ededed" || true
           gh issue list --label "auto-generated" --state all --limit 1000 --json title --jq '.[].title' > existing_titles.txt
           files=$(find ISSUES issues -maxdepth 1 -name "*.md" -type f 2>/dev/null | sort -V || true)
           for file in $files; do
             expected_title="Issue for $(basename "$file")"
-            if grep -Fxq "$expected_title" existing_titles.txt; then continue; fi
+            grep -Fxq "$expected_title" existing_titles.txt && continue
             body_file=$(mktemp)
-            { echo "Automatically created for: \`$file\`"; echo "### Content"; echo '```'; cat "$file"; echo '```'; echo "---"; echo "### Directive: Recursive Task Generation"; echo "At least ONE follow-up issue MUST be created for every task."; } > "$body_file"
+            { echo "Automatically created for: \`$file\`"; echo "### Content"; echo '```'; cat "$file"; echo '```'; echo "---"; echo "### Directive: Recursive Task Generation"; echo "Every task MUST generate at least one follow-up file in ISSUES/."; } > "$body_file"
             gh issue create --title "$expected_title" --body-file "$body_file" --label "auto-generated"
           done
 EOF
 
-    # JULES QUEUE (Rate Limit + Log Inspector)
+    # --- WORKFLOW: QUEUE MANAGER ---
     cat <<'EOF' > .github/workflows/jules-queue.yml
 name: Jules Label Queue
 on:
-  issues: { types: [opened, labeled, unlabeled, closed, reopened] }
+  issues: { types: [opened, labeled, closed, reopened] }
   workflow_run: { workflows: ["Auto Merge and Close"], types: [completed] }
   schedule: [{cron: '0 * * * *'}]
 jobs:
@@ -129,9 +159,9 @@ jobs:
         run: |
           SINCE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
           RECENT=$(gh search issues --repo "${{ github.repository }}" --label "jules" --updated ">$SINCE" --json number --jq 'length')
-          if [ "${RECENT:-0}" -ge "$MAX_RUNS" ]; then exit 0; fi
+          [ "${RECENT:-0}" -ge "$MAX_RUNS" ] && echo "Limit reached" && exit 0
           active=$(gh issue list --label "jules" --state open --json number --jq '.[0]')
-          if [ -n "$active" ]; then exit 0; fi
+          [ -n "$active" ] && exit 0
 
       - name: Evaluate Native Playbook Logs
         run: |
@@ -141,7 +171,7 @@ jobs:
             if [ -f "./remote_logs/playbook_output.log" ]; then
               if grep -Ei "failed=[1-9]|unreachable=[1-9]|DEPLOYMENT_FAILED" ./remote_logs/playbook_output.log > /dev/null; then
                 ISSUE_NUM=$(gh issue list --label "jules" --state open --json number -q '.[0].number')
-                gh issue comment "$ISSUE_NUM" --body "### ❌ Remote Run Failed\n\`\`\`text\n$(tail -n 30 ./remote_logs/playbook_output.log)\n\`\`\`"
+                gh issue comment "$ISSUE_NUM" --body "### ❌ Remote Run Failed\nHardware or Ansible reported an error:\n\`\`\`text\n$(tail -n 25 ./remote_logs/playbook_output.log)\n\`\`\`"
                 exit 1
               fi
             fi
@@ -149,10 +179,10 @@ jobs:
       - name: Promote Next
         run: |
           next=$(gh issue list --state open --json number --jq 'min_by(.number).number')
-          if [ -n "$next" ]; then gh issue edit "$next" --add-label "jules"; fi
+          [ -n "$next" ] && gh issue edit "$next" --add-label "jules"
 EOF
 
-    # REMOTE VERIFY (Direct Bootstrap Call)
+    # --- WORKFLOW: REMOTE VERIFY ---
     cat <<'EOF' > .github/workflows/remote-verify.yml
 name: Remote Verification
 on:
@@ -170,13 +200,13 @@ jobs:
             echo "DEPLOYMENT_FAILED" >> playbook_output.log
             exit 1
           }
-      - name: Upload Logs
+      - name: Upload Native Logs
         if: always()
         uses: actions/upload-artifact@v4
         with: { name: execution-logs, path: playbook_output.log }
 EOF
 
-    # AUTO MERGE
+    # --- WORKFLOW: AUTO MERGE ---
     cat <<'EOF' > .github/workflows/auto-merge.yml
 name: Auto Merge and Close
 on:
@@ -194,35 +224,49 @@ jobs:
           PR_URL="${{ github.event.pull_request.html_url }}"
           ISSUE_NUM=$(gh pr view "$PR_URL" --json body -q '.body' | grep -oEi '(closes|fixes) #[0-9]+' | grep -oE '[0-9]+' | head -n 1)
           gh pr merge --auto --merge "$PR_URL"
-          if [ -n "$ISSUE_NUM" ]; then gh issue close "$ISSUE_NUM" --comment "Auto-closed by validation loop."; fi
+          [ -n "$ISSUE_NUM" ] && gh issue close "$ISSUE_NUM" --comment "Auto-closed via PR."
 EOF
 
-    echo "[4/5] Writing Protocol..."
-    cat <<'EOF' > .github/context/SCAFFOLD_PROTOCOL.md
-# Lead Architect Protocol
-1. Every PR MUST include "Closes #X" in the body.
-2. If remote logs show "failed=1", prioritize fixing the playbook.
-3. Every task MUST generate a follow-up markdown file in ISSUES/.
-EOF
+    echo "[5/5] Setup Complete! Next steps:"
+    echo "1. git add . && git commit -m 'chore: bootstrap agentic workflow' && git push"
+    echo "2. Add secret IMPERSONATION_PAT to GitHub Repo Settings."
+    echo "3. Run: ./agentic_workflow.sh --ignite"
+}
 
-    echo "[5/5] Setup Complete! Review .github/AGENTIC_README.md for next steps."
+# ==========================================
+# IGNITE LOGIC (Start Issue #1)
+# ==========================================
+ignite_workflow() {
+    echo "🚀 Starting Project Ignition..."
+    REPO_NAME=$(basename "$(pwd)")
+    gh issue create \
+        --title "Scaffold: Initialize $REPO_NAME" \
+        --label "jules" \
+        --body "### Mission: Initialize Cluster Upbringing
+- Verify bootstrap.sh permissions on workstation.
+- Confirm folder structure (src/, tests/, ISSUES/).
+- Generate the next task file in ISSUES/ for core infra services."
+    echo "✅ Issue #1 created. Automation engine is now live."
 }
 
 # ==========================================
 # UNINSTALL LOGIC
 # ==========================================
 uninstall_workflow() {
-    echo "Cleaning Agentic files..."
+    echo "Cleaning up Agentic configs..."
     rm -f .github/workflows/create-issues-from-files.yml .github/workflows/jules-queue.yml .github/workflows/remote-verify.yml .github/workflows/auto-merge.yml .github/AGENTIC_README.md
     rm -rf .github/context/ ISSUES/
-    if command -v gh &> /dev/null; then
-        gh label delete "jules" --yes || true
-        gh label delete "auto-generated" --yes || true
+    gh label delete "jules" --yes || true
+    gh label delete "auto-generated" --yes || true
+    if [ "$PURGE_NOMAD" = true ] && [ -f "./bootstrap.sh" ]; then
+        echo "Purging Nomad jobs..."
+        ./bootstrap.sh --purge-jobs
     fi
-    [ "$PURGE_NOMAD" = true ] && [ -f "./bootstrap.sh" ] && ./bootstrap.sh --purge-jobs
-    echo "✅ Agentic workflow uninstalled."
+    echo "✅ Agentic workflow removed."
 }
 
+# --- Router ---
 if [ "$ACTION" == "setup" ]; then setup_workflow;
+elif [ "$ACTION" == "ignite" ]; then ignite_workflow;
 elif [ "$ACTION" == "uninstall" ]; then uninstall_workflow;
 elif [ "$ACTION" == "status" ]; then check_status; fi
