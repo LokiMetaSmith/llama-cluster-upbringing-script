@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# --- Configuration & Metadata ---
-REPO_FULL_NAME=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
+# --- Configuration ---
+# Standardizing on ISSUES directory for task generation
+ISSUE_DIR="ISSUES"
 
 # --- Help Menu ---
 show_help() {
@@ -11,9 +12,9 @@ show_help() {
     echo "Usage: $0 [options]"
     echo ""
     echo "Options:"
-    echo "  --setup      Install robust workflows with CONTAINER ISOLATION."
+    echo "  --setup      Install isolated workflows and 'Continuous Motion' logic."
     echo "  --ignite     Create the first issue to trigger the AI Agent."
-    echo "  --status     Check Jules queue state and hardware stall detection."
+    echo "  --status     Check Jules queue state and hardware runner health."
     echo "  --uninstall  Remove all workflow files and clean GitHub labels."
     echo "  --purge      (Used with --uninstall) Also purge Nomad jobs via bootstrap.sh."
     echo "  -h, --help   Display this help message."
@@ -65,7 +66,7 @@ check_status() {
         echo "🕒 Last Activity: $((DIFF / 3600))h $(((DIFF % 3600) / 60))m ago"
         
         if [ "$DIFF" -gt 7200 ]; then
-            echo "⚠️  STATUS: STALLED (No activity for >2 hours - Check hardware runner)"
+            echo "⚠️  STATUS: STALLED (Threshold >2h - Verify hardware runner is online)"
         else
             echo "✅ STATUS: ACTIVE"
         fi
@@ -78,41 +79,42 @@ check_status() {
 }
 
 # ==========================================
-# SETUP LOGIC (Now with Containerized Verification)
+# SETUP LOGIC (The Isolated Loop)
 # ==========================================
 setup_workflow() {
-    echo "[1/5] Checking GitHub CLI Auth..."
+    echo "[1/6] Validating environment..."
     if ! gh auth status &>/dev/null; then
         echo "❌ Error: Not logged into 'gh' CLI. Run 'gh auth login' first."
         exit 1
     fi
 
-    echo "[2/5] Creating structure..."
-    mkdir -p .github/workflows .github/context ISSUES src tests
+    echo "[2/6] Creating structure..."
+    mkdir -p .github/workflows .github/context "$ISSUE_DIR" src tests
 
-    echo "[3/5] Initializing REQUIRED GitHub Labels..."
+    echo "[3/6] Initializing Required GitHub Labels..."
     gh label create "jules" --color "0052cc" --description "Active AI Agent Task" --force || true
     gh label create "auto-generated" --color "ededed" --description "Tasks created from files" --force || true
 
-    echo "[4/5] Generating Workflows & Architecture Docs..."
-
-    # --- ARCHITECTURE DOC ---
+    echo "[4/6] Generating Architecture Guide..."
     cat <<'EOF' > .github/AGENTIC_README.md
-# Agentic Validation Loop Architecture (CONTAINERIZED)
+# Agentic Validation Loop Architecture (Isolated & Recursive)
 
 This repository uses a "Validation Loop" to bridge AI agents with local workstation hardware via an isolated container environment.
 
-## The Loop
-1. **Agent Implementation:** Jules pushes code changes to a branch.
-2. **Remote Verification:** The `remote-verify.yml` workflow triggers on a **Self-Hosted Runner**.
-3. **ISOLATED Execution:** The workstation runs `./bootstrap.sh --container --debug`, spawning a privileged Docker container.
-4. **Log Evaluation:** `jules-queue.yml` inspects logs generated inside the container.
-5. **Auto-Merge:** Once logs are clean and checks pass, `auto-merge.yml` merges the PR and closes the task.
+## 1. The Architecture
+- **Step A (Agent Implementation):** The agent (Jules) pushes code changes and a **new follow-up task** in `ISSUES/`.
+- **Step B (Remote Verification):** `remote-verify.yml` triggers on the **Self-Hosted Runner**.
+- **Step C (Isolated Execution):** The workstation runs `./bootstrap.sh --container --debug`, generating `playbook_output.log`.
+- **Step D (Log Evaluation):** `jules-queue.yml` inspects logs. If Ansible errors exist, it blocks the queue and notifies the agent.
+- **Step E (Continuous Motion):** `auto-merge.yml` blocks merges unless a new follow-up issue is detected in the PR.
 
-## Security & Isolation
-- **Containerization:** By using the `--container` flag, Ansible playbooks run within `pipecat-dev-container`.
-- **Host Safety:** The agent cannot modify host system files outside the repository volume mapping.
+## 2. Requirements
+- **GitHub Self-Hosted Runner:** Must be installed and tagged `self-hosted` on the workstation.
+- **Secret `IMPERSONATION_PAT`:** PAT with `repo` and `workflow` scopes.
+- **Isolation:** All code executes inside the `pipecat-dev-container` to protect the host machine.
 EOF
+
+    echo "[5/6] Writing workflow files..."
 
     # --- WORKFLOW: CREATE ISSUES ---
     cat <<'EOF' > .github/workflows/create-issues-from-files.yml
@@ -136,7 +138,7 @@ jobs:
             expected_title="Issue for $(basename "$file")"
             grep -Fxq "$expected_title" existing_titles.txt && continue
             body_file=$(mktemp)
-            { echo "Automatically created for: \`$file\`"; echo "### Content"; echo '```'; cat "$file"; echo '```'; echo "---"; echo "### Directive: Recursive Task Generation"; echo "Every task MUST generate at least one follow-up file in ISSUES/."; } > "$body_file"
+            { echo "Automatically created for: \`$file\`"; echo "### Content"; echo '```'; cat "$file"; echo '```'; echo "---"; echo "### Directive: Recursive Task Generation"; echo "This system requires constant evolution. This task must generate a successor."; } > "$body_file"
             gh issue create --title "$expected_title" --body-file "$body_file" --label "auto-generated"
           done
 EOF
@@ -157,11 +159,11 @@ jobs:
         run: |
           SINCE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
           RECENT=$(gh search issues --repo "${{ github.repository }}" --label "jules" --updated ">$SINCE" --json number --jq 'length')
-          [ "${RECENT:-0}" -ge "$MAX_RUNS" ] && echo "Limit reached" && exit 0
+          [ "${RECENT:-0}" -ge "$MAX_RUNS" ] && exit 0
           active=$(gh issue list --label "jules" --state open --json number --jq '.[0]')
           [ -n "$active" ] && exit 0
 
-      - name: Evaluate Native Playbook Logs
+      - name: Evaluate Playbook Logs
         run: |
           RUN_ID=$(gh run list --workflow "Remote Verification" --limit 1 --json databaseId -q '.[0].databaseId')
           if [ -n "$RUN_ID" ]; then
@@ -169,7 +171,7 @@ jobs:
             if [ -f "./remote_logs/playbook_output.log" ]; then
               if grep -Ei "failed=[1-9]|unreachable=[1-9]|DEPLOYMENT_FAILED" ./remote_logs/playbook_output.log > /dev/null; then
                 ISSUE_NUM=$(gh issue list --label "jules" --state open --json number -q '.[0].number')
-                gh issue comment "$ISSUE_NUM" --body "### ❌ Isolated Remote Run Failed\nHardware reported an error inside the container:\n\`\`\`text\n$(tail -n 25 ./remote_logs/playbook_output.log)\n\`\`\`"
+                gh issue comment "$ISSUE_NUM" --body "### ❌ Cluster Playbook Failed\nErrors detected in isolated run:\n\`\`\`text\n$(tail -n 25 ./remote_logs/playbook_output.log)\n\`\`\`"
                 exit 1
               fi
             fi
@@ -180,7 +182,7 @@ jobs:
           [ -n "$next" ] && gh issue edit "$next" --add-label "jules"
 EOF
 
-    # --- WORKFLOW: REMOTE VERIFY (CONTAINERIZED) ---
+    # --- WORKFLOW: REMOTE VERIFY (Isolated Container) ---
     cat <<'EOF' > .github/workflows/remote-verify.yml
 name: Remote Verification
 on:
@@ -194,40 +196,54 @@ jobs:
       - name: Run Isolated Cluster Upbringing
         run: |
           chmod +x ./bootstrap.sh
-          # Added --container for isolation
+          # Using container isolation for security
           ./bootstrap.sh --container --debug --run-local --tags "app,verification" || {
             echo "DEPLOYMENT_FAILED" >> playbook_output.log
             exit 1
           }
-      - name: Upload Logs
+      - name: Upload Native Logs
         if: always()
         uses: actions/upload-artifact@v4
         with: { name: execution-logs, path: playbook_output.log }
 EOF
 
-    # --- WORKFLOW: AUTO MERGE ---
+    # --- WORKFLOW: AUTO MERGE (High Entropy Logic) ---
     cat <<'EOF' > .github/workflows/auto-merge.yml
 name: Auto Merge and Close
 on:
-  pull_request: { types: [opened, ready_for_review] }
+  workflow_run:
+    workflows: ["Remote Verification"]
+    types: [completed]
+permissions: { contents: write, pull-requests: write, issues: write }
 jobs:
   merge-and-close:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - name: Wait for Verification
-        run: gh pr checks "${{ github.event.pull_request.html_url }}" --required --watch
-        env: { GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} }
-      - name: Merge
-        env: { GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} }
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify Motion and Merge
+        env: { GH_TOKEN: ${{ secrets.IMPERSONATION_PAT }}, HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}, REPO: ${{ github.repository }} }
         run: |
-          PR_URL="${{ github.event.pull_request.html_url }}"
-          ISSUE_NUM=$(gh pr view "$PR_URL" --json body -q '.body' | grep -oEi '(closes|fixes) #[0-9]+' | grep -oE '[0-9]+' | head -n 1)
-          gh pr merge --auto --merge "$PR_URL"
-          [ -n "$ISSUE_NUM" ] && gh issue close "$ISSUE_NUM" --comment "Auto-closed via containerized validation loop."
+          PR_URL=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state open --json url --jq '.[0].url')
+          if [ -z "$PR_URL" ]; then exit 0; fi
+
+          # Check for new issues in this PR (The Entropy Check)
+          if gh pr diff "$PR_URL" --name-only | grep -Ei "^(ISSUES|issues)/"; then
+            echo "[SUCCESS] Follow-up task detected."
+            gh pr merge --merge "$PR_URL"
+            PR_BODY=$(gh pr view "$PR_URL" --json body -q .body)
+            ISSUE_NUM=$(echo "$PR_BODY" | grep -oEi '(close|closes|closed|fix|fixes|fixed) #[0-9]+' | grep -oE '[0-9]+' | head -n 1)
+            [ -n "$ISSUE_NUM" ] && gh issue close "$ISSUE_NUM" --comment "Auto-closed via validation loop."
+          else
+            echo "[FAILURE] No follow-up issue found."
+            gh pr comment "$PR_URL" --body "**[FAILURE] Entropy Detected**: This PR does not include a new task in \`ISSUES/\`. Blocks merge."
+            exit 1
+          fi
 EOF
 
-    echo "[5/5] Setup Complete! Next steps:"
-    echo "1. git add . && git commit -m 'chore: setup isolated agentic workflow' && git push"
+    echo "[6/6] Setup Complete! Next steps:"
+    echo "1. git add . && git commit -m 'chore: setup isolated agentic loop' && git push"
     echo "2. Add secret IMPERSONATION_PAT to GitHub Repo Settings."
     echo "3. Run: ./agentic_workflow.sh --ignite"
 }
@@ -241,24 +257,23 @@ ignite_workflow() {
     gh issue create \
         --title "Scaffold: Initialize $REPO_NAME" \
         --label "jules" \
-        --body "### Mission: Initialize Cluster Upbringing (Containerized)
-- Verify bootstrap.sh --container logic works on host.
+        --body "### Mission: Initialize Cluster Upbringing (Isolated Loop)
+- Verify bootstrap.sh --container logic works on the hardware runner.
 - Confirm folder structure (src/, tests/, ISSUES/).
-- Generate follow-up tasks in ISSUES/ for core services."
-    echo "✅ Issue #1 created. Automation engine is live with CONTAINER ISOLATION."
+- Generate the next task file in ISSUES/ for core services."
+    echo "✅ Project ignited. Automation engine is live."
 }
 
 # ==========================================
 # UNINSTALL LOGIC
 # ==========================================
 uninstall_workflow() {
-    echo "Cleaning up Agentic configs..."
-    rm -f .github/workflows/create-issues-from-files.yml .github/workflows/jules-queue.yml .github/workflows/remote-verify.yml .github/workflows/auto-merge.yml .github/AGENTIC_README.md
-    rm -rf .github/context/ ISSUES/
+    echo "Cleaning config..."
+    rm -f .github/workflows/*.yml .github/AGENTIC_README.md
+    rm -rf .github/context/ "$ISSUE_DIR"/
     gh label delete "jules" --yes || true
     gh label delete "auto-generated" --yes || true
     if [ "$PURGE_NOMAD" = true ] && [ -f "./bootstrap.sh" ]; then
-        echo "Purging Nomad jobs..."
         ./bootstrap.sh --purge-jobs
     fi
     echo "✅ Agentic workflow removed."
