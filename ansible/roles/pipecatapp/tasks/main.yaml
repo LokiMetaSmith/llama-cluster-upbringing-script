@@ -567,6 +567,50 @@
       ansible.builtin.fail:
         msg: "Router job failed to start. See logs above."
 
+- name: Ensure Nomad service registration (Fallback)
+  block:
+    - name: Fetch Consul management token for fallback registration
+      ansible.builtin.slurp:
+        src: /etc/consul.d/management_token
+      register: consul_token_file_pipecat
+      become: yes
+      ignore_errors: yes
+      no_log: true
+
+    - name: Set Consul token fact for pipecatapp
+      set_fact:
+        consul_bootstrap_token: "{{ consul_token_file_pipecat['content'] | b64decode | trim }}"
+      when: consul_token_file_pipecat is success and consul_token_file_pipecat.content is defined and consul_bootstrap_token is not defined
+      no_log: true
+
+    - name: Check if router service is registered in Consul
+      ansible.builtin.uri:
+        url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/catalog/service/router-api"
+        return_content: yes
+      register: router_catalog_check
+      changed_when: false
+
+    - name: Manually register router service in Consul if missing
+      ansible.builtin.uri:
+        url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/agent/service/register"
+        method: PUT
+        headers:
+          X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
+        body_format: json
+        body:
+          Name: "router-api"
+          Address: "{{ cluster_ip }}"
+          Port: "{{ router_port }}"
+          Tags: ["router", "manual-registration"]
+          Check:
+            Name: "Router API Health"
+            HTTP: "http://{{ cluster_ip }}:{{ router_port }}/health"
+            Interval: "15s"
+            Timeout: "5s"
+        status_code: [200, 204]
+      when: >
+        (router_catalog_check.json is defined and router_catalog_check.json | length == 0)
+
 - name: Wait for the router service to be healthy in Consul
   ansible.builtin.uri:
     url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/router-api"
