@@ -24,14 +24,16 @@ job "router" {
 
     reschedule {
       attempts  = 3
-      interval  = "1m"
+      interval  = "5m"
       delay     = "30s"
       unlimited = false
     }
 
     network {
       mode = "host"
-      port "http" { } # Use a different port than the expert
+      port "http" {
+        static = {{ router_port }}
+      }
     }
 
     service {
