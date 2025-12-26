@@ -586,6 +586,8 @@
     - name: Check if router service is registered in Consul
       ansible.builtin.uri:
         url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/catalog/service/router-api"
+        headers:
+          X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
         return_content: yes
       register: router_catalog_check
       changed_when: false
@@ -614,6 +616,8 @@
 - name: Wait for the router service to be healthy in Consul
   ansible.builtin.uri:
     url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/router-api"
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     return_content: yes
   register: router_health
   until: >
@@ -700,6 +704,8 @@
 - name: Wait for the pipecat-app service to be healthy in Consul
   ansible.builtin.uri:
     url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/pipecat-app"
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     return_content: yes
   register: pipecat_health
   until: >
