@@ -44,6 +44,7 @@ mqtt_websocket_port: 9001
 provisioning_api_port: 8002
 home_assistant_port: 8123
 router_port: 8080
+router_count: 1
 nanochat_port: 8005
 frigate_port: 5000
 archivist_port: 8008

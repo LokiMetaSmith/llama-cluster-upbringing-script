@@ -6,7 +6,7 @@ job "router" {
   priority    = 50
 
   group "router" {
-    count = 3
+    count = {{ router_count }}
 
     update {
       max_parallel      = 1
