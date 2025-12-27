@@ -5,6 +5,22 @@ job "{{ job_name | default('pipecat-app') }}" {
   group "pipecat-group" {
     count = 1
 
+    env {
+      LLAMA_API_SERVICE_NAME = "{{ llama_api_service_name | default('llamacpp-rpc-api') }}"
+      USE_SUMMARIZER         = "{{ use_summarizer | default('false') }}"
+      STT_SERVICE            = "{{ stt_service | default('faster-whisper') }}"
+      PIECAT_API_KEYS        = "{{ pipecat_api_keys }}"
+      EXTERNAL_EXPERTS_CONFIG = "{{ external_experts_config | to_json | replace('\"', '\\\"') }}"
+      OPENAI_API_KEY         = "{{ openai_api_key }}"
+      OPENROUTER_API_KEY     = "{{ openrouter_api_key }}"
+      MEMORY_SERVICE_URL     = "http://{{ cluster_ip }}:8000"
+      CONSUL_HOST            = "{{ cluster_ip }}"
+      CONSUL_PORT            = "{{ consul_http_port }}"
+      WEB_PORT               = "${NOMAD_PORT_http}"
+      YOLO_MODEL_PATH        = "{{ nomad_models_dir }}/vision/yolov8n.pt"
+      PRIMA_API_SERVICE_NAME = "llama-api-main"
+    }
+
     {% if pipecat_deployment_style == 'docker' %}
     network {
       mode = "host"
@@ -30,13 +46,13 @@ job "{{ job_name | default('pipecat-app') }}" {
       name     = "{{ service_name | default('pipecat-app') }}"
       port     = "http"
       provider = "consul"
+      address  = "{{ cluster_ip }}"
 
       check {
         type         = "http"
         path         = "/health"
         interval     = "10s"
         timeout      = "2s"
-        address_mode = "host"
       }
     }
 
@@ -74,10 +90,6 @@ job "{{ job_name | default('pipecat-app') }}" {
     task "pipecat-task" {
       driver = "raw_exec"
 
-      env {
-        WEB_PORT = "${NOMAD_PORT_http}"
-      }
- 
       config {
         command = "/opt/pipecatapp/start_pipecat.sh"
       }
