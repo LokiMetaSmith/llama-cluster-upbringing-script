@@ -5,6 +5,7 @@ job "{{ job_name | default('pipecat-app') }}" {
   group "pipecat-group" {
     count = 1
 
+    {% set env_vars %}
     env {
       LLAMA_API_SERVICE_NAME = "{{ llama_api_service_name | default('llamacpp-rpc-api') }}"
       USE_SUMMARIZER         = "{{ use_summarizer | default('false') }}"
@@ -20,6 +21,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       YOLO_MODEL_PATH        = "{{ nomad_models_dir }}/vision/yolov8n.pt"
       PRIMA_API_SERVICE_NAME = "llama-api-main"
     }
+    {% endset %}
 
     {% if pipecat_deployment_style == 'docker' %}
     network {
@@ -59,6 +61,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     {% if pipecat_deployment_style == 'docker' %}
     task "pipecat-task" {
       driver = "docker"
+      {{ env_vars }}
 
       config {
         image = "pipecatapp:local"
@@ -89,6 +92,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     {% else %}
     task "pipecat-task" {
       driver = "raw_exec"
+      {{ env_vars }}
 
       config {
         command = "/opt/pipecatapp/start_pipecat.sh"
