@@ -14,15 +14,39 @@ log "Using network interface: $INTERFACE"
 CURRENT_HOSTNAME=$(hostname)
 
 # --- Derive NODE_ID for cluster network ---
-# Logic: Extract number from hostname (e.g., worker1 -> 11). Default 'devbox' -> 10.
-if [ "$CURRENT_HOSTNAME" == "devbox" ]; then
-    NODE_ID=10
+# Expected format: <base>-<id>-<role> (e.g., yggie-1-controller, yggie-2-worker)
+# Logic:
+#   Controllers: 10 + ID (controller-1 -> .11, controller-2 -> .12)
+#   Workers:     50 + ID (worker-1 -> .51, worker-2 -> .52)
+#   Legacy/Fallback: Extract numbers, default to 11.
+
+# Extract the ID part (assumes format *-<number>-*)
+HOST_ID=$(echo "$CURRENT_HOSTNAME" | grep -oP '\-\K\d+(?=\-)' || echo "")
+
+# If regex failed (legacy name like 'devbox' or 'worker1'), try simple number extraction
+if [ -z "$HOST_ID" ]; then
+    HOST_ID=$(echo "$CURRENT_HOSTNAME" | tr -dc '0-9')
+fi
+
+# Default ID if nothing found
+if [ -z "$HOST_ID" ]; then
+    HOST_ID=1
+fi
+
+if [[ "$CURRENT_HOSTNAME" == *"-controller" ]]; then
+    # Controllers start at .10 (ID 0) -> .11 (ID 1)
+    # Actually, let's map ID 1 -> .10, ID 2 -> .11 to keep it simple?
+    # Or strict: ID 1 -> .11. Let's use ID + 10 for controllers.
+    NODE_ID=$((HOST_ID + 10))
+elif [[ "$CURRENT_HOSTNAME" == *"-worker" ]]; then
+    # Workers start at .50
+    NODE_ID=$((HOST_ID + 50))
 else
-    NODE_ID_SUFFIX=$(echo "$CURRENT_HOSTNAME" | tr -dc '0-9')
-    if [ -z "$NODE_ID_SUFFIX" ]; then
-        NODE_ID=11 # Fallback
+    # Fallback/Legacy
+    if [ "$CURRENT_HOSTNAME" == "devbox" ]; then
+        NODE_ID=10
     else
-        NODE_ID=$((NODE_ID_SUFFIX + 10))
+        NODE_ID=$((HOST_ID + 10))
     fi
 fi
 
