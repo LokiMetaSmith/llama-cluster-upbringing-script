@@ -12,6 +12,10 @@ def mock_torch():
     """Fixture to mock the torch library."""
     with patch('moondream_detector.torch') as mock:
         mock.cuda.is_available.return_value = False
+        # Mock torch.compile to behave like identity or return a mock that passes calls through
+        def mock_compile(model, **kwargs):
+            return model
+        mock.compile.side_effect = mock_compile
         yield mock
 
 @pytest.fixture
@@ -19,6 +23,7 @@ def mock_auto_model():
     """Fixture to mock the AutoModelForCausalLM."""
     with patch('moondream_detector.AutoModelForCausalLM') as mock:
         mock_instance = mock.from_pretrained.return_value
+        # Ensure the model mock behaves well when "compiled" (which is now identity)
         mock_instance.caption.return_value = {"caption": "a cat"}
         yield mock
 

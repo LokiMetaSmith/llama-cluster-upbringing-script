@@ -4,11 +4,13 @@ import asyncio
 import logging
 import requests
 import yaml
+import time  # Added back for the backup timestamp
 from fastapi import FastAPI, WebSocket, Body, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict
 from workflow.runner import ActiveWorkflows, OpenGates
+from workflow.history import WorkflowHistory
 
 
 # Configure logging
@@ -117,6 +119,17 @@ async def internal_chat(payload: Dict = Body(...)):
     return JSONResponse(status_code=202, content={"message": "Request accepted"})
 
 
+@app.post("/internal/system_message", summary="Process System Alert", description="Receives a system alert (e.g., from Supervisor), injecting it into the agent's workflow.", tags=["Internal"])
+async def internal_system_message(payload: Dict = Body(..., examples=[{"text": "Job X failed with error Y", "priority": "high"}])):
+    """
+    Handles a system alert. These are treated as high-priority inputs from the infrastructure.
+    """
+    # Mark it as a system alert for special handling in TwinService
+    payload["is_system_alert"] = True
+    await text_message_queue.put(payload)
+    return JSONResponse(status_code=202, content={"message": "System alert accepted"})
+
+
 @app.get("/", summary="Serve Web UI", description="Serves the main `index.html` file for the web user interface.", tags=["UI"])
 async def get():
     """Serves the main `index.html` file for the web UI."""
@@ -163,6 +176,23 @@ async def get_active_workflows():
     active_workflows = ActiveWorkflows()
     return active_workflows.get_all_states()
 
+@app.get("/api/workflows/history", response_class=JSONResponse, summary="Get Workflow History", description="Retrieves a list of past workflow runs.", tags=["Workflow"])
+async def get_workflow_history(limit: int = 50):
+    """Retrieves a list of past workflow runs."""
+    history = WorkflowHistory()
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, lambda: history.get_all_runs(limit=limit))
+
+@app.get("/api/workflows/history/{runner_id}", response_class=JSONResponse, summary="Get Workflow Run Details", description="Retrieves the full details of a specific workflow run.", tags=["Workflow"])
+async def get_workflow_run(runner_id: str):
+    """Retrieves the full details of a specific workflow run."""
+    history = WorkflowHistory()
+    loop = asyncio.get_running_loop()
+    run_details = await loop.run_in_executor(None, lambda: history.get_run(runner_id))
+    if not run_details:
+        raise HTTPException(status_code=404, detail="Workflow run not found.")
+    return run_details
+
 @app.post("/api/gate/approve", response_class=JSONResponse)
 async def approve_gate(payload: Dict = Body(...)):
     """Approves a paused gate, allowing the workflow to continue."""
@@ -194,6 +224,48 @@ async def get_workflow_definition(workflow_name: str):
             return yaml.safe_load(f)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading workflow: {e}")
+
+@app.post("/api/workflows/save", summary="Save Workflow", description="Saves a workflow definition to a YAML file.", tags=["Workflow"])
+async def save_workflow_definition(payload: Dict = Body(...)):
+    """
+    Saves a workflow definition.
+    Payload: { "name": "filename.yaml", "definition": { ... } }
+    """
+    workflow_name = payload.get("name")
+    definition = payload.get("definition")
+
+    if not workflow_name or not definition:
+        raise HTTPException(status_code=400, detail="Name and definition are required.")
+
+    if ".." in workflow_name or not workflow_name.endswith((".yaml", ".yml")):
+        raise HTTPException(status_code=400, detail="Invalid workflow name.")
+
+    workflow_dir = os.path.join(script_dir, "workflows")
+    # Ensure directory exists
+    os.makedirs(workflow_dir, exist_ok=True)
+
+    file_path = os.path.join(workflow_dir, workflow_name)
+
+    # Optional: Versioning
+    # If file exists, maybe backup? For now, we overwrite as per "Live Edit" requirement,
+    # but the frontend can handle "Save As" logic or we can add timestamp here.
+    # The user asked for "history versions", which usually implies the Run History.
+    # But for "rollback", let's create a backup if it exists.
+    if os.path.exists(file_path):
+        backup_name = f"{workflow_name}.{int(time.time())}.bak"
+        backup_path = os.path.join(workflow_dir, backup_name)
+        try:
+            os.rename(file_path, backup_path)
+            logging.info(f"Backed up existing workflow to {backup_name}")
+        except OSError as e:
+            logging.warning(f"Failed to backup workflow: {e}")
+
+    try:
+        with open(file_path, 'w') as f:
+            yaml.dump(definition, f, default_flow_style=False, sort_keys=False)
+        return {"message": f"Workflow {workflow_name} saved successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving workflow: {e}")
 
 @app.get("/api/web_uis")
 async def get_web_uis():
