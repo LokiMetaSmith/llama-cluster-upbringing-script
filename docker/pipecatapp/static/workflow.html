@@ -2,68 +2,287 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="description" content="Workflow Visualization">
-    <meta name="keywords" content="Workflow, Visualization, Ansible, Nomad">
+    <meta name="description" content="Workflow Editor">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Workflow Visualization</title>
+    <title>Workflow Editor</title>
+    <link rel="stylesheet" href="/static/css/litegraph.css">
     <link rel="stylesheet" href="/static/css/styles.css">
     <style>
-        #cy {
-            width: 100%;
-            height: 80vh;
-            border: 1px solid #ccc;
+        body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .container { display: flex; flex: 1; overflow: hidden; height: 100%; }
+        #sidebar {
+            width: 250px;
+            border-right: 1px solid #333;
+            background-color: #1e1e1e;
+            color: #ddd;
+            display: flex;
+            flex-direction: column;
         }
-        /* Modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgb(0,0,0);
-            background-color: rgba(0,0,0,0.4);
+
+        /* Sidebar Tabs */
+        .sidebar-tabs {
+            display: flex;
+            background: #252526;
+            border-bottom: 1px solid #333;
         }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-        }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
+        .sidebar-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
             cursor: pointer;
+            font-size: 12px;
+            background: #252526;
+            color: #888;
         }
+        .sidebar-tab.active {
+            background: #1e1e1e;
+            color: #fff;
+            border-bottom: 2px solid #007acc;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .sidebar-content.active {
+            display: flex;
+        }
+
+        #sidebar h2 { padding: 10px; margin: 0; background: #252526; font-size: 14px; text-transform: uppercase; }
+
+        /* History List */
+        #history-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
+        .history-item { padding: 8px 10px; border-bottom: 1px solid #333; cursor: pointer; font-size: 12px; }
+        .history-item:hover { background-color: #2a2d2e; }
+        .history-item.active { background-color: #37373d; border-left: 3px solid #007acc; }
+        .history-meta { color: #888; font-size: 10px; margin-top: 2px; }
+
+        /* Node Library */
+        #node-library { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
+        .node-item {
+            padding: 8px 10px;
+            border-bottom: 1px solid #333;
+            cursor: grab;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+        }
+        .node-item:hover { background-color: #2a2d2e; }
+        .node-item::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #0e639c;
+            margin-right: 8px;
+        }
+
+        #main-content { flex-grow: 1; position: relative; display: flex; flex-direction: column; }
+        #toolbar {
+            height: 40px;
+            background-color: #252526;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+        }
+        #toolbar button {
+            background: #0e639c;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            margin-right: 10px;
+            cursor: pointer;
+            font-size: 12px;
+            border-radius: 2px;
+        }
+        #toolbar button:hover { background: #1177bb; }
+        #toolbar span { color: #ccc; margin-left: auto; font-size: 12px; }
+
+        #editor-canvas { width: 100%; height: 100%; background-color: #1e1e1e; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Workflow Visualization</h1>
-        <div id="approval-container"></div>
-        <div id="cy"></div>
+        <div id="sidebar">
+            <div class="sidebar-tabs">
+                <div class="sidebar-tab active" data-target="tab-library">Library</div>
+                <div class="sidebar-tab" data-target="tab-history">History</div>
+            </div>
+
+            <!-- Library Tab -->
+            <div id="tab-library" class="sidebar-content active">
+                <div style="padding: 10px; border-bottom: 1px solid #333;">
+                    <input type="text" id="node-search" placeholder="Search nodes..." style="width: 100%; padding: 5px; background: #333; border: 1px solid #444; color: #fff;">
+                </div>
+                <ul id="node-library">
+                    <!-- Nodes will be populated here -->
+                </ul>
+            </div>
+
+            <!-- History Tab -->
+            <div id="tab-history" class="sidebar-content">
+                <div id="controls" style="padding: 10px; border-bottom: 1px solid #333;">
+                    <button id="live-btn" style="width: 100%; margin-bottom: 5px;">Go Live / Poll</button>
+                    <button id="refresh-history-btn" style="width: 100%;">Refresh History</button>
+                </div>
+                <ul id="history-list"></ul>
+            </div>
+        </div>
+        <div id="main-content">
+            <div id="toolbar">
+                <button id="save-btn">Save / Deploy</button>
+                <button id="arrange-btn">Auto Arrange</button>
+                <span id="status-text">Ready</span>
+            </div>
+            <canvas id="editor-canvas"></canvas>
+        </div>
     </div>
 
-    <!-- The Modal -->
-    <div id="nodeModal" class="modal">
-      <div class="modal-content">
-        <span class="close">X</span>
-        <h2>Node Output</h2>
-        <pre id="node-output-content"></pre>
-      </div>
-    </div>
+    <script src="/static/js/litegraph.js"></script>
+    <script src="/static/js/editor.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize Editor
+            WorkflowEditor.init("editor-canvas");
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
-    <script src="/static/js/workflow.js"></script>
+            // Load Default Workflow
+            try {
+                const response = await fetch('/api/workflows/definition/default_agent_loop.yaml');
+                const yamlData = await response.json();
+                WorkflowEditor.importWorkflow(yamlData);
+            } catch (e) {
+                console.error("Failed to load default workflow", e);
+            }
+
+            // Tab Logic
+            document.querySelectorAll('.sidebar-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs and content
+                    document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
+
+                    // Add active class to clicked tab and target content
+                    tab.classList.add('active');
+                    document.getElementById(tab.dataset.target).classList.add('active');
+                });
+            });
+
+            // Populate Node Library
+            const nodeLibrary = document.getElementById('node-library');
+            const searchInput = document.getElementById('node-search');
+
+            function populateLibrary(filter = "") {
+                nodeLibrary.innerHTML = "";
+                const registeredTypes = WorkflowEditor.getRegisteredNodeTypes();
+
+                registeredTypes.filter(type => type.toLowerCase().includes(filter.toLowerCase())).forEach(type => {
+                    const li = document.createElement('li');
+                    li.className = 'node-item';
+                    li.textContent = type.replace("agent/", ""); // Clean up name
+                    li.draggable = true;
+
+                    li.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('nodeType', type);
+                    });
+
+                    nodeLibrary.appendChild(li);
+                });
+            }
+
+            populateLibrary();
+
+            searchInput.addEventListener('input', (e) => {
+                populateLibrary(e.target.value);
+            });
+
+            // Buttons
+            document.getElementById('save-btn').addEventListener('click', () => {
+                WorkflowEditor.saveWorkflow();
+            });
+
+            document.getElementById('arrange-btn').addEventListener('click', () => {
+                WorkflowEditor.autoLayout();
+            });
+
+            // Live Polling Logic
+            let pollingInterval = null;
+            const liveBtn = document.getElementById('live-btn');
+
+            function startPolling() {
+                liveBtn.textContent = "Stop Live View";
+                liveBtn.style.backgroundColor = "#28a745";
+                pollingInterval = setInterval(async () => {
+                    try {
+                        const res = await fetch('/api/workflows/active');
+                        const data = await res.json();
+                        // Get first active workflow state
+                        const runIds = Object.keys(data);
+                        if (runIds.length > 0) {
+                            WorkflowEditor.updateLiveStatus(data[runIds[0]]);
+                            document.getElementById('status-text').textContent = "Running: " + runIds[0];
+                        } else {
+                            document.getElementById('status-text').textContent = "No active workflows";
+                        }
+                    } catch (e) { console.error(e); }
+                }, 1000);
+            }
+
+            function stopPolling() {
+                liveBtn.textContent = "Go Live / Poll";
+                liveBtn.style.backgroundColor = "";
+                if (pollingInterval) clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+
+            liveBtn.addEventListener('click', () => {
+                if (pollingInterval) stopPolling();
+                else startPolling();
+            });
+
+            // History Logic
+            const historyList = document.getElementById('history-list');
+
+            async function loadHistory() {
+                const res = await fetch('/api/workflows/history?limit=20');
+                const runs = await res.json();
+                historyList.innerHTML = '';
+                runs.forEach(run => {
+                    const li = document.createElement('li');
+                    li.className = 'history-item';
+                    li.innerHTML = `
+                        <div>${new Date(run.start_time * 1000).toLocaleTimeString()}</div>
+                        <div class="history-meta">${run.id.substring(0,8)}...</div>
+                    `;
+                    li.onclick = async () => {
+                        // Mark active
+                        document.querySelectorAll('.history-item').forEach(i => i.classList.remove('active'));
+                        li.classList.add('active');
+
+                        console.log("Loading run", run);
+                        // Fetch full details
+                        try {
+                            const detailRes = await fetch(`/api/workflows/history/${run.id}`);
+                            if (!detailRes.ok) throw new Error("Run not found");
+                            const fullRun = await detailRes.json();
+
+                            // Visualize
+                            WorkflowEditor.visualizeRun(fullRun);
+                        } catch(e) {
+                            console.error(e);
+                            alert("Failed to load run details");
+                        }
+                    };
+                    historyList.appendChild(li);
+                });
+            }
+
+            document.getElementById('refresh-history-btn').addEventListener('click', loadHistory);
+            loadHistory();
+        });
+    </script>
 </body>
 </html>

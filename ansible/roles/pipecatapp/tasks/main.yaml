@@ -253,6 +253,14 @@
   become: yes
   become_user: "{{ target_user }}"
 
+- name: Synchronize python source files to build context
+  ansible.builtin.copy:
+    src: "{{ role_path }}/files/"
+    dest: "{{ playbook_dir }}/../../docker/pipecatapp/"
+    mode: preserve
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
 - name: Copy pipecat startup script to build context
   ansible.builtin.template:
     src: start_pipecatapp.sh.j2

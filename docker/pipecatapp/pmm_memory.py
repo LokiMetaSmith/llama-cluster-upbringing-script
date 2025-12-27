@@ -27,7 +27,7 @@ class PMMMemory:
 
     def _init_db(self):
         """Initializes the SQLite database and creates the events table."""
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, check_same_thread=False)
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS events (

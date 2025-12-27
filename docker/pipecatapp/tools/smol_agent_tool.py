@@ -108,8 +108,9 @@ class SmolAgentTool:
                 if message["role"] == "assistant":
                     matches = code_pattern.findall(message["content"])
                     if matches:
-                        # Use the last code block found in the latest assistant message
-                        code_to_execute = matches[-1].strip()
+                        # Extract all code blocks from the message and concatenate them
+                        # to form a complete workspace execution.
+                        code_to_execute = "\n".join([m.strip() for m in matches])
                         break
 
             if not code_to_execute:

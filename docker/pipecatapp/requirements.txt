@@ -35,3 +35,6 @@ spacy
 ultralytics
 uvicorn
 websockets
+python-consul2
+transformers
+pillow

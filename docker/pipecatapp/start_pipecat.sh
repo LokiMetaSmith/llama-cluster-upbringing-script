@@ -9,12 +9,17 @@
 set -e
 
 # Change to the application directory
-cd /opt/pipecatapp
+cd "/opt/pipecatapp"
+
+# Source environment variables if present
+if [ -f "/opt/pipecatapp/pipecat.env" ]; then
+    source "/opt/pipecatapp/pipecat.env"
+fi
 
 # Activate the virtual environment
-source /opt/pipecatapp/venv/bin/activate
+source "/opt/pipecatapp/venv/bin/activate"
 
 echo "--- Starting pipecat-app: $(date) ---"
 
 # For Docker, we log to stdout/stderr and let the container runtime handle it.
-exec /opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py
+exec "/opt/pipecatapp/venv/bin/python3" "/opt/pipecatapp/app.py"
