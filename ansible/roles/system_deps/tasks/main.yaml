@@ -43,7 +43,7 @@
       - libevent-2.1-7t64
       - libflite1
       - libgstreamer-plugins-bad1.0-0
-      - libgl1-mesa-glx
+      - libgl1
       - libglib2.0-0
       - libmecab-dev
       - libnss-mdns
