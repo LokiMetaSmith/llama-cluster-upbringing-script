@@ -44,7 +44,7 @@
       - libflite1
       - libgstreamer-plugins-bad1.0-0
       - libgl1
-      - libglib2.0-0
+      - libglib2.0-0t64
       - libmecab-dev
       - libnss-mdns
       - lolcat
