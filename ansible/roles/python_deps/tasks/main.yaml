@@ -3,6 +3,8 @@
     cmd: "python3 -m venv /opt/pipecatapp/venv"
     creates: "/opt/pipecatapp/venv/bin/pip"
   become: yes
+  tags:
+    - deploy_app
 
 - name: Ensure correct ownership of the virtual environment
   ansible.builtin.file:
@@ -11,6 +13,8 @@
     group: "{{ target_user }}"
     recurse: yes
   become: yes
+  tags:
+    - deploy_app
 
 - name: Copy requirements.txt to the application directory
   copy:
@@ -19,6 +23,8 @@
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
   become: yes
+  tags:
+    - deploy_app
 
 - name: Create a persistent temporary directory for pip builds
   ansible.builtin.file:
@@ -26,6 +32,8 @@
     state: directory
     mode: '0777'
   become: yes
+  tags:
+    - deploy_app
 
 - name: Install/Upgrade base python packages in venv
   ansible.builtin.pip:
@@ -37,6 +45,8 @@
     executable: "/opt/pipecatapp/venv/bin/pip3"
   become: yes
   become_user: "{{ target_user }}"
+  tags:
+    - deploy_app
 
 - name: Install Cython separately to ensure it's available for other builds
   ansible.builtin.pip:
@@ -45,6 +55,8 @@
     executable: "/opt/pipecatapp/venv/bin/pip3"
   become: yes
   become_user: "{{ target_user }}"
+  tags:
+    - deploy_app
 
 - name: Install python dependencies into the virtual environment
   ansible.builtin.pip:
@@ -57,9 +69,13 @@
   poll: 10    # Check status every 10 seconds
   become: yes
   become_user: "{{ target_user }}"
+  tags:
+    - deploy_app
 
 - name: Clean up pip build directory
   ansible.builtin.file:
     path: /var/tmp/ansible_pip_build
     state: absent
   become: yes
+  tags:
+    - deploy_app
