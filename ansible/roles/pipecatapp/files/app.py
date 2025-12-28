@@ -1,6 +1,8 @@
 import asyncio
 import logging
+print("DEBUG: Importing YOLO...", flush=True)
 from ultralytics import YOLO
+print("DEBUG: YOLO imported.", flush=True)
 import time
 import json
 import io
@@ -9,6 +11,7 @@ import os
 import inspect
 import threading
 
+print("DEBUG: Importing Pipecat frames...", flush=True)
 from pipecat.frames.frames import (
     AudioRawFrame,
     TextFrame,
@@ -23,7 +26,9 @@ from pipecat.pipeline.task import PipelineTask
 from pipecat.processors.frame_processor import FrameProcessor
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
+print("DEBUG: Importing Faster Whisper...", flush=True)
 from faster_whisper import WhisperModel
+print("DEBUG: Importing Piper Voice...", flush=True)
 from piper.voice import PiperVoice
 import requests
 import consul.aio
