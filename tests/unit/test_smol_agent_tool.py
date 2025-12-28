@@ -61,3 +61,31 @@ def test_deno_missing(mock_which, smol_tool):
 def test_empty_task(smol_tool):
     result = smol_tool.run("")
     assert "Error: Task description must be a non-empty string." in result
+
+@patch('smol_agent_tool.shutil.which')
+@patch('smol_agent_tool.LiteLLMModel')
+@patch('smol_agent_tool.CodeAgent')
+def test_run_py_language_specifier(mock_agent_cls, mock_model_cls, mock_which, smol_tool):
+    """Test that the 'py' language specifier is handled correctly."""
+    mock_which.return_value = "/usr/bin/deno"
+    mock_agent = mock_agent_cls.return_value
+    mock_agent.memory = [{"role": "assistant", "content": "```py\nprint('py specifier')\n```"}]
+
+    with patch.object(smol_tool, '_execute_in_sandbox', return_value="Output: py specifier") as mock_exec:
+        result = smol_tool.run("task description")
+        assert result == "Output: py specifier"
+        mock_exec.assert_called_once_with("print('py specifier')")
+
+@patch('smol_agent_tool.shutil.which')
+@patch('smol_agent_tool.LiteLLMModel')
+@patch('smol_agent_tool.CodeAgent')
+def test_run_no_language_specifier(mock_agent_cls, mock_model_cls, mock_which, smol_tool):
+    """Test that code blocks with no language specifier are handled."""
+    mock_which.return_value = "/usr/bin/deno"
+    mock_agent = mock_agent_cls.return_value
+    mock_agent.memory = [{"role": "assistant", "content": "```\nprint('no specifier')\n```"}]
+
+    with patch.object(smol_tool, '_execute_in_sandbox', return_value="Output: no specifier") as mock_exec:
+        result = smol_tool.run("task description")
+        assert result == "Output: no specifier"
+        mock_exec.assert_called_once_with("print('no specifier')")

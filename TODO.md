@@ -90,9 +90,6 @@ This section tracks identified placeholder files, corrupted binaries, and code t
     - `distributed-llama-repo/dllama`
     - `distributed-llama-repo/dllama-api`
 
-- [ ] **Refactor Brittle Code:**
-  - `ansible/roles/pipecatapp/files/tools/smol_agent_tool.py`: Contains a TODO about brittle code extraction logic.
-
 - [ ] **Fix Skipped Test:**
   - `tests/unit/test_home_assistant_template.py`: Test is currently skipped and contains a TODO to re-add it without breaking tests.
 
