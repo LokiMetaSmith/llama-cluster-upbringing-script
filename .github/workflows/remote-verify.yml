@@ -1,0 +1,18 @@
+name: Remote Verification
+on:
+  pull_request: { types: [opened, synchronize, ready_for_review] }
+jobs:
+  verify-on-workstation:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run Isolated Cluster Upbringing
+        run: |
+          chmod +x ./bootstrap.sh
+          # Executes inside pipecat-dev-container for safety
+          ./bootstrap.sh --container --debug --run-local --tags "app,verification" || { echo "DEPLOYMENT_FAILED" >> playbook_output.log; exit 1; }
+      - name: Upload Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: execution-logs, path: playbook_output.log }

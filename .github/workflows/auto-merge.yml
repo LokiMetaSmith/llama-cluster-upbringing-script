@@ -1,0 +1,49 @@
+name: Auto Merge and Close
+on:
+  workflow_run: { workflows: ["Remote Verification"], types: [completed] }
+permissions: { contents: write, pull-requests: write, issues: write }
+jobs:
+  merge-and-close:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify Motion and Merge
+        env: { GH_TOKEN: ${{ secrets.IMPERSONATION_PAT }}, HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}, REPO: ${{ github.repository }} }
+        run: |
+          echo "Triggered by CI success on branch $HEAD_BRANCH"
+          PR_URL=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state open --json url --jq '.[0].url')
+
+          if [ -z "$PR_URL" ]; then
+              echo "::notice ::No open PR found for branch $HEAD_BRANCH. Skipping auto-merge."
+              exit 0
+          fi
+
+          echo "Found PR: $PR_URL"
+          CHANGES=$(gh pr diff "$PR_URL" --name-only)
+
+          if echo "$CHANGES" | grep -q "^\(ISSUES\|issues\)/"; then
+              echo "[SUCCESS] Valid Issue Definition found."
+              gh pr merge --merge "$PR_URL"
+
+              PR_BODY=$(gh pr view "$PR_URL" --json body -q .body)
+              ISSUE_NUMBER=$(echo "$PR_BODY" | grep -oEi '(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved) #[0-9]+' | grep -oE '[0-9]+' | head -n 1)
+
+              if [ -n "$ISSUE_NUMBER" ]; then
+                  echo "Closing linked issue #$ISSUE_NUMBER..."
+                  gh issue close "$ISSUE_NUMBER" --repo "$REPO" --comment "Auto-closed via validation loop."
+              fi
+          else
+              echo "[FAILURE] Violation: No changes detected in 'issues/' directory."
+              gh pr comment "$PR_URL" --body "**[FAILURE] Entropy Detected**: This PR does not include a corresponding Issue Definition in \`issues/\`.
+              **Action Required:**
+              This project requires continuous forward motion. This PR cannot be merged until a **new** issue definition is created for the next logical step.
+              **Agent Instructions:**
+              1. Analyze the changes in this PR.
+              2. Identify a logical follow-up task.
+              3. **Create a new file** in \`ISSUES/\` with the format \`ISSUES/$(date --iso)-{topic}.md\`.
+              4. The file must contain Title, Context, and Acceptance Criteria.
+              **Auto-merge is blocked until this new file is detected.**"
+              exit 1
+          fi

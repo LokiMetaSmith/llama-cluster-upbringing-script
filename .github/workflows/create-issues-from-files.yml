@@ -1,0 +1,86 @@
+name: Create Issues from Files
+on:
+  workflow_dispatch:
+  push: { paths: ["ISSUES/**", "issues/**"] }
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  create-issues:
+    runs-on: ubuntu-latest
+    permissions: { issues: write, contents: read }
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Create issues from ISSUES dir
+        env: { GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} }
+        shell: bash
+        run: |
+          # 0. ENSURE LABEL EXISTS
+          gh label create "auto-generated" \
+            --repo "$GITHUB_REPOSITORY" \
+            --description "Issues created from files" \
+            --color "ededed" || true
+
+          # 1. BATCH FETCH EXISTING ISSUES
+          echo "Fetching existing issues..."
+          gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --label "auto-generated" \
+            --state all \
+            --limit 1000 \
+            --json title \
+            --jq '.[].title' > existing_titles.txt
+
+          # 2. GENERATE SORTED FILE LIST (safe guard)
+          echo "Identifying and sorting files..."
+          files=$(find ISSUES issues -maxdepth 1 -name "*.md" -type f 2>/dev/null | sort -V || true)
+          if [ -z "$files" ]; then
+              echo "No markdown files found in ISSUES/ or issues/. Exiting gracefully."
+              exit 0
+          fi
+          printf "%s\n" "$files" > sorted_files.txt
+
+          # 3. LOOP THROUGH SORTED LIST
+          while IFS= read -r file; do
+              filename=$(basename "$file")
+              expected_title="Issue for $filename"
+              if grep -Fxq "$expected_title" existing_titles.txt; then
+                  echo "Skipping: $filename (exists)"
+                  continue
+              fi
+
+              echo "Creating issue for: $filename"
+              body_file=$(mktemp)
+              {
+                  echo "This issue was automatically created for file: \`$file\`."
+                  echo ""
+                  echo "### Content"
+                  echo "\`\`\`"
+                  cat "$file"
+                  echo ""
+                  echo "\`\`\`"
+                  echo ""
+                  echo "---"
+                  echo "### Directive: Recursive Task Generation"
+                  echo ""
+                  echo "**Context:** Every task MUST be analyzed for:"
+                  echo "- Dependencies (code, infra, configs)"
+                  echo "- Refactoring (duplication, naming, structure)"
+                  echo "- Extensions (tests, docs, automation)."
+                  echo ""
+                  echo "**Requirement:** Do not inline future work in comments. At least ONE follow-up issue MUST be created for every task, we can always improve something"
+                  echo ""
+                  echo "**Output Specification:**"
+                  echo "1. **Action:** Create one or more markdown files."
+                  echo "2. **Path:** \`ISSUES/<kebab-case-description>.md\`"
+                  echo "3. **Content:** Detailed technical scope and acceptance criteria."
+              } > "$body_file"
+
+              gh issue create \
+                --title "$expected_title" \
+                --body-file "$body_file" \
+                --label "auto-generated" \
+                --repo "$GITHUB_REPOSITORY"
+              sleep 2
+          done < sorted_files.txt

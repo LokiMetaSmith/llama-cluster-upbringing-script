@@ -1,0 +1,69 @@
+name: Jules Label Queue
+on:
+  issues: { types: [opened, labeled, closed, reopened] }
+  workflow_run: { workflows: ["Auto Merge and Close"], types: [completed] }
+  schedule: [{cron: '0 * * * *'}]
+jobs:
+  enforce-jules:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env: { GH_TOKEN: ${{ secrets.IMPERSONATION_PAT }}, MAX_RUNS: ${{ vars.JULES_MAX_DAILY_RUNS || '10' }} }
+    steps:
+      - name: Manage Jules Label
+        run: |
+          # 1. RATE LIMIT CHECK
+          SINCE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
+          RECENT_COUNT=$(gh search issues --repo "${{ github.repository }}" --label "jules" --updated ">$SINCE" --json number --jq 'length')
+          RECENT_COUNT=${RECENT_COUNT:-0}
+          echo "[INFO] Activity Monitor: $RECENT_COUNT issues processed in last 24h."
+
+          if [ "$RECENT_COUNT" -ge "$MAX_RUNS" ]; then
+             echo "[LIMIT] Daily limit of $MAX_RUNS reached. Sleeping until activity cools down."
+             exit 0
+          fi
+
+          # 2. CHECK ACTIVE ISSUE & STALL DETECTION
+          active=$(gh issue list --repo "${{ github.repository }}" --label "jules" --state open --json number,updatedAt --jq '.[0]')
+
+          if [ -n "$active" ]; then
+              issue_num=$(echo "$active" | jq '.number')
+              updated_at=$(echo "$active" | jq -r '.updatedAt')
+              echo "[INFO] Issue #$issue_num is currently active."
+
+              # Stall Detection (2 hours)
+              STALL_THRESHOLD=7200
+              current_time=$(date +%s)
+              last_update=$(date -d "$updated_at" +%s)
+              diff=$((current_time - last_update))
+
+              if [ "$diff" -gt "$STALL_THRESHOLD" ]; then
+                  echo "[WARNING] Issue #$issue_num has been stuck for $diff seconds."
+                  gh issue comment "$issue_num" --repo "${{ github.repository }}" \
+                    --body "[SYSTEM ALERT] This issue has held the 'jules' label for over 2 hours without closing. The automation pipeline may be stuck. Please investigate." || true
+              fi
+              echo "[INFO] Waiting for issue #$issue_num to be processed. Done."
+              exit 0
+          fi
+
+      - name: Evaluate Native Playbook Logs
+        run: |
+          RUN_ID=$(gh run list --workflow "Remote Verification" --limit 1 --json databaseId -q '.[0].databaseId')
+          if [ -n "$RUN_ID" ]; then
+            gh run download "$RUN_ID" --name execution-logs --dir ./remote_logs || true
+            if [ -f "./remote_logs/playbook_output.log" ] && grep -Ei "failed=[1-9]|unreachable=[1-9]|DEPLOYMENT_FAILED" ./remote_logs/playbook_output.log > /dev/null; then
+                ISSUE_NUM=$(gh issue list --label "jules" --state open --json number -q '.[0].number')
+                gh issue comment "$ISSUE_NUM" --body "### ❌ Cluster Playbook Failed\nIsolated remote run reported errors:\n\`\`\`text\n$(tail -n 25 ./remote_logs/playbook_output.log)\n\`\`\`"
+                exit 1
+            fi
+          fi
+
+      - name: Promote Next
+        run: |
+          next=$(gh issue list --repo "${{ github.repository }}" --state open --json number --jq 'min_by(.number).number')
+          if [ -n "$next" ]; then
+              echo "[ACTION] Promoting issue #$next to jules."
+              gh issue edit "$next" --repo "${{ github.repository }}" --add-label "jules"
+          else
+              echo "[INFO] No open issues available to tag."
+          fi
