@@ -45,6 +45,7 @@
         name: python_deps
       tags:
         - python_deps
+        - deploy_app
 
     - name: Run pre-Home Assistant application roles
       ansible.builtin.include_role:
