@@ -51,3 +51,9 @@
       when: consul_leader_status.skipped is not defined and (consul_leader_status.failed or consul_leader_status.content == '""') and not ansible_check_mode
       tags:
         - consul-health
+
+    - name: Remove temporary passwordless sudo for '{{ target_user }}'
+      become: yes
+      ansible.builtin.file:
+        path: "/etc/sudoers.d/ansible-{{ target_user }}-nopasswd"
+        state: absent
