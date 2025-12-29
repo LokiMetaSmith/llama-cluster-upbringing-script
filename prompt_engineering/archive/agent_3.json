@@ -1,0 +1,5 @@
+{
+  "rationale": "Grandchild agent, refining the first child's approach.",
+  "fitness": 0.9,
+  "parent": "agent_1"
+}
