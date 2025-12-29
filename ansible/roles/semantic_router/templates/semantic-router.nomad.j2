@@ -1,0 +1,51 @@
+job "semantic-router" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "router" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" {
+        static = {{ semantic_router_port }}
+      }
+    }
+
+    task "router-server" {
+      driver = "docker"
+
+      config {
+        image = "{{ semantic_router_image_name }}"
+        force_pull = false # We build it locally
+
+        ports = ["http"]
+
+        # Pass environment variables if needed for HuggingFace
+        # env = {
+        #   HF_TOKEN = "..."
+        # }
+      }
+
+      resources {
+        cpu    = 1000
+        memory = 2048 # Adjust as needed
+      }
+
+      service {
+        name = "semantic-router"
+        port = "http"
+        tags = ["router"]
+
+        check {
+          name     = "Semantic Router Health Check"
+          type     = "tcp"
+          port     = "http"
+          interval = "10s"
+          timeout  = "2s"
+          address_mode = "host"
+        }
+      }
+    }
+  }
+}

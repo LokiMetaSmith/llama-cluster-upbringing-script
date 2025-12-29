@@ -1,0 +1,6 @@
+# defaults/main.yaml
+semantic_router_port: 8000
+semantic_router_image_name: "semantic-router:latest"
+semantic_router_build_dir: "/opt/semantic_router"
+nomad_jobs_dir: "/opt/nomad/jobs"
+cluster_ip: "{{ ansible_default_ipv4.address }}"
