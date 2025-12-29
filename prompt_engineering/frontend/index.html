@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolutionary Tree</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            margin: 0;
+            height: 100vh;
+        }
+        #tree-container {
+            flex: 1;
+            overflow: auto;
+            border-right: 1px solid #ccc;
+        }
+        #details-panel {
+            width: 400px;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+        .node circle {
+            fill: #fff;
+            stroke: steelblue;
+            stroke-width: 3px;
+        }
+        .node text {
+            font: 12px sans-serif;
+        }
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 2px;
+        }
+        pre {
+            background-color: #eee;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div id="tree-container"></div>
+    <div id="details-panel">
+        <h2>Agent Details</h2>
+        <div id="details-content">
+            <p>Click on a node to see its details.</p>
+        </div>
+    </div>
+
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const width = document.getElementById('tree-container').clientWidth;
+            const height = document.getElementById('tree-container').clientHeight;
+
+            const fetchData = async () => {
+                try {
+                    const response = await fetch('/api/tree');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error("Error fetching data:", error);
+                    return null;
+                }
+            };
+
+            const rawData = await fetchData();
+            if (!rawData) {
+                document.getElementById('tree-container').innerHTML = '<p>Error loading data.</p>';
+                return;
+            }
+
+            const dataById = new Map(rawData.map(d => [d.id, {...d, children: []}]));
+            let root;
+            for (const node of dataById.values()) {
+                if (node.parent) {
+                    const parent = dataById.get(node.parent);
+                    if (parent) {
+                        parent.children.push(node);
+                    }
+                } else {
+                    root = node;
+                }
+            }
+
+            // If there's no root, create a dummy root and attach orphans
+            if (!root) {
+                root = { id: "root", children: [], rationale: "Root of the evolutionary tree." };
+                for (const node of dataById.values()) {
+                    if (!node.parent) {
+                        root.children.push(node);
+                    }
+                }
+            }
+
+
+            const tree = d3.tree().size([height, width - 160]);
+            const rootNode = d3.hierarchy(root);
+
+            const svg = d3.create("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("viewBox", [0, 0, width, height]);
+
+            const g = svg.append("g")
+                .attr("transform", `translate(80,0)`);
+
+            function update(source) {
+                const duration = 250;
+                const nodes = rootNode.descendants().reverse();
+                const links = rootNode.links();
+
+                tree(rootNode);
+
+                let left = rootNode;
+                let right = rootNode;
+                rootNode.eachBefore(node => {
+                    if (node.x < left.x) left = node;
+                    if (node.x > right.x) right = node;
+                });
+
+                const height = right.x - left.x + 100;
+
+                g.selectAll(".node")
+                    .data(nodes, d => d.id)
+                    .join("g")
+                    .attr("class", "node")
+                    .attr("transform", d => `translate(${d.y},${d.x})`)
+                    .on("click", (event, d) => {
+                        displayDetails(d.data);
+                    });
+
+                const node = g.selectAll(".node")
+                node.append("circle")
+                    .attr("r", 10);
+
+                node.append("text")
+                    .attr("dy", "0.31em")
+                    .attr("x", d => d.children ? -12 : 12)
+                    .attr("text-anchor", d => d.children ? "end" : "start")
+                    .text(d => d.data.id);
+
+                g.selectAll(".link")
+                    .data(links)
+                    .join("path")
+                    .attr("class", "link")
+                    .attr("d", d3.linkHorizontal()
+                        .x(d => d.y)
+                        .y(d => d.x));
+            }
+
+            update(rootNode);
+            document.getElementById('tree-container').append(svg.node());
+
+            function displayDetails(nodeData) {
+                const content = `
+                    <h3>${nodeData.id}</h3>
+                    <p><strong>Parent:</strong> ${nodeData.parent || 'None'}</p>
+                    <p><strong>Fitness:</strong> ${nodeData.fitness.toFixed(4)}</p>
+                    <p><strong>Rationale:</strong></p>
+                    <p>${nodeData.rationale}</p>
+                    <p><strong>Code:</strong></p>
+                    <pre>${nodeData.code}</pre>
+                `;
+                document.getElementById('details-content').innerHTML = content;
+            }
+        });
+    </script>
+</body>
+</html>

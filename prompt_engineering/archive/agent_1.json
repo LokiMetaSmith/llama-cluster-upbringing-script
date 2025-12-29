@@ -1,0 +1,5 @@
+{
+  "rationale": "First child agent, improving on the root.",
+  "fitness": 0.75,
+  "parent": "agent_0"
+}
