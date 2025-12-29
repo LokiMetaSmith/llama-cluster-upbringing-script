@@ -100,6 +100,32 @@
   become: yes
   notify: Restart nomad
 
+- name: Create Nomad system group
+  ansible.builtin.group:
+    name: nomad
+    system: yes
+    state: present
+  become: yes
+
+- name: Create Nomad system user
+  ansible.builtin.user:
+    name: nomad
+    group: nomad
+    system: yes
+    shell: /bin/false
+    home: "{{ nomad_data_dir }}"
+    create_home: no
+  become: yes
+
+- name: Create Nomad data directory
+  ansible.builtin.file:
+    path: "{{ nomad_data_dir }}"
+    state: directory
+    owner: nomad
+    group: nomad
+    mode: '0755'
+  become: yes
+
 - name: Create Nomad config directory
   ansible.builtin.file:
     path: /etc/nomad.d
@@ -113,8 +139,8 @@
   ansible.builtin.file:
     path: "{{ nomad_models_dir }}"
     state: directory
-    owner: root
-    group: root
+    owner: nomad
+    group: nomad
     mode: '0755'
   become: yes
 
@@ -122,8 +148,8 @@
   ansible.builtin.file:
     path: "{{ nomad_jobs_dir }}"
     state: directory
-    owner: root
-    group: root
+    owner: nomad
+    group: nomad
     mode: '0755'
   become: yes
 
@@ -262,8 +288,8 @@
   ansible.builtin.file:
     path: "{{ pipecat_app_dir }}"
     state: directory
-    owner: "{{ target_user | default('pipecatapp') }}"
-    group: "{{ target_user | default('pipecatapp') }}"
+    owner: "nomad"
+    group: "nomad"
     mode: '0755'
   become: yes
 
@@ -271,8 +297,8 @@
   ansible.builtin.file:
     path: "{{ nomad_volumes_dir }}"
     state: directory
-    owner: "{{ target_user | default('pipecatapp') }}"
-    group: "{{ target_user | default('pipecatapp') }}"
+    owner: "nomad"
+    group: "nomad"
     mode: '0755'
   become: yes
 
@@ -280,8 +306,8 @@
   ansible.builtin.file:
     path: "{{ nomad_volumes_dir }}/{{ item }}"
     state: directory
-    owner: "{{ target_user | default('pipecatapp') }}"
-    group: "{{ target_user | default('pipecatapp') }}"
+    owner: "nomad"
+    group: "nomad"
     mode: '0755'
   loop:
     - mqtt-data

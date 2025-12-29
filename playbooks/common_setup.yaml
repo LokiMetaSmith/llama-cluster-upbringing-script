@@ -42,12 +42,9 @@
         state: directory
         mode: '0755'
 
-    - name: Allow '{{ target_user }}' to have passwordless sudo access
+    - name: Remove passwordless sudo for '{{ target_user }}'
       tags:
         - sudo
-      ansible.builtin.lineinfile:
+      ansible.builtin.file:
         path: "/etc/sudoers.d/ansible-{{ target_user }}-nopasswd"
-        line: "{{ target_user }} ALL=(ALL) NOPASSWD: ALL"
-        create: yes
-        validate: 'visudo -cf %s'
-        mode: '0440'
+        state: absent
