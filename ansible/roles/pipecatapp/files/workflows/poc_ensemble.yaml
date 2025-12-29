@@ -1,0 +1,89 @@
+name: "PoC Ensemble Architecture"
+nodes:
+  - id: "Input"
+    type: "InputNode"
+    config:
+      outputs:
+        - "user_text"
+    inputs: []
+
+  - id: "Orchestrator"
+    type: "ExternalLLMNode"
+    config:
+      expert_id: "openai_gpt4" # Simulating Opus 4.5
+      system_prompt: |
+        You are the Main Driver and Delegator.
+        Analyze the user request and delegate tasks to the following specialists:
+        1. Architecture (GPT 5.2)
+        2. Documentation (Sonnet 4.5)
+        3. Frontend (Gemini 3)
+
+        Output a JSON plan with keys: "architecture_task", "docs_task", "frontend_task".
+    inputs:
+      - name: "messages"
+        connection:
+          from_node: "Input"
+          from_output: "user_text"
+
+  # Sub-agent: Architecture
+  - id: "Architect"
+    type: "ExternalLLMNode"
+    config:
+      expert_id: "openrouter_gpt5" # Simulating GPT 5.2
+    inputs:
+      - name: "messages"
+        connection:
+          from_node: "Orchestrator"
+          from_output: "response" # In a real scenario, we'd need a JSON parser node here to extract the specific task
+
+  # Sub-agent: Documentation
+  - id: "Librarian"
+    type: "ExternalLLMNode"
+    config:
+      expert_id: "openrouter_claude_sonnet" # Simulating Sonnet 4.5
+    inputs:
+      - name: "messages"
+        connection:
+          from_node: "Orchestrator"
+          from_output: "response"
+
+  # Sub-agent: Frontend
+  - id: "Designer"
+    type: "ExternalLLMNode"
+    config:
+      expert_id: "openrouter_gemini_flash" # Simulating Gemini 3
+    inputs:
+      - name: "messages"
+        connection:
+          from_node: "Orchestrator"
+          from_output: "response"
+
+  - id: "Synthesizer"
+    type: "SimpleLLMNode"
+    config:
+      system_prompt: "Combine the reports from the Architect, Librarian, and Designer into a cohesive response."
+    inputs:
+      - name: "architect_report"
+        connection:
+          from_node: "Architect"
+          from_output: "response"
+      - name: "docs_report"
+        connection:
+          from_node: "Librarian"
+          from_output: "response"
+      - name: "design_report"
+        connection:
+          from_node: "Designer"
+          from_output: "response"
+      - name: "user_text"
+        connection:
+            from_node: "Input"
+            from_output: "user_text"
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_output"
+        connection:
+          from_node: "Synthesizer"
+          from_output: "response"
