@@ -5,6 +5,7 @@ import asyncio
 import json
 import random
 import glob
+import difflib
 try:
     from . import promote_agent
 except ImportError:
@@ -36,7 +37,7 @@ def load_archive_metadata():
 
     return archive
 
-def select_parent(archive, selection_method="weighted", tournament_size=3):
+def select_parent(archive, selection_method="weighted", tournament_size=3, novelty_k=10):
     """
     Selects a parent from the archive based on the chosen strategy.
 
@@ -112,10 +113,62 @@ def select_parent(archive, selection_method="weighted", tournament_size=3):
                 return sorted_archive[i]
         return sorted_archive[-1]
 
+    # 5. Novelty Search
+    elif selection_method == "novelty":
+        if len(archive) <= 1:
+            return random.choice(archive)
+
+        # Memoize file reads to avoid redundant I/O
+        memoized_code = {}
+        def get_agent_code(agent):
+            path = agent.get('path')
+            if not path or path not in memoized_code:
+                try:
+                    with open(path, 'r') as f:
+                        memoized_code[path] = f.read()
+                except (FileNotFoundError, TypeError):
+                    memoized_code[path] = "" # Agent might not have a path yet
+            return memoized_code[path]
+
+        novelty_scores = []
+        for i, agent_i in enumerate(archive):
+            code_i = get_agent_code(agent_i)
+            distances = []
+            for j, agent_j in enumerate(archive):
+                if i == j:
+                    continue
+                code_j = get_agent_code(agent_j)
+
+                # Behavioral distance is 1 minus the similarity ratio from difflib
+                distance = 1.0 - difflib.SequenceMatcher(a=code_i, b=code_j).ratio()
+                distances.append(distance)
+
+            # Sort distances to find the nearest neighbors
+            distances.sort()
+
+            # The number of neighbors to consider (k) cannot be larger than the number of other agents
+            k = min(novelty_k, len(distances))
+
+            # Novelty is the average distance to the k-nearest neighbors
+            if k > 0:
+                novelty_score = sum(distances[:k]) / k
+            else:
+                novelty_score = 0.0 # Should not happen if len(archive) > 1
+
+            novelty_scores.append((agent_i, novelty_score))
+
+        # Select the agent with the highest novelty score
+        if not novelty_scores:
+            return random.choice(archive) # Fallback
+
+        best_agent = max(novelty_scores, key=lambda item: item[1])[0]
+        return best_agent
+
     # Default fallback
     return random.choice(archive)
 
-def select_parent_from_archive(selection_method="weighted", tournament_size=3):
+
+def select_parent_from_archive(selection_method="weighted", tournament_size=3, novelty_k=10):
     """Wrapper function to maintain backward compatibility and orchestrate selection."""
     archive = load_archive_metadata()
 
@@ -126,7 +179,9 @@ def select_parent_from_archive(selection_method="weighted", tournament_size=3):
         )
         return initial_program_path, None
 
-    selected_agent = select_parent(archive, selection_method, tournament_size)
+    selected_agent = select_parent(
+        archive, selection_method, tournament_size, novelty_k
+    )
 
     # Calculate fitness for logging
     fitness = selected_agent.get("fitness", 0.0)
@@ -137,7 +192,7 @@ def select_parent_from_archive(selection_method="weighted", tournament_size=3):
     return selected_agent['path'], selected_agent['id']
 
 
-async def run_evolution(test_case_path=None, auto_promote=False, selection_method="weighted", tournament_size=3):
+async def run_evolution(test_case_path=None, auto_promote=False, selection_method="weighted", tournament_size=3, novelty_k=10):
     """Initializes and runs the OpenEvolve algorithm with a DGM-style archive."""
     # Ensure API key is set
     if not os.environ.get("OPENAI_API_KEY"):
@@ -150,7 +205,9 @@ async def run_evolution(test_case_path=None, auto_promote=False, selection_metho
             os.environ["DYNAMIC_TEST_CASE_PATH"] = os.path.abspath(test_case_path)
 
         # 1. Select parent from archive
-        initial_program_path, parent_id = select_parent_from_archive(selection_method, tournament_size)
+        initial_program_path, parent_id = select_parent_from_archive(
+            selection_method, tournament_size, novelty_k
+        )
 
         if not os.path.exists(initial_program_path):
             raise FileNotFoundError(f"Parent program file not found at {initial_program_path}")
@@ -233,7 +290,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--selection-method",
-        choices=["weighted", "tournament", "random", "power_law"],
+        choices=["weighted", "tournament", "random", "power_law", "novelty"],
         default="weighted",
         help="Strategy for selecting the parent from the archive."
     )
@@ -243,11 +300,18 @@ if __name__ == "__main__":
         default=3,
         help="Number of candidates to compare in tournament selection (k). Larger k = higher selection pressure."
     )
+    parser.add_argument(
+        "--novelty-k",
+        type=int,
+        default=10,
+        help="Number of nearest neighbors to compare against for novelty search."
+    )
     args = parser.parse_args()
 
     asyncio.run(run_evolution(
         test_case_path=args.test_case,
         auto_promote=args.auto_promote,
         selection_method=args.selection_method,
-        tournament_size=args.tournament_size
+        tournament_size=args.tournament_size,
+        novelty_k=args.novelty_k,
     ))
