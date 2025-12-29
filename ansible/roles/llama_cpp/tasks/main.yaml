@@ -118,6 +118,12 @@
         remote_src: yes
       loop: "{{ llama_artifacts.files | rejectattr('path', 'match', '.*\\.so(\\..+)?$') | list }}"
 
+    - name: Verify rpc-server binary integrity
+      ansible.builtin.stat:
+        path: "/usr/local/bin/rpc-server"
+      register: rpc_server_binary_stat
+      failed_when: "rpc_server_binary_stat.stat.size == 0"
+
     - name: Install shared libraries to /usr/local/lib
       ansible.builtin.copy:
         src: "{{ item.path }}"
