@@ -116,6 +116,7 @@ class Memorizer:
 
         self.last_processed_id = 0
         self.lightweight_memory = "No history yet."
+        self.conn = None
 
         self._load_state()
 
@@ -178,19 +179,35 @@ class Memorizer:
                 "page_ids_list": self.page_ids_list # Persist list order
             }, f)
 
-    def _fetch_new_events(self):
+    def _get_db_connection(self):
+        if self.conn:
+            return self.conn
+
         if not os.path.exists(self.db_path):
-            if not hasattr(self, '_db_warned'):
-                logger.warning(f"Database not found at {self.db_path}")
-                self._db_warned = True
+            return None
+
+        try:
+            # check_same_thread=False allows using the connection from different threads
+            # (which happens because we run in ThreadPoolExecutor)
+            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            return self.conn
+        except Exception as e:
+            logger.error(f"Failed to connect to DB: {e}")
+            return None
+
+    def _fetch_new_events(self):
+        conn = self._get_db_connection()
+        if not conn:
+            if not os.path.exists(self.db_path):
+                if not hasattr(self, '_db_warned'):
+                    logger.warning(f"Database not found at {self.db_path}")
+                    self._db_warned = True
             return []
 
         try:
-            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute("SELECT id, timestamp, kind, content FROM events WHERE id > ? ORDER BY id ASC LIMIT 50", (self.last_processed_id,))
             rows = cursor.fetchall()
-            conn.close()
             return rows
         except Exception as e:
             logger.error(f"DB Read Error: {e}")
