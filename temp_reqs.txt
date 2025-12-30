@@ -1,3 +1,4 @@
+
 torch
 torchvision
 torchaudio
@@ -28,6 +29,7 @@ piper-tts
 playwright
 python-consul2
 python-dotenv
+pyvips
 pyvips-binary
 pyyaml
 RealtimeSTT
@@ -36,8 +38,7 @@ sentence-transformers
 langchain
 setuptools
 soundfile
-spacy>=3.8.0
-thinc>=8.3.0
+spacy
 tenacity
 ultralytics
 uvicorn
