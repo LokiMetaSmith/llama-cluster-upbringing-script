@@ -32,7 +32,8 @@ webrtcvad
 requests
 sentence-transformers
 soundfile
-spacy
+spacy>=3.8.0
+thinc>=8.3.0
 ultralytics
 uvicorn
 websockets
