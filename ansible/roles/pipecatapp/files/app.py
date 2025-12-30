@@ -665,12 +665,21 @@ class TwinService(FrameProcessor):
             workflow_runner = WorkflowRunner("workflows/default_agent_loop.yaml", runner_id=request_id)
             active_workflows.add_runner(request_id, workflow_runner)
 
+            # Retrieve external experts config from env
+            external_experts_config_str = os.getenv("EXTERNAL_EXPERTS_CONFIG", "{}")
+            try:
+                external_experts_config = json.loads(external_experts_config_str)
+            except json.JSONDecodeError:
+                external_experts_config = {}
+                logging.warning("Failed to parse EXTERNAL_EXPERTS_CONFIG JSON.")
+
             global_inputs = {
                 "user_text": frame.text,
                 "tools_dict": self.tools,
                 "tool_result": None, # Start with no tool result
                 "consul_http_addr": self.consul_http_addr,
-                "twin_service": self
+                "twin_service": self,
+                "external_experts_config": external_experts_config
             }
 
             for _ in range(10): # Allow up to 10 steps in the thought process
