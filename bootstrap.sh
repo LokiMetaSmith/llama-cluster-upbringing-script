@@ -508,6 +508,32 @@ for i in "${!PLAYBOOKS[@]}"; do
         sleep 10
     fi
 
+    # --- Resource Management: Cleanup between Model Services and Core AI Services ---
+    if [[ "$playbook_path" == *"core_ai_services.yaml"* ]]; then
+        echo "🧹 Performing pre-Core AI Services cleanup to free RAM..."
+
+        # Stop llamacpp-rpc jobs left over from model_services.yaml (benchmarking/speedtest)
+        if command -v nomad &> /dev/null; then
+            echo "Stopping any running llamacpp-rpc jobs..."
+            # Using raw Nomad command to target wildcard jobs if possible, or iterating
+            # Since wildcard stop isn't standard in all Nomad versions, we list and stop.
+            nomad job status | awk '/llamacpp-rpc/ {print $1}' | while read -r job_id; do
+                if [ -n "$job_id" ]; then
+                    echo "Stopping job: $job_id"
+                    nomad job stop -purge "$job_id" >/dev/null
+                fi
+            done
+        fi
+
+        # Drop filesystem caches to free reclaimable memory
+        echo "Dropping filesystem caches..."
+        sync
+        echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+
+        echo "RAM status after cleanup:"
+        free -h
+    fi
+
     COMMAND=("$ANSIBLE_PLAYBOOK_EXEC" -i local_inventory.ini "$playbook_path" "${ANSIBLE_ARGS[@]}")
 
     if [ "$DEBUG_MODE" = true ]; then
