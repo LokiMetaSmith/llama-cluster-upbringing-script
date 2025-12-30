@@ -2,6 +2,7 @@ import sqlite3
 import json
 import time
 import hashlib
+import asyncio
 from typing import Dict, Any, Optional, List
 
 class PMMMemory:
@@ -78,8 +79,8 @@ class PMMMemory:
         hasher.update(json.dumps(payload, sort_keys=True).encode('utf-8'))
         return hasher.hexdigest()
 
-    def add_event(self, kind: str, content: str, meta: Optional[Dict[str, Any]] = None) -> None:
-        """Adds a new event to the memory ledger.
+    def add_event_sync(self, kind: str, content: str, meta: Optional[Dict[str, Any]] = None) -> None:
+        """Adds a new event to the memory ledger synchronously.
 
         Args:
             kind (str): The type of event (e.g., 'user_message', 'assistant_message').
@@ -99,8 +100,20 @@ class PMMMemory:
         """, (timestamp, kind, content, json.dumps(meta), prev_hash, event_hash))
         self.conn.commit()
 
-    def get_events(self, kind: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
-        """Retrieves the most recent events from the ledger.
+    async def add_event(self, kind: str, content: str, meta: Optional[Dict[str, Any]] = None) -> None:
+        """Adds a new event to the memory ledger asynchronously.
+
+        Args:
+            kind (str): The type of event (e.g., 'user_message', 'assistant_message').
+            content (str): The content of the event.
+            meta (Optional[Dict[str, Any]], optional): Additional metadata.
+                Defaults to None.
+        """
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self.add_event_sync, kind, content, meta)
+
+    def get_events_sync(self, kind: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """Retrieves the most recent events from the ledger synchronously.
 
         Args:
             kind (Optional[str], optional): The type of events to retrieve.
@@ -127,6 +140,21 @@ class PMMMemory:
                 "meta": json.loads(row[4])
             })
         return list(reversed(events))
+
+    async def get_events(self, kind: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """Retrieves the most recent events from the ledger asynchronously.
+
+        Args:
+            kind (Optional[str], optional): The type of events to retrieve.
+                If None, retrieves all kinds. Defaults to None.
+            limit (int, optional): The maximum number of events to retrieve.
+                Defaults to 10.
+
+        Returns:
+            A list of dictionaries, where each dictionary represents an event.
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.get_events_sync, kind, limit)
 
     def close(self):
         """Closes the database connection."""
