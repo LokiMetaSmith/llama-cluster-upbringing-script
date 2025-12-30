@@ -40,7 +40,7 @@ class TaskSupervisor:
         # We want all 'worker_started' and 'worker_result' events.
         # Optimization: In a real system, we'd use a cursor/timestamp to only get new events.
         # For now, we fetch last 100 events.
-        events = self.memory.get_events(limit=100)
+        events = await self.memory.get_events(limit=100)
 
         # Process events to update state
         for event in reversed(events): # Process chronological order

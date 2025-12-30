@@ -691,7 +691,7 @@ class TwinService(FrameProcessor):
                 if final_response:
                     logging.info(f"Workflow produced final response: {final_response}")
                     await self._send_response(final_response)
-                    self.long_term_memory.add_event(kind="assistant_message", content=final_response)
+                    await self.long_term_memory.add_event(kind="assistant_message", content=final_response)
                     self.short_term_memory.append(f"Assistant: {final_response}")
                     return # End the loop
 
