@@ -315,6 +315,23 @@
     - world_model_storage
   become: yes
 
+- name: Check if Nomad is active
+  ansible.builtin.command: systemctl is-active nomad
+  register: nomad_active
+  failed_when: false
+  changed_when: false
+  check_mode: no
+
+- name: Force kill stuck Nomad processes
+  ansible.builtin.shell: "pkill -9 nomad || true"
+  become: yes
+  when: nomad_active.rc != 0
+
+- name: Reset Nomad service failure state
+  ansible.builtin.command: systemctl reset-failed nomad
+  become: yes
+  when: nomad_active.rc != 0
+
 - name: Start and enable Nomad service
   ansible.builtin.systemd:
     name: nomad
