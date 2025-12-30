@@ -3,6 +3,30 @@ import os
 import subprocess
 import time
 import requests
+import yaml
+
+def load_llm_config():
+    """Loads and constructs the LLM configuration from Ansible vars files.
+
+    Returns:
+        dict: The configuration dictionary for the LLM.
+    """
+    config = {}
+    try:
+        # Load external experts config
+        with open('group_vars/external_experts.yaml', 'r') as f:
+            ext_experts = yaml.safe_load(f)
+            config = ext_experts['external_experts_config']['openai_gpt4']
+
+        # Load API key from all.yaml
+        with open('group_vars/all.yaml', 'r') as f:
+            all_vars = yaml.safe_load(f)
+            config['api_key_plaintext'] = all_vars.get('openai_api_key')
+
+        return config
+    except (IOError, KeyError, yaml.YAMLError) as e:
+        print(f"Error loading LLM config: {e}")
+        return None
 
 def run_playbook(playbook_path, extra_vars=None):
     """Executes an Ansible playbook as a subprocess.
@@ -87,6 +111,10 @@ def main():
     """
     failed_jobs_file = "failed_jobs.json"
 
+    # Load LLM config once at startup
+    llm_config = load_llm_config()
+    llm_config_json = json.dumps(llm_config) if llm_config else None
+
     while True:
         print("\n--- Starting new health check cycle ---")
 
@@ -126,7 +154,11 @@ def main():
                 continue
 
             # 4. Reflect on the failure to get a solution
-            solution_json = run_script("reflection/reflect.py", [diagnostics_file])
+            script_args = [diagnostics_file]
+            if llm_config_json:
+                script_args.extend(["--llm-config", llm_config_json])
+
+            solution_json = run_script("reflection/reflect.py", script_args)
             if not solution_json:
                 print(f"Could not get a healing solution for {job_id}. Skipping.")
                 cleanup_files([diagnostics_file])

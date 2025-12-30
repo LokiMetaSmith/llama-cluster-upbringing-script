@@ -4,16 +4,21 @@ import sys
 import os
 import requests
 import yaml
+import argparse
 
 # Global cache for LLM configuration
 LLM_CONFIG = None
 
-def load_llm_config():
-    """Loads and caches the LLM configuration from the main Ansible vars file.
+def load_llm_config(config_dict=None):
+    """Loads and caches the LLM configuration.
 
-    This function reads `group_vars/all.yaml` to find the configuration
-    for the external expert (OpenAI GPT-4), which is used for reflection.
-    It caches the result in a global variable to avoid repeated file reads.
+    If a configuration dictionary is provided, it is used directly.
+    Otherwise, it attempts to read `group_vars/external_experts.yaml` and `group_vars/all.yaml`
+    to find the configuration for the external expert (OpenAI GPT-4).
+    It caches the result in a global variable.
+
+    Args:
+        config_dict (dict, optional): A dictionary containing the pre-loaded configuration.
 
     Returns:
         dict: The configuration dictionary for the LLM, or None if the
@@ -23,16 +28,32 @@ def load_llm_config():
     if LLM_CONFIG:
         return LLM_CONFIG
 
-    config_path = os.path.join(os.path.dirname(__file__), '..', 'group_vars/all.yaml')
+    if config_dict:
+        LLM_CONFIG = config_dict
+        return LLM_CONFIG
+
+    # Fallback to file reading if no config passed
+    # TODO: This fallback logic can be removed once all callers (e.g., adaptation_manager.py)
+    # are updated to pass the configuration via command line arguments.
+    base_dir = os.path.join(os.path.dirname(__file__), '..')
     try:
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-            LLM_CONFIG = config['external_experts_config']['openai_gpt4']
-            # Also load the plaintext key from the same file as a fallback
-            LLM_CONFIG['api_key_plaintext'] = config.get('openai_api_key')
-            return LLM_CONFIG
+        # Load external experts config
+        experts_path = os.path.join(base_dir, 'group_vars/external_experts.yaml')
+        with open(experts_path, 'r') as f:
+            ext_experts = yaml.safe_load(f)
+            config = ext_experts['external_experts_config']['openai_gpt4']
+
+        # Load API key from all.yaml
+        all_vars_path = os.path.join(base_dir, 'group_vars/all.yaml')
+        with open(all_vars_path, 'r') as f:
+            all_vars = yaml.safe_load(f)
+            config['api_key_plaintext'] = all_vars.get('openai_api_key')
+
+        LLM_CONFIG = config
+        return LLM_CONFIG
+
     except (IOError, yaml.YAMLError, KeyError) as e:
-        print(f"Error loading LLM config from {config_path}: {e}", file=sys.stderr)
+        print(f"Error loading LLM config from files: {e}", file=sys.stderr)
         return None
 
 def call_openai_llm(messages, reasoning_config=None):
@@ -199,14 +220,23 @@ def main():
     process. The final proposed solution from the LLM is printed to standard
     output as a JSON string.
     """
-    if len(sys.argv) < 2:
-        print("Usage: python reflect.py <path_to_diagnostic_file>", file=sys.stderr)
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Analyze a failed job's diagnostic data using an LLM.")
+    parser.add_argument("diagnostic_file", help="Path to the JSON diagnostic file.")
+    parser.add_argument("--llm-config", help="JSON string containing LLM configuration.", default=None)
 
-    diagnostic_file_path = sys.argv[1]
+    args = parser.parse_args()
+
+    # Pre-load config if provided
+    if args.llm_config:
+        try:
+            config_dict = json.loads(args.llm_config)
+            load_llm_config(config_dict)
+        except json.JSONDecodeError as e:
+            print(f"Error parsing LLM config argument: {e}", file=sys.stderr)
+            # Proceed, load_llm_config will fall back to files
 
     try:
-        with open(diagnostic_file_path, 'r') as f:
+        with open(args.diagnostic_file, 'r') as f:
             diagnostic_data = json.load(f)
 
         solution = analyze_failure_with_llm(diagnostic_data)
