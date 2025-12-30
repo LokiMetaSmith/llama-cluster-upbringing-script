@@ -52,18 +52,21 @@ class LLMClient:
         self.consul_port = consul_port
         self.service_name = service_name
         self.base_url = None
+        self.client = httpx.AsyncClient(timeout=60.0)
+
+    async def close(self):
+        await self.client.aclose()
 
     async def discover(self):
         url = f"http://{self.consul_host}:{self.consul_port}/v1/health/service/{self.service_name}?passing"
         try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(url)
-                if resp.status_code == 200:
-                    services = resp.json()
-                    if services:
-                        svc = services[0]['Service']
-                        self.base_url = f"http://{svc['Address']}:{svc['Port']}/v1"
-                        logger.info(f"Discovered LLM at {self.base_url}")
+            resp = await self.client.get(url)
+            if resp.status_code == 200:
+                services = resp.json()
+                if services:
+                    svc = services[0]['Service']
+                    self.base_url = f"http://{svc['Address']}:{svc['Port']}/v1"
+                    logger.info(f"Discovered LLM at {self.base_url}")
         except Exception as e:
             logger.error(f"Service discovery failed: {e}")
 
@@ -76,18 +79,17 @@ class LLMClient:
             return "Error: LLM Service Unavailable"
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                resp = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    json={
-                        "model": "gpt-3.5-turbo", # Placeholder model name
-                        "messages": [{"role": "user", "content": prompt}],
-                        "temperature": temperature
-                    }
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                return data['choices'][0]['message']['content']
+            resp = await self.client.post(
+                f"{self.base_url}/chat/completions",
+                json={
+                    "model": "gpt-3.5-turbo", # Placeholder model name
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": temperature
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return data['choices'][0]['message']['content']
         except Exception as e:
             logger.error(f"LLM Call failed: {e}")
             return f"Error generating response: {e}"
@@ -441,6 +443,11 @@ async def startup():
 
     asyncio.create_task(memorizer_instance.process_loop())
     logger.info(f"Archivist started on port {PORT}")
+
+@app.on_event("shutdown")
+async def shutdown():
+    if researcher_instance and researcher_instance.llm_client:
+        await researcher_instance.llm_client.close()
 
 @app.post("/research")
 async def research_endpoint(req: DeepResearchRequest):
