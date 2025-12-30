@@ -15,3 +15,33 @@
   retries: 30
   delay: 15
   when: not ansible_check_mode
+  ignore_errors: true
+
+- name: Debug Nomad failure
+  when: not ansible_check_mode and nomad_api_status.failed
+  block:
+    - name: Get Nomad service status
+      ansible.builtin.command: systemctl status nomad --no-pager
+      register: nomad_status
+      failed_when: false
+      changed_when: false
+      become: yes
+
+    - name: Display Nomad service status
+      ansible.builtin.debug:
+        var: nomad_status.stdout_lines
+
+    - name: Get last 50 lines of Nomad logs
+      ansible.builtin.command: journalctl -u nomad --no-pager -n 50
+      register: nomad_logs
+      failed_when: false
+      changed_when: false
+      become: yes
+
+    - name: Display Nomad logs
+      ansible.builtin.debug:
+        var: nomad_logs.stdout_lines
+
+    - name: Fail with helpful message
+      ansible.builtin.fail:
+        msg: "Nomad failed to restart. Check the logs above."
