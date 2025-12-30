@@ -47,11 +47,6 @@ wheel
 pylint
 llm-sandbox[docker]
 rank_bm25
-fastapi
-uvicorn
-python-consul2
 aiohttp
-faiss-cpu
-sentence-transformers
 opencode-ai
 pydantic

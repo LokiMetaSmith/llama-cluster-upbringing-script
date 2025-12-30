@@ -72,6 +72,14 @@
   tags:
     - deploy_app
 
+- name: Verify llm_sandbox installation
+  ansible.builtin.command:
+    cmd: "/opt/pipecatapp/venv/bin/python3 -c 'import llm_sandbox'"
+  become: yes
+  become_user: "{{ target_user }}"
+  tags:
+    - deploy_app
+
 - name: Clean up pip build directory
   ansible.builtin.file:
     path: /var/tmp/ansible_pip_build
