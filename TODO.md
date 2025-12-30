@@ -2,6 +2,10 @@
 
 ## Immediate Actions
 
+- [ ] **Read and evaluate VLLM project findings:**
+  - Read `docs/VLLM_PROJECT_EVALUATION.md` to understand the potential of Semantic Router, GuideLLM, and vLLM Omni.
+  - Decide on the implementation timeline for `semantic_router` and `guidellm`.
+
 ## Prompt Engineering Enhancements
 
 - [x] **Implement Automated Testing for `prompt_engineering`:**

@@ -1,0 +1,48 @@
+# tasks/main.yaml
+
+- name: Create build directory
+  ansible.builtin.file:
+    path: "{{ semantic_router_build_dir }}"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Template Dockerfile
+  ansible.builtin.template:
+    src: Dockerfile.j2
+    dest: "{{ semantic_router_build_dir }}/Dockerfile"
+    mode: '0644'
+  become: yes
+  register: dockerfile_status
+
+- name: Build Semantic Router Docker Image
+  ansible.builtin.command:
+    cmd: "docker build -t {{ semantic_router_image_name }} ."
+    chdir: "{{ semantic_router_build_dir }}"
+  become: yes
+  when: dockerfile_status.changed or force_rebuild | default(false)
+
+- name: Ensure Nomad jobs directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_jobs_dir }}"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Template Semantic Router Nomad job
+  ansible.builtin.template:
+    src: semantic-router.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/semantic-router.nomad"
+    mode: '0644'
+  become: yes
+  register: job_template
+
+- name: Run Semantic Router Nomad job
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job run "{{ nomad_jobs_dir }}/semantic-router.nomad"
+  environment:
+    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+  register: nomad_job_run_result
+  changed_when: "'Job registration successful' in nomad_job_run_result.stdout"
+  failed_when: nomad_job_run_result.rc != 0 and 'Job registration successful' not in nomad_job_run_result.stdout
+  become: yes

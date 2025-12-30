@@ -6,10 +6,30 @@
   changed_when: false
   failed_when: false
 
+- name: Check for AMD GPU (ROCm)
+  ansible.builtin.shell: rocm-smi
+  register: rocm_smi_result
+  changed_when: false
+  failed_when: false
+  when: nvidia_smi_result.rc != 0
+
+- name: Determine GPU Type
+  ansible.builtin.set_fact:
+    vllm_gpu_type: "{{ 'nvidia' if nvidia_smi_result.rc == 0 else ('amd' if (rocm_smi_result is defined and rocm_smi_result.rc == 0) else 'none') }}"
+
+- name: Set vLLM Docker Image for NVIDIA
+  ansible.builtin.set_fact:
+    vllm_docker_image: "vllm/vllm-openai:latest"
+  when: vllm_gpu_type == 'nvidia'
+
+- name: Set vLLM Docker Image for AMD
+  ansible.builtin.set_fact:
+    vllm_docker_image: "vllm/vllm-openai:latest-rocm"
+  when: vllm_gpu_type == 'amd'
+
 - name: Debug GPU status
   ansible.builtin.debug:
-    msg: "GPU detected: {{ nvidia_smi_result.rc == 0 }}. vLLM will be deployed."
-  when: nvidia_smi_result.rc == 0
+    msg: "GPU detected: {{ vllm_gpu_type }}. vLLM image: {{ vllm_docker_image | default('None') }}"
 
 - name: Deploy vLLM
   block:
@@ -25,4 +45,4 @@
       loop: "{{ vllm_expert_models }}"
       loop_control:
         loop_var: model_item
-  when: nvidia_smi_result.rc == 0
+  when: vllm_gpu_type != 'none'

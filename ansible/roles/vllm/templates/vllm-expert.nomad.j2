@@ -16,19 +16,45 @@ job "{{ job_name }}" {
       source    = "{{ nomad_models_dir }}/vllm/{{ model_folder_name }}"
     }
 
+    {% if vllm_gpu_type == 'amd' %}
+    # Mount AMD GPU devices
+    volume "kfd" {
+      type      = "host"
+      read_only = false
+      source    = "/dev/kfd"
+    }
+    volume "dri" {
+      type      = "host"
+      read_only = false
+      source    = "/dev/dri"
+    }
+    {% endif %}
+
     task "vllm-server" {
       driver = "docker"
 
       config {
-        image = "vllm/vllm-openai:latest"
+        image = "{{ vllm_docker_image }}"
 
-        # This is critical for GPU access in Docker
+        {% if vllm_gpu_type == 'nvidia' %}
+        # Nvidia GPU access
         device_requests = [
           {
             count = -1 # All
             capabilities = [["gpu"]]
           }
         ]
+        {% elif vllm_gpu_type == 'amd' %}
+        # AMD GPU access requires privileged mode or specific cap_adds and device mounts
+        # For simplicity and robustness with ROCm containers, we often use privileged or cap_add
+        cap_add = ["SYS_PTRACE"]
+        security_opt = ["seccomp=unconfined"]
+        ipc_mode = "host"
+        group_add = ["video"]
+
+        # Mapping devices via volumes/mounts is handled below in volume_mount
+        # Nomad docker driver 'devices' block is an alternative but volume mounts work reliably for /dev nodes
+        {% endif %}
 
         # Shared memory size might need to be increased for large models
         shm_size = "2g" # Adjust as needed
@@ -47,6 +73,19 @@ job "{{ job_name }}" {
           destination = "/model"
           read_only   = true
         }
+
+        {% if vllm_gpu_type == 'amd' %}
+        volume_mount {
+          volume      = "kfd"
+          destination = "/dev/kfd"
+          read_only   = false
+        }
+        volume_mount {
+          volume      = "dri"
+          destination = "/dev/dri"
+          read_only   = false
+        }
+        {% endif %}
       }
 
       resources {
