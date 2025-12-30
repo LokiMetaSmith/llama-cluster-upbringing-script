@@ -14,6 +14,42 @@ const server = new McpServer({
   version: '1.0.0',
 });
 
+let ws: WebSocket | null = null;
+let connectionPromise: Promise<WebSocket> | null = null;
+
+function getWebSocket(): Promise<WebSocket> {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    return Promise.resolve(ws);
+  }
+
+  if (connectionPromise) {
+    return connectionPromise;
+  }
+
+  connectionPromise = new Promise((resolve, reject) => {
+    const socket = new WebSocket('ws://localhost:8000/ws');
+
+    socket.on('open', () => {
+      ws = socket;
+      connectionPromise = null;
+      resolve(socket);
+    });
+
+    socket.on('error', (error) => {
+      if (connectionPromise) {
+        connectionPromise = null;
+        reject(error);
+      }
+    });
+
+    socket.on('close', () => {
+      ws = null;
+    });
+  });
+
+  return connectionPromise;
+}
+
 server.registerTool(
   'send_message',
   {
@@ -23,18 +59,11 @@ server.registerTool(
     }).shape,
   },
   async ({ message }) => {
-    const ws = new WebSocket('ws://localhost:8000/ws');
+    const socket = await getWebSocket();
 
-    await new Promise((resolve, reject) => {
-      ws.on('open', () => {
-        ws.send(JSON.stringify({ type: 'user_message', data: message }));
-        ws.close();
-        resolve(void 0);
-      });
-      ws.on('error', (error) => {
-        reject(error);
-      });
-    });
+    // We don't wait for a response here as per original implementation,
+    // but we ensure the socket is open before sending.
+    socket.send(JSON.stringify({ type: 'user_message', data: message }));
 
     return {
       content: [
