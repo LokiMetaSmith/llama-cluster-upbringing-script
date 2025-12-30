@@ -18,15 +18,6 @@
     unique_models: "{{ all_models | unique(attribute='filename') }}"
 
   tasks:
-    - name: Deploy and run the GPU Provider Pool job for each Unique Model
-      include_tasks:
-        file: "{{ playbook_dir }}/../../ansible/tasks/deploy_model_gpu_provider.yaml"
-      loop: "{{ unique_models }}"
-      loop_control:
-        loop_var: model
-      tags:
-        - deploy-gpu-provider
-
     - name: Check for benchmark log file
       stat:
         path: /var/log/llama_benchmarks.jsonl
@@ -78,6 +69,22 @@
       when: benchmark_results is defined
       tags:
         - benchmark
+
+    - name: Set deployment candidates based on verification
+      ansible.builtin.set_fact:
+        deployment_candidates: "{{ (unique_models | selectattr('filename', 'in', successful_models) | list) if (successful_models is defined and successful_models | length > 0) else unique_models }}"
+      tags:
+        - benchmark
+        - deploy-gpu-provider
+
+    - name: Deploy and run the GPU Provider Pool job for verified models
+      include_tasks:
+        file: "{{ playbook_dir }}/../../ansible/tasks/deploy_model_gpu_provider.yaml"
+      loop: "{{ deployment_candidates }}"
+      loop_control:
+        loop_var: model
+      tags:
+        - deploy-gpu-provider
 
     - name: Identify verified experts by checking their models against benchmark results
       ansible.builtin.set_fact:
