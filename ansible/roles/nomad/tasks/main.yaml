@@ -124,6 +124,7 @@
     owner: nomad
     group: nomad
     mode: '0755'
+    recurse: yes
   become: yes
 
 - name: Create Nomad config directory
@@ -142,6 +143,7 @@
     owner: nomad
     group: nomad
     mode: '0755'
+    recurse: yes
   become: yes
 
 - name: Create Nomad jobs directory
@@ -151,6 +153,7 @@
     owner: nomad
     group: nomad
     mode: '0755'
+    recurse: yes
   become: yes
 
 - name: Fetch Consul management token
@@ -291,6 +294,7 @@
     owner: "nomad"
     group: "nomad"
     mode: '0755'
+    recurse: yes
   become: yes
 
 - name: Create Nomad volumes directory before service setup
@@ -300,6 +304,7 @@
     owner: "nomad"
     group: "nomad"
     mode: '0755'
+    recurse: yes
   become: yes
 
 - name: Create subdirectories for Nomad volumes
@@ -309,6 +314,7 @@
     owner: "nomad"
     group: "nomad"
     mode: '0755'
+    recurse: yes
   loop:
     - mqtt-data
     - ha-config
