@@ -268,7 +268,7 @@ The project contains two distinct long-term memory systems: a MemoryStore for co
 
 When building a Docker image with Ansible, ensure the application files are copied into the image via the Dockerfile. Do not use redundant artifact blocks in the corresponding Nomad job file to load the same files.
 
-When refactoring a module or class, it is critical to also update all the code that calls it to match the new interface (e.g., constructor arguments). Failure to do so will result in runtime errors.
+When refactoring a module or class, it is crucial to also update all the code that calls it to match the new interface (e.g., constructor arguments). Failure to do so will result in runtime errors.
 
 In Nomad job files for locally-built Docker images, do not use force_pull = true, as it may cause failures by trying to pull from a remote registry. Rely on specific image tags for updates.
 
@@ -517,3 +517,5 @@ Ansible pipelining is disabled in ansible.cfg (pipelining = False) to avoid priv
 The main Ansible playbook (playbook.yaml) requires the target_user variable to be defined.
 
 End-to-end tests are defined in the e2e-tests.yaml Ansible playbook.
+
+When refactoring a persistence layer from a simple file-based JSON dump (O(N) writes) to a database like SQLite, it is critical to ensure that any auxiliary in-memory structures (like a list of keys mapping to external index offsets) are also persisted or deterministically reconstructible. For example, replacing a JSON dump of `{id: page}` with a SQLite table breaks the implicit ordering that might be used to map FAISS vector indices to Page IDs. The restoration logic must guarantee that the in-memory list matches the on-disk FAISS index order, either by persisting the list explicitly (e.g., in `state.json`) or by using a deterministic database query (e.g., `ORDER BY timestamp ASC`) if insertion order is strictly guaranteed.
