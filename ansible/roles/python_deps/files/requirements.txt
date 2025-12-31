@@ -46,6 +46,8 @@ websockets
 wheel
 pylint
 llm-sandbox[docker]
+kubernetes
+podman
 rank_bm25
 aiohttp
 opencode-ai
