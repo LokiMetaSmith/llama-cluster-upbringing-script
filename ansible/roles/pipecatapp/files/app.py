@@ -682,6 +682,8 @@ class TwinService(FrameProcessor):
                 "external_experts_config": external_experts_config
             }
 
+            previous_tool_calls = []
+
             for _ in range(10): # Allow up to 10 steps in the thought process
                 workflow_result = await workflow_runner.run(global_inputs)
 
@@ -697,9 +699,28 @@ class TwinService(FrameProcessor):
 
                 if tool_call:
                     logging.info(f"Workflow produced tool call: {tool_call}")
-                    # The tool is executed within the workflow, so we just need to
-                    # grab the result and feed it back into the next iteration.
-                    global_inputs["tool_result"] = workflow_result.get("tool_result")
+
+                    # Detect Loops
+                    tool_name = tool_call.get("name")
+                    tool_args = tool_call.get("arguments", {})
+                    # Normalize args to ensure consistent string representation
+                    try:
+                        tool_args_str = json.dumps(tool_args, sort_keys=True)
+                    except Exception:
+                        tool_args_str = str(tool_args)
+
+                    current_signature = (tool_name, tool_args_str)
+                    previous_tool_calls.append(current_signature)
+
+                    # Check if the last 3 calls are identical
+                    if len(previous_tool_calls) >= 3 and all(c == current_signature for c in previous_tool_calls[-3:]):
+                        logging.warning("Loop detected in tool calls. Injecting system alert.")
+                        global_inputs["tool_result"] = "SYSTEM ALERT: You have called this tool with these exact arguments 3 times in a row. Please change your strategy or ask the user for help."
+                    else:
+                        # The tool is executed within the workflow, so we just need to
+                        # grab the result and feed it back into the next iteration.
+                        global_inputs["tool_result"] = workflow_result.get("tool_result")
+
                     # Continue the loop
                 else:
                     # This case should not be reached if the workflow is designed correctly
