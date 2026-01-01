@@ -21,4 +21,6 @@ else
 fi
 
 echo "Starting Archivist Service from $TARGET_SCRIPT"
-exec python3 "$TARGET_SCRIPT"
+# Use uvicorn CLI to start the service to avoid port binding issues and ensure clean signal handling
+cd "$(dirname "$TARGET_SCRIPT")"
+exec uvicorn archivist_service:app --host 0.0.0.0 --port ${ARCHIVIST_PORT:-8008}
