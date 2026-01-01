@@ -106,6 +106,7 @@
     system: yes
     state: present
   become: yes
+  notify: Restart nomad
 
 - name: Create Nomad system user
   ansible.builtin.user:
@@ -118,6 +119,7 @@
     home: "{{ nomad_data_dir }}"
     create_home: no
   become: yes
+  notify: Restart nomad
 
 - name: Create Nomad data directory
   ansible.builtin.file:
