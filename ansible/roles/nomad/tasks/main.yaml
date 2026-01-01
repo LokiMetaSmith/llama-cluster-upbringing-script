@@ -111,6 +111,8 @@
   ansible.builtin.user:
     name: nomad
     group: nomad
+    groups: docker
+    append: yes
     system: yes
     shell: /bin/false
     home: "{{ nomad_data_dir }}"
