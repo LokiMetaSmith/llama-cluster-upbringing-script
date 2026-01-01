@@ -27,7 +27,7 @@ class Challenger:
         """
         # Try to discover base_url from environment if not provided
         if not base_url:
-            base_url = os.getenv("LLAMA_API_URL", "http://localhost:8080/v1")
+            base_url = os.getenv("LLAMA_API_URL", "http://localhost:8081/v1")
 
         self.client = OpenAI(base_url=base_url, api_key=api_key)
         self.model = model

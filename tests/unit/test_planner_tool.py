@@ -34,7 +34,7 @@ async def test_discover_llm_url_fallback(planner_tool):
 
     # Mock fallback to default
     url = await planner_tool._discover_llm_url()
-    assert url == "http://localhost:8080/v1"
+    assert url == "http://localhost:8081/v1"
 
 @pytest.mark.asyncio
 async def test_call_llm_success(planner_tool):

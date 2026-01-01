@@ -17,7 +17,7 @@ job "model-benchmark-{{ model_filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
         args = [
           "--model", "/opt/nomad/models/llm/{{ model_filename }}",
           "--host", "127.0.0.1",
-          "--port", "8080",
+          "--port", "8081",
           "--n-gpu-layers", "99",
           "--mlock",
           "--benchmark"

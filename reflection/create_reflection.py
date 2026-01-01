@@ -10,7 +10,7 @@ def create_reflection():
     """
     log_file_path = "aid_e_log.txt"
     reflection_output_path = "reflection/daily_reflection.md"
-    llama_cpp_url = "http://localhost:8080/completion"
+    llama_cpp_url = "http://localhost:8081/completion"
 
     # 1. Read the log file
     try:
