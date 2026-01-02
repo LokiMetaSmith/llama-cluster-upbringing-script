@@ -63,10 +63,28 @@ class SimpleLLMNode(Node):
     """A simple LLM node with configurable model tiers."""
     async def execute(self, context: WorkflowContext):
         # 1. Gather Inputs
-        messages = self.get_input(context, "messages")
+        messages = None
+        # Check if 'messages' is a configured input
+        if any(i["name"] == "messages" for i in self.config.get("inputs", [])):
+             messages = self.get_input(context, "messages")
+
         if not messages:
-            # Fallback to constructing messages from user_text if raw messages aren't provided
-            user_text = self.get_input(context, "user_text") or "Hello"
+            # Fallback to constructing messages from user_text or other inputs
+            user_text = ""
+            if any(i["name"] == "user_text" for i in self.config.get("inputs", [])):
+                 user_text = self.get_input(context, "user_text") or ""
+
+            # Aggregate other inputs (e.g. reports)
+            for input_config in self.config.get("inputs", []):
+                 name = input_config["name"]
+                 if name not in ["messages", "user_text", "reasoning"]:
+                     val = self.get_input(context, name)
+                     if val:
+                         user_text += f"\n\n{name.replace('_', ' ').title()}:\n{val}"
+
+            if not user_text:
+                user_text = "Hello"
+
             system_prompt = self.config.get("system_prompt", "You are a helpful assistant.")
             messages = [
                 {"role": "system", "content": system_prompt},
@@ -112,7 +130,11 @@ class SimpleLLMNode(Node):
                         }
 
                         # Check for reasoning config in input or self.config
-                        reasoning_config = self.get_input(context, "reasoning") or self.config.get("reasoning")
+                        reasoning_config = None
+                        if any(i["name"] == "reasoning" for i in self.config.get("inputs", [])):
+                            reasoning_config = self.get_input(context, "reasoning")
+                        reasoning_config = reasoning_config or self.config.get("reasoning")
+
                         if reasoning_config:
                             # Standard OpenRouter/OpenAI 'reasoning' parameter or 'extra_body'
                             # Some backends expect it in 'extra_body', others top-level (OpenRouter unified)

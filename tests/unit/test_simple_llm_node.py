@@ -8,6 +8,7 @@ sys.modules["pipecat.services.openai"] = MagicMock()
 sys.modules["pipecat.services.openai.llm"] = MagicMock()
 
 import unittest
+import os
 from unittest.mock import AsyncMock, patch
 # Now we can import
 from ansible.roles.pipecatapp.files.workflow.nodes.llm_nodes import SimpleLLMNode
@@ -69,7 +70,8 @@ class TestSimpleLLMNode(unittest.IsolatedAsyncioTestCase):
             MockClient.return_value.__aenter__.return_value = mock_client_instance
 
             mock_consul_resp = MagicMock()
-            mock_consul_resp.json.return_value = [{"Service": {"Address": "10.0.0.5", "Port": 8081}}]
+            port = int(os.getenv("ROUTER_PORT", 8081))
+            mock_consul_resp.json.return_value = [{"Service": {"Address": "10.0.0.5", "Port": port}}]
             mock_client_instance.get.return_value = mock_consul_resp
 
             mock_llm_resp = MagicMock()

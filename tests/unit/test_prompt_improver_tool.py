@@ -24,8 +24,9 @@ class TestPromptImproverTool(unittest.TestCase):
 
         # Mock discovery response
         mock_discovery_response = MagicMock()
+        port = int(os.getenv("ROUTER_PORT", 8081))
         mock_discovery_response.json.return_value = [{
-            'Service': {'Address': '127.0.0.1', 'Port': 8081}
+            'Service': {'Address': '127.0.0.1', 'Port': port}
         }]
         mock_discovery_response.raise_for_status = MagicMock()
 

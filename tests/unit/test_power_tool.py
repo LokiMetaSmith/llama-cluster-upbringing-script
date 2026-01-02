@@ -27,7 +27,8 @@ def test_set_idle_threshold_for_new_service(mock_file, mock_exists, power_tool):
         return False
     mock_exists.side_effect = exists_side_effect
 
-    result = power_tool.set_idle_threshold(service_port=8081, idle_seconds=300)
+    port = int(os.getenv("ROUTER_PORT", 8081))
+    result = power_tool.set_idle_threshold(service_port=port, idle_seconds=300)
 
     assert "Successfully set idle threshold" in result
 
@@ -38,7 +39,7 @@ def test_set_idle_threshold_for_new_service(mock_file, mock_exists, power_tool):
 
     expected_json = {
         "monitored_services": {
-            "8081": {
+            str(port): {
                 "idle_threshold_seconds": 300
             }
         }
@@ -49,16 +50,17 @@ def test_set_idle_threshold_for_new_service(mock_file, mock_exists, power_tool):
 @patch('builtins.open', new_callable=mock_open)
 def test_set_idle_threshold_for_existing_service(mock_file, mock_exists, power_tool):
     """Test updating an idle threshold for an existing service."""
+    port = int(os.getenv("ROUTER_PORT", 8081))
     initial_config = {
         "monitored_services": {
-            "8081": {"idle_threshold_seconds": 100},
+            str(port): {"idle_threshold_seconds": 100},
             "9090": {"idle_threshold_seconds": 200}
         }
     }
 
     m = mock_open(read_data=json.dumps(initial_config))
     with patch('builtins.open', m):
-        result = power_tool.set_idle_threshold(service_port=8081, idle_seconds=500)
+        result = power_tool.set_idle_threshold(service_port=port, idle_seconds=500)
 
         assert "Successfully set idle threshold" in result
 
@@ -67,18 +69,20 @@ def test_set_idle_threshold_for_existing_service(mock_file, mock_exists, power_t
         written_data = "".join(call.args[0] for call in handle.write.call_args_list)
         written_json = json.loads(written_data)
 
-        assert written_json["monitored_services"]["8081"]["idle_threshold_seconds"] == 500
+        assert written_json["monitored_services"][str(port)]["idle_threshold_seconds"] == 500
         assert written_json["monitored_services"]["9090"]["idle_threshold_seconds"] == 200
 
 @patch('os.path.exists', return_value=False)
 def test_config_directory_not_found(mock_exists, power_tool):
     """Test the error case where the config directory doesn't exist."""
-    result = power_tool.set_idle_threshold(service_port=8081, idle_seconds=300)
+    port = int(os.getenv("ROUTER_PORT", 8081))
+    result = power_tool.set_idle_threshold(service_port=port, idle_seconds=300)
     assert "Error: Power manager config directory not found" in result
 
 @patch('os.path.exists', return_value=True)
 @patch('builtins.open', side_effect=IOError("Permission denied"))
 def test_file_io_error(mock_file, mock_exists, power_tool):
     """Test handling of an IOError during file operations."""
-    result = power_tool.set_idle_threshold(service_port=8081, idle_seconds=300)
+    port = int(os.getenv("ROUTER_PORT", 8081))
+    result = power_tool.set_idle_threshold(service_port=port, idle_seconds=300)
     assert "An error occurred while setting the power policy: Permission denied" in result
