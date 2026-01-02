@@ -9,6 +9,19 @@
   tags:
     - consul_configure
 
+- name: Wait for Consul to stop if cleanup requested
+  become: true
+  ansible.builtin.shell: "pgrep consul"
+  register: consul_pid
+  until: consul_pid.rc != 0
+  retries: 10
+  delay: 2
+  failed_when: false
+  changed_when: false
+  when: cleanup_services | default(false) | bool
+  tags:
+    - consul_configure
+
 - name: Remove Consul data directory if cleanup requested
   become: true
   ansible.builtin.file:
@@ -118,19 +131,13 @@
 # Task 9: Generate certificates on localhost (from original file)
 - name: Generate certificates on localhost
   block:
-    - name: Clean up previous temporary certificate directory
-      become: yes
-      ansible.builtin.file:
-        path: "{{ consul_temp_cert_dir }}"
-        state: absent
-
     - name: Ensure openssl is installed on localhost
       become: yes
       ansible.builtin.package:
         name: openssl
         state: present
 
-    - name: Create local certs directory
+    - name: Ensure local certs directory exists
       become: yes
       ansible.builtin.file:
         path: "{{ consul_temp_cert_dir }}"
@@ -147,6 +154,28 @@
       args:
         creates: "{{ consul_temp_cert_dir }}/ca.pem"
 
+    # Server Certs
+    - name: Generate OpenSSL config for server nodes
+      ansible.builtin.copy:
+        dest: "{{ consul_temp_cert_dir }}/{{ item }}.cnf"
+        content: |
+          [req]
+          distinguished_name = req_distinguished_name
+          req_extensions = v3_req
+          prompt = no
+          [req_distinguished_name]
+          CN = server.consul
+          [v3_req]
+          keyUsage = keyEncipherment, dataEncipherment
+          extendedKeyUsage = serverAuth, clientAuth
+          subjectAltName = @alt_names
+          [alt_names]
+          DNS.1 = server.consul
+          DNS.2 = localhost
+          IP.1 = 127.0.0.1
+          IP.2 = {{ hostvars[item]['cluster_ip'] }}
+      loop: "{{ groups['controller_nodes'] }}"
+
     - name: Generate server keys for controller nodes
       ansible.builtin.command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
       args:
@@ -154,16 +183,38 @@
       loop: "{{ groups['controller_nodes'] }}"
 
     - name: Generate server CSRs for controller nodes
-      ansible.builtin.command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=server.consul'"
+      ansible.builtin.command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -config {{ consul_temp_cert_dir }}/{{ item }}.cnf"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.csr"
       loop: "{{ groups['controller_nodes'] }}"
 
     - name: Sign server certificates for controller nodes
-      ansible.builtin.command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
+      ansible.builtin.command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365 -extfile {{ consul_temp_cert_dir }}/{{ item }}.cnf -extensions v3_req"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.pem"
       loop: "{{ groups['controller_nodes'] }}"
+
+    # Client Certs
+    - name: Generate OpenSSL config for client nodes
+      ansible.builtin.copy:
+        dest: "{{ consul_temp_cert_dir }}/{{ item }}.cnf"
+        content: |
+          [req]
+          distinguished_name = req_distinguished_name
+          req_extensions = v3_req
+          prompt = no
+          [req_distinguished_name]
+          CN = client.consul
+          [v3_req]
+          keyUsage = keyEncipherment, dataEncipherment
+          extendedKeyUsage = clientAuth, serverAuth
+          subjectAltName = @alt_names
+          [alt_names]
+          DNS.1 = client.consul
+          DNS.2 = localhost
+          IP.1 = 127.0.0.1
+          IP.2 = {{ hostvars[item]['cluster_ip'] }}
+      loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
 
     - name: Generate client keys for client nodes
       ansible.builtin.command: "openssl genrsa -out {{ consul_temp_cert_dir }}/{{ item }}.key 2048"
@@ -172,16 +223,17 @@
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
 
     - name: Generate client CSRs for client nodes
-      ansible.builtin.command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -subj '/CN=client.consul'"
+      ansible.builtin.command: "openssl req -new -key {{ consul_temp_cert_dir }}/{{ item }}.key -out {{ consul_temp_cert_dir }}/{{ item }}.csr -config {{ consul_temp_cert_dir }}/{{ item }}.cnf"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.csr"
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
 
     - name: Sign client certificates for client nodes
-      ansible.builtin.command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365"
+      ansible.builtin.command: "openssl x509 -req -in {{ consul_temp_cert_dir }}/{{ item }}.csr -CA {{ consul_temp_cert_dir }}/ca.pem -CAkey {{ consul_temp_cert_dir }}/ca.key -CAcreateserial -out {{ consul_temp_cert_dir }}/{{ item }}.pem -days 365 -extfile {{ consul_temp_cert_dir }}/{{ item }}.cnf -extensions v3_req"
       args:
         creates: "{{ consul_temp_cert_dir }}/{{ item }}.pem"
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
+
   delegate_to: localhost
   run_once: true
   tags:
@@ -248,6 +300,7 @@
     - name: Wait for Consul API to be ready
       ansible.builtin.uri:
         url: "http://{{ advertise_ip }}:{{ consul_http_port }}/v1/status/leader"
+        validate_certs: no
       register: consul_status
       until: consul_status.status == 200
       retries: 30
@@ -274,13 +327,3 @@
 
 - name: Include ACL tasks
   include_tasks: acl.yaml
-
-# Task 16: Clean up temporary certificate directory
-- name: Clean up temporary certificate directory
-  ansible.builtin.file:
-    path: "{{ consul_temp_cert_dir }}"
-    state: absent
-  delegate_to: localhost
-  run_once: true
-  tags:
-    - consul_configure
