@@ -1,3 +1,23 @@
+# Task 0: Cleanup previous installation if requested
+- name: Stop Consul if cleanup requested
+  become: true
+  ansible.builtin.systemd:
+    name: consul
+    state: stopped
+  when: cleanup_services | default(false) | bool
+  ignore_errors: yes
+  tags:
+    - consul_configure
+
+- name: Remove Consul data directory if cleanup requested
+  become: true
+  ansible.builtin.file:
+    path: "{{ consul_data_dir }}"
+    state: absent
+  when: cleanup_services | default(false) | bool
+  tags:
+    - consul_configure
+
 # Task 1: Install unzip (from user snippet)
 - name: Install unzip
   become: true
@@ -224,12 +244,27 @@
   meta: flush_handlers
 
 - name: Wait for Consul API to be ready
-  ansible.builtin.uri:
-    url: "http://{{ advertise_ip }}:{{ consul_http_port }}/v1/status/leader"
-  register: consul_status
-  until: consul_status.status == 200
-  retries: 30
-  delay: 5
+  block:
+    - name: Wait for Consul API to be ready
+      ansible.builtin.uri:
+        url: "http://{{ advertise_ip }}:{{ consul_http_port }}/v1/status/leader"
+      register: consul_status
+      until: consul_status.status == 200
+      retries: 30
+      delay: 5
+  rescue:
+    - name: Fetch Consul service logs
+      ansible.builtin.shell: journalctl -u consul.service -n 50 --no-pager
+      register: consul_logs
+      ignore_errors: true
+
+    - name: Display Consul service logs
+      ansible.builtin.debug:
+        var: consul_logs.stdout_lines
+
+    - name: Fail task
+      ansible.builtin.fail:
+        msg: "Consul API failed to become ready. See logs above."
 
 - name: Wait for Consul to be ready before ACL bootstrap
   ansible.builtin.wait_for:
