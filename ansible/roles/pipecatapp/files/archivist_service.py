@@ -9,6 +9,7 @@ import faiss
 import numpy as np
 import pickle
 from typing import List, Dict, Optional, Any
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
@@ -23,7 +24,11 @@ logger = logging.getLogger("Archivist")
 # --- Configuration ---
 DB_PATH = os.getenv("DB_PATH", os.path.expanduser("~/.config/pipecat/pypicat_memory.db"))
 INDEX_DIR = os.getenv("INDEX_DIR", os.path.expanduser("~/.config/pipecat/archivist_data"))
-PORT = int(os.getenv("ARCHIVIST_PORT", 8008))
+
+if not os.getenv("ARCHIVIST_PORT"):
+    raise ValueError("ARCHIVIST_PORT environment variable must be set")
+PORT = int(os.getenv("ARCHIVIST_PORT"))
+
 CONSUL_HOST = os.getenv("CONSUL_HOST", "127.0.0.1")
 CONSUL_PORT = int(os.getenv("CONSUL_PORT", 8500))
 LLAMA_API_SERVICE_NAME = os.getenv("LLAMA_API_SERVICE_NAME", "llamacpp-rpc-api")
@@ -542,12 +547,11 @@ class Researcher:
 
 # --- App Setup ---
 
-app = FastAPI(title="Archivist Service", version="1.0")
 memorizer_instance: Optional[Memorizer] = None
 researcher_instance: Optional[Researcher] = None
 
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global memorizer_instance, researcher_instance
 
     llm = LLMClient(CONSUL_HOST, CONSUL_PORT, LLAMA_API_SERVICE_NAME)
@@ -557,10 +561,12 @@ async def startup():
     asyncio.create_task(memorizer_instance.process_loop())
     logger.info(f"Archivist started on port {PORT}")
 
-@app.on_event("shutdown")
-async def shutdown():
+    yield
+
     if researcher_instance and researcher_instance.llm_client:
         await researcher_instance.llm_client.close()
+
+app = FastAPI(title="Archivist Service", version="1.0", lifespan=lifespan)
 
 @app.post("/research")
 async def research_endpoint(req: DeepResearchRequest):

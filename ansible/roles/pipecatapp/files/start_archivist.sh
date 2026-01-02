@@ -21,4 +21,10 @@ else
 fi
 
 echo "Starting Archivist Service from $TARGET_SCRIPT"
-exec python3 "$TARGET_SCRIPT"
+# Use uvicorn CLI to start the service to avoid port binding issues and ensure clean signal handling
+if [ -z "$ARCHIVIST_PORT" ]; then
+    echo "Error: ARCHIVIST_PORT is not set."
+    exit 1
+fi
+cd "$(dirname "$TARGET_SCRIPT")"
+exec uvicorn archivist_service:app --host 0.0.0.0 --port "$ARCHIVIST_PORT"
