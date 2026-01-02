@@ -18,6 +18,42 @@ server {
 
 client {
   enabled = true
+
+  host_volume "pipecatapp" {
+    path      = "{{ pipecat_app_dir }}"
+    read_only = false
+  }
+
+  # The "snd" volume is required for voice applications but will prevent
+  # Nomad from starting on machines without a sound device. It is commented
+  # out to allow for more flexible deployment. The pipecat job itself will
+  # still require this volume to be present on the target node.
+  {% if snd_device_stat.stat.exists %}
+  host_volume "snd" {
+    path      = "/dev/snd"
+    read_only = false
+  }
+  {% endif %}
+
+  host_volume "models" {
+    path      = "{{ nomad_models_dir }}"
+    read_only = true
+  }
+
+  host_volume "mqtt-data" {
+    path      = "{{ nomad_volumes_dir }}/mqtt-data"
+    read_only = false
+  }
+
+  host_volume "ha-config" {
+    path      = "{{ nomad_volumes_dir }}/ha-config"
+    read_only = false
+  }
+
+  host_volume "world_model_storage" {
+    path      = "{{ nomad_volumes_dir }}/world_model_storage"
+    read_only = false
+  }
 }
 
 consul {
