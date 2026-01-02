@@ -1,0 +1,28 @@
+- name: Create OpenWorkers Nomad job files
+  template:
+    src: "{{ item }}.nomad.j2"
+    dest: "{{ nomad_jobs_dir }}/{{ item }}.nomad"
+  loop:
+    - openworkers-infra
+    - openworkers-runners
+    - openworkers-bootstrap
+  notify: Run OpenWorkers jobs
+
+- name: Run OpenWorkers bootstrap job
+  nomad_job:
+    host: "{{ advertise_ip }}"
+    state: present
+    name: openworkers-bootstrap
+    timeout: 300
+  when: openworkers_enabled | bool
+
+- name: Run OpenWorkers services
+  nomad_job:
+    host: "{{ advertise_ip }}"
+    state: present
+    name: "{{ item }}"
+    timeout: 120
+  loop:
+    - openworkers-infra
+    - openworkers-runners
+  when: openworkers_enabled | bool

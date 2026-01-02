@@ -1,0 +1,6 @@
+- name: Run NATS job
+  nomad_job:
+    host: "{{ advertise_ip }}"
+    state: present
+    name: nats
+    timeout: 120

@@ -1,0 +1,33 @@
+job "openworkers-bootstrap" {
+  datacenters = ["dc1"]
+  type        = "batch"
+
+  group "bootstrap" {
+    count = 1
+
+    task "migrate" {
+      driver = "docker"
+
+      config {
+        image = "alpine/git"
+        command = "/bin/sh"
+        args = ["-c", "git clone https://github.com/openworkers/openworkers-cli.git /tmp/cli && apk add postgresql-client && until psql -h $POSTGRES_HOST -p $POSTGRES_PORT -U {{ postgres_user }} -d {{ postgres_db }} -c '\q'; do echo 'Waiting for Postgres...'; sleep 2; done && for f in /tmp/cli/migrations/*.sql; do psql -h $POSTGRES_HOST -p $POSTGRES_PORT -U {{ postgres_user }} -d {{ postgres_db }} -f $f; done"]
+      }
+
+      template {
+        data = <<EOH
+{{ range service "postgres" }}
+POSTGRES_HOST="{{ .Address }}"
+POSTGRES_PORT="{{ .Port }}"
+{{ end }}
+EOH
+        destination = "local/bootstrap.env"
+        env         = true
+      }
+
+      env {
+        PGPASSWORD = "{{ postgres_password }}"
+      }
+    }
+  }
+}

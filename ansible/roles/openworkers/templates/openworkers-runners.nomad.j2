@@ -1,0 +1,57 @@
+job "openworkers-runners" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "runner" {
+    count = 3
+
+    network {
+      port "http" {
+        to = 8080
+      }
+    }
+
+    service {
+      name     = "openworkers-runner"
+      port     = "http"
+      provider = "consul"
+
+      check {
+        name     = "Runner Health"
+        type     = "http"
+        path     = "/health"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "runner" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/openworkers/openworkers-runner:v0.7.3-v8"
+        ports = ["http"]
+      }
+
+      template {
+        data = <<EOH
+{{ range service "postgres" }}
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
+{{ end }}
+{{ range service "nats" }}
+NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
+{{ end }}
+EOH
+        destination = "local/runner.env"
+        env         = true
+      }
+
+      env {
+        RUST_LOG          = "openworkers_runtime=debug,openworkers_runner=debug"
+        postgres_user     = "{{ postgres_user }}"
+        postgres_password = "{{ postgres_password }}"
+        postgres_db       = "{{ postgres_db }}"
+      }
+    }
+  }
+}

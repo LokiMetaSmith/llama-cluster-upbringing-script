@@ -1,0 +1,221 @@
+job "openworkers-infra" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  # Postgate (HTTP proxy for Postgres)
+  group "postgate" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 6080
+      }
+    }
+
+    service {
+      name     = "postgate"
+      port     = "http"
+      provider = "consul"
+    }
+
+    task "postgate" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/openworkers/postgate:v0.1.2"
+        ports = ["http"]
+      }
+
+      template {
+        data = <<EOH
+{{ range service "postgres" }}
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
+{{ end }}
+EOH
+        destination = "local/postgres.env"
+        env         = true
+      }
+
+      env {
+        RUST_LOG                 = "postgate=info"
+        POSTGATE_HOST            = "0.0.0.0"
+        POSTGATE_PORT            = "6080"
+        POSTGATE_SKIP_MIGRATIONS = "true"
+        postgres_user            = "{{ postgres_user }}"
+        postgres_password        = "{{ postgres_password }}"
+        postgres_db              = "{{ postgres_db }}"
+      }
+    }
+  }
+
+  # OpenWorkers API
+  group "api" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 7000
+      }
+    }
+
+    service {
+      name     = "openworkers-api"
+      port     = "http"
+      provider = "consul"
+      tags     = ["urlprefix-/openworkers-api"]
+
+      check {
+        name     = "API Health"
+        type     = "http"
+        path     = "/api/health"
+        interval = "60s"
+        timeout  = "5s"
+      }
+    }
+
+    task "api" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/openworkers/openworkers-api:v1.1.7"
+        ports = ["http"]
+      }
+
+      template {
+        data = <<EOH
+{{ range service "postgres" }}
+POSTGRES_HOST="{{ .Address }}"
+POSTGRES_PORT="{{ .Port }}"
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
+{{ end }}
+
+{{ range service "nats" }}
+NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
+{{ end }}
+
+{{ range service "postgate" }}
+POSTGATE_URL="http://{{ .Address }}:{{ .Port }}"
+{{ end }}
+EOH
+        destination = "local/openworkers.env"
+        env         = true
+      }
+
+      env {
+        NODE_ENV             = "production"
+        POSTGRES_DB          = "{{ postgres_db }}"
+        POSTGRES_USER        = "{{ postgres_user }}"
+        POSTGRES_PASSWORD    = "{{ postgres_password }}"
+        postgres_user        = "{{ postgres_user }}"
+        postgres_password    = "{{ postgres_password }}"
+        postgres_db          = "{{ postgres_db }}"
+        POSTGATE_TOKEN       = "{{ postgate_token }}"
+        GITHUB_CLIENT_ID     = "{{ github_client_id }}"
+        GITHUB_CLIENT_SECRET = "{{ github_client_secret }}"
+        JWT_ACCESS_SECRET    = "{{ jwt_access_secret }}"
+        JWT_REFRESH_SECRET   = "{{ jwt_refresh_secret }}"
+      }
+    }
+  }
+
+  # OpenWorkers Scheduler
+  group "scheduler" {
+    count = 1
+
+    task "scheduler" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/openworkers/openworkers-scheduler:v0.1.3"
+      }
+
+      template {
+        data = <<EOH
+{{ range service "postgres" }}
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
+{{ end }}
+{{ range service "nats" }}
+NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
+{{ end }}
+EOH
+        destination = "local/scheduler.env"
+        env         = true
+      }
+
+      env {
+        RUST_LOG          = "openworkers_scheduler=info"
+        postgres_user     = "{{ postgres_user }}"
+        postgres_password = "{{ postgres_password }}"
+        postgres_db       = "{{ postgres_db }}"
+      }
+    }
+  }
+
+  # OpenWorkers Logs
+  group "logs" {
+    count = 1
+
+    task "logs" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/openworkers/openworkers-logs:v0.1.4"
+      }
+
+      template {
+        data = <<EOH
+{{ range service "postgres" }}
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
+{{ end }}
+{{ range service "nats" }}
+NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
+{{ end }}
+EOH
+        destination = "local/logs.env"
+        env         = true
+      }
+
+      env {
+        RUST_LOG          = "openworkers_logs=info"
+        postgres_user     = "{{ postgres_user }}"
+        postgres_password = "{{ postgres_password }}"
+        postgres_db       = "{{ postgres_db }}"
+      }
+    }
+  }
+
+  # OpenWorkers Dashboard
+  group "dashboard" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 80
+      }
+    }
+
+    service {
+      name     = "openworkers-dash"
+      port     = "http"
+      provider = "consul"
+      tags     = ["urlprefix-/openworkers-dash"]
+
+      check {
+        name     = "Dashboard Health"
+        type     = "http"
+        path     = "/"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "dashboard" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/openworkers/openworkers-dash:v1.1.13"
+        ports = ["http"]
+      }
+    }
+  }
+}

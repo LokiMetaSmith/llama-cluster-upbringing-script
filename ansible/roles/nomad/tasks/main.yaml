@@ -323,6 +323,7 @@
     - mqtt-data
     - ha-config
     - world_model_storage
+    - postgres_data
   become: yes
 
 - name: Check if Nomad is active

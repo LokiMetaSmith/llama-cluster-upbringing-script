@@ -1,0 +1,6 @@
+- name: Run Postgres job
+  nomad_job:
+    host: "{{ advertise_ip }}"
+    state: present
+    name: postgres
+    timeout: 120
