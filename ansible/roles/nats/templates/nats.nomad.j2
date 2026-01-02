@@ -7,12 +7,10 @@ job "nats" {
 
     network {
       port "client" {
-        static = 4222
-        to     = 4222
+        to = 4222
       }
       port "monitor" {
-        static = 8222
-        to     = 8222
+        to = 8222
       }
     }
 

@@ -7,8 +7,7 @@ job "openworkers-runners" {
 
     network {
       port "http" {
-        static = 8080
-        to     = 8080
+        to = 8080
       }
     }
 
@@ -34,10 +33,24 @@ job "openworkers-runners" {
         ports = ["http"]
       }
 
+      template {
+        data = <<EOH
+{{ range service "postgres" }}
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
+{{ end }}
+{{ range service "nats" }}
+NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
+{{ end }}
+EOH
+        destination = "local/runner.env"
+        env         = true
+      }
+
       env {
         RUST_LOG          = "openworkers_runtime=debug,openworkers_runner=debug"
-        DATABASE_URL      = "postgres://{{ postgres_user }}:{{ postgres_password }}@postgres.service.consul:5432/{{ postgres_db }}"
-        NATS_SERVERS      = "nats://nats.service.consul:4222"
+        postgres_user     = "{{ postgres_user }}"
+        postgres_password = "{{ postgres_password }}"
+        postgres_db       = "{{ postgres_db }}"
       }
     }
   }

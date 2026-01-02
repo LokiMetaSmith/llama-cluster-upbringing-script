@@ -3,8 +3,8 @@
     path: "{{ nomad_volumes_dir }}/postgres_data"
     state: directory
     mode: '0755'
-    owner: "{{ home_assistant_uid | default('568') }}"
-    group: "{{ home_assistant_gid | default('568') }}"
+    owner: "999"
+    group: "999"
 
 - name: Create Postgres Nomad job file
   template:
