@@ -1,5 +1,6 @@
 import pytest
 import json
+import os
 from unittest.mock import MagicMock, AsyncMock, patch
 from ansible.roles.pipecatapp.files.tools.planner_tool import PlannerTool
 
@@ -35,6 +36,17 @@ async def test_discover_llm_url_fallback(planner_tool):
     # Mock fallback to default
     url = await planner_tool._discover_llm_url()
     assert url == "http://localhost:8081/v1"
+
+@pytest.mark.asyncio
+async def test_discover_llm_url_env_var(planner_tool):
+    # Remove router_llm to trigger fallback
+    del planner_tool.twin_service.router_llm
+    planner_tool.twin_service.llm_base_url = None
+
+    # Mock env var
+    with patch.dict(os.environ, {"LLAMA_API_URL": "http://env-override:9999/v1"}):
+        url = await planner_tool._discover_llm_url()
+        assert url == "http://env-override:9999/v1"
 
 @pytest.mark.asyncio
 async def test_call_llm_success(planner_tool):

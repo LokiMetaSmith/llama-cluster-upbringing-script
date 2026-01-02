@@ -110,7 +110,7 @@ def run_inference(url, model, prompt, name):
 def main():
     parser = argparse.ArgumentParser(description="Compare Exo vs Llama.cpp performance")
     parser.add_argument("--exo-url", default="http://localhost:52415", help="URL for Exo API")
-    parser.add_argument("--llama-url", default="http://localhost:8081", help="URL for Llama.cpp API")
+    parser.add_argument("--llama-url", default=os.getenv("LLAMA_URL", "http://localhost:8081"), help="URL for Llama.cpp API")
     parser.add_argument("--exo-model", default="llama-3.2-1b", help="Model name for Exo")
     parser.add_argument("--llama-model", default="main", help="Model name for Llama.cpp (expert name)")
     parser.add_argument("--prompt", default="Write a Python function to implement Bubble Sort.", help="Prompt to test")
