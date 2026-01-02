@@ -137,11 +137,12 @@
         name: openssl
         state: present
 
-    - name: Ensure local certs directory exists
+    - name: Ensure local certs directory exists and is writable by user
       become: yes
       ansible.builtin.file:
         path: "{{ consul_temp_cert_dir }}"
         state: directory
+        owner: "{{ ansible_user_id }}"
         mode: '0755'
 
     - name: Generate CA key
@@ -239,12 +240,15 @@
   tags:
     - consul_configure
 
-- name: Set readable permissions on generated certs
-  ansible.builtin.file:
-    path: "{{ consul_temp_cert_dir }}"
-    state: directory
-    recurse: yes
-    mode: '0644'
+- name: Secure private keys on localhost
+  ansible.builtin.shell: "chmod 0600 {{ consul_temp_cert_dir }}/*.key"
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - consul_configure
+
+- name: Set public certificates to readable on localhost
+  ansible.builtin.shell: "chmod 0644 {{ consul_temp_cert_dir }}/*.pem {{ consul_temp_cert_dir }}/*.csr {{ consul_temp_cert_dir }}/*.cnf"
   delegate_to: localhost
   run_once: true
   tags:
