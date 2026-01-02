@@ -220,6 +220,9 @@
   tags:
     - consul_configure
 
+- name: Flush handlers to ensure Consul is ready
+  meta: flush_handlers
+
 - name: Wait for Consul API to be ready
   ansible.builtin.uri:
     url: "http://{{ advertise_ip }}:{{ consul_http_port }}/v1/status/leader"
@@ -227,9 +230,6 @@
   until: consul_status.status == 200
   retries: 30
   delay: 5
-
-- name: Flush handlers to ensure Consul is ready
-  meta: flush_handlers
 
 - name: Wait for Consul to be ready before ACL bootstrap
   ansible.builtin.wait_for:
