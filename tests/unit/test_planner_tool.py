@@ -35,7 +35,8 @@ async def test_discover_llm_url_fallback(planner_tool):
 
     # Mock fallback to default
     url = await planner_tool._discover_llm_url()
-    assert url == "http://localhost:8081/v1"
+    port = os.getenv("ROUTER_PORT", "8081")
+    assert url == f"http://localhost:{port}/v1"
 
 @pytest.mark.asyncio
 async def test_discover_llm_url_env_var(planner_tool):
