@@ -93,7 +93,7 @@ class TestPoCEnsemble(unittest.TestCase):
              mock_resp.status_code = 200
              mock_resp.raise_for_status = MagicMock()
              # Return fake service for SimpleLLMNode
-             mock_resp.json.return_value = [{"Service": {"Address": "127.0.0.1", "Port": 8080}}]
+             mock_resp.json.return_value = [{"Service": {"Address": "127.0.0.1", "Port": 8081}}]
              return mock_resp
 
         mock_client.get.side_effect = mock_get

@@ -60,7 +60,7 @@ async def main_async():
             if services:
                 svc = services[0]
                 addr = svc.get("ServiceAddress", "localhost")
-                port = svc.get("ServicePort", 8080) # Default likely 8080 for router
+                port = svc.get("ServicePort", int(os.getenv("ROUTER_PORT", 8081))) # Default likely 8081 for router
                 llm_base_url = f"http://{addr}:{port}/v1"
                 logger.info(f"Discovered LLM Service at {llm_base_url}")
     except Exception as e:

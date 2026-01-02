@@ -201,7 +201,7 @@ if [ "$USE_CONTAINER" = true ]; then
             echo "Configuring container as a new CONTROLLER."
             CONTAINER_ROLE="all"
             CONTAINER_CONTROLLER_IP="" # This will be set inside the container
-            DOCKER_RUN_CMD+=(-p 4646:4646 -p 8500:8500 -p 8080:8080 -p 8000:8000)
+            DOCKER_RUN_CMD+=(-p 4646:4646 -p 8500:8500 -p 8081:8081 -p 8000:8000)
         fi
 
         DOCKER_RUN_CMD+=("$IMAGE_NAME")

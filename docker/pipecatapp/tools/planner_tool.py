@@ -48,7 +48,7 @@ class PlannerTool:
             return llm_base_url
 
         # Final fallback
-        return "http://localhost:8080/v1"
+        return os.getenv("LLAMA_API_URL", "http://localhost:8081/v1")
 
     async def _call_llm(self, prompt: str) -> list:
         """Calls the LLM to generate a plan."""
