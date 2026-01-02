@@ -24,7 +24,11 @@ logger = logging.getLogger("Archivist")
 # --- Configuration ---
 DB_PATH = os.getenv("DB_PATH", os.path.expanduser("~/.config/pipecat/pypicat_memory.db"))
 INDEX_DIR = os.getenv("INDEX_DIR", os.path.expanduser("~/.config/pipecat/archivist_data"))
-PORT = int(os.getenv("ARCHIVIST_PORT", 8008))
+
+if not os.getenv("ARCHIVIST_PORT"):
+    raise ValueError("ARCHIVIST_PORT environment variable must be set")
+PORT = int(os.getenv("ARCHIVIST_PORT"))
+
 CONSUL_HOST = os.getenv("CONSUL_HOST", "127.0.0.1")
 CONSUL_PORT = int(os.getenv("CONSUL_PORT", 8500))
 LLAMA_API_SERVICE_NAME = os.getenv("LLAMA_API_SERVICE_NAME", "llamacpp-rpc-api")
