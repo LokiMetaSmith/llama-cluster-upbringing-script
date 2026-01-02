@@ -25,7 +25,7 @@ class TestPromptImproverTool(unittest.TestCase):
         # Mock discovery response
         mock_discovery_response = MagicMock()
         mock_discovery_response.json.return_value = [{
-            'Service': {'Address': '127.0.0.1', 'Port': 8080}
+            'Service': {'Address': '127.0.0.1', 'Port': 8081}
         }]
         mock_discovery_response.raise_for_status = MagicMock()
 
