@@ -10,6 +10,8 @@
     src: "{{ consul_temp_cert_dir }}/ca.pem"
     dest: "{{ consul_config_dir }}/ca.pem"
     mode: '0644'
+    owner: consul
+    group: consul
     remote_src: yes
   become: yes
   when: not ansible_check_mode or ca_cert_stat.stat.exists
@@ -19,6 +21,8 @@
     src: "{{ consul_temp_cert_dir }}/{{ inventory_hostname }}.{{ item.src }}"
     dest: "{{ consul_config_dir }}/{{ item.dest }}"
     mode: '0600'
+    owner: consul
+    group: consul
     remote_src: yes
   loop:
     - { src: 'pem', dest: 'cert.pem' }
