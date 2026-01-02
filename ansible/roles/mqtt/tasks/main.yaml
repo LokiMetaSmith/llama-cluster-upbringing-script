@@ -44,13 +44,22 @@
 - name: Flush handlers to ensure nomad is restarted and ready
   ansible.builtin.meta: flush_handlers
 
+- name: Check if mqtt job exists
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job status mqtt
+  environment:
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+  register: mqtt_job_check
+  failed_when: false
+  changed_when: false
+
 - name: Purge mqtt job
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job stop -purge mqtt
   environment:
     NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+  when: mqtt_job_check.rc == 0
   changed_when: true
-  ignore_errors: yes
 
 - name: Template mqtt Nomad job file
   ansible.builtin.template:

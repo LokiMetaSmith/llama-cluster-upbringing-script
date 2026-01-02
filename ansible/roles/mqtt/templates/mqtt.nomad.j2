@@ -8,12 +8,12 @@ job "mqtt" {
     network {
       mode = "bridge"
       port "mqtt" {
-        to     = {{ mqtt_port }}
-        static = {{ mqtt_port }}
+        to     = 1883
+        static = 1883
       }
       port "ws" {
-        to     = {{ mqtt_websocket_port }}
-        static = {{ mqtt_websocket_port }}
+        to     = 9001
+        static = 9001
       }
     }
 
