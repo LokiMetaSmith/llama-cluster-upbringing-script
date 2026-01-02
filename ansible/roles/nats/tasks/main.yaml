@@ -1,0 +1,5 @@
+- name: Create NATS Nomad job file
+  template:
+    src: nats.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/nats.nomad"
+  notify: Run NATS job

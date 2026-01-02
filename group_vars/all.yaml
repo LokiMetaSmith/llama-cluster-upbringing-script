@@ -147,6 +147,20 @@ experts:
 # Options: "debian" or "nixos". Defaults to "debian" for backward compatibility.
 pxe_os: "debian"
 
+# -- OpenWorkers Configuration --
+openworkers_enabled: true
+openworkers_api_port: 7000
+openworkers_dash_port: 8081  # Changed from 80 to avoid conflict
+postgate_port: 6080
+postgres_user: "openworkers"
+postgres_password: "change_me_in_prod"
+postgres_db: "openworkers"
+postgate_token: "pg_change_me_in_prod"
+github_client_id: "change_me"
+github_client_secret: "change_me"
+jwt_access_secret: "change_me"
+jwt_refresh_secret: "change_me"
+
 # -- NixOS PXE Server Variables --
 # These variables are only used if pxe_os is set to "nixos".
 

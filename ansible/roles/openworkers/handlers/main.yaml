@@ -1,0 +1,10 @@
+- name: Run OpenWorkers jobs
+  nomad_job:
+    host: "{{ advertise_ip }}"
+    state: present
+    name: "{{ item }}"
+    timeout: 120
+  loop:
+    - openworkers-infra
+    - openworkers-runners
+  when: openworkers_enabled | bool

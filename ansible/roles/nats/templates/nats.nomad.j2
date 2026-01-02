@@ -1,0 +1,49 @@
+job "nats" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "nats" {
+    count = 1
+
+    network {
+      port "client" {
+        static = 4222
+        to     = 4222
+      }
+      port "monitor" {
+        static = 8222
+        to     = 8222
+      }
+    }
+
+    service {
+      name     = "nats"
+      port     = "client"
+      provider = "consul"
+
+      check {
+        name     = "NATS Health"
+        type     = "http"
+        path     = "/healthz"
+        port     = "monitor"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "nats" {
+      driver = "docker"
+
+      config {
+        image = "nats:2.12.2-alpine3.22"
+        ports = ["client", "monitor"]
+        args  = ["-m", "8222"]
+      }
+
+      resources {
+        cpu    = 200
+        memory = 128
+      }
+    }
+  }
+}

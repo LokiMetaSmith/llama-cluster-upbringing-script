@@ -85,5 +85,10 @@ client {
     path      = "{{ nomad_volumes_dir }}/world_model_storage"
     read_only = false
   }
+
+  host_volume "postgres_data" {
+    path      = "{{ nomad_volumes_dir }}/postgres_data"
+    read_only = false
+  }
   
 }

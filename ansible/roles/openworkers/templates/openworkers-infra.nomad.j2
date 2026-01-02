@@ -1,0 +1,157 @@
+job "openworkers-infra" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  # Postgate (HTTP proxy for Postgres)
+  group "postgate" {
+    count = 1
+
+    network {
+      port "http" {
+        static = {{ postgate_port }}
+        to     = 6080
+      }
+    }
+
+    service {
+      name     = "postgate"
+      port     = "http"
+      provider = "consul"
+    }
+
+    task "postgate" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/openworkers/postgate:v0.1.2"
+        ports = ["http"]
+      }
+
+      env {
+        DATABASE_URL             = "postgres://{{ postgres_user }}:{{ postgres_password }}@postgres.service.consul:5432/{{ postgres_db }}"
+        RUST_LOG                 = "postgate=info"
+        POSTGATE_HOST            = "0.0.0.0"
+        POSTGATE_PORT            = "6080"
+        POSTGATE_SKIP_MIGRATIONS = "true"
+      }
+    }
+  }
+
+  # OpenWorkers API
+  group "api" {
+    count = 1
+
+    network {
+      port "http" {
+        static = {{ openworkers_api_port }}
+        to     = 7000
+      }
+    }
+
+    service {
+      name     = "openworkers-api"
+      port     = "http"
+      provider = "consul"
+      tags     = ["urlprefix-/openworkers-api"]
+
+      check {
+        name     = "API Health"
+        type     = "http"
+        path     = "/api/health"
+        interval = "60s"
+        timeout  = "5s"
+      }
+    }
+
+    task "api" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/openworkers/openworkers-api:v1.1.7"
+        ports = ["http"]
+      }
+
+      env {
+        NODE_ENV             = "production"
+        POSTGRES_HOST        = "postgres.service.consul"
+        POSTGRES_PORT        = "5432"
+        POSTGRES_DB          = "{{ postgres_db }}"
+        POSTGRES_USER        = "{{ postgres_user }}"
+        POSTGRES_PASSWORD    = "{{ postgres_password }}"
+        DATABASE_URL         = "postgres://{{ postgres_user }}:{{ postgres_password }}@postgres.service.consul:5432/{{ postgres_db }}"
+        NATS_SERVERS         = "nats://nats.service.consul:4222"
+        POSTGATE_URL         = "http://postgate.service.consul:6080"
+        POSTGATE_TOKEN       = "{{ postgate_token }}"
+        GITHUB_CLIENT_ID     = "{{ github_client_id }}"
+        GITHUB_CLIENT_SECRET = "{{ github_client_secret }}"
+        JWT_ACCESS_SECRET    = "{{ jwt_access_secret }}"
+        JWT_REFRESH_SECRET   = "{{ jwt_refresh_secret }}"
+      }
+    }
+  }
+
+  # OpenWorkers Scheduler
+  group "scheduler" {
+    count = 1
+
+    task "scheduler" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/openworkers/openworkers-scheduler:v0.1.3"
+      }
+
+      env {
+        RUST_LOG          = "openworkers_scheduler=info"
+        DATABASE_URL      = "postgres://{{ postgres_user }}:{{ postgres_password }}@postgres.service.consul:5432/{{ postgres_db }}"
+        NATS_SERVERS      = "nats://nats.service.consul:4222"
+      }
+    }
+  }
+
+  # OpenWorkers Logs
+  group "logs" {
+    count = 1
+
+    task "logs" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/openworkers/openworkers-logs:v0.1.4"
+      }
+
+      env {
+        RUST_LOG          = "openworkers_logs=info"
+        DATABASE_URL      = "postgres://{{ postgres_user }}:{{ postgres_password }}@postgres.service.consul:5432/{{ postgres_db }}"
+        NATS_SERVERS      = "nats://nats.service.consul:4222"
+      }
+    }
+  }
+
+  # OpenWorkers Dashboard
+  group "dashboard" {
+    count = 1
+
+    network {
+      port "http" {
+        static = {{ openworkers_dash_port }}
+        to     = 80
+      }
+    }
+
+    service {
+      name     = "openworkers-dash"
+      port     = "http"
+      provider = "consul"
+    }
+
+    task "dashboard" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/openworkers/openworkers-dash:v1.1.13"
+        ports = ["http"]
+      }
+    }
+  }
+}

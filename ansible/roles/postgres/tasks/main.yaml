@@ -1,0 +1,13 @@
+- name: Create Postgres data directory
+  file:
+    path: "{{ nomad_volumes_dir }}/postgres_data"
+    state: directory
+    mode: '0755'
+    owner: "{{ home_assistant_uid | default('568') }}"
+    group: "{{ home_assistant_gid | default('568') }}"
+
+- name: Create Postgres Nomad job file
+  template:
+    src: postgres.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/postgres.nomad"
+  notify: Run Postgres job
