@@ -29,6 +29,7 @@ consul {
 
 plugin "docker" {
   config {
+    endpoint = "unix:///var/run/docker.sock"
     volumes {
       enabled = true
     }
