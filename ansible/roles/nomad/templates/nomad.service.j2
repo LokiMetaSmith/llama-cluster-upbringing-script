@@ -1,8 +1,8 @@
 [Unit]
-Description=Nomad
+Description=Nomad Agent
 Documentation=https://www.nomadproject.io/docs/
-Wants=network-online.target consul.service
-After=network-online.target consul.service
+Wants=consul.service network-online.target
+After=consul.service network-online.target
 
 [Service]
 User=root
