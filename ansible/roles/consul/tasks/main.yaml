@@ -27,10 +27,9 @@
     port: 8500
     state: stopped
     delay: 0
-    timeout: 30
+    timeout: 60
     msg: "Timeout waiting for Consul port 8500 to close."
   when: cleanup_services | default(false) | bool
-  ignore_errors: yes
   tags:
     - consul_configure
 
