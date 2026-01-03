@@ -23,9 +23,10 @@
 
 - name: Wait for Consul port 8500 to close if cleanup requested
   ansible.builtin.wait_for:
+    host: "127.0.0.1" # Explicitly check localhost since client_addr is 0.0.0.0
     port: 8500
     state: stopped
-    delay: 0
+    delay: 5 # Add delay to ensure systemd has fully processed the stop
     timeout: 30
     msg: "Timeout waiting for Consul port 8500 to close."
   when: cleanup_services | default(false) | bool
