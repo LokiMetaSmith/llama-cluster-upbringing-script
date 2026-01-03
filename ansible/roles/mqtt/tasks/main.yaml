@@ -61,6 +61,48 @@
     consul_bootstrap_token: "{{ consul_token_file_mqtt['content'] | b64decode | trim }}"
   when: consul_bootstrap_token is undefined and consul_token_file_mqtt is success and consul_token_file_mqtt.content is defined
 
+- name: Check Nomad Consul integration status
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad node status -self -json
+  environment:
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+  register: nomad_status_json
+  changed_when: false
+  ignore_errors: yes
+
+- name: Fix Nomad Consul integration if missing
+  when: nomad_status_json.stdout is defined and 'consul.version' not in (nomad_status_json.stdout | from_json).get('Attributes', {})
+  block:
+    - name: Debug Consul Token
+      ansible.builtin.debug:
+        msg: "Consul token is: {{ 'DEFINED' if consul_bootstrap_token is defined and consul_bootstrap_token | length > 0 else 'UNDEFINED/EMPTY' }}"
+
+    - name: Check server.hcl for token
+      ansible.builtin.command: grep "token" /etc/nomad.d/server.hcl
+      register: server_hcl_token
+      become: yes
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Debug server.hcl token presence
+      ansible.builtin.debug:
+        var: server_hcl_token.stdout_lines
+
+    - name: Force restart Nomad to pick up Consul config
+      ansible.builtin.systemd:
+        name: nomad
+        state: restarted
+      become: yes
+
+    - name: Wait for Nomad API to be ready after restart
+      ansible.builtin.uri:
+        url: "http://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
+        status_code: 200
+      register: nomad_api_status_fix
+      until: nomad_api_status_fix.status == 200
+      retries: 12
+      delay: 5
+
 - name: Check if mqtt job exists
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job status mqtt
