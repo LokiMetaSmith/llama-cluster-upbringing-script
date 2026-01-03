@@ -141,7 +141,7 @@
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: mqtt_logs_stdout
       ignore_errors: yes
-      when: mqtt_alloc_id.stdout | length > 0
+      when: mqtt_alloc_id.stdout | length > 0 and mqtt_alloc_id.stdout != 'null'
 
     - name: Display MQTT logs (stdout)
       ansible.builtin.debug:
@@ -155,7 +155,7 @@
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: mqtt_logs_stderr
       ignore_errors: yes
-      when: mqtt_alloc_id.stdout | length > 0
+      when: mqtt_alloc_id.stdout | length > 0 and mqtt_alloc_id.stdout != 'null'
 
     - name: Display MQTT logs (stderr)
       ansible.builtin.debug:
