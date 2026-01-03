@@ -77,7 +77,7 @@
   block:
     - name: Run mqtt job
       ansible.builtin.command:
-        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/mqtt.nomad
+        cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/mqtt.nomad
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       changed_when: true
