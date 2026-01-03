@@ -44,6 +44,23 @@
 - name: Flush handlers to ensure nomad is restarted and ready
   ansible.builtin.meta: flush_handlers
 
+- name: Fetch Consul management token (if undefined)
+  ansible.builtin.slurp:
+    src: /etc/consul.d/management_token
+  register: consul_token_file_mqtt
+  delegate_to: "{{ (groups['controller_nodes'] | first) if ('controller_nodes' in groups and groups['controller_nodes']) else inventory_hostname }}"
+  become: yes
+  until: consul_token_file_mqtt is success
+  retries: 5
+  delay: 2
+  when: consul_bootstrap_token is undefined
+  ignore_errors: yes
+
+- name: Set Consul token fact (if undefined)
+  set_fact:
+    consul_bootstrap_token: "{{ consul_token_file_mqtt['content'] | b64decode | trim }}"
+  when: consul_bootstrap_token is undefined and consul_token_file_mqtt is success and consul_token_file_mqtt.content is defined
+
 - name: Check if mqtt job exists
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job status mqtt
@@ -141,7 +158,7 @@
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: mqtt_logs_stdout
       ignore_errors: yes
-      when: mqtt_alloc_id.stdout | length > 0 and mqtt_alloc_id.stdout != 'null'
+      when: (mqtt_alloc_id.stdout | trim | length > 0) and (mqtt_alloc_id.stdout | trim != 'null')
 
     - name: Display MQTT logs (stdout)
       ansible.builtin.debug:
@@ -155,7 +172,7 @@
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: mqtt_logs_stderr
       ignore_errors: yes
-      when: mqtt_alloc_id.stdout | length > 0 and mqtt_alloc_id.stdout != 'null'
+      when: (mqtt_alloc_id.stdout | trim | length > 0) and (mqtt_alloc_id.stdout | trim != 'null')
 
     - name: Display MQTT logs (stderr)
       ansible.builtin.debug:
