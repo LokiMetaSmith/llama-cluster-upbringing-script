@@ -88,7 +88,7 @@
   loop:
     - "{{ nomad_config_dir }}/client.hcl"
     - "{{ nomad_config_dir }}/server.hcl"
-  when: "inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names and (groups.get('controller_nodes') is undefined or inventory_hostname not in groups['controller_nodes'])"
+  when: "inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names and ('controller_nodes' not in groups or inventory_hostname not in groups['controller_nodes'])"
   become: yes
   notify: Restart nomad
 
@@ -96,7 +96,7 @@
   ansible.builtin.file:
     path: "{{ nomad_config_dir }}/nomad.hcl"
     state: absent
-  when: "not (inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names) or (groups.get('controller_nodes') is defined and inventory_hostname in groups['controller_nodes'])"
+  when: "not (inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names) or ('controller_nodes' in groups and inventory_hostname in groups['controller_nodes'])"
   become: yes
   notify: Restart nomad
 
@@ -125,8 +125,8 @@
   ansible.builtin.file:
     path: "{{ nomad_data_dir }}"
     state: directory
-    owner: nomad
-    group: nomad
+    owner: root
+    group: root
     mode: '0755'
     recurse: yes
   become: yes
@@ -144,8 +144,8 @@
   ansible.builtin.file:
     path: "{{ nomad_models_dir }}"
     state: directory
-    owner: nomad
-    group: nomad
+    owner: root
+    group: root
     mode: '0755'
     recurse: yes
   become: yes
@@ -154,8 +154,8 @@
   ansible.builtin.file:
     path: "{{ nomad_jobs_dir }}"
     state: directory
-    owner: nomad
-    group: nomad
+    owner: root
+    group: root
     mode: '0755'
     recurse: yes
   become: yes
@@ -211,7 +211,7 @@
   ansible.builtin.template:
     src: nomad.hcl.server.j2
     dest: "{{ nomad_config_dir }}/nomad.hcl"
-  when: "inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names and (groups.get('controller_nodes') is undefined or inventory_hostname not in groups['controller_nodes'])"
+  when: "inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names and ('controller_nodes' not in groups or inventory_hostname not in groups['controller_nodes'])"
   notify:
     - Restart nomad
 
@@ -295,8 +295,8 @@
   ansible.builtin.file:
     path: "{{ pipecat_app_dir }}"
     state: directory
-    owner: "nomad"
-    group: "nomad"
+    owner: "root"
+    group: "root"
     mode: '0755'
     recurse: yes
   become: yes
@@ -305,8 +305,8 @@
   ansible.builtin.file:
     path: "{{ nomad_volumes_dir }}"
     state: directory
-    owner: "nomad"
-    group: "nomad"
+    owner: "root"
+    group: "root"
     mode: '0755'
     recurse: yes
   become: yes
@@ -315,8 +315,8 @@
   ansible.builtin.file:
     path: "{{ nomad_volumes_dir }}/{{ item }}"
     state: directory
-    owner: "nomad"
-    group: "nomad"
+    owner: "root"
+    group: "root"
     mode: '0755'
     recurse: yes
   loop:
