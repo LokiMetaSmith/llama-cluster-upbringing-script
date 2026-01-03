@@ -88,6 +88,40 @@
       ansible.builtin.debug:
         var: server_hcl_token.stdout_lines
 
+    - name: Verify Consul Leader Status
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ consul_http_port }}/v1/status/leader"
+        return_content: yes
+      register: consul_leader_check
+      ignore_errors: yes
+
+    - name: Debug Consul Leader
+      ansible.builtin.debug:
+        var: consul_leader_check
+
+    - name: Verify Consul Token Validity
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ consul_http_port }}/v1/agent/self"
+        headers:
+          X-Consul-Token: "{{ consul_bootstrap_token }}"
+        return_content: yes
+      register: consul_token_check
+      ignore_errors: yes
+
+    - name: Debug Consul Token Check
+      ansible.builtin.debug:
+        var: consul_token_check
+
+    - name: Fetch Nomad Logs (Pre-Restart)
+      ansible.builtin.shell: "journalctl -u nomad -n 200 --no-pager | grep -i consul"
+      register: nomad_logs_consul
+      ignore_errors: yes
+      become: yes
+
+    - name: Display Nomad Consul Logs
+      ansible.builtin.debug:
+        var: nomad_logs_consul.stdout_lines
+
     - name: Force restart Nomad to pick up Consul config
       ansible.builtin.systemd:
         name: nomad
