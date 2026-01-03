@@ -139,6 +139,11 @@ if [ "$ROLE" = "worker" ] && [ -z "$CONTROLLER_IP" ]; then
     exit 1
 fi
 
+if [ "$CLEAN_REPO" = true ] && [ "$CONTINUE_RUN" = true ]; then
+    echo "Error: --clean and --continue cannot be used together."
+    exit 1
+fi
+
 # --- Move to the script's directory ---
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR"
@@ -370,8 +375,9 @@ if [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
     exit 1
 fi
 
-# Install collections to a system-wide path to ensure they are available to the root user (via become)
-if ! sudo "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker --collections-path /usr/share/ansible/collections; then
+# Install collections to the default location (within the venv or user home)
+# This avoids sudo and ensures the playbook executor (running from venv) can find them.
+if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker; then
     echo "Error: Failed to install Ansible collections." >&2
     exit 1
 fi
@@ -400,9 +406,33 @@ if [ "$PURGE_JOBS" = true ]; then
     fi
 fi
 
-echo "Forcefully terminating any orphaned application processes to prevent memory leaks..."
-pkill -f dllama-api || true
-pkill -f "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py" || true
+echo "Checking for orphaned application processes..."
+# Only kill if Nomad is NOT running or if we purged jobs and they are still hanging around
+NOMAD_RUNNING=false
+if command -v nomad &> /dev/null && nomad node status &> /dev/null; then
+    NOMAD_RUNNING=true
+fi
+
+# Helper to kill if running
+kill_if_running() {
+    local pattern="$1"
+    local pids
+    pids=$(pgrep -f "$pattern")
+    if [ -n "$pids" ]; then
+        echo "⚠️  Found orphaned process matching '$pattern'. Terminating..."
+        echo "$pids" | xargs kill -9 2>/dev/null || true
+    fi
+}
+
+# If Nomad is running and we didn't purge, we should be careful about killing things blindly.
+# However, the user intent of this script is often to "reset/start" state.
+# But per requirements, we should avoid killing managed processes if Nomad is active and we didn't purge.
+if [ "$PURGE_JOBS" = true ] || [ "$NOMAD_RUNNING" = false ]; then
+    kill_if_running "dllama-api"
+    kill_if_running "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py"
+else
+    echo "ℹ️  Nomad is running and --purge-jobs was not requested. Skipping forced process termination to avoid conflicts."
+fi
 echo "Process cleanup complete."
 
 # Display system memory
@@ -463,6 +493,7 @@ CONTROLLER_PLAYBOOKS=(
 )
 
 WORKER_PLAYBOOKS=(
+    "playbooks/preflight/checks.yaml"
     "playbooks/worker.yaml"
 )
 
@@ -504,8 +535,37 @@ for i in "${!PLAYBOOKS[@]}"; do
 
     # Add a delay before running app_services.yaml to avoid port conflicts
     if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
-        echo "Sleeping for 10 seconds before running app_services.yaml to avoid port conflicts..."
-        sleep 10
+        echo "Verifying ports are free before running app_services.yaml to avoid port conflicts..."
+        # Wait for ports 4646, 8500, 8000, 8081, 1883 to be freed/ready as needed
+        # In this specific context (before app services start), we want to ensure previous cleanups
+        # have released the ports.
+
+        wait_for_ports_freed() {
+            local ports=("$@")
+            local timeout=60
+            local start_time=$(date +%s)
+
+            for port in "${ports[@]}"; do
+                echo "Waiting for port $port to be free..."
+                while nc -z 127.0.0.1 "$port" 2>/dev/null; do
+                    current_time=$(date +%s)
+                    elapsed=$((current_time - start_time))
+                    if [ "$elapsed" -ge "$timeout" ]; then
+                        echo "⚠️  Timeout waiting for port $port to be free. Proceeding anyway, but conflicts may occur."
+                        return
+                    fi
+                    sleep 2
+                done
+                echo "✅ Port $port is free."
+            done
+        }
+
+        # We check specific ports that might be held by old app instances
+        # Note: 4646 (Nomad) and 8500 (Consul) SHOULD be running if we are in the middle of a bootstrap
+        # where infrastructure is already up.
+        # BUT, 'app_services.yaml' implies restarting user-land apps.
+        # So we mainly check 8000 (App), 8081 (Traefik), 1883 (MQTT).
+        wait_for_ports_freed 8000 8081 1883
     fi
 
     # --- Resource Management: Cleanup between Model Services and Core AI Services ---
@@ -526,9 +586,9 @@ for i in "${!PLAYBOOKS[@]}"; do
         fi
 
         # Drop filesystem caches to free reclaimable memory
-        echo "Dropping filesystem caches..."
-        sync
-        echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+        # echo "Dropping filesystem caches..."
+        # sync
+        # echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
 
         echo "RAM status after cleanup:"
         free -h
