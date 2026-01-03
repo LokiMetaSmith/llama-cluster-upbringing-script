@@ -16,7 +16,17 @@
 - name: "Network Repair : Identify Physical Interfaces"
   ansible.builtin.set_fact:
     # Use alphanumeric regex to exclude aliases (e.g. eth0:0 -> eth0_0) and VLANs (eth0.100) which lack /sys/class/net entries
-    physical_interfaces: "{{ ansible_interfaces | map('regex_search', '^(e|w)[a-zA-Z0-9]+$') | select('string') | list }}"
+    # Modified to exclude wireless interfaces (wlp*, wlan*) unless wifi_ssid is provided
+    physical_interfaces: >-
+      {{
+        ansible_interfaces
+        | map('regex_search', '^(e|w)[a-zA-Z0-9]+$')
+        | select('string')
+        | reject('match', '^(wlp|wlan)')
+        | list
+        +
+        (ansible_interfaces | map('regex_search', '^(wlp|wlan)[a-zA-Z0-9]+$') | select('string') | list if wifi_ssid is defined else [])
+      }}
 
 - name: "Network Repair : Identify Down Interfaces"
   ansible.builtin.set_fact:
