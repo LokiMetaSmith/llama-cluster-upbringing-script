@@ -22,6 +22,18 @@
   tags:
     - consul_configure
 
+- name: Wait for Consul port 8500 to close if cleanup requested
+  ansible.builtin.wait_for:
+    port: 8500
+    state: stopped
+    delay: 0
+    timeout: 30
+    msg: "Timeout waiting for Consul port 8500 to close."
+  when: cleanup_services | default(false) | bool
+  ignore_errors: yes
+  tags:
+    - consul_configure
+
 - name: Remove Consul data directory if cleanup requested
   become: true
   ansible.builtin.file:
