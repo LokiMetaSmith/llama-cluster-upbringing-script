@@ -83,6 +83,26 @@
       changed_when: true
       register: mqtt_job_run
       #  notify: Restart Home Assistant
+
+    - name: Wait for MQTT port to be open
+      ansible.builtin.wait_for:
+        host: "127.0.0.1"  # Force check on localhost to bypass alias/hairpin issues
+        port: "{{ mqtt_port }}"
+        timeout: 60
+      become: no
+
+    - name: Wait for MQTT service to be healthy in Consul
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/mqtt?passing"
+        method: GET
+        headers:
+          X-Consul-Token: "{{ consul_bootstrap_token }}"
+        return_content: yes
+        status_code: 200
+      register: consul_check
+      until: consul_check.json | length > 0
+      retries: 30
+      delay: 2
   rescue:
     - name: Get MQTT job status
       ansible.builtin.command:
@@ -151,26 +171,6 @@
       ansible.builtin.fail:
         msg: "MQTT job failed to start. See logs above."
 
-- name: Wait for MQTT port to be open
-  ansible.builtin.wait_for:
-    host: "127.0.0.1"  # Force check on localhost to bypass alias/hairpin issues
-    port: "{{ mqtt_port }}"
-    timeout: 60
-  become: no
-
 - name: Debug mqtt job run
   ansible.builtin.debug:
     var: mqtt_job_run
-
-- name: Wait for MQTT service to be healthy in Consul
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/mqtt?passing"
-    method: GET
-    headers:
-      X-Consul-Token: "{{ consul_bootstrap_token }}"
-    return_content: yes
-    status_code: 200
-  register: consul_check
-  until: consul_check.json | length > 0
-  retries: 30
-  delay: 2
