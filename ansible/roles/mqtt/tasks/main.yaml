@@ -133,6 +133,18 @@
       ansible.builtin.debug:
         var: mqtt_job_status.stdout
 
+    - name: Get Nomad Node Status (Debug)
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad node status -self -verbose
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: nomad_node_status
+      ignore_errors: yes
+
+    - name: Display Nomad Node Status
+      ansible.builtin.debug:
+        var: nomad_node_status.stdout
+
     - name: Get MQTT allocations
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json mqtt
@@ -163,7 +175,7 @@
     - name: Display MQTT logs (stdout)
       ansible.builtin.debug:
         var: mqtt_logs_stdout.stdout
-      when: mqtt_logs_stdout is defined
+      when: mqtt_logs_stdout.stdout is defined
 
     - name: Fetch MQTT logs (stderr)
       ansible.builtin.command:
@@ -177,7 +189,7 @@
     - name: Display MQTT logs (stderr)
       ansible.builtin.debug:
         var: mqtt_logs_stderr.stdout
-      when: mqtt_logs_stderr is defined
+      when: mqtt_logs_stderr.stdout is defined
 
     - name: Clean up temp file
       ansible.builtin.file:
