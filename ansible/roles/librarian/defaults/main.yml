@@ -1,0 +1,16 @@
+---
+librarian_enabled: true
+librarian_install_path: "/opt/librarian"
+librarian_repo_url: "https://github.com/diganto-deb/local_file_organizer.git"
+librarian_user: "root"
+librarian_group: "root"
+librarian_service_name: "librarian"
+# Scan every 15 minutes
+librarian_scan_interval: 900
+# Target directories to organize
+librarian_target_dirs:
+  - "/mnt/storage/downloads"
+  - "/mnt/storage/documents"
+# LLM Config
+librarian_llm_base_url: "http://localhost:8081/v1"
+librarian_llm_model: "llama3.2"

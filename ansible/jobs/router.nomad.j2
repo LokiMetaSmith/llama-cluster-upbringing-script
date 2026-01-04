@@ -34,6 +34,9 @@ job "router" {
       port "http" {
         static = {{ router_port }}
       }
+      port "ollama" {
+        static = 11434
+      }
     }
 
     service {
@@ -48,6 +51,45 @@ job "router" {
         interval     = "15s"
         timeout      = "5s"
         address_mode = "host"
+      }
+    }
+
+    service {
+      name     = "ollama-api"
+      provider = "consul"
+      port     = "ollama"
+
+      check {
+        type         = "http"
+        port         = "ollama"
+        path         = "/"
+        interval     = "30s"
+        timeout      = "5s"
+        address_mode = "host"
+      }
+    }
+
+    task "litellm-proxy" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/berriai/litellm:main-latest"
+        ports = ["ollama"]
+        args = [
+          "--port", "${NOMAD_PORT_ollama}",
+          "--model", "openai/{{ expert_models.router[0].filename }}",
+          "--api_base", "http://localhost:{{ router_port }}/v1",
+          "--drop_params", "true"
+        ]
+      }
+
+      env {
+        LITELLM_MASTER_KEY = "sk-1234"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
       }
     }
 

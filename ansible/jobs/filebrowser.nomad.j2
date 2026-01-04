@@ -1,0 +1,48 @@
+job "filebrowser" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "filebrowser" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 80
+      }
+    }
+
+    service {
+      name = "filebrowser"
+      port = "http"
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.filebrowser.rule=Host(`filebrowser.service.consul`)",
+      ]
+      check {
+        type     = "http"
+        path     = "/"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "filebrowser" {
+      driver = "docker"
+
+      config {
+        image = "filebrowser/filebrowser:latest"
+        ports = ["http"]
+        volumes = [
+          "/mnt/storage:/srv",
+          "/opt/filebrowser/filebrowser.db:/database.db",
+          "/opt/filebrowser/.filebrowser.json:/.filebrowser.json"
+        ]
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+  }
+}
