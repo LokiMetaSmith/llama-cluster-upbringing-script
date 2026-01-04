@@ -21,6 +21,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libavif15 \
     gstreamer1.0-libav \
+    libavcodec-dev \
+    libavdevice-dev \
+    libavfilter-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libswresample-dev \
+    libswscale-dev \
+    pkg-config \
     git \
     && rm -rf /var/lib/apt/lists/*
 

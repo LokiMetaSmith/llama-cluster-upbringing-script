@@ -63,10 +63,28 @@ class SimpleLLMNode(Node):
     """A simple LLM node with configurable model tiers."""
     async def execute(self, context: WorkflowContext):
         # 1. Gather Inputs
-        messages = self.get_input(context, "messages")
+        messages = None
+        # Check if 'messages' is a configured input
+        if any(i["name"] == "messages" for i in self.config.get("inputs", [])):
+             messages = self.get_input(context, "messages")
+
         if not messages:
-            # Fallback to constructing messages from user_text if raw messages aren't provided
-            user_text = self.get_input(context, "user_text") or "Hello"
+            # Fallback to constructing messages from user_text or other inputs
+            user_text = ""
+            if any(i["name"] == "user_text" for i in self.config.get("inputs", [])):
+                 user_text = self.get_input(context, "user_text") or ""
+
+            # Aggregate other inputs (e.g. reports)
+            for input_config in self.config.get("inputs", []):
+                 name = input_config["name"]
+                 if name not in ["messages", "user_text", "reasoning"]:
+                     val = self.get_input(context, name)
+                     if val:
+                         user_text += f"\n\n{name.replace('_', ' ').title()}:\n{val}"
+
+            if not user_text:
+                user_text = "Hello"
+
             system_prompt = self.config.get("system_prompt", "You are a helpful assistant.")
             messages = [
                 {"role": "system", "content": system_prompt},
@@ -112,7 +130,11 @@ class SimpleLLMNode(Node):
                         }
 
                         # Check for reasoning config in input or self.config
-                        reasoning_config = self.get_input(context, "reasoning") or self.config.get("reasoning")
+                        reasoning_config = None
+                        if any(i["name"] == "reasoning" for i in self.config.get("inputs", [])):
+                            reasoning_config = self.get_input(context, "reasoning")
+                        reasoning_config = reasoning_config or self.config.get("reasoning")
+
                         if reasoning_config:
                             # Standard OpenRouter/OpenAI 'reasoning' parameter or 'extra_body'
                             # Some backends expect it in 'extra_body', others top-level (OpenRouter unified)
@@ -198,3 +220,88 @@ class ExpertRouterNode(Node):
             print(f"Error routing to expert {expert_name}: {e}")
 
         self.set_output(context, "expert_response", expert_response)
+
+@registry.register
+class ExternalLLMNode(Node):
+    """A node that calls an external LLM service directly (e.g., OpenRouter, OpenAI)."""
+    async def execute(self, context: WorkflowContext):
+        expert_id = self.config.get("expert_id")
+        raw_input = self.get_input(context, "messages")
+        external_experts_config = context.global_inputs.get("external_experts_config", {})
+
+        # Construct messages payload
+        messages = []
+
+        # 1. Add System Prompt from Config
+        system_prompt = self.config.get("system_prompt")
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+
+        # 2. Handle Input
+        if isinstance(raw_input, str):
+            messages.append({"role": "user", "content": raw_input})
+        elif isinstance(raw_input, list):
+            messages.extend(raw_input)
+        else:
+            # Fallback for unexpected types
+            messages.append({"role": "user", "content": str(raw_input)})
+
+        if not expert_id:
+             self.set_output(context, "response", "Error: expert_id is required in node config.")
+             return
+
+        if expert_id not in external_experts_config:
+             self.set_output(context, "response", f"Error: Expert '{expert_id}' not found in external configuration.")
+             return
+
+        expert_config = external_experts_config[expert_id]
+        base_url = expert_config.get("base_url")
+        api_key_env = expert_config.get("api_key_env")
+        model = expert_config.get("model")
+
+        api_key = os.getenv(api_key_env)
+        if not api_key:
+             self.set_output(context, "response", f"Error: API key environment variable '{api_key_env}' not set.")
+             return
+
+        # Prepare payload
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": self.config.get("temperature", 0.7)
+        }
+
+        # Support reasoning parameters if provided in input
+        reasoning_config = self.get_input(context, "reasoning")
+        if reasoning_config:
+             payload["reasoning"] = reasoning_config
+
+        chat_url = f"{base_url}/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+
+        # OpenRouter specific headers
+        if "openrouter.ai" in base_url:
+             headers["HTTP-Referer"] = "https://pipecat-agent.internal"
+             headers["X-Title"] = "Pipecat Agent"
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(chat_url, headers=headers, json=payload, timeout=120)
+                response.raise_for_status()
+                response_data = response.json()
+                result = response_data["choices"][0]["message"]["content"]
+
+                # Check for reasoning details
+                reasoning_details = response_data["choices"][0]["message"].get("reasoning_details") or \
+                                    response_data["choices"][0]["message"].get("reasoning")
+                if reasoning_details:
+                     self.set_output(context, "reasoning_details", reasoning_details)
+
+                self.set_output(context, "response", result)
+
+        except Exception as e:
+            print(f"Error calling external expert {expert_id}: {e}")
+            self.set_output(context, "response", f"Error calling external expert: {e}")

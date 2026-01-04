@@ -6,7 +6,8 @@ from ..context import WorkflowContext
 class InputNode(Node):
     """A node that introduces global inputs into the workflow."""
     async def execute(self, context: WorkflowContext):
-        for output_config in self.config.get("outputs", []):
+        outputs = self.config.get("config", {}).get("outputs", [])
+        for output_config in outputs:
             if isinstance(output_config, str):
                 output_name = output_config
             else:

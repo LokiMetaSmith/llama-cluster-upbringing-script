@@ -99,9 +99,9 @@ class SmolAgentTool:
             # Use the agent to generate a plan and code.
             self.agent.run(task_description)
 
-            # Extract code using regex to handle variations (e.g. ```python, ```)
+            # Extract code using regex to handle variations (e.g. ```python, ```py, ```)
             # and to be less brittle than simple string splitting.
-            code_pattern = re.compile(r"```(?:python)?\s*(.*?)```", re.DOTALL)
+            code_pattern = re.compile(r"```(?:\w+)?\s*(.*?)```", re.DOTALL)
             code_to_execute = ""
 
             for message in reversed(self.agent.memory):

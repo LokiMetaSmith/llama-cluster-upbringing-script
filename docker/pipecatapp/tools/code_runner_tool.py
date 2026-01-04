@@ -39,31 +39,39 @@ class CodeRunnerTool:
                  execution, or an error message if something went wrong.
         """
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp_file:
-                tmp_file.write(code)
-                tmp_file_path = tmp_file.name
+            # Use TemporaryDirectory for better isolation than mounting /tmp
+            with tempfile.TemporaryDirectory() as temp_dir:
+                script_name = "script.py"
+                host_script_path = os.path.join(temp_dir, script_name)
 
-            container_path = f"/tmp/{os.path.basename(tmp_file_path)}"
+                with open(host_script_path, "w") as f:
+                    f.write(code)
 
-            container = self.client.containers.run(
-                self.image,
-                command=["python", container_path],
-                volumes={os.path.dirname(tmp_file_path): {'bind': '/tmp', 'mode': 'ro'}},
-                remove=True,
-                stderr=True,
-                stdout=True
-            )
+                # Mount the temp dir to /code
+                volumes = {temp_dir: {'bind': '/code', 'mode': 'ro'}}
 
-            output = container.decode('utf-8')
-            return output
+                container = self.client.containers.run(
+                    self.image,
+                    command=["python", f"/code/{script_name}"],
+                    volumes=volumes,
+                    working_dir="/code",
+                    network_mode="none",  # Security: No internet access
+                    mem_limit="128m",     # Security: Limit memory
+                    cpu_period=100000,
+                    cpu_quota=50000,      # Security: Limit CPU (50%)
+                    pids_limit=20,        # Security: Limit processes
+                    remove=True,
+                    stderr=True,
+                    stdout=True
+                )
+
+                output = container.decode('utf-8')
+                return output
 
         except docker.errors.ImageNotFound:
             return f"Error: The Docker image '{self.image}' was not found. Please pull it first."
         except Exception as e:
             return f"An error occurred: {e}"
-        finally:
-            if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
-                os.unlink(tmp_file_path)
 
     def run_code_in_sandbox(
         self,

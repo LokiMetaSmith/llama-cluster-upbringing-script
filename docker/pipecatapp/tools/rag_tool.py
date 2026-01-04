@@ -56,7 +56,8 @@ class RAG_Tool:
         logging.info("Building RAG knowledge base...")
 
         # Load existing documents from PMM memory to avoid reprocessing
-        self.documents = self.pmm_memory.get_events(kind="rag_document", limit=10000) # Arbitrary high limit
+        # Use synchronous method as we are in a background thread
+        self.documents = self.pmm_memory.get_events_sync(kind="rag_document", limit=10000) # Arbitrary high limit
 
         if not self.documents:
             logging.info("No existing RAG documents found in memory, scanning filesystem...")
@@ -80,7 +81,8 @@ class RAG_Tool:
                                 chunks = content.split("\n\n")
                                 for chunk_text in chunks:
                                     if chunk_text.strip():
-                                        self.pmm_memory.add_event(
+                                        # Use synchronous method
+                                        self.pmm_memory.add_event_sync(
                                             kind="rag_document",
                                             content=chunk_text,
                                             meta={"source": file_path}
@@ -88,7 +90,8 @@ class RAG_Tool:
                         except Exception as e:
                             logging.warning(f"Could not read or process file {file_path}: {e}")
 
-            self.documents = self.pmm_memory.get_events(kind="rag_document", limit=10000)
+            # Use synchronous method
+            self.documents = self.pmm_memory.get_events_sync(kind="rag_document", limit=10000)
 
         if not self.documents:
             logging.warning("No documents found for RAG tool. Knowledge base is empty.")

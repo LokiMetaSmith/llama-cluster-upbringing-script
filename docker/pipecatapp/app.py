@@ -665,13 +665,24 @@ class TwinService(FrameProcessor):
             workflow_runner = WorkflowRunner("workflows/default_agent_loop.yaml", runner_id=request_id)
             active_workflows.add_runner(request_id, workflow_runner)
 
+            # Retrieve external experts config from env
+            external_experts_config_str = os.getenv("EXTERNAL_EXPERTS_CONFIG", "{}")
+            try:
+                external_experts_config = json.loads(external_experts_config_str)
+            except json.JSONDecodeError:
+                external_experts_config = {}
+                logging.warning("Failed to parse EXTERNAL_EXPERTS_CONFIG JSON.")
+
             global_inputs = {
                 "user_text": frame.text,
                 "tools_dict": self.tools,
                 "tool_result": None, # Start with no tool result
                 "consul_http_addr": self.consul_http_addr,
-                "twin_service": self
+                "twin_service": self,
+                "external_experts_config": external_experts_config
             }
+
+            previous_tool_calls = []
 
             for _ in range(10): # Allow up to 10 steps in the thought process
                 workflow_result = await workflow_runner.run(global_inputs)
@@ -682,15 +693,34 @@ class TwinService(FrameProcessor):
                 if final_response:
                     logging.info(f"Workflow produced final response: {final_response}")
                     await self._send_response(final_response)
-                    self.long_term_memory.add_event(kind="assistant_message", content=final_response)
+                    await self.long_term_memory.add_event(kind="assistant_message", content=final_response)
                     self.short_term_memory.append(f"Assistant: {final_response}")
                     return # End the loop
 
                 if tool_call:
                     logging.info(f"Workflow produced tool call: {tool_call}")
-                    # The tool is executed within the workflow, so we just need to
-                    # grab the result and feed it back into the next iteration.
-                    global_inputs["tool_result"] = workflow_result.get("tool_result")
+
+                    # Detect Loops
+                    tool_name = tool_call.get("name")
+                    tool_args = tool_call.get("arguments", {})
+                    # Normalize args to ensure consistent string representation
+                    try:
+                        tool_args_str = json.dumps(tool_args, sort_keys=True)
+                    except Exception:
+                        tool_args_str = str(tool_args)
+
+                    current_signature = (tool_name, tool_args_str)
+                    previous_tool_calls.append(current_signature)
+
+                    # Check if the last 3 calls are identical
+                    if len(previous_tool_calls) >= 3 and all(c == current_signature for c in previous_tool_calls[-3:]):
+                        logging.warning("Loop detected in tool calls. Injecting system alert.")
+                        global_inputs["tool_result"] = "SYSTEM ALERT: You have called this tool with these exact arguments 3 times in a row. Please change your strategy or ask the user for help."
+                    else:
+                        # The tool is executed within the workflow, so we just need to
+                        # grab the result and feed it back into the next iteration.
+                        global_inputs["tool_result"] = workflow_result.get("tool_result")
+
                     # Continue the loop
                 else:
                     # This case should not be reached if the workflow is designed correctly

@@ -9,6 +9,7 @@ import faiss
 import numpy as np
 import pickle
 from typing import List, Dict, Optional, Any
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
@@ -23,7 +24,11 @@ logger = logging.getLogger("Archivist")
 # --- Configuration ---
 DB_PATH = os.getenv("DB_PATH", os.path.expanduser("~/.config/pipecat/pypicat_memory.db"))
 INDEX_DIR = os.getenv("INDEX_DIR", os.path.expanduser("~/.config/pipecat/archivist_data"))
-PORT = int(os.getenv("ARCHIVIST_PORT", 8008))
+
+if not os.getenv("ARCHIVIST_PORT"):
+    raise ValueError("ARCHIVIST_PORT environment variable must be set")
+PORT = int(os.getenv("ARCHIVIST_PORT"))
+
 CONSUL_HOST = os.getenv("CONSUL_HOST", "127.0.0.1")
 CONSUL_PORT = int(os.getenv("CONSUL_PORT", 8500))
 LLAMA_API_SERVICE_NAME = os.getenv("LLAMA_API_SERVICE_NAME", "llamacpp-rpc-api")
@@ -52,18 +57,21 @@ class LLMClient:
         self.consul_port = consul_port
         self.service_name = service_name
         self.base_url = None
+        self.client = httpx.AsyncClient(timeout=60.0)
+
+    async def close(self):
+        await self.client.aclose()
 
     async def discover(self):
         url = f"http://{self.consul_host}:{self.consul_port}/v1/health/service/{self.service_name}?passing"
         try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(url)
-                if resp.status_code == 200:
-                    services = resp.json()
-                    if services:
-                        svc = services[0]['Service']
-                        self.base_url = f"http://{svc['Address']}:{svc['Port']}/v1"
-                        logger.info(f"Discovered LLM at {self.base_url}")
+            resp = await self.client.get(url)
+            if resp.status_code == 200:
+                services = resp.json()
+                if services:
+                    svc = services[0]['Service']
+                    self.base_url = f"http://{svc['Address']}:{svc['Port']}/v1"
+                    logger.info(f"Discovered LLM at {self.base_url}")
         except Exception as e:
             logger.error(f"Service discovery failed: {e}")
 
@@ -76,18 +84,17 @@ class LLMClient:
             return "Error: LLM Service Unavailable"
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                resp = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    json={
-                        "model": "gpt-3.5-turbo", # Placeholder model name
-                        "messages": [{"role": "user", "content": prompt}],
-                        "temperature": temperature
-                    }
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                return data['choices'][0]['message']['content']
+            resp = await self.client.post(
+                f"{self.base_url}/chat/completions",
+                json={
+                    "model": "gpt-3.5-turbo", # Placeholder model name
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": temperature
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return data['choices'][0]['message']['content']
         except Exception as e:
             logger.error(f"LLM Call failed: {e}")
             return f"Error generating response: {e}"
@@ -105,9 +112,9 @@ class Memorizer:
         self.faiss_index_path = os.path.join(index_dir, "pages.faiss")
         self.bm25_index_path = os.path.join(index_dir, "pages.bm25")
         self.pages_store_path = os.path.join(index_dir, "pages.json")
+        self.pages_db_path = os.path.join(index_dir, "pages.db")
         self.state_path = os.path.join(index_dir, "state.json")
 
-        self.pages: Dict[str, Page] = {}
         self.page_ids_list: List[str] = [] # Maps FAISS index ID to Page ID
 
         self.faiss_index = None
@@ -116,16 +123,96 @@ class Memorizer:
 
         self.last_processed_id = 0
         self.lightweight_memory = "No history yet."
+        self.conn = None
+        self.pages_conn = None
 
+        self._init_pages_db()
         self._load_state()
 
+    def _init_pages_db(self):
+        self.pages_conn = sqlite3.connect(self.pages_db_path, check_same_thread=False)
+        self.pages_conn.row_factory = sqlite3.Row
+        cursor = self.pages_conn.cursor()
+        # Use implicit rowid for insertion order, but we don't need to define it explicitly unless we want to access it portably.
+        # SQLite's rowid is stable and monotonic for inserts if not vacuumed or explicitly manipulated.
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS pages (
+                id TEXT PRIMARY KEY,
+                header TEXT,
+                content TEXT,
+                timestamp REAL
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS page_sequence (
+                seq_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                page_id TEXT
+            )
+        """)
+        self.pages_conn.commit()
+
+    def save_page(self, page: Page):
+        try:
+            cursor = self.pages_conn.cursor()
+            cursor.execute(
+                "INSERT INTO pages (id, header, content, timestamp) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET header=excluded.header, content=excluded.content, timestamp=excluded.timestamp",
+                (page.id, page.header, page.content, page.timestamp)
+            )
+            self.pages_conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to save page {page.id}: {e}")
+
+    def record_page_sequence(self, page_id: str):
+        try:
+            cursor = self.pages_conn.cursor()
+            cursor.execute("INSERT INTO page_sequence (page_id) VALUES (?)", (page_id,))
+            self.pages_conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to record page sequence for {page_id}: {e}")
+
+    def get_page(self, page_id: str) -> Optional[Page]:
+        try:
+            cursor = self.pages_conn.cursor()
+            cursor.execute("SELECT id, header, content, timestamp FROM pages WHERE id = ?", (page_id,))
+            row = cursor.fetchone()
+            if row:
+                return Page(id=row['id'], header=row['header'], content=row['content'], timestamp=row['timestamp'])
+        except Exception as e:
+            logger.error(f"Failed to fetch page {page_id}: {e}")
+        return None
+
+    def get_page_count(self) -> int:
+        try:
+            cursor = self.pages_conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM pages")
+            return cursor.fetchone()[0]
+        except Exception as e:
+            logger.error(f"Failed to count pages: {e}")
+            return 0
+
     def _load_state(self):
-        # Load Pages
+        # Load Pages - Migrate from JSON if needed
+        # We check if pages.json exists. If pages.db is empty, we migrate.
         if os.path.exists(self.pages_store_path):
-            with open(self.pages_store_path, 'r') as f:
-                data = json.load(f)
-                self.pages = {k: Page(**v) for k, v in data.items()}
-                logger.info(f"Loaded {len(self.pages)} pages.")
+            if self.get_page_count() == 0:
+                logger.info("Migrating pages from JSON to SQLite...")
+                try:
+                    with open(self.pages_store_path, 'r') as f:
+                        data = json.load(f)
+                        for k, v in data.items():
+                            page = Page(**v)
+                            self.save_page(page)
+                            self.record_page_sequence(page.id)
+                    logger.info(f"Migrated {len(data)} pages.")
+                    os.rename(self.pages_store_path, self.pages_store_path + ".bak")
+                except Exception as e:
+                    logger.error(f"Migration failed: {e}")
+            else:
+                 # DB has data, JSON exists. Maybe we failed to rename it last time?
+                 # Or user restored JSON.
+                 # We assume DB is current.
+                 if not os.path.exists(self.pages_store_path + ".bak"):
+                     os.rename(self.pages_store_path, self.pages_store_path + ".bak")
 
         # Load FAISS
         if os.path.exists(self.faiss_index_path):
@@ -157,13 +244,28 @@ class Memorizer:
                         # We can't recover easily without re-embedding everything.
                         pass
         else:
-            # Fallback for migration if state file doesn't exist but pages do (shouldn't happen in fresh deploy)
-            if not self.page_ids_list and self.pages:
-                self.page_ids_list = list(self.pages.keys())
+             # If no state file, we might be in a fresh DB or migrated DB.
+             # If we have pages in DB but no state, we should rebuild page_ids_list?
+             # For now, we assume if state is missing, we start fresh or from what we have.
+             # If we just migrated, we might not have page_ids_list unless we rebuild it.
+             # Wait, existing code relied on `self.pages.keys()` if state was missing.
+             # We can query all IDs from DB.
+             if not self.page_ids_list:
+                 cursor = self.pages_conn.cursor()
+                 # Try to load from sequence table first
+                 cursor.execute("SELECT page_id FROM page_sequence ORDER BY seq_id ASC")
+                 rows = cursor.fetchall()
+                 if rows:
+                     self.page_ids_list = [row['page_id'] for row in rows]
+                     logger.info("Restored page_ids_list from page_sequence table.")
+                 elif self.get_page_count() > 0:
+                     # Fallback to pages table rowid if sequence table is empty (e.g. legacy data)
+                     cursor.execute("SELECT id FROM pages ORDER BY rowid ASC")
+                     self.page_ids_list = [row['id'] for row in cursor.fetchall()]
+                     logger.warning("Restored page_ids_list from pages table. Order might be incorrect if updates occurred.")
 
     def _save_state(self):
-        with open(self.pages_store_path, 'w') as f:
-            json.dump({k: v.model_dump() for k, v in self.pages.items()}, f)
+        # We no longer dump pages to JSON.
 
         if self.faiss_index:
             faiss.write_index(self.faiss_index, self.faiss_index_path)
@@ -178,19 +280,35 @@ class Memorizer:
                 "page_ids_list": self.page_ids_list # Persist list order
             }, f)
 
-    def _fetch_new_events(self):
+    def _get_db_connection(self):
+        if self.conn:
+            return self.conn
+
         if not os.path.exists(self.db_path):
-            if not hasattr(self, '_db_warned'):
-                logger.warning(f"Database not found at {self.db_path}")
-                self._db_warned = True
+            return None
+
+        try:
+            # check_same_thread=False allows using the connection from different threads
+            # (which happens because we run in ThreadPoolExecutor)
+            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            return self.conn
+        except Exception as e:
+            logger.error(f"Failed to connect to DB: {e}")
+            return None
+
+    def _fetch_new_events(self):
+        conn = self._get_db_connection()
+        if not conn:
+            if not os.path.exists(self.db_path):
+                if not hasattr(self, '_db_warned'):
+                    logger.warning(f"Database not found at {self.db_path}")
+                    self._db_warned = True
             return []
 
         try:
-            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute("SELECT id, timestamp, kind, content FROM events WHERE id > ? ORDER BY id ASC LIMIT 50", (self.last_processed_id,))
             rows = cursor.fetchall()
-            conn.close()
             return rows
         except Exception as e:
             logger.error(f"DB Read Error: {e}")
@@ -273,14 +391,15 @@ class Memorizer:
                 await loop.run_in_executor(executor, update_indices)
 
                 # 5. Update Memory State (Main Thread)
-                self.pages[page_id] = page
+                self.save_page(page)
+                self.record_page_sequence(page_id)
                 self.page_ids_list.append(page_id)
                 self.last_processed_id = end_id
 
                 # Save
                 await loop.run_in_executor(executor, self._save_state)
 
-                logger.info(f"Archived page {page_id}. Total pages: {len(self.pages)}")
+                logger.info(f"Archived page {page_id}. Total pages: {self.get_page_count()}")
 
             except Exception as e:
                 logger.error(f"Error in Memorizer loop: {e}", exc_info=True)
@@ -396,8 +515,8 @@ class Researcher:
         for i, idx in enumerate(I[0]):
             if idx != -1 and idx < len(self.memorizer.page_ids_list):
                 pid = self.memorizer.page_ids_list[idx]
-                if pid in self.memorizer.pages:
-                    page = self.memorizer.pages[pid]
+                page = self.memorizer.get_page(pid)
+                if page:
                     results.append({
                         "id": pid,
                         "header": page.header,
@@ -415,24 +534,24 @@ class Researcher:
                 if scores[idx] > 0 and idx < len(self.memorizer.page_ids_list):
                     pid = self.memorizer.page_ids_list[idx]
                     if not any(r['id'] == pid for r in results):
-                         page = self.memorizer.pages[pid]
-                         results.append({
-                            "id": pid,
-                            "header": page.header,
-                            "content": page.content,
-                            "score": float(scores[idx])
-                        })
+                         page = self.memorizer.get_page(pid)
+                         if page:
+                            results.append({
+                                "id": pid,
+                                "header": page.header,
+                                "content": page.content,
+                                "score": float(scores[idx])
+                            })
 
         return results
 
 # --- App Setup ---
 
-app = FastAPI(title="Archivist Service", version="1.0")
 memorizer_instance: Optional[Memorizer] = None
 researcher_instance: Optional[Researcher] = None
 
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global memorizer_instance, researcher_instance
 
     llm = LLMClient(CONSUL_HOST, CONSUL_PORT, LLAMA_API_SERVICE_NAME)
@@ -441,6 +560,13 @@ async def startup():
 
     asyncio.create_task(memorizer_instance.process_loop())
     logger.info(f"Archivist started on port {PORT}")
+
+    yield
+
+    if researcher_instance and researcher_instance.llm_client:
+        await researcher_instance.llm_client.close()
+
+app = FastAPI(title="Archivist Service", version="1.0", lifespan=lifespan)
 
 @app.post("/research")
 async def research_endpoint(req: DeepResearchRequest):
@@ -453,7 +579,7 @@ async def research_endpoint(req: DeepResearchRequest):
 @app.get("/health")
 async def health_check():
     if memorizer_instance:
-        return {"status": "ok", "pages_indexed": len(memorizer_instance.pages)}
+        return {"status": "ok", "pages_indexed": memorizer_instance.get_page_count()}
     return {"status": "starting"}
 
 if __name__ == "__main__":
