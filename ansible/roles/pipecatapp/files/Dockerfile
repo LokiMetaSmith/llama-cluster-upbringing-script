@@ -39,6 +39,7 @@ ENV PATH="/opt/pipecatapp/venv/bin:$PATH"
 # Install Python packages
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install llm-sandbox
 
 # Install Playwright browsers
 RUN playwright install
