@@ -23,5 +23,8 @@
   "devDependencies": {
     "husky": "^9.1.7",
     "markdownlint-cli": "^0.41.0"
+  },
+  "dependencies": {
+    "opencode-ai": "^1.0.223"
   }
 }
