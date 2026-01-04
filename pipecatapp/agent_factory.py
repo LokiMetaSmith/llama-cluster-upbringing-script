@@ -25,6 +25,14 @@ from tools.planner_tool import PlannerTool
 from tools.file_editor_tool import FileEditorTool
 from tools.archivist_tool import ArchivistTool
 from tools.opencode_tool import OpencodeTool
+from tools.remote_tool_proxy import RemoteToolProxy
+
+# Tools that are supported by the Tool Server and can be proxied
+REMOTE_SUPPORTED_TOOLS = [
+    "ssh", "desktop_control", "code_runner", "web_browser",
+    "ansible", "power", "term_everything", "rag", "ha",
+    "git", "orchestrator"
+]
 
 def create_tools(config: dict, twin_service=None, runner=None) -> dict:
     """
@@ -39,26 +47,13 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         dict: A dictionary of tool instances.
     """
 
+    mode = config.get("tool_execution_mode", "local")
+    tool_server_url = config.get("tool_server_url")
+
+    # Start with tools that are ALWAYS local (complex deps or not on tool server)
     tools = {
-        "ssh": SSH_Tool(),
-        # MCP Tool needs runner and twin_service
         "mcp": MCP_Tool(twin_service, runner) if twin_service and runner else None,
-        # Vision is usually handled separately (YOLO), but we can add placeholders or simple tools
-        # "vision": ... (In app.py it's the YOLO detector instance itself)
-        "desktop_control": DesktopControlTool(),
-        "code_runner": CodeRunnerTool(),
         "smol_agent_computer": SmolAgentTool(),
-        "web_browser": WebBrowserTool(),
-        "ansible": Ansible_Tool(),
-        "power": Power_Tool(),
-        "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
-        "rag": RAG_Tool(pmm_memory=twin_service.long_term_memory if twin_service else None, base_dir="/"),
-        "ha": HA_Tool(
-            ha_url=config.get("ha_url"),
-            ha_token=config.get("ha_token")
-        ),
-        "git": Git_Tool(),
-        "orchestrator": OrchestratorTool(),
         "llxprt_code": LLxprt_Code_Tool(),
         "claude_clone": ClaudeCloneTool(),
         "final_answer": FinalAnswerTool(),
@@ -68,7 +63,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "swarm": SwarmTool(),
         "project_mapper": ProjectMapperTool(),
         "planner": PlannerTool(twin_service) if twin_service else None,
-        "file_editor": FileEditorTool(root_dir="/opt/pipecatapp"), # Allow editing within the app dir
+        "file_editor": FileEditorTool(root_dir="/opt/pipecatapp"),
         "archivist": ArchivistTool(),
         "opencode": OpencodeTool(
             base_url=config.get("opencode_api_url"),
@@ -79,6 +74,30 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
 
     if config.get("use_summarizer", False) and twin_service:
         tools["summarizer"] = SummarizerTool(twin_service)
+
+    # Handle "Remote Supported" tools
+    if mode == "remote" and tool_server_url:
+        for name in REMOTE_SUPPORTED_TOOLS:
+            tools[name] = RemoteToolProxy(name, tool_server_url)
+    else:
+        # Instantiate local versions of supported tools
+        tools["ssh"] = SSH_Tool()
+        tools["desktop_control"] = DesktopControlTool()
+        tools["code_runner"] = CodeRunnerTool()
+        tools["web_browser"] = WebBrowserTool()
+        tools["ansible"] = Ansible_Tool()
+        tools["power"] = Power_Tool()
+        tools["term_everything"] = TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage")
+
+        # RAG Tool has specific local dependencies (memory)
+        tools["rag"] = RAG_Tool(pmm_memory=twin_service.long_term_memory if twin_service else None, base_dir="/")
+
+        tools["ha"] = HA_Tool(
+            ha_url=config.get("ha_url"),
+            ha_token=config.get("ha_token")
+        )
+        tools["git"] = Git_Tool()
+        tools["orchestrator"] = OrchestratorTool()
 
     # Filter out None values
     return {k: v for k, v in tools.items() if v is not None}

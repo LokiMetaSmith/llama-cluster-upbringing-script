@@ -11,12 +11,12 @@ Objective: Allow the application to choose between running tools in-process (Mon
   - [ ] Update `ansible/roles/pipecatapp/templates/pipecat.env.j2` to expose this as an environment variable `TOOL_EXECUTION_MODE`.
 
 - [ ] **Implement Remote Tool Proxy**
-  - [ ] Create `ansible/roles/pipecatapp/files/tools/remote_tool_proxy.py`.
+  - [ ] Create `pipecatapp/tools/remote_tool_proxy.py`.
   - [ ] Implement a generic `RemoteToolProxy` class that accepts a `tool_name` and `base_url`.
   - [ ] Implement `__getattr__` or explicit methods to forward calls to the Tool Server API (`POST /run_tool`).
   - [ ] Handle authentication (forward `TOOL_SERVER_API_KEY`).
 
-- [ ] **Refactor Agent Factory (`agent_factory.py`)**
+- [ ] **Refactor Agent Factory (`pipecatapp/agent_factory.py`)**
   - [ ] Update `create_tools(config, ...)` to read `config.get("tool_execution_mode")`.
   - [ ] Implement conditional logic:
 
@@ -34,7 +34,7 @@ Objective: Allow the application to choose between running tools in-process (Mon
 
 Objective: Enable the main `pipecatapp` container to perform LLM inference and manage state locally, eliminating the need for sidecar containers on Tier 2 nodes.
 
-- [ ] **Refactor LLM Service Initialization (`app.py`)**
+- [ ] **Refactor LLM Service Initialization (`pipecatapp/app.py`)**
   - [ ] Add support for `llama-cpp-python` direct loading.
   - [ ] In `main()`, check `RUN_LOCAL_LLM` environment variable.
   - [ ] If true:
@@ -44,7 +44,7 @@ Objective: Enable the main `pipecatapp` container to perform LLM inference and m
   - [ ] If false (default): Continue using `OpenAILLMService` pointing to `LLAMA_API_SERVICE_NAME`.
 
 - [ ] **Integrate World Model**
-  - [ ] Create `ansible/roles/pipecatapp/files/local_world_model.py`.
+  - [ ] Create `pipecatapp/local_world_model.py`.
   - [ ] Implement a singleton class `LocalWorldModel` that matches the API of the MQTT-based service.
   - [ ] In `app.py`, conditionally instantiate `LocalWorldModel` vs `MQTTWorldModelClient` based on `WORLD_MODEL_MODE` (local/distributed).
   - [ ] Ensure `LocalWorldModel` still publishes updates to MQTT (fire-and-forget) so external observers (Home Assistant) stay in sync, even if the app doesn't read from MQTT.
@@ -80,12 +80,12 @@ Objective: Allow the application to seamlessly switch between finding services o
 Objective: Create a single, flexible Docker image that can run in any of the three modes.
 
 - [ ] **Update Python Dependencies**
-  - [ ] Review `ansible/roles/pipecatapp/files/requirements.txt`.
+  - [ ] Review `pipecatapp/requirements.txt`.
   - [ ] Ensure `llama-cpp-python` is included (or installed in the base image) but does not crash if no GPU is present (use CPU-only fallback build or conditional import).
   - [ ] Ensure `fastapi` and `uvicorn` are present for the Web UI.
 
-- [ ] **Enhance Startup Script (`start_pipecat.sh`)**
-  - [ ] Add logic to `ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2`.
+- [ ] **Enhance Startup Script (`pipecatapp/start_pipecat.sh`)**
+  - [ ] Add logic to `ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2` (or `pipecatapp/start_pipecat.sh`).
   - [ ] Parse `NODE_ROLE` or `DEPLOYMENT_MODE`.
   - [ ] If `MODE=monolith`, start `app.py` directly.
   - [ ] If `MODE=distributed`, ensure `consul-template` or sidecars are ready before starting.
