@@ -44,7 +44,7 @@ job "opencode" {
 
       check {
         type     = "http"
-        path     = "/" # Verify health endpoint
+        path     = "/health" # Verify health endpoint
         interval = "10s"
         timeout  = "2s"
       }
