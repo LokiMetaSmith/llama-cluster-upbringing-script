@@ -8,10 +8,10 @@
 - [ ] **Implement LLMRouter Integration (Proof of Concept):**
   - **Goal:** Replace static "tiered" routing in `SimpleLLMNode` with dynamic, semantic routing using `LLMRouter`.
   - **Tasks:**
-    1.  Add `llmrouter` to `ansible/roles/python_deps/files/requirements.txt`.
-    2.  Create a new `LLMRouterNode` class in `workflow/nodes/llm_nodes.py` (see `docs/EVALUATION_LLMROUTER.md` for design).
-    3.  Implement a basic mapping config to route between at least two local experts (e.g., `llamacpp-rpc-main` vs. `llamacpp-rpc-coding`).
-    4.  Update a test workflow to use this new node.
+    1. Add `llmrouter` to `ansible/roles/python_deps/files/requirements.txt`.
+    2. Create a new `LLMRouterNode` class in `workflow/nodes/llm_nodes.py` (see `docs/EVALUATION_LLMROUTER.md` for design).
+    3. Implement a basic mapping config to route between at least two local experts (e.g., `llamacpp-rpc-main` vs. `llamacpp-rpc-coding`).
+    4. Update a test workflow to use this new node.
 
 ## Prompt Engineering Enhancements
 
