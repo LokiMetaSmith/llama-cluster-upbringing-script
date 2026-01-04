@@ -5,35 +5,20 @@
   "providers": {
     "local": {
       "type": "openai",
-      "base_url": "http://localhost:8080/v1",
+      "base_url": "http://localhost:8081/v1",
       "api_key": "dummy"
     }
   },
   "models": {
-    "local/router-main": {
+    "local/router": {
       "provider": "local",
-      "model": "router-main",
-      "context_window": 32768
-    },
-    "local/expert-reasoning": {
-      "provider": "local",
-      "model": "expert-reasoning",
-      "context_window": 32768
-    },
-    "local/expert-context": {
-      "provider": "local",
-      "model": "expert-context",
-      "context_window": 32768
-    },
-    "local/expert-fast": {
-      "provider": "local",
-      "model": "expert-fast",
-      "context_window": 8192
-    },
-    "local/expert-creative": {
-      "provider": "local",
-      "model": "expert-creative",
-      "context_window": 32768
+      "model": "router",
+      "context_window": 4096
+    }
+  },
+  "agents": {
+    "default": {
+      "model": "local/router"
     }
   }
 }
