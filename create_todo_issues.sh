@@ -24,6 +24,6 @@ gh issue create --title "Investigate RPC Provider Monitoring: Research how to ex
 gh issue create --title "Fix Corrupted Model Files:" --body "The following files are 0 bytes and appear to be corrupted:\n`en_US-lessac-medium.onnx`\n`chat.prompt.bin`\n`bob.prompt.bin`\n"
 gh issue create --title "Fix Corrupted Binaries:" --body "The following executable files are 0 bytes:\n`distributed-llama-repo/dllama`\n`distributed-llama-repo/dllama-api`\n"
 gh issue create --title "Fix Skipped Test:" --body "`tests/unit/test_home_assistant_template.py`: Test is currently skipped and contains a TODO to re-add it without breaking tests.\n"
-gh issue create --title "Reconcile Stale Artifacts:" --body "`docker/pipecatapp/app.py` contains code and TODOs (e.g., vision model failover) that are not present in the source `ansible/roles/pipecatapp/files/app.py`. Determine if these changes should be merged or if the artifact should be regenerated.\n"
-gh issue create --title "Vision Model Failover: Implement failover or selection logic for vision models (see `ansible/roles/pipecatapp/files/app.py`)."
+gh issue create --title "Reconcile Stale Artifacts:" --body "`pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.\n"
+gh issue create --title "Vision Model Failover: Implement failover or selection logic for vision models (see `pipecatapp/app.py`)."
 gh issue create --title "Refactor Vision Role: The `vision` role is currently minimal (only installs `libgl1`) and does not deploy Frigate as implied by the `frigate_port` variable. It needs to be refactored to actually deploy the service."
