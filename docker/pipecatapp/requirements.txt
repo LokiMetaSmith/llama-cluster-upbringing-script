@@ -54,3 +54,4 @@ webrtcvad
 websockets
 wikipedia
 llm-sandbox
+python-dotenv
