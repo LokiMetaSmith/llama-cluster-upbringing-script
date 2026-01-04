@@ -22,7 +22,8 @@
   "homepage": "https://github.com/LokiMetaSmith/llama-cluster-upbringing-script#readme",
   "devDependencies": {
     "husky": "^9.1.7",
-    "markdownlint-cli": "^0.41.0"
+    "markdownlint-cli": "^0.41.0",
+    "oh-my-opencode": "^2.12.2"
   },
   "dependencies": {
     "opencode-ai": "^1.0.223"
