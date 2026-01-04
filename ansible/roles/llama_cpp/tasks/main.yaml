@@ -4,6 +4,7 @@
       - build-essential
       - git
       - cmake
+      - ccache
       - libssl-dev
       - libcurl4-openssl-dev
       - libstdc++6
@@ -91,14 +92,14 @@
 
     - name: Configure llama.cpp build with RPC and shared libraries
       ansible.builtin.command:
-        cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON -DBUILD_SHARED_LIBS=ON
+        cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON -DBUILD_SHARED_LIBS=OFF
       args:
         chdir: "{{ llama_cpp_build_dir }}"
         creates: "{{ llama_cpp_build_dir }}/build/Makefile"
 
     - name: Build llama.cpp
       ansible.builtin.command:
-        cmd: cmake --build build --config Release -j 2
+        cmd: cmake --build build --config Release -j {{ ansible_processor_vcpus }}
       args:
         chdir: "{{ llama_cpp_build_dir }}"
         creates: "{{ llama_cpp_build_dir }}/build/bin/llama-server"
