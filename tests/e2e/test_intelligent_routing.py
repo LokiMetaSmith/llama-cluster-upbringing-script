@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 # Add the app directory to the path to allow imports
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'docker/pipecatapp')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
 
 from app import TwinService, TranscriptionFrame
 from pipecat.frames.frames import StartFrame

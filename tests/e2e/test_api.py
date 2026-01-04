@@ -32,13 +32,13 @@ def start_service(api_key_and_hash):
     # Set the environment variable for the subprocess
     env = os.environ.copy()
     env["PIECAT_API_KEYS"] = hashed_key
-    env["PYTHONPATH"] = "./docker/pipecatapp"
+    env["PYTHONPATH"] = "./pipecatapp"
 
     # Start the FastAPI server as a subprocess
     # We run it from the root directory to ensure all paths are correct
     process = subprocess.Popen(
         ["python", "-m", "uvicorn", "test_server:app", "--host", "0.0.0.0", "--port", "8000"],
-        cwd=os.path.abspath("docker/pipecatapp"),
+        cwd=os.path.abspath("pipecatapp"),
         env=env,
     )
 
