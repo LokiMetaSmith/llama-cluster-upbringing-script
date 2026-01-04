@@ -33,6 +33,18 @@
   tags:
     - consul_configure
 
+- name: Wipe Consul Data and Tokens (Root cause of 403)
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ consul_data_dir }}"              
+    - "{{ consul_config_dir }}/management_token" 
+  when: cleanup_services | default(false) | bool
+  tags:
+    - consul_configure
+
 - name: Remove Consul data directory if cleanup requested
   become: true
   ansible.builtin.file:
