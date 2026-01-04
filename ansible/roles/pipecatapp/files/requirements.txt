@@ -39,3 +39,4 @@ python-consul2
 transformers
 pillow
 httpx
+llm-sandbox

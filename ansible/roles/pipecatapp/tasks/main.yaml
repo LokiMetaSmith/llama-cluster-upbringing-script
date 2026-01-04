@@ -67,6 +67,23 @@
     recurse: yes
   become: yes
 
+- name: Copy requirements.txt
+  ansible.builtin.copy:
+    src: requirements.txt
+    dest: "{{ pipecat_app_dir }}/requirements.txt"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Install python dependencies
+  ansible.builtin.pip:
+    requirements: "{{ pipecat_app_dir }}/requirements.txt"
+    virtualenv: "{{ pipecat_app_dir }}/venv"
+    virtualenv_command: python3 -m venv
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy pipecat app
   ansible.builtin.copy:
     src: app.py
