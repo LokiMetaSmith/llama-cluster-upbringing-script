@@ -4,8 +4,8 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 
-# Add the docker/pipecatapp directory to the Python path to allow for imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'docker', 'pipecatapp')))
+# Add the pipecatapp directory to the Python path to allow for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
 
 # Mock modules that are not part of the test and may have heavy dependencies
 MOCK_MODULES = [
