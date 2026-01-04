@@ -1,0 +1,127 @@
+---
+- name: Install system dependencies for Librarian
+  apt:
+    name:
+      - git
+      - python3-venv
+      - python3-pip
+      - curl
+      - unzip
+    state: present
+    update_cache: yes
+
+- name: Create Librarian directory
+  file:
+    path: "{{ librarian_install_path }}"
+    state: directory
+    owner: "{{ librarian_user }}"
+    group: "{{ librarian_group }}"
+    mode: '0755'
+
+- name: Create FileBrowser data directory
+  file:
+    path: "/opt/filebrowser"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode: '0755'
+
+- name: Create FileBrowser database file
+  file:
+    path: "/opt/filebrowser/filebrowser.db"
+    state: touch
+    owner: "root"
+    group: "root"
+    mode: '0644'
+
+- name: Create FileBrowser config file
+  copy:
+    dest: "/opt/filebrowser/.filebrowser.json"
+    content: |
+      {
+        "port": 80,
+        "address": "",
+        "log": "stdout",
+        "database": "/database.db",
+        "root": "/srv"
+      }
+    owner: "root"
+    group: "root"
+    mode: '0644'
+
+- name: Clone Local File Organizer repository
+  git:
+    repo: "{{ librarian_repo_url }}"
+    dest: "{{ librarian_install_path }}/local_file_organizer"
+    version: main
+    force: yes
+
+- name: Create virtual environment
+  command: python3 -m venv venv
+  args:
+    chdir: "{{ librarian_install_path }}/local_file_organizer"
+    creates: "{{ librarian_install_path }}/local_file_organizer/venv"
+
+- name: Install requirements
+  pip:
+    requirements: "{{ librarian_install_path }}/local_file_organizer/requirements.txt"
+    virtualenv: "{{ librarian_install_path }}/local_file_organizer/venv"
+
+- name: Install additional requirements (openai, schedule)
+  pip:
+    name:
+      - openai
+      - schedule
+      - requests
+    virtualenv: "{{ librarian_install_path }}/local_file_organizer/venv"
+
+- name: Download Spacedrive Core (Headless)
+  get_url:
+    url: "https://github.com/spacedriveapp/spacedrive/releases/latest/download/Spacedrive-linux-x86_64.deb"
+    dest: "/tmp/spacedrive.deb"
+    mode: '0644'
+  register: spacedrive_download
+
+- name: Install Spacedrive Core
+  apt:
+    deb: "/tmp/spacedrive.deb"
+  when: spacedrive_download.changed
+
+- name: Create Spacedrive systemd service
+  template:
+    src: spacedrive.service.j2
+    dest: "/etc/systemd/system/spacedrive.service"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart spacedrive
+
+- name: Enable and start Spacedrive service
+  systemd:
+    name: "spacedrive"
+    enabled: yes
+    state: started
+
+- name: Deploy Librarian Agent script
+  template:
+    src: librarian_agent.py.j2
+    dest: "{{ librarian_install_path }}/local_file_organizer/librarian_agent.py"
+    owner: "{{ librarian_user }}"
+    group: "{{ librarian_group }}"
+    mode: '0755'
+  notify: restart librarian
+
+- name: Create Librarian systemd service
+  template:
+    src: librarian.service.j2
+    dest: "/etc/systemd/system/{{ librarian_service_name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart librarian
+
+- name: Enable and start Librarian service
+  systemd:
+    name: "{{ librarian_service_name }}"
+    enabled: yes
+    state: started

@@ -1,0 +1,18 @@
+[Unit]
+Description=Librarian Agent - Autonomous File Organizer
+After=network.target
+
+[Service]
+Type=simple
+User={{ librarian_user }}
+Group={{ librarian_group }}
+WorkingDirectory={{ librarian_install_path }}/local_file_organizer
+Environment="PATH={{ librarian_install_path }}/local_file_organizer/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+ExecStart={{ librarian_install_path }}/local_file_organizer/venv/bin/python3 librarian_agent.py
+
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

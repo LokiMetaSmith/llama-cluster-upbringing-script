@@ -1,0 +1,18 @@
+[Unit]
+Description=Spacedrive Core Service
+After=network.target
+
+[Service]
+Type=simple
+User={{ librarian_user }}
+Group={{ librarian_group }}
+# Adjust path if the .deb installs elsewhere, typically /usr/bin/spacedrive or /usr/bin/sd-core
+# Based on the user's note about "headless sd-core", we assume the binary might be `spacedrive`.
+# If the .deb installs a GUI app, we might need to look for the core binary inside it.
+# Usually standard linux packages put binaries in /usr/bin.
+ExecStart=/usr/bin/spacedrive --headless
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

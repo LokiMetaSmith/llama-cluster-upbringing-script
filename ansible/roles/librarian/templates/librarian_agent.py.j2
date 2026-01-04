@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+"""
+Librarian Agent
+---------------
+This autonomous agent periodically scans configured directories, identifies unorganized files,
+and uses the cluster's LLM to categorize and move them using the Local File Organizer logic.
+"""
+
+import os
+import sys
+import time
+import logging
+import schedule
+import json
+import requests
+from openai import OpenAI
+from pathlib import Path
+
+# Configure Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("librarian.log")
+    ]
+)
+logger = logging.getLogger("Librarian")
+
+# Configuration (Injected by Ansible)
+TARGET_DIRS = {{ librarian_target_dirs | to_json }}
+LLM_BASE_URL = "{{ librarian_llm_base_url }}"
+LLM_MODEL = "{{ librarian_llm_model }}"
+SCAN_INTERVAL = {{ librarian_scan_interval }}
+
+# Initialize OpenAI Client (pointing to Cluster Router)
+client = OpenAI(
+    base_url=LLM_BASE_URL,
+    api_key="sk-cluster-key" # Dummy key for local cluster
+)
+
+class MockContext:
+    """
+    Mocks the FastMCP Context object to allow calling file_organizer tools directly.
+    We need to implement 'call_tool' to redirect back to file_organizer functions
+    or implementation of mcp_filesystem_* tools if they are external.
+
+    Wait, file_organizer.py relies on 'mcp_filesystem_*' tools which are provided by
+    '@modelcontextprotocol/server-filesystem'. This is an external Node.js server usually.
+
+    CRITICAL FINDING: The 'local_file_organizer' repo assumes it has access to
+    'mcp_filesystem_*' tools. These are NOT in python. They are usually provided by the
+    client (Claude) or another MCP server.
+
+    If we run this standalone, we must IMPLEMENT the filesystem tools or find a python
+    implementation.
+
+    Fortunately, implementing basic filesystem ops in Python is trivial.
+    """
+    def __init__(self, request_context=None):
+        self.request_context = request_context
+
+    def call_tool(self, name: str, arguments: dict):
+        logger.debug(f"MockContext calling tool: {name} with {arguments}")
+
+        path = arguments.get("path")
+
+        if name == "mcp_filesystem_list_directory":
+            # Emulate ls -F style
+            return self._list_directory(path)
+        elif name == "mcp_filesystem_create_directory":
+            os.makedirs(path, exist_ok=True)
+            return f"Created {path}"
+        elif name == "mcp_filesystem_move_file":
+            src = arguments.get("source")
+            dest = arguments.get("destination")
+            os.rename(src, dest)
+            return f"Moved {src} to {dest}"
+        elif name == "mcp_filesystem_read_file":
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                return f.read()
+        elif name == "mcp_filesystem_get_file_info":
+             return self._get_file_info(path)
+        elif name == "mcp_filesystem_list_allowed_directories":
+            # Return all target dirs
+            return "\n".join(TARGET_DIRS)
+        else:
+            raise NotImplementedError(f"Tool {name} not implemented in MockContext")
+
+    def _list_directory(self, path):
+        output = []
+        try:
+            with os.scandir(path) as it:
+                for entry in it:
+                    if entry.is_dir():
+                        output.append(f"[DIR] {entry.name}")
+                    else:
+                        output.append(f"[FILE] {entry.name}")
+        except Exception as e:
+            logger.error(f"Error listing {path}: {e}")
+        return "\n".join(output)
+
+    def _get_file_info(self, path):
+        stats = os.stat(path)
+        is_dir = os.path.isdir(path)
+        return f"path: {path}\nisDirectory: {str(is_dir).lower()}\nsize: {stats.st_size}"
+
+    def info(self, message):
+        logger.info(message)
+
+    def error(self, message):
+        logger.error(message)
+
+
+def process_directory(path):
+    """
+    Scans a directory and organizes it.
+    """
+    logger.info(f"Scanning directory: {path}")
+    ctx = MockContext()
+
+    try:
+        # 1. Analyze the directory
+        # We can use file_organizer.analyze_directory logic, but we want to be autonomous.
+        # file_organizer.organize_files uses 'bulk_move_files' which organizes based on EXTENSION.
+        # This is rule-based, not LLM-based.
+        # The user wanted "LLM acts as Data Librarian".
+
+        # So we should Use the LLM to decide.
+
+        # Get file list
+        files_content = ctx._list_directory(path)
+        files = [line.replace("[FILE] ", "") for line in files_content.split("\n") if "[FILE]" in line]
+
+        if not files:
+            logger.info("No files found.")
+            return
+
+        # Prepare Prompt for LLM
+        prompt = f"""
+        You are a Data Librarian. Organize the following files in the directory '{path}'.
+
+        Files:
+        {json.dumps(files)}
+
+        The goal is to sort them into subfolders based on their content/type.
+        Standard folders: Documents, Images, Videos, Audio, Archives, Code, Applications.
+        You may suggest specific subfolders if appropriate (e.g. 'Invoices' inside Documents).
+
+        Return a JSON object where keys are the filenames and values are the new relative paths.
+        Example: {{"invoice.pdf": "Documents/Invoices/invoice.pdf", "pic.jpg": "Images/pic.jpg"}}
+
+        Only return the JSON.
+        """
+
+        logger.info(f"Asking LLM to organize {len(files)} files...")
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1
+        )
+
+        content = response.choices[0].message.content
+        logger.info(f"LLM Response: {content[:100]}...")
+
+        # Parse JSON
+        try:
+            # clean code blocks if present
+            clean_content = content.strip().replace("```json", "").replace("```", "")
+            moves = json.loads(clean_content)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse LLM response as JSON")
+            return
+
+        # Execute Moves
+        for filename, new_rel_path in moves.items():
+            if filename not in files:
+                continue
+
+            src_path = os.path.join(path, filename)
+            dest_path = os.path.join(path, new_rel_path)
+            dest_dir = os.path.dirname(dest_path)
+
+            # Security check: ensure we stay within target dir
+            if not os.path.abspath(dest_path).startswith(os.path.abspath(path)):
+                logger.warning(f"Skipping move: {dest_path} is outside base directory")
+                continue
+
+            if src_path == dest_path:
+                continue
+
+            logger.info(f"Moving {filename} -> {new_rel_path}")
+            try:
+                os.makedirs(dest_dir, exist_ok=True)
+                os.rename(src_path, dest_path)
+            except Exception as e:
+                logger.error(f"Failed to move {filename}: {e}")
+
+    except Exception as e:
+        logger.error(f"Error processing {path}: {e}", exc_info=True)
+
+def job():
+    logger.info("Starting scheduled scan...")
+    for target in TARGET_DIRS:
+        if os.path.exists(target):
+            process_directory(target)
+        else:
+            logger.warning(f"Target directory not found: {target}")
+    logger.info("Scan complete.")
+
+def main():
+    logger.info("Librarian Agent Started")
+    logger.info(f"Target Dirs: {TARGET_DIRS}")
+    logger.info(f"LLM: {LLM_BASE_URL} ({LLM_MODEL})")
+
+    # Run once on startup
+    job()
+
+    # Schedule
+    schedule.every(SCAN_INTERVAL).seconds.do(job)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+if __name__ == "__main__":
+    main()
