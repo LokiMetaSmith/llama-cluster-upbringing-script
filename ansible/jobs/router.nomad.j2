@@ -79,7 +79,7 @@ job "router" {
           "--port", "${NOMAD_PORT_ollama}",
           "--model", "openai/{{ expert_models.router[0].filename }}",
           "--api_base", "http://localhost:{{ router_port }}/v1",
-          "--drop_params", "true"
+          "--drop_params"
         ]
       }
 
