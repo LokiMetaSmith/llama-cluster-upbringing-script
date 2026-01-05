@@ -55,3 +55,4 @@ websockets
 wikipedia
 llm-sandbox
 python-dotenv
+opencode-ai
