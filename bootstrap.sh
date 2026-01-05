@@ -28,7 +28,8 @@ show_help() {
     echo "  --user <user>                Specify the target user for Ansible. Default: pipecatapp."
     echo "  --purge-jobs                 Stop and purge all running Nomad jobs before starting."
     echo "  --clean                      Clean the repository of all untracked files (interactive prompt)."
-    echo "  --debug                      Enable verbose Ansible output and log to playbook_output.log."
+    echo "  --verbose [level]            Set verbosity level (0-4). Default 0, or 3 if flag is used without value."
+    echo "  --debug                      Alias for --verbose 4."
     echo "  --leave-services-running     Do not clean up Nomad and Consul data on startup."
     echo "  --external-model-server      Skip large model downloads and builds, assuming an external server."
     echo "  --continue                   Resume from the last successfully completed playbook."
@@ -44,24 +45,55 @@ show_help() {
 # --- Initialize flags ---
 USE_CONTAINER=false
 CLEAN_REPO=false
-IS_DEBUG=false
+VERBOSE_LEVEL=0
 ROLE="all"
 CONTROLLER_IP=""
 
 # --- Parse command-line arguments for wrapper logic ---
-# We need to peek at args to handle --clean and --container before passing everything to Python
-for arg in "$@"; do
+# We use a while loop to handle optional values for flags like --verbose
+ARGS=("$@")
+PROCESSED_ARGS=()
+SKIP_NEXT=false
+
+for ((i=0; i<${#ARGS[@]}; i++)); do
+    arg="${ARGS[$i]}"
+
+    if [ "$SKIP_NEXT" = true ]; then
+        SKIP_NEXT=false
+        continue
+    fi
+
     case $arg in
-        --clean) CLEAN_REPO=true ;;
-        --container) USE_CONTAINER=true ;;
-        --debug) IS_DEBUG=true ;;
-        --role)
-            # Simple peek, robust parsing handled by python
-            shift
+        --clean)
+            CLEAN_REPO=true
+            PROCESSED_ARGS+=("$arg")
+            ;;
+        --container)
+            USE_CONTAINER=true
+            PROCESSED_ARGS+=("$arg")
+            ;;
+        --debug)
+            VERBOSE_LEVEL=4
+            PROCESSED_ARGS+=("$arg")
+            ;;
+        --verbose)
+            # Check next arg
+            NEXT_ARG="${ARGS[$((i+1))]}"
+            if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
+                VERBOSE_LEVEL="$NEXT_ARG"
+                PROCESSED_ARGS+=("--verbose" "$VERBOSE_LEVEL")
+                SKIP_NEXT=true
+            else
+                VERBOSE_LEVEL=3
+                PROCESSED_ARGS+=("--verbose" "3")
+            fi
             ;;
         -h|--help)
             show_help
             exit 0
+            ;;
+        *)
+            PROCESSED_ARGS+=("$arg")
             ;;
     esac
 done
@@ -78,10 +110,13 @@ run_step() {
     local desc="$1"
     local cmd="$2"
 
-    if [ "$IS_DEBUG" = true ]; then
+    # Levels 3 and 4 show output
+    if [ "$VERBOSE_LEVEL" -ge 3 ]; then
         echo -e "\n${BOLD}${CYAN}--- Running ${desc} ---${NC}"
-        eval "$cmd"
-        local status=$?
+        # Execute and tee to log
+        eval "$cmd" 2>&1 | tee -a "$LOG_FILE"
+        local status=${PIPESTATUS[0]} # Capture exit code of the evaluated command
+
         if [ $status -eq 0 ]; then
             echo -e "${GREEN}✅ ${desc} complete.${NC}"
         else
@@ -179,14 +214,8 @@ if [ "$USE_CONTAINER" = true ]; then
         sleep 5
 
         echo "Executing bootstrap inside the container..."
-        ARGS_WITHOUT_CONTAINER=()
-        for arg in "$@"; do
-            if [[ "$arg" != "--container" ]]; then
-                ARGS_WITHOUT_CONTAINER+=("$arg")
-            fi
-        done
-
-        docker exec -it "$CONTAINER_NAME" /bin/bash -c "cd /opt/cluster-infra && ./bootstrap.sh ${ARGS_WITHOUT_CONTAINER[*]}"
+        # Pass processed args
+        docker exec -it "$CONTAINER_NAME" /bin/bash -c "cd /opt/cluster-infra && ./bootstrap.sh ${PROCESSED_ARGS[*]}"
         EXIT_CODE=$?
 
         echo "Container bootstrap finished with exit code: $EXIT_CODE"
@@ -273,9 +302,8 @@ fi
 
 # --- Run Provisioning Script ---
 # echo "🚀 Handing over to Python provisioning script..."
-# Pass all original arguments to the python script.
-# Note: The python script parses args independently.
-python3 provisioning.py "$@"
+# Pass processed arguments to the python script.
+python3 provisioning.py "${PROCESSED_ARGS[@]}"
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then

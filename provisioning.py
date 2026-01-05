@@ -4,7 +4,7 @@ Provisioning Script for Hybrid Architecture.
 Replaces the logic of bootstrap.sh with a more robust, extensible Python script.
 
 Usage:
-    python3 provisioning.py [--role ROLE] [--tags TAGS] [--continue] ...
+    python3 provisioning.py [--role ROLE] [--tags TAGS] [--continue] [--verbose LEVEL] ...
 """
 
 import argparse
@@ -206,7 +206,7 @@ def purge_nomad_jobs():
     print("Process cleanup complete.")
 
 
-def run_playbook(playbook_path, extra_vars, tags, debug_mode):
+def run_playbook(playbook_path, extra_vars, tags, verbose_level):
     """Runs a single ansible playbook."""
     cmd = ["ansible-playbook", "-i", INVENTORY_FILE, playbook_path]
 
@@ -216,29 +216,88 @@ def run_playbook(playbook_path, extra_vars, tags, debug_mode):
     if tags:
         cmd.extend(["--tags", tags])
 
-    if debug_mode:
+    # Add verbosity flags based on level
+    if verbose_level >= 4:
         cmd.append("-vvvv")
+    elif verbose_level == 3:
+        cmd.append("-v")
+
+    # Level 2 is normal ansible output (no flag needed typically, or maybe -v if one wants slightly more info?)
+    # Default ansible output is decent.
+    # Level 0, 1: Suppress output.
 
     print_task_header(f"Running task: {os.path.basename(playbook_path)}")
 
+    if verbose_level >= 1:
+        print(f"  Path: {playbook_path}")
+
     start_time = time.time()
 
-    # In debug mode, we might want to capture output to file, but simpler to just let it stream
-    # and rely on the wrapper script to redirect if needed, or use subprocess.PIPE.
-    # The original script used `>> $LOG_FILE 2>&1`.
+    # Streaming logic
+    # We want to ALWAYS capture to LOG_FILE.
+    # If verbose_level >= 2, we ALSO print to stdout.
 
-    if debug_mode:
-        with open(LOG_FILE, "a") as log:
-            result = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT)
-    else:
-        result = subprocess.run(cmd)
+    # We open the log file in append mode.
+    # Using subprocess.Popen to stream.
+
+    # Ensure stdout flushes immediately
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+    env["ANSIBLE_FORCE_COLOR"] = "1" # Keep colors if possible
+
+    try:
+        with open(LOG_FILE, "a") as log_file:
+            # We add a header to the log file for this run
+            log_file.write(f"\n--- Running Task: {playbook_path} ---\n")
+
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, # Merge stderr into stdout
+                text=True,
+                env=env,
+                bufsize=1 # Line buffered
+            )
+
+            captured_lines = []
+
+            for line in process.stdout:
+                # Write to log
+                log_file.write(line)
+
+                # If verbose, write to stdout
+                if verbose_level >= 2:
+                    sys.stdout.write(line)
+                elif verbose_level < 2:
+                    # Keep a small buffer in case of error?
+                    # If error happens, we might want to dump the last N lines or point to the log.
+                    # The user said "highlight when errors occur... running list of warnings and errors".
+                    # We can store everything in memory if it's not too huge, or just rely on the file.
+                    captured_lines.append(line)
+
+            process.wait()
+            return_code = process.returncode
+
+    except Exception as e:
+        print_error(f"Failed to execute playbook: {e}")
+        sys.exit(1)
 
     duration = time.time() - start_time
     print(f"Task finished in {duration:.2f}s")
 
-    if result.returncode != 0:
+    if return_code != 0:
         print_error(f"Task '{playbook_path}' failed.")
-        sys.exit(result.returncode)
+
+        # If we suppressed output, dump the relevant parts now
+        if verbose_level < 2:
+            print(f"{Colors.WARNING}--- Task Output (Last 50 lines) ---{Colors.ENDC}")
+            # Dump last 50 lines from capture
+            for line in captured_lines[-50:]:
+                sys.stdout.write(line)
+            print(f"{Colors.WARNING}--- End Task Output ---{Colors.ENDC}")
+            print(f"Full log available in: {LOG_FILE}")
+
+        sys.exit(return_code)
 
     print(f"{Colors.OKGREEN}✅ Task '{playbook_path}' completed successfully.{Colors.ENDC}")
 
@@ -268,7 +327,8 @@ def main():
     parser.add_argument("--controller-ip", help="IP of the controller (required for workers)")
     parser.add_argument("--tags", help="Ansible tags to run")
     parser.add_argument("--user", default="pipecatapp", dest="target_user", help="Target user for Ansible")
-    parser.add_argument("--debug", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--debug", action="store_true", help="Enable verbose logging (Legacy flag)")
+    parser.add_argument("--verbose", type=int, default=0, help="Verbosity level (0-4)")
     parser.add_argument("--continue", action="store_true", dest="continue_run", help="Resume from last state")
 
     # Pass-through flags that are handled as extra-vars
@@ -283,7 +343,15 @@ def main():
 
     args = parser.parse_args()
 
+    # Consolidate debug flag into verbose level
+    if args.debug and args.verbose == 0:
+        args.verbose = 4
+
+    verbose_level = args.verbose
+
     print_header("Provisioning Started")
+    if verbose_level > 0:
+        print(f"Verbosity Level: {verbose_level}")
 
     # --- Validation ---
     if args.role == "worker" and not args.controller_ip:
@@ -374,7 +442,7 @@ def main():
             cleanup_memory_for_core_ai()
 
         # --- Run ---
-        run_playbook(pb_path, extra_vars, args.tags, args.debug)
+        run_playbook(pb_path, extra_vars, args.tags, verbose_level)
 
         # Save State
         with open(STATE_FILE, 'w') as f:
