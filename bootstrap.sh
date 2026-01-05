@@ -6,6 +6,15 @@
 # server for development or as the initial control node for a new cluster.
 # It runs the main Ansible playbook using a local inventory file.
 
+# --- Colors ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+BOLD='\033[1m'
+
 # --- Help Menu ---
 show_help() {
     echo "Usage: $0 [options]"
@@ -35,6 +44,7 @@ show_help() {
 # --- Initialize flags ---
 USE_CONTAINER=false
 CLEAN_REPO=false
+IS_DEBUG=false
 ROLE="all"
 CONTROLLER_IP=""
 
@@ -44,6 +54,7 @@ for arg in "$@"; do
     case $arg in
         --clean) CLEAN_REPO=true ;;
         --container) USE_CONTAINER=true ;;
+        --debug) IS_DEBUG=true ;;
         --role)
             # Simple peek, robust parsing handled by python
             shift
@@ -59,9 +70,50 @@ done
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR"
 
+LOG_FILE="bootstrap_debug.log"
+> "$LOG_FILE"
+
+# --- Helper: Run Step ---
+run_step() {
+    local desc="$1"
+    local cmd="$2"
+
+    if [ "$IS_DEBUG" = true ]; then
+        echo -e "\n${BOLD}${CYAN}--- Running ${desc} ---${NC}"
+        eval "$cmd"
+        local status=$?
+        if [ $status -eq 0 ]; then
+            echo -e "${GREEN}✅ ${desc} complete.${NC}"
+        else
+            echo -e "${RED}❌ ${desc} failed.${NC}"
+            return $status
+        fi
+    else
+        echo -n -e "⏳ ${desc}..."
+
+        local tmp_log=$(mktemp)
+        eval "$cmd" > "$tmp_log" 2>&1
+        local status=$?
+
+        cat "$tmp_log" >> "$LOG_FILE"
+
+        if [ $status -eq 0 ]; then
+            echo -e "\r\033[K${GREEN}✅ ${desc} Complete${NC}"
+        else
+            echo -e "\r\033[K${RED}❌ ${desc} Failed${NC}"
+            echo -e "${YELLOW}--- Error Log ---${NC}"
+            cat "$tmp_log"
+            echo -e "${YELLOW}-----------------${NC}"
+            rm "$tmp_log"
+            return $status
+        fi
+        rm "$tmp_log"
+    fi
+}
+
 # --- Container Mode ---
 if [ "$USE_CONTAINER" = true ]; then
-    echo "--- Running in Container Mode ---"
+    echo -e "${BOLD}--- Running in Container Mode ---${NC}"
 
     # --- Host-side Cluster Detection ---
     check_for_existing_cluster() {
@@ -108,15 +160,8 @@ if [ "$USE_CONTAINER" = true ]; then
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw --cgroupns=host \
             -v "$SCRIPT_DIR":/opt/cluster-infra -e "HOST_IP=$HOST_IP")
 
-        # Determine ports based on logic similar to original script
-        # Since we are passing args to python inside, we just expose all potentially needed ports
-        # If joining an existing cluster, we might not need all, but it's safer to expose them.
-        # Original logic: if CLUSTER_EXISTS, worker mode (no ports needed). Else controller mode.
-
         if [ "$CLUSTER_EXISTS" = true ]; then
             echo "Configuring container as a WORKER to join the existing cluster."
-            # No port mappings needed for a worker node (it connects out or uses host net logic if adjusted)
-            # NOTE: If using bridge network, worker needs to be reachable.
         else
             echo "Configuring container as a new CONTROLLER."
             DOCKER_RUN_CMD+=(-p 4646:4646 -p 8500:8500 -p 8081:8081 -p 8000:8000)
@@ -141,7 +186,6 @@ if [ "$USE_CONTAINER" = true ]; then
             fi
         done
 
-        # Execute inside container
         docker exec -it "$CONTAINER_NAME" /bin/bash -c "cd /opt/cluster-infra && ./bootstrap.sh ${ARGS_WITHOUT_CONTAINER[*]}"
         EXIT_CODE=$?
 
@@ -154,14 +198,20 @@ if [ "$USE_CONTAINER" = true ]; then
 fi
 
 # --- Run Initial Machine Setup ---
-echo "--- Running Initial Machine Setup ---"
+echo -e "${BOLD}=== System Bootstrap ===${NC}"
 if [ -f "initial-setup/setup.sh" ]; then
     if [ -f "/.dockerenv" ] && [ "$(hostname)" = "pipecat-dev-runner" ]; then
          echo "🐳 Container environment detected. Skipping initial machine setup (setup.sh)."
     else
-        echo "You may be prompted for your sudo password to run the initial setup script."
-        sudo bash "initial-setup/setup.sh"
-        echo "✅ Initial machine setup complete."
+        # We need to ensure sudo doesn't hang on prompt hidden by redirection
+        if sudo -n true 2>/dev/null; then
+            # Sudo is already cached
+            run_step "Initial machine setup" "sudo bash initial-setup/setup.sh"
+        else
+            echo "You may be prompted for your sudo password to run the initial setup script."
+            sudo -v
+            run_step "Initial machine setup" "sudo bash initial-setup/setup.sh"
+        fi
     fi
 else
     echo "⚠️  Warning: initial-setup/setup.sh not found. Skipping pre-configuration."
@@ -169,7 +219,7 @@ fi
 
 # --- Handle the --clean option ---
 if [ "$CLEAN_REPO" = true ]; then
-    echo "⚠️  --clean flag detected. This will permanently delete all untracked files."
+    echo -e "\n${YELLOW}⚠️  --clean flag detected. This will permanently delete all untracked files.${NC}"
     echo "Performing a dry run to show what will be deleted:"
     echo "--------------------------------------------------"
     git clean -ndx
@@ -178,9 +228,7 @@ if [ "$CLEAN_REPO" = true ]; then
     read -p "Are you sure you want to permanently delete all files and directories listed above? [y/N] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "Cleaning repository..."
-        git clean -fdx
-        echo "✅ Repository cleaned."
+        run_step "Cleaning repository" "git clean -fdx"
     else
         echo "Cleanup cancelled. Exiting."
         exit 1
@@ -188,60 +236,52 @@ if [ "$CLEAN_REPO" = true ]; then
 fi
 
 # --- Install Python dependencies (Virtual Environment) ---
-echo "Setting up Python virtual environment..."
+echo -e "\n${BOLD}=== Environment Setup ===${NC}"
 VENV_DIR="$SCRIPT_DIR/.venv"
 
-if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment at $VENV_DIR..."
-    python3 -m venv "$VENV_DIR"
-fi
+setup_venv() {
+    if [ ! -d "$VENV_DIR" ]; then
+        python3 -m venv "$VENV_DIR"
+    fi
+}
+run_step "Creating Python virtual environment" "setup_venv"
 
 # Activate venv for this script execution
 source "$VENV_DIR/bin/activate"
 
-# Upgrade pip
-pip install --upgrade pip
+run_step "Upgrading pip" "pip install --upgrade pip"
 
-echo "Installing Python dependencies from requirements-dev.txt..."
 if [ -f "requirements-dev.txt" ]; then
-    pip install --no-cache-dir -r requirements-dev.txt
-    echo "✅ Python dependencies installed."
+    run_step "Installing Python dependencies" "pip install --no-cache-dir -r requirements-dev.txt"
 else
     echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
 fi
 
-echo "Installing essential Ansible dependencies..."
-pip install ansible-core pyyaml
-echo "✅ Ansible dependencies installed."
+run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
 
 # --- Find Ansible Playbook executable ---
 # Since we are in a venv, these are guaranteed to be in the path
 ANSIBLE_GALAXY_EXEC="$(which ansible-galaxy)"
 
 # Install Ansible collections
-echo "Installing Ansible collections..."
 if [ -x "$ANSIBLE_GALAXY_EXEC" ]; then
-    if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker; then
-        echo "Error: Failed to install Ansible collections." >&2
-        exit 1
-    fi
-    echo "✅ Ansible collections installed successfully."
+    run_step "Installing Ansible collections" "$ANSIBLE_GALAXY_EXEC collection install community.general ansible.posix community.docker"
 else
     echo "Error: ansible-galaxy not found in venv." >&2
     exit 1
 fi
 
 # --- Run Provisioning Script ---
-echo "🚀 Handing over to Python provisioning script..."
+# echo "🚀 Handing over to Python provisioning script..."
 # Pass all original arguments to the python script.
 # Note: The python script parses args independently.
 python3 provisioning.py "$@"
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
-    echo "Bootstrap complete."
+    echo -e "\n${GREEN}✨ Bootstrap complete.${NC}"
 else
-    echo "Bootstrap failed with exit code $EXIT_CODE."
+    echo -e "\n${RED}❌ Bootstrap failed with exit code $EXIT_CODE.${NC}"
 fi
 
 exit $EXIT_CODE
