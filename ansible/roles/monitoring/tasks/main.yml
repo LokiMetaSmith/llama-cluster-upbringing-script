@@ -60,6 +60,13 @@
 
 - name: Deploy MQTT Exporter
   block:
+    - name: Wait for MQTT service to be ready
+      ansible.builtin.wait_for:
+        host: "{{ cluster_ip }}"
+        port: "{{ mqtt_port }}"
+        timeout: 300
+        state: started
+
     - name: Template mqtt-exporter job
       ansible.builtin.template:
         src: mqtt-exporter.nomad.j2
