@@ -22,7 +22,7 @@ langchain
 langchain-community
 langchain-core
 misaki[en]>=0.9.4
-nomad-python
+python-nomad
 num2words
 numpy
 onnxruntime
