@@ -38,7 +38,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     network {
       mode = "host"
       port "http" {
-        to = 8000
+        static = {{ nanochat_port }}
       }
     }
 
@@ -51,7 +51,9 @@ job "{{ job_name | default('pipecat-app') }}" {
     {% else %}
     network {
       mode = "host"
-      port "http" {}
+      port "http" {
+        static = {{ nanochat_port }}
+      }
     }
     {% endif %}
 
