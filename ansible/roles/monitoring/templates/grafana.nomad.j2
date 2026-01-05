@@ -2,6 +2,17 @@ job "grafana" {
   datacenters = ["dc1"]
   type        = "service"
 
+  # Update stanza for reliability
+  update {
+    max_parallel      = 1
+    health_check      = "checks"
+    min_healthy_time  = "10s"
+    healthy_deadline  = "15m"
+    progress_deadline = "20m"
+    auto_revert       = true
+    canary            = 0
+  }
+
   group "grafana" {
     count = 1
 
@@ -13,6 +24,7 @@ job "grafana" {
     }
 
     network {
+      mode = "host"
       port "http" {
         static = {{ grafana_port }}
       }
