@@ -35,7 +35,7 @@
 
 - name: "Tool Server : Copy pmm_memory.py"
   ansible.builtin.copy:
-    src: "{{ role_path }}/../../roles/pipecatapp/files/pmm_memory.py"
+    src: "{{ role_path }}/../../../pipecatapp/pmm_memory.py"
     dest: "/opt/tool_server/pmm_memory.py"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
@@ -44,7 +44,7 @@
 
 - name: "Tool Server : Copy tools directory"
   ansible.builtin.copy:
-    src: "{{ role_path }}/../../roles/pipecatapp/files/tools"
+    src: "{{ role_path }}/../../../pipecatapp/tools"
     dest: "/opt/tool_server/"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
