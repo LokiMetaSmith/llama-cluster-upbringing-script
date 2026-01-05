@@ -4,7 +4,7 @@ Provisioning Script for Hybrid Architecture.
 Replaces the logic of bootstrap.sh with a more robust, extensible Python script.
 
 Usage:
-    python3 provisioning.py [--role ROLE] [--tags TAGS] [--continue] ...
+    python3 provisioning.py [--role ROLE] [--tags TAGS] [--continue] [--verbose LEVEL] ...
 """
 
 import argparse
@@ -22,19 +22,58 @@ STATE_FILE = os.path.join(SCRIPT_DIR, ".provisioning_state")
 LOG_FILE = os.path.join(SCRIPT_DIR, "playbook_output.log")
 INVENTORY_FILE = os.path.join(SCRIPT_DIR, "local_inventory.ini")
 
+# --- Colors & formatting ---
+class Colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+WARNINGS = []
+ERRORS = []
+
 # --- Helper Functions ---
+
+def print_warning(msg):
+    """Prints a warning message and adds it to the tracking list."""
+    full_msg = f"{Colors.WARNING}⚠️  {msg}{Colors.ENDC}"
+    print(full_msg)
+    WARNINGS.append(msg)
+
+def print_error(msg):
+    """Prints an error message and adds it to the tracking list."""
+    full_msg = f"{Colors.FAIL}❌ {msg}{Colors.ENDC}"
+    print(full_msg)
+    ERRORS.append(msg)
+
+def print_header(msg):
+    """Prints a styled header."""
+    print(f"\n{Colors.HEADER}{Colors.BOLD}{'=' * 60}")
+    print(f" {msg}")
+    print(f"{'=' * 60}{Colors.ENDC}")
+
+def print_task_header(msg):
+    """Prints a styled task header."""
+    print(f"\n{Colors.OKBLUE}{Colors.BOLD}┌────────────────────────────────────────────────────────┐")
+    print(f"│ 🚀 {msg:<50} │")
+    print(f"└────────────────────────────────────────────────────────┘{Colors.ENDC}")
 
 def load_playbooks_from_manifest(manifest_path):
     """Parses a YAML manifest to extract the list of playbooks."""
     if not os.path.exists(manifest_path):
-        print(f"Error: Manifest file '{manifest_path}' not found.")
+        print_error(f"Manifest file '{manifest_path}' not found.")
         sys.exit(1)
 
     with open(manifest_path, 'r') as f:
         try:
             data = yaml.safe_load(f)
         except yaml.YAMLError as e:
-            print(f"Error parsing YAML manifest: {e}")
+            print_error(f"Error parsing YAML manifest: {e}")
             sys.exit(1)
 
     playbooks = []
@@ -72,14 +111,14 @@ def wait_for_ports_freed(ports, timeout=60):
         print(f"Checking port {port}...")
         while check_port_open("127.0.0.1", port):
             if time.time() - start_time > timeout:
-                print(f"⚠️  Timeout waiting for port {port} to be free. Proceeding anyway.")
+                print_warning(f"Timeout waiting for port {port} to be free. Proceeding anyway.")
                 return
             time.sleep(2)
-        print(f"✅ Port {port} is free.")
+        print(f"{Colors.OKGREEN}✅ Port {port} is free.{Colors.ENDC}")
 
 def cleanup_memory_for_core_ai():
     """Performs cleanup to free RAM before heavy AI services start."""
-    print("🧹 Performing pre-Core AI Services cleanup to free RAM...")
+    print(f"{Colors.OKCYAN}🧹 Performing pre-Core AI Services cleanup to free RAM...{Colors.ENDC}")
 
     # Stop llamacpp-rpc jobs
     try:
@@ -95,7 +134,7 @@ def cleanup_memory_for_core_ai():
                     subprocess.run(["nomad", "job", "stop", "-purge", job_id],
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
-        print(f"Warning: Failed to cleanup Nomad jobs: {e}")
+        print_warning(f"Failed to cleanup Nomad jobs: {e}")
 
     # Note: drop_caches requires sudo, which we might not have if running as user.
     # The original script commented out the 'sync; echo 3 > drop_caches' part,
@@ -112,18 +151,18 @@ def kill_if_running(pattern):
         if result.returncode == 0:
             pids = result.stdout.strip().split()
             if pids:
-                print(f"⚠️  Found orphaned process matching '{pattern}'. Terminating...")
+                print(f"{Colors.WARNING}⚠️  Found orphaned process matching '{pattern}'. Terminating...{Colors.ENDC}")
                 subprocess.run(["kill", "-9"] + pids, stderr=subprocess.DEVNULL)
     except Exception as e:
-        print(f"Warning: Failed to kill process matching '{pattern}': {e}")
+        print_warning(f"Failed to kill process matching '{pattern}': {e}")
 
 def purge_nomad_jobs():
     """Stops and purges all Nomad jobs."""
     if not shutil.which("nomad"):
-        print("⚠️  Warning: 'nomad' command not found. Cannot purge jobs. Skipping.")
+        print_warning("'nomad' command not found. Cannot purge jobs. Skipping.")
         return
 
-    print("🔥 --purge-jobs flag detected. Stopping and purging all Nomad jobs...")
+    print(f"{Colors.WARNING}🔥 --purge-jobs flag detected. Stopping and purging all Nomad jobs...{Colors.ENDC}")
     try:
         # Get all job IDs
         cmd = "nomad job status | awk 'NR>1 {print $1}'"
@@ -139,12 +178,12 @@ def purge_nomad_jobs():
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         if found_jobs:
-            print("✅ All Nomad jobs have been purged.")
+            print(f"{Colors.OKGREEN}✅ All Nomad jobs have been purged.{Colors.ENDC}")
         else:
             print("No running Nomad jobs found to purge.")
 
     except Exception as e:
-        print(f"Error purging jobs: {e}")
+        print_error(f"Error purging jobs: {e}")
 
     # Check for orphaned processes
     print("Checking for orphaned application processes...")
@@ -167,7 +206,7 @@ def purge_nomad_jobs():
     print("Process cleanup complete.")
 
 
-def run_playbook(playbook_path, extra_vars, tags, debug_mode):
+def run_playbook(playbook_path, extra_vars, tags, verbose_level):
     """Runs a single ansible playbook."""
     cmd = ["ansible-playbook", "-i", INVENTORY_FILE, playbook_path]
 
@@ -177,33 +216,108 @@ def run_playbook(playbook_path, extra_vars, tags, debug_mode):
     if tags:
         cmd.extend(["--tags", tags])
 
-    if debug_mode:
+    # Add verbosity flags based on level
+    if verbose_level >= 4:
         cmd.append("-vvvv")
+    elif verbose_level == 3:
+        cmd.append("-v")
 
-    print(f"--------------------------------------------------")
-    print(f"🚀 Running playbook: {playbook_path}")
-    print(f"--------------------------------------------------")
+    # Level 2 is normal ansible output (no flag needed typically, or maybe -v if one wants slightly more info?)
+    # Default ansible output is decent.
+    # Level 0, 1: Suppress output.
+
+    print_task_header(f"Running task: {os.path.basename(playbook_path)}")
+
+    if verbose_level >= 1:
+        print(f"  Path: {playbook_path}")
 
     start_time = time.time()
 
-    # In debug mode, we might want to capture output to file, but simpler to just let it stream
-    # and rely on the wrapper script to redirect if needed, or use subprocess.PIPE.
-    # The original script used `>> $LOG_FILE 2>&1`.
+    # Streaming logic
+    # We want to ALWAYS capture to LOG_FILE.
+    # If verbose_level >= 2, we ALSO print to stdout.
 
-    if debug_mode:
-        with open(LOG_FILE, "a") as log:
-            result = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT)
-    else:
-        result = subprocess.run(cmd)
+    # We open the log file in append mode.
+    # Using subprocess.Popen to stream.
+
+    # Ensure stdout flushes immediately
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+    env["ANSIBLE_FORCE_COLOR"] = "1" # Keep colors if possible
+
+    try:
+        with open(LOG_FILE, "a") as log_file:
+            # We add a header to the log file for this run
+            log_file.write(f"\n--- Running Task: {playbook_path} ---\n")
+
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, # Merge stderr into stdout
+                text=True,
+                env=env,
+                bufsize=1 # Line buffered
+            )
+
+            captured_lines = []
+
+            for line in process.stdout:
+                # Write to log
+                log_file.write(line)
+
+                # If verbose, write to stdout
+                if verbose_level >= 2:
+                    sys.stdout.write(line)
+                elif verbose_level < 2:
+                    # Keep a small buffer in case of error?
+                    # If error happens, we might want to dump the last N lines or point to the log.
+                    # The user said "highlight when errors occur... running list of warnings and errors".
+                    # We can store everything in memory if it's not too huge, or just rely on the file.
+                    captured_lines.append(line)
+
+            process.wait()
+            return_code = process.returncode
+
+    except Exception as e:
+        print_error(f"Failed to execute playbook: {e}")
+        sys.exit(1)
 
     duration = time.time() - start_time
-    print(f"Playbook finished in {duration:.2f}s")
+    print(f"Task finished in {duration:.2f}s")
 
-    if result.returncode != 0:
-        print(f"❌ Playbook '{playbook_path}' failed.")
-        sys.exit(result.returncode)
+    if return_code != 0:
+        print_error(f"Task '{playbook_path}' failed.")
 
-    print(f"✅ Playbook '{playbook_path}' completed successfully.")
+        # If we suppressed output, dump the relevant parts now
+        if verbose_level < 2:
+            print(f"{Colors.WARNING}--- Task Output (Last 50 lines) ---{Colors.ENDC}")
+            # Dump last 50 lines from capture
+            for line in captured_lines[-50:]:
+                sys.stdout.write(line)
+            print(f"{Colors.WARNING}--- End Task Output ---{Colors.ENDC}")
+            print(f"Full log available in: {LOG_FILE}")
+
+        sys.exit(return_code)
+
+    print(f"{Colors.OKGREEN}✅ Task '{playbook_path}' completed successfully.{Colors.ENDC}")
+
+def print_summary():
+    """Prints a summary of warnings and errors."""
+    if not WARNINGS and not ERRORS:
+        return
+
+    print_header("Summary of Warnings and Errors")
+
+    if WARNINGS:
+        print(f"\n{Colors.WARNING}{Colors.BOLD}Warnings:{Colors.ENDC}")
+        for w in WARNINGS:
+            print(f"  • {w}")
+
+    if ERRORS:
+        print(f"\n{Colors.FAIL}{Colors.BOLD}Errors:{Colors.ENDC}")
+        for e in ERRORS:
+            print(f"  • {e}")
+    print("\n")
 
 # --- Main Execution ---
 
@@ -213,7 +327,8 @@ def main():
     parser.add_argument("--controller-ip", help="IP of the controller (required for workers)")
     parser.add_argument("--tags", help="Ansible tags to run")
     parser.add_argument("--user", default="pipecatapp", dest="target_user", help="Target user for Ansible")
-    parser.add_argument("--debug", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--debug", action="store_true", help="Enable verbose logging (Legacy flag)")
+    parser.add_argument("--verbose", type=int, default=0, help="Verbosity level (0-4)")
     parser.add_argument("--continue", action="store_true", dest="continue_run", help="Resume from last state")
 
     # Pass-through flags that are handled as extra-vars
@@ -228,9 +343,19 @@ def main():
 
     args = parser.parse_args()
 
+    # Consolidate debug flag into verbose level
+    if args.debug and args.verbose == 0:
+        args.verbose = 4
+
+    verbose_level = args.verbose
+
+    print_header("Provisioning Started")
+    if verbose_level > 0:
+        print(f"Verbosity Level: {verbose_level}")
+
     # --- Validation ---
     if args.role == "worker" and not args.controller_ip:
-        print("Error: --controller-ip is required when using --role=worker")
+        print_error("--controller-ip is required when using --role=worker")
         sys.exit(1)
 
     # --- Pre-Provisioning Actions ---
@@ -253,10 +378,10 @@ def main():
         extra_vars["purge_jobs"] = "true"
     if args.leave_services_running:
         extra_vars["cleanup_services"] = "false"
-        print("✅ --leave-services-running detected. Nomad and Consul data will not be cleaned up.")
+        print(f"{Colors.OKGREEN}✅ --leave-services-running detected. Nomad and Consul data will not be cleaned up.{Colors.ENDC}")
     else:
         extra_vars["cleanup_services"] = "true"
-        print("🧹 Nomad and Consul data will be cleaned up by default.")
+        print(f"{Colors.OKCYAN}🧹 Nomad and Consul data will be cleaned up by default.{Colors.ENDC}")
 
     if args.deploy_docker:
         extra_vars["pipecat_deployment_style"] = "docker"
@@ -276,7 +401,7 @@ def main():
         manifest_file = "playbooks/worker.yaml"
 
     manifest_path = os.path.join(SCRIPT_DIR, manifest_file)
-    print(f"Loading playbooks from: {manifest_file}")
+    print(f"Loading tasks from: {manifest_file}")
 
     playbooks = load_playbooks_from_manifest(manifest_path)
 
@@ -286,9 +411,9 @@ def main():
         if os.path.exists(STATE_FILE):
             with open(STATE_FILE, 'r') as f:
                 start_index = int(f.read().strip()) + 1
-            print(f"🔄 Resuming from index {start_index}")
+            print(f"{Colors.BOLD}{Colors.OKCYAN}🔄 Resuming from task {start_index} ({os.path.basename(playbooks[min(start_index, len(playbooks)-1)]['path'])}){Colors.ENDC}")
         else:
-            print("ℹ️  --continue flag set but no state file found. Starting from 0.")
+            print(f"{Colors.OKBLUE}ℹ️  --continue flag set but no state file found. Starting from 0.{Colors.ENDC}")
     else:
         if os.path.exists(STATE_FILE):
             try:
@@ -299,7 +424,9 @@ def main():
     # --- Execution Loop ---
     for i, pb in enumerate(playbooks):
         if i < start_index:
-            print(f"⏭️  Skipping completed: {pb['path']}")
+            # Shorten path for display
+            display_path = os.path.basename(pb['path'])
+            print(f"{Colors.OKBLUE}⏭️  Skipping completed: {display_path}{Colors.ENDC}")
             continue
 
         pb_path = os.path.join(SCRIPT_DIR, pb['path'])
@@ -315,15 +442,16 @@ def main():
             cleanup_memory_for_core_ai()
 
         # --- Run ---
-        run_playbook(pb_path, extra_vars, args.tags, args.debug)
+        run_playbook(pb_path, extra_vars, args.tags, verbose_level)
 
         # Save State
         with open(STATE_FILE, 'w') as f:
             f.write(str(i))
 
-    print("--------------------------------------------------")
-    print("✅ All playbooks completed successfully.")
-    print("Provisioning complete.")
+    print_header("Provisioning Complete")
+    print(f"{Colors.OKGREEN}✅ All tasks completed successfully.{Colors.ENDC}")
+
+    print_summary()
 
 if __name__ == "__main__":
     main()
