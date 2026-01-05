@@ -35,114 +35,25 @@ show_help() {
 # --- Initialize flags ---
 USE_CONTAINER=false
 CLEAN_REPO=false
-DEBUG_MODE=false
-EXTERNAL_MODEL_SERVER=false
-LEAVE_SERVICES_RUNNING=false
-PURGE_JOBS=false
-CONTINUE_RUN=false
-ROLE="all" # Default role
+ROLE="all"
 CONTROLLER_IP=""
-ANSIBLE_ARGS=() # Use an array for Ansible arguments
-LOG_FILE="playbook_output.log"
-STATE_FILE=".bootstrap_state"
 
-# --- Parse command-line arguments ---
-ORIGINAL_ARGS=("$@")
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case $key in
+# --- Parse command-line arguments for wrapper logic ---
+# We need to peek at args to handle --clean and --container before passing everything to Python
+for arg in "$@"; do
+    case $arg in
+        --clean) CLEAN_REPO=true ;;
+        --container) USE_CONTAINER=true ;;
         --role)
-        ROLE="$2"
-        shift
-        shift
-        ;;
-        --controller-ip)
-        CONTROLLER_IP="$2"
-        shift
-        shift
-        ;;
-        --tags)
-        ANSIBLE_TAGS="$2"
-        shift
-        shift
-        ;;
-        --purge-jobs)
-        PURGE_JOBS=true
-        shift
-        ;;
-        --clean)
-        CLEAN_REPO=true
-        shift
-        ;;
-        --debug)
-        DEBUG_MODE=true
-        shift
-        ;;
-        --leave-services-running)
-        LEAVE_SERVICES_RUNNING=true
-        shift
-        ;;
-        --external-model-server)
-        EXTERNAL_MODEL_SERVER=true
-        shift
-        ;;
-        --continue)
-        CONTINUE_RUN=true
-        shift
-        ;;
-        --user)
-        TARGET_USER="$2"
-        shift
-        shift
-        ;;
-        --benchmark)
-        BENCHMARK_MODE=true
-        shift
-        ;;
-        --deploy-docker)
-        ANSIBLE_ARGS+=(--extra-vars "pipecat_deployment_style=docker")
-        shift
-        ;;
-        --run-local)
-        ANSIBLE_ARGS+=(--extra-vars "pipecat_deployment_style=raw_exec")
-        shift
-        ;;
-        --home-assistant-debug)
-        ANSIBLE_ARGS+=(--extra-vars "home_assistant_debug_mode=true")
-        shift
-        ;;
-        --container)
-        USE_CONTAINER=true
-        shift
-        ;;
-        --watch)
-        WATCH_TARGET="$2"
-        ANSIBLE_ARGS+=(--extra-vars "watch_target=$WATCH_TARGET")
-        shift
-        shift
-        ;;
+            # Simple peek, robust parsing handled by python
+            shift
+            ;;
         -h|--help)
-        show_help
-        exit 0
-        ;;
-        *)
-        echo "Unknown option: $1"
-        show_help
-        exit 1
-        ;;
+            show_help
+            exit 0
+            ;;
     esac
 done
-
-# --- Validate Arguments ---
-if [ "$ROLE" = "worker" ] && [ -z "$CONTROLLER_IP" ]; then
-    echo "Error: --controller-ip is required when using --role=worker"
-    exit 1
-fi
-
-if [ "$CLEAN_REPO" = true ] && [ "$CONTINUE_RUN" = true ]; then
-    echo "Error: --clean and --continue cannot be used together."
-    exit 1
-fi
 
 # --- Move to the script's directory ---
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
@@ -169,7 +80,7 @@ if [ "$USE_CONTAINER" = true ]; then
         echo "✅ Already inside the container. Proceeding with bootstrap..."
     else
         IMAGE_NAME="pipecat-dev-container"
-        CONTAINER_NAME="pipecat-dev-runner" # Keep original name to avoid regression
+        CONTAINER_NAME="pipecat-dev-runner"
 
         check_for_existing_cluster
 
@@ -197,21 +108,23 @@ if [ "$USE_CONTAINER" = true ]; then
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw --cgroupns=host \
             -v "$SCRIPT_DIR":/opt/cluster-infra -e "HOST_IP=$HOST_IP")
 
+        # Determine ports based on logic similar to original script
+        # Since we are passing args to python inside, we just expose all potentially needed ports
+        # If joining an existing cluster, we might not need all, but it's safer to expose them.
+        # Original logic: if CLUSTER_EXISTS, worker mode (no ports needed). Else controller mode.
+
         if [ "$CLUSTER_EXISTS" = true ]; then
             echo "Configuring container as a WORKER to join the existing cluster."
-            CONTAINER_ROLE="worker"
-            CONTAINER_CONTROLLER_IP="$HOST_IP"
-            # No port mappings needed for a worker node
+            # No port mappings needed for a worker node (it connects out or uses host net logic if adjusted)
+            # NOTE: If using bridge network, worker needs to be reachable.
         else
             echo "Configuring container as a new CONTROLLER."
-            CONTAINER_ROLE="all"
-            CONTAINER_CONTROLLER_IP="" # This will be set inside the container
             DOCKER_RUN_CMD+=(-p 4646:4646 -p 8500:8500 -p 8081:8081 -p 8000:8000)
         fi
 
         DOCKER_RUN_CMD+=("$IMAGE_NAME")
 
-        echo "Starting container with role: $CONTAINER_ROLE..."
+        echo "Starting container..."
         if ! "${DOCKER_RUN_CMD[@]}"; then
             echo "❌ Failed to start container."
             exit 1
@@ -222,15 +135,14 @@ if [ "$USE_CONTAINER" = true ]; then
 
         echo "Executing bootstrap inside the container..."
         ARGS_WITHOUT_CONTAINER=()
-        for arg in "${ORIGINAL_ARGS[@]}"; do
-            if [[ "$arg" != "--container" && "$arg" != "--role" && "$arg" != "--controller-ip" ]]; then
-                # Filter out container-specific or now-determined args
+        for arg in "$@"; do
+            if [[ "$arg" != "--container" ]]; then
                 ARGS_WITHOUT_CONTAINER+=("$arg")
             fi
         done
 
-        # Explicitly pass the determined role and controller IP to the script inside the container
-        docker exec -it "$CONTAINER_NAME" /bin/bash -c "cd /opt/cluster-infra && ./bootstrap.sh --role ${CONTAINER_ROLE} --controller-ip ${CONTAINER_CONTROLLER_IP} ${ARGS_WITHOUT_CONTAINER[*]}"
+        # Execute inside container
+        docker exec -it "$CONTAINER_NAME" /bin/bash -c "cd /opt/cluster-infra && ./bootstrap.sh ${ARGS_WITHOUT_CONTAINER[*]}"
         EXIT_CODE=$?
 
         echo "Container bootstrap finished with exit code: $EXIT_CODE"
@@ -241,11 +153,8 @@ if [ "$USE_CONTAINER" = true ]; then
     fi
 fi
 
-# --- Run Initial Machine Setup based on Role ---
-# This script handles pre-Ansible configuration like network and hostname.
-# It's run for all roles, and the script itself determines what to do based on the config.
+# --- Run Initial Machine Setup ---
 echo "--- Running Initial Machine Setup ---"
-# Skip setup.sh if running inside the dev container
 if [ -f "initial-setup/setup.sh" ]; then
     if [ -f "/.dockerenv" ] && [ "$(hostname)" = "pipecat-dev-runner" ]; then
          echo "🐳 Container environment detected. Skipping initial machine setup (setup.sh)."
@@ -258,72 +167,24 @@ else
     echo "⚠️  Warning: initial-setup/setup.sh not found. Skipping pre-configuration."
 fi
 
-
 # --- Handle the --clean option ---
 if [ "$CLEAN_REPO" = true ]; then
     echo "⚠️  --clean flag detected. This will permanently delete all untracked files."
-    echo "This includes logs, temporary files, and build artifacts."
-    echo ""
     echo "Performing a dry run to show what will be deleted:"
     echo "--------------------------------------------------"
     git clean -ndx
     echo "--------------------------------------------------"
     
     read -p "Are you sure you want to permanently delete all files and directories listed above? [y/N] " -n 1 -r
-    echo # Move to a new line
+    echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "Cleaning repository..."
         git clean -fdx
-        echo "✅ Repository cleaned to a pristine state."
+        echo "✅ Repository cleaned."
     else
-        echo "Cleanup cancelled by user. Exiting script."
+        echo "Cleanup cancelled. Exiting."
         exit 1
     fi
-fi
-
-# --- Build Ansible arguments ---
-if [ -n "$TARGET_USER" ]; then
-    echo "Using target user from --user flag: $TARGET_USER"
-    ANSIBLE_ARGS+=(--extra-vars "target_user=$TARGET_USER")
-else
-    echo "Using default target user: pipecatapp"
-    ANSIBLE_ARGS+=(--extra-vars "target_user=pipecatapp")
-fi
-
-# FIXED: Correct 'if' statement spacing
-if [ "$BENCHMARK_MODE" = true ]; then
-    echo "--benchmark flag detected, running benchmarks"
-    ANSIBLE_ARGS+=(--extra-vars "run_benchmarks=true")
-fi
-
-# FIXED: Updated to use ANSIBLE_ARGS array directly
-if [ "$EXTERNAL_MODEL_SERVER" = true ]; then
-    echo "⚡️ --external-model-server flag detected. Skipping large model downloads and builds."
-    ANSIBLE_ARGS+=(--extra-vars "external_model_server=true")
-fi
-
-if [ "$PURGE_JOBS" = true ]; then
-    ANSIBLE_ARGS+=(--extra-vars "purge_jobs=true")
-fi
-
-if [ "$LEAVE_SERVICES_RUNNING" = true ]; then
-    echo "✅ --leave-services-running detected. Nomad and Consul data will not be cleaned up."
-    ANSIBLE_ARGS+=(--extra-vars "cleanup_services=false")
-else
-    echo "🧹 Nomad and Consul data will be cleaned up by default. Use --leave-services-running to prevent this."
-    ANSIBLE_ARGS+=(--extra-vars "cleanup_services=true")
-fi
-# --- Now you can use the ANSIBLE_ARGS array ---
-echo "---"
-echo "Running Ansible with the following arguments:"
-# This 'printf' is a safe way to show the final command
-printf "ansible-playbook ... %s \n" "${ANSIBLE_ARGS[@]}"
-
-# ANSIBLE_ARGS+=(--extra-vars "$EXTRA_VARS")
-
-if [ "$DEBUG_MODE" = true ]; then
-    echo "🔍 --debug flag detected. Ansible output will be saved to '$LOG_FILE'."
-    ANSIBLE_ARGS+=("-vvvv")
 fi
 
 # --- Install Python dependencies (Virtual Environment) ---
@@ -350,277 +211,37 @@ else
 fi
 
 echo "Installing essential Ansible dependencies..."
-pip install ansible-core
+pip install ansible-core pyyaml
 echo "✅ Ansible dependencies installed."
 
 # --- Find Ansible Playbook executable ---
 # Since we are in a venv, these are guaranteed to be in the path
-ANSIBLE_PLAYBOOK_EXEC="$(which ansible-playbook)"
 ANSIBLE_GALAXY_EXEC="$(which ansible-galaxy)"
 
-if [ -z "$ANSIBLE_PLAYBOOK_EXEC" ] || [ -z "$ANSIBLE_GALAXY_EXEC" ]; then
-     echo "Error: Ansible executables not found in virtual environment." >&2
-     exit 1
-fi
-
-echo "Found ansible-playbook: $ANSIBLE_PLAYBOOK_EXEC"
-echo "Found ansible-galaxy: $ANSIBLE_GALAXY_EXEC"
-
 # Install Ansible collections
-echo "Installing Ansible and collections..."
-
-# Ensure ansible-galaxy is executable
-if [ ! -x "$ANSIBLE_GALAXY_EXEC" ]; then
-    echo "Error: ansible-galaxy is not executable at $ANSIBLE_GALAXY_EXEC" >&2
-    exit 1
-fi
-
-# Install collections to the default location (within the venv or user home)
-# This avoids sudo and ensures the playbook executor (running from venv) can find them.
-if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker; then
-    echo "Error: Failed to install Ansible collections." >&2
-    exit 1
-fi
-echo "✅ Ansible collections installed successfully."
-
-# --- Handle Nomad job purge ---
-if [ "$PURGE_JOBS" = true ]; then
-    if command -v nomad &> /dev/null; then
-        echo "🔥 --purge-jobs flag detected. Stopping and purging all Nomad jobs..."
-        # Get all job IDs, filter out the header and any 'No jobs' messages
-        job_ids=$(nomad job status | awk 'NR>1 {print $1}')
-
-        if [ -n "$job_ids" ]; then
-            echo "$job_ids" | while read -r job_id; do
-                if [ -n "$job_id" ]; then
-                    echo "Stopping and purging job: $job_id"
-                    nomad job stop -purge "$job_id" >/dev/null
-                fi
-            done
-            echo "✅ All Nomad jobs have been purged."
-        else
-            echo "No running Nomad jobs found to purge."
-        fi
-    else
-        echo "⚠️  Warning: 'nomad' command not found. Cannot purge jobs. Skipping."
-    fi
-fi
-
-echo "Checking for orphaned application processes..."
-# Only kill if Nomad is NOT running or if we purged jobs and they are still hanging around
-NOMAD_RUNNING=false
-if command -v nomad &> /dev/null && nomad node status &> /dev/null; then
-    NOMAD_RUNNING=true
-fi
-
-# Helper to kill if running
-kill_if_running() {
-    local pattern="$1"
-    local pids
-    pids=$(pgrep -f "$pattern")
-    if [ -n "$pids" ]; then
-        echo "⚠️  Found orphaned process matching '$pattern'. Terminating..."
-        echo "$pids" | xargs kill -9 2>/dev/null || true
-    fi
-}
-
-# If Nomad is running and we didn't purge, we should be careful about killing things blindly.
-# However, the user intent of this script is often to "reset/start" state.
-# But per requirements, we should avoid killing managed processes if Nomad is active and we didn't purge.
-if [ "$PURGE_JOBS" = true ] || [ "$NOMAD_RUNNING" = false ]; then
-    kill_if_running "dllama-api"
-    kill_if_running "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py"
-else
-    echo "ℹ️  Nomad is running and --purge-jobs was not requested. Skipping forced process termination to avoid conflicts."
-fi
-echo "Process cleanup complete."
-
-# Display system memory
-free -h
-
-# --- Run Ansible Playbooks ---
-echo "Running Ansible playbooks for local setup..."
-echo "You may be prompted for your sudo password."
-
-# --- State Management ---
-start_index=0
-if [ "$CONTINUE_RUN" = true ]; then
-    if [ "$DEBUG_MODE" = true ] && [ -f "$LOG_FILE" ]; then
-        echo "🔄 --continue and --debug flags detected. Saving previous log to ${LOG_FILE}.before_changes"
-        mv "$LOG_FILE" "${LOG_FILE}.before_changes"
-    fi
-    if [ -f "$STATE_FILE" ]; then
-        last_completed_index=$(cat "$STATE_FILE")
-        start_index=$((last_completed_index + 1))
-        echo "🔄 --continue flag detected. Resuming from playbook at index $start_index."
-    else
-        echo "ℹ️  --continue flag detected, but no state file found. Starting from the beginning."
-    fi
-else
-    # Not a continued run, so remove the state file to ensure a fresh start
-    if [ -f "$STATE_FILE" ]; then
-        rm "$STATE_FILE"
-    fi
-fi
-
-# Clear the log file if debug mode is on and we are not continuing a run
-if [ "$DEBUG_MODE" = true ] && [ "$CONTINUE_RUN" = false ]; then
-    > "$LOG_FILE"
-fi
-
-# --- Define Role-Specific Playbooks ---
-ALL_PLAYBOOKS=(
-    "playbooks/preflight/checks.yaml"
-    "playbooks/common_setup.yaml"
-    "playbooks/services/core_infra.yaml"
-    "playbooks/services/consul.yaml"
-    "playbooks/services/docker.yaml"
-    "playbooks/services/nomad.yaml"
-    "playbooks/services/app_services.yaml"
-    "playbooks/services/model_services.yaml"
-    "playbooks/services/core_ai_services.yaml"
-    "playbooks/services/ai_experts.yaml"
-    "playbooks/services/final_verification.yaml"
-)
-
-CONTROLLER_PLAYBOOKS=(
-    "playbooks/preflight/checks.yaml"
-    "playbooks/common_setup.yaml"
-    "playbooks/services/core_infra.yaml"
-    "playbooks/services/consul.yaml"
-    "playbooks/services/docker.yaml"
-    "playbooks/services/nomad.yaml"
-)
-
-WORKER_PLAYBOOKS=(
-    "playbooks/preflight/checks.yaml"
-    "playbooks/worker.yaml"
-)
-
-# --- Select Playbooks based on Role ---
-if [ -n "$ANSIBLE_TAGS" ]; then
-    ANSIBLE_ARGS+=(--tags "$ANSIBLE_TAGS")
-fi
-case "$ROLE" in
-    "all")
-        PLAYBOOKS=("${ALL_PLAYBOOKS[@]}")
-        ;;
-    "controller")
-        PLAYBOOKS=("${CONTROLLER_PLAYBOOKS[@]}")
-        ;;
-    "worker")
-        PLAYBOOKS=("${WORKER_PLAYBOOKS[@]}")
-        ANSIBLE_ARGS+=(--extra-vars "controller_ip=$CONTROLLER_IP")
-        ;;
-    *)
-        echo "Error: Invalid role '$ROLE' specified."
+echo "Installing Ansible collections..."
+if [ -x "$ANSIBLE_GALAXY_EXEC" ]; then
+    if ! "$ANSIBLE_GALAXY_EXEC" collection install community.general ansible.posix community.docker; then
+        echo "Error: Failed to install Ansible collections." >&2
         exit 1
-        ;;
-esac
-
-
-for i in "${!PLAYBOOKS[@]}"; do
-    playbook_path="$SCRIPT_DIR/${PLAYBOOKS[$i]}"
-
-    if [ "$i" -lt "$start_index" ]; then
-        echo "--------------------------------------------------"
-        echo "⏭️  Skipping already completed playbook: $playbook_path"
-        echo "--------------------------------------------------"
-        continue
     fi
+    echo "✅ Ansible collections installed successfully."
+else
+    echo "Error: ansible-galaxy not found in venv." >&2
+    exit 1
+fi
 
-    echo "--------------------------------------------------"
-    echo "🚀 Running playbook ($((i+1))/${#PLAYBOOKS[@]}): $playbook_path"
-    echo "--------------------------------------------------"
+# --- Run Provisioning Script ---
+echo "🚀 Handing over to Python provisioning script..."
+# Pass all original arguments to the python script.
+# Note: The python script parses args independently.
+python3 provisioning.py "$@"
+EXIT_CODE=$?
 
-    # Add a delay before running app_services.yaml to avoid port conflicts
-    if [[ "$playbook_path" == *"app_services.yaml"* ]]; then
-        echo "Verifying ports are free before running app_services.yaml to avoid port conflicts..."
-        # Wait for ports 4646, 8500, 8000, 8081, 1883 to be freed/ready as needed
-        # In this specific context (before app services start), we want to ensure previous cleanups
-        # have released the ports.
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "Bootstrap complete."
+else
+    echo "Bootstrap failed with exit code $EXIT_CODE."
+fi
 
-        wait_for_ports_freed() {
-            local ports=("$@")
-            local timeout=60
-            local start_time=$(date +%s)
-
-            for port in "${ports[@]}"; do
-                echo "Waiting for port $port to be free..."
-                while nc -z 127.0.0.1 "$port" 2>/dev/null; do
-                    current_time=$(date +%s)
-                    elapsed=$((current_time - start_time))
-                    if [ "$elapsed" -ge "$timeout" ]; then
-                        echo "⚠️  Timeout waiting for port $port to be free. Proceeding anyway, but conflicts may occur."
-                        return
-                    fi
-                    sleep 2
-                done
-                echo "✅ Port $port is free."
-            done
-        }
-
-        # We check specific ports that might be held by old app instances
-        # Note: 4646 (Nomad) and 8500 (Consul) SHOULD be running if we are in the middle of a bootstrap
-        # where infrastructure is already up.
-        # BUT, 'app_services.yaml' implies restarting user-land apps.
-        # So we mainly check 8000 (App), 8081 (Traefik), 1883 (MQTT).
-        wait_for_ports_freed 8000 8081 1883
-    fi
-
-    # --- Resource Management: Cleanup between Model Services and Core AI Services ---
-    if [[ "$playbook_path" == *"core_ai_services.yaml"* ]]; then
-        echo "🧹 Performing pre-Core AI Services cleanup to free RAM..."
-
-        # Stop llamacpp-rpc jobs left over from model_services.yaml (benchmarking/speedtest)
-        if command -v nomad &> /dev/null; then
-            echo "Stopping any running llamacpp-rpc jobs..."
-            # Using raw Nomad command to target wildcard jobs if possible, or iterating
-            # Since wildcard stop isn't standard in all Nomad versions, we list and stop.
-            nomad job status | awk '/llamacpp-rpc/ {print $1}' | while read -r job_id; do
-                if [ -n "$job_id" ]; then
-                    echo "Stopping job: $job_id"
-                    nomad job stop -purge "$job_id" >/dev/null
-                fi
-            done
-        fi
-
-        # Drop filesystem caches to free reclaimable memory
-        # echo "Dropping filesystem caches..."
-        # sync
-        # echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
-
-        echo "RAM status after cleanup:"
-        free -h
-    fi
-
-    COMMAND=("$ANSIBLE_PLAYBOOK_EXEC" -i local_inventory.ini "$playbook_path" "${ANSIBLE_ARGS[@]}")
-
-    if [ "$DEBUG_MODE" = true ]; then
-        # Execute with verbose logging and append to file
-        time "${COMMAND[@]}" >> "$LOG_FILE" 2>&1
-        playbook_exit_code=$?
-    else
-        # Execute normally
-        time "${COMMAND[@]}"
-
-        playbook_exit_code=$?
-    fi
-
-    if [ $playbook_exit_code -ne 0 ]; then
-        echo "❌ Playbook '$playbook_path' failed. Aborting script."
-        echo "To resume from the next playbook, run this script again with the --continue flag."
-        if [ "$DEBUG_MODE" = true ]; then
-            echo "View the detailed log in '$LOG_FILE'."
-        fi
-        exit $playbook_exit_code
-    fi
-
-    # Save the index of the successfully completed playbook
-    echo "$i" > "$STATE_FILE"
-    echo "✅ Playbook '$playbook_path' completed successfully."
-done
-
-echo "--------------------------------------------------"
-echo "✅ All playbooks completed successfully."
-echo "Bootstrap complete."
+exit $EXIT_CODE

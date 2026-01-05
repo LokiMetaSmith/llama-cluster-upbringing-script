@@ -1,0 +1,7 @@
+- import_playbook: playbooks/preflight/checks.yaml
+- import_playbook: playbooks/common_setup.yaml
+- import_playbook: playbooks/services/core_infra.yaml
+- import_playbook: playbooks/services/consul.yaml
+- import_playbook: playbooks/services/docker.yaml
+- import_playbook: playbooks/services/nomad.yaml
+- import_playbook: playbooks/services/monitoring.yaml
