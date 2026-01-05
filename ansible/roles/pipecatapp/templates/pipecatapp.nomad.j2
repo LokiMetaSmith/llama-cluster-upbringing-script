@@ -5,6 +5,15 @@ job "{{ job_name | default('pipecat-app') }}" {
   group "pipecat-group" {
     count = 1
 
+    update {
+      max_parallel     = 1
+      min_healthy_time = "30s"
+      healthy_deadline = "15m"
+      progress_deadline = "20m"
+      auto_revert      = true
+      canary           = 0
+    }
+
     {% set env_vars %}
     env {
       LLAMA_API_SERVICE_NAME = "{{ llama_api_service_name | default('llamacpp-rpc-api') }}"
@@ -55,8 +64,8 @@ job "{{ job_name | default('pipecat-app') }}" {
       check {
         type         = "http"
         path         = "/health"
-        interval     = "10s"
-        timeout      = "2s"
+        interval     = "20s"
+        timeout      = "5s"
       }
     }
 
