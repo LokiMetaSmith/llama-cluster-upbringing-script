@@ -279,18 +279,3 @@
 - name: Debug mqtt job run
   ansible.builtin.debug:
     var: mqtt_job_run
-
-- name: Deploy MQTT Exporter
-  block:
-    - name: Template mqtt-exporter job
-      ansible.builtin.template:
-        src: mqtt-exporter.nomad.j2
-        dest: "{{ nomad_jobs_dir }}/mqtt-exporter.nomad"
-      become: yes
-
-    - name: Run mqtt-exporter job
-      ansible.builtin.command:
-        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/mqtt-exporter.nomad
-      environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
-      changed_when: true
