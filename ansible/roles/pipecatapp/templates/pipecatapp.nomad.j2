@@ -5,6 +5,15 @@ job "{{ job_name | default('pipecat-app') }}" {
   group "pipecat-group" {
     count = 1
 
+    update {
+      max_parallel     = 3
+      min_healthy_time = "30s"
+      healthy_deadline = "15m"
+      progress_deadline = "20m"
+      auto_revert      = true
+      canary           = 0
+    }
+
     {% set env_vars %}
     env {
       LLAMA_API_SERVICE_NAME = "{{ llama_api_service_name | default('llamacpp-rpc-api') }}"
@@ -29,7 +38,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     network {
       mode = "host"
       port "http" {
-        to = 8000
+        static = {{ nanochat_port }}
       }
     }
 
@@ -42,7 +51,9 @@ job "{{ job_name | default('pipecat-app') }}" {
     {% else %}
     network {
       mode = "host"
-      port "http" {}
+      port "http" {
+        static = {{ nanochat_port }}
+      }
     }
     {% endif %}
 
@@ -51,12 +62,22 @@ job "{{ job_name | default('pipecat-app') }}" {
       port     = "http"
       provider = "consul"
       address  = "{{ cluster_ip }}"
+      tags     = ["pipecat", "ai-agent", "version=1.0"]
 
       check {
-        type         = "http"
-        path         = "/health"
-        interval     = "10s"
-        timeout      = "2s"
+        name     = "alive"
+        type     = "http"
+        path     = "/health"
+        interval = "20s"
+        timeout  = "5s"
+      }
+
+      check {
+        name     = "pipeline-status"
+        type     = "http"
+        path     = "/api/status"
+        interval = "30s"
+        timeout  = "5s"
       }
     }
 
