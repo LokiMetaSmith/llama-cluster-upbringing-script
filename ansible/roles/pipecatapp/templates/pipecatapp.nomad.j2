@@ -6,7 +6,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     count = 1
 
     update {
-      max_parallel     = 1
+      max_parallel     = 3
       min_healthy_time = "30s"
       healthy_deadline = "15m"
       progress_deadline = "20m"
@@ -60,12 +60,22 @@ job "{{ job_name | default('pipecat-app') }}" {
       port     = "http"
       provider = "consul"
       address  = "{{ cluster_ip }}"
+      tags     = ["pipecat", "ai-agent", "version=1.0"]
 
       check {
-        type         = "http"
-        path         = "/health"
-        interval     = "20s"
-        timeout      = "5s"
+        name     = "alive"
+        type     = "http"
+        path     = "/health"
+        interval = "20s"
+        timeout  = "5s"
+      }
+
+      check {
+        name     = "pipeline-status"
+        type     = "http"
+        path     = "/api/status"
+        interval = "30s"
+        timeout  = "5s"
       }
     }
 
