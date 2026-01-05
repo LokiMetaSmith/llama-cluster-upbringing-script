@@ -550,31 +550,57 @@
       register: router_alloc_id
       ignore_errors: yes
 
-    - name: "Router : Fetch Router logs (stdout)"
+    - name: "Router : Fetch litellm-proxy logs (stdout)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs {{ router_alloc_id.stdout }}"
-      register: router_logs_stdout
+        cmd: "/usr/local/bin/nomad alloc logs -task litellm-proxy {{ router_alloc_id.stdout }}"
+      register: litellm_logs_stdout
       ignore_errors: yes
       become: no
       when: router_alloc_id.stdout | length > 0
 
-    - name: "Router : Display Router logs (stdout)"
+    - name: "Router : Display litellm-proxy logs (stdout)"
       ansible.builtin.debug:
-        var: router_logs_stdout.stdout
-      when: router_logs_stdout is defined
+        var: litellm_logs_stdout.stdout
+      when: litellm_logs_stdout is defined
 
-    - name: "Router : Fetch Router logs (stderr)"
+    - name: "Router : Fetch litellm-proxy logs (stderr)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ router_alloc_id.stdout }}"
-      register: router_logs_stderr
+        cmd: "/usr/local/bin/nomad alloc logs -stderr -task litellm-proxy {{ router_alloc_id.stdout }}"
+      register: litellm_logs_stderr
       ignore_errors: yes
       become: no
       when: router_alloc_id.stdout | length > 0
 
-    - name: "Router : Display Router logs (stderr)"
+    - name: "Router : Display litellm-proxy logs (stderr)"
       ansible.builtin.debug:
-        var: router_logs_stderr.stdout
-      when: router_logs_stderr is defined
+        var: litellm_logs_stderr.stdout
+      when: litellm_logs_stderr is defined
+
+    - name: "Router : Fetch llama-server-router logs (stdout)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -task llama-server-router {{ router_alloc_id.stdout }}"
+      register: llama_logs_stdout
+      ignore_errors: yes
+      become: no
+      when: router_alloc_id.stdout | length > 0
+
+    - name: "Router : Display llama-server-router logs (stdout)"
+      ansible.builtin.debug:
+        var: llama_logs_stdout.stdout
+      when: llama_logs_stdout is defined
+
+    - name: "Router : Fetch llama-server-router logs (stderr)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -stderr -task llama-server-router {{ router_alloc_id.stdout }}"
+      register: llama_logs_stderr
+      ignore_errors: yes
+      become: no
+      when: router_alloc_id.stdout | length > 0
+
+    - name: "Router : Display llama-server-router logs (stderr)"
+      ansible.builtin.debug:
+        var: llama_logs_stderr.stdout
+      when: llama_logs_stderr is defined
 
     - name: "Router : Clean up temp file"
       ansible.builtin.file:
