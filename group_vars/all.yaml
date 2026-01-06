@@ -48,6 +48,10 @@ router_count: 1
 nanochat_port: 8005
 frigate_port: 5000
 archivist_port: 8008
+node_exporter_port: 9100
+prometheus_port: 9090
+grafana_port: 3000
+mqtt_exporter_metrics_port: 9341
 
 # Standard Paths
 consul_data_dir: "/opt/consul"

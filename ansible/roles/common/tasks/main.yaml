@@ -160,6 +160,18 @@
     - "{{ router_port }}" # Traefik / Router (if used)
     - "{{ archivist_port }}" # Archivist Service
 
+- name: "Firewall : Allow Monitoring Ports"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+    comment: "Allow Monitoring Services"
+  loop:
+    - "{{ node_exporter_port }}" # Node Exporter
+    - "{{ prometheus_port }}"    # Prometheus
+    - "{{ grafana_port }}"       # Grafana
+    - "{{ mqtt_exporter_metrics_port }}" # MQTT Exporter
+
 - name: "Firewall : Allow Exo Port"
   community.general.ufw:
     rule: allow
