@@ -148,6 +148,8 @@ document.addEventListener("DOMContentLoaded", function() {
     ws.onopen = function() {
         logToTerminal("--- Connection established with Agent ---");
         statusLight.style.backgroundColor = "#0f0"; // Green
+        statusLight.setAttribute("aria-label", "Connection Status: Connected");
+        statusLight.setAttribute("title", "Connection Status: Connected");
         updateStatus();
         startIdleAnimation();
     };
@@ -211,6 +213,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
     ws.onclose = function() {
         logToTerminal("--- Connection lost with Agent ---", "error");
+        statusLight.style.backgroundColor = "#f00"; // Red
+        statusLight.setAttribute("aria-label", "Connection Status: Disconnected");
+        statusLight.setAttribute("title", "Connection Status: Disconnected");
         stopAllAnimations();
     };
 
