@@ -35,12 +35,14 @@ job "mqtt-exporter" {
         MQTT_PORT = "{{ mqtt_port | default(1883) }}"
         PROMETHEUS_PORT = "{{ mqtt_exporter_metrics_port | default(9000) }}"
         PROMETHEUS_ADDRESS = "0.0.0.0"
+        PROMETHEUS_BIND_ADDRESS = "0.0.0.0"
+        LOG_LEVEL = "DEBUG"
         # Optional: MQTT_TOPIC_IGNORED, etc.
       }
 
       resources {
-        cpu    = 100
-        memory = 128
+        cpu    = 200
+        memory = 256
       }
 
       service {
@@ -51,8 +53,13 @@ job "mqtt-exporter" {
         check {
           type     = "http"
           path     = "/metrics"
-          interval = "10s"
-          timeout  = "2s"
+          interval = "15s"
+          timeout  = "5s"
+          check_restart {
+            limit = 3
+            grace = "30s"
+            ignore_warnings = false
+          }
         }
       }
     }
