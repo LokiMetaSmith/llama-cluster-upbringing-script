@@ -28,7 +28,6 @@ job "prometheus" {
 
       config {
         image = "prom/prometheus:v{{ prometheus_version }}"
-        ports = ["http"]
         args = [
           "--config.file=/local/prometheus.yml",
           "--storage.tsdb.path=/prometheus",

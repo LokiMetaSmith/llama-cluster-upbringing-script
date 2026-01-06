@@ -35,7 +35,6 @@ job "grafana" {
 
       config {
         image = "grafana/grafana:{{ grafana_version }}"
-        ports = ["http"]
       }
 
       env {
