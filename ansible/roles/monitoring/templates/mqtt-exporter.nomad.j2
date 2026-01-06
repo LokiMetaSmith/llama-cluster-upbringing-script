@@ -8,7 +8,7 @@ job "mqtt-exporter" {
     health_check      = "checks"
     min_healthy_time  = "10s"
     healthy_deadline  = "15m"
-    progress_deadline = "20m"
+    progress_deadline = "5m"
     auto_revert       = true
     canary            = 0
   }

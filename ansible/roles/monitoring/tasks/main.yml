@@ -57,6 +57,73 @@
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       changed_when: true
+  rescue:
+    - name: Get MQTT Exporter job status
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status -verbose mqtt-exporter
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: mqtt_exporter_job_status
+      ignore_errors: yes
+
+    - name: Display MQTT Exporter job status
+      ansible.builtin.debug:
+        var: mqtt_exporter_job_status.stdout
+
+    - name: Get MQTT Exporter allocations
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job allocs -json mqtt-exporter
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: mqtt_exporter_allocs
+      ignore_errors: yes
+
+    - name: Save MQTT Exporter allocations to temp file
+      ansible.builtin.copy:
+        content: "{{ mqtt_exporter_allocs.stdout }}"
+        dest: "/tmp/mqtt_exporter_allocs.json"
+
+    - name: Extract Allocation ID
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/mqtt_exporter_allocs.json
+      register: mqtt_exporter_alloc_id
+      ignore_errors: yes
+
+    - name: Fetch MQTT Exporter logs (stdout)
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs {{ mqtt_exporter_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: mqtt_exporter_logs_stdout
+      ignore_errors: yes
+      when: (mqtt_exporter_alloc_id.stdout | trim | length > 0) and (mqtt_exporter_alloc_id.stdout | trim != 'null')
+
+    - name: Display MQTT Exporter logs (stdout)
+      ansible.builtin.debug:
+        var: mqtt_exporter_logs_stdout.stdout
+      when: mqtt_exporter_logs_stdout.stdout is defined
+
+    - name: Fetch MQTT Exporter logs (stderr)
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ mqtt_exporter_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: mqtt_exporter_logs_stderr
+      ignore_errors: yes
+      when: (mqtt_exporter_alloc_id.stdout | trim | length > 0) and (mqtt_exporter_alloc_id.stdout | trim != 'null')
+
+    - name: Display MQTT Exporter logs (stderr)
+      ansible.builtin.debug:
+        var: mqtt_exporter_logs_stderr.stdout
+      when: mqtt_exporter_logs_stderr.stdout is defined
+
+    - name: Clean up temp file
+      ansible.builtin.file:
+        path: "/tmp/mqtt_exporter_allocs.json"
+        state: absent
+
+    - name: Fail after debugging
+      ansible.builtin.fail:
+        msg: "MQTT Exporter job failed to start. See logs above."
 
 - name: Deploy MQTT Exporter
   block:
