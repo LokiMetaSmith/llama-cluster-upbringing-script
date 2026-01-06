@@ -215,7 +215,11 @@ async def get_workflow_definition(workflow_name: str):
         raise HTTPException(status_code=400, detail="Invalid workflow name.")
 
     workflow_dir = os.path.join(script_dir, "workflows")
-    file_path = os.path.join(workflow_dir, workflow_name)
+
+    # Security fix: Ensure resolved path is within workflow_dir
+    file_path = os.path.abspath(os.path.join(workflow_dir, workflow_name))
+    if not file_path.startswith(os.path.abspath(workflow_dir)):
+        raise HTTPException(status_code=400, detail="Invalid workflow name.")
 
     if not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail="Workflow not found.")
@@ -245,7 +249,10 @@ async def save_workflow_definition(payload: Dict = Body(...)):
     # Ensure directory exists
     os.makedirs(workflow_dir, exist_ok=True)
 
-    file_path = os.path.join(workflow_dir, workflow_name)
+    # Security fix: Ensure resolved path is within workflow_dir
+    file_path = os.path.abspath(os.path.join(workflow_dir, workflow_name))
+    if not file_path.startswith(os.path.abspath(workflow_dir)):
+        raise HTTPException(status_code=400, detail="Invalid workflow name.")
 
     # Optional: Versioning
     # If file exists, maybe backup? For now, we overwrite as per "Live Edit" requirement,
