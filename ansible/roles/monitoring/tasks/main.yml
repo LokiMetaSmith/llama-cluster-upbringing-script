@@ -53,7 +53,7 @@
 
     - name: Run node-exporter job
       ansible.builtin.command:
-        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/node-exporter.nomad
+        cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/node-exporter.nomad
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       changed_when: true
@@ -75,7 +75,7 @@
 
     - name: Run mqtt-exporter job
       ansible.builtin.command:
-        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/mqtt-exporter.nomad
+        cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/mqtt-exporter.nomad
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       changed_when: true
@@ -90,7 +90,7 @@
 
     - name: Run prometheus job
       ansible.builtin.command:
-        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/prometheus.nomad
+        cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/prometheus.nomad
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       changed_when: true
@@ -105,7 +105,7 @@
 
     - name: Run grafana job
       ansible.builtin.command:
-        cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/grafana.nomad
+        cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/grafana.nomad
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       changed_when: true
