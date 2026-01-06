@@ -5,9 +5,9 @@ grafana_version: "10.2.2"
 mqtt_exporter_version: "1.9.0" # kpetremann/mqtt-exporter
 
 # Ports
-node_exporter_port: 9100
-prometheus_port: 9090
-grafana_port: 3000
+# node_exporter_port: 9100 (Defined in group_vars/all.yaml)
+# prometheus_port: 9090 (Defined in group_vars/all.yaml)
+# grafana_port: 3000 (Defined in group_vars/all.yaml)
 mqtt_exporter_port: 9001 # Using 9001 internally if possible, or mapping dynamic. Actually mqtt-exporter usually pushes or exposes on 9341.
 # kpetremann/mqtt-exporter exposes metrics on 9000 by default. I will stick to that or override.
-mqtt_exporter_metrics_port: 9341
+# mqtt_exporter_metrics_port: 9341 (Defined in group_vars/all.yaml)
