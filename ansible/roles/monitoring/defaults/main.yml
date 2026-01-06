@@ -2,7 +2,7 @@
 node_exporter_version: "1.7.0"
 prometheus_version: "2.45.1"
 grafana_version: "10.2.2"
-mqtt_exporter_version: "2.3.0" # kpetremann/mqtt-exporter
+mqtt_exporter_version: "1.9.0" # kpetremann/mqtt-exporter
 
 # Ports
 node_exporter_port: 9100
