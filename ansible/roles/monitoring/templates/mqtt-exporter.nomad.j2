@@ -28,7 +28,6 @@ job "mqtt-exporter" {
 
       config {
         image = "kpetremann/mqtt-exporter:{{ mqtt_exporter_version }}"
-        ports = ["metrics"]
       }
 
       env {
