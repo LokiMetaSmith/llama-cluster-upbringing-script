@@ -35,6 +35,17 @@ job "grafana" {
 
       config {
         image = "grafana/grafana:{{ grafana_version }}"
+
+        # Mount the dashboard directory from the host directly
+        # This avoids the circular dependency of needing a host_volume defined in client.hcl (which requires directory existence + restart)
+        mounts = [
+          {
+            type     = "bind"
+            target   = "/local/dashboards"
+            source   = "{{ nomad_volumes_dir }}/grafana/dashboards"
+            readonly = true
+          }
+        ]
       }
 
       env {
@@ -57,17 +68,6 @@ EOF
 EOF
         destination = "local/provisioning/dashboards/dashboards.yaml"
       }
-
-      # Mount the dashboard directory from the host directly
-      # This avoids the circular dependency of needing a host_volume defined in client.hcl (which requires directory existence + restart)
-      mounts = [
-          {
-              type = "bind"
-              target = "/local/dashboards"
-              source = "{{ nomad_volumes_dir }}/grafana/dashboards"
-              readonly = true
-          }
-      ]
 
       resources {
         cpu    = 200
