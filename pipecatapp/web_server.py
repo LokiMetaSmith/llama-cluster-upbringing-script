@@ -3,6 +3,7 @@ import json
 import asyncio
 import logging
 import requests
+import httpx
 import yaml
 import time  # Added back for the backup timestamp
 from fastapi import FastAPI, WebSocket, Body, Request, HTTPException
@@ -278,49 +279,63 @@ async def get_web_uis():
     consul_url = "http://127.0.0.1:8500"
 
     try:
-        # 1. Add Consul UI
-        web_uis.append({"name": "Consul", "url": f"{consul_url}/ui"})
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            # 1. Add Consul UI
+            web_uis.append({"name": "Consul", "url": f"{consul_url}/ui"})
 
-        # 2. Add Nomad UI
-        nomad_service_response = requests.get(f"{consul_url}/v1/catalog/service/nomad")
-        nomad_service_response.raise_for_status()
-        nomad_services = nomad_service_response.json()
-        if nomad_services:
-            nomad_address = nomad_services[0].get("ServiceAddress") or nomad_services[0].get("Address")
-            web_uis.append({"name": "Nomad", "url": f"http://{nomad_address}:4646"})
+            # 2. Add Nomad UI
+            nomad_service_response = await client.get(f"{consul_url}/v1/catalog/service/nomad")
+            nomad_service_response.raise_for_status()
+            nomad_services = nomad_service_response.json()
+            if nomad_services:
+                nomad_address = nomad_services[0].get("ServiceAddress") or nomad_services[0].get("Address")
+                web_uis.append({"name": "Nomad", "url": f"http://{nomad_address}:4646"})
 
-        # 3. Discover other HTTP services
-        services_response = requests.get(f"{consul_url}/v1/catalog/services")
-        services_response.raise_for_status()
-        all_services = services_response.json()
+            # 3. Discover other HTTP services
+            services_response = await client.get(f"{consul_url}/v1/catalog/services")
+            services_response.raise_for_status()
+            all_services = services_response.json()
 
-        for service_name in all_services.keys():
-            if service_name in ["nomad", "consul"] or "pipecat" in service_name:
-                continue
+            async def check_service(service_name):
+                if service_name in ["nomad", "consul"] or "pipecat" in service_name:
+                    return None
 
-            health_response = requests.get(f"{consul_url}/v1/health/service/{service_name}?passing")
-            if health_response.status_code != 200:
-                continue
+                try:
+                    health_response = await client.get(f"{consul_url}/v1/health/service/{service_name}?passing")
+                    if health_response.status_code != 200:
+                        return None
 
-            service_instances = health_response.json()
-            if not service_instances:
-                continue
+                    service_instances = health_response.json()
+                    if not service_instances:
+                        return None
 
-            has_http_check = any(
-                "http" in check.get("Type", "") and check.get("Status") == "passing"
-                for instance in service_instances
-                for check in instance.get("Checks", [])
-            )
+                    has_http_check = any(
+                        "http" in check.get("Type", "") and check.get("Status") == "passing"
+                        for instance in service_instances
+                        for check in instance.get("Checks", [])
+                    )
 
-            if has_http_check:
-                instance = service_instances[0]
-                service_info = instance.get("Service", {})
-                address = service_info.get("Address") or instance.get("Node", {}).get("Address")
-                port = service_info.get("Port")
-                if address and port:
-                    web_uis.append({"name": service_name, "url": f"http://{address}:{port}"})
+                    if has_http_check:
+                        instance = service_instances[0]
+                        service_info = instance.get("Service", {})
+                        address = service_info.get("Address") or instance.get("Node", {}).get("Address")
+                        port = service_info.get("Port")
+                        if address and port:
+                            return {"name": service_name, "url": f"http://{address}:{port}"}
+                except Exception:
+                    # Ignore failures for individual services so we don't break the whole list
+                    pass
+                return None
 
-    except requests.RequestException as e:
+            # Fetch all service health checks in parallel
+            tasks = [check_service(name) for name in all_services.keys()]
+            results = await asyncio.gather(*tasks)
+
+            for result in results:
+                if result:
+                    web_uis.append(result)
+
+    except (httpx.RequestError, httpx.HTTPStatusError) as e:
         print(f"Could not connect to Consul to discover UIs: {e}")
         return JSONResponse(
             status_code=503,
