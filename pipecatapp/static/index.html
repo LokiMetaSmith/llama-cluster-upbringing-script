@@ -116,26 +116,26 @@
     </style>
 </head>
 <body>
-    <h1>Mission Control <span id="status-light"></span></h1>
+    <h1>Mission Control <span id="status-light" role="status" aria-label="Connection Status: Disconnected" title="Connection Status: Disconnected"></span></h1>
     <div id="controls">
         <div class="dropdown">
-            <button class="dropbtn">Admin UIs</button>
-            <div class="dropdown-content" id="admin-ui-links">
+            <button class="dropbtn" aria-haspopup="true" aria-expanded="false">Admin UIs</button>
+            <div class="dropdown-content" id="admin-ui-links" aria-label="Admin UI Links">
                 <!-- Links will be populated by JavaScript -->
             </div>
         </div>
-        <button id="test-and-evaluation-btn">test and evaluation</button>
-        <input type="text" id="save-name-input" placeholder="Enter state name...">
+        <button id="test-and-evaluation-btn">Test and Evaluation</button>
+        <input type="text" id="save-name-input" placeholder="Enter state name..." aria-label="Save State Name">
         <button id="save-state-btn">Save State</button>
         <button id="load-state-btn">Load State</button>
         <button id="clear-terminal-btn">Clear Terminal</button>
     </div>
-    <div id="terminal">
+    <div id="terminal" aria-live="polite" aria-label="Terminal Output">
         <pre id="robot-art" style="text-align: center; font-family: 'Courier New', Courier, monospace;"></pre>
     </div>
-    <div id="status-display" style="padding: 10px; margin-top: 10px; border: 1px solid #333; background-color: #000;"></div>
+    <div id="status-display" style="padding: 10px; margin-top: 10px; border: 1px solid #333; background-color: #000;" aria-live="polite" aria-label="System Status"></div>
     <div id="input-area" style="padding: 10px; margin-top: 10px; display: flex; gap: 10px;">
-        <input type="text" id="message-input" style="flex-grow: 1; background-color: #333; color: #f0f0f0; border: 1px solid #555; padding: 5px;" placeholder="Type your message here and press Enter...">
+        <input type="text" id="message-input" style="flex-grow: 1; background-color: #333; color: #f0f0f0; border: 1px solid #555; padding: 5px;" placeholder="Type your message here and press Enter..." aria-label="Message Input">
     </div>
     <script src="/static/terminal.js"></script>
     <script>
