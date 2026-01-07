@@ -5,6 +5,16 @@ job "opencode" {
   group "opencode" {
     count = 1
 
+    update {
+      max_parallel      = 1
+      min_healthy_time  = "10s"
+      healthy_deadline  = "15m"
+      progress_deadline = "20m"
+      auto_revert       = true
+      auto_promote      = true
+      canary            = 0
+    }
+
     network {
       port "http" {
         to = 8083
@@ -15,11 +25,10 @@ job "opencode" {
       driver = "raw_exec"
 
       config {
-        command = "{{ opencode_bin_path | default('/usr/bin/opencode') }}"
+        command = "/bin/sh"
         args    = [
-          "serve",
-          "--port", "${NOMAD_PORT_http}",
-          "--hostname", "0.0.0.0"
+          "-c",
+          "cd /tmp && exec {{ opencode_bin_path | default('/usr/bin/opencode') }} serve --port ${NOMAD_PORT_http} --hostname 0.0.0.0"
         ]
       }
 
