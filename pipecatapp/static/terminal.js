@@ -21,6 +21,41 @@ document.addEventListener("DOMContentLoaded", function() {
     const statusDisplay = document.getElementById("status-display");
     const messageInput = document.getElementById("message-input");
 
+    // Dropdown Logic
+    const adminUiBtn = document.getElementById("admin-ui-btn");
+    const adminUiDropdown = document.getElementById("admin-ui-dropdown");
+
+    if (adminUiBtn && adminUiDropdown) {
+        adminUiBtn.addEventListener('click', function(event) {
+            // Prevent event from bubbling to window (which would close it immediately)
+            event.stopPropagation();
+            adminUiDropdown.classList.toggle("show");
+            const expanded = adminUiDropdown.classList.contains("show");
+            adminUiBtn.setAttribute("aria-expanded", expanded);
+        });
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(event) {
+            if (!event.target.matches('.dropbtn') && !event.target.matches('.dropdown-content') && !adminUiDropdown.contains(event.target)) {
+                if (adminUiDropdown.classList.contains('show')) {
+                    adminUiDropdown.classList.remove('show');
+                    adminUiBtn.setAttribute("aria-expanded", "false");
+                }
+            }
+        });
+
+        // Handle Escape key to close dropdown
+        adminUiDropdown.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                if (adminUiDropdown.classList.contains('show')) {
+                    adminUiDropdown.classList.remove('show');
+                    adminUiBtn.setAttribute("aria-expanded", "false");
+                    adminUiBtn.focus(); // Return focus to button
+                }
+            }
+        });
+    }
+
     function sendMessage() {
         const message = messageInput.value.trim();
         if (message) {
