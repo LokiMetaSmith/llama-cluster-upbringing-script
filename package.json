@@ -26,6 +26,6 @@
     "oh-my-opencode": "^2.12.2"
   },
   "dependencies": {
-    "opencode-ai": "^1.0.223"
+    "opencode-ai": "^1.1.4"
   }
 }
