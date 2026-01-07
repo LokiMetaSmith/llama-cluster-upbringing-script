@@ -4,6 +4,10 @@
 # The `llama-expert.nomad` job template will be rendered with one of these lists.
 expert_models:
   main:
+    - name: "Qwen3-30B-A3B-Instruct-2507"
+      url: "https://huggingface.co/byteshape/Qwen3-30B-A3B-Instruct-2507-GGUF/resolve/main/Qwen3-30B-A3B-Instruct-2507-Q3_K_S-2.70bpw.gguf"
+      filename: "Qwen3-30B-A3B-Instruct-2507-Q3_K_S-2.70bpw.gguf"
+      memory_mb: 13500
     - name: "Llama-3-8B-Instruct"
       url: "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF-v2/resolve/main/Meta-Llama-3-8B-Instruct-v2.Q4_K_M.gguf"
       filename: "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
@@ -36,6 +40,11 @@ expert_models:
       url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
       filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
       memory_mb: 4096
+  qwen:
+    - name: "Qwen3-30B-A3B-Instruct-2507"
+      url: "https://huggingface.co/byteshape/Qwen3-30B-A3B-Instruct-2507-GGUF/resolve/main/Qwen3-30B-A3B-Instruct-2507-Q3_K_S-2.70bpw.gguf"
+      filename: "Qwen3-30B-A3B-Instruct-2507-Q3_K_S-2.70bpw.gguf"
+      memory_mb: 13500
   cynic:
     - name: "Llama-3-8B-Instruct"
       url: "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF-v2/resolve/main/Meta-Llama-3-8B-Instruct-v2.Q4_K_M.gguf"
