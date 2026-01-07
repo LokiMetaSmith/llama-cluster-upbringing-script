@@ -16,9 +16,7 @@ job "opencode" {
     }
 
     network {
-      port "http" {
-        to = 8083
-      }
+      port "http" {}
     }
 
     task "opencode-server" {
@@ -53,7 +51,7 @@ job "opencode" {
 
       check {
         type     = "http"
-        path     = "/health" # Verify health endpoint
+        path     = "/global/health" # Verify health endpoint
         interval = "20s"
         timeout  = "10s"
       }
