@@ -824,7 +824,8 @@ async def load_config_from_consul(consul_host, consul_port):
     """
     logging.info("Loading configuration from Consul KV store...")
     config = {}
-    c = consul.aio.Consul(host=consul_host, port=consul_port)
+    token = os.getenv("CONSUL_HTTP_TOKEN")
+    c = consul.aio.Consul(host=consul_host, port=consul_port, token=token)
     try:
         index, data = await c.kv.get('config/app/settings')
         if data:
