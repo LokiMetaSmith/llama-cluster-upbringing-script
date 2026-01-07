@@ -1,0 +1,42 @@
+job "memory-audit" {
+  datacenters = ["dc1"]
+  type        = "batch"
+
+  periodic {
+    cron             = "0 8 * * *"
+    prohibit_overlap = true
+  }
+
+  group "audit" {
+    task "audit" {
+      driver = "docker"
+
+      config {
+        image = "python:3.9-slim"
+        command = "/bin/bash"
+        args = [
+          "-c",
+          "pip install requests && python3 /local/memory_audit.py --apply"
+        ]
+      }
+
+      template {
+        data = <<EOH
+{{ lookup('file', 'scripts/memory_audit.py') }}
+EOH
+        destination = "local/memory_audit.py"
+        env         = false
+      }
+
+      env {
+        PROMETHEUS_URL = "http://{{ cluster_ip }}:{{ prometheus_port }}"
+        NOMAD_ADDR     = "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      }
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+    }
+  }
+}
