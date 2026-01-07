@@ -124,6 +124,20 @@
   tags:
     - deploy_app
 
+- name: Fetch Consul management token for fallback registration
+  ansible.builtin.slurp:
+    src: /etc/consul.d/management_token
+  register: consul_token_file_pipecat
+  become: yes
+  ignore_errors: yes
+  no_log: true
+
+- name: Set Consul token fact for pipecatapp
+  set_fact:
+    consul_bootstrap_token: "{{ consul_token_file_pipecat['content'] | b64decode | trim }}"
+  when: consul_token_file_pipecat is success and consul_token_file_pipecat.content is defined and consul_bootstrap_token is not defined
+  no_log: true
+
 - name: Create pipecat environment file from template
   ansible.builtin.template:
     src: pipecat.env.j2
@@ -613,20 +627,6 @@
 
 - name: Ensure Nomad service registration (Fallback)
   block:
-    - name: Fetch Consul management token for fallback registration
-      ansible.builtin.slurp:
-        src: /etc/consul.d/management_token
-      register: consul_token_file_pipecat
-      become: yes
-      ignore_errors: yes
-      no_log: true
-
-    - name: Set Consul token fact for pipecatapp
-      set_fact:
-        consul_bootstrap_token: "{{ consul_token_file_pipecat['content'] | b64decode | trim }}"
-      when: consul_token_file_pipecat is success and consul_token_file_pipecat.content is defined and consul_bootstrap_token is not defined
-      no_log: true
-
     - name: Check if router service is registered in Consul
       ansible.builtin.uri:
         url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/catalog/service/router-api"
