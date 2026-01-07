@@ -124,19 +124,32 @@
   tags:
     - deploy_app
 
-- name: Fetch Consul management token for fallback registration
+- name: Fetch Consul management token from controller node
   ansible.builtin.slurp:
     src: /etc/consul.d/management_token
-  register: consul_token_file_pipecat
+  register: consul_token_file_remote
+  delegate_to: "{{ groups['controller_nodes'][0] }}"
   become: yes
   ignore_errors: yes
   no_log: true
+  when: groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0
 
-- name: Set Consul token fact for pipecatapp
-  set_fact:
-    consul_bootstrap_token: "{{ consul_token_file_pipecat['content'] | b64decode | trim }}"
-  when: consul_token_file_pipecat is success and consul_token_file_pipecat.content is defined and consul_bootstrap_token is not defined
+- name: Set Consul token fact from file
+  ansible.builtin.set_fact:
+    consul_bootstrap_token: "{{ consul_token_file_remote['content'] | b64decode | trim }}"
+  when: consul_token_file_remote is defined and consul_token_file_remote is success and consul_token_file_remote.content is defined and (consul_bootstrap_token is not defined or consul_bootstrap_token == '')
   no_log: true
+
+- name: Set Consul token from environment (fallback)
+  ansible.builtin.set_fact:
+    consul_bootstrap_token: "{{ lookup('env', 'CONSUL_HTTP_TOKEN') }}"
+  when: (consul_bootstrap_token is not defined or consul_bootstrap_token == '')
+  no_log: true
+
+- name: Fail if Consul token is missing
+  ansible.builtin.fail:
+    msg: "Consul bootstrap token is missing. Please ensure /etc/consul.d/management_token exists on the controller node or export CONSUL_HTTP_TOKEN in your environment."
+  when: consul_bootstrap_token is not defined or consul_bootstrap_token == ''
 
 - name: Create pipecat environment file from template
   ansible.builtin.template:
