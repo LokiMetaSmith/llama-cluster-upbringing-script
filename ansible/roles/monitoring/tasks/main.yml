@@ -58,6 +58,21 @@
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       changed_when: true
 
+- name: Deploy Memory Audit
+  block:
+    - name: Template memory-audit job
+      ansible.builtin.template:
+        src: memory-audit.nomad.j2
+        dest: "{{ nomad_jobs_dir }}/memory-audit.nomad"
+      become: yes
+
+    - name: Run memory-audit job
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/memory-audit.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true
+
 - name: Deploy MQTT Exporter
   block:
     - name: Wait for MQTT service to be ready
