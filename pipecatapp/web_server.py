@@ -9,6 +9,8 @@ import time  # Added back for the backup timestamp
 from fastapi import FastAPI, WebSocket, Body, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from typing import List, Dict
 from workflow.runner import ActiveWorkflows, OpenGates
 from workflow.history import WorkflowHistory
@@ -22,6 +24,35 @@ app = FastAPI(
     description="This API exposes endpoints to interact with the Pipecat agent, including real-time communication, status checks, and state management.",
     version="1.0.0",
 )
+
+# Security Enhancement: Add CORS Middleware
+# TODO: In production, strict origin validation should be enabled instead of allowing "*"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Security Enhancement: Add Security Headers
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Content-Security-Policy: Allow 'self' and inline scripts/styles which are used in index.html
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "img-src 'self' data:; "
+            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "connect-src 'self' ws: wss:;"
+        )
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Create queues to communicate between the web server and the TwinService
 approval_queue = asyncio.Queue()
@@ -228,7 +259,9 @@ async def get_workflow_definition(workflow_name: str):
         with open(file_path, 'r') as f:
             return yaml.safe_load(f)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error loading workflow: {e}")
+        logging.error(f"Error loading workflow {file_path}: {e}")
+        # Security fix: Do not expose internal exception details
+        raise HTTPException(status_code=500, detail="An error occurred while loading the workflow.")
 
 @app.post("/api/workflows/save", summary="Save Workflow", description="Saves a workflow definition to a YAML file.", tags=["Workflow"])
 async def save_workflow_definition(payload: Dict = Body(...)):
@@ -273,7 +306,9 @@ async def save_workflow_definition(payload: Dict = Body(...)):
             yaml.dump(definition, f, default_flow_style=False, sort_keys=False)
         return {"message": f"Workflow {workflow_name} saved successfully."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error saving workflow: {e}")
+        logging.error(f"Error saving workflow {file_path}: {e}")
+        # Security fix: Do not expose internal exception details
+        raise HTTPException(status_code=500, detail="An error occurred while saving the workflow.")
 
 @app.get("/api/web_uis")
 async def get_web_uis():
