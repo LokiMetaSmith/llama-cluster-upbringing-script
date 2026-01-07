@@ -36,12 +36,14 @@ async def main_async():
 
     # Discover Services via Consul
     consul_addr = os.getenv("CONSUL_HTTP_ADDR", "http://10.0.0.1:8500")
+    token = os.getenv("CONSUL_HTTP_TOKEN")
+    headers = {"X-Consul-Token": token} if token else {}
     memory_url = None
     llm_base_url = None
 
     try:
         # 1. Discover Memory Service
-        resp = requests.get(f"{consul_addr}/v1/catalog/service/memory-service")
+        resp = requests.get(f"{consul_addr}/v1/catalog/service/memory-service", headers=headers)
         if resp.status_code == 200:
             services = resp.json()
             if services:
@@ -54,7 +56,7 @@ async def main_async():
         # 2. Discover LLM Service (router-api or llamacpp-rpc-api)
         # We try 'router-api' first as it's the main entry point
         llm_service_name = os.getenv("LLAMA_API_SERVICE_NAME", "router-api")
-        resp = requests.get(f"{consul_addr}/v1/catalog/service/{llm_service_name}")
+        resp = requests.get(f"{consul_addr}/v1/catalog/service/{llm_service_name}", headers=headers)
         if resp.status_code == 200:
             services = resp.json()
             if services:

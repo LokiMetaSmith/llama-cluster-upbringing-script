@@ -64,8 +64,10 @@ class LLMClient:
 
     async def discover(self):
         url = f"http://{self.consul_host}:{self.consul_port}/v1/health/service/{self.service_name}?passing"
+        token = os.getenv("CONSUL_HTTP_TOKEN")
+        headers = {"X-Consul-Token": token} if token else {}
         try:
-            resp = await self.client.get(url)
+            resp = await self.client.get(url, headers=headers)
             if resp.status_code == 200:
                 services = resp.json()
                 if services:

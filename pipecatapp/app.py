@@ -504,12 +504,18 @@ async def discover_services(service_names: list, consul_http_addr: str, delay=10
         The base URL (e.g., "http://1.2.3.4:5678/v1") of the first discovered service.
     """
     logging.info(f"Attempting to discover services: {service_names}")
+    token = os.getenv("CONSUL_HTTP_TOKEN")
+    headers = {"X-Consul-Token": token} if token else {}
 
     while True:
         for service_name in service_names:
             try:
                 logging.debug(f"Checking status of service: {service_name}")
-                response = requests.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing", timeout=5)
+                response = requests.get(
+                    f"{consul_http_addr}/v1/health/service/{service_name}?passing",
+                    headers=headers,
+                    timeout=5
+                )
                 response.raise_for_status()
                 services = response.json()
                 if services:
@@ -544,9 +550,15 @@ async def discover_main_llm_service(consul_http_addr="http://localhost:8500", de
          logging.warning("PRIMA_API_SERVICE_NAME not set, defaulting to llama-api-main")
          service_name = "llama-api-main"
 
+    token = os.getenv("CONSUL_HTTP_TOKEN")
+    headers = {"X-Consul-Token": token} if token else {}
+
     while True:
         try:
-            response = requests.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
+            response = requests.get(
+                f"{consul_http_addr}/v1/health/service/{service_name}?passing",
+                headers=headers
+            )
             response.raise_for_status()
             services = response.json()
             if services:
