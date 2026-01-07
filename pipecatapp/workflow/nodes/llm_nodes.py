@@ -305,3 +305,85 @@ class ExternalLLMNode(Node):
         except Exception as e:
             print(f"Error calling external expert {expert_id}: {e}")
             self.set_output(context, "response", f"Error calling external expert: {e}")
+@registry.register
+class LLMRouterNode(Node):
+    """
+    Routes a query to the best available expert using LLMRouter.
+    """
+    async def execute(self, context: WorkflowContext):
+        query = self.get_input(context, "user_text")
+
+        # NOTE: This implementation assumes LLMRouter is installed and configured.
+        # Since we are in a proof-of-concept phase, we might need to mock or
+        # configure it dynamically.
+
+        try:
+            from llmrouter import LLMRouter
+
+            # TODO: Load a real routing config or trained model here.
+            # For the PoC, we might use a simple rule-based or zero-shot router if supported,
+            # or just a mock if the library requires training data we don't have yet.
+            #
+            # Ideally, the router is initialized once at startup, not per-request.
+            # But for now, we'll keep it self-contained or use a singleton pattern if available.
+
+            # Mocking the router behavior for now until we have training data/config
+            # mapped to our local services.
+            # In a real scenario:
+            # router = LLMRouter(config_path="...")
+            # route = router.route(query)
+            # selected_model = route.model_name
+
+            # Simple heuristic fallback (PoC logic) mimicking what a router might do
+            if "code" in query.lower() or "python" in query.lower() or "function" in query.lower():
+                selected_model = "qwen2.5-coder"
+            elif "vision" in query.lower() or "see" in query.lower() or "image" in query.lower():
+                selected_model = "llava-llama-3"
+            else:
+                selected_model = "llama-3-8b"
+
+            # Map selected model to Consul service
+            service_mapper = {
+                "qwen2.5-coder": "llamacpp-rpc-coding",
+                "llava-llama-3": "llamacpp-rpc-vision", # Hypothetical
+                "llama-3-8b": "llamacpp-rpc-main",
+                "phi-3": "llamacpp-rpc-router"
+            }
+
+            service_name = service_mapper.get(selected_model, "llamacpp-rpc-main")
+
+            # Reusing logic similar to SimpleLLMNode to call the service
+            consul_http_addr = context.global_inputs.get("consul_http_addr")
+            response_text = f"Error: Could not reach {service_name}."
+
+            if consul_http_addr:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
+                    response.raise_for_status()
+                    services = response.json()
+
+                    if services:
+                        address = services[0]['Service']['Address']
+                        port = services[0]['Service']['Port']
+                        base_url = f"http://{address}:{port}/v1"
+
+                        payload = {
+                            "model": service_name,
+                            "messages": [{"role": "user", "content": query}],
+                            "temperature": 0.7
+                        }
+
+                        chat_url = f"{base_url}/chat/completions"
+                        llm_res = await client.post(chat_url, json=payload, timeout=120)
+                        llm_res.raise_for_status()
+                        response_text = llm_res.json()["choices"][0]["message"]["content"]
+                    else:
+                        response_text = f"Error: Service {service_name} (mapped from {selected_model}) not found."
+
+        except ImportError:
+            response_text = "Error: LLMRouter library not installed."
+        except Exception as e:
+            print(f"Error in LLMRouterNode: {e}")
+            response_text = f"Error routing query: {e}"
+
+        self.set_output(context, "response", response_text)
