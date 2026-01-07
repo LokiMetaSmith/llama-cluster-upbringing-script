@@ -111,7 +111,9 @@ class SimpleLLMNode(Node):
         # 3. Call Service
         if consul_http_addr:
             try:
-                async with httpx.AsyncClient() as client:
+                token = os.getenv("CONSUL_HTTP_TOKEN")
+                headers = {"X-Consul-Token": token} if token else {}
+                async with httpx.AsyncClient(headers=headers) as client:
                     # Discovery
                     response = await client.get(f"{consul_http_addr}/v1/health/service/{target_service}?passing")
                     response.raise_for_status()
@@ -185,7 +187,9 @@ class ExpertRouterNode(Node):
         expert_response = f"Could not find or contact expert service: {expert_name}"
 
         try:
-            async with httpx.AsyncClient() as client:
+            token = os.getenv("CONSUL_HTTP_TOKEN")
+            headers = {"X-Consul-Token": token} if token else {}
+            async with httpx.AsyncClient(headers=headers) as client:
                 response = await client.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
                 response.raise_for_status()
                 services = response.json()
@@ -357,7 +361,9 @@ class LLMRouterNode(Node):
             response_text = f"Error: Could not reach {service_name}."
 
             if consul_http_addr:
-                async with httpx.AsyncClient() as client:
+                token = os.getenv("CONSUL_HTTP_TOKEN")
+                headers = {"X-Consul-Token": token} if token else {}
+                async with httpx.AsyncClient(headers=headers) as client:
                     response = await client.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
                     response.raise_for_status()
                     services = response.json()
