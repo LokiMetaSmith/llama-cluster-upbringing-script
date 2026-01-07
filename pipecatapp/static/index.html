@@ -61,13 +61,15 @@
         /* Change color of dropdown links on hover */
         .dropdown-content a:hover {background-color: #f1f1f1}
 
-        /* Show the dropdown menu on hover */
-        .dropdown:hover .dropdown-content {
+        /* Show the dropdown menu on hover or when 'show' class is added */
+        .dropdown:hover .dropdown-content,
+        .dropdown.show .dropdown-content {
             display: block;
         }
 
         /* Change the background color of the dropdown button when the dropdown content is shown */
-        .dropdown:hover .dropbtn {
+        .dropdown:hover .dropbtn,
+        .dropdown.show .dropbtn {
             background-color: #005f7a;
         }
 
@@ -118,8 +120,8 @@
 <body>
     <h1>Mission Control <span id="status-light" role="status" aria-label="Connection Status: Disconnected" title="Connection Status: Disconnected"></span></h1>
     <div id="controls">
-        <div class="dropdown">
-            <button class="dropbtn" aria-haspopup="true" aria-expanded="false">Admin UIs</button>
+        <div class="dropdown" id="admin-ui-dropdown">
+            <button class="dropbtn" id="admin-ui-btn" aria-haspopup="true" aria-expanded="false">Admin UIs</button>
             <div class="dropdown-content" id="admin-ui-links" aria-label="Admin UI Links">
                 <!-- Links will be populated by JavaScript -->
             </div>
