@@ -16,7 +16,7 @@ einops
 espeakng_loader
 faiss-cpu
 fastapi
-faster-whisper==1.0.1
+faster-whisper==1.0.3
 fugashi-plus
 huggingface-hub
 httpx
