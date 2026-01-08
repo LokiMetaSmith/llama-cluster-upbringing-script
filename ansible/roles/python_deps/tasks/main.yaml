@@ -65,7 +65,7 @@
     extra_args: -v --no-cache-dir
   environment:
     TMPDIR: /var/tmp/ansible_pip_build
-  async: 3600 # Set timeout to 60 minutes
+  async: 7200 # Set timeout to 120 minutes
   poll: 10    # Check status every 10 seconds
   become: yes
   become_user: "{{ target_user }}"
