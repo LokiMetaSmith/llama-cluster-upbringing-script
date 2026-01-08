@@ -52,4 +52,4 @@ rank_bm25
 aiohttp
 opencode-ai
 pydantic
-llmrouter
+llmrouter-lib
