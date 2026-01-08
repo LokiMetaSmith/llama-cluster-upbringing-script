@@ -314,6 +314,7 @@
       path: "{{ playbook_dir }}/../../pipecatapp"
       nocache: true
     source: build
+    force_source: true
   when: pipecat_deployment_style == 'docker'
 
 
