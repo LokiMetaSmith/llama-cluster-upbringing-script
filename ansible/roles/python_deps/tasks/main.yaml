@@ -58,15 +58,23 @@
   tags:
     - deploy_app
 
-- name: Install python dependencies into the virtual environment
+- name: Install uv for faster dependency resolution
   ansible.builtin.pip:
-    requirements: "/opt/pipecatapp/requirements.txt"
+    name: uv
+    state: latest
     executable: "/opt/pipecatapp/venv/bin/pip3"
-    extra_args: -v --no-cache-dir
+  become: yes
+  become_user: "{{ target_user }}"
+  tags:
+    - deploy_app
+
+- name: Install python dependencies with uv
+  ansible.builtin.command:
+    cmd: "/opt/pipecatapp/venv/bin/uv pip install -r /opt/pipecatapp/requirements.txt --python /opt/pipecatapp/venv/bin/python"
   environment:
     TMPDIR: /var/tmp/ansible_pip_build
-  async: 7200 # Set timeout to 120 minutes
-  poll: 10    # Check status every 10 seconds
+  async: 1200 # Should be sufficient with uv
+  poll: 10
   become: yes
   become_user: "{{ target_user }}"
   tags:
