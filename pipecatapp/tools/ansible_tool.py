@@ -37,7 +37,14 @@ class Ansible_Tool:
             str: A string containing the output of the playbook run, or an
                 error message if the run fails or times out.
         """
-        playbook_path = os.path.join(self.project_root, playbook)
+        playbook_path = os.path.abspath(os.path.join(self.project_root, playbook))
+        project_root_abs = os.path.abspath(self.project_root)
+
+        # Ensure strict directory containment to prevent partial path attacks
+        # e.g., /opt/cluster-infra vs /opt/cluster-infra-secret
+        if os.path.commonpath([playbook_path, project_root_abs]) != project_root_abs:
+            return "Error: Invalid playbook path. Path traversal detected."
+
         if not os.path.exists(playbook_path):
             return f"Error: Playbook '{playbook_path}' not found."
 
