@@ -24,6 +24,11 @@ def test_mission_control_ui_loads(page: Page):
     status_light = page.locator("#status-light")
     expect(status_light).to_be_visible()
 
+    # Check for the Send button
+    send_btn = page.locator("#send-btn")
+    expect(send_btn).to_be_visible()
+    expect(send_btn).to_have_text("Send")
+
 def test_health_check_endpoint(page: Page):
     """
     Tests that the /health API endpoint eventually becomes healthy.
@@ -33,7 +38,7 @@ def test_health_check_endpoint(page: Page):
     timeout = 60  # seconds
 
     while time.time() - start_time < timeout:
-        response = page.request.get("http://localhost:8000/health", fail_on_error=False)
+        response = page.request.get("http://localhost:8000/health", fail_on_status_code=False)
         if response.ok:
             json_response = response.json()
             assert json_response == {"status": "ok"}

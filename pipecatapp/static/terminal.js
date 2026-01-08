@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const testAndEvaluationBtn = document.getElementById("test-and-evaluation-btn");
     const statusDisplay = document.getElementById("status-display");
     const messageInput = document.getElementById("message-input");
+    const sendBtn = document.getElementById("send-btn");
 
     // Dropdown Logic
     const adminUiBtn = document.getElementById("admin-ui-btn");
@@ -71,6 +72,10 @@ document.addEventListener("DOMContentLoaded", function() {
             sendMessage();
         }
     });
+
+    if (sendBtn) {
+        sendBtn.addEventListener("click", sendMessage);
+    }
 
     function updateStatus() {
         fetch("/api/status")
