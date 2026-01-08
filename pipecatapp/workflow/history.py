@@ -8,9 +8,15 @@ from datetime import datetime
 class WorkflowHistory:
     """Manages the persistence of workflow execution history."""
 
+    _initialized_paths = set()
+
     def __init__(self, db_path: str = "~/.config/pipecat/workflow_history.db"):
-        self.db_path = os.path.expanduser(db_path)
-        self._init_db()
+        self.db_path = os.path.abspath(os.path.expanduser(db_path))
+        # Optimization: Only run _init_db (which checks filesystem/creates tables)
+        # if we haven't already done so for this path in this process.
+        if self.db_path not in self._initialized_paths:
+            self._init_db()
+            self._initialized_paths.add(self.db_path)
 
     def _init_db(self):
         """Initialize the SQLite database and create the table if it doesn't exist."""
