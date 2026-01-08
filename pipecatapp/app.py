@@ -26,6 +26,7 @@ from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransp
 from faster_whisper import WhisperModel
 from piper.voice import PiperVoice
 import requests
+import httpx
 import consul.aio
 import numpy as np
 from pmm_memory import PMMMemory
@@ -504,32 +505,34 @@ async def discover_services(service_names: list, consul_http_addr: str, delay=10
         The base URL (e.g., "http://1.2.3.4:5678/v1") of the first discovered service.
     """
     logging.info(f"Attempting to discover services: {service_names}")
-    token = os.getenv("CONSUL_HTTP_TOKEN")
+    token = os.getenv("CONSUL_HTTP_TOKEN", "").strip()
     headers = {"X-Consul-Token": token} if token else {}
 
-    while True:
-        for service_name in service_names:
-            try:
-                logging.debug(f"Checking status of service: {service_name}")
-                response = requests.get(
-                    f"{consul_http_addr}/v1/health/service/{service_name}?passing",
-                    headers=headers,
-                    timeout=5
-                )
-                response.raise_for_status()
-                services = response.json()
-                if services:
-                    address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
-                    base_url = f"http://{address}:{port}/v1"
-                    logging.info(f"Successfully discovered {service_name} at {base_url}")
-                    return base_url
-            except requests.exceptions.RequestException as e:
-                logging.warning(f"Could not connect to Consul or find service {service_name}: {e}")
-            except Exception as e:
-                logging.error(f"Unexpected error discovering {service_name}: {e}")
+    async with httpx.AsyncClient() as client:
+        while True:
+            for service_name in service_names:
+                try:
+                    logging.debug(f"Checking status of service: {service_name}")
+                    url = f"{consul_http_addr}/v1/health/service/{service_name}?passing"
+                    response = await client.get(url, headers=headers, timeout=5)
 
-        logging.info(f"No healthy services found in list {service_names}, retrying in {delay} seconds...")
-        await asyncio.sleep(delay)
+                    if response.status_code != 200:
+                        logging.warning(f"Consul returned {response.status_code} for {service_name} at {url}: {response.text}")
+                        continue
+
+                    services = response.json()
+                    if services:
+                        address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
+                        base_url = f"http://{address}:{port}/v1"
+                        logging.info(f"Successfully discovered {service_name} at {base_url}")
+                        return base_url
+                    else:
+                        logging.info(f"Consul returned empty list for {service_name} at {url}")
+                except Exception as e:
+                    logging.error(f"Unexpected error discovering {service_name}: {e}")
+
+            logging.info(f"No healthy services found in list {service_names}, retrying in {delay} seconds...")
+            await asyncio.sleep(delay)
 
 async def discover_main_llm_service(consul_http_addr="http://localhost:8500", delay=10):
     """Discovers the main LLM service used for vision-related tasks.
@@ -550,25 +553,29 @@ async def discover_main_llm_service(consul_http_addr="http://localhost:8500", de
          logging.warning("PRIMA_API_SERVICE_NAME not set, defaulting to llama-api-main")
          service_name = "llama-api-main"
 
-    token = os.getenv("CONSUL_HTTP_TOKEN")
+    token = os.getenv("CONSUL_HTTP_TOKEN", "").strip()
     headers = {"X-Consul-Token": token} if token else {}
 
-    while True:
-        try:
-            response = requests.get(
-                f"{consul_http_addr}/v1/health/service/{service_name}?passing",
-                headers=headers
-            )
-            response.raise_for_status()
-            services = response.json()
-            if services:
-                address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
-                base_url = f"http://{address}:{port}/v1"
-                logging.info(f"Discovered main LLM service at {base_url}")
-                return base_url
-        except requests.exceptions.RequestException as e:
-            logging.warning(f"Could not find service {service_name}: {e}")
-        await asyncio.sleep(delay)
+    async with httpx.AsyncClient() as client:
+        while True:
+            try:
+                url = f"{consul_http_addr}/v1/health/service/{service_name}?passing"
+                response = await client.get(url, headers=headers, timeout=5)
+
+                if response.status_code != 200:
+                    logging.warning(f"Consul returned {response.status_code} for {service_name} at {url}: {response.text}")
+                else:
+                    services = response.json()
+                    if services:
+                        address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
+                        base_url = f"http://{address}:{port}/v1"
+                        logging.info(f"Discovered main LLM service at {base_url}")
+                        return base_url
+                    else:
+                        logging.info(f"Consul returned empty list for {service_name} at {url}")
+            except Exception as e:
+                logging.warning(f"Could not find service {service_name}: {e}")
+            await asyncio.sleep(delay)
 
 # -----------------------
 # TwinService (keeps the richer app_config-aware version)
@@ -836,7 +843,7 @@ async def load_config_from_consul(consul_host, consul_port):
     """
     logging.info("Loading configuration from Consul KV store...")
     config = {}
-    token = os.getenv("CONSUL_HTTP_TOKEN")
+    token = os.getenv("CONSUL_HTTP_TOKEN", "").strip()
     c = consul.aio.Consul(host=consul_host, port=consul_port, token=token)
     try:
         index, data = await c.kv.get('config/app/settings')
