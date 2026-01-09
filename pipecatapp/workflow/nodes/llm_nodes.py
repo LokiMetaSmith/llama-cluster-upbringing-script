@@ -98,13 +98,13 @@ class SimpleLLMNode(Node):
         # Mapping logic (simplified for now, ideally strictly matches Consul service names)
         if tier == "fast":
             # Phi-3 is usually the 'fast' or 'router' expert
-            target_service = "llamacpp-rpc-router"
+            target_service = "rpc-router"
         elif tier == "capable":
             # CodeLlama or similar high-end
-            target_service = "llamacpp-rpc-coding"
+            target_service = "rpc-coding"
         else: # balanced / default
             # Llama-3-8B is the main expert
-            target_service = "llamacpp-rpc-main"
+            target_service = "rpc-main"
 
         response_text = f"Error: Could not reach {tier} service."
 
@@ -183,7 +183,7 @@ class ExpertRouterNode(Node):
             self.set_output(context, "expert_response", "Error: expert_name, query, and consul_http_addr are required.")
             return
 
-        service_name = f"llamacpp-rpc-{expert_name}"
+        service_name = f"rpc-{expert_name}"
         expert_response = f"Could not find or contact expert service: {expert_name}"
 
         try:
@@ -348,13 +348,13 @@ class LLMRouterNode(Node):
 
             # Map selected model to Consul service
             service_mapper = {
-                "qwen2.5-coder": "llamacpp-rpc-coding",
-                "llava-llama-3": "llamacpp-rpc-vision", # Hypothetical
-                "llama-3-8b": "llamacpp-rpc-main",
-                "phi-3": "llamacpp-rpc-router"
+                "qwen2.5-coder": "rpc-coding",
+                "llava-llama-3": "rpc-vision", # Hypothetical
+                "llama-3-8b": "rpc-main",
+                "phi-3": "rpc-router"
             }
 
-            service_name = service_mapper.get(selected_model, "llamacpp-rpc-main")
+            service_name = service_mapper.get(selected_model, "rpc-main")
 
             # Reusing logic similar to SimpleLLMNode to call the service
             consul_http_addr = context.global_inputs.get("consul_http_addr")

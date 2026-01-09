@@ -49,13 +49,13 @@ echo ""
 # 4. Duplicate Check
 echo "--- Duplication Check ---"
 # Check if multiple jobs are serving the same model
-# We assume the service naming convention llamacpp-rpc-<model>-provider is unique.
+# We assume the service naming convention rpc-<model>-provider is unique.
 # If we see multiple POOLS for the same model, that's bad.
 
 if [ -n "$services" ]; then
     echo "$services" | awk -F'-' '{
-        if ($1 == "llamacpp" && $2 == "rpc") {
-            # Extract model part (skip llamacpp-rpc and -provider)
+        if (($1 == "llamacpp" && $2 == "rpc") || $1 == "rpc") {
+            # Extract model part (skip prefix and -provider)
             # This is rough parsing
             print $0
         }

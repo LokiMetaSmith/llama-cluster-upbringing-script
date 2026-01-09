@@ -20,8 +20,8 @@ class ConsulServiceDiscoveryNode(Node):
 
             for name, service_info in services.items():
                 # This logic can be expanded to be more sophisticated
-                if name.startswith("llamacpp-rpc-"):
-                    service_names.add(name.replace("llamacpp-rpc-", ""))
+                if name.startswith("rpc-"):
+                    service_names.add(name.replace("rpc-", ""))
 
                 tags = service_info.get("Tags", [])
                 if "expert" in tags:

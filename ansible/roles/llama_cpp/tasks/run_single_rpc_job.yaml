@@ -6,7 +6,7 @@
   ansible.builtin.set_fact:
     current_avg_tps: "{{ model_benchmark.tokens_per_second | default(0) }}"
 
-- name: Template llamacpp-rpc job for {{ model_item.filename }}
+- name: Template rpc job for {{ model_item.filename }}
   ansible.builtin.template:
     src: ../../jobs/llamacpp-rpc.nomad.j2
     dest: "/tmp/rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
@@ -18,9 +18,9 @@
     avg_tokens_per_second: "{{ current_avg_tps }}" # Pass the calculated TPS
     worker_count: 1 # Assuming 1 worker per model for RPC? Adjust if needed.
 
-- name: Run llamacpp-rpc job for {{ model_item.filename }}
+- name: Run rpc job for {{ model_item.filename }}
   block:
-    - name: Deploy llamacpp-rpc job
+    - name: Deploy rpc job
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job run /tmp/rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
       register: rpc_job_run
@@ -52,7 +52,7 @@
 
     - name: Fail task
       ansible.builtin.fail:
-        msg: "Failed to deploy llamacpp-rpc job for {{ model_item.filename }}. Check logs above."
+        msg: "Failed to deploy rpc job for {{ model_item.filename }}. Check logs above."
 
 - name: Clean up temporary job file for {{ model_item.filename }}
   ansible.builtin.file:
