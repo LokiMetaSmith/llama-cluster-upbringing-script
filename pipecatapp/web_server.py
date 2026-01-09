@@ -269,10 +269,11 @@ async def get_workflow_definition(workflow_name: str):
         raise HTTPException(status_code=400, detail="Invalid workflow name.")
 
     workflow_dir = os.path.join(script_dir, "workflows")
+    abs_workflow_dir = os.path.abspath(workflow_dir)
 
     # Security fix: Ensure resolved path is within workflow_dir
     file_path = os.path.abspath(os.path.join(workflow_dir, workflow_name))
-    if not file_path.startswith(os.path.abspath(workflow_dir)):
+    if os.path.commonpath([abs_workflow_dir, file_path]) != abs_workflow_dir:
         raise HTTPException(status_code=400, detail="Invalid workflow name.")
 
     if not os.path.isfile(file_path):
@@ -302,12 +303,13 @@ async def save_workflow_definition(payload: Dict = Body(...)):
         raise HTTPException(status_code=400, detail="Invalid workflow name.")
 
     workflow_dir = os.path.join(script_dir, "workflows")
+    abs_workflow_dir = os.path.abspath(workflow_dir)
     # Ensure directory exists
     os.makedirs(workflow_dir, exist_ok=True)
 
     # Security fix: Ensure resolved path is within workflow_dir
     file_path = os.path.abspath(os.path.join(workflow_dir, workflow_name))
-    if not file_path.startswith(os.path.abspath(workflow_dir)):
+    if os.path.commonpath([abs_workflow_dir, file_path]) != abs_workflow_dir:
         raise HTTPException(status_code=400, detail="Invalid workflow name.")
 
     # Optional: Versioning

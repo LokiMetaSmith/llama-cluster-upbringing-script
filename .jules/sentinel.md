@@ -7,3 +7,8 @@
 **Vulnerability:** Path traversal in `Ansible_Tool.run_playbook` allowed arbitrary file access via `..` sequences in the `playbook` argument.
 **Learning:** Simply joining paths with `os.path.join` is insufficient for security when user input is involved.
 **Prevention:** Use `os.path.abspath` and `os.path.commonpath` (or strictly check the prefix of the resolved path) to ensure the target file resides within the intended directory.
+
+## 2026-06-15 - Robust Path Traversal Check in Web Server
+**Vulnerability:** The `startswith` check for path traversal in `pipecatapp/web_server.py` was insufficient because it didn't account for partial directory name matches (e.g., `/app/workflows_secret` starts with `/app/workflows`).
+**Learning:** `startswith` treats paths as simple strings. To ensure a file is strictly inside a directory, we must respect directory boundaries.
+**Prevention:** Use `os.path.commonpath([base_dir, target_path]) == base_dir` to mathematically prove the target path is a child of the base directory.
