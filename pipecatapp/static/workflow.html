@@ -33,6 +33,14 @@
             font-size: 12px;
             background: #252526;
             color: #888;
+            border: none;
+            outline: none;
+            font-family: inherit;
+        }
+        .sidebar-tab:focus-visible {
+            background-color: #2a2d2e;
+            outline: 1px solid #007acc;
+            outline-offset: -1px;
         }
         .sidebar-tab.active {
             background: #1e1e1e;
@@ -108,15 +116,15 @@
 <body>
     <div class="container">
         <div id="sidebar">
-            <div class="sidebar-tabs">
-                <div class="sidebar-tab active" data-target="tab-library">Library</div>
-                <div class="sidebar-tab" data-target="tab-history">History</div>
+            <div class="sidebar-tabs" role="tablist" aria-label="Sidebar Sections">
+                <button class="sidebar-tab active" role="tab" aria-selected="true" aria-controls="tab-library" id="tab-btn-library" data-target="tab-library">Library</button>
+                <button class="sidebar-tab" role="tab" aria-selected="false" aria-controls="tab-history" id="tab-btn-history" data-target="tab-history">History</button>
             </div>
 
             <!-- Library Tab -->
-            <div id="tab-library" class="sidebar-content active">
+            <div id="tab-library" class="sidebar-content active" role="tabpanel" aria-labelledby="tab-btn-library">
                 <div style="padding: 10px; border-bottom: 1px solid #333;">
-                    <input type="text" id="node-search" placeholder="Search nodes..." style="width: 100%; padding: 5px; background: #333; border: 1px solid #444; color: #fff;">
+                    <input type="text" id="node-search" placeholder="Search nodes..." aria-label="Search nodes" style="width: 100%; padding: 5px; background: #333; border: 1px solid #444; color: #fff;">
                 </div>
                 <ul id="node-library">
                     <!-- Nodes will be populated here -->
@@ -124,7 +132,7 @@
             </div>
 
             <!-- History Tab -->
-            <div id="tab-history" class="sidebar-content">
+            <div id="tab-history" class="sidebar-content" role="tabpanel" aria-labelledby="tab-btn-history">
                 <div id="controls" style="padding: 10px; border-bottom: 1px solid #333;">
                     <button id="live-btn" style="width: 100%; margin-bottom: 5px;">Go Live / Poll</button>
                     <button id="refresh-history-btn" style="width: 100%;">Refresh History</button>
@@ -162,11 +170,15 @@
             document.querySelectorAll('.sidebar-tab').forEach(tab => {
                 tab.addEventListener('click', () => {
                     // Remove active class from all tabs and content
-                    document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.sidebar-tab').forEach(t => {
+                        t.classList.remove('active');
+                        t.setAttribute('aria-selected', 'false');
+                    });
                     document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
 
                     // Add active class to clicked tab and target content
                     tab.classList.add('active');
+                    tab.setAttribute('aria-selected', 'true');
                     document.getElementById(tab.dataset.target).classList.add('active');
                 });
             });
