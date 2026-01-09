@@ -9,11 +9,11 @@
 - name: Template llamacpp-rpc job for {{ model_item.filename }}
   ansible.builtin.template:
     src: ../../jobs/llamacpp-rpc.nomad.j2
-    dest: "/tmp/llamacpp-rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
+    dest: "/tmp/rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
     mode: '0644'
   vars:
     # Pass necessary variables to the template
-    job_name: "llamacpp-rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
+    job_name: "rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
     model: "{{ model_item }}" # Pass the current model dict as 'model' for the template
     avg_tokens_per_second: "{{ current_avg_tps }}" # Pass the calculated TPS
     worker_count: 1 # Assuming 1 worker per model for RPC? Adjust if needed.
@@ -22,7 +22,7 @@
   block:
     - name: Deploy llamacpp-rpc job
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad job run /tmp/llamacpp-rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
+        cmd: "/usr/local/bin/nomad job run /tmp/rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
       register: rpc_job_run
       changed_when: "'Eval ID' in rpc_job_run.stdout"
       environment:
@@ -30,7 +30,7 @@
   rescue:
     - name: Fetch Nomad allocations for debugging
       ansible.builtin.shell: >
-        /usr/local/bin/nomad job allocs -json llamacpp-rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }} | jq -r 'sort_by(.CreateTime) | reverse | .[0].ID'
+        /usr/local/bin/nomad job allocs -json rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }} | jq -r 'sort_by(.CreateTime) | reverse | .[0].ID'
       register: alloc_id
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
@@ -56,5 +56,5 @@
 
 - name: Clean up temporary job file for {{ model_item.filename }}
   ansible.builtin.file:
-    path: "/tmp/llamacpp-rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
+    path: "/tmp/rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
     state: absent
