@@ -162,7 +162,7 @@
 
 - name: Stop and purge any existing llamacpp-rpc jobs if llama.cpp was rebuilt
   ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job stop -purge "llamacpp-rpc-{{ item.filename | regex_replace('\\.gguf$', '') }}"
+    cmd: /usr/local/bin/nomad job stop -purge "rpc-{{ item.filename | regex_replace('\\.gguf$', '') }}"
   loop: "{{ all_models_for_rpc }}"
   register: rpc_job_stop_status
   changed_when: "'Running' in rpc_job_stop_status.stdout"
