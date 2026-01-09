@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", function() {
     const terminal = document.getElementById("terminal");
+    const MAX_LOG_ENTRIES = 500; // Optimization: Limit terminal size to prevent DOM bloat
     const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
     function logToTerminal(message, className = '') {
@@ -9,6 +10,30 @@ document.addEventListener("DOMContentLoaded", function() {
             p.className = className;
         }
         terminal.appendChild(p);
+
+        // Bolt ⚡ Optimization: Limit the number of log entries to prevent DOM bloat
+        // We preserve the robot-art element if it's the first child.
+        const maxElements = MAX_LOG_ENTRIES + (document.getElementById("robot-art") ? 1 : 0);
+
+        while (terminal.childElementCount > maxElements) {
+            const first = terminal.firstElementChild;
+            // If the first element is the robot art, we want to remove the *next* sibling (the oldest log)
+            // If the first element is NOT robot art (maybe it was cleared?), we remove the first element.
+            if (first && first.id === 'robot-art') {
+                const second = first.nextElementSibling;
+                if (second) {
+                    terminal.removeChild(second);
+                } else {
+                    // Should not happen if count > maxElements, but safe break
+                    break;
+                }
+            } else {
+                if (first) {
+                    terminal.removeChild(first);
+                }
+            }
+        }
+
         terminal.scrollTop = terminal.scrollHeight;
     }
 
