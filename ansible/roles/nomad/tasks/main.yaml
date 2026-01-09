@@ -324,6 +324,7 @@
     - ha-config
     - world_model_storage
     - postgres_data
+    - memory-data
   become: yes
 
 - name: Check if Nomad is active

@@ -17,7 +17,7 @@ job "memory-service" {
     # In a real setup, this should be a host_volume defined in Nomad client config
     volume "memory-data" {
       type      = "host"
-      source    = "nomad-data" # Assuming a generic data volume exists or created via Ansible
+      source    = "memory-data"
       read_only = false
     }
 
