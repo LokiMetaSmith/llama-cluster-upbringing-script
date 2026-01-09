@@ -91,5 +91,10 @@ client {
     path      = "{{ nomad_volumes_dir }}/postgres_data"
     read_only = false
   }
+
+  host_volume "memory-data" {
+    path      = "{{ nomad_volumes_dir }}/memory-data"
+    read_only = false
+  }
   
 }

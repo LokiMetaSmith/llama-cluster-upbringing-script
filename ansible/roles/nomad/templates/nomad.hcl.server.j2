@@ -54,6 +54,11 @@ client {
     path      = "{{ nomad_volumes_dir }}/world_model_storage"
     read_only = false
   }
+
+  host_volume "memory-data" {
+    path      = "{{ nomad_volumes_dir }}/memory-data"
+    read_only = false
+  }
 }
 
 consul {
