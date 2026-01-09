@@ -355,15 +355,23 @@ async def get_web_uis():
         client = service_discovery_client
 
         # 1. Add Consul UI
-        web_uis.append({"name": "Consul", "url": f"{consul_url}/ui"})
+        # We assume Consul itself is healthy if we can talk to it
+        web_uis.append({"name": "Consul", "url": f"{consul_url}/ui", "status": "healthy"})
 
         # 2. Add Nomad UI
-        nomad_service_response = await client.get(f"{consul_url}/v1/catalog/service/nomad")
-        nomad_service_response.raise_for_status()
-        nomad_services = nomad_service_response.json()
-        if nomad_services:
-            nomad_address = nomad_services[0].get("ServiceAddress") or nomad_services[0].get("Address")
-            web_uis.append({"name": "Nomad", "url": f"http://{nomad_address}:4646"})
+        try:
+            nomad_service_response = await client.get(f"{consul_url}/v1/catalog/service/nomad")
+            nomad_service_response.raise_for_status()
+            nomad_services = nomad_service_response.json()
+            if nomad_services:
+                nomad_address = nomad_services[0].get("ServiceAddress") or nomad_services[0].get("Address")
+                # Check Nomad health via Consul
+                nomad_health_resp = await client.get(f"{consul_url}/v1/health/service/nomad?passing")
+                nomad_status = "healthy" if nomad_health_resp.status_code == 200 and nomad_health_resp.json() else "unhealthy"
+                web_uis.append({"name": "Nomad", "url": f"http://{nomad_address}:4646", "status": nomad_status})
+        except Exception:
+            web_uis.append({"name": "Nomad", "url": "#", "status": "unhealthy"})
+
 
         # 3. Discover other HTTP services
         services_response = await client.get(f"{consul_url}/v1/catalog/services")
@@ -375,7 +383,8 @@ async def get_web_uis():
                 return None
 
             try:
-                health_response = await client.get(f"{consul_url}/v1/health/service/{service_name}?passing")
+                # Removed ?passing to get all services including unhealthy ones
+                health_response = await client.get(f"{consul_url}/v1/health/service/{service_name}")
                 if health_response.status_code != 200:
                     return None
 
@@ -383,19 +392,40 @@ async def get_web_uis():
                 if not service_instances:
                     return None
 
-                has_http_check = any(
-                    "http" in check.get("Type", "") and check.get("Status") == "passing"
-                    for instance in service_instances
-                    for check in instance.get("Checks", [])
-                )
+                # Logic to determine if it is a web UI and its status
+                ui_candidate = None
+                is_healthy = False
 
-                if has_http_check:
-                    instance = service_instances[0]
-                    service_info = instance.get("Service", {})
-                    address = service_info.get("Address") or instance.get("Node", {}).get("Address")
-                    port = service_info.get("Port")
-                    if address and port:
-                        return {"name": service_name, "url": f"http://{address}:{port}"}
+                for instance in service_instances:
+                    checks = instance.get("Checks", [])
+
+                    # Check for HTTP check presence (loose check for "http" in Type)
+                    has_http = any("http" in check.get("Type", "").lower() for check in checks)
+
+                    if has_http:
+                        # Capture address/port
+                        service_info = instance.get("Service", {})
+                        address = service_info.get("Address") or instance.get("Node", {}).get("Address")
+                        port = service_info.get("Port")
+
+                        if address and port:
+                            candidate_url = f"http://{address}:{port}"
+
+                            # Check health of this specific instance
+                            instance_passing = all(check.get("Status") == "passing" for check in checks)
+
+                            if instance_passing:
+                                is_healthy = True
+                                ui_candidate = candidate_url
+                                break # Found a healthy instance
+                            else:
+                                # Unhealthy, store candidate but keep looking for a healthy one
+                                if not ui_candidate:
+                                    ui_candidate = candidate_url
+
+                if ui_candidate:
+                     return {"name": service_name, "url": ui_candidate, "status": "healthy" if is_healthy else "unhealthy"}
+
             except Exception:
                 # Ignore failures for individual services so we don't break the whole list
                 pass
@@ -414,11 +444,15 @@ async def get_web_uis():
         return JSONResponse(
             status_code=503,
             content=[
-                {"name": "Consul (Not Reachable)", "url": "#"},
-                {"name": "Nomad (Not Reachable)", "url": "#"},
+                {"name": "Consul (Not Reachable)", "url": "#", "status": "unhealthy"},
+                {"name": "Nomad (Not Reachable)", "url": "#", "status": "unhealthy"},
             ]
         )
 
+    # Dictionary deduplication logic needs to handle 'status' now.
+    # We prefer 'healthy' if there are duplicates (unlikely with current logic but good practice)
+    # Actually current logic returns max 1 entry per service name from check_service.
+    # But Consul/Nomad are separate.
     unique_uis = [dict(t) for t in {tuple(d.items()) for d in web_uis}]
     sorted_uis = sorted(unique_uis, key=lambda x: x['name'])
 

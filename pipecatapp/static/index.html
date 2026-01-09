@@ -58,8 +58,17 @@
             display: block;
         }
 
+        /* Unhealthy links */
+        .dropdown-content a.unhealthy {
+            color: #888;
+            background-color: #eee;
+            cursor: not-allowed;
+            pointer-events: none; /* Disable clicking */
+        }
+
         /* Change color of dropdown links on hover */
         .dropdown-content a:hover {background-color: #f1f1f1}
+        .dropdown-content a.unhealthy:hover {background-color: #eee} /* Keep grey on hover */
 
         /* Show the dropdown menu on hover or when 'show' class is added */
         .dropdown:hover .dropdown-content,
@@ -156,12 +165,30 @@
                     }
                     data.forEach(ui => {
                         const link = document.createElement('a');
-                        link.textContent = ui.name;
-                        // Construct URL relative to the current host
-                        const url = new URL(ui.url);
-                        url.hostname = window.location.hostname;
-                        link.href = url.toString();
-                        link.target = "_blank"; // Open in new tab
+                        let displayName = ui.name;
+
+                        if (ui.status !== 'healthy') {
+                             displayName += " (Offline)";
+                             link.classList.add('unhealthy');
+                        }
+
+                        link.textContent = displayName;
+
+                        try {
+                            // Construct URL relative to the current host
+                            if (ui.url && ui.url !== '#') {
+                                const url = new URL(ui.url);
+                                url.hostname = window.location.hostname;
+                                link.href = url.toString();
+                                link.target = "_blank"; // Open in new tab
+                            } else {
+                                link.href = "#";
+                            }
+                        } catch (e) {
+                             console.warn("Invalid URL for UI:", ui);
+                             link.href = "#";
+                        }
+
                         adminUiLinks.appendChild(link);
                     });
                 })
