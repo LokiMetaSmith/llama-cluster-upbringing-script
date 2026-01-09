@@ -13,7 +13,8 @@
     mode: '0644'
   vars:
     # Pass necessary variables to the template
-    job_name: "rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
+    # Truncate to 40 chars to ensure safety even with longer prefixes, and remove trailing hyphens.
+    job_name: "rpc-{{ ((model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-'))[:40]) | regex_replace('-$', '') }}"
     model: "{{ model_item }}" # Pass the current model dict as 'model' for the template
     avg_tokens_per_second: "{{ current_avg_tps }}" # Pass the calculated TPS
     worker_count: 1 # Assuming 1 worker per model for RPC? Adjust if needed.
@@ -30,7 +31,7 @@
   rescue:
     - name: Fetch Nomad allocations for debugging
       ansible.builtin.shell: >
-        /usr/local/bin/nomad job allocs -json rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }} | jq -r 'sort_by(.CreateTime) | reverse | .[0].ID'
+        /usr/local/bin/nomad job allocs -json rpc-{{ ((model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-'))[:40]) | regex_replace('-$', '') }} | jq -r 'sort_by(.CreateTime) | reverse | .[0].ID'
       register: alloc_id
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
