@@ -22,7 +22,7 @@ job "memory-audit" {
 
       template {
         data = <<EOH
-{{ lookup('file', 'scripts/memory_audit.py') }}
+{{ lookup('file', inventory_dir + '/scripts/memory_audit.py') }}
 EOH
         destination = "local/memory_audit.py"
         env         = false
