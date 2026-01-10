@@ -315,6 +315,7 @@
       nocache: true
     source: build
     force_source: true
+  become: yes
   when: pipecat_deployment_style == 'docker'
 
 
