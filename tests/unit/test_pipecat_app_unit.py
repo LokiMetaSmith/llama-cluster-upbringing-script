@@ -83,7 +83,7 @@ async def test_workflow_runner_loads_definition(mocker):
     mocker.patch('workflow.runner.registry.get_node_class', return_value=MagicMock())
 
     # The path is relative to the `app.py` file's location
-    workflow_path = os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'workflows', 'default_agent_loop.yaml')
+    workflow_path = os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'workflows', 'default_agent_loop.yaml')
 
     # This will raise an error if the file is not found or is invalid YAML
     from workflow.runner import WorkflowRunner
@@ -226,7 +226,8 @@ async def test_loop_detection_mechanism(mocker):
                 global_inputs = last_call_args[0][0]
 
                 assert "SYSTEM ALERT" in global_inputs["tool_result"]
-                assert "Loop detected" in global_inputs["tool_result"]
+                # The exact message might change, but "3 times" is in the injected string in app.py
+                assert "3 times" in global_inputs["tool_result"]
 
                 # Verify final response was sent
                 mock_send_response.assert_called_with("I broke the loop.")

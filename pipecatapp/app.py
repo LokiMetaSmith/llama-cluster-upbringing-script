@@ -607,6 +607,14 @@ class TwinService(FrameProcessor):
         self.approval_queue = approval_queue
         self.short_term_memory = []
 
+        # Optimization: Pre-load external experts config to avoid json.loads in process_frame loop
+        external_experts_config_str = os.getenv("EXTERNAL_EXPERTS_CONFIG", "{}")
+        try:
+            self.external_experts_config = json.loads(external_experts_config_str)
+        except json.JSONDecodeError:
+            self.external_experts_config = {}
+            logging.warning("Failed to parse EXTERNAL_EXPERTS_CONFIG JSON.")
+
         # Use Remote Memory if available (via Consul discovery or env var), otherwise fallback to local
         memory_service_url = os.getenv("MEMORY_SERVICE_URL")
         if memory_service_url:
@@ -684,21 +692,13 @@ class TwinService(FrameProcessor):
             workflow_runner = WorkflowRunner("workflows/default_agent_loop.yaml", runner_id=request_id)
             active_workflows.add_runner(request_id, workflow_runner)
 
-            # Retrieve external experts config from env
-            external_experts_config_str = os.getenv("EXTERNAL_EXPERTS_CONFIG", "{}")
-            try:
-                external_experts_config = json.loads(external_experts_config_str)
-            except json.JSONDecodeError:
-                external_experts_config = {}
-                logging.warning("Failed to parse EXTERNAL_EXPERTS_CONFIG JSON.")
-
             global_inputs = {
                 "user_text": frame.text,
                 "tools_dict": self.tools,
                 "tool_result": None, # Start with no tool result
                 "consul_http_addr": self.consul_http_addr,
                 "twin_service": self,
-                "external_experts_config": external_experts_config
+                "external_experts_config": self.external_experts_config
             }
 
             previous_tool_calls = []
