@@ -26,10 +26,16 @@ app = FastAPI(
 )
 
 # Security Enhancement: Add CORS Middleware
-# TODO: In production, strict origin validation should be enabled instead of allowing "*"
+# Default to "*" for development convenience, but support strict configuration via env var
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "*")
+allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+
+if "*" in allowed_origins and len(allowed_origins) == 1:
+    logging.warning("⚠️  Security Warning: CORS is configured to allow all origins ('*'). This is acceptable for development but insecure for production. Set 'ALLOWED_ORIGINS' environment variable to a comma-separated list of trusted domains.")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
