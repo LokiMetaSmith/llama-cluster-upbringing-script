@@ -160,6 +160,32 @@
     recurse: yes
   become: yes
 
+- name: Create Nomad volumes directory before service setup
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode: '0755'
+    recurse: yes
+  become: yes
+
+- name: Create subdirectories for Nomad volumes
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/{{ item }}"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode: '0755'
+    recurse: yes
+  loop:
+    - mqtt-data
+    - ha-config
+    - world_model_storage
+    - postgres_data
+    - memory-data
+  become: yes
+
 - name: Fetch Consul management token
   ansible.builtin.slurp:
     src: /etc/consul.d/management_token
@@ -299,32 +325,6 @@
     group: "root"
     mode: '0755'
     recurse: yes
-  become: yes
-
-- name: Create Nomad volumes directory before service setup
-  ansible.builtin.file:
-    path: "{{ nomad_volumes_dir }}"
-    state: directory
-    owner: "root"
-    group: "root"
-    mode: '0755'
-    recurse: yes
-  become: yes
-
-- name: Create subdirectories for Nomad volumes
-  ansible.builtin.file:
-    path: "{{ nomad_volumes_dir }}/{{ item }}"
-    state: directory
-    owner: "root"
-    group: "root"
-    mode: '0755'
-    recurse: yes
-  loop:
-    - mqtt-data
-    - ha-config
-    - world_model_storage
-    - postgres_data
-    - memory-data
   become: yes
 
 - name: Check if Nomad is active
