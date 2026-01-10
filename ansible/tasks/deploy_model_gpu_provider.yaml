@@ -18,10 +18,6 @@
   ansible.builtin.command:
     cmd: "nomad job run /tmp/rpc-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
   changed_when: true
-  vars:
-    # Used only for logging/reporting if needed, but not strictly required here as the file path is constructed from model.filename
-    # We kept the file path consistent with the first task: /tmp/rpc-...
-    pass
 
 - name: "Wait for GPU Provider for {{ model.name }} to become healthy in Consul"
   ansible.builtin.uri:
