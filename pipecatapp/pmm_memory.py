@@ -3,6 +3,7 @@ import json
 import time
 import hashlib
 import asyncio
+import os
 from typing import Dict, Any, Optional, List
 
 class PMMMemory:
@@ -23,7 +24,11 @@ class PMMMemory:
             db_path (str, optional): The path to the SQLite database file.
                 Defaults to "pmm_memory.db".
         """
-        self.db_path = db_path
+        self.db_path = os.path.expanduser(db_path)
+        # Ensure the directory exists
+        db_dir = os.path.dirname(self.db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
         self.conn = self._init_db()
 
     def _init_db(self):
