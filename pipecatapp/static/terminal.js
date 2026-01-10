@@ -47,6 +47,28 @@ document.addEventListener("DOMContentLoaded", function() {
     const messageInput = document.getElementById("message-input");
     const sendBtn = document.getElementById("send-btn");
 
+    // Helper for loading state
+    function setLoading(btn, isLoading, loadingText) {
+        if (!btn) return;
+        if (isLoading) {
+             // Store original text if not already stored
+             if (!btn.hasAttribute('data-original-text')) {
+                 btn.setAttribute('data-original-text', btn.textContent);
+             }
+             btn.textContent = loadingText || "Loading...";
+             btn.disabled = true;
+             btn.setAttribute("aria-busy", "true");
+        } else {
+             const originalText = btn.getAttribute('data-original-text');
+             if (originalText) {
+                 btn.textContent = originalText;
+                 btn.removeAttribute('data-original-text');
+             }
+             btn.disabled = false;
+             btn.setAttribute("aria-busy", "false");
+        }
+    }
+
     // Dropdown Logic
     const adminUiBtn = document.getElementById("admin-ui-btn");
     const adminUiDropdown = document.getElementById("admin-ui-dropdown");
@@ -102,7 +124,11 @@ document.addEventListener("DOMContentLoaded", function() {
         sendBtn.addEventListener("click", sendMessage);
     }
 
-    function updateStatus() {
+    function updateStatus(event) {
+        // If triggered by event (button click), handle loading state
+        const btn = (event instanceof Event) ? event.target : null;
+        if (btn) setLoading(btn, true, "Checking...");
+
         fetch("/api/status")
             .then(response => response.json())
             .then(data => {
@@ -142,6 +168,9 @@ document.addEventListener("DOMContentLoaded", function() {
             .catch(error => {
                 statusDisplay.innerText = `Error fetching status: ${error}`;
                 console.error("Error fetching status:", error);
+            })
+            .finally(() => {
+                if (btn) setLoading(btn, false);
             });
     }
 
@@ -225,6 +254,8 @@ document.addEventListener("DOMContentLoaded", function() {
             logToTerminal("Please enter a name for the save state.", "error");
             return;
         }
+        setLoading(saveStateBtn, true, "Saving...");
+
         fetch("/api/state/save", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -232,7 +263,8 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .then(response => response.json())
         .then(data => logToTerminal(data.message))
-        .catch(error => logToTerminal(`Error saving state: ${error}`, "error"));
+        .catch(error => logToTerminal(`Error saving state: ${error}`, "error"))
+        .finally(() => setLoading(saveStateBtn, false));
     };
 
     loadStateBtn.onclick = function() {
@@ -241,6 +273,8 @@ document.addEventListener("DOMContentLoaded", function() {
             logToTerminal("Please enter the name of the state to load.", "error");
             return;
         }
+        setLoading(loadStateBtn, true, "Loading...");
+
         fetch("/api/state/load", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -251,7 +285,8 @@ document.addEventListener("DOMContentLoaded", function() {
             logToTerminal(data.message);
             logToTerminal("--- State loaded. You may need to refresh the page to see changes in memory. ---");
         })
-        .catch(error => logToTerminal(`Error loading state: ${error}`, "error"));
+        .catch(error => logToTerminal(`Error loading state: ${error}`, "error"))
+        .finally(() => setLoading(loadStateBtn, false));
     };
 
     clearTerminalBtn.onclick = function() {
