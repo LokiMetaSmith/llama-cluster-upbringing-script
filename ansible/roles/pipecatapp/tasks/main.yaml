@@ -690,12 +690,26 @@
   block:
     - name: "Pipecat App : Run nomad job"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/pipecatapp.nomad"
+        cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/pipecatapp.nomad"
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       changed_when: true
       become: no
       register: pipecat_job_run
+
+    - name: Wait for the pipecat-app service to be healthy in Consul
+      ansible.builtin.uri:
+        url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/pipecat-app"
+        headers:
+          X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
+        return_content: yes
+      register: pipecat_health
+      until: >
+        pipecat_health.json is defined and
+        pipecat_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
+      retries: 60
+      delay: 10
+      changed_when: false
   rescue:
     - name: "Pipecat App : Get Pipecat App job status"
       ansible.builtin.command:
@@ -759,17 +773,3 @@
     - name: "Pipecat App : Fail after debugging"
       ansible.builtin.fail:
         msg: "Pipecat App job failed to start. See logs above."
-
-- name: Wait for the pipecat-app service to be healthy in Consul
-  ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/pipecat-app"
-    headers:
-      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
-    return_content: yes
-  register: pipecat_health
-  until: >
-    pipecat_health.json is defined and
-    pipecat_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
-  retries: 60
-  delay: 10
-  changed_when: false

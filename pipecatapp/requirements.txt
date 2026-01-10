@@ -59,3 +59,4 @@ opencode-ai
 llmrouter-lib
 rank_bm25
 podman
+tenacity
