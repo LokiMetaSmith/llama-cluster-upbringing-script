@@ -67,6 +67,7 @@ from workflow.nodes.base_nodes import *
 from workflow.nodes.llm_nodes import *
 from workflow.nodes.tool_nodes import *
 from workflow.nodes.system_nodes import *
+from api_keys import initialize_api_keys
 
 
 import uvicorn
@@ -867,6 +868,15 @@ async def load_config_from_consul(consul_host, consul_port):
 
 async def main():
     """The main entry point for the conversational AI application."""
+    # Initialize API Keys
+    api_keys_str = os.getenv("PIPECAT_API_KEYS") or os.getenv("PIECAT_API_KEYS", "")
+    if api_keys_str:
+        hashed_keys = [key.strip() for key in api_keys_str.split(',')]
+        initialize_api_keys(hashed_keys)
+        logging.info(f"Initialized with {len(hashed_keys)} API key(s).")
+    else:
+        logging.warning("No API keys found in PIPECAT_API_KEYS (or PIECAT_API_KEYS). Sensitive endpoints will be insecure if not protected elsewhere.")
+
     # Load configuration from Consul
     consul_host = os.getenv("CONSUL_HOST")
     if not consul_host:
