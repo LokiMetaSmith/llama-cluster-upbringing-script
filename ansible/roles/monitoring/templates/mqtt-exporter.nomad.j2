@@ -8,7 +8,7 @@ job "mqtt-exporter" {
     health_check      = "checks"
     min_healthy_time  = "10s"
     healthy_deadline  = "15m"
-    progress_deadline = "5m"
+    progress_deadline = "20m"
     auto_revert       = true
     canary            = 0
   }
@@ -27,7 +27,7 @@ job "mqtt-exporter" {
       driver = "docker"
 
       config {
-        image = "kpetremann/mqtt-exporter:{{ mqtt_exporter_version }}"
+        image = "kpetrem/mqtt-exporter:{{ mqtt_exporter_version }}"
       }
 
       env {
