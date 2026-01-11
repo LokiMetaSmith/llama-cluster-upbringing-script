@@ -93,10 +93,6 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
     task "rpc-server-provider" {
       driver = "raw_exec"
 
-      env {
-        NOMAD_PORT_rpc = "${NOMAD_PORT_rpc}"
-      }
-
       config {
         command = "/bin/bash"
         args = [
