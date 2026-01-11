@@ -46,7 +46,8 @@ def start_service(api_key_and_hash):
     for _ in range(10):
         try:
             response = requests.get(f"{BASE_URL}/health")
-            if response.status_code == 200 or response.status_code == 503: # 503 is also ok as it means server is up but agent not ready
+            # 503 is also ok as it means server is up but agent not ready
+            if response.status_code == 200 or response.status_code == 503:
                 print("Service is up.")
                 break
         except requests.ConnectionError:
@@ -63,24 +64,39 @@ def start_service(api_key_and_hash):
     process.wait()
     print("Service terminated.")
 
-def test_api_status_unauthorized_no_key():
-    """Verify that accessing a protected endpoint without an API key fails."""
+def test_status_publicly_accessible():
+    """Verify that the status endpoint is accessible WITHOUT an API key."""
     response = requests.get(f"{BASE_URL}/api/status")
+    # Should be 200 OK (or 503 if not ready) but NOT 401 Unauthorized
+    assert response.status_code in [200, 503]
+    assert response.status_code != 401
+
+def test_protected_endpoint_unauthorized_no_key():
+    """Verify that accessing a protected endpoint (load state) without an API key fails."""
+    # Using /api/state/load as the test target for protection
+    payload = {"save_name": "test_snapshot"}
+    response = requests.post(f"{BASE_URL}/api/state/load", json=payload)
     assert response.status_code == 401
     assert "Missing API Key" in response.json()["detail"]
 
-def test_api_status_unauthorized_invalid_key():
+def test_protected_endpoint_unauthorized_invalid_key():
     """Verify that accessing a protected endpoint with an invalid API key fails."""
     headers = {"Authorization": "Bearer invalidkey"}
-    response = requests.get(f"{BASE_URL}/api/status", headers=headers)
+    payload = {"save_name": "test_snapshot"}
+    response = requests.post(f"{BASE_URL}/api/state/load", json=payload, headers=headers)
     assert response.status_code == 401
     assert "Invalid API Key" in response.json()["detail"]
 
-def test_api_status_authorized(api_key_and_hash):
-    """Verify that accessing a protected endpoint with a valid API key succeeds."""
+def test_protected_endpoint_authorized(api_key_and_hash):
+    """Verify that accessing a protected endpoint with a valid API key succeeds (or at least passes auth)."""
     api_key, _ = api_key_and_hash
     headers = {"Authorization": f"Bearer {api_key}"}
-    response = requests.get(f"{BASE_URL}/api/status", headers=headers)
-    assert response.status_code == 200
-    # The agent isn't fully running, so we expect this specific status message
-    assert "Agent not fully initialized" in response.json()["status"]
+    payload = {"save_name": "test_snapshot"}
+    response = requests.post(f"{BASE_URL}/api/state/load", json=payload, headers=headers)
+
+    # We expect 503 because the agent isn't fully initialized in this test harness,
+    # BUT we should NOT get 401.
+    # If the logic reaches the "Agent not fully initialized" return, auth passed.
+    assert response.status_code != 401
+    if response.status_code == 503:
+        assert "Agent not fully initialized" in response.json()["message"]

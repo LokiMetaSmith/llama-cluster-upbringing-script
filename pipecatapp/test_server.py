@@ -1,6 +1,7 @@
 import os
 import logging
 from api_keys import initialize_api_keys
+from web_server import app
 
 # This is a special entry point for testing purposes.
 # It initializes the API keys from the environment before the app starts.
@@ -15,5 +16,9 @@ if hashed_api_keys_str:
     logging.info(f"Test server initialized with {len(hashed_keys)} API key(s).")
 else:
     logging.warning("PIECAT_API_KEYS environment variable not set for test server.")
+
+# Initialize global state attributes for testing
+app.state.is_ready = False
+app.state.twin_service_instance = None
 
 # The 'app' object is imported from web_server and will be used by uvicorn.
