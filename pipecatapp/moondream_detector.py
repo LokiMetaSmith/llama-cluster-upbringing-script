@@ -1,5 +1,7 @@
 from transformers import AutoModelForCausalLM
 import torch
+import time
+import asyncio
 from pipecat.processors.frame_processor import FrameProcessor
 
 # Enable high precision for matmul operations on Ampere+ GPUs
@@ -53,6 +55,8 @@ class MoondreamDetector(FrameProcessor):
                 print(f"Failed to compile model: {e}")
 
         self.latest_observation = "I don't see anything."
+        self.last_processed_time = 0
+        self.is_processing = False
         print("MoondreamDetector initialized.")
 
     async def process_frame(self, frame, direction):
@@ -71,9 +75,22 @@ class MoondreamDetector(FrameProcessor):
             await self.push_frame(frame, direction)
             return
 
+        current_time = time.time()
+        # Optimization: Limit captioning to 1 FPS to prevent blocking the event loop
+        # and unnecessary GPU usage. Also prevent concurrent inference.
+        if (current_time - self.last_processed_time < 1.0) or self.is_processing:
+            return
+
+        self.is_processing = True
+        self.last_processed_time = current_time
+
         try:
-            # Generate a caption for the image.
-            caption = self.model.caption(frame.image, length="short")["caption"]
+            loop = asyncio.get_running_loop()
+            # Run blocking inference in a separate thread
+            caption = await loop.run_in_executor(
+                None,
+                lambda: self.model.caption(frame.image, length="short")["caption"]
+            )
 
             # Only update if the observation has changed to avoid spamming logs.
             if caption and caption != self.latest_observation:
@@ -82,6 +99,8 @@ class MoondreamDetector(FrameProcessor):
         except Exception as e:
             print(f"Error in MoondreamDetector: {e}")
             self.latest_observation = "I am having trouble seeing."
+        finally:
+            self.is_processing = False
 
         # This processor's purpose is to maintain a state (`latest_observation`).
         # It doesn't need to push any frames downstream.
