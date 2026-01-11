@@ -5,6 +5,7 @@
     name: consul
     state: stopped
   when: cleanup_services | default(false) | bool
+  failed_when: false
   tags:
     - consul_configure
 
