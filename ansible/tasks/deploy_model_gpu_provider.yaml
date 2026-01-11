@@ -25,7 +25,7 @@
 
 - name: "Run the GPU Provider Pool job for {{ model.name }}"
   ansible.builtin.command:
-    cmd: "nomad job run /tmp/{{ rpc_job_name }}.nomad"
+    cmd: "/usr/local/bin/nomad job run /tmp/{{ rpc_job_name }}.nomad"
   changed_when: true
 
 - name: "Wait for GPU Provider for {{ model.name }} to become healthy in Consul"
