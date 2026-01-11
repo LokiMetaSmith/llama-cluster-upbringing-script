@@ -253,6 +253,16 @@
   notify:
     - Restart nomad
 
+- name: Ensure /opt/pipecatapp directory exists for Nomad volume
+  ansible.builtin.file:
+    path: "{{ pipecat_app_dir }}"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode: '0755'
+    recurse: yes
+  become: yes
+
 - name: Copy Nomad systemd service file
   ansible.builtin.template:
     src: nomad.service.j2
@@ -316,16 +326,6 @@
     creates: /opt/cni/bin/bridge
   become: yes
   check_mode: no
-
-- name: Ensure /opt/pipecatapp directory exists for Nomad volume
-  ansible.builtin.file:
-    path: "{{ pipecat_app_dir }}"
-    state: directory
-    owner: "root"
-    group: "root"
-    mode: '0755'
-    recurse: yes
-  become: yes
 
 - name: Check if Nomad is active
   ansible.builtin.command: systemctl is-active nomad
