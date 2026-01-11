@@ -4,10 +4,10 @@ import os
 import docker
 from unittest.mock import MagicMock, patch
 
-# Add tools directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
+# Add repo root to path to allow importing pipecatapp as a package
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from code_runner_tool import CodeRunnerTool
+from pipecatapp.tools.code_runner_tool import CodeRunnerTool
 
 @pytest.fixture
 def code_runner():
@@ -18,7 +18,9 @@ def code_runner():
         return runner
 
 # We patch SandboxSession where it's used in the code_runner_tool module.
-@patch('code_runner_tool.SandboxSession')
+# The patch path depends on how code_runner_tool is imported/mocked.
+# Since we import from pipecatapp.tools.code_runner_tool, we should patch there.
+@patch('pipecatapp.tools.code_runner_tool.SandboxSession')
 def test_run_code_in_sandbox_success(mock_sandbox_session, code_runner):
     """
     Test that run_code_in_sandbox successfully executes Python code.
@@ -42,7 +44,7 @@ def test_run_code_in_sandbox_success(mock_sandbox_session, code_runner):
     mock_sandbox_session.assert_called_once_with(lang="python")
     mock_session_instance.run.assert_called_once_with(code_to_run, libraries=[])
 
-@patch('code_runner_tool.SandboxSession')
+@patch('pipecatapp.tools.code_runner_tool.SandboxSession')
 def test_run_code_in_sandbox_with_libraries(mock_sandbox_session, code_runner):
     """
     Test that run_code_in_sandbox correctly passes libraries.
@@ -65,7 +67,7 @@ def test_run_code_in_sandbox_with_libraries(mock_sandbox_session, code_runner):
     assert result == expected_output
     mock_session_instance.run.assert_called_once_with(code_to_run, libraries=libraries)
 
-@patch('code_runner_tool.SandboxSession')
+@patch('pipecatapp.tools.code_runner_tool.SandboxSession')
 def test_run_code_in_sandbox_with_error(mock_sandbox_session, code_runner):
     """
     Test that run_code_in_sandbox returns a formatted error string.
@@ -142,6 +144,14 @@ def test_run_python_code_with_error(mock_path_exists, code_runner, mocker):
              result = code_runner.run_python_code(code_to_run)
 
     assert result == error_output
+
+def test_run_python_code_no_docker_client(code_runner):
+    """
+    Test that run_python_code returns an error message when Docker client is not available.
+    """
+    code_runner.client = None
+    result = code_runner.run_python_code("print('hello')")
+    assert "Error: Docker execution is not available" in result
 
 @patch('os.path.exists', return_value=True)
 def test_image_not_found_error(mock_path_exists, code_runner, mocker):

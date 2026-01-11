@@ -1,4 +1,5 @@
 import docker
+import logging
 import os
 import tempfile
 from llm_sandbox import SandboxSession
@@ -22,7 +23,12 @@ class CodeRunnerTool:
         """Initializes the CodeRunnerTool."""
         self.description = "Execute Python code in a sandboxed Docker container."
         self.name = "code_runner"
-        self.client = docker.from_env()
+        try:
+            self.client = docker.from_env()
+        except Exception as e:
+            logging.warning(f"Failed to initialize Docker client for CodeRunnerTool: {e}")
+            self.client = None
+
         self.image = "python:3.9-slim"
         self.scanner = DependencyScannerTool()
 
@@ -40,6 +46,9 @@ class CodeRunnerTool:
             str: The captured output (stdout and stderr) from the code
                  execution, or an error message if something went wrong.
         """
+        if not self.client:
+            return "Error: Docker execution is not available (Docker client failed to initialize)."
+
         try:
             # Use TemporaryDirectory for better isolation than mounting /tmp
             with tempfile.TemporaryDirectory() as temp_dir:
