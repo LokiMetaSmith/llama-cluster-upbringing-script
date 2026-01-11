@@ -17,10 +17,11 @@ job "grafana" {
     count = 1
 
     # Ensure Grafana runs on the node where dashboards are provisioned
-    # We use a unique constraint on the hostname matching the inventory hostname (controller node)
+    # We use a unique constraint on the hostname matching the actual system hostname (controller node)
+    # inventory_hostname often resolves to 'localhost' in local execution, which Nomad rejects
     constraint {
       attribute = "${attr.unique.hostname}"
-      value     = "{{ inventory_hostname }}"
+      value     = "{{ lookup('pipe', 'hostname') }}"
     }
 
     network {
