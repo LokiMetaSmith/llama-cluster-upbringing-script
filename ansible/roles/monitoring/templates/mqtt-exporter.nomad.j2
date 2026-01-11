@@ -27,7 +27,7 @@ job "mqtt-exporter" {
       driver = "docker"
 
       config {
-        image = "kpetremann/mqtt-exporter:{{ mqtt_exporter_version }}"
+        image = "kpetrem/mqtt-exporter:{{ mqtt_exporter_version }}"
       }
 
       env {
