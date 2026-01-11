@@ -137,7 +137,7 @@
                     <button id="live-btn" style="width: 100%; margin-bottom: 5px;">Go Live / Poll</button>
                     <button id="refresh-history-btn" style="width: 100%;">Refresh History</button>
                 </div>
-                <ul id="history-list"></ul>
+                <ul id="history-list" role="listbox" aria-label="History List"></ul>
             </div>
         </div>
         <div id="main-content">
@@ -265,14 +265,22 @@
                 runs.forEach(run => {
                     const li = document.createElement('li');
                     li.className = 'history-item';
+                    li.tabIndex = 0;
+                    li.setAttribute('role', 'option');
+                    li.setAttribute('aria-selected', 'false');
                     li.innerHTML = `
                         <div>${new Date(run.start_time * 1000).toLocaleTimeString()}</div>
                         <div class="history-meta">${run.id.substring(0,8)}...</div>
                     `;
-                    li.onclick = async () => {
+
+                    const handleClick = async () => {
                         // Mark active
-                        document.querySelectorAll('.history-item').forEach(i => i.classList.remove('active'));
+                        document.querySelectorAll('.history-item').forEach(i => {
+                            i.classList.remove('active');
+                            i.setAttribute('aria-selected', 'false');
+                        });
                         li.classList.add('active');
+                        li.setAttribute('aria-selected', 'true');
 
                         console.log("Loading run", run);
                         // Fetch full details
@@ -288,6 +296,15 @@
                             alert("Failed to load run details");
                         }
                     };
+
+                    li.onclick = handleClick;
+                    li.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleClick();
+                        }
+                    });
+
                     historyList.appendChild(li);
                 });
             }
