@@ -3,6 +3,7 @@ import os
 import tempfile
 from llm_sandbox import SandboxSession
 from typing import List, Optional
+from .dependency_scanner_tool import DependencyScannerTool
 
 class CodeRunnerTool:
     """A tool for executing Python code in a sandboxed Docker container.
@@ -23,6 +24,7 @@ class CodeRunnerTool:
         self.name = "code_runner"
         self.client = docker.from_env()
         self.image = "python:3.9-slim"
+        self.scanner = DependencyScannerTool()
 
     def run_python_code(self, code: str) -> str:
         """Runs a string of Python code in a Docker container and returns the output.
@@ -92,6 +94,20 @@ class CodeRunnerTool:
         """
         if libraries is None:
             libraries = []
+
+        # Dependency Intelligence Check
+        if language == "python" and libraries:
+            for lib in libraries:
+                # Basic parsing to separate package name from version if present
+                # Simple split on '==' for now; robust parsing would use 'packaging' library
+                if '==' in lib:
+                    name, version = lib.split('==', 1)
+                else:
+                    name, version = lib, None
+
+                scan_result = self.scanner.scan_package(name, version)
+                if "UNSAFE" in scan_result:
+                    return f"Operation blocked by security policy. Vulnerability detected in dependency '{lib}':\n{scan_result}"
 
         try:
             with SandboxSession(lang=language) as session:

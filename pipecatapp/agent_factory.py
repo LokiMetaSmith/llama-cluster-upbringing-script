@@ -25,6 +25,7 @@ from tools.planner_tool import PlannerTool
 from tools.file_editor_tool import FileEditorTool
 from tools.archivist_tool import ArchivistTool
 from tools.opencode_tool import OpencodeTool
+from tools.dependency_scanner_tool import DependencyScannerTool
 from tools.remote_tool_proxy import RemoteToolProxy
 
 # Tools that are supported by the Tool Server and can be proxied
@@ -70,6 +71,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
             provider_id=config.get("opencode_provider", "openai"),
             model_id=config.get("opencode_model", "gpt-4o")
         ),
+        "dependency_scanner": DependencyScannerTool(),
     }
 
     if config.get("use_summarizer", False) and twin_service:
