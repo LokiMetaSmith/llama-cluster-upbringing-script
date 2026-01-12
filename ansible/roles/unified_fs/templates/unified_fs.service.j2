@@ -1,0 +1,15 @@
+[Unit]
+Description=Unified Agent Filesystem (FUSE)
+After=network.target consul.service
+Requires=network.target
+
+[Service]
+Type=simple
+User={{ unified_fs_user }}
+ExecStart=/usr/local/bin/unified_fs_agent.py {{ unified_fs_mount_point }} {{ unified_fs_root_storage }}
+ExecStop=/bin/fusermount -u {{ unified_fs_mount_point }}
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
