@@ -1,0 +1,42 @@
+mqtt:
+  host: {{ frigate_mqtt_server }}
+  port: {{ frigate_mqtt_port }}
+  topic_prefix: frigate
+  client_id: frigate
+  user: {{ frigate_mqtt_user }}
+  password: {{ frigate_mqtt_password }}
+
+cameras:
+  test_cam:
+    ffmpeg:
+      inputs:
+        - path: test
+          input_args: -f lavfi -i testsrc=size=1280x720:rate=5
+          roles:
+            - detect
+            - rtmp
+    detect:
+      enabled: True
+      width: 1280
+      height: 720
+      fps: 5
+    objects:
+      track:
+        - person
+        - car
+        - dog
+
+detectors:
+  cpu1:
+    type: cpu
+
+record:
+  enabled: True
+  retain:
+    days: 0
+    mode: motion
+
+snapshots:
+  enabled: True
+  retain:
+    default: 10
