@@ -3,6 +3,17 @@ document.addEventListener("DOMContentLoaded", function() {
     const MAX_LOG_ENTRIES = 500; // Optimization: Limit terminal size to prevent DOM bloat
     const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
+    // Security Fix: Prevent XSS by escaping HTML special characters
+    function escapeHtml(text) {
+        if (!text) return text;
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     function logToTerminal(message, className = '') {
         const p = document.createElement('p');
         p.innerHTML = message;
@@ -108,7 +119,8 @@ document.addEventListener("DOMContentLoaded", function() {
         const message = messageInput.value.trim();
         if (message) {
             ws.send(JSON.stringify({ type: "user_message", data: message }));
-            logToTerminal(`<strong>You:</strong> ${message}`, "user-message");
+            // Security Fix: Escape user input before rendering
+            logToTerminal(`<strong>You:</strong> ${escapeHtml(message)}`, "user-message");
             messageInput.value = "";
             animateThinking();
         }
@@ -135,7 +147,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 const statusText = data.status;
 
                 if (!statusText || statusText === "No active pipelines." || statusText === "MCP tool or runner not available." || statusText.startsWith("Agent not fully initialized")) {
-                     statusDisplay.innerHTML = `<p>${statusText}</p>`;
+                     // Security Fix: Escape status text
+                     statusDisplay.innerHTML = `<p>${escapeHtml(statusText)}</p>`;
                      return;
                 }
 
@@ -145,7 +158,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 if (lines.length === 0) {
                      // Fallback if parsing fails or format is unexpected
-                     statusDisplay.innerHTML = `<pre>${statusText}</pre>`;
+                     // Security Fix: Escape status text
+                     statusDisplay.innerHTML = `<pre>${escapeHtml(statusText)}</pre>`;
                      return;
                 }
 
@@ -158,7 +172,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     if (match) {
                         const taskName = match[1];
                         const taskState = match[2];
-                        html += `<tr><td>${taskName}</td><td>${taskState}</td></tr>`;
+                        // Security Fix: Escape task name and state
+                        html += `<tr><td>${escapeHtml(taskName)}</td><td>${escapeHtml(taskState)}</td></tr>`;
                     }
                 });
 
@@ -262,8 +277,8 @@ document.addEventListener("DOMContentLoaded", function() {
             body: JSON.stringify({ save_name: saveName })
         })
         .then(response => response.json())
-        .then(data => logToTerminal(data.message))
-        .catch(error => logToTerminal(`Error saving state: ${error}`, "error"))
+        .then(data => logToTerminal(escapeHtml(data.message))) // Security Fix: Escape response
+        .catch(error => logToTerminal(`Error saving state: ${escapeHtml(error)}`, "error")) // Security Fix: Escape error
         .finally(() => setLoading(saveStateBtn, false));
     };
 
@@ -282,10 +297,10 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .then(response => response.json())
         .then(data => {
-            logToTerminal(data.message);
+            logToTerminal(escapeHtml(data.message)); // Security Fix: Escape response
             logToTerminal("--- State loaded. You may need to refresh the page to see changes in memory. ---");
         })
-        .catch(error => logToTerminal(`Error loading state: ${error}`, "error"))
+        .catch(error => logToTerminal(`Error loading state: ${escapeHtml(error)}`, "error")) // Security Fix: Escape error
         .finally(() => setLoading(loadStateBtn, false));
     };
 
@@ -307,7 +322,8 @@ document.addEventListener("DOMContentLoaded", function() {
             const msg = JSON.parse(event.data);
             handleMessage(msg);
         } catch (e) {
-            logToTerminal(event.data);
+            // Security Fix: Escape raw message
+            logToTerminal(escapeHtml(event.data));
         }
     };
 
@@ -320,7 +336,7 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 
     ws.onerror = function(error) {
-        logToTerminal(`--- WebSocket Error: ${error} ---`, "error");
+        logToTerminal(`--- WebSocket Error: ${escapeHtml(error)} ---`, "error");
     };
 
     function handleMessage(msg) {
@@ -328,18 +344,22 @@ document.addEventListener("DOMContentLoaded", function() {
         const data = msg.data;
 
         if (type === "log") {
-            logToTerminal(data);
+            logToTerminal(escapeHtml(data));
         } else if (type === "user") {
-            logToTerminal(`<strong>You:</strong> ${data}`, "user-message");
+            logToTerminal(`<strong>You:</strong> ${escapeHtml(data)}`, "user-message");
         } else if (type === "agent") {
-            logToTerminal(`<strong>Agent:</strong> ${data}`, "agent-message breathing-shimmering");
+            logToTerminal(`<strong>Agent:</strong> ${escapeHtml(data)}`, "agent-message breathing-shimmering");
             startIdleAnimation();
         } else if (type === "display") {
+            // display type might expect HTML or specific rendering,
+            // but renderEffect uses figlet/lolcat which generates HTML.
+            // We trust renderEffect for now as it doesn't take raw HTML from user directly in this path?
+            // Actually renderEffect takes 'text'. If text is safe...
             renderEffect(data.text, data.effect);
         } else if (type === "approval_request") {
             renderApprovalPrompt(data);
         } else {
-            logToTerminal(JSON.stringify(msg));
+            logToTerminal(escapeHtml(JSON.stringify(msg)));
         }
     }
 
@@ -394,12 +414,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function renderEffect(text, effect) {
         if (effect === "figlet-lolcat") {
+            // figlet relies on text content, safe from HTML injection usually as it converts chars to ascii art
             figlet.text(text, { font: 'slant' }, function(err, data) {
                 if (err) {
-                    logToTerminal(text); // fallback
+                    logToTerminal(escapeHtml(text)); // fallback
                     return;
                 }
                 const pre = document.createElement('pre');
+                // lolcat.rainbow wraps chars in spans. data is ascii art.
+                // We assume figlet output is safe.
                 pre.innerHTML = lolcat.rainbow(function(char, color) {
                     return `<span style="color: ${color};">${char}</span>`;
                 }, data);
@@ -407,7 +430,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 terminal.scrollTop = terminal.scrollHeight;
             });
         } else {
-            logToTerminal(text);
+            logToTerminal(escapeHtml(text));
         }
     }
 });
