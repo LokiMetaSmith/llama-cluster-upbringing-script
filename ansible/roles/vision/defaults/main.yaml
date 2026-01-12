@@ -1,0 +1,9 @@
+---
+frigate_image: "ghcr.io/blakeblackshear/frigate:stable"
+frigate_config_dir: "{{ nomad_volumes_dir }}/frigate-config"
+frigate_storage_dir: "{{ nomad_volumes_dir }}/frigate-storage"
+frigate_mqtt_server: "localhost"
+frigate_mqtt_port: 1883
+frigate_mqtt_user: ""
+frigate_mqtt_password: ""
+frigate_port: 5000

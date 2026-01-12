@@ -113,7 +113,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [ ] **Reconcile Stale Artifacts:**
   - `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
 - [ ] **Vision Model Failover**: Implement failover or selection logic for vision models (see `pipecatapp/app.py`).
-- [ ] **Refactor Vision Role**: The `vision` role is currently minimal (only installs `libgl1`) and does not deploy Frigate as implied by the `frigate_port` variable. It needs to be refactored to actually deploy the service.
+- [x] **Refactor Vision Role**: The `vision` role is currently minimal (only installs `libgl1`) and does not deploy Frigate as implied by the `frigate_port` variable. It needs to be refactored to actually deploy the service.
 
 ## Completed History
 
