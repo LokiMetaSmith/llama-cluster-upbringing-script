@@ -1,5 +1,6 @@
 - name: Restart Vision Job
   community.general.nomad_job:
+    name: vision
     path: "{{ nomad_jobs_dir }}/vision.nomad"
     state: present
     host: localhost
