@@ -127,8 +127,9 @@
     - name: "World Model Service : Purge existing nomad job (force image update)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job stop -purge world-model-service"
-      ignore_errors: yes
-      changed_when: true
+      register: stop_job_result
+      failed_when: stop_job_result.rc != 0 and "No job(s) with prefix or ID" not in stop_job_result.stderr
+      changed_when: stop_job_result.rc == 0
       become: no
 
     - name: "World Model Service : Run nomad job"
