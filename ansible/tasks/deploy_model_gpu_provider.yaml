@@ -7,6 +7,30 @@
   ansible.builtin.debug:
     msg: "Expecting service: {{ rpc_service_name }} for model {{ model.name }}"
 
+- name: Check for Consul bootstrap token file
+  ansible.builtin.stat:
+    path: /etc/consul.d/bootstrap.token
+  register: bootstrap_token_file
+  become: yes
+  when: consul_bootstrap_token is not defined or consul_bootstrap_token == ''
+
+- name: Read Consul bootstrap token
+  ansible.builtin.slurp:
+    src: /etc/consul.d/bootstrap.token
+  register: bootstrap_token_content
+  become: yes
+  when:
+    - consul_bootstrap_token is not defined or consul_bootstrap_token == ''
+    - bootstrap_token_file.stat.exists
+
+- name: Set consul_bootstrap_token fact
+  ansible.builtin.set_fact:
+    consul_bootstrap_token: "{{ bootstrap_token_content.content | b64decode | trim }}"
+  when:
+    - consul_bootstrap_token is not defined or consul_bootstrap_token == ''
+    - bootstrap_token_file.stat.exists
+    - bootstrap_token_content.content is defined
+
 - name: "Render the GPU Provider Pool job template for {{ model.name }}"
   ansible.builtin.template:
     src: "{{ playbook_dir }}/../../ansible/jobs/llamacpp-rpc.nomad.j2"
@@ -31,6 +55,8 @@
 - name: "Wait for GPU Provider for {{ model.name }} to become healthy in Consul"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/{{ rpc_service_name }}?passing"
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     return_content: yes
   register: consul_health
   until: "consul_health.json | length >= expected_worker_count | int"
