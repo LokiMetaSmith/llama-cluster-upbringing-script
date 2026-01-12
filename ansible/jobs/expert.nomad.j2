@@ -108,6 +108,12 @@ job "{{ job_name }}" {
         STT_SERVICE = "faster-whisper"
         # Comma-separated list of services for failover (primary, backup, etc.)
         LLAMA_API_SERVICE_NAME = "{{ service_list | join(',') }}"
+
+        # Necessary for service discovery
+        CONSUL_HOST = "${attr.unique.network.ip-address}"
+        CONSUL_PORT = "8500"
+        CONSUL_HTTP_ADDR = "http://${attr.unique.network.ip-address}:8500"
+        CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
       }
 
       resources {
