@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
 
-        // Handle Escape key to close dropdown
+        // Handle Escape key to close dropdown and Arrow Keys for navigation
         adminUiDropdown.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 if (adminUiDropdown.classList.contains('show')) {
@@ -100,6 +100,32 @@ document.addEventListener("DOMContentLoaded", function() {
                     adminUiBtn.setAttribute("aria-expanded", "false");
                     adminUiBtn.focus(); // Return focus to button
                 }
+            } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                // Ensure dropdown is open
+                if (!adminUiDropdown.classList.contains('show')) {
+                    adminUiDropdown.classList.add('show');
+                    adminUiBtn.setAttribute("aria-expanded", "true");
+                }
+
+                const links = Array.from(adminUiDropdown.querySelectorAll('a[href]')); // Only focusable links
+                if (links.length === 0) return;
+
+                const currentIndex = links.indexOf(document.activeElement);
+                let nextIndex = 0;
+
+                if (currentIndex !== -1) {
+                     if (event.key === 'ArrowDown') {
+                         nextIndex = (currentIndex + 1) % links.length;
+                     } else {
+                         nextIndex = (currentIndex - 1 + links.length) % links.length;
+                     }
+                } else if (event.key === 'ArrowUp') {
+                    // If no link focused, ArrowUp goes to last
+                    nextIndex = links.length - 1;
+                }
+
+                links[nextIndex].focus();
             }
         });
     }

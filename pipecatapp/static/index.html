@@ -176,17 +176,14 @@
 
                         try {
                             // Construct URL relative to the current host
-                            if (ui.url && ui.url !== '#') {
+                            if (ui.status === 'healthy' && ui.url && ui.url !== '#') {
                                 const url = new URL(ui.url);
                                 url.hostname = window.location.hostname;
                                 link.href = url.toString();
                                 link.target = "_blank"; // Open in new tab
-                            } else {
-                                link.href = "#";
                             }
                         } catch (e) {
                              console.warn("Invalid URL for UI:", ui);
-                             link.href = "#";
                         }
 
                         adminUiLinks.appendChild(link);
