@@ -632,6 +632,9 @@ class TwinService(FrameProcessor):
         # This will hold metadata from incoming requests (e.g., from the gateway)
         self.current_request_meta = None
 
+        # Optimization: Reusable HTTP client for gateway responses
+        self.http_client = httpx.AsyncClient(timeout=30.0)
+
         self.debug_mode = self.app_config.get("debug_mode", False)
         self.approval_mode = self.app_config.get("approval_mode", False)
         self.consul_http_addr = f"http://{self.app_config.get('consul_host', '127.0.0.1')}:{self.app_config.get('consul_port', 8500)}"
@@ -765,10 +768,8 @@ class TwinService(FrameProcessor):
             response_url = self.current_request_meta["response_url"]
             request_id = self.current_request_meta["request_id"]
             try:
-                # Use a standard library HTTP client for this async context
-                import httpx
-                async with httpx.AsyncClient() as client:
-                    await client.post(response_url, json={"request_id": request_id, "content": text})
+                # Bolt ⚡ Optimization: Use reused client instead of creating new one
+                await self.http_client.post(response_url, json={"request_id": request_id, "content": text})
                 logging.info(f"Sent response for request {request_id} to gateway.")
             except Exception as e:
                 logging.error(f"Failed to send response to gateway: {e}")
