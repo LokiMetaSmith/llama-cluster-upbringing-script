@@ -1,11 +1,13 @@
 import asyncio
 import logging
+import os
+# Set config dir before importing ultralytics to avoid permission errors
+os.environ["YOLO_CONFIG_DIR"] = "/tmp/Ultralytics"
 from ultralytics import YOLO
 import time
 import json
 import io
 import wave
-import os
 import inspect
 import threading
 
@@ -1030,7 +1032,7 @@ async def main():
     text_injector.start_listening()
 
     await runner.run(
-        [main_task, PipelineTask(vision_pipeline)]
+        main_task, PipelineTask(vision_pipeline)
     )
 
 if __name__ == "__main__":
