@@ -469,8 +469,10 @@
     - name: "Archivist : Get Archivist job status"
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose archivist
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: arch_job_status
-      ignore_errors: yes
+      failed_when: false
       become: no
 
     - name: "Archivist : Display Archivist job status"
@@ -480,8 +482,10 @@
     - name: "Archivist : Get Archivist allocations"
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json archivist
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: arch_allocs
-      ignore_errors: yes
+      failed_when: false
       become: no
 
     - name: "Archivist : Save Archivist allocations to temp file"
@@ -492,13 +496,15 @@
     - name: "Archivist : Extract Allocation ID"
       ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/arch_allocs.json
       register: arch_alloc_id
-      ignore_errors: yes
+      failed_when: false
 
     - name: "Archivist : Fetch Archivist logs (stdout)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ arch_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: arch_logs_stdout
-      ignore_errors: yes
+      failed_when: false
       become: no
       when: arch_alloc_id.stdout | length > 0
 
@@ -510,8 +516,10 @@
     - name: "Archivist : Fetch Archivist logs (stderr)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ arch_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: arch_logs_stderr
-      ignore_errors: yes
+      failed_when: false
       become: no
       when: arch_alloc_id.stdout | length > 0
 
@@ -554,8 +562,10 @@
     - name: "Router : Get Router job status"
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose router
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: router_job_status
-      ignore_errors: yes
+      failed_when: false
       become: no
 
     - name: "Router : Display Router job status"
@@ -565,8 +575,10 @@
     - name: "Router : Get Router allocations"
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json router
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: router_allocs
-      ignore_errors: yes
+      failed_when: false
       become: no
 
     - name: "Router : Save Router allocations to temp file"
@@ -577,13 +589,15 @@
     - name: "Router : Extract Allocation ID"
       ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/router_allocs.json
       register: router_alloc_id
-      ignore_errors: yes
+      failed_when: false
 
     - name: "Router : Fetch litellm-proxy logs (stdout)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -task litellm-proxy {{ router_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: litellm_logs_stdout
-      ignore_errors: yes
+      failed_when: false
       become: no
       when: router_alloc_id.stdout | length > 0
 
@@ -595,8 +609,10 @@
     - name: "Router : Fetch litellm-proxy logs (stderr)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr -task litellm-proxy {{ router_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: litellm_logs_stderr
-      ignore_errors: yes
+      failed_when: false
       become: no
       when: router_alloc_id.stdout | length > 0
 
@@ -608,8 +624,10 @@
     - name: "Router : Fetch llama-server-router logs (stdout)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -task llama-server-router {{ router_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: llama_logs_stdout
-      ignore_errors: yes
+      failed_when: false
       become: no
       when: router_alloc_id.stdout | length > 0
 
@@ -621,8 +639,10 @@
     - name: "Router : Fetch llama-server-router logs (stderr)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr -task llama-server-router {{ router_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: llama_logs_stderr
-      ignore_errors: yes
+      failed_when: false
       become: no
       when: router_alloc_id.stdout | length > 0
 
@@ -714,8 +734,10 @@
     - name: "Pipecat App : Get Pipecat App job status"
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose pipecat-app
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: pipecat_job_status
-      ignore_errors: yes
+      failed_when: false
       become: no
 
     - name: "Pipecat App : Display Pipecat App job status"
@@ -725,8 +747,10 @@
     - name: "Pipecat App : Get Pipecat App allocations"
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json pipecat-app
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: pipecat_allocs
-      ignore_errors: yes
+      failed_when: false
       become: no
 
     - name: "Pipecat App : Save Pipecat App allocations to temp file"
@@ -737,13 +761,15 @@
     - name: "Pipecat App : Extract Allocation ID"
       ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/pipecat_allocs.json
       register: pipecat_alloc_id
-      ignore_errors: yes
+      failed_when: false
 
     - name: "Pipecat App : Fetch Pipecat App logs (stdout)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ pipecat_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: pipecat_logs_stdout
-      ignore_errors: yes
+      failed_when: false
       become: no
       when: pipecat_alloc_id.stdout | length > 0
 
@@ -755,8 +781,10 @@
     - name: "Pipecat App : Fetch Pipecat App logs (stderr)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ pipecat_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: pipecat_logs_stderr
-      ignore_errors: yes
+      failed_when: false
       become: no
       when: pipecat_alloc_id.stdout | length > 0
 
