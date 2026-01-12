@@ -76,9 +76,8 @@ job "{{ job_name }}" {
     }
 
     network {
-      port "http" {
-        to = 8000
-      }
+      mode = "host"
+      port "http" {}
     }
 
     service {
@@ -105,6 +104,7 @@ job "{{ job_name }}" {
 
       env {
         STT_SERVICE = "faster-whisper"
+        WEB_PORT = "${NOMAD_PORT_http}"
         # Comma-separated list of services for failover (primary, backup, etc.)
         LLAMA_API_SERVICE_NAME = "{{ service_list | join(',') }}"
         PIPECAT_API_KEYS = "{{ pipecat_api_keys | default('') }}"
