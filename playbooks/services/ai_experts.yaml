@@ -90,6 +90,36 @@
       tags:
         - deploy-gpu-provider
 
+    - name: Check for Consul management token file
+      ansible.builtin.stat:
+        path: /etc/consul.d/management_token
+      register: management_token_file
+      become: yes
+      when: consul_bootstrap_token is not defined or consul_bootstrap_token == ''
+      tags:
+        - healthcheck
+
+    - name: Read Consul management token
+      ansible.builtin.slurp:
+        src: /etc/consul.d/management_token
+      register: management_token_content
+      become: yes
+      when:
+        - consul_bootstrap_token is not defined or consul_bootstrap_token == ''
+        - management_token_file.stat.exists
+      tags:
+        - healthcheck
+
+    - name: Set consul_bootstrap_token fact
+      ansible.builtin.set_fact:
+        consul_bootstrap_token: "{{ management_token_content.content | b64decode | trim }}"
+      when:
+        - consul_bootstrap_token is not defined or consul_bootstrap_token == ''
+        - management_token_file.stat.exists
+        - management_token_content.content is defined
+      tags:
+        - healthcheck
+
     - name: Identify verified experts by checking their models against benchmark results
       ansible.builtin.set_fact:
         verified_experts: >-
@@ -186,6 +216,8 @@
     - name: Wait for the expert services to be healthy in Consul
       ansible.builtin.uri:
         url: "http://127.0.0.1:8500/v1/health/service/expert-api-{{ item }}"
+        headers:
+          X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
         return_content: yes
       register: expert_health
       until: >

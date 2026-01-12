@@ -30,9 +30,35 @@
     NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
   when: job_file.changed or job_status.rc != 0
 
+- name: Check for Consul management token file
+  ansible.builtin.stat:
+    path: /etc/consul.d/management_token
+  register: management_token_file
+  become: yes
+  when: consul_bootstrap_token is not defined or consul_bootstrap_token == ''
+
+- name: Read Consul management token
+  ansible.builtin.slurp:
+    src: /etc/consul.d/management_token
+  register: management_token_content
+  become: yes
+  when:
+    - consul_bootstrap_token is not defined or consul_bootstrap_token == ''
+    - management_token_file.stat.exists
+
+- name: Set consul_bootstrap_token fact
+  ansible.builtin.set_fact:
+    consul_bootstrap_token: "{{ management_token_content.content | b64decode | trim }}"
+  when:
+    - consul_bootstrap_token is not defined or consul_bootstrap_token == ''
+    - management_token_file.stat.exists
+    - management_token_content.content is defined
+
 - name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/llamacpp-rpc-api"
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     return_content: yes
   register: expert_health
   until: >
