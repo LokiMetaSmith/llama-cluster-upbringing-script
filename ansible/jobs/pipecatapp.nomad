@@ -20,7 +20,7 @@ job "pipecat-app" {
 
     reschedule {
       attempts  = 3
-      interval  = "2m"
+      interval  = "10m"
       delay     = "30s"
       unlimited = false
     }
