@@ -232,7 +232,9 @@ async def get_health(request: Request):
     if getattr(request.app.state, "is_ready", False):
         return JSONResponse(content={"status": "ok"})
     else:
-        return JSONResponse(status_code=503, content={"status": "initializing"})
+        # Return 200 OK with "initializing" status to prevent Nomad from killing the allocation
+        # during long startup phases (e.g., waiting for other services).
+        return JSONResponse(status_code=200, content={"status": "initializing"})
 
 @app.get("/api/workflows/active", response_class=JSONResponse)
 async def get_active_workflows():
