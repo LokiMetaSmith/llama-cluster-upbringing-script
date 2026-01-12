@@ -30,6 +30,7 @@ python-consul2
 python-dotenv
 pyvips-binary
 pyyaml
+jinja2
 RealtimeSTT
 requests
 sentence-transformers

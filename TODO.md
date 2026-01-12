@@ -107,9 +107,6 @@ This section tracks identified placeholder files, corrupted binaries, and code t
     - `distributed-llama-repo/dllama`
     - `distributed-llama-repo/dllama-api`
 
-- [ ] **Fix Skipped Test:**
-  - `tests/unit/test_home_assistant_template.py`: Test is currently skipped and contains a TODO to re-add it without breaking tests.
-
 - [ ] **Reconcile Stale Artifacts:**
   - `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
 - [ ] **Vision Model Failover**: Implement failover or selection logic for vision models (see `pipecatapp/app.py`).
