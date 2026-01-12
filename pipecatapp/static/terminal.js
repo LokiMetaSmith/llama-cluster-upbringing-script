@@ -80,6 +80,10 @@ document.addEventListener("DOMContentLoaded", function() {
             adminUiDropdown.classList.toggle("show");
             const expanded = adminUiDropdown.classList.contains("show");
             adminUiBtn.setAttribute("aria-expanded", expanded);
+
+            if (expanded && typeof window.refreshAdminUIs === 'function') {
+                window.refreshAdminUIs();
+            }
         });
 
         // Close dropdown when clicking outside
