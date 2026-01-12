@@ -22,7 +22,6 @@ variable "rpc_pool_job_name" {
 {% set suitable_models_unsorted = models_with_memory | selectattr('memory_mb', 'le', available_memory_mb) %}
 {% set suitable_models = suitable_models_unsorted | sort(attribute='memory_mb', reverse=true) | list %}
 {% set rpc_service_name = rpc_pool_job_name | default('rpc-pool') ~ '-' ~ current_expert ~ '-provider' %}
-{% set args_list = ["/opt/pipecatapp/supervisor.py", "--expert-id=" ~ job_name] %}
 {% set service_list = [] %}
 {% for model in suitable_models %}
   {% set _ = service_list.append("rpc-" ~ (model.filename | regex_replace('[^a-zA-Z0-9-]', '-')) ~ "-provider") %}
@@ -108,6 +107,7 @@ job "{{ job_name }}" {
         STT_SERVICE = "faster-whisper"
         # Comma-separated list of services for failover (primary, backup, etc.)
         LLAMA_API_SERVICE_NAME = "{{ service_list | join(',') }}"
+        PIPECAT_API_KEYS = "{{ pipecat_api_keys | default('') }}"
 
         # Necessary for service discovery
         CONSUL_HOST = "${attr.unique.network.ip-address}"
@@ -118,7 +118,7 @@ job "{{ job_name }}" {
 
       resources {
         cpu    = 500 # 500 MHz
-        memory = 1024 # 1024MB
+        memory = 2048 # 2048MB
       }
     }
   }
