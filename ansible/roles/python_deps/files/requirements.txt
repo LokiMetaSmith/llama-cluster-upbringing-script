@@ -53,3 +53,5 @@ aiohttp
 opencode-ai
 pydantic
 llmrouter-lib
+fusepy
+requests
