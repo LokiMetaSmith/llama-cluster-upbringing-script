@@ -505,7 +505,7 @@
     - name: "Archivist : Display Archivist logs (stdout)"
       ansible.builtin.debug:
         var: arch_logs_stdout.stdout
-      when: arch_logs_stdout is defined
+      when: arch_logs_stdout.stdout is defined
 
     - name: "Archivist : Fetch Archivist logs (stderr)"
       ansible.builtin.command:
@@ -518,7 +518,7 @@
     - name: "Archivist : Display Archivist logs (stderr)"
       ansible.builtin.debug:
         var: arch_logs_stderr.stdout
-      when: arch_logs_stderr is defined
+      when: arch_logs_stderr.stdout is defined
 
     - name: "Archivist : Clean up temp file"
       ansible.builtin.file:
@@ -590,7 +590,7 @@
     - name: "Router : Display litellm-proxy logs (stdout)"
       ansible.builtin.debug:
         var: litellm_logs_stdout.stdout
-      when: litellm_logs_stdout is defined
+      when: litellm_logs_stdout.stdout is defined
 
     - name: "Router : Fetch litellm-proxy logs (stderr)"
       ansible.builtin.command:
@@ -603,7 +603,7 @@
     - name: "Router : Display litellm-proxy logs (stderr)"
       ansible.builtin.debug:
         var: litellm_logs_stderr.stdout
-      when: litellm_logs_stderr is defined
+      when: litellm_logs_stderr.stdout is defined
 
     - name: "Router : Fetch llama-server-router logs (stdout)"
       ansible.builtin.command:
@@ -616,7 +616,7 @@
     - name: "Router : Display llama-server-router logs (stdout)"
       ansible.builtin.debug:
         var: llama_logs_stdout.stdout
-      when: llama_logs_stdout is defined
+      when: llama_logs_stdout.stdout is defined
 
     - name: "Router : Fetch llama-server-router logs (stderr)"
       ansible.builtin.command:
@@ -629,7 +629,7 @@
     - name: "Router : Display llama-server-router logs (stderr)"
       ansible.builtin.debug:
         var: llama_logs_stderr.stdout
-      when: llama_logs_stderr is defined
+      when: llama_logs_stderr.stdout is defined
 
     - name: "Router : Clean up temp file"
       ansible.builtin.file:
@@ -750,7 +750,7 @@
     - name: "Pipecat App : Display Pipecat App logs (stdout)"
       ansible.builtin.debug:
         var: pipecat_logs_stdout.stdout
-      when: pipecat_logs_stdout is defined
+      when: pipecat_logs_stdout.stdout is defined
 
     - name: "Pipecat App : Fetch Pipecat App logs (stderr)"
       ansible.builtin.command:
@@ -763,7 +763,7 @@
     - name: "Pipecat App : Display Pipecat App logs (stderr)"
       ansible.builtin.debug:
         var: pipecat_logs_stderr.stdout
-      when: pipecat_logs_stderr is defined
+      when: pipecat_logs_stderr.stdout is defined
 
     - name: "Pipecat App : Clean up temp file"
       ansible.builtin.file:
