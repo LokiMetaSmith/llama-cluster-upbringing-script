@@ -41,8 +41,8 @@
   notify: Restart Vision Job
 
 - name: Start Vision Job
-  community.general.nomad_job:
-    name: vision
-    path: "{{ nomad_jobs_dir }}/vision.nomad"
-    state: present
-    host: localhost
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/vision.nomad
+  environment:
+    NOMAD_ADDR: "http://localhost:4646"
+  changed_when: true
