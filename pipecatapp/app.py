@@ -880,6 +880,28 @@ async def main():
     else:
         logging.warning("No API keys found in PIPECAT_API_KEYS (or PIECAT_API_KEYS). Sensitive endpoints will be insecure if not protected elsewhere.")
 
+    # Set initial state for web server
+    web_server.app.state.is_ready = False
+    web_server.app.state.twin_service_instance = None
+
+    # Start web server (uvicorn) in its own thread immediately so /health checks pass
+    # even while we are waiting for discovery
+    web_port_str = os.getenv("WEB_PORT")
+    if not web_port_str:
+        logging.warning("WEB_PORT not set, defaulting to 8000")
+        web_port = 8000
+    else:
+        web_port = int(web_port_str)
+
+    config = uvicorn.Config(
+        web_server.app,
+        host="0.0.0.0",
+        port=web_port,
+        log_level="info"
+    )
+    server = uvicorn.Server(config)
+    threading.Thread(target=server.run, daemon=True).start()
+
     # Load configuration from Consul
     consul_host = os.getenv("CONSUL_HOST")
     if not consul_host:
@@ -911,28 +933,6 @@ async def main():
         main_llm_service_names = [app_config.get("llama_api_service_name", "llamacpp-rpc-api")]
 
     consul_http_addr = f"http://{consul_host}:{consul_port}"
-
-    # Set initial state for web server
-    web_server.app.state.is_ready = False
-    web_server.app.state.twin_service_instance = None
-
-    # Start web server (uvicorn) in its own thread immediately so /health checks pass
-    # even while we are waiting for discovery
-    web_port_str = os.getenv("WEB_PORT")
-    if not web_port_str:
-        logging.warning("WEB_PORT not set, defaulting to 8000")
-        web_port = 8000
-    else:
-        web_port = int(web_port_str)
-
-    config = uvicorn.Config(
-        web_server.app,
-        host="0.0.0.0",
-        port=web_port,
-        log_level="info"
-    )
-    server = uvicorn.Server(config)
-    threading.Thread(target=server.run, daemon=True).start()
 
     llm_base_url = await discover_services(main_llm_service_names, consul_http_addr)
 
