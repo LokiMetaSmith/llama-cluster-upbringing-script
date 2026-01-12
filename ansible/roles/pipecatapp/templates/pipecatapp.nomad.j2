@@ -14,6 +14,13 @@ job "{{ job_name | default('pipecat-app') }}" {
       canary           = 0
     }
 
+    reschedule {
+      attempts  = 3
+      interval  = "2m"
+      delay     = "30s"
+      unlimited = false
+    }
+
     {% set env_vars %}
     env {
       LLAMA_API_SERVICE_NAME = "{{ llama_api_service_name | default('llamacpp-rpc-api') }}"
