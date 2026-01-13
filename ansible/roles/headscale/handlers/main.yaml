@@ -1,0 +1,6 @@
+---
+- name: restart headscale
+  systemd:
+    name: headscale
+    state: restarted
+    daemon_reload: yes
