@@ -200,15 +200,12 @@
       tags:
         - deploy-expert
 
-    - name: Deploy the Expert Orchestrator services
-      ansible.builtin.command: >
-        nomad job run
-        -var="job_name=expert-{{ item }}"
-        -var="service_name=expert-api-{{ item }}"
-        -var="rpc_pool_job_name=llamacpp-rpc-pool"
-        /tmp/expert-{{ item }}.nomad
+    - name: Deploy the Expert Orchestrator services with debugging
+      include_tasks:
+        file: "{{ playbook_dir }}/../../ansible/tasks/deploy_expert_wrapper.yaml"
       loop: "{{ experts }}"
-      changed_when: true
+      loop_control:
+        loop_var: expert_name
       when: benchmark_results is defined
       tags:
         - deploy-expert
