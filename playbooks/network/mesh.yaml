@@ -1,0 +1,9 @@
+- hosts: controller_nodes
+  become: yes
+  roles:
+    - headscale
+
+- hosts: all
+  become: yes
+  roles:
+    - tailscale

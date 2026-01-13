@@ -1,0 +1,15 @@
+[Unit]
+Description=headscale controller
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/headscale serve -c /etc/headscale/config.yaml
+WorkingDirectory=/var/lib/headscale
+User=headscale
+Group=headscale
+Restart=always
+RestartSec=5
+# Environment variables if needed
+
+[Install]
+WantedBy=multi-user.target

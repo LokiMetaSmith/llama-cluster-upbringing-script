@@ -1,0 +1,34 @@
+---
+- name: Install Tailscale
+  shell: curl -fsSL https://tailscale.com/install.sh | sh
+  args:
+    creates: /usr/bin/tailscale
+
+- name: Enable IP forwarding
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: Check Tailscale status
+  command: tailscale status
+  register: tailscale_status
+  failed_when: false
+  changed_when: false
+
+- name: Connect to Headscale
+  command: >
+    tailscale up
+    --login-server={{ hostvars[groups['controller_nodes'][0]]['headscale_server_url'] }}
+    --authkey={{ hostvars[groups['controller_nodes'][0]]['headscale_auth_key'] }}
+    --accept-routes
+  when: tailscale_status.rc != 0
+  register: tailscale_up
+  changed_when: "'Success' in tailscale_up.stdout"
+
+- name: Refresh network facts
+  setup:
+    gather_subset:
+      - network
