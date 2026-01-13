@@ -96,6 +96,11 @@ job "{{ job_name }}" {
     task "{{ job_name }}" {
       driver = "docker"
 
+      constraint {
+        attribute = "${meta.node_type}"
+        value     = "controller"
+      }
+
       config {
         image = "pipecatapp:local"
         force_pull = false
