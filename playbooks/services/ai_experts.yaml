@@ -20,6 +20,7 @@
     # Better: grouping by filename
     all_models: "{{ expert_models.values() | flatten }}"
     unique_models: "{{ all_models | unique(attribute='filename') }}"
+    pipecat_deployment_style: "docker"
 
   tasks:
     - name: Check for benchmark log file
@@ -86,6 +87,12 @@
         file: "{{ playbook_dir }}/../../ansible/tasks/build_pipecatapp_image.yaml"
       tags:
         - deploy-gpu-provider
+        - deploy-expert
+
+    - name: Verify pipecatapp Docker image exists
+      ansible.builtin.command: docker image inspect pipecatapp:local
+      changed_when: false
+      tags:
         - deploy-expert
 
     - name: Deploy and run the GPU Provider Pool job for verified models
