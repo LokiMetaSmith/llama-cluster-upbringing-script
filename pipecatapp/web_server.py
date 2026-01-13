@@ -15,6 +15,7 @@ from typing import List, Dict
 from workflow.runner import ActiveWorkflows, OpenGates
 from workflow.history import WorkflowHistory
 from api_keys import get_api_key
+from .models import InternalChatRequest, SystemMessageRequest
 
 
 # Configure logging
@@ -173,24 +174,27 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @app.post("/internal/chat", summary="Process Internal Chat Message", description="Receives a chat message from an internal service like the MoE Gateway, processes it, and sends the response to a specified callback URL.", tags=["Internal"])
-async def internal_chat(payload: Dict = Body(...), api_key: str = Security(get_api_key)):
+async def internal_chat(payload: InternalChatRequest, api_key: str = Security(get_api_key)):
     """
     Handles a chat message from another internal service.
     The payload should contain the user's text, a unique request_id,
     and a response_url where the final agent message should be sent.
     """
-    await text_message_queue.put(payload)
+    # Convert model to dict for internal processing (serialized for JSON compatibility)
+    data = payload.model_dump(mode="json")
+    await text_message_queue.put(data)
     return JSONResponse(status_code=202, content={"message": "Request accepted"})
 
 
 @app.post("/internal/system_message", summary="Process System Alert", description="Receives a system alert (e.g., from Supervisor), injecting it into the agent's workflow.", tags=["Internal"])
-async def internal_system_message(payload: Dict = Body(..., examples=[{"text": "Job X failed with error Y", "priority": "high"}]), api_key: str = Security(get_api_key)):
+async def internal_system_message(payload: SystemMessageRequest, api_key: str = Security(get_api_key)):
     """
     Handles a system alert. These are treated as high-priority inputs from the infrastructure.
     """
+    data = payload.model_dump(mode="json")
     # Mark it as a system alert for special handling in TwinService
-    payload["is_system_alert"] = True
-    await text_message_queue.put(payload)
+    data["is_system_alert"] = True
+    await text_message_queue.put(data)
     return JSONResponse(status_code=202, content={"message": "System alert accepted"})
 
 
