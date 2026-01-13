@@ -50,6 +50,9 @@ client {
   enabled = true
   servers = ["127.0.0.1"]
   
+  meta {
+    node_type = "worker"
+  }
 
   host_volume "pipecatapp" {
     path      = "{{ pipecat_app_dir }}"

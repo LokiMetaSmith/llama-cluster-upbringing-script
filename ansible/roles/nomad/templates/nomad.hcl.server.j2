@@ -19,6 +19,10 @@ server {
 client {
   enabled = true
 
+  meta {
+    node_type = "controller"
+  }
+
   host_volume "pipecatapp" {
     path      = "{{ pipecat_app_dir }}"
     read_only = false

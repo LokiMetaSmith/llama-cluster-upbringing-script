@@ -94,6 +94,11 @@ job "{{ job_name | default('pipecat-app') }}" {
       driver = "docker"
       {{ env_vars }}
 
+      constraint {
+        attribute = "${meta.node_type}"
+        value     = "controller"
+      }
+
       config {
         image = "pipecatapp:local"
         force_pull = false
