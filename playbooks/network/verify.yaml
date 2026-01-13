@@ -1,0 +1,71 @@
+---
+- name: Verify Mesh Network Health
+  hosts: all
+  become: yes
+  gather_facts: yes
+  vars:
+    # We expect the 100.64.0.0/10 range (CGNAT) for the new mesh
+    expected_subnet_prefix: "100."
+
+  tasks:
+    - name: "Check 1: Verify tailscale0 interface exists"
+      fail:
+        msg: "Interface tailscale0 not found! The mesh is not active."
+      when: "'tailscale0' not in ansible_interfaces"
+
+    - name: "Check 2: Verify tailscale0 has an IPv4 address"
+      fail:
+        msg: "Interface tailscale0 has no IPv4 address."
+      when: "ansible_tailscale0.ipv4.address is not defined"
+
+    - name: "Check 3: Validate cluster_ip resolution"
+      assert:
+        that:
+          - "cluster_ip == ansible_tailscale0.ipv4.address"
+          - "cluster_ip.startswith(expected_subnet_prefix)"
+        fail_msg: "cluster_ip ({{ cluster_ip }}) does not match tailscale0 IP ({{ ansible_tailscale0.ipv4.address | default('N/A') }}) or is not in the expected subnet."
+
+    - name: "Check 4: Verify connectivity to Headscale Controller"
+      uri:
+        url: "{{ hostvars[groups['controller_nodes'][0]]['headscale_server_url'] }}/health"
+        method: GET
+        status_code: 200
+        return_content: no
+      register: headscale_health
+      ignore_errors: yes
+
+      # Note: Headscale might not have a /health endpoint on the root, but the port should be open.
+      # Alternative: Check port connectivity.
+
+    - name: "Check 4 (Alternative): Check TCP connectivity to Headscale Port"
+      wait_for:
+        host: "{{ groups['controller_nodes'][0] }}" # This resolves to the LAN IP usually
+        port: "{{ headscale_port }}"
+        timeout: 5
+      when: headscale_health.failed
+
+    - name: "Check 5: Verify Consul is listening on Mesh IP"
+      wait_for:
+        host: "{{ cluster_ip }}"
+        port: 8301 # Consul Serf LAN
+        timeout: 5
+        state: started
+      ignore_errors: yes
+      register: consul_check
+
+    - name: "Check 6: Verify Nomad is listening on Mesh IP"
+      wait_for:
+        host: "{{ cluster_ip }}"
+        port: 4647 # Nomad RPC
+        timeout: 5
+        state: started
+      ignore_errors: yes
+      register: nomad_check
+
+    - name: Report Results
+      debug:
+        msg:
+          - "Mesh IP: {{ cluster_ip }}"
+          - "Headscale Connection: {{ 'OK' if not headscale_health.failed else 'Failed (Check LAN connectivity)' }}"
+          - "Consul Binding: {{ 'OK' if not consul_check.failed else 'Failed (Not bound to Mesh IP)' }}"
+          - "Nomad Binding: {{ 'OK' if not nomad_check.failed else 'Failed (Not bound to Mesh IP)' }}"
