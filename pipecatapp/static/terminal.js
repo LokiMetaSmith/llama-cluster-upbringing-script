@@ -103,13 +103,53 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
 
-        // Handle Escape key to close dropdown
+        // Handle Keyboard Navigation for Dropdown
         adminUiDropdown.addEventListener('keydown', function(event) {
+            const isExpanded = adminUiDropdown.classList.contains("show");
+
+            // Close on Escape
             if (event.key === 'Escape') {
-                if (adminUiDropdown.classList.contains('show')) {
+                if (isExpanded) {
                     adminUiDropdown.classList.remove('show');
                     adminUiBtn.setAttribute("aria-expanded", "false");
-                    adminUiBtn.focus(); // Return focus to button
+                    adminUiBtn.focus();
+                }
+                return;
+            }
+
+            // Open menu with ArrowDown if focused on button
+            if (!isExpanded && document.activeElement === adminUiBtn && event.key === 'ArrowDown') {
+                event.preventDefault();
+                adminUiDropdown.classList.add("show");
+                adminUiBtn.setAttribute("aria-expanded", "true");
+                const firstLink = adminUiDropdown.querySelector('.dropdown-content a:not(.unhealthy)');
+                if (firstLink) firstLink.focus();
+                return;
+            }
+
+            // Navigate links if menu is open
+            if (isExpanded) {
+                const links = Array.from(adminUiDropdown.querySelectorAll('.dropdown-content a:not(.unhealthy)'));
+                if (links.length === 0) return;
+
+                const currentIndex = links.indexOf(document.activeElement);
+
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    // If no link is focused (e.g. still on button), focus first. Otherwise next.
+                    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % links.length;
+                    links[nextIndex].focus();
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    // If no link is focused, focus last. Otherwise previous.
+                    const prevIndex = currentIndex === -1 ? links.length - 1 : (currentIndex - 1 + links.length) % links.length;
+                    links[prevIndex].focus();
+                } else if (event.key === 'Home') {
+                    event.preventDefault();
+                    links[0].focus();
+                } else if (event.key === 'End') {
+                    event.preventDefault();
+                    links[links.length - 1].focus();
                 }
             }
         });
