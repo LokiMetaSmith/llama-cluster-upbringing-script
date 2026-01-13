@@ -3,6 +3,7 @@ import asyncio
 import time
 import os
 import uuid
+import copy
 from typing import Dict, Any, List, Optional
 from .context import WorkflowContext
 from .nodes.registry import registry
@@ -55,12 +56,39 @@ class OpenGates:
 class WorkflowRunner:
     """Loads and executes a workflow defined in a YAML file."""
 
+    # Bolt ⚡ Optimization: Cache loaded workflow definitions to avoid repeated file I/O and parsing
+    # Key: path, Value: (mtime, parsed_definition)
+    _workflow_cache = {}
+
     def __init__(self, workflow_path: str, runner_id: Optional[str] = None):
-        with open(workflow_path, 'r') as f:
-            self.workflow_definition = yaml.safe_load(f)
+        self.workflow_definition = self._load_workflow_definition(workflow_path)
         self.nodes = {}
         self.workflow_name = os.path.basename(workflow_path)
         self.runner_id = runner_id if runner_id else str(uuid.uuid4())
+
+    def _load_workflow_definition(self, path: str) -> Dict[str, Any]:
+        """Loads workflow definition from cache or file if updated."""
+        try:
+            current_mtime = os.path.getmtime(path)
+        except OSError:
+            # File might not exist yet or permissions issue; let open() fail later naturally
+            current_mtime = 0
+
+        cached_entry = self._workflow_cache.get(path)
+
+        if cached_entry:
+            cached_mtime, definition = cached_entry
+            if current_mtime == cached_mtime:
+                # Return a deep copy to prevent state pollution if nodes modify the config
+                return copy.deepcopy(definition)
+
+        # Not in cache or file modified
+        with open(path, 'r') as f:
+            definition = yaml.safe_load(f)
+
+        self._workflow_cache[path] = (current_mtime, definition)
+        # Return a deep copy
+        return copy.deepcopy(definition)
 
     def _instantiate_nodes(self):
         """Instantiate all nodes defined in the workflow."""
