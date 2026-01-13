@@ -1,5 +1,7 @@
 - import_playbook: playbooks/preflight/checks.yaml
 - import_playbook: playbooks/common_setup.yaml
+- import_playbook: playbooks/network/mesh.yaml
+- import_playbook: playbooks/network/verify.yaml
 - import_playbook: playbooks/developer_tools.yaml
   tags: [developer-tools]
 - import_playbook: playbooks/services/core_infra.yaml
