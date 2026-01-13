@@ -29,7 +29,10 @@ ephemeral_node_inactivity_timeout: 30m
 db_type: sqlite3
 db_path: /var/lib/headscale/db.sqlite
 
-dns:
+unix_socket: /var/run/headscale/headscale.sock
+unix_socket_permission: "0770"
+
+dns_config:
   magic_dns: true
   base_domain: example.com
   nameservers:
