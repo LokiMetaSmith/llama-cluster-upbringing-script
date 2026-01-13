@@ -81,6 +81,13 @@
         - benchmark
         - deploy-gpu-provider
 
+    - name: Ensure pipecatapp Docker image is built
+      ansible.builtin.include_tasks:
+        file: "{{ playbook_dir }}/../../ansible/tasks/build_pipecatapp_image.yaml"
+      tags:
+        - deploy-gpu-provider
+        - deploy-expert
+
     - name: Deploy and run the GPU Provider Pool job for verified models
       include_tasks:
         file: "{{ playbook_dir }}/../../ansible/tasks/deploy_model_gpu_provider.yaml"

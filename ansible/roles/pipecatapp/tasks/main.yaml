@@ -298,25 +298,9 @@
   become_user: "{{ target_user }}"
 
 
-- name: Copy pipecat startup script to build context
-  ansible.builtin.template:
-    src: start_pipecatapp.sh.j2
-    dest: "{{ playbook_dir }}/../../pipecatapp/start_pipecat.sh"
-    mode: '0755'
-  become: yes
-  when: pipecat_deployment_style == 'docker'
-
-- name: Build pipecatapp Docker image when deployment style is docker
-  community.docker.docker_image:
-    name: pipecatapp
-    tag: local
-    build:
-      path: "{{ playbook_dir }}/../../pipecatapp"
-      nocache: true
-    source: build
-    force_source: true
-  become: yes
-  when: pipecat_deployment_style == 'docker'
+- name: Build pipecatapp Docker image
+  ansible.builtin.include_tasks:
+    file: "{{ playbook_dir }}/../../ansible/tasks/build_pipecatapp_image.yaml"
 
 
 - name: Ensure Nomad jobs directory exists
