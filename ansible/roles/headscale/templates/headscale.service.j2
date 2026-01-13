@@ -7,6 +7,8 @@ ExecStart=/usr/local/bin/headscale serve -c /etc/headscale/config.yaml
 WorkingDirectory=/var/lib/headscale
 User=headscale
 Group=headscale
+RuntimeDirectory=headscale
+RuntimeDirectoryMode=0755
 Restart=always
 RestartSec=5
 # Environment variables if needed
