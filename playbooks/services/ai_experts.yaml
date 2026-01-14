@@ -90,7 +90,7 @@
         - deploy-expert
 
     - name: Verify pipecatapp Docker image exists
-      ansible.builtin.command: docker image inspect pipecatapp:local
+      ansible.builtin.command: docker image inspect localhost/pipecatapp:local
       changed_when: false
       tags:
         - deploy-expert
