@@ -7,3 +7,6 @@
 ## 2024-03-22 - Keyboard Accessible History List
 **Learning:** `onclick` on `<li>` elements is a common pattern that completely excludes keyboard users. Adding `tabindex="0"`, `role="button"`, and a `keydown` handler is a standard remediation pattern that is robust and easy to implement.
 **Action:** Always check `onclick` elements for keyboard accessibility. If they are not `<button>` or `<a>`, they likely need remediation. Use `event.key === 'Enter' || event.key === ' '` to trigger the click logic.
+## 2026-01-14 - Accessible ASCII Art Animation
+**Learning:** Animated ASCII art (like spinners or faces) creates a chaotic experience for screen readers, announcing every punctuation mark repeatedly.
+**Action:** Use `role="img"` and `aria-label` to describe the *meaning* of the art/animation, and update the label only when the semantic state changes, not on every animation frame.

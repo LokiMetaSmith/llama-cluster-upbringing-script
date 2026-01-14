@@ -244,8 +244,19 @@ document.addEventListener("DOMContentLoaded", function() {
     let wanderTimeout;
     let thinkingAnimation;
 
+    // Accessibility Helper: Update aria-label and text content together
+    function updateRobotState(text, stateLabel) {
+        if (!robotArt) return;
+        robotArt.textContent = text;
+        if (stateLabel) {
+            robotArt.setAttribute("aria-label", `Robot face: ${stateLabel}`);
+        }
+    }
+
     function animateIdle() {
         currentFrame = (currentFrame + 1) % idleFrames.length;
+        // Don't update aria-label on every frame to avoid spamming the screen reader
+        // Just update text content. The state "Idle" remains valid.
         robotArt.textContent = idleFrames[currentFrame];
     }
 
@@ -258,10 +269,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function triggerWander() {
         stopAllAnimations();
-        robotArt.textContent = wanderingFrames[0]; // Look left
+        updateRobotState(wanderingFrames[0], "Wandering"); // Look left
 
         setTimeout(() => {
-            robotArt.textContent = wanderingFrames[1]; // Look right
+            updateRobotState(wanderingFrames[1], "Wandering"); // Look right
             setTimeout(() => {
                 startIdleAnimation(); // Return to idle state, which will schedule the next wander
             }, 1000);
@@ -271,6 +282,8 @@ document.addEventListener("DOMContentLoaded", function() {
     function animateThinking() {
         stopAllAnimations();
         let frame = 0;
+        // Set initial label
+        updateRobotState(thinkingFrames[0], "Thinking");
         thinkingAnimation = setInterval(() => {
             robotArt.textContent = thinkingFrames[frame];
             frame = (frame + 1) % thinkingFrames.length;
@@ -279,7 +292,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function startIdleAnimation() {
         stopAllAnimations();
-        robotArt.textContent = idleFrames[0];
+        // Set initial label
+        updateRobotState(idleFrames[0], "Idle");
         idleAnimation = setInterval(animateIdle, 2000);
         // After starting idle, schedule a wander
         wanderTimeout = setTimeout(triggerWander, 8000);
@@ -287,7 +301,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     messageInput.addEventListener("input", () => {
         stopAllAnimations();
-        robotArt.textContent = typingFrame;
+        updateRobotState(typingFrame, "Typing");
 
         typingTimeout = setTimeout(() => {
             startIdleAnimation(); // After typing, go back to idle
