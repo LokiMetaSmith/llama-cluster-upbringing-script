@@ -102,7 +102,7 @@ job "{{ job_name }}" {
       }
 
       config {
-        image = "pipecatapp:local"
+        image = "localhost/pipecatapp:local"
         force_pull = false
         ports = ["http"]
       }
