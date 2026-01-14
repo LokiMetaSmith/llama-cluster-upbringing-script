@@ -8,7 +8,7 @@
 
 - name: Build pipecatapp Docker image when deployment style is docker
   community.docker.docker_image:
-    name: localhost/pipecatapp
+    name: pipecatapp
     tag: local
     build:
       path: "{{ playbook_dir }}/../../pipecatapp"
