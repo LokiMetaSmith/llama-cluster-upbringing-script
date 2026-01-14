@@ -55,6 +55,10 @@ class Git_Tool:
         Returns:
             str: The output of the git clone command.
         """
+        # Security Fix: Prevent path traversal
+        if ".." in directory or os.path.isabs(directory):
+            return "Error: Invalid directory. Path traversal is not allowed. Please use a relative path."
+
         return self._run_git_command(["clone", repo_url, directory], ".")
 
     def pull(self, working_dir: str) -> str:

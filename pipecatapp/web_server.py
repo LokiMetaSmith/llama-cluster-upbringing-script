@@ -488,6 +488,10 @@ async def save_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     if not save_name:
         return JSONResponse(status_code=400, content={"message": "save_name is required"})
 
+    # Security Fix: Input validation to prevent path traversal
+    if ".." in save_name or "/" in save_name or "\\" in save_name:
+        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must be a filename without path characters."})
+
     twin_service = request.app.state.twin_service_instance
     if twin_service:
         result = twin_service.save_state(save_name)
@@ -507,6 +511,10 @@ async def load_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     save_name = payload.get("save_name")
     if not save_name:
         return JSONResponse(status_code=400, content={"message": "save_name is required"})
+
+    # Security Fix: Input validation to prevent path traversal
+    if ".." in save_name or "/" in save_name or "\\" in save_name:
+        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must be a filename without path characters."})
 
     twin_service = request.app.state.twin_service_instance
     if twin_service:
