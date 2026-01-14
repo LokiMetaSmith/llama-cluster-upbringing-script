@@ -27,7 +27,7 @@
 
         - name: "Check 4: Verify connectivity to Headscale Controller"
           uri:
-            url: "{{ hostvars[groups['controller_nodes'][0]]['headscale_server_url'] }}/health"
+            url: "http://{{ hostvars[groups['controller_nodes'][0]]['ansible_default_ipv4']['address'] }}:{{ headscale_port }}/health"
             method: GET
             status_code: 200
             return_content: no
@@ -68,13 +68,14 @@
       rescue:
         - name: "DEBUG: Run Mesh Debug Script on Failure"
           script:
-            cmd: scripts/debug_mesh.sh
+            cmd: "{{ playbook_dir }}/../../scripts/debug_mesh.sh"
           register: debug_output
           ignore_errors: yes
 
         - name: "DEBUG: Display Mesh Debug Info"
           debug:
             var: debug_output.stdout_lines
+          when: debug_output.stdout_lines is defined
 
         - name: "Fail Playbook after Debugging"
           fail:
