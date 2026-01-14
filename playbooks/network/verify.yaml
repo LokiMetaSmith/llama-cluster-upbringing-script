@@ -41,29 +41,11 @@
             timeout: 5
           when: headscale_health.failed
 
-        - name: "Check 5: Verify Consul is listening on Mesh IP"
-          wait_for:
-            host: "{{ cluster_ip }}"
-            port: 8301 # Consul Serf LAN
-            timeout: 5
-            state: started
-          register: consul_check
-
-        - name: "Check 6: Verify Nomad is listening on Mesh IP"
-          wait_for:
-            host: "{{ cluster_ip }}"
-            port: 4647 # Nomad RPC
-            timeout: 5
-            state: started
-          register: nomad_check
-
         - name: Report Success
           debug:
             msg:
               - "Mesh IP: {{ cluster_ip }}"
               - "Headscale Connection: OK"
-              - "Consul Binding: OK"
-              - "Nomad Binding: OK"
 
       rescue:
         - name: "DEBUG: Run Mesh Debug Script on Failure"

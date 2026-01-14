@@ -1,7 +1,7 @@
 - name: Final Verification
   hosts: all
   become: no
-  gather_facts: no
+  gather_facts: yes
   tags:
     - final-verification
   tasks:
@@ -51,6 +51,26 @@
       when: consul_leader_status.skipped is not defined and (consul_leader_status.failed or consul_leader_status.content == '""') and not ansible_check_mode
       tags:
         - consul-health
+
+    - name: Verify Consul is listening on Mesh IP (Serf LAN)
+      wait_for:
+        host: "{{ cluster_ip }}"
+        port: 8301
+        timeout: 10
+        state: started
+      when: not ansible_check_mode
+      tags:
+        - consul-health
+
+    - name: Verify Nomad is listening on Mesh IP (RPC)
+      wait_for:
+        host: "{{ cluster_ip }}"
+        port: 4647
+        timeout: 10
+        state: started
+      when: not ansible_check_mode
+      tags:
+        - nomad-health
 
     - name: Remove temporary passwordless sudo for '{{ target_user }}'
       become: yes
