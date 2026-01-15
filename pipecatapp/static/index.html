@@ -24,6 +24,13 @@
         #status-light { width: 15px; height: 15px; border-radius: 50%; background-color: #f00; display: inline-block; margin-left: 10px; }
         input, button { padding: 5px; background-color: #333; color: #f0f0f0; border: 1px solid #555; }
 
+        /* Accessibility: High contrast focus indicator */
+        a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid #00ff00; /* Terminal Green */
+            outline-offset: 2px;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
         /* Dropdown Button */
         .dropbtn {
             background-color: #008CBA;
