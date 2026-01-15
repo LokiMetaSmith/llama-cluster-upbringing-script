@@ -15,8 +15,8 @@ from typing import List, Dict
 from workflow.runner import ActiveWorkflows, OpenGates
 from workflow.history import WorkflowHistory
 from api_keys import get_api_key
-from .models import InternalChatRequest, SystemMessageRequest
-from .rate_limiter import RateLimiter
+from models import InternalChatRequest, SystemMessageRequest
+from rate_limiter import RateLimiter
 
 
 # Configure logging
