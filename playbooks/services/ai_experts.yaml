@@ -98,7 +98,7 @@
 
     - name: Set pipecat_image_id fact
       ansible.builtin.set_fact:
-        pipecat_image_id: "{{ (pipecat_image_info.stdout | from_json | first).Id | regex_replace('^sha256:', '') }}"
+        pipecat_image_id: "pipecatapp:local"
       tags:
         - deploy-expert
 
