@@ -242,6 +242,11 @@ class FasterWhisperSTTService(FrameProcessor):
         audio_s16 = np.frombuffer(audio_bytes, dtype=np.int16)
         return audio_s16.astype(np.float32) / 32768.0
 
+    def _transcribe_sync(self, audio_data: np.ndarray) -> str:
+        """Synchronous helper for transcription to run in a thread."""
+        segments, _ = self.model.transcribe(audio_data, language="en")
+        return "".join(segment.text for segment in segments).strip()
+
     async def process_frame(self, frame, direction):
         """Processes audio frames, buffering and transcribing them.
 
@@ -259,8 +264,11 @@ class FasterWhisperSTTService(FrameProcessor):
                 return
             audio_f32 = self._convert_audio_bytes_to_float_array(self.audio_buffer)
             self.audio_buffer.clear()
-            segments, _ = self.model.transcribe(audio_f32, language="en")
-            full_text = "".join(segment.text for segment in segments).strip()
+
+            # Bolt ⚡ Optimization: Run blocking inference in a thread
+            loop = asyncio.get_running_loop()
+            full_text = await loop.run_in_executor(None, self._transcribe_sync, audio_f32)
+
             if full_text:
                 await self.push_frame(TranscriptionFrame(full_text))
         else:
