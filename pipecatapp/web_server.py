@@ -16,6 +16,7 @@ from workflow.runner import ActiveWorkflows, OpenGates
 from workflow.history import WorkflowHistory
 from api_keys import get_api_key
 from .models import InternalChatRequest, SystemMessageRequest
+from .rate_limiter import RateLimiter
 
 
 # Configure logging
@@ -61,6 +62,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Security Enhancement: Rate Limiters
+# Strict limiter for sensitive operations (10 requests per minute)
+strict_limiter = RateLimiter(limit=10, window=60)
+# Standard limiter for regular API calls (100 requests per minute)
+standard_limiter = RateLimiter(limit=100, window=60)
 
 # Create queues to communicate between the web server and the TwinService
 approval_queue = asyncio.Queue()
@@ -174,7 +181,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @app.post("/internal/chat", summary="Process Internal Chat Message", description="Receives a chat message from an internal service like the MoE Gateway, processes it, and sends the response to a specified callback URL.", tags=["Internal"])
-async def internal_chat(payload: InternalChatRequest, api_key: str = Security(get_api_key)):
+async def internal_chat(payload: InternalChatRequest, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """
     Handles a chat message from another internal service.
     The payload should contain the user's text, a unique request_id,
@@ -187,7 +194,7 @@ async def internal_chat(payload: InternalChatRequest, api_key: str = Security(ge
 
 
 @app.post("/internal/system_message", summary="Process System Alert", description="Receives a system alert (e.g., from Supervisor), injecting it into the agent's workflow.", tags=["Internal"])
-async def internal_system_message(payload: SystemMessageRequest, api_key: str = Security(get_api_key)):
+async def internal_system_message(payload: SystemMessageRequest, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """
     Handles a system alert. These are treated as high-priority inputs from the infrastructure.
     """
@@ -264,7 +271,7 @@ async def get_workflow_run(runner_id: str):
     return run_details
 
 @app.post("/api/gate/approve", response_class=JSONResponse)
-async def approve_gate(payload: Dict = Body(...), api_key: str = Security(get_api_key)):
+async def approve_gate(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """Approves a paused gate, allowing the workflow to continue."""
     request_id = payload.get("request_id")
     if not request_id:
@@ -303,7 +310,7 @@ async def get_workflow_definition(workflow_name: str):
         raise HTTPException(status_code=500, detail="An error occurred while loading the workflow.")
 
 @app.post("/api/workflows/save", summary="Save Workflow", description="Saves a workflow definition to a YAML file.", tags=["Workflow"])
-async def save_workflow_definition(payload: Dict = Body(...), api_key: str = Security(get_api_key)):
+async def save_workflow_definition(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """
     Saves a workflow definition.
     Payload: { "name": "filename.yaml", "definition": { ... } }
@@ -475,7 +482,7 @@ async def get_web_uis():
     return JSONResponse(content=sorted_uis)
 
 @app.post("/api/state/save", summary="Save Agent State", description="Saves the agent's current conversation and internal state to a named snapshot.", tags=["Agent"])
-async def save_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]), api_key: str = Security(get_api_key)):
+async def save_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """API endpoint to save the agent's current state to a named snapshot.
 
     Args:
@@ -499,7 +506,7 @@ async def save_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
 @app.post("/api/state/load", summary="Load Agent State", description="Loads the agent's state from a previously saved snapshot.", tags=["Agent"])
-async def load_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]), api_key: str = Security(get_api_key)):
+async def load_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """API endpoint to load the agent's state from a named snapshot.
 
     Args:
