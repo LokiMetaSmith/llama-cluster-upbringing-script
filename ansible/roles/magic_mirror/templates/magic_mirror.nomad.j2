@@ -30,6 +30,7 @@ job "magic_mirror" {
         check {
           type     = "tcp"
           port     = "41111"
+          address_mode = "driver"
           interval = "10s"
           timeout  = "2s"
         }
