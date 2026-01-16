@@ -334,12 +334,26 @@ class YOLOv8Detector(FrameProcessor):
              model_path = "/opt/nomad/models/vision/yolov8n.pt" # Last resort fallback
         self.latest_observation = "I don't see anything."
         self.last_detected_objects = set()
+        self.last_processed_time = 0
+        self.is_processing = False
+
         try:
             self.model = YOLO(model_path)
         except Exception as e:
             logging.error(f"Failed to load YOLOv8 model from {model_path}: {e}")
             self.model = None
             self.latest_observation = "Vision system unavailable."
+
+    def _run_inference(self, image):
+        """Helper to run inference in a separate thread.
+
+        Args:
+            image: The image data to process.
+
+        Returns:
+            set: A set of detected object names.
+        """
+        return {self.model.names[int(c)] for r in self.model(image) for c in r.boxes.cls}
 
     async def process_frame(self, frame, direction):
         """Processes an image frame to detect objects.
@@ -357,12 +371,25 @@ class YOLOv8Detector(FrameProcessor):
             await self.push_frame(frame, direction)
             return
 
+        current_time = time.time()
+        # Bolt ⚡ Optimization: Rate limit to 1 FPS and avoid concurrent processing
+        if (current_time - self.last_processed_time < 1.0) or self.is_processing:
+            await self.push_frame(frame, direction)
+            return
+
+        self.is_processing = True
+        self.last_processed_time = current_time
+
         try:
-            # run model; returns list of results; boxes.cls may be torch tensors or arrays
-            detected_objects = {self.model.names[int(c)] for r in self.model(frame.image) for c in r.boxes.cls}
+            loop = asyncio.get_running_loop()
+            # Bolt ⚡ Optimization: Run blocking inference in a thread
+            detected_objects = await loop.run_in_executor(None, self._run_inference, frame.image)
         except Exception as e:
             logging.error(f"YOLOv8 detection error: {e}")
             detected_objects = set()
+        finally:
+            self.is_processing = False
+
         if detected_objects != self.last_detected_objects:
             self.last_detected_objects = detected_objects
             self.latest_observation = f"I see {', '.join(detected_objects)}." if detected_objects else "I don't see anything."
