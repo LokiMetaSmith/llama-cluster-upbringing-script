@@ -98,7 +98,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
             ha_url=config.get("ha_url"),
             ha_token=config.get("ha_token")
         )
-        tools["git"] = Git_Tool()
+        tools["git"] = Git_Tool(root_dir="/opt/pipecatapp")
         tools["orchestrator"] = OrchestratorTool()
 
     # Filter out None values
