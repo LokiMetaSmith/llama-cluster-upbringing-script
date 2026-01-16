@@ -15,8 +15,7 @@ job "magic_mirror" {
       config {
         command = "{{ magic_mirror_install_dir }}/mmserver"
         args    = [
-            "--address", "0.0.0.0",
-            "--port", "41111" # Explicitly setting port to match health check
+            "--bind", "0.0.0.0:41111"
         ]
       }
 
