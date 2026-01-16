@@ -77,14 +77,12 @@
         .dropdown-content a:hover {background-color: #f1f1f1}
         .dropdown-content a.unhealthy:hover {background-color: #eee} /* Keep grey on hover */
 
-        /* Show the dropdown menu on hover or when 'show' class is added */
-        .dropdown:hover .dropdown-content,
+        /* Show the dropdown menu only when 'show' class is added (via click/keyboard) */
         .dropdown.show .dropdown-content {
             display: block;
         }
 
         /* Change the background color of the dropdown button when the dropdown content is shown */
-        .dropdown:hover .dropbtn,
         .dropdown.show .dropbtn {
             background-color: #005f7a;
         }
