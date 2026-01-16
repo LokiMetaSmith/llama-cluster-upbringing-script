@@ -36,7 +36,7 @@ tools = {
     "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
     "rag": RAG_Tool(base_dir="/"),
     "ha": HA_Tool(ha_url=None, ha_token=None), # These will be configured later if needed
-    "git": Git_Tool(),
+    "git": Git_Tool(root_dir="/opt/pipecatapp"),
     "orchestrator": OrchestratorTool(),
 }
 
