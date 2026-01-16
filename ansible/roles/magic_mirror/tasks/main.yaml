@@ -30,6 +30,8 @@
     dest: "{{ magic_mirror_install_dir }}"
     remote_src: yes
     creates: "{{ magic_mirror_install_dir }}/mmserver"
+    extra_opts:
+      - --strip-components=1
 
 - name: Ensure mmserver is executable
   ansible.builtin.file:
