@@ -96,6 +96,12 @@
       tags:
         - deploy-expert
 
+    - name: Verify pipecatapp Docker image is runnable
+      ansible.builtin.command: docker run --rm --entrypoint /bin/true pipecatapp:local
+      changed_when: false
+      tags:
+        - deploy-expert
+
     - name: Set pipecat_image_id fact
       ansible.builtin.set_fact:
         pipecat_image_id: "pipecatapp:local"

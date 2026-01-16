@@ -103,7 +103,6 @@ job "{{ job_name }}" {
 
       config {
         image = "{{ pipecat_image_id }}"
-        force_pull = false
         ports = ["http"]
       }
 
