@@ -11,7 +11,7 @@ expert_models:
     - name: "Llama-3-8B-Instruct"
       url: "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF-v2/resolve/main/Meta-Llama-3-8B-Instruct-v2.Q4_K_M.gguf"
       filename: "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
-      memory_mb: 8192
+      memory_mb: 9216
     - name: "phi-3-mini-instruct"
       url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
       filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
@@ -20,7 +20,7 @@ expert_models:
     - name: "CodeLlama-7B-Instruct"
       url: "https://huggingface.co/TheBloke/CodeLlama-7B-Instruct-GGUF/resolve/main/codellama-7b-instruct.Q4_K_M.gguf"
       filename: "codellama-7b-instruct.Q4_K_M.gguf"
-      memory_mb: 8192
+      memory_mb: 9216
     - name: "phi-3-mini-instruct"
       url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
       filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf"
