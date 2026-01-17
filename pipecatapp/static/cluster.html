@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Llama Cluster: The Upbringing</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0d1117; /* GitHub Dark Dimmed */
+            color: #c9d1d9;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            cursor: default; /* Default cursor */
+        }
+        #overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 2;
+            pointer-events: none;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        #tooltip {
+            position: absolute;
+            background: rgba(13, 17, 23, 0.95);
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 12px;
+            color: #c9d1d9;
+            pointer-events: none;
+            display: none;
+            z-index: 100;
+            white-space: pre;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #58a6ff;
+        }
+        #subtitle {
+            font-size: 16px;
+            color: #8b949e;
+            margin-bottom: 10px;
+        }
+        #terminal {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px;
+            width: 400px;
+            height: 200px;
+            overflow: hidden;
+            font-size: 12px;
+            color: #7ee787;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        .log-line {
+            margin: 2px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .log-error { color: #ff7b72; }
+        .log-warn { color: #d29922; }
+        .log-info { color: #7ee787; }
+        .log-highlight { color: #58a6ff; font-weight: bold; }
+
+        #progress-container {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            max-width: 600px;
+            z-index: 2;
+            display: none;
+        }
+        .progress-bar-bg {
+            background: #21262d;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid #30363d;
+        }
+        .progress-bar-fill {
+            background: #238636;
+            height: 100%;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        #progress-label {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #8b949e;
+        }
+
+        #final-message {
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            font-size: 4rem;
+            font-weight: bold;
+            color: #fff;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 2s;
+            pointer-events: none;
+            text-shadow: 0 0 20px #238636;
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas"></canvas>
+
+    <div id="overlay">
+        <h1>Llama Cluster Upbringing</h1>
+        <div id="subtitle">Initializing visualization...</div>
+        <div id="terminal"></div>
+    </div>
+
+    <div id="tooltip"></div>
+
+    <div id="progress-container">
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-fill"></div>
+        </div>
+        <div id="progress-label">Executing bootstrap.sh...</div>
+    </div>
+
+    <div id="final-message">CLUSTER ONLINE</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const terminal = document.getElementById('terminal');
+        const subtitle = document.getElementById('subtitle');
+        const progressContainer = document.getElementById('progress-container');
+        const progressFill = document.getElementById('progress-fill');
+        const finalMessage = document.getElementById('final-message');
+        const tooltip = document.getElementById('tooltip');
+
+        let width, height;
+        let particles = [];
+        let signals = [];
+        let time = 0;
+        let phase = 0; // 0: Genesis, 1: Expansion, 2: Refactor, 3: Bootstrap, 4: Forming Mesh
+        let fullMesh = false;
+
+        // Interaction state
+        let draggedParticle = null;
+        let mouseX = 0;
+        let mouseY = 0;
+
+        // Colors based on file type/role
+        const COLORS = {
+            ansible: '#EE0000', // Red for Ansible/Config
+            python: '#3572A5',  // Blue for App Logic
+            infra: '#F1E05A',   // Yellow for Core Infra (Consul/Nomad)
+            tool: '#89E051',    // Green for Tools
+            doc: '#73C990',     // Light Green for Docs
+            script: '#FFFFFF',  // White for Scripts
+            service: '#D19A66'  // Orange for Services (Postgres, etc)
+        };
+
+        // Detailed structure based on your actual file list to represent the "Real" cluster
+        // Initial static nodes (Infra) + Dynamic Placeholders
+        let SERVICE_DATA = [
+            // ROOT
+            { id: 'bootstrap', label: 'bootstrap.sh', type: 'script', size: 15, group: 'root' },
+
+            // INFRASTRUCTURE (The Core)
+            { id: 'consul', label: 'Consul', type: 'infra', size: 12, group: 'core_infra' },
+            { id: 'nomad', label: 'Nomad', type: 'infra', size: 12, group: 'core_infra' },
+            { id: 'docker', label: 'Docker', type: 'infra', size: 8, group: 'core_infra' },
+
+            // Core Applications (Needed for intro animation)
+            { id: 'pipecat_app', label: 'pipecat_app', type: 'python', size: 14, group: 'app' },
+            { id: 'agent_factory', label: 'agent_factory', type: 'python', size: 6, group: 'app' },
+            { id: 'memory', label: 'memory', type: 'python', size: 6, group: 'app' },
+            { id: 'vllm', label: 'vllm', type: 'service', size: 9, group: 'service' },
+            { id: 'postgres', label: 'postgres', type: 'service', size: 8, group: 'service' },
+            { id: 'ansible_ctrl', label: 'ansible_ctrl', type: 'ansible', size: 10, group: 'mgmt' },
+            { id: 'playbooks', label: 'playbooks', type: 'ansible', size: 8, group: 'mgmt' },
+            { id: 'tool_code', label: 'tool_code', type: 'tool', size: 5, group: 'tools' },
+            { id: 'tool_git', label: 'tool_git', type: 'tool', size: 5, group: 'tools' },
+            { id: 'tool_browser', label: 'tool_browser', type: 'tool', size: 5, group: 'tools' },
+            { id: 'tool_file', label: 'tool_file', type: 'tool', size: 5, group: 'tools' },
+
+            // Placeholder for dynamically fetched services
+        ];
+
+        // Fetch Metrics and Update Data
+        async function fetchMetrics() {
+            try {
+                // Parallel fetch of metrics and web UIs
+                const [metricsRes, uisRes] = await Promise.all([
+                    fetch('/api/cluster/metrics'),
+                    fetch('/api/web_uis')
+                ]);
+
+                if (!metricsRes.ok) return;
+                const services = await metricsRes.json();
+                const uis = uisRes.ok ? await uisRes.json() : [];
+
+                // Merge services into SERVICE_DATA
+                services.forEach(svc => {
+                    let existing = SERVICE_DATA.find(d => d.id === svc.id);
+
+                    // Match with UI URL if available
+                    // Simple heuristic: match if ui name is contained in svc id (case insensitive)
+                    const ui = uis.find(u => svc.id.toLowerCase().includes(u.name.toLowerCase()) || u.name.toLowerCase().includes(svc.id.toLowerCase()));
+                    const uiUrl = ui ? ui.url : null;
+
+                    if (!existing) {
+                        // Determine group based on name heuristics
+                        let group = 'service';
+                        if (svc.id.includes('pipecat')) group = 'app';
+                        if (svc.id.includes('tool')) group = 'tools';
+
+                        const newNode = {
+                            id: svc.id,
+                            label: svc.id,
+                            type: group === 'app' ? 'python' : 'service',
+                            size: 8,
+                            group: group,
+                            cpu: svc.cpu,
+                            mem: svc.mem,
+                            status: svc.status,
+                            url: uiUrl
+                        };
+                        SERVICE_DATA.push(newNode);
+
+                        // If fully formed, spawn immediately
+                        if (fullMesh) {
+                            spawnNode(svc.id);
+                            // Recalculate positions to fit new node
+                            calculateFinalPositions();
+                        }
+                    } else {
+                        // Update stats
+                        existing.cpu = svc.cpu;
+                        existing.mem = svc.mem;
+                        existing.status = svc.status;
+                        if(uiUrl) existing.url = uiUrl;
+
+                        // Update particle
+                        const p = getParticle(svc.id);
+                        if (p) {
+                            // Pulse effect: base size + cpu factor (clamped)
+                            const activity = Math.min(svc.cpu * 2, 10);
+                            p.targetRadius = (existing.size || 8) + activity;
+
+                            // Color update based on status
+                            if (existing.status !== 'running' && existing.status !== 'healthy') {
+                                p.color = '#ff0000'; // Red for error
+                            } else {
+                                p.color = COLORS[existing.type] || '#888';
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.warn("Failed to fetch metrics", e);
+            }
+        }
+
+        // Define Real Architecture Connections
+        const ARCHITECTURE_CONNECTIONS = [
+            { from: 'ansible_ctrl', to: 'consul' },
+            { from: 'ansible_ctrl', to: 'nomad' },
+            { from: 'ansible_ctrl', to: 'pipecat_app' }, // Configures app
+            { from: 'nomad', to: 'pipecat_app' }, // Manages App
+            { from: 'nomad', to: 'vllm' },        // Manages Service
+            { from: 'nomad', to: 'postgres' },    // Manages Service
+            { from: 'consul', to: 'pipecat_app' },// Service Discovery
+            { from: 'consul', to: 'vllm' },
+            { from: 'consul', to: 'postgres' },
+            { from: 'pipecat_app', to: 'tool_code' },
+            { from: 'pipecat_app', to: 'tool_git' },
+            { from: 'pipecat_app', to: 'tool_browser' },
+            { from: 'pipecat_app', to: 'tool_file' },
+            { from: 'pipecat_app', to: 'agent_factory' },
+            { from: 'pipecat_app', to: 'memory' },
+            { from: 'pipecat_app', to: 'vllm' } // Consumes model
+        ];
+
+        class Particle {
+            constructor(x, y, data) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.data = data;
+                this.radius = 0;
+                this.targetRadius = data.size;
+                this.color = COLORS[data.type] || '#888';
+                this.group = data.group;
+                this.visible = true;
+
+                // For final formation
+                this.destX = null;
+                this.destY = null;
+            }
+
+            update() {
+                if (!this.visible) {
+                    if(this.radius > 0) this.radius -= 1;
+                    return;
+                }
+
+                // Growth
+                if (this.radius < this.targetRadius) this.radius += 0.2;
+
+                // --- DRAG HANDLING ---
+                // If being dragged, follow mouse and ignore physics
+                if (this === draggedParticle) {
+                    this.x = mouseX;
+                    this.y = mouseY;
+                    this.vx = 0;
+                    this.vy = 0;
+                    return;
+                }
+
+                if (fullMesh) {
+                    // --- FINAL PHASE PHYSICS: Snap to Architecture Slots ---
+                    if (this.destX !== null && this.destY !== null) {
+                        const dx = this.destX - this.x;
+                        const dy = this.destY - this.y;
+                        this.x += dx * 0.05; // Spring/Snap effect
+                        this.y += dy * 0.05;
+                    }
+                } else {
+                    // --- CHAOTIC PHASE PHYSICS ---
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vx *= 0.95;
+                    this.vy *= 0.95;
+
+                    // Center gravity
+                    const dx = width / 2 - this.x;
+                    const dy = height / 2 - this.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const angle = Math.atan2(dy, dx);
+                    const force = Math.min(dist * 0.001, 2);
+
+                    this.vx += Math.cos(angle) * force;
+                    this.vy += Math.sin(angle) * force;
+
+                    // Repulsion
+                    for (let p of particles) {
+                        if (p === this || !p.visible) continue;
+                        const pdx = this.x - p.x;
+                        const pdy = this.y - p.y;
+                        const pdist = Math.sqrt(pdx*pdx + pdy*pdy);
+                        const minDist = this.radius + p.radius + 20;
+                        if (pdist < minDist && pdist > 0) {
+                            const rep = (minDist - pdist) * 0.05;
+                            this.vx += (pdx/pdist) * rep;
+                            this.vy += (pdy/pdist) * rep;
+                        }
+                    }
+                }
+            }
+
+            draw() {
+                if (this.radius <= 0) return;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+
+                // Highlight if dragged
+                if(this === draggedParticle) {
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                ctx.fill();
+
+                // Label
+                if (this.radius > 6 || fullMesh) {
+                    // Draw Text Background for readability
+                    ctx.font = '12px monospace';
+                    const label = this.data.id;
+                    const textWidth = ctx.measureText(label).width;
+
+                    ctx.fillStyle = 'rgba(13, 17, 23, 0.85)'; // Dark box behind text
+                    ctx.fillRect(this.x + this.radius + 2, this.y - 8, textWidth + 4, 16);
+
+                    // Draw Text
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.fillText(label, this.x + this.radius + 4, this.y + 4);
+                }
+            }
+        }
+
+        class Signal {
+            constructor(p1, p2) {
+                this.p1 = p1;
+                this.p2 = p2;
+                this.progress = 0;
+                this.speed = 0.02 + Math.random() * 0.03; // Random speed
+                this.active = true;
+            }
+
+            update() {
+                this.progress += this.speed;
+                if (this.progress >= 1) {
+                    this.active = false;
+                }
+            }
+
+            draw() {
+                if (!this.active) return;
+                const x = this.p1.x + (this.p2.x - this.p1.x) * this.progress;
+                const y = this.p1.y + (this.p2.y - this.p1.y) * this.progress;
+
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+                // Trail
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x - (this.p2.x - this.p1.x)*0.05, y - (this.p2.y - this.p1.y)*0.05);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function log(msg, type = 'log-info') {
+            const div = document.createElement('div');
+            div.className = `log-line ${type}`;
+            div.textContent = `> ${msg}`;
+            terminal.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight;
+            if (terminal.children.length > 15) terminal.removeChild(terminal.firstChild);
+        }
+
+        function spawnNode(id) {
+            const data = SERVICE_DATA.find(d => d.id === id);
+            if (!data) return;
+            const p = new Particle(width/2 + (Math.random()-0.5)*50, height/2 + (Math.random()-0.5)*50, data);
+            particles.push(p);
+            return p;
+        }
+
+        function getParticle(id) {
+            return particles.find(p => p.data.id === id);
+        }
+
+        // --- INTERACTION HANDLERS ---
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+
+            // Find clicked particle (iterate reverse to click top-most)
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                if (!p.visible) continue;
+                const dx = mouseX - p.x;
+                const dy = mouseY - p.y;
+                // Hit detection with slight buffer
+                if (dx*dx + dy*dy < (p.radius + 10) * (p.radius + 10)) {
+                    draggedParticle = p;
+                    break;
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+
+            // Change cursor on hover
+            let hovering = null;
+            for (const p of particles) {
+                if (!p.visible) continue;
+                const dx = mouseX - p.x;
+                const dy = mouseY - p.y;
+                if (dx*dx + dy*dy < (p.radius + 5) * (p.radius + 5)) {
+                    hovering = p;
+                    break;
+                }
+            }
+
+            if (draggedParticle) {
+                canvas.style.cursor = 'grabbing';
+                tooltip.style.display = 'none';
+            } else {
+                canvas.style.cursor = hovering ? 'pointer' : 'default';
+                if (hovering) {
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (e.clientX + 15) + 'px';
+                    tooltip.style.top = (e.clientY + 15) + 'px';
+
+                    let content = `<strong>${hovering.data.label || hovering.data.id}</strong>\n`;
+                    content += `Type: ${hovering.data.type}\n`;
+                    if (hovering.data.cpu !== undefined) content += `CPU: ${(hovering.data.cpu * 100).toFixed(1)}%\n`;
+                    if (hovering.data.mem !== undefined) content += `Mem: ${(hovering.data.mem / (1024*1024)).toFixed(0)} MB\n`;
+                    if (hovering.data.status) content += `Status: ${hovering.data.status}\n`;
+                    if (hovering.data.url) content += `\n<em>Double-click to open UI</em>`;
+
+                    tooltip.innerHTML = content;
+                } else {
+                    tooltip.style.display = 'none';
+                }
+            }
+        });
+
+        canvas.addEventListener('dblclick', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            for (const p of particles) {
+                if (!p.visible) continue;
+                const dx = x - p.x;
+                const dy = y - p.y;
+                if (dx*dx + dy*dy < (p.radius + 5) * (p.radius + 5)) {
+                    if (p.data.url && p.data.url !== '#') {
+                        // Construct absolute URL if relative or handle different ports
+                        let url = p.data.url;
+                        if (!url.startsWith('http')) {
+                            // Assume it matches current host
+                            const proto = window.location.protocol;
+                            const host = window.location.hostname;
+                            // If url is just a port or path, logic needed.
+                            // But API returns full http://ip:port usually.
+                        }
+                        // Replace localhost/127.0.0.1 with window.location.hostname to support remote viewing
+                        url = url.replace('localhost', window.location.hostname).replace('127.0.0.1', window.location.hostname);
+
+                        window.open(url, '_blank');
+                    }
+                    break;
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            draggedParticle = null;
+            canvas.style.cursor = 'default';
+        });
+
+        // Timeline events
+        const scriptTimeline = [
+            { t: 0, fn: () => {
+                subtitle.textContent = "Phase 1: Genesis";
+                log("git init");
+                spawnNode('bootstrap');
+            }},
+            { t: 50, fn: () => {
+                log("Adding core infrastructure roles...");
+                spawnNode('docker');
+                spawnNode('consul');
+                spawnNode('nomad');
+            }},
+            { t: 120, fn: () => {
+                subtitle.textContent = "Phase 2: The Application";
+                log("feat: Init Pipecat App");
+                // Dynamically spawn placeholder if not present
+                spawnNode('pipecat_app');
+            }},
+            { t: 180, fn: () => {
+                log("feat: Adding Tools & Services");
+            }},
+            { t: 240, fn: () => {
+                subtitle.textContent = "Phase 3: Automation & Refactor";
+                log("refactor: Ansible Control Layer");
+                // Spawn remaining random bits
+                SERVICE_DATA.forEach(d => {
+                    if(!getParticle(d.id)) spawnNode(d.id);
+                });
+            }},
+            { t: 320, fn: () => {
+                phase = 3;
+                subtitle.textContent = "Phase 4: Bootstrap Execution";
+                log("./bootstrap.sh --start", "log-highlight");
+                progressContainer.style.display = 'block';
+            }},
+            { t: 350, fn: () => updateProgress(20, "Installing System Deps...") },
+            { t: 380, fn: () => updateProgress(40, "Configuring Ansible...") },
+            { t: 410, fn: () => updateProgress(60, "Deploying Consul Mesh...") },
+            { t: 440, fn: () => updateProgress(80, "Starting Nomad Jobs...") },
+            { t: 480, fn: () => {
+                updateProgress(100, "Done.");
+                switchToLiveMode();
+            }}
+        ];
+
+        function switchToLiveMode() {
+            phase = 4;
+            fullMesh = true;
+            finalMessage.style.opacity = 1;
+            subtitle.textContent = "Live Cluster Status";
+            log("BOOTSTRAP SUCCESSFUL", "log-highlight");
+
+            // 1. Remove Bootstrap Node
+            const bs = getParticle('bootstrap');
+            if(bs) bs.visible = false;
+
+            // 2. Calculate Final Architecture Positions
+            calculateFinalPositions();
+
+            // 3. Start Polling
+            setInterval(fetchMetrics, 2000);
+            fetchMetrics();
+        }
+
+        // Check Health on Load
+        fetch('/health').then(res => res.json()).then(data => {
+            if (data.status === 'ok') {
+                // Skip intro
+                time = 500; // Past timeline
+                // Spawn base nodes immediately
+                SERVICE_DATA.forEach(d => {
+                     if (!getParticle(d.id)) spawnNode(d.id);
+                });
+                switchToLiveMode();
+            }
+        }).catch(() => {});
+
+        // WebSocket for Logs
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        const ws = new WebSocket(wsUrl);
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'log') {
+                // Determine log level color
+                let level = 'log-info';
+                if (data.level === 'ERROR') level = 'log-error';
+                if (data.level === 'WARNING') level = 'log-warn';
+                log(`[${data.source || 'APP'}] ${data.message}`, level);
+            }
+        };
+
+        function calculateFinalPositions() {
+            const cx = width / 2;
+            const cy = height * 0.55;
+
+            // Helper to get specific group members
+            const services = particles.filter(p => p.group === 'service' && p.visible);
+            const tools = particles.filter(p => p.group === 'tools' && p.visible);
+            const apps = particles.filter(p => p.group === 'app' && p.visible);
+            const mgmt = particles.filter(p => p.group === 'mgmt' && p.visible);
+
+            particles.forEach(p => {
+                if (!p.visible) return;
+
+                switch(p.group) {
+                    case 'core_infra':
+                        // Triangle formation for core, spread wide
+                        if (p.data.id === 'consul') { p.destX = cx - 150; p.destY = cy; }
+                        else if (p.data.id === 'nomad') { p.destX = cx + 150; p.destY = cy; }
+                        else { p.destX = cx; p.destY = cy + 120; } // docker
+                        break;
+                    case 'app':
+                        // Fan out application nodes
+                        const aIdx = apps.indexOf(p);
+                        const aTotal = apps.length;
+                        p.destX = cx + (aIdx - (aTotal - 1) / 2) * 140; // Fan out horizontally
+                        p.destY = cy - 200;
+                        break;
+                    case 'service':
+                        // Wide arc below
+                        const sIdx = services.indexOf(p);
+                        const sTotal = services.length;
+                        p.destX = cx + (sIdx - (sTotal-1)/2) * 200; // Increased spacing
+                        p.destY = cy + 280;
+                        break;
+                    case 'tools':
+                        // Row above the app
+                        const tIdx = tools.indexOf(p);
+                        const tTotal = tools.length;
+                        p.destX = cx + (tIdx - (tTotal-1)/2) * 180; // Increased spacing
+                        p.destY = cy - 350;
+                        break;
+                    case 'mgmt':
+                        // Spread vertically on left
+                        const mIdx = mgmt.indexOf(p);
+                        p.destX = cx - 500;
+                        p.destY = (cy - 200) + mIdx * 80;
+                        break;
+                    case 'docs':
+                        p.destX = width - 150;
+                        p.destY = 150;
+                        break;
+                    case 'tests':
+                        p.destX = width - 150;
+                        p.destY = height - 150;
+                        break;
+                    default:
+                        // Random scatter for others to avoid clump
+                        p.destX = cx + (Math.random()-0.5)*900;
+                        p.destY = cy + (Math.random()-0.5)*900;
+                }
+            });
+        }
+
+        function updateProgress(percent, msg) {
+            log(msg);
+            progressFill.style.width = percent + '%';
+        }
+
+        function drawConnectionsAndSignals() {
+            if (!fullMesh) return;
+
+            ctx.lineWidth = 1;
+
+            // 1. Draw Static Connections
+            ARCHITECTURE_CONNECTIONS.forEach(conn => {
+                const p1 = getParticle(conn.from);
+                const p2 = getParticle(conn.to);
+
+                if (p1 && p2 && p1.visible && p2.visible) {
+                    // Draw Line
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                    ctx.stroke();
+
+                    // Draw Connection Points (Dots at ends)
+                    drawConnectionPoint(p1.x, p1.y, p1.color);
+                    drawConnectionPoint(p2.x, p2.y, p1.color);
+
+                    // Chance to spawn signal
+                    if (Math.random() < 0.05) { // 5% chance per frame per connection
+                        signals.push(new Signal(p1, p2));
+                    }
+                }
+            });
+
+            // 2. Update and Draw Signals
+            for (let i = signals.length - 1; i >= 0; i--) {
+                const s = signals[i];
+                s.update();
+                s.draw();
+                if (!s.active) {
+                    signals.splice(i, 1);
+                }
+            }
+        }
+
+        function drawConnectionPoint(x, y, color) {
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        function animate() {
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, width, height);
+
+            // Timeline
+            const currentEvent = scriptTimeline.find(e => e.t === time);
+            if (currentEvent) currentEvent.fn();
+
+            // Draw Bootstrap Beam (Phase 3 only)
+            if (phase === 3) {
+                const bs = getParticle('bootstrap');
+                if (bs && bs.visible) {
+                    const progress = parseFloat(progressFill.style.width) || 0;
+                    const activeCount = Math.floor((progress / 100) * particles.length);
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#58a6ff';
+                    ctx.lineWidth = 2;
+                    for(let i=0; i < activeCount && i < particles.length; i++) {
+                        const p = particles[i];
+                        if (p !== bs) {
+                            ctx.moveTo(bs.x, bs.y);
+                            ctx.lineTo(p.x, p.y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+            }
+
+            particles.forEach(p => p.update());
+
+            // Draw connections BEHIND nodes if fullMesh
+            if (fullMesh) drawConnectionsAndSignals();
+
+            particles.forEach(p => p.draw());
+
+            time++;
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        animate();
+
+    </script>
+</body>
+</html>

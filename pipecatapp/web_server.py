@@ -222,6 +222,75 @@ async def get_workflow_ui():
     with open(workflow_html_path) as f:
         return HTMLResponse(f.read())
 
+@app.get("/cluster", summary="Serve Cluster UI", description="Serves the `cluster.html` file for the cluster visualization UI.", tags=["UI"])
+async def get_cluster_ui():
+    """Serves the cluster visualization UI."""
+    cluster_html_path = os.path.join(static_dir, "cluster.html")
+    with open(cluster_html_path) as f:
+        return HTMLResponse(f.read())
+
+@app.get("/api/cluster/metrics", summary="Get Cluster Metrics", description="Retrieves CPU and Memory metrics for services from Prometheus.", tags=["System"])
+async def get_cluster_metrics():
+    """Retrieves cluster metrics from Prometheus."""
+    prom_url = os.getenv("PROMETHEUS_URL", "http://localhost:9090")
+
+    services = []
+
+    try:
+        async with httpx.AsyncClient() as client:
+            # CPU Query (rate over 1m)
+            cpu_query = 'sum by (task) (rate(nomad_client_allocs_cpu_total_ticks[1m]))'
+            cpu_resp = await client.get(f"{prom_url}/api/v1/query", params={'query': cpu_query}, timeout=2.0)
+
+            # Memory Query
+            mem_query = 'sum by (task) (nomad_client_allocs_memory_usage)'
+            mem_resp = await client.get(f"{prom_url}/api/v1/query", params={'query': mem_query}, timeout=2.0)
+
+            cpu_data = {}
+            if cpu_resp.status_code == 200:
+                data = cpu_resp.json()
+                if data.get('status') == 'success':
+                    results = data.get('data', {}).get('result', [])
+                    for res in results:
+                        task = res['metric'].get('task')
+                        # Prometheus value is [timestamp, "value"]
+                        try:
+                            val = float(res['value'][1])
+                            if task:
+                                cpu_data[task] = val
+                        except (ValueError, IndexError):
+                            continue
+
+            mem_data = {}
+            if mem_resp.status_code == 200:
+                data = mem_resp.json()
+                if data.get('status') == 'success':
+                    results = data.get('data', {}).get('result', [])
+                    for res in results:
+                        task = res['metric'].get('task')
+                        try:
+                            val = float(res['value'][1])
+                            if task:
+                                mem_data[task] = val
+                        except (ValueError, IndexError):
+                            continue
+
+            # Combine
+            all_tasks = set(cpu_data.keys()) | set(mem_data.keys())
+            for task in all_tasks:
+                services.append({
+                    "id": task,
+                    "cpu": cpu_data.get(task, 0),
+                    "mem": mem_data.get(task, 0),
+                    "status": "running"
+                })
+
+    except Exception as e:
+        logging.error(f"Error fetching metrics: {e}")
+        pass
+
+    return JSONResponse(content=services)
+
 @app.get("/api/status", summary="Get Agent Status", description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks.", tags=["Agent"])
 async def get_status(request: Request):
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
