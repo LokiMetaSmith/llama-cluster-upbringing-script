@@ -361,6 +361,7 @@
     nomad_namespace: "{{ nomad_namespace }}"
     job_name: "expert-{{ current_expert }}"
     service_name: "expert-api-{{ current_expert }}"
+    pipecat_image_id: "pipecatapp:local"
     model_list: "{{ expert_models[current_expert] | default([]) }}" # Corrected default
     worker_count: 1
     rpc_pool_job_name: "llamacpp-rpc-pool"
