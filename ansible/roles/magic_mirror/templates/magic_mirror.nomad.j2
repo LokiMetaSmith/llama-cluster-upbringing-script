@@ -7,6 +7,9 @@ job "magic_mirror" {
 
     network {
       mode = "host" # Needs host networking to handle namespaces and ports properly
+      port "mm" {
+        static = 41111
+      }
     }
 
     task "mmserver" {
@@ -15,8 +18,22 @@ job "magic_mirror" {
       config {
         command = "{{ magic_mirror_install_dir }}/mmserver"
         args    = [
-            "--bind", "0.0.0.0:41111"
+            "--config", "local/mmserver.toml"
         ]
+      }
+
+      template {
+        data = <<EOH
+[server]
+bind = "{{ ansible_default_ipv4.address | default('127.0.0.1') }}:41111"
+
+[apps.terminal]
+description = "Terminal"
+command = ["/bin/bash"]
+xwayland = false
+EOH
+        destination = "local/mmserver.toml"
+        change_mode = "restart"
       }
 
       resources {
@@ -26,9 +43,10 @@ job "magic_mirror" {
 
       service {
         name = "magic-mirror"
+        port = "mm"
         check {
           type     = "tcp"
-          port     = "41111"
+          port     = "mm"
           address_mode = "driver"
           interval = "10s"
           timeout  = "2s"
