@@ -15,6 +15,10 @@ job "magic_mirror" {
     task "mmserver" {
       driver = "raw_exec"
 
+      env {
+        RUST_BACKTRACE = "1"
+      }
+
       config {
         command = "{{ magic_mirror_install_dir }}/mmserver"
         args    = [
@@ -25,7 +29,7 @@ job "magic_mirror" {
       template {
         data = <<EOH
 [server]
-bind = "{{ ansible_default_ipv4.address | default('127.0.0.1') }}:41111"
+bind = "{{ (ansible_default_ipv4 | default({})).get('address', '127.0.0.1') }}:41111"
 
 [apps.terminal]
 description = "Terminal"
@@ -47,7 +51,7 @@ EOH
         check {
           type     = "script"
           command  = "/bin/bash"
-          args     = ["-c", "echo > /dev/tcp/{{ ansible_default_ipv4.address | default('127.0.0.1') }}/41111"]
+          args     = ["-c", "echo > /dev/tcp/{{ (ansible_default_ipv4 | default({})).get('address', '127.0.0.1') }}/41111"]
           interval = "10s"
           timeout  = "2s"
         }

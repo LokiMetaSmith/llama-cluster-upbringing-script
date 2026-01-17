@@ -1,3 +1,17 @@
+- name: Check for GPU render nodes
+  ansible.builtin.shell: find /dev/dri -name 'renderD*' 2>/dev/null || true
+  register: gpu_render_nodes
+  changed_when: false
+
+- name: Warn if no GPU render nodes found
+  ansible.builtin.debug:
+    msg: "WARNING: No GPU render nodes found in /dev/dri. Magic Mirror server (mmserver) requires a GPU with Vulkan/DRM support and may fail to start or crash."
+  when: gpu_render_nodes.stdout == ""
+
+- name: Debug bind address
+  ansible.builtin.debug:
+    msg: "Magic Mirror will bind to IP: {{ (ansible_default_ipv4 | default({})).get('address', '127.0.0.1') }}"
+
 - name: Install common Magic Mirror runtime dependencies
   ansible.builtin.apt:
     name:
