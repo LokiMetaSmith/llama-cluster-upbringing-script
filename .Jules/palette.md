@@ -10,3 +10,6 @@
 ## 2026-01-14 - Accessible ASCII Art Animation
 **Learning:** Animated ASCII art (like spinners or faces) creates a chaotic experience for screen readers, announcing every punctuation mark repeatedly.
 **Action:** Use `role="img"` and `aria-label` to describe the *meaning* of the art/animation, and update the label only when the semantic state changes, not on every animation frame.
+## 2025-11-26 - Save/Load State Interaction
+**Learning:** Users can fail to provide required input for "Save/Load State" actions, leading to error messages in the terminal that might be missed.
+**Action:** Prevent the error by disabling the action buttons until valid input is provided, using standard HTML `disabled` attribute and visual cues. This follows the "prevention over cure" UX principle.

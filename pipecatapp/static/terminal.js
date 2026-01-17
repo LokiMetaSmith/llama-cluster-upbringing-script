@@ -58,6 +58,20 @@ document.addEventListener("DOMContentLoaded", function() {
     const messageInput = document.getElementById("message-input");
     const sendBtn = document.getElementById("send-btn");
 
+    // Palette UX Improvement: Disable Save/Load buttons when input is empty
+    function toggleStateButtons() {
+        if (!saveStateBtn || !loadStateBtn || !saveNameInput) return;
+        const isDisabled = !saveNameInput.value.trim();
+        saveStateBtn.disabled = isDisabled;
+        loadStateBtn.disabled = isDisabled;
+    }
+
+    if (saveNameInput) {
+        saveNameInput.addEventListener("input", toggleStateButtons);
+        // Initialize state
+        toggleStateButtons();
+    }
+
     // Helper for loading state
     function setLoading(btn, isLoading, loadingText) {
         if (!btn) return;
