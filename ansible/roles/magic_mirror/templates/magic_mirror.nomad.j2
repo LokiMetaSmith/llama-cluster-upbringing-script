@@ -45,9 +45,9 @@ EOH
         name = "magic-mirror"
         port = "mm"
         check {
-          type     = "tcp"
-          port     = "mm"
-          address_mode = "driver"
+          type     = "script"
+          command  = "/bin/bash"
+          args     = ["-c", "echo > /dev/tcp/{{ ansible_default_ipv4.address | default('127.0.0.1') }}/41111"]
           interval = "10s"
           timeout  = "2s"
         }
