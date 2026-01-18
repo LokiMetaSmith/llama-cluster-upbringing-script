@@ -169,20 +169,65 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
+    // Palette UX Improvement: Command History
+    const messageHistory = [];
+    const MAX_HISTORY = 50;
+    let historyIndex = -1;
+    let tempInput = "";
+
     function sendMessage() {
         const message = messageInput.value.trim();
         if (message) {
             ws.send(JSON.stringify({ type: "user_message", data: message }));
             // Security Fix: Escape user input before rendering
             logToTerminal(`<strong>You:</strong> ${escapeHtml(message)}`, "user-message");
+
+            // Add to history if unique or last entry is different
+            if (messageHistory.length === 0 || messageHistory[messageHistory.length - 1] !== message) {
+                messageHistory.push(message);
+                if (messageHistory.length > MAX_HISTORY) messageHistory.shift();
+            }
+            historyIndex = -1;
+            tempInput = "";
+
             messageInput.value = "";
             animateThinking();
         }
     }
 
-    messageInput.addEventListener("keypress", function(event) {
+    messageInput.addEventListener("keydown", function(event) {
         if (event.key === "Enter") {
             sendMessage();
+            event.preventDefault();
+            return;
+        }
+
+        if (event.key === "ArrowUp") {
+            if (messageHistory.length === 0) return;
+            event.preventDefault();
+
+            if (historyIndex === -1) {
+                tempInput = messageInput.value;
+                historyIndex = messageHistory.length - 1;
+            } else if (historyIndex > 0) {
+                historyIndex--;
+            }
+            messageInput.value = messageHistory[historyIndex];
+            // Move cursor to end
+            setTimeout(() => messageInput.setSelectionRange(messageInput.value.length, messageInput.value.length), 0);
+        } else if (event.key === "ArrowDown") {
+            if (historyIndex === -1) return;
+            event.preventDefault();
+
+            if (historyIndex < messageHistory.length - 1) {
+                historyIndex++;
+                messageInput.value = messageHistory[historyIndex];
+            } else {
+                historyIndex = -1;
+                messageInput.value = tempInput;
+            }
+            // Move cursor to end
+            setTimeout(() => messageInput.setSelectionRange(messageInput.value.length, messageInput.value.length), 0);
         }
     });
 

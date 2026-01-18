@@ -13,3 +13,6 @@
 ## 2025-11-26 - Save/Load State Interaction
 **Learning:** Users can fail to provide required input for "Save/Load State" actions, leading to error messages in the terminal that might be missed.
 **Action:** Prevent the error by disabling the action buttons until valid input is provided, using standard HTML `disabled` attribute and visual cues. This follows the "prevention over cure" UX principle.
+## 2025-05-15 - Command History in Terminal Interfaces
+**Learning:** In "Mission Control" or terminal-like web interfaces, users instinctively expect Up/Down arrow keys to cycle through command history. Missing this feature breaks the immersive "terminal" illusion and frustrates power users.
+**Action:** Implement a history buffer and Up/Down key listeners for terminal-style inputs. Ensure standard text input behavior (cursor movement) is preserved when not navigating history.
