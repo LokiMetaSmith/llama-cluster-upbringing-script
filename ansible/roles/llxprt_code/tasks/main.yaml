@@ -42,6 +42,7 @@
     repo: 'https://github.com/vybestack/llxprt-code.git'
     dest: "{{ llxprt_code_dir }}"
     version: main
+    force: yes
 
 - name: Install llxprt-code dependencies
   ansible.builtin.npm:
