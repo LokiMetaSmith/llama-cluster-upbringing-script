@@ -8,6 +8,8 @@ import time
 import json
 import io
 import wave
+import base64
+from PIL import Image
 import inspect
 import threading
 
@@ -311,6 +313,47 @@ class PiperTTSService(FrameProcessor):
             audio_bytes = wf.readframes(wf.getnframes())
         await self.push_frame(AudioRawFrame(audio_bytes))
 
+class WebsocketAudioStreamer(FrameProcessor):
+    """A Pipecat processor that streams audio frames to the frontend via WebSockets.
+
+    This enables spatial audio in the VR interface.
+    """
+    def __init__(self, sample_rate: int = 16000):
+        super().__init__()
+        self.sample_rate = sample_rate
+
+    async def process_frame(self, frame, direction):
+        if not isinstance(frame, AudioRawFrame):
+            await self.push_frame(frame, direction)
+            return
+
+        # Wrap raw PCM in WAV container for browser compatibility
+        try:
+            wav_buffer = io.BytesIO()
+            with wave.open(wav_buffer, "wb") as wf:
+                wf.setnchannels(1)  # Mono
+                wf.setsampwidth(2)  # 16-bit
+                wf.setframerate(self.sample_rate)
+                wf.writeframes(frame.audio)
+
+            wav_bytes = wav_buffer.getvalue()
+            b64_audio = base64.b64encode(wav_bytes).decode('utf-8')
+
+            # Fix: Import web_server locally
+            try:
+                import web_server
+                await web_server.manager.broadcast(json.dumps({
+                    "type": "audio",
+                    "data": b64_audio
+                }))
+            except Exception as ws_err:
+                logging.error(f"Failed to stream audio frame: {ws_err}")
+
+        except Exception as e:
+             logging.error(f"Error packing audio for stream: {e}")
+
+        await self.push_frame(frame, direction)
+
 # -----------------------
 # YOLO Vision Detector
 # -----------------------
@@ -351,9 +394,26 @@ class YOLOv8Detector(FrameProcessor):
             image: The image data to process.
 
         Returns:
-            set: A set of detected object names.
+            tuple: (set of detected object names, base64_encoded_jpeg_string)
         """
-        return {self.model.names[int(c)] for r in self.model(image) for c in r.boxes.cls}
+        results = self.model(image)
+        detected_objects = {self.model.names[int(c)] for r in results for c in r.boxes.cls}
+
+        # Generate visual debug frame
+        img_base64 = None
+        try:
+            # Plot returns a numpy array (BGR)
+            annotated_frame = results[0].plot()
+            # Convert BGR to RGB
+            rgb_frame = annotated_frame[..., ::-1]
+            pil_img = Image.fromarray(rgb_frame)
+            buffered = io.BytesIO()
+            pil_img.save(buffered, format="JPEG", quality=70)
+            img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        except Exception as e:
+            logging.error(f"Error generating visual debug frame: {e}")
+
+        return detected_objects, img_base64
 
     async def process_frame(self, frame, direction):
         """Processes an image frame to detect objects.
@@ -383,7 +443,20 @@ class YOLOv8Detector(FrameProcessor):
         try:
             loop = asyncio.get_running_loop()
             # Bolt ⚡ Optimization: Run blocking inference in a thread
-            detected_objects = await loop.run_in_executor(None, self._run_inference, frame.image)
+            detected_objects, img_base64 = await loop.run_in_executor(None, self._run_inference, frame.image)
+
+            # Broadcast visual debug frame
+            if img_base64:
+                # Fix: Import web_server locally to avoid NameError and circular dependencies
+                try:
+                    import web_server
+                    await web_server.manager.broadcast(json.dumps({
+                        "type": "vision_debug",
+                        "data": img_base64
+                    }))
+                except Exception as ws_err:
+                     logging.error(f"Failed to broadcast vision frame: {ws_err}")
+
         except Exception as e:
             logging.error(f"YOLOv8 detection error: {e}")
             detected_objects = set()
@@ -1012,6 +1085,23 @@ async def main():
 
     pipeline_steps = []
 
+    # Pre-initialize TTS services if available, for both Headed and Headless modes
+    # This ensures VR users get audio even if the server has no audio device
+    tts = None
+    websocket_streamer = None
+
+    try:
+        tts_voices = app_config.get("tts_voices", [])
+        if tts_voices:
+            model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
+            tts = PiperTTSService(model_path=model_path)
+            websocket_streamer = WebsocketAudioStreamer(sample_rate=tts.sample_rate)
+            logging.info("TTS and Websocket Audio Streamer initialized.")
+        else:
+            logging.warning("TTS voices not configured in Consul. Audio output will be disabled.")
+    except Exception as e:
+        logging.error(f"Failed to initialize TTS services: {e}")
+
     if audio_device_index is not None:
         logging.info("Audio device detected. Starting audio pipeline.")
         transport_params = LocalAudioTransportParams(
@@ -1036,24 +1126,32 @@ async def main():
         else:
             raise RuntimeError(f"STT_SERVICE not configured correctly in Consul. Got '{stt_service_name}'")
 
-        tts_voices = app_config.get("tts_voices", [])
-        if not tts_voices:
-            raise RuntimeError("TTS voices not configured in Consul.")
-        model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
-        tts = PiperTTSService(model_path=model_path)
-
         pipeline_steps.extend([
             transport.input(),
             stt,
             UILogger(sender="user"),
             twin,
-            UILogger(sender="agent"),
-            tts,
-            transport.output()
+            UILogger(sender="agent")
         ])
+
+        if tts:
+             pipeline_steps.append(tts)
+             if websocket_streamer:
+                 pipeline_steps.append(websocket_streamer)
+
+        pipeline_steps.append(transport.output())
+
     else:
         logging.warning("No audio device found. Starting in headless mode (no audio source, no STT).")
+        # In headless mode (e.g. Docker), we inject text from the UI, process it,
+        # generate TTS, and stream it back to the UI.
         pipeline_steps.append(twin)
+        pipeline_steps.append(UILogger(sender="agent"))
+
+        if tts:
+             pipeline_steps.append(tts)
+             if websocket_streamer:
+                 pipeline_steps.append(websocket_streamer)
 
     pipeline_steps.insert(0, text_injector)
 
