@@ -20,3 +20,5 @@
   community.general.nomad_job:
     content: "{{ lookup('template', 'memory-graph.nomad.j2') }}"
     state: present
+    host: localhost
+    port: 4646
