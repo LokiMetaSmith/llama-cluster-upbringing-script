@@ -23,6 +23,9 @@
     - role: memory_service
       tags:
         - memory_service
+    - role: memory_graph
+      tags:
+        - memory_graph
     - role: pipecatapp
       tags:
         - pipecatapp

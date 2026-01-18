@@ -1,5 +1,16 @@
 import time
 import threading
+import asyncio
+import logging
+
+try:
+    from mcp import ClientSession
+    from mcp.client.sse import sse_client
+    MCP_AVAILABLE = True
+except ImportError:
+    MCP_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 class ExpertTracker:
     """A thread-safe class to track performance and health metrics for LLM experts.
@@ -8,14 +19,19 @@ class ExpertTracker:
     and performance metrics like latency and success/failure rates. This data
     is used by the coordinator LLM to make intelligent routing decisions.
 
+    It also supports integration with a Memory Graph via MCP to track relationships
+    and dependencies.
+
     Attributes:
         experts (dict): A dictionary to store the state of each expert.
         lock (threading.Lock): A lock to ensure thread-safe updates to the experts dict.
+        memory_url (str): The URL of the memory-graph service SSE endpoint.
     """
-    def __init__(self):
+    def __init__(self, memory_url: str = "http://memory-graph.service.consul:8000/sse"):
         """Initializes the ExpertTracker."""
         self.experts = {}
         self.lock = threading.Lock()
+        self.memory_url = memory_url
 
     def register_expert(self, name: str, expert_type: str):
         """Registers a new expert to be tracked.
@@ -83,3 +99,29 @@ class ExpertTracker:
                     f"  - Average Latency: {data['average_latency']:.2f}s\n"
                 )
             return metrics_string
+
+    async def connect_and_store_relation(self, source: str, relation: str, target: str, context: str = ""):
+        """
+        Connects to the Memory Graph service and stores a relationship.
+        This is a helper method to demonstrate client integration.
+        """
+        if not MCP_AVAILABLE:
+            logger.warning("MCP library not available. Skipping memory graph update.")
+            return
+
+        try:
+            async with sse_client(self.memory_url) as streams:
+                async with ClientSession(streams[0], streams[1]) as session:
+                    await session.initialize()
+                    # Using the tool name 'create_relationship' which we exposed in server.py
+                    # Note: We exposed 'create_relationship' wrapping handle_create_relationship
+                    # The args are: from_memory_id, to_memory_id, relationship_type
+                    # Adapting the generic signature to match
+                    result = await session.call_tool("create_relationship", {
+                        "from_memory_id": source,
+                        "to_memory_id": target,
+                        "relationship_type": relation
+                    })
+                    logger.info(f"Stored relation in memory graph: {result}")
+        except Exception as e:
+            logger.error(f"Failed to store relation in memory graph: {e}")
