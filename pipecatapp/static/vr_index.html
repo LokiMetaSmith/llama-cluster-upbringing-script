@@ -260,6 +260,70 @@
             }
         });
 
+        // 5. Focus Mode / Blackout Mode Logic
+        function enterFocusMode() {
+            // Find the element currently intersected by the cursor
+            const scene = document.querySelector('a-scene');
+            // We assume the cursor is the one in the rig
+            // But getting the intersected element from raycaster component is easier via event
+            // However, we are not in an event handler here.
+            // Let's rely on finding the raycaster component.
+
+            const raycasterEls = document.querySelectorAll('[raycaster]');
+            let targetedEl = null;
+
+            // Simple check: iterate raycasters (hands or gaze)
+            for (let i = 0; i < raycasterEls.length; i++) {
+                const raycaster = raycasterEls[i].components.raycaster;
+                if (raycaster && raycaster.intersectedEls.length > 0) {
+                    targetedEl = raycaster.intersectedEls[0]; // First hit
+                    break;
+                }
+            }
+
+            if (!targetedEl) {
+                updateLog("No panel selected for Focus Mode.");
+                return;
+            }
+
+            updateLog("Entering Focus Mode.");
+
+            // Dim all entities with class .clickable
+            const clickables = document.querySelectorAll('.clickable, a-plane');
+            clickables.forEach(el => {
+                if (el !== targetedEl && !targetedEl.contains(el) && !el.contains(targetedEl)) {
+                   // Store original opacity if not present
+                   if (!el.hasAttribute('data-orig-opacity')) {
+                       const material = el.getAttribute('material') || {};
+                       el.setAttribute('data-orig-opacity', material.opacity || 1.0);
+                   }
+                   el.setAttribute('opacity', '0.1');
+
+                   // Recursively hide text
+                   el.querySelectorAll('a-text').forEach(text => {
+                       text.setAttribute('visible', 'false');
+                   });
+                }
+            });
+        }
+
+        function exitFocusMode() {
+            updateLog("Exiting Focus Mode.");
+            const clickables = document.querySelectorAll('.clickable, a-plane');
+            clickables.forEach(el => {
+                if (el.hasAttribute('data-orig-opacity')) {
+                    const op = el.getAttribute('data-orig-opacity');
+                    el.setAttribute('opacity', op);
+                } else {
+                    el.setAttribute('opacity', '0.8'); // Default fallback
+                }
+                 // Restore text visibility
+                 el.querySelectorAll('a-text').forEach(text => {
+                    text.setAttribute('visible', 'true');
+                });
+            });
+        }
+
     </script>
 </body>
 </html>
