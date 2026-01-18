@@ -8,7 +8,7 @@
   - When triggered ("Computer, focus"), dim all A-Frame entities except the one currently looked at.
   - Use `raycaster` intersection to determine the active panel.
 
-- [ ] **VR Keyboard/Input**: Add a virtual keyboard for text input when voice is not suitable.
+- [x] **VR Keyboard/Input**: Add a virtual keyboard for text input when voice is not suitable.
   - Look into `aframe-keyboard` or similar components.
 
 - [ ] **Performance Optimization**:
