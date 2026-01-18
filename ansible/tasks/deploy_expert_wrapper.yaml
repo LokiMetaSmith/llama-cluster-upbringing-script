@@ -20,20 +20,6 @@
       register: expert_job_run
 
   rescue:
-    - name: "Expert {{ expert_name }} : Debug Job Run Failure"
-      ansible.builtin.debug:
-        var: expert_job_run
-      when: expert_job_run is defined
-
-    - name: "Expert {{ expert_name }} : Debug Nomad File Content"
-      ansible.builtin.command: "cat /tmp/expert-{{ expert_name }}.nomad"
-      register: expert_nomad_file_content
-      changed_when: false
-
-    - name: "Expert {{ expert_name }} : Show Nomad File"
-      ansible.builtin.debug:
-        var: expert_nomad_file_content.stdout
-
     - name: "Expert {{ expert_name }} : Get job status"
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose expert-{{ expert_name }}
@@ -94,4 +80,4 @@
 
     - name: "Expert {{ expert_name }} : Fail after debugging"
       ansible.builtin.fail:
-        msg: "Expert {{ expert_name }} job failed to start. Check the debug output above for details."
+        msg: "Expert {{ expert_name }} job failed to start."
