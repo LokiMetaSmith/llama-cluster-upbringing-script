@@ -1,0 +1,36 @@
+job "memory-graph" {
+  datacenters = ["dc1"]
+  type = "service"
+
+  group "memory" {
+    network {
+      port "http" { to = 8000 }
+    }
+
+    task "server" {
+      driver = "docker"
+      config {
+        image = "memory-graph-service:latest"
+        ports = ["http"]
+        # Mount volume for SQLite persistence
+        volumes = ["/opt/pipecat/data/memory:/data"]
+      }
+
+      env {
+        MEMORY_DB_PATH = "/data/memory.db"
+      }
+
+      service {
+        name = "memory-graph"
+        port = "http"
+        tags = ["mcp", "memory"]
+        check {
+          type     = "http"
+          path     = "/sse"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}
