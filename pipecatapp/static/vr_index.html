@@ -91,7 +91,8 @@
 
         <!-- Left Panel: Agent Coder Logs -->
         <a-entity position="-2.5 2 -1" rotation="0 45 0">
-            <a-plane width="2" height="3" color="#1a1a1a" opacity="0.8">
+            <a-plane id="agent-panel" width="2" height="3" color="#1a1a1a" opacity="0.8"
+                     sound="src: #; position: true; refDistance: 1; rolloffFactor: 1">
                  <a-text value="Agent: Coder" align="center" position="0 1.4 0.01" width="4"></a-text>
                  <a-text id="agent-log-text" value="Waiting for logs..." align="left" anchor="center" position="0 0 0.01" width="1.8" height="2.5" wrap-count="30"></a-text>
             </a-plane>
@@ -161,6 +162,19 @@
                     visionDisplay.setAttribute('src', src);
                     visionStatus.setAttribute('value', 'Live Feed');
                 }
+                else if (msg.type === 'audio') {
+                    // msg.data is base64 encoded wav
+                    const src = `data:audio/wav;base64,${msg.data}`;
+                    const panel = document.querySelector('#agent-panel');
+                    // Play sound spatially
+                    // We can either create a temporary Audio object or set the entity sound component
+                    // For proper spatial audio in A-Frame, we should use the sound component.
+                    // However, we need to ensure previous sound is done or overlapping.
+
+                    // Simple approach: Update component and play
+                    panel.setAttribute('sound', 'src', src);
+                    panel.components.sound.playSound();
+                }
                 else if (msg.type === 'log') {
                     // Update log panel
                     // We only show last 10 lines to avoid texture overflow
@@ -220,6 +234,14 @@
                          const transcript = event.results[i][0].transcript.trim();
                          console.log("Voice Command:", transcript);
                          updateLog(`[VOICE] ${transcript}`);
+
+                         // Blackout / Focus Mode Logic
+                         const lower = transcript.toLowerCase();
+                         if (lower.includes("focus") || lower.includes("blackout")) {
+                             enterFocusMode();
+                         } else if (lower.includes("restore") || lower.includes("normal mode")) {
+                             exitFocusMode();
+                         }
 
                          // Send to Backend
                          if (ws.readyState === WebSocket.OPEN) {

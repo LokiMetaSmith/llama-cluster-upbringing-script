@@ -1,10 +1,10 @@
 # VR Mission Control TODO
 
-- [ ] **Spatial Audio Node**: Implement a LiteGraph node that plays audio from a 3D location corresponding to the agent.
+- [x] **Spatial Audio Node**: Implement a LiteGraph node that plays audio from a 3D location corresponding to the agent.
   - Requires backend metadata about which "agent" is speaking.
   - Requires frontend `a-sound` entity management.
 
-- [ ] **Blackout Mode**: Implement a "Focus Mode" voice command.
+- [x] **Blackout Mode**: Implement a "Focus Mode" voice command.
   - When triggered ("Computer, focus"), dim all A-Frame entities except the one currently looked at.
   - Use `raycaster` intersection to determine the active panel.
 
