@@ -62,7 +62,17 @@ def test_cluster_metrics(mock_get):
         }
     }
 
-    mock_get.side_effect = [mock_cpu_resp, mock_mem_resp]
+    # Bolt ⚡ Update: Handle concurrent requests by checking query params
+    async def side_effect(*args, **kwargs):
+        params = kwargs.get("params", {})
+        query = params.get("query", "")
+        if "cpu" in query:
+            return mock_cpu_resp
+        elif "memory" in query:
+            return mock_mem_resp
+        return MagicMock(status_code=404)
+
+    mock_get.side_effect = side_effect
 
     response = client.get("/api/cluster/metrics")
     assert response.status_code == 200

@@ -99,6 +99,8 @@ class ServiceDiscoveryCache:
 service_cache = ServiceDiscoveryCache(ttl=30)
 # Reusable HTTP client for service discovery
 service_discovery_client = httpx.AsyncClient(timeout=2.0)
+# Reusable HTTP client for metrics
+metrics_client = httpx.AsyncClient(timeout=2.0)
 
 class WebSocketManager:
     """Manages active WebSocket connections.
@@ -237,29 +239,35 @@ async def get_cluster_metrics():
     services = []
 
     try:
-        async with httpx.AsyncClient() as client:
-            # CPU Query (rate over 1m)
-            cpu_query = 'sum by (task) (rate(nomad_client_allocs_cpu_total_ticks[1m]))'
-            cpu_resp = await client.get(f"{prom_url}/api/v1/query", params={'query': cpu_query}, timeout=2.0)
+        # Bolt ⚡ Optimization: Reuse client and parallelize requests
+        client = metrics_client
 
-            # Memory Query
-            mem_query = 'sum by (task) (nomad_client_allocs_memory_usage)'
-            mem_resp = await client.get(f"{prom_url}/api/v1/query", params={'query': mem_query}, timeout=2.0)
+        # CPU Query (rate over 1m)
+        cpu_query = 'sum by (task) (rate(nomad_client_allocs_cpu_total_ticks[1m]))'
 
-            cpu_data = {}
-            if cpu_resp.status_code == 200:
-                data = cpu_resp.json()
-                if data.get('status') == 'success':
-                    results = data.get('data', {}).get('result', [])
-                    for res in results:
-                        task = res['metric'].get('task')
-                        # Prometheus value is [timestamp, "value"]
-                        try:
-                            val = float(res['value'][1])
-                            if task:
-                                cpu_data[task] = val
-                        except (ValueError, IndexError):
-                            continue
+        # Memory Query
+        mem_query = 'sum by (task) (nomad_client_allocs_memory_usage)'
+
+        # Execute in parallel
+        cpu_resp, mem_resp = await asyncio.gather(
+            client.get(f"{prom_url}/api/v1/query", params={'query': cpu_query}, timeout=2.0),
+            client.get(f"{prom_url}/api/v1/query", params={'query': mem_query}, timeout=2.0)
+        )
+
+        cpu_data = {}
+        if cpu_resp.status_code == 200:
+            data = cpu_resp.json()
+            if data.get('status') == 'success':
+                results = data.get('data', {}).get('result', [])
+                for res in results:
+                    task = res['metric'].get('task')
+                    # Prometheus value is [timestamp, "value"]
+                    try:
+                        val = float(res['value'][1])
+                        if task:
+                            cpu_data[task] = val
+                    except (ValueError, IndexError):
+                        continue
 
             mem_data = {}
             if mem_resp.status_code == 200:
