@@ -22,3 +22,4 @@
     state: present
     host: localhost
     port: 4646
+    use_ssl: false
