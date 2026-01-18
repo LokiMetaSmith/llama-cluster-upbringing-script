@@ -151,6 +151,15 @@
             </div>
         </a-entity>
 
+        <!-- Help Panel -->
+        <a-entity position="0 2 2" rotation="0 180 0">
+            <a-plane width="2.5" height="1.5" color="#1a1a1a" opacity="0.8">
+                <a-text value="Help & Commands" align="center" position="0 0.5 0.01" width="4" color="#00ff00"></a-text>
+                <a-text align="left" position="-1.1 0 0.01" width="3.5" wrap-count="30"
+                        value="Voice Commands:\n- 'Focus' / 'Blackout': Dim surroundings\n- 'Restore' / 'Normal Mode': Restore view\n- 'Navigate to Server Room'\n\nControls:\n- Click to interact\n- Use virtual keyboard for text"></a-text>
+            </a-plane>
+        </a-entity>
+
         <!-- Floor -->
         <a-plane rotation="-90 0 0" width="30" height="30" src="#floor-texture" repeat="10 10"></a-plane>
 
@@ -218,6 +227,11 @@
             updateLog("Connected to Backend.");
         };
 
+        // Audio Context for spatial audio
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+        let nextStartTime = 0;
+
         ws.onmessage = (event) => {
             try {
                 const msg = JSON.parse(event.data);
@@ -229,17 +243,46 @@
                     visionStatus.setAttribute('value', 'Live Feed');
                 }
                 else if (msg.type === 'audio') {
-                    // msg.data is base64 encoded wav
-                    const src = `data:audio/wav;base64,${msg.data}`;
-                    const panel = document.querySelector('#agent-panel');
-                    // Play sound spatially
-                    // We can either create a temporary Audio object or set the entity sound component
-                    // For proper spatial audio in A-Frame, we should use the sound component.
-                    // However, we need to ensure previous sound is done or overlapping.
+                    // msg.data is base64 encoded wav (header included)
+                    // Decode base64 to ArrayBuffer
+                    const binaryString = window.atob(msg.data);
+                    const len = binaryString.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
 
-                    // Simple approach: Update component and play
-                    panel.setAttribute('sound', 'src', src);
-                    panel.components.sound.playSound();
+                    // Decode Audio Data
+                    audioCtx.decodeAudioData(bytes.buffer, (buffer) => {
+                        const source = audioCtx.createBufferSource();
+                        source.buffer = buffer;
+
+                        // Simple Spatial Audio: Use a PannerNode
+                        const panner = audioCtx.createPanner();
+                        panner.panningModel = 'HRTF';
+                        panner.distanceModel = 'inverse';
+                        panner.refDistance = 1;
+                        panner.maxDistance = 10000;
+                        panner.rolloffFactor = 1;
+                        panner.coneInnerAngle = 360;
+                        panner.coneOuterAngle = 0;
+                        panner.coneOuterGain = 0;
+
+                        // Set position to Agent Panel (hardcoded for now to match entity)
+                        // Agent panel is at -2.5, 2, -1
+                        panner.setPosition(-2.5, 2, -1);
+
+                        source.connect(panner);
+                        panner.connect(audioCtx.destination);
+
+                        // Schedule
+                        if (nextStartTime < audioCtx.currentTime) {
+                            nextStartTime = audioCtx.currentTime;
+                        }
+                        source.start(nextStartTime);
+                        nextStartTime += buffer.duration;
+
+                    }, (e) => console.error("Error decoding audio data: " + e.err));
                 }
                 else if (msg.type === 'log') {
                     // Update log panel
