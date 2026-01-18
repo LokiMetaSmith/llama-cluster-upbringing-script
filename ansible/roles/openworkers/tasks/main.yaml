@@ -9,7 +9,7 @@
   notify: Run OpenWorkers jobs
 
 - name: Run OpenWorkers bootstrap job
-  nomad_job:
+  community.general.nomad_job:
     host: "{{ advertise_ip }}"
     state: present
     name: openworkers-bootstrap
@@ -17,7 +17,7 @@
   when: openworkers_enabled | bool
 
 - name: Run OpenWorkers services
-  nomad_job:
+  community.general.nomad_job:
     host: "{{ advertise_ip }}"
     state: present
     name: "{{ item }}"
