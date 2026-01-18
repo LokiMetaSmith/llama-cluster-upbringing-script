@@ -1,5 +1,6 @@
 import paramiko
 import os
+import logging
 
 class SSH_Tool:
     """A tool for executing commands on a remote machine via SSH.
@@ -37,7 +38,14 @@ class SSH_Tool:
                  the command fails or an exception occurs.
         """
         client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        # Security Fix: Sentinel - Prevent MITM attacks
+        # Load system host keys (e.g. from ~/.ssh/known_hosts)
+        client.load_system_host_keys()
+
+        # Use RejectPolicy to prevent connecting to unknown hosts automatically.
+        # Users must add the host to known_hosts manually or verify it elsewhere.
+        client.set_missing_host_key_policy(paramiko.RejectPolicy())
 
         try:
             if key_filename:
@@ -56,6 +64,8 @@ class SSH_Tool:
                 return f"Error executing command: {error}"
             return output
 
+        except paramiko.SSHException as e:
+            return f"SSH Error: {e}. If 'Server not found in known_hosts', please add the server's public key to your local known_hosts file."
         except Exception as e:
             return f"An error occurred: {e}"
         finally:
