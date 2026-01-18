@@ -173,9 +173,17 @@
         if (typeof WorkflowEditor !== 'undefined') {
             WorkflowEditor.init("mycanvas", { skipResize: true });
 
-            // Force a draw
+            // Performance Optimization: Throttle draws to 30 FPS to save VR resources
+            let lastDraw = 0;
+            const FPS_LIMIT = 30;
+            const INTERVAL = 1000 / FPS_LIMIT;
+
             WorkflowEditor.graph.onAfterExecute = function() {
-                WorkflowEditor.canvas.draw(true);
+                const now = Date.now();
+                if (now - lastDraw > INTERVAL) {
+                    WorkflowEditor.canvas.draw(true);
+                    lastDraw = now;
+                }
             };
             WorkflowEditor.graph.start();
         } else {
