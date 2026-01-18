@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pipecat VR Mission Control</title>
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- HTML Embed for projecting DOM into VR -->
+    <script src="https://supereggbert.github.io/aframe-htmlembed-component/dist/build.js"></script>
+    <!-- LiteGraph -->
+    <link rel="stylesheet" type="text/css" href="css/litegraph.css">
+    <script src="js/litegraph.js"></script>
+    <!-- Custom Editor Logic -->
+    <script src="js/editor.js"></script>
+
+    <style>
+        /* Hide the 2D overlay elements initially, we will project them */
+        body { margin: 0; background-color: #000; overflow: hidden; }
+
+        /* The canvas needs to be rendered but not visible in 2D to save performance/avoid clutter */
+        #main-canvas-container {
+            width: 1024px;
+            height: 1024px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1; /* Hide behind scene */
+            pointer-events: none; /* Let clicks pass through if needed, though VR handles clicks via raycaster */
+        }
+
+        #mycanvas {
+            background-color: #111;
+        }
+
+        /* Styles for embedded content */
+        .embedded-ui {
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 20px;
+            width: 500px;
+            height: 400px;
+            font-family: monospace;
+            overflow-y: auto;
+            border: 2px solid #00ff00;
+        }
+
+        .agent-log {
+            border-bottom: 1px solid #333;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hidden Container for LiteGraph Canvas -->
+    <div id="main-canvas-container">
+        <canvas id="mycanvas" width="1024" height="1024"></canvas>
+    </div>
+
+    <a-scene background="color: #050505" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+
+        <a-assets>
+            <img id="floor-texture" src="https://cdn.aframe.io/a-painter/images/floor.jpg">
+            <audio id="click-sound" src="https://cdn.aframe.io/360-image-gallery-boilerplate/audio/click.ogg"></audio>
+        </a-assets>
+
+        <!-- Player Rig -->
+        <a-entity id="rig" position="0 0 4">
+            <a-entity camera look-controls wasd-controls position="0 1.6 0">
+                <a-text id="voice-status" value="Mic: OFF" position="0 -0.5 -1"
+                        color="red" align="center" width="2"></a-text>
+                <a-entity position="0 0 -1" geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                          material="color: cyan; shader: flat"
+                          cursor="fuse: false"></a-entity>
+            </a-entity>
+            <!-- Hands -->
+            <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 10"></a-entity>
+            <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 10"></a-entity>
+        </a-entity>
+
+        <!-- Main LiteGraph Screen (Curved) -->
+        <!-- We use htmlembed to make the div interactive, or just use the canvas texture if we don't need DOM interaction -->
+        <!-- htmlembed is great for divs. For canvas, we can just use the canvas as texture. -->
+        <!-- However, LiteGraph handles its own events. htmlembed proxies DOM events. -->
+        <!-- Let's try sticking the canvas inside an htmlembed div as per the plan -->
+        <a-entity position="0 2 -2" class="clickable" htmlembed="width:1024; height:1024;">
+            <div id="vr-graph-container" style="width: 1024px; height: 1024px; background: #222;">
+                <!-- Canvas will be moved here by JS -->
+            </div>
+        </a-entity>
+
+        <!-- Left Panel: Agent Coder Logs -->
+        <a-entity position="-2.5 2 -1" rotation="0 45 0">
+            <a-plane width="2" height="3" color="#1a1a1a" opacity="0.8">
+                 <a-text value="Agent: Coder" align="center" position="0 1.4 0.01" width="4"></a-text>
+                 <a-text id="agent-log-text" value="Waiting for logs..." align="left" anchor="center" position="0 0 0.01" width="1.8" height="2.5" wrap-count="30"></a-text>
+            </a-plane>
+        </a-entity>
+
+        <!-- Right Panel: Visual Debugger (YOLO) -->
+        <a-entity position="2.5 2 -1" rotation="0 -45 0">
+            <a-plane width="2" height="3" color="#1a1a1a" opacity="0.8">
+                <a-text value="Visual Debugger" align="center" position="0 1.4 0.01" width="4"></a-text>
+                <!-- Image texture will be updated via base64 -->
+                <a-image id="vision-display" position="0 0 0.01" width="1.8" height="1.8" src=""></a-image>
+                <a-text id="vision-status" value="No Signal" position="0 -1.2 0.01" align="center" width="3"></a-text>
+            </a-plane>
+        </a-entity>
+
+        <!-- Floor -->
+        <a-plane rotation="-90 0 0" width="30" height="30" src="#floor-texture" repeat="10 10"></a-plane>
+
+    </a-scene>
+
+    <script>
+        // 1. Initialize LiteGraph
+        // We initialize it on the canvas element, but prevent editor.js from adding window resize listeners
+        // because we want fixed resolution for VR.
+
+        // Move canvas into the VR embed container BEFORE init, or AFTER?
+        // editor.js init does `document.getElementById(containerId)`.
+        // So we move it first.
+        const canvas = document.getElementById("mycanvas");
+        document.getElementById('vr-graph-container').appendChild(canvas);
+
+        // Initialize WorkflowEditor
+        // We ensure WorkflowEditor is available. It is defined in editor.js.
+        // Even if it's not on 'window' explicitly in some environments, checking typeof is safer.
+        if (typeof WorkflowEditor !== 'undefined') {
+            WorkflowEditor.init("mycanvas", { skipResize: true });
+
+            // Force a draw
+            WorkflowEditor.graph.onAfterExecute = function() {
+                WorkflowEditor.canvas.draw(true);
+            };
+            WorkflowEditor.graph.start();
+        } else {
+            console.error("WorkflowEditor not found! Is editor.js loaded?");
+        }
+
+        // 2. WebSocket Connection
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        const agentLogText = document.querySelector('#agent-log-text');
+        const visionDisplay = document.querySelector('#vision-display');
+        const visionStatus = document.querySelector('#vision-status');
+
+        let logs = [];
+
+        ws.onopen = () => {
+            console.log("Connected to Pipecat Agent");
+            updateLog("Connected to Backend.");
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+
+                if (msg.type === 'vision_debug') {
+                    // msg.data is base64 encoded jpeg
+                    const src = `data:image/jpeg;base64,${msg.data}`;
+                    visionDisplay.setAttribute('src', src);
+                    visionStatus.setAttribute('value', 'Live Feed');
+                }
+                else if (msg.type === 'log') {
+                    // Update log panel
+                    // We only show last 10 lines to avoid texture overflow
+                    updateLog(`[SYS] ${msg.data}`);
+                }
+                else if (msg.type === 'agent') {
+                    updateLog(`[AGENT] ${msg.data}`);
+                }
+                else if (msg.type === 'user') {
+                    updateLog(`[YOU] ${msg.data}`);
+                }
+            } catch (e) {
+                console.error("Error parsing WS message", e);
+            }
+        };
+
+        function updateLog(text) {
+            logs.push(text);
+            if (logs.length > 15) logs.shift();
+            agentLogText.setAttribute('value', logs.join('\n'));
+        }
+
+        // 3. Voice Command Integration
+        const voiceStatus = document.querySelector('#voice-status');
+
+        // Fix: Better browser compatibility
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false; // We only want final results to send
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                voiceStatus.setAttribute('value', "Mic: ON");
+                voiceStatus.setAttribute('color', "#00ff00");
+            };
+
+            recognition.onend = () => {
+                // Auto restart
+                voiceStatus.setAttribute('value', "Mic: OFF (Restarting...)");
+                voiceStatus.setAttribute('color', "yellow");
+                recognition.start();
+            };
+
+            recognition.onerror = (event) => {
+                 console.error("Speech Recognition Error", event.error);
+                 voiceStatus.setAttribute('value', "Mic Error: " + event.error);
+                 voiceStatus.setAttribute('color', "red");
+            };
+
+            recognition.onresult = (event) => {
+                // Loop through results
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                         const transcript = event.results[i][0].transcript.trim();
+                         console.log("Voice Command:", transcript);
+                         updateLog(`[VOICE] ${transcript}`);
+
+                         // Send to Backend
+                         if (ws.readyState === WebSocket.OPEN) {
+                             ws.send(JSON.stringify({
+                                 type: "user_message",
+                                 data: transcript
+                             }));
+                         }
+                    }
+                }
+            };
+
+            // Start immediately
+            // Note: Browsers require user interaction to start audio context usually.
+            // In VR, clicking "Enter VR" usually counts, but here we might need a "Start" button overlay.
+            // For now, we try to start.
+            try {
+                recognition.start();
+            } catch(e) {
+                console.warn("Could not start recognition automatically:", e);
+                voiceStatus.setAttribute('value', "Click to Enable Mic");
+
+                // Add click listener to scene to start mic
+                document.querySelector('a-scene').addEventListener('click', () => {
+                    try { recognition.start(); } catch(e){}
+                }, {once:true});
+            }
+
+        } else {
+            voiceStatus.setAttribute('value', "No Web Speech API");
+        }
+
+        // 4. Keyboard Shortcuts for VR debugging
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'v') {
+                // Toggle Vision debug simulated
+                console.log("Simulating vision data...");
+            }
+        });
+
+    </script>
+</body>
+</html>

@@ -8,6 +8,8 @@ import time
 import json
 import io
 import wave
+import base64
+from PIL import Image
 import inspect
 import threading
 
@@ -351,9 +353,26 @@ class YOLOv8Detector(FrameProcessor):
             image: The image data to process.
 
         Returns:
-            set: A set of detected object names.
+            tuple: (set of detected object names, base64_encoded_jpeg_string)
         """
-        return {self.model.names[int(c)] for r in self.model(image) for c in r.boxes.cls}
+        results = self.model(image)
+        detected_objects = {self.model.names[int(c)] for r in results for c in r.boxes.cls}
+
+        # Generate visual debug frame
+        img_base64 = None
+        try:
+            # Plot returns a numpy array (BGR)
+            annotated_frame = results[0].plot()
+            # Convert BGR to RGB
+            rgb_frame = annotated_frame[..., ::-1]
+            pil_img = Image.fromarray(rgb_frame)
+            buffered = io.BytesIO()
+            pil_img.save(buffered, format="JPEG", quality=70)
+            img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        except Exception as e:
+            logging.error(f"Error generating visual debug frame: {e}")
+
+        return detected_objects, img_base64
 
     async def process_frame(self, frame, direction):
         """Processes an image frame to detect objects.
@@ -383,7 +402,20 @@ class YOLOv8Detector(FrameProcessor):
         try:
             loop = asyncio.get_running_loop()
             # Bolt ⚡ Optimization: Run blocking inference in a thread
-            detected_objects = await loop.run_in_executor(None, self._run_inference, frame.image)
+            detected_objects, img_base64 = await loop.run_in_executor(None, self._run_inference, frame.image)
+
+            # Broadcast visual debug frame
+            if img_base64:
+                # Fix: Import web_server locally to avoid NameError and circular dependencies
+                try:
+                    import web_server
+                    await web_server.manager.broadcast(json.dumps({
+                        "type": "vision_debug",
+                        "data": img_base64
+                    }))
+                except Exception as ws_err:
+                     logging.error(f"Failed to broadcast vision frame: {ws_err}")
+
         except Exception as e:
             logging.error(f"YOLOv8 detection error: {e}")
             detected_objects = set()

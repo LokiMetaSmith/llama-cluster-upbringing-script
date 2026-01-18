@@ -11,7 +11,7 @@ const WorkflowEditor = {
         return Object.keys(this.nodeTypes).map(type => "agent/" + type);
     },
 
-    init: function(containerId) {
+    init: function(containerId, options = {}) {
         this.graph = new LGraph();
         this.canvas = new LGraphCanvas(containerId, this.graph);
         this.canvas.allow_searchbox = true; // enable search box with double click
@@ -19,17 +19,19 @@ const WorkflowEditor = {
         // Register custom nodes
         this.registerNodeTypes();
 
-        // Adjust canvas on resize
-        window.addEventListener("resize", () => {
-            const parent = document.getElementById(containerId).parentNode;
-            this.canvas.resize(parent.clientWidth, parent.clientHeight);
-        });
+        if (!options.skipResize) {
+            // Adjust canvas on resize
+            window.addEventListener("resize", () => {
+                const parent = document.getElementById(containerId).parentNode;
+                this.canvas.resize(parent.clientWidth, parent.clientHeight);
+            });
 
-        // Initial resize
-        setTimeout(() => {
-             const parent = document.getElementById(containerId).parentNode;
-             this.canvas.resize(parent.clientWidth, parent.clientHeight);
-        }, 100);
+            // Initial resize
+            setTimeout(() => {
+                 const parent = document.getElementById(containerId).parentNode;
+                 this.canvas.resize(parent.clientWidth, parent.clientHeight);
+            }, 100);
+        }
 
         // Setup Drag and Drop
         this.setupDragAndDrop(containerId);
