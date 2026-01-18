@@ -3,7 +3,9 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install dependencies
-RUN pip install "mcp[cli]" starlette uvicorn memory-graph
+# memorygraphMCP includes the core logic
+# mcp[cli], starlette, uvicorn are needed for the FastMCP wrapper
+RUN pip install "mcp[cli]" starlette uvicorn memorygraphMCP
 
 # Copy the wrapper code
 COPY server.py .

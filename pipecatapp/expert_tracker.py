@@ -113,11 +113,14 @@ class ExpertTracker:
             async with sse_client(self.memory_url) as streams:
                 async with ClientSession(streams[0], streams[1]) as session:
                     await session.initialize()
-                    result = await session.call_tool("store_relation", {
-                        "source": source,
-                        "relation": relation,
-                        "target": target,
-                        "context": context
+                    # Using the tool name 'create_relationship' which we exposed in server.py
+                    # Note: We exposed 'create_relationship' wrapping handle_create_relationship
+                    # The args are: from_memory_id, to_memory_id, relationship_type
+                    # Adapting the generic signature to match
+                    result = await session.call_tool("create_relationship", {
+                        "from_memory_id": source,
+                        "to_memory_id": target,
+                        "relationship_type": relation
                     })
                     logger.info(f"Stored relation in memory graph: {result}")
         except Exception as e:
