@@ -17,6 +17,6 @@
     force_source: true
 
 - name: Deploy memory-graph Nomad job
-  nomad_job:
+  community.general.nomad_job:
     content: "{{ lookup('template', 'memory-graph.nomad.j2') }}"
     state: present
