@@ -154,6 +154,21 @@
         <!-- Floor -->
         <a-plane rotation="-90 0 0" width="30" height="30" src="#floor-texture" repeat="10 10"></a-plane>
 
+        <!-- Room 2: Server Room Visuals -->
+        <a-entity position="10 0 0">
+             <a-text value="Server Room" position="0 2 -2" align="center" width="6"></a-text>
+             <a-box position="-2 1 -2" color="blue" depth="1" height="2" width="1"></a-box>
+             <a-box position="2 1 -2" color="blue" depth="1" height="2" width="1"></a-box>
+             <a-plane rotation="-90 0 0" width="10" height="10" color="#222"></a-plane>
+        </a-entity>
+
+        <!-- Room 3: Chill Zone Visuals -->
+        <a-entity position="-10 0 0">
+             <a-text value="Chill Zone" position="0 2 -2" align="center" width="6"></a-text>
+             <a-sphere position="0 1 -2" radius="0.5" color="purple"></a-sphere>
+             <a-plane rotation="-90 0 0" width="10" height="10" color="#333"></a-plane>
+        </a-entity>
+
     </a-scene>
 
     <script>
@@ -237,10 +252,23 @@
                 else if (msg.type === 'user') {
                     updateLog(`[YOU] ${msg.data}`);
                 }
+                else if (msg.type === 'navigation') {
+                    updateLog(`[NAV] Moving to ${msg.destination}...`);
+                    handleNavigation(msg.coordinates);
+                }
             } catch (e) {
                 console.error("Error parsing WS message", e);
             }
         };
+
+        function handleNavigation(coords) {
+            const rig = document.querySelector('#rig');
+            if (rig && coords) {
+                // Simple teleport
+                rig.setAttribute('position', `${coords.x} ${coords.y} ${coords.z}`);
+                // Could add animation here for smoother transition
+            }
+        }
 
         function updateLog(text) {
             logs.push(text);

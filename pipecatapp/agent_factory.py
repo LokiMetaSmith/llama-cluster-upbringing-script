@@ -27,6 +27,7 @@ from tools.archivist_tool import ArchivistTool
 from tools.opencode_tool import OpencodeTool
 from tools.dependency_scanner_tool import DependencyScannerTool
 from tools.remote_tool_proxy import RemoteToolProxy
+from tools.vr_tool import VRTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -72,6 +73,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
             model_id=config.get("opencode_model", "gpt-4o")
         ),
         "dependency_scanner": DependencyScannerTool(),
+        "vr": VRTool(),
     }
 
     if config.get("use_summarizer", False) and twin_service:

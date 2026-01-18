@@ -14,4 +14,4 @@
 - [x] **Performance Optimization**:
   - The LiteGraph canvas (1024x1024) texture upload can be heavy. Consider lowering resolution or updating less frequently if FPS drops.
 
-- [ ] **Multi-Room Navigation**: Create a node graph to switch between different VR "rooms" or contexts.
+- [x] **Multi-Room Navigation**: Create a node graph to switch between different VR "rooms" or contexts.
