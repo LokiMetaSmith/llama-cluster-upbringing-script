@@ -56,11 +56,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         # Content-Security-Policy: Allow 'self' and inline scripts/styles which are used in index.html
+        # Also allow unpkg.com, aframe.io, and supereggbert.github.io for VR components
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "img-src 'self' data:; "
+            "img-src 'self' data: https://cdn.aframe.io; "
+            "media-src 'self' https://cdn.aframe.io; "
             "style-src 'self' 'unsafe-inline'; "
-            "script-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' https://unpkg.com https://aframe.io https://supereggbert.github.io https://cdn.jsdelivr.net; "
             "connect-src 'self' ws: wss:;"
         )
         return response
@@ -229,6 +231,13 @@ async def get_cluster_ui():
     """Serves the cluster visualization UI."""
     cluster_html_path = os.path.join(static_dir, "cluster.html")
     with open(cluster_html_path) as f:
+        return HTMLResponse(f.read())
+
+@app.get("/cluster_viz", summary="Serve Cluster VR Viz", description="Serves the `cluster_viz.html` file for the 3D cluster visualization UI.", tags=["UI"])
+async def get_cluster_viz():
+    """Serves the 3D cluster visualization UI."""
+    viz_html_path = os.path.join(static_dir, "cluster_viz.html")
+    with open(viz_html_path) as f:
         return HTMLResponse(f.read())
 
 @app.get("/api/cluster/metrics", summary="Get Cluster Metrics", description="Retrieves CPU and Memory metrics for services from Prometheus.", tags=["System"])

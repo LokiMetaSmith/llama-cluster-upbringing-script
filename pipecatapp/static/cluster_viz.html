@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cluster VR Visualization</title>
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- D3 Force 3D -->
+    <script src="https://unpkg.com/d3-force-3d"></script>
+    <!-- A-Frame HTML Embed (Optional, for potential future UI overlay in VR) -->
+    <script src="https://supereggbert.github.io/aframe-htmlembed-component/dist/build.js"></script>
+
+    <style>
+        body { margin: 0; background-color: #000; overflow: hidden; }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #0f0; font-family: monospace; font-size: 24px; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">Connecting to Cluster...</div>
+
+    <a-scene background="color: #050505" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+
+        <a-assets>
+            <img id="floor-texture" src="https://cdn.aframe.io/a-painter/images/floor.jpg">
+            <audio id="ping-sound" src="https://cdn.aframe.io/360-image-gallery-boilerplate/audio/click.ogg"></audio>
+        </a-assets>
+
+        <!-- Player Rig -->
+        <a-entity id="rig" position="0 2 10">
+            <a-camera look-controls wasd-controls>
+                <a-text id="hud-log" value="System: Online" position="0 -0.5 -1" color="#00ff00" width="2" align="center"></a-text>
+            </a-camera>
+            <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 50"></a-entity>
+            <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 50"></a-entity>
+        </a-entity>
+
+        <!-- Floor -->
+        <a-plane rotation="-90 0 0" width="100" height="100" src="#floor-texture" repeat="20 20" color="#333"></a-plane>
+
+        <!-- Container for Graph Nodes -->
+        <a-entity id="graph-container" position="0 0 0"></a-entity>
+
+        <!-- Log Panel Floating in Space -->
+        <a-entity position="-4 3 0" rotation="0 45 0">
+             <a-plane color="#000" opacity="0.7" width="3" height="4">
+                 <a-text value="Live Logs" position="0 1.8 0.1" align="center" color="#fff"></a-text>
+                 <a-text id="log-panel-text" value="Waiting for logs..." position="-1.4 1.5 0.1" width="2.8" align="left" baseline="top" wrap-count="35"></a-text>
+             </a-plane>
+        </a-entity>
+
+        <!-- Legend/Stats Panel -->
+        <a-entity position="4 3 0" rotation="0 -45 0">
+             <a-plane color="#000" opacity="0.7" width="3" height="4">
+                 <a-text value="Cluster Health" position="0 1.8 0.1" align="center" color="#fff"></a-text>
+                 <a-text id="stats-panel-text" value="Loading metrics..." position="-1.4 1.5 0.1" width="2.8" align="left" baseline="top" wrap-count="30"></a-text>
+             </a-plane>
+        </a-entity>
+
+    </a-scene>
+
+    <script>
+        // --- 1. State & Config ---
+        const SCENE_SCALE = 0.1; // Scale down d3 coordinates to VR space
+        const GRAPH_CONTAINER = document.getElementById('graph-container');
+        const LOG_TEXT = document.getElementById('log-panel-text');
+        const STATS_TEXT = document.getElementById('stats-panel-text');
+        const HUD_LOG = document.getElementById('hud-log');
+        const LOADING = document.getElementById('loading');
+
+        let nodes = [];
+        let links = [];
+        let nodeEntities = {}; // Map id -> a-entity
+        let linkEntities = {}; // Map id -> a-entity (lines)
+        let projectiles = [];
+
+        // Architecture Groups defining structure
+        const GROUPS = {
+            'core_infra': { color: '#F1E05A', label: 'Infra' },
+            'app': { color: '#3572A5', label: 'App' },
+            'service': { color: '#D19A66', label: 'Service' },
+            'tools': { color: '#89E051', label: 'Tool' },
+            'mgmt': { color: '#EE0000', label: 'Mgmt' }
+        };
+
+        // --- 2. D3 Force Simulation ---
+        const simulation = d3.forceSimulation()
+            .numDimensions(3)
+            .force('link', d3.forceLink().id(d => d.id).distance(40)) // Default distance
+            .force('charge', d3.forceManyBody().strength(-100))      // Repulsion
+            .force('center', d3.forceCenter(0, 50, 0))               // Center slightly up
+            .force('y', d3.forceY(20).strength(0.1));                // Keep somewhat grounded
+
+        simulation.on('tick', () => {
+            // Update A-Frame Entities positions
+            nodes.forEach(node => {
+                const el = nodeEntities[node.id];
+                if (el) {
+                    // Smooth lerp could go here, but direct assignment is faster for now
+                    el.object3D.position.set(node.x * SCENE_SCALE, Math.max(0.5, node.y * SCENE_SCALE), node.z * SCENE_SCALE);
+                }
+            });
+
+            links.forEach((link, idx) => {
+                const line = linkEntities[idx];
+                if (line) {
+                    const start = { x: link.source.x * SCENE_SCALE, y: link.source.y * SCENE_SCALE, z: link.source.z * SCENE_SCALE };
+                    const end = { x: link.target.x * SCENE_SCALE, y: link.target.y * SCENE_SCALE, z: link.target.z * SCENE_SCALE };
+
+                    line.setAttribute('line', {
+                        start: start,
+                        end: end,
+                        color: '#555'
+                    });
+                }
+            });
+        });
+
+        // --- 3. Data Fetching & Graph Building ---
+        async function updateGraph() {
+            try {
+                const res = await fetch('/api/cluster/metrics');
+                if (!res.ok) return;
+                const metrics = await res.json();
+
+                // Construct Nodes from Metrics
+                let newNodes = [];
+                let newLinks = [];
+
+                // Add a central hub "Conductor" if not present
+                // We'll use 'pipecat_app' as the main hub or create a virtual one
+                // Check if 'pipecat_app' exists in metrics, if not add it manually for structure
+                let appNodeExists = metrics.find(m => m.id.includes('pipecat') || m.id === 'pipecat_app');
+
+                // Helper to classify
+                const classify = (id) => {
+                    if (id.includes('nomad') || id.includes('consul')) return 'core_infra';
+                    if (id.includes('pipecat')) return 'app';
+                    if (id.includes('tool')) return 'tools';
+                    return 'service';
+                };
+
+                metrics.forEach(m => {
+                    // Update or Add Node
+                    let existing = nodes.find(n => n.id === m.id);
+                    if (!existing) {
+                        existing = {
+                            id: m.id,
+                            group: classify(m.id),
+                            cpu: m.cpu,
+                            mem: m.mem,
+                            // Initial random pos
+                            x: (Math.random()-0.5)*100,
+                            y: (Math.random())*50,
+                            z: (Math.random()-0.5)*100
+                        };
+                        nodes.push(existing);
+                        createNodeEntity(existing);
+                    } else {
+                        existing.cpu = m.cpu;
+                        existing.mem = m.mem;
+                        updateNodeVisuals(existing);
+                    }
+                });
+
+                // Update Links (Naive Topology: All -> App/Infra)
+                // We connect everything to a central point to keep them together,
+                // or use a structured approach if we know the topology.
+                // Let's connect all 'service'/'tool' to 'app', and 'app' to 'infra'.
+
+                const appNodes = nodes.filter(n => n.group === 'app');
+                const infraNodes = nodes.filter(n => n.group === 'core_infra');
+
+                nodes.forEach(n => {
+                    if (n.group !== 'app' && n.group !== 'core_infra') {
+                        // Connect to nearest app node or random app node
+                        if (appNodes.length > 0) {
+                            addLink(n, appNodes[0]);
+                        } else if (infraNodes.length > 0) {
+                            addLink(n, infraNodes[0]);
+                        }
+                    }
+                    if (n.group === 'app') {
+                        // Connect to infra
+                        if (infraNodes.length > 0) {
+                            addLink(n, infraNodes[0]);
+                        }
+                    }
+                });
+
+                // Restart simulation with new data
+                simulation.nodes(nodes);
+                simulation.force('link').links(links);
+                simulation.alpha(0.3).restart();
+
+                updateStatsPanel(metrics);
+                LOADING.style.display = 'none';
+
+            } catch (e) {
+                console.error("Graph Update Error", e);
+            }
+        }
+
+        function addLink(source, target) {
+            // Check if link exists
+            const exists = links.find(l => (l.source.id === source.id && l.target.id === target.id) || (l.source.id === target.id && l.target.id === source.id));
+            if (!exists) {
+                const link = { source: source.id, target: target.id }; // d3 will resolve to objects
+                links.push(link);
+                createLinkEntity(links.length - 1);
+            }
+        }
+
+        function createNodeEntity(node) {
+            const el = document.createElement('a-box');
+            el.setAttribute('id', `node-${node.id}`);
+            el.setAttribute('class', 'clickable');
+            el.setAttribute('color', GROUPS[node.group].color);
+            el.setAttribute('width', 1);
+            el.setAttribute('depth', 1);
+            // Height based on Mem? Start default
+            el.setAttribute('height', 1);
+            el.setAttribute('shadow', '');
+
+            // Label
+            const text = document.createElement('a-text');
+            text.setAttribute('value', node.id);
+            text.setAttribute('align', 'center');
+            text.setAttribute('position', '0 1.2 0');
+            text.setAttribute('side', 'double');
+            text.setAttribute('scale', '2 2 2');
+            el.appendChild(text);
+
+            GRAPH_CONTAINER.appendChild(el);
+            nodeEntities[node.id] = el;
+
+            // Interaction
+            el.addEventListener('click', () => {
+                HUD_LOG.setAttribute('value', `Selected: ${node.id}`);
+            });
+            // Make Draggable? (Simplified: Just log for now, full drag logic is complex in vanilla A-Frame without extra components)
+        }
+
+        function updateNodeVisuals(node) {
+            const el = nodeEntities[node.id];
+            if (!el) return;
+
+            // Height = Mem (base 1 + mem / 100MB)
+            const memMB = (node.mem / (1024*1024));
+            const height = 1 + (memMB / 500);
+            el.setAttribute('height', Math.min(height, 10)); // Cap at 10
+
+            // Color/Pulse = CPU
+            // We can change opacity or color brightness
+            const cpu = node.cpu || 0;
+            if (cpu > 80) {
+                el.setAttribute('color', '#ff0000'); // Hot!
+            } else if (cpu > 50) {
+                el.setAttribute('color', '#ff8800'); // Warm
+            } else {
+                el.setAttribute('color', GROUPS[node.group].color);
+            }
+        }
+
+        function createLinkEntity(idx) {
+            const el = document.createElement('a-entity');
+            el.setAttribute('line', 'color: #555; opacity: 0.5');
+            GRAPH_CONTAINER.appendChild(el);
+            linkEntities[idx] = el;
+        }
+
+        // --- 4. Projectiles (Traffic Simulation) ---
+        function spawnProjectile(sourceId, targetId) {
+            const sourceEl = nodeEntities[sourceId];
+            const targetEl = nodeEntities[targetId];
+            if (!sourceEl || !targetEl) return;
+
+            const sphere = document.createElement('a-sphere');
+            sphere.setAttribute('radius', 0.2);
+            sphere.setAttribute('color', '#00ffff');
+            sphere.setAttribute('shader', 'flat');
+            GRAPH_CONTAINER.appendChild(sphere);
+
+            // Animation data
+            const start = sourceEl.object3D.position.clone();
+            const end = targetEl.object3D.position.clone();
+
+            // Simple animation loop
+            let progress = 0;
+            const speed = 0.05;
+
+            const animateProjectile = () => {
+                progress += speed;
+                if (progress >= 1) {
+                    sphere.parentNode.removeChild(sphere);
+                    return;
+                }
+                const pos = new THREE.Vector3().lerpVectors(start, end, progress);
+                sphere.object3D.position.copy(pos);
+                requestAnimationFrame(animateProjectile);
+            };
+            animateProjectile();
+        }
+
+        function randomTraffic() {
+            // Pick random link and spawn projectile
+            if (links.length > 0) {
+                const link = links[Math.floor(Math.random() * links.length)];
+                // D3 resolves source/target to objects, so use .id
+                spawnProjectile(link.source.id, link.target.id);
+            }
+        }
+        setInterval(randomTraffic, 500); // Constant background chatter
+
+        // --- 5. WebSocket & Stats ---
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
+        let logs = [];
+
+        ws.onopen = () => {
+            console.log("WS Connected");
+            HUD_LOG.setAttribute('value', "System: Connected");
+        };
+
+        ws.onmessage = (e) => {
+            const msg = JSON.parse(e.data);
+            if (msg.type === 'log' || msg.type === 'agent' || msg.type === 'user') {
+                const text = `[${msg.type.toUpperCase()}] ${msg.data || msg.message}`;
+                logs.push(text);
+                if (logs.length > 15) logs.shift();
+                LOG_TEXT.setAttribute('value', logs.join('\n'));
+
+                // Trigger a projectile from App to somewhere if log indicates activity?
+                // Just random burst for now
+                randomTraffic();
+            }
+        };
+
+        function updateStatsPanel(metrics) {
+            let text = "Active Nodes: " + metrics.length + "\n\n";
+            metrics.forEach(m => {
+                text += `${m.id.substring(0, 12)}... \nCPU: ${(m.cpu*100).toFixed(0)}% MEM: ${(m.mem/1024/1024).toFixed(0)}MB\n\n`;
+            });
+            STATS_TEXT.setAttribute('value', text);
+        }
+
+        // --- 6. Init ---
+        setInterval(updateGraph, 2000); // Poll metrics
+        updateGraph(); // Initial fetch
+
+    </script>
+</body>
+</html>
