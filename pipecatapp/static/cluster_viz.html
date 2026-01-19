@@ -6,20 +6,44 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <!-- D3 Force 3D -->
     <script src="https://unpkg.com/d3-force-3d"></script>
-    <!-- A-Frame HTML Embed (Optional, for potential future UI overlay in VR) -->
+    <!-- HTML Embed -->
     <script src="https://supereggbert.github.io/aframe-htmlembed-component/dist/build.js"></script>
+    <!-- LiteGraph -->
+    <link rel="stylesheet" type="text/css" href="css/litegraph.css">
+    <script src="js/litegraph.js"></script>
+    <!-- Custom Editor Logic -->
+    <script src="js/editor.js"></script>
 
     <style>
         body { margin: 0; background-color: #000; overflow: hidden; }
         #loading {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             color: #0f0; font-family: monospace; font-size: 24px; pointer-events: none;
+            z-index: 999;
+        }
+        /* Hidden Container for LiteGraph Canvas */
+        #main-canvas-container {
+            width: 1024px;
+            height: 1024px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+        #mycanvas {
+            background-color: #111;
         }
     </style>
 </head>
 <body>
 
     <div id="loading">Connecting to Cluster...</div>
+
+    <!-- Hidden Container for LiteGraph Canvas -->
+    <div id="main-canvas-container">
+        <canvas id="mycanvas" width="1024" height="1024"></canvas>
+    </div>
 
     <a-scene background="color: #050505" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
 
@@ -31,7 +55,7 @@
         <!-- Player Rig -->
         <a-entity id="rig" position="0 2 10">
             <a-camera look-controls wasd-controls>
-                <a-text id="hud-log" value="System: Online" position="0 -0.5 -1" color="#00ff00" width="2" align="center"></a-text>
+                <a-text id="hud-log" value="System: Initializing..." position="0 -0.5 -1" color="#00ff00" width="2" align="center"></a-text>
             </a-camera>
             <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 50"></a-entity>
             <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 50"></a-entity>
@@ -43,7 +67,7 @@
         <!-- Container for Graph Nodes -->
         <a-entity id="graph-container" position="0 0 0"></a-entity>
 
-        <!-- Log Panel Floating in Space -->
+        <!-- Log Panel -->
         <a-entity position="-4 3 0" rotation="0 45 0">
              <a-plane color="#000" opacity="0.7" width="3" height="4">
                  <a-text value="Live Logs" position="0 1.8 0.1" align="center" color="#fff"></a-text>
@@ -51,12 +75,22 @@
              </a-plane>
         </a-entity>
 
-        <!-- Legend/Stats Panel -->
+        <!-- Stats Panel -->
         <a-entity position="4 3 0" rotation="0 -45 0">
              <a-plane color="#000" opacity="0.7" width="3" height="4">
                  <a-text value="Cluster Health" position="0 1.8 0.1" align="center" color="#fff"></a-text>
                  <a-text id="stats-panel-text" value="Loading metrics..." position="-1.4 1.5 0.1" width="2.8" align="left" baseline="top" wrap-count="30"></a-text>
              </a-plane>
+        </a-entity>
+
+        <!-- ComfyUI / Workflow Editor (To the Left) -->
+        <a-entity position="-8 2.5 8" rotation="0 90 0">
+            <a-text value="Workflow Editor" align="center" position="0 2.2 0" width="8"></a-text>
+            <a-entity class="clickable" htmlembed="width:1024; height:1024;">
+                <div id="vr-graph-container" style="width: 1024px; height: 1024px; background: #222;">
+                    <!-- Canvas will be moved here by JS -->
+                </div>
+            </a-entity>
         </a-entity>
 
     </a-scene>
@@ -75,6 +109,7 @@
         let nodeEntities = {}; // Map id -> a-entity
         let linkEntities = {}; // Map id -> a-entity (lines)
         let projectiles = [];
+        let simulation = null;
 
         // Architecture Groups defining structure
         const GROUPS = {
@@ -85,44 +120,100 @@
             'mgmt': { color: '#EE0000', label: 'Mgmt' }
         };
 
-        // --- 2. D3 Force Simulation ---
-        const simulation = d3.forceSimulation()
-            .numDimensions(3)
-            .force('link', d3.forceLink().id(d => d.id).distance(40)) // Default distance
-            .force('charge', d3.forceManyBody().strength(-100))      // Repulsion
-            .force('center', d3.forceCenter(0, 50, 0))               // Center slightly up
-            .force('y', d3.forceY(20).strength(0.1));                // Keep somewhat grounded
+        function showError(msg) {
+            console.error(msg);
+            LOADING.style.display = 'none';
+            HUD_LOG.setAttribute('value', "Error: " + msg);
+            // Create visible error text
+            const errEntity = document.createElement('a-text');
+            errEntity.setAttribute('value', msg);
+            errEntity.setAttribute('color', 'red');
+            errEntity.setAttribute('position', '0 2 0');
+            errEntity.setAttribute('align', 'center');
+            errEntity.setAttribute('scale', '2 2 2');
+            document.querySelector('a-scene').appendChild(errEntity);
+        }
 
-        simulation.on('tick', () => {
-            // Update A-Frame Entities positions
-            nodes.forEach(node => {
-                const el = nodeEntities[node.id];
-                if (el) {
-                    // Smooth lerp could go here, but direct assignment is faster for now
-                    el.object3D.position.set(node.x * SCENE_SCALE, Math.max(0.5, node.y * SCENE_SCALE), node.z * SCENE_SCALE);
-                }
+        // --- Editor Init ---
+        // Move canvas to VR container and init LiteGraph
+        try {
+            const canvas = document.getElementById("mycanvas");
+            document.getElementById('vr-graph-container').appendChild(canvas);
+
+            if (typeof WorkflowEditor !== 'undefined') {
+                WorkflowEditor.init("mycanvas", { skipResize: true });
+
+                // Throttling for VR performance
+                let lastDraw = 0;
+                const FPS_LIMIT = 30;
+                const INTERVAL = 1000 / FPS_LIMIT;
+                WorkflowEditor.graph.onAfterExecute = function() {
+                    const now = Date.now();
+                    if (now - lastDraw > INTERVAL) {
+                        WorkflowEditor.canvas.draw(true);
+                        lastDraw = now;
+                    }
+                };
+                WorkflowEditor.graph.start();
+            } else {
+                console.warn("WorkflowEditor not found");
+            }
+        } catch(e) {
+            console.error("Editor Init Error", e);
+        }
+
+        try {
+            if (typeof d3 === 'undefined') {
+                throw new Error("D3 library failed to load.");
+            }
+
+            // D3 Init
+            simulation = d3.forceSimulation()
+                .numDimensions(3)
+                .force('link', d3.forceLink().id(d => d.id).distance(40)) // Default distance
+                .force('charge', d3.forceManyBody().strength(-100))      // Repulsion
+                .force('center', d3.forceCenter(0, 50, 0))               // Center slightly up
+                .force('y', d3.forceY(20).strength(0.1));                // Keep somewhat grounded
+
+            simulation.on('tick', () => {
+                // Update A-Frame Entities positions
+                nodes.forEach(node => {
+                    const el = nodeEntities[node.id];
+                    if (el) {
+                        // Smooth lerp could go here, but direct assignment is faster for now
+                        el.object3D.position.set(node.x * SCENE_SCALE, Math.max(0.5, node.y * SCENE_SCALE), node.z * SCENE_SCALE);
+                    }
+                });
+
+                links.forEach((link, idx) => {
+                    const line = linkEntities[idx];
+                    if (line) {
+                        const start = { x: link.source.x * SCENE_SCALE, y: link.source.y * SCENE_SCALE, z: link.source.z * SCENE_SCALE };
+                        const end = { x: link.target.x * SCENE_SCALE, y: link.target.y * SCENE_SCALE, z: link.target.z * SCENE_SCALE };
+
+                        line.setAttribute('line', {
+                            start: start,
+                            end: end,
+                            color: '#555'
+                        });
+                    }
+                });
             });
 
-            links.forEach((link, idx) => {
-                const line = linkEntities[idx];
-                if (line) {
-                    const start = { x: link.source.x * SCENE_SCALE, y: link.source.y * SCENE_SCALE, z: link.source.z * SCENE_SCALE };
-                    const end = { x: link.target.x * SCENE_SCALE, y: link.target.y * SCENE_SCALE, z: link.target.z * SCENE_SCALE };
+            // Start Polling
+            setInterval(updateGraph, 2000);
+            updateGraph(); // Initial
 
-                    line.setAttribute('line', {
-                        start: start,
-                        end: end,
-                        color: '#555'
-                    });
-                }
-            });
-        });
+        } catch (e) {
+            showError(e.message);
+        }
 
         // --- 3. Data Fetching & Graph Building ---
         async function updateGraph() {
+            if (!simulation) return;
             try {
                 const res = await fetch('/api/cluster/metrics');
-                if (!res.ok) return;
+                if (!res.ok) throw new Error("API Error " + res.status);
                 const metrics = await res.json();
 
                 // Construct Nodes from Metrics
@@ -197,9 +288,12 @@
 
                 updateStatsPanel(metrics);
                 LOADING.style.display = 'none';
+                HUD_LOG.setAttribute('value', "System: Online");
 
             } catch (e) {
                 console.error("Graph Update Error", e);
+                LOADING.style.display = 'none';
+                HUD_LOG.setAttribute('value', "System: Connection Lost");
             }
         }
 
@@ -347,8 +441,7 @@
         }
 
         // --- 6. Init ---
-        setInterval(updateGraph, 2000); // Poll metrics
-        updateGraph(); // Initial fetch
+        // (Moved to top-level to handle loading async if needed, but D3 init is sync)
 
     </script>
 </body>
