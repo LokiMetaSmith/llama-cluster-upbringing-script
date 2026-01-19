@@ -62,8 +62,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "img-src 'self' data: https://cdn.aframe.io; "
             "media-src 'self' https://cdn.aframe.io; "
             "style-src 'self' 'unsafe-inline'; "
-            "script-src 'self' 'unsafe-inline' https://unpkg.com https://aframe.io https://supereggbert.github.io https://cdn.jsdelivr.net; "
-            "connect-src 'self' ws: wss:;"
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://aframe.io https://supereggbert.github.io https://cdn.jsdelivr.net; "
+            "connect-src 'self' ws: wss: https://cdn.aframe.io;"
         )
         return response
 

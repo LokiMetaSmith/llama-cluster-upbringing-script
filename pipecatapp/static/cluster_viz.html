@@ -5,14 +5,15 @@
     <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <!-- D3 Force 3D -->
+    <script src="https://unpkg.com/d3"></script>
     <script src="https://unpkg.com/d3-force-3d"></script>
     <!-- HTML Embed -->
     <script src="https://supereggbert.github.io/aframe-htmlembed-component/dist/build.js"></script>
     <!-- LiteGraph -->
-    <link rel="stylesheet" type="text/css" href="css/litegraph.css">
-    <script src="js/litegraph.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/css/litegraph.css">
+    <script src="/static/js/litegraph.js"></script>
     <!-- Custom Editor Logic -->
-    <script src="js/editor.js"></script>
+    <script src="/static/js/editor.js"></script>
 
     <style>
         body { margin: 0; background-color: #000; overflow: hidden; }
@@ -107,9 +108,10 @@
         let nodes = [];
         let links = [];
         let nodeEntities = {}; // Map id -> a-entity
-        let linkEntities = {}; // Map id -> a-entity (lines)
+        // linkEntities is removed, we attach entity to link object
         let projectiles = [];
         let simulation = null;
+        let audioManager = null;
 
         // Architecture Groups defining structure
         const GROUPS = {
@@ -133,6 +135,90 @@
             errEntity.setAttribute('scale', '2 2 2');
             document.querySelector('a-scene').appendChild(errEntity);
         }
+
+        // --- Audio Manager ---
+        class AudioManager {
+            constructor() {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+                this.nodes = {}; // map id -> { osc, gain, panner }
+                this.enabled = false;
+
+                // Unlock audio on first interaction
+                window.addEventListener('click', () => {
+                    if (this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                    this.enabled = true;
+                }, { once: true });
+            }
+
+            createNodeSound(id) {
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                const panner = this.ctx.createPanner();
+
+                panner.panningModel = 'HRTF';
+                panner.distanceModel = 'inverse';
+                panner.refDistance = 2;
+                panner.maxDistance = 50;
+                panner.rolloffFactor = 1;
+
+                osc.type = 'sine';
+                osc.frequency.value = 100; // Base freq
+                gain.gain.value = 0;       // Start silent
+
+                osc.connect(gain);
+                gain.connect(panner);
+                panner.connect(this.ctx.destination);
+
+                osc.start();
+
+                this.nodes[id] = { osc, gain, panner };
+            }
+
+            updateNodeSound(id, cpu, pos) {
+                if (!this.nodes[id]) this.createNodeSound(id);
+                const n = this.nodes[id];
+
+                // Update Position
+                if (n.panner.positionX) {
+                    n.panner.positionX.value = pos.x;
+                    n.panner.positionY.value = pos.y;
+                    n.panner.positionZ.value = pos.z;
+                } else {
+                    n.panner.setPosition(pos.x, pos.y, pos.z);
+                }
+
+                // Update Pitch & Volume based on CPU
+                // CPU is 0.0 to 1.0 (or > 1.0)
+                // Pitch: 100Hz + (cpu * 200) -> 100Hz to 300Hz typical
+                // Volume: 0.0 + (cpu * 0.2) -> Max 0.2 to not be deafening
+
+                const safeCpu = Math.max(0, cpu || 0);
+                const targetFreq = 100 + (safeCpu * 400);
+                const targetGain = this.enabled ? Math.min(0.2, safeCpu * 0.1) : 0;
+
+                // Smooth transitions
+                const now = this.ctx.currentTime;
+                n.osc.frequency.setTargetAtTime(targetFreq, now, 0.1);
+                n.gain.gain.setTargetAtTime(targetGain, now, 0.1);
+            }
+
+            removeNodeSound(id) {
+                if (this.nodes[id]) {
+                    const n = this.nodes[id];
+                    n.gain.disconnect();
+                    n.panner.disconnect();
+                    n.osc.stop();
+                    delete this.nodes[id];
+                }
+            }
+        }
+
+        audioManager = new AudioManager();
 
         // --- Editor Init ---
         // Move canvas to VR container and init LiteGraph
@@ -180,13 +266,21 @@
                 nodes.forEach(node => {
                     const el = nodeEntities[node.id];
                     if (el) {
-                        // Smooth lerp could go here, but direct assignment is faster for now
-                        el.object3D.position.set(node.x * SCENE_SCALE, Math.max(0.5, node.y * SCENE_SCALE), node.z * SCENE_SCALE);
+                        const x = node.x * SCENE_SCALE;
+                        const y = Math.max(0.5, node.y * SCENE_SCALE);
+                        const z = node.z * SCENE_SCALE;
+
+                        el.object3D.position.set(x, y, z);
+
+                        // Update Audio Position
+                        if (audioManager) {
+                            audioManager.updateNodeSound(node.id, node.cpu, {x, y, z});
+                        }
                     }
                 });
 
-                links.forEach((link, idx) => {
-                    const line = linkEntities[idx];
+                links.forEach(link => {
+                    const line = link._entity;
                     if (line) {
                         const start = { x: link.source.x * SCENE_SCALE, y: link.source.y * SCENE_SCALE, z: link.source.z * SCENE_SCALE };
                         const end = { x: link.target.x * SCENE_SCALE, y: link.target.y * SCENE_SCALE, z: link.target.z * SCENE_SCALE };
@@ -233,6 +327,9 @@
                     return 'service';
                 };
 
+                // 1. Mark all as potentially missing
+                nodes.forEach(n => n._seen = false);
+
                 metrics.forEach(m => {
                     // Update or Add Node
                     let existing = nodes.find(n => n.id === m.id);
@@ -242,42 +339,72 @@
                             group: classify(m.id),
                             cpu: m.cpu,
                             mem: m.mem,
-                            // Initial random pos
+                            status: m.status || 'healthy',
                             x: (Math.random()-0.5)*100,
                             y: (Math.random())*50,
-                            z: (Math.random()-0.5)*100
+                            z: (Math.random()-0.5)*100,
+                            _seen: true
                         };
                         nodes.push(existing);
                         createNodeEntity(existing);
                     } else {
                         existing.cpu = m.cpu;
                         existing.mem = m.mem;
+                        existing.status = m.status || 'healthy';
+                        existing._seen = true;
                         updateNodeVisuals(existing);
                     }
                 });
 
-                // Update Links (Naive Topology: All -> App/Infra)
-                // We connect everything to a central point to keep them together,
-                // or use a structured approach if we know the topology.
-                // Let's connect all 'service'/'tool' to 'app', and 'app' to 'infra'.
+                // 2. Handle Broken/Missing Nodes
+                // If a node is missing from metrics OR status is unhealthy/unreachable
+                // We sever its links.
 
-                const appNodes = nodes.filter(n => n.group === 'app');
-                const infraNodes = nodes.filter(n => n.group === 'core_infra');
+                const brokenNodes = nodes.filter(n => !n._seen || n.status !== 'healthy' && n.status !== 'running');
 
-                nodes.forEach(n => {
-                    if (n.group !== 'app' && n.group !== 'core_infra') {
-                        // Connect to nearest app node or random app node
-                        if (appNodes.length > 0) {
-                            addLink(n, appNodes[0]);
-                        } else if (infraNodes.length > 0) {
-                            addLink(n, infraNodes[0]);
+                if (brokenNodes.length > 0) {
+                    // Remove links connected to broken nodes
+                    for (let i = links.length - 1; i >= 0; i--) {
+                        const l = links[i];
+                        // D3 replaces source/target with objects
+                        const sId = l.source.id || l.source;
+                        const tId = l.target.id || l.target;
+
+                        if (brokenNodes.find(n => n.id === sId || n.id === tId)) {
+                            // Destroy link entity
+                            if (l._entity) {
+                                l._entity.parentNode.removeChild(l._entity);
+                                l._entity = null;
+                            }
+                            links.splice(i, 1);
                         }
                     }
+
+                    // Visual update for broken nodes
+                    brokenNodes.forEach(n => {
+                        updateNodeVisuals(n); // Ensure it turns red
+                        // Also silence it
+                        if (audioManager) audioManager.removeNodeSound(n.id);
+                    });
+                }
+
+                // Update Links (Naive Topology: All -> App/Infra)
+                // Only connect HEALTHY nodes
+                const healthyNodes = nodes.filter(n => !brokenNodes.includes(n));
+                const appNodes = healthyNodes.filter(n => n.group === 'app');
+                const infraNodes = healthyNodes.filter(n => n.group === 'core_infra');
+
+                healthyNodes.forEach(n => {
+                    // Skip if already has links (optimization? D3 handles dupes via checks)
+                    // But we removed links for broken nodes, so we need to ensure connectivity for others.
+                    // To avoid dupes, addLink checks existence.
+
+                    if (n.group !== 'app' && n.group !== 'core_infra') {
+                        if (appNodes.length > 0) addLink(n, appNodes[0]);
+                        else if (infraNodes.length > 0) addLink(n, infraNodes[0]);
+                    }
                     if (n.group === 'app') {
-                        // Connect to infra
-                        if (infraNodes.length > 0) {
-                            addLink(n, infraNodes[0]);
-                        }
+                        if (infraNodes.length > 0) addLink(n, infraNodes[0]);
                     }
                 });
 
@@ -302,8 +429,8 @@
             const exists = links.find(l => (l.source.id === source.id && l.target.id === target.id) || (l.source.id === target.id && l.target.id === source.id));
             if (!exists) {
                 const link = { source: source.id, target: target.id }; // d3 will resolve to objects
+                createLinkEntity(link);
                 links.push(link);
-                createLinkEntity(links.length - 1);
             }
         }
 
@@ -341,28 +468,40 @@
             const el = nodeEntities[node.id];
             if (!el) return;
 
+            // Check for broken status
+            const isBroken = (!node._seen || (node.status && node.status !== 'healthy' && node.status !== 'running'));
+
+            if (isBroken) {
+                el.setAttribute('color', '#555555'); // Dead/Grey
+                // Or flashing red?
+                // Simple grey for "disconnected"
+                el.setAttribute('opacity', 0.5);
+                return;
+            } else {
+                el.setAttribute('opacity', 1.0);
+            }
+
             // Height = Mem (base 1 + mem / 100MB)
             const memMB = (node.mem / (1024*1024));
             const height = 1 + (memMB / 500);
             el.setAttribute('height', Math.min(height, 10)); // Cap at 10
 
             // Color/Pulse = CPU
-            // We can change opacity or color brightness
             const cpu = node.cpu || 0;
-            if (cpu > 80) {
+            if (cpu > 0.8) {
                 el.setAttribute('color', '#ff0000'); // Hot!
-            } else if (cpu > 50) {
+            } else if (cpu > 0.5) {
                 el.setAttribute('color', '#ff8800'); // Warm
             } else {
                 el.setAttribute('color', GROUPS[node.group].color);
             }
         }
 
-        function createLinkEntity(idx) {
+        function createLinkEntity(link) {
             const el = document.createElement('a-entity');
             el.setAttribute('line', 'color: #555; opacity: 0.5');
             GRAPH_CONTAINER.appendChild(el);
-            linkEntities[idx] = el;
+            link._entity = el;
         }
 
         // --- 4. Projectiles (Traffic Simulation) ---
