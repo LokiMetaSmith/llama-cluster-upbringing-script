@@ -16,3 +16,6 @@
 ## 2025-05-15 - Command History in Terminal Interfaces
 **Learning:** In "Mission Control" or terminal-like web interfaces, users instinctively expect Up/Down arrow keys to cycle through command history. Missing this feature breaks the immersive "terminal" illusion and frustrates power users.
 **Action:** Implement a history buffer and Up/Down key listeners for terminal-style inputs. Ensure standard text input behavior (cursor movement) is preserved when not navigating history.
+## 2026-06-18 - Navigation Buttons vs Links
+**Learning:** Using `<button onclick="...">` for navigation breaks middle-click (open in new tab), right-click, and search engine crawling. It confuses the semantic distinction between "doing" (button) and "going" (link).
+**Action:** Use `<a>` tags styled as buttons for any action that primarily performs navigation (URL change). Ensure they have valid `href` attributes.
