@@ -311,6 +311,14 @@ class PiperTTSService(FrameProcessor):
         self.voice = PiperVoice.load(model_path)
         self.sample_rate = self.voice.config.sample_rate
 
+    def _synthesize_sync(self, text: str) -> bytes:
+        """Helper to run synthesis in a separate thread."""
+        audio_stream = io.BytesIO()
+        self.voice.synthesize(text, audio_stream)
+        audio_stream.seek(0)
+        with wave.open(audio_stream, "rb") as wf:
+            return wf.readframes(wf.getnframes())
+
     async def process_frame(self, frame, direction):
         """Processes text frames to synthesize audio.
 
@@ -321,11 +329,10 @@ class PiperTTSService(FrameProcessor):
         if not isinstance(frame, TextFrame):
             await self.push_frame(frame, direction)
             return
-        audio_stream = io.BytesIO()
-        self.voice.synthesize(frame.text, audio_stream)
-        audio_stream.seek(0)
-        with wave.open(audio_stream, "rb") as wf:
-            audio_bytes = wf.readframes(wf.getnframes())
+
+        loop = asyncio.get_running_loop()
+        # Bolt ⚡ Optimization: Run blocking synthesis in a thread
+        audio_bytes = await loop.run_in_executor(None, self._synthesize_sync, frame.text)
         await self.push_frame(AudioRawFrame(audio_bytes))
 
 class WebsocketAudioStreamer(FrameProcessor):
