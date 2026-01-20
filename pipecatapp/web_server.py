@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import asyncio
 import logging
@@ -56,12 +57,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         # Content-Security-Policy: Allow 'self' and inline scripts/styles which are used in index.html
+        # Also allow unpkg.com, aframe.io, and supereggbert.github.io for VR components
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "img-src 'self' data:; "
+            "img-src 'self' data: https://cdn.aframe.io; "
+            "media-src 'self' https://cdn.aframe.io; "
             "style-src 'self' 'unsafe-inline'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "connect-src 'self' ws: wss:;"
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://aframe.io https://supereggbert.github.io https://cdn.jsdelivr.net; "
+            "connect-src 'self' ws: wss: https://cdn.aframe.io;"
         )
         return response
 
@@ -229,6 +232,13 @@ async def get_cluster_ui():
     """Serves the cluster visualization UI."""
     cluster_html_path = os.path.join(static_dir, "cluster.html")
     with open(cluster_html_path) as f:
+        return HTMLResponse(f.read())
+
+@app.get("/cluster_viz", summary="Serve Cluster VR Viz", description="Serves the `cluster_viz.html` file for the 3D cluster visualization UI.", tags=["UI"])
+async def get_cluster_viz():
+    """Serves the 3D cluster visualization UI."""
+    viz_html_path = os.path.join(static_dir, "cluster_viz.html")
+    with open(viz_html_path) as f:
         return HTMLResponse(f.read())
 
 @app.get("/api/cluster/metrics", summary="Get Cluster Metrics", description="Retrieves CPU and Memory metrics for services from Prometheus.", tags=["System"])
@@ -576,9 +586,10 @@ async def save_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     if not save_name:
         return JSONResponse(status_code=400, content={"message": "save_name is required"})
 
-    # Security Fix: Input validation to prevent path traversal
-    if ".." in save_name or "/" in save_name or "\\" in save_name:
-        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must be a filename without path characters."})
+    # Security Fix: Stronger input validation to prevent path traversal and injection
+    # Allow only alphanumeric, underscore, hyphen, and period.
+    if not re.match(r"^[a-zA-Z0-9_\-\.]+$", save_name) or ".." in save_name:
+        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must only contain alphanumeric characters, dots, dashes, or underscores."})
 
     twin_service = request.app.state.twin_service_instance
     if twin_service:
@@ -600,9 +611,10 @@ async def load_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     if not save_name:
         return JSONResponse(status_code=400, content={"message": "save_name is required"})
 
-    # Security Fix: Input validation to prevent path traversal
-    if ".." in save_name or "/" in save_name or "\\" in save_name:
-        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must be a filename without path characters."})
+    # Security Fix: Stronger input validation to prevent path traversal and injection
+    # Allow only alphanumeric, underscore, hyphen, and period.
+    if not re.match(r"^[a-zA-Z0-9_\-\.]+$", save_name) or ".." in save_name:
+        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must only contain alphanumeric characters, dots, dashes, or underscores."})
 
     twin_service = request.app.state.twin_service_instance
     if twin_service:
