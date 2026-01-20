@@ -136,11 +136,12 @@
 
     <div id="tooltip"></div>
 
-    <div id="progress-container">
+    <!-- Palette UX Improvement: Accessible Progress Bar -->
+    <div id="progress-container" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="progress-label">
         <div class="progress-bar-bg">
             <div class="progress-bar-fill" id="progress-fill"></div>
         </div>
-        <div id="progress-label">Executing bootstrap.sh...</div>
+        <div id="progress-label" aria-live="polite">Executing bootstrap.sh...</div>
     </div>
 
     <div id="final-message">CLUSTER ONLINE</div>
@@ -727,6 +728,16 @@
         function updateProgress(percent, msg) {
             log(msg);
             progressFill.style.width = percent + '%';
+
+            // Palette UX Improvement: Update ARIA and label for accessibility
+            const container = document.getElementById('progress-container');
+            if (container) {
+                container.setAttribute('aria-valuenow', percent);
+            }
+            const label = document.getElementById('progress-label');
+            if (label && msg) {
+                label.textContent = msg;
+            }
         }
 
         function drawConnectionsAndSignals() {
