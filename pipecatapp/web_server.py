@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import asyncio
 import logging
@@ -576,9 +577,10 @@ async def save_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     if not save_name:
         return JSONResponse(status_code=400, content={"message": "save_name is required"})
 
-    # Security Fix: Input validation to prevent path traversal
-    if ".." in save_name or "/" in save_name or "\\" in save_name:
-        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must be a filename without path characters."})
+    # Security Fix: Stronger input validation to prevent path traversal and injection
+    # Allow only alphanumeric, underscore, hyphen, and period.
+    if not re.match(r"^[a-zA-Z0-9_\-\.]+$", save_name) or ".." in save_name:
+        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must only contain alphanumeric characters, dots, dashes, or underscores."})
 
     twin_service = request.app.state.twin_service_instance
     if twin_service:
@@ -600,9 +602,10 @@ async def load_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     if not save_name:
         return JSONResponse(status_code=400, content={"message": "save_name is required"})
 
-    # Security Fix: Input validation to prevent path traversal
-    if ".." in save_name or "/" in save_name or "\\" in save_name:
-        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must be a filename without path characters."})
+    # Security Fix: Stronger input validation to prevent path traversal and injection
+    # Allow only alphanumeric, underscore, hyphen, and period.
+    if not re.match(r"^[a-zA-Z0-9_\-\.]+$", save_name) or ".." in save_name:
+        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must only contain alphanumeric characters, dots, dashes, or underscores."})
 
     twin_service = request.app.state.twin_service_instance
     if twin_service:
