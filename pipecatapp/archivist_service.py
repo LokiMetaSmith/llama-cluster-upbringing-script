@@ -29,6 +29,7 @@ if not os.getenv("ARCHIVIST_PORT"):
     raise ValueError("ARCHIVIST_PORT environment variable must be set")
 PORT = int(os.getenv("ARCHIVIST_PORT"))
 
+from pipecatapp.net_utils import format_url
 CONSUL_HOST = os.getenv("CONSUL_HOST", "127.0.0.1")
 CONSUL_PORT = int(os.getenv("CONSUL_PORT", 8500))
 LLAMA_API_SERVICE_NAME = os.getenv("LLAMA_API_SERVICE_NAME", "llamacpp-rpc-api")
@@ -63,7 +64,7 @@ class LLMClient:
         await self.client.aclose()
 
     async def discover(self):
-        url = f"http://{self.consul_host}:{self.consul_port}/v1/health/service/{self.service_name}?passing"
+        url = format_url("http", self.consul_host, self.consul_port, f"v1/health/service/{self.service_name}?passing")
         token = os.getenv("CONSUL_HTTP_TOKEN")
         headers = {"X-Consul-Token": token} if token else {}
         try:
@@ -72,7 +73,7 @@ class LLMClient:
                 services = resp.json()
                 if services:
                     svc = services[0]['Service']
-                    self.base_url = f"http://{svc['Address']}:{svc['Port']}/v1"
+                    self.base_url = format_url("http", svc['Address'], svc['Port'], "v1")
                     logger.info(f"Discovered LLM at {self.base_url}")
         except Exception as e:
             logger.error(f"Service discovery failed: {e}")
@@ -585,4 +586,5 @@ async def health_check():
     return {"status": "starting"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    host_ip = os.getenv("HOST_IP", "::")
+    uvicorn.run(app, host=host_ip, port=PORT)

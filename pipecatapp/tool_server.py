@@ -98,4 +98,5 @@ async def list_tools():
     return available_tools
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    host_ip = os.getenv("HOST_IP", "::")
+    uvicorn.run(app, host=host_ip, port=8001)
