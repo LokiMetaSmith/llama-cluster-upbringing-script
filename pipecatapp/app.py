@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import re
 # Set config dir before importing ultralytics to avoid permission errors
 os.environ["YOLO_CONFIG_DIR"] = "/tmp/Ultralytics"
 from ultralytics import YOLO
@@ -80,6 +81,14 @@ import uvicorn
 # -----------------------
 # Logging -> web UI bridge
 # -----------------------
+
+# Pre-compile regex for redaction to improve performance
+# Matches "sk-" followed by 20+ alphanumeric/hyphen characters
+# This targets OpenAI-style keys while avoiding common words like "task", "ask", "desk"
+_API_KEY_PATTERN = re.compile(r'(sk-[a-zA-Z0-9-]{20,})')
+# Matches "Bearer " followed by a token (alphanumeric and common token chars)
+_BEARER_TOKEN_PATTERN = re.compile(r'(Bearer\s+)([a-zA-Z0-9\-\._~+/]+=*)')
+
 class WebSocketLogHandler(logging.Handler):
     """A logging handler that forwards records to a WebSocket connection.
 
@@ -94,6 +103,12 @@ class WebSocketLogHandler(logging.Handler):
             record: The log record to be emitted.
         """
         log_entry = self.format(record)
+
+        # Security Fix: Sentinel - Redact sensitive information
+        # Redact generic API key patterns and Bearer tokens
+        log_entry = _API_KEY_PATTERN.sub(r'sk-[REDACTED]', log_entry)
+        log_entry = _BEARER_TOKEN_PATTERN.sub(r'\1[REDACTED]', log_entry)
+
         try:
             # Get the running asyncio loop to safely schedule the broadcast.
             loop = asyncio.get_running_loop()
