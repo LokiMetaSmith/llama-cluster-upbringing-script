@@ -103,6 +103,7 @@ job "{{ job_name }}" {
 
       config {
         image = "{{ pipecat_image_id }}"
+        # image_pull_policy is not supported by the docker driver in Nomad 1.0+ (defaults to appropriate behavior)
         ports = ["http"]
       }
 
