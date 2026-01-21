@@ -7,7 +7,7 @@ import requests
 import httpx
 import yaml
 import time  # Added back for the backup timestamp
-from fastapi import FastAPI, WebSocket, Body, Request, HTTPException, Depends, Security
+from fastapi import FastAPI, WebSocket, Body, Request, HTTPException, Depends, Security, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -70,6 +70,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 
+def is_origin_allowed(origin: str, allowed_origins: list) -> bool:
+    """Checks if the given origin is allowed based on the configuration."""
+    if "*" in allowed_origins:
+        return True
+    if not origin:
+        # Reject requests without an Origin header for strict security,
+        # unless you expect non-browser clients that don't send it.
+        # For this web-based agent, we expect browsers.
+        return False
+    return origin in allowed_origins
+
 # Security Enhancement: Rate Limiters
 # Strict limiter for sensitive operations (10 requests per minute)
 strict_limiter = RateLimiter(limit=10, window=60)
@@ -80,8 +91,8 @@ standard_limiter = RateLimiter(limit=100, window=60)
 approval_queue = asyncio.Queue()
 text_message_queue = asyncio.Queue()
 
-# Simple in-memory cache for service discovery
-class ServiceDiscoveryCache:
+# Simple generic in-memory cache
+class AsyncCache:
     def __init__(self, ttl=30):
         self.ttl = ttl
         self.cache = None
@@ -99,7 +110,8 @@ class ServiceDiscoveryCache:
             self.cache = value
             self.last_update = time.time()
 
-service_cache = ServiceDiscoveryCache(ttl=30)
+service_cache = AsyncCache(ttl=30)
+metrics_cache = AsyncCache(ttl=5)
 # Reusable HTTP client for service discovery
 service_discovery_client = httpx.AsyncClient(timeout=2.0)
 # Reusable HTTP client for metrics
@@ -176,6 +188,15 @@ async def websocket_endpoint(websocket: WebSocket):
     """
     # Note: WebSocket authentication is trickier. For now, we leave it open as per "semi-unprotected" plan.
     # If strict auth is needed later, we would check query params during connect.
+
+    # Security Fix: Prevent Cross-Site WebSocket Hijacking (CSWSH)
+    # Even without auth, we must ensure the connection comes from a trusted origin.
+    origin = websocket.headers.get("origin")
+    if not is_origin_allowed(origin, allowed_origins):
+        logging.warning(f"Rejected WebSocket connection from untrusted origin: {origin}")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await manager.connect(websocket)
     try:
         while True:
@@ -244,6 +265,11 @@ async def get_cluster_viz():
 @app.get("/api/cluster/metrics", summary="Get Cluster Metrics", description="Retrieves CPU and Memory metrics for services from Prometheus.", tags=["System"])
 async def get_cluster_metrics():
     """Retrieves cluster metrics from Prometheus."""
+    # Bolt ⚡ Optimization: Return cached metrics if available
+    cached_metrics = await metrics_cache.get()
+    if cached_metrics is not None:
+         return JSONResponse(content=cached_metrics)
+
     prom_url = os.getenv("PROMETHEUS_URL", "http://localhost:9090")
 
     services = []
@@ -302,6 +328,9 @@ async def get_cluster_metrics():
                     "mem": mem_data.get(task, 0),
                     "status": "running"
                 })
+
+        # Cache the result
+        await metrics_cache.set(services)
 
     except Exception as e:
         logging.error(f"Error fetching metrics: {e}")
