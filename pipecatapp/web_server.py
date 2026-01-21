@@ -7,7 +7,7 @@ import requests
 import httpx
 import yaml
 import time  # Added back for the backup timestamp
-from fastapi import FastAPI, WebSocket, Body, Request, HTTPException, Depends, Security
+from fastapi import FastAPI, WebSocket, Body, Request, HTTPException, Depends, Security, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -69,6 +69,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+def is_origin_allowed(origin: str, allowed_origins: list) -> bool:
+    """Checks if the given origin is allowed based on the configuration."""
+    if "*" in allowed_origins:
+        return True
+    if not origin:
+        # Reject requests without an Origin header for strict security,
+        # unless you expect non-browser clients that don't send it.
+        # For this web-based agent, we expect browsers.
+        return False
+    return origin in allowed_origins
 
 # Security Enhancement: Rate Limiters
 # Strict limiter for sensitive operations (10 requests per minute)
@@ -177,6 +188,15 @@ async def websocket_endpoint(websocket: WebSocket):
     """
     # Note: WebSocket authentication is trickier. For now, we leave it open as per "semi-unprotected" plan.
     # If strict auth is needed later, we would check query params during connect.
+
+    # Security Fix: Prevent Cross-Site WebSocket Hijacking (CSWSH)
+    # Even without auth, we must ensure the connection comes from a trusted origin.
+    origin = websocket.headers.get("origin")
+    if not is_origin_allowed(origin, allowed_origins):
+        logging.warning(f"Rejected WebSocket connection from untrusted origin: {origin}")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await manager.connect(websocket)
     try:
         while True:
