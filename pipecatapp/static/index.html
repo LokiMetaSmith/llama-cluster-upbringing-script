@@ -78,6 +78,24 @@
         .dropdown-content a:hover {background-color: #f1f1f1}
         .dropdown-content a.unhealthy:hover {background-color: #eee} /* Keep grey on hover */
 
+        /* Palette: Navigation Links styled as Buttons */
+        a.nav-btn {
+            padding: 5px 10px;
+            background-color: #333;
+            color: #f0f0f0;
+            border: 1px solid #555;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+            font-size: 13.33px; /* Match button default */
+        }
+        a.nav-btn:hover { background-color: #444; }
+        a.nav-btn:active { background-color: #222; }
+
+        /* VR Button specific style */
+        #vr-mode-btn.nav-btn { background-color: #800080; }
+        #vr-mode-btn.nav-btn:hover { background-color: #600060; }
+
         /* Show the dropdown menu only when 'show' class is added (via click/keyboard) */
         .dropdown.show .dropdown-content {
             display: block;
@@ -164,9 +182,9 @@
         <button id="load-state-btn">Load State</button>
         <button id="clear-terminal-btn">Clear Terminal</button>
         <!-- Palette UX: Semantic links for navigation -->
-        <a href="/cluster" target="_blank" rel="noopener noreferrer" class="nav-btn" aria-label="Cluster Viz (opens in new tab)">Cluster Viz</a>
-        <a href="/cluster_viz" target="_blank" rel="noopener noreferrer" class="nav-btn" aria-label="Cluster VR (opens in new tab)">Cluster VR</a>
-        <a href="/static/vr_index.html" class="nav-btn" style="background-color: #800080;">Enter VR</a>
+        <a id="cluster-viz-btn" href="/cluster" target="_blank" rel="noopener noreferrer" class="nav-btn" title="Open Cluster Visualization in new tab" aria-label="Cluster Viz (opens in new tab)">Cluster Viz</a>
+        <a id="cluster-vr-btn" href="/cluster_viz" target="_blank" rel="noopener noreferrer" class="nav-btn" title="Open Cluster VR in new tab" aria-label="Cluster VR (opens in new tab)">Cluster VR</a>
+        <a id="vr-mode-btn" href="/static/vr_index.html" class="nav-btn" title="Enter WebVR Interface" aria-label="Enter WebVR Interface">Enter VR</a>
     </div>
     <div id="terminal" aria-live="polite" aria-label="Terminal Output">
         <pre id="robot-art" role="img" aria-label="Robot face: Idle" style="text-align: center; font-family: 'Courier New', Courier, monospace;"></pre>
