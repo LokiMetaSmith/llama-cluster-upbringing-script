@@ -164,9 +164,10 @@
         <button id="save-state-btn">Save State</button>
         <button id="load-state-btn">Load State</button>
         <button id="clear-terminal-btn">Clear Terminal</button>
-        <a id="cluster-viz-btn" class="nav-btn" href="/cluster" target="_blank" title="Open Cluster Visualization in new tab">Cluster Viz</a>
-        <a id="cluster-vr-btn" class="nav-btn" href="/cluster_viz" target="_blank" title="Open Cluster VR in new tab">Cluster VR</a>
-        <a id="vr-mode-btn" class="nav-btn" href="/static/vr_index.html" title="Enter WebVR Interface">Enter VR</a>
+        <!-- Palette UX: Semantic links for navigation -->
+        <a id="cluster-viz-btn" href="/cluster" target="_blank" rel="noopener noreferrer" class="nav-btn" title="Open Cluster Visualization in new tab" aria-label="Cluster Viz (opens in new tab)">Cluster Viz</a>
+        <a id="cluster-vr-btn" href="/cluster_viz" target="_blank" rel="noopener noreferrer" class="nav-btn" title="Open Cluster VR in new tab" aria-label="Cluster VR (opens in new tab)">Cluster VR</a>
+        <a id="vr-mode-btn" href="/static/vr_index.html" class="nav-btn" title="Enter WebVR Interface" aria-label="Enter WebVR Interface">Enter VR</a>
     </div>
     <div id="terminal" aria-live="polite" aria-label="Terminal Output">
         <pre id="robot-art" role="img" aria-label="Robot face: Idle" style="text-align: center; font-family: 'Courier New', Courier, monospace;"></pre>
