@@ -19,9 +19,11 @@ from api_keys import get_api_key
 try:
     from .models import InternalChatRequest, SystemMessageRequest
     from .rate_limiter import RateLimiter
+    from .net_utils import format_url
 except ImportError:
     from models import InternalChatRequest, SystemMessageRequest
     from rate_limiter import RateLimiter
+    from net_utils import format_url
 
 
 # Configure logging
@@ -490,7 +492,7 @@ async def get_web_uis():
         return JSONResponse(content=cached_uis)
 
     web_uis = []
-    consul_url = "http://127.0.0.1:8500"
+    consul_url = format_url("http", "127.0.0.1", 8500)
 
     try:
         # Use the reusable client instead of creating a new one every time
@@ -510,7 +512,7 @@ async def get_web_uis():
                 # Check Nomad health via Consul
                 nomad_health_resp = await client.get(f"{consul_url}/v1/health/service/nomad?passing")
                 nomad_status = "healthy" if nomad_health_resp.status_code == 200 and nomad_health_resp.json() else "unhealthy"
-                web_uis.append({"name": "Nomad", "url": f"http://{nomad_address}:4646", "status": nomad_status})
+                web_uis.append({"name": "Nomad", "url": format_url("http", nomad_address, 4646), "status": nomad_status})
         except Exception:
             web_uis.append({"name": "Nomad", "url": "#", "status": "unhealthy"})
 
@@ -551,7 +553,7 @@ async def get_web_uis():
                         port = service_info.get("Port")
 
                         if address and port:
-                            candidate_url = f"http://{address}:{port}"
+                            candidate_url = format_url("http", address, port)
 
                             # Check health of this specific instance
                             instance_passing = all(check.get("Status") == "passing" for check in checks)
@@ -653,4 +655,5 @@ async def load_state_endpoint(request: Request, payload: Dict = Body(..., exampl
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    host_ip = os.getenv("HOST_IP", "::")
+    uvicorn.run(app, host=host_ip, port=8000)

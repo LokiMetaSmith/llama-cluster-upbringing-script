@@ -74,6 +74,10 @@ from workflow.nodes.llm_nodes import *
 from workflow.nodes.tool_nodes import *
 from workflow.nodes.system_nodes import *
 from api_keys import initialize_api_keys
+try:
+    from .net_utils import format_url
+except ImportError:
+    from net_utils import format_url
 
 
 import uvicorn
@@ -679,7 +683,7 @@ async def discover_services(service_names: list, consul_http_addr: str, delay=10
                     services = response.json()
                     if services:
                         address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
-                        base_url = f"http://{address}:{port}/v1"
+                        base_url = format_url("http", address, port, "v1")
                         logging.info(f"Successfully discovered {service_name} at {base_url}")
                         return base_url
                     else:
@@ -724,7 +728,7 @@ async def discover_main_llm_service(consul_http_addr="http://localhost:8500", de
                     services = response.json()
                     if services:
                         address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
-                        base_url = f"http://{address}:{port}/v1"
+                        base_url = format_url("http", address, port, "v1")
                         logging.info(f"Discovered main LLM service at {base_url}")
                         return base_url
                     else:
@@ -790,7 +794,7 @@ class TwinService(FrameProcessor):
 
         self.debug_mode = self.app_config.get("debug_mode", False)
         self.approval_mode = self.app_config.get("approval_mode", False)
-        self.consul_http_addr = f"http://{self.app_config.get('consul_host', '127.0.0.1')}:{self.app_config.get('consul_port', 8500)}"
+        self.consul_http_addr = format_url("http", self.app_config.get('consul_host', '127.0.0.1'), self.app_config.get('consul_port', 8500))
 
         # Initialize tools via factory
         self.tools = create_tools(self.app_config, twin_service=self, runner=self.runner)
@@ -1085,7 +1089,7 @@ async def main():
         logging.warning("LLAMA_API_SERVICE_NAME not set, falling back to Consul config or default.")
         main_llm_service_names = [app_config.get("llama_api_service_name", "llamacpp-rpc-api")]
 
-    consul_http_addr = f"http://{consul_host}:{consul_port}"
+    consul_http_addr = format_url("http", consul_host, consul_port)
 
     llm_base_url = await discover_services(main_llm_service_names, consul_http_addr)
 

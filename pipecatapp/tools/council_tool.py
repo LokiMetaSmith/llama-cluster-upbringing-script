@@ -4,6 +4,7 @@ import os
 import logging
 import aiohttp
 from typing import List, Dict, Any, Optional
+from pipecatapp.net_utils import format_url
 
 class CouncilTool:
     """A tool to convene a council of AI experts (both local and external) to deliberate on a query."""
@@ -41,7 +42,7 @@ class CouncilTool:
                                 if services:
                                     address = services[0]['Service']['Address']
                                     port = services[0]['Service']['Port']
-                                    experts[expert_name] = f"http://{address}:{port}/v1"
+                                    experts[expert_name] = format_url("http", address, port, "v1")
                     except Exception as e:
                         logging.debug(f"Expert {expert_name} not found or error: {e}")
         except Exception as e:

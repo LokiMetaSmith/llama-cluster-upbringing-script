@@ -90,17 +90,26 @@ def load_playbooks_from_manifest(manifest_path):
     return playbooks
 
 def check_port_open(host, port, timeout=2):
-    """Checks if a port is open on the given host."""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(timeout)
+    """Checks if a port is open on the given host, supporting both IPv4 and IPv6."""
     try:
-        sock.connect((host, port))
-        sock.close()
-        return True
-    except (socket.timeout, ConnectionRefusedError):
+        # getaddrinfo handles both IPv4 and IPv6 resolution and formatting
+        # It returns a list of (family, type, proto, canonname, sockaddr) tuples
+        addr_info = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+    except socket.gaierror:
+        # Hostname could not be resolved
         return False
-    except OSError:
-        return False
+
+    for family, socktype, proto, canonname, sockaddr in addr_info:
+        try:
+            sock = socket.socket(family, socktype, proto)
+            sock.settimeout(timeout)
+            sock.connect(sockaddr)
+            sock.close()
+            return True
+        except (socket.timeout, ConnectionRefusedError, OSError):
+            continue
+
+    return False
 
 def wait_for_ports_freed(ports, timeout=60):
     """Waits for specified ports to be free (not listening)."""
