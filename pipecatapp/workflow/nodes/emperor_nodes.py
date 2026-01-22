@@ -5,6 +5,7 @@ import os
 import json
 import inspect
 import httpx
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 import logging
@@ -121,10 +122,89 @@ def edit_file_tool(path: str, old_str: str, new_str: str) -> Dict[str, Any]:
     except Exception as e:
         return {"error": str(e)}
 
+def shell_tool(command: str) -> Dict[str, Any]:
+    """
+    Executes a shell command and returns the output.
+    :param command: The command to execute.
+    :return: A dictionary with stdout, stderr, and returncode.
+    """
+    try:
+        # Security Note: This tool allows arbitrary command execution.
+        # In this self-hosted context with the Emperor agent, this is intentional.
+        result = subprocess.run(
+            command,
+            shell=True,
+            text=True,
+            capture_output=True,
+            timeout=120
+        )
+        return {
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+def deploy_nomad_job_tool(job_name: str) -> Dict[str, Any]:
+    """
+    Deploys a predefined Nomad job template.
+    :param job_name: The name of the job to deploy (e.g., 'immich', 'uptime-kuma').
+    :return: The output of the nomad job run command.
+    """
+    try:
+        # Resolve path to templates directory
+        # We assume templates are in pipecatapp/nomad_templates/ relative to repo root
+        # EMPEROR_ROOT_DIR usually points to repo root or is PWD
+        root_dir = os.getenv("EMPEROR_ROOT_DIR", os.getcwd())
+        template_dir = Path(root_dir) / "pipecatapp" / "nomad_templates"
+
+        job_file = template_dir / f"{job_name}.nomad.hcl"
+
+        if not job_file.exists():
+            # Try just checking if it's a file path provided directly?
+            # Or maybe just list available templates
+            return {"error": f"Template {job_name} not found in {template_dir}"}
+
+        # Run nomad job run
+        # We assume 'nomad' is in PATH. The agent runs in a container/environment where nomad might be accessible
+        # via the shell_tool logic, but usually we need to ensure the binary is there.
+        # If running inside the pipecatapp container, it might NOT have nomad installed.
+        # However, the task says "The AI assistant's execution environment lacks the nomad binary".
+        # BUT this code runs inside the "EmperorAgentNode" which is part of the runtime application.
+        # The runtime application (pipecatapp) runs on the host or in a container.
+        # If in a container, it needs the binary or API access.
+        # The memory says: "Nomad commands must be executed via Ansible tasks or by the user directly...".
+        # But here we are building an AGENT that can do it.
+        # The agent *on the server* (Claude Code equivalent) likely has shell access.
+        # If this Python code runs inside the `pipecatapp` container, we might need to use the HTTP API or install nomad client.
+        # But simpler: use subprocess to call `nomad`. If it fails, the agent will report it.
+
+        cmd = f"nomad job run {job_file}"
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            text=True,
+            capture_output=True,
+            timeout=120
+        )
+
+        return {
+            "command": cmd,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
 TOOL_REGISTRY = {
     "read_file": read_file_tool,
     "list_files": list_files_tool,
-    "edit_file": edit_file_tool
+    "edit_file": edit_file_tool,
+    "shell": shell_tool,
+    "deploy_nomad_job": deploy_nomad_job_tool
 }
 
 SYSTEM_PROMPT_TEMPLATE = """
@@ -272,6 +352,10 @@ class EmperorAgentNode(Node):
                                 args.get("old_str", ""),
                                 args.get("new_str", "")
                             )
+                        elif name == "shell":
+                            result = tool_func(args.get("command", ""))
+                        elif name == "deploy_nomad_job":
+                            result = tool_func(args.get("job_name", ""))
                         else:
                             result = "Unknown tool"
 
