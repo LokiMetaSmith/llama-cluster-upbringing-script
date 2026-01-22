@@ -78,7 +78,21 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
     provided_key = parts[1]
     hashed_provided_key = get_api_key_hash(provided_key)
 
-    if hashed_provided_key not in API_KEYS:
+    # Security Fix: Sentinel - Prevent timing attacks
+    # Use constant-time comparison instead of direct set membership check.
+    # While Python sets are fast, returning early reveals information about the key validity.
+    # We iterate through all keys and use secrets.compare_digest.
+    # NOTE: This approach has O(N) complexity where N is the number of keys.
+    # It is secure but may impact performance if thousands of keys are loaded.
+    is_valid = False
+    for valid_key_hash in API_KEYS:
+        if secrets.compare_digest(hashed_provided_key, valid_key_hash):
+            is_valid = True
+            # We continue iterating to ensure constant time (relative to number of keys)
+            # although secrets.compare_digest is constant time for string comparison.
+            # To be truly constant time we should not break.
+
+    if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API Key",
