@@ -17,6 +17,31 @@
             word-wrap: break-word;
             white-space: pre-wrap;
         }
+        /* Palette UX: Jump to Bottom Button */
+        #jump-to-bottom-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: none; /* Hidden by default */
+            z-index: 10;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            font-size: 20px;
+            line-height: 1;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            background-color: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        #jump-to-bottom-btn:hover {
+            opacity: 1;
+            background-color: #444;
+        }
         .approval-prompt { border: 1px dashed #ffc107; padding: 10px; margin: 10px 0; }
         .user-message { color: #87cefa; }
         .agent-message { color: #98fb98; }
@@ -186,8 +211,11 @@
         <a id="cluster-vr-btn" href="/cluster_viz" target="_blank" rel="noopener noreferrer" class="nav-btn" title="Open Cluster VR in new tab" aria-label="Cluster VR (opens in new tab)">Cluster VR</a>
         <a id="vr-mode-btn" href="/static/vr_index.html" class="nav-btn" title="Enter WebVR Interface" aria-label="Enter WebVR Interface">Enter VR</a>
     </div>
-    <div id="terminal" aria-live="polite" aria-label="Terminal Output">
-        <pre id="robot-art" role="img" aria-label="Robot face: Idle" style="text-align: center; font-family: 'Courier New', Courier, monospace;"></pre>
+    <div style="position: relative;">
+        <div id="terminal" aria-live="polite" aria-label="Terminal Output">
+            <pre id="robot-art" role="img" aria-label="Robot face: Idle" style="text-align: center; font-family: 'Courier New', Courier, monospace;"></pre>
+        </div>
+        <button id="jump-to-bottom-btn" aria-label="Jump to latest logs" title="Jump to Bottom">↓</button>
     </div>
     <div id="status-display" style="padding: 10px; margin-top: 10px; border: 1px solid #333; background-color: #000;" aria-live="polite" aria-label="System Status"></div>
     <div id="input-area" style="padding: 10px; margin-top: 10px; display: flex; gap: 10px;">

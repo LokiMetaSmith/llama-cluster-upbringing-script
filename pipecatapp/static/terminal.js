@@ -57,6 +57,28 @@ document.addEventListener("DOMContentLoaded", function() {
     const statusDisplay = document.getElementById("status-display");
     const messageInput = document.getElementById("message-input");
     const sendBtn = document.getElementById("send-btn");
+    const jumpToBottomBtn = document.getElementById("jump-to-bottom-btn");
+
+    // Palette UX Improvement: Auto-focus input on load
+    if (messageInput) {
+        messageInput.focus();
+    }
+
+    // Palette UX Improvement: Jump to Bottom Logic
+    if (jumpToBottomBtn) {
+        jumpToBottomBtn.addEventListener('click', () => {
+            terminal.scrollTop = terminal.scrollHeight;
+        });
+
+        terminal.addEventListener('scroll', () => {
+            const isNearBottom = terminal.scrollHeight - terminal.scrollTop - terminal.clientHeight < 100;
+            if (isNearBottom) {
+                jumpToBottomBtn.style.display = 'none';
+            } else {
+                jumpToBottomBtn.style.display = 'block';
+            }
+        });
+    }
 
     // Palette UX Improvement: Disable Save/Load buttons when input is empty
     function toggleStateButtons() {
@@ -194,6 +216,20 @@ document.addEventListener("DOMContentLoaded", function() {
             animateThinking();
         }
     }
+
+    // Palette UX Improvement: Global Keyboard Shortcuts
+    document.addEventListener('keydown', function(event) {
+        // Ctrl+K to clear terminal
+        if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+            event.preventDefault();
+            if (clearTerminalBtn) clearTerminalBtn.click();
+        }
+        // Ctrl+L to focus input
+        if ((event.ctrlKey || event.metaKey) && event.key === 'l') {
+            event.preventDefault();
+            if (messageInput) messageInput.focus();
+        }
+    });
 
     messageInput.addEventListener("keydown", function(event) {
         if (event.key === "Enter") {
