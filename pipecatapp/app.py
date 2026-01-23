@@ -286,9 +286,9 @@ class FasterWhisperSTTService(FrameProcessor):
         elif isinstance(frame, UserStoppedSpeakingFrame):
             if not self.audio_buffer:
                 return
-            # Create a copy of bytes to pass to thread, as audio_buffer will be cleared
-            audio_bytes = bytes(self.audio_buffer)
-            self.audio_buffer.clear()
+            # Bolt ⚡ Optimization: Avoid bytes() copy by swapping buffer
+            audio_bytes = self.audio_buffer
+            self.audio_buffer = bytearray()
 
             # Bolt ⚡ Optimization: Run blocking inference in a thread
             loop = asyncio.get_running_loop()
