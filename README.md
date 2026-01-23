@@ -1,6 +1,6 @@
 # Distributed Conversational AI Pipeline for Legacy CPU Clusters
 
-Last updated: 2025-11-26
+Last updated: 2026-01-23
 
 It uses Ansible for automated provisioning, Nomad for cluster orchestration, and a state-of-the-art AI stack to create a responsive, streaming, and embodied voice agent. For a detailed technical description of the system's layers, see the [Holistic Project Architecture](docs/ARCHITECTURE.md) document.
 

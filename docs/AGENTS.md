@@ -1,5 +1,7 @@
 # AI Agent Architectures
 
+Last updated: 2026-01-23
+
 This project utilizes two distinct AI agent architectures: a "Mixture of Experts" for the runtime application and an "Ensemble of Agents" for the development workflow.
 
 ## 1. Runtime Architecture: A Mixture of Experts (MoE)

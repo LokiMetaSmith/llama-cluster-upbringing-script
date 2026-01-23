@@ -1,6 +1,6 @@
 # Holistic Project Architecture
 
-Last updated: 2025-11-26
+Last updated: 2026-01-23
 
 This document provides a detailed overview of the system architecture, from the hardware provisioning layer to the application logic and user interface. The system is designed as a multi-layered stack to deploy a responsive, distributed, and embodied conversational AI agent on a cluster of legacy machines.
 
