@@ -58,6 +58,15 @@ def log_event(task_id, kind, content, meta):
     conn.commit()
     conn.close()
 
+def parse_meta(row):
+    d = dict(row)
+    if d.get("meta") and isinstance(d["meta"], str):
+        try:
+            d["meta"] = json.loads(d["meta"])
+        except json.JSONDecodeError:
+            pass
+    return d
+
 def get_events(limit=50):
     conn = sqlite3.connect(EVENTS_DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -67,7 +76,7 @@ def get_events(limit=50):
     """, (limit,))
     rows = cursor.fetchall()
     conn.close()
-    return [dict(row) for row in rows]
+    return [parse_meta(row) for row in rows]
 
 def get_task_events(task_id):
     conn = sqlite3.connect(EVENTS_DB_PATH)
@@ -78,7 +87,7 @@ def get_task_events(task_id):
     """, (task_id,))
     rows = cursor.fetchall()
     conn.close()
-    return [dict(row) for row in rows]
+    return [parse_meta(row) for row in rows]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

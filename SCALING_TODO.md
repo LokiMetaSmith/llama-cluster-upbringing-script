@@ -12,14 +12,14 @@ This document tracks the progress of integrating the "Browser from Scratch" auto
     - [x] Register service in Consul (e.g., `event-bus` or extend `memory-service`).
 
 ## Phase 2: Agent Integration
-- [ ] **Update Worker Agent** (`worker_agent.py`)
-    - [ ] Ensure it discovers the Event Bus correctly.
-    - [ ] Verify payload format matches `POST /events` expectation.
-- [ ] **Update Technician Agent** (`technician_agent.py`)
-    - [ ] Ensure it reports detailed progress (plan, execution steps) to Event Bus.
-- [ ] **Update Manager Agent** (`manager_agent.py`)
-    - [ ] Replace mock polling with real `GET /events` polling.
-    - [ ] Implement "Reduce" phase logic using real worker outputs.
+- [x] **Update Worker Agent** (`worker_agent.py`)
+    - [x] Ensure it discovers the Event Bus correctly.
+    - [x] Verify payload format matches `POST /events` expectation.
+- [x] **Update Technician Agent** (`technician_agent.py`)
+    - [x] Ensure it reports detailed progress (plan, execution steps) to Event Bus.
+- [x] **Update Manager Agent** (`manager_agent.py`)
+    - [x] Replace mock polling with real `GET /events` polling.
+    - [x] Implement "Reduce" phase logic using real worker outputs.
 
 ## Phase 3: The Judge & Quality Assurance
 - [ ] **Implement Judge Agent** (or distinct Judge loop in Manager)

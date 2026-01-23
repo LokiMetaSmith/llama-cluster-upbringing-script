@@ -34,8 +34,9 @@ class TechnicianAgent:
         headers = {"X-Consul-Token": token} if token else {}
 
         try:
-            # 1. Discover Memory Service
-            resp = requests.get(f"{consul_addr}/v1/catalog/service/memory-service", headers=headers)
+            # 1. Discover Memory Service / Event Bus
+            event_bus_service_name = os.getenv("EVENT_BUS_SERVICE_NAME", "memory-service")
+            resp = requests.get(f"{consul_addr}/v1/catalog/service/{event_bus_service_name}", headers=headers)
             if resp.status_code == 200:
                 services = resp.json()
                 if services:
@@ -43,7 +44,7 @@ class TechnicianAgent:
                     addr = svc.get("ServiceAddress", "localhost")
                     port = svc.get("ServicePort", 8000)
                     self.memory_url = f"http://{addr}:{port}"
-                    logger.info(f"Discovered Memory Service at {self.memory_url}")
+                    logger.info(f"Discovered Event Bus ({event_bus_service_name}) at {self.memory_url}")
 
             # 2. Discover LLM Service
             llm_service_name = os.getenv("LLAMA_API_SERVICE_NAME", "router-api")
@@ -84,8 +85,16 @@ class TechnicianAgent:
         try:
             # Synchronous post is fine for this low volume
             requests.post(f"{self.memory_url}/events", json=payload)
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             logger.error(f"Failed to report event {kind}: {e}")
+            # Retry once
+            try:
+                time.sleep(1)
+                requests.post(f"{self.memory_url}/events", json=payload)
+            except:
+                pass
+        except Exception as e:
+            logger.error(f"Unexpected error reporting {kind}: {e}")
 
     async def call_llm(self, messages: List[Dict[str, str]], temperature: float = 0.0) -> str:
         """Helper to call the LLM service."""

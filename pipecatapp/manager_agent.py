@@ -113,8 +113,8 @@ class ManagerAgent:
         return [t['id'] for t in subtasks]
 
     async def reduce_phase(self, task_ids: List[str]) -> str:
-        """Waits for results and aggregates them."""
-        logger.info("PHASE 3: Reduce - Aggregating Results")
+        """Waits for results and aggregates them using targeted task polling."""
+        logger.info(f"PHASE 3: Reduce - Aggregating Results for tasks: {task_ids}")
         
         results = {}
         start_time = time.time()
@@ -125,23 +125,32 @@ class ManagerAgent:
                 logger.warning("Timeout waiting for sub-tasks.")
                 break
                 
-            # Poll Memory Service for "worker_result" events
-            # In a real impl, we'd filter by task_id. 
-            # Here we simulate or mock if no memory service.
             if self.memory_url:
                 try:
                     async with httpx.AsyncClient() as client:
-                        resp = await client.get(f"{self.memory_url}/events?limit=50")
-                        if resp.status_code == 200:
-                            events = resp.json()
-                            for evt in events:
-                                if evt.get("kind") == "worker_result":
-                                    tid = evt.get("meta", {}).get("task_id")
-                                    if tid in task_ids and tid not in results:
+                        # Iterate through pending tasks and check their status specifically
+                        # This avoids race conditions where an event might be missed in the global feed
+                        # if the limit is exceeded.
+                        for tid in task_ids:
+                            if tid in results:
+                                continue
+
+                            # Call the new /tasks/{task_id} endpoint
+                            resp = await client.get(f"{self.memory_url}/tasks/{tid}")
+                            if resp.status_code == 200:
+                                events = resp.json()
+                                # Look for a result event
+                                for evt in events:
+                                    if evt.get("kind") == "worker_result":
                                         results[tid] = evt.get("content")
                                         logger.info(f"Received result for {tid}")
+                                        break
+                                    elif evt.get("kind") == "worker_failure":
+                                        results[tid] = f"FAILURE: {evt.get('content')}"
+                                        logger.error(f"Task {tid} failed: {evt.get('content')}")
+                                        break
                 except Exception as e:
-                    logger.warning(f"Error polling memory: {e}")
+                    logger.warning(f"Error polling memory service: {e}")
             
             await asyncio.sleep(5)
             
@@ -186,12 +195,14 @@ class ManagerAgent:
         # Report completion
         if self.memory_url:
              try:
-                requests.post(f"{self.memory_url}/events", json={
-                    "kind": "manager_result",
-                    "content": final_report,
-                    "meta": {"task_id": self.task_id}
-                })
-             except: pass
+                async with httpx.AsyncClient() as client:
+                    await client.post(f"{self.memory_url}/events", json={
+                        "kind": "manager_result",
+                        "content": final_report,
+                        "meta": {"task_id": self.task_id}
+                    })
+             except Exception as e:
+                 logger.error(f"Failed to report manager result: {e}")
 
 if __name__ == "__main__":
     agent = ManagerAgent()
