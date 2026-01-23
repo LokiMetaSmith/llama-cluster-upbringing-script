@@ -60,9 +60,10 @@ This layer contains the core Python application that constitutes the agent itsel
 - **Entrypoint:** `app.py`.
 - **Core Components:**
   - **`TwinService`:** The agent's "brain," implemented as a `pipecat` `FrameProcessor`. It handles conversation, memory, and tool use.
+  - **Workflow Engine:** A new, flexible engine that defines the agent's thought process using declarative YAML workflows (e.g., `default_agent_loop.yaml`).
   - **Memory:** A dual-component memory system with short-term conversational history and a long-term FAISS vector store for semantic search.
-  - **Tools:** The `TwinService` can use a variety of tools, including `ssh`, a sandboxed `code_runner`, `vision`, and most importantly, `ansible`. The `ansible` tool allows the agent to call back to the Ansible control plane, enabling it to provision new nodes or reconfigure the cluster in response to conversational commands.
-  - **Mixture of Experts (MoE) Routing:** The `TwinService` can act as a router, forwarding queries to specialized LLM backends discovered via Consul.
+  - **Tools:** The `TwinService` can access a comprehensive library of over 25 tools, including `ansible` for cluster management, `code_runner` for secure Python execution, `vision` for seeing the world, and specialized tools like `orchestrator`, `planner`, and `swarm` for complex tasks.
+  - **Mixture of Experts (MoE) Routing:** The system uses the workflow to route queries to specialized LLM backends (e.g., Coding, Math, Vision) discovered via Consul.
 
 ## Layer 5: Web UI & Control Plane
 

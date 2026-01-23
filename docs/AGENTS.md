@@ -4,55 +4,81 @@ This project utilizes two distinct AI agent architectures: a "Mixture of Experts
 
 ## 1. Runtime Architecture: A Mixture of Experts (MoE)
 
-The production application uses a Mixture of Experts (MoE) architecture to handle a wide range of tasks efficiently. Instead of relying on a single, monolithic model, the system is composed of multiple specialized AI agents. A primary "Router" agent analyzes incoming user requests and delegates them to the most suitable expert. This approach allows the cluster to use smaller, specialized models for specific tasks, leading to faster response times, more accurate results, and better resource management.
+The production application uses a Mixture of Experts (MoE) architecture to handle a wide range of tasks efficiently. Instead of relying on a single, monolithic model, the system is composed of multiple specialized AI agents.
+
+### The Workflow Engine
+
+The core of the system is the **Workflow Engine**, which runs within the main `pipecatapp` service (specifically the `TwinService`). The agent's behavior is no longer hardcoded; instead, it is defined by declarative workflows (YAML files).
+
+- **Role**: To orchestrate the "thought process" of the agent, moving from input to summary, reasoning, tool execution, and final response.
+- **Implementation**: The `WorkflowRunner` in `pipecatapp/workflow/runner.py` executes graphs defined in `pipecatapp/workflows/`.
+- **Flexibility**: The system can switch between different workflows. The default workflow (`default_agent_loop.yaml`) is a tiered conversation loop, but more complex workflows can enable autonomous tool use and multi-step planning.
 
 ### The Agent Hierarchy
 
-#### a. The Router Agent (The Conductor)
+#### a. The Router / Main Agent
 
-The core of the system is the Router Agent, which runs within the main `pipecatapp` service. This agent's primary responsibility is not to answer complex questions itself, but to understand the user's intent and delegate the task to the appropriate downstream service or tool.
+In the context of the workflow, the "Router" or "Main Agent" is the primary LLM node that analyzes the user's request.
 
-- **Role**: To classify incoming queries and route them to the correct specialist.
-- **Implementation**: This agent is the main `TwinService` in `ansible/roles/pipecatapp/files/app.py`.
-- **Prompt File**: `ansible/roles/pipecatapp/files/prompts/router.txt`
-- **Key Behavior**: The Router is the only agent with access to the tool library. If a query requires interaction with the system (e.g., running code, accessing files), the Router will select and execute the appropriate tool. If the query falls into a specialized domain, it will use the `route_to_expert` tool to pass the query to a specialist. For general conversation, it will handle the query itself.
+- **Responsibility**: It classifies incoming queries and delegates them to the most suitable expert or tool.
+- **Prompt File**: `ansible/roles/pipecatapp/files/prompts/router.txt` (used by `SystemPromptNode` in advanced workflows).
+- **Tool Access**: The Main Agent is the only entity with direct access to the tool library. If a query requires interaction with the system (e.g., running code, accessing files), it selects and executes the appropriate tool.
 
 #### b. The Expert Agents (The Specialists)
 
 Expert agents are specialized LLMs deployed as separate, independent services. They are designed to excel at a single, well-defined domain. They do not have access to tools and focus solely on processing the text-based queries routed to them. The system includes the following experts by default:
 
-- **The Main Expert**: Handles general conversation, summarization, and acts as the fallback for the Router Agent.
+- **The Main Expert**: Handles general conversation, summarization, and acts as the fallback.
 - **The Coding Expert**: Handles code generation, debugging, and questions about algorithms and system architecture.
 - **The Math Expert**: Solves math problems and answers logic-based questions.
-- **The Extract Expert**: Parses text to find and format specific information, like names, dates, or other data points.
+- **The Extract Expert**: Parses text to find and format specific information.
 
 ### Tool-Using Capabilities
 
-**Only the Router Agent has access to the library of tools.** This is a deliberate design choice for security and predictability. When the Router determines that a task requires interacting with the outside world, it will select and use the appropriate tool itself, rather than passing that capability down to a specialized expert. This concentrates the system's interactive capabilities in one place, making it easier to manage, monitor, and secure.
+**Only the Router/Main Agent has access to the library of tools.** This concentrates the system's interactive capabilities in one place, making it easier to manage, monitor, and secure.
 
-The following tools are available:
+#### Built-in Capabilities
 
-- **`ssh`**: Executes commands on remote machines.
-- **`mcp`**: Provides agent introspection and self-control (e.g., status checks, memory management).
-- **`vision`**: Gets a real-time description of what is visible via the webcam.
-- **`desktop_control`**: Provides full control over the desktop environment, including taking screenshots and performing mouse/keyboard actions.
-- **`code_runner`**: Executes Python code in a secure, sandboxed environment.
-- **`web_browser`**: Enables web navigation and content interaction.
+These are special capabilities integrated directly into the `TwinService` or prompt:
+
+- **`vision`**: Gets a real-time description of what is visible via the webcam (using YOLOv8 or Moondream).
+- **`route_to_expert`**: A virtual tool that allows the agent to forward a user's query to a specialized model (e.g., Coding, Math).
+
+#### Available Tools
+
+The following tools are available in `pipecatapp/tools/`:
+
 - **`ansible`**: Runs Ansible playbooks to manage the cluster.
-- **`power`**: Controls the cluster's power management policies.
-- **`summarizer`**: Summarizes conversation history.
-- **`term_everything`**: Provides a terminal interface for interacting with the system.
-- **`rag`**: Searches the project's documentation to answer questions.
-- **`ha`**: Controls smart home devices via Home Assistant.
-- **`git`**: Interacts with Git repositories.
-- **`orchestrator`**: Dispatches high-priority, complex jobs to the cluster.
-- **`llxprt_code`**: A specialized tool for code-related tasks.
-- **`council`**: Convenes a council of AI experts to deliberate on a query.
-- **`swarm`**: Spawns multiple worker agents to perform tasks in parallel.
-- **`project_mapper`**: Scans the codebase to generate a project structure map.
-- **`planner`**: Plans complex tasks and executes them using the SwarmTool.
-- **`file_editor`**: Reads, writes, and patches files in the codebase.
 - **`archivist`**: Performs deep research on the agent's long-term memory.
+- **`claude_clone`**: A tool for interacting with a Claude-like model.
+- **`code_runner`**: Executes Python code in a secure, sandboxed environment.
+- **`council`**: Convenes a council of AI experts to deliberate on a query.
+- **`dependency_scanner`**: Scans Python packages for vulnerabilities using the OSV database.
+- **`desktop_control`**: Provides full control over the desktop environment, including taking screenshots and performing mouse/keyboard actions.
+- **`file_editor`**: Reads, writes, and patches files in the codebase.
+- **`final_answer`**: A tool to provide a final answer to the user.
+- **`git`**: Interacts with Git repositories.
+- **`ha`**: Controls smart home devices via Home Assistant.
+- **`llxprt_code`**: A specialized tool for code-related tasks.
+- **`mcp`**: Provides agent introspection and self-control (e.g., status checks, memory management).
+- **`open_workers`**: Manages and interacts with open worker agents.
+- **`opencode`**: Interface for the OpenCode tool.
+- **`orchestrator`**: Dispatches high-priority, complex jobs to the cluster.
+- **`planner`**: Plans complex tasks and executes them.
+- **`power`**: Controls the cluster's power management policies.
+- **`project_mapper`**: Scans the codebase to generate a project structure map.
+- **`prompt_improver`**: A tool for improving prompts.
+- **`rag`**: Searches the project's documentation to answer questions.
+- **`shell`**: Executes shell commands (uses a persistent tmux session).
+- **`smol_agent_computer`**: A tool for creating small, specialized agents.
+- **`ssh`**: Executes commands on remote machines.
+- **`summarizer`**: Summarizes conversation history.
+- **`swarm`**: Spawns multiple worker agents to perform tasks in parallel.
+- **`term_everything`**: Provides a terminal interface for interacting with the system.
+- **`vr`**: Tools for Virtual Reality interactions.
+- **`web_browser`**: Enables web navigation and content interaction.
+
+> **Note on Implementation History:** Previous versions of the agent relied on a hardcoded "Router" agent with a static list of tools. The current system has evolved to a dynamic, workflow-driven architecture, enabling more complex and varied agent behaviors.
 
 ### Configuration and Customization
 
