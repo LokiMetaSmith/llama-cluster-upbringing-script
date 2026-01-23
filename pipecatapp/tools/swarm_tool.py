@@ -30,7 +30,7 @@ class SwarmTool:
         """
         dispatched_ids = []
         errors = []
-
+        
         # Determine script based on agent_type
         script_path = "/opt/pipecatapp/worker_agent.py"
         if agent_type == "technician":

@@ -19,6 +19,32 @@
     2. Train the router to map queries to our specific local experts.
     3. Update `LLMRouterNode` to load the trained config/model.
 
+## Agentic Patterns Implementation
+
+- [x] **Implement Technician Agent:**
+  - Create a 3-phase agent (Plan, Execute, Reflect) in `pipecatapp/technician_agent.py`.
+  - Update `SwarmTool` to support spawning technician agents.
+- [ ] **Swarm Orchestration (Map-Reduce):**
+  - **Goal:** Implement the "Swarm Migration" pattern where a manager agent splits a large task into chunks and dispatches them to multiple Technician Agents.
+  - **Tasks:**
+    1. Create a `ManagerAgent` or update `TechnicianAgent` to have a "Manager Mode".
+    2. Implement the "Map" phase: Analysis of the task and generation of sub-task definitions.
+    3. Implement the "Dispatch" phase: Using `SwarmTool` to spawn multiple `technician` agents.
+    4. Implement the "Reduce" phase: Aggregating results from the spawned workers.
+- [ ] **Durable Execution Integration:**
+  - **Goal:** Ensure `TechnicianAgent` can resume execution after a crash or restart.
+  - **Tasks:**
+    1. Update `TechnicianAgent` to use `pipecatapp.durable_execution.DurableExecutionEngine`.
+    2. Decorate the `execute_step` method with `@durable_step`.
+    3. Ensure state (messages list, current plan) is checkpointed.
+- [ ] **Skill Library (Knowledge Persistence):**
+  - **Goal:** Allow agents to save successful tool usage patterns for future use.
+  - **Tasks:**
+    1. Create a simple file-based or database-backed Skill Library service (or use the existing Memory service).
+    2. Add a `save_skill` tool to the agent's toolkit.
+    3. Add a `search_skills` tool to the agent's toolkit.
+    4. Update the `TechnicianAgent` reflection phase to optionally suggest saving a new skill if the task was novel and successful.
+
 ## Prompt Engineering Enhancements
 
 - [x] **Implement Automated Testing for `prompt_engineering`:**
