@@ -1,0 +1,40 @@
+- name: Ensure llama.cpp server is started with --slots argument
+  ansible.builtin.debug:
+    msg: |
+      "IMPORTANT: Ensure your llama.cpp server (or the service managing it) on this worker node
+      is started with the '--slots AVAILABLE_SLOTS' argument, where AVAILABLE_SLOTS is an integer
+      representing the number of parallel requests this node can handle.
+      Paddler agent requires this for proper operation.
+      Example: llama-server -m model.gguf -c 2048 --port 8088 --slots 4"
+  when: paddler_agent_verify_llamacpp_slots | default(true)
+
+- name: Create paddler-agent systemd service file
+  ansible.builtin.template:
+    src: paddler-agent.service.j2 # Assumes templates are in a 'templates' dir relative to this task file or playbook
+    dest: /etc/systemd/system/paddler-agent.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload and restart paddler-agent
+  become: true
+
+- name: Ensure paddler-agent service is enabled and started
+  ansible.builtin.systemd:
+    name: paddler-agent
+    enabled: true
+    state: started
+    daemon_reload: true # Reload daemon if the service file changed (implicitly handled by notify or explicitly here)
+  become: true
+
+# It's good practice to have handlers in a separate handlers.yaml file,
+# but for simplicity in this standalone task, we can define it here or rely on notify to trigger it
+# if defined in a playbook's handlers section.
+# If this tasks file is part of a role, handlers would be in role_path/handlers/main.yaml
+
+# Example handler (would typically be in handlers/main.yaml if this were a role)
+# - name: Reload and restart paddler-agent
+#   ansible.builtin.systemd:
+#     name: paddler-agent
+#     daemon_reload: true
+#     state: restarted
+#   become: true

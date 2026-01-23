@@ -1,0 +1,51 @@
+- name: Ensure paddler user and group exist
+  ansible.builtin.group:
+    name: "{{ paddler_balancer_group }}"
+    state: present
+  become: true
+
+- name: Ensure paddler user exists
+  ansible.builtin.user:
+    name: "{{ paddler_balancer_user }}"
+    group: "{{ paddler_balancer_group }}"
+    system: true # Mark as system user, no home directory by default unless specified
+    shell: /usr/sbin/nologin # Disable login for service user
+    create_home: false
+  become: true
+
+- name: Ensure paddler working directory exists
+  ansible.builtin.file:
+    path: "{{ paddler_balancer_working_directory }}"
+    state: directory
+    owner: "{{ paddler_balancer_user }}"
+    group: "{{ paddler_balancer_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create paddler-balancer systemd service file
+  ansible.builtin.template:
+    src: paddler-balancer.service.j2 # Assumes templates are in 'templates/' dir relative to this task file
+    dest: /etc/systemd/system/paddler-balancer.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload and restart paddler-balancer
+  become: true
+
+- name: Ensure paddler-balancer service is enabled and started
+  ansible.builtin.systemd:
+    name: paddler-balancer
+    enabled: true
+    state: started
+    daemon_reload: true # Reload daemon if the service file changed
+  become: true
+
+# Handlers would typically be in role_path/handlers/main.yaml
+# For example:
+# handlers:
+#   - name: Reload and restart paddler-balancer
+#     ansible.builtin.systemd:
+#       name: paddler-balancer
+#       daemon_reload: true
+#       state: restarted
+#     become: true
