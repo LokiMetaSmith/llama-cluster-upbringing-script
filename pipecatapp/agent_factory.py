@@ -26,7 +26,6 @@ from tools.file_editor_tool import FileEditorTool
 from tools.archivist_tool import ArchivistTool
 from tools.opencode_tool import OpencodeTool
 from tools.dependency_scanner_tool import DependencyScannerTool
-from tools.spec_loader_tool import SpecLoaderTool
 from tools.remote_tool_proxy import RemoteToolProxy
 from tools.vr_tool import VRTool
 
@@ -75,7 +74,6 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         ),
         "dependency_scanner": DependencyScannerTool(),
         "vr": VRTool(),
-        "spec_loader": SpecLoaderTool(),
     }
 
     if config.get("use_summarizer", False) and twin_service:

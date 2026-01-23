@@ -42,9 +42,8 @@ async def main_async():
     llm_base_url = None
 
     try:
-        # 1. Discover Memory Service / Event Bus
-        event_bus_service_name = os.getenv("EVENT_BUS_SERVICE_NAME", "memory-service")
-        resp = requests.get(f"{consul_addr}/v1/catalog/service/{event_bus_service_name}", headers=headers)
+        # 1. Discover Memory Service
+        resp = requests.get(f"{consul_addr}/v1/catalog/service/memory-service", headers=headers)
         if resp.status_code == 200:
             services = resp.json()
             if services:
@@ -52,7 +51,7 @@ async def main_async():
                 addr = svc.get("ServiceAddress", "localhost")
                 port = svc.get("ServicePort", 8000)
                 memory_url = f"http://{addr}:{port}"
-                logger.info(f"Discovered Event Bus ({event_bus_service_name}) at {memory_url}")
+                logger.info(f"Discovered Memory Service at {memory_url}")
 
         # 2. Discover LLM Service (router-api or llamacpp-rpc-api)
         # We try 'router-api' first as it's the main entry point
@@ -83,20 +82,8 @@ async def main_async():
                 }
             })
             logger.info("Reported start to Memory Service.")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to report start to memory service: {e}")
-            # Retry once
-            try:
-                time.sleep(1)
-                requests.post(f"{memory_url}/events", json={
-                    "kind": "worker_started",
-                    "content": f"Task {task_id} started.",
-                    "meta": {"task_id": task_id}
-                })
-            except:
-                pass
         except Exception as e:
-             logger.error(f"Unexpected error reporting start: {e}")
+            logger.error(f"Failed to report start to memory service: {e}")
 
     # Initialize Tools
     # We pass None for twin_service/runner for now as the worker doesn't have the full pipeline context
@@ -188,22 +175,8 @@ If you have a final answer, respond with just the text.
                     "meta": {"task_id": task_id, "status": "success", "tools_used": list(tools.keys())}
                 })
                 logger.info("Reported result to Memory Service.")
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Failed to report result to memory service: {e}")
-                # Retry loop for results (more critical)
-                for i in range(3):
-                    try:
-                        time.sleep(2)
-                        requests.post(f"{memory_url}/events", json={
-                            "kind": "worker_result",
-                            "content": f"Task {task_id} completed (Retry). Result: {result_output}",
-                            "meta": {"task_id": task_id, "status": "success"}
-                        })
-                        break
-                    except:
-                        pass
             except Exception as e:
-                logger.error(f"Unexpected error reporting result: {e}")
+                logger.error(f"Failed to report to memory service: {e}")
 
         logger.info(f"Task {task_id} completed successfully.")
 

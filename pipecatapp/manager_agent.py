@@ -113,8 +113,8 @@ class ManagerAgent:
         return [t['id'] for t in subtasks]
 
     async def reduce_phase(self, task_ids: List[str]) -> str:
-        """Waits for results and aggregates them using targeted task polling."""
-        logger.info(f"PHASE 3: Reduce - Aggregating Results for tasks: {task_ids}")
+        """Waits for results and aggregates them."""
+        logger.info("PHASE 3: Reduce - Aggregating Results")
         
         results = {}
         start_time = time.time()
@@ -125,32 +125,23 @@ class ManagerAgent:
                 logger.warning("Timeout waiting for sub-tasks.")
                 break
                 
+            # Poll Memory Service for "worker_result" events
+            # In a real impl, we'd filter by task_id.
+            # Here we simulate or mock if no memory service.
             if self.memory_url:
                 try:
                     async with httpx.AsyncClient() as client:
-                        # Iterate through pending tasks and check their status specifically
-                        # This avoids race conditions where an event might be missed in the global feed
-                        # if the limit is exceeded.
-                        for tid in task_ids:
-                            if tid in results:
-                                continue
-
-                            # Call the new /tasks/{task_id} endpoint
-                            resp = await client.get(f"{self.memory_url}/tasks/{tid}")
-                            if resp.status_code == 200:
-                                events = resp.json()
-                                # Look for a result event
-                                for evt in events:
-                                    if evt.get("kind") == "worker_result":
+                        resp = await client.get(f"{self.memory_url}/events?limit=50")
+                        if resp.status_code == 200:
+                            events = resp.json()
+                            for evt in events:
+                                if evt.get("kind") == "worker_result":
+                                    tid = evt.get("meta", {}).get("task_id")
+                                    if tid in task_ids and tid not in results:
                                         results[tid] = evt.get("content")
                                         logger.info(f"Received result for {tid}")
-                                        break
-                                    elif evt.get("kind") == "worker_failure":
-                                        results[tid] = f"FAILURE: {evt.get('content')}"
-                                        logger.error(f"Task {tid} failed: {evt.get('content')}")
-                                        break
                 except Exception as e:
-                    logger.warning(f"Error polling memory service: {e}")
+                    logger.warning(f"Error polling memory: {e}")
             
             await asyncio.sleep(5)
             
@@ -168,54 +159,6 @@ class ManagerAgent:
         msgs = [{"role": "user", "content": aggregation_prompt}]
         final_report = await self.call_llm(msgs)
         return final_report
-
-    async def verify_phase(self, target_result: str) -> str:
-        """Dispatches a Judge Agent to verify the result."""
-        logger.info("PHASE 4: Verification")
-
-        judge_task_id = f"judge-{self.task_id}"
-
-        # Dispatch Judge
-        judge_task = [{
-            "id": judge_task_id,
-            "prompt": "Verify the quality and correctness of the provided result.",
-            "context": target_result[:2000], # Truncate if too long, or pass pointer
-            "target_task_id": self.task_id # Logic to let judge pull it
-        }]
-
-        if not self.swarm_tool:
-            self.swarm_tool = SwarmTool()
-
-        await self.swarm_tool.spawn_workers(judge_task, agent_type="judge")
-
-        # Wait for Judge Result
-        verdict = "VERDICT: PASS (Default)" # Fallback
-
-        # Similar polling loop
-        # Ideally we refactor polling into a helper, but duplicating for safety now
-        start_time = time.time()
-        timeout = 300
-
-        while time.time() - start_time < timeout:
-            if self.memory_url:
-                 try:
-                    async with httpx.AsyncClient() as client:
-                        resp = await client.get(f"{self.memory_url}/tasks/{judge_task_id}")
-                        if resp.status_code == 200:
-                            events = resp.json()
-                            for evt in events:
-                                if evt.get("kind") == "judge_pass":
-                                    logger.info("Verification Passed!")
-                                    return f"VERIFICATION PASSED: {evt.get('content')}"
-                                elif evt.get("kind") == "judge_fail":
-                                    logger.warning("Verification Failed!")
-                                    return f"VERIFICATION FAILED: {evt.get('content')}"
-                 except Exception:
-                     pass
-            await asyncio.sleep(5)
-
-        logger.warning("Verification timed out.")
-        return "VERIFICATION TIMEOUT"
 
     async def run(self):
         logger.info(f"Starting Manager Agent for {self.task_id}")
@@ -237,37 +180,18 @@ class ManagerAgent:
         # 3. Reduce
         final_report = await self.reduce_phase(task_ids)
         
-        # 4. Verify
-        # We temporarily store the report to memory so Judge can fetch it by ID
-        if self.memory_url:
-             try:
-                async with httpx.AsyncClient() as client:
-                    await client.post(f"{self.memory_url}/events", json={
-                        "kind": "manager_result", # Intermediate result
-                        "content": final_report,
-                        "meta": {"task_id": self.task_id}
-                    })
-             except Exception: pass
-
-        verification_result = await self.verify_phase(final_report)
-        logger.info(f"Verification Result: {verification_result}")
-
-        final_output = f"{final_report}\n\n{verification_result}"
-
         logger.info("FINAL REPORT:")
-        print(final_output)
+        print(final_report)
         
-        # Final Report completion
+        # Report completion
         if self.memory_url:
              try:
-                async with httpx.AsyncClient() as client:
-                    await client.post(f"{self.memory_url}/events", json={
-                        "kind": "manager_complete", # Distinction from intermediate result
-                        "content": final_output,
-                        "meta": {"task_id": self.task_id}
-                    })
-             except Exception as e:
-                 logger.error(f"Failed to report manager result: {e}")
+                requests.post(f"{self.memory_url}/events", json={
+                    "kind": "manager_result",
+                    "content": final_report,
+                    "meta": {"task_id": self.task_id}
+                })
+             except: pass
 
 if __name__ == "__main__":
     agent = ManagerAgent()
