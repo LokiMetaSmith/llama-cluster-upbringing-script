@@ -16,6 +16,7 @@ from typing import List, Dict
 from workflow.runner import ActiveWorkflows, OpenGates
 from workflow.history import WorkflowHistory
 from api_keys import get_api_key
+from security import sanitize_data
 try:
     from .models import InternalChatRequest, SystemMessageRequest
     from .rate_limiter import RateLimiter
@@ -380,7 +381,14 @@ async def get_workflow_history(limit: int = 50):
     """Retrieves a list of past workflow runs."""
     history = WorkflowHistory()
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, lambda: history.get_all_runs(limit=limit))
+    runs = await loop.run_in_executor(None, lambda: history.get_all_runs(limit=limit))
+
+    # Sanitize error messages
+    for run in runs:
+        if "error" in run and run["error"]:
+            run["error"] = sanitize_data(run["error"])
+
+    return runs
 
 @app.get("/api/workflows/history/{runner_id}", response_class=JSONResponse, summary="Get Workflow Run Details", description="Retrieves the full details of a specific workflow run.", tags=["Workflow"])
 async def get_workflow_run(runner_id: str):
@@ -390,7 +398,10 @@ async def get_workflow_run(runner_id: str):
     run_details = await loop.run_in_executor(None, lambda: history.get_run(runner_id))
     if not run_details:
         raise HTTPException(status_code=404, detail="Workflow run not found.")
-    return run_details
+
+    # Security Enhancement: Sanitize sensitive data from the run details
+    # This removes potential secrets in global_inputs or tool outputs before returning to the UI
+    return sanitize_data(run_details)
 
 @app.post("/api/gate/approve", response_class=JSONResponse)
 async def approve_gate(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
