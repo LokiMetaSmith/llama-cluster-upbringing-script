@@ -101,6 +101,7 @@ Agent memories related to the project.
 * The `bootstrap.sh` script establishes a Python virtual environment in the `.venv` directory; manual Ansible executions should utilize `.venv/bin/ansible-playbook` to ensure dependencies are met.
 * The `magic_mirror` Ansible role performs a pre-flight check for `/dev/dri/renderD*` devices and conditionally skips the entire deployment (installation and Nomad job submission) if no GPU is found, to prevent crash loops on headless nodes.
 * The `playbooks/ops/optimize_memory.yaml` playbook manages cluster memory by explicitly stopping heavy RPC jobs (targeting both legacy filename-based and current name-based IDs) and restarting core expert services.
+
 ## Nomad & Consul Configuration
 
 * In Nomad HCL, keys within an `env` block must not be quoted. For example, use `KEY = "value"` instead of `"KEY" = "value"`.
@@ -206,6 +207,7 @@ Agent memories related to the project.
 * For Nomad jobs using `driver = "raw_exec"` with host networking, `tcp` health checks verify the host's IP address (due to Nomad's architecture). If a service binds specifically to `127.0.0.1` (localhost), standard `tcp` checks will fail; a `script` check (e.g., using `bash -c 'echo > /dev/tcp/127.0.0.1/PORT'`) must be used to verify the specific bind address.
 * In Nomad job definitions using `driver = "raw_exec"` with host networking, service health checks should reference a named port label (e.g., `port = "label_name"`) defined in the `network` stanza rather than a literal port number to ensure robust binding verification.
 * The `group_vars/models.yaml` configuration reserves 9216MB (approx. 9GB) for 7B and 8B parameter LLM models (e.g., Llama-3, CodeLlama) to provide a realistic buffer and prevent out-of-memory errors.
+
 ## Development Workflow & Testing
 
 * The correct Python module path for unit tests invoked via `python -m unittest` is `tests.unit.<module_name>`, matching the filesystem structure `tests/unit/`.
@@ -328,6 +330,7 @@ Agent memories related to the project.
 * Unit tests for `pipecatapp` that involve concurrent HTTP requests (e.g., using `asyncio.gather`) require mocking `httpx.Client.get` with a side-effect function that inspects arguments, rather than a sequence of return values, to handle non-deterministic execution order.
 * The project uses `.Jules/palette.md` to record critical UX and accessibility learnings and patterns.
 * Existing code comments labeled 'Security Fix' (e.g., in `terminal.js`) may identify legacy patterns or inherited code rather than recent changes; context should be verified before assuming authorship.
+
 ## Project Architecture & Components
 
 * `supervisor.py` depends on `health_check.yaml`, `diagnose_failure.yaml`, and `heal_job.yaml` being present in the root directory.
@@ -425,6 +428,7 @@ Agent memories related to the project.
 * The `magic_mirror` server binary (v0.8.4) will exit immediately with an error ("at least one application must be defined") if no application configuration is provided at startup.
 * To satisfy the `magic_mirror` startup requirement in a headless or cluster environment without a display, configuring a dummy application (e.g., `/bin/bash`) with `xwayland = false` is a valid strategy.
 * Persistence for `memory-graph` is handled by mounting the host directory `/opt/pipecat/data/memory` to `/data` inside the container, utilizing a SQLite database.
+
 ## Troubleshooting & Gotchas
 
 * In the development environment, if a file is confirmed to exist via `ls` but tools like `read_file` or `replace_with_git_merge_diff` fail with a 'file not found' error, deleting and recreating the file can resolve the issue.
