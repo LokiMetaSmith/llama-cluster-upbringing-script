@@ -30,15 +30,15 @@ This document tracks the progress of integrating the "Browser from Scratch" auto
     - [x] Implement Judge loop in Manager (dispatch -> wait for verdict).
 
 ## Phase 4: Smart Context (Git Submodules/Docs)
-- [ ] **Create SpecLoader Tool**
-    - [ ] Tool to clone/pull external git repositories (e.g., library docs).
-    - [ ] Ingest text/markdown from these repos into RAG/Memory.
-- [ ] **Context Injection**
-    - [ ] Allow Manager to specify "External Specs" to load for a mission.
+- [x] **Create SpecLoader Tool**
+    - [x] Tool to clone/pull external git repositories (e.g., library docs).
+    - [x] Ingest text/markdown from these repos into RAG/Memory.
+- [x] **Context Injection**
+    - [x] Integrate tool into Agent Factory.
 
 ## Phase 5: Scaling & Swarm
 - [ ] **Infrastructure Tuning**
     - [ ] Verify Nomad job templates allow dynamic scaling.
     - [ ] Test with >10 concurrent agents.
 - [ ] **SwarmTool Upgrade**
-    - [ ] Ensure `SwarmTool` can handle batch dispatch efficiently.
+    - [x] Ensure `SwarmTool` can handle batch dispatch efficiently.
