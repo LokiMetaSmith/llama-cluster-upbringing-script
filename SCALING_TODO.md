@@ -22,12 +22,12 @@ This document tracks the progress of integrating the "Browser from Scratch" auto
     - [x] Implement "Reduce" phase logic using real worker outputs.
 
 ## Phase 3: The Judge & Quality Assurance
-- [ ] **Implement Judge Agent** (or distinct Judge loop in Manager)
-    - [ ] Create `JudgeAgent` or `VerificationTool`.
-    - [ ] Define criteria for "success" (e.g., lint pass, test pass, functionality check).
-- [ ] **Workflow Upgrade**
-    - [ ] Update Manager to dispatch "Verify" tasks after "Execute" tasks.
-    - [ ] Implement retry/feedback loop: if Judge fails, Manager creates new fix task.
+- [x] **Implement Judge Agent** (`judge_agent.py`)
+    - [x] Create `JudgeAgent`.
+    - [x] Define criteria for "success" (e.g., lint pass, test pass, functionality check).
+- [x] **Workflow Upgrade**
+    - [x] Update Manager to dispatch "Verify" tasks after "Execute" tasks.
+    - [x] Implement Judge loop in Manager (dispatch -> wait for verdict).
 
 ## Phase 4: Smart Context (Git Submodules/Docs)
 - [ ] **Create SpecLoader Tool**

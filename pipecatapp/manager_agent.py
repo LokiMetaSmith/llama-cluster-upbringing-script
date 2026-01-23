@@ -169,6 +169,54 @@ class ManagerAgent:
         final_report = await self.call_llm(msgs)
         return final_report
 
+    async def verify_phase(self, target_result: str) -> str:
+        """Dispatches a Judge Agent to verify the result."""
+        logger.info("PHASE 4: Verification")
+
+        judge_task_id = f"judge-{self.task_id}"
+
+        # Dispatch Judge
+        judge_task = [{
+            "id": judge_task_id,
+            "prompt": "Verify the quality and correctness of the provided result.",
+            "context": target_result[:2000], # Truncate if too long, or pass pointer
+            "target_task_id": self.task_id # Logic to let judge pull it
+        }]
+
+        if not self.swarm_tool:
+            self.swarm_tool = SwarmTool()
+
+        await self.swarm_tool.spawn_workers(judge_task, agent_type="judge")
+
+        # Wait for Judge Result
+        verdict = "VERDICT: PASS (Default)" # Fallback
+
+        # Similar polling loop
+        # Ideally we refactor polling into a helper, but duplicating for safety now
+        start_time = time.time()
+        timeout = 300
+
+        while time.time() - start_time < timeout:
+            if self.memory_url:
+                 try:
+                    async with httpx.AsyncClient() as client:
+                        resp = await client.get(f"{self.memory_url}/tasks/{judge_task_id}")
+                        if resp.status_code == 200:
+                            events = resp.json()
+                            for evt in events:
+                                if evt.get("kind") == "judge_pass":
+                                    logger.info("Verification Passed!")
+                                    return f"VERIFICATION PASSED: {evt.get('content')}"
+                                elif evt.get("kind") == "judge_fail":
+                                    logger.warning("Verification Failed!")
+                                    return f"VERIFICATION FAILED: {evt.get('content')}"
+                 except Exception:
+                     pass
+            await asyncio.sleep(5)
+
+        logger.warning("Verification timed out.")
+        return "VERIFICATION TIMEOUT"
+
     async def run(self):
         logger.info(f"Starting Manager Agent for {self.task_id}")
         if not self.prompt:
@@ -189,16 +237,33 @@ class ManagerAgent:
         # 3. Reduce
         final_report = await self.reduce_phase(task_ids)
         
-        logger.info("FINAL REPORT:")
-        print(final_report)
-        
-        # Report completion
+        # 4. Verify
+        # We temporarily store the report to memory so Judge can fetch it by ID
         if self.memory_url:
              try:
                 async with httpx.AsyncClient() as client:
                     await client.post(f"{self.memory_url}/events", json={
-                        "kind": "manager_result",
+                        "kind": "manager_result", # Intermediate result
                         "content": final_report,
+                        "meta": {"task_id": self.task_id}
+                    })
+             except Exception: pass
+
+        verification_result = await self.verify_phase(final_report)
+        logger.info(f"Verification Result: {verification_result}")
+
+        final_output = f"{final_report}\n\n{verification_result}"
+
+        logger.info("FINAL REPORT:")
+        print(final_output)
+        
+        # Final Report completion
+        if self.memory_url:
+             try:
+                async with httpx.AsyncClient() as client:
+                    await client.post(f"{self.memory_url}/events", json={
+                        "kind": "manager_complete", # Distinction from intermediate result
+                        "content": final_output,
                         "meta": {"task_id": self.task_id}
                     })
              except Exception as e:

@@ -19,35 +19,42 @@ BASE_URL = f"http://localhost:{PORT}"
 def run_server():
     uvicorn.run(app, host="127.0.0.1", port=PORT, log_level="error")
 
-async def mock_technician_task(task_id: str, duration: int = 2):
-    """Simulates a technician doing work and reporting back."""
+async def mock_technician_task(task_id: str, duration: int = 2, agent_type: str = "technician"):
+    """Simulates a technician or judge doing work and reporting back."""
     await asyncio.sleep(duration)
-    # Use requests since the agent uses it (sync)
     try:
         # Start
         requests.post(f"{BASE_URL}/events", json={
-            "kind": "worker_started",
+            "kind": f"{agent_type}_started", # judge_started or worker_started
             "content": f"Started {task_id}",
-            "meta": {"task_id": task_id, "agent_type": "technician"}
+            "meta": {"task_id": task_id, "agent_type": agent_type}
         })
 
         await asyncio.sleep(1)
 
-        # Result
-        requests.post(f"{BASE_URL}/events", json={
-            "kind": "worker_result",
-            "content": f"Result for {task_id}: SUCCESS",
-            "meta": {"task_id": task_id, "status": "success"}
-        })
+        if agent_type == "judge":
+            # Judge Result
+            requests.post(f"{BASE_URL}/events", json={
+                "kind": "judge_pass",
+                "content": "VERDICT: PASS",
+                "meta": {"task_id": task_id, "status": "success"}
+            })
+        else:
+            # Technician Result
+            requests.post(f"{BASE_URL}/events", json={
+                "kind": "worker_result",
+                "content": f"Result for {task_id}: SUCCESS",
+                "meta": {"task_id": task_id, "status": "success"}
+            })
     except Exception as e:
-        print(f"Mock technician failed: {e}")
+        print(f"Mock {agent_type} failed: {e}")
 
 class MockSwarmTool:
     """Mocks SwarmTool to spawn our local mock tasks instead of Nomad jobs."""
     async def spawn_workers(self, tasks: list, agent_type: str = "worker"):
         for task in tasks:
             # Fire and forget the mock task
-            asyncio.create_task(mock_technician_task(task['id']))
+            asyncio.create_task(mock_technician_task(task['id'], agent_type=agent_type))
         return f"Mock dispatched {len(tasks)}"
 
 class TestManagerFlow:
@@ -81,19 +88,13 @@ class TestManagerFlow:
         # Mock Dispatch to use our local mock runner
         async def mock_dispatch(subtasks):
             swarm = MockSwarmTool()
+            agent.swarm_tool = swarm # Ensure agent has reference for verify_phase
             await swarm.spawn_workers(subtasks)
             return [t['id'] for t in subtasks]
         agent.dispatch_phase = mock_dispatch
 
         # Run!
-        # reduce_phase is what we really want to test (the polling logic)
         print("Starting Manager Agent Run...")
-
-        # We manually invoke the phases to control the flow, or just run()
-        # But run() calls map/dispatch/reduce.
-        # Since we mocked map/dispatch, run() is safe.
-
-        # Capture stdout? No need, just let it run.
         await agent.run()
         print("Manager Agent Run Complete.")
 
@@ -105,14 +106,14 @@ class TestManagerFlow:
         for e in events:
             print(f" - {e['kind']} (Task: {e.get('task_id')})")
 
-        # Check for manager_result
-        manager_results = [e for e in events if e['kind'] == 'manager_result']
-        assert len(manager_results) == 1, "Manager did not report final result"
-        print("Manager reported final result.")
+        # Check for manager_complete (not just intermediate manager_result)
+        complete_results = [e for e in events if e['kind'] == 'manager_complete']
+        assert len(complete_results) == 1, "Manager did not report completion"
 
-        final_content = manager_results[0]['content']
-        assert "task-A" in final_content or "Mock LLM" in final_content
-        print(f"Final Report Content: {final_content[:50]}...")
+        final_content = complete_results[0]['content']
+        assert "VERIFICATION PASSED" in final_content
+        print(f"Final Report verified: {final_content[:50]}...")
+        print("Manager reported final result.")
 
 if __name__ == "__main__":
     t = TestManagerFlow()

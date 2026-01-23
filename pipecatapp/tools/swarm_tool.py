@@ -35,6 +35,8 @@ class SwarmTool:
         script_path = "/opt/pipecatapp/worker_agent.py"
         if agent_type == "technician":
             script_path = "/opt/pipecatapp/technician_agent.py"
+        elif agent_type == "judge":
+            script_path = "/opt/pipecatapp/judge_agent.py"
 
         async with httpx.AsyncClient() as client:
             for task in tasks:
@@ -73,6 +75,8 @@ class SwarmTool:
                                             "WORKER_PROMPT": task.get("prompt"),
                                             "WORKER_CONTEXT": task.get("context", ""),
                                             "WORKER_TASK_ID": task.get("id"),
+                                            "TARGET_TASK_ID": task.get("target_task_id", ""),
+                                            "JUDGE_TASK_ID": task.get("id"),
                                             "CONSUL_HTTP_ADDR": os.getenv("CONSUL_HTTP_ADDR", "http://10.0.0.1:8500")
                                         },
                                         "Resources": {
