@@ -177,6 +177,54 @@
   tags:
     - deploy_app
 
+- name: Copy net_utils module
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../pipecatapp/net_utils.py"
+    dest: "{{ pipecat_app_dir }}/net_utils.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy models module
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../pipecatapp/models.py"
+    dest: "{{ pipecat_app_dir }}/models.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy rate_limiter module
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../pipecatapp/rate_limiter.py"
+    dest: "{{ pipecat_app_dir }}/rate_limiter.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy security module
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../pipecatapp/security.py"
+    dest: "{{ pipecat_app_dir }}/security.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy api_keys module
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../pipecatapp/api_keys.py"
+    dest: "{{ pipecat_app_dir }}/api_keys.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy llm_clients module
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../pipecatapp/llm_clients.py"
+    dest: "{{ pipecat_app_dir }}/llm_clients.py"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy archivist service
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../../pipecatapp/archivist_service.py"
