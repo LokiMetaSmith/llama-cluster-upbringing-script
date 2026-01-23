@@ -74,6 +74,7 @@ from workflow.nodes.llm_nodes import *
 from workflow.nodes.tool_nodes import *
 from workflow.nodes.system_nodes import *
 from api_keys import initialize_api_keys
+from security import redact_sensitive_data
 try:
     from .net_utils import format_url
 except ImportError:
@@ -85,13 +86,6 @@ import uvicorn
 # -----------------------
 # Logging -> web UI bridge
 # -----------------------
-
-# Pre-compile regex for redaction to improve performance
-# Matches "sk-" followed by 20+ alphanumeric/hyphen characters
-# This targets OpenAI-style keys while avoiding common words like "task", "ask", "desk"
-_API_KEY_PATTERN = re.compile(r'(sk-[a-zA-Z0-9-]{20,})')
-# Matches "Bearer " followed by a token (alphanumeric and common token chars)
-_BEARER_TOKEN_PATTERN = re.compile(r'(Bearer\s+)([a-zA-Z0-9\-\._~+/]+=*)')
 
 class WebSocketLogHandler(logging.Handler):
     """A logging handler that forwards records to a WebSocket connection.
@@ -110,8 +104,7 @@ class WebSocketLogHandler(logging.Handler):
 
         # Security Fix: Sentinel - Redact sensitive information
         # Redact generic API key patterns and Bearer tokens
-        log_entry = _API_KEY_PATTERN.sub(r'sk-[REDACTED]', log_entry)
-        log_entry = _BEARER_TOKEN_PATTERN.sub(r'\1[REDACTED]', log_entry)
+        log_entry = redact_sensitive_data(log_entry)
 
         try:
             # Get the running asyncio loop to safely schedule the broadcast.
