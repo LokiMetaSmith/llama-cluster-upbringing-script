@@ -12,6 +12,7 @@ const WorkflowEditor = {
     },
 
     init: function(containerId, options = {}) {
+        this.options = options;
         this.graph = new LGraph();
         this.canvas = new LGraphCanvas(containerId, this.graph);
         this.canvas.allow_searchbox = true; // enable search box with double click
@@ -459,10 +460,19 @@ const WorkflowEditor = {
                 })
             });
             const res = await response.json();
-            alert(res.message);
+
+            if (this.options && this.options.onStatusUpdate) {
+                this.options.onStatusUpdate(res.message, 'success');
+            } else {
+                alert(res.message);
+            }
         } catch (error) {
             console.error("Save failed", error);
-            alert("Save failed: " + error);
+            if (this.options && this.options.onStatusUpdate) {
+                this.options.onStatusUpdate("Save failed: " + error, 'error');
+            } else {
+                alert("Save failed: " + error);
+            }
         }
     }
 };
