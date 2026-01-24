@@ -8,6 +8,7 @@ import httpx
 import json
 from typing import List, Dict, Any, Optional
 from agent_factory import create_tools
+from pmm_memory_client import PMMMemoryClient
 
 # Configure logging
 logging.basicConfig(
@@ -23,9 +24,11 @@ class TechnicianAgent:
         self.context = os.getenv("WORKER_CONTEXT", "")
         self.llm_base_url = None
         self.memory_url = None
+        self.memory_client = None
         self.tools = {}
         self.messages = []
         self.max_steps = int(os.getenv("MAX_STEPS", "15"))
+        self.work_item_id = None # Root work item for this task
 
     def discover_services(self):
         """Discovers LLM and Memory services via Consul."""
@@ -43,6 +46,7 @@ class TechnicianAgent:
                     addr = svc.get("ServiceAddress", "localhost")
                     port = svc.get("ServicePort", 8000)
                     self.memory_url = f"http://{addr}:{port}"
+                    self.memory_client = PMMMemoryClient(base_url=self.memory_url)
                     logger.info(f"Discovered Memory Service at {self.memory_url}")
 
             # 2. Discover LLM Service
@@ -67,25 +71,18 @@ class TechnicianAgent:
 
     async def report_event(self, kind: str, content: str, meta: Dict[str, Any] = None):
         """Reports an event to the shared memory service."""
-        if not self.memory_url:
+        if not self.memory_client:
             return
 
-        payload = {
-            "kind": kind,
-            "content": content,
-            "meta": meta or {}
-        }
         # Add standard meta
-        payload["meta"].update({
+        meta = meta or {}
+        meta.update({
             "task_id": self.task_id,
-            "agent_type": "technician"
+            "agent_type": "technician",
+            "work_item_id": self.work_item_id
         })
 
-        try:
-            # Synchronous post is fine for this low volume
-            requests.post(f"{self.memory_url}/events", json=payload)
-        except Exception as e:
-            logger.error(f"Failed to report event {kind}: {e}")
+        await self.memory_client.add_event(kind, content, meta)
 
     async def call_llm(self, messages: List[Dict[str, str]], temperature: float = 0.0) -> str:
         """Helper to call the LLM service."""
@@ -112,8 +109,21 @@ class TechnicianAgent:
                 return f"Error: {str(e)}"
 
     async def phase_1_plan(self) -> str:
-        """Generates a high-level plan."""
+        """Generates a high-level plan and registers it in the Gas Town Work Ledger."""
         logger.info("PHASE 1: Planning")
+
+        # 1. Create Root Work Item
+        if self.memory_client:
+            self.work_item_id = await self.memory_client.create_work_item(
+                title=f"Task: {self.prompt[:50]}...",
+                created_by=f"technician_{self.task_id}",
+                assignee_id=f"technician_{self.task_id}",
+                meta={"full_prompt": self.prompt, "context": self.context}
+            )
+            logger.info(f"Created Work Item: {self.work_item_id}")
+            if self.work_item_id:
+                await self.memory_client.update_work_item(self.work_item_id, status="planning")
+
         system_prompt = (
             "You are an expert technical planner. "
             "Given a request, create a concise, step-by-step plan to achieve it using the available tools. "
@@ -128,7 +138,17 @@ class TechnicianAgent:
 
         plan = await self.call_llm(msgs, temperature=0.2)
         logger.info(f"Generated Plan:\n{plan}")
+
         await self.report_event("technician_plan", plan)
+
+        # 2. Update Work Item with Plan
+        if self.work_item_id and self.memory_client:
+             await self.memory_client.update_work_item(
+                 self.work_item_id,
+                 meta_update={"plan": plan},
+                 status="in_progress"
+             )
+
         return plan
 
     async def phase_2_execute(self, plan: str) -> str:
@@ -167,6 +187,9 @@ Focus on one step at a time.
             response = await self.call_llm(self.messages)
             logger.info(f"LLM Thought: {response}")
             self.messages.append({"role": "assistant", "content": response})
+
+            # Log thought to Memory (optional, maybe too verbose for main ledger?)
+            # await self.report_event("agent_thought", response)
 
             # Parse for Final Answer
             if "FINAL_ANSWER:" in response:
@@ -220,6 +243,10 @@ Focus on one step at a time.
         """Reflects on the result."""
         logger.info("PHASE 3: Reflection")
 
+        # Update Work Item Status
+        if self.work_item_id and self.memory_client:
+             await self.memory_client.update_work_item(self.work_item_id, status="validating")
+
         reflection_prompt = (
             "Review the following execution result against the original request.\n"
             f"Original Request: {self.prompt}\n"
@@ -235,6 +262,16 @@ Focus on one step at a time.
 
         critique = await self.call_llm(msgs, temperature=0.0)
         logger.info(f"Reflection: {critique}")
+
+        # Final Status Update
+        if self.work_item_id and self.memory_client:
+            final_status = "completed" if "satisfactory" in critique.lower() or "yes" in critique.lower() else "failed"
+            await self.memory_client.update_work_item(
+                self.work_item_id,
+                status=final_status,
+                validation_results={"critique": critique}
+            )
+
         return critique
 
     async def run(self):
@@ -268,6 +305,8 @@ Focus on one step at a time.
         except Exception as e:
             logger.error(f"Technician failed: {e}")
             await self.report_event("worker_failure", str(e), {"status": "failed"})
+            if self.work_item_id and self.memory_client:
+                await self.memory_client.update_work_item(self.work_item_id, status="failed", meta_update={"error": str(e)})
             sys.exit(1)
 
 if __name__ == "__main__":
