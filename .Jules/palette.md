@@ -7,3 +7,22 @@
 ## 2024-03-22 - Keyboard Accessible History List
 **Learning:** `onclick` on `<li>` elements is a common pattern that completely excludes keyboard users. Adding `tabindex="0"`, `role="button"`, and a `keydown` handler is a standard remediation pattern that is robust and easy to implement.
 **Action:** Always check `onclick` elements for keyboard accessibility. If they are not `<button>` or `<a>`, they likely need remediation. Use `event.key === 'Enter' || event.key === ' '` to trigger the click logic.
+## 2026-01-14 - Accessible ASCII Art Animation
+**Learning:** Animated ASCII art (like spinners or faces) creates a chaotic experience for screen readers, announcing every punctuation mark repeatedly.
+**Action:** Use `role="img"` and `aria-label` to describe the *meaning* of the art/animation, and update the label only when the semantic state changes, not on every animation frame.
+## 2025-11-26 - Save/Load State Interaction
+**Learning:** Users can fail to provide required input for "Save/Load State" actions, leading to error messages in the terminal that might be missed.
+**Action:** Prevent the error by disabling the action buttons until valid input is provided, using standard HTML `disabled` attribute and visual cues. This follows the "prevention over cure" UX principle.
+## 2025-05-15 - Command History in Terminal Interfaces
+**Learning:** In "Mission Control" or terminal-like web interfaces, users instinctively expect Up/Down arrow keys to cycle through command history. Missing this feature breaks the immersive "terminal" illusion and frustrates power users.
+**Action:** Implement a history buffer and Up/Down key listeners for terminal-style inputs. Ensure standard text input behavior (cursor movement) is preserved when not navigating history.
+## 2026-06-18 - Navigation Buttons vs Links
+**Learning:** Using `<button onclick="...">` for navigation breaks middle-click (open in new tab), right-click, and search engine crawling. It confuses the semantic distinction between "doing" (button) and "going" (link).
+**Action:** Use `<a>` tags styled as buttons for any action that primarily performs navigation (URL change). Ensure they have valid `href` attributes.
+## 2026-01-21 - [Semantic Navigation Links]
+**Learning:** Buttons used for navigation (opening new tabs) are semantically incorrect and can confuse screen readers. Using `<a>` tags with `role="button"` or simply styled as buttons is preferred for navigation.
+**Action:** Replaced `button` elements with `<a>` tags for "Cluster Viz" and "Cluster VR" in `index.html`. Added `rel="noopener noreferrer"` for security and `aria-label` for accessibility.
+
+## 2026-01-22 - Non-blocking Status Notifications
+**Learning:** Native `alert()` calls block the UI and disrupt user flow. Replacing them with non-blocking status text provides feedback without interruption.
+**Action:** Use a callback pattern (like `onStatusUpdate`) to allow logic components (like `WorkflowEditor`) to trigger UI updates in the parent view, maintaining separation of concerns.

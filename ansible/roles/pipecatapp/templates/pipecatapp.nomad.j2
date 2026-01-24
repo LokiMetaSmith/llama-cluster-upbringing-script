@@ -16,7 +16,7 @@ job "{{ job_name | default('pipecat-app') }}" {
 
     reschedule {
       attempts  = 3
-      interval  = "2m"
+      interval  = "10m"
       delay     = "30s"
       unlimited = false
     }
@@ -93,6 +93,11 @@ job "{{ job_name | default('pipecat-app') }}" {
     task "pipecat-task" {
       driver = "docker"
       {{ env_vars }}
+
+      constraint {
+        attribute = "${meta.node_type}"
+        value     = "controller"
+      }
 
       config {
         image = "pipecatapp:local"

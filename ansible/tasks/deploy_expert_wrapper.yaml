@@ -1,0 +1,119 @@
+- block:
+    - name: "Expert {{ expert_name }} : Purge existing nomad job"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job stop -purge expert-{{ expert_name }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      ignore_errors: yes
+      changed_when: true
+
+    - name: "Expert {{ expert_name }} : Run nomad job"
+      ansible.builtin.command: >
+        /usr/local/bin/nomad job run
+        -var="job_name=expert-{{ expert_name }}"
+        -var="service_name=expert-api-{{ expert_name }}"
+        -var="rpc_pool_job_name=llamacpp-rpc-pool"
+        /tmp/expert-{{ expert_name }}.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true
+      register: expert_job_run
+
+  rescue:
+    - name: "Expert {{ expert_name }} : Debug Job Run Failure"
+      ansible.builtin.debug:
+        var: expert_job_run
+      when: expert_job_run is defined
+
+    - name: "Expert {{ expert_name }} : Run nomad job plan for debugging"
+      ansible.builtin.command: >
+        /usr/local/bin/nomad job plan
+        -var="job_name=expert-{{ expert_name }}"
+        -var="service_name=expert-api-{{ expert_name }}"
+        -var="rpc_pool_job_name=llamacpp-rpc-pool"
+        /tmp/expert-{{ expert_name }}.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: expert_job_plan_debug
+      failed_when: false
+      changed_when: false
+
+    - name: "Expert {{ expert_name }} : Display job plan result"
+      ansible.builtin.debug:
+        var: expert_job_plan_debug
+
+    - name: "Expert {{ expert_name }} : Debug Nomad File Content"
+      ansible.builtin.command: "cat /tmp/expert-{{ expert_name }}.nomad"
+      register: expert_nomad_file_content
+      changed_when: false
+
+    - name: "Expert {{ expert_name }} : Show Nomad File"
+      ansible.builtin.debug:
+        var: expert_nomad_file_content.stdout
+
+    - name: "Expert {{ expert_name }} : Get job status"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status -verbose expert-{{ expert_name }}
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: expert_job_status
+      failed_when: false
+
+    - name: "Expert {{ expert_name }} : Display job status"
+      ansible.builtin.debug:
+        var: expert_job_status.stdout
+
+    - name: "Expert {{ expert_name }} : Get allocations"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job allocs -json expert-{{ expert_name }}
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: expert_allocs
+      failed_when: false
+
+    - name: "Expert {{ expert_name }} : Save allocations to temp file"
+      ansible.builtin.copy:
+        content: "{{ expert_allocs.stdout }}"
+        dest: "/tmp/expert_{{ expert_name }}_allocs.json"
+
+    - name: "Expert {{ expert_name }} : Extract Allocation ID"
+      ansible.builtin.shell: "jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/expert_{{ expert_name }}_allocs.json"
+      register: expert_alloc_id
+      failed_when: false
+
+    - name: "Expert {{ expert_name }} : Fetch logs (stdout)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs {{ expert_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: expert_logs_stdout
+      failed_when: false
+      when: expert_alloc_id.stdout | length > 0
+
+    - name: "Expert {{ expert_name }} : Display logs (stdout)"
+      ansible.builtin.debug:
+        var: expert_logs_stdout.stdout
+      when: expert_logs_stdout.stdout is defined
+
+    - name: "Expert {{ expert_name }} : Fetch logs (stderr)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ expert_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: expert_logs_stderr
+      failed_when: false
+      when: expert_alloc_id.stdout | length > 0
+
+    - name: "Expert {{ expert_name }} : Display logs (stderr)"
+      ansible.builtin.debug:
+        var: expert_logs_stderr.stdout
+      when: expert_logs_stderr.stdout is defined
+
+    - name: "Expert {{ expert_name }} : Fail after debugging"
+      ansible.builtin.fail:
+        msg: >
+          Expert {{ expert_name }} job failed to start.
+          Run Error: {{ expert_job_run.stderr | default('N/A') }}
+          Plan Output: {{ expert_job_plan_debug.stdout | default('N/A') }}
+          Plan Error: {{ expert_job_plan_debug.stderr | default('N/A') }}
+          Check the debug output above for more details.

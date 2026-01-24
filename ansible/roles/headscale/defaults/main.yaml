@@ -1,0 +1,7 @@
+headscale_version: "0.22.3"
+headscale_port: 8085
+headscale_metrics_port: 9090
+headscale_listen_addr: "0.0.0.0"
+headscale_namespace: "default"
+# We use 100.64.0.0/10 (CGNAT) to avoid conflict with the legacy 10.0.0.0/24 network during migration.
+headscale_ip_prefix: "100.64.0.0/10"

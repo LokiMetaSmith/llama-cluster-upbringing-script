@@ -19,8 +19,10 @@ node_id: >-
   }}
 
 cluster_subnet_prefix: "10.0.0"
-# Always force the private/static IP alias for cluster binding
-cluster_ip: "{{ cluster_subnet_prefix + '.' + node_id }}"
+# Determine the cluster IP dynamically:
+# 1. Try to get the IP of the 'tailscale0' interface (mesh network).
+# 2. Fallback to the legacy alias logic if the mesh isn't up yet.
+cluster_ip: "{{ (ansible_tailscale0 | default({})).get('ipv4', {}).get('address', cluster_subnet_prefix + '.' + node_id) }}"
 
 
 ansible_python_interpreter: /usr/bin/python3
@@ -39,6 +41,7 @@ nomad_models_dir: "/opt/nomad/models"
 # Standard Ports
 consul_http_port: 8500
 nomad_http_port: 4646
+headscale_port: 8085
 mqtt_port: 1883
 mqtt_websocket_port: 9001
 provisioning_api_port: 8002

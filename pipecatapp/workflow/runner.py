@@ -3,10 +3,56 @@ import asyncio
 import time
 import os
 import uuid
+import copy
+import json
 from typing import Dict, Any, List, Optional
 from .context import WorkflowContext
 from .nodes.registry import registry
 from .history import WorkflowHistory
+
+def _safe_context_to_dict(context: Optional['WorkflowContext']) -> Dict[str, Any]:
+    """Helper function to serialize workflow context to a dictionary.
+    Safe to run in background thread."""
+    if not context:
+        return {}
+
+    serializable_outputs = {}
+    for node_id, outputs in context.node_outputs.items():
+        serializable_outputs[node_id] = {}
+        for key, value in outputs.items():
+            # Attempt to serialize. If it fails, use the string representation.
+            try:
+                json.dumps(value)
+                serializable_outputs[node_id][key] = value
+            except (TypeError, OverflowError):
+                serializable_outputs[node_id][key] = str(value)
+
+    return {
+        "global_inputs": context.global_inputs,
+        "node_outputs": serializable_outputs,
+        "final_output": context.final_output
+    }
+
+def _save_run_background(runner_id, workflow_name, start_time, end_time, status, context, error):
+    """Background task to save workflow history."""
+    try:
+        # Perform CPU-bound serialization in the thread
+        context_data = _safe_context_to_dict(context)
+
+        # Perform I/O-bound DB write
+        history = WorkflowHistory()
+        history.save_run(
+            runner_id=runner_id,
+            workflow_name=workflow_name,
+            start_time=start_time,
+            end_time=end_time,
+            status=status,
+            context=context_data,
+            error=error
+        )
+    except Exception as e:
+        # We catch exceptions here because this runs in a fire-and-forget task
+        print(f"Failed to save workflow history in background: {e}")
 
 class ActiveWorkflows:
     """A simple singleton to track active workflow runners."""
@@ -55,12 +101,39 @@ class OpenGates:
 class WorkflowRunner:
     """Loads and executes a workflow defined in a YAML file."""
 
+    # Bolt ⚡ Optimization: Cache loaded workflow definitions to avoid repeated file I/O and parsing
+    # Key: path, Value: (mtime, parsed_definition)
+    _workflow_cache = {}
+
     def __init__(self, workflow_path: str, runner_id: Optional[str] = None):
-        with open(workflow_path, 'r') as f:
-            self.workflow_definition = yaml.safe_load(f)
+        self.workflow_definition = self._load_workflow_definition(workflow_path)
         self.nodes = {}
         self.workflow_name = os.path.basename(workflow_path)
         self.runner_id = runner_id if runner_id else str(uuid.uuid4())
+
+    def _load_workflow_definition(self, path: str) -> Dict[str, Any]:
+        """Loads workflow definition from cache or file if updated."""
+        try:
+            current_mtime = os.path.getmtime(path)
+        except OSError:
+            # File might not exist yet or permissions issue; let open() fail later naturally
+            current_mtime = 0
+
+        cached_entry = self._workflow_cache.get(path)
+
+        if cached_entry:
+            cached_mtime, definition = cached_entry
+            if current_mtime == cached_mtime:
+                # Return a deep copy to prevent state pollution if nodes modify the config
+                return copy.deepcopy(definition)
+
+        # Not in cache or file modified
+        with open(path, 'r') as f:
+            definition = yaml.safe_load(f)
+
+        self._workflow_cache[path] = (current_mtime, definition)
+        # Return a deep copy
+        return copy.deepcopy(definition)
 
     def _instantiate_nodes(self):
         """Instantiate all nodes defined in the workflow."""
@@ -116,26 +189,9 @@ class WorkflowRunner:
 
     def context_to_dict(self) -> Dict[str, Any]:
         """Returns a serializable dictionary of the current workflow context."""
-        if not hasattr(self, 'context'):
-            return {}
-
-        serializable_outputs = {}
-        for node_id, outputs in self.context.node_outputs.items():
-            serializable_outputs[node_id] = {}
-            for key, value in outputs.items():
-                # Attempt to serialize. If it fails, use the string representation.
-                try:
-                    import json
-                    json.dumps(value)
-                    serializable_outputs[node_id][key] = value
-                except (TypeError, OverflowError):
-                    serializable_outputs[node_id][key] = str(value)
-
-        return {
-            "global_inputs": self.context.global_inputs,
-            "node_outputs": serializable_outputs,
-            "final_output": self.context.final_output
-        }
+        # Use shared helper
+        context = getattr(self, 'context', None)
+        return _safe_context_to_dict(context)
 
     async def run(self, global_inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the workflow.
@@ -171,23 +227,26 @@ class WorkflowRunner:
 
         finally:
             end_time = time.time()
-            # Persist history
+            # Bolt ⚡ Optimization: Offload history saving to background thread
+            # This prevents disk I/O and JSON serialization from blocking the return
             try:
-                history = WorkflowHistory()
-                context_data = self.context_to_dict() if hasattr(self, 'context') else {}
-
                 loop = asyncio.get_running_loop()
-                await loop.run_in_executor(
+                # We pass the context object itself. Since 'run' instantiates a NEW context
+                # at the beginning, this object reference is safe to use in the background
+                # even if 'run' is called again on the same runner instance.
+                context_ref = getattr(self, 'context', None)
+
+                loop.run_in_executor(
                     None,
-                    lambda: history.save_run(
-                        runner_id=self.runner_id,
-                        workflow_name=self.workflow_name,
-                        start_time=start_time,
-                        end_time=end_time,
-                        status=status,
-                        context=context_data,
-                        error=error
-                    )
+                    _save_run_background,
+                    self.runner_id,
+                    self.workflow_name,
+                    start_time,
+                    end_time,
+                    status,
+                    context_ref,
+                    error
                 )
             except Exception as h_e:
-                print(f"Failed to save workflow history: {h_e}")
+                # Should rarely happen (scheduling error)
+                print(f"Failed to schedule workflow history saving: {h_e}")

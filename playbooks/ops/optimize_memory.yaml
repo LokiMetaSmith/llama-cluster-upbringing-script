@@ -1,0 +1,62 @@
+---
+- name: Optimize Cluster Memory (Unload Heavy Models)
+  hosts: controller_nodes
+  gather_facts: no
+  vars:
+    nomad_bin: /usr/local/bin/nomad
+    # Heavy models to unload.
+    # INCLUDES BOTH:
+    # 1. Long names (found running in the wild/screenshot)
+    # 2. Short names (derived from current models.yaml config)
+    heavy_models:
+      # Long Names (Observed in screenshot)
+      - "rpc-codellama-7b-instruct-Q4-K-M-gguf"
+      - "rpc-Meta-Llama-3-8B-Instruct-Q4-K-M-gguf"
+      - "rpc-Qwen3-30B-A3B-Instruct-2507-Q3_K_S-2.70bpw-gguf"
+      # Short Names (Standard Config)
+      - "rpc-CodeLlama-7B-Instruct"
+      - "rpc-Llama-3-8B-Instruct"
+      - "rpc-Qwen3-30B-A3B-Instruct-2507"
+
+    # Core services to ensure are running (or restart if dead)
+    core_jobs:
+      - "expert-main"
+      - "expert-coding"
+      - "expert-math"
+      - "expert-cynic"
+      - "expert-extract"
+      - "pipecat-app"
+      - "magic_mirror"
+      - "mqtt-exporter"
+
+  tasks:
+    - name: Stop heavy RPC provider jobs to free memory
+      shell: "{{ nomad_bin }} job stop -purge {{ item }}"
+      register: stop_result
+      failed_when:
+        - stop_result.rc != 0
+        - "'Job not found' not in stop_result.stderr"
+      loop: "{{ heavy_models }}"
+      ignore_errors: yes
+
+    - name: Wait for memory to be reclaimed
+      pause:
+        seconds: 5
+
+    - name: Restart core services (trigger re-evaluation)
+      shell: "{{ nomad_bin }} job run -detach /opt/nomad/jobs/{{ item }}.nomad"
+      register: run_result
+      failed_when: run_result.rc != 0
+      loop: "{{ core_jobs }}"
+      ignore_errors: yes
+
+    - name: Display status of core services
+      shell: "{{ nomad_bin }} job status {{ item }}"
+      register: status_result
+      loop: "{{ core_jobs }}"
+      ignore_errors: yes
+
+    - name: Summarize status
+      debug:
+        msg: "Service {{ item.item }}: {{ 'RUNNING' if 'Status = running' in item.stdout | lower else 'CHECK LOGS' }}"
+      loop: "{{ status_result.results }}"

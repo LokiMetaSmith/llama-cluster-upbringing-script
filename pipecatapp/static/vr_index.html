@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pipecat VR Mission Control</title>
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- HTML Embed for projecting DOM into VR -->
+    <script src="https://supereggbert.github.io/aframe-htmlembed-component/dist/build.js"></script>
+    <!-- LiteGraph -->
+    <link rel="stylesheet" type="text/css" href="css/litegraph.css">
+    <script src="js/litegraph.js"></script>
+    <!-- Custom Editor Logic -->
+    <script src="js/editor.js"></script>
+
+    <style>
+        /* Hide the 2D overlay elements initially, we will project them */
+        body { margin: 0; background-color: #000; overflow: hidden; }
+
+        /* The canvas needs to be rendered but not visible in 2D to save performance/avoid clutter */
+        #main-canvas-container {
+            width: 1024px;
+            height: 1024px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1; /* Hide behind scene */
+            pointer-events: none; /* Let clicks pass through if needed, though VR handles clicks via raycaster */
+        }
+
+        #mycanvas {
+            background-color: #111;
+        }
+
+        /* Styles for embedded content */
+        .embedded-ui {
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 20px;
+            width: 500px;
+            height: 400px;
+            font-family: monospace;
+            overflow-y: auto;
+            border: 2px solid #00ff00;
+        }
+
+        .agent-log {
+            border-bottom: 1px solid #333;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+        }
+
+        /* Keyboard Styles */
+        .keyboard-container {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 5px;
+            padding: 10px;
+            background: #222;
+            border: 1px solid #444;
+            width: 600px;
+        }
+        .key-btn {
+            background: #444;
+            color: #fff;
+            border: none;
+            padding: 15px;
+            font-size: 18px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .key-btn:hover { background: #666; }
+        .key-btn:active { background: #888; }
+        .key-wide { grid-column: span 2; }
+        .key-space { grid-column: span 6; }
+        #keyboard-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 20px;
+            background: #111;
+            color: #0f0;
+            border: 1px solid #444;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hidden Container for LiteGraph Canvas -->
+    <div id="main-canvas-container">
+        <canvas id="mycanvas" width="1024" height="1024"></canvas>
+    </div>
+
+    <a-scene background="color: #050505" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+
+        <a-assets>
+            <img id="floor-texture" src="https://cdn.aframe.io/a-painter/images/floor.jpg">
+            <audio id="click-sound" src="https://cdn.aframe.io/360-image-gallery-boilerplate/audio/click.ogg"></audio>
+        </a-assets>
+
+        <!-- Player Rig -->
+        <a-entity id="rig" position="0 0 4">
+            <a-entity camera look-controls wasd-controls position="0 1.6 0">
+                <a-text id="voice-status" value="Mic: OFF" position="0 -0.5 -1"
+                        color="red" align="center" width="2"></a-text>
+                <a-entity position="0 0 -1" geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                          material="color: cyan; shader: flat"
+                          cursor="fuse: false"></a-entity>
+            </a-entity>
+            <!-- Hands -->
+            <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 10"></a-entity>
+            <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 10"></a-entity>
+        </a-entity>
+
+        <!-- Main LiteGraph Screen (Curved) -->
+        <!-- We use htmlembed to make the div interactive, or just use the canvas texture if we don't need DOM interaction -->
+        <!-- htmlembed is great for divs. For canvas, we can just use the canvas as texture. -->
+        <!-- However, LiteGraph handles its own events. htmlembed proxies DOM events. -->
+        <!-- Let's try sticking the canvas inside an htmlembed div as per the plan -->
+        <a-entity position="0 2 -2" class="clickable" htmlembed="width:1024; height:1024;">
+            <div id="vr-graph-container" style="width: 1024px; height: 1024px; background: #222;">
+                <!-- Canvas will be moved here by JS -->
+            </div>
+        </a-entity>
+
+        <!-- Left Panel: Agent Coder Logs -->
+        <a-entity position="-2.5 2 -1" rotation="0 45 0">
+            <a-plane id="agent-panel" width="2" height="3" color="#1a1a1a" opacity="0.8"
+                     sound="src: #; position: true; refDistance: 1; rolloffFactor: 1">
+                 <a-text value="Agent: Coder" align="center" position="0 1.4 0.01" width="4"></a-text>
+                 <a-text id="agent-log-text" value="Waiting for logs..." align="left" anchor="center" position="0 0 0.01" width="1.8" height="2.5" wrap-count="30"></a-text>
+            </a-plane>
+        </a-entity>
+
+        <!-- Right Panel: Visual Debugger (YOLO) -->
+        <a-entity position="2.5 2 -1" rotation="0 -45 0">
+            <a-plane width="2" height="3" color="#1a1a1a" opacity="0.8">
+                <a-text value="Visual Debugger" align="center" position="0 1.4 0.01" width="4"></a-text>
+                <!-- Image texture will be updated via base64 -->
+                <a-image id="vision-display" position="0 0 0.01" width="1.8" height="1.8" src=""></a-image>
+                <a-text id="vision-status" value="No Signal" position="0 -1.2 0.01" align="center" width="3"></a-text>
+            </a-plane>
+        </a-entity>
+
+        <!-- Virtual Keyboard Panel -->
+        <a-entity position="0 0.8 -1.5" rotation="-30 0 0" class="clickable" htmlembed="width:620; height:300;">
+            <div style="width: 620px; height: 300px; background: #1a1a1a; padding: 10px;">
+                <input type="text" id="keyboard-input" placeholder="Type command..." readonly>
+                <div class="keyboard-container" id="virtual-keyboard">
+                    <!-- Keys generated by JS -->
+                </div>
+            </div>
+        </a-entity>
+
+        <!-- Help Panel -->
+        <a-entity position="0 2 2" rotation="0 180 0">
+            <a-plane width="2.5" height="1.5" color="#1a1a1a" opacity="0.8">
+                <a-text value="Help & Commands" align="center" position="0 0.5 0.01" width="4" color="#00ff00"></a-text>
+                <a-text align="left" position="-1.1 0 0.01" width="3.5" wrap-count="30"
+                        value="Voice Commands:\n- 'Focus' / 'Blackout': Dim surroundings\n- 'Restore' / 'Normal Mode': Restore view\n- 'Navigate to Server Room'\n\nControls:\n- Click to interact\n- Use virtual keyboard for text"></a-text>
+            </a-plane>
+        </a-entity>
+
+        <!-- Floor -->
+        <a-plane rotation="-90 0 0" width="30" height="30" src="#floor-texture" repeat="10 10"></a-plane>
+
+        <!-- Room 2: Server Room Visuals -->
+        <a-entity position="10 0 0">
+             <a-text value="Server Room" position="0 2 -2" align="center" width="6"></a-text>
+             <a-box position="-2 1 -2" color="blue" depth="1" height="2" width="1"></a-box>
+             <a-box position="2 1 -2" color="blue" depth="1" height="2" width="1"></a-box>
+             <a-plane rotation="-90 0 0" width="10" height="10" color="#222"></a-plane>
+        </a-entity>
+
+        <!-- Room 3: Chill Zone Visuals -->
+        <a-entity position="-10 0 0">
+             <a-text value="Chill Zone" position="0 2 -2" align="center" width="6"></a-text>
+             <a-sphere position="0 1 -2" radius="0.5" color="purple"></a-sphere>
+             <a-plane rotation="-90 0 0" width="10" height="10" color="#333"></a-plane>
+        </a-entity>
+
+    </a-scene>
+
+    <script>
+        // 1. Initialize LiteGraph
+        // We initialize it on the canvas element, but prevent editor.js from adding window resize listeners
+        // because we want fixed resolution for VR.
+
+        // Move canvas into the VR embed container BEFORE init, or AFTER?
+        // editor.js init does `document.getElementById(containerId)`.
+        // So we move it first.
+        const canvas = document.getElementById("mycanvas");
+        document.getElementById('vr-graph-container').appendChild(canvas);
+
+        // Initialize WorkflowEditor
+        // We ensure WorkflowEditor is available. It is defined in editor.js.
+        // Even if it's not on 'window' explicitly in some environments, checking typeof is safer.
+        if (typeof WorkflowEditor !== 'undefined') {
+            WorkflowEditor.init("mycanvas", { skipResize: true });
+
+            // Performance Optimization: Throttle draws to 30 FPS to save VR resources
+            let lastDraw = 0;
+            const FPS_LIMIT = 30;
+            const INTERVAL = 1000 / FPS_LIMIT;
+
+            WorkflowEditor.graph.onAfterExecute = function() {
+                const now = Date.now();
+                if (now - lastDraw > INTERVAL) {
+                    WorkflowEditor.canvas.draw(true);
+                    lastDraw = now;
+                }
+            };
+            WorkflowEditor.graph.start();
+        } else {
+            console.error("WorkflowEditor not found! Is editor.js loaded?");
+        }
+
+        // 2. WebSocket Connection
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        const agentLogText = document.querySelector('#agent-log-text');
+        const visionDisplay = document.querySelector('#vision-display');
+        const visionStatus = document.querySelector('#vision-status');
+
+        let logs = [];
+
+        ws.onopen = () => {
+            console.log("Connected to Pipecat Agent");
+            updateLog("Connected to Backend.");
+        };
+
+        // Audio Context for spatial audio
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+        let nextStartTime = 0;
+
+        ws.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+
+                if (msg.type === 'vision_debug') {
+                    // msg.data is base64 encoded jpeg
+                    const src = `data:image/jpeg;base64,${msg.data}`;
+                    visionDisplay.setAttribute('src', src);
+                    visionStatus.setAttribute('value', 'Live Feed');
+                }
+                else if (msg.type === 'audio') {
+                    // msg.data is base64 encoded wav (header included)
+                    // Decode base64 to ArrayBuffer
+                    const binaryString = window.atob(msg.data);
+                    const len = binaryString.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+
+                    // Decode Audio Data
+                    audioCtx.decodeAudioData(bytes.buffer, (buffer) => {
+                        const source = audioCtx.createBufferSource();
+                        source.buffer = buffer;
+
+                        // Simple Spatial Audio: Use a PannerNode
+                        const panner = audioCtx.createPanner();
+                        panner.panningModel = 'HRTF';
+                        panner.distanceModel = 'inverse';
+                        panner.refDistance = 1;
+                        panner.maxDistance = 10000;
+                        panner.rolloffFactor = 1;
+                        panner.coneInnerAngle = 360;
+                        panner.coneOuterAngle = 0;
+                        panner.coneOuterGain = 0;
+
+                        // Set position to Agent Panel (hardcoded for now to match entity)
+                        // Agent panel is at -2.5, 2, -1
+                        panner.setPosition(-2.5, 2, -1);
+
+                        source.connect(panner);
+                        panner.connect(audioCtx.destination);
+
+                        // Schedule
+                        if (nextStartTime < audioCtx.currentTime) {
+                            nextStartTime = audioCtx.currentTime;
+                        }
+                        source.start(nextStartTime);
+                        nextStartTime += buffer.duration;
+
+                    }, (e) => console.error("Error decoding audio data: " + e.err));
+                }
+                else if (msg.type === 'log') {
+                    // Update log panel
+                    // We only show last 10 lines to avoid texture overflow
+                    updateLog(`[SYS] ${msg.data}`);
+                }
+                else if (msg.type === 'agent') {
+                    updateLog(`[AGENT] ${msg.data}`);
+                }
+                else if (msg.type === 'user') {
+                    updateLog(`[YOU] ${msg.data}`);
+                }
+                else if (msg.type === 'navigation') {
+                    updateLog(`[NAV] Moving to ${msg.destination}...`);
+                    handleNavigation(msg.coordinates);
+                }
+            } catch (e) {
+                console.error("Error parsing WS message", e);
+            }
+        };
+
+        function handleNavigation(coords) {
+            const rig = document.querySelector('#rig');
+            if (rig && coords) {
+                // Simple teleport
+                rig.setAttribute('position', `${coords.x} ${coords.y} ${coords.z}`);
+                // Could add animation here for smoother transition
+            }
+        }
+
+        function updateLog(text) {
+            logs.push(text);
+            if (logs.length > 15) logs.shift();
+            agentLogText.setAttribute('value', logs.join('\n'));
+        }
+
+        // 3. Voice Command Integration
+        const voiceStatus = document.querySelector('#voice-status');
+
+        // Fix: Better browser compatibility
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false; // We only want final results to send
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                voiceStatus.setAttribute('value', "Mic: ON");
+                voiceStatus.setAttribute('color', "#00ff00");
+            };
+
+            recognition.onend = () => {
+                // Auto restart
+                voiceStatus.setAttribute('value', "Mic: OFF (Restarting...)");
+                voiceStatus.setAttribute('color', "yellow");
+                recognition.start();
+            };
+
+            recognition.onerror = (event) => {
+                 console.error("Speech Recognition Error", event.error);
+                 voiceStatus.setAttribute('value', "Mic Error: " + event.error);
+                 voiceStatus.setAttribute('color', "red");
+            };
+
+            recognition.onresult = (event) => {
+                // Loop through results
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                         const transcript = event.results[i][0].transcript.trim();
+                         console.log("Voice Command:", transcript);
+                         updateLog(`[VOICE] ${transcript}`);
+
+                         // Blackout / Focus Mode Logic
+                         const lower = transcript.toLowerCase();
+                         if (lower.includes("focus") || lower.includes("blackout")) {
+                             enterFocusMode();
+                         } else if (lower.includes("restore") || lower.includes("normal mode")) {
+                             exitFocusMode();
+                         }
+
+                         // Send to Backend
+                         if (ws.readyState === WebSocket.OPEN) {
+                             ws.send(JSON.stringify({
+                                 type: "user_message",
+                                 data: transcript
+                             }));
+                         }
+                    }
+                }
+            };
+
+            // Start immediately
+            // Note: Browsers require user interaction to start audio context usually.
+            // In VR, clicking "Enter VR" usually counts, but here we might need a "Start" button overlay.
+            // For now, we try to start.
+            try {
+                recognition.start();
+            } catch(e) {
+                console.warn("Could not start recognition automatically:", e);
+                voiceStatus.setAttribute('value', "Click to Enable Mic");
+
+                // Add click listener to scene to start mic
+                document.querySelector('a-scene').addEventListener('click', () => {
+                    try { recognition.start(); } catch(e){}
+                }, {once:true});
+            }
+
+        } else {
+            voiceStatus.setAttribute('value', "No Web Speech API");
+        }
+
+        // 4. Keyboard Shortcuts for VR debugging
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'v') {
+                // Toggle Vision debug simulated
+                console.log("Simulating vision data...");
+            }
+        });
+
+        // 5. Focus Mode / Blackout Mode Logic
+        function enterFocusMode() {
+            // Find the element currently intersected by the cursor
+            const scene = document.querySelector('a-scene');
+            // We assume the cursor is the one in the rig
+            // But getting the intersected element from raycaster component is easier via event
+            // However, we are not in an event handler here.
+            // Let's rely on finding the raycaster component.
+
+            const raycasterEls = document.querySelectorAll('[raycaster]');
+            let targetedEl = null;
+
+            // Simple check: iterate raycasters (hands or gaze)
+            for (let i = 0; i < raycasterEls.length; i++) {
+                const raycaster = raycasterEls[i].components.raycaster;
+                if (raycaster && raycaster.intersectedEls.length > 0) {
+                    targetedEl = raycaster.intersectedEls[0]; // First hit
+                    break;
+                }
+            }
+
+            if (!targetedEl) {
+                updateLog("No panel selected for Focus Mode.");
+                return;
+            }
+
+            updateLog("Entering Focus Mode.");
+
+            // Dim all entities with class .clickable
+            const clickables = document.querySelectorAll('.clickable, a-plane');
+            clickables.forEach(el => {
+                if (el !== targetedEl && !targetedEl.contains(el) && !el.contains(targetedEl)) {
+                   // Store original opacity if not present
+                   if (!el.hasAttribute('data-orig-opacity')) {
+                       const material = el.getAttribute('material') || {};
+                       el.setAttribute('data-orig-opacity', material.opacity || 1.0);
+                   }
+                   el.setAttribute('opacity', '0.1');
+
+                   // Recursively hide text
+                   el.querySelectorAll('a-text').forEach(text => {
+                       text.setAttribute('visible', 'false');
+                   });
+                }
+            });
+        }
+
+        function exitFocusMode() {
+            updateLog("Exiting Focus Mode.");
+            const clickables = document.querySelectorAll('.clickable, a-plane');
+            clickables.forEach(el => {
+                if (el.hasAttribute('data-orig-opacity')) {
+                    const op = el.getAttribute('data-orig-opacity');
+                    el.setAttribute('opacity', op);
+                } else {
+                    el.setAttribute('opacity', '0.8'); // Default fallback
+                }
+                 // Restore text visibility
+                 el.querySelectorAll('a-text').forEach(text => {
+                    text.setAttribute('visible', 'true');
+                });
+            });
+        }
+
+        // 6. Virtual Keyboard Logic
+        const keyboardContainer = document.getElementById('virtual-keyboard');
+        const keyboardInput = document.getElementById('keyboard-input');
+
+        const keys = [
+            '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+            'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
+            'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Enter',
+            'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'Clear', 'Space'
+        ];
+
+        keys.forEach(key => {
+            const btn = document.createElement('button');
+            btn.className = 'key-btn';
+            btn.textContent = key;
+
+            if (key === 'Enter') btn.classList.add('key-wide');
+            if (key === 'Clear') btn.classList.add('key-wide');
+            if (key === 'Space') btn.classList.add('key-space');
+
+            btn.onclick = () => {
+                if (key === 'Enter') {
+                    const text = keyboardInput.value.trim();
+                    if (text) {
+                        updateLog(`[KB] ${text}`);
+                        if (ws.readyState === WebSocket.OPEN) {
+                             ws.send(JSON.stringify({
+                                 type: "user_message",
+                                 data: text
+                             }));
+                        }
+                        keyboardInput.value = "";
+                    }
+                } else if (key === 'Clear') {
+                    keyboardInput.value = "";
+                } else if (key === 'Space') {
+                    keyboardInput.value += " ";
+                } else {
+                    keyboardInput.value += key;
+                }
+            };
+
+            keyboardContainer.appendChild(btn);
+        });
+
+    </script>
+</body>
+</html>

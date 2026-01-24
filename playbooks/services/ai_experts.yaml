@@ -20,6 +20,7 @@
     # Better: grouping by filename
     all_models: "{{ expert_models.values() | flatten }}"
     unique_models: "{{ all_models | unique(attribute='filename') }}"
+    pipecat_deployment_style: "docker"
 
   tasks:
     - name: Check for benchmark log file
@@ -80,6 +81,32 @@
       tags:
         - benchmark
         - deploy-gpu-provider
+
+    - name: Ensure pipecatapp Docker image is built
+      ansible.builtin.include_tasks:
+        file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
+      tags:
+        - deploy-gpu-provider
+        - deploy-expert
+
+    - name: Verify pipecatapp Docker image exists
+      ansible.builtin.command: docker image inspect pipecatapp:local
+      changed_when: false
+      register: pipecat_image_info
+      tags:
+        - deploy-expert
+
+    - name: Verify pipecatapp Docker image is runnable
+      ansible.builtin.command: docker run --rm --entrypoint /bin/true pipecatapp:local
+      changed_when: false
+      tags:
+        - deploy-expert
+
+    - name: Set pipecat_image_id fact
+      ansible.builtin.set_fact:
+        pipecat_image_id: "pipecatapp:local"
+      tags:
+        - deploy-expert
 
     - name: Deploy and run the GPU Provider Pool job for verified models
       include_tasks:
@@ -200,15 +227,12 @@
       tags:
         - deploy-expert
 
-    - name: Deploy the Expert Orchestrator services
-      ansible.builtin.command: >
-        nomad job run
-        -var="job_name=expert-{{ item }}"
-        -var="service_name=expert-api-{{ item }}"
-        -var="rpc_pool_job_name=llamacpp-rpc-pool"
-        /tmp/expert-{{ item }}.nomad
+    - name: Deploy the Expert Orchestrator services with debugging
+      include_tasks:
+        file: "{{ playbook_dir }}/../../ansible/tasks/deploy_expert_wrapper.yaml"
       loop: "{{ experts }}"
-      changed_when: true
+      loop_control:
+        loop_var: expert_name
       when: benchmark_results is defined
       tags:
         - deploy-expert

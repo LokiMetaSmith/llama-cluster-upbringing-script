@@ -70,6 +70,7 @@ class DurableExecutionEngine:
             return None
 
     def log_invocation_start(self, flow_id, step_sequence, step_name, args):
+        print(f"DEBUG: log_invocation_start {flow_id} seq {step_sequence} step {step_name}")
         try:
             cursor = self.conn.cursor()
             try:
@@ -84,10 +85,13 @@ class DurableExecutionEngine:
                 VALUES (?, ?, ?, ?, ?, ?, NULL)
             """, (flow_id, step_sequence, step_name, timestamp, InvocationStatus.PENDING.value, args_blob))
             self.conn.commit()
+            print("DEBUG: log_invocation_start committed")
         except sqlite3.Error as e:
+            print(f"DEBUG: log_invocation_start error: {e}")
             logger.error(f"Error logging invocation start: {e}")
 
     def log_invocation_completion(self, flow_id, step_sequence, result):
+        print(f"DEBUG: log_invocation_completion {flow_id} seq {step_sequence}")
         try:
             cursor = self.conn.cursor()
             try:
@@ -102,14 +106,19 @@ class DurableExecutionEngine:
                 WHERE flowId = ? AND step_sequence = ?
             """, (InvocationStatus.COMPLETE.value, result_blob, flow_id, step_sequence))
             self.conn.commit()
+            print("DEBUG: log_invocation_completion committed")
         except sqlite3.Error as e:
+            print(f"DEBUG: log_invocation_completion error: {e}")
             logger.error(f"Error logging invocation completion: {e}")
 
 def _pre_execution(instance, func_name, args, kwargs):
     """Helper to handle pre-execution logic (checking cache, logging start)."""
+    print(f"DEBUG: _pre_execution {func_name}")
     if not hasattr(instance, 'durable_engine') or not instance.durable_engine:
+        print("DEBUG: No durable_engine")
         return None, False
     if not hasattr(instance, 'current_flow_id') or not instance.current_flow_id:
+        print("DEBUG: No current_flow_id")
         return None, False
 
     flow_id = instance.current_flow_id
@@ -133,6 +142,7 @@ def _pre_execution(instance, func_name, args, kwargs):
 
 def _post_execution(instance, context, result):
     """Helper to handle post-execution logic (logging completion)."""
+    print("DEBUG: _post_execution")
     flow_id, current_step_seq = context
     instance.durable_engine.log_invocation_completion(flow_id, current_step_seq, result)
 

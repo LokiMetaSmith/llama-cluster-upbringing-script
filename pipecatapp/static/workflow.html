@@ -109,6 +109,11 @@
         }
         #toolbar button:hover { background: #1177bb; }
         #toolbar span { color: #ccc; margin-left: auto; font-size: 12px; }
+        /* Palette UX: Status colors */
+        .status-success { color: #28a745 !important; transition: color 0.3s; }
+        .status-error { color: #dc3545 !important; transition: color 0.3s; }
+        .status-info { color: #007acc !important; transition: color 0.3s; }
+        .status-ready { color: #ccc; transition: color 0.3s; }
 
         #editor-canvas { width: 100%; height: 100%; background-color: #1e1e1e; }
     </style>
@@ -144,7 +149,8 @@
             <div id="toolbar">
                 <button id="save-btn">Save / Deploy</button>
                 <button id="arrange-btn">Auto Arrange</button>
-                <span id="status-text">Ready</span>
+                <button id="vr-btn" onclick="window.location.href='/static/vr_index.html'" style="background-color: #800080;">Enter VR</button>
+                <span id="status-text" role="status" aria-live="polite">Ready</span>
             </div>
             <canvas id="editor-canvas"></canvas>
         </div>
@@ -154,8 +160,29 @@
     <script src="/static/js/editor.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // Initialize Editor
-            WorkflowEditor.init("editor-canvas");
+            const statusText = document.getElementById('status-text');
+
+            // Palette UX: Helper for non-blocking status updates
+            let statusTimeout;
+            function showStatus(message, type = 'info') {
+                if (statusTimeout) clearTimeout(statusTimeout);
+                statusText.textContent = message;
+                statusText.className = ''; // clear previous
+                if (type === 'success') statusText.classList.add('status-success');
+                else if (type === 'error') statusText.classList.add('status-error');
+                else if (type === 'info') statusText.classList.add('status-info');
+
+                // Revert to ready after 3 seconds
+                statusTimeout = setTimeout(() => {
+                    statusText.textContent = "Ready";
+                    statusText.className = 'status-ready';
+                }, 3000);
+            }
+
+            // Initialize Editor with status callback
+            WorkflowEditor.init("editor-canvas", {
+                onStatusUpdate: showStatus
+            });
 
             // Load Default Workflow
             try {
@@ -293,7 +320,7 @@
                             WorkflowEditor.visualizeRun(fullRun);
                         } catch(e) {
                             console.error(e);
-                            alert("Failed to load run details");
+                            showStatus("Failed to load run details", "error");
                         }
                     };
 

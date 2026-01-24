@@ -1,0 +1,38 @@
+---
+- name: Install system FUSE package
+  apt:
+    name: fuse
+    state: present
+    update_cache: yes
+
+- name: Create mount directory
+  file:
+    path: "{{ unified_fs_mount_point }}"
+    state: directory
+    mode: '0755'
+
+- name: Create FUSE agent script
+  copy:
+    src: unified_fs_agent.py
+    dest: /usr/local/bin/unified_fs_agent.py
+    mode: '0755'
+  notify: restart unified_fs
+
+- name: Configure FUSE to allow other users
+  lineinfile:
+    path: /etc/fuse.conf
+    regexp: '^#user_allow_other'
+    line: 'user_allow_other'
+  notify: restart unified_fs
+
+- name: Deploy Unified FS systemd service
+  template:
+    src: unified_fs.service.j2
+    dest: /etc/systemd/system/unified_fs.service
+  notify: restart unified_fs
+
+- name: Start Unified FS service
+  systemd:
+    name: unified_fs
+    state: started
+    enabled: yes

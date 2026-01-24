@@ -3,6 +3,17 @@ document.addEventListener("DOMContentLoaded", function() {
     const MAX_LOG_ENTRIES = 500; // Optimization: Limit terminal size to prevent DOM bloat
     const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
+    // Security Fix: Prevent XSS by escaping HTML special characters
+    function escapeHtml(text) {
+        if (!text) return text;
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     function logToTerminal(message, className = '') {
         const p = document.createElement('p');
         p.innerHTML = message;
@@ -46,6 +57,42 @@ document.addEventListener("DOMContentLoaded", function() {
     const statusDisplay = document.getElementById("status-display");
     const messageInput = document.getElementById("message-input");
     const sendBtn = document.getElementById("send-btn");
+    const jumpToBottomBtn = document.getElementById("jump-to-bottom-btn");
+
+    // Palette UX Improvement: Auto-focus input on load
+    if (messageInput) {
+        messageInput.focus();
+    }
+
+    // Palette UX Improvement: Jump to Bottom Logic
+    if (jumpToBottomBtn) {
+        jumpToBottomBtn.addEventListener('click', () => {
+            terminal.scrollTop = terminal.scrollHeight;
+        });
+
+        terminal.addEventListener('scroll', () => {
+            const isNearBottom = terminal.scrollHeight - terminal.scrollTop - terminal.clientHeight < 100;
+            if (isNearBottom) {
+                jumpToBottomBtn.style.display = 'none';
+            } else {
+                jumpToBottomBtn.style.display = 'block';
+            }
+        });
+    }
+
+    // Palette UX Improvement: Disable Save/Load buttons when input is empty
+    function toggleStateButtons() {
+        if (!saveStateBtn || !loadStateBtn || !saveNameInput) return;
+        const isDisabled = !saveNameInput.value.trim();
+        saveStateBtn.disabled = isDisabled;
+        loadStateBtn.disabled = isDisabled;
+    }
+
+    if (saveNameInput) {
+        saveNameInput.addEventListener("input", toggleStateButtons);
+        // Initialize state
+        toggleStateButtons();
+    }
 
     // Helper for loading state
     function setLoading(btn, isLoading, loadingText) {
@@ -98,11 +145,51 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // Handle Escape key to close dropdown and Arrow Keys for navigation
         adminUiDropdown.addEventListener('keydown', function(event) {
+            const isExpanded = adminUiDropdown.classList.contains("show");
+
+            // Close on Escape
             if (event.key === 'Escape') {
-                if (adminUiDropdown.classList.contains('show')) {
+                if (isExpanded) {
                     adminUiDropdown.classList.remove('show');
                     adminUiBtn.setAttribute("aria-expanded", "false");
-                    adminUiBtn.focus(); // Return focus to button
+                    adminUiBtn.focus();
+                }
+                return;
+            }
+
+            // Open menu with ArrowDown if focused on button
+            if (!isExpanded && document.activeElement === adminUiBtn && event.key === 'ArrowDown') {
+                event.preventDefault();
+                adminUiDropdown.classList.add("show");
+                adminUiBtn.setAttribute("aria-expanded", "true");
+                const firstLink = adminUiDropdown.querySelector('.dropdown-content a:not(.unhealthy)');
+                if (firstLink) firstLink.focus();
+                return;
+            }
+
+            // Navigate links if menu is open
+            if (isExpanded) {
+                const links = Array.from(adminUiDropdown.querySelectorAll('.dropdown-content a:not(.unhealthy)'));
+                if (links.length === 0) return;
+
+                const currentIndex = links.indexOf(document.activeElement);
+
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    // If no link is focused (e.g. still on button), focus first. Otherwise next.
+                    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % links.length;
+                    links[nextIndex].focus();
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    // If no link is focused, focus last. Otherwise previous.
+                    const prevIndex = currentIndex === -1 ? links.length - 1 : (currentIndex - 1 + links.length) % links.length;
+                    links[prevIndex].focus();
+                } else if (event.key === 'Home') {
+                    event.preventDefault();
+                    links[0].focus();
+                } else if (event.key === 'End') {
+                    event.preventDefault();
+                    links[links.length - 1].focus();
                 }
             } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                 event.preventDefault();
@@ -134,19 +221,79 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
+    // Palette UX Improvement: Command History
+    const messageHistory = [];
+    const MAX_HISTORY = 50;
+    let historyIndex = -1;
+    let tempInput = "";
+
     function sendMessage() {
         const message = messageInput.value.trim();
         if (message) {
             ws.send(JSON.stringify({ type: "user_message", data: message }));
-            logToTerminal(`<strong>You:</strong> ${message}`, "user-message");
+            // Security Fix: Escape user input before rendering
+            logToTerminal(`<strong>You:</strong> ${escapeHtml(message)}`, "user-message");
+
+            // Add to history if unique or last entry is different
+            if (messageHistory.length === 0 || messageHistory[messageHistory.length - 1] !== message) {
+                messageHistory.push(message);
+                if (messageHistory.length > MAX_HISTORY) messageHistory.shift();
+            }
+            historyIndex = -1;
+            tempInput = "";
+
             messageInput.value = "";
             animateThinking();
         }
     }
 
-    messageInput.addEventListener("keypress", function(event) {
+    // Palette UX Improvement: Global Keyboard Shortcuts
+    document.addEventListener('keydown', function(event) {
+        // Ctrl+K to clear terminal
+        if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+            event.preventDefault();
+            if (clearTerminalBtn) clearTerminalBtn.click();
+        }
+        // Ctrl+L to focus input
+        if ((event.ctrlKey || event.metaKey) && event.key === 'l') {
+            event.preventDefault();
+            if (messageInput) messageInput.focus();
+        }
+    });
+
+    messageInput.addEventListener("keydown", function(event) {
         if (event.key === "Enter") {
             sendMessage();
+            event.preventDefault();
+            return;
+        }
+
+        if (event.key === "ArrowUp") {
+            if (messageHistory.length === 0) return;
+            event.preventDefault();
+
+            if (historyIndex === -1) {
+                tempInput = messageInput.value;
+                historyIndex = messageHistory.length - 1;
+            } else if (historyIndex > 0) {
+                historyIndex--;
+            }
+            messageInput.value = messageHistory[historyIndex];
+            // Move cursor to end
+            setTimeout(() => messageInput.setSelectionRange(messageInput.value.length, messageInput.value.length), 0);
+        } else if (event.key === "ArrowDown") {
+            if (historyIndex === -1) return;
+            event.preventDefault();
+
+            if (historyIndex < messageHistory.length - 1) {
+                historyIndex++;
+                messageInput.value = messageHistory[historyIndex];
+            } else {
+                historyIndex = -1;
+                messageInput.value = tempInput;
+            }
+            // Move cursor to end
+            setTimeout(() => messageInput.setSelectionRange(messageInput.value.length, messageInput.value.length), 0);
         }
     });
 
@@ -165,7 +312,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 const statusText = data.status;
 
                 if (!statusText || statusText === "No active pipelines." || statusText === "MCP tool or runner not available." || statusText.startsWith("Agent not fully initialized")) {
-                     statusDisplay.innerHTML = `<p>${statusText}</p>`;
+                     // Security Fix: Escape status text
+                     statusDisplay.innerHTML = `<p>${escapeHtml(statusText)}</p>`;
                      return;
                 }
 
@@ -175,7 +323,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 if (lines.length === 0) {
                      // Fallback if parsing fails or format is unexpected
-                     statusDisplay.innerHTML = `<pre>${statusText}</pre>`;
+                     // Security Fix: Escape status text
+                     statusDisplay.innerHTML = `<pre>${escapeHtml(statusText)}</pre>`;
                      return;
                 }
 
@@ -188,7 +337,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     if (match) {
                         const taskName = match[1];
                         const taskState = match[2];
-                        html += `<tr><td>${taskName}</td><td>${taskState}</td></tr>`;
+                        // Security Fix: Escape task name and state
+                        html += `<tr><td>${escapeHtml(taskName)}</td><td>${escapeHtml(taskState)}</td></tr>`;
                     }
                 });
 
@@ -219,8 +369,19 @@ document.addEventListener("DOMContentLoaded", function() {
     let wanderTimeout;
     let thinkingAnimation;
 
+    // Accessibility Helper: Update aria-label and text content together
+    function updateRobotState(text, stateLabel) {
+        if (!robotArt) return;
+        robotArt.textContent = text;
+        if (stateLabel) {
+            robotArt.setAttribute("aria-label", `Robot face: ${stateLabel}`);
+        }
+    }
+
     function animateIdle() {
         currentFrame = (currentFrame + 1) % idleFrames.length;
+        // Don't update aria-label on every frame to avoid spamming the screen reader
+        // Just update text content. The state "Idle" remains valid.
         robotArt.textContent = idleFrames[currentFrame];
     }
 
@@ -233,10 +394,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function triggerWander() {
         stopAllAnimations();
-        robotArt.textContent = wanderingFrames[0]; // Look left
+        updateRobotState(wanderingFrames[0], "Wandering"); // Look left
 
         setTimeout(() => {
-            robotArt.textContent = wanderingFrames[1]; // Look right
+            updateRobotState(wanderingFrames[1], "Wandering"); // Look right
             setTimeout(() => {
                 startIdleAnimation(); // Return to idle state, which will schedule the next wander
             }, 1000);
@@ -246,6 +407,8 @@ document.addEventListener("DOMContentLoaded", function() {
     function animateThinking() {
         stopAllAnimations();
         let frame = 0;
+        // Set initial label
+        updateRobotState(thinkingFrames[0], "Thinking");
         thinkingAnimation = setInterval(() => {
             robotArt.textContent = thinkingFrames[frame];
             frame = (frame + 1) % thinkingFrames.length;
@@ -254,7 +417,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function startIdleAnimation() {
         stopAllAnimations();
-        robotArt.textContent = idleFrames[0];
+        // Set initial label
+        updateRobotState(idleFrames[0], "Idle");
         idleAnimation = setInterval(animateIdle, 2000);
         // After starting idle, schedule a wander
         wanderTimeout = setTimeout(triggerWander, 8000);
@@ -262,7 +426,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     messageInput.addEventListener("input", () => {
         stopAllAnimations();
-        robotArt.textContent = typingFrame;
+        updateRobotState(typingFrame, "Typing");
 
         typingTimeout = setTimeout(() => {
             startIdleAnimation(); // After typing, go back to idle
@@ -292,8 +456,8 @@ document.addEventListener("DOMContentLoaded", function() {
             body: JSON.stringify({ save_name: saveName })
         })
         .then(response => response.json())
-        .then(data => logToTerminal(data.message))
-        .catch(error => logToTerminal(`Error saving state: ${error}`, "error"))
+        .then(data => logToTerminal(escapeHtml(data.message))) // Security Fix: Escape response
+        .catch(error => logToTerminal(`Error saving state: ${escapeHtml(error)}`, "error")) // Security Fix: Escape error
         .finally(() => setLoading(saveStateBtn, false));
     };
 
@@ -312,10 +476,10 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .then(response => response.json())
         .then(data => {
-            logToTerminal(data.message);
+            logToTerminal(escapeHtml(data.message)); // Security Fix: Escape response
             logToTerminal("--- State loaded. You may need to refresh the page to see changes in memory. ---");
         })
-        .catch(error => logToTerminal(`Error loading state: ${error}`, "error"))
+        .catch(error => logToTerminal(`Error loading state: ${escapeHtml(error)}`, "error")) // Security Fix: Escape error
         .finally(() => setLoading(loadStateBtn, false));
     };
 
@@ -337,7 +501,8 @@ document.addEventListener("DOMContentLoaded", function() {
             const msg = JSON.parse(event.data);
             handleMessage(msg);
         } catch (e) {
-            logToTerminal(event.data);
+            // Security Fix: Escape raw message
+            logToTerminal(escapeHtml(event.data));
         }
     };
 
@@ -350,7 +515,7 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 
     ws.onerror = function(error) {
-        logToTerminal(`--- WebSocket Error: ${error} ---`, "error");
+        logToTerminal(`--- WebSocket Error: ${escapeHtml(error)} ---`, "error");
     };
 
     function handleMessage(msg) {
@@ -358,18 +523,22 @@ document.addEventListener("DOMContentLoaded", function() {
         const data = msg.data;
 
         if (type === "log") {
-            logToTerminal(data);
+            logToTerminal(escapeHtml(data));
         } else if (type === "user") {
-            logToTerminal(`<strong>You:</strong> ${data}`, "user-message");
+            logToTerminal(`<strong>You:</strong> ${escapeHtml(data)}`, "user-message");
         } else if (type === "agent") {
-            logToTerminal(`<strong>Agent:</strong> ${data}`, "agent-message breathing-shimmering");
+            logToTerminal(`<strong>Agent:</strong> ${escapeHtml(data)}`, "agent-message breathing-shimmering");
             startIdleAnimation();
         } else if (type === "display") {
+            // display type might expect HTML or specific rendering,
+            // but renderEffect uses figlet/lolcat which generates HTML.
+            // We trust renderEffect for now as it doesn't take raw HTML from user directly in this path?
+            // Actually renderEffect takes 'text'. If text is safe...
             renderEffect(data.text, data.effect);
         } else if (type === "approval_request") {
             renderApprovalPrompt(data);
         } else {
-            logToTerminal(JSON.stringify(msg));
+            logToTerminal(escapeHtml(JSON.stringify(msg)));
         }
     }
 
@@ -424,12 +593,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function renderEffect(text, effect) {
         if (effect === "figlet-lolcat") {
+            // figlet relies on text content, safe from HTML injection usually as it converts chars to ascii art
             figlet.text(text, { font: 'slant' }, function(err, data) {
                 if (err) {
-                    logToTerminal(text); // fallback
+                    logToTerminal(escapeHtml(text)); // fallback
                     return;
                 }
                 const pre = document.createElement('pre');
+                // lolcat.rainbow wraps chars in spans. data is ascii art.
+                // We assume figlet output is safe.
                 pre.innerHTML = lolcat.rainbow(function(char, color) {
                     return `<span style="color: ${color};">${char}</span>`;
                 }, data);
@@ -437,7 +609,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 terminal.scrollTop = terminal.scrollHeight;
             });
         } else {
-            logToTerminal(text);
+            logToTerminal(escapeHtml(text));
         }
     }
 });

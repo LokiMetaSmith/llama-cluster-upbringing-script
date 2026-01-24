@@ -1,0 +1,74 @@
+---
+- name: Create headscale user
+  user:
+    name: headscale
+    system: yes
+    shell: /sbin/nologin
+
+- name: Create headscale directory
+  file:
+    path: /var/lib/headscale
+    state: directory
+    owner: headscale
+    group: headscale
+    mode: '0750'
+
+- name: Create headscale config directory
+  file:
+    path: /etc/headscale
+    state: directory
+    owner: headscale
+    group: headscale
+    mode: '0755'
+
+- name: Download headscale binary
+  get_url:
+    url: "https://github.com/juanfont/headscale/releases/download/v{{ headscale_version }}/headscale_{{ headscale_version }}_linux_amd64"
+    dest: /usr/local/bin/headscale
+    mode: '0755'
+
+- name: Deploy headscale config
+  template:
+    src: config.yaml.j2
+    dest: /etc/headscale/config.yaml
+    owner: headscale
+    group: headscale
+    mode: '0644'
+  notify: restart headscale
+
+- name: Deploy headscale service
+  template:
+    src: headscale.service.j2
+    dest: /etc/systemd/system/headscale.service
+    mode: '0644'
+  notify: restart headscale
+
+- name: Ensure headscale is enabled and running
+  systemd:
+    name: headscale
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Wait for headscale to be up
+  wait_for:
+    port: "{{ headscale_port }}"
+    delay: 2
+
+- name: Create headscale user/namespace
+  command: /usr/local/bin/headscale users create {{ headscale_namespace }}
+  register: create_user_result
+  changed_when: "'User created' in create_user_result.stdout"
+  failed_when:
+    - create_user_result.rc != 0
+    - "'already exists' not in create_user_result.stderr"
+
+- name: Create pre-auth key
+  command: /usr/local/bin/headscale --user {{ headscale_namespace }} preauthkeys create --reusable --expiration 24h
+  register: headscale_auth_key_output
+  changed_when: true
+
+- name: Set headscale auth key fact
+  set_fact:
+    headscale_auth_key: "{{ headscale_auth_key_output.stdout_lines[-1] }}"
+    headscale_server_url: "http://{{ ansible_default_ipv4.address }}:{{ headscale_port }}"

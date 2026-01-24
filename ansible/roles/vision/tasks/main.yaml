@@ -4,3 +4,45 @@
       - libgl1
     state: present
   become: yes
+
+- name: Create Frigate config directory
+  ansible.builtin.file:
+    path: "{{ frigate_config_dir }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  become: yes
+
+- name: Create Frigate storage directory
+  ansible.builtin.file:
+    path: "{{ frigate_storage_dir }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  become: yes
+
+- name: Deploy Frigate configuration
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ frigate_config_dir }}/config.yml"
+    mode: '0644'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  become: yes
+  notify: Restart Vision Job
+
+- name: Deploy Vision Nomad job
+  ansible.builtin.template:
+    src: vision.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/vision.nomad"
+    mode: '0644'
+  notify: Restart Vision Job
+
+- name: Start Vision Job
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/vision.nomad
+  environment:
+    NOMAD_ADDR: "http://localhost:4646"
+  changed_when: true

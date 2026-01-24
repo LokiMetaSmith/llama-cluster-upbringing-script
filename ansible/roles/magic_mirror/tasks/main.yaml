@@ -1,32 +1,67 @@
-- name: Install Magic Mirror runtime dependencies
-  ansible.builtin.apt:
-    name:
-      - libxkbcommon0
-      - libwayland-client0
-      - libasound2
-    state: present
-    update_cache: yes
+- name: Check for GPU render nodes
+  ansible.builtin.shell: find /dev/dri -name 'renderD*' 2>/dev/null || true
+  register: gpu_render_nodes
+  changed_when: false
 
-- name: Create Magic Mirror install directory
-  ansible.builtin.file:
-    path: "{{ magic_mirror_install_dir }}"
-    state: directory
-    mode: '0755'
+- name: Warn if no GPU render nodes found
+  ansible.builtin.debug:
+    msg: "WARNING: No GPU render nodes found in /dev/dri. Magic Mirror server (mmserver) requires a GPU with Vulkan/DRM support and may fail to start or crash."
+  when: gpu_render_nodes.stdout == ""
 
-- name: Download and unarchive Magic Mirror server
-  ansible.builtin.unarchive:
-    src: "{{ magic_mirror_url }}"
-    dest: "{{ magic_mirror_install_dir }}"
-    remote_src: yes
-    creates: "{{ magic_mirror_install_dir }}/mmserver"
+- name: Debug bind address
+  ansible.builtin.debug:
+    msg: "Magic Mirror will bind to IP: {{ (ansible_default_ipv4 | default({})).get('address', '127.0.0.1') }}"
 
-- name: Ensure mmserver is executable
-  ansible.builtin.file:
-    path: "{{ magic_mirror_install_dir }}/mmserver"
-    mode: '0755'
+- name: Deploy Magic Mirror
+  block:
+    - name: Install common Magic Mirror runtime dependencies
+      ansible.builtin.apt:
+        name:
+          - libxkbcommon0
+          - libwayland-client0
+        state: present
+        update_cache: yes
 
-- name: Render Magic Mirror Nomad job file
-  ansible.builtin.template:
-    src: magic_mirror.nomad.j2
-    dest: /opt/nomad/jobs/magic_mirror.nomad
-  notify: Run Magic Mirror Job
+    - name: Install libasound2
+      block:
+        - name: Try installing libasound2
+          ansible.builtin.apt:
+            name: libasound2
+            state: present
+      rescue:
+        - name: Try installing libasound2t64 (for newer Ubuntu)
+          ansible.builtin.apt:
+            name: libasound2t64
+            state: present
+
+    - name: Create Magic Mirror install directory
+      ansible.builtin.file:
+        path: "{{ magic_mirror_install_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Download and unarchive Magic Mirror server
+      ansible.builtin.unarchive:
+        src: "{{ magic_mirror_url }}"
+        dest: "{{ magic_mirror_install_dir }}"
+        remote_src: yes
+        creates: "{{ magic_mirror_install_dir }}/mmserver"
+        extra_opts:
+          - --strip-components=1
+
+    - name: Ensure mmserver is executable
+      ansible.builtin.file:
+        path: "{{ magic_mirror_install_dir }}/mmserver"
+        mode: '0755'
+
+    - name: Render Magic Mirror Nomad job file
+      ansible.builtin.template:
+        src: magic_mirror.nomad.j2
+        dest: /opt/nomad/jobs/magic_mirror.nomad
+      notify: Run Magic Mirror Job
+  when: gpu_render_nodes.stdout != ""
+
+- name: Skip Magic Mirror deployment
+  ansible.builtin.debug:
+    msg: "Skipping Magic Mirror deployment: No GPU render nodes found."
+  when: gpu_render_nodes.stdout == ""

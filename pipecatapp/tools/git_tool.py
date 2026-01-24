@@ -7,10 +7,38 @@ class Git_Tool:
     This class provides methods to execute Git commands from within the
     agent's environment.
     """
-    def __init__(self):
-        """Initializes the Git_Tool."""
+    def __init__(self, root_dir=None):
+        """Initializes the Git_Tool.
+
+        Args:
+            root_dir (str, optional): The directory to restrict git operations to.
+                                      If None, defaults to the current working directory.
+        """
         self.description = "A tool for interacting with Git repositories."
         self.name = "git_tool"
+        if root_dir:
+            self.root_dir = os.path.abspath(root_dir)
+        else:
+            self.root_dir = os.path.abspath(os.getcwd())
+
+    def _validate_path(self, path: str) -> str:
+        """Ensures the path is within the root directory."""
+        # Resolve absolute path
+        if not os.path.isabs(path):
+            full_path = os.path.abspath(os.path.join(os.getcwd(), path))
+        else:
+            full_path = os.path.abspath(path)
+
+        # Security check: Ensure we don't break out of the allowed root
+        try:
+            common = os.path.commonpath([self.root_dir, full_path])
+        except ValueError:
+            common = ""
+
+        if common != self.root_dir:
+            raise ValueError(f"Access denied: {path} is outside the allowed root {self.root_dir}")
+
+        return full_path
 
     def _run_git_command(self, command: list, working_dir: str) -> str:
         """A helper function to run a Git command.
@@ -23,6 +51,11 @@ class Git_Tool:
             str: A string containing the output of the command, or an
                 error message if the run fails.
         """
+        try:
+            working_dir = self._validate_path(working_dir)
+        except ValueError as e:
+            return str(e)
+
         if not os.path.isdir(working_dir):
             return f"Error: Working directory '{working_dir}' not found."
 
@@ -55,6 +88,22 @@ class Git_Tool:
         Returns:
             str: The output of the git clone command.
         """
+        # Validate that the target directory (relative to CWD) is within root
+        # Note: 'directory' here is the argument to git clone, which creates it.
+        # git clone <url> <directory>
+        # We run it in "." (CWD).
+        # So we should validate that os.path.join(os.getcwd(), directory) is safe.
+
+        try:
+            # We don't check existence because clone creates it, but we check location.
+            self._validate_path(directory)
+        except ValueError as e:
+            return str(e)
+
+        # Security Fix: Prevent path traversal
+        if ".." in directory or os.path.isabs(directory):
+            return "Error: Invalid directory. Path traversal is not allowed. Please use a relative path."
+
         return self._run_git_command(["clone", repo_url, directory], ".")
 
     def pull(self, working_dir: str) -> str:

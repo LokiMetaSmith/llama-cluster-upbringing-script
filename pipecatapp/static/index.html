@@ -17,12 +17,45 @@
             word-wrap: break-word;
             white-space: pre-wrap;
         }
+        /* Palette UX: Jump to Bottom Button */
+        #jump-to-bottom-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: none; /* Hidden by default */
+            z-index: 10;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            font-size: 20px;
+            line-height: 1;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            background-color: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        #jump-to-bottom-btn:hover {
+            opacity: 1;
+            background-color: #444;
+        }
         .approval-prompt { border: 1px dashed #ffc107; padding: 10px; margin: 10px 0; }
         .user-message { color: #87cefa; }
         .agent-message { color: #98fb98; }
         .error { color: #ff6347; }
         #status-light { width: 15px; height: 15px; border-radius: 50%; background-color: #f00; display: inline-block; margin-left: 10px; }
         input, button { padding: 5px; background-color: #333; color: #f0f0f0; border: 1px solid #555; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Accessibility: High contrast focus indicator */
+        a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid #00ff00; /* Terminal Green */
+            outline-offset: 2px;
+            box-shadow: 0 0 5px #00ff00;
+        }
 
         /* Dropdown Button */
         .dropbtn {
@@ -70,14 +103,30 @@
         .dropdown-content a:hover {background-color: #f1f1f1}
         .dropdown-content a.unhealthy:hover {background-color: #eee} /* Keep grey on hover */
 
-        /* Show the dropdown menu on hover or when 'show' class is added */
-        .dropdown:hover .dropdown-content,
+        /* Palette: Navigation Links styled as Buttons */
+        a.nav-btn {
+            padding: 5px 10px;
+            background-color: #333;
+            color: #f0f0f0;
+            border: 1px solid #555;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+            font-size: 13.33px; /* Match button default */
+        }
+        a.nav-btn:hover { background-color: #444; }
+        a.nav-btn:active { background-color: #222; }
+
+        /* VR Button specific style */
+        #vr-mode-btn.nav-btn { background-color: #800080; }
+        #vr-mode-btn.nav-btn:hover { background-color: #600060; }
+
+        /* Show the dropdown menu only when 'show' class is added (via click/keyboard) */
         .dropdown.show .dropdown-content {
             display: block;
         }
 
         /* Change the background color of the dropdown button when the dropdown content is shown */
-        .dropdown:hover .dropbtn,
         .dropdown.show .dropbtn {
             background-color: #005f7a;
         }
@@ -124,6 +173,23 @@
         table.status-table tr:nth-child(even) {
             background-color: #111;
         }
+
+        /* Palette UX: Button-like links */
+        a.nav-btn {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #333;
+            color: #f0f0f0;
+            border: 1px solid #555;
+            text-decoration: none;
+            font-size: 13.3333px; /* Match button default */
+            cursor: pointer;
+            box-sizing: border-box;
+            line-height: normal;
+        }
+        a.nav-btn:hover {
+            background-color: #444;
+        }
     </style>
 </head>
 <body>
@@ -140,9 +206,16 @@
         <button id="save-state-btn">Save State</button>
         <button id="load-state-btn">Load State</button>
         <button id="clear-terminal-btn">Clear Terminal</button>
+        <!-- Palette UX: Semantic links for navigation -->
+        <a id="cluster-viz-btn" href="/cluster" target="_blank" rel="noopener noreferrer" class="nav-btn" title="Open Cluster Visualization in new tab" aria-label="Cluster Viz (opens in new tab)">Cluster Viz</a>
+        <a id="cluster-vr-btn" href="/cluster_viz" target="_blank" rel="noopener noreferrer" class="nav-btn" title="Open Cluster VR in new tab" aria-label="Cluster VR (opens in new tab)">Cluster VR</a>
+        <a id="vr-mode-btn" href="/static/vr_index.html" class="nav-btn" title="Enter WebVR Interface" aria-label="Enter WebVR Interface">Enter VR</a>
     </div>
-    <div id="terminal" aria-live="polite" aria-label="Terminal Output">
-        <pre id="robot-art" style="text-align: center; font-family: 'Courier New', Courier, monospace;"></pre>
+    <div style="position: relative;">
+        <div id="terminal" aria-live="polite" aria-label="Terminal Output">
+            <pre id="robot-art" role="img" aria-label="Robot face: Idle" style="text-align: center; font-family: 'Courier New', Courier, monospace;"></pre>
+        </div>
+        <button id="jump-to-bottom-btn" aria-label="Jump to latest logs" title="Jump to Bottom">↓</button>
     </div>
     <div id="status-display" style="padding: 10px; margin-top: 10px; border: 1px solid #333; background-color: #000;" aria-live="polite" aria-label="System Status"></div>
     <div id="input-area" style="padding: 10px; margin-top: 10px; display: flex; gap: 10px;">

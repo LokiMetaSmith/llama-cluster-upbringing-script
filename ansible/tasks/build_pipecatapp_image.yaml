@@ -1,0 +1,19 @@
+- name: Copy pipecat startup script to build context
+  ansible.builtin.template:
+    src: "{{ inventory_dir }}/ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2"
+    dest: "{{ inventory_dir }}/pipecatapp/start_pipecat.sh"
+    mode: '0755'
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Build pipecatapp Docker image when deployment style is docker
+  community.docker.docker_image:
+    name: pipecatapp
+    tag: local
+    build:
+      path: "{{ inventory_dir }}/pipecatapp"
+      nocache: true
+    source: build
+    force_source: true
+  become: yes
+  when: pipecat_deployment_style == 'docker'

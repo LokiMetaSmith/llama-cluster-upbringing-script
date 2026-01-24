@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import asyncio
 import logging
@@ -6,7 +7,7 @@ import requests
 import httpx
 import yaml
 import time  # Added back for the backup timestamp
-from fastapi import FastAPI, WebSocket, Body, Request, HTTPException, Depends, Security
+from fastapi import FastAPI, WebSocket, Body, Request, HTTPException, Depends, Security, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +16,15 @@ from typing import List, Dict
 from workflow.runner import ActiveWorkflows, OpenGates
 from workflow.history import WorkflowHistory
 from api_keys import get_api_key
+from security import sanitize_data
+try:
+    from .models import InternalChatRequest, SystemMessageRequest
+    from .rate_limiter import RateLimiter
+    from .net_utils import format_url
+except ImportError:
+    from models import InternalChatRequest, SystemMessageRequest
+    from rate_limiter import RateLimiter
+    from net_utils import format_url
 
 
 # Configure logging
@@ -50,23 +60,42 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         # Content-Security-Policy: Allow 'self' and inline scripts/styles which are used in index.html
+        # Also allow unpkg.com, aframe.io, and supereggbert.github.io for VR components
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "img-src 'self' data:; "
+            "img-src 'self' data: https://cdn.aframe.io; "
+            "media-src 'self' https://cdn.aframe.io; "
             "style-src 'self' 'unsafe-inline'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "connect-src 'self' ws: wss:;"
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://aframe.io https://supereggbert.github.io https://cdn.jsdelivr.net; "
+            "connect-src 'self' ws: wss: https://cdn.aframe.io;"
         )
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
 
+def is_origin_allowed(origin: str, allowed_origins: list) -> bool:
+    """Checks if the given origin is allowed based on the configuration."""
+    if "*" in allowed_origins:
+        return True
+    if not origin:
+        # Reject requests without an Origin header for strict security,
+        # unless you expect non-browser clients that don't send it.
+        # For this web-based agent, we expect browsers.
+        return False
+    return origin in allowed_origins
+
+# Security Enhancement: Rate Limiters
+# Strict limiter for sensitive operations (10 requests per minute)
+strict_limiter = RateLimiter(limit=10, window=60)
+# Standard limiter for regular API calls (100 requests per minute)
+standard_limiter = RateLimiter(limit=100, window=60)
+
 # Create queues to communicate between the web server and the TwinService
 approval_queue = asyncio.Queue()
 text_message_queue = asyncio.Queue()
 
-# Simple in-memory cache for service discovery
-class ServiceDiscoveryCache:
+# Simple generic in-memory cache
+class AsyncCache:
     def __init__(self, ttl=30):
         self.ttl = ttl
         self.cache = None
@@ -84,9 +113,12 @@ class ServiceDiscoveryCache:
             self.cache = value
             self.last_update = time.time()
 
-service_cache = ServiceDiscoveryCache(ttl=30)
+service_cache = AsyncCache(ttl=30)
+metrics_cache = AsyncCache(ttl=5)
 # Reusable HTTP client for service discovery
 service_discovery_client = httpx.AsyncClient(timeout=2.0)
+# Reusable HTTP client for metrics
+metrics_client = httpx.AsyncClient(timeout=2.0)
 
 class WebSocketManager:
     """Manages active WebSocket connections.
@@ -159,6 +191,15 @@ async def websocket_endpoint(websocket: WebSocket):
     """
     # Note: WebSocket authentication is trickier. For now, we leave it open as per "semi-unprotected" plan.
     # If strict auth is needed later, we would check query params during connect.
+
+    # Security Fix: Prevent Cross-Site WebSocket Hijacking (CSWSH)
+    # Even without auth, we must ensure the connection comes from a trusted origin.
+    origin = websocket.headers.get("origin")
+    if not is_origin_allowed(origin, allowed_origins):
+        logging.warning(f"Rejected WebSocket connection from untrusted origin: {origin}")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await manager.connect(websocket)
     try:
         while True:
@@ -173,24 +214,27 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @app.post("/internal/chat", summary="Process Internal Chat Message", description="Receives a chat message from an internal service like the MoE Gateway, processes it, and sends the response to a specified callback URL.", tags=["Internal"])
-async def internal_chat(payload: Dict = Body(...), api_key: str = Security(get_api_key)):
+async def internal_chat(payload: InternalChatRequest, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """
     Handles a chat message from another internal service.
     The payload should contain the user's text, a unique request_id,
     and a response_url where the final agent message should be sent.
     """
-    await text_message_queue.put(payload)
+    # Convert model to dict for internal processing (serialized for JSON compatibility)
+    data = payload.model_dump(mode="json")
+    await text_message_queue.put(data)
     return JSONResponse(status_code=202, content={"message": "Request accepted"})
 
 
 @app.post("/internal/system_message", summary="Process System Alert", description="Receives a system alert (e.g., from Supervisor), injecting it into the agent's workflow.", tags=["Internal"])
-async def internal_system_message(payload: Dict = Body(..., examples=[{"text": "Job X failed with error Y", "priority": "high"}]), api_key: str = Security(get_api_key)):
+async def internal_system_message(payload: SystemMessageRequest, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """
     Handles a system alert. These are treated as high-priority inputs from the infrastructure.
     """
+    data = payload.model_dump(mode="json")
     # Mark it as a system alert for special handling in TwinService
-    payload["is_system_alert"] = True
-    await text_message_queue.put(payload)
+    data["is_system_alert"] = True
+    await text_message_queue.put(data)
     return JSONResponse(status_code=202, content={"message": "System alert accepted"})
 
 
@@ -206,6 +250,96 @@ async def get_workflow_ui():
     workflow_html_path = os.path.join(static_dir, "workflow.html")
     with open(workflow_html_path) as f:
         return HTMLResponse(f.read())
+
+@app.get("/cluster", summary="Serve Cluster UI", description="Serves the `cluster.html` file for the cluster visualization UI.", tags=["UI"])
+async def get_cluster_ui():
+    """Serves the cluster visualization UI."""
+    cluster_html_path = os.path.join(static_dir, "cluster.html")
+    with open(cluster_html_path) as f:
+        return HTMLResponse(f.read())
+
+@app.get("/cluster_viz", summary="Serve Cluster VR Viz", description="Serves the `cluster_viz.html` file for the 3D cluster visualization UI.", tags=["UI"])
+async def get_cluster_viz():
+    """Serves the 3D cluster visualization UI."""
+    viz_html_path = os.path.join(static_dir, "cluster_viz.html")
+    with open(viz_html_path) as f:
+        return HTMLResponse(f.read())
+
+@app.get("/api/cluster/metrics", summary="Get Cluster Metrics", description="Retrieves CPU and Memory metrics for services from Prometheus.", tags=["System"])
+async def get_cluster_metrics():
+    """Retrieves cluster metrics from Prometheus."""
+    # Bolt ⚡ Optimization: Return cached metrics if available
+    cached_metrics = await metrics_cache.get()
+    if cached_metrics is not None:
+         return JSONResponse(content=cached_metrics)
+
+    prom_url = os.getenv("PROMETHEUS_URL", "http://localhost:9090")
+
+    services = []
+
+    try:
+        # Bolt ⚡ Optimization: Reuse client and parallelize requests
+        client = metrics_client
+
+        # CPU Query (rate over 1m)
+        cpu_query = 'sum by (task) (rate(nomad_client_allocs_cpu_total_ticks[1m]))'
+
+        # Memory Query
+        mem_query = 'sum by (task) (nomad_client_allocs_memory_usage)'
+
+        # Execute in parallel
+        cpu_resp, mem_resp = await asyncio.gather(
+            client.get(f"{prom_url}/api/v1/query", params={'query': cpu_query}, timeout=2.0),
+            client.get(f"{prom_url}/api/v1/query", params={'query': mem_query}, timeout=2.0)
+        )
+
+        cpu_data = {}
+        if cpu_resp.status_code == 200:
+            data = cpu_resp.json()
+            if data.get('status') == 'success':
+                results = data.get('data', {}).get('result', [])
+                for res in results:
+                    task = res['metric'].get('task')
+                    # Prometheus value is [timestamp, "value"]
+                    try:
+                        val = float(res['value'][1])
+                        if task:
+                            cpu_data[task] = val
+                    except (ValueError, IndexError):
+                        continue
+
+            mem_data = {}
+            if mem_resp.status_code == 200:
+                data = mem_resp.json()
+                if data.get('status') == 'success':
+                    results = data.get('data', {}).get('result', [])
+                    for res in results:
+                        task = res['metric'].get('task')
+                        try:
+                            val = float(res['value'][1])
+                            if task:
+                                mem_data[task] = val
+                        except (ValueError, IndexError):
+                            continue
+
+            # Combine
+            all_tasks = set(cpu_data.keys()) | set(mem_data.keys())
+            for task in all_tasks:
+                services.append({
+                    "id": task,
+                    "cpu": cpu_data.get(task, 0),
+                    "mem": mem_data.get(task, 0),
+                    "status": "running"
+                })
+
+        # Cache the result
+        await metrics_cache.set(services)
+
+    except Exception as e:
+        logging.error(f"Error fetching metrics: {e}")
+        pass
+
+    return JSONResponse(content=services)
 
 @app.get("/api/status", summary="Get Agent Status", description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks.", tags=["Agent"])
 async def get_status(request: Request):
@@ -232,7 +366,9 @@ async def get_health(request: Request):
     if getattr(request.app.state, "is_ready", False):
         return JSONResponse(content={"status": "ok"})
     else:
-        return JSONResponse(status_code=503, content={"status": "initializing"})
+        # Return 200 OK with "initializing" status to prevent Nomad from killing the allocation
+        # during long startup phases (e.g., waiting for other services).
+        return JSONResponse(status_code=200, content={"status": "initializing"})
 
 @app.get("/api/workflows/active", response_class=JSONResponse)
 async def get_active_workflows():
@@ -245,7 +381,14 @@ async def get_workflow_history(limit: int = 50):
     """Retrieves a list of past workflow runs."""
     history = WorkflowHistory()
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, lambda: history.get_all_runs(limit=limit))
+    runs = await loop.run_in_executor(None, lambda: history.get_all_runs(limit=limit))
+
+    # Sanitize error messages
+    for run in runs:
+        if "error" in run and run["error"]:
+            run["error"] = sanitize_data(run["error"])
+
+    return runs
 
 @app.get("/api/workflows/history/{runner_id}", response_class=JSONResponse, summary="Get Workflow Run Details", description="Retrieves the full details of a specific workflow run.", tags=["Workflow"])
 async def get_workflow_run(runner_id: str):
@@ -255,10 +398,13 @@ async def get_workflow_run(runner_id: str):
     run_details = await loop.run_in_executor(None, lambda: history.get_run(runner_id))
     if not run_details:
         raise HTTPException(status_code=404, detail="Workflow run not found.")
-    return run_details
+
+    # Security Enhancement: Sanitize sensitive data from the run details
+    # This removes potential secrets in global_inputs or tool outputs before returning to the UI
+    return sanitize_data(run_details)
 
 @app.post("/api/gate/approve", response_class=JSONResponse)
-async def approve_gate(payload: Dict = Body(...), api_key: str = Security(get_api_key)):
+async def approve_gate(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """Approves a paused gate, allowing the workflow to continue."""
     request_id = payload.get("request_id")
     if not request_id:
@@ -297,7 +443,7 @@ async def get_workflow_definition(workflow_name: str):
         raise HTTPException(status_code=500, detail="An error occurred while loading the workflow.")
 
 @app.post("/api/workflows/save", summary="Save Workflow", description="Saves a workflow definition to a YAML file.", tags=["Workflow"])
-async def save_workflow_definition(payload: Dict = Body(...), api_key: str = Security(get_api_key)):
+async def save_workflow_definition(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """
     Saves a workflow definition.
     Payload: { "name": "filename.yaml", "definition": { ... } }
@@ -357,7 +503,7 @@ async def get_web_uis():
         return JSONResponse(content=cached_uis)
 
     web_uis = []
-    consul_url = "http://127.0.0.1:8500"
+    consul_url = format_url("http", "127.0.0.1", 8500)
 
     try:
         # Use the reusable client instead of creating a new one every time
@@ -377,7 +523,7 @@ async def get_web_uis():
                 # Check Nomad health via Consul
                 nomad_health_resp = await client.get(f"{consul_url}/v1/health/service/nomad?passing")
                 nomad_status = "healthy" if nomad_health_resp.status_code == 200 and nomad_health_resp.json() else "unhealthy"
-                web_uis.append({"name": "Nomad", "url": f"http://{nomad_address}:4646", "status": nomad_status})
+                web_uis.append({"name": "Nomad", "url": format_url("http", nomad_address, 4646), "status": nomad_status})
         except Exception:
             web_uis.append({"name": "Nomad", "url": "#", "status": "unhealthy"})
 
@@ -418,7 +564,7 @@ async def get_web_uis():
                         port = service_info.get("Port")
 
                         if address and port:
-                            candidate_url = f"http://{address}:{port}"
+                            candidate_url = format_url("http", address, port)
 
                             # Check health of this specific instance
                             instance_passing = all(check.get("Status") == "passing" for check in checks)
@@ -469,7 +615,7 @@ async def get_web_uis():
     return JSONResponse(content=sorted_uis)
 
 @app.post("/api/state/save", summary="Save Agent State", description="Saves the agent's current conversation and internal state to a named snapshot.", tags=["Agent"])
-async def save_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]), api_key: str = Security(get_api_key)):
+async def save_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """API endpoint to save the agent's current state to a named snapshot.
 
     Args:
@@ -482,6 +628,11 @@ async def save_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     if not save_name:
         return JSONResponse(status_code=400, content={"message": "save_name is required"})
 
+    # Security Fix: Stronger input validation to prevent path traversal and injection
+    # Allow only alphanumeric, underscore, hyphen, and period.
+    if not re.match(r"^[a-zA-Z0-9_\-\.]+$", save_name) or ".." in save_name:
+        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must only contain alphanumeric characters, dots, dashes, or underscores."})
+
     twin_service = request.app.state.twin_service_instance
     if twin_service:
         result = twin_service.save_state(save_name)
@@ -489,7 +640,7 @@ async def save_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
 @app.post("/api/state/load", summary="Load Agent State", description="Loads the agent's state from a previously saved snapshot.", tags=["Agent"])
-async def load_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]), api_key: str = Security(get_api_key)):
+async def load_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """API endpoint to load the agent's state from a named snapshot.
 
     Args:
@@ -502,6 +653,11 @@ async def load_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     if not save_name:
         return JSONResponse(status_code=400, content={"message": "save_name is required"})
 
+    # Security Fix: Stronger input validation to prevent path traversal and injection
+    # Allow only alphanumeric, underscore, hyphen, and period.
+    if not re.match(r"^[a-zA-Z0-9_\-\.]+$", save_name) or ".." in save_name:
+        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must only contain alphanumeric characters, dots, dashes, or underscores."})
+
     twin_service = request.app.state.twin_service_instance
     if twin_service:
         result = twin_service.load_state(save_name)
@@ -510,4 +666,5 @@ async def load_state_endpoint(request: Request, payload: Dict = Body(..., exampl
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    host_ip = os.getenv("HOST_IP", "::")
+    uvicorn.run(app, host=host_ip, port=8000)

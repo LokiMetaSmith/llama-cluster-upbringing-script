@@ -13,7 +13,7 @@ class SwarmTool:
         self.nomad_url = nomad_url
         self.logger = logging.getLogger(__name__)
 
-    async def spawn_workers(self, tasks: list[dict], image: str = "pipecatapp:latest") -> str:
+    async def spawn_workers(self, tasks: list[dict], image: str = "pipecatapp:latest", agent_type: str = "worker") -> str:
         """
         Spawns a worker agent for each task in the list.
 
@@ -23,21 +23,26 @@ class SwarmTool:
                 - prompt (str): The instruction for the worker agent.
                 - context (str): Relevant context or data.
             image (str): The Docker image to use for the worker (default: pipecatapp:latest).
+            agent_type (str): The type of agent to spawn. Options: 'worker' (simple), 'technician' (advanced).
 
         Returns:
             str: A summary of the dispatched jobs.
         """
         dispatched_ids = []
         errors = []
+        
+        # Determine script based on agent_type
+        script_path = "/opt/pipecatapp/worker_agent.py"
+        if agent_type == "technician":
+            script_path = "/opt/pipecatapp/technician_agent.py"
 
         async with httpx.AsyncClient() as client:
             for task in tasks:
                 # Use UUID for collision-free IDs
                 unique_suffix = str(uuid.uuid4())[:8]
-                job_id = f"swarm-worker-{task.get('id', 'unknown')}-{unique_suffix}"
+                job_id = f"swarm-{agent_type}-{task.get('id', 'unknown')}-{unique_suffix}"
 
                 # Construct a Nomad batch job payload
-                # This explicitly runs the worker_agent.py script we just added.
                 job_payload = {
                     "Job": {
                         "ID": job_id,
@@ -54,7 +59,7 @@ class SwarmTool:
                                         "Config": {
                                             "image": image,
                                             "command": "python",
-                                            "args": ["/opt/pipecatapp/worker_agent.py"],
+                                            "args": [script_path],
                                             "mounts": [
                                                 {
                                                     "type": "bind",

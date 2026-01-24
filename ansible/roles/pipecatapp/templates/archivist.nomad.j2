@@ -36,6 +36,7 @@ job "archivist" {
         INDEX_DIR      = "{{ target_user_home }}/.config/pipecat/archivist_data"
         CONSUL_HOST    = "{{ ansible_facts['default_ipv4']['address'] }}"
         CONSUL_PORT    = "8500"
+        CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
       }
 
       config {
@@ -44,7 +45,7 @@ job "archivist" {
 
       resources {
         cpu    = 1000 # 1 GHz
-        memory = 4096 # 4 GB for BGE-Large
+        memory = 2048 # 2 GB for BGE-Large
       }
     }
   }

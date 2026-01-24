@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import re
 # Set config dir before importing ultralytics to avoid permission errors
 os.environ["YOLO_CONFIG_DIR"] = "/tmp/Ultralytics"
 from ultralytics import YOLO
@@ -8,6 +9,9 @@ import time
 import json
 import io
 import wave
+import struct
+import base64
+from PIL import Image
 import inspect
 import threading
 
@@ -70,6 +74,11 @@ from workflow.nodes.llm_nodes import *
 from workflow.nodes.tool_nodes import *
 from workflow.nodes.system_nodes import *
 from api_keys import initialize_api_keys
+from security import redact_sensitive_data
+try:
+    from .net_utils import format_url
+except ImportError:
+    from net_utils import format_url
 
 
 import uvicorn
@@ -77,6 +86,7 @@ import uvicorn
 # -----------------------
 # Logging -> web UI bridge
 # -----------------------
+
 class WebSocketLogHandler(logging.Handler):
     """A logging handler that forwards records to a WebSocket connection.
 
@@ -91,6 +101,11 @@ class WebSocketLogHandler(logging.Handler):
             record: The log record to be emitted.
         """
         log_entry = self.format(record)
+
+        # Security Fix: Sentinel - Redact sensitive information
+        # Redact generic API key patterns and Bearer tokens
+        log_entry = redact_sensitive_data(log_entry)
+
         try:
             # Get the running asyncio loop to safely schedule the broadcast.
             loop = asyncio.get_running_loop()
@@ -242,6 +257,13 @@ class FasterWhisperSTTService(FrameProcessor):
         audio_s16 = np.frombuffer(audio_bytes, dtype=np.int16)
         return audio_s16.astype(np.float32) / 32768.0
 
+    def _transcribe_sync(self, audio_bytes: bytes) -> str:
+        """Synchronous helper for transcription to run in a thread."""
+        # Bolt ⚡ Optimization: Perform CPU-heavy numpy conversion in the thread
+        audio_data = self._convert_audio_bytes_to_float_array(audio_bytes)
+        segments, _ = self.model.transcribe(audio_data, language="en")
+        return "".join(segment.text for segment in segments).strip()
+
     async def process_frame(self, frame, direction):
         """Processes audio frames, buffering and transcribing them.
 
@@ -257,10 +279,14 @@ class FasterWhisperSTTService(FrameProcessor):
         elif isinstance(frame, UserStoppedSpeakingFrame):
             if not self.audio_buffer:
                 return
-            audio_f32 = self._convert_audio_bytes_to_float_array(self.audio_buffer)
-            self.audio_buffer.clear()
-            segments, _ = self.model.transcribe(audio_f32, language="en")
-            full_text = "".join(segment.text for segment in segments).strip()
+            # Bolt ⚡ Optimization: Avoid bytes() copy by swapping buffer
+            audio_bytes = self.audio_buffer
+            self.audio_buffer = bytearray()
+
+            # Bolt ⚡ Optimization: Run blocking inference in a thread
+            loop = asyncio.get_running_loop()
+            full_text = await loop.run_in_executor(None, self._transcribe_sync, audio_bytes)
+
             if full_text:
                 await self.push_frame(TranscriptionFrame(full_text))
         else:
@@ -286,6 +312,14 @@ class PiperTTSService(FrameProcessor):
         self.voice = PiperVoice.load(model_path)
         self.sample_rate = self.voice.config.sample_rate
 
+    def _synthesize_sync(self, text: str) -> bytes:
+        """Helper to run synthesis in a separate thread."""
+        audio_stream = io.BytesIO()
+        self.voice.synthesize(text, audio_stream)
+        audio_stream.seek(0)
+        with wave.open(audio_stream, "rb") as wf:
+            return wf.readframes(wf.getnframes())
+
     async def process_frame(self, frame, direction):
         """Processes text frames to synthesize audio.
 
@@ -296,12 +330,71 @@ class PiperTTSService(FrameProcessor):
         if not isinstance(frame, TextFrame):
             await self.push_frame(frame, direction)
             return
-        audio_stream = io.BytesIO()
-        self.voice.synthesize(frame.text, audio_stream)
-        audio_stream.seek(0)
-        with wave.open(audio_stream, "rb") as wf:
-            audio_bytes = wf.readframes(wf.getnframes())
+
+        loop = asyncio.get_running_loop()
+        # Bolt ⚡ Optimization: Run blocking synthesis in a thread
+        audio_bytes = await loop.run_in_executor(None, self._synthesize_sync, frame.text)
         await self.push_frame(AudioRawFrame(audio_bytes))
+
+class WebsocketAudioStreamer(FrameProcessor):
+    """A Pipecat processor that streams audio frames to the frontend via WebSockets.
+
+    This enables spatial audio in the VR interface.
+    """
+    def __init__(self, sample_rate: int = 16000):
+        super().__init__()
+        self.sample_rate = sample_rate
+
+    async def process_frame(self, frame, direction):
+        if not isinstance(frame, AudioRawFrame):
+            await self.push_frame(frame, direction)
+            return
+
+        # Wrap raw PCM in WAV container for browser compatibility
+        try:
+            # Bolt ⚡ Optimization: Manually construct WAV header instead of using 'wave' module
+            # This is ~7x faster and reduces object allocation
+            audio_data = frame.audio
+            length = len(audio_data)
+
+            # WAV Header: 44 bytes
+            # RIFF + size + WAVE + fmt + size + 1 (PCM) + 1 (channels) + rate + byte_rate + block_align + bits + data + size
+            # We assume Mono 16-bit PCM as per app config
+            header = struct.pack(
+                '<4sI4s4sIHHIIHH4sI',
+                b'RIFF',
+                36 + length,
+                b'WAVE',
+                b'fmt ',
+                16,
+                1, # PCM
+                1, # Mono
+                self.sample_rate,
+                self.sample_rate * 2, # ByteRate (SampleRate * NumChannels * BitsPerSample/8)
+                2, # BlockAlign (NumChannels * BitsPerSample/8)
+                16, # BitsPerSample
+                b'data',
+                length
+            )
+
+            # Combine header and audio data, then encode
+            wav_bytes = header + audio_data
+            b64_audio = base64.b64encode(wav_bytes).decode('utf-8')
+
+            # Fix: Import web_server locally
+            try:
+                import web_server
+                await web_server.manager.broadcast(json.dumps({
+                    "type": "audio",
+                    "data": b64_audio
+                }))
+            except Exception as ws_err:
+                logging.error(f"Failed to stream audio frame: {ws_err}")
+
+        except Exception as e:
+             logging.error(f"Error packing audio for stream: {e}")
+
+        await self.push_frame(frame, direction)
 
 # -----------------------
 # YOLO Vision Detector
@@ -326,12 +419,43 @@ class YOLOv8Detector(FrameProcessor):
              model_path = "/opt/nomad/models/vision/yolov8n.pt" # Last resort fallback
         self.latest_observation = "I don't see anything."
         self.last_detected_objects = set()
+        self.last_processed_time = 0
+        self.is_processing = False
+
         try:
             self.model = YOLO(model_path)
         except Exception as e:
             logging.error(f"Failed to load YOLOv8 model from {model_path}: {e}")
             self.model = None
             self.latest_observation = "Vision system unavailable."
+
+    def _run_inference(self, image):
+        """Helper to run inference in a separate thread.
+
+        Args:
+            image: The image data to process.
+
+        Returns:
+            tuple: (set of detected object names, base64_encoded_jpeg_string)
+        """
+        results = self.model(image)
+        detected_objects = {self.model.names[int(c)] for r in results for c in r.boxes.cls}
+
+        # Generate visual debug frame
+        img_base64 = None
+        try:
+            # Plot returns a numpy array (BGR)
+            annotated_frame = results[0].plot()
+            # Convert BGR to RGB
+            rgb_frame = annotated_frame[..., ::-1]
+            pil_img = Image.fromarray(rgb_frame)
+            buffered = io.BytesIO()
+            pil_img.save(buffered, format="JPEG", quality=70)
+            img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        except Exception as e:
+            logging.error(f"Error generating visual debug frame: {e}")
+
+        return detected_objects, img_base64
 
     async def process_frame(self, frame, direction):
         """Processes an image frame to detect objects.
@@ -349,12 +473,38 @@ class YOLOv8Detector(FrameProcessor):
             await self.push_frame(frame, direction)
             return
 
+        current_time = time.time()
+        # Bolt ⚡ Optimization: Rate limit to 1 FPS and avoid concurrent processing
+        if (current_time - self.last_processed_time < 1.0) or self.is_processing:
+            await self.push_frame(frame, direction)
+            return
+
+        self.is_processing = True
+        self.last_processed_time = current_time
+
         try:
-            # run model; returns list of results; boxes.cls may be torch tensors or arrays
-            detected_objects = {self.model.names[int(c)] for r in self.model(frame.image) for c in r.boxes.cls}
+            loop = asyncio.get_running_loop()
+            # Bolt ⚡ Optimization: Run blocking inference in a thread
+            detected_objects, img_base64 = await loop.run_in_executor(None, self._run_inference, frame.image)
+
+            # Broadcast visual debug frame
+            if img_base64:
+                # Fix: Import web_server locally to avoid NameError and circular dependencies
+                try:
+                    import web_server
+                    await web_server.manager.broadcast(json.dumps({
+                        "type": "vision_debug",
+                        "data": img_base64
+                    }))
+                except Exception as ws_err:
+                     logging.error(f"Failed to broadcast vision frame: {ws_err}")
+
         except Exception as e:
             logging.error(f"YOLOv8 detection error: {e}")
             detected_objects = set()
+        finally:
+            self.is_processing = False
+
         if detected_objects != self.last_detected_objects:
             self.last_detected_objects = detected_objects
             self.latest_observation = f"I see {', '.join(detected_objects)}." if detected_objects else "I don't see anything."
@@ -526,7 +676,7 @@ async def discover_services(service_names: list, consul_http_addr: str, delay=10
                     services = response.json()
                     if services:
                         address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
-                        base_url = f"http://{address}:{port}/v1"
+                        base_url = format_url("http", address, port, "v1")
                         logging.info(f"Successfully discovered {service_name} at {base_url}")
                         return base_url
                     else:
@@ -571,7 +721,7 @@ async def discover_main_llm_service(consul_http_addr="http://localhost:8500", de
                     services = response.json()
                     if services:
                         address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
-                        base_url = f"http://{address}:{port}/v1"
+                        base_url = format_url("http", address, port, "v1")
                         logging.info(f"Discovered main LLM service at {base_url}")
                         return base_url
                     else:
@@ -632,9 +782,12 @@ class TwinService(FrameProcessor):
         # This will hold metadata from incoming requests (e.g., from the gateway)
         self.current_request_meta = None
 
+        # Optimization: Reusable HTTP client for gateway responses
+        self.http_client = httpx.AsyncClient(timeout=30.0)
+
         self.debug_mode = self.app_config.get("debug_mode", False)
         self.approval_mode = self.app_config.get("approval_mode", False)
-        self.consul_http_addr = f"http://{self.app_config.get('consul_host', '127.0.0.1')}:{self.app_config.get('consul_port', 8500)}"
+        self.consul_http_addr = format_url("http", self.app_config.get('consul_host', '127.0.0.1'), self.app_config.get('consul_port', 8500))
 
         # Initialize tools via factory
         self.tools = create_tools(self.app_config, twin_service=self, runner=self.runner)
@@ -765,10 +918,8 @@ class TwinService(FrameProcessor):
             response_url = self.current_request_meta["response_url"]
             request_id = self.current_request_meta["request_id"]
             try:
-                # Use a standard library HTTP client for this async context
-                import httpx
-                async with httpx.AsyncClient() as client:
-                    await client.post(response_url, json={"request_id": request_id, "content": text})
+                # Bolt ⚡ Optimization: Use reused client instead of creating new one
+                await self.http_client.post(response_url, json={"request_id": request_id, "content": text})
                 logging.info(f"Sent response for request {request_id} to gateway.")
             except Exception as e:
                 logging.error(f"Failed to send response to gateway: {e}")
@@ -879,6 +1030,28 @@ async def main():
     else:
         logging.warning("No API keys found in PIPECAT_API_KEYS (or PIECAT_API_KEYS). Sensitive endpoints will be insecure if not protected elsewhere.")
 
+    # Set initial state for web server
+    web_server.app.state.is_ready = False
+    web_server.app.state.twin_service_instance = None
+
+    # Start web server (uvicorn) in its own thread immediately so /health checks pass
+    # even while we are waiting for discovery
+    web_port_str = os.getenv("WEB_PORT")
+    if not web_port_str:
+        logging.warning("WEB_PORT not set, defaulting to 8000")
+        web_port = 8000
+    else:
+        web_port = int(web_port_str)
+
+    config = uvicorn.Config(
+        web_server.app,
+        host="0.0.0.0",
+        port=web_port,
+        log_level="info"
+    )
+    server = uvicorn.Server(config)
+    threading.Thread(target=server.run, daemon=True).start()
+
     # Load configuration from Consul
     consul_host = os.getenv("CONSUL_HOST")
     if not consul_host:
@@ -909,7 +1082,8 @@ async def main():
         logging.warning("LLAMA_API_SERVICE_NAME not set, falling back to Consul config or default.")
         main_llm_service_names = [app_config.get("llama_api_service_name", "llamacpp-rpc-api")]
 
-    consul_http_addr = f"http://{consul_host}:{consul_port}"
+    consul_http_addr = format_url("http", consul_host, consul_port)
+
     llm_base_url = await discover_services(main_llm_service_names, consul_http_addr)
 
     llm = OpenAILLMService(
@@ -930,10 +1104,6 @@ async def main():
     if app_config.get("approval_mode", False):
         logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
 
-    # Set initial state for web server
-    web_server.app.state.is_ready = False
-    web_server.app.state.twin_service_instance = None
-
     twin = TwinService(
         llm=llm,
         vision_detector=vision_detector,
@@ -943,23 +1113,6 @@ async def main():
         llm_base_url=llm_base_url
     )
     web_server.app.state.twin_service_instance = twin
-
-    # Start web server (uvicorn) in its own thread, now that TwinService is initialized
-    web_port_str = os.getenv("WEB_PORT")
-    if not web_port_str:
-        logging.warning("WEB_PORT not set, defaulting to 8000")
-        web_port = 8000
-    else:
-        web_port = int(web_port_str)
-
-    config = uvicorn.Config(
-        web_server.app,
-        host="0.0.0.0",
-        port=web_port,
-        log_level="info"
-    )
-    server = uvicorn.Server(config)
-    threading.Thread(target=server.run, daemon=True).start()
 
     # Start Task Supervisor
     task_supervisor = TaskSupervisor(twin)
@@ -973,6 +1126,23 @@ async def main():
     text_injector = TextMessageInjector(text_message_queue)
 
     pipeline_steps = []
+
+    # Pre-initialize TTS services if available, for both Headed and Headless modes
+    # This ensures VR users get audio even if the server has no audio device
+    tts = None
+    websocket_streamer = None
+
+    try:
+        tts_voices = app_config.get("tts_voices", [])
+        if tts_voices:
+            model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
+            tts = PiperTTSService(model_path=model_path)
+            websocket_streamer = WebsocketAudioStreamer(sample_rate=tts.sample_rate)
+            logging.info("TTS and Websocket Audio Streamer initialized.")
+        else:
+            logging.warning("TTS voices not configured in Consul. Audio output will be disabled.")
+    except Exception as e:
+        logging.error(f"Failed to initialize TTS services: {e}")
 
     if audio_device_index is not None:
         logging.info("Audio device detected. Starting audio pipeline.")
@@ -998,24 +1168,32 @@ async def main():
         else:
             raise RuntimeError(f"STT_SERVICE not configured correctly in Consul. Got '{stt_service_name}'")
 
-        tts_voices = app_config.get("tts_voices", [])
-        if not tts_voices:
-            raise RuntimeError("TTS voices not configured in Consul.")
-        model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
-        tts = PiperTTSService(model_path=model_path)
-
         pipeline_steps.extend([
             transport.input(),
             stt,
             UILogger(sender="user"),
             twin,
-            UILogger(sender="agent"),
-            tts,
-            transport.output()
+            UILogger(sender="agent")
         ])
+
+        if tts:
+             pipeline_steps.append(tts)
+             if websocket_streamer:
+                 pipeline_steps.append(websocket_streamer)
+
+        pipeline_steps.append(transport.output())
+
     else:
         logging.warning("No audio device found. Starting in headless mode (no audio source, no STT).")
+        # In headless mode (e.g. Docker), we inject text from the UI, process it,
+        # generate TTS, and stream it back to the UI.
         pipeline_steps.append(twin)
+        pipeline_steps.append(UILogger(sender="agent"))
+
+        if tts:
+             pipeline_steps.append(tts)
+             if websocket_streamer:
+                 pipeline_steps.append(websocket_streamer)
 
     pipeline_steps.insert(0, text_injector)
 

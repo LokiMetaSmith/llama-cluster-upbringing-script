@@ -1,0 +1,64 @@
+---
+- name: Verify Mesh Network Health
+  hosts: all
+  become: yes
+  gather_facts: yes
+  vars:
+    expected_subnet_prefix: "100."
+
+  tasks:
+    - block:
+        - name: "Check 1: Verify tailscale0 interface exists"
+          fail:
+            msg: "Interface tailscale0 not found! The mesh is not active."
+          when: "'tailscale0' not in ansible_interfaces"
+
+        - name: "Check 2: Verify tailscale0 has an IPv4 address"
+          fail:
+            msg: "Interface tailscale0 has no IPv4 address."
+          when: "ansible_tailscale0.ipv4.address is not defined"
+
+        - name: "Check 3: Validate cluster_ip resolution"
+          assert:
+            that:
+              - "cluster_ip == ansible_tailscale0.ipv4.address"
+              - "cluster_ip.startswith(expected_subnet_prefix)"
+            fail_msg: "cluster_ip ({{ cluster_ip }}) does not match tailscale0 IP ({{ ansible_tailscale0.ipv4.address | default('N/A') }}) or is not in the expected subnet."
+
+        - name: "Check 4: Verify connectivity to Headscale Controller"
+          uri:
+            url: "http://{{ hostvars[groups['controller_nodes'][0]]['ansible_default_ipv4']['address'] }}:{{ headscale_port }}/health"
+            method: GET
+            status_code: 200
+            return_content: no
+          register: headscale_health
+          ignore_errors: yes
+
+        - name: "Check 4 (Alternative): Check TCP connectivity to Headscale Port"
+          wait_for:
+            host: "{{ groups['controller_nodes'][0] }}"
+            port: "{{ headscale_port }}"
+            timeout: 5
+          when: headscale_health.failed
+
+        - name: Report Success
+          debug:
+            msg:
+              - "Mesh IP: {{ cluster_ip }}"
+              - "Headscale Connection: OK"
+
+      rescue:
+        - name: "DEBUG: Run Mesh Debug Script on Failure"
+          script:
+            cmd: "{{ playbook_dir }}/../../scripts/debug_mesh.sh"
+          register: debug_output
+          ignore_errors: yes
+
+        - name: "DEBUG: Display Mesh Debug Info"
+          debug:
+            var: debug_output.stdout_lines
+          when: debug_output.stdout_lines is defined
+
+        - name: "Fail Playbook after Debugging"
+          fail:
+            msg: "Mesh network verification failed. See debug output above."

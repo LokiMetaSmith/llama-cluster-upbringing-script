@@ -40,6 +40,7 @@ python-consul2
 python-multipart
 pyvips-binary
 PyYAML
+jinja2
 RealtimeSTT
 requests
 sentence-transformers
@@ -60,3 +61,4 @@ llmrouter-lib
 rank_bm25
 podman
 tenacity
+mcp

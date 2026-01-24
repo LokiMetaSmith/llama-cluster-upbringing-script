@@ -3,3 +3,4 @@
   become: yes
   roles:
     - monitoring
+    - unified_fs

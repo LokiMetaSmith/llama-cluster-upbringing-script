@@ -1,6 +1,6 @@
 # Distributed Conversational AI Pipeline for Legacy CPU Clusters
 
-Last updated: 2025-11-26
+Last updated: 2026-01-23
 
 It uses Ansible for automated provisioning, Nomad for cluster orchestration, and a state-of-the-art AI stack to create a responsive, streaming, and embodied voice agent. For a detailed technical description of the system's layers, see the [Holistic Project Architecture](docs/ARCHITECTURE.md) document.
 
@@ -17,6 +17,8 @@ A brief overview of the key directories in this repository:
 - **/ansible**: Contains all Ansible playbooks, roles, and templates for provisioning and deploying the entire system.
   - **/ansible/roles**: Individual, reusable components for managing specific parts of the system (e.g., `nomad`, `consul`, `pipecatapp`).
   - **/ansible/roles/pipecatapp/files**: The core Python source code for the conversational agent, including `app.py`, `memory.py`, and the `tools` directory.
+- **/pipecatapp/workflows**: Contains YAML definitions for the agent's behavior and thought processes (e.g., `default_agent_loop.yaml`).
+- **/verification**: Scripts and tools for verifying the system's frontend and functionality.
 - **/prompt_engineering**: Scripts and tools for evaluating and improving the AI's prompts using evolutionary algorithms.
 - **/reflection**: Scripts related to the agent's self-reflection and self-healing capabilities.
 - **/scripts**: Utility and linting scripts for maintaining code quality.
@@ -120,56 +122,77 @@ The playbook will handle everything:
 - It stops the services on the target node, cleans up the old worker-specific state, and re-runs the `consul` and `nomad` configuration roles to re-provision it as a server.
 - The node will automatically rejoin the cluster as a controller, strengthening the control plane.
 
-## 6. Agent Architecture: The `TwinService`
+## 6. Agent Architecture: The `TwinService` & Workflow Engine
 
-The core of this application is the `TwinService`, a custom service that acts as the agent's "brain." It orchestrates the agent's responses, memory, and tool use.
+The core of this application is the `TwinService`, which now orchestrates the agent's behavior using a flexible **Workflow Engine**. Instead of a hardcoded logic loop, the agent's thought process is defined in declarative YAML files (e.g., `pipecatapp/workflows/default_agent_loop.yaml`).
 
-### 6.1. Memory
+### 6.1. Workflow Engine
+
+The agent uses a graph-based workflow engine where nodes represent steps in the thought process (e.g., "Summarize", "Reason", "Execute Tool").
+
+- **Default Workflow:** A tiered agent loop that summarizes input and generates a response using a mixture of expert models.
+- **Extensibility:** You can define custom workflows to create agents with different capabilities (e.g., a "Researcher" workflow that prioritizes browsing and summarization).
+
+### 6.2. Memory
 
 - **Short-Term:** Remembers the last 10 conversational turns in a simple list.
-- **Long-Term:** Uses a FAISS vector store (`long_term_memory.faiss`) to remember key facts. It performs a semantic search over this memory to retrieve relevant context for new conversations.
+- **Long-Term:** Uses a FAISS vector store or a remote PMM Memory Service to remember key facts. It performs a semantic search over this memory to retrieve relevant context for new conversations.
 
-### 6.2. Tool Use
+### 6.3. Tool Use
 
-The agent can use tools to perform actions and gather information. The `TwinService` dynamically provides the list of available tools to the LLM in its prompt, enabling the LLM to decide which tool to use based on the user's query.
+The agent is capable of using a wide variety of tools to interact with the world. While the default workflow is a simple conversational loop, advanced workflows can leverage the following tools:
+
+#### Built-in Capabilities
+
+These features are integrated directly into the `TwinService` or prompt system:
+
+- **Vision:** Uses a YOLOv8 or Moondream model to provide real-time descriptions of the webcam feed.
+- **Expert Routing:** Dynamically routes queries to specialized expert models (e.g., Coding, Math) via `route_to_expert`.
 
 #### Available Tools
 
-- **SSH (`ssh`)**: Executes commands on remote machines.
-- **Master Control Program (`mcp`)**: Provides agent introspection and self-control (e.g., status checks, memory management).
-- **Vision (`vision`)**: Gets a real-time description of what is visible via the webcam.
-- **Desktop Control (`desktop_control`)**: Provides full control over the desktop environment, including taking screenshots and performing mouse/keyboard actions.
-- **Code Runner (`code_runner`)**: Executes Python code in a secure, sandboxed environment.
-- **Smol Agent (`smol_agent_computer`)**: A tool for creating small, specialized agents.
-- **Web Browser (`web_browser`)**: Enables web navigation and content interaction.
-- **Ansible (`ansible`)**: Runs Ansible playbooks to manage the cluster.
-- **Power (`power`)**: Controls the cluster's power management policies.
-- **Term Everything (`term_everything`)**: Provides a terminal interface for interacting with the system.
-- **RAG (`rag`)**: Searches the project's documentation to answer questions.
-- **Home Assistant (`ha`)**: Controls smart home devices via Home Assistant.
-- **Git (`git`)**: Interacts with Git repositories.
-- **Orchestrator (`orchestrator`)**: Dispatches high-priority, complex jobs to the cluster.
-- **LLxprt Code (`llxprt_code`)**: A specialized tool for code-related tasks.
-- **Claude Clone (`claude_clone`)**: A tool for interacting with a Claude-like model.
-- **Final Answer (`final_answer`)**: A tool to provide a final answer to the user.
-- **Shell (`shell`)**: Executes shell commands.
-- **Prompt Improver (`prompt_improver`)**: A tool for improving prompts.
-- **Council (`council`)**: Convenes a council of AI experts to deliberate on a query.
-- **Swarm (`swarm`)**: Spawns multiple worker agents to perform tasks in parallel.
-- **Project Mapper (`project_mapper`)**: Scans the codebase to generate a project structure map.
-- **Planner (`planner`)**: Plans complex tasks and executes them using the SwarmTool.
-- **File Editor (`file_editor`)**: Reads, writes, and patches files in the codebase.
-- **Archivist (`archivist`)**: Performs deep research on the agent's long-term memory.
-- **Summarizer (`summarizer`)**: Summarizes conversation history (enabled via config).
+The following tools are available in the codebase (`pipecatapp/tools/`):
 
-### 6.3. Mixture of Experts (MoE) Routing
+- **Ansible (`ansible`)**: Runs Ansible playbooks to manage the cluster.
+- **Archivist (`archivist`)**: Performs deep research on the agent's long-term memory.
+- **Claude Clone (`claude_clone`)**: A tool for interacting with a Claude-like model.
+- **Code Runner (`code_runner`)**: Executes Python code in a secure, sandboxed environment.
+- **Council (`council`)**: Convenes a council of AI experts to deliberate on a query.
+- **Dependency Scanner (`dependency_scanner`)**: Scans Python packages for vulnerabilities using the OSV database.
+- **Desktop Control (`desktop_control`)**: Provides full control over the desktop environment (screenshots, mouse/keyboard).
+- **File Editor (`file_editor`)**: Reads, writes, and patches files in the codebase.
+- **Final Answer (`final_answer`)**: A tool to provide a final answer to the user.
+- **Git (`git`)**: Interacts with Git repositories.
+- **Home Assistant (`ha`)**: Controls smart home devices via Home Assistant.
+- **LLxprt Code (`llxprt_code`)**: A specialized tool for code-related tasks.
+- **Master Control Program (`mcp`)**: Provides agent introspection and self-control.
+- **Open Workers (`open_workers`)**: Manages and interacts with open worker agents.
+- **OpenCode (`opencode`)**: Interface for the OpenCode tool.
+- **Orchestrator (`orchestrator`)**: Dispatches high-priority, complex jobs to the cluster.
+- **Planner (`planner`)**: Plans complex tasks and executes them.
+- **Power (`power`)**: Controls the cluster's power management policies.
+- **Project Mapper (`project_mapper`)**: Scans the codebase to generate a project structure map.
+- **Prompt Improver (`prompt_improver`)**: A tool for improving prompts.
+- **RAG (`rag`)**: Searches the project's documentation to answer questions.
+- **Shell (`shell`)**: Executes shell commands (uses a persistent tmux session).
+- **Smol Agent (`smol_agent_computer`)**: A tool for creating small, specialized agents.
+- **SSH (`ssh`)**: Executes commands on remote machines.
+- **Summarizer (`summarizer`)**: Summarizes conversation history.
+- **Swarm (`swarm`)**: Spawns multiple worker agents to perform tasks in parallel.
+- **Term Everything (`term_everything`)**: Provides a terminal interface for interacting with the system.
+- **VR (`vr`)**: Tools for Virtual Reality interactions.
+- **Web Browser (`web_browser`)**: Enables web navigation and content interaction.
+
+> **Note on Implementation History:** Previous versions of the agent relied on a hardcoded "Router" agent with a static list of tools. The current system has evolved to a dynamic, workflow-driven architecture (`TwinService` + `WorkflowRunner`), enabling more complex and varied agent behaviors.
+
+### 6.4. Mixture of Experts (MoE) Routing
 
 The agent is designed to function as a "Mixture of Experts." The primary `pipecat` agent acts as a router, classifying the user's query and routing it to a specialized backend expert if appropriate.
 
-- **How it Works:** The `TwinService` prompt instructs the main agent to first classify the user's query. If it determines the query is best handled by a specialist (e.g., a 'coding' expert), it uses the `route_to_expert` tool. This tool call is intercepted by the `TwinService`, which then discovers the expert's API endpoint via Consul and forwards the query.
+- **How it Works:** The `TwinService` (or a `SimpleLLMNode` in the workflow) classifies the user's query. If it determines the query is best handled by a specialist (e.g., a 'coding' expert), it routes the request to that expert service via Consul.
 - **Configuration:** Deploying these specialized experts is done using the `deploy_expert.yaml` Ansible playbook. For detailed instructions, see the [Advanced AI Service Deployment](#82-advanced-deploying-additional-ai-experts) section below.
 
-### 6.4. Configuring Agent Personas
+### 6.5. Configuring Agent Personas
 
 The personality and instructions for the main router agent are defined in `ansible/roles/pipecatapp/files/prompts/router.txt`. You can edit this file to customize the behavior of the main agent. Expert agents are configured via the `group_vars/models.yaml` file, where you can define the models they use.
 

@@ -1,0 +1,25 @@
+---
+- name: Ensure memory persistence directory exists
+  file:
+    path: /opt/pipecat/data/memory
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Build memory-graph service image
+  docker_image:
+    name: "memory-graph-service:latest"
+    build:
+      path: "{{ playbook_dir }}/../../pipecatapp/memory_graph_service"
+      pull: yes
+    source: build
+    force_source: true
+
+- name: Deploy memory-graph Nomad job
+  community.general.nomad_job:
+    content: "{{ lookup('template', 'memory-graph.nomad.j2') }}"
+    state: present
+    host: localhost
+    port: 4646
+    use_ssl: false

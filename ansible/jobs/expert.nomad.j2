@@ -22,7 +22,6 @@ variable "rpc_pool_job_name" {
 {% set suitable_models_unsorted = models_with_memory | selectattr('memory_mb', 'le', available_memory_mb) %}
 {% set suitable_models = suitable_models_unsorted | sort(attribute='memory_mb', reverse=true) | list %}
 {% set rpc_service_name = rpc_pool_job_name | default('rpc-pool') ~ '-' ~ current_expert ~ '-provider' %}
-{% set args_list = ["/opt/pipecatapp/supervisor.py", "--expert-id=" ~ job_name] %}
 {% set service_list = [] %}
 {% for model in suitable_models %}
   {% set _ = service_list.append("rpc-" ~ (model.filename | regex_replace('[^a-zA-Z0-9-]', '-')) ~ "-provider") %}
@@ -71,15 +70,14 @@ job "{{ job_name }}" {
 
     reschedule {
       attempts  = 3
-      interval  = "2m"
+      interval  = "5m"
       delay     = "30s"
       unlimited = false
     }
 
     network {
-      port "http" {
-        to = 8000
-      }
+      mode = "host"
+      port "http" {}
     }
 
     service {
@@ -98,21 +96,35 @@ job "{{ job_name }}" {
     task "{{ job_name }}" {
       driver = "docker"
 
+      constraint {
+        attribute = "${meta.node_type}"
+        value     = "controller"
+      }
+
       config {
-        image = "pipecatapp:local"
+        image = "{{ pipecat_image_id }}"
         force_pull = false
+        image_pull_policy = "never"
         ports = ["http"]
       }
 
       env {
         STT_SERVICE = "faster-whisper"
+        WEB_PORT = "${NOMAD_PORT_http}"
         # Comma-separated list of services for failover (primary, backup, etc.)
         LLAMA_API_SERVICE_NAME = "{{ service_list | join(',') }}"
+        PIPECAT_API_KEYS = "{{ pipecat_api_keys | default('') }}"
+
+        # Necessary for service discovery
+        CONSUL_HOST = "${attr.unique.network.ip-address}"
+        CONSUL_PORT = "8500"
+        CONSUL_HTTP_ADDR = "http://${attr.unique.network.ip-address}:8500"
+        CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
       }
 
       resources {
         cpu    = 500 # 500 MHz
-        memory = 1024 # 1024MB
+        memory = 2048 # 2048MB
       }
     }
   }

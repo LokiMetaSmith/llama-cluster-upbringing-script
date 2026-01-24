@@ -1,0 +1,74 @@
+job "vision" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "frigate" {
+    count = 1
+
+    network {
+      mode = "bridge"
+      port "http" {
+        to = 5000
+        static = {{ frigate_port }}
+      }
+      port "rtmp" {
+        to = 1935
+        static = 1935
+      }
+    }
+
+    task "frigate" {
+      driver = "docker"
+
+      config {
+        image = "{{ frigate_image }}"
+        privileged = true
+
+        # Mounts for config and storage
+        mounts = [
+          {
+            type   = "bind"
+            source = "{{ frigate_config_dir }}"
+            target = "/config"
+          },
+          {
+            type   = "bind"
+            source = "{{ frigate_storage_dir }}"
+            target = "/media/frigate"
+          },
+          {
+            type   = "tmpfs"
+            target = "/tmp/cache"
+            readonly = false
+            volume_options = {
+              size = "1000000000" # 1GB
+            }
+          }
+        ]
+
+        shm_size = 67108864 # 64MB
+      }
+
+      env {
+        FRIGATE_RTSP_PASSWORD = "password"
+      }
+
+      resources {
+        cpu    = 1000
+        memory = 2048
+      }
+
+      service {
+        name = "frigate"
+        port = "http"
+        check {
+          name     = "alive"
+          type     = "http"
+          path     = "/"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}

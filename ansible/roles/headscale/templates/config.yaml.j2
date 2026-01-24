@@ -1,0 +1,39 @@
+---
+server_url: http://{{ ansible_default_ipv4.address }}:{{ headscale_port }}
+listen_addr: {{ headscale_listen_addr }}:{{ headscale_port }}
+metrics_listen_addr: 127.0.0.1:{{ headscale_metrics_port }}
+grpc_listen_addr: 127.0.0.1:50443
+grpc_allow_insecure: false
+
+private_key_path: /var/lib/headscale/private.key
+noise:
+  private_key_path: /var/lib/headscale/noise_private.key
+
+ip_prefixes:
+  - {{ headscale_ip_prefix }}
+
+derp:
+  server:
+    enabled: true
+    region_id: 999
+    region_code: "headscale"
+    region_name: "Headscale Embedded DERP"
+    stun_listen_addr: "0.0.0.0:3478"
+  urls:
+    - https://controlplane.tailscale.com/derpmap/default
+
+disable_check_updates: true
+ephemeral_node_inactivity_timeout: 30m
+
+# Database configuration
+db_type: sqlite3
+db_path: /var/lib/headscale/db.sqlite
+
+unix_socket: /var/run/headscale/headscale.sock
+unix_socket_permission: "0770"
+
+dns_config:
+  magic_dns: true
+  base_domain: example.com
+  nameservers:
+    - 1.1.1.1

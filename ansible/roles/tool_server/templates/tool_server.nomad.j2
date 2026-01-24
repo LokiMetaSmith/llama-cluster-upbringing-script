@@ -23,7 +23,7 @@ job "tool-server" {
             type   = "tmpfs"
             target = "/opt/cluster-infra"
             tmpfs_options = {
-              size = 2147483648 # 2GB
+              size = 1073741824 # 1GB
             }
           }
         ]
@@ -54,7 +54,7 @@ job "tool-server" {
 
       resources {
         cpu    = 1000
-        memory = 4096
+        memory = 2048
       }
       
       service {

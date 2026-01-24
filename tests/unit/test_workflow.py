@@ -19,6 +19,13 @@ def mock_registry(mocker):
     mocker.patch('workflow.runner.registry', mock)
     return mock
 
+@pytest.fixture(autouse=True)
+def clear_workflow_cache():
+    """Clears the workflow definition cache before each test."""
+    WorkflowRunner._workflow_cache.clear()
+    yield
+    WorkflowRunner._workflow_cache.clear()
+
 def test_topological_sort_linear(mocker):
     """Tests that a simple linear workflow is sorted correctly."""
     workflow_def = {

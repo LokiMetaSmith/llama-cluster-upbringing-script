@@ -12,3 +12,8 @@
 **Vulnerability:** The `startswith` check for path traversal in `pipecatapp/web_server.py` was insufficient because it didn't account for partial directory name matches (e.g., `/app/workflows_secret` starts with `/app/workflows`).
 **Learning:** `startswith` treats paths as simple strings. To ensure a file is strictly inside a directory, we must respect directory boundaries.
 **Prevention:** Use `os.path.commonpath([base_dir, target_path]) == base_dir` to mathematically prove the target path is a child of the base directory.
+
+## 2026-10-27 - Unrestricted Git Tool Access
+**Vulnerability:** `Git_Tool` allowed executing git commands in arbitrary directories via `working_dir` argument, lacking any root directory restriction.
+**Learning:** Tools that execute shell commands or file operations must be explicitly restricted to a safe root directory, even if they seem harmless like "git status".
+**Prevention:** Enforce a `root_dir` in tool initialization and validate all path arguments using `os.path.commonpath` against this root.

@@ -36,7 +36,7 @@ tools = {
     "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
     "rag": RAG_Tool(base_dir="/"),
     "ha": HA_Tool(ha_url=None, ha_token=None), # These will be configured later if needed
-    "git": Git_Tool(),
+    "git": Git_Tool(root_dir="/opt/pipecatapp"),
     "orchestrator": OrchestratorTool(),
 }
 
@@ -98,4 +98,5 @@ async def list_tools():
     return available_tools
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    host_ip = os.getenv("HOST_IP", "::")
+    uvicorn.run(app, host=host_ip, port=8001)
