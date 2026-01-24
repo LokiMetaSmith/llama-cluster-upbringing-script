@@ -2,6 +2,9 @@ import sqlite3
 import json
 import time
 import hashlib
+import asyncio
+import os
+import uuid
 from typing import Dict, Any, Optional, List
 
 class PMMMemory:
@@ -22,12 +25,16 @@ class PMMMemory:
             db_path (str, optional): The path to the SQLite database file.
                 Defaults to "pmm_memory.db".
         """
-        self.db_path = db_path
+        self.db_path = os.path.expanduser(db_path)
+        # Ensure the directory exists
+        db_dir = os.path.dirname(self.db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
         self.conn = self._init_db()
 
     def _init_db(self):
         """Initializes the SQLite database and creates the events table."""
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, check_same_thread=False)
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS events (
@@ -38,6 +45,21 @@ class PMMMemory:
                 meta TEXT,
                 prev_hash TEXT,
                 hash TEXT UNIQUE
+            )
+        """)
+        # Gas Town Work Ledger (Beads) Table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS work_items (
+                id TEXT PRIMARY KEY,
+                title TEXT,
+                status TEXT,
+                assignee_id TEXT,
+                created_by TEXT,
+                created_at REAL,
+                updated_at REAL,
+                parent_id TEXT,
+                meta TEXT,
+                validation_results TEXT
             )
         """)
         conn.commit()
@@ -78,8 +100,8 @@ class PMMMemory:
         hasher.update(json.dumps(payload, sort_keys=True).encode('utf-8'))
         return hasher.hexdigest()
 
-    def add_event(self, kind: str, content: str, meta: Optional[Dict[str, Any]] = None) -> None:
-        """Adds a new event to the memory ledger.
+    def add_event_sync(self, kind: str, content: str, meta: Optional[Dict[str, Any]] = None) -> None:
+        """Adds a new event to the memory ledger synchronously.
 
         Args:
             kind (str): The type of event (e.g., 'user_message', 'assistant_message').
@@ -99,8 +121,20 @@ class PMMMemory:
         """, (timestamp, kind, content, json.dumps(meta), prev_hash, event_hash))
         self.conn.commit()
 
-    def get_events(self, kind: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
-        """Retrieves the most recent events from the ledger.
+    async def add_event(self, kind: str, content: str, meta: Optional[Dict[str, Any]] = None) -> None:
+        """Adds a new event to the memory ledger asynchronously.
+
+        Args:
+            kind (str): The type of event (e.g., 'user_message', 'assistant_message').
+            content (str): The content of the event.
+            meta (Optional[Dict[str, Any]], optional): Additional metadata.
+                Defaults to None.
+        """
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self.add_event_sync, kind, content, meta)
+
+    def get_events_sync(self, kind: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """Retrieves the most recent events from the ledger synchronously.
 
         Args:
             kind (Optional[str], optional): The type of events to retrieve.
@@ -127,6 +161,145 @@ class PMMMemory:
                 "meta": json.loads(row[4])
             })
         return list(reversed(events))
+
+    async def get_events(self, kind: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """Retrieves the most recent events from the ledger asynchronously.
+
+        Args:
+            kind (Optional[str], optional): The type of events to retrieve.
+                If None, retrieves all kinds. Defaults to None.
+            limit (int, optional): The maximum number of events to retrieve.
+                Defaults to 10.
+
+        Returns:
+            A list of dictionaries, where each dictionary represents an event.
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.get_events_sync, kind, limit)
+
+    # -------------------------------------------------------------------------
+    # Gas Town Work Ledger Methods
+    # -------------------------------------------------------------------------
+
+    def create_work_item_sync(self, title: str, created_by: str, assignee_id: str = None, parent_id: str = None, meta: Dict = None) -> str:
+        """Creates a new work item in the ledger."""
+        item_id = str(uuid.uuid4())[:8] # Short ID like 'a1b2c3d4'
+        timestamp = time.time()
+        meta = meta or {}
+
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO work_items (id, title, status, assignee_id, created_by, created_at, updated_at, parent_id, meta, validation_results)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (item_id, title, "open", assignee_id, created_by, timestamp, timestamp, parent_id, json.dumps(meta), json.dumps({})))
+        self.conn.commit()
+
+        # Also log as an event for audit trail
+        self.add_event_sync("work_item_created", f"Created work item {item_id}: {title}", {"work_item_id": item_id, "creator": created_by})
+
+        return item_id
+
+    async def create_work_item(self, title: str, created_by: str, assignee_id: str = None, parent_id: str = None, meta: Dict = None) -> str:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.create_work_item_sync, title, created_by, assignee_id, parent_id, meta)
+
+    def update_work_item_sync(self, item_id: str, status: str = None, assignee_id: str = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
+        """Updates an existing work item."""
+        cursor = self.conn.cursor()
+
+        # Build update query dynamically
+        updates = ["updated_at = ?"]
+        params = [time.time()]
+
+        if status:
+            updates.append("status = ?")
+            params.append(status)
+        if assignee_id:
+            updates.append("assignee_id = ?")
+            params.append(assignee_id)
+        if validation_results:
+            updates.append("validation_results = ?")
+            params.append(json.dumps(validation_results))
+
+        # Fetch existing meta to merge if needed, or simple overwrite?
+        # For simplicity, we'll fetch-merge-update if meta_update is present
+        if meta_update:
+            cursor.execute("SELECT meta FROM work_items WHERE id = ?", (item_id,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+            current_meta = json.loads(row[0])
+            current_meta.update(meta_update)
+            updates.append("meta = ?")
+            params.append(json.dumps(current_meta))
+
+        params.append(item_id)
+
+        sql = f"UPDATE work_items SET {', '.join(updates)} WHERE id = ?"
+        cursor.execute(sql, params)
+        self.conn.commit()
+
+        if cursor.rowcount > 0:
+            self.add_event_sync("work_item_updated", f"Updated work item {item_id}", {"updates": updates})
+            return True
+        return False
+
+    async def update_work_item(self, item_id: str, status: str = None, assignee_id: str = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.update_work_item_sync, item_id, status, assignee_id, validation_results, meta_update)
+
+    def get_work_item_sync(self, item_id: str) -> Optional[Dict]:
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM work_items WHERE id = ?", (item_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        # Map columns to dict
+        columns = [description[0] for description in cursor.description]
+        item = dict(zip(columns, row))
+        item['meta'] = json.loads(item['meta'])
+        item['validation_results'] = json.loads(item['validation_results'])
+        return item
+
+    async def get_work_item(self, item_id: str) -> Optional[Dict]:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.get_work_item_sync, item_id)
+
+    def list_work_items_sync(self, status: str = None, assignee_id: str = None, limit: int = 50) -> List[Dict]:
+        cursor = self.conn.cursor()
+        query = "SELECT * FROM work_items"
+        conditions = []
+        params = []
+
+        if status:
+            conditions.append("status = ?")
+            params.append(status)
+        if assignee_id:
+            conditions.append("assignee_id = ?")
+            params.append(assignee_id)
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+        columns = [description[0] for description in cursor.description]
+        results = []
+        for row in rows:
+            item = dict(zip(columns, row))
+            item['meta'] = json.loads(item['meta'])
+            item['validation_results'] = json.loads(item['validation_results'])
+            results.append(item)
+        return results
+
+    async def list_work_items(self, status: str = None, assignee_id: str = None, limit: int = 50) -> List[Dict]:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.list_work_items_sync, status, assignee_id, limit)
 
     def close(self):
         """Closes the database connection."""

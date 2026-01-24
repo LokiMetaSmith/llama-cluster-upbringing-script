@@ -348,7 +348,7 @@
 
 - name: Build pipecatapp Docker image
   ansible.builtin.include_tasks:
-    file: "{{ playbook_dir }}/../../ansible/tasks/build_pipecatapp_image.yaml"
+    file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
 
 
 - name: Ensure Nomad jobs directory exists

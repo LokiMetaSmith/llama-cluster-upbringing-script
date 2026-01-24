@@ -25,6 +25,23 @@
         var: expert_job_run
       when: expert_job_run is defined
 
+    - name: "Expert {{ expert_name }} : Run nomad job plan for debugging"
+      ansible.builtin.command: >
+        /usr/local/bin/nomad job plan
+        -var="job_name=expert-{{ expert_name }}"
+        -var="service_name=expert-api-{{ expert_name }}"
+        -var="rpc_pool_job_name=llamacpp-rpc-pool"
+        /tmp/expert-{{ expert_name }}.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: expert_job_plan_debug
+      failed_when: false
+      changed_when: false
+
+    - name: "Expert {{ expert_name }} : Display job plan result"
+      ansible.builtin.debug:
+        var: expert_job_plan_debug
+
     - name: "Expert {{ expert_name }} : Debug Nomad File Content"
       ansible.builtin.command: "cat /tmp/expert-{{ expert_name }}.nomad"
       register: expert_nomad_file_content
@@ -94,4 +111,23 @@
 
     - name: "Expert {{ expert_name }} : Fail after debugging"
       ansible.builtin.fail:
-        msg: "Expert {{ expert_name }} job failed to start. Check the debug output above for details."
+        msg: |
+          Expert {{ expert_name }} job failed to start.
+
+          --- RUN ERROR (stderr) ---
+          {{ (expert_job_run | default({})).stderr | default('N/A') }}
+
+          --- RUN OUTPUT (stdout) ---
+          {{ (expert_job_run | default({})).stdout | default('N/A') }}
+
+          --- JOB STATUS ---
+          {{ (expert_job_status | default({})).stdout | default('N/A') }}
+
+          --- ALLOCATIONS (JSON) ---
+          {{ (expert_allocs | default({})).stdout | default('N/A') }}
+
+          --- PLAN OUTPUT ---
+          {{ (expert_job_plan_debug | default({})).stdout | default('N/A') }}
+
+          --- PLAN ERROR ---
+          {{ (expert_job_plan_debug | default({})).stderr | default('N/A') }}
