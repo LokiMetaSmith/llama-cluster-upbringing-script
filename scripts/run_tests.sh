@@ -3,7 +3,7 @@ set -e
 
 # Resolve the directory of the script to ensure absolute paths
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-REPO_ROOT="$SCRIPT_DIR"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Function to display help
 show_help() {

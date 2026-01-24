@@ -2,12 +2,15 @@ import yaml
 import os
 import json
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(SCRIPT_DIR)
+
 def load_config():
     try:
-        with open('group_vars/external_experts.yaml', 'r') as f:
+        with open(os.path.join(REPO_ROOT, 'group_vars/external_experts.yaml'), 'r') as f:
             ext_experts = yaml.safe_load(f)
 
-        with open('group_vars/all.yaml', 'r') as f:
+        with open(os.path.join(REPO_ROOT, 'group_vars/all.yaml'), 'r') as f:
             all_vars = yaml.safe_load(f)
 
         llm_config = ext_experts['external_experts_config']['openai_gpt4']

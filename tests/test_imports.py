@@ -4,6 +4,10 @@ import os
 # Add files dir to path
 sys.path.append("/app/ansible/roles/pipecatapp/files")
 
+# Fallback for local testing
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(repo_root, "pipecatapp"))
+
 print("DEBUG: Starting import test", flush=True)
 
 try:

@@ -18,9 +18,10 @@ import shutil
 
 # --- Constants ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-STATE_FILE = os.path.join(SCRIPT_DIR, ".provisioning_state")
-LOG_FILE = os.path.join(SCRIPT_DIR, "playbook_output.log")
-INVENTORY_FILE = os.path.join(SCRIPT_DIR, "local_inventory.ini")
+REPO_ROOT = os.path.dirname(SCRIPT_DIR)
+STATE_FILE = os.path.join(REPO_ROOT, ".provisioning_state")
+LOG_FILE = os.path.join(REPO_ROOT, "playbook_output.log")
+INVENTORY_FILE = os.path.join(REPO_ROOT, "local_inventory.ini")
 
 # --- Colors & formatting ---
 class Colors:
@@ -409,7 +410,7 @@ def main():
     elif args.role == "worker":
         manifest_file = "playbooks/worker.yaml"
 
-    manifest_path = os.path.join(SCRIPT_DIR, manifest_file)
+    manifest_path = os.path.join(REPO_ROOT, manifest_file)
     print(f"Loading tasks from: {manifest_file}")
 
     playbooks = load_playbooks_from_manifest(manifest_path)
@@ -438,7 +439,7 @@ def main():
             print(f"{Colors.OKBLUE}⏭️  Skipping completed: {display_path}{Colors.ENDC}")
             continue
 
-        pb_path = os.path.join(SCRIPT_DIR, pb['path'])
+        pb_path = os.path.join(REPO_ROOT, pb['path'])
 
         # --- Hooks / Smart Logic ---
 

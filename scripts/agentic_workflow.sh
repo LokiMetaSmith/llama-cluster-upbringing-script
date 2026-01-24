@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # --- Configuration ---
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$REPO_ROOT" || exit 1
+
 # Standardizing on ISSUES directory for task generation
 ISSUE_DIR="ISSUES"
 
