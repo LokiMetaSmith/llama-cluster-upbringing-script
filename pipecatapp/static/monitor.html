@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Workflow Monitor">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Monitor</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background-color: #1e1e1e; color: #f0f0f0; font-family: sans-serif; }
+        .container { display: flex; flex: 1; overflow: hidden; height: 100%; }
+        #sidebar {
+            width: 250px;
+            border-right: 1px solid #333;
+            background-color: #252526;
+            display: flex;
+            flex-direction: column;
+        }
+        #sidebar h2 { padding: 10px; margin: 0; font-size: 14px; text-transform: uppercase; background: #333; }
+        #history-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
+        .history-item { padding: 8px 10px; border-bottom: 1px solid #333; cursor: pointer; font-size: 12px; }
+        .history-item:hover { background-color: #2a2d2e; }
+        .history-item.active { background-color: #37373d; border-left: 3px solid #007acc; }
+        .history-meta { color: #888; font-size: 10px; margin-top: 2px; }
+
+        #main-content { flex-grow: 1; position: relative; display: flex; flex-direction: column; }
+        #toolbar {
+            height: 40px;
+            background-color: #333;
+            border-bottom: 1px solid #444;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+        }
+        #toolbar h1 { font-size: 16px; margin: 0; margin-right: 20px; }
+        #toolbar button {
+            background: #0e639c;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            margin-right: 10px;
+            cursor: pointer;
+            font-size: 12px;
+            border-radius: 2px;
+        }
+        #toolbar button:hover { background: #1177bb; }
+
+        #cy { width: 100%; height: 100%; background-color: #1e1e1e; }
+
+        #approval-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+        #approve-btn {
+            background-color: #ffc107;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        #approve-btn:hover { background-color: #e0a800; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 200;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+        }
+        .modal-content {
+            background-color: #252526;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #444;
+            width: 80%;
+            max-width: 800px;
+            color: #ddd;
+            border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover, .close:focus { color: #fff; text-decoration: none; }
+        pre { white-space: pre-wrap; word-wrap: break-word; background: #111; padding: 10px; overflow-x: auto; }
+
+        /* Nav Links */
+        a.nav-link { color: #ccc; text-decoration: none; font-size: 12px; margin-left: auto; }
+        a.nav-link:hover { text-decoration: underline; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="sidebar">
+            <h2>Workflow Runs</h2>
+            <div style="padding: 5px;">
+                <button id="refresh-history-btn" style="width: 100%; background: #333; border: 1px solid #555; color: #eee; padding: 5px; cursor: pointer;">Refresh</button>
+            </div>
+            <ul id="history-list"></ul>
+        </div>
+        <div id="main-content">
+            <div id="toolbar">
+                <h1 id="view-title">Workflow Monitor (Live)</h1>
+                <button id="live-btn">Stop Live View</button>
+                <div id="approval-container"></div>
+                <a href="/" class="nav-link">Back to Mission Control</a>
+            </div>
+            <div id="cy"></div>
+        </div>
+    </div>
+
+    <!-- Node Detail Modal -->
+    <div id="nodeModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Node Output</h3>
+            <pre id="node-output-content"></pre>
+        </div>
+    </div>
+
+    <script src="/static/js/workflow.js"></script>
+</body>
+</html>

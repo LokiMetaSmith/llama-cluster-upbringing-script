@@ -262,6 +262,13 @@ async def get_workflow_ui():
     with open(workflow_html_path) as f:
         return HTMLResponse(f.read())
 
+@app.get("/monitor", summary="Serve Workflow Monitor", description="Serves the `monitor.html` file for the workflow monitor UI.", tags=["UI"])
+async def get_monitor_ui():
+    """Serves the workflow monitor UI."""
+    monitor_html_path = os.path.join(static_dir, "monitor.html")
+    with open(monitor_html_path) as f:
+        return HTMLResponse(f.read())
+
 @app.get("/cluster", summary="Serve Cluster UI", description="Serves the `cluster.html` file for the cluster visualization UI.", tags=["UI"])
 async def get_cluster_ui():
     """Serves the cluster visualization UI."""

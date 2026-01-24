@@ -139,6 +139,10 @@ exo_enable: false
 # The model Exo should run.
 exo_model: "llama-3.2-1b"
 
+# --- Paddler Configuration ---
+# Paddler is a load balancer for llama.cpp. Disabled by default as it is experimental.
+enable_paddler: false
+
 # A list of all available experts. This is used to dynamically generate
 # the Nomad jobs for each expert model.
 experts:
