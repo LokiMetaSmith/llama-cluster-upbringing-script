@@ -26,6 +26,8 @@ class ManagerAgent:
         self.memory_url = None
         self.memory_client = None
         self.swarm_tool = None
+        # Gas Town: We might have a root work item ID for the manager task itself
+        self.root_work_item_id = os.getenv("WORK_ITEM_ID")
         
     def discover_services(self):
         """Discovers services via Consul."""
@@ -213,7 +215,8 @@ class ManagerAgent:
             "id": judge_task_id,
             "prompt": "Verify the quality and correctness of the provided result.",
             "context": target_result[:2000], # Truncate if too long, or pass pointer
-            "target_task_id": self.task_id # Logic to let judge pull it
+            "target_task_id": self.task_id, # Logic to let judge pull it
+            "target_work_item_id": self.root_work_item_id # Gas Town: Link validation to the ledger
         }]
 
         if not self.swarm_tool:

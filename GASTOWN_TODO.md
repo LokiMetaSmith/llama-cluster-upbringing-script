@@ -22,8 +22,8 @@ This roadmap tracks the adaptation of Gas Town concepts (Work Ledger, Attributio
 - [x] **Manager Agent:** Update `ManagerAgent` to query these stats when selecting agents for tasks.
 
 ## Phase 4: Validation & Quality Gates
-- [x] **Judge Agent:** Created `JudgeAgent` and wired it into `ManagerAgent` for result verification.
-- [ ] **Validation Schema:** Formalize the JSON schema for the `validation_results` column.
+- [x] **Validation Schema:** Add `validation` column (JSON) to `work_items`.
+- [x] **Judge Agent:** Create/Update `JudgeAgent` (or equivalent) to perform checks (lint, test) and update the `validation` field.
 
 ## Phase 5: Federation (Future)
 - [ ] **Remote Ledgers:** Investigate syncing work items across multiple Memory Service instances.

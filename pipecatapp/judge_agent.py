@@ -8,6 +8,7 @@ import httpx
 import json
 from typing import List, Dict, Any, Optional
 from agent_factory import create_tools
+from pmm_memory_client import PMMMemoryClient
 
 # Configure logging
 logging.basicConfig(
@@ -21,10 +22,12 @@ class JudgeAgent:
         self.task_id = os.getenv("JUDGE_TASK_ID", "unknown")
         # The task_id of the work we are judging
         self.target_task_id = os.getenv("TARGET_TASK_ID")
+        self.target_work_item_id = os.getenv("TARGET_WORK_ITEM_ID") # Gas Town Integration
         self.criteria = os.getenv("JUDGE_CRITERIA", "General correctness and functionality")
 
         self.llm_base_url = None
         self.memory_url = None
+        self.memory_client = None
         self.tools = {}
 
     def discover_services(self):
@@ -44,6 +47,7 @@ class JudgeAgent:
                     addr = svc.get("ServiceAddress", "localhost")
                     port = svc.get("ServicePort", 8000)
                     self.memory_url = f"http://{addr}:{port}"
+                    self.memory_client = PMMMemoryClient(base_url=self.memory_url)
                     logger.info(f"Discovered Event Bus ({event_bus_service_name}) at {self.memory_url}")
 
             # 2. Discover LLM Service
@@ -69,33 +73,18 @@ class JudgeAgent:
 
     async def report_event(self, kind: str, content: str, meta: Dict[str, Any] = None):
         """Reports an event to the shared memory service."""
-        if not self.memory_url:
+        if not self.memory_client:
             return
 
-        payload = {
-            "kind": kind,
-            "content": content,
-            "meta": meta or {}
-        }
-        # Add standard meta
-        payload["meta"].update({
+        meta = meta or {}
+        meta.update({
             "task_id": self.task_id,
             "agent_type": "judge",
-            "target_task_id": self.target_task_id
+            "target_task_id": self.target_task_id,
+            "target_work_item_id": self.target_work_item_id
         })
 
-        try:
-            requests.post(f"{self.memory_url}/events", json=payload)
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to report event {kind}: {e}")
-            # Retry once
-            try:
-                time.sleep(1)
-                requests.post(f"{self.memory_url}/events", json=payload)
-            except:
-                pass
-        except Exception as e:
-            logger.error(f"Unexpected error reporting {kind}: {e}")
+        await self.memory_client.add_event(kind, content, meta)
 
     async def call_llm(self, messages: List[Dict[str, str]], temperature: float = 0.0) -> str:
         """Helper to call the LLM service."""
@@ -217,10 +206,36 @@ Instructions:
         verdict = await self.judge_work(target_result)
         logger.info(f"Final Verdict: {verdict}")
 
-        if verdict.startswith("PASS"):
+        passed = verdict.startswith("PASS")
+
+        # Report to Event Bus
+        if passed:
             await self.report_event("judge_pass", verdict, {"status": "success"})
         else:
             await self.report_event("judge_fail", verdict, {"status": "failed"})
+
+        # Gas Town Integration: Update Work Ledger
+        if self.target_work_item_id and self.memory_client:
+            try:
+                # We update the validation_results field, but we do NOT change the main status
+                # because that is the Worker/Technician's responsibility.
+                # Or should we? Gas Town "Quality Gates" imply we might block completion.
+                # For now, we just append to validation_results.
+
+                # Fetch existing to append or overwrite? WorkItemUpdate overwrites JSON fields usually.
+                # Let's just write the latest verdict.
+                await self.memory_client.update_work_item(
+                    self.target_work_item_id,
+                    validation_results={
+                        "judge_verdict": verdict,
+                        "passed": passed,
+                        "judge_task_id": self.task_id,
+                        "timestamp": time.time()
+                    }
+                )
+                logger.info("Updated Work Ledger with Judge Verdict.")
+            except Exception as e:
+                logger.error(f"Failed to update Work Ledger: {e}")
 
 if __name__ == "__main__":
     agent = JudgeAgent()
