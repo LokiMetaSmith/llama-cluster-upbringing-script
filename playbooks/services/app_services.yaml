@@ -87,7 +87,6 @@
         name: "{{ role_name }}"
       loop:
         - desktop_extras
-        - paddler
         - vision
         - power_manager
         - world_model_service
@@ -102,10 +101,27 @@
       tags:
         - provisioning_api
         - desktop_extras
-        - paddler
         - vision
         - power_manager
         - world_model_service
         - tool_server
+
+    - name: Run Paddler Stack
+      when: enable_paddler | default(false)
+      tags:
+        - paddler
+      block:
+        - name: Install Paddler Binary
+          ansible.builtin.include_role:
+            name: paddler
+
+        - name: Configure Paddler Balancer
+          ansible.builtin.include_role:
+            name: paddler_balancer
+          when: inventory_hostname == (paddler_balancer_host | default('controller_node'))
+
+        - name: Configure Paddler Agent
+          ansible.builtin.include_role:
+            name: paddler_agent
         - llxprt_code
         - claude_clone
