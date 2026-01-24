@@ -2,7 +2,7 @@
 
 ## Immediate Actions
 
-- [ ] **Read and evaluate VLLM project findings:**
+- [x] **Read and evaluate VLLM project findings:**
   - Read `docs/VLLM_PROJECT_EVALUATION.md` to understand the potential of Semantic Router, GuideLLM, and vLLM Omni.
   - Decide on the implementation timeline for `semantic_router` and `guidellm`.
 - [x] **Implement LLMRouter Integration (Proof of Concept):**
@@ -52,7 +52,7 @@
   - Add unit tests for the core logic in `run_campaign.py`, `visualize_archive.py`, and `promote_agent.py`.
   - Mock the `subprocess` calls to `evolve.py` to test the campaign loop without running the full, slow evolution process.
   - Create a small, temporary mock archive to test the analysis, visualization, and promotion scripts against a known, controlled dataset.
-- [ ] **Improve Parent Selection Algorithm:**
+- [x] **Improve Parent Selection Algorithm:**
   - Research alternative selection strategies from evolutionary computation (e.g., tournament selection, novelty search).
   - Add a new command-line argument to `evolve.py` to allow the user to choose the selection strategy (e.g., `--selection-method tournament`).
   - Implement the new selection logic in the `select_parent_from_archive` function.
@@ -78,9 +78,9 @@
 ### Pre-build a Docker Image for `pipecatapp`
 
 - [x] **Add a flag to `bootstrap.sh`:** Add a `--run-local` or similar flag to the bootstrap script to allow switching between a Docker-based deployment and the old `raw_exec` method for debugging.
-- [ ] **Create a `Dockerfile` for the `pipecatapp` application.**
+- [x] **Create a `Dockerfile` for the `pipecatapp` application.**
 - [ ] **Build and push the image to a registry as part of the development process.**
-- [ ] **Simplify the Nomad job to use the `docker` driver with the pre-built image.**
+- [x] **Simplify the Nomad job to use the `docker` driver with the pre-built image.**
 
 ## Testing and Usability
 
@@ -109,9 +109,9 @@
 - [ ] **Robust Remote Node Recovery:** Add mechanism to recover remote nodes even if network stack is completely broken (possibly via serial console or IPMI automation).
 - [x] **Monitoring and Observability:** Deploy a monitoring stack like Prometheus and Grafana.
 - [x] Add a `wait_for` to the `home_assistant` role to ensure the `mqtt` service is running before starting the `home-assistant` service.
-- [ ] Create a new integration test file for home assistant.
-- [ ] Add the new test to `e2e-tests.yaml`.
-- [ ] Modify `start_services.sh` to include the home assistant job.
+- [x] Create a new integration test file for home assistant.
+- [x] Add the new test to `e2e-tests.yaml`.
+- [x] Modify `start_services.sh` to include the home assistant job.
 - [ ] Investigate <https://github.com/microsoft/agent-lightning> as a possible agent improvement method.
 - [ ] **Investigate RPC Provider Monitoring:** Research how to expose or scrape metrics from `llamacpp-rpc` providers to aggregate backend performance data.
 
@@ -135,8 +135,8 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 
 - [ ] **Reconcile Stale Artifacts:**
   - `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
-- [ ] **Vision Model Failover**: Implement failover or selection logic for vision models (see `pipecatapp/app.py`).
-- [x] **Refactor Vision Role**: The `vision` role is currently minimal (only installs `libgl1`) and does not deploy Frigate as implied by the `frigate_port` variable. It needs to be refactored to actually deploy the service.
+- [x] **Vision Model Failover**: Implement failover or selection logic for vision models (see `pipecatapp/app.py`).
+- [ ] **Refactor Vision Role**: The `vision` role is currently minimal (only installs `libgl1`) and does not deploy Frigate as implied by the `frigate_port` variable. It needs to be refactored to actually deploy the service.
 
 ## Completed History
 
