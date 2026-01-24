@@ -5,6 +5,10 @@ import time
 import requests
 import yaml
 
+# Determine Repo Root
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(SCRIPT_DIR)
+
 def load_llm_config():
     """Loads and constructs the LLM configuration from Ansible vars files.
 
@@ -14,12 +18,12 @@ def load_llm_config():
     config = {}
     try:
         # Load external experts config
-        with open('group_vars/external_experts.yaml', 'r') as f:
+        with open(os.path.join(REPO_ROOT, 'group_vars/external_experts.yaml'), 'r') as f:
             ext_experts = yaml.safe_load(f)
             config = ext_experts['external_experts_config']['openai_gpt4']
 
         # Load API key from all.yaml
-        with open('group_vars/all.yaml', 'r') as f:
+        with open(os.path.join(REPO_ROOT, 'group_vars/all.yaml'), 'r') as f:
             all_vars = yaml.safe_load(f)
             config['api_key_plaintext'] = all_vars.get('openai_api_key')
 
@@ -43,6 +47,13 @@ def run_playbook(playbook_path, extra_vars=None):
     Returns:
         bool: True if the playbook ran successfully, False otherwise.
     """
+    # Resolve playbook path relative to REPO_ROOT
+    if not os.path.isabs(playbook_path):
+        if not os.path.dirname(playbook_path):
+            # If just a filename, assume it's in playbooks/
+            playbook_path = os.path.join("playbooks", playbook_path)
+        playbook_path = os.path.join(REPO_ROOT, playbook_path)
+
     command = ["ansible-playbook", playbook_path]
     if extra_vars:
         command.extend(["-e", json.dumps(extra_vars)])
@@ -73,6 +84,9 @@ def run_script(script_path, args=None):
     Returns:
         str: The standard output of the script, or None if an error occurred.
     """
+    if not os.path.isabs(script_path):
+        script_path = os.path.join(REPO_ROOT, script_path)
+
     command = ["python", script_path]
     if args:
         command.extend(args)

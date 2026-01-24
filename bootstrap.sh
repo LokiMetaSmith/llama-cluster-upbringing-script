@@ -303,7 +303,7 @@ fi
 # --- Run Provisioning Script ---
 # echo "🚀 Handing over to Python provisioning script..."
 # Pass processed arguments to the python script.
-python3 provisioning.py "${PROCESSED_ARGS[@]}"
+python3 scripts/provisioning.py "${PROCESSED_ARGS[@]}"
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then

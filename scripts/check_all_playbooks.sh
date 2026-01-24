@@ -13,6 +13,11 @@
 #   ./check_all_playbooks.sh -l     (Same as --log)
 # ---
 
+# Calculate Repo Root
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$REPO_ROOT" || exit 1
+
 # --- Configuration ---
 LOG_FILE="playbook_check.log"
 LOGGING_ENABLED=false
