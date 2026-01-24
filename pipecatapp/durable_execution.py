@@ -19,6 +19,7 @@ class DurableExecutionEngine:
         self._ensure_db_dir()
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.execute("PRAGMA journal_mode=WAL;")
+        self.conn.execute("PRAGMA synchronous=NORMAL;")
         self.create_table()
 
     def _ensure_db_dir(self):
