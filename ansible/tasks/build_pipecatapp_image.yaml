@@ -8,8 +8,8 @@
 
 - name: Build pipecatapp Docker image when deployment style is docker
   community.docker.docker_image:
-    name: pipecatapp
-    tag: local
+    name: "{{ pipecat_image_name | default('pipecatapp') }}"
+    tag: "{{ pipecat_image_tag | default('local') }}"
     build:
       path: "{{ inventory_dir }}/pipecatapp"
       nocache: true
