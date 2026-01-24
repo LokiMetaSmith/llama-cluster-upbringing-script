@@ -90,6 +90,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
     if (saveNameInput) {
         saveNameInput.addEventListener("input", toggleStateButtons);
+        saveNameInput.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                if (saveStateBtn && !saveStateBtn.disabled) {
+                    saveStateBtn.click();
+                }
+            }
+        });
         // Initialize state
         toggleStateButtons();
     }

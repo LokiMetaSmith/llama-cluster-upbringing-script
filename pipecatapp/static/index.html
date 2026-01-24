@@ -202,10 +202,10 @@
             </div>
         </div>
         <button id="test-and-evaluation-btn">Test and Evaluation</button>
-        <input type="text" id="save-name-input" placeholder="Enter state name..." aria-label="Save State Name">
-        <button id="save-state-btn">Save State</button>
-        <button id="load-state-btn">Load State</button>
-        <button id="clear-terminal-btn">Clear Terminal</button>
+        <input type="text" id="save-name-input" placeholder="Enter state name..." aria-label="Save State Name" title="Enter a name for the memory snapshot" autocomplete="off">
+        <button id="save-state-btn" title="Save current state to memory">Save State</button>
+        <button id="load-state-btn" title="Load state from memory">Load State</button>
+        <button id="clear-terminal-btn" title="Clear Terminal (Ctrl+K)" aria-label="Clear Terminal, Control plus K">Clear Terminal</button>
         <!-- Palette UX: Semantic links for navigation -->
         <a id="cluster-viz-btn" href="/cluster" target="_blank" rel="noopener noreferrer" class="nav-btn" title="Open Cluster Visualization in new tab" aria-label="Cluster Viz (opens in new tab)">Cluster Viz</a>
         <a id="cluster-vr-btn" href="/cluster_viz" target="_blank" rel="noopener noreferrer" class="nav-btn" title="Open Cluster VR in new tab" aria-label="Cluster VR (opens in new tab)">Cluster VR</a>
@@ -219,8 +219,8 @@
     </div>
     <div id="status-display" style="padding: 10px; margin-top: 10px; border: 1px solid #333; background-color: #000;" aria-live="polite" aria-label="System Status"></div>
     <div id="input-area" style="padding: 10px; margin-top: 10px; display: flex; gap: 10px;">
-        <input type="text" id="message-input" style="flex-grow: 1; background-color: #333; color: #f0f0f0; border: 1px solid #555; padding: 5px;" placeholder="Type your message here..." aria-label="Message Input">
-        <button id="send-btn" aria-label="Send Message">Send</button>
+        <input type="text" id="message-input" style="flex-grow: 1; background-color: #333; color: #f0f0f0; border: 1px solid #555; padding: 5px;" placeholder="Type your message here..." aria-label="Message Input" title="Type your message here (Ctrl+L to focus)">
+        <button id="send-btn" aria-label="Send Message" title="Send Message (Enter)">Send</button>
     </div>
     <script src="/static/terminal.js"></script>
     <script>
