@@ -84,7 +84,7 @@
 
     - name: Ensure pipecatapp Docker image is built
       ansible.builtin.include_tasks:
-        file: "{{ playbook_dir }}/../../ansible/tasks/build_pipecatapp_image.yaml"
+        file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
       tags:
         - deploy-gpu-provider
         - deploy-expert

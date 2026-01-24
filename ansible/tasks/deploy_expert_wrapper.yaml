@@ -111,9 +111,23 @@
 
     - name: "Expert {{ expert_name }} : Fail after debugging"
       ansible.builtin.fail:
-        msg: >
+        msg: |
           Expert {{ expert_name }} job failed to start.
-          Run Error: {{ expert_job_run.stderr | default('N/A') }}
-          Plan Output: {{ expert_job_plan_debug.stdout | default('N/A') }}
-          Plan Error: {{ expert_job_plan_debug.stderr | default('N/A') }}
-          Check the debug output above for more details.
+
+          --- RUN ERROR (stderr) ---
+          {{ (expert_job_run | default({})).stderr | default('N/A') }}
+
+          --- RUN OUTPUT (stdout) ---
+          {{ (expert_job_run | default({})).stdout | default('N/A') }}
+
+          --- JOB STATUS ---
+          {{ (expert_job_status | default({})).stdout | default('N/A') }}
+
+          --- ALLOCATIONS (JSON) ---
+          {{ (expert_allocs | default({})).stdout | default('N/A') }}
+
+          --- PLAN OUTPUT ---
+          {{ (expert_job_plan_debug | default({})).stdout | default('N/A') }}
+
+          --- PLAN ERROR ---
+          {{ (expert_job_plan_debug | default({})).stderr | default('N/A') }}

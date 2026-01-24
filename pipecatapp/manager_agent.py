@@ -125,6 +125,9 @@ class ManagerAgent:
                 logger.warning("Timeout waiting for sub-tasks.")
                 break
                 
+            # Poll Memory Service for "worker_result" events
+            # In a real impl, we'd filter by task_id. 
+            # Here we simulate or mock if no memory service.
             if self.memory_url:
                 try:
                     async with httpx.AsyncClient() as client:

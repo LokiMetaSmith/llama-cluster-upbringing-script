@@ -10,8 +10,8 @@
     model_list: "{{ expert_models[current_expert] | default([]) }}" # Corrected default
     worker_count: 1
     rpc_pool_job_name: "llamacpp-rpc-pool"
-    pipecat_image_id: "{{ pipecat_image_id }}"
-    pipecat_api_keys: "{{ pipecat_api_keys }}"
+    # Note: pipecat_image_id and pipecat_api_keys are inherited from global/play scope
+    # to avoid recursive loop errors if redefined here as "{{ var }}".
     avg_tokens: "{{ (expert_benchmark_data.get(current_expert, {})).get('avg_tokens', 0) | float | round(2) }}"
     # DO NOT redefine ansible_memtotal_mb here
     current_expert_tags:

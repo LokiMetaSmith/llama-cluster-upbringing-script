@@ -3,7 +3,6 @@ import os
 import httpx
 import logging
 import uuid
-import asyncio
 
 class SwarmTool:
     """
@@ -24,87 +23,80 @@ class SwarmTool:
                 - prompt (str): The instruction for the worker agent.
                 - context (str): Relevant context or data.
             image (str): The Docker image to use for the worker (default: pipecatapp:latest).
-            agent_type (str): The type of agent to spawn. Options: 'worker' (simple), 'technician' (advanced), 'judge'.
+            agent_type (str): The type of agent to spawn. Options: 'worker' (simple), 'technician' (advanced).
 
         Returns:
             str: A summary of the dispatched jobs.
         """
+        dispatched_ids = []
+        errors = []
+        
         # Determine script based on agent_type
         script_path = "/opt/pipecatapp/worker_agent.py"
         if agent_type == "technician":
             script_path = "/opt/pipecatapp/technician_agent.py"
-        elif agent_type == "judge":
-            script_path = "/opt/pipecatapp/judge_agent.py"
-
-        async def dispatch_one(client, task):
-            # Use UUID for collision-free IDs
-            unique_suffix = str(uuid.uuid4())[:8]
-            job_id = f"swarm-{agent_type}-{task.get('id', 'unknown')}-{unique_suffix}"
-
-            # Construct a Nomad batch job payload
-            job_payload = {
-                "Job": {
-                    "ID": job_id,
-                    "Name": job_id,
-                    "Type": "batch",
-                    "Datacenters": ["dc1"],
-                    "TaskGroups": [
-                        {
-                            "Name": "worker-group",
-                            "Tasks": [
-                                {
-                                    "Name": "worker-agent",
-                                    "Driver": "docker",
-                                    "Config": {
-                                        "image": image,
-                                        "command": "python",
-                                        "args": [script_path],
-                                        "mounts": [
-                                            {
-                                                "type": "bind",
-                                                "source": "/opt/pipecatapp",
-                                                "target": "/opt/pipecatapp",
-                                                "readonly": True
-                                            }
-                                        ]
-                                    },
-                                    "Env": {
-                                        "WORKER_PROMPT": task.get("prompt"),
-                                        "WORKER_CONTEXT": task.get("context", ""),
-                                        "WORKER_TASK_ID": task.get("id"),
-                                        "TARGET_TASK_ID": task.get("target_task_id", ""),
-                                        "JUDGE_TASK_ID": task.get("id"),
-                                        "CONSUL_HTTP_ADDR": os.getenv("CONSUL_HTTP_ADDR", "http://10.0.0.1:8500")
-                                    },
-                                    "Resources": {
-                                        "CPU": 500,
-                                        "MemoryMB": 1024
-                                    }
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }
-
-            try:
-                resp = await client.post(f"{self.nomad_url}/v1/job/{job_id}", json=job_payload)
-                resp.raise_for_status()
-                self.logger.info(f"Dispatched swarm worker: {job_id}")
-                return {"id": job_id, "status": "ok"}
-            except Exception as e:
-                error_msg = f"Failed to dispatch {job_id}: {str(e)}"
-                self.logger.error(error_msg)
-                return {"id": job_id, "status": "error", "error": str(e)}
 
         async with httpx.AsyncClient() as client:
-            # Parallel dispatch using gather
-            results = await asyncio.gather(*(dispatch_one(client, task) for task in tasks))
+            for task in tasks:
+                # Use UUID for collision-free IDs
+                unique_suffix = str(uuid.uuid4())[:8]
+                job_id = f"swarm-{agent_type}-{task.get('id', 'unknown')}-{unique_suffix}"
 
-        success_count = sum(1 for r in results if r["status"] == "ok")
-        errors = [r["error"] for r in results if r["status"] == "error"]
+                # Construct a Nomad batch job payload
+                job_payload = {
+                    "Job": {
+                        "ID": job_id,
+                        "Name": job_id,
+                        "Type": "batch",
+                        "Datacenters": ["dc1"],
+                        "TaskGroups": [
+                            {
+                                "Name": "worker-group",
+                                "Tasks": [
+                                    {
+                                        "Name": "worker-agent",
+                                        "Driver": "docker",
+                                        "Config": {
+                                            "image": image,
+                                            "command": "python",
+                                            "args": [script_path],
+                                            "mounts": [
+                                                {
+                                                    "type": "bind",
+                                                    "source": "/opt/pipecatapp",
+                                                    "target": "/opt/pipecatapp",
+                                                    "readonly": True
+                                                }
+                                            ]
+                                        },
+                                        "Env": {
+                                            "WORKER_PROMPT": task.get("prompt"),
+                                            "WORKER_CONTEXT": task.get("context", ""),
+                                            "WORKER_TASK_ID": task.get("id"),
+                                            "CONSUL_HTTP_ADDR": os.getenv("CONSUL_HTTP_ADDR", "http://10.0.0.1:8500")
+                                        },
+                                        "Resources": {
+                                            "CPU": 500,
+                                            "MemoryMB": 1024
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
 
-        result_msg = f"Successfully dispatched {success_count} workers."
+                try:
+                    resp = await client.post(f"{self.nomad_url}/v1/job/{job_id}", json=job_payload)
+                    resp.raise_for_status()
+                    dispatched_ids.append(job_id)
+                    self.logger.info(f"Dispatched swarm worker: {job_id}")
+                except Exception as e:
+                    error_msg = f"Failed to dispatch {job_id}: {str(e)}"
+                    self.logger.error(error_msg)
+                    errors.append(error_msg)
+
+        result_msg = f"Successfully dispatched {len(dispatched_ids)} workers: {', '.join(dispatched_ids)}."
         if errors:
             result_msg += f" Errors: {'; '.join(errors)}"
 

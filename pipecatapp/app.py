@@ -255,7 +255,10 @@ class FasterWhisperSTTService(FrameProcessor):
             np.ndarray: The audio data as a normalized float array.
         """
         audio_s16 = np.frombuffer(audio_bytes, dtype=np.int16)
-        return audio_s16.astype(np.float32) / 32768.0
+        # Bolt ⚡ Optimization: In-place multiplication to avoid extra allocation
+        audio_f32 = audio_s16.astype(np.float32)
+        audio_f32 *= (1.0 / 32768.0)
+        return audio_f32
 
     def _transcribe_sync(self, audio_bytes: bytes) -> str:
         """Synchronous helper for transcription to run in a thread."""
