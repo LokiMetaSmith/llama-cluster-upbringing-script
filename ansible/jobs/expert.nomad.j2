@@ -102,7 +102,7 @@ job "{{ job_name }}" {
       }
 
       config {
-        image = "{{ pipecat_image_id }}"
+        image = "expert-orchestrator:latest"
         force_pull = false
         ports = ["http"]
         #image_pull_policy = "never"

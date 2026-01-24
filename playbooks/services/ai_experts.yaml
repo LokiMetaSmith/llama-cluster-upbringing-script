@@ -85,19 +85,22 @@
     - name: Ensure pipecatapp Docker image is built
       ansible.builtin.include_tasks:
         file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
+      vars:
+        pipecat_image_name: "expert-orchestrator"
+        pipecat_image_tag: "latest"
       tags:
         - deploy-gpu-provider
         - deploy-expert
 
     - name: Verify pipecatapp Docker image exists
-      ansible.builtin.command: docker image inspect pipecatapp:local
+      ansible.builtin.command: docker image inspect expert-orchestrator:latest
       changed_when: false
       register: pipecat_image_info
       tags:
         - deploy-expert
 
     - name: Verify pipecatapp Docker image is runnable
-      ansible.builtin.command: docker run --rm --entrypoint /bin/true pipecatapp:local
+      ansible.builtin.command: docker run --rm --entrypoint /bin/true expert-orchestrator:latest
       changed_when: false
       tags:
         - deploy-expert
@@ -105,7 +108,7 @@
     - name: Set pipecat_image_id fact
       ansible.builtin.set_fact:
         #pipecat_image_id: "pipecatapp:local"
-        pipecat_image_id: "{{ (pipecat_image_info.stdout | from_json)[0].Id }}"
+        pipecat_image_id: "expert-orchestrator:latest"
       tags:
         - deploy-expert
 
