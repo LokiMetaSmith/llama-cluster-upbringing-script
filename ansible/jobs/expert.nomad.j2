@@ -105,6 +105,7 @@ job "{{ job_name }}" {
         image = "{{ pipecat_image_id }}"
         force_pull = false
         ports = ["http"]
+        #image_pull_policy = "never"
       }
 
       env {
