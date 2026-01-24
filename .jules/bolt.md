@@ -9,3 +9,7 @@
 ## 2025-11-26 - Zero-Copy Audio Buffering
 **Learning:** Using `bytes(bytearray)` creates an unnecessary copy. `bytearray` can be swapped and passed directly to `np.frombuffer` which supports the buffer interface.
 **Action:** When buffering data for processing in another thread, swap the buffer reference (e.g. `buf = self.b; self.b = bytearray()`) instead of copying it if the consumer supports the buffer interface.
+
+## 2026-01-24 - In-place Numpy Operations
+**Learning:** Performing arithmetic operations in-place (e.g., `*=`) on Numpy arrays avoids allocating temporary arrays, significantly reducing memory churn and CPU time for large buffers.
+**Action:** Use in-place operators for element-wise operations on large arrays whenever possible.
