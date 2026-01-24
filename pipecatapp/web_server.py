@@ -11,6 +11,7 @@ from fastapi import FastAPI, WebSocket, Body, Request, HTTPException, Depends, S
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from typing import List, Dict
 from workflow.runner import ActiveWorkflows, OpenGates
@@ -72,6 +73,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Security Enhancement: Support for running behind a proxy
+# TRUSTED_PROXIES can be a comma-separated list of IPs or "*" to trust all.
+# This ensures that RateLimiter and logs use the correct client IP from X-Forwarded-For.
+trusted_proxies_env = os.getenv("TRUSTED_PROXIES")
+if trusted_proxies_env:
+    # If explicitly set to "*", we trust all proxies (e.g. strict internal network or dev)
+    trusted_hosts = "*" if trusted_proxies_env.strip() == "*" else [h.strip() for h in trusted_proxies_env.split(",")]
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted_hosts)
+    logging.info(f"Enabled ProxyHeadersMiddleware with trusted hosts: {trusted_hosts}")
 
 def is_origin_allowed(origin: str, allowed_origins: list) -> bool:
     """Checks if the given origin is allowed based on the configuration."""
