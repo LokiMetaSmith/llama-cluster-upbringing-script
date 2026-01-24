@@ -8,6 +8,7 @@ import time
 from typing import List, Dict, Any
 from tools.swarm_tool import SwarmTool
 from agent_factory import create_tools
+from pmm_memory_client import PMMMemoryClient
 
 # Configure logging
 logging.basicConfig(
@@ -23,7 +24,10 @@ class ManagerAgent:
         self.context = os.getenv("MANAGER_CONTEXT", "")
         self.llm_base_url = None
         self.memory_url = None
+        self.memory_client = None
         self.swarm_tool = None
+        # Gas Town: We might have a root work item ID for the manager task itself
+        self.root_work_item_id = os.getenv("WORK_ITEM_ID")
         
     def discover_services(self):
         """Discovers services via Consul."""
@@ -46,6 +50,7 @@ class ManagerAgent:
                 if services:
                     svc = services[0]
                     self.memory_url = f"http://{svc['ServiceAddress']}:{svc['ServicePort']}"
+                    self.memory_client = PMMMemoryClient(base_url=self.memory_url)
                     logger.info(f"Discovered Memory Service at {self.memory_url}")
                     
         except Exception as e:
@@ -68,6 +73,27 @@ class ManagerAgent:
             except Exception as e:
                 logger.error(f"LLM call failed: {e}")
                 return "{}"
+
+    async def get_agent_suitability(self, agent_id: str, tag: str) -> str:
+        """
+        Queries the agent's work history stats to determine suitability.
+        This implements the 'Agent CV' logic from Gas Town.
+        """
+        if not self.memory_client:
+            return "Stats unavailable"
+
+        try:
+            stats = await self.memory_client.get_agent_stats(agent_id)
+            if not stats:
+                 return "New Agent (No history)"
+
+            total = stats.get("total_tasks", 0)
+            success = stats.get("success_rate", 0)
+
+            return f"History: {total} tasks, {success}% success rate."
+        except Exception as e:
+            logger.warning(f"Failed to fetch stats for {agent_id}: {e}")
+            return "Stats error"
 
     async def map_phase(self) -> List[Dict]:
         """Analyzes the task and splits it into sub-tasks."""
@@ -103,6 +129,12 @@ class ManagerAgent:
         logger.info("PHASE 2: Dispatch - Spawning Technicians")
         self.swarm_tool = SwarmTool()
         
+        # Gas Town Integration: Check stats for potential assignees (simulated)
+        # In a real dynamic dispatch, we'd query available agents.
+        # Here we just log the stats for a hypothetical 'technician_default' to prove the loop.
+        stats_info = await self.get_agent_suitability("technician_default", "general")
+        logger.info(f"Candidate Agent Stats: {stats_info}")
+
         # We assume the sub-tasks are fit for Technician Agents (Plan-Execute-Reflect)
         result = await self.swarm_tool.spawn_workers(subtasks, agent_type="technician")
         logger.info(result)
@@ -183,7 +215,8 @@ class ManagerAgent:
             "id": judge_task_id,
             "prompt": "Verify the quality and correctness of the provided result.",
             "context": target_result[:2000], # Truncate if too long, or pass pointer
-            "target_task_id": self.task_id # Logic to let judge pull it
+            "target_task_id": self.task_id, # Logic to let judge pull it
+            "target_work_item_id": self.root_work_item_id # Gas Town: Link validation to the ledger
         }]
 
         if not self.swarm_tool:

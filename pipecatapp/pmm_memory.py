@@ -301,6 +301,36 @@ class PMMMemory:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.list_work_items_sync, status, assignee_id, limit)
 
+    def get_agent_stats_sync(self, assignee_id: str) -> Dict[str, Any]:
+        """Aggregates work statistics for a specific agent."""
+        cursor = self.conn.cursor()
+
+        # Count total tasks assigned
+        cursor.execute("SELECT COUNT(*) FROM work_items WHERE assignee_id = ?", (assignee_id,))
+        total_tasks = cursor.fetchone()[0]
+
+        # Count successful tasks
+        cursor.execute("SELECT COUNT(*) FROM work_items WHERE assignee_id = ? AND status = 'completed'", (assignee_id,))
+        completed_tasks = cursor.fetchone()[0]
+
+        # Count failed tasks
+        cursor.execute("SELECT COUNT(*) FROM work_items WHERE assignee_id = ? AND status = 'failed'", (assignee_id,))
+        failed_tasks = cursor.fetchone()[0]
+
+        success_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
+
+        return {
+            "assignee_id": assignee_id,
+            "total_tasks": total_tasks,
+            "completed_tasks": completed_tasks,
+            "failed_tasks": failed_tasks,
+            "success_rate": round(success_rate, 2)
+        }
+
+    async def get_agent_stats(self, assignee_id: str) -> Dict[str, Any]:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.get_agent_stats_sync, assignee_id)
+
     def close(self):
         """Closes the database connection."""
         if self.conn:

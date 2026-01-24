@@ -8,6 +8,7 @@ import httpx
 from agent_factory import create_tools
 from tools.submit_solution_tool import SubmitSolutionTool
 from pipecat.services.openai.llm import OpenAILLMService
+from pmm_memory_client import PMMMemoryClient
 
 # Configure logging
 logging.basicConfig(
@@ -25,6 +26,7 @@ async def main_async():
     task_id = os.getenv("WORKER_TASK_ID", "unknown")
     prompt = os.getenv("WORKER_PROMPT")
     context = os.getenv("WORKER_CONTEXT", "")
+    work_item_id = os.getenv("WORK_ITEM_ID") # Gas Town Work Item ID
 
     logger.info(f"Starting Worker Agent for Task ID: {task_id}")
 
@@ -41,6 +43,7 @@ async def main_async():
     headers = {"X-Consul-Token": token} if token else {}
     memory_url = None
     llm_base_url = None
+    memory_client = None
 
     try:
         # 1. Discover Memory Service / Event Bus
@@ -53,6 +56,7 @@ async def main_async():
                 addr = svc.get("ServiceAddress", "localhost")
                 port = svc.get("ServicePort", 8000)
                 memory_url = f"http://{addr}:{port}"
+                memory_client = PMMMemoryClient(base_url=memory_url)
                 logger.info(f"Discovered Event Bus ({event_bus_service_name}) at {memory_url}")
 
         # 2. Discover LLM Service (router-api or llamacpp-rpc-api)
@@ -70,38 +74,31 @@ async def main_async():
     except Exception as e:
         logger.warning(f"Failed to discover services: {e}")
 
-    # Report Startup to Shared Brain
-    if memory_url:
+    # Report Startup to Shared Brain & Work Ledger
+    if memory_client:
         try:
-            requests.post(f"{memory_url}/events", json={
-                "kind": "worker_started",
-                "content": f"Task {task_id} started.",
-                "meta": {
+            # Event Bus
+            await memory_client.add_event(
+                kind="worker_started",
+                content=f"Task {task_id} started.",
+                meta={
                     "task_id": task_id,
                     "prompt": prompt,
                     "context": context,
-                    "status": "started"
+                    "status": "started",
+                    "work_item_id": work_item_id
                 }
-            })
+            )
+
+            # Gas Town Work Ledger
+            if work_item_id:
+                await memory_client.update_work_item(work_item_id, status="in_progress")
+
             logger.info("Reported start to Memory Service.")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to report start to memory service: {e}")
-            # Retry once
-            try:
-                time.sleep(1)
-                requests.post(f"{memory_url}/events", json={
-                    "kind": "worker_started",
-                    "content": f"Task {task_id} started.",
-                    "meta": {"task_id": task_id}
-                })
-            except:
-                pass
         except Exception as e:
-             logger.error(f"Unexpected error reporting start: {e}")
+            logger.error(f"Failed to report start to memory service: {e}")
 
     # Initialize Tools
-    # We pass None for twin_service/runner for now as the worker doesn't have the full pipeline context
-    # but tools like Git, Shell, CodeRunner should work fine.
     tools = create_tools(config={}, twin_service=None, runner=None)
     tools["submit_solution"] = SubmitSolutionTool()
     logger.info(f"Initialized tools: {list(tools.keys())}")
@@ -184,31 +181,32 @@ If you have a final answer (and have already submitted your solution), respond w
                     output = await tools["shell"].run("ls -la /opt/pipecatapp")
                     result_output = f"Shell Output: {output}"
 
-        # Report to Shared Brain
-        if memory_url:
+        # Report to Shared Brain & Work Ledger
+        if memory_client:
             try:
-                requests.post(f"{memory_url}/events", json={
-                    "kind": "worker_result",
-                    "content": f"Task {task_id} completed. Result: {result_output}",
-                    "meta": {"task_id": task_id, "status": "success", "tools_used": list(tools.keys())}
-                })
+                # Event Bus
+                await memory_client.add_event(
+                    kind="worker_result",
+                    content=f"Task {task_id} completed. Result: {result_output}",
+                    meta={
+                        "task_id": task_id,
+                        "status": "success",
+                        "tools_used": list(tools.keys()),
+                        "work_item_id": work_item_id
+                    }
+                )
+
+                # Gas Town Work Ledger
+                if work_item_id:
+                    await memory_client.update_work_item(
+                        work_item_id,
+                        status="completed",
+                        validation_results={"output": result_output}
+                    )
+
                 logger.info("Reported result to Memory Service.")
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Failed to report result to memory service: {e}")
-                # Retry loop for results (more critical)
-                for i in range(3):
-                    try:
-                        time.sleep(2)
-                        requests.post(f"{memory_url}/events", json={
-                            "kind": "worker_result",
-                            "content": f"Task {task_id} completed (Retry). Result: {result_output}",
-                            "meta": {"task_id": task_id, "status": "success"}
-                        })
-                        break
-                    except:
-                        pass
             except Exception as e:
-                logger.error(f"Unexpected error reporting result: {e}")
+                logger.error(f"Failed to report result to memory service: {e}")
 
         logger.info(f"Task {task_id} completed successfully.")
 
@@ -217,6 +215,16 @@ If you have a final answer (and have already submitted your solution), respond w
 
     except Exception as e:
         logger.error(f"Task failed: {e}")
+        # Failure Reporting
+        if memory_client and work_item_id:
+            try:
+                await memory_client.update_work_item(
+                    work_item_id,
+                    status="failed",
+                    validation_results={"error": str(e)}
+                )
+            except:
+                pass
         sys.exit(1)
 
 if __name__ == "__main__":
