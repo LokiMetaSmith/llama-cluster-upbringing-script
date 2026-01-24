@@ -6,6 +6,7 @@ import requests
 import asyncio
 import httpx
 from agent_factory import create_tools
+from tools.submit_solution_tool import SubmitSolutionTool
 from pipecat.services.openai.llm import OpenAILLMService
 
 # Configure logging
@@ -102,6 +103,7 @@ async def main_async():
     # We pass None for twin_service/runner for now as the worker doesn't have the full pipeline context
     # but tools like Git, Shell, CodeRunner should work fine.
     tools = create_tools(config={}, twin_service=None, runner=None)
+    tools["submit_solution"] = SubmitSolutionTool()
     logger.info(f"Initialized tools: {list(tools.keys())}")
 
     try:
@@ -115,10 +117,13 @@ You have access to the following tools: {list(tools.keys())}.
 Your task is: {prompt}
 Context: {context}
 
+IMPORTANT: When you have completed the coding task, you MUST use the `submit_solution` tool to return your work.
+Do not just output the code in text. Use the tool.
+
 If you need to use a tool, respond with a JSON object:
 {{ "tool": "tool_name", "args": {{ ... }} }}
 
-If you have a final answer, respond with just the text.
+If you have a final answer (and have already submitted your solution), respond with just the text.
 """
 
             messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}]

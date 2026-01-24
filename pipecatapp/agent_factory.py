@@ -28,6 +28,8 @@ from tools.opencode_tool import OpencodeTool
 from tools.dependency_scanner_tool import DependencyScannerTool
 from tools.remote_tool_proxy import RemoteToolProxy
 from tools.vr_tool import VRTool
+from tools.experiment_tool import ExperimentTool
+from tools.submit_solution_tool import SubmitSolutionTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -74,6 +76,8 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         ),
         "dependency_scanner": DependencyScannerTool(),
         "vr": VRTool(),
+        "experiment": ExperimentTool(),
+        "submit_solution": SubmitSolutionTool(),
     }
 
     if config.get("use_summarizer", False) and twin_service:
