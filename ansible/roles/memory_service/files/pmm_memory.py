@@ -35,6 +35,8 @@ class PMMMemory:
     def _init_db(self):
         """Initializes the SQLite database and creates the events table."""
         conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA synchronous=NORMAL;")
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS events (
@@ -47,6 +49,8 @@ class PMMMemory:
                 hash TEXT UNIQUE
             )
         """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);")
+
         # Gas Town Work Ledger (Beads) Table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS work_items (
@@ -62,6 +66,9 @@ class PMMMemory:
                 validation_results TEXT
             )
         """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_items_status ON work_items(status);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_items_assignee ON work_items(assignee_id);")
+
         conn.commit()
         return conn
 
