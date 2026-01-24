@@ -26,3 +26,7 @@
 ## 2026-01-22 - Non-blocking Status Notifications
 **Learning:** Native `alert()` calls block the UI and disrupt user flow. Replacing them with non-blocking status text provides feedback without interruption.
 **Action:** Use a callback pattern (like `onStatusUpdate`) to allow logic components (like `WorkflowEditor`) to trigger UI updates in the parent view, maintaining separation of concerns.
+
+## 2026-02-12 - Invisible Keyboard Shortcuts
+**Learning:** Users cannot discover powerful keyboard shortcuts (like Ctrl+K to clear) if they are not exposed in the UI. Relying on documentation is insufficient for real-time usage.
+**Action:** Expose shortcuts via tooltips (`title` attribute) and accessible labels (`aria-label`) on the relevant controls. This provides "just-in-time" learning for users.
