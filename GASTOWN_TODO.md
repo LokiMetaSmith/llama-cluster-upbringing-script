@@ -14,16 +14,16 @@ This roadmap tracks the adaptation of Gas Town concepts (Work Ledger, Attributio
 - [x] **Technician Agent:** Update `TechnicianAgent` to:
     - [x] Create a "Plan" as a set of `work_items` in the ledger.
     - [x] Update item status to `in_progress` and `completed` as it executes.
-- [ ] **Worker Agent:** Update `WorkerAgent` to report status updates to specific work items if assigned a `work_item_id`.
+- [x] **Worker Agent:** Update `WorkerAgent` to report status updates to specific work items if assigned a `work_item_id`.
 
 ## Phase 3: Agent CVs & Analytics
-- [ ] **Stats Aggregation:** Add SQL queries to `pmm_memory.py` to calculate success rates by agent and tag.
-- [ ] **API Endpoint:** Add `GET /agents/{id}/stats` to expose this data.
-- [ ] **Manager Agent:** Update `ManagerAgent` to query these stats when selecting agents for tasks.
+- [x] **Stats Aggregation:** Add SQL queries to `pmm_memory.py` to calculate success rates by agent and tag.
+- [x] **API Endpoint:** Add `GET /agents/{id}/stats` to expose this data.
+- [x] **Manager Agent:** Update `ManagerAgent` to query these stats when selecting agents for tasks.
 
 ## Phase 4: Validation & Quality Gates
-- [ ] **Validation Schema:** Add `validation` column (JSON) to `work_items`.
-- [ ] **Judge Agent:** Create/Update `JudgeAgent` (or equivalent) to perform checks (lint, test) and update the `validation` field.
+- [x] **Judge Agent:** Created `JudgeAgent` and wired it into `ManagerAgent` for result verification.
+- [ ] **Validation Schema:** Formalize the JSON schema for the `validation_results` column.
 
 ## Phase 5: Federation (Future)
 - [ ] **Remote Ledgers:** Investigate syncing work items across multiple Memory Service instances.

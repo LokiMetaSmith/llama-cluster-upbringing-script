@@ -100,6 +100,14 @@ async def update_work_item(item_id: str, update: WorkItemUpdate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/agents/{agent_id}/stats")
+async def get_agent_stats(agent_id: str):
+    try:
+        stats = await memory.get_agent_stats(agent_id)
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
