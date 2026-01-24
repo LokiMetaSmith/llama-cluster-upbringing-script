@@ -141,6 +141,18 @@ class PMMMemoryClient:
             self.logger.error(f"Failed to list work items: {e}")
             return []
 
+    async def get_agent_stats(self, agent_id: str) -> Dict[str, Any]:
+        """Retrieves performance statistics for a given agent."""
+        url = f"{self.base_url}/agents/{agent_id}/stats"
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                return resp.json()
+        except Exception as e:
+            self.logger.error(f"Failed to get stats for agent {agent_id}: {e}")
+            return {}
+
     def close(self):
         """No-op for HTTP client, but kept for interface compatibility."""
         pass
