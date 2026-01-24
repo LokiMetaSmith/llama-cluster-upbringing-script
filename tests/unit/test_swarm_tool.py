@@ -3,8 +3,9 @@ import sys
 import os
 from unittest.mock import MagicMock, patch, AsyncMock
 
+import json
 # Add tools directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'tools')))
 
 from swarm_tool import SwarmTool
 
@@ -30,9 +31,10 @@ async def test_spawn_workers_success():
         # post must be awaitable
         mock_client_instance.post = AsyncMock(return_value=mock_response)
 
-        result = await tool.spawn_workers(tasks)
+        result_json = await tool.spawn_workers(tasks)
+        result = json.loads(result_json)
 
-        assert "Successfully dispatched 2 workers" in result
+        assert "Successfully dispatched 2 workers" in result["message"]
         assert mock_client_instance.post.call_count == 2
 
 @pytest.mark.asyncio
@@ -64,10 +66,11 @@ async def test_spawn_workers_partial_failure():
 
         mock_client_instance.post = AsyncMock(side_effect=side_effect)
 
-        result = await tool.spawn_workers(tasks)
+        result_json = await tool.spawn_workers(tasks)
+        result = json.loads(result_json)
 
-        assert "Successfully dispatched 1 workers" in result
-        assert "Errors: Failed to dispatch" in result
+        assert "Successfully dispatched 1 workers" in result["message"]
+        assert len(result["errors"]) > 0
 
 @pytest.mark.asyncio
 async def test_kill_worker_success():

@@ -96,11 +96,13 @@ class SwarmTool:
                     self.logger.error(error_msg)
                     errors.append(error_msg)
 
-        result_msg = f"Successfully dispatched {len(dispatched_ids)} workers: {', '.join(dispatched_ids)}."
-        if errors:
-            result_msg += f" Errors: {'; '.join(errors)}"
+        result = {
+            "job_ids": dispatched_ids,
+            "message": f"Successfully dispatched {len(dispatched_ids)} workers.",
+            "errors": errors
+        }
 
-        return result_msg
+        return json.dumps(result)
 
     async def kill_worker(self, job_id: str) -> str:
         """Kills a specific worker job."""
