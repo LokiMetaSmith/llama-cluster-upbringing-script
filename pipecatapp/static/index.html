@@ -224,11 +224,13 @@
     </div>
     <script src="/static/terminal.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        window.refreshAdminUIs = function() {
             fetch('/api/web_uis')
                 .then(response => response.json())
                 .then(data => {
                     const adminUiLinks = document.getElementById('admin-ui-links');
+                    adminUiLinks.innerHTML = ''; // Clear existing content
+
                     if (data.length === 0) {
                         const noLink = document.createElement('a');
                         noLink.textContent = "No UIs found";
@@ -254,12 +256,9 @@
                                 url.hostname = window.location.hostname;
                                 link.href = url.toString();
                                 link.target = "_blank"; // Open in new tab
-                            } else {
-                                link.href = "#";
                             }
                         } catch (e) {
                              console.warn("Invalid URL for UI:", ui);
-                             link.href = "#";
                         }
 
                         adminUiLinks.appendChild(link);
@@ -268,12 +267,15 @@
                 .catch(error => {
                     console.error('Error fetching web UIs:', error);
                     const adminUiLinks = document.getElementById('admin-ui-links');
+                    adminUiLinks.innerHTML = ''; // Clear existing content
                     const errorLink = document.createElement('a');
                     errorLink.textContent = "Error loading UIs";
                     errorLink.href = "#";
                     adminUiLinks.appendChild(errorLink);
                 });
-        });
+        };
+
+        document.addEventListener('DOMContentLoaded', window.refreshAdminUIs);
     </script>
 </body>
 </html>
