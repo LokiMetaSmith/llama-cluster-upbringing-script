@@ -96,6 +96,9 @@ fi
 
 echo "--- Starting pipecat-app: $(date) ---"
 
+# Add parent directory of app to PYTHONPATH so that 'import pipecatapp' works from within submodules
+export PYTHONPATH=$PYTHONPATH:$(dirname "{{ pipecat_app_dir }}")
+
 {% if pipecat_deployment_style == 'raw_exec' %}
 # For raw_exec, we manage our own log file.
 LOG_FILE="{{ pipecat_log_file }}"
