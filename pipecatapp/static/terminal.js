@@ -569,6 +569,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
         const approveButton = document.createElement('button');
         approveButton.textContent = "Approve";
+        approveButton.className = "btn-approve";
+        approveButton.setAttribute("aria-label", "Approve tool execution");
+        approveButton.title = "Allow the agent to execute this tool";
         approveButton.onclick = function() {
             sendApprovalResponse(requestId, true);
             container.innerHTML = `<p><strong>Approved.</strong></p>`;
@@ -577,6 +580,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
         const denyButton = document.createElement('button');
         denyButton.textContent = "Deny";
+        denyButton.className = "btn-deny";
+        denyButton.setAttribute("aria-label", "Deny tool execution");
+        denyButton.title = "Block this tool execution";
         denyButton.onclick = function() {
             sendApprovalResponse(requestId, false);
             container.innerHTML = `<p><strong>Denied.</strong></p>`;

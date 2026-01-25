@@ -30,3 +30,7 @@
 ## 2026-02-12 - Invisible Keyboard Shortcuts
 **Learning:** Users cannot discover powerful keyboard shortcuts (like Ctrl+K to clear) if they are not exposed in the UI. Relying on documentation is insufficient for real-time usage.
 **Action:** Expose shortcuts via tooltips (`title` attribute) and accessible labels (`aria-label`) on the relevant controls. This provides "just-in-time" learning for users.
+
+## 2026-02-14 - Visual Hierarchy in Action Prompts
+**Learning:** In high-contrast terminal interfaces, generic grey buttons for critical binary choices (Approve/Deny) lack "visual affordance" and can lead to hesitation or errors. Color-coding and semantic labeling significantly reduce cognitive load.
+**Action:** Use standard semantic colors (Green/Red) and explicit `aria-label`s for critical decision buttons to provide instant visual and assistive feedback on the action's consequence.
