@@ -123,5 +123,3 @@
         - name: Configure Paddler Agent
           ansible.builtin.include_role:
             name: paddler_agent
-        - llxprt_code
-        - claude_clone
