@@ -17,3 +17,8 @@
 **Vulnerability:** `Git_Tool` allowed executing git commands in arbitrary directories via `working_dir` argument, lacking any root directory restriction.
 **Learning:** Tools that execute shell commands or file operations must be explicitly restricted to a safe root directory, even if they seem harmless like "git status".
 **Prevention:** Enforce a `root_dir` in tool initialization and validate all path arguments using `os.path.commonpath` against this root.
+
+## 2026-10-28 - SSRF in WebBrowserTool
+**Vulnerability:** `WebBrowserTool` allowed navigating to arbitrary URLs, including internal services (localhost, 127.0.0.1) and Cloud Metadata services (169.254.169.254), enabling SSRF.
+**Learning:** Tools that fetch URLs must treat user input as untrusted and strictly validate the destination, including resolving DNS to check for private IPs.
+**Prevention:** Implemented `_validate_url` to check scheme, block local hostnames, and resolve IPs to reject private/link-local ranges using `ipaddress`.
