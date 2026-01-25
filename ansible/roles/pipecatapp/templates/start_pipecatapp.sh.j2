@@ -50,11 +50,21 @@ if [ -f "{{ pipecat_app_dir }}/pipecat.env" ]; then
     source "{{ pipecat_app_dir }}/pipecat.env"
 fi
 
-# Function to setup virtual environment
 setup_venv() {
-    echo "Creating virtual environment..."
-    python3 -m venv venv
-    source venv/bin/activate
+    local venv_path=$1
+    echo "Creating virtual environment at $venv_path..."
+
+    set +e
+    python3 -m venv "$venv_path"
+    local ret=$?
+    set -e
+
+    if [ $ret -ne 0 ]; then
+        echo "Failed to create venv at $venv_path"
+        return 1
+    fi
+
+    source "$venv_path/bin/activate"
 
     echo "Installing dependencies..."
     pip install --upgrade pip
@@ -64,13 +74,24 @@ setup_venv() {
     playwright install
 }
 
-# Check for venv
-if [ ! -f "{{ pipecat_app_dir }}/venv/bin/activate" ]; then
-    echo "Virtual environment not found or broken. Setting up..."
-    rm -rf venv
-    setup_venv
+# Try standard location first, then fallback
+VENV_DIR="{{ pipecat_app_dir }}/venv"
+FALLBACK_VENV_DIR="/opt/venv"
+
+if [ -f "$VENV_DIR/bin/activate" ]; then
+    source "$VENV_DIR/bin/activate"
 else
-    source "{{ pipecat_app_dir }}/venv/bin/activate"
+    echo "Virtual environment not found or broken at $VENV_DIR. Attempting to create..."
+    rm -rf "$VENV_DIR"
+
+    if ! setup_venv "$VENV_DIR"; then
+        echo "Retrying with fallback location: $FALLBACK_VENV_DIR"
+        rm -rf "$FALLBACK_VENV_DIR"
+        if ! setup_venv "$FALLBACK_VENV_DIR"; then
+             echo "Critical: Failed to create virtual environment in both $VENV_DIR and $FALLBACK_VENV_DIR"
+             exit 1
+        fi
+    fi
 fi
 
 echo "--- Starting pipecat-app: $(date) ---"
@@ -82,5 +103,6 @@ touch "$LOG_FILE"
 exec "{{ pipecat_app_dir }}/venv/bin/python3" "{{ pipecat_app_dir }}/app.py" >> "$LOG_FILE" 2>&1
 {% else %}
 # For Docker, we log to stdout/stderr and let the container runtime handle it.
-exec "{{ pipecat_app_dir }}/venv/bin/python3" "{{ pipecat_app_dir }}/app.py"
+# Note: We rely on the active venv here.
+exec python3 "{{ pipecat_app_dir }}/app.py"
 {% endif %}
