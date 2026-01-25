@@ -8,6 +8,40 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+# Install system dependencies if running as root in a Debian-based system (e.g. Docker dev mode)
+if [ -f "/etc/debian_version" ] && [ "$(id -u)" -eq 0 ]; then
+    if ! command -v git &> /dev/null || ! command -v pkg-config &> /dev/null; then
+        echo "Installing system dependencies..."
+        apt-get update && apt-get install -y --no-install-recommends \
+            build-essential \
+            python3-dev \
+            portaudio19-dev \
+            mecab \
+            libmecab-dev \
+            mecab-ipadic-utf8 \
+            rustc \
+            cargo \
+            libevent-2.1-7 \
+            libgstreamer-plugins-bad1.0-0 \
+            libflite1 \
+            libgl1-mesa-glx \
+            libglib2.0-0 \
+            libavif15 \
+            gstreamer1.0-libav \
+            libavcodec-dev \
+            libavdevice-dev \
+            libavfilter-dev \
+            libavformat-dev \
+            libavutil-dev \
+            libswresample-dev \
+            libswscale-dev \
+            pkg-config \
+            git
+    else
+        echo "System dependencies appear to be installed."
+    fi
+fi
+
 # Change to the application directory
 cd "{{ pipecat_app_dir }}"
 
@@ -16,8 +50,28 @@ if [ -f "{{ pipecat_app_dir }}/pipecat.env" ]; then
     source "{{ pipecat_app_dir }}/pipecat.env"
 fi
 
-# Activate the virtual environment
-source "{{ pipecat_app_dir }}/venv/bin/activate"
+# Function to setup virtual environment
+setup_venv() {
+    echo "Creating virtual environment..."
+    python3 -m venv venv
+    source venv/bin/activate
+
+    echo "Installing dependencies..."
+    pip install --upgrade pip
+    pip install -r requirements.txt
+
+    echo "Installing Playwright browsers..."
+    playwright install
+}
+
+# Check for venv
+if [ ! -f "{{ pipecat_app_dir }}/venv/bin/activate" ]; then
+    echo "Virtual environment not found or broken. Setting up..."
+    rm -rf venv
+    setup_venv
+else
+    source "{{ pipecat_app_dir }}/venv/bin/activate"
+fi
 
 echo "--- Starting pipecat-app: $(date) ---"
 
