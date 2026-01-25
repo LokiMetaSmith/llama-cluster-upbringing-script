@@ -68,6 +68,10 @@ class PMMMemory:
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_items_status ON work_items(status);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_items_assignee ON work_items(assignee_id);")
+        # Bolt ⚡ Optimization: Index created_at for faster sorting
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_items_created_at ON work_items(created_at);")
+        # Bolt ⚡ Optimization: Composite index for agent stats
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_items_assignee_status ON work_items(assignee_id, status);")
 
         conn.commit()
         return conn
