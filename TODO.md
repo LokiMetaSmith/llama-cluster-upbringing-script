@@ -152,3 +152,13 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] Harden the Core System: Phase 4 Workflow Engine (Steps 1-3).
 - [x] Refactor for Strict Idempotency in Ansible.
 - [x] Maintenance & Clean Up (Empty Handler, Corrupted Files, etc.).
+
+## Performance & I/O Optimization
+
+- [x] **Optimize ExperimentTool Sandbox Creation:**
+  - Replaced `shutil.copytree` with `tar` snapshotting to reduce syscall overhead.
+- [x] **Optimize ProjectMapperTool Scanning:**
+  - Implemented `git ls-files` strategy for faster file listing in git repositories.
+- [ ] **Review Codebase for I/O Inefficiencies:**
+  - **Goal:** Identify and optimize other areas with heavy syscall usage (e.g., logging, data processing).
+  - **Strategy:** Look for repeated file opens/closes in loops, inefficient directory traversals, and opportunities to batch I/O or use `tar`/`sqlite` strategies.

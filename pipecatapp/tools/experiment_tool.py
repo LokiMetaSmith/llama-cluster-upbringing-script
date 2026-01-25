@@ -118,38 +118,46 @@ class ExperimentTool:
         eval_report = []
         best_candidate = None
 
-        for t_id, evt in results.items():
-            content = evt.get("content", "")
+        # Optimization: Create a source snapshot once to avoid repeatedly copying thousands of files.
+        # This significantly reduces syscall overhead as per https://modulovalue.com/blog/syscall-overhead-tar-gz-io-performance/
+        snapshot_path = self._create_snapshot("/opt/pipecatapp")
 
-            # Extract artifact from content
-            # Content might be "Tool submit_solution output: {...}" or just the JSON if the worker returned it directly.
-            # We need to parse it.
-            artifact = self._extract_artifact(content)
+        try:
+            for t_id, evt in results.items():
+                content = evt.get("content", "")
 
-            if not artifact:
-                eval_report.append({
+                # Extract artifact from content
+                # Content might be "Tool submit_solution output: {...}" or just the JSON if the worker returned it directly.
+                # We need to parse it.
+                artifact = self._extract_artifact(content)
+
+                if not artifact:
+                    eval_report.append({
+                        "task_id": t_id,
+                        "status": "malformed_output",
+                        "details": "Could not find valid solution artifact."
+                    })
+                    continue
+
+                # Run Sandbox Eval
+                score_data = self._run_sandbox_eval(artifact, test_command, snapshot_path)
+
+                result_entry = {
                     "task_id": t_id,
-                    "status": "malformed_output",
-                    "details": "Could not find valid solution artifact."
-                })
-                continue
+                    "status": "evaluated",
+                    "passed": score_data["passed"],
+                    "output": score_data["output"],
+                    "artifact": artifact
+                }
+                eval_report.append(result_entry)
 
-            # Run Sandbox Eval
-            score_data = self._run_sandbox_eval(artifact, test_command)
-
-            result_entry = {
-                "task_id": t_id,
-                "status": "evaluated",
-                "passed": score_data["passed"],
-                "output": score_data["output"],
-                "artifact": artifact
-            }
-            eval_report.append(result_entry)
-
-            if score_data["passed"]:
-                # Simple logic: First passing result is best (or could look for fastest/cleanest)
-                if not best_candidate:
-                    best_candidate = result_entry
+                if score_data["passed"]:
+                    # Simple logic: First passing result is best (or could look for fastest/cleanest)
+                    if not best_candidate:
+                        best_candidate = result_entry
+        finally:
+            if snapshot_path and os.path.exists(snapshot_path):
+                os.remove(snapshot_path)
 
         # 5. Cleanup Workers (Optional, Swarm might auto-cleanup or we leave them for debug)
         # for jid in job_ids:
@@ -164,6 +172,35 @@ class ExperimentTool:
         }
 
         return json.dumps(summary, indent=2)
+
+    def _create_snapshot(self, src_dir: str) -> Optional[str]:
+        """Creates a tar snapshot of the source directory to speed up sandbox creation."""
+        if not os.path.exists(src_dir):
+            return None
+
+        try:
+            fd, archive_path = tempfile.mkstemp(suffix=".tar")
+            os.close(fd)
+
+            # Create tarball using system tar for speed and efficient syscall usage
+            # Exclude .git, __pycache__, node_modules, *.pyc
+            cmd = [
+                "tar",
+                "-cf", archive_path,
+                "-C", src_dir,
+                "--exclude", ".git",
+                "--exclude", "__pycache__",
+                "--exclude", "node_modules",
+                "--exclude", "*.pyc",
+                "."
+            ]
+            subprocess.run(cmd, check=True, capture_output=True)
+            return archive_path
+        except Exception as e:
+            self.logger.error(f"Failed to create snapshot: {e}")
+            if 'archive_path' in locals() and os.path.exists(archive_path):
+                os.remove(archive_path)
+            return None
 
     def _extract_artifact(self, content: str) -> Optional[Dict]:
         """Parses the content to find the JSON artifact."""
@@ -184,23 +221,29 @@ class ExperimentTool:
             self.logger.warning(f"Failed to parse artifact: {e}")
         return None
 
-    def _run_sandbox_eval(self, artifact: Dict, test_command: str) -> Dict:
+    def _run_sandbox_eval(self, artifact: Dict, test_command: str, snapshot_path: Optional[str] = None) -> Dict:
         """Runs the artifact in a temp sandbox against the test command."""
 
         # Create temp dir
         temp_dir = tempfile.mkdtemp(prefix="pipecat_exp_")
 
         try:
-            # Copy Codebase (Assume /opt/pipecatapp is source)
-            # We copy everything except heavy stuff
-            src_dir = "/opt/pipecatapp"
-            if not os.path.exists(src_dir):
-                return {"passed": False, "output": "Source directory /opt/pipecatapp not found"}
+            # Populate Sandbox
+            if snapshot_path and os.path.exists(snapshot_path):
+                 # Fast path: Extract tarball
+                 # This avoids thousands of open/read/write/close syscalls
+                 cmd = ["tar", "-xf", snapshot_path, "-C", temp_dir]
+                 subprocess.run(cmd, check=True, capture_output=True)
+            else:
+                 # Fallback: Copy Codebase (Assume /opt/pipecatapp is source)
+                 src_dir = "/opt/pipecatapp"
+                 if not os.path.exists(src_dir):
+                     return {"passed": False, "output": "Source directory /opt/pipecatapp not found"}
 
-            # Copy relevant files
-            # We use ignore_patterns to skip .git, __pycache__
-            shutil.copytree(src_dir, temp_dir, dirs_exist_ok=True,
-                            ignore=shutil.ignore_patterns('.git', '__pycache__', 'node_modules', '*.pyc'))
+                 # Copy relevant files
+                 # We use ignore_patterns to skip .git, __pycache__
+                 shutil.copytree(src_dir, temp_dir, dirs_exist_ok=True,
+                                ignore=shutil.ignore_patterns('.git', '__pycache__', 'node_modules', '*.pyc'))
 
             # Apply Artifact
             file_path = artifact.get("file_path", "solution.py")
