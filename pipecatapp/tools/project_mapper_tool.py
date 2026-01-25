@@ -1,6 +1,9 @@
 import os
 import re
 import fnmatch
+import subprocess
+import shutil
+from typing import Optional, List
 
 class ProjectMapperTool:
     """
@@ -32,6 +35,24 @@ class ProjectMapperTool:
             "structure": {}
         }
 
+        # Optimization: Use git ls-files if available to avoid slow os.walk
+        git_files = self._list_files_git(start_dir)
+        if git_files is not None:
+            for rel_path in git_files:
+                full_path = os.path.join(start_dir, rel_path)
+                # Still check ignores in case git tracks files we want to skip
+                if self._is_ignored(full_path):
+                    continue
+
+                file_info = {
+                    "path": rel_path,
+                    "type": self._guess_type(rel_path),
+                    "imports": self._extract_imports(full_path)
+                }
+                project_map["files"].append(file_info)
+            return project_map
+
+        # Fallback to os.walk
         for root, dirs, files in os.walk(start_dir):
             # Modify dirs in-place to skip ignored directories
             dirs[:] = [d for d in dirs if not self._is_ignored(os.path.join(root, d))]
@@ -51,6 +72,23 @@ class ProjectMapperTool:
                 project_map["files"].append(file_info)
 
         return project_map
+
+    def _list_files_git(self, start_dir: str) -> Optional[List[str]]:
+        """Lists files using git ls-files if possible. Returns None if not a git repo."""
+        if not shutil.which("git"):
+            return None
+
+        try:
+            # Check if inside git repo
+            subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+                           cwd=start_dir, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            # git ls-files returns paths relative to cwd
+            res = subprocess.run(["git", "ls-files"], cwd=start_dir, check=True, capture_output=True, text=True)
+            files = res.stdout.splitlines()
+            return files
+        except Exception:
+            return None
 
     def _guess_type(self, filename: str) -> str:
         if filename.endswith(".py"): return "python"

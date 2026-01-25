@@ -5,7 +5,7 @@ import shutil
 import tempfile
 
 # Adjust path to import the tool
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'tools')))
 
 from project_mapper_tool import ProjectMapperTool
 
