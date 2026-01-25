@@ -85,6 +85,13 @@
         content: "{{ expert_allocs.stdout }}"
         dest: "/tmp/expert_{{ expert_name }}_allocs.json"
 
+    - name: "Expert {{ expert_name }} : Analyze allocations"
+      ansible.builtin.command:
+        cmd: "python3 {{ playbook_dir }}/../../scripts/analyze_nomad_allocs.py /tmp/expert_{{ expert_name }}_allocs.json"
+      register: expert_allocs_analysis
+      changed_when: false
+      failed_when: false
+
     - name: "Expert {{ expert_name }} : Extract Allocation ID"
       ansible.builtin.shell: "jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/expert_{{ expert_name }}_allocs.json"
       register: expert_alloc_id
@@ -123,6 +130,9 @@
         msg: |
           Expert {{ expert_name }} job failed to start.
 
+          --- FAILURE ANALYSIS ---
+          {{ (expert_allocs_analysis | default({})).stdout | default('No analysis available') }}
+
           --- RUN ERROR (stderr) ---
           {{ (expert_job_run | default({})).stderr | default('N/A') }}
 
@@ -133,6 +143,7 @@
           {{ (expert_job_status | default({})).stdout | default('N/A') }}
 
           --- ALLOCATIONS (JSON) ---
+          (See /tmp/expert_{{ expert_name }}_allocs.json for full dump)
           {{ (expert_allocs | default({})).stdout | default('N/A') }}
 
           --- PLAN OUTPUT ---
