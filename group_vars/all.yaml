@@ -22,7 +22,7 @@ cluster_subnet_prefix: "10.0.0"
 # Determine the cluster IP dynamically:
 # 1. Try to get the IP of the 'tailscale0' interface (mesh network).
 # 2. Fallback to the legacy alias logic if the mesh isn't up yet.
-cluster_ip: "{{ (ansible_tailscale0 | default({})).get('ipv4', {}).get('address', cluster_subnet_prefix + '.' + node_id) }}"
+cluster_ip: "{{ ansible_facts.get('tailscale0', {}).get('ipv4', {}).get('address', cluster_subnet_prefix + '.' + node_id) }}"
 
 
 ansible_python_interpreter: /usr/bin/python3

@@ -1,10 +1,19 @@
 - block:
+    - name: "Expert {{ expert_name }} : Check if job exists"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad job status expert-{{ expert_name }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: expert_job_status_check
+      failed_when: false
+      changed_when: false
+
     - name: "Expert {{ expert_name }} : Purge existing nomad job"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job stop -purge expert-{{ expert_name }}"
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
-      ignore_errors: yes
+      when: expert_job_status_check.rc == 0
       changed_when: true
 
     - name: "Expert {{ expert_name }} : Run nomad job"
