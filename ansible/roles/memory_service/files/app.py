@@ -31,6 +31,23 @@ class WorkItemUpdate(BaseModel):
     validation_results: Optional[Dict[str, Any]] = None
     meta_update: Optional[Dict[str, Any]] = None
 
+# DLQ Models
+class DLQItemCreate(BaseModel):
+    event_type: str
+    payload: Dict[str, Any]
+    error_reason: str
+    retry_count: Optional[int] = 0
+
+class DLQClaimRequest(BaseModel):
+    worker_id: str
+    supported_types: Optional[List[str]] = None
+
+class DLQItemUpdate(BaseModel):
+    status: str
+    result: Optional[str] = None
+    retry_after: Optional[float] = None
+    increment_retry: Optional[bool] = False
+
 @app.post("/events")
 async def add_event(event: Event):
     try:
@@ -105,6 +122,50 @@ async def get_agent_stats(agent_id: str):
     try:
         stats = await memory.get_agent_stats(agent_id)
         return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# DLQ Endpoints
+@app.post("/dlq")
+async def enqueue_dlq(item: DLQItemCreate):
+    try:
+        item_id = await memory.enqueue_dlq_item(
+            event_type=item.event_type,
+            payload=item.payload,
+            error_reason=item.error_reason,
+            retry_count=item.retry_count
+        )
+        return {"status": "success", "dlq_item_id": item_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/dlq/claim")
+async def claim_dlq_item(request: DLQClaimRequest):
+    try:
+        item = await memory.claim_dlq_item(
+            worker_id=request.worker_id,
+            supported_types=request.supported_types
+        )
+        # If no item is found, return None (JSON null)
+        return item
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.patch("/dlq/{item_id}")
+async def update_dlq_item(item_id: str, update: DLQItemUpdate):
+    try:
+        success = await memory.update_dlq_item(
+            item_id=item_id,
+            status=update.status,
+            result=update.result,
+            retry_after=update.retry_after,
+            increment_retry=update.increment_retry
+        )
+        if not success:
+             raise HTTPException(status_code=404, detail="DLQ item not found")
+        return {"status": "success"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

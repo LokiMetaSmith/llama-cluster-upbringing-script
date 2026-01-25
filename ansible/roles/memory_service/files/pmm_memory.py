@@ -73,6 +73,25 @@ class PMMMemory:
         # Bolt ⚡ Optimization: Composite index for agent stats
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_work_items_assignee_status ON work_items(assignee_id, status);")
 
+        # DLQ Table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS dlq (
+                id TEXT PRIMARY KEY,
+                event_type TEXT,
+                payload TEXT,
+                error_reason TEXT,
+                status TEXT,
+                retry_count INTEGER,
+                retry_after REAL,
+                created_at REAL,
+                updated_at REAL,
+                locked_by TEXT
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_dlq_status ON dlq(status);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_dlq_event_type ON dlq(event_type);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_dlq_retry_after ON dlq(retry_after);")
+
         conn.commit()
         return conn
 
@@ -341,6 +360,117 @@ class PMMMemory:
     async def get_agent_stats(self, assignee_id: str) -> Dict[str, Any]:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.get_agent_stats_sync, assignee_id)
+
+    # -------------------------------------------------------------------------
+    # Dead Letter Queue (DLQ) Methods
+    # -------------------------------------------------------------------------
+
+    def enqueue_dlq_item_sync(self, event_type: str, payload: Dict[str, Any], error_reason: str, retry_count: int = 0) -> str:
+        """Enqueues a failed event into the Dead Letter Queue."""
+        item_id = str(uuid.uuid4())
+        timestamp = time.time()
+        retry_after = timestamp
+
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO dlq (id, event_type, payload, error_reason, status, retry_count, retry_after, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (item_id, event_type, json.dumps(payload), error_reason, "PENDING", retry_count, retry_after, timestamp, timestamp))
+        self.conn.commit()
+        return item_id
+
+    async def enqueue_dlq_item(self, event_type: str, payload: Dict[str, Any], error_reason: str, retry_count: int = 0) -> str:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.enqueue_dlq_item_sync, event_type, payload, error_reason, retry_count)
+
+    def claim_dlq_item_sync(self, worker_id: str, supported_types: List[str] = None) -> Optional[Dict]:
+        """Atomically claims a PENDING DLQ item for processing."""
+        cursor = self.conn.cursor()
+        now = time.time()
+
+        # Build query filters
+        type_filter = ""
+        params = [now]
+        if supported_types:
+            placeholders = ",".join("?" * len(supported_types))
+            type_filter = f"AND event_type IN ({placeholders})"
+            params.extend(supported_types)
+
+        # Retry loop for optimistic concurrency (simulating SKIP LOCKED)
+        for _ in range(3):
+            # 1. Find a candidate
+            query = f"""
+                SELECT id FROM dlq
+                WHERE status = 'PENDING'
+                  AND retry_after <= ?
+                  {type_filter}
+                ORDER BY created_at ASC
+                LIMIT 1
+            """
+            cursor.execute(query, params)
+            row = cursor.fetchone()
+
+            if not row:
+                return None # Queue empty
+
+            item_id = row[0]
+
+            # 2. Try to lock it
+            update_query = """
+                UPDATE dlq
+                SET status = 'PROCESSING', locked_by = ?, updated_at = ?
+                WHERE id = ? AND status = 'PENDING'
+            """
+            cursor.execute(update_query, (worker_id, now, item_id))
+            self.conn.commit()
+
+            if cursor.rowcount == 1:
+                # Successfully claimed
+                cursor.execute("SELECT * FROM dlq WHERE id = ?", (item_id,))
+                row = cursor.fetchone()
+                columns = [description[0] for description in cursor.description]
+                item = dict(zip(columns, row))
+                item['payload'] = json.loads(item['payload'])
+                return item
+            else:
+                # Race condition: someone else claimed it, loop again
+                continue
+
+        return None
+
+    async def claim_dlq_item(self, worker_id: str, supported_types: List[str] = None) -> Optional[Dict]:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.claim_dlq_item_sync, worker_id, supported_types)
+
+    def update_dlq_item_sync(self, item_id: str, status: str, result: str = None, retry_after: float = None, increment_retry: bool = False) -> bool:
+        """Updates the status of a DLQ item."""
+        cursor = self.conn.cursor()
+        now = time.time()
+
+        updates = ["status = ?", "updated_at = ?", "locked_by = NULL"]
+        params = [status, now]
+
+        if increment_retry:
+             updates.append("retry_count = retry_count + 1")
+
+        if retry_after is not None:
+            updates.append("retry_after = ?")
+            params.append(retry_after)
+
+        if result:
+             updates.append("error_reason = ?")
+             params.append(result)
+
+        params.append(item_id)
+
+        sql = f"UPDATE dlq SET {', '.join(updates)} WHERE id = ?"
+        cursor.execute(sql, params)
+        self.conn.commit()
+        return cursor.rowcount > 0
+
+    async def update_dlq_item(self, item_id: str, status: str, result: str = None, retry_after: float = None, increment_retry: bool = False) -> bool:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.update_dlq_item_sync, item_id, status, result, retry_after, increment_retry)
 
     def close(self):
         """Closes the database connection."""
