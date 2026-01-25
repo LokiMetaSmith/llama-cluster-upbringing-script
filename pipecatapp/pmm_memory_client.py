@@ -153,6 +153,59 @@ class PMMMemoryClient:
             self.logger.error(f"Failed to get stats for agent {agent_id}: {e}")
             return {}
 
+    # -------------------------------------------------------------------------
+    # DLQ Client Methods
+    # -------------------------------------------------------------------------
+
+    async def enqueue_dlq_item(self, event_type: str, payload: Dict[str, Any], error_reason: str, retry_count: int = 0) -> str:
+        url = f"{self.base_url}/dlq"
+        payload_data = {
+            "event_type": event_type,
+            "payload": payload,
+            "error_reason": error_reason,
+            "retry_count": retry_count
+        }
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=payload_data)
+                resp.raise_for_status()
+                return resp.json()["dlq_item_id"]
+        except Exception as e:
+            self.logger.error(f"Failed to enqueue DLQ item: {e}")
+            return None
+
+    async def claim_dlq_item(self, worker_id: str, supported_types: List[str] = None) -> Optional[Dict]:
+        url = f"{self.base_url}/dlq/claim"
+        payload = {
+            "worker_id": worker_id,
+            "supported_types": supported_types
+        }
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=payload)
+                resp.raise_for_status()
+                return resp.json()
+        except Exception as e:
+            self.logger.error(f"Failed to claim DLQ item: {e}")
+            return None
+
+    async def update_dlq_item(self, item_id: str, status: str, result: str = None, retry_after: float = None, increment_retry: bool = False) -> bool:
+        url = f"{self.base_url}/dlq/{item_id}"
+        payload = {
+            "status": status,
+            "result": result,
+            "retry_after": retry_after,
+            "increment_retry": increment_retry
+        }
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.patch(url, json=payload)
+                resp.raise_for_status()
+                return True
+        except Exception as e:
+            self.logger.error(f"Failed to update DLQ item {item_id}: {e}")
+            return False
+
     def close(self):
         """No-op for HTTP client, but kept for interface compatibility."""
         pass
