@@ -8,6 +8,9 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+# Redirect all output to stderr to ensure it appears in Nomad/Docker logs
+exec 1>&2
+
 # Install system dependencies if running as root in a Debian-based system (e.g. Docker dev mode)
 if [ -f "/etc/debian_version" ] && [ "$(id -u)" -eq 0 ]; then
     if ! command -v git &> /dev/null || ! command -v pkg-config &> /dev/null; then
@@ -50,9 +53,16 @@ if [ -f "{{ pipecat_app_dir }}/pipecat.env" ]; then
     source "{{ pipecat_app_dir }}/pipecat.env"
 fi
 
-setup_venv() {
+try_create_venv() {
     local venv_path=$1
-    echo "Creating virtual environment at $venv_path..."
+    echo "Attempting to create venv at $venv_path..."
+
+    if [ -d "$venv_path" ]; then
+        echo "Removing existing venv at $venv_path..."
+        if ! rm -rf "$venv_path"; then
+             echo "Warning: Failed to remove $venv_path. Permission denied?"
+        fi
+    fi
 
     set +e
     python3 -m venv "$venv_path"
@@ -63,8 +73,35 @@ setup_venv() {
         echo "Failed to create venv at $venv_path"
         return 1
     fi
+    return 0
+}
 
-    source "$venv_path/bin/activate"
+# Try standard location first, then fallback
+VENV_DIR="{{ pipecat_app_dir }}/venv"
+FALLBACK_VENV_DIR="/opt/venv"
+EMERGENCY_VENV_DIR="/tmp/venv"
+
+ACTIVATE=""
+
+if [ -f "$VENV_DIR/bin/activate" ]; then
+    echo "Found existing venv at $VENV_DIR"
+    ACTIVATE="$VENV_DIR/bin/activate"
+    source "$ACTIVATE"
+else
+    echo "Virtual environment not found. Attempting to create..."
+
+    if try_create_venv "$VENV_DIR"; then
+        ACTIVATE="$VENV_DIR/bin/activate"
+    elif try_create_venv "$FALLBACK_VENV_DIR"; then
+        ACTIVATE="$FALLBACK_VENV_DIR/bin/activate"
+    elif try_create_venv "$EMERGENCY_VENV_DIR"; then
+        ACTIVATE="$EMERGENCY_VENV_DIR/bin/activate"
+    else
+        echo "Critical: Failed to create virtual environment in all locations."
+        exit 1
+    fi
+
+    source "$ACTIVATE"
 
     echo "Installing dependencies..."
     pip install --upgrade pip
@@ -72,26 +109,6 @@ setup_venv() {
 
     echo "Installing Playwright browsers..."
     playwright install
-}
-
-# Try standard location first, then fallback
-VENV_DIR="{{ pipecat_app_dir }}/venv"
-FALLBACK_VENV_DIR="/opt/venv"
-
-if [ -f "$VENV_DIR/bin/activate" ]; then
-    source "$VENV_DIR/bin/activate"
-else
-    echo "Virtual environment not found or broken at $VENV_DIR. Attempting to create..."
-    rm -rf "$VENV_DIR"
-
-    if ! setup_venv "$VENV_DIR"; then
-        echo "Retrying with fallback location: $FALLBACK_VENV_DIR"
-        rm -rf "$FALLBACK_VENV_DIR"
-        if ! setup_venv "$FALLBACK_VENV_DIR"; then
-             echo "Critical: Failed to create virtual environment in both $VENV_DIR and $FALLBACK_VENV_DIR"
-             exit 1
-        fi
-    fi
 fi
 
 echo "--- Starting pipecat-app: $(date) ---"
