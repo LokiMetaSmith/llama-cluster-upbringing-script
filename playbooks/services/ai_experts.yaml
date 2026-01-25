@@ -86,21 +86,21 @@
       ansible.builtin.include_tasks:
         file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
       vars:
-        pipecat_image_name: "pipecatapp"
+        pipecat_image_name: "localhost/pipecatapp"
         pipecat_image_tag: "expert"
       tags:
         - deploy-gpu-provider
         - deploy-expert
 
     - name: Verify pipecatapp Docker image exists
-      ansible.builtin.command: docker image inspect pipecatapp:expert
+      ansible.builtin.command: docker image inspect localhost/pipecatapp:expert
       changed_when: false
       register: pipecat_image_info
       tags:
         - deploy-expert
 
     - name: Verify pipecatapp Docker image is runnable
-      ansible.builtin.command: docker run --rm --entrypoint /bin/true pipecatapp:expert
+      ansible.builtin.command: docker run --rm --entrypoint /bin/true localhost/pipecatapp:expert
       changed_when: false
       tags:
         - deploy-expert
@@ -108,7 +108,7 @@
     - name: Set pipecat_image_id fact
       ansible.builtin.set_fact:
         #pipecat_image_id: "pipecatapp:local"
-        pipecat_image_id: "pipecatapp:expert"
+        pipecat_image_id: "localhost/pipecatapp:expert"
       tags:
         - deploy-expert
 
