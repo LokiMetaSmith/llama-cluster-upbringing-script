@@ -1,4 +1,11 @@
 - block:
+    - name: "Expert {{ expert_name }} : Ensure startup script exists (Dev Mode fallback)"
+      ansible.builtin.template:
+        src: "{{ inventory_dir }}/ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2"
+        dest: "{{ inventory_dir }}/pipecatapp/start_pipecat.sh"
+        mode: '0755'
+      delegate_to: localhost
+
     - name: "Expert {{ expert_name }} : Check if job exists"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job status expert-{{ expert_name }}"
