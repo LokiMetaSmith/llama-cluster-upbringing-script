@@ -8,13 +8,28 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Redirect all output to stderr to ensure it appears in Nomad/Docker logs
-exec 1>&2
+# Define log file path in the app directory (bind-mounted in dev mode)
+LOG_FILE="{{ pipecat_app_dir }}/startup.log"
+
+# Function to log message to both stderr and file
+log_msg() {
+    echo "$@" | tee -a "$LOG_FILE" >&2
+}
+
+# Redirect all subsequent output to the log file while preserving stderr
+# We use process substitution to tee everything to the log file.
+# Note: set -e might cause issues with process substitution if tee fails, but usually safe.
+# We'll use a simpler approach: explicitly logging key steps and redirecting the final python exec.
+
+# Ensure the log file is created/writable
+touch "$LOG_FILE" || echo "Warning: Could not create log file at $LOG_FILE" >&2
+
+log_msg "--- Starting pipecat-app wrapper: $(date) ---"
 
 # Install system dependencies if running as root in a Debian-based system (e.g. Docker dev mode)
 if [ -f "/etc/debian_version" ] && [ "$(id -u)" -eq 0 ]; then
     if ! command -v git &> /dev/null || ! command -v pkg-config &> /dev/null; then
-        echo "Installing system dependencies..."
+        log_msg "Installing system dependencies..."
         apt-get update && apt-get install -y --no-install-recommends \
             build-essential \
             python3-dev \
@@ -39,9 +54,9 @@ if [ -f "/etc/debian_version" ] && [ "$(id -u)" -eq 0 ]; then
             libswresample-dev \
             libswscale-dev \
             pkg-config \
-            git
+            git 2>&1 | tee -a "$LOG_FILE"
     else
-        echo "System dependencies appear to be installed."
+        log_msg "System dependencies appear to be installed."
     fi
 fi
 
@@ -50,27 +65,28 @@ cd "{{ pipecat_app_dir }}"
 
 # Source environment variables if present
 if [ -f "{{ pipecat_app_dir }}/pipecat.env" ]; then
+    log_msg "Sourcing pipecat.env"
     source "{{ pipecat_app_dir }}/pipecat.env"
 fi
 
 try_create_venv() {
     local venv_path=$1
-    echo "Attempting to create venv at $venv_path..."
+    log_msg "Attempting to create venv at $venv_path..."
 
     if [ -d "$venv_path" ]; then
-        echo "Removing existing venv at $venv_path..."
+        log_msg "Removing existing venv at $venv_path..."
         if ! rm -rf "$venv_path"; then
-             echo "Warning: Failed to remove $venv_path. Permission denied?"
+             log_msg "Warning: Failed to remove $venv_path. Permission denied?"
         fi
     fi
 
     set +e
-    python3 -m venv "$venv_path"
+    python3 -m venv "$venv_path" 2>&1 | tee -a "$LOG_FILE"
     local ret=$?
     set -e
 
     if [ $ret -ne 0 ]; then
-        echo "Failed to create venv at $venv_path"
+        log_msg "Failed to create venv at $venv_path"
         return 1
     fi
     return 0
@@ -89,17 +105,17 @@ if [ -d "$VENV_DIR" ] && [ -f "$VENV_DIR/bin/python3" ]; then
     VENV_VER=$("$VENV_DIR/bin/python3" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "invalid")
 
     if [ "$CURRENT_VER" != "$VENV_VER" ]; then
-        echo "Virtual environment version mismatch (System: $CURRENT_VER, Venv: $VENV_VER). Recreating..."
+        log_msg "Virtual environment version mismatch (System: $CURRENT_VER, Venv: $VENV_VER). Recreating..."
         rm -rf "$VENV_DIR"
     fi
 fi
 
 if [ -f "$VENV_DIR/bin/activate" ]; then
-    echo "Found existing venv at $VENV_DIR"
+    log_msg "Found existing venv at $VENV_DIR"
     ACTIVATE="$VENV_DIR/bin/activate"
     source "$ACTIVATE"
 else
-    echo "Virtual environment not found. Attempting to create..."
+    log_msg "Virtual environment not found. Attempting to create..."
 
     if try_create_venv "$VENV_DIR"; then
         ACTIVATE="$VENV_DIR/bin/activate"
@@ -108,32 +124,31 @@ else
     elif try_create_venv "$EMERGENCY_VENV_DIR"; then
         ACTIVATE="$EMERGENCY_VENV_DIR/bin/activate"
     else
-        echo "Critical: Failed to create virtual environment in all locations."
+        log_msg "Critical: Failed to create virtual environment in all locations."
         exit 1
     fi
 
     source "$ACTIVATE"
 fi
 
-echo "Installing dependencies..."
-pip install --upgrade pip
-pip install -r requirements.txt
+log_msg "Installing dependencies..."
+pip install --upgrade pip 2>&1 | tee -a "$LOG_FILE"
+pip install -r requirements.txt 2>&1 | tee -a "$LOG_FILE"
 
-echo "Installing Playwright browsers..."
-playwright install
+log_msg "Installing Playwright browsers..."
+playwright install 2>&1 | tee -a "$LOG_FILE"
 
-echo "--- Starting pipecat-app: $(date) ---"
+log_msg "--- Launching pipecat-app: $(date) ---"
 
 # Add parent directory of app to PYTHONPATH so that 'import pipecatapp' works from within submodules
 export PYTHONPATH=$PYTHONPATH:$(dirname "{{ pipecat_app_dir }}")
 
 {% if pipecat_deployment_style == 'raw_exec' %}
-# For raw_exec, we manage our own log file.
-LOG_FILE="{{ pipecat_log_file }}"
-touch "$LOG_FILE"
-exec "{{ pipecat_app_dir }}/venv/bin/python3" "{{ pipecat_app_dir }}/app.py" >> "$LOG_FILE" 2>&1
+# For raw_exec, we explicitly manage our own log file via redirection.
+exec "{{ pipecat_app_dir }}/venv/bin/python3" -u "{{ pipecat_app_dir }}/app.py" >> "$LOG_FILE" 2>&1
 {% else %}
-# For Docker, we log to stdout/stderr and let the container runtime handle it.
+# For Docker, we want logs to stdout/stderr (for `docker logs`) AND to the file (for debugging).
+# We use process substitution to pipe to tee.
 # Note: We rely on the active venv here.
-exec python3 "{{ pipecat_app_dir }}/app.py"
+exec python3 -u "{{ pipecat_app_dir }}/app.py" 2>&1 | tee -a "$LOG_FILE"
 {% endif %}
