@@ -93,6 +93,20 @@
         - deploy-gpu-provider
         - deploy-expert
 
+    - name: Ensure pipecatapp directory exists for bind mount
+      ansible.builtin.file:
+        path: "{{ inventory_dir }}/pipecatapp"
+        state: directory
+        mode: '0755'
+      tags:
+        - deploy-expert
+
+    - name: Explicitly tag pipecatapp:expert to refresh metadata
+      ansible.builtin.command: docker tag pipecatapp:expert pipecatapp:expert
+      changed_when: false
+      tags:
+        - deploy-expert
+
     - name: Verify pipecatapp Docker image exists
       ansible.builtin.command: docker image inspect pipecatapp:expert
       changed_when: false
