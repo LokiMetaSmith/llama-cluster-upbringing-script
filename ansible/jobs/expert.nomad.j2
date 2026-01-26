@@ -27,7 +27,6 @@ variable "rpc_pool_job_name" {
   {% set _ = service_list.append("rpc-" ~ (model.filename | regex_replace('[^a-zA-Z0-9-]', '-')) ~ "-provider") %}
 {% endfor %}
 
-
 job "{{ job_name }}" {
   datacenters = ["dc1"]
 
@@ -62,19 +61,6 @@ job "{{ job_name }}" {
       auto_revert = true
     }
 
-    migrate {
-      max_parallel = 1
-      health_check = "checks"
-      healthy_deadline = "5m"
-    }
-
-    reschedule {
-      attempts  = 3
-      interval  = "5m"
-      delay     = "30s"
-      unlimited = false
-    }
-
     network {
       mode = "host"
       port "http" {}
@@ -88,8 +74,14 @@ job "{{ job_name }}" {
       check {
         type     = "http"
         path     = "/health"
-        interval = "10s"
+        interval = "15s"
         timeout  = "10s"
+        
+        # Give the app 90 seconds to load heavy models before restarting
+        check_restart {
+          limit = 3
+          grace = "90s"
+        }
       }
     }
 
@@ -107,12 +99,20 @@ job "{{ job_name }}" {
         ports = ["http"]
         command = "/bin/bash"
         args = ["-c", "if [ -f /opt/pipecatapp/start_pipecat.sh ]; then exec /opt/pipecatapp/start_pipecat.sh; else exec /opt/start_pipecat.sh; fi"]
+        
         mounts = [
           {
             type = "bind"
             target = "/opt/pipecatapp"
             source = "{{ pipecat_app_mount_source | default(pipecat_app_dir) }}"
             readonly = false
+          },
+          # FIX: Mount the models directory so the app can find Whisper and Embeddings
+          {
+            type = "bind"
+            target = "/opt/nomad/models"
+            source = "{{ nomad_models_dir | default('/home/loki/models') }}"
+            readonly = true
           }
         ]
       }
@@ -120,7 +120,6 @@ job "{{ job_name }}" {
       env {
         STT_SERVICE = "faster-whisper"
         WEB_PORT = "${NOMAD_PORT_http}"
-        # Comma-separated list of services for failover (primary, backup, etc.)
         LLAMA_API_SERVICE_NAME = "{{ service_list | join(',') }}"
         PIPECAT_API_KEYS = "{{ pipecat_api_keys | default('') }}"
 
