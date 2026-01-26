@@ -424,6 +424,7 @@ class YOLOv8Detector(FrameProcessor):
         self.last_detected_objects = set()
         self.last_processed_time = 0
         self.is_processing = False
+        self.connection_check_callback = None
 
         try:
             self.model = YOLO(model_path)
@@ -432,11 +433,20 @@ class YOLOv8Detector(FrameProcessor):
             self.model = None
             self.latest_observation = "Vision system unavailable."
 
-    def _run_inference(self, image):
+    def set_connection_check_callback(self, callback):
+        """Sets a callback to check if there are active connections.
+
+        Args:
+            callback (callable): A function that returns True if debug images should be generated.
+        """
+        self.connection_check_callback = callback
+
+    def _run_inference(self, image, generate_debug_image=False):
         """Helper to run inference in a separate thread.
 
         Args:
             image: The image data to process.
+            generate_debug_image (bool): Whether to generate a base64 debug image.
 
         Returns:
             tuple: (set of detected object names, base64_encoded_jpeg_string)
@@ -446,17 +456,18 @@ class YOLOv8Detector(FrameProcessor):
 
         # Generate visual debug frame
         img_base64 = None
-        try:
-            # Plot returns a numpy array (BGR)
-            annotated_frame = results[0].plot()
-            # Convert BGR to RGB
-            rgb_frame = annotated_frame[..., ::-1]
-            pil_img = Image.fromarray(rgb_frame)
-            buffered = io.BytesIO()
-            pil_img.save(buffered, format="JPEG", quality=70)
-            img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-        except Exception as e:
-            logging.error(f"Error generating visual debug frame: {e}")
+        if generate_debug_image:
+            try:
+                # Plot returns a numpy array (BGR)
+                annotated_frame = results[0].plot()
+                # Convert BGR to RGB
+                rgb_frame = annotated_frame[..., ::-1]
+                pil_img = Image.fromarray(rgb_frame)
+                buffered = io.BytesIO()
+                pil_img.save(buffered, format="JPEG", quality=70)
+                img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            except Exception as e:
+                logging.error(f"Error generating visual debug frame: {e}")
 
         return detected_objects, img_base64
 
@@ -486,9 +497,20 @@ class YOLOv8Detector(FrameProcessor):
         self.last_processed_time = current_time
 
         try:
+            # Bolt ⚡ Optimization: Check if anyone is watching to avoid expensive image encoding
+            generate_debug_image = True
+            if self.connection_check_callback:
+                try:
+                    generate_debug_image = self.connection_check_callback()
+                except Exception as e:
+                    logging.warning(f"Connection check callback failed: {e}")
+                    generate_debug_image = True
+
             loop = asyncio.get_running_loop()
             # Bolt ⚡ Optimization: Run blocking inference in a thread
-            detected_objects, img_base64 = await loop.run_in_executor(None, self._run_inference, frame.image)
+            detected_objects, img_base64 = await loop.run_in_executor(
+                None, self._run_inference, frame.image, generate_debug_image
+            )
 
             # Broadcast visual debug frame
             if img_base64:
@@ -1098,7 +1120,9 @@ async def main():
     runner = PipelineRunner()
 
     vision_detector = initialize_vision_detector(app_config)
-
+    # Bolt ⚡ Optimization: Inject callback to check for active connections
+    if isinstance(vision_detector, YOLOv8Detector):
+        vision_detector.set_connection_check_callback(lambda: len(web_server.manager.active_connections) > 0)
 
     if app_config.get("debug_mode", False):
         logging.getLogger().setLevel(logging.DEBUG)
