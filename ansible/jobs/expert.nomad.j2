@@ -111,7 +111,7 @@ job "{{ job_name }}" {
           {
             type = "bind"
             target = "/opt/pipecatapp"
-            source = "{{ pipecat_app_dir }}"
+            source = "{{ pipecat_app_mount_source | default(pipecat_app_dir) }}"
             readonly = false
           }
         ]
