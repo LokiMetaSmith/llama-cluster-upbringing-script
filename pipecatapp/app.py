@@ -147,7 +147,9 @@ class UILogger(FrameProcessor):
             direction: The direction of the frame in the pipeline.
         """
         if isinstance(frame, (TranscriptionFrame, TextFrame)):
-            await web_server.manager.broadcast(json.dumps({"type": self.sender, "data": frame.text}))
+            # Security Fix: Sentinel - Redact sensitive information
+            redacted_text = redact_sensitive_data(frame.text)
+            await web_server.manager.broadcast(json.dumps({"type": self.sender, "data": redacted_text}))
         await self.push_frame(frame, direction)
 
 class BenchmarkCollector(FrameProcessor):
