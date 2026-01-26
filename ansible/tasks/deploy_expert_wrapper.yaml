@@ -132,10 +132,26 @@
         var: expert_logs_stderr.stdout
       when: expert_logs_stderr.stdout is defined
 
+    # --- Debugging via local file (fix for missing logs) ---
+    - name: "Expert {{ expert_name }} : Read local startup.log"
+      ansible.builtin.command: "cat {{ pipecat_app_mount_source }}/startup.log"
+      register: expert_local_log
+      failed_when: false
+      changed_when: false
+      delegate_to: localhost
+
+    - name: "Expert {{ expert_name }} : Display local startup.log"
+      ansible.builtin.debug:
+        var: expert_local_log.stdout
+      when: expert_local_log.stdout is defined
+
     - name: "Expert {{ expert_name }} : Fail after debugging"
       ansible.builtin.fail:
         msg: |
           Expert {{ expert_name }} job failed to start.
+
+          --- LOCAL STARTUP LOG (from {{ pipecat_app_mount_source }}/startup.log) ---
+          {{ (expert_local_log | default({})).stdout | default('No local log found') }}
 
           --- FAILURE ANALYSIS ---
           {{ (expert_allocs_analysis | default({})).stdout | default('No analysis available') }}
