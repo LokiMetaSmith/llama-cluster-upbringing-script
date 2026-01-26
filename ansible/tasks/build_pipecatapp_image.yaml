@@ -12,7 +12,6 @@
     tag: "{{ pipecat_image_tag | default('local') }}"
     build:
       path: "{{ inventory_dir }}/pipecatapp"
-      nocache: true
     source: build
     force_source: true
   become: yes
