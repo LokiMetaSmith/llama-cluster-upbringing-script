@@ -111,7 +111,7 @@ job "{{ job_name }}" {
           {
             type = "bind"
             target = "/opt/pipecatapp"
-            source = "{{ pipecat_app_dir }}"
+            source = "{{ inventory_dir }}/pipecatapp"
             readonly = false
           }
         ]
