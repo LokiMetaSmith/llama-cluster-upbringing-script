@@ -197,10 +197,37 @@
 
         .btn-deny { border-color: #ff6347; color: #ff6347; }
         .btn-deny:hover, .btn-deny:focus { background-color: #ff6347; color: #000; }
+
+        /* Palette UX: Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid #444;
+            font-size: 0.6em; /* Relative to H1 */
+            vertical-align: middle;
+            margin-left: 15px;
+            background-color: #000;
+            transition: all 0.3s ease;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #444;
+            transition: background-color 0.3s ease;
+        }
+        .status-badge.connected { border-color: #00ff00; color: #00ff00; }
+        .status-badge.connected .status-dot { background-color: #00ff00; box-shadow: 0 0 5px #00ff00; }
+
+        .status-badge.disconnected { border-color: #ff6347; color: #ff6347; }
+        .status-badge.disconnected .status-dot { background-color: #ff6347; }
     </style>
 </head>
 <body>
-    <h1>Mission Control <span id="status-light" role="status" aria-label="Connection Status: Disconnected" title="Connection Status: Disconnected"></span></h1>
+    <h1>Mission Control <span id="connection-status" class="status-badge disconnected" role="status" aria-live="polite"><span class="status-dot"></span><span class="status-text">Disconnected</span></span></h1>
     <div id="controls">
         <div class="dropdown" id="admin-ui-dropdown">
             <button class="dropbtn" id="admin-ui-btn" aria-haspopup="true" aria-expanded="false">Admin UIs</button>
@@ -208,7 +235,7 @@
                 <!-- Links will be populated by JavaScript -->
             </div>
         </div>
-        <button id="test-and-evaluation-btn">Test and Evaluation</button>
+        <button id="system-status-btn">System Status</button>
         <input type="text" id="save-name-input" placeholder="Enter state name..." aria-label="Save State Name" title="Enter a name for the memory snapshot" autocomplete="off">
         <button id="save-state-btn" title="Save current state to memory">Save State</button>
         <button id="load-state-btn" title="Load state from memory">Load State</button>
