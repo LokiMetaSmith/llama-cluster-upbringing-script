@@ -52,8 +52,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const saveStateBtn = document.getElementById("save-state-btn");
     const loadStateBtn = document.getElementById("load-state-btn");
     const clearTerminalBtn = document.getElementById("clear-terminal-btn");
-    const statusLight = document.getElementById("status-light");
-    const testAndEvaluationBtn = document.getElementById("test-and-evaluation-btn");
+    const statusLight = document.getElementById("connection-status");
+    const systemStatusBtn = document.getElementById("system-status-btn");
     const statusDisplay = document.getElementById("status-display");
     const messageInput = document.getElementById("message-input");
     const sendBtn = document.getElementById("send-btn");
@@ -362,7 +362,9 @@ document.addEventListener("DOMContentLoaded", function() {
             });
     }
 
-    testAndEvaluationBtn.onclick = updateStatus;
+    if (systemStatusBtn) {
+        systemStatusBtn.onclick = updateStatus;
+    }
 
     const robotArt = document.getElementById("robot-art");
 
@@ -443,9 +445,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
     ws.onopen = function() {
         logToTerminal("--- Connection established with Agent ---");
-        statusLight.style.backgroundColor = "#0f0"; // Green
-        statusLight.setAttribute("aria-label", "Connection Status: Connected");
-        statusLight.setAttribute("title", "Connection Status: Connected");
+        if (statusLight) {
+            statusLight.classList.remove("disconnected");
+            statusLight.classList.add("connected");
+            const statusText = statusLight.querySelector(".status-text");
+            if (statusText) statusText.textContent = "Connected";
+            statusLight.setAttribute("aria-label", "Connection Status: Connected");
+            statusLight.setAttribute("title", "Connection Status: Connected");
+        }
         updateStatus();
         startIdleAnimation();
     };
@@ -516,9 +523,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
     ws.onclose = function() {
         logToTerminal("--- Connection lost with Agent ---", "error");
-        statusLight.style.backgroundColor = "#f00"; // Red
-        statusLight.setAttribute("aria-label", "Connection Status: Disconnected");
-        statusLight.setAttribute("title", "Connection Status: Disconnected");
+        if (statusLight) {
+            statusLight.classList.remove("connected");
+            statusLight.classList.add("disconnected");
+            const statusText = statusLight.querySelector(".status-text");
+            if (statusText) statusText.textContent = "Disconnected";
+            statusLight.setAttribute("aria-label", "Connection Status: Disconnected");
+            statusLight.setAttribute("title", "Connection Status: Disconnected");
+        }
         stopAllAnimations();
     };
 
