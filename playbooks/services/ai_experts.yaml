@@ -21,6 +21,7 @@
     all_models: "{{ expert_models.values() | flatten }}"
     unique_models: "{{ all_models | unique(attribute='filename') }}"
     pipecat_deployment_style: "docker"
+    pipecat_app_mount_source: "{{ inventory_dir }}/pipecatapp"
 
   tasks:
     - name: Check for benchmark log file
