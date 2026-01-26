@@ -8,8 +8,17 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+# Detect execution environment and set APP_DIR
+# If running inside a Docker container (indicated by /.dockerenv), use the container path.
+# Otherwise, use the Ansible variable (host path).
+if [ -f /.dockerenv ]; then
+    APP_DIR="/opt/pipecatapp"
+else
+    APP_DIR="{{ pipecat_app_dir }}"
+fi
+
 # Define log file path in the app directory (bind-mounted in dev mode)
-LOG_FILE="{{ pipecat_app_dir }}/startup.log"
+LOG_FILE="$APP_DIR/startup.log"
 
 # Function to log message to both stderr and file
 log_msg() {
@@ -61,12 +70,12 @@ if [ -f "/etc/debian_version" ] && [ "$(id -u)" -eq 0 ]; then
 fi
 
 # Change to the application directory
-cd "{{ pipecat_app_dir }}"
+cd "$APP_DIR"
 
 # Source environment variables if present
-if [ -f "{{ pipecat_app_dir }}/pipecat.env" ]; then
+if [ -f "$APP_DIR/pipecat.env" ]; then
     log_msg "Sourcing pipecat.env"
-    source "{{ pipecat_app_dir }}/pipecat.env"
+    source "$APP_DIR/pipecat.env"
 fi
 
 try_create_venv() {
@@ -93,7 +102,7 @@ try_create_venv() {
 }
 
 # Try standard location first, then fallback
-VENV_DIR="{{ pipecat_app_dir }}/venv"
+VENV_DIR="$APP_DIR/venv"
 FALLBACK_VENV_DIR="/opt/venv"
 EMERGENCY_VENV_DIR="/tmp/venv"
 
@@ -141,14 +150,14 @@ playwright install 2>&1 | tee -a "$LOG_FILE"
 log_msg "--- Launching pipecat-app: $(date) ---"
 
 # Add parent directory of app to PYTHONPATH so that 'import pipecatapp' works from within submodules
-export PYTHONPATH=$PYTHONPATH:$(dirname "{{ pipecat_app_dir }}")
+export PYTHONPATH=$PYTHONPATH:$(dirname "$APP_DIR")
 
 {% if pipecat_deployment_style == 'raw_exec' %}
 # For raw_exec, we explicitly manage our own log file via redirection.
-exec "{{ pipecat_app_dir }}/venv/bin/python3" -u "{{ pipecat_app_dir }}/app.py" >> "$LOG_FILE" 2>&1
+exec "$APP_DIR/venv/bin/python3" -u "$APP_DIR/app.py" >> "$LOG_FILE" 2>&1
 {% else %}
 # For Docker, we want logs to stdout/stderr (for `docker logs`) AND to the file (for debugging).
 # We use process substitution to pipe to tee.
 # Note: We rely on the active venv here.
-exec python3 -u "{{ pipecat_app_dir }}/app.py" 2>&1 | tee -a "$LOG_FILE"
+exec python3 -u "$APP_DIR/app.py" 2>&1 | tee -a "$LOG_FILE"
 {% endif %}
