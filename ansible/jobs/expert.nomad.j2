@@ -106,12 +106,12 @@ job "{{ job_name }}" {
         force_pull = false
         ports = ["http"]
         command = "/bin/bash"
-        args = ["-c", "if [ -f /opt/start_pipecat.sh ]; then exec /opt/start_pipecat.sh; else exec /opt/pipecatapp/start_pipecat.sh; fi"]
+        args = ["-c", "if [ -f /opt/pipecatapp/start_pipecat.sh ]; then exec /opt/pipecatapp/start_pipecat.sh; else exec /opt/start_pipecat.sh; fi"]
         mounts = [
           {
             type = "bind"
             target = "/opt/pipecatapp"
-            source = "{{ pipecat_app_dir }}"
+            source = "{{ pipecat_app_mount_source | default(pipecat_app_dir) }}"
             readonly = false
           }
         ]

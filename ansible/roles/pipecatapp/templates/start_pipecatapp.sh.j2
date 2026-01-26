@@ -83,6 +83,17 @@ EMERGENCY_VENV_DIR="/tmp/venv"
 
 ACTIVATE=""
 
+# Check if existing venv is compatible with current python version
+if [ -d "$VENV_DIR" ] && [ -f "$VENV_DIR/bin/python3" ]; then
+    CURRENT_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+    VENV_VER=$("$VENV_DIR/bin/python3" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "invalid")
+
+    if [ "$CURRENT_VER" != "$VENV_VER" ]; then
+        echo "Virtual environment version mismatch (System: $CURRENT_VER, Venv: $VENV_VER). Recreating..."
+        rm -rf "$VENV_DIR"
+    fi
+fi
+
 if [ -f "$VENV_DIR/bin/activate" ]; then
     echo "Found existing venv at $VENV_DIR"
     ACTIVATE="$VENV_DIR/bin/activate"
