@@ -105,7 +105,8 @@ job "{{ job_name }}" {
         image = "{{ pipecat_image_id }}"
         force_pull = false
         ports = ["http"]
-        command = "/opt/pipecatapp/start_pipecat.sh"
+        command = "/bin/bash"
+        args = ["-c", "if [ -f /opt/start_pipecat.sh ]; then exec /opt/start_pipecat.sh; else exec /opt/pipecatapp/start_pipecat.sh; fi"]
         mounts = [
           {
             type = "bind"
