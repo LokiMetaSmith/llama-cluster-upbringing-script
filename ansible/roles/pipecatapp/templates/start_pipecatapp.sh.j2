@@ -102,14 +102,14 @@ else
     fi
 
     source "$ACTIVATE"
-
-    echo "Installing dependencies..."
-    pip install --upgrade pip
-    pip install -r requirements.txt
-
-    echo "Installing Playwright browsers..."
-    playwright install
 fi
+
+echo "Installing dependencies..."
+pip install --upgrade pip
+pip install -r requirements.txt
+
+echo "Installing Playwright browsers..."
+playwright install
 
 echo "--- Starting pipecat-app: $(date) ---"
 
