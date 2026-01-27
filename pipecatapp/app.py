@@ -11,7 +11,7 @@ import io
 import wave
 import struct
 import base64
-from PIL import Image
+import cv2
 import inspect
 import threading
 
@@ -462,12 +462,12 @@ class YOLOv8Detector(FrameProcessor):
             try:
                 # Plot returns a numpy array (BGR)
                 annotated_frame = results[0].plot()
-                # Convert BGR to RGB
-                rgb_frame = annotated_frame[..., ::-1]
-                pil_img = Image.fromarray(rgb_frame)
-                buffered = io.BytesIO()
-                pil_img.save(buffered, format="JPEG", quality=70)
-                img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+                # Bolt ⚡ Optimization: Use OpenCV for faster JPEG encoding (avoid PIL & extra allocations)
+                # annotated_frame is BGR. cv2.imencode expects BGR.
+                success, buffer = cv2.imencode('.jpg', annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+                if success:
+                    img_base64 = base64.b64encode(buffer).decode('utf-8')
             except Exception as e:
                 logging.error(f"Error generating visual debug frame: {e}")
 
