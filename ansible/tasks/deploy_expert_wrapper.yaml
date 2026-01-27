@@ -20,6 +20,8 @@
         cmd: "/usr/local/bin/nomad job stop -purge expert-{{ expert_name }}"
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: expert_purge_result
+      failed_when: false
       when: expert_job_status_check.rc == 0
       changed_when: true
 
@@ -155,6 +157,9 @@
 
           --- FAILURE ANALYSIS ---
           {{ (expert_allocs_analysis | default({})).stdout | default('No analysis available') }}
+
+          --- PURGE OUTPUT ---
+          {{ (expert_purge_result | default({})).stderr | default((expert_purge_result | default({})).stdout) | default('N/A') }}
 
           --- RUN ERROR (stderr) ---
           {{ (expert_job_run | default({})).stderr | default('N/A') }}
