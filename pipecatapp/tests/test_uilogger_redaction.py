@@ -17,6 +17,7 @@ sys.modules["piper.voice"] = MagicMock()
 sys.modules["consul"] = MagicMock()
 sys.modules["consul.aio"] = MagicMock()
 sys.modules["PIL"] = MagicMock() # Mock Pillow
+sys.modules["cv2"] = MagicMock() # Mock cv2
 sys.modules["requests"] = MagicMock() # Mock requests
 sys.modules["httpx"] = MagicMock() # Mock httpx
 sys.modules["numpy"] = MagicMock() # Mock numpy
