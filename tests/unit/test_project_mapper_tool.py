@@ -121,3 +121,15 @@ class TestProjectMapperTool:
         main_py_info = next(f for f in files if f["path"] == "main.py")
         assert main_py_info["type"] == "python"
         assert "os" in main_py_info["imports"]
+
+    def test_scan_path_traversal(self, tool, temp_project):
+        tool.root_dir = temp_project
+
+        # Try to scan parent directory
+        with pytest.raises(ValueError, match="Access denied"):
+            tool.scan("..")
+
+        # Try to scan absolute path outside root
+        outside_path = os.path.abspath(os.path.join(temp_project, ".."))
+        with pytest.raises(ValueError, match="Access denied"):
+            tool.scan(outside_path)

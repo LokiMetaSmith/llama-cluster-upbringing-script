@@ -28,7 +28,20 @@ class ProjectMapperTool:
         Scans the codebase starting from root_dir/sub_path.
         Returns a dictionary representing the file structure and imports.
         """
-        start_dir = os.path.normpath(os.path.join(self.root_dir, sub_path))
+        # Resolve absolute paths to prevent traversal
+        root_abs = os.path.abspath(self.root_dir)
+        start_dir = os.path.abspath(os.path.join(root_abs, sub_path))
+
+        # Security check: Ensure we don't break out of the allowed root
+        try:
+            common = os.path.commonpath([root_abs, start_dir])
+        except ValueError:
+            # Can happen on Windows if paths are on different drives
+            common = ""
+
+        if common != root_abs:
+            raise ValueError(f"Access denied: {sub_path} is outside the allowed root {self.root_dir}")
+
         project_map = {
             "root": start_dir,
             "files": [],
