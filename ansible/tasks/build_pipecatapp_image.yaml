@@ -15,5 +15,6 @@
       nocache: true
     source: build
     force_source: true
+  register: build_result
   become: yes
   when: pipecat_deployment_style == 'docker'
