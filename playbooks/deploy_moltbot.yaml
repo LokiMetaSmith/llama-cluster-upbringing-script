@@ -1,0 +1,6 @@
+---
+- name: Deploy Moltbot
+  hosts: controller_nodes
+  become: yes
+  roles:
+    - moltbot

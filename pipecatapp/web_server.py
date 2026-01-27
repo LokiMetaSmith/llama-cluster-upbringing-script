@@ -105,6 +105,10 @@ standard_limiter = RateLimiter(limit=100, window=60)
 approval_queue = asyncio.Queue()
 text_message_queue = asyncio.Queue()
 
+# Store for synchronous request responses
+# Structure: request_id -> {"event": asyncio.Event(), "response": str}
+sync_response_store = {}
+
 # Simple generic in-memory cache
 class AsyncCache:
     def __init__(self, ttl=30):
@@ -235,6 +239,42 @@ async def internal_chat(payload: InternalChatRequest, api_key: str = Security(ge
     data = payload.model_dump(mode="json")
     await text_message_queue.put(data)
     return JSONResponse(status_code=202, content={"message": "Request accepted"})
+
+
+@app.post("/internal/chat/sync", summary="Process Synchronous Internal Chat", description="Receives a chat message, processes it, and returns the response synchronously.", tags=["Internal"])
+async def internal_chat_sync(payload: InternalChatRequest, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """
+    Handles a synchronous chat message.
+    Waits for the agent to generate a response and returns it.
+    """
+    data = payload.model_dump(mode="json")
+    request_id = data.get("request_id")
+    if not request_id:
+        request_id = str(time.time())
+        data["request_id"] = request_id
+
+    # Mark as synchronous
+    data["is_sync"] = True
+
+    # Initialize sync state
+    event = asyncio.Event()
+    sync_response_store[request_id] = {"event": event, "response": None}
+
+    try:
+        await text_message_queue.put(data)
+
+        # Wait for response (timeout 60s)
+        try:
+            await asyncio.wait_for(event.wait(), timeout=60.0)
+            response_text = sync_response_store[request_id]["response"]
+            return JSONResponse(content={"response": response_text})
+        except asyncio.TimeoutError:
+            return JSONResponse(status_code=504, content={"message": "Agent timeout"})
+
+    finally:
+        # Cleanup
+        if request_id in sync_response_store:
+            del sync_response_store[request_id]
 
 
 @app.post("/internal/system_message", summary="Process System Alert", description="Receives a system alert (e.g., from Supervisor), injecting it into the agent's workflow.", tags=["Internal"])

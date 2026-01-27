@@ -1,0 +1,53 @@
+- name: Create Moltbot directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user | default('root') }}"
+    group: "{{ target_user | default('root') }}"
+  loop:
+    - /opt/moltbot
+    - /opt/moltbot/config
+    - /opt/moltbot/data
+    - /opt/moltbot/skills/pipecat
+    - /opt/moltbot/docker
+
+- name: Copy Moltbot Dockerfile
+  ansible.builtin.copy:
+    src: Dockerfile
+    dest: /opt/moltbot/docker/Dockerfile
+    mode: '0644'
+    owner: "{{ target_user | default('root') }}"
+    group: "{{ target_user | default('root') }}"
+
+- name: Build Moltbot Docker image
+  community.docker.docker_image:
+    name: moltbot
+    tag: latest
+    source: build
+    build:
+      path: /opt/moltbot/docker
+      pull: true
+    force_source: true
+
+- name: Copy Pipecat Skill
+  ansible.builtin.copy:
+    src: pipecat_skill.md
+    dest: /opt/moltbot/skills/pipecat/SKILL.md
+    mode: '0644'
+    owner: "{{ target_user | default('root') }}"
+    group: "{{ target_user | default('root') }}"
+
+- name: Template Moltbot Nomad job file
+  ansible.builtin.template:
+    src: moltbot.nomad.j2
+    dest: "{{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/moltbot.nomad"
+    mode: '0644'
+
+- name: Run Moltbot Nomad job
+  ansible.builtin.command:
+    cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/moltbot.nomad"
+  environment:
+    NOMAD_ADDR: "http://{{ cluster_ip | default('localhost') }}:4646"
+  register: moltbot_job_run
+  changed_when: true

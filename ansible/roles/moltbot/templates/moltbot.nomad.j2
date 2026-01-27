@@ -1,0 +1,68 @@
+job "moltbot" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "gateway" {
+    count = 1
+
+    network {
+      port "gateway" {
+        static = 18789
+      }
+    }
+
+    task "moltbot" {
+      driver = "docker"
+
+      config {
+        image = "moltbot:latest"
+        image_pull_timeout = "15m"
+        ports = ["gateway"]
+
+        # Mount config and workspace
+        mounts = [
+          {
+            type   = "bind"
+            source = "/opt/moltbot/config"
+            target = "/root/.clawdbot"
+          },
+          {
+            type   = "bind"
+            source = "/opt/moltbot/data"
+            target = "/root/clawd"
+          },
+          {
+            type   = "bind"
+            source = "/opt/moltbot/skills/pipecat"
+            target = "/root/clawd/skills/pipecat"
+          }
+        ]
+      }
+
+      env {
+        TERM = "xterm-256color"
+        # Enable Shell tool for integration
+        # Note: You may need to explicitly allow the shell tool in ~/.clawdbot/moltbot.json
+        # or via MOLTBOT_TOOL_POLICIES env vars if supported.
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+
+      service {
+        name = "moltbot"
+        port = "gateway"
+        tags = ["moltbot", "gateway"]
+
+        check {
+          name     = "alive"
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}
