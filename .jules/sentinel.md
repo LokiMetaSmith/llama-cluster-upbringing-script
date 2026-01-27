@@ -22,3 +22,8 @@
 **Vulnerability:** `WebBrowserTool` allowed navigating to arbitrary URLs, including internal services (localhost, 127.0.0.1) and Cloud Metadata services (169.254.169.254), enabling SSRF.
 **Learning:** Tools that fetch URLs must treat user input as untrusted and strictly validate the destination, including resolving DNS to check for private IPs.
 **Prevention:** Implemented `_validate_url` to check scheme, block local hostnames, and resolve IPs to reject private/link-local ranges using `ipaddress`.
+
+## 2026-10-29 - Path Traversal in Project Mapper
+**Vulnerability:** `ProjectMapperTool` allowed arbitrary directory scanning via path traversal in `sub_path` argument, as it only used `os.path.normpath` without `os.path.commonpath`.
+**Learning:** `os.path.normpath` resolves `..` but does not enforce that the resulting path is within a base directory. Always verify the resolved path is a child of the intended root.
+**Prevention:** Resolve both root and target paths to absolute paths using `os.path.abspath`, then use `os.path.commonpath([root, target]) == root` to strictly enforce containment.
