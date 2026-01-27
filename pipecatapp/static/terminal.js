@@ -309,6 +309,26 @@ document.addEventListener("DOMContentLoaded", function() {
         sendBtn.addEventListener("click", sendMessage);
     }
 
+    // Palette UX Improvement: Render Status with Dismiss Button
+    function renderStatus(contentHtml) {
+        const headerHtml = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <strong style="color: #00ff00;">System Status</strong>
+                <button id="status-dismiss-btn" aria-label="Dismiss Status" title="Close" style="background: none; border: none; color: #888; cursor: pointer; font-size: 1.2em; padding: 0 5px;">&times;</button>
+            </div>
+        `;
+        statusDisplay.innerHTML = headerHtml + contentHtml;
+        statusDisplay.classList.remove('hidden');
+
+        const dismissBtn = document.getElementById("status-dismiss-btn");
+        if (dismissBtn) {
+            dismissBtn.onclick = function() {
+                statusDisplay.classList.add('hidden');
+                statusDisplay.innerHTML = '';
+            };
+        }
+    }
+
     function updateStatus(event) {
         // If triggered by event (button click), handle loading state
         const btn = (event instanceof Event) ? event.target : null;
@@ -321,7 +341,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 if (!statusText || statusText === "No active pipelines." || statusText === "MCP tool or runner not available." || statusText.startsWith("Agent not fully initialized")) {
                      // Security Fix: Escape status text
-                     statusDisplay.innerHTML = `<p>${escapeHtml(statusText)}</p>`;
+                     renderStatus(`<p>${escapeHtml(statusText)}</p>`);
                      return;
                 }
 
@@ -332,7 +352,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (lines.length === 0) {
                      // Fallback if parsing fails or format is unexpected
                      // Security Fix: Escape status text
-                     statusDisplay.innerHTML = `<pre>${escapeHtml(statusText)}</pre>`;
+                     renderStatus(`<pre>${escapeHtml(statusText)}</pre>`);
                      return;
                 }
 
@@ -351,10 +371,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
 
                 html += '</tbody></table>';
-                statusDisplay.innerHTML = html;
+                renderStatus(html);
             })
             .catch(error => {
-                statusDisplay.innerText = `Error fetching status: ${error}`;
+                renderStatus(`<p class="error">Error fetching status: ${escapeHtml(error)}</p>`);
                 console.error("Error fetching status:", error);
             })
             .finally(() => {
