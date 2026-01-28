@@ -30,6 +30,14 @@
       pull: true
     force_source: true
 
+- name: Tag and push moltbot image to local registry
+  community.docker.docker_image:
+    name: moltbot
+    tag: latest
+    repository: localhost:5001/moltbot
+    push: true
+    source: local
+
 - name: Copy Pipecat Skill
   ansible.builtin.copy:
     src: pipecat_skill.md

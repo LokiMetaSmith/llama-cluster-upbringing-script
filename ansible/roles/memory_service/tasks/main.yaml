@@ -29,6 +29,14 @@
     source: build
     force_source: true
 
+- name: Tag and push memory_service image to local registry
+  community.docker.docker_image:
+    name: memory_service
+    tag: local
+    repository: localhost:5001/memory_service
+    push: true
+    source: local
+
 - name: Template memory service Nomad job
   ansible.builtin.template:
     src: memory_service.nomad.j2

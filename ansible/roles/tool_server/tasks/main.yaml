@@ -68,6 +68,15 @@
   become: yes
   changed_when: false
 
+- name: "Tool Server : Tag and push tool-server image to local registry"
+  community.docker.docker_image:
+    name: tool-server
+    tag: local
+    repository: localhost:5001/tool-server
+    push: true
+    source: local
+  become: yes
+
 - name: "Tool Server : Verify Docker image exists"
   ansible.builtin.command:
     cmd: "docker images -q tool-server:local"

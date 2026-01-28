@@ -18,3 +18,13 @@
   register: build_result
   become: yes
   when: pipecat_deployment_style == 'docker'
+
+- name: Tag and push pipecatapp image to local registry
+  community.docker.docker_image:
+    name: "{{ pipecat_image_name | default('pipecatapp') }}"
+    tag: "{{ pipecat_image_tag | default('local') }}"
+    repository: "localhost:5001/{{ pipecat_image_name | default('pipecatapp') }}"
+    push: true
+    source: local
+  become: yes
+  when: pipecat_deployment_style == 'docker'
