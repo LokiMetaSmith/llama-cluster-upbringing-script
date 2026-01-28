@@ -18,11 +18,11 @@ from workflow.runner import ActiveWorkflows, OpenGates
 from workflow.history import WorkflowHistory
 from api_keys import get_api_key
 from security import sanitize_data
-try:
+if __package__:
     from .models import InternalChatRequest, SystemMessageRequest
     from .rate_limiter import RateLimiter
     from .net_utils import format_url
-except ImportError:
+else:
     from models import InternalChatRequest, SystemMessageRequest
     from rate_limiter import RateLimiter
     from net_utils import format_url
