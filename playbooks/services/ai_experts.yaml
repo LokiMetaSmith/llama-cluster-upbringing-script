@@ -1,6 +1,5 @@
 - name: Deploy Distributed AI Experts
   hosts: controller_nodes[0] # Run these commands from a single controller node
-  connection: local
   gather_facts: yes
   become: no
 
@@ -21,7 +20,7 @@
     all_models: "{{ expert_models.values() | flatten }}"
     unique_models: "{{ all_models | unique(attribute='filename') }}"
     pipecat_deployment_style: "docker"
-    pipecat_app_mount_source: "{{ inventory_dir }}/pipecatapp"
+    pipecat_app_mount_source: "{{ cluster_infra_dir }}/pipecatapp"
 
   tasks:
     - name: Check for benchmark log file
@@ -83,19 +82,34 @@
         - benchmark
         - deploy-gpu-provider
 
+    - name: Synchronize pipecatapp source to controller
+      ansible.posix.synchronize:
+        src: "{{ inventory_dir }}/pipecatapp/"
+        dest: "{{ cluster_infra_dir }}/pipecatapp/"
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=venv"
+          - "--exclude=__pycache__"
+          - "--exclude=*.pyc"
+          - "--exclude=start_pipecat.sh"
+        rsync_path: "sudo rsync"
+      tags:
+        - deploy-expert
+
     - name: Ensure pipecatapp Docker image is built
       ansible.builtin.include_tasks:
         file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
       vars:
         pipecat_image_name: "pipecatapp"
         pipecat_image_tag: "expert"
+        pipecat_build_dir: "{{ cluster_infra_dir }}/pipecatapp"
       tags:
         - deploy-gpu-provider
         - deploy-expert
 
     - name: Ensure pipecatapp directory exists for bind mount
       ansible.builtin.file:
-        path: "{{ inventory_dir }}/pipecatapp"
+        path: "{{ pipecat_app_mount_source }}"
         state: directory
         mode: '0755'
       tags:
