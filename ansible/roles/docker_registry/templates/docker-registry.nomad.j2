@@ -1,0 +1,51 @@
+job "docker-registry" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "registry" {
+    count = 1
+
+    constraint {
+      attribute = "${meta.node_type}"
+      value     = "controller"
+    }
+
+    network {
+      port "http" {
+        to = 5000
+        static = {{ docker_registry_port }}
+      }
+    }
+
+    service {
+      name = "docker-registry"
+      port = "http"
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.registry.rule=Host(`registry.service.consul`)",
+      ]
+      check {
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "registry" {
+      driver = "docker"
+
+      config {
+        image = "registry:2"
+        ports = ["http"]
+        volumes = [
+          "{{ nomad_volumes_dir }}/registry:/var/lib/registry"
+        ]
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+  }
+}

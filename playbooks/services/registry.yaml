@@ -1,0 +1,12 @@
+- name: Deploy Docker Registry
+  hosts: controller_nodes
+  remote_user: "{{ target_user }}"
+  become: yes
+
+  tags:
+    - registry
+
+  roles:
+    - role: docker_registry
+      tags:
+        - registry

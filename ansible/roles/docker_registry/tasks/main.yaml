@@ -1,0 +1,20 @@
+- name: Ensure Registry data directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/registry"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Template docker-registry job
+  ansible.builtin.template:
+    src: docker-registry.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/docker-registry.nomad"
+  become: yes
+
+- name: Run docker-registry job
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/docker-registry.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+  register: nomad_job_run
+  changed_when: "'Job registration successful' in nomad_job_run.stdout"
