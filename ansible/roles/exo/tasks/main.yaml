@@ -40,6 +40,15 @@
     force_source: true # Ensure we rebuild if files change
   when: exo_enable
 
+- name: Tag and push Exo image to local registry
+  community.docker.docker_image:
+    name: "{{ exo_docker_image_name }}"
+    repository: "localhost:5001/{{ exo_docker_image_name }}"
+    push: true
+    source: local
+  become: yes
+  when: exo_enable
+
 - name: Cleanup build directory
   ansible.builtin.file:
     path: /tmp/exo_build

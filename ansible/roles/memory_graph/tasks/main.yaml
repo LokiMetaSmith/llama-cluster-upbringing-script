@@ -8,13 +8,20 @@
     group: root
 
 - name: Build memory-graph service image
-  docker_image:
+  community.docker.docker_image:
     name: "memory-graph-service:latest"
     build:
       path: "{{ playbook_dir }}/../../pipecatapp/memory_graph_service"
       pull: yes
     source: build
     force_source: true
+
+- name: Tag and push memory-graph service image to local registry
+  community.docker.docker_image:
+    name: "memory-graph-service:latest"
+    repository: localhost:5001/memory-graph-service
+    push: true
+    source: local
 
 - name: Deploy memory-graph Nomad job
   community.general.nomad_job:
