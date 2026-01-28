@@ -30,6 +30,7 @@ from tools.remote_tool_proxy import RemoteToolProxy
 from tools.vr_tool import VRTool
 from tools.experiment_tool import ExperimentTool
 from tools.submit_solution_tool import SubmitSolutionTool
+from tools.container_registry_tool import ContainerRegistryTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -78,6 +79,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "vr": VRTool(),
         "experiment": ExperimentTool(),
         "submit_solution": SubmitSolutionTool(),
+        "container_registry": ContainerRegistryTool(),
     }
 
     if config.get("use_summarizer", False) and twin_service:
