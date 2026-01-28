@@ -37,6 +37,10 @@
           ansible.builtin.command: docker tag pipecatapp:expert pipecatapp:expert
       when: pipecat_image_check.rc != 0
 
+    - name: "Expert {{ expert_name }} : Refresh pipecatapp:expert tag for Nomad"
+      ansible.builtin.command: docker tag pipecatapp:expert pipecatapp:expert
+      changed_when: false
+
     - name: "Expert {{ expert_name }} : Ensure startup script exists (Dev Mode fallback)"
       ansible.builtin.template:
         src: "{{ inventory_dir }}/ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2"
