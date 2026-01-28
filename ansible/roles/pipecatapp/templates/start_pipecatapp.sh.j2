@@ -78,6 +78,9 @@ if [ -f "$APP_DIR/pipecat.env" ]; then
     source "$APP_DIR/pipecat.env"
 fi
 
+# Fix for Ultralytics permission issue
+export YOLO_CONFIG_DIR="/tmp/Ultralytics"
+
 try_create_venv() {
     local venv_path=$1
     log_msg "Attempting to create venv at $venv_path..."
