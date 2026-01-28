@@ -13,8 +13,10 @@ set -e
 # Otherwise, use the Ansible variable (host path).
 if [ -f /.dockerenv ]; then
     APP_DIR="/opt/pipecatapp"
+    IS_DOCKER=1
 else
     APP_DIR="{{ pipecat_app_dir }}"
+    IS_DOCKER=0
 fi
 
 # Define log file path in the app directory (bind-mounted in dev mode)
@@ -106,8 +108,7 @@ try_create_venv() {
 
 # Try standard location first, then fallback
 VENV_DIR="$APP_DIR/venv"
-FALLBACK_VENV_DIR="/opt/venv"
-EMERGENCY_VENV_DIR="/tmp/venv"
+CONTAINER_VENV_DIR="/opt/pipecat_venv"
 
 ACTIVATE=""
 
@@ -127,25 +128,26 @@ check_venv_valid() {
     return 1
 }
 
+# 1. Try local/development venv (bind mount location)
 if check_venv_valid "$VENV_DIR"; then
-    log_msg "Found existing venv at $VENV_DIR"
+    log_msg "Found existing valid venv at $VENV_DIR"
     ACTIVATE="$VENV_DIR/bin/activate"
     source "$ACTIVATE"
-elif check_venv_valid "$FALLBACK_VENV_DIR"; then
-    log_msg "Found valid fallback venv at $FALLBACK_VENV_DIR. Using it."
-    ACTIVATE="$FALLBACK_VENV_DIR/bin/activate"
+
+# 2. If inside Docker, try the baked-in container venv
+elif [ "$IS_DOCKER" -eq 1 ] && check_venv_valid "$CONTAINER_VENV_DIR"; then
+    log_msg "Found valid container venv at $CONTAINER_VENV_DIR. Using it."
+    ACTIVATE="$CONTAINER_VENV_DIR/bin/activate"
     source "$ACTIVATE"
+
+# 3. Last resort: Create a new venv in the local directory
 else
-    log_msg "Virtual environment not found. Attempting to create..."
+    log_msg "Virtual environment not found or invalid. Attempting to create at $VENV_DIR..."
 
     if try_create_venv "$VENV_DIR"; then
         ACTIVATE="$VENV_DIR/bin/activate"
-    elif try_create_venv "$FALLBACK_VENV_DIR"; then
-        ACTIVATE="$FALLBACK_VENV_DIR/bin/activate"
-    elif try_create_venv "$EMERGENCY_VENV_DIR"; then
-        ACTIVATE="$EMERGENCY_VENV_DIR/bin/activate"
     else
-        log_msg "Critical: Failed to create virtual environment in all locations."
+        log_msg "Critical: Failed to create virtual environment."
         exit 1
     fi
 
