@@ -38,8 +38,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment
-RUN python3 -m venv /opt/pipecatapp/venv
-ENV PATH="/opt/pipecatapp/venv/bin:$PATH"
+# We use a specific name to avoid conflicts with generic /opt/venv
+RUN python3 -m venv /opt/pipecat_venv
+ENV PATH="/opt/pipecat_venv/bin:$PATH"
 
 # Install Python packages
 COPY requirements.txt .
