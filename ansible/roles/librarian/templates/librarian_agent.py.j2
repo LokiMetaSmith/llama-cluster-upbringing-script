@@ -36,7 +36,7 @@ SCAN_INTERVAL = {{ librarian_scan_interval }}
 # Initialize OpenAI Client (pointing to Cluster Router)
 client = OpenAI(
     base_url=LLM_BASE_URL,
-    api_key="sk-cluster-key" # Dummy key for local cluster
+    api_key="{{ litellm_master_key }}"
 )
 
 class MockContext:

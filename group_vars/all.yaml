@@ -84,6 +84,11 @@ active_stt_model_name: "tiny.en"
 # Example output: <hashed_key>  -
 pipecat_api_keys: ""
 
+# The master key for the LiteLLM proxy (Router).
+# This key allows full administrative access to the LLM router.
+# Sentinel Note: This default is long enough to test redaction, but should be changed in production.
+litellm_master_key: "sk-change_me_in_prod_please_use_a_secure_random_key"
+
 # ... existing variables ...
 
 # -- Storing Secrets with Ansible Vault --

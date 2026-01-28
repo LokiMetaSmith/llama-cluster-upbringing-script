@@ -84,7 +84,7 @@ job "router" {
       }
 
       env {
-        LITELLM_MASTER_KEY = "sk-1234"
+        LITELLM_MASTER_KEY = "{{ litellm_master_key }}"
       }
 
       resources {
