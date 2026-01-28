@@ -1,4 +1,42 @@
 - block:
+    - name: "Expert {{ expert_name }} : Check if pipecatapp:expert image exists"
+      ansible.builtin.command: docker image inspect pipecatapp:expert
+      register: pipecat_image_check
+      failed_when: false
+      changed_when: false
+
+    - name: "Expert {{ expert_name }} : Build pipecatapp image if missing"
+      block:
+        - name: "Expert {{ expert_name }} : Ensure pipecatapp directory exists"
+          ansible.builtin.file:
+            path: "{{ pipecat_app_mount_source }}"
+            state: directory
+            mode: '0755'
+
+        - name: "Expert {{ expert_name }} : Synchronize pipecatapp source"
+          ansible.posix.synchronize:
+            src: "{{ inventory_dir }}/pipecatapp/"
+            dest: "{{ pipecat_app_mount_source }}/"
+            rsync_opts:
+              - "--exclude=.git"
+              - "--exclude=venv"
+              - "--exclude=__pycache__"
+              - "--exclude=*.pyc"
+              - "--exclude=start_pipecat.sh"
+            rsync_path: "sudo rsync"
+
+        - name: "Expert {{ expert_name }} : Build pipecatapp Docker image"
+          ansible.builtin.include_tasks:
+            file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
+          vars:
+            pipecat_image_name: "pipecatapp"
+            pipecat_image_tag: "expert"
+            pipecat_build_dir: "{{ pipecat_app_mount_source }}"
+
+        - name: "Expert {{ expert_name }} : Tag pipecatapp:expert"
+          ansible.builtin.command: docker tag pipecatapp:expert pipecatapp:expert
+      when: pipecat_image_check.rc != 0
+
     - name: "Expert {{ expert_name }} : Ensure startup script exists (Dev Mode fallback)"
       ansible.builtin.template:
         src: "{{ inventory_dir }}/ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2"
