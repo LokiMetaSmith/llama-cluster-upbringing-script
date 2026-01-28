@@ -224,6 +224,10 @@ document.addEventListener('DOMContentLoaded', async function () {
             const li = document.createElement('li');
             li.className = 'history-item';
             li.dataset.runId = run.id; // Add data attribute for easier selection
+            li.tabIndex = 0; // Accessibility
+            li.setAttribute('role', 'option'); // Accessibility
+            li.setAttribute('aria-selected', 'false'); // Accessibility
+
             const date = new Date(run.start_time * 1000).toLocaleString();
             li.innerHTML = `
                 <div><strong>${run.workflow_name}</strong></div>
@@ -232,7 +236,18 @@ document.addEventListener('DOMContentLoaded', async function () {
                     Status: <span class="status-${run.status.toLowerCase()}">${run.status}</span>
                 </div>
             `;
-            li.onclick = () => loadHistoricalRun(run.id);
+
+            const handleLoad = () => loadHistoricalRun(run.id);
+            li.onclick = handleLoad;
+
+            // Accessibility: Keyboard support
+            li.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleLoad();
+                }
+            });
+
             historyList.appendChild(li);
         });
     }
@@ -243,8 +258,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         viewTitle.textContent = `Workflow Visualization (Run: ${runId})`;
         document.querySelectorAll('.history-item').forEach(el => {
             el.classList.remove('active');
+            el.setAttribute('aria-selected', 'false'); // Accessibility
             if (el.dataset.runId === runId) {
                 el.classList.add('active');
+                el.setAttribute('aria-selected', 'true'); // Accessibility
             }
         });
 
