@@ -111,20 +111,29 @@ EMERGENCY_VENV_DIR="/tmp/venv"
 
 ACTIVATE=""
 
-# Check if existing venv is compatible with current python version
-if [ -d "$VENV_DIR" ] && [ -f "$VENV_DIR/bin/python3" ]; then
-    CURRENT_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-    VENV_VER=$("$VENV_DIR/bin/python3" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "invalid")
+check_venv_valid() {
+    local venv_path=$1
+    if [ -d "$venv_path" ] && [ -f "$venv_path/bin/python3" ] && [ -f "$venv_path/bin/activate" ]; then
+        # Check mismatch
+        local current_ver=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+        local venv_ver=$("$venv_path/bin/python3" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "invalid")
 
-    if [ "$CURRENT_VER" != "$VENV_VER" ]; then
-        log_msg "Virtual environment version mismatch (System: $CURRENT_VER, Venv: $VENV_VER). Recreating..."
-        rm -rf "$VENV_DIR"
+        if [ "$current_ver" != "$venv_ver" ]; then
+            log_msg "Virtual environment at $venv_path version mismatch (System: $current_ver, Venv: $venv_ver)."
+            return 1
+        fi
+        return 0
     fi
-fi
+    return 1
+}
 
-if [ -f "$VENV_DIR/bin/activate" ]; then
+if check_venv_valid "$VENV_DIR"; then
     log_msg "Found existing venv at $VENV_DIR"
     ACTIVATE="$VENV_DIR/bin/activate"
+    source "$ACTIVATE"
+elif check_venv_valid "$FALLBACK_VENV_DIR"; then
+    log_msg "Found valid fallback venv at $FALLBACK_VENV_DIR. Using it."
+    ACTIVATE="$FALLBACK_VENV_DIR/bin/activate"
     source "$ACTIVATE"
 else
     log_msg "Virtual environment not found. Attempting to create..."
@@ -157,7 +166,8 @@ export PYTHONPATH=$PYTHONPATH:$(dirname "$APP_DIR")
 
 {% if pipecat_deployment_style == 'raw_exec' %}
 # For raw_exec, we explicitly manage our own log file via redirection.
-exec "$APP_DIR/venv/bin/python3" -u "$APP_DIR/app.py" >> "$LOG_FILE" 2>&1
+PYTHON_EXEC="$(dirname "$ACTIVATE")/python3"
+exec "$PYTHON_EXEC" -u "$APP_DIR/app.py" >> "$LOG_FILE" 2>&1
 {% else %}
 # For Docker, we want logs to stdout/stderr (for `docker logs`) AND to the file (for debugging).
 # We use process substitution to pipe to tee.
