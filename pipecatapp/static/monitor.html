@@ -103,6 +103,22 @@
         /* Nav Links */
         a.nav-link { color: #ccc; text-decoration: none; font-size: 12px; margin-left: auto; }
         a.nav-link:hover { text-decoration: underline; color: #fff; }
+
+        /* Palette UX: Accessibility Styles */
+        .history-item:focus-visible {
+            outline: 2px solid #007acc;
+            outline-offset: -2px;
+            background-color: #2a2d2e;
+        }
+
+        /* Reset button styles for .close to match original look */
+        button.close {
+            background: none;
+            border: none;
+            padding: 0;
+            line-height: 1;
+            font-family: inherit;
+        }
     </style>
 </head>
 <body>
@@ -112,7 +128,7 @@
             <div style="padding: 5px;">
                 <button id="refresh-history-btn" style="width: 100%; background: #333; border: 1px solid #555; color: #eee; padding: 5px; cursor: pointer;">Refresh</button>
             </div>
-            <ul id="history-list"></ul>
+            <ul id="history-list" role="listbox" aria-label="Workflow History"></ul>
         </div>
         <div id="main-content">
             <div id="toolbar">
@@ -128,7 +144,7 @@
     <!-- Node Detail Modal -->
     <div id="nodeModal" class="modal">
         <div class="modal-content">
-            <span class="close">&times;</span>
+            <button class="close" aria-label="Close modal">&times;</button>
             <h3>Node Output</h3>
             <pre id="node-output-content"></pre>
         </div>
