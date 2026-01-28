@@ -941,7 +941,15 @@ class TwinService(FrameProcessor):
 
     async def _send_response(self, text: str):
         """Sends a response back to the appropriate channel (TTS or Gateway)."""
-        if self.current_request_meta and "response_url" in self.current_request_meta:
+        if self.current_request_meta and self.current_request_meta.get("is_sync"):
+            request_id = self.current_request_meta.get("request_id")
+            if request_id and request_id in web_server.sync_response_store:
+                web_server.sync_response_store[request_id]["response"] = text
+                web_server.sync_response_store[request_id]["event"].set()
+                logging.info(f"Set synchronous response for request {request_id}")
+            else:
+                logging.warning(f"Sync response request {request_id} not found in store.")
+        elif self.current_request_meta and "response_url" in self.current_request_meta:
             response_url = self.current_request_meta["response_url"]
             request_id = self.current_request_meta["request_id"]
             try:
