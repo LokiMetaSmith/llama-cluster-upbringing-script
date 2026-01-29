@@ -137,7 +137,7 @@
     - name: Set pipecat_image_id fact
       ansible.builtin.set_fact:
         #pipecat_image_id: "pipecatapp:local"
-        pipecat_image_id: "pipecatapp:expert"
+        pipecat_image_id: "{{ docker_registry_host }}:{{ docker_registry_port }}/pipecatapp:expert"
       tags:
         - deploy-expert
 
