@@ -224,12 +224,54 @@
                     li.textContent = type.replace("agent/", ""); // Clean up name
                     li.draggable = true;
 
+                    // Palette UX: Accessibility for keyboard users
+                    li.tabIndex = 0;
+                    li.setAttribute('role', 'button');
+                    li.setAttribute('aria-label', "Add " + li.textContent + " node");
+
                     li.addEventListener('dragstart', (e) => {
                         e.dataTransfer.setData('nodeType', type);
                     });
 
+                    // Palette UX: Allow adding via keyboard
+                    li.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            addNodeToCenter(type);
+                        }
+                    });
+
                     nodeLibrary.appendChild(li);
                 });
+            }
+
+            // Palette UX: Helper to add node to center of view
+            function addNodeToCenter(type) {
+                if (!WorkflowEditor.graph || !WorkflowEditor.canvas) return;
+
+                const node = LiteGraph.createNode(type);
+                if (!node) return;
+
+                const canvas = WorkflowEditor.canvas;
+                // Calculate center based on current canvas transform (ds)
+                let x = 400;
+                let y = 300;
+
+                if (canvas.ds) {
+                    const w = canvas.bgcanvas ? canvas.bgcanvas.width : 800;
+                    const h = canvas.bgcanvas ? canvas.bgcanvas.height : 600;
+
+                    x = (-canvas.ds.offset[0] + w / 2) / canvas.ds.scale;
+                    y = (-canvas.ds.offset[1] + h / 2) / canvas.ds.scale;
+                }
+
+                node.pos = [x, y];
+                WorkflowEditor.graph.add(node);
+                showStatus(`Added ${type.replace("agent/", "")} node`, 'success');
+
+                if (WorkflowEditor.canvas.selectNode) {
+                    WorkflowEditor.canvas.selectNode(node);
+                }
             }
 
             populateLibrary();

@@ -34,3 +34,7 @@
 ## 2026-02-14 - Visual Hierarchy in Action Prompts
 **Learning:** In high-contrast terminal interfaces, generic grey buttons for critical binary choices (Approve/Deny) lack "visual affordance" and can lead to hesitation or errors. Color-coding and semantic labeling significantly reduce cognitive load.
 **Action:** Use standard semantic colors (Green/Red) and explicit `aria-label`s for critical decision buttons to provide instant visual and assistive feedback on the action's consequence.
+
+## 2026-02-16 - Accessible Drag-and-Drop Alternatives
+**Learning:** Drag-and-drop interfaces for adding items (like nodes in a graph editor) are inherently inaccessible to keyboard users. Relying solely on this interaction pattern excludes a significant user group.
+**Action:** Implement keyboard-accessible alternatives (e.g., Enter key to "add" the item to a default location) and ensure the draggable source elements have `tabindex="0"`, `role="button"`, and appropriate ARIA labels.
