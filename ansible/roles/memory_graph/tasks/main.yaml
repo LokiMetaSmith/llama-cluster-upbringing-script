@@ -1,4 +1,3 @@
----
 - name: Ensure memory persistence directory exists
   file:
     path: /opt/pipecat/data/memory
@@ -16,12 +15,22 @@
     source: build
     force_source: true
 
+- name: Check if local registry is reachable
+  ansible.builtin.wait_for:
+    host: "localhost"
+    port: 5001
+    state: started
+    timeout: 1
+  register: registry_check
+  ignore_errors: true
+
 - name: Tag and push memory-graph service image to local registry
   community.docker.docker_image:
     name: "memory-graph-service:latest"
     repository: localhost:5001/memory-graph-service
     push: true
     source: local
+  when: registry_check is success
 
 - name: Deploy memory-graph Nomad job
   community.general.nomad_job:

@@ -29,6 +29,15 @@
     source: build
     force_source: true
 
+- name: Check if local registry is reachable
+  ansible.builtin.wait_for:
+    host: "localhost"
+    port: 5001
+    state: started
+    timeout: 1
+  register: registry_check
+  ignore_errors: true
+
 - name: Tag and push memory_service image to local registry
   community.docker.docker_image:
     name: memory_service
@@ -36,6 +45,7 @@
     repository: localhost:5001/memory_service
     push: true
     source: local
+  when: registry_check is success
 
 - name: Template memory service Nomad job
   ansible.builtin.template:
