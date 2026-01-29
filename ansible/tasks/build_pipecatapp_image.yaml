@@ -19,6 +19,16 @@
   become: yes
   when: pipecat_deployment_style == 'docker'
 
+- name: Check if local registry is reachable
+  ansible.builtin.wait_for:
+    host: "localhost"
+    port: 5001
+    state: started
+    timeout: 1
+  register: registry_check
+  ignore_errors: true
+  when: pipecat_deployment_style == 'docker'
+
 - name: Tag and push pipecatapp image to local registry
   community.docker.docker_image:
     name: "{{ pipecat_image_name | default('pipecatapp') }}"
@@ -27,4 +37,4 @@
     push: true
     source: local
   become: yes
-  when: pipecat_deployment_style == 'docker'
+  when: pipecat_deployment_style == 'docker' and registry_check is success

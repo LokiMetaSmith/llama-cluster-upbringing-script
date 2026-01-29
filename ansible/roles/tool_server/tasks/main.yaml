@@ -68,6 +68,15 @@
   become: yes
   changed_when: false
 
+- name: Check if local registry is reachable
+  ansible.builtin.wait_for:
+    host: "localhost"
+    port: 5001
+    state: started
+    timeout: 1
+  register: registry_check
+  ignore_errors: true
+
 - name: "Tool Server : Tag and push tool-server image to local registry"
   community.docker.docker_image:
     name: tool-server
@@ -76,6 +85,7 @@
     push: true
     source: local
   become: yes
+  when: registry_check is success
 
 - name: "Tool Server : Verify Docker image exists"
   ansible.builtin.command:
