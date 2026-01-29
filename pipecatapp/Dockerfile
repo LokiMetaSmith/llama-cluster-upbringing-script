@@ -39,6 +39,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgraphene-1.0-0 \
     libxslt1.1 \
     libwebpdemux2 \
+    libwoff1 \
     libharfbuzz-icu0 \
     libenchant-2-2 \
     libsecret-1-0 \
