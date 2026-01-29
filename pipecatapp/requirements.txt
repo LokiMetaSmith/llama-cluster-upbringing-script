@@ -30,8 +30,7 @@ opencv-python-headless
 pandas
 paramiko
 pillow
-pipecat-ai
-pipecat-ai[all]
+pipecat-ai[openai,local]
 pipecat-ai-whisker
 piper-tts
 playwright
