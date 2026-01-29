@@ -134,10 +134,28 @@
       tags:
         - deploy-expert
 
-    - name: Set pipecat_image_id fact
+    - name: Check if local registry is reachable (Global)
+      ansible.builtin.wait_for:
+        host: "{{ docker_registry_host }}"
+        port: "{{ docker_registry_port }}"
+        state: started
+        timeout: 1
+      register: global_registry_check
+      ignore_errors: true
+      tags:
+        - deploy-expert
+
+    - name: Set pipecat_image_id fact (Registry)
       ansible.builtin.set_fact:
-        #pipecat_image_id: "pipecatapp:local"
         pipecat_image_id: "{{ docker_registry_host }}:{{ docker_registry_port }}/pipecatapp:expert"
+      when: global_registry_check is success
+      tags:
+        - deploy-expert
+
+    - name: Set pipecat_image_id fact (Local Fallback)
+      ansible.builtin.set_fact:
+        pipecat_image_id: "pipecatapp:expert"
+      when: global_registry_check is failed
       tags:
         - deploy-expert
 
