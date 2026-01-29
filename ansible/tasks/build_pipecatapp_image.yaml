@@ -21,7 +21,7 @@
 
 - name: Check if local registry is reachable
   ansible.builtin.wait_for:
-    host: "localhost"
+    host: "{{ docker_registry_host }}"
     port: "{{ docker_registry_port }}"
     state: started
     timeout: 1
@@ -33,7 +33,7 @@
   community.docker.docker_image:
     name: "{{ pipecat_image_name | default('pipecatapp') }}"
     tag: "{{ pipecat_image_tag | default('local') }}"
-    repository: "localhost:{{ docker_registry_port }}/{{ pipecat_image_name | default('pipecatapp') }}"
+    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/{{ pipecat_image_name | default('pipecatapp') }}"
     push: true
     source: local
   become: yes

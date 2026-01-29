@@ -32,7 +32,7 @@
 
 - name: Check if local registry is reachable
   ansible.builtin.wait_for:
-    host: "localhost"
+    host: "{{ docker_registry_host }}"
     port: "{{ docker_registry_port }}"
     state: started
     timeout: 1
@@ -43,7 +43,7 @@
   community.docker.docker_image:
     name: moltbot
     tag: latest
-    repository: "localhost:{{ docker_registry_port }}/moltbot"
+    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/moltbot"
     push: true
     source: local
   when: registry_check is success
