@@ -46,7 +46,7 @@
         host: "{{ docker_registry_host }}"
         port: "{{ docker_registry_port }}"
         state: started
-        timeout: 1
+        timeout: 5
       register: registry_check
       ignore_errors: true
 
