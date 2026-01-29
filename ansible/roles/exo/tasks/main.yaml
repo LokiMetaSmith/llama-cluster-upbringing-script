@@ -40,6 +40,16 @@
     force_source: true # Ensure we rebuild if files change
   when: exo_enable
 
+- name: Check if local registry is reachable
+  ansible.builtin.wait_for:
+    host: "localhost"
+    port: 5001
+    state: started
+    timeout: 1
+  register: registry_check
+  ignore_errors: true
+  when: exo_enable
+
 - name: Tag and push Exo image to local registry
   community.docker.docker_image:
     name: "{{ exo_docker_image_name }}"
@@ -47,7 +57,7 @@
     push: true
     source: local
   become: yes
-  when: exo_enable
+  when: exo_enable and registry_check is success
 
 - name: Cleanup build directory
   ansible.builtin.file:
