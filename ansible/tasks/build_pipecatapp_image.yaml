@@ -6,16 +6,63 @@
   become: yes
   when: pipecat_deployment_style == 'docker'
 
-- name: Build pipecatapp Docker image when deployment style is docker
+- name: Get checksum of Dockerfile
+  ansible.builtin.stat:
+    path: "{{ pipecat_build_dir | default(inventory_dir ~ '/pipecatapp') }}/Dockerfile"
+    checksum_algorithm: sha256
+  register: dockerfile_stat
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Get checksum of requirements.txt
+  ansible.builtin.stat:
+    path: "{{ pipecat_build_dir | default(inventory_dir ~ '/pipecatapp') }}/requirements.txt"
+    checksum_algorithm: sha256
+  register: requirements_stat
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Get checksum of start_pipecat.sh
+  ansible.builtin.stat:
+    path: "{{ pipecat_build_dir | default(inventory_dir ~ '/pipecatapp') }}/start_pipecat.sh"
+    checksum_algorithm: sha256
+  register: startup_script_stat
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Generate build configuration hash
+  ansible.builtin.set_fact:
+    pipecat_build_hash: "{{ (dockerfile_stat.stat.checksum ~ requirements_stat.stat.checksum ~ startup_script_stat.stat.checksum) | hash('sha256') }}"
+  when: pipecat_deployment_style == 'docker'
+
+- name: Set versioned tag
+  ansible.builtin.set_fact:
+    pipecat_versioned_tag: "expert-{{ pipecat_build_hash }}"
+  when: pipecat_deployment_style == 'docker'
+
+- name: Check if versioned image exists locally
+  ansible.builtin.command: "docker image inspect {{ pipecat_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag }}"
+  register: versioned_image_check
+  failed_when: false
+  changed_when: false
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Build pipecatapp Docker image (if missing)
   community.docker.docker_image:
     name: "{{ pipecat_image_name | default('pipecatapp') }}"
-    tag: "{{ pipecat_image_tag | default('local') }}"
+    tag: "{{ pipecat_versioned_tag }}"
     build:
       path: "{{ pipecat_build_dir | default(inventory_dir ~ '/pipecatapp') }}"
       nocache: true
     source: build
     force_source: true
   register: build_result
+  become: yes
+  when: pipecat_deployment_style == 'docker' and versioned_image_check.rc != 0
+
+- name: Tag image with stable tag
+  ansible.builtin.command: "docker tag {{ pipecat_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag }} {{ pipecat_image_name | default('pipecatapp') }}:{{ pipecat_image_tag | default('local') }}"
   become: yes
   when: pipecat_deployment_style == 'docker'
 
@@ -29,10 +76,20 @@
   ignore_errors: true
   when: pipecat_deployment_style == 'docker'
 
-- name: Tag and push pipecatapp image to local registry
+- name: Tag and push pipecatapp image (stable) to local registry
   community.docker.docker_image:
     name: "{{ pipecat_image_name | default('pipecatapp') }}"
     tag: "{{ pipecat_image_tag | default('local') }}"
+    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/{{ pipecat_image_name | default('pipecatapp') }}"
+    push: true
+    source: local
+  become: yes
+  when: pipecat_deployment_style == 'docker' and registry_check is success
+
+- name: Tag and push pipecatapp image (versioned) to local registry
+  community.docker.docker_image:
+    name: "{{ pipecat_image_name | default('pipecatapp') }}"
+    tag: "{{ pipecat_versioned_tag }}"
     repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/{{ pipecat_image_name | default('pipecatapp') }}"
     push: true
     source: local
