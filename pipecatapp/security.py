@@ -5,9 +5,17 @@ from typing import Any, Dict, List
 # Pre-compile regex for redaction to improve performance
 # Matches "sk-" followed by 20+ alphanumeric/hyphen characters
 # This targets OpenAI-style keys while avoiding common words like "task", "ask", "desk"
-_API_KEY_PATTERN = re.compile(r'(sk-[a-zA-Z0-9-]{20,})')
+_OPENAI_KEY_PATTERN = re.compile(r'(sk-[a-zA-Z0-9-]{20,})')
 # Matches "Bearer " followed by a token (alphanumeric and common token chars)
 _BEARER_TOKEN_PATTERN = re.compile(r'(Bearer\s+)([a-zA-Z0-9\-\._~+/]+=*)')
+# Matches Google API Keys (starts with AIza, 39 chars total)
+_GOOGLE_KEY_PATTERN = re.compile(r'(AIza[0-9A-Za-z\-_]{35})')
+# Matches AWS Access Key IDs (starts with AKIA, ASIA, ABIA, ACCA)
+_AWS_KEY_PATTERN = re.compile(r'((?:AKIA|ASIA|ABIA|ACCA)[0-9A-Z]{16})')
+# Matches Slack Tokens (starts with xoxb, xoxp, etc.)
+_SLACK_KEY_PATTERN = re.compile(r'(xox[baprs]-[a-zA-Z0-9-]{10,})')
+# Matches GitHub Tokens (starts with ghp, gho, etc.)
+_GITHUB_KEY_PATTERN = re.compile(r'(gh[pousr]_[a-zA-Z0-9]{36,})')
 
 def redact_sensitive_data(text: str) -> str:
     """
@@ -22,8 +30,12 @@ def redact_sensitive_data(text: str) -> str:
         return text
 
     # Redact generic API key patterns and Bearer tokens
-    text = _API_KEY_PATTERN.sub(r'sk-[REDACTED]', text)
+    text = _OPENAI_KEY_PATTERN.sub(r'sk-[REDACTED]', text)
     text = _BEARER_TOKEN_PATTERN.sub(r'\1[REDACTED]', text)
+    text = _GOOGLE_KEY_PATTERN.sub(r'AIza[REDACTED]', text)
+    text = _AWS_KEY_PATTERN.sub(r'AWS-[REDACTED]', text)
+    text = _SLACK_KEY_PATTERN.sub(r'xox-[REDACTED]', text)
+    text = _GITHUB_KEY_PATTERN.sub(r'gh-[REDACTED]', text)
 
     return text
 
