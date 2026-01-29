@@ -41,6 +41,24 @@
       ansible.builtin.command: docker tag pipecatapp:expert pipecatapp:expert
       changed_when: false
 
+    - name: "Expert {{ expert_name }} : Check if local registry is reachable"
+      ansible.builtin.wait_for:
+        host: "{{ docker_registry_host }}"
+        port: "{{ docker_registry_port }}"
+        state: started
+        timeout: 1
+      register: registry_check
+      ignore_errors: true
+
+    - name: "Expert {{ expert_name }} : Tag and push pipecatapp image to local registry"
+      community.docker.docker_image:
+        name: "pipecatapp"
+        tag: "expert"
+        repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/pipecatapp"
+        push: true
+        source: local
+      when: registry_check is success
+
     - name: "Expert {{ expert_name }} : Ensure startup script exists (Dev Mode fallback)"
       ansible.builtin.template:
         src: "{{ inventory_dir }}/ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2"
