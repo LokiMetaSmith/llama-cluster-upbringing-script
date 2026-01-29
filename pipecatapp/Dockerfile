@@ -35,6 +35,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgtk-3-0 \
     libatk1.0-0 \
     libnss3 \
+    libgtk-4-1 \
+    libgraphene-1.0-0 \
+    libxslt1.1 \
+    libwebpdemux2 \
+    libharfbuzz-icu0 \
+    libenchant-2-2 \
+    libsecret-1-0 \
+    libhyphen0 \
+    libmanette-0.2-0 \
+    libgles2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment

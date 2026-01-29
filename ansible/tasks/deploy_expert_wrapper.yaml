@@ -5,26 +5,26 @@
       failed_when: false
       changed_when: false
 
+    - name: "Expert {{ expert_name }} : Ensure pipecatapp directory exists"
+      ansible.builtin.file:
+        path: "{{ pipecat_app_mount_source }}"
+        state: directory
+        mode: '0755'
+
+    - name: "Expert {{ expert_name }} : Synchronize pipecatapp source"
+      ansible.posix.synchronize:
+        src: "{{ inventory_dir }}/pipecatapp/"
+        dest: "{{ pipecat_app_mount_source }}/"
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=venv"
+          - "--exclude=__pycache__"
+          - "--exclude=*.pyc"
+          - "--exclude=start_pipecat.sh"
+        rsync_path: "sudo rsync"
+
     - name: "Expert {{ expert_name }} : Build pipecatapp image if missing"
       block:
-        - name: "Expert {{ expert_name }} : Ensure pipecatapp directory exists"
-          ansible.builtin.file:
-            path: "{{ pipecat_app_mount_source }}"
-            state: directory
-            mode: '0755'
-
-        - name: "Expert {{ expert_name }} : Synchronize pipecatapp source"
-          ansible.posix.synchronize:
-            src: "{{ inventory_dir }}/pipecatapp/"
-            dest: "{{ pipecat_app_mount_source }}/"
-            rsync_opts:
-              - "--exclude=.git"
-              - "--exclude=venv"
-              - "--exclude=__pycache__"
-              - "--exclude=*.pyc"
-              - "--exclude=start_pipecat.sh"
-            rsync_path: "sudo rsync"
-
         - name: "Expert {{ expert_name }} : Build pipecatapp Docker image"
           ansible.builtin.include_tasks:
             file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
