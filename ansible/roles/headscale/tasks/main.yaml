@@ -1,4 +1,3 @@
----
 - name: Create headscale user
   user:
     name: headscale

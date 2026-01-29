@@ -18,7 +18,7 @@
 - name: Check if local registry is reachable
   ansible.builtin.wait_for:
     host: "localhost"
-    port: 5001
+    port: "{{ docker_registry_port }}"
     state: started
     timeout: 1
   register: registry_check
@@ -27,7 +27,7 @@
 - name: Tag and push memory-graph service image to local registry
   community.docker.docker_image:
     name: "memory-graph-service:latest"
-    repository: localhost:5001/memory-graph-service
+    repository: "localhost:{{ docker_registry_port }}/memory-graph-service"
     push: true
     source: local
   when: registry_check is success

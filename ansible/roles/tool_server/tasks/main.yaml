@@ -71,7 +71,7 @@
 - name: Check if local registry is reachable
   ansible.builtin.wait_for:
     host: "localhost"
-    port: 5001
+    port: "{{ docker_registry_port }}"
     state: started
     timeout: 1
   register: registry_check
@@ -81,7 +81,7 @@
   community.docker.docker_image:
     name: tool-server
     tag: local
-    repository: localhost:5001/tool-server
+    repository: "localhost:{{ docker_registry_port }}/tool-server"
     push: true
     source: local
   become: yes
