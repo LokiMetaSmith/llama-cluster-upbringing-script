@@ -16,6 +16,11 @@ def redact_sensitive_data(text: str) -> str:
     if not text:
         return text
 
+    # Fast path: if the triggers aren't present, skip regex
+    # Bolt ⚡ Optimization: 'in' operator is much faster than regex
+    if "sk-" not in text and "Bearer" not in text:
+        return text
+
     # Redact generic API key patterns and Bearer tokens
     text = _API_KEY_PATTERN.sub(r'sk-[REDACTED]', text)
     text = _BEARER_TOKEN_PATTERN.sub(r'\1[REDACTED]', text)
