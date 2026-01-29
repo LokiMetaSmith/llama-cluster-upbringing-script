@@ -42,8 +42,8 @@
 
 - name: Check if local registry is reachable
   ansible.builtin.wait_for:
-    host: "localhost"
-    port: 5001
+    host: "{{ docker_registry_host }}"
+    port: "{{ docker_registry_port }}"
     state: started
     timeout: 1
   register: registry_check
@@ -53,7 +53,7 @@
 - name: Tag and push Exo image to local registry
   community.docker.docker_image:
     name: "{{ exo_docker_image_name }}"
-    repository: "localhost:5001/{{ exo_docker_image_name }}"
+    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/{{ exo_docker_image_name }}"
     push: true
     source: local
   become: yes

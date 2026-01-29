@@ -1,4 +1,3 @@
----
 - name: Run Nanochat Nomad job
   ansible.builtin.command:
     cmd: "nomad job run {{ nomad_jobs_dir }}/nanochat.nomad"

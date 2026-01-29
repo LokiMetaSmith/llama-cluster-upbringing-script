@@ -1,4 +1,3 @@
----
 - name: Run Opencode Job
   ansible.builtin.command: nomad job run /opt/nomad/jobs/opencode.nomad
   become: yes

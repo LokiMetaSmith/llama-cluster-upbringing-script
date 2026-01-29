@@ -1,4 +1,3 @@
----
 - name: Install system FUSE package
   apt:
     name: fuse

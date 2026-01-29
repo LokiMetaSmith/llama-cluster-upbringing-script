@@ -1,4 +1,3 @@
----
 nanochat_repo: "https://github.com/LokiMetaSmith/nanochat.git"
 nanochat_version: "main"
 nanochat_install_dir: "/opt/nanochat"
