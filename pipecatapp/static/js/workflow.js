@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     let pollingInterval = null;
     let currentWorkflowDefinition = null;
     let currentNodeOutputs = {};
+    let lastExecutedNodeIdsSignature = "";
 
     // --- Workflow Loading and Rendering ---
 
@@ -113,6 +114,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     function renderGraph(workflow) {
+        lastExecutedNodeIdsSignature = ""; // Reset optimization cache
         cy.elements().remove(); // Clear existing graph
 
         // Add nodes
@@ -171,6 +173,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     function updateGraphState(nodeOutputs) {
         currentNodeOutputs = nodeOutputs;
         const executedNodeIds = Object.keys(nodeOutputs);
+
+        // Bolt ⚡ Optimization: Memoize graph updates to prevent unnecessary re-renders
+        const signature = JSON.stringify(executedNodeIds.sort());
+        if (signature === lastExecutedNodeIdsSignature) {
+            return;
+        }
+        lastExecutedNodeIdsSignature = signature;
 
         cy.nodes().removeClass('executed gated failed');
 
