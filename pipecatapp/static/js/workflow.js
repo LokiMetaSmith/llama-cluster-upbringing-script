@@ -207,7 +207,18 @@ document.addEventListener('DOMContentLoaded', async function () {
     // --- History Logic ---
 
     async function fetchHistory() {
+        const btn = document.getElementById('refresh-history-btn');
+        // Store original content to restore later (includes SVG)
+        // If we haven't stored it yet, do so.
+        if (!btn.dataset.originalContent) {
+            btn.dataset.originalContent = btn.innerHTML;
+        }
+
         try {
+            btn.disabled = true;
+            btn.classList.add('loading');
+            btn.innerHTML = '<span class="spinner"></span> Refreshing...';
+
             const response = await fetch('/api/workflows/history?limit=50');
             if (response.ok) {
                 const history = await response.json();
@@ -215,6 +226,12 @@ document.addEventListener('DOMContentLoaded', async function () {
             }
         } catch (error) {
             console.error('Error fetching history:', error);
+        } finally {
+            btn.disabled = false;
+            btn.classList.remove('loading');
+            if (btn.dataset.originalContent) {
+                btn.innerHTML = btn.dataset.originalContent;
+            }
         }
     }
 
