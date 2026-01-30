@@ -208,3 +208,14 @@ class Git_Tool:
             str: The output of the git merge command.
         """
         return self._run_git_command(["merge", branch], working_dir)
+
+    def ls_files(self, working_dir: str) -> str:
+        """Lists files in the work tree.
+
+        Args:
+            working_dir (str): The path to the local repository.
+
+        Returns:
+            str: The output of the git ls-files command.
+        """
+        return self._run_git_command(["ls-files"], working_dir)
