@@ -40,6 +40,19 @@ class Git_Tool:
 
         return full_path
 
+    def _validate_arg(self, arg: str, arg_name: str):
+        """Validates that an argument does not start with a dash to prevent injection.
+
+        Args:
+            arg (str): The argument to validate.
+            arg_name (str): The name of the argument for error reporting.
+
+        Raises:
+            ValueError: If the argument starts with '-'.
+        """
+        if arg and arg.startswith("-"):
+            raise ValueError(f"Security Error: Argument '{arg_name}' cannot start with '-'. Invalid value: {arg}")
+
     def _run_git_command(self, command: list, working_dir: str) -> str:
         """A helper function to run a Git command.
 
@@ -97,6 +110,9 @@ class Git_Tool:
         try:
             # We don't check existence because clone creates it, but we check location.
             self._validate_path(directory)
+            # Security Fix: Sentinel - Prevent argument injection
+            self._validate_arg(repo_url, "repo_url")
+            self._validate_arg(directory, "directory")
         except ValueError as e:
             return str(e)
 
@@ -138,6 +154,7 @@ class Git_Tool:
         Returns:
             str: The output of the git commit command.
         """
+        # Note: message can start with - (e.g. "-fix bug") as it is value for -m
         return self._run_git_command(["commit", "-m", message], working_dir)
 
     def branch(self, working_dir: str, branch_name: str = None) -> str:
@@ -153,6 +170,11 @@ class Git_Tool:
         """
         command = ["branch"]
         if branch_name:
+            try:
+                # Security Fix: Sentinel - Prevent argument injection
+                self._validate_arg(branch_name, "branch_name")
+            except ValueError as e:
+                return str(e)
             command.append(branch_name)
         return self._run_git_command(command, working_dir)
 
@@ -166,6 +188,11 @@ class Git_Tool:
         Returns:
             str: The output of the git checkout command.
         """
+        try:
+            # Security Fix: Sentinel - Prevent argument injection
+            self._validate_arg(branch_name, "branch_name")
+        except ValueError as e:
+            return str(e)
         return self._run_git_command(["checkout", branch_name], working_dir)
 
     def status(self, working_dir: str) -> str:
@@ -191,10 +218,18 @@ class Git_Tool:
             str: The output of the git diff command.
         """
         command = ["diff"]
-        if commit1:
-            command.append(commit1)
-        if commit2:
-            command.append(commit2)
+        try:
+            if commit1:
+                # Security Fix: Sentinel - Prevent argument injection
+                self._validate_arg(commit1, "commit1")
+                command.append(commit1)
+            if commit2:
+                # Security Fix: Sentinel - Prevent argument injection
+                self._validate_arg(commit2, "commit2")
+                command.append(commit2)
+        except ValueError as e:
+            return str(e)
+
         return self._run_git_command(command, working_dir)
 
     def merge(self, working_dir: str, branch: str) -> str:
@@ -207,6 +242,11 @@ class Git_Tool:
         Returns:
             str: The output of the git merge command.
         """
+        try:
+            # Security Fix: Sentinel - Prevent argument injection
+            self._validate_arg(branch, "branch")
+        except ValueError as e:
+            return str(e)
         return self._run_git_command(["merge", branch], working_dir)
 
     def ls_files(self, working_dir: str) -> str:
