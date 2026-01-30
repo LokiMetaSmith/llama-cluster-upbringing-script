@@ -32,6 +32,7 @@ from tools.experiment_tool import ExperimentTool
 from tools.submit_solution_tool import SubmitSolutionTool
 from tools.container_registry_tool import ContainerRegistryTool
 from tools.search_tool import SearchTool
+from tools.openclaw_tool import OpenClawTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -82,6 +83,9 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "submit_solution": SubmitSolutionTool(),
         "container_registry": ContainerRegistryTool(),
         "search": SearchTool(root_dir="/opt/pipecatapp"),
+        "openclaw": OpenClawTool(
+            gateway_url=config.get("openclaw_gateway_url", "ws://moltbot.service.consul:18789")
+        ),
     }
 
     if config.get("use_summarizer", False) and twin_service:
