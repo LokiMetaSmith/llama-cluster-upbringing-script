@@ -100,7 +100,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       }
 
       config {
-        image = "pipecatapp:local"
+        image = "{{ pipecatapp_image_ref | default('pipecatapp:local') }}"
         force_pull = false
         ports = ["http"]
         # Mount volumes for models and config. Models are read-only.

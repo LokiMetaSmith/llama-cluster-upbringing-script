@@ -350,6 +350,30 @@
   ansible.builtin.include_tasks:
     file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
 
+- name: Inspect pipecatapp:local image
+  ansible.builtin.command: docker image inspect pipecatapp:local
+  register: pipecatapp_local_image_info
+  changed_when: false
+  become: yes
+
+- name: Check if local registry is reachable (Pipecat App)
+  ansible.builtin.wait_for:
+    host: "{{ docker_registry_host }}"
+    port: "{{ docker_registry_port }}"
+    state: started
+    timeout: 1
+  register: pipecatapp_registry_check
+  ignore_errors: true
+
+- name: Set pipecatapp_image_ref (Registry)
+  ansible.builtin.set_fact:
+    pipecatapp_image_ref: "{{ docker_registry_host }}:{{ docker_registry_port }}/pipecatapp:local"
+  when: pipecatapp_registry_check is success
+
+- name: Set pipecatapp_image_ref (Local Fallback)
+  ansible.builtin.set_fact:
+    pipecatapp_image_ref: "{{ (pipecatapp_local_image_info.stdout | from_json)[0].Id }}"
+  when: pipecatapp_registry_check is failed
 
 - name: Ensure Nomad jobs directory exists
   ansible.builtin.file:
