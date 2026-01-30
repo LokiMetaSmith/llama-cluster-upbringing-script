@@ -120,7 +120,7 @@ RPC_SERVERS="$RPC_SERVERS,{{ .Address }}:{{ .Port }}"
 {{ end }}
 {% endraw %}
 # Remove leading comma
-RPC_SERVERS="${RPC_SERVERS#,}"
+RPC_SERVERS="$${RPC_SERVERS#,}"
 
 if [ -z "$RPC_SERVERS" ]; then
   echo "Warning: No RPC servers found for model {{ best_model.filename }}. Waiting..."
