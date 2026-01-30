@@ -16,6 +16,12 @@ _AWS_KEY_PATTERN = re.compile(r'((?:AKIA|ASIA|ABIA|ACCA)[0-9A-Z]{16})')
 _SLACK_KEY_PATTERN = re.compile(r'(xox[baprs]-[a-zA-Z0-9-]{10,})')
 # Matches GitHub Tokens (starts with ghp, gho, etc.)
 _GITHUB_KEY_PATTERN = re.compile(r'(gh[pousr]_[a-zA-Z0-9]{36,})')
+# Matches GitLab Tokens (starts with glpat-, glptt-, etc.)
+_GITLAB_KEY_PATTERN = re.compile(r'(glpat-[0-9a-zA-Z\-_]{20,})')
+
+# Matches URL credentials (e.g. scheme://user:pass@host)
+# Captures: 1=scheme separator "://", 2=user, 3=password
+_URL_CREDENTIALS_PATTERN = re.compile(r'(://)([^:/]+):([^@]+)@')
 
 def redact_sensitive_data(text: str) -> str:
     """
@@ -24,9 +30,18 @@ def redact_sensitive_data(text: str) -> str:
     if not text:
         return text
 
-    # Fast path: if the triggers aren't present, skip regex
+    # Fast path optimization: if potential triggers aren't present, skip regex
     # Bolt ⚡ Optimization: 'in' operator is much faster than regex
-    if "sk-" not in text and "Bearer" not in text:
+    # We check for the most common prefixes/indicators
+    triggers = [
+        "sk-", "Bearer", "AIza",
+        "AKIA", "ASIA", "ABIA", "ACCA",
+        "xox",
+        "ghp_", "gho_", "ghu_", "ghs_", "ghr_", # GitHub prefixes
+        "glpat", # GitLab
+        "://"    # URL credentials
+    ]
+    if not any(trigger in text for trigger in triggers):
         return text
 
     # Redact generic API key patterns and Bearer tokens
@@ -36,6 +51,11 @@ def redact_sensitive_data(text: str) -> str:
     text = _AWS_KEY_PATTERN.sub(r'AWS-[REDACTED]', text)
     text = _SLACK_KEY_PATTERN.sub(r'xox-[REDACTED]', text)
     text = _GITHUB_KEY_PATTERN.sub(r'gh-[REDACTED]', text)
+    text = _GITLAB_KEY_PATTERN.sub(r'glpat-[REDACTED]', text)
+
+    # Redact credentials in URLs (e.g. for Bitbucket, generic git, etc.)
+    # Replace with scheme://user:[REDACTED]@
+    text = _URL_CREDENTIALS_PATTERN.sub(r'\1\2:[REDACTED]@', text)
 
     return text
 
