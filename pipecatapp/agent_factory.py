@@ -37,7 +37,7 @@ from tools.search_tool import SearchTool
 REMOTE_SUPPORTED_TOOLS = [
     "ssh", "desktop_control", "code_runner", "web_browser",
     "ansible", "power", "term_everything", "rag", "ha",
-    "git", "orchestrator"
+    "git", "orchestrator", "search"
 ]
 
 def create_tools(config: dict, twin_service=None, runner=None) -> dict:
@@ -81,7 +81,6 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "experiment": ExperimentTool(),
         "submit_solution": SubmitSolutionTool(),
         "container_registry": ContainerRegistryTool(),
-        "search": SearchTool(root_dir="/opt/pipecatapp"),
     }
 
     if config.get("use_summarizer", False) and twin_service:
@@ -110,6 +109,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         )
         tools["git"] = Git_Tool(root_dir="/opt/pipecatapp")
         tools["orchestrator"] = OrchestratorTool()
+        tools["search"] = SearchTool(root_dir="/opt/pipecatapp")
 
     # Filter out None values
     return {k: v for k, v in tools.items() if v is not None}
