@@ -21,11 +21,8 @@ variable "rpc_pool_job_name" {
 {% set models_with_memory = model_list | selectattr('memory_mb', 'defined') %}
 {% set suitable_models_unsorted = models_with_memory | selectattr('memory_mb', 'le', available_memory_mb) %}
 {% set suitable_models = suitable_models_unsorted | sort(attribute='memory_mb', reverse=true) | list %}
-{% set rpc_service_name = rpc_pool_job_name | default('rpc-pool') ~ '-' ~ current_expert ~ '-provider' %}
-{% set service_list = [] %}
-{% for model in suitable_models %}
-  {% set _ = service_list.append("rpc-" ~ (model.filename | regex_replace('[^a-zA-Z0-9-]', '-')) ~ "-provider") %}
-{% endfor %}
+{% set best_model = suitable_models[0] %}
+{% set best_model_sanitized = best_model.filename | regex_replace('[^a-zA-Z0-9-]', '-') %}
 
 job "{{ job_name }}" {
   datacenters = ["dc1"]
@@ -64,12 +61,14 @@ job "{{ job_name }}" {
     network {
       mode = "host"
       port "http" {}
+      port "api" {}
     }
 
+    # The LLM API Service
     service {
       name = "{{ service_name }}"
       tags = [{{ current_expert_tags | map('to_json') | join(', ') }}]
-      port = "http"
+      port = "api"
 
       check {
         type     = "http"
@@ -82,6 +81,76 @@ job "{{ job_name }}" {
           limit = 3
           grace = "90s"
         }
+      }
+    }
+
+    # The Pipecat Agent Service
+    service {
+      name = "{{ service_name }}-agent"
+      port = "http"
+      tags = ["agent", "expert={{ current_expert }}"]
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "15s"
+        timeout  = "10s"
+      }
+    }
+
+    task "llama-server" {
+      driver = "raw_exec"
+
+      constraint {
+        attribute = "${meta.node_type}"
+        value     = "controller"
+      }
+
+      template {
+        data = <<EOH
+#!/bin/bash
+set -e
+echo "Starting llama-server for {{ best_model.filename }}..."
+
+# Discover RPC servers
+RPC_SERVERS=""
+{% raw %}
+{{ range service "rpc-{% endraw %}{{ best_model_sanitized }}{% raw %}-provider" }}
+RPC_SERVERS="$RPC_SERVERS,{{ .Address }}:{{ .Port }}"
+{{ end }}
+{% endraw %}
+# Remove leading comma
+RPC_SERVERS="${RPC_SERVERS#,}"
+
+if [ -z "$RPC_SERVERS" ]; then
+  echo "Warning: No RPC servers found for model {{ best_model.filename }}. Waiting..."
+  # Just sleep to avoid crash loops if RPC servers are starting up
+  sleep 10
+  exit 1
+fi
+
+echo "Found RPC servers: $RPC_SERVERS"
+
+exec /usr/local/bin/llama-server \
+    --model /opt/nomad/models/{{ best_model.filename }} \
+    --host 0.0.0.0 \
+    --port ${NOMAD_PORT_api} \
+    --rpc "$RPC_SERVERS" \
+    --n-gpu-layers 99 \
+    --mlock \
+    --verbose
+EOH
+        destination = "local/run_server.sh"
+        perms = "0755"
+      }
+
+      config {
+        command = "local/run_server.sh"
+      }
+
+      resources {
+        cpu    = 1000
+        memory = 1024
       }
     }
 
@@ -120,7 +189,11 @@ job "{{ job_name }}" {
       env {
         STT_SERVICE = "faster-whisper"
         WEB_PORT = "${NOMAD_PORT_http}"
-        LLAMA_API_SERVICE_NAME = "{{ service_list | join(',') }}"
+
+        # Point to the local llama-server we just started
+        LLAMA_API_BASE_URL = "http://localhost:${NOMAD_PORT_api}/v1"
+        LLAMA_API_SERVICE_NAME = "{{ service_name }}" # For discovery fallback
+
         PIPECAT_API_KEYS = "{{ pipecat_api_keys | default('') }}"
 
         # Necessary for service discovery
