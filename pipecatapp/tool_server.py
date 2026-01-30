@@ -17,6 +17,7 @@ from tools.rag_tool import RAG_Tool
 from tools.ha_tool import HA_Tool
 from tools.git_tool import Git_Tool
 from tools.orchestrator_tool import OrchestratorTool
+from tools.search_tool import SearchTool
 
 app = FastAPI()
 
@@ -38,6 +39,7 @@ tools = {
     "ha": HA_Tool(ha_url=None, ha_token=None), # These will be configured later if needed
     "git": Git_Tool(root_dir="/opt/pipecatapp"),
     "orchestrator": OrchestratorTool(),
+    "search": SearchTool(root_dir="/opt/pipecatapp"),
 }
 
 API_KEY = os.getenv("TOOL_SERVER_API_KEY")
