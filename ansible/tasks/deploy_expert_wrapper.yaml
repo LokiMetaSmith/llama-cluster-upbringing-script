@@ -87,7 +87,7 @@
 
     - name: "Expert {{ expert_name }} : Run nomad job"
       ansible.builtin.command: >
-        /usr/local/bin/nomad job run
+        /usr/local/bin/nomad job run -detach
         -var="job_name=expert-{{ expert_name }}"
         -var="service_name=expert-api-{{ expert_name }}"
         -var="rpc_pool_job_name=llamacpp-rpc-pool"
