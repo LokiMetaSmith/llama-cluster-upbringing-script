@@ -108,7 +108,12 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         # RAG Tool has specific local dependencies (memory)
         # Allow configurability for base_dir, but default to secure app dir
         rag_base_dir = config.get("rag_base_dir", "/opt/pipecatapp")
-        tools["rag"] = RAG_Tool(pmm_memory=twin_service.long_term_memory if twin_service else None, base_dir=rag_base_dir)
+        rag_allowed_root = config.get("rag_allowed_root", rag_base_dir)
+        tools["rag"] = RAG_Tool(
+            pmm_memory=twin_service.long_term_memory if twin_service else None,
+            base_dir=rag_base_dir,
+            allowed_root=rag_allowed_root
+        )
 
         tools["ha"] = HA_Tool(
             ha_url=config.get("ha_url"),
