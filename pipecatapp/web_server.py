@@ -722,6 +722,33 @@ async def load_state_endpoint(request: Request, payload: Dict = Body(..., exampl
         return {"message": result}
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
+@app.post("/api/rag/configure", summary="Configure RAG Scope", description="Changes the search scope (base directory) for the RAG tool.", tags=["Agent"])
+async def configure_rag(request: Request, payload: Dict = Body(..., examples=[{"path": "/opt/pipecatapp/docs"}]), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """Configures the RAG tool's search scope.
+
+    Args:
+        payload (Dict): The request body, expected to contain a "path" key.
+
+    Returns:
+        JSONResponse: A message indicating success or failure.
+    """
+    path = payload.get("path")
+    if not path:
+        return JSONResponse(status_code=400, content={"message": "path is required"})
+
+    twin_service = getattr(request.app.state, "twin_service_instance", None)
+    if not twin_service or not hasattr(twin_service, 'tools'):
+         return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
+
+    rag_tool = twin_service.tools.get('rag')
+    if not rag_tool:
+        return JSONResponse(status_code=503, content={"message": "RAG tool not available."})
+
+    if rag_tool.set_scope(path):
+        return {"message": f"RAG scope updated to {path}"}
+    else:
+        return JSONResponse(status_code=400, content={"message": "Invalid path or security violation."})
+
 if __name__ == "__main__":
     import uvicorn
     host_ip = os.getenv("HOST_IP", "::")

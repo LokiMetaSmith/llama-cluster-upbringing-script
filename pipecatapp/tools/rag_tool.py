@@ -15,13 +15,15 @@ class RAG_Tool:
     the agent to find relevant information to answer user queries about the
     project.
     """
-    def __init__(self, pmm_memory: Optional[PMMMemory] = None, base_dir="/", model_name="all-MiniLM-L6-v2"):
+    def __init__(self, pmm_memory: Optional[PMMMemory] = None, base_dir="/", allowed_root: Optional[str] = None, model_name="all-MiniLM-L6-v2"):
         """Initializes the RAG_Tool.
 
         Args:
             pmm_memory (Optional[PMMMemory]): The PMMMemory object for persistent storage.
                 If None, a local PMMMemory instance will be created.
             base_dir (str): The root directory to start scanning for documents.
+            allowed_root (str, optional): The security root. Subdirectories of this path are allowed.
+                Defaults to base_dir if not provided.
             model_name (str): The name of the SentenceTransformer model to use.
         """
         self.name = "rag"
@@ -39,7 +41,14 @@ class RAG_Tool:
                 logging.error("Could not import PMMMemory. RAG tool will not function.")
                 self.pmm_memory = None
 
-        self.base_dir = base_dir
+        self.base_dir = os.path.abspath(base_dir)
+        self.allowed_root = os.path.abspath(allowed_root) if allowed_root else self.base_dir
+
+        # Ensure initial base_dir is within allowed_root
+        if os.path.commonpath([self.allowed_root, self.base_dir]) != self.allowed_root:
+            logging.warning(f"Initial base_dir {self.base_dir} is not within allowed_root {self.allowed_root}. Resetting to allowed_root.")
+            self.base_dir = self.allowed_root
+
         self.model = SentenceTransformer(model_name)
         self.documents = []
         self.index = None
@@ -51,16 +60,57 @@ class RAG_Tool:
         else:
              logging.warning("RAG Tool disabled: PMMMemory unavailable.")
 
+    def set_scope(self, path: str) -> bool:
+        """Updates the search scope to a new directory.
+
+        Args:
+            path (str): The new directory to scan.
+
+        Returns:
+            bool: True if scope was updated, False if invalid or forbidden.
+        """
+        abs_path = os.path.abspath(path)
+        # Security check: ensure path is within allowed_root
+        if os.path.commonpath([self.allowed_root, abs_path]) != self.allowed_root:
+            logging.warning(f"RAG scope change denied: {path} is not within {self.allowed_root}")
+            return False
+
+        if not os.path.isdir(abs_path):
+            logging.warning(f"RAG scope change denied: {path} is not a directory")
+            return False
+
+        logging.info(f"RAG tool changing scope from {self.base_dir} to {abs_path}")
+        self.base_dir = abs_path
+        self.is_ready = False
+        self.index = None
+        self.documents = []
+
+        if self.pmm_memory:
+            threading.Thread(target=self._build_knowledge_base, daemon=True).start()
+
+        return True
+
     def _build_knowledge_base(self):
         """Scans for documents, chunks them, and builds the FAISS index."""
-        logging.info("Building RAG knowledge base...")
+        logging.info(f"Building RAG knowledge base for {self.base_dir}...")
 
         # Load existing documents from PMM memory to avoid reprocessing
         # Use synchronous method as we are in a background thread
-        self.documents = self.pmm_memory.get_events_sync(kind="rag_document", limit=10000) # Arbitrary high limit
+        all_docs = self.pmm_memory.get_events_sync(kind="rag_document", limit=10000) # Arbitrary high limit
+
+        # Filter docs to only those inside the current base_dir
+        # We use commonpath to avoid partial prefix matches (e.g. /opt/dir matching /opt/dir-secret)
+        self.documents = []
+        for doc in all_docs:
+            source = doc['meta'].get('source', '')
+            try:
+                if source and os.path.commonpath([self.base_dir, source]) == self.base_dir:
+                    self.documents.append(doc)
+            except ValueError:
+                continue
 
         if not self.documents:
-            logging.info("No existing RAG documents found in memory, scanning filesystem...")
+            logging.info("No existing RAG documents found in memory for this scope, scanning filesystem...")
             all_chunks = []
             # Exclude irrelevant or problematic directories
             exclude_dirs = {".git", "jules-scratch", ".venv", "ansible", "docker", "e2e", "debian_service", "distributed-llama-repo"}
