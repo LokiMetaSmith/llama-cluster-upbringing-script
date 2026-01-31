@@ -322,7 +322,7 @@ def wait_for_async_tasks():
     print_header("Checking for background Async Tasks")
 
     while True:
-        pending_jobs = 0
+        pending_job_ids = []
         files = glob.glob(os.path.join(async_dir, "*"))
 
         for fpath in files:
@@ -340,18 +340,18 @@ def wait_for_async_tasks():
                     try:
                         os.kill(pid, 0)
                         # Process exists
-                        pending_jobs += 1
+                        pending_job_ids.append(os.path.basename(fpath))
                     except OSError:
                         # Process dead, likely crashed or finished without updating file?
                         pass
             except Exception:
                 pass
 
-        if pending_jobs == 0:
+        if not pending_job_ids:
             print(f"{Colors.OKGREEN}✅ All async tasks completed.{Colors.ENDC}")
             break
 
-        print(f"⏳ Waiting for {pending_jobs} async task(s) to complete...")
+        print(f"⏳ Waiting for {len(pending_job_ids)} async task(s) to complete: {', '.join(pending_job_ids)}")
         time.sleep(2)
 
 def print_summary():
