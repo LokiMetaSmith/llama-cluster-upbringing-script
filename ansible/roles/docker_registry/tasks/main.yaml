@@ -11,13 +11,18 @@
     dest: "{{ nomad_jobs_dir }}/docker-registry.nomad"
   become: yes
 
+- name: Ensure registry image is pulled
+  ansible.builtin.command: docker pull registry:2
+  become: yes
+  register: docker_pull
+  changed_when: "'Downloaded newer image' in docker_pull.stdout"
+
 - name: Run docker-registry job
   ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/docker-registry.nomad
+    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/docker-registry.nomad
   environment:
     NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
   register: nomad_job_run
-  changed_when: "'Job registration successful' in nomad_job_run.stdout"
 
 - name: Wait for Registry to be ready with debug on failure
   block:
