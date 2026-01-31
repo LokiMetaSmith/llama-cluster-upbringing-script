@@ -112,6 +112,7 @@ VENV_DIR="$APP_DIR/venv"
 CONTAINER_VENV_DIR="/opt/pipecat_venv"
 
 ACTIVATE=""
+USING_CONTAINER_VENV=0
 
 check_venv_valid() {
     local venv_path=$1
@@ -140,6 +141,7 @@ elif [ "$IS_DOCKER" -eq 1 ] && check_venv_valid "$CONTAINER_VENV_DIR"; then
     log_msg "Found valid container venv at $CONTAINER_VENV_DIR. Using it."
     ACTIVATE="$CONTAINER_VENV_DIR/bin/activate"
     source "$ACTIVATE"
+    USING_CONTAINER_VENV=1
 
 # 3. Last resort: Create a new venv in the local directory
 else
@@ -155,12 +157,16 @@ else
     source "$ACTIVATE"
 fi
 
-log_msg "Installing dependencies..."
-pip install --upgrade pip 2>&1 | tee -a "$LOG_FILE"
-pip install -r requirements.txt 2>&1 | tee -a "$LOG_FILE"
+if [ "$USING_CONTAINER_VENV" -eq 1 ]; then
+    log_msg "Using container venv. Skipping pip install/playwright install to avoid network issues."
+else
+    log_msg "Installing dependencies..."
+    pip install --upgrade pip 2>&1 | tee -a "$LOG_FILE"
+    pip install -r requirements.txt 2>&1 | tee -a "$LOG_FILE"
 
-log_msg "Installing Playwright browsers..."
-playwright install 2>&1 | tee -a "$LOG_FILE"
+    log_msg "Installing Playwright browsers..."
+    playwright install 2>&1 | tee -a "$LOG_FILE"
+fi
 
 log_msg "--- Launching pipecat-app: $(date) ---"
 
