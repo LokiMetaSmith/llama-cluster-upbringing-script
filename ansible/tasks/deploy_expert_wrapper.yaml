@@ -1,6 +1,6 @@
 - block:
-    - name: "Expert {{ expert_name }} : Check if pipecatapp:expert image exists"
-      ansible.builtin.command: docker image inspect pipecatapp:expert
+    - name: "Expert {{ expert_name }} : Check if {{ pipecat_image_name }}:{{ pipecat_image_tag }} image exists"
+      ansible.builtin.command: "docker image inspect {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
       register: pipecat_image_check
       failed_when: false
       changed_when: false
@@ -25,20 +25,20 @@
 
     - name: "Expert {{ expert_name }} : Build pipecatapp image if missing"
       block:
-        - name: "Expert {{ expert_name }} : Build pipecatapp Docker image"
+        - name: "Expert {{ expert_name }} : Build {{ pipecat_image_name }} Docker image"
           ansible.builtin.include_tasks:
             file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
           vars:
-            pipecat_image_name: "pipecatapp"
-            pipecat_image_tag: "expert"
+            pipecat_image_name: "{{ pipecat_image_name }}"
+            pipecat_image_tag: "{{ pipecat_image_tag }}"
             pipecat_build_dir: "{{ pipecat_app_mount_source }}"
 
-        - name: "Expert {{ expert_name }} : Tag pipecatapp:expert"
-          ansible.builtin.command: docker tag pipecatapp:expert pipecatapp:expert
+        - name: "Expert {{ expert_name }} : Tag {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
+          ansible.builtin.command: "docker tag {{ pipecat_image_name }}:{{ pipecat_image_tag }} {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
       when: pipecat_image_check.rc != 0
 
-    - name: "Expert {{ expert_name }} : Refresh pipecatapp:expert tag for Nomad"
-      ansible.builtin.command: docker tag pipecatapp:expert pipecatapp:expert
+    - name: "Expert {{ expert_name }} : Refresh {{ pipecat_image_name }}:{{ pipecat_image_tag }} tag for Nomad"
+      ansible.builtin.command: "docker tag {{ pipecat_image_name }}:{{ pipecat_image_tag }} {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
       changed_when: false
 
     - name: "Expert {{ expert_name }} : Check if local registry is reachable"
@@ -50,11 +50,11 @@
       register: registry_check
       ignore_errors: true
 
-    - name: "Expert {{ expert_name }} : Tag and push pipecatapp image to local registry"
+    - name: "Expert {{ expert_name }} : Tag and push {{ pipecat_image_name }} image to local registry"
       community.docker.docker_image:
-        name: "pipecatapp"
-        tag: "expert"
-        repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/pipecatapp"
+        name: "{{ pipecat_image_name }}"
+        tag: "{{ pipecat_image_tag }}"
+        repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/{{ pipecat_image_name }}"
         push: true
         source: local
       when: registry_check is success
