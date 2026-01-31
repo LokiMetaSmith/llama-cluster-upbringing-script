@@ -27,3 +27,8 @@
 **Vulnerability:** `ProjectMapperTool` allowed arbitrary directory scanning via path traversal in `sub_path` argument, as it only used `os.path.normpath` without `os.path.commonpath`.
 **Learning:** `os.path.normpath` resolves `..` but does not enforce that the resulting path is within a base directory. Always verify the resolved path is a child of the intended root.
 **Prevention:** Resolve both root and target paths to absolute paths using `os.path.abspath`, then use `os.path.commonpath([root, target]) == root` to strictly enforce containment.
+
+## 2026-01-30 - Excessive Scope in RAG Tool
+**Vulnerability:** `RAG_Tool` was initialized with `base_dir="/"`, granting it permission to scan and index the entire container filesystem, including sensitive system directories.
+**Learning:** Default configurations for tools should obey the Principle of Least Privilege. Never default to the filesystem root (`/`) when a specific application directory (`/opt/pipecatapp`) is sufficient.
+**Prevention:** Explicitly restrict file scanning tools to the application's root directory during initialization in the factory method.
