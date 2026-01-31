@@ -372,7 +372,7 @@
 
 - name: Set pipecatapp_image_ref (Local Fallback)
   ansible.builtin.set_fact:
-    pipecatapp_image_ref: "{{ (pipecatapp_local_image_info.stdout | from_json)[0].Id }}"
+    pipecatapp_image_ref: "pipecatapp:local"
   when: pipecatapp_registry_check is failed
 
 - name: Ensure Nomad jobs directory exists
