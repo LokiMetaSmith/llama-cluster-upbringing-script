@@ -1,33 +1,61 @@
-name: "Tiered Agent Loop"
+name: "Agent Loop with Tools"
 nodes:
   - id: "Input"
     type: "InputNode"
+    config:
+      outputs:
+        - name: "user_text"
     inputs: []
 
-  - id: "Summarizer"
+  - id: "SystemPrompt"
+    type: "SystemPromptNode"
+    inputs: []
+
+  - id: "Router"
     type: "SimpleLLMNode"
-    model_tier: "fast"
-    system_prompt: "You are a concise summarizer. Summarize the user's input in one sentence."
+    model_tier: "balanced"
     inputs:
       - name: "user_text"
         connection:
           from_node: "Input"
           from_output: "user_text"
-
-  - id: "Reasoning"
-    type: "SimpleLLMNode"
-    model_tier: "balanced"
-    system_prompt: "You are a thoughtful assistant. Answer the user based on the summary provided."
-    inputs:
-      - name: "user_text"
+      - name: "system_prompt"
         connection:
-          from_node: "Summarizer"
+          from_node: "SystemPrompt"
+          from_output: "system_prompt"
+
+  - id: "ToolParser"
+    type: "ToolParserNode"
+    inputs:
+      - name: "llm_response"
+        connection:
+          from_node: "Router"
           from_output: "response"
+
+  - id: "ToolExecutor"
+    type: "ToolExecutorNode"
+    inputs:
+      - name: "tool_call_data"
+        connection:
+          from_node: "ToolParser"
+          from_output: "tool_call_data"
+
+  - id: "Merger"
+    type: "MergeNode"
+    inputs:
+      - name: "in1"
+        connection:
+          from_node: "ToolParser"
+          from_output: "final_response"
+      - name: "in2"
+        connection:
+          from_node: "ToolExecutor"
+          from_output: "tool_result"
 
   - id: "Output"
     type: "OutputNode"
     inputs:
       - name: "final_output"
         connection:
-          from_node: "Reasoning"
-          from_output: "response"
+          from_node: "Merger"
+          from_output: "merged_output"
