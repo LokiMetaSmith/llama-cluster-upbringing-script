@@ -154,7 +154,7 @@
 
     - name: Set pipecat_image_id fact (Local Fallback)
       ansible.builtin.set_fact:
-        pipecat_image_id: "{{ (pipecat_image_info.stdout | from_json)[0].Id }}"
+        pipecat_image_id: "pipecatapp:expert"
       when: global_registry_check is failed
       tags:
         - deploy-expert
