@@ -168,7 +168,7 @@
 
     - name: "Expert {{ expert_name }} : Fetch logs (stdout)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs {{ expert_alloc_id.stdout }}"
+        cmd: "/usr/local/bin/nomad alloc logs {{ expert_alloc_id.stdout }} expert-{{ expert_name }}"
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: expert_logs_stdout
@@ -182,7 +182,7 @@
 
     - name: "Expert {{ expert_name }} : Fetch logs (stderr)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ expert_alloc_id.stdout }}"
+        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ expert_alloc_id.stdout }} expert-{{ expert_name }}"
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       register: expert_logs_stderr
