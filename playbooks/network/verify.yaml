@@ -11,19 +11,19 @@
         - name: "Check 1: Verify tailscale0 interface exists"
           fail:
             msg: "Interface tailscale0 not found! The mesh is not active."
-          when: "'tailscale0' not in ansible_interfaces"
+          when: "'tailscale0' not in ansible_facts['interfaces']"
 
         - name: "Check 2: Verify tailscale0 has an IPv4 address"
           fail:
             msg: "Interface tailscale0 has no IPv4 address."
-          when: "ansible_tailscale0.ipv4.address is not defined"
+          when: "ansible_facts['tailscale0'].ipv4.address is not defined"
 
         - name: "Check 3: Validate cluster_ip resolution"
           assert:
             that:
-              - "cluster_ip == ansible_tailscale0.ipv4.address"
+              - "cluster_ip == ansible_facts['tailscale0'].ipv4.address"
               - "cluster_ip.startswith(expected_subnet_prefix)"
-            fail_msg: "cluster_ip ({{ cluster_ip }}) does not match tailscale0 IP ({{ ansible_tailscale0.ipv4.address | default('N/A') }}) or is not in the expected subnet."
+            fail_msg: "cluster_ip ({{ cluster_ip }}) does not match tailscale0 IP ({{ ansible_facts['tailscale0'].ipv4.address | default('N/A') }}) or is not in the expected subnet."
 
         - name: "Check 4: Verify connectivity to Headscale Controller"
           uri:
