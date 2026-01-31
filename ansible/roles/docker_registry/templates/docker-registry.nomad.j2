@@ -12,7 +12,6 @@ job "docker-registry" {
 
     network {
       port "http" {
-        to = 5000
         static = {{ docker_registry_port }}
       }
     }
@@ -36,10 +35,14 @@ job "docker-registry" {
 
       config {
         image = "registry:2"
-        ports = ["http"]
+        network_mode = "host"
         volumes = [
           "{{ nomad_volumes_dir }}/registry:/var/lib/registry"
         ]
+      }
+
+      env {
+        REGISTRY_HTTP_ADDR = ":{{ docker_registry_port }}"
       }
 
       resources {
