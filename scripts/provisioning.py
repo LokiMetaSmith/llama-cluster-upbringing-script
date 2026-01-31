@@ -15,6 +15,8 @@ import time
 import socket
 import yaml
 import shutil
+import glob
+import json
 
 # --- Constants ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -311,6 +313,47 @@ def run_playbook(playbook_path, extra_vars, tags, verbose_level):
 
     print(f"{Colors.OKGREEN}✅ Task '{playbook_path}' completed successfully.{Colors.ENDC}")
 
+def wait_for_async_tasks():
+    """Waits for any background Ansible async tasks to complete."""
+    async_dir = os.path.expanduser("~/.ansible_async")
+    if not os.path.exists(async_dir):
+        return
+
+    print_header("Checking for background Async Tasks")
+
+    while True:
+        pending_jobs = 0
+        files = glob.glob(os.path.join(async_dir, "*"))
+
+        for fpath in files:
+            try:
+                with open(fpath, 'r') as f:
+                    data = json.load(f)
+
+                # If explicitly finished, ignore
+                if data.get('finished') == 1:
+                    continue
+
+                # Check if PID is still alive
+                pid = data.get('pid')
+                if pid:
+                    try:
+                        os.kill(pid, 0)
+                        # Process exists
+                        pending_jobs += 1
+                    except OSError:
+                        # Process dead, likely crashed or finished without updating file?
+                        pass
+            except Exception:
+                pass
+
+        if pending_jobs == 0:
+            print(f"{Colors.OKGREEN}✅ All async tasks completed.{Colors.ENDC}")
+            break
+
+        print(f"⏳ Waiting for {pending_jobs} async task(s) to complete...")
+        time.sleep(2)
+
 def print_summary():
     """Prints a summary of warnings and errors."""
     if not WARNINGS and not ERRORS:
@@ -457,6 +500,9 @@ def main():
         # Save State
         with open(STATE_FILE, 'w') as f:
             f.write(str(i))
+
+    # Wait for any background/async tasks (like home-assistant)
+    wait_for_async_tasks()
 
     print_header("Provisioning Complete")
     print(f"{Colors.OKGREEN}✅ All tasks completed successfully.{Colors.ENDC}")
