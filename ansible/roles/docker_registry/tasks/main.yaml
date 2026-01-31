@@ -24,10 +24,28 @@
     NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
   register: nomad_job_run
 
-- name: Wait for Registry to be ready
-  ansible.builtin.wait_for:
-    host: "127.0.0.1"
-    port: "{{ docker_registry_port }}"
-    delay: 5
-    timeout: 300
-    state: started
+- name: Wait for Registry to be ready with debug on failure
+  block:
+    - name: Wait for Registry to be ready
+      ansible.builtin.wait_for:
+        host: "{{ '127.0.0.1' if docker_registry_host == 'localhost' else docker_registry_host }}"
+        port: "{{ docker_registry_port }}"
+        delay: 5
+        timeout: 300
+        state: started
+  rescue:
+    - name: Get docker-registry job status
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status docker-registry
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      register: nomad_status
+      ignore_errors: true
+
+    - name: Display docker-registry job status
+      ansible.builtin.debug:
+        var: nomad_status.stdout_lines
+
+    - name: Fail after debugging
+      ansible.builtin.fail:
+        msg: "Timeout waiting for docker registry. See nomad status above."
