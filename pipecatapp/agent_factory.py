@@ -106,7 +106,9 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         tools["term_everything"] = TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage")
 
         # RAG Tool has specific local dependencies (memory)
-        tools["rag"] = RAG_Tool(pmm_memory=twin_service.long_term_memory if twin_service else None, base_dir="/opt/pipecatapp")
+        # Allow configurability for base_dir, but default to secure app dir
+        rag_base_dir = config.get("rag_base_dir", "/opt/pipecatapp")
+        tools["rag"] = RAG_Tool(pmm_memory=twin_service.long_term_memory if twin_service else None, base_dir=rag_base_dir)
 
         tools["ha"] = HA_Tool(
             ha_url=config.get("ha_url"),
