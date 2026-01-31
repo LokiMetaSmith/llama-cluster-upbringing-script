@@ -50,7 +50,7 @@ router_port: 8081
 router_count: 1
 nanochat_port: 8005
 frigate_port: 5000
-docker_registry_host: "127.0.0.1"
+docker_registry_host: "localhost"
 docker_registry_port: 5001
 archivist_port: 8008
 node_exporter_port: 9100

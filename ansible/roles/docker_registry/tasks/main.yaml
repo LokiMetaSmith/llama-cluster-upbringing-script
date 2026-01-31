@@ -23,7 +23,7 @@
   block:
     - name: Wait for Registry to be ready
       ansible.builtin.wait_for:
-        host: "{{ docker_registry_host }}"
+        host: "{{ '127.0.0.1' if docker_registry_host == 'localhost' else docker_registry_host }}"
         port: "{{ docker_registry_port }}"
         delay: 5
         timeout: 300
