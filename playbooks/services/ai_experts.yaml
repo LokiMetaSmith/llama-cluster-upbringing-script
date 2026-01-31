@@ -102,8 +102,6 @@
       ansible.builtin.include_tasks:
         file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
       vars:
-        pipecat_image_name: "{{ pipecat_image_name }}"
-        pipecat_image_tag: "{{ pipecat_image_tag }}"
         pipecat_build_dir: "{{ cluster_infra_dir }}/pipecatapp"
       tags:
         - deploy-gpu-provider

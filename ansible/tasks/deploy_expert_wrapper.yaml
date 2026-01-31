@@ -29,8 +29,6 @@
           ansible.builtin.include_tasks:
             file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
           vars:
-            pipecat_image_name: "{{ pipecat_image_name }}"
-            pipecat_image_tag: "{{ pipecat_image_tag }}"
             pipecat_build_dir: "{{ pipecat_app_mount_source }}"
 
         - name: "Expert {{ expert_name }} : Tag {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
