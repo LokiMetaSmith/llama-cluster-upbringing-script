@@ -38,3 +38,7 @@
 ## 2026-02-16 - Accessible Drag-and-Drop Alternatives
 **Learning:** Drag-and-drop interfaces for adding items (like nodes in a graph editor) are inherently inaccessible to keyboard users. Relying solely on this interaction pattern excludes a significant user group.
 **Action:** Implement keyboard-accessible alternatives (e.g., Enter key to "add" the item to a default location) and ensure the draggable source elements have `tabindex="0"`, `role="button"`, and appropriate ARIA labels.
+
+## 2026-02-18 - Search Empty States
+**Learning:** When search results (like filtering a node library) are empty, displaying nothing can look like a bug. An explicit "No results found" message provides confirmation that the system is working and the search just yielded no matches.
+**Action:** Always check for empty results in filter/search functions and display a friendly, styled empty state message (e.g., "No nodes found matching 'xyz'").
