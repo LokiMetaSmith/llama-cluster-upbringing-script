@@ -335,17 +335,22 @@ class PMMMemory:
         """Aggregates work statistics for a specific agent."""
         cursor = self.conn.cursor()
 
-        # Count total tasks assigned
-        cursor.execute("SELECT COUNT(*) FROM work_items WHERE assignee_id = ?", (assignee_id,))
-        total_tasks = cursor.fetchone()[0]
+        # Bolt ⚡ Optimization: Use a single query for all stats to reduce overhead
+        cursor.execute("""
+            SELECT
+                COUNT(*),
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END),
+                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END)
+            FROM work_items
+            WHERE assignee_id = ?
+        """, (assignee_id,))
 
-        # Count successful tasks
-        cursor.execute("SELECT COUNT(*) FROM work_items WHERE assignee_id = ? AND status = 'completed'", (assignee_id,))
-        completed_tasks = cursor.fetchone()[0]
+        row = cursor.fetchone()
 
-        # Count failed tasks
-        cursor.execute("SELECT COUNT(*) FROM work_items WHERE assignee_id = ? AND status = 'failed'", (assignee_id,))
-        failed_tasks = cursor.fetchone()[0]
+        total_tasks = row[0]
+        # SQLite SUM() can return None if there are no rows, but since we count(*), if count is 0, sums are None.
+        completed_tasks = row[1] if row[1] is not None else 0
+        failed_tasks = row[2] if row[2] is not None else 0
 
         success_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
 
