@@ -281,6 +281,8 @@
     - name: Deploy the Expert Orchestrator services with debugging
       include_tasks:
         file: "{{ playbook_dir }}/../../ansible/tasks/deploy_expert_wrapper.yaml"
+      vars:
+        registry_is_reachable: "{{ global_registry_check is success }}"
       loop: "{{ experts }}"
       loop_control:
         loop_var: expert_name
