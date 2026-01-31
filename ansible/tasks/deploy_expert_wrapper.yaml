@@ -47,6 +47,7 @@
         timeout: 5
       register: registry_check
       ignore_errors: true
+      when: registry_is_reachable | default(true)
 
     - name: "Expert {{ expert_name }} : Tag and push {{ pipecat_image_name }} image to local registry"
       community.docker.docker_image:
@@ -55,7 +56,9 @@
         repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/{{ pipecat_image_name }}"
         push: true
         source: local
-      when: registry_check is success
+      when:
+        - registry_is_reachable | default(true)
+        - registry_check is success
 
     - name: "Expert {{ expert_name }} : Ensure startup script exists (Dev Mode fallback)"
       ansible.builtin.template:
