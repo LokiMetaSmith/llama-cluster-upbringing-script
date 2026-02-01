@@ -394,7 +394,7 @@ def main():
     parser.add_argument("--home-assistant-debug", action="store_true", help="Debug Home Assistant")
     parser.add_argument("--watch", help="Pause for inspection after target")
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
 
     # Consolidate debug flag into verbose level
     if args.debug and args.verbose == 0:
