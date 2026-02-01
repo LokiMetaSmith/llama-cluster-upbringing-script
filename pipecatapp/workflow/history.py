@@ -2,27 +2,49 @@ import sqlite3
 import json
 import os
 import time
+import threading
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 class WorkflowHistory:
-    """Manages the persistence of workflow execution history."""
+    """Manages the persistence of workflow execution history.
 
-    _initialized_paths = set()
+    Bolt ⚡ Optimization:
+    - Implements Singleton pattern to avoid repeated object creation.
+    - Uses a persistent SQLite connection with WAL mode for better concurrency.
+    - Uses threading.Lock to ensure thread-safe writes on the shared connection.
+    """
+
+    _instances = {}
+    _instances_lock = threading.Lock()
+
+    def __new__(cls, db_path: str = "~/.config/pipecat/workflow_history.db"):
+        path = os.path.abspath(os.path.expanduser(db_path))
+        with cls._instances_lock:
+            if path not in cls._instances:
+                instance = super(WorkflowHistory, cls).__new__(cls)
+                cls._instances[path] = instance
+                # Initialize the instance here, protected by the class lock
+                instance.db_path = path
+                instance.lock = threading.Lock()
+                instance._init_db()
+            return cls._instances[path]
 
     def __init__(self, db_path: str = "~/.config/pipecat/workflow_history.db"):
-        self.db_path = os.path.abspath(os.path.expanduser(db_path))
-        # Optimization: Only run _init_db (which checks filesystem/creates tables)
-        # if we haven't already done so for this path in this process.
-        if self.db_path not in self._initialized_paths:
-            self._init_db()
-            self._initialized_paths.add(self.db_path)
+        # Initialization is handled in __new__ to ensure thread safety
+        pass
 
     def _init_db(self):
         """Initialize the SQLite database and create the table if it doesn't exist."""
+        # This is called inside __new__ under the class lock, so it's safe.
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        # Bolt ⚡ Optimization: Keep connection open and use WAL mode
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row # Set row_factory globally
+        self.conn.execute("PRAGMA journal_mode=WAL;")
+        self.conn.execute("PRAGMA synchronous=NORMAL;")
+
+        cursor = self.conn.cursor()
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS workflow_runs (
                 id TEXT PRIMARY KEY,
@@ -34,30 +56,26 @@ class WorkflowHistory:
                 error TEXT
             )
         ''')
-        conn.commit()
-        conn.close()
+        self.conn.commit()
 
     def save_run(self, runner_id: str, workflow_name: str, start_time: float, end_time: float, status: str, context: Dict[str, Any], error: Optional[str] = None):
         """Save a completed workflow run to the database."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        # Serialize context to JSON
+        # Serialize context to JSON outside the lock to minimize lock holding time
         final_state_json = json.dumps(context)
 
-        cursor.execute('''
-            INSERT OR REPLACE INTO workflow_runs (id, workflow_name, start_time, end_time, status, final_state, error)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (runner_id, workflow_name, start_time, end_time, status, final_state_json, error))
-
-        conn.commit()
-        conn.close()
+        with self.lock:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                INSERT OR REPLACE INTO workflow_runs (id, workflow_name, start_time, end_time, status, final_state, error)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (runner_id, workflow_name, start_time, end_time, status, final_state_json, error))
+            self.conn.commit()
 
     def get_all_runs(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Retrieve a list of recent workflow runs (summary only)."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        # SQLite's internal mutex protects the connection object itself.
+        # We create a new cursor which is thread-local.
+        cursor = self.conn.cursor()
 
         cursor.execute('''
             SELECT id, workflow_name, start_time, end_time, status, error
@@ -79,14 +97,11 @@ class WorkflowHistory:
                 "duration": row["end_time"] - row["start_time"] if row["end_time"] and row["start_time"] else 0
             })
 
-        conn.close()
         return runs
 
     def get_run(self, runner_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve the full details of a specific workflow run."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        cursor = self.conn.cursor()
 
         cursor.execute('SELECT * FROM workflow_runs WHERE id = ?', (runner_id,))
         row = cursor.fetchone()
@@ -97,8 +112,13 @@ class WorkflowHistory:
                 run_data["final_state"] = json.loads(run_data["final_state"])
             except (json.JSONDecodeError, TypeError):
                 run_data["final_state"] = {}
-            conn.close()
             return run_data
 
-        conn.close()
         return None
+
+    def close(self):
+        """Explicitly close the database connection."""
+        with self.lock:
+            if hasattr(self, 'conn') and self.conn:
+                self.conn.close()
+                del self.conn
