@@ -9,20 +9,28 @@ def temp_db_path():
     path = os.path.abspath("/tmp/test_workflow_history_pytest.db")
     yield path
     # Teardown: Remove file and clear cache
+
+    # Critical: Close connection and clear the global cache to ensure isolation
+    if hasattr(WorkflowHistory, '_instances') and path in WorkflowHistory._instances:
+        # Close the connection explicitly
+        instance = WorkflowHistory._instances[path]
+        # Only call close if it exists (which it should now)
+        if hasattr(instance, 'close'):
+            instance.close()
+        del WorkflowHistory._instances[path]
+
     if os.path.exists(path):
         os.remove(path)
     dir_path = os.path.dirname(path)
     if os.path.exists(dir_path) and dir_path != "/tmp":
         shutil.rmtree(dir_path)
 
-    # Critical: Clear the global cache to ensure isolation
-    if path in WorkflowHistory._initialized_paths:
-        WorkflowHistory._initialized_paths.remove(path)
-
 def test_workflow_history_init(temp_db_path):
     history = WorkflowHistory(db_path=temp_db_path)
     assert os.path.exists(temp_db_path)
 
+    # Check that we can access the DB manually
+    # Note: With WAL mode, there might be .shm and .wal files.
     conn = sqlite3.connect(temp_db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='workflow_runs'")
@@ -33,17 +41,20 @@ def test_workflow_history_singleton_init(temp_db_path, mocker):
     # First init should call _init_db
     history1 = WorkflowHistory(db_path=temp_db_path)
 
-    assert temp_db_path in WorkflowHistory._initialized_paths
+    assert temp_db_path in WorkflowHistory._instances
+    assert history1 is WorkflowHistory._instances[temp_db_path]
 
-    # Second init should be fast and not call os.makedirs/sqlite connect for table creation
-    # We mock os.makedirs to ensure it's not called again
-
+    # Mock os.makedirs to ensure it's not called again
     mock_makedirs = mocker.patch('os.makedirs')
-    # Note: We can't easily mock sqlite3.connect here without potentially affecting other things
-    # unless we're very careful, but verifying os.makedirs is a strong enough signal
-    # since _init_db calls it first.
 
+    # Second init should return the same instance and NOT run _init_db
     history2 = WorkflowHistory(db_path=temp_db_path)
 
-    # Assert os.makedirs was NOT called because we hit the cache
+    # Assert identity
+    assert history1 is history2
+
+    # Assert os.makedirs was NOT called
     assert not mock_makedirs.called
+
+    # Assert connection is the same
+    assert history1.conn is history2.conn
