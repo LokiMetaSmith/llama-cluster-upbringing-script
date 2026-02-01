@@ -59,7 +59,20 @@ if command -v snap &> /dev/null; then
         done
 fi
 
-# 5. Log Files
+# 5. Bootstrap Artifacts Cleanup
+echo -e "\n${BOLD}🧹 Cleaning Bootstrap Artifacts...${NC}"
+# Remove downloaded archives
+rm -f /tmp/consul.zip
+rm -f /tmp/nomad.zip
+rm -f /tmp/cni-plugins.tgz
+rm -f /tmp/get-docker.sh
+rm -f /tmp/pipecatapp.tar
+
+# Remove extracted directories
+rm -rf /tmp/consul
+rm -rf /tmp/nomad
+
+# 6. Log Files
 echo -e "\n${BOLD}📝 Cleaning Log Files...${NC}"
 # Truncate large system logs instead of deleting them to avoid open file handle issues
 if [ -f "/var/log/syslog" ]; then
