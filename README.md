@@ -1,6 +1,6 @@
 # Distributed Conversational AI Pipeline for Legacy CPU Clusters
 
-Last updated: 2026-01-23
+Last updated: 2026-02-01
 
 It uses Ansible for automated provisioning, Nomad for cluster orchestration, and a state-of-the-art AI stack to create a responsive, streaming, and embodied voice agent. For a detailed technical description of the system's layers, see the [Holistic Project Architecture](docs/ARCHITECTURE.md) document.
 
@@ -75,12 +75,21 @@ For development, testing, or bootstrapping the very first node of a new cluster,
      - `controller`: Sets up only the core infrastructure services (Consul, Nomad, etc.).
      - `worker`: Configures the node as a worker and requires `--controller-ip`.
    - `--controller-ip <ip>`: The IP address of the main controller node. **Required** when `--role` is `worker`.
+   - `--user <user>`: Specify the target user for Ansible (default: `pipecatapp`).
    - `--tags <tag1,tag2>`: Run only specific parts of the Ansible playbook (e.g., `--tags nomad` would only run the Nomad configuration tasks).
    - `--external-model-server`: Skips the download and build steps for large language models. This is ideal for development or if you are using a remote model server.
    - `--purge-jobs`: Stops and purges all running Nomad jobs before starting the bootstrap process, ensuring a clean deployment.
+   - `--leave-services-running`: Do not clean up Nomad and Consul data on startup (useful for restarts without state loss).
    - `--clean`: **Use with caution.** This will permanently delete all untracked files in the repository (`git clean -fdx`), restoring it to a pristine state.
    - `--debug`: Enables verbose Ansible logging (`-vvvv`) and saves the full output to `playbook_output.log`.
+   - `--verbose [level]`: Set verbosity level (0-4). Default 0, or 3 if flag is used without value.
    - `--continue`: If a previous bootstrap run failed, this flag will resume the process from the last successfully completed playbook, saving significant time.
+   - `--benchmark`: Run benchmark tests during deployment.
+   - `--deploy-docker`: Deploy the pipecat application using Docker (Default).
+   - `--run-local`: Deploy the pipecat application using local `raw_exec` (useful for debugging without Docker rebuilds).
+   - `--container`: Run the entire infrastructure inside a single large container (experimental).
+   - `--home-assistant-debug`: Enable debug mode for Home Assistant integrations.
+   - `--watch <target>`: Pause for inspection after the specified target (task/role) completes.
 
 This single node is now ready to be used as a standalone conversational AI agent. It can also serve as the primary "seed" node for a larger cluster. To expand your cluster, see the advanced guide below.
 
@@ -157,9 +166,11 @@ The following tools are available in the codebase (`pipecatapp/tools/`):
 - **Archivist (`archivist`)**: Performs deep research on the agent's long-term memory.
 - **Claude Clone (`claude_clone`)**: A tool for interacting with a Claude-like model.
 - **Code Runner (`code_runner`)**: Executes Python code in a secure, sandboxed environment.
+- **Container Registry (`container_registry`)**: Search for container images and tags in the Docker Registry.
 - **Council (`council`)**: Convenes a council of AI experts to deliberate on a query.
 - **Dependency Scanner (`dependency_scanner`)**: Scans Python packages for vulnerabilities using the OSV database.
 - **Desktop Control (`desktop_control`)**: Provides full control over the desktop environment (screenshots, mouse/keyboard).
+- **Experiment (`experiment`)**: Orchestrates A/B testing or parallel experiments for code generation.
 - **File Editor (`file_editor`)**: Reads, writes, and patches files in the codebase.
 - **Final Answer (`final_answer`)**: A tool to provide a final answer to the user.
 - **Git (`git`)**: Interacts with Git repositories.
@@ -167,6 +178,7 @@ The following tools are available in the codebase (`pipecatapp/tools/`):
 - **LLxprt Code (`llxprt_code`)**: A specialized tool for code-related tasks.
 - **Master Control Program (`mcp`)**: Provides agent introspection and self-control.
 - **Open Workers (`open_workers`)**: Manages and interacts with open worker agents.
+- **OpenClaw (`openclaw`)**: Send messages via OpenClaw Gateway to various channels (WhatsApp, Telegram, etc.).
 - **OpenCode (`opencode`)**: Interface for the OpenCode tool.
 - **Orchestrator (`orchestrator`)**: Dispatches high-priority, complex jobs to the cluster.
 - **Planner (`planner`)**: Plans complex tasks and executes them.
@@ -174,9 +186,12 @@ The following tools are available in the codebase (`pipecatapp/tools/`):
 - **Project Mapper (`project_mapper`)**: Scans the codebase to generate a project structure map.
 - **Prompt Improver (`prompt_improver`)**: A tool for improving prompts.
 - **RAG (`rag`)**: Searches the project's documentation to answer questions.
+- **Search (`search`)**: Search the codebase for text patterns or file names.
 - **Shell (`shell`)**: Executes shell commands (uses a persistent tmux session).
 - **Smol Agent (`smol_agent_computer`)**: A tool for creating small, specialized agents.
+- **Spec Loader (`spec_loader`)**: Clones external Git repositories (docs, specs) and ingests them into the agent's context.
 - **SSH (`ssh`)**: Executes commands on remote machines.
+- **Submit Solution (`submit_solution`)**: Allows a Worker Agent to submit a code solution or artifact to be parsed by the ExperimentTool/Judge.
 - **Summarizer (`summarizer`)**: Summarizes conversation history.
 - **Swarm (`swarm`)**: Spawns multiple worker agents to perform tasks in parallel.
 - **Term Everything (`term_everything`)**: Provides a terminal interface for interacting with the system.
@@ -311,6 +326,13 @@ The true power of this architecture is the ability to deploy multiple, specializ
      ```
 
 The `TwinService` in the `pipecatapp` will automatically discover any service registered in Consul with the `llama-api-` prefix and make it available for routing.
+
+### 8.3. Distributed Split Inference
+
+To support running large models on legacy hardware with limited RAM, the system supports **Split Inference**.
+
+- **How it Works:** The `expert` job can be configured to offload computation to `rpc-server` providers running on worker nodes.
+- **Configuration:** When deploying an expert, the system automatically discovers available `rpc-provider` services via Consul and passes them to the `llama-server` using the `--rpc` argument. This allows the model's layers to be split across multiple machines, aggregating their memory and compute power.
 
 ## 9. Advanced System Features
 
