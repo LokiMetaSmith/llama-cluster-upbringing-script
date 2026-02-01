@@ -78,7 +78,7 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             ;;
         --purge-jobs)
             DO_PURGE_JOBS=true
-            # Don't pass to provisioning
+            # Don't pass to provisioning as a direct arg, we handle logic
             ;;
         --container)
             USE_CONTAINER=true
@@ -158,8 +158,6 @@ run_step() {
     fi
 }
 
-# --- Cleanup Logic ---
-
 ask_confirm() {
     local prompt="$1"
     read -p "$prompt [y/N] " -n 1 -r
@@ -171,29 +169,62 @@ ask_confirm() {
     fi
 }
 
+# --- Environment Setup (Reusable) ---
+VENV_DIR="$SCRIPT_DIR/.venv"
+
+ensure_python_environment() {
+    echo -e "\n${BOLD}=== Environment Setup ===${NC}"
+
+    setup_venv() {
+        if [ ! -d "$VENV_DIR" ]; then
+            python3 -m venv "$VENV_DIR"
+        fi
+    }
+    run_step "Creating Python virtual environment" "setup_venv"
+
+    # Activate venv for this script execution
+    source "$VENV_DIR/bin/activate"
+
+    run_step "Upgrading pip" "pip install --upgrade pip"
+
+    if [ -f "requirements-dev.txt" ]; then
+        run_step "Installing Python dependencies" "pip install --no-cache-dir -r requirements-dev.txt"
+    else
+        echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
+    fi
+
+    run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
+
+    # --- Find Ansible Playbook executable ---
+    # Since we are in a venv, these are guaranteed to be in the path
+    ANSIBLE_GALAXY_EXEC="$(which ansible-galaxy)"
+
+    # Install Ansible collections
+    if [ -x "$ANSIBLE_GALAXY_EXEC" ]; then
+        run_step "Installing Ansible collections" "$ANSIBLE_GALAXY_EXEC collection install community.general ansible.posix community.docker"
+    else
+        echo "Error: ansible-galaxy not found in venv." >&2
+        exit 1
+    fi
+}
+
+# --- Cleanup Actions ---
+
 perform_purge_jobs() {
     echo -e "\n${BOLD}${YELLOW}⚠️  Purge Jobs initiated.${NC}"
     if ask_confirm "Are you sure you want to stop and purge all Nomad jobs?"; then
-        if command -v nomad &> /dev/null; then
-             echo "Stopping running jobs..."
-             # Get jobs, excluding "No running jobs" or header
-             JOBS=$(nomad job status 2>/dev/null | awk 'NR>1 {print $1}' | grep -v "No")
-             if [ -n "$JOBS" ]; then
-                for job in $JOBS; do
-                    echo "Stopping and purging job: $job"
-                    nomad job stop -purge "$job" > /dev/null 2>&1
-                done
-             else
-                echo "No running Nomad jobs found."
-             fi
-        else
-            echo "Nomad not found, skipping job purge."
-        fi
+        # Ensure we have the python environment to run the script
+        ensure_python_environment
 
-        echo "Checking for orphaned processes..."
-        pkill -f "dllama-api" || true
-        pkill -f "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py" || true
-        echo -e "${GREEN}✅ Jobs purged and orphans killed.${NC}"
+        echo "Running provisioning script to purge jobs..."
+        # Pass --purge-jobs and --only-purge
+        python3 scripts/provisioning.py --purge-jobs --only-purge
+        local status=$?
+        if [ $status -eq 0 ]; then
+            echo -e "${GREEN}✅ Jobs purged.${NC}"
+        else
+             echo -e "${RED}❌ Job purge failed.${NC}"
+        fi
     else
         echo "Job purge cancelled."
     fi
@@ -253,9 +284,9 @@ if [ "$DO_CLEAN_GIT" = true ]; then
     perform_git_clean
 fi
 
-# If we just did a full system cleanup and nothing else (no other args passed?), maybe we should exit?
-# But typically bootstrap.sh is meant to *bootstrap*. If I say --system-cleanup, I might mean "clean then build".
-# The original script proceeded. We will proceed.
+# If the user only requested cleanup, we might want to stop here?
+# But typically bootstrap means "setup". If I wanted to JUST clean, I might not expect it to start building again.
+# However, for now we follow the pattern: cleanup then proceed.
 
 
 # --- Container Mode ---
@@ -359,40 +390,8 @@ else
 fi
 
 # --- Install Python dependencies (Virtual Environment) ---
-echo -e "\n${BOLD}=== Environment Setup ===${NC}"
-VENV_DIR="$SCRIPT_DIR/.venv"
-
-setup_venv() {
-    if [ ! -d "$VENV_DIR" ]; then
-        python3 -m venv "$VENV_DIR"
-    fi
-}
-run_step "Creating Python virtual environment" "setup_venv"
-
-# Activate venv for this script execution
-source "$VENV_DIR/bin/activate"
-
-run_step "Upgrading pip" "pip install --upgrade pip"
-
-if [ -f "requirements-dev.txt" ]; then
-    run_step "Installing Python dependencies" "pip install --no-cache-dir -r requirements-dev.txt"
-else
-    echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
-fi
-
-run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
-
-# --- Find Ansible Playbook executable ---
-# Since we are in a venv, these are guaranteed to be in the path
-ANSIBLE_GALAXY_EXEC="$(which ansible-galaxy)"
-
-# Install Ansible collections
-if [ -x "$ANSIBLE_GALAXY_EXEC" ]; then
-    run_step "Installing Ansible collections" "$ANSIBLE_GALAXY_EXEC collection install community.general ansible.posix community.docker"
-else
-    echo "Error: ansible-galaxy not found in venv." >&2
-    exit 1
-fi
+# Ensure environment is ready (it might have been set up by purge_jobs, or deleted by git clean)
+ensure_python_environment
 
 # --- Run Provisioning Script ---
 # echo "🚀 Handing over to Python provisioning script..."

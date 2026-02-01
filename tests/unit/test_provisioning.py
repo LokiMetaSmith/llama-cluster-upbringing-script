@@ -95,5 +95,45 @@ class TestProvisioning(unittest.TestCase):
         self.assertIn("--tags", cmd)
         self.assertIn("tag1", cmd)
 
+    @patch('provisioning.purge_nomad_jobs')
+    def test_main_purge_jobs(self, mock_purge):
+        with patch('argparse.ArgumentParser.parse_known_args') as mock_args:
+            # Note: parse_known_args returns (args, unknown)
+            mock_args.return_value = (argparse.Namespace(
+                role="all", controller_ip=None, tags=None, target_user="u",
+                debug=False, continue_run=False, benchmark=False,
+                external_model_server=False, leave_services_running=False,
+                purge_jobs=True, only_purge=False, deploy_docker=False, run_local=False,
+                home_assistant_debug=False, watch=None, verbose=0
+            ), [])
+
+            # Mock os.path.exists for manifest
+            with patch('os.path.exists', return_value=True):
+                 with patch('provisioning.load_playbooks_from_manifest', return_value=[]):
+                     provisioning.main()
+
+            mock_purge.assert_called_once()
+
+    @patch('provisioning.purge_nomad_jobs')
+    def test_main_only_purge(self, mock_purge):
+        with patch('argparse.ArgumentParser.parse_known_args') as mock_args:
+             mock_args.return_value = (argparse.Namespace(
+                role="all", controller_ip=None, tags=None, target_user="u",
+                debug=False, continue_run=False, benchmark=False,
+                external_model_server=False, leave_services_running=False,
+                purge_jobs=True, only_purge=True, deploy_docker=False, run_local=False,
+                home_assistant_debug=False, watch=None, verbose=0
+            ), [])
+
+             # We want sys.exit(0) to actually interrupt the flow so main() stops
+             with patch('sys.exit') as mock_exit:
+                 mock_exit.side_effect = SystemExit(0)
+
+                 with self.assertRaises(SystemExit):
+                    provisioning.main()
+
+                 mock_purge.assert_called_once()
+                 mock_exit.assert_called_with(0)
+
 if __name__ == '__main__':
     unittest.main()
