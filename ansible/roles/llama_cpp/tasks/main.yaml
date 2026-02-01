@@ -209,7 +209,7 @@
       loop: "{{ all_models_to_benchmark }}"
       loop_control:
         loop_var: model_item
-  when: run_benchmarks | default(false)
+  when: run_benchmarks | default(false) | bool
 
 - name: Read benchmark log file
   ansible.builtin.slurp:
