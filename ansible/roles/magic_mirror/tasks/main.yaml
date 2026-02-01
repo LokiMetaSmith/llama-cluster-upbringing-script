@@ -22,17 +22,14 @@
         state: present
         update_cache: yes
 
-    - name: Install libasound2
-      block:
-        - name: Try installing libasound2
-          ansible.builtin.apt:
-            name: libasound2
-            state: present
-      rescue:
-        - name: Try installing libasound2t64 (for newer Ubuntu)
-          ansible.builtin.apt:
-            name: libasound2t64
-            state: present
+    - name: Determine correct libasound package
+      ansible.builtin.set_fact:
+        libasound_pkg: "{{ 'libasound2t64' if ansible_distribution == 'Ubuntu' and ansible_distribution_major_version | int >= 24 else 'libasound2' }}"
+
+    - name: Install libasound
+      ansible.builtin.apt:
+        name: "{{ libasound_pkg }}"
+        state: present
 
     - name: Create Magic Mirror install directory
       ansible.builtin.file:
