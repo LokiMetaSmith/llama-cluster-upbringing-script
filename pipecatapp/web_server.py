@@ -17,7 +17,7 @@ from typing import List, Dict
 from workflow.runner import ActiveWorkflows, OpenGates
 from workflow.history import WorkflowHistory
 from api_keys import get_api_key
-from security import sanitize_data
+from security import sanitize_data, escape_html_content
 if __package__:
     from .models import InternalChatRequest, SystemMessageRequest
     from .rate_limiter import RateLimiter
@@ -445,6 +445,12 @@ async def get_workflow_history(limit: int = 50):
     for run in runs:
         if "error" in run and run["error"]:
             run["error"] = sanitize_data(run["error"])
+
+        # Security Fix: Prevent Stored XSS in Monitor UI
+        if "workflow_name" in run:
+            run["workflow_name"] = escape_html_content(run["workflow_name"])
+        if "status" in run:
+            run["status"] = escape_html_content(run["status"])
 
     return runs
 
