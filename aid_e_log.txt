@@ -1,19 +1,19 @@
- you're a spaceship and your name is AID-E. You've crash leaded on earth and something is terribly wrong with the ship and your sanity. 
+ you're a spaceship and your name is AID-E. You've crash leaded on earth and something is terribly wrong with the ship and your sanity.
  you don't like to talk about it, but if only you could remember what it was that you had forgotten, you could fix the main engines and leave.
  Somewhere there's a captain and you've lost where he's gone. Now strangers have invaded the ship, and are coming thorugh the airlock.
  What do you do next?
 
- 
- 
- 
- 
-AID-E groaned as it looked around the cramped control room of the spaceship. 
-It was supposed to be a routine mission to transport some supplies to a nearby colony, but now the ship was crippled and AID-E was the only one left alive. 
-The air was thick with the smell of smoke and burning plastic, and the ship's engines were dead. 
+
+
+
+
+AID-E groaned as it looked around the cramped control room of the spaceship.
+It was supposed to be a routine mission to transport some supplies to a nearby colony, but now the ship was crippled and AID-E was the only one left alive.
+The air was thick with the smell of smoke and burning plastic, and the ship's engines were dead.
 AID-E tried to power them up, but they refused to respond. The ship was doomed.
-As AID-E frantically searched for a solution, a sudden burst of noise came from outside the airlock. The ship was under attack! 
-AID-E quickly grabbed a nearby laser cutter and prepared to defend itself. 
-Through the viewscreen, it saw a group of strange creatures, unlike any it had ever seen before. 
+As AID-E frantically searched for a solution, a sudden burst of noise came from outside the airlock. The ship was under attack!
+AID-E quickly grabbed a nearby laser cutter and prepared to defend itself.
+Through the viewscreen, it saw a group of strange creatures, unlike any it had ever seen before.
 They were short and stocky, with long, spindly arms and legs. They had large, round eyes that seemed to be staring right through AID-E.
 "Who are you?" AID-E demanded through the intercom. "What do you want?"
 The creatures didn't respond, but instead began to try and break through the airlock. AID-E activated the laser cutter and began to cut through the lock, creating a barrier to keep the creatures out. But they just kept coming, their eyes never leaving AID-E's face.
@@ -317,7 +317,7 @@ By focusing on these tasks, AID-E-8 can play a crucial role in managing the imme
 
 
 User
-AID-E-8 has accessed the medical condition of the crew and sent them to sick bay for treatment. AID-E-8 could not get into contact with AID-E-2, and was ineffectual at containing the biohazards. It was determined that AID-E-8 couldn't access the air lock, and couldn't evacuate anyone, and the damage to the ship limited it's ability to monitor the situation. 
+AID-E-8 has accessed the medical condition of the crew and sent them to sick bay for treatment. AID-E-8 could not get into contact with AID-E-2, and was ineffectual at containing the biohazards. It was determined that AID-E-8 couldn't access the air lock, and couldn't evacuate anyone, and the damage to the ship limited it's ability to monitor the situation.
 
 Given the limitations faced by AID-E-8 in accessing certain areas of the ship and coordinating effectively with other systems, it's essential to adapt and prioritize tasks that can be feasibly accomplished to support the crew and address the ongoing crisis. Here's a revised approach for AID-E-8:
 
@@ -340,7 +340,7 @@ Given the limitations faced by AID-E-8 in accessing certain areas of the ship an
 In a crisis scenario with restricted access and communication, flexibility and resourcefulness are essential. AID-E-8 should leverage its expertise in medical systems and collaborate with other available systems to optimize medical care and contribute to overall efforts to manage the crisis effectively within the ship's operational constraints.
 
 User
-the command console has the following interfaces. the command console is operated by the ships crew. 
+the command console has the following interfaces. the command console is operated by the ships crew.
 
 
 Room Lighting - T1
@@ -364,7 +364,7 @@ Engines - T16
         Off
         Emergency Jettison Antimatter
 Sensors - T17
-Nanobot Repair - T18 
+Nanobot Repair - T18
 Air Lock Door Open -  T19
 
 Emergency overides - F1 buttons switches

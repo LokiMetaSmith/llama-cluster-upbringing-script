@@ -1,3 +1,13 @@
+- name: Prune Docker system to free space
+  ansible.builtin.command: docker system prune --force
+  become: yes
+  ignore_errors: yes
+
+- name: Prune Docker builder cache
+  ansible.builtin.command: docker builder prune --force
+  become: yes
+  ignore_errors: yes
+
 - name: Copy pipecat startup script to build context
   ansible.builtin.template:
     src: "{{ pipecat_template_src | default(inventory_dir ~ '/ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2') }}"
