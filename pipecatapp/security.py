@@ -1,5 +1,6 @@
 import re
 import copy
+import html
 from typing import Any, Dict, List
 
 # Pre-compile regex for redaction to improve performance
@@ -58,6 +59,20 @@ def redact_sensitive_data(text: str) -> str:
     text = _URL_CREDENTIALS_PATTERN.sub(r'\1\2:[REDACTED]@', text)
 
     return text
+
+def escape_html_content(text: str) -> str:
+    """
+    Escapes HTML characters in a string to prevent XSS.
+
+    Args:
+        text (str): The input string.
+
+    Returns:
+        str: The escaped string safe for HTML insertion.
+    """
+    if not text:
+        return text
+    return html.escape(text)
 
 def sanitize_data(data: Any) -> Any:
     """
