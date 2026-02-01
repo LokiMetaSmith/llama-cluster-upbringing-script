@@ -154,70 +154,6 @@ def cleanup_memory_for_core_ai():
 
     subprocess.run(["free", "-h"])
 
-def kill_if_running(pattern):
-    """Kills processes matching a pattern."""
-    try:
-        # pgrep -f matches against full command line
-        cmd = ["pgrep", "-f", pattern]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode == 0:
-            pids = result.stdout.strip().split()
-            if pids:
-                print(f"{Colors.WARNING}⚠️  Found orphaned process matching '{pattern}'. Terminating...{Colors.ENDC}")
-                subprocess.run(["kill", "-9"] + pids, stderr=subprocess.DEVNULL)
-    except Exception as e:
-        print_warning(f"Failed to kill process matching '{pattern}': {e}")
-
-def purge_nomad_jobs():
-    """Stops and purges all Nomad jobs."""
-    if not shutil.which("nomad"):
-        print_warning("'nomad' command not found. Cannot purge jobs. Skipping.")
-        return
-
-    print(f"{Colors.WARNING}🔥 --purge-jobs flag detected. Stopping and purging all Nomad jobs...{Colors.ENDC}")
-    try:
-        # Get all job IDs
-        cmd = "nomad job status | awk 'NR>1 {print $1}'"
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        job_ids = result.stdout.strip().split('\n')
-
-        found_jobs = False
-        for job_id in job_ids:
-            if job_id and job_id != "No": # awk might catch "No running jobs"
-                found_jobs = True
-                print(f"Stopping and purging job: {job_id}")
-                subprocess.run(["nomad", "job", "stop", "-purge", job_id],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-        if found_jobs:
-            print(f"{Colors.OKGREEN}✅ All Nomad jobs have been purged.{Colors.ENDC}")
-        else:
-            print("No running Nomad jobs found to purge.")
-
-    except Exception as e:
-        print_error(f"Error purging jobs: {e}")
-
-    # Check for orphaned processes
-    print("Checking for orphaned application processes...")
-
-    # Check if Nomad is running (if we purged, we assume it might still be running the agent,
-    # but we killed the jobs. If nomad is NOT running, we definitely want to kill orphans.)
-    nomad_running = False
-    try:
-        if subprocess.run(["nomad", "node", "status"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
-            nomad_running = True
-    except:
-        pass
-
-    # If we purged jobs, OR nomad is not running, force kill orphans.
-    # If nomad IS running and we didn't purge (this function is only called if purge=True),
-    # then this logic holds.
-
-    kill_if_running("dllama-api")
-    kill_if_running("/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py")
-    print("Process cleanup complete.")
-
-
 def run_playbook(playbook_path, extra_vars, tags, verbose_level):
     """Runs a single ansible playbook."""
     cmd = ["ansible-playbook", "-i", INVENTORY_FILE, playbook_path]
@@ -388,7 +324,6 @@ def main():
     parser.add_argument("--benchmark", action="store_true", help="Run benchmarks")
     parser.add_argument("--external-model-server", action="store_true", help="Skip model downloads")
     parser.add_argument("--leave-services-running", action="store_true", help="Don't cleanup Nomad/Consul")
-    parser.add_argument("--purge-jobs", action="store_true", help="Purge Nomad jobs (handled by wrapper mostly, but var passed)")
     parser.add_argument("--deploy-docker", action="store_true", help="Deploy via Docker")
     parser.add_argument("--run-local", action="store_true", help="Deploy via raw_exec")
     parser.add_argument("--home-assistant-debug", action="store_true", help="Debug Home Assistant")
@@ -411,10 +346,6 @@ def main():
         print_error("--controller-ip is required when using --role=worker")
         sys.exit(1)
 
-    # --- Pre-Provisioning Actions ---
-    if args.purge_jobs:
-        purge_nomad_jobs()
-
     # --- Build Extra Vars ---
     extra_vars = {
         "target_user": args.target_user
@@ -427,8 +358,6 @@ def main():
         extra_vars["run_benchmarks"] = "true"
     if args.external_model_server:
         extra_vars["external_model_server"] = "true"
-    if args.purge_jobs:
-        extra_vars["purge_jobs"] = "true"
     if args.leave_services_running:
         extra_vars["cleanup_services"] = "false"
         print(f"{Colors.OKGREEN}✅ --leave-services-running detected. Nomad and Consul data will not be cleaned up.{Colors.ENDC}")

@@ -26,10 +26,9 @@ show_help() {
     echo "  --controller-ip <ip>         Required if --role is 'worker'. IP address of the controller node."
     echo "  --tags <tags>                Comma-separated list of Ansible tags to run."
     echo "  --user <user>                Specify the target user for Ansible. Default: pipecatapp."
-    echo "  --purge-jobs                 Stop and purge all running Nomad jobs before starting."
-    echo "  --system-cleanup             Aggressively clean Docker resources, Apt cache, and logs."
-    echo "  --clean                      Clean the repository of all untracked files (interactive prompt)."
-    echo "  --system-cleanup             Aggressively clean Docker, Apt, and logs to free disk space."
+    echo "  --purge-jobs                 Stop and purge all running Nomad jobs."
+    echo "  --clean-git                  Clean the repository of all untracked files (interactive prompt)."
+    echo "  --system-cleanup             Perform a full system cleanup (Purge Jobs, Clean System, Clean Git), with interactive prompts."
     echo "  --verbose [level]            Set verbosity level (0-4). Default 0, or 3 if flag is used without value."
     echo "  --debug                      Alias for --verbose 4."
     echo "  --leave-services-running     Do not clean up Nomad and Consul data on startup."
@@ -46,8 +45,9 @@ show_help() {
 
 # --- Initialize flags ---
 USE_CONTAINER=false
-CLEAN_REPO=false
-SYSTEM_CLEANUP=false
+DO_CLEAN_GIT=false
+DO_SYSTEM_CLEANUP=false
+DO_PURGE_JOBS=false
 VERBOSE_LEVEL=0
 ROLE="all"
 CONTROLLER_IP=""
@@ -68,15 +68,17 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
 
     case $arg in
         --system-cleanup)
-            SYSTEM_CLEANUP=true
+            DO_SYSTEM_CLEANUP=true
+            DO_PURGE_JOBS=true
+            DO_CLEAN_GIT=true
             ;;
-        --clean)
-            CLEAN_REPO=true
-            PROCESSED_ARGS+=("$arg")
+        --clean-git|--clean) # Support legacy --clean just in case, but map to clean-git
+            DO_CLEAN_GIT=true
+            # Don't pass to provisioning
             ;;
-        --system-cleanup)
-            SYSTEM_CLEANUP=true
-            # Do NOT pass this to provisioning.py as it handles logic here in bash
+        --purge-jobs)
+            DO_PURGE_JOBS=true
+            # Don't pass to provisioning
             ;;
         --container)
             USE_CONTAINER=true
@@ -156,21 +158,105 @@ run_step() {
     fi
 }
 
-# --- Handle System Cleanup ---
-if [ "$SYSTEM_CLEANUP" = true ]; then
-    echo -e "\n${BOLD}=== System Cleanup ===${NC}"
-    if [ -x "scripts/cleanup.sh" ]; then
-        # We assume the user has sudo if they are running this
-        run_step "Running system cleanup script" "sudo ./scripts/cleanup.sh"
+# --- Cleanup Logic ---
+
+ask_confirm() {
+    local prompt="$1"
+    read -p "$prompt [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        return 0
     else
-         echo -e "${RED}❌ scripts/cleanup.sh not found or not executable.${NC}"
-         exit 1
+        return 1
     fi
-    # We exit after cleanup if that's all that was requested?
-    # Usually cleanup is prep work. If the user passed other flags, they likely want to continue.
-    # But if they ONLY passed --system-cleanup, maybe we should ask?
-    # For now, we proceed, assuming they might want to build after cleaning.
+}
+
+perform_purge_jobs() {
+    echo -e "\n${BOLD}${YELLOW}⚠️  Purge Jobs initiated.${NC}"
+    if ask_confirm "Are you sure you want to stop and purge all Nomad jobs?"; then
+        if command -v nomad &> /dev/null; then
+             echo "Stopping running jobs..."
+             # Get jobs, excluding "No running jobs" or header
+             JOBS=$(nomad job status 2>/dev/null | awk 'NR>1 {print $1}' | grep -v "No")
+             if [ -n "$JOBS" ]; then
+                for job in $JOBS; do
+                    echo "Stopping and purging job: $job"
+                    nomad job stop -purge "$job" > /dev/null 2>&1
+                done
+             else
+                echo "No running Nomad jobs found."
+             fi
+        else
+            echo "Nomad not found, skipping job purge."
+        fi
+
+        echo "Checking for orphaned processes..."
+        pkill -f "dllama-api" || true
+        pkill -f "/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py" || true
+        echo -e "${GREEN}✅ Jobs purged and orphans killed.${NC}"
+    else
+        echo "Job purge cancelled."
+    fi
+}
+
+perform_system_cleanup() {
+    echo -e "\n${BOLD}${YELLOW}⚠️  System Cleanup initiated (Docker, Apt, Logs).${NC}"
+    if ask_confirm "Are you sure you want to aggressively clean system resources?"; then
+        if [ -x "scripts/cleanup.sh" ]; then
+            # We assume the user has sudo if they are running this
+            run_step "Running system cleanup script" "sudo ./scripts/cleanup.sh"
+        else
+            echo -e "${RED}❌ scripts/cleanup.sh not found or not executable.${NC}"
+        fi
+    else
+        echo "System cleanup cancelled."
+    fi
+}
+
+perform_git_clean() {
+    echo -e "\n${BOLD}${YELLOW}⚠️  Git Clean initiated.${NC}"
+    echo "This will permanently delete all untracked files."
+    echo "--------------------------------------------------"
+    git clean -ndx
+    echo "--------------------------------------------------"
+
+    if ask_confirm "Are you sure you want to permanently delete these files?"; then
+        if ! run_step "Cleaning repository" "git clean -fdx"; then
+            echo -e "\n${YELLOW}⚠️  Standard cleanup failed. This is often due to files created with sudo.${NC}"
+            if ask_confirm "Do you want to try cleaning with sudo?"; then
+                # Ensure sudo credentials
+                if ! sudo -n true 2>/dev/null; then
+                    sudo -v
+                fi
+                run_step "Cleaning repository (with sudo)" "sudo git clean -fdx"
+            else
+                echo "Cleanup skipped."
+            fi
+        fi
+    else
+        echo "Git clean cancelled."
+    fi
+}
+
+# --- Execute Cleanup Actions ---
+# We execute these BEFORE everything else to ensure a clean slate if requested.
+
+if [ "$DO_PURGE_JOBS" = true ]; then
+    perform_purge_jobs
 fi
+
+if [ "$DO_SYSTEM_CLEANUP" = true ]; then
+    perform_system_cleanup
+fi
+
+if [ "$DO_CLEAN_GIT" = true ]; then
+    perform_git_clean
+fi
+
+# If we just did a full system cleanup and nothing else (no other args passed?), maybe we should exit?
+# But typically bootstrap.sh is meant to *bootstrap*. If I say --system-cleanup, I might mean "clean then build".
+# The original script proceeded. We will proceed.
+
 
 # --- Container Mode ---
 if [ "$USE_CONTAINER" = true ]; then
@@ -270,53 +356,6 @@ if [ -f "initial-setup/setup.sh" ]; then
     fi
 else
     echo "⚠️  Warning: initial-setup/setup.sh not found. Skipping pre-configuration."
-fi
-
-# --- Handle the --clean option ---
-if [ "$CLEAN_REPO" = true ]; then
-    echo -e "\n${YELLOW}⚠️  --clean flag detected. This will permanently delete all untracked files.${NC}"
-    echo "Performing a dry run to show what will be deleted:"
-    echo "--------------------------------------------------"
-    git clean -ndx
-    echo "--------------------------------------------------"
-    
-    read -p "Are you sure you want to permanently delete all files and directories listed above? [y/N] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        if ! run_step "Cleaning repository" "git clean -fdx"; then
-            echo -e "\n${YELLOW}⚠️  Standard cleanup failed. This is often due to files created with sudo.${NC}"
-            read -p "Do you want to try cleaning with sudo? [y/N] " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                # Ensure sudo credentials
-                if ! sudo -n true 2>/dev/null; then
-                    sudo -v
-                fi
-                run_step "Cleaning repository (with sudo)" "sudo git clean -fdx"
-            else
-                echo "Cleanup skipped."
-            fi
-        fi
-    else
-        echo "Cleanup cancelled. Exiting."
-        exit 1
-    fi
-fi
-
-# --- Handle the --system-cleanup option ---
-if [ "$SYSTEM_CLEANUP" = true ]; then
-    echo -e "\n${YELLOW}⚠️  --system-cleanup flag detected. This will aggressively clean Docker, Apt, and logs.${NC}"
-    read -p "Are you sure you want to proceed? [y/N] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        # Ensure sudo
-        if ! sudo -n true 2>/dev/null; then
-             sudo -v
-        fi
-        run_step "System Cleanup" "sudo ./scripts/cleanup.sh"
-    else
-        echo "System cleanup cancelled."
-    fi
 fi
 
 # --- Install Python dependencies (Virtual Environment) ---

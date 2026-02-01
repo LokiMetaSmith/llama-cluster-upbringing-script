@@ -1,4 +1,3 @@
-
 import unittest
 import os
 import shutil
@@ -9,8 +8,8 @@ from io import StringIO
 import yaml
 import sys
 
-# Add root directory to path so we can import provisioning
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+# Add scripts directory to path so we can import provisioning
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../scripts')))
 
 import provisioning
 
@@ -75,13 +74,19 @@ class TestProvisioning(unittest.TestCase):
             # Check arguments manually as they are complex
             self.assertTrue(any("nomad" in str(c) and "stop" in str(c) for c in calls))
 
-    @patch('subprocess.run')
-    def test_run_playbook(self, mock_run):
-        mock_run.return_value = MagicMock(returncode=0)
+    @patch('subprocess.Popen')
+    def test_run_playbook(self, mock_popen):
+        # Mock the process object returned by Popen
+        mock_process = MagicMock()
+        mock_process.stdout = [] # Iterator for stdout
+        mock_process.returncode = 0
+        mock_process.wait.return_value = None
+
+        mock_popen.return_value = mock_process
 
         provisioning.run_playbook("test.yaml", {"k": "v"}, "tag1", False)
 
-        args, _ = mock_run.call_args
+        args, _ = mock_popen.call_args
         cmd = args[0]
         self.assertEqual(cmd[0], "ansible-playbook")
         self.assertIn("test.yaml", cmd)
@@ -89,24 +94,6 @@ class TestProvisioning(unittest.TestCase):
         self.assertIn("k=v", cmd)
         self.assertIn("--tags", cmd)
         self.assertIn("tag1", cmd)
-
-    @patch('provisioning.purge_nomad_jobs')
-    def test_main_purge_jobs(self, mock_purge):
-        with patch('argparse.ArgumentParser.parse_args') as mock_args:
-            mock_args.return_value = argparse.Namespace(
-                role="all", controller_ip=None, tags=None, target_user="u",
-                debug=False, continue_run=False, benchmark=False,
-                external_model_server=False, leave_services_running=False,
-                purge_jobs=True, deploy_docker=False, run_local=False,
-                home_assistant_debug=False, watch=None
-            )
-
-            # Mock os.path.exists for manifest
-            with patch('os.path.exists', return_value=True):
-                 with patch('provisioning.load_playbooks_from_manifest', return_value=[]):
-                     provisioning.main()
-
-            mock_purge.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()
