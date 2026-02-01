@@ -262,7 +262,20 @@ if [ "$CLEAN_REPO" = true ]; then
     read -p "Are you sure you want to permanently delete all files and directories listed above? [y/N] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        run_step "Cleaning repository" "git clean -fdx"
+        if ! run_step "Cleaning repository" "git clean -fdx"; then
+            echo -e "\n${YELLOW}⚠️  Standard cleanup failed. This is often due to files created with sudo.${NC}"
+            read -p "Do you want to try cleaning with sudo? [y/N] " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                # Ensure sudo credentials
+                if ! sudo -n true 2>/dev/null; then
+                    sudo -v
+                fi
+                run_step "Cleaning repository (with sudo)" "sudo git clean -fdx"
+            else
+                echo "Cleanup skipped."
+            fi
+        fi
     else
         echo "Cleanup cancelled. Exiting."
         exit 1
