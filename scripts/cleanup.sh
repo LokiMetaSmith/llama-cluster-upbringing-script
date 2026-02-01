@@ -74,9 +74,6 @@ fi
 if [ -f "playbook_output.log" ]; then
     rm -f playbook_output.log
 fi
-if [ -f "aid_e_log.txt" ]; then
-    rm -f aid_e_log.txt
-fi
 
 echo -e "\n${GREEN}✨ Cleanup Complete!${NC}"
 df -h /
