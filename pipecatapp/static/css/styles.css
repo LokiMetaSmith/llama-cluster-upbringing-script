@@ -152,3 +152,17 @@ button.close {
     border-top-color: #fff;
     animation: spin 1s ease-in-out infinite;
 }
+
+/* Palette UX: Live Button Styles */
+#toolbar button.live-paused {
+    background-color: #28a745;
+}
+#toolbar button.live-paused:hover {
+    background-color: #34cf5b;
+}
+
+/* Accessibility: Ensure focus visibility for toolbar buttons */
+#toolbar button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}

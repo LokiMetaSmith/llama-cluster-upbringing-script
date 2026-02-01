@@ -361,10 +361,27 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
+    function togglePolling() {
+        if (pollingInterval) {
+            stopPolling();
+        } else {
+            startPolling();
+        }
+    }
+
     function startPolling() {
         if (!pollingInterval) {
             pollingInterval = setInterval(pollActiveWorkflows, 2000);
             viewTitle.textContent = "Workflow Visualization (Live)";
+
+            const btn = document.getElementById('live-btn');
+            if (btn) {
+                btn.textContent = "Stop Live View";
+                btn.setAttribute('aria-pressed', 'true');
+                btn.classList.remove('live-paused');
+                btn.classList.add('live-active');
+            }
+
             isLive = true;
             approvalContainer.innerHTML = '';
             // Load default immediately
@@ -376,12 +393,20 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (pollingInterval) {
             clearInterval(pollingInterval);
             pollingInterval = null;
+
+            const btn = document.getElementById('live-btn');
+            if (btn) {
+                btn.textContent = "Resume Live View";
+                btn.setAttribute('aria-pressed', 'false');
+                btn.classList.remove('live-active');
+                btn.classList.add('live-paused');
+            }
         }
     }
 
     // --- Initialization ---
 
-    document.getElementById('live-btn').addEventListener('click', startPolling);
+    document.getElementById('live-btn').addEventListener('click', togglePolling);
     document.getElementById('refresh-history-btn').addEventListener('click', fetchHistory);
 
     // Initial load
