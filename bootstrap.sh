@@ -28,6 +28,7 @@ show_help() {
     echo "  --user <user>                Specify the target user for Ansible. Default: pipecatapp."
     echo "  --purge-jobs                 Stop and purge all running Nomad jobs before starting."
     echo "  --clean                      Clean the repository of all untracked files (interactive prompt)."
+    echo "  --system-cleanup             Aggressively clean Docker, Apt, and logs to free disk space."
     echo "  --verbose [level]            Set verbosity level (0-4). Default 0, or 3 if flag is used without value."
     echo "  --debug                      Alias for --verbose 4."
     echo "  --leave-services-running     Do not clean up Nomad and Consul data on startup."
@@ -45,6 +46,7 @@ show_help() {
 # --- Initialize flags ---
 USE_CONTAINER=false
 CLEAN_REPO=false
+SYSTEM_CLEANUP=false
 VERBOSE_LEVEL=0
 ROLE="all"
 CONTROLLER_IP=""
@@ -67,6 +69,10 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
         --clean)
             CLEAN_REPO=true
             PROCESSED_ARGS+=("$arg")
+            ;;
+        --system-cleanup)
+            SYSTEM_CLEANUP=true
+            # Do NOT pass this to provisioning.py as it handles logic here in bash
             ;;
         --container)
             USE_CONTAINER=true
@@ -145,6 +151,22 @@ run_step() {
         rm "$tmp_log"
     fi
 }
+
+# --- Handle System Cleanup ---
+if [ "$SYSTEM_CLEANUP" = true ]; then
+    echo -e "\n${BOLD}=== System Cleanup ===${NC}"
+    if [ -x "scripts/cleanup.sh" ]; then
+        # We assume the user has sudo if they are running this
+        run_step "Running system cleanup script" "sudo ./scripts/cleanup.sh"
+    else
+         echo -e "${RED}❌ scripts/cleanup.sh not found or not executable.${NC}"
+         exit 1
+    fi
+    # We exit after cleanup if that's all that was requested?
+    # Usually cleanup is prep work. If the user passed other flags, they likely want to continue.
+    # But if they ONLY passed --system-cleanup, maybe we should ask?
+    # For now, we proceed, assuming they might want to build after cleaning.
+fi
 
 # --- Container Mode ---
 if [ "$USE_CONTAINER" = true ]; then
