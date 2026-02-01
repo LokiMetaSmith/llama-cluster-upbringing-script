@@ -80,6 +80,7 @@ For development, testing, or bootstrapping the very first node of a new cluster,
    - `--external-model-server`: Skips the download and build steps for large language models. This is ideal for development or if you are using a remote model server.
    - `--purge-jobs`: Stops and purges all running Nomad jobs before starting the bootstrap process, ensuring a clean deployment.
    - `--leave-services-running`: Do not clean up Nomad and Consul data on startup (useful for restarts without state loss).
+   - `--system-cleanup`: **Use with caution.** Aggressively cleans Docker resources, Apt cache, and logs to free up disk space on the host machine.
    - `--clean`: **Use with caution.** This will permanently delete all untracked files in the repository (`git clean -fdx`), restoring it to a pristine state.
    - `--debug`: Enables verbose Ansible logging (`-vvvv`) and saves the full output to `playbook_output.log`.
    - `--verbose [level]`: Set verbosity level (0-4). Default 0, or 3 if flag is used without value.

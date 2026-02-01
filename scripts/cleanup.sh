@@ -3,6 +3,11 @@
 # Cleanup script to free up disk space on the host machine.
 # This script aggressively cleans Docker resources, Apt cache, and temporary files.
 # It is intended to be run with sudo privileges.
+#
+# Usage:
+#   sudo ./scripts/cleanup.sh
+#   OR via bootstrap:
+#   ./bootstrap.sh --system-cleanup
 
 set -e
 

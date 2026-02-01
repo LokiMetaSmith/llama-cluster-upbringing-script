@@ -27,6 +27,7 @@ show_help() {
     echo "  --tags <tags>                Comma-separated list of Ansible tags to run."
     echo "  --user <user>                Specify the target user for Ansible. Default: pipecatapp."
     echo "  --purge-jobs                 Stop and purge all running Nomad jobs before starting."
+    echo "  --system-cleanup             Aggressively clean Docker resources, Apt cache, and logs."
     echo "  --clean                      Clean the repository of all untracked files (interactive prompt)."
     echo "  --verbose [level]            Set verbosity level (0-4). Default 0, or 3 if flag is used without value."
     echo "  --debug                      Alias for --verbose 4."
@@ -45,6 +46,7 @@ show_help() {
 # --- Initialize flags ---
 USE_CONTAINER=false
 CLEAN_REPO=false
+SYSTEM_CLEANUP=false
 VERBOSE_LEVEL=0
 ROLE="all"
 CONTROLLER_IP=""
@@ -64,6 +66,9 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
     fi
 
     case $arg in
+        --system-cleanup)
+            SYSTEM_CLEANUP=true
+            ;;
         --clean)
             CLEAN_REPO=true
             PROCESSED_ARGS+=("$arg")
@@ -261,6 +266,22 @@ if [ "$CLEAN_REPO" = true ]; then
     else
         echo "Cleanup cancelled. Exiting."
         exit 1
+    fi
+fi
+
+# --- Handle the --system-cleanup option ---
+if [ "$SYSTEM_CLEANUP" = true ]; then
+    echo -e "\n${YELLOW}⚠️  --system-cleanup flag detected. This will aggressively clean Docker, Apt, and logs.${NC}"
+    read -p "Are you sure you want to proceed? [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # Ensure sudo
+        if ! sudo -n true 2>/dev/null; then
+             sudo -v
+        fi
+        run_step "System Cleanup" "sudo ./scripts/cleanup.sh"
+    else
+        echo "System cleanup cancelled."
     fi
 fi
 
