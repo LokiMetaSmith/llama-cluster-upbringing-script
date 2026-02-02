@@ -42,3 +42,7 @@
 ## 2026-02-18 - Search Empty States
 **Learning:** When search results (like filtering a node library) are empty, displaying nothing can look like a bug. An explicit "No results found" message provides confirmation that the system is working and the search just yielded no matches.
 **Action:** Always check for empty results in filter/search functions and display a friendly, styled empty state message (e.g., "No nodes found matching 'xyz'").
+
+## 2026-02-24 - Loading and Empty States in Data Lists
+**Learning:** Leaving a data list empty while loading or when no data exists creates uncertainty ("Is it broken? Is it loading?"). Users need immediate feedback.
+**Action:** Always implement explicit states for "Loading...", "No results found" (Empty), and "Failed to load" (Error) within the list container itself, using consistent styling.

@@ -228,13 +228,21 @@ document.addEventListener('DOMContentLoaded', async function () {
             btn.classList.add('loading');
             btn.innerHTML = '<span class="spinner"></span> Refreshing...';
 
+            // Palette UX: Show loading state in the list
+            historyList.innerHTML = '<div class="empty-state">Loading history...</div>';
+
             const response = await fetch('/api/workflows/history?limit=50');
             if (response.ok) {
                 const history = await response.json();
                 renderHistoryList(history);
+            } else {
+                 // Palette UX: Handle server errors (e.g. 500)
+                 historyList.innerHTML = '<div class="error-state">Failed to load history.</div>';
             }
         } catch (error) {
             console.error('Error fetching history:', error);
+            // Palette UX: Show error state in the list
+            historyList.innerHTML = '<div class="error-state">Connection failed. Please try again.</div>';
         } finally {
             btn.disabled = false;
             btn.classList.remove('loading');
@@ -246,6 +254,13 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     function renderHistoryList(history) {
         historyList.innerHTML = '';
+
+        // Palette UX: Empty State
+        if (history.length === 0) {
+            historyList.innerHTML = '<div class="empty-state">No workflow runs found.</div>';
+            return;
+        }
+
         history.forEach(run => {
             const li = document.createElement('li');
             li.className = 'history-item';
