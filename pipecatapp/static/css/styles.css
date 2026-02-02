@@ -166,3 +166,19 @@ button.close {
     outline: 2px solid #fff;
     outline-offset: 2px;
 }
+
+/* Palette UX: Status Colors */
+.status-completed { color: #4caf50; }
+.status-failed { color: #f44336; }
+.status-running { color: #ffeb3b; }
+
+/* Palette UX: Empty & Error States */
+.empty-state, .error-state {
+    padding: 20px;
+    text-align: center;
+    font-size: 13px;
+    color: #888;
+}
+.error-state {
+    color: #f44336;
+}
