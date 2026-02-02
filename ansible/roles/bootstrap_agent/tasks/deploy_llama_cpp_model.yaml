@@ -55,6 +55,7 @@
     - management_token_file.stat.exists
     - management_token_content.content is defined
 
+# Ensure we check the provider service, not the API (which is just a label in some contexts)
 - name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/llamacpp-rpc-provider"
