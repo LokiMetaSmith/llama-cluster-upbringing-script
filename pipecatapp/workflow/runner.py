@@ -20,6 +20,11 @@ def _safe_context_to_dict(context: Optional['WorkflowContext']) -> Dict[str, Any
     for node_id, outputs in context.node_outputs.items():
         serializable_outputs[node_id] = {}
         for key, value in outputs.items():
+            # Bolt ⚡ Optimization: Fast path for primitives
+            if value is None or isinstance(value, (str, int, float, bool)):
+                serializable_outputs[node_id][key] = value
+                continue
+
             # Attempt to serialize. If it fails, use the string representation.
             try:
                 json.dumps(value)
