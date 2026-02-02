@@ -44,6 +44,21 @@ The Python backend for the main `bootstrap.sh` script. It handles complex logic 
 Legacy script for manually starting services via `nomad job run`.
 **Recommendation:** Use Ansible tags (e.g., `ansible-playbook playbook.yaml --tags "app,ai-experts"`) for reliable service deployment.
 
+### `heal_cluster.sh`
+
+**Usage:** `./scripts/heal_cluster.sh [--user <user>]`
+Wrapper for the `playbooks/heal_cluster.yaml` Ansible playbook. It ensures that core infrastructure components (like `llamacpp-rpc` and `pipecat-app`) are running on the primary controller. Use this if services appear to be down or missing.
+
+### `fix_verification_failures.sh`
+
+**Usage:** `./scripts/fix_verification_failures.sh`
+A remediation script that attempts to fix common environment issues reported by verification tools. It handles:
+
+- Installing/Fixing `llxprt-code` (global npm package).
+- Cloning/Building `Claude_Clone`.
+- Restoring `moe_gateway/gateway.py`.
+- Restarting the `power-agent` service.
+
 ---
 
 ## 2. Testing & Verification
