@@ -10,7 +10,7 @@
   community.docker.docker_image:
     name: "memory-graph-service:latest"
     build:
-      path: "{{ playbook_dir }}/../../pipecatapp/memory_graph_service"
+      path: "{{ inventory_dir }}/pipecatapp/memory_graph_service"
       pull: yes
     source: build
     force_source: true
