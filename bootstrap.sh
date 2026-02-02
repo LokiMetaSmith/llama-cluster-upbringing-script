@@ -26,10 +26,9 @@ show_help() {
     echo "  --controller-ip <ip>         Required if --role is 'worker'. IP address of the controller node."
     echo "  --tags <tags>                Comma-separated list of Ansible tags to run."
     echo "  --user <user>                Specify the target user for Ansible. Default: pipecatapp."
-    echo "  --purge-jobs                 Stop and purge all running Nomad jobs before starting."
-    echo "  --system-cleanup             Aggressively clean Docker resources, Apt cache, and logs."
-    echo "  --clean                      Clean the repository of all untracked files (interactive prompt)."
-    echo "  --system-cleanup             Aggressively clean Docker, Apt, and logs to free disk space."
+    echo "  --purge-jobs                 Stop and purge all running Nomad jobs."
+    echo "  --clean-git                  Clean the repository of all untracked files (interactive prompt)."
+    echo "  --system-cleanup             Perform a full system cleanup (Purge Jobs, Clean System, Clean Git), with interactive prompts."
     echo "  --verbose [level]            Set verbosity level (0-4). Default 0, or 3 if flag is used without value."
     echo "  --debug                      Alias for --verbose 4."
     echo "  --leave-services-running     Do not clean up Nomad and Consul data on startup."
@@ -46,8 +45,9 @@ show_help() {
 
 # --- Initialize flags ---
 USE_CONTAINER=false
-CLEAN_REPO=false
-SYSTEM_CLEANUP=false
+DO_CLEAN_GIT=false
+DO_SYSTEM_CLEANUP=false
+DO_PURGE_JOBS=false
 VERBOSE_LEVEL=0
 ROLE="all"
 CONTROLLER_IP=""
@@ -68,15 +68,17 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
 
     case $arg in
         --system-cleanup)
-            SYSTEM_CLEANUP=true
+            DO_SYSTEM_CLEANUP=true
+            DO_PURGE_JOBS=true
+            DO_CLEAN_GIT=true
             ;;
-        --clean)
-            CLEAN_REPO=true
-            PROCESSED_ARGS+=("$arg")
+        --clean-git|--clean) # Support legacy --clean just in case, but map to clean-git
+            DO_CLEAN_GIT=true
+            # Don't pass to provisioning
             ;;
-        --system-cleanup)
-            SYSTEM_CLEANUP=true
-            # Do NOT pass this to provisioning.py as it handles logic here in bash
+        --purge-jobs)
+            DO_PURGE_JOBS=true
+            # Don't pass to provisioning as a direct arg, we handle logic
             ;;
         --container)
             USE_CONTAINER=true
@@ -156,21 +158,136 @@ run_step() {
     fi
 }
 
-# --- Handle System Cleanup ---
-if [ "$SYSTEM_CLEANUP" = true ]; then
-    echo -e "\n${BOLD}=== System Cleanup ===${NC}"
-    if [ -x "scripts/cleanup.sh" ]; then
-        # We assume the user has sudo if they are running this
-        run_step "Running system cleanup script" "sudo ./scripts/cleanup.sh"
+ask_confirm() {
+    local prompt="$1"
+    read -p "$prompt [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        return 0
     else
-         echo -e "${RED}❌ scripts/cleanup.sh not found or not executable.${NC}"
-         exit 1
+        return 1
     fi
-    # We exit after cleanup if that's all that was requested?
-    # Usually cleanup is prep work. If the user passed other flags, they likely want to continue.
-    # But if they ONLY passed --system-cleanup, maybe we should ask?
-    # For now, we proceed, assuming they might want to build after cleaning.
+}
+
+# --- Environment Setup (Reusable) ---
+VENV_DIR="$SCRIPT_DIR/.venv"
+
+ensure_python_environment() {
+    echo -e "\n${BOLD}=== Environment Setup ===${NC}"
+
+    setup_venv() {
+        if [ ! -d "$VENV_DIR" ]; then
+            python3 -m venv "$VENV_DIR"
+        fi
+    }
+    run_step "Creating Python virtual environment" "setup_venv"
+
+    # Activate venv for this script execution
+    source "$VENV_DIR/bin/activate"
+
+    run_step "Upgrading pip" "pip install --upgrade pip"
+
+    if [ -f "requirements-dev.txt" ]; then
+        run_step "Installing Python dependencies" "pip install --no-cache-dir -r requirements-dev.txt"
+    else
+        echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
+    fi
+
+    run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
+
+    # --- Find Ansible Playbook executable ---
+    # Since we are in a venv, these are guaranteed to be in the path
+    ANSIBLE_GALAXY_EXEC="$(which ansible-galaxy)"
+
+    # Install Ansible collections
+    if [ -x "$ANSIBLE_GALAXY_EXEC" ]; then
+        run_step "Installing Ansible collections" "$ANSIBLE_GALAXY_EXEC collection install community.general ansible.posix community.docker"
+    else
+        echo "Error: ansible-galaxy not found in venv." >&2
+        exit 1
+    fi
+}
+
+# --- Cleanup Actions ---
+
+perform_purge_jobs() {
+    echo -e "\n${BOLD}${YELLOW}⚠️  Purge Jobs initiated.${NC}"
+    if ask_confirm "Are you sure you want to stop and purge all Nomad jobs?"; then
+        # Ensure we have the python environment to run the script
+        ensure_python_environment
+
+        echo "Running provisioning script to purge jobs..."
+        # Pass --purge-jobs and --only-purge
+        python3 scripts/provisioning.py --purge-jobs --only-purge
+        local status=$?
+        if [ $status -eq 0 ]; then
+            echo -e "${GREEN}✅ Jobs purged.${NC}"
+        else
+             echo -e "${RED}❌ Job purge failed.${NC}"
+        fi
+    else
+        echo "Job purge cancelled."
+    fi
+}
+
+perform_system_cleanup() {
+    echo -e "\n${BOLD}${YELLOW}⚠️  System Cleanup initiated (Docker, Apt, Logs).${NC}"
+    if ask_confirm "Are you sure you want to aggressively clean system resources?"; then
+        if [ -x "scripts/cleanup.sh" ]; then
+            # We assume the user has sudo if they are running this
+            run_step "Running system cleanup script" "sudo ./scripts/cleanup.sh"
+        else
+            echo -e "${RED}❌ scripts/cleanup.sh not found or not executable.${NC}"
+        fi
+    else
+        echo "System cleanup cancelled."
+    fi
+}
+
+perform_git_clean() {
+    echo -e "\n${BOLD}${YELLOW}⚠️  Git Clean initiated.${NC}"
+    echo "This will permanently delete all untracked files."
+    echo "--------------------------------------------------"
+    git clean -ndx
+    echo "--------------------------------------------------"
+
+    if ask_confirm "Are you sure you want to permanently delete these files?"; then
+        if ! run_step "Cleaning repository" "git clean -fdx"; then
+            echo -e "\n${YELLOW}⚠️  Standard cleanup failed. This is often due to files created with sudo.${NC}"
+            if ask_confirm "Do you want to try cleaning with sudo?"; then
+                # Ensure sudo credentials
+                if ! sudo -n true 2>/dev/null; then
+                    sudo -v
+                fi
+                run_step "Cleaning repository (with sudo)" "sudo git clean -fdx"
+            else
+                echo "Cleanup skipped."
+            fi
+        fi
+    else
+        echo "Git clean cancelled."
+    fi
+}
+
+# --- Execute Cleanup Actions ---
+# We execute these BEFORE everything else to ensure a clean slate if requested.
+
+if [ "$DO_PURGE_JOBS" = true ]; then
+    perform_purge_jobs
 fi
+
+if [ "$DO_SYSTEM_CLEANUP" = true ]; then
+    perform_system_cleanup
+fi
+
+if [ "$DO_CLEAN_GIT" = true ]; then
+    perform_git_clean
+fi
+
+# If the user only requested cleanup, we might want to stop here?
+# But typically bootstrap means "setup". If I wanted to JUST clean, I might not expect it to start building again.
+# However, for now we follow the pattern: cleanup then proceed.
+
 
 # --- Container Mode ---
 if [ "$USE_CONTAINER" = true ]; then
@@ -272,88 +389,9 @@ else
     echo "⚠️  Warning: initial-setup/setup.sh not found. Skipping pre-configuration."
 fi
 
-# --- Handle the --clean option ---
-if [ "$CLEAN_REPO" = true ]; then
-    echo -e "\n${YELLOW}⚠️  --clean flag detected. This will permanently delete all untracked files.${NC}"
-    echo "Performing a dry run to show what will be deleted:"
-    echo "--------------------------------------------------"
-    git clean -ndx
-    echo "--------------------------------------------------"
-    
-    read -p "Are you sure you want to permanently delete all files and directories listed above? [y/N] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        if ! run_step "Cleaning repository" "git clean -fdx"; then
-            echo -e "\n${YELLOW}⚠️  Standard cleanup failed. This is often due to files created with sudo.${NC}"
-            read -p "Do you want to try cleaning with sudo? [y/N] " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                # Ensure sudo credentials
-                if ! sudo -n true 2>/dev/null; then
-                    sudo -v
-                fi
-                run_step "Cleaning repository (with sudo)" "sudo git clean -fdx"
-            else
-                echo "Cleanup skipped."
-            fi
-        fi
-    else
-        echo "Cleanup cancelled. Exiting."
-        exit 1
-    fi
-fi
-
-# --- Handle the --system-cleanup option ---
-if [ "$SYSTEM_CLEANUP" = true ]; then
-    echo -e "\n${YELLOW}⚠️  --system-cleanup flag detected. This will aggressively clean Docker, Apt, and logs.${NC}"
-    read -p "Are you sure you want to proceed? [y/N] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        # Ensure sudo
-        if ! sudo -n true 2>/dev/null; then
-             sudo -v
-        fi
-        run_step "System Cleanup" "sudo ./scripts/cleanup.sh"
-    else
-        echo "System cleanup cancelled."
-    fi
-fi
-
 # --- Install Python dependencies (Virtual Environment) ---
-echo -e "\n${BOLD}=== Environment Setup ===${NC}"
-VENV_DIR="$SCRIPT_DIR/.venv"
-
-setup_venv() {
-    if [ ! -d "$VENV_DIR" ]; then
-        python3 -m venv "$VENV_DIR"
-    fi
-}
-run_step "Creating Python virtual environment" "setup_venv"
-
-# Activate venv for this script execution
-source "$VENV_DIR/bin/activate"
-
-run_step "Upgrading pip" "pip install --upgrade pip"
-
-if [ -f "requirements-dev.txt" ]; then
-    run_step "Installing Python dependencies" "pip install --no-cache-dir -r requirements-dev.txt"
-else
-    echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
-fi
-
-run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
-
-# --- Find Ansible Playbook executable ---
-# Since we are in a venv, these are guaranteed to be in the path
-ANSIBLE_GALAXY_EXEC="$(which ansible-galaxy)"
-
-# Install Ansible collections
-if [ -x "$ANSIBLE_GALAXY_EXEC" ]; then
-    run_step "Installing Ansible collections" "$ANSIBLE_GALAXY_EXEC collection install community.general ansible.posix community.docker"
-else
-    echo "Error: ansible-galaxy not found in venv." >&2
-    exit 1
-fi
+# Ensure environment is ready (it might have been set up by purge_jobs, or deleted by git clean)
+ensure_python_environment
 
 # --- Run Provisioning Script ---
 # echo "🚀 Handing over to Python provisioning script..."

@@ -389,6 +389,7 @@ def main():
     parser.add_argument("--external-model-server", action="store_true", help="Skip model downloads")
     parser.add_argument("--leave-services-running", action="store_true", help="Don't cleanup Nomad/Consul")
     parser.add_argument("--purge-jobs", action="store_true", help="Purge Nomad jobs (handled by wrapper mostly, but var passed)")
+    parser.add_argument("--only-purge", action="store_true", help="Only purge jobs and exit (requires --purge-jobs)")
     parser.add_argument("--deploy-docker", action="store_true", help="Deploy via Docker")
     parser.add_argument("--run-local", action="store_true", help="Deploy via raw_exec")
     parser.add_argument("--home-assistant-debug", action="store_true", help="Debug Home Assistant")
@@ -414,6 +415,9 @@ def main():
     # --- Pre-Provisioning Actions ---
     if args.purge_jobs:
         purge_nomad_jobs()
+        if args.only_purge:
+            print(f"{Colors.OKGREEN}✅ Purge complete. Exiting as requested.{Colors.ENDC}")
+            sys.exit(0)
 
     # --- Build Extra Vars ---
     extra_vars = {
