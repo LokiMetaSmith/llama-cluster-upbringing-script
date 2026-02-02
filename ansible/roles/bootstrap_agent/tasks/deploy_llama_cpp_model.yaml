@@ -1,6 +1,6 @@
 - name: Render the Llama.cpp RPC Nomad job from template for bootstrap
   ansible.builtin.template:
-    src: "{{ playbook_dir }}/ansible/jobs/llamacpp-rpc.nomad.j2"
+    src: "{{ inventory_dir }}/ansible/jobs/llamacpp-rpc.nomad.j2"
     dest: "{{ nomad_jobs_dir }}/llamacpp-rpc.nomad"
     mode: '0644'
   vars:
