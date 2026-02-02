@@ -1,144 +1,162 @@
-# Project Linting and Formatting
+# `scripts/` Directory Overview
 
-Last updated: 2025-11-06
+This directory contains various utility scripts for managing the lifecycle, testing, debugging, and quality assurance of the `pipecatapp` ecosystem.
 
-This document outlines the process for running linters to ensure code quality and consistency across the repository. The project uses a suite of linters for YAML, Markdown, Nomad (HCL), and Jinja2 files.
+## Table of Contents
 
-## 1. Installation
+- [1. Core Lifecycle & Infrastructure](#1-core-lifecycle--infrastructure)
+- [2. Testing & Verification](#2-testing--verification)
+- [3. Agent & Workflow (Jules)](#3-agent--workflow-jules)
+- [4. Debugging & Diagnostics](#4-debugging--diagnostics)
+- [5. Linting & Code Quality](#5-linting--code-quality)
 
-To run the linters, you must first install the necessary development dependencies.
+---
 
-### Python Dependencies
+## 1. Core Lifecycle & Infrastructure
 
-The Python-based linters (`yamllint`, `djlint`) are managed via `pip`. Install them by running the following command from the root of the repository:
+These scripts manage the setup, teardown, and maintenance of the environment.
 
-```bash
-pip install -r requirements-dev.txt
-```
+### `cleanup.sh`
 
-### Node.js Dependencies
+**Usage:** `sudo ./scripts/cleanup.sh`
+Aggressively cleans up system resources to free disk space. Target areas include:
 
-The Markdown linter is managed via `npm`. Install it by running:
+- Docker (prunes system, build cache, and containers).
+- Apt cache (autoremove).
+- Playwright browsers (optional).
+- Snap revisions (removes old disabled snaps).
+- Temporary bootstrap artifacts in `/tmp`.
+- Large system logs (`/var/log/syslog`, `journalctl`).
 
-```bash
-npm install
-```
+### `uninstall.sh`
 
-This will install the `markdownlint-cli` package listed in `devDependencies` in `package.json`.
+**Usage:** `./scripts/uninstall.sh`
+Completely removes the application and its infrastructure components. It stops services, cleans up directories, and removes configuration files.
 
-## 2. Running the Linters
+### `provisioning.py`
 
-A unified script has been created to run all the linters with a single command.
+**Usage:** *Internal (Called by `bootstrap.sh`)*
+The Python backend for the main `bootstrap.sh` script. It handles complex logic for provisioning the environment, running Ansible playbooks, and managing dependencies. It uses `argparse` to parse arguments passed from the bootstrap wrapper.
 
-From the root of the repository, run:
+### `start_services.sh` (⚠️ DEPRECATED)
 
-```bash
-npm run lint
-```
+**Usage:** `./scripts/start_services.sh`
+Legacy script for manually starting services via `nomad job run`.
+**Recommendation:** Use Ansible tags (e.g., `ansible-playbook playbook.yaml --tags "app,ai-experts"`) for reliable service deployment.
 
-This command executes the `scripts/lint.sh` script, which will check all relevant files and report any errors.
+---
 
-## 3. Excluding Files (Whitelist)
+## 2. Testing & Verification
 
-Some files may have persistent, unresolvable linter errors due to tool limitations or specific project constraints. To prevent these from blocking the linting process, an exclusion system has been implemented.
+Scripts to ensure the system is correct and functional.
 
-### How it Works
+### `run_tests.sh`
 
-The file `scripts/lint_exclude.txt` acts as a whitelist of files to be ignored by the linters. The main `scripts/lint.sh` script reads this file and dynamically generates the correct `--ignore` or `--exclude` flags for each linter.
+**Usage:** `./scripts/run_tests.sh [--unit|--integration|--e2e|--all]`
+A unified test runner wrapper.
 
-To exclude a new file, simply add its full path (from the repository root) to a new line in `scripts/lint_exclude.txt`.
+- `--unit`: Runs unit tests in `tests/unit/`.
+- `--integration`: Runs integration tests in `tests/integration/`.
+- `--e2e`: Runs end-to-end tests in `tests/e2e/`.
+- `--all`: Runs all test suites sequentially.
+Generates JUnit XML reports (`report_*.xml`) in the root directory.
 
-### Current Exclusions and Known Issues
+### `check_all_playbooks.sh`
 
-The following files are currently excluded from linting:
+**Usage:** `./scripts/check_all_playbooks.sh [--log]`
+recursively finds all Ansible playbooks (files ending in `.yaml` or `.yml` containing `- hosts:`) and runs `ansible-playbook --check` on them. This validates syntax and variable references without applying changes.
 
-- **`ansible/lint_nomad.yaml`**: Excluded from `yamllint` due to a persistent `no-new-line-at-end-of-file` warning that is difficult to resolve reliably across different environments.
-- **`ansible/jobs/expert.nomad.j2`**: Excluded from `djlint` because the linter incorrectly flags the `http://` URLs used for local Consul communication (Rule `H022`). This is a false positive, as these URLs are internal to the cluster.
+- `--log`: Saves output to `playbook_check.log`.
 
-These exclusions ensure that the linting process can complete successfully while still providing value for the rest of the codebase. They should be revisited periodically to see if updates to the linters or the files themselves can resolve the underlying issues.
+### `test_playbooks_dry_run.sh` / `test_playbooks_live_run.sh`
 
-## 4. Ansible Playbook Change Detection
+Helpers to run specific playbooks in dry-run (check) or live mode. Useful for quick validation during development.
 
-To ensure that changes to the Ansible playbooks are intentional and well-understood, the `ansible_diff.sh` script provides a way to compare playbook runs over time.
+### `check_deps.py`
 
-### Purpose
+**Usage:** `python3 scripts/check_deps.py`
+Verifies Python dependencies by attempting a dry-run install against a temporary requirements list. Generates a `report.json` with resolution details.
 
-This script helps prevent unintended side effects by comparing the output of a "dry run" (`--check` mode) against a known-good "baseline" run. If the dry run output differs from the baseline, it means that applying the playbook will result in changes to the system.
+---
 
-### How it Works (Ansible Diff)
+## 3. Agent & Workflow (Jules)
 
-1. **Baseline Creation**: The first time you run the script, it executes the main playbook and saves its output to `ansible_run.baseline.log`. This file represents the expected state of the system.
-2. **Comparison**: On subsequent runs, the script executes the playbook in `--check --diff` mode, which predicts changes without making them. It saves this output to a temporary log file.
-3. **Difference Reporting**: The script then `diff`s the baseline log against the temporary check log. If differences are found, they are saved to `ansible_diff.log` for you to review.
+Tools related to the "Agentic Workflow" and AI capabilities.
 
-### Usage
+### `agentic_workflow.sh`
 
-**Initial Run (Creating the Baseline):**
+**Usage:** `./scripts/agentic_workflow.sh [options]`
+The main entry point for managing the "Jules" agent workflow.
 
-Before you can compare for changes, you must establish a baseline from a known-good system state.
+- `--setup`: Installs GitHub Actions workflows and local hooks.
+- `--ignite`: Creates the first issue to trigger the agent loop.
+- `--status`: Checks the current status of the agent queue and hardware runner.
+- `--uninstall`: Removes all workflow files and labels.
 
-1. First, ensure the system is configured correctly by running the main playbook.
-2. Then, create the baseline with the `--update-baseline` flag:
+### `healer.py` (🧪 EXPERIMENTAL)
 
-```bash
-./scripts/ansible_diff.sh --update-baseline
-```
+**Usage:** `python3 scripts/healer.py --local-mode --log <log> --target <file>`
+A self-healing agent prototype. It can:
 
-This will run the playbook in `--check --diff` mode and save its output to `ansible_run.baseline.log`.
+1. Read a crash log and source code.
+2. Generate a reproduction test case using an LLM.
+3. Attempt to fix the code to pass the test.
 
-**Checking for Changes:**
+### `run_quibbler.sh` (🧪 EXPERIMENTAL)
 
-Once the baseline exists, run the script without any flags to compare the current playbook against the baseline:
+**Usage:** `./scripts/run_quibbler.sh <instructions> <plan>`
+Wrapper for the `quibbler` tool to perform automated code review on agent plans.
 
-```bash
-./scripts/ansible_diff.sh
-```
+---
 
-If changes are detected, review the `ansible_diff.log` file.
+## 4. Debugging & Diagnostics
 
-**Updating the Baseline:**
+Tools to help troubleshoot issues in the running cluster.
 
-If you have made intentional changes to the playbooks and want to update the baseline to reflect the new expected state, run the same command as the initial setup:
+### `analyze_nomad_allocs.py`
 
-```bash
-./scripts/ansible_diff.sh --update-baseline
-```
+**Usage:** `python3 scripts/analyze_nomad_allocs.py <json_dump>`
+Parses a JSON dump of Nomad allocations (e.g., from `nomad alloc status -json`) and provides a human-readable summary of failures, task states, and recent events.
 
-**Customizing the Run:**
+### `debug_expert.sh`
 
-You can override the default inventory and extra variables using command-line flags:
+**Usage:** `./scripts/debug_expert.sh`
+Deploys the "Expert" service in debug mode (using `ansible/jobs/expert-debug.nomad`). Useful for interactive troubleshooting or attaching debuggers.
 
-```bash
-./scripts/ansible_diff.sh -i my_inventory.ini -e "target_user=other_user"
-```
+### `profile_resources.sh` / `memory_audit.py`
 
-### Automated CI Check
+Tools for profiling system resource usage (CPU, Memory) of the running services.
 
-For automated environments, the `ci_ansible_check.sh` script provides a wrapper around the `ansible_diff.sh` script that is suitable for use in CI/CD pipelines or as a pre-push git hook.
+---
 
-**Purpose:**
+## 5. Linting & Code Quality
 
-This script is designed to run non-interactively. It will:
+Scripts to enforce code style and detect regressions.
 
-- Exit with a status code of `0` if no changes are detected.
-- Exit with a status code of `1` if changes are detected, printing the diff to standard output.
+### `lint.sh`
 
-**How it Works (CI):**
+**Usage:** `npm run lint` or `./scripts/lint.sh`
+Runs all project linters:
 
-The GitHub Actions workflow uses the `actions/cache` action to persist the `ansible_run.baseline.log` file across runs. The cache is keyed to the specific Git branch, so each pull request will have its own baseline.
+- `yamllint` for YAML files.
+- `markdownlint` for Markdown documentation.
+- `nomad-fmt` (if available) for Nomad HCL.
+- `djlint` for Jinja2 templates.
+Reads exclusions from `scripts/lint_exclude.txt`.
 
-- **First Run on a Branch:** When the workflow runs for the first time on a new branch, the cache will be empty. The script will detect that the baseline file is missing, create a new one, and exit successfully. The new baseline file is then saved to the cache for the next run.
-- **Subsequent Runs:** On subsequent pushes to the same branch, the workflow will restore the baseline file from the cache. The script will then run the comparison against this restored baseline. If it finds a difference, it will print the diff and exit with an error, failing the CI job.
+### `fix_markdown.sh` / `fix_yaml.sh`
 
-**Usage:**
+Auto-fix scripts that attempt to automatically resolve linting errors for Markdown and YAML files respectively.
 
-This check runs automatically on every pull request. No manual intervention is needed.
+### `ansible_diff.sh`
 
-**Updating the Baseline in a Pull Request:**
+**Usage:** `./scripts/ansible_diff.sh [--update-baseline]`
+Detects unintended changes in Ansible playbooks by comparing a "dry run" against a known "baseline".
 
-If a pull request introduces intentional changes to the Ansible playbooks, the `ansible-check` job will fail. To approve the changes and update the baseline for that branch, you must:
+#### How it Works
 
-1. Navigate to the "Actions" tab in the GitHub repository.
-2. Find the failed workflow run for your pull request.
-3. Go to the "Cache" section and delete the cache entry corresponding to your branch (e.g., `ansible-baseline-refs/heads/your-branch-name`).
-4. Re-run the failed job. It will now run on a clean cache, generate a new baseline, and pass successfully.
+1. **Baseline Creation:** The first run (or with `--update-baseline`) saves the output of a check-mode run to `ansible_run.baseline.log`.
+2. **Comparison:** Subsequent runs compare the current check-mode output against the baseline.
+3. **Reporting:** Differences are logged to `ansible_diff.log`.
+
+This is automatically run in CI via `ci_ansible_check.sh` to prevent regressions.
