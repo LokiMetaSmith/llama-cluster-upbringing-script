@@ -8,6 +8,7 @@
     service_name: "llamacpp-rpc-api"
     nomad_namespace: "default"
     model_list: "{{ expert_models['main'] }}"
+    model: "{{ expert_models['main'][0] }}"
     worker_count: 1
   register: job_file
 
