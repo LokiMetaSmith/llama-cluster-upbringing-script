@@ -7,6 +7,7 @@
   vars_files:
     - "{{ inventory_dir }}/group_vars/all.yaml"
     - "{{ inventory_dir }}/group_vars/models.yaml"
+    - "{{ inventory_dir }}/group_vars/external_experts.yaml"
 
   vars:
     target_user: "pipecatapp"
