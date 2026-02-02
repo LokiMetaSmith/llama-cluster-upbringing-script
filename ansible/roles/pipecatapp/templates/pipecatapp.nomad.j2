@@ -131,6 +131,8 @@ job "{{ job_name | default('pipecat-app') }}" {
       driver = "raw_exec"
       {{ env_vars }}
 
+      user = "{{ target_user | default('pipecatapp') }}"
+
       config {
         command = "/opt/pipecatapp/start_pipecat.sh"
       }

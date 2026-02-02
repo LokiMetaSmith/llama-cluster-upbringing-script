@@ -34,7 +34,7 @@ log_msg() {
 # We'll use a simpler approach: explicitly logging key steps and redirecting the final python exec.
 
 # Ensure the log file is created/writable
-touch "$LOG_FILE" || echo "Warning: Could not create log file at $LOG_FILE" >&2
+touch "$LOG_FILE" || echo "Warning: Could not create log file at $LOG_FILE (User: $(id))" >&2
 
 log_msg "--- Starting pipecat-app wrapper: $(date) ---"
 
