@@ -31,31 +31,27 @@
   register: new_nomad_version
   changed_when: false
 
-- name: Reset Nomad state if version has changed
-  when: >
-    (existing_nomad_version.stdout is defined and
-    new_nomad_version.stdout is defined and
-    existing_nomad_version.stdout != new_nomad_version.stdout) and
-    (cleanup_services | bool)
-  block:
-    - name: Stop Nomad service
-      ansible.builtin.systemd:
-        name: nomad
-        state: stopped
-      become: yes
-      ignore_errors: yes
+- name: Stop Nomad service if cleanup requested
+  ansible.builtin.systemd:
+    name: nomad
+    state: stopped
+  become: yes
+  ignore_errors: yes
+  when: cleanup_services | default(false) | bool
 
-    - name: Clear old Nomad server state
-      ansible.builtin.file:
-        path: "{{ nomad_data_dir }}/server"
-        state: absent
-      become: yes
+- name: Clear Nomad server state if cleanup requested
+  ansible.builtin.file:
+    path: "{{ nomad_data_dir }}/server"
+    state: absent
+  become: yes
+  when: cleanup_services | default(false) | bool
 
-    - name: Clear old Nomad client state
-      ansible.builtin.file:
-        path: "{{ nomad_data_dir }}/client"
-        state: absent
-      become: yes
+- name: Clear Nomad client state if cleanup requested
+  ansible.builtin.file:
+    path: "{{ nomad_data_dir }}/client"
+    state: absent
+  become: yes
+  when: cleanup_services | default(false) | bool
 
 - name: Move Nomad to /usr/local/bin
   ansible.builtin.copy:
