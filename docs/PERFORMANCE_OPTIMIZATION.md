@@ -7,9 +7,10 @@ This document tracks optimizations applied to the codebase to reduce syscall ove
 **Problem:** The `ExperimentTool` creates a fresh sandbox for every agent evaluation. Previously, this used `shutil.copytree`, which performs thousands of `open`, `read`, `write`, `close` syscalls (one set per file) to copy the application code to a temporary directory.
 
 **Solution:** We implemented a "Snapshot & Extract" strategy:
-1.  A tar archive of the source directory is created once (excluding `.git`, `__pycache__`, etc.).
-2.  For each sandbox, this tar archive is extracted using the system `tar` command.
-3.  This replaces thousands of random read/write syscalls with a sequential read of the archive and optimized extraction, significantly speeding up sandbox creation.
+
+1. A tar archive of the source directory is created once (excluding `.git`, `__pycache__`, etc.).
+2. For each sandbox, this tar archive is extracted using the system `tar` command.
+3. This replaces thousands of random read/write syscalls with a sequential read of the archive and optimized extraction, significantly speeding up sandbox creation.
 
 ## Git Integration in ProjectMapperTool
 
@@ -19,6 +20,6 @@ This document tracks optimizations applied to the codebase to reduce syscall ove
 
 ## Future Opportunities
 
--   **Batch I/O:** Look for other areas where many small files are processed and consider using `tar` or `sqlite` as a container.
--   **Logging:** Ensure logging doesn't open/close files excessively.
--   **Git Cat-File:** For tools reading many files, consider `git cat-file --batch` to read contents without opening individual file descriptors.
+- **Batch I/O:** Look for other areas where many small files are processed and consider using `tar` or `sqlite` as a container.
+- **Logging:** Ensure logging doesn't open/close files excessively.
+- **Git Cat-File:** For tools reading many files, consider `git cat-file --batch` to read contents without opening individual file descriptors.
