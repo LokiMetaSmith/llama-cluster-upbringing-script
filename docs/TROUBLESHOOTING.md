@@ -2,6 +2,24 @@
 
 This document provides solutions to common issues encountered when operating the Distributed Conversational AI Pipeline.
 
+## Automated Troubleshooting Report
+
+If you are experiencing issues with the system, especially with failed jobs, you can generate a comprehensive troubleshooting report using the provided script. This script captures the current state of the system, including resources, Docker/Consul/Nomad status, and logs from recently failed allocations.
+
+**To generate the report:**
+
+```bash
+python3 scripts/troubleshoot.py
+```
+
+This will create a timestamped text file (e.g., `troubleshoot_report_2026-02-01_123456.txt`) in the current directory containing:
+
+* **System Resources:** Uptime, memory usage (`free`), and disk usage (`df`).
+* **Docker Status:** List of all containers (`docker ps -a`).
+* **Consul Status:** Members list and registered services. It also runs a dry-run check for stale critical services.
+* **Nomad Status:** Server members, node status, and job status.
+* **Failed Job Logs:** The script automatically identifies the top 5 most recently failed Nomad allocations and fetches their stderr logs.
+
 ## Common Issues
 
 ### 1. Nomad Server Checks Failing ("All service checks failing")
@@ -65,12 +83,12 @@ Jobs submitted to Nomad stay in the "Pending" state and are not placed on any no
 
 **Cause:**
 
-- Lack of resources (CPU/Memory).
-- Constraint mismatches (e.g., job requires a specific device or kernel capability).
-- Nodes are down or ineligible.
+* Lack of resources (CPU/Memory).
+* Constraint mismatches (e.g., job requires a specific device or kernel capability).
+* Nodes are down or ineligible.
 
 **Solution:**
 
-- Run `nomad job allocs <job_name>` to see allocation status.
-- Check `nomad node status` to ensure workers are ready.
-- Check `nomad alloc status <alloc_id>` for placement failure reasons.
+* Run `nomad job allocs <job_name>` to see allocation status.
+* Check `nomad node status` to ensure workers are ready.
+* Check `nomad alloc status <alloc_id>` for placement failure reasons.
