@@ -1,3 +1,16 @@
+- name: Check for empty management token file
+  stat:
+    path: "{{ consul_config_dir }}/management_token"
+  register: token_stat
+  become: yes
+
+- name: Remove empty management token file
+  file:
+    path: "{{ consul_config_dir }}/management_token"
+    state: absent
+  when: token_stat.stat.exists and token_stat.stat.size == 0
+  become: yes
+
 - name: Bootstrap ACLs and recover from failures
   block:
     - name: Bootstrap ACLs
@@ -10,12 +23,17 @@
           changed_when: "'SecretID:' in acl_bootstrap_result.stdout"
           become: yes
 
+        - name: Extract SecretID from bootstrap
+          set_fact:
+            consul_bootstrap_secret_id: "{{ (acl_bootstrap_result.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') or []) | first }}"
+          when: acl_bootstrap_result.changed and 'SecretID:' in acl_bootstrap_result.stdout
+
         - name: Store management token
           copy:
-            content: "{{ (acl_bootstrap_result.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') or []) | first | default('') }}"
+            content: "{{ consul_bootstrap_secret_id }}"
             dest: "{{ consul_config_dir }}/management_token"
             mode: '0600'
-          when: acl_bootstrap_result.changed and 'SecretID:' in acl_bootstrap_result.stdout
+          when: acl_bootstrap_result.changed and consul_bootstrap_secret_id is defined and consul_bootstrap_secret_id | length > 0
           become: yes
       when: "'controller_nodes' in groups and groups['controller_nodes'] | length > 0"
       run_once: true
@@ -78,12 +96,17 @@
               - "STDOUT: {{ acl_bootstrap_result_recovery.stdout }}"
               - "STDERR: {{ acl_bootstrap_result_recovery.stderr }}"
 
+        - name: Extract SecretID from recovery
+          set_fact:
+            consul_recovery_secret_id: "{{ (acl_bootstrap_result_recovery.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') or []) | first }}"
+          when: "'SecretID:' in acl_bootstrap_result_recovery.stdout"
+
         - name: Store recovered management token
           copy:
-            content: "{{ (acl_bootstrap_result_recovery.stdout | regex_search('SecretID:\\s+([^\\n]+)', '\\1') or []) | first | default('') }}"
+            content: "{{ consul_recovery_secret_id }}"
             dest: "{{ consul_config_dir }}/management_token"
             mode: '0600'
-          when: "'SecretID:' in acl_bootstrap_result_recovery.stdout"
+          when: consul_recovery_secret_id is defined and consul_recovery_secret_id | length > 0
           become: yes
       when: ansible_failed_result.stderr is defined and 'ACL bootstrap no longer allowed' in ansible_failed_result.stderr
       delegate_to: "{{ groups['controller_nodes'][0] }}"
