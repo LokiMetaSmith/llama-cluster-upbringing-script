@@ -4,7 +4,11 @@ import os
 import re
 # Set config dir before importing ultralytics to avoid permission errors
 os.environ["YOLO_CONFIG_DIR"] = "/tmp/Ultralytics"
-from ultralytics import YOLO
+try:
+    from ultralytics import YOLO
+except ImportError:
+    YOLO = None
+    logging.warning("Ultralytics not found. YOLOv8 vision will be disabled.")
 import time
 import json
 import io
@@ -427,6 +431,12 @@ class YOLOv8Detector(FrameProcessor):
         self.last_processed_time = 0
         self.is_processing = False
         self.connection_check_callback = None
+
+        if YOLO is None:
+             logging.error("YOLOv8 model unavailable because ultralytics module is missing.")
+             self.model = None
+             self.latest_observation = "Vision system unavailable (missing dependency)."
+             return
 
         try:
             self.model = YOLO(model_path)

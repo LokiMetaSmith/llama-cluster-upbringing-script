@@ -108,6 +108,7 @@ job "{{ job_name | default('pipecat-app') }}" {
         volumes = [
           "/opt/nomad/models:/opt/nomad/models:ro",
           "/opt/pipecatapp/pipecat_config.json:/app/pipecat_config.json:ro",
+          "/opt/pipecatapp:/opt/pipecatapp",
         ]
         # Pass through the sound device to the container
         {% if sound_enabled | default(false) %}
