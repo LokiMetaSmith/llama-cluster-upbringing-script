@@ -160,8 +160,20 @@ def main():
                 # Enhanced Log Capture for Failed Allocs
                 f.write(section("RECENT FAILED ALLOCATION LOGS"))
 
-                # Filter for failed allocs
-                failed_allocs = [a for a in allocs if a.get('ClientStatus') == 'failed']
+                # Filter for failed allocs (check ClientStatus OR TaskStates)
+                failed_allocs = []
+                for a in allocs:
+                    if a.get('ClientStatus') == 'failed':
+                        failed_allocs.append(a)
+                        continue
+
+                    # Check task states for failure
+                    task_states = a.get('TaskStates', {})
+                    for state in task_states.values():
+                        if state.get('Failed', False):
+                            failed_allocs.append(a)
+                            break
+
                 # Sort by ModifyTime desc
                 failed_allocs.sort(key=lambda x: x.get('ModifyTime', 0), reverse=True)
 

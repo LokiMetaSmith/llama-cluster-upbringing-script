@@ -34,7 +34,18 @@ def analyze_allocs(filepath):
         return
 
     # Filter for failed allocations or allocations with recent failures
-    failed_allocs = [a for a in allocs if a.get('ClientStatus') == 'failed']
+    failed_allocs = []
+    for a in allocs:
+        if a.get('ClientStatus') == 'failed':
+            failed_allocs.append(a)
+            continue
+
+        # Check task states for failure
+        task_states = a.get('TaskStates', {})
+        for state in task_states.values():
+            if state.get('Failed', False):
+                failed_allocs.append(a)
+                break
 
     if not failed_allocs:
         print("No failed allocations found in the dump.")
