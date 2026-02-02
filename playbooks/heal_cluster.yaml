@@ -5,8 +5,8 @@
   gather_facts: yes
 
   vars_files:
-    - group_vars/all.yaml
-    - group_vars/models.yaml
+    - ../group_vars/all.yaml
+    - ../group_vars/models.yaml
 
   vars:
     target_user: "pipecatapp"
