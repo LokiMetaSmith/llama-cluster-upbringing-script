@@ -24,7 +24,7 @@ client = TestClient(app)
 
 def test_websocket_accepts_trusted_origin():
     """
-    Test that the WebSocket accepts connections from trusted origins.
+    Test that the WebSocket accepts connections from trusted origins when explicitly configured.
     """
     # We patch the 'allowed_origins' list that we will access in the endpoint
     with patch("web_server.allowed_origins", ["http://localhost"]):
@@ -37,7 +37,7 @@ def test_websocket_accepts_trusted_origin():
 
 def test_websocket_rejects_untrusted_origin():
     """
-    Test that the WebSocket rejects connections from untrusted origins.
+    Test that the WebSocket rejects connections from untrusted origins when explicitly configured.
     This simulates a Cross-Site WebSocket Hijacking attempt.
     """
     with patch("web_server.allowed_origins", ["http://localhost"]):
@@ -50,8 +50,46 @@ def test_websocket_rejects_untrusted_origin():
 
 def test_websocket_allows_wildcard():
     """
-    Test that the WebSocket accepts all origins if configured with wildcard '*'.
+    Test that the WebSocket accepts all origins if EXPLICITLY configured with wildcard '*'.
     """
     with patch("web_server.allowed_origins", ["*"]):
          with client.websocket_connect("/ws", headers={"Origin": "http://evil.com"}) as websocket:
              pass
+
+def test_websocket_default_secure_same_origin_success():
+    """
+    Test that the WebSocket accepts Same-Origin connections when allowed_origins is empty (default strict mode).
+    """
+    # Simulate default behavior (allowed_origins = [])
+    with patch("web_server.allowed_origins", []):
+         # TestClient uses 'testserver' as Host by default.
+         # So we set Origin to match it.
+         with client.websocket_connect("/ws", headers={"Origin": "http://testserver"}) as websocket:
+             websocket.send_json({"type": "ping"})
+
+def test_websocket_default_secure_same_origin_failure():
+    """
+    Test that the WebSocket rejects Cross-Origin connections when allowed_origins is empty (default strict mode).
+    """
+    # Simulate default behavior (allowed_origins = [])
+    with patch("web_server.allowed_origins", []):
+         with pytest.raises(WebSocketDisconnect) as excinfo:
+             # Origin does NOT match Host (testserver)
+             with client.websocket_connect("/ws", headers={"Origin": "http://attacker.com"}) as websocket:
+                 websocket.receive_text()
+
+         # Verify the close code is 1008 (Policy Violation)
+         assert excinfo.value.code == 1008
+
+def test_websocket_default_secure_missing_origin():
+    """
+    Test that the WebSocket rejects connections without Origin header when in default strict mode.
+    """
+    with patch("web_server.allowed_origins", []):
+         with pytest.raises(WebSocketDisconnect) as excinfo:
+             # No Origin header
+             with client.websocket_connect("/ws") as websocket:
+                 websocket.receive_text()
+
+         # Verify the close code is 1008 (Policy Violation)
+         assert excinfo.value.code == 1008

@@ -38,11 +38,14 @@ app = FastAPI(
 )
 
 # Security Enhancement: Add CORS Middleware
-# Default to "*" for development convenience, but support strict configuration via env var
-allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "*")
-allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+# Default to strict security (Same-Origin only), but support configuration via env var
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
+if allowed_origins_env:
+    allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+else:
+    allowed_origins = []  # Secure default: Block all Cross-Origin requests
 
-if "*" in allowed_origins and len(allowed_origins) == 1:
+if "*" in allowed_origins:
     logging.warning("⚠️  Security Warning: CORS is configured to allow all origins ('*'). This is acceptable for development but insecure for production. Set 'ALLOWED_ORIGINS' environment variable to a comma-separated list of trusted domains.")
 
 app.add_middleware(
@@ -212,10 +215,36 @@ async def websocket_endpoint(websocket: WebSocket):
     # Security Fix: Prevent Cross-Site WebSocket Hijacking (CSWSH)
     # Even without auth, we must ensure the connection comes from a trusted origin.
     origin = websocket.headers.get("origin")
-    if not is_origin_allowed(origin, allowed_origins):
-        logging.warning(f"Rejected WebSocket connection from untrusted origin: {origin}")
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
+
+    # 1. Check strict list first (if configured)
+    if allowed_origins:
+        if not is_origin_allowed(origin, allowed_origins):
+            logging.warning(f"Rejected WebSocket connection from untrusted origin: {origin}")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+
+    # 2. If no list configured (Default secure mode), enforce Strict Same-Origin Policy
+    else:
+        # If origin is missing, we reject in strict mode to be safe.
+        if not origin:
+            logging.warning("Rejected WebSocket connection: Missing Origin header in strict mode.")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+
+        # Extract host from origin and compare with Host header
+        # Origin: http://localhost:8000 -> localhost:8000
+        try:
+            origin_host = origin.split("://")[-1]
+            server_host = websocket.headers.get("host")
+
+            if origin_host != server_host:
+                logging.warning(f"Rejected Cross-Origin WebSocket (Strict Mode): Origin={origin_host}, Host={server_host}")
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                return
+        except Exception as e:
+            logging.error(f"Error checking origin: {e}")
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+            return
 
     await manager.connect(websocket)
     try:

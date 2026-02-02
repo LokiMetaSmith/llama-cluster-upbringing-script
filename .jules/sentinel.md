@@ -32,3 +32,8 @@
 **Vulnerability:** `RAG_Tool` was initialized with `base_dir="/"`, granting it permission to scan and index the entire container filesystem, including sensitive system directories.
 **Learning:** Default configurations for tools should obey the Principle of Least Privilege. Never default to the filesystem root (`/`) when a specific application directory (`/opt/pipecatapp`) is sufficient.
 **Prevention:** Explicitly restrict file scanning tools to the application's root directory during initialization in the factory method.
+
+## 2026-02-01 - Cross-Site WebSocket Hijacking
+**Vulnerability:** Default configuration allowed all origins (*), enabling CSWSH.
+**Learning:** "Secure by default" is critical. Convenience defaults (* for dev) often end up in production, leaving apps vulnerable.
+**Prevention:** Default to restrictive policies (Same-Origin). Require explicit configuration for permissive modes. Use strict Origin vs Host validation for WebSockets.
