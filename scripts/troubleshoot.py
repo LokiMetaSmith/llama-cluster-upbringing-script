@@ -10,7 +10,40 @@ import urllib.error
 import tempfile
 import shutil
 
-def run_command(command, shell=False):
+def get_consul_token():
+    """Retrieve Consul management token."""
+    # Check environment first
+    if "CONSUL_HTTP_TOKEN" in os.environ:
+        return os.environ["CONSUL_HTTP_TOKEN"]
+
+    token_file = "/etc/consul.d/management_token"
+
+    # 1. Try reading directly (fast, silent)
+    if os.path.exists(token_file):
+        try:
+            with open(token_file, 'r') as f:
+                return f.read().strip()
+        except PermissionError:
+            pass  # Fall through to sudo
+        except Exception:
+            pass
+
+    # 2. Try sudo -n cat (silent check)
+    try:
+        result = subprocess.run(
+            ["sudo", "-n", "cat", token_file],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+
+    return None
+
+def run_command(command, shell=False, env=None):
     """Run a shell command and return its output."""
     try:
         # If command is a list, shell should be False (usually)
@@ -28,7 +61,8 @@ def run_command(command, shell=False):
             stderr=subprocess.STDOUT,
             shell=shell,
             universal_newlines=True,
-            timeout=30
+            timeout=30,
+            env=env
         )
         return f"$ {cmd_str}\n{result.stdout}\n"
     except Exception as e:
@@ -77,15 +111,25 @@ def main():
 
         # Consul
         f.write(section("CONSUL STATUS"))
-        f.write(run_command("consul members"))
-        f.write(run_command("consul catalog services"))
+
+        # Setup Consul Token environment
+        env = os.environ.copy()
+        consul_token = get_consul_token()
+        if consul_token:
+            env["CONSUL_HTTP_TOKEN"] = consul_token
+            print("Using Consul token for queries.")
+        else:
+            print("Warning: Could not retrieve Consul token. Service queries might be empty.")
+
+        f.write(run_command("consul members", env=env))
+        f.write(run_command("consul catalog services", env=env))
 
         f.write("\n--- Stale Services Analysis ---\n")
         # Run prune_consul_services.py in dry-run mode
         script_dir = os.path.dirname(os.path.abspath(__file__))
         prune_script = os.path.join(script_dir, "prune_consul_services.py")
         if os.path.exists(prune_script):
-            f.write(run_command([sys.executable, prune_script, "--dry-run"]))
+            f.write(run_command([sys.executable, prune_script, "--dry-run"], env=env))
         else:
             f.write(f"Script not found: {prune_script}\n")
 
