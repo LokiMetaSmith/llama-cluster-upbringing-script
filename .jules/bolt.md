@@ -13,3 +13,7 @@
 ## 2026-01-24 - In-place Numpy Operations
 **Learning:** Performing arithmetic operations in-place (e.g., `*=`) on Numpy arrays avoids allocating temporary arrays, significantly reducing memory churn and CPU time for large buffers.
 **Action:** Use in-place operators for element-wise operations on large arrays whenever possible.
+
+## 2025-06-15 - Redundant JSON Serialization Checks
+**Learning:** Using `try: json.dumps(val)` just to check if a value is serializable is incredibly expensive for large strings (e.g. LLM outputs), as it re-encodes the entire string.
+**Action:** Add a type check fast-path for primitives (str, int, bool) before attempting complex serialization checks.
