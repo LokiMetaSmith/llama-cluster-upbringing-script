@@ -5,7 +5,7 @@
     mode: '0644'
   vars:
     job_name: "llamacpp-rpc"
-    service_name: "llamacpp-rpc-api"
+    service_name: "llamacpp-rpc-provider"
     nomad_namespace: "default"
     model_list: "{{ expert_models['main'] }}"
     model: "{{ expert_models['main'][0] }}"
@@ -57,7 +57,7 @@
 
 - name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/llamacpp-rpc-api"
+    url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/llamacpp-rpc-provider"
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     return_content: yes
