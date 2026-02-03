@@ -37,3 +37,8 @@
 **Vulnerability:** Default configuration allowed all origins (*), enabling CSWSH.
 **Learning:** "Secure by default" is critical. Convenience defaults (* for dev) often end up in production, leaving apps vulnerable.
 **Prevention:** Default to restrictive policies (Same-Origin). Require explicit configuration for permissive modes. Use strict Origin vs Host validation for WebSockets.
+
+## 2026-02-03 - Path Traversal in ExperimentTool Artifacts
+**Vulnerability:** `ExperimentTool` allowed path traversal when writing solution artifacts from worker agents. This could allow a compromised worker (or LLM hallucination) to overwrite arbitrary files on the host.
+**Learning:** Tools that accept file paths from LLM outputs must strictly validate that the resolved path stays within the intended sandbox/directory. `os.path.join` is not enough if the input can be absolute.
+**Prevention:** Always use a validation helper (like `_validate_path`) that resolves absolute paths, checks `os.path.isabs`, and uses `os.path.commonpath` to ensure containment.

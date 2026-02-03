@@ -173,6 +173,28 @@ class ExperimentTool:
 
         return json.dumps(summary, indent=2)
 
+    def _validate_path(self, root_dir: str, filepath: str) -> str:
+        """Ensures the filepath is within the root directory."""
+        root_dir = os.path.abspath(root_dir)
+
+        # Handle absolute paths by stripping leading slash
+        # This treats /etc/passwd as relative to root_dir
+        if os.path.isabs(filepath):
+            filepath = filepath.lstrip(os.sep)
+
+        full_path = os.path.join(root_dir, filepath)
+        full_path = os.path.abspath(full_path)
+
+        try:
+            common = os.path.commonpath([root_dir, full_path])
+        except ValueError:
+            common = ""
+
+        if common != root_dir:
+            raise ValueError(f"Access denied: {filepath} is outside the sandbox.")
+
+        return full_path
+
     def _create_snapshot(self, src_dir: str) -> Optional[str]:
         """Creates a tar snapshot of the source directory to speed up sandbox creation."""
         if not os.path.exists(src_dir):
@@ -247,7 +269,10 @@ class ExperimentTool:
 
             # Apply Artifact
             file_path = artifact.get("file_path", "solution.py")
-            full_path = os.path.join(temp_dir, file_path)
+            try:
+                full_path = self._validate_path(temp_dir, file_path)
+            except ValueError as e:
+                return {"passed": False, "output": f"Security Error: {e}"}
 
             # Ensure directory exists
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
