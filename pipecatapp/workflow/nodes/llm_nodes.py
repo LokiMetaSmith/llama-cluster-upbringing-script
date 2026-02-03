@@ -4,6 +4,8 @@ from ..context import WorkflowContext
 from pipecat.services.openai.llm import OpenAILLMService
 import os
 import httpx
+import asyncio
+import re
 
 # This is a simplified version for now. We will need to make this more robust.
 async def discover_main_llm_service():
@@ -60,7 +62,7 @@ class PromptBuilderNode(Node):
 
 @registry.register
 class SimpleLLMNode(Node):
-    """A simple LLM node with configurable model tiers."""
+    """A simple LLM node with configurable model tiers and Ensembling support."""
     async def execute(self, context: WorkflowContext):
         # 1. Gather Inputs
         messages = None
@@ -123,44 +125,91 @@ class SimpleLLMNode(Node):
                         address = services[0]['Service']['Address']
                         port = services[0]['Service']['Port']
                         base_url = f"http://{address}:{port}/v1"
+                        chat_url = f"{base_url}/chat/completions"
 
-                        # Call Chat Completion
+                        # CHECK FOR ENSEMBLING
+                        ensemble_size = self.config.get("ensemble_size", 1)
+                        # Also allow overriding from input
+                        if any(i["name"] == "ensemble_size" for i in self.config.get("inputs", [])):
+                             input_size = self.get_input(context, "ensemble_size")
+                             if input_size:
+                                 ensemble_size = int(input_size)
+
                         payload = {
-                            "model": target_service, # Model name often ignored by llama.cpp rpc, but good practice
+                            "model": target_service,
                             "messages": messages,
                             "temperature": 0.7
                         }
 
-                        # Check for reasoning config in input or self.config
+                        # Check for reasoning config
                         reasoning_config = None
                         if any(i["name"] == "reasoning" for i in self.config.get("inputs", [])):
                             reasoning_config = self.get_input(context, "reasoning")
                         reasoning_config = reasoning_config or self.config.get("reasoning")
 
                         if reasoning_config:
-                            # Standard OpenRouter/OpenAI 'reasoning' parameter or 'extra_body'
-                            # Some backends expect it in 'extra_body', others top-level (OpenRouter unified)
-                            # We'll put it top-level as per OpenRouter docs for direct API calls,
-                            # but some libraries wrap it. Since we are using raw httpx, top-level is correct for OpenRouter.
-                            # However, standard OpenAI API puts it in extra_body or specialized fields.
-                            # If we are calling OpenRouter directly, top-level `reasoning` is fine.
-                            # If we are calling a local llama-server that mimics OpenAI, it might just ignore it or
-                            # support it if it's a newer version.
-                            # Let's support both by injecting it into the payload.
                             payload["reasoning"] = reasoning_config
 
-                        chat_url = f"{base_url}/chat/completions"
-                        llm_res = await client.post(chat_url, json=payload, timeout=120)
-                        llm_res.raise_for_status()
-                        response_data = llm_res.json()
-                        response_text = response_data["choices"][0]["message"]["content"]
+                        if ensemble_size <= 1:
+                            # Standard Single Execution
+                            llm_res = await client.post(chat_url, json=payload, timeout=120)
+                            llm_res.raise_for_status()
+                            response_data = llm_res.json()
+                            response_text = response_data["choices"][0]["message"]["content"]
 
-                        # Preserve reasoning details if present, for future turns (though SimpleLLMNode is usually one-off)
-                        # We could store it in context if needed.
-                        reasoning_details = response_data["choices"][0]["message"].get("reasoning_details") or \
-                                            response_data["choices"][0]["message"].get("reasoning")
-                        if reasoning_details:
-                             self.set_output(context, "reasoning_details", reasoning_details)
+                            reasoning_details = response_data["choices"][0]["message"].get("reasoning_details") or \
+                                                response_data["choices"][0]["message"].get("reasoning")
+                            if reasoning_details:
+                                 self.set_output(context, "reasoning_details", reasoning_details)
+                        else:
+                            # ENSEMBLE EXECUTION (Best-of-N)
+                            tasks = []
+                            for i in range(ensemble_size):
+                                # Vary temperature slightly if needed, or rely on inherent stochasticity
+                                # Here we keep it simple or slightly boost temp for variety
+                                p = payload.copy()
+                                if i > 0:
+                                    p["temperature"] = 0.8 # Slightly higher for candidates
+
+                                tasks.append(client.post(chat_url, json=p, timeout=120))
+
+                            results = await asyncio.gather(*tasks, return_exceptions=True)
+                            candidates = []
+                            for r in results:
+                                if isinstance(r, httpx.Response) and r.status_code == 200:
+                                    candidates.append(r.json()["choices"][0]["message"]["content"])
+
+                            if not candidates:
+                                response_text = "Error: All ensemble calls failed."
+                            elif len(candidates) == 1:
+                                response_text = candidates[0]
+                            else:
+                                # SELECT BEST CANDIDATE
+                                # We ask the same model (or a fast one) to pick the best.
+                                # Using the same model for simplicity.
+                                selection_prompt = "Select the most coherent, complete, and correct response from the following options. Respond ONLY with the index number (e.g., 0, 1, 2).\n\n"
+                                for idx, cand in enumerate(candidates):
+                                    selection_prompt += f"--- Option {idx} ---\n{cand}\n\n"
+
+                                sel_payload = {
+                                    "model": target_service,
+                                    "messages": [{"role": "user", "content": selection_prompt}],
+                                    "temperature": 0.0
+                                }
+                                sel_res = await client.post(chat_url, json=sel_payload, timeout=60)
+                                if sel_res.status_code == 200:
+                                    sel_text = sel_res.json()["choices"][0]["message"]["content"]
+                                    match = re.search(r"\d+", sel_text)
+                                    if match:
+                                        best_idx = int(match.group(0))
+                                        if 0 <= best_idx < len(candidates):
+                                            response_text = candidates[best_idx]
+                                        else:
+                                            response_text = candidates[0]
+                                    else:
+                                        response_text = candidates[0]
+                                else:
+                                    response_text = candidates[0]
 
                     else:
                          response_text = f"Error: Service {target_service} not found in Consul."

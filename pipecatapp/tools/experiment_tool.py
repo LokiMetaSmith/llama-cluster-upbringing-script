@@ -30,7 +30,7 @@ class ExperimentTool:
 
         self.swarm_tool = SwarmTool()
 
-    async def run(self, task_description: str, test_command: str, variants: List[str] = [], num_workers: int = 3, timeout_seconds: int = 300) -> str:
+    async def run(self, task_description: str, test_command: str, variants: List[str] = [], num_workers: int = 5, timeout_seconds: int = 300) -> str:
         """
         Runs the experiment.
 
