@@ -2,6 +2,10 @@ job "{{ job_name | default('pipecat-app') }}" {
   datacenters = ["dc1"]
   type        = "service"
 
+  meta {
+    version = "{{ pipecat_versioned_tag | default('local') }}"
+  }
+
   group "pipecat-group" {
     count = 1
 

@@ -138,18 +138,18 @@ check_venv_valid() {
     return 1
 }
 
-# 1. Try local/development venv (bind mount location)
-if check_venv_valid "$VENV_DIR"; then
-    log_msg "Found existing valid venv at $VENV_DIR"
-    ACTIVATE="$VENV_DIR/bin/activate"
-    source "$ACTIVATE"
-
-# 2. If inside Docker, try the baked-in container venv
-elif [ "$IS_DOCKER" -eq 1 ] && check_venv_valid "$CONTAINER_VENV_DIR"; then
+# 1. If inside Docker, try the baked-in container venv
+if [ "$IS_DOCKER" -eq 1 ] && check_venv_valid "$CONTAINER_VENV_DIR"; then
     log_msg "Found valid container venv at $CONTAINER_VENV_DIR. Using it."
     ACTIVATE="$CONTAINER_VENV_DIR/bin/activate"
     source "$ACTIVATE"
     USING_CONTAINER_VENV=1
+
+# 2. Try local/development venv (bind mount location)
+elif check_venv_valid "$VENV_DIR"; then
+    log_msg "Found existing valid venv at $VENV_DIR"
+    ACTIVATE="$VENV_DIR/bin/activate"
+    source "$ACTIVATE"
 
 # 3. Last resort: Create a new venv in the local directory
 else
