@@ -9,7 +9,14 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 PLAYBOOK="$REPO_ROOT/playbooks/heal_cluster.yaml"
-TARGET_USER="${USER:-pipecatapp}"
+
+# Determine default target user (avoid root)
+CURRENT_USER="$(whoami)"
+if [ "$CURRENT_USER" = "root" ]; then
+    TARGET_USER="pipecatapp"
+else
+    TARGET_USER="${CURRENT_USER:-pipecatapp}"
+fi
 
 # --- Help ---
 show_help() {
