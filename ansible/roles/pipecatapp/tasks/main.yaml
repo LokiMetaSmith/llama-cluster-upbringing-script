@@ -124,6 +124,38 @@
   tags:
     - deploy_app
 
+- name: Copy pmm memory module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/pmm_memory.py"
+    dest: "{{ pipecat_app_dir }}/pmm_memory.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy quality_control module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/quality_control.py"
+    dest: "{{ pipecat_app_dir }}/quality_control.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy durable_execution module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/durable_execution.py"
+    dest: "{{ pipecat_app_dir }}/durable_execution.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy workflow directory
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/workflow"
+    dest: "{{ pipecat_app_dir }}/"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Fetch Consul management token from controller node
   ansible.builtin.slurp:
     src: /etc/consul.d/management_token
