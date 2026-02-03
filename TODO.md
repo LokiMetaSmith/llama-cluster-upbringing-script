@@ -162,3 +162,24 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [ ] **Review Codebase for I/O Inefficiencies:**
   - **Goal:** Identify and optimize other areas with heavy syscall usage (e.g., logging, data processing).
   - **Strategy:** Look for repeated file opens/closes in loops, inefficient directory traversals, and opportunities to batch I/O or use `tar`/`sqlite` strategies.
+
+## Security Audit
+
+- [x] **Audit and remove hardcoded secrets:**
+  - Audit frontend code (`pipecatapp/static/js`), workflows (`workflows/`), and tools (`pipecatapp/tools/`) for hardcoded secrets, API keys, or tokens.
+  - Remove any found secrets and replace them with secure environment variable loading.
+- [ ] **Audit unauthenticated API endpoints:**
+  - Review `pipecatapp/web_server.py` and other API definitions to ensure sensitive data endpoints are authenticated.
+  - Specifically check endpoints returning user data or configuration.
+- [ ] **Audit WebSocket security:**
+  - Verify that WebSocket connections enforce strict Origin checks to prevent Cross-Site WebSocket Hijacking (CSWSH).
+  - Consider implementing authentication for WebSocket connections.
+- [ ] **Audit write access controls:**
+  - Ensure that all state-changing endpoints (POST, PUT, PATCH) require authentication and authorization.
+  - Verify that unauthenticated users cannot modify workflows or agent state.
+- [ ] **Audit rate limiting configuration:**
+  - Review rate limiting settings in `pipecatapp/rate_limiter.py` and `pipecatapp/web_server.py`.
+  - Ensure critical endpoints have stricter limits to prevent abuse.
+- [ ] **Audit data storage security:**
+  - Check how sensitive data (e.g., in `pipecatapp/memory.py` or database integrations) is stored.
+  - Ensure encryption at rest is considered or implemented for sensitive fields.
