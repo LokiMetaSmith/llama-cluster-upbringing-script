@@ -17,3 +17,7 @@
 ## 2025-06-15 - Redundant JSON Serialization Checks
 **Learning:** Using `try: json.dumps(val)` just to check if a value is serializable is incredibly expensive for large strings (e.g. LLM outputs), as it re-encodes the entire string.
 **Action:** Add a type check fast-path for primitives (str, int, bool) before attempting complex serialization checks.
+
+## 2025-05-27 - Fast Path Regex vs Loop
+**Learning:** Iterating through a list of strings with `any(sub in text for sub in list)` to skip expensive operations is O(N*M) where M is the number of triggers. For M=15, a single compiled Regex (O(N)) is ~2.8x faster on short strings.
+**Action:** When implementing fast-path checks with multiple triggers, verify if a combined Regex is faster than a loop, especially if the loop size is > 5.
