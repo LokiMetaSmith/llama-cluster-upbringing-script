@@ -352,14 +352,36 @@ document.addEventListener('DOMContentLoaded', async function () {
                 if (lastNodeDef && lastNodeDef.type === 'GateNode') {
                      cy.getElementById(lastNodeId).addClass('gated');
                      if (approvalContainer.innerHTML === '') {
-                        approvalContainer.innerHTML = `<button id="approve-btn" data-request-id="${requestId}">Approve</button>`;
+                        // Palette UX: Enhanced Approve Button with Icon and Accessibility
+                        approvalContainer.innerHTML = `
+                            <button id="approve-btn" data-request-id="${requestId}" aria-label="Approve pending request ${requestId}">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px; vertical-align: text-bottom;">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Approve
+                            </button>`;
+
                         document.getElementById('approve-btn').addEventListener('click', async (e) => {
-                            const reqId = e.target.dataset.requestId;
-                            await fetch('/api/gate/approve', {
-                                method: 'POST',
-                                headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({ request_id: reqId })
-                            });
+                            const btn = e.currentTarget;
+                            const reqId = btn.dataset.requestId;
+
+                            // Palette UX: Loading State
+                            btn.disabled = true;
+                            const originalContent = btn.innerHTML;
+                            btn.innerHTML = '<span class="spinner" style="margin-right: 5px; border-color: currentColor; border-right-color: transparent;"></span> Approving...';
+
+                            try {
+                                await fetch('/api/gate/approve', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ request_id: reqId })
+                                });
+                            } catch (error) {
+                                console.error('Approval failed:', error);
+                                btn.disabled = false;
+                                btn.innerHTML = originalContent; // Revert on error
+                                return;
+                            }
                             approvalContainer.innerHTML = '';
                         });
                      }

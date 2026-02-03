@@ -56,6 +56,10 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 #approve-btn:hover { background-color: #e0a800; }
+#approve-btn:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
 
 /* Modal */
 .modal {
