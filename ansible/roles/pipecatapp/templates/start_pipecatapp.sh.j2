@@ -20,21 +20,29 @@ else
     IS_DOCKER=0
 fi
 
-# Define log file path in the app directory (bind-mounted in dev mode)
-LOG_FILE="$APP_DIR/startup.log"
+# Define log file path logic
+# We attempt to write to APP_DIR, then /tmp, then /dev/null
+# This prevents 'permission denied' errors from crashing the script when set -o pipefail is on.
+
+TARGET_LOG="$APP_DIR/startup.log"
+
+if touch "$TARGET_LOG" 2>/dev/null; then
+    LOG_FILE="$TARGET_LOG"
+else
+    echo "Warning: Could not create log file at $TARGET_LOG (User: $(id)). Falling back to /tmp/startup.log" >&2
+    TARGET_LOG="/tmp/startup.log"
+    if touch "$TARGET_LOG" 2>/dev/null; then
+        LOG_FILE="$TARGET_LOG"
+    else
+        echo "Warning: Could not create log file at $TARGET_LOG. Disabling file logging." >&2
+        LOG_FILE="/dev/null"
+    fi
+fi
 
 # Function to log message to both stderr and file
 log_msg() {
     echo "$@" | tee -a "$LOG_FILE" >&2
 }
-
-# Redirect all subsequent output to the log file while preserving stderr
-# We use process substitution to tee everything to the log file.
-# Note: set -e might cause issues with process substitution if tee fails, but usually safe.
-# We'll use a simpler approach: explicitly logging key steps and redirecting the final python exec.
-
-# Ensure the log file is created/writable
-touch "$LOG_FILE" || echo "Warning: Could not create log file at $LOG_FILE (User: $(id))" >&2
 
 log_msg "--- Starting pipecat-app wrapper: $(date) ---"
 
