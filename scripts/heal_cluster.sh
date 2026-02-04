@@ -10,6 +10,13 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 PLAYBOOK="$REPO_ROOT/playbooks/heal_cluster.yaml"
 
+# --- Logging ---
+LOG_DIR="$REPO_ROOT/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/heal_cluster_$(date +%Y%m%d_%H%M%S).log"
+echo "📜 Logging to: $LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
 # Determine default target user (avoid root)
 CURRENT_USER="$(whoami)"
 if [ "$CURRENT_USER" = "root" ]; then
@@ -63,3 +70,4 @@ ansible-playbook "$PLAYBOOK" \
 
 echo ""
 echo "✅ Healing complete."
+echo "📜 Logs saved to: $LOG_FILE"
