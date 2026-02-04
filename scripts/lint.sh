@@ -6,6 +6,9 @@
 # It accumulates failures and reports them at the end, rather than exiting on
 # the first error.
 
+# Ensure we are running from the repository root
+cd "$(dirname "$0")/.." || exit 1
+
 EXIT_CODE=0
 
 # Helper function to run a command, capture its exit code, and print status.
