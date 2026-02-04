@@ -346,6 +346,7 @@
     - name: Fail task
       ansible.builtin.fail:
         msg: "Consul API failed to become ready. See logs above."
+  when: not ansible_check_mode
 
 - name: Wait for Consul to be ready before ACL bootstrap
   ansible.builtin.wait_for:

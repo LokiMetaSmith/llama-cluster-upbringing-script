@@ -1,5 +1,17 @@
 # tasks file for download_models
 
+- name: Read Consul management token
+  ansible.builtin.slurp:
+    src: "{{ consul_config_dir | default('/etc/consul.d') }}/management_token"
+  register: consul_token_file
+  become: yes
+  ignore_errors: yes
+
+- name: Set consul_token fact
+  ansible.builtin.set_fact:
+    consul_token: "{{ consul_token_file.content | b64decode | trim }}"
+  when: consul_token_file.content is defined
+
 - name: Query Consul for all model configurations
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ consul_http_port }}/v1/kv/config/models/{{ item }}?raw=true"

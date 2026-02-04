@@ -71,3 +71,4 @@
   set_fact:
     headscale_auth_key: "{{ headscale_auth_key_output.stdout_lines[-1] }}"
     headscale_server_url: "http://{{ ansible_default_ipv4.address }}:{{ headscale_port }}"
+  when: headscale_auth_key_output.stdout_lines is defined and headscale_auth_key_output.stdout_lines | length > 0

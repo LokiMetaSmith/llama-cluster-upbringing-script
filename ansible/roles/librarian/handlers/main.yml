@@ -1,0 +1,13 @@
+- name: restart spacedrive
+  systemd:
+    name: spacedrive
+    state: restarted
+    daemon_reload: yes
+  when: not ansible_check_mode
+
+- name: restart librarian
+  systemd:
+    name: "{{ librarian_service_name }}"
+    state: restarted
+    daemon_reload: yes
+  when: not ansible_check_mode
