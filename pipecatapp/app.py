@@ -1100,14 +1100,23 @@ async def main():
     # Load configuration from Consul
     consul_host = os.getenv("CONSUL_HOST")
     if not consul_host:
-         raise RuntimeError("CONSUL_HOST environment variable not set")
+         logging.warning("CONSUL_HOST environment variable not set. Defaulting to 127.0.0.1")
+         consul_host = "127.0.0.1"
 
     consul_port_str = os.getenv("CONSUL_PORT")
     if not consul_port_str:
-         raise RuntimeError("CONSUL_PORT environment variable not set")
-    consul_port = int(consul_port_str)
+         logging.warning("CONSUL_PORT environment variable not set. Defaulting to 8500")
+         consul_port = 8500
+    else:
+         consul_port = int(consul_port_str)
 
-    app_config = await load_config_from_consul(consul_host, consul_port)
+    try:
+        app_config = await load_config_from_consul(consul_host, consul_port)
+    except Exception as e:
+        logging.critical(f"Failed to load config from Consul: {e}")
+        print(f"CRITICAL: Failed to load config from Consul: {e}", file=sys.stderr)
+        sys.stderr.flush()
+        raise e
 
     # Add consul host/port to app_config
     app_config['consul_host'] = consul_host
