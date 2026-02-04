@@ -34,11 +34,11 @@
     </div>
 
     <!-- Node Detail Modal -->
-    <div id="nodeModal" class="modal">
+    <div id="nodeModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content">
             <button class="close" aria-label="Close modal">&times;</button>
-            <h3>Node Output</h3>
-            <pre id="node-output-content"></pre>
+            <h3 id="modal-title">Node Output</h3>
+            <pre id="node-output-content" tabindex="0" aria-label="Node Output content"></pre>
         </div>
     </div>
 

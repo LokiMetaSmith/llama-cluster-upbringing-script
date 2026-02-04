@@ -46,3 +46,7 @@
 ## 2026-02-24 - Loading and Empty States in Data Lists
 **Learning:** Leaving a data list empty while loading or when no data exists creates uncertainty ("Is it broken? Is it loading?"). Users need immediate feedback.
 **Action:** Always implement explicit states for "Loading...", "No results found" (Empty), and "Failed to load" (Error) within the list container itself, using consistent styling.
+
+## 2026-03-01 - Modal Focus Trapping
+**Learning:** Simply showing a modal (`display: block`) leaves keyboard focus behind, confusing users and failing WCAG requirements. Users can tab "behind" the modal, interacting with invisible elements.
+**Action:** When opening a modal, save the `activeElement`, move focus to the modal's first interactive element (or close button), trap the Tab cycle within the modal, and restore focus to the saved element upon closing.

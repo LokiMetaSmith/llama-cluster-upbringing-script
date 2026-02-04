@@ -192,6 +192,22 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // --- Modal Logic ---
 
+    let lastFocusedElement = null;
+
+    function openModal() {
+        lastFocusedElement = document.activeElement;
+        nodeModal.style.display = "block";
+        // Focus the close button for accessibility
+        closeModalSpan.focus();
+    }
+
+    function closeModal() {
+        nodeModal.style.display = "none";
+        if (lastFocusedElement) {
+            lastFocusedElement.focus();
+        }
+    }
+
     cy.on('tap', 'node', function(evt){
         const node = evt.target;
         const nodeId = node.id();
@@ -199,19 +215,43 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         if (output !== undefined) {
              nodeOutputContent.textContent = JSON.stringify(output, null, 2);
-             nodeModal.style.display = "block";
+             openModal();
         }
     });
 
-    closeModalSpan.onclick = function() {
-        nodeModal.style.display = "none";
-    }
+    closeModalSpan.onclick = closeModal;
 
     window.onclick = function(event) {
         if (event.target == nodeModal) {
-             nodeModal.style.display = "none";
+             closeModal();
         }
     }
+
+    // Palette UX: Trap focus inside modal
+    nodeModal.addEventListener('keydown', function(e) {
+        if (nodeModal.style.display !== 'block') return;
+
+        if (e.key === 'Escape') {
+            closeModal();
+        } else if (e.key === 'Tab') {
+            // Focusable elements inside modal: close button and pre content
+            const focusableElements = nodeModal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) { /* Shift + Tab */
+                if (document.activeElement === firstElement) {
+                    lastElement.focus();
+                    e.preventDefault();
+                }
+            } else { /* Tab */
+                if (document.activeElement === lastElement) {
+                    firstElement.focus();
+                    e.preventDefault();
+                }
+            }
+        }
+    });
 
     // --- History Logic ---
 
