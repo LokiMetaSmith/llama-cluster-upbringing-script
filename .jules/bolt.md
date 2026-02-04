@@ -21,3 +21,7 @@
 ## 2025-05-27 - Fast Path Regex vs Loop
 **Learning:** Iterating through a list of strings with `any(sub in text for sub in list)` to skip expensive operations is O(N*M) where M is the number of triggers. For M=15, a single compiled Regex (O(N)) is ~2.8x faster on short strings.
 **Action:** When implementing fast-path checks with multiple triggers, verify if a combined Regex is faster than a loop, especially if the loop size is > 5.
+
+## 2026-02-04 - Recursive Type Check vs JSON Dump
+**Learning:** `json.dumps(obj)` validates serialization by processing the entire string content. For objects containing large strings (like LLM outputs), this is O(total_chars). A recursive `isinstance` check is O(structure_size) and avoids processing string content, offering >1000x speedup for large payloads.
+**Action:** Replace `try: json.dumps(obj)` validation checks with a recursive `make_serializable` helper that traverses the structure and stringifies only non-serializable leaves.

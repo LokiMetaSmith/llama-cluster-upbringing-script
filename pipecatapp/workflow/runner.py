@@ -10,27 +10,32 @@ from .context import WorkflowContext
 from .nodes.registry import registry
 from .history import WorkflowHistory
 
+def make_serializable(obj, depth=0, max_depth=50):
+    """
+    Recursively ensures that an object is JSON-serializable by converting
+    unknown types to their string representation.
+    """
+    if depth > max_depth:
+        return str(obj)
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        return obj
+    if isinstance(obj, dict):
+        return {str(k): make_serializable(v, depth+1, max_depth) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [make_serializable(v, depth+1, max_depth) for v in obj]
+    return str(obj)
+
 def _safe_context_to_dict(context: Optional['WorkflowContext']) -> Dict[str, Any]:
     """Helper function to serialize workflow context to a dictionary.
     Safe to run in background thread."""
     if not context:
         return {}
 
+    # Bolt ⚡ Optimization: Use recursive check instead of json.dumps
+    # This avoids expensive serialization of large strings just to check validity.
     serializable_outputs = {}
     for node_id, outputs in context.node_outputs.items():
-        serializable_outputs[node_id] = {}
-        for key, value in outputs.items():
-            # Bolt ⚡ Optimization: Fast path for primitives
-            if value is None or isinstance(value, (str, int, float, bool)):
-                serializable_outputs[node_id][key] = value
-                continue
-
-            # Attempt to serialize. If it fails, use the string representation.
-            try:
-                json.dumps(value)
-                serializable_outputs[node_id][key] = value
-            except (TypeError, OverflowError):
-                serializable_outputs[node_id][key] = str(value)
+        serializable_outputs[node_id] = make_serializable(outputs)
 
     return {
         "global_inputs": context.global_inputs,
