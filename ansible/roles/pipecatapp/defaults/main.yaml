@@ -1,2 +1,3 @@
 pipecat_image_id: "pipecatapp:local"
 external_experts_config: {}
+pipecat_memory_mb: 4096
