@@ -26,13 +26,15 @@ fi
 
 TARGET_LOG="$APP_DIR/startup.log"
 
+# Try to write to app dir, but fallback silently to /tmp if it fails (common in read-only mounts)
 if touch "$TARGET_LOG" 2>/dev/null; then
     LOG_FILE="$TARGET_LOG"
 else
-    echo "Warning: Could not create log file at $TARGET_LOG (User: $(id)). Falling back to /tmp/startup.log" >&2
+    # Fallback to /tmp without scary warning unless that fails too
     TARGET_LOG="/tmp/startup.log"
     if touch "$TARGET_LOG" 2>/dev/null; then
         LOG_FILE="$TARGET_LOG"
+        echo "Note: Logging to $LOG_FILE (App dir read-only or permission denied)" >&2
     else
         echo "Warning: Could not create log file at $TARGET_LOG. Disabling file logging." >&2
         LOG_FILE="/dev/null"
@@ -180,6 +182,18 @@ log_msg "--- Launching pipecat-app: $(date) ---"
 
 # Add parent directory of app to PYTHONPATH so that 'import pipecatapp' works from within submodules
 export PYTHONPATH=$PYTHONPATH:$(dirname "$APP_DIR")
+
+log_msg "--- Pre-flight checks ---"
+log_msg "Environment: CONSUL_HOST=${CONSUL_HOST:-unset} CONSUL_PORT=${CONSUL_PORT:-unset}"
+log_msg "PYTHONPATH=$PYTHONPATH"
+log_msg "User: $(id)"
+
+# Pre-flight import check to catch missing dependencies early
+log_msg "Running pre-flight import check..."
+# We use the python from the active venv
+if ! python3 -c "import sys; sys.path.append('$(dirname "$APP_DIR")'); import pipecatapp.app; print('Pre-flight import check passed.')" 2>&1 | tee -a "$LOG_FILE" >&2; then
+    log_msg "CRITICAL: Pre-flight import check failed. This usually indicates missing dependencies or syntax errors."
+fi
 
 {% if pipecat_deployment_style == 'raw_exec' %}
 # For raw_exec, we explicitly manage our own log file via redirection.
