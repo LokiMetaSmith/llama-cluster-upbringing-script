@@ -298,6 +298,14 @@
   tags:
     - deploy_app
 
+- name: Copy integrations directory
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/integrations"
+    dest: "{{ pipecat_app_dir }}/"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy moondream_detector module
   ansible.builtin.copy:
     src: "{{ inventory_dir }}/pipecatapp/moondream_detector.py"
