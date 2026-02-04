@@ -17,12 +17,18 @@
     mode: '0755'
   notify: restart unified_fs
 
+- name: Check if /etc/fuse.conf exists
+  stat:
+    path: /etc/fuse.conf
+  register: fuse_conf_stat
+
 - name: Configure FUSE to allow other users
   lineinfile:
     path: /etc/fuse.conf
     regexp: '^#user_allow_other'
     line: 'user_allow_other'
   notify: restart unified_fs
+  when: fuse_conf_stat.stat.exists
 
 - name: Deploy Unified FS systemd service
   template:
@@ -35,3 +41,4 @@
     name: unified_fs
     state: started
     enabled: yes
+  when: not ansible_check_mode

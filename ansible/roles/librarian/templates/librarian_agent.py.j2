@@ -148,7 +148,7 @@ def process_directory(path):
         You may suggest specific subfolders if appropriate (e.g. 'Invoices' inside Documents).
 
         Return a JSON object where keys are the filenames and values are the new relative paths.
-        Example: {{"invoice.pdf": "Documents/Invoices/invoice.pdf", "pic.jpg": "Images/pic.jpg"}}
+        Example: {{ '{{' }}"invoice.pdf": "Documents/Invoices/invoice.pdf", "pic.jpg": "Images/pic.jpg"{{ '}}' }}
 
         Only return the JSON.
         """

@@ -60,11 +60,13 @@
   args:
     chdir: "{{ librarian_install_path }}/local_file_organizer"
     creates: "{{ librarian_install_path }}/local_file_organizer/venv"
+  when: not ansible_check_mode
 
 - name: Install requirements
   pip:
     requirements: "{{ librarian_install_path }}/local_file_organizer/requirements.txt"
     virtualenv: "{{ librarian_install_path }}/local_file_organizer/venv"
+  when: not ansible_check_mode
 
 - name: Install additional requirements (openai, schedule)
   pip:
@@ -73,6 +75,7 @@
       - schedule
       - requests
     virtualenv: "{{ librarian_install_path }}/local_file_organizer/venv"
+  when: not ansible_check_mode
 
 - name: Download Spacedrive Core (Headless)
   get_url:
@@ -84,7 +87,7 @@
 - name: Install Spacedrive Core
   apt:
     deb: "/tmp/spacedrive.deb"
-  when: spacedrive_download.changed
+  when: spacedrive_download.changed and not ansible_check_mode
 
 - name: Create Spacedrive systemd service
   template:
@@ -100,6 +103,7 @@
     name: "spacedrive"
     enabled: yes
     state: started
+  when: not ansible_check_mode
 
 - name: Deploy Librarian Agent script
   template:
@@ -124,3 +128,4 @@
     name: "{{ librarian_service_name }}"
     enabled: yes
     state: started
+  when: not ansible_check_mode

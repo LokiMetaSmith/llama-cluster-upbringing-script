@@ -7,33 +7,29 @@
   become: yes
 
 - name: Download Node Exporter Full Dashboard
-  ansible.builtin.get_url:
-    url: https://grafana.com/api/dashboards/1860/revisions/37/download
-    dest: "{{ nomad_volumes_dir }}/grafana/dashboards/node-exporter-full.json"
-    mode: '0644'
+  ansible.builtin.command:
+    cmd: curl -L -o "{{ nomad_volumes_dir }}/grafana/dashboards/node-exporter-full.json" https://grafana.com/api/dashboards/1860/revisions/37/download
+    creates: "{{ nomad_volumes_dir }}/grafana/dashboards/node-exporter-full.json"
   become: yes
 
 - name: Download Nomad Dashboard
-  ansible.builtin.get_url:
-    url: https://grafana.com/api/dashboards/19154/revisions/1/download
-    dest: "{{ nomad_volumes_dir }}/grafana/dashboards/nomad.json"
-    mode: '0644'
+  ansible.builtin.command:
+    cmd: curl -L -o "{{ nomad_volumes_dir }}/grafana/dashboards/nomad.json" https://grafana.com/api/dashboards/19154/revisions/1/download
+    creates: "{{ nomad_volumes_dir }}/grafana/dashboards/nomad.json"
   become: yes
 
 # Consul Dashboard (ID 13627 is for Native Metrics)
 - name: Download Consul Dashboard
-  ansible.builtin.get_url:
-    url: https://grafana.com/api/dashboards/13627/revisions/1/download
-    dest: "{{ nomad_volumes_dir }}/grafana/dashboards/consul.json"
-    mode: '0644'
+  ansible.builtin.command:
+    cmd: curl -L -o "{{ nomad_volumes_dir }}/grafana/dashboards/consul.json" https://grafana.com/api/dashboards/13627/revisions/1/download
+    creates: "{{ nomad_volumes_dir }}/grafana/dashboards/consul.json"
   become: yes
 
 # MQTT Dashboard (Using a generic MQTT dashboard as a base, e.g., ID 11288)
 - name: Download MQTT Dashboard
-  ansible.builtin.get_url:
-    url: https://grafana.com/api/dashboards/11288/revisions/1/download
-    dest: "{{ nomad_volumes_dir }}/grafana/dashboards/mqtt.json"
-    mode: '0644'
+  ansible.builtin.command:
+    cmd: curl -L -o "{{ nomad_volumes_dir }}/grafana/dashboards/mqtt.json" https://grafana.com/api/dashboards/11288/revisions/1/download
+    creates: "{{ nomad_volumes_dir }}/grafana/dashboards/mqtt.json"
   become: yes
 
 - name: Copy LLM Performance Dashboard
