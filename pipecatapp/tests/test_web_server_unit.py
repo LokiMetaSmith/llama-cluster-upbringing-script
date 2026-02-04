@@ -83,3 +83,20 @@ def test_cluster_metrics(mock_get):
     assert data[0]["cpu"] == 0.5
     assert data[0]["mem"] == 1048576
     assert data[0]["status"] == "running"
+
+@patch("workflow.runner.ActiveWorkflows.get_all_states")
+def test_active_workflows_sanitization(mock_get_all_states):
+    """Test that active workflows output is sanitized."""
+    mock_get_all_states.return_value = {
+        "runner1": {
+            "global_inputs": {"key": "sk-1234567890abcdef1234567890abcdef"},
+            "node_outputs": {}
+        }
+    }
+
+    response = client.get("/api/workflows/active")
+    assert response.status_code == 200
+    data = response.json()
+
+    # Check that redaction occurred
+    assert data["runner1"]["global_inputs"]["key"] == "sk-[REDACTED]"
