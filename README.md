@@ -2,7 +2,10 @@
 
 Last updated: 2026-02-01
 
-It uses Ansible for automated provisioning, Nomad for cluster orchestration, and a state-of-the-art AI stack to create a responsive, streaming, and embodied voice agent. For a detailed technical description of the system's layers, see the [Holistic Project Architecture](docs/ARCHITECTURE.md) document.
+It uses Ansible for automated provisioning, Nomad for cluster orchestration, and
+a state-of-the-art AI stack to create a responsive, streaming, and embodied
+voice agent. For a detailed technical description of the system's layers, see
+the [Holistic Project Architecture](docs/ARCHITECTURE.md) document.
 
 ## 1. System Requirements
 
@@ -32,25 +35,37 @@ Setting up a new cluster involves two main methods: a one-time manual setup for 
 
 ### 3.1. Manual Setup (First Node / PXE Server)
 
-The first node in your cluster requires a manual OS installation. This node will later be configured by Ansible to act as the PXE/iPXE boot server for all other nodes.
+The first node in your cluster requires a manual OS installation. This node will
+later be configured by Ansible to act as the PXE/iPXE boot server for all other
+nodes.
 
 1. **Install Debian Trixie:** Perform a standard, minimal installation of Debian Trixie with an SSH server.
 2. **Clone this repository:** `git clone <repo_url>`
-3. **Configure Initial Settings:** Enter the `initial-setup` directory and edit the `setup.conf` file. You must provide the machine's desired `HOSTNAME`, a static IP address, and the `CONTROL_NODE_IP` (which should be the static IP of this same machine, as it will become the control node).
+3. **Configure Initial Settings:** Enter the `initial-setup` directory and edit
+   the `setup.conf` file. You must provide the machine's desired `HOSTNAME`, a
+   static IP address, and the `CONTROL_NODE_IP` (which should be the static IP
+   of this same machine, as it will become the control node).
 4. **Run Setup Script:** Execute the script with root privileges: `sudo bash setup.sh`
 5. **Reboot.**
 
-After rebooting, this node is ready for Ansible provisioning (see Section 4). It should be designated as both a `controller_node` and your `pxe_server` in the Ansible inventory.
+After rebooting, this node is ready for Ansible provisioning (see Section 4).
+It should be designated as both a `controller_node` and your `pxe_server` in
+the Ansible inventory.
 
 ### 3.2. Automated Setup (All Other Nodes)
 
 Once your first node has been provisioned by Ansible and the `pxe_server` role has been applied to it, you can automatically install Debian on all other bare-metal machines in your cluster.
 
-This system uses an advanced iPXE-over-HTTP method that is significantly faster and more reliable than traditional PXE. For detailed instructions on how to apply the Ansible role and prepare the client machines for network booting, see the **[iPXE Boot Server Setup Guide](docs/PXE_BOOT_SETUP.md)**.
+This system uses an advanced iPXE-over-HTTP method that is significantly faster
+and more reliable than traditional PXE. For detailed instructions on how to
+apply the Ansible role and prepare the client machines for network booting, see
+the **[iPXE Boot Server Setup Guide](docs/PXE_BOOT_SETUP.md)**.
 
 ## 4. Easy Bootstrap (Single-Server Setup)
 
-For development, testing, or bootstrapping the very first node of a new cluster, you can use the provided bootstrap script. This is the recommended method for getting started.
+For development, testing, or bootstrapping the very first node of a new
+cluster, you can use the provided bootstrap script. This is the recommended
+method for getting started.
 
 1. **On your control node, install Git:** `sudo apt install git -y`
 2. **Clone this repository.**
@@ -63,8 +78,13 @@ For development, testing, or bootstrapping the very first node of a new cluster,
    ./bootstrap.sh
    ```
 
-   - **What this does:** By default, the script runs the complete end-to-end process to configure the local machine as a standalone agent and control node. It invokes a series of Ansible playbooks that install and configure all necessary system components (Consul, Nomad, Docker) and deploy the AI agent services.
-   - You will be prompted for your `sudo` password, as the script needs administrative privileges to install and configure software.
+   - **What this does:** By default, the script runs the complete end-to-end
+     process to configure the local machine as a standalone agent and control
+     node. It invokes a series of Ansible playbooks that install and configure
+     all necessary system components (Consul, Nomad, Docker) and deploy the AI
+     agent services.
+   - You will be prompted for your `sudo` password, as the script needs
+     administrative privileges to install and configure software.
 
    **Common Flags for Customizing the Bootstrap Process:**
 
@@ -77,18 +97,31 @@ For development, testing, or bootstrapping the very first node of a new cluster,
    - `--controller-ip <ip>`: The IP address of the main controller node. **Required** when `--role` is `worker`.
    - `--user <user>`: Specify the target user for Ansible (default: `pipecatapp`).
    - `--tags <tag1,tag2>`: Run only specific parts of the Ansible playbook (e.g., `--tags nomad` would only run the Nomad configuration tasks).
-   - `--external-model-server`: Skips the download and build steps for large language models. This is ideal for development or if you are using a remote model server.
-   - `--purge-jobs`: Stops and purges all running Nomad jobs before starting the bootstrap process, ensuring a clean deployment.
-   - `--leave-services-running`: Do not clean up Nomad and Consul data on startup (useful for restarts without state loss).
-   - `--system-cleanup`: **Use with caution.** Aggressively cleans Docker resources, Apt cache, and logs to free up disk space on the host machine.
-   - `--clean`: **Use with caution.** This will permanently delete all untracked files in the repository (`git clean -fdx`), restoring it to a pristine state.
-   - `--debug`: Enables verbose Ansible logging (`-vvvv`) and saves the full output to `playbook_output.log`.
-   - `--verbose [level]`: Set verbosity level (0-4). Default 0, or 3 if flag is used without value.
-   - `--continue`: If a previous bootstrap run failed, this flag will resume the process from the last successfully completed playbook, saving significant time.
+   - `--external-model-server`: Skips the download and build steps for large
+     language models. This is ideal for development or if you are using a remote
+     model server.
+   - `--purge-jobs`: Stops and purges all running Nomad jobs before starting the
+     bootstrap process, ensuring a clean deployment.
+   - `--leave-services-running`: Do not clean up Nomad and Consul data on
+     startup (useful for restarts without state loss).
+   - `--system-cleanup`: **Use with caution.** Aggressively cleans Docker
+     resources, Apt cache, and logs to free up disk space on the host machine.
+   - `--clean`: **Use with caution.** This will permanently delete all untracked
+     files in the repository (`git clean -fdx`), restoring it to a pristine
+     state.
+   - `--debug`: Enables verbose Ansible logging (`-vvvv`) and saves the full
+     output to `playbook_output.log`.
+   - `--verbose [level]`: Set verbosity level (0-4). Default 0, or 3 if flag is
+     used without value.
+   - `--continue`: If a previous bootstrap run failed, this flag will resume the
+     process from the last successfully completed playbook, saving significant
+     time.
    - `--benchmark`: Run benchmark tests during deployment.
    - `--deploy-docker`: Deploy the pipecat application using Docker (Default).
-   - `--run-local`: Deploy the pipecat application using local `raw_exec` (useful for debugging without Docker rebuilds).
-   - `--container`: Run the entire infrastructure inside a single large container (experimental).
+   - `--run-local`: Deploy the pipecat application using local `raw_exec`
+     (useful for debugging without Docker rebuilds).
+   - `--container`: Run the entire infrastructure inside a single large
+     container (experimental).
    - `--home-assistant-debug`: Enable debug mode for Home Assistant integrations.
    - `--watch <target>`: Pause for inspection after the specified target (task/role) completes.
 
@@ -203,10 +236,18 @@ The following tools are available in the codebase (`pipecatapp/tools/`):
 
 ### 6.4. Mixture of Experts (MoE) Routing
 
-The agent is designed to function as a "Mixture of Experts." The primary `pipecat` agent acts as a router, classifying the user's query and routing it to a specialized backend expert if appropriate.
+The agent is designed to function as a "Mixture of Experts." The primary
+`pipecat` agent acts as a router, classifying the user's query and routing it to
+a specialized backend expert if appropriate.
 
-- **How it Works:** The `TwinService` (or a `SimpleLLMNode` in the workflow) classifies the user's query. If it determines the query is best handled by a specialist (e.g., a 'coding' expert), it routes the request to that expert service via Consul.
-- **Configuration:** Deploying these specialized experts is done using the `deploy_expert.yaml` Ansible playbook. For detailed instructions, see the [Advanced AI Service Deployment](#82-advanced-deploying-additional-ai-experts) section below.
+- **How it Works:** The `TwinService` (or a `SimpleLLMNode` in the workflow)
+  classifies the user's query. If it determines the query is best handled by a
+  specialist (e.g., a 'coding' expert), it routes the request to that expert
+  service via Consul.
+- **Configuration:** Deploying these specialized experts is done using the
+  `deploy_expert.yaml` Ansible playbook. For detailed instructions, see the
+  [Advanced AI Service Deployment](#82-advanced-deploying-additional-ai-experts)
+  section below.
 
 ### 6.5. Configuring Agent Personas
 
@@ -306,7 +347,10 @@ nomad job stop -purge pipecat-app
 
 ### 8.2. Advanced: Deploying Additional AI Experts
 
-The true power of this architecture is the ability to deploy multiple, specialized AI experts that the main `pipecat` agent can route queries to. With the new unified `llama-expert.nomad` job template, deploying a new expert is handled through a dedicated Ansible playbook.
+The true power of this architecture is the ability to deploy multiple,
+specialized AI experts that the main `pipecat` agent can route queries to. With
+the new unified `llama-expert.nomad` job template, deploying a new expert is
+handled through a dedicated Ansible playbook.
 
 1. **Define a Model List for Your Expert:**
    First, open `group_vars/models.yaml` and create a new list of models for your expert. For example, to create a `creative-writing` expert, you could add:
@@ -323,10 +367,13 @@ The true power of this architecture is the ability to deploy multiple, specializ
    - **Example: Deploying a `creative-writing` expert to the `creative` namespace:**
 
      ```bash
-     ansible-playbook playbooks/deploy_expert.yaml -e "job_name=creative-expert service_name=llama-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
+     ansible-playbook playbooks/deploy_expert.yaml \
+     -e "job_name=creative-expert service_name=llama-api-creative namespace=creative model_list={{ creative_writing_models }} worker_count=2"
      ```
 
-The `TwinService` in the `pipecatapp` will automatically discover any service registered in Consul with the `llama-api-` prefix and make it available for routing.
+The `TwinService` in the `pipecatapp` will automatically discover any service
+registered in Consul with the `llama-api-` prefix and make it available for
+routing.
 
 ### 8.3. Distributed Split Inference
 
