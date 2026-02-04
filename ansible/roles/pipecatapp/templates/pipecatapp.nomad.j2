@@ -127,7 +127,7 @@ job "{{ job_name | default('pipecat-app') }}" {
 
       resources {
         cpu    = 1000 # 1 GHz
-        memory = 2048 # 2048 MB
+        memory = {{ pipecat_memory_mb }} # {{ pipecat_memory_mb }} MB
       }
     }
     {% else %}
@@ -143,7 +143,7 @@ job "{{ job_name | default('pipecat-app') }}" {
 
       resources {
         cpu    = 1000 # 1 GHz
-        memory = 1024 # 4 GB
+        memory = {{ pipecat_memory_mb }} # {{ pipecat_memory_mb }} MB
       }
     }
     {% endif %}
