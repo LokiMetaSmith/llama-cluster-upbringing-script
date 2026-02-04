@@ -42,3 +42,8 @@
 **Vulnerability:** `ExperimentTool` allowed path traversal when writing solution artifacts from worker agents. This could allow a compromised worker (or LLM hallucination) to overwrite arbitrary files on the host.
 **Learning:** Tools that accept file paths from LLM outputs must strictly validate that the resolved path stays within the intended sandbox/directory. `os.path.join` is not enough if the input can be absolute.
 **Prevention:** Always use a validation helper (like `_validate_path`) that resolves absolute paths, checks `os.path.isabs`, and uses `os.path.commonpath` to ensure containment.
+
+## 2026-02-04 - Unsanitized Active Workflow State
+**Vulnerability:** The `/api/workflows/active` endpoint returned the raw state of active workflows, potentially leaking secrets (like API keys) stored in inputs or outputs.
+**Learning:** Even internal monitoring endpoints must sanitize data before exposing it to the UI, as the UI is a client-side component. "Active" state is just as sensitive as "Historical" state.
+**Prevention:** Apply `sanitize_data` to all endpoints returning workflow context or state, not just historical runs. Review all API endpoints for raw data exposure.
