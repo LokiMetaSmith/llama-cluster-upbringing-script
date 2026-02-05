@@ -58,3 +58,7 @@ llmrouter-lib
 rank_bm25
 podman
 tenacity
+# Miniray dependencies
+redis
+cloudpickle
+tritonclient[http]

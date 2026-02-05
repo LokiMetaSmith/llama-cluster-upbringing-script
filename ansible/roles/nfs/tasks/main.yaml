@@ -1,6 +1,55 @@
-- name: Install NFS packages
+- name: Install NFS Server packages
   apt:
     name:
       - nfs-kernel-server
       - nfs-common
     state: present
+  when: inventory_hostname in groups['controller_nodes']
+
+- name: Install NFS Client packages
+  apt:
+    name: nfs-common
+    state: present
+  when: inventory_hostname not in groups['controller_nodes']
+
+- name: Create NFS export directory
+  file:
+    path: /srv/nfs/share
+    state: directory
+    mode: '0777'
+    owner: nobody
+    group: nogroup
+  when: inventory_hostname in groups['controller_nodes']
+
+- name: Configure /etc/exports
+  template:
+    src: exports.j2
+    dest: /etc/exports
+  notify: restart nfs
+  when: inventory_hostname in groups['controller_nodes']
+
+- name: Start NFS Service
+  systemd:
+    name: nfs-kernel-server
+    state: started
+    enabled: yes
+  when: inventory_hostname in groups['controller_nodes'] and not ansible_check_mode
+
+- name: Create mount point
+  file:
+    path: /mnt/cluster_share
+    state: directory
+    mode: '0777'
+
+- name: Mount NFS Share
+  mount:
+    path: /mnt/cluster_share
+    src: "{{ hostvars[groups['controller_nodes'][0]]['ansible_host'] | default(hostvars[groups['controller_nodes'][0]]['ansible_ssh_host']) | default('127.0.0.1') }}:/srv/nfs/share"
+    fstype: nfs
+    opts: defaults
+    state: mounted
+  # Skip mounting on the controller itself to avoid circular dependency/locking issues?
+  # Actually, mounting NFS on the server itself is fine but efficientcy-wise simple bind mount is better.
+  # For simplicity of "distributed code", let's mount it everywhere.
+  # However, if IP is 127.0.0.1, it works.
+  when: not ansible_check_mode

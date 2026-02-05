@@ -33,6 +33,8 @@ from tools.submit_solution_tool import SubmitSolutionTool
 from tools.container_registry_tool import ContainerRegistryTool
 from tools.search_tool import SearchTool
 from tools.openclaw_tool import OpenClawTool
+from tools.mkv_tool import MKV_Tool
+from tools.miniray_tool import MinirayTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -86,6 +88,8 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "openclaw": OpenClawTool(
             gateway_url=config.get("openclaw_gateway_url", "ws://moltbot.service.consul:18789")
         ),
+        "mkv_store": MKV_Tool(),
+        "miniray_compute": MinirayTool(),
     }
 
     if config.get("use_summarizer", False) and twin_service:

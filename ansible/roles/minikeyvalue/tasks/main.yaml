@@ -1,0 +1,56 @@
+- name: Ensure Docker is present
+  service:
+    name: docker
+    state: started
+  when: not ansible_check_mode
+
+- name: Build Minikeyvalue Docker Image
+  docker_image:
+    name: minikeyvalue
+    tag: latest
+    source: build
+    build:
+      path: "{{ role_path }}/files"
+      pull: yes
+  # This requires the files to be present on the target machine if we use 'path'.
+  # But Ansible roles files are on the controller.
+  # We need to synchronize the build context to the target first.
+  when: not ansible_check_mode
+
+# Correction: 'docker_image' with 'build.path' expects the path ON THE TARGET.
+# So I must copy the files first.
+
+- name: Create build directory on target
+  file:
+    path: /tmp/mkv_build
+    state: directory
+    mode: '0755'
+
+- name: Copy build files to target
+  copy:
+    src: "{{ item }}"
+    dest: /tmp/mkv_build/
+    mode: preserve
+  with_items:
+    - Dockerfile
+    - start_master.py
+    - volume
+    - src
+
+- name: Build Minikeyvalue Docker Image (Target)
+  docker_image:
+    name: minikeyvalue
+    tag: latest
+    source: build
+    build:
+      path: /tmp/mkv_build
+    force_source: yes
+  when: not ansible_check_mode
+
+- name: Deploy Minikeyvalue Nomad Job
+  nomad_job:
+    host: localhost
+    content: "{{ lookup('template', 'mkv.nomad.j2') }}"
+    state: present
+  run_once: true
+  when: not ansible_check_mode and inventory_hostname in groups['controller_nodes']
