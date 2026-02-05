@@ -183,12 +183,13 @@ class PMMMemory:
         rows = cursor.fetchall()
         events = []
         for row in rows:
+            meta = json.loads(row[4]) if row[4] else {}
             events.append({
                 "id": row[0],
                 "timestamp": row[1],
                 "kind": row[2],
                 "content": row[3],
-                "meta": json.loads(row[4])
+                "meta": meta
             })
         return list(reversed(events))
 
@@ -288,8 +289,8 @@ class PMMMemory:
         # Map columns to dict
         columns = [description[0] for description in cursor.description]
         item = dict(zip(columns, row))
-        item['meta'] = json.loads(item['meta'])
-        item['validation_results'] = json.loads(item['validation_results'])
+        item['meta'] = json.loads(item['meta']) if item['meta'] else {}
+        item['validation_results'] = json.loads(item['validation_results']) if item['validation_results'] else {}
         return item
 
     async def get_work_item(self, item_id: str) -> Optional[Dict]:
@@ -322,8 +323,8 @@ class PMMMemory:
         results = []
         for row in rows:
             item = dict(zip(columns, row))
-            item['meta'] = json.loads(item['meta'])
-            item['validation_results'] = json.loads(item['validation_results'])
+            item['meta'] = json.loads(item['meta']) if item['meta'] else {}
+            item['validation_results'] = json.loads(item['validation_results']) if item['validation_results'] else {}
             results.append(item)
         return results
 
@@ -335,17 +336,22 @@ class PMMMemory:
         """Aggregates work statistics for a specific agent."""
         cursor = self.conn.cursor()
 
-        # Count total tasks assigned
-        cursor.execute("SELECT COUNT(*) FROM work_items WHERE assignee_id = ?", (assignee_id,))
-        total_tasks = cursor.fetchone()[0]
+        # Bolt ⚡ Optimization: Use a single query for all stats to reduce overhead
+        cursor.execute("""
+            SELECT
+                COUNT(*),
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END),
+                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END)
+            FROM work_items
+            WHERE assignee_id = ?
+        """, (assignee_id,))
 
-        # Count successful tasks
-        cursor.execute("SELECT COUNT(*) FROM work_items WHERE assignee_id = ? AND status = 'completed'", (assignee_id,))
-        completed_tasks = cursor.fetchone()[0]
+        row = cursor.fetchone()
 
-        # Count failed tasks
-        cursor.execute("SELECT COUNT(*) FROM work_items WHERE assignee_id = ? AND status = 'failed'", (assignee_id,))
-        failed_tasks = cursor.fetchone()[0]
+        total_tasks = row[0]
+        # SQLite SUM() can return None if there are no rows, but since we count(*), if count is 0, sums are None.
+        completed_tasks = row[1] if row[1] is not None else 0
+        failed_tasks = row[2] if row[2] is not None else 0
 
         success_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
 
@@ -430,7 +436,7 @@ class PMMMemory:
                 row = cursor.fetchone()
                 columns = [description[0] for description in cursor.description]
                 item = dict(zip(columns, row))
-                item['payload'] = json.loads(item['payload'])
+                item['payload'] = json.loads(item['payload']) if item['payload'] else {}
                 return item
             else:
                 # Race condition: someone else claimed it, loop again
