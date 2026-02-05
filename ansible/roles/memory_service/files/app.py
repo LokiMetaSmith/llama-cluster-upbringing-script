@@ -51,7 +51,7 @@ class DLQItemUpdate(BaseModel):
 @app.post("/events")
 async def add_event(event: Event):
     try:
-        memory.add_event(event.kind, event.content, event.meta)
+        await memory.add_event(event.kind, event.content, event.meta)
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -59,7 +59,7 @@ async def add_event(event: Event):
 @app.get("/events")
 async def get_events(kind: Optional[str] = None, limit: int = 10):
     try:
-        events = memory.get_events(kind, limit)
+        events = await memory.get_events(kind, limit)
         return events
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
