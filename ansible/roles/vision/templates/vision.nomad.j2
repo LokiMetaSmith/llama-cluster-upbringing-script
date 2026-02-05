@@ -40,8 +40,8 @@ job "vision" {
             type   = "tmpfs"
             target = "/tmp/cache"
             readonly = false
-            volume_options = {
-              size = "1000000000" # 1GB
+            tmpfs_options = {
+              size = 1000000000 # 1GB
             }
           }
         ]
