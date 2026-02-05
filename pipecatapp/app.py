@@ -18,6 +18,7 @@ import base64
 import cv2
 import inspect
 import threading
+from contextlib import asynccontextmanager
 
 from pipecat.frames.frames import (
     AudioRawFrame,
@@ -86,6 +87,7 @@ except ImportError:
 
 
 import uvicorn
+from fastapi import FastAPI
 
 # -----------------------
 # Logging -> web UI bridge
@@ -830,37 +832,6 @@ class TwinService(FrameProcessor):
         self.tools = create_tools(self.app_config, twin_service=self, runner=self.runner)
         # Add vision detector explicitly as it is a special case (frame processor)
         self.tools["vision"] = self.vision_detector
-       # self.tools = {
-       #     "ssh": SSH_Tool(),
-       #     "mcp": MCP_Tool(self, self.runner),
-       #     "vision": self.vision_detector,
-       #     "desktop_control": DesktopControlTool(),
-       #     "code_runner": CodeRunnerTool(),
-       #     "smol_agent_computer": SmolAgentTool(),
-       #     "web_browser": WebBrowserTool(),
-       #     "ansible": Ansible_Tool(),
-       #    "power": Power_Tool(),
-       #    "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
-       #    "rag": RAG_Tool(pmm_memory=self.long_term_memory, base_dir="/"),
-       #    "ha": HA_Tool(
-       #        ha_url=self.app_config.get("ha_url"),
-       #        ha_token=self.app_config.get("ha_token")
-       #   ),
-       #   "git": Git_Tool(),
-       #    "orchestrator": OrchestratorTool(),
-       #    "llxprt_code": LLxprt_Code_Tool(),
-       #    "claude_clone": ClaudeCloneTool(),
-       #    "final_answer": FinalAnswerTool(),
-       #    "shell": ShellTool(),
-       #    "prompt_improver": PromptImproverTool(self),
-       #    "council": CouncilTool(self),
-       #    "swarm": SwarmTool(),
-       #    "project_mapper": ProjectMapperTool(),
-       #    "planner": PlannerTool(self),
-       #}
-
-        #if self.app_config.get("use_summarizer", False):
-       #     self.tools["summarizer"] = SummarizerTool(self)
 
     async def process_frame(self, frame, direction):
         """Entry point for the agent's logic, triggered by a transcription frame.
@@ -1064,8 +1035,13 @@ async def load_config_from_consul(consul_host, consul_port):
         logging.error(f"Error loading configuration from Consul: {e}")
     return config
 
-async def main():
-    """The main entry point for the conversational AI application."""
+# Global variable to hold the background task
+agent_task = None
+
+async def run_agent():
+    """The main entry point for the conversational AI application logic."""
+    logging.info("Starting agent background task...")
+
     # Initialize API Keys
     api_keys_str = os.getenv("PIPECAT_API_KEYS") or os.getenv("PIECAT_API_KEYS", "")
     if api_keys_str:
@@ -1078,24 +1054,6 @@ async def main():
     # Set initial state for web server
     web_server.app.state.is_ready = False
     web_server.app.state.twin_service_instance = None
-
-    # Start web server (uvicorn) in its own thread immediately so /health checks pass
-    # even while we are waiting for discovery
-    web_port_str = os.getenv("WEB_PORT")
-    if not web_port_str:
-        logging.warning("WEB_PORT not set, defaulting to 8000")
-        web_port = 8000
-    else:
-        web_port = int(web_port_str)
-
-    config = uvicorn.Config(
-        web_server.app,
-        host="0.0.0.0",
-        port=web_port,
-        log_level="info"
-    )
-    server = uvicorn.Server(config)
-    threading.Thread(target=server.run, daemon=True).start()
 
     # Load configuration from Consul
     consul_host = os.getenv("CONSUL_HOST")
@@ -1114,9 +1072,9 @@ async def main():
         app_config = await load_config_from_consul(consul_host, consul_port)
     except Exception as e:
         logging.critical(f"Failed to load config from Consul: {e}")
-        print(f"CRITICAL: Failed to load config from Consul: {e}", file=sys.stderr)
-        sys.stderr.flush()
-        raise e
+        # We can't exit the process here easily without killing Uvicorn too,
+        # but logging critical is good. The health check will remain failing.
+        return
 
     # Add consul host/port to app_config
     app_config['consul_host'] = consul_host
@@ -1126,13 +1084,10 @@ async def main():
     audio_device_index = find_workable_audio_input_device()
 
     # Discover main LLM from Consul or Environment
-    # We prefer environment variables which can contain a comma-separated list of services for failover
     env_service_names = os.getenv("LLAMA_API_SERVICE_NAME")
     if env_service_names:
-        # Split by comma and strip whitespace
         main_llm_service_names = [s.strip() for s in env_service_names.split(",") if s.strip()]
     else:
-        # Fallback to single service from Consul config or default
         logging.warning("LLAMA_API_SERVICE_NAME not set, falling back to Consul config or default.")
         main_llm_service_names = [app_config.get("llama_api_service_name", "llamacpp-rpc-api")]
 
@@ -1174,8 +1129,7 @@ async def main():
     task_supervisor = TaskSupervisor(twin)
     asyncio.create_task(task_supervisor.start())
 
-    # Now that the twin service is initialized and the web server is starting,
-    # we can mark the application as ready.
+    # Now that the twin service is initialized, mark the application as ready.
     web_server.app.state.is_ready = True
     logging.info("Application is fully initialized and ready.")
 
@@ -1183,8 +1137,7 @@ async def main():
 
     pipeline_steps = []
 
-    # Pre-initialize TTS services if available, for both Headed and Headless modes
-    # This ensures VR users get audio even if the server has no audio device
+    # Pre-initialize TTS services if available
     tts = None
     websocket_streamer = None
 
@@ -1265,10 +1218,45 @@ async def main():
 
     text_injector.start_listening()
 
+    # This runs forever
     await asyncio.gather(
         runner.run(main_task),
         runner.run(PipelineTask(vision_pipeline))
     )
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manages the lifecycle of the agent background task."""
+    global agent_task
+    # Start the agent loop in the background
+    # We use a task name to easily identify it in debug tools
+    agent_task = asyncio.create_task(run_agent(), name="pipecat_agent_loop")
+    yield
+    # Cleanup on shutdown
+    if agent_task:
+        logging.info("Cancelling agent background task...")
+        agent_task.cancel()
+        try:
+            await agent_task
+        except asyncio.CancelledError:
+            logging.info("Agent task cancelled successfully.")
+        except Exception as e:
+            logging.error(f"Error during agent task shutdown: {e}")
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Determine port
+    web_port_str = os.getenv("WEB_PORT")
+    if not web_port_str:
+        logging.warning("WEB_PORT not set, defaulting to 8000")
+        web_port = 8000
+    else:
+        web_port = int(web_port_str)
+
+    # Attach the lifespan context manager to the FastAPI app defined in web_server.py
+    # This allows us to start the background tasks when Uvicorn starts the app
+    web_server.app.router.lifespan_context = lifespan
+
+    # Run Uvicorn in the main thread (blocking)
+    # This ensures standard signal handling and socket management
+    logging.info(f"Starting Uvicorn on 0.0.0.0:{web_port}")
+    uvicorn.run(web_server.app, host="0.0.0.0", port=web_port, log_level="info")
