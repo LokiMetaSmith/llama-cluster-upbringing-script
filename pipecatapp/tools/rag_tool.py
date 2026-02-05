@@ -49,10 +49,12 @@ class RAG_Tool:
             logging.warning(f"Initial base_dir {self.base_dir} is not within allowed_root {self.allowed_root}. Resetting to allowed_root.")
             self.base_dir = self.allowed_root
 
-        self.model = SentenceTransformer(model_name)
+        self.model_name = model_name
+        self.model = None
         self.documents = []
         self.index = None
         self.is_ready = False
+        self.initialization_error = None
 
         if self.pmm_memory:
             # Run knowledge base build in a separate thread
@@ -92,6 +94,17 @@ class RAG_Tool:
 
     def _build_knowledge_base(self):
         """Scans for documents, chunks them, and builds the FAISS index."""
+        # 1. Initialize Model Lazily
+        if self.model is None:
+            try:
+                logging.info(f"Loading RAG model: {self.model_name}")
+                self.model = SentenceTransformer(self.model_name)
+                logging.info(f"Successfully loaded RAG model: {self.model_name}")
+            except Exception as e:
+                self.initialization_error = f"Failed to load RAG model: {e}"
+                logging.error(self.initialization_error)
+                return
+
         logging.info(f"Building RAG knowledge base for {self.base_dir}...")
 
         # Load existing documents from PMM memory to avoid reprocessing
@@ -168,8 +181,10 @@ class RAG_Tool:
             str: A formatted string containing the most relevant document
                  excerpts, or a message if no relevant information is found.
         """
+        if self.initialization_error:
+            return f"RAG Tool unavailable: {self.initialization_error}"
         if not self.is_ready:
-            return "The knowledge base is still being built. Please try again shortly."
+            return "The knowledge base is still being built or the model is loading. Please try again shortly."
         if self.index is None or not self.documents:
             return "The knowledge base is empty. I cannot answer questions about the project yet."
 
