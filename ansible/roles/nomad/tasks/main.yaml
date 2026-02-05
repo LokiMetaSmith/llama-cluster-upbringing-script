@@ -1,3 +1,9 @@
+- name: Install python-nomad library
+  ansible.builtin.pip:
+    name: python-nomad
+    state: present
+  become: yes
+
 - name: Download Nomad
   ansible.builtin.get_url:
     url: "{{ nomad_zip_url }}"
