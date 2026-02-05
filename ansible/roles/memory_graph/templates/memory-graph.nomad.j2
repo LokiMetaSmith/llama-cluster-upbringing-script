@@ -10,7 +10,7 @@ job "memory-graph" {
     task "server" {
       driver = "docker"
       config {
-        image = "memory-graph-service:latest"
+        image = "{{ docker_registry_host }}:{{ docker_registry_port }}/memory-graph-service:latest"
         ports = ["http"]
         # Mount volume for SQLite persistence
         volumes = ["/opt/pipecat/data/memory:/data"]
