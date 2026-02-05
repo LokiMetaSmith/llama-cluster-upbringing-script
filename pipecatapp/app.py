@@ -1265,8 +1265,9 @@ async def main():
 
     text_injector.start_listening()
 
-    await runner.run(
-        main_task, PipelineTask(vision_pipeline)
+    await asyncio.gather(
+        runner.run(main_task),
+        runner.run(PipelineTask(vision_pipeline))
     )
 
 if __name__ == "__main__":
