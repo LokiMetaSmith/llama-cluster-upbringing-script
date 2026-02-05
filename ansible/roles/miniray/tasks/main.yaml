@@ -1,0 +1,32 @@
+- name: Create build directory on target
+  file:
+    path: /tmp/miniray_build
+    state: directory
+    mode: '0755'
+
+- name: Copy build files to target
+  copy:
+    src: "{{ item }}"
+    dest: /tmp/miniray_build/
+    mode: preserve
+  with_items:
+    - Dockerfile
+    - src
+
+- name: Build Miniray Docker Image (Target)
+  docker_image:
+    name: miniray
+    tag: latest
+    source: build
+    build:
+      path: /tmp/miniray_build
+    force_source: yes
+  when: not ansible_check_mode
+
+- name: Deploy Miniray Nomad Job
+  nomad_job:
+    host: localhost
+    content: "{{ lookup('template', 'miniray.nomad.j2') }}"
+    state: present
+  run_once: true
+  when: not ansible_check_mode and inventory_hostname in groups['controller_nodes']

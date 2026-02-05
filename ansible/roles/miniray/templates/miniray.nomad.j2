@@ -1,0 +1,94 @@
+job "miniray" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "redis" {
+    count = 1
+
+    network {
+      port "db" {
+        to = 6379
+        static = 6379
+      }
+    }
+
+    task "redis" {
+      driver = "docker"
+
+      config {
+        image = "redis:7-alpine"
+        ports = ["db"]
+      }
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+
+      service {
+        name = "redis"
+        port = "db"
+        check {
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+
+  group "worker" {
+    count = {{ miniray_workers | default(2) }}
+
+    constraint {
+      operator  = "distinct_hosts"
+      value     = "true"
+    }
+
+    network {
+      port "worker" {}
+    }
+
+    task "miniray-worker" {
+      driver = "docker"
+
+      config {
+        image = "miniray:latest"
+        ports = ["worker"]
+        # Allow access to NFS mount
+        mounts = [
+          {
+            type   = "bind"
+            source = "/mnt/cluster_share"
+            target = "/mnt/cluster_share"
+            readonly = false
+          }
+        ]
+      }
+
+      env {
+        REDIS_HOST = "{{ ansible_default_ipv4.address }}"
+        # Ideally we use Consul DNS: 'redis.service.consul'
+        # But if DNS isn't set up in the container, we fall back to host IP (since redis is on host network port 6379 static)
+        # Actually, in bridge mode, container DNS depends on Nomad setup.
+        # Safest is to use the Redis Service Address found via Consul template, or just assume the controller IP for now.
+        # But wait, group 'redis' runs on *some* node.
+        # I'll use 'redis.service.consul' and rely on the environment having Consul DNS or use a template to resolve it.
+      }
+
+      template {
+        data = <<EOH
+REDIS_HOST="{{ range service "redis" }}{{ .Address }}{{ end }}"
+TRITON_SERVER_ENABLED="0"
+EOH
+        destination = "local/env.txt"
+        env         = true
+      }
+
+      resources {
+        cpu    = 200
+        memory = 512
+      }
+    }
+  }
+}

@@ -1,0 +1,90 @@
+job "minikeyvalue" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "master" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 3000
+        static = 3000
+      }
+    }
+
+    task "mkv-master" {
+      driver = "docker"
+
+      config {
+        image = "minikeyvalue:latest"
+        command = "python3"
+        args = ["/app/start_master.py"]
+        ports = ["http"]
+      }
+
+      env {
+        MKV_REPLICAS = "{{ mkv_replicas | default(1) }}"
+        CONSUL_HTTP_ADDR = "http://{{ ansible_default_ipv4.address }}:8500"
+      }
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+
+      service {
+        name = "mkv-master"
+        port = "http"
+        check {
+          type     = "http"
+          path     = "/we?list"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+
+  group "volume" {
+    count = {{ mkv_replicas | default(1) }}
+
+    constraint {
+      operator  = "distinct_hosts"
+      value     = "true"
+    }
+
+    network {
+      port "http" {}
+    }
+
+    task "mkv-volume" {
+      driver = "docker"
+
+      config {
+        image = "minikeyvalue:latest"
+        command = "/app/volume"
+        args = ["/data/volume"]
+        ports = ["http"]
+      }
+
+      env {
+        PORT = "${NOMAD_PORT_http}"
+      }
+
+      resources {
+        cpu    = 200
+        memory = 512
+      }
+
+      service {
+        name = "mkv-volume"
+        port = "http"
+        check {
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}

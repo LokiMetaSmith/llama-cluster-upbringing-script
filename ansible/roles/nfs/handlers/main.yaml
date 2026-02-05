@@ -1,0 +1,5 @@
+- name: restart nfs
+  systemd:
+    name: nfs-kernel-server
+    state: restarted
+  when: not ansible_check_mode
