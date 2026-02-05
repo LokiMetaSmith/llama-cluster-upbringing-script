@@ -50,3 +50,7 @@
 ## 2026-03-01 - Modal Focus Trapping
 **Learning:** Simply showing a modal (`display: block`) leaves keyboard focus behind, confusing users and failing WCAG requirements. Users can tab "behind" the modal, interacting with invisible elements.
 **Action:** When opening a modal, save the `activeElement`, move focus to the modal's first interactive element (or close button), trap the Tab cycle within the modal, and restore focus to the saved element upon closing.
+
+## 2026-03-05 - Async Action Feedback
+**Learning:** Users lack confidence in async operations (like saving) when the only feedback is a delayed notification. Immediate, local feedback on the trigger element (button) reduces anxiety and prevents double-submission.
+**Action:** Implement "Loading..." text and a spinner on the action button itself immediately upon click, and disable it until the operation completes.
