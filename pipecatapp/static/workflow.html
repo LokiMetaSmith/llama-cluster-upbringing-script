@@ -299,8 +299,18 @@
             });
 
             // Buttons
-            document.getElementById('save-btn').addEventListener('click', () => {
-                WorkflowEditor.saveWorkflow();
+            document.getElementById('save-btn').addEventListener('click', async () => {
+                const btn = document.getElementById('save-btn');
+                const originalText = btn.innerHTML;
+
+                try {
+                    btn.innerHTML = '<span class="spinner" style="margin-right: 8px;"></span> Saving...';
+                    btn.disabled = true;
+                    await WorkflowEditor.saveWorkflow();
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
             });
 
             document.getElementById('arrange-btn').addEventListener('click', () => {
