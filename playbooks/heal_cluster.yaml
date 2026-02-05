@@ -22,3 +22,7 @@
       ansible.builtin.include_role:
         name: pipecatapp
         tasks_from: main.yaml
+
+    - name: Ensure memory-graph service is running
+      ansible.builtin.include_role:
+        name: memory_graph
