@@ -8,7 +8,7 @@
 
 - name: Build memory-graph service image
   community.docker.docker_image:
-    name: "memory-graph-service:latest"
+    name: "memory-graph-service:local"
     build:
       path: "{{ inventory_dir }}/pipecatapp/memory_graph_service"
       pull: yes
@@ -26,11 +26,21 @@
 
 - name: Tag and push memory-graph service image to local registry
   community.docker.docker_image:
-    name: "memory-graph-service:latest"
-    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/memory-graph-service"
+    name: "memory-graph-service:local"
+    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/memory-graph-service:latest"
     push: true
     source: local
   when: registry_check is success
+
+- name: Set memory_graph_image (Registry)
+  ansible.builtin.set_fact:
+    memory_graph_image: "{{ docker_registry_host }}:{{ docker_registry_port }}/memory-graph-service:latest"
+  when: registry_check is success
+
+- name: Set memory_graph_image (Local Fallback)
+  ansible.builtin.set_fact:
+    memory_graph_image: "memory-graph-service:local"
+  when: registry_check is failed
 
 - name: Deploy memory-graph Nomad job
   community.general.nomad_job:
