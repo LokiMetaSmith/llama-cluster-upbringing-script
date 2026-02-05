@@ -17,9 +17,9 @@ job "mqtt-exporter" {
     count = 1
 
     network {
-      mode = "host"
+      mode = "bridge"
       port "metrics" {
-        static = {{ mqtt_exporter_metrics_port | default(9000) }}
+        to = {{ mqtt_exporter_metrics_port | default(9000) }}
       }
     }
 
