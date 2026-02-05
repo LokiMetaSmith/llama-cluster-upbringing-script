@@ -9,7 +9,10 @@ from typing import Dict, Any, List, Optional
 from .context import WorkflowContext
 from .nodes.registry import registry
 from .history import WorkflowHistory
-from ..security import redact_sensitive_data, SENSITIVE_KEYS
+try:
+    from ..security import redact_sensitive_data, SENSITIVE_KEYS
+except ImportError:
+    from security import redact_sensitive_data, SENSITIVE_KEYS
 
 def make_serializable(obj, depth=0, max_depth=50, sanitize=False):
     """
