@@ -9,23 +9,39 @@ from typing import Dict, Any, List, Optional
 from .context import WorkflowContext
 from .nodes.registry import registry
 from .history import WorkflowHistory
+from ..security import redact_sensitive_data, SENSITIVE_KEYS
 
-def make_serializable(obj, depth=0, max_depth=50):
+def make_serializable(obj, depth=0, max_depth=50, sanitize=False):
     """
     Recursively ensures that an object is JSON-serializable by converting
     unknown types to their string representation.
+    Optionally sanitizes the data by removing sensitive keys and redacting strings.
     """
     if depth > max_depth:
-        return str(obj)
-    if obj is None or isinstance(obj, (str, int, float, bool)):
-        return obj
-    if isinstance(obj, dict):
-        return {str(k): make_serializable(v, depth+1, max_depth) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
-        return [make_serializable(v, depth+1, max_depth) for v in obj]
-    return str(obj)
+        res = str(obj)
+        return redact_sensitive_data(res) if sanitize else res
 
-def _safe_context_to_dict(context: Optional['WorkflowContext']) -> Dict[str, Any]:
+    if obj is None or isinstance(obj, (int, float, bool)):
+        return obj
+
+    if isinstance(obj, str):
+        return redact_sensitive_data(obj) if sanitize else obj
+
+    if isinstance(obj, dict):
+        new_dict = {}
+        for k, v in obj.items():
+            if sanitize and k in SENSITIVE_KEYS:
+                continue
+            new_dict[str(k)] = make_serializable(v, depth+1, max_depth, sanitize)
+        return new_dict
+
+    if isinstance(obj, (list, tuple)):
+        return [make_serializable(v, depth+1, max_depth, sanitize) for v in obj]
+
+    res = str(obj)
+    return redact_sensitive_data(res) if sanitize else res
+
+def _safe_context_to_dict(context: Optional['WorkflowContext'], sanitize=False) -> Dict[str, Any]:
     """Helper function to serialize workflow context to a dictionary.
     Safe to run in background thread."""
     if not context:
@@ -33,14 +49,18 @@ def _safe_context_to_dict(context: Optional['WorkflowContext']) -> Dict[str, Any
 
     # Bolt ⚡ Optimization: Use recursive check instead of json.dumps
     # This avoids expensive serialization of large strings just to check validity.
+    # Also optionally sanitizes in the same pass.
     serializable_outputs = {}
     for node_id, outputs in context.node_outputs.items():
-        serializable_outputs[node_id] = make_serializable(outputs)
+        serializable_outputs[node_id] = make_serializable(outputs, sanitize=sanitize)
+
+    global_inputs = make_serializable(context.global_inputs, sanitize=sanitize)
+    final_output = make_serializable(context.final_output, sanitize=sanitize)
 
     return {
-        "global_inputs": context.global_inputs,
+        "global_inputs": global_inputs,
         "node_outputs": serializable_outputs,
-        "final_output": context.final_output
+        "final_output": final_output
     }
 
 def _save_run_background(runner_id, workflow_name, start_time, end_time, status, context, error):
@@ -84,8 +104,8 @@ class ActiveWorkflows:
         if runner_id in self.runners:
             del self.runners[runner_id]
 
-    def get_all_states(self) -> Dict[str, Any]:
-        return {runner_id: runner.context_to_dict() for runner_id, runner in self.runners.items()}
+    def get_all_states(self, sanitize=False) -> Dict[str, Any]:
+        return {runner_id: runner.context_to_dict(sanitize=sanitize) for runner_id, runner in self.runners.items()}
 
 class OpenGates:
     """A simple singleton to track open gates that are waiting for approval."""
@@ -197,11 +217,11 @@ class WorkflowRunner:
 
         return sorted_order
 
-    def context_to_dict(self) -> Dict[str, Any]:
+    def context_to_dict(self, sanitize=False) -> Dict[str, Any]:
         """Returns a serializable dictionary of the current workflow context."""
         # Use shared helper
         context = getattr(self, 'context', None)
-        return _safe_context_to_dict(context)
+        return _safe_context_to_dict(context, sanitize=sanitize)
 
     async def run(self, global_inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the workflow.

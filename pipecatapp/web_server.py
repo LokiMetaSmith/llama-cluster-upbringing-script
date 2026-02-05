@@ -470,7 +470,8 @@ async def get_active_workflows():
     """Returns a snapshot of the state of all active workflows."""
     active_workflows = ActiveWorkflows()
     # Security Fix: Sanitize sensitive data from the active workflow states
-    return sanitize_data(active_workflows.get_all_states())
+    # Bolt ⚡ Optimization: Sanitize during serialization to avoid double copy
+    return active_workflows.get_all_states(sanitize=True)
 
 @app.get("/api/workflows/history", response_class=JSONResponse, summary="Get Workflow History", description="Retrieves a list of past workflow runs.", tags=["Workflow"])
 async def get_workflow_history(limit: int = 50):

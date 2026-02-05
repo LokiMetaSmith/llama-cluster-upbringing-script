@@ -29,6 +29,9 @@ _URL_CREDENTIALS_PATTERN = re.compile(r'(://)([^:/]+):([^@]+)@')
 # especially for short strings which dominate the data (2.6x speedup).
 _FAST_PATH_PATTERN = re.compile(r'sk-|Bearer|AIza|AKIA|ASIA|ABIA|ACCA|xox|gh[pousr]_|glpat|://')
 
+# Keys containing sensitive data that should be removed during sanitization
+SENSITIVE_KEYS = ["external_experts_config", "tools_dict", "twin_service"]
+
 def redact_sensitive_data(text: str) -> str:
     """
     Redacts sensitive information like API keys and Bearer tokens from a string.
@@ -85,7 +88,7 @@ def sanitize_data(data: Any) -> Any:
         new_dict = {}
         for key, value in data.items():
             # Remove specific sensitive keys commonly found in global_inputs
-            if key in ["external_experts_config", "tools_dict", "twin_service"]:
+            if key in SENSITIVE_KEYS:
                 continue
 
             new_dict[key] = sanitize_data(value)
