@@ -21,11 +21,11 @@ from security import sanitize_data, escape_html_content
 if __package__:
     from .models import InternalChatRequest, SystemMessageRequest
     from .rate_limiter import RateLimiter
-    from .net_utils import format_url
+    from .net_utils import format_url, validate_url
 else:
     from models import InternalChatRequest, SystemMessageRequest
     from rate_limiter import RateLimiter
-    from net_utils import format_url
+    from net_utils import format_url, validate_url
 
 
 # Configure logging
@@ -266,6 +266,12 @@ async def internal_chat(payload: InternalChatRequest, api_key: str = Security(ge
     The payload should contain the user's text, a unique request_id,
     and a response_url where the final agent message should be sent.
     """
+    # Security Fix: Sentinel - Validate response_url to prevent SSRF
+    try:
+        await validate_url(str(payload.response_url))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     # Convert model to dict for internal processing (serialized for JSON compatibility)
     data = payload.model_dump(mode="json")
     await text_message_queue.put(data)

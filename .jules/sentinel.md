@@ -47,3 +47,8 @@
 **Vulnerability:** The `/api/workflows/active` endpoint returned the raw state of active workflows, potentially leaking secrets (like API keys) stored in inputs or outputs.
 **Learning:** Even internal monitoring endpoints must sanitize data before exposing it to the UI, as the UI is a client-side component. "Active" state is just as sensitive as "Historical" state.
 **Prevention:** Apply `sanitize_data` to all endpoints returning workflow context or state, not just historical runs. Review all API endpoints for raw data exposure.
+
+## 2026-02-05 - SSRF in Internal Chat Endpoint
+**Vulnerability:** `web_server.py` allowed `response_url` to point to internal services (localhost, cloud metadata) enabling SSRF.
+**Learning:** Validating `HttpUrl` in Pydantic only checks syntax, not safety (IP ranges).
+**Prevention:** Use a dedicated `validate_url` helper that resolves DNS and checks against private IP ranges for all user-supplied URLs.
