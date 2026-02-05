@@ -1055,26 +1055,6 @@ async def run_agent():
     web_server.app.state.is_ready = False
     web_server.app.state.twin_service_instance = None
 
-    # Start web server (uvicorn) in its own thread immediately so /health checks pass
-    # even while we are waiting for discovery
-    web_port_str = os.getenv("WEB_PORT")
-    if not web_port_str:
-        logging.warning("WEB_PORT not set, defaulting to 8000")
-        web_port = 8000
-    else:
-        web_port = int(web_port_str)
-
-    logging.info(f"Starting Web Server on port {web_port}")
-
-    config = uvicorn.Config(
-        web_server.app,
-        host="0.0.0.0",
-        port=web_port,
-        log_level="info"
-    )
-    server = uvicorn.Server(config)
-    threading.Thread(target=server.run, daemon=True).start()
-
     # Load configuration from Consul
     consul_host = os.getenv("CONSUL_HOST")
     if not consul_host:
