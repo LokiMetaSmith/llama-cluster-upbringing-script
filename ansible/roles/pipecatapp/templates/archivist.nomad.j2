@@ -37,6 +37,7 @@ job "archivist" {
         CONSUL_HOST    = "{{ ansible_facts['default_ipv4']['address'] }}"
         CONSUL_PORT    = "8500"
         CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
+        HOST_IP        = "0.0.0.0"
       }
 
       config {

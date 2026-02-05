@@ -590,4 +590,5 @@ async def health_check():
 
 if __name__ == "__main__":
     host_ip = os.getenv("HOST_IP", "::")
+    logger.info(f"Starting uvicorn manually on {host_ip}:{PORT}")
     uvicorn.run(app, host=host_ip, port=PORT)
