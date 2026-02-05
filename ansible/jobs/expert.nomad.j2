@@ -132,7 +132,7 @@ fi
 echo "Found RPC servers: $RPC_SERVERS"
 
 exec /usr/local/bin/llama-server \
-    --model /opt/nomad/models/{{ best_model.filename }} \
+    --model /opt/nomad/models/llm/{{ best_model.filename }} \
     --host 0.0.0.0 \
     --port ${NOMAD_PORT_api} \
     --rpc "$RPC_SERVERS" \
