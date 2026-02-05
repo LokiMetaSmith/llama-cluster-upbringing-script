@@ -9,6 +9,7 @@
   ansible.builtin.command: npm prefix -g
   register: opencode_npm_prefix_path
   changed_when: false
+  become: yes
 
 - name: Set opencode binary path
   ansible.builtin.set_fact:
