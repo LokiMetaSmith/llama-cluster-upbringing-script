@@ -205,7 +205,7 @@ EOH
 
       resources {
         cpu    = 500 # 500 MHz
-        memory = 2048 # 2048MB
+        memory = {{ pipecat_memory_mb | default(4096) }} # 4096MB
       }
     }
   }

@@ -1088,6 +1088,8 @@ async def main():
     else:
         web_port = int(web_port_str)
 
+    logging.info(f"Starting Web Server on port {web_port}")
+
     config = uvicorn.Config(
         web_server.app,
         host="0.0.0.0",
@@ -1138,7 +1140,16 @@ async def main():
 
     consul_http_addr = format_url("http", consul_host, consul_port)
 
-    llm_base_url = await discover_services(main_llm_service_names, consul_http_addr)
+    # Bolt ⚡ Optimization: check for explicit LLAMA_API_BASE_URL (e.g. from Expert Sidecar)
+    # This bypasses Consul discovery for faster startup when the LLM is local.
+    explicit_llm_url = os.getenv("LLAMA_API_BASE_URL")
+    # We only use the explicit URL if it points to localhost (sidecar pattern)
+    # otherwise we prefer Consul discovery for load balancing.
+    if explicit_llm_url and "localhost" in explicit_llm_url:
+         logging.info(f"Using explicit LLAMA_API_BASE_URL from environment: {explicit_llm_url}")
+         llm_base_url = explicit_llm_url
+    else:
+         llm_base_url = await discover_services(main_llm_service_names, consul_http_addr)
 
     llm = OpenAILLMService(
         base_url=llm_base_url,
