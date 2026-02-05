@@ -27,6 +27,8 @@
     - math
     - extract
     - router
+    - qwen
+    - cynic
     - vllm_expert_models
     - piper_voice_files
     - embedding_models
@@ -40,7 +42,7 @@
 
 - name: Set model facts from Consul KV
   ansible.builtin.set_fact:
-    llm_models_to_download: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'router']) | map(attribute='content') | map('from_json') | sum(start=[]) }}"
+    llm_models_to_download: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'router', 'qwen', 'cynic']) | map(attribute='content') | map('from_json') | sum(start=[]) }}"
     vllm_expert_models: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'vllm_expert_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
     piper_voice_files: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'piper_voice_files') | map(attribute='content') | map('from_json') | first | default([]) }}"
     embedding_models: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'embedding_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
