@@ -122,17 +122,6 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Remove or Implement Empty Handler:**
   - `ansible/roles/bootstrap_agent/handlers/main.yaml` is currently empty.
 
-- [ ] **Fix Corrupted Model Files:**
-  - The following files are 0 bytes and appear to be corrupted:
-    - `en_US-lessac-medium.onnx`
-    - `chat.prompt.bin`
-    - `bob.prompt.bin`
-
-- [ ] **Fix Corrupted Binaries:**
-  - The following executable files are 0 bytes:
-    - `distributed-llama-repo/dllama`
-    - `distributed-llama-repo/dllama-api`
-
 - [ ] **Reconcile Stale Artifacts:**
   - `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
 - [x] **Vision Model Failover**: Implement failover or selection logic for vision models (see `pipecatapp/app.py`).

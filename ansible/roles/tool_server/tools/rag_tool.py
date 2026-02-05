@@ -62,7 +62,7 @@ class RAG_Tool:
             logging.info("No existing RAG documents found in memory, scanning filesystem...")
             all_chunks = []
             # Exclude irrelevant or problematic directories
-            exclude_dirs = {".git", "jules-scratch", ".venv", "ansible", "docker", "e2e", "debian_service", "distributed-llama-repo"}
+            exclude_dirs = {".git", "jules-scratch", ".venv", "ansible", "docker", "e2e", "debian_service"}
 
             for root, dirs, files in os.walk(self.base_dir):
                 # Modify the list of directories in-place to prune the search
