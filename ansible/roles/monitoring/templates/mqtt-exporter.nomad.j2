@@ -17,9 +17,10 @@ job "mqtt-exporter" {
     count = 1
 
     network {
-      mode = "host"
+      mode = "bridge"
       port "metrics" {
         static = {{ mqtt_exporter_metrics_port | default(9000) }}
+        to     = 9000
       }
     }
 
@@ -33,7 +34,7 @@ job "mqtt-exporter" {
       env {
         MQTT_ADDRESS = "{{ cluster_ip }}"
         MQTT_PORT = "{{ mqtt_port | default(1883) }}"
-        PROMETHEUS_PORT = "{{ mqtt_exporter_metrics_port | default(9000) }}"
+        PROMETHEUS_PORT = "9000"
         PROMETHEUS_ADDRESS = "0.0.0.0"
         PROMETHEUS_BIND_ADDRESS = "0.0.0.0"
         MQTT_IGNORED_TOPICS = "test/topic"
