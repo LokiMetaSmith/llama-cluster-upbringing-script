@@ -29,10 +29,20 @@ fi
 
 echo "DEBUG: HOST_IP=${HOST_IP:-0.0.0.0}"
 echo "DEBUG: ARCHIVIST_PORT=$ARCHIVIST_PORT"
-echo "DEBUG: Checking port $ARCHIVIST_PORT usage:"
-lsof -i :$ARCHIVIST_PORT || echo "Port $ARCHIVIST_PORT is free"
-echo "DEBUG: Checking existing archivist processes:"
-pgrep -af archivist || echo "No archivist processes found"
+
+# Check if port is in use and kill the process
+if command -v lsof >/dev/null 2>&1; then
+    PORT_PID=$(lsof -t -i :$ARCHIVIST_PORT || true)
+    if [ -n "$PORT_PID" ]; then
+        echo "WARNING: Port $ARCHIVIST_PORT is in use by PID(s) $PORT_PID. Killing..."
+        kill -9 $PORT_PID || true
+        sleep 2
+    else
+        echo "Port $ARCHIVIST_PORT is free."
+    fi
+else
+    echo "WARNING: lsof not found. Cannot check for port usage by PID."
+fi
 
 cd "$(dirname "$TARGET_SCRIPT")"
 HOST_IP=${HOST_IP:-0.0.0.0}
