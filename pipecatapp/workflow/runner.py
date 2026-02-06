@@ -70,7 +70,9 @@ def _save_run_background(runner_id, workflow_name, start_time, end_time, status,
     """Background task to save workflow history."""
     try:
         # Perform CPU-bound serialization in the thread
-        context_data = _safe_context_to_dict(context)
+        # Bolt ⚡ Optimization: Sanitize context to avoid serializing heavy objects (tools_dict)
+        # and to prevent persisting secrets to the history database.
+        context_data = _safe_context_to_dict(context, sanitize=True)
 
         # Perform I/O-bound DB write
         history = WorkflowHistory()

@@ -30,7 +30,8 @@ _URL_CREDENTIALS_PATTERN = re.compile(r'(://)([^:/]+):([^@]+)@')
 _FAST_PATH_PATTERN = re.compile(r'sk-|Bearer|AIza|AKIA|ASIA|ABIA|ACCA|xox|gh[pousr]_|glpat|://')
 
 # Keys containing sensitive data that should be removed during sanitization
-SENSITIVE_KEYS = ["external_experts_config", "tools_dict", "twin_service"]
+# Bolt ⚡ Optimization: Use set for O(1) lookups
+SENSITIVE_KEYS = {"external_experts_config", "tools_dict", "twin_service"}
 
 def redact_sensitive_data(text: str) -> str:
     """
