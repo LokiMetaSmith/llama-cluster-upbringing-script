@@ -254,6 +254,11 @@ async def websocket_endpoint(websocket: WebSocket):
             if message.get("type") == "approval_response":
                 await approval_queue.put(message)
             elif message.get("type") == "user_message":
+                # Security Fix: Sentinel - Prevent SSRF by stripping 'response_url'
+                # The 'response_url' field should only be accepted from authenticated
+                # /internal/chat endpoints, not from unauthenticated WebSocket clients.
+                if "response_url" in message:
+                    del message["response_url"]
                 await text_message_queue.put(message)
     except Exception:
         manager.disconnect(websocket)

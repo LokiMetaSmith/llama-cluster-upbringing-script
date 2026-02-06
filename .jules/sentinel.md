@@ -52,3 +52,8 @@
 **Vulnerability:** `web_server.py` allowed `response_url` to point to internal services (localhost, cloud metadata) enabling SSRF.
 **Learning:** Validating `HttpUrl` in Pydantic only checks syntax, not safety (IP ranges).
 **Prevention:** Use a dedicated `validate_url` helper that resolves DNS and checks against private IP ranges for all user-supplied URLs.
+
+## 2026-02-06 - WebSocket SSRF Bypass
+**Vulnerability:** The WebSocket endpoint accepted user messages containing metadata fields (like `response_url`) intended only for authenticated internal endpoints. This allowed unauthenticated WebSocket clients to trigger SSRF by supplying a `response_url`.
+**Learning:** Do not blindly trust JSON payloads from WebSockets. Explicitly define and sanitize the allowed fields for user messages, stripping any internal control metadata.
+**Prevention:** Sanitize incoming WebSocket messages by stripping sensitive fields (`response_url`, `is_system_alert`) before processing them in the pipeline.
