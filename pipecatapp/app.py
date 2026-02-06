@@ -303,6 +303,62 @@ class FasterWhisperSTTService(FrameProcessor):
         else:
             await self.push_frame(frame, direction)
 
+class GroqSTTService(FrameProcessor):
+    """A Pipecat processor for Speech-to-Text using Groq's fast Whisper API.
+
+    Attributes:
+        api_key: The Groq API key.
+        model: The Whisper model to use (default: whisper-large-v3).
+    """
+    def __init__(self, api_key: str, model: str = "whisper-large-v3"):
+        super().__init__()
+        self.api_key = api_key
+        self.model = model
+        self.audio_buffer = bytearray()
+        self.client = httpx.AsyncClient(headers={"Authorization": f"Bearer {api_key}"}, timeout=10.0)
+
+    async def _transcribe(self, audio_bytes):
+        try:
+            # Prepare WAV header (16kHz, 16-bit, Mono)
+            header = struct.pack(
+                '<4sI4s4sIHHIIHH4sI',
+                b'RIFF', 36 + len(audio_bytes), b'WAVE', b'fmt ', 16, 1, 1,
+                16000, 32000, 2, 16, b'data', len(audio_bytes)
+            )
+            wav_data = header + audio_bytes
+
+            files = {'file': ('audio.wav', wav_data, 'audio/wav')}
+            data = {'model': self.model, 'response_format': 'json'}
+
+            response = await self.client.post(
+                "https://api.groq.com/openai/v1/audio/transcriptions",
+                files=files,
+                data=data
+            )
+            response.raise_for_status()
+            return response.json().get("text", "").strip()
+        except Exception as e:
+            logging.error(f"Groq STT error: {e}")
+            return ""
+
+    async def process_frame(self, frame, direction):
+        if isinstance(frame, UserStartedSpeakingFrame):
+            self.audio_buffer.clear()
+        elif isinstance(frame, AudioRawFrame):
+            self.audio_buffer.extend(frame.audio)
+        elif isinstance(frame, UserStoppedSpeakingFrame):
+            if not self.audio_buffer:
+                return
+
+            audio_bytes = self.audio_buffer
+            self.audio_buffer = bytearray()
+
+            text = await self._transcribe(audio_bytes)
+            if text:
+                await self.push_frame(TranscriptionFrame(text))
+        else:
+            await self.push_frame(frame, direction)
+
 class PiperTTSService(FrameProcessor):
     """A Pipecat processor for Text-to-Speech using Piper.
 
@@ -1093,21 +1149,42 @@ async def run_agent():
 
     consul_http_addr = format_url("http", consul_host, consul_port)
 
-    # Bolt ⚡ Optimization: check for explicit LLAMA_API_BASE_URL (e.g. from Expert Sidecar)
-    # This bypasses Consul discovery for faster startup when the LLM is local.
-    explicit_llm_url = os.getenv("LLAMA_API_BASE_URL")
-    # We only use the explicit URL if it points to localhost (sidecar pattern)
-    # otherwise we prefer Consul discovery for load balancing.
-    if explicit_llm_url and "localhost" in explicit_llm_url:
-         logging.info(f"Using explicit LLAMA_API_BASE_URL from environment: {explicit_llm_url}")
-         llm_base_url = explicit_llm_url
+    # Determine LLM Provider
+    llm_provider = os.getenv("LLM_PROVIDER", "local")
+    llm_api_key = "dummy"
+    llm_model = "dummy"
+
+    if llm_provider == "groq":
+        llm_base_url = "https://api.groq.com/openai/v1"
+        llm_api_key = os.getenv("GROQ_API_KEY", "")
+        llm_model = os.getenv("LLM_MODEL", "llama3-70b-8192")
+        logging.info("Using Groq LLM provider.")
+    elif llm_provider == "deepseek":
+        llm_base_url = "https://api.deepseek.com"
+        llm_api_key = os.getenv("DEEPSEEK_API_KEY", "")
+        llm_model = os.getenv("LLM_MODEL", "deepseek-chat")
+        logging.info("Using DeepSeek LLM provider.")
+    elif llm_provider == "openai":
+        llm_base_url = "https://api.openai.com/v1"
+        llm_api_key = os.getenv("OPENAI_API_KEY", "")
+        llm_model = os.getenv("LLM_MODEL", "gpt-4o")
+        logging.info("Using OpenAI LLM provider.")
     else:
-         llm_base_url = await discover_services(main_llm_service_names, consul_http_addr)
+        # Bolt ⚡ Optimization: check for explicit LLAMA_API_BASE_URL (e.g. from Expert Sidecar)
+        # This bypasses Consul discovery for faster startup when the LLM is local.
+        explicit_llm_url = os.getenv("LLAMA_API_BASE_URL")
+        # We only use the explicit URL if it points to localhost (sidecar pattern)
+        # otherwise we prefer Consul discovery for load balancing.
+        if explicit_llm_url and "localhost" in explicit_llm_url:
+             logging.info(f"Using explicit LLAMA_API_BASE_URL from environment: {explicit_llm_url}")
+             llm_base_url = explicit_llm_url
+        else:
+             llm_base_url = await discover_services(main_llm_service_names, consul_http_addr)
 
     llm = OpenAILLMService(
         base_url=llm_base_url,
-        api_key="dummy",
-        model="dummy"
+        api_key=llm_api_key,
+        model=llm_model
     )
 
     runner = PipelineRunner()
@@ -1183,6 +1260,12 @@ async def run_agent():
             model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
             stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
             logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate 16000Hz.")
+        elif stt_service_name == "groq":
+            groq_key = os.getenv("GROQ_API_KEY")
+            if not groq_key:
+                raise RuntimeError("STT_SERVICE is 'groq' but GROQ_API_KEY is not set.")
+            stt = GroqSTTService(api_key=groq_key)
+            logging.info("Configured Groq for STT.")
         else:
             raise RuntimeError(f"STT_SERVICE not configured correctly in Consul. Got '{stt_service_name}'")
 

@@ -96,6 +96,7 @@
         - claude_clone
         - moe_gateway
         - mcp_server
+        - moltbot
       loop_control:
         loop_var: role_name
       tags:
