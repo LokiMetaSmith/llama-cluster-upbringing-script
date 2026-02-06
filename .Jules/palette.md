@@ -54,3 +54,7 @@
 ## 2026-03-05 - Async Action Feedback
 **Learning:** Users lack confidence in async operations (like saving) when the only feedback is a delayed notification. Immediate, local feedback on the trigger element (button) reduces anxiety and prevents double-submission.
 **Action:** Implement "Loading..." text and a spinner on the action button itself immediately upon click, and disable it until the operation completes.
+
+## 2026-03-10 - Frictionless Data Access in Dev Tools
+**Learning:** In developer-focused tools (like debug monitors), displaying data (e.g., JSON) in a read-only view is insufficient if users frequently need to extract it. Manual selection and copying is friction.
+**Action:** Always include a dedicated "Copy to Clipboard" button next to large data blobs or code blocks. Provide immediate visual feedback (e.g., "Copied!" or checkmark) to confirm the action.
