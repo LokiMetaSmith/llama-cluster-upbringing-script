@@ -5,6 +5,7 @@ torchaudio
 --extra-index-url https://pypi.org/simple
 accelerate
 aiohttp
+apscheduler
 beautifulsoup4
 ctranslate2==4.1.0
 docker

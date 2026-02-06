@@ -105,6 +105,11 @@ litellm_master_key: "sk-change_me_in_prod_please_use_a_secure_random_key"
 # For now, we'll place it here for simplicity.
 openai_api_key: "sk-your_openai_api_key_here"
 openrouter_api_key: ""
+groq_api_key: ""
+deepseek_api_key: ""
+# LLM Provider Configuration
+llm_provider: "local" # Options: local, groq, deepseek, openai
+llm_model: "" # Explicit model override (e.g. llama3-70b-8192)
 hf_token: ""
 jules_api_key: "your_jules_api_key_here"
 
