@@ -588,7 +588,7 @@ async def health_check():
         return {"status": "ok", "pages_indexed": memorizer_instance.get_page_count()}
     return {"status": "starting"}
 
-if __name__ == "__main__":
-    host_ip = os.getenv("HOST_IP", "::")
-    logger.info(f"Starting uvicorn manually on {host_ip}:{PORT}")
-    uvicorn.run(app, host=host_ip, port=PORT)
+# if __name__ == "__main__":
+#     host_ip = os.getenv("HOST_IP", "::")
+#     logger.info(f"Starting uvicorn manually on {host_ip}:{PORT}")
+#     uvicorn.run(app, host=host_ip, port=PORT)

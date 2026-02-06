@@ -26,6 +26,14 @@ if [ -z "$ARCHIVIST_PORT" ]; then
     echo "Error: ARCHIVIST_PORT is not set."
     exit 1
 fi
+
+echo "DEBUG: HOST_IP=${HOST_IP:-0.0.0.0}"
+echo "DEBUG: ARCHIVIST_PORT=$ARCHIVIST_PORT"
+echo "DEBUG: Checking port $ARCHIVIST_PORT usage:"
+lsof -i :$ARCHIVIST_PORT || echo "Port $ARCHIVIST_PORT is free"
+echo "DEBUG: Checking existing archivist processes:"
+pgrep -af archivist || echo "No archivist processes found"
+
 cd "$(dirname "$TARGET_SCRIPT")"
 HOST_IP=${HOST_IP:-0.0.0.0}
 exec uvicorn archivist_service:app --host "$HOST_IP" --port "$ARCHIVIST_PORT"
