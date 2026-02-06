@@ -36,8 +36,18 @@
     <!-- Node Detail Modal -->
     <div id="nodeModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content">
-            <button class="close" aria-label="Close modal">&times;</button>
-            <h3 id="modal-title">Node Output</h3>
+            <div class="modal-header">
+                <h3 id="modal-title">Node Output</h3>
+                <div class="modal-actions">
+                    <button id="copy-node-output" class="icon-btn" aria-label="Copy output to clipboard" title="Copy to clipboard">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
+                    <button class="close" aria-label="Close modal">&times;</button>
+                </div>
+            </div>
             <pre id="node-output-content" tabindex="0" aria-label="Node Output content"></pre>
         </div>
     </div>

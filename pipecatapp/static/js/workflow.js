@@ -253,6 +253,32 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
+    // Palette UX: Copy to Clipboard
+    const copyBtn = document.getElementById('copy-node-output');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', async () => {
+            const text = nodeOutputContent.textContent;
+            try {
+                await navigator.clipboard.writeText(text);
+
+                // Visual Feedback
+                const originalHTML = copyBtn.innerHTML;
+                copyBtn.classList.add('success');
+                // Checkmark icon
+                copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                copyBtn.setAttribute('aria-label', 'Copied!');
+
+                setTimeout(() => {
+                    copyBtn.classList.remove('success');
+                    copyBtn.innerHTML = originalHTML;
+                    copyBtn.setAttribute('aria-label', 'Copy output to clipboard');
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy!', err);
+            }
+        });
+    }
+
     // --- History Logic ---
 
     async function fetchHistory() {

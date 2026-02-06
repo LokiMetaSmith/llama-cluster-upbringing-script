@@ -186,3 +186,49 @@ button.close {
 .error-state {
     color: #f44336;
 }
+
+/* Palette UX: Modal Enhancements */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 10px;
+}
+.modal-header h3 {
+    margin: 0;
+}
+.modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.icon-btn {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+.icon-btn:hover {
+    color: #fff;
+    background-color: rgba(255,255,255,0.1);
+}
+.icon-btn:focus-visible {
+    outline: 2px solid #007acc;
+    outline-offset: 2px;
+}
+.icon-btn.success {
+    color: #4caf50;
+}
+.modal-actions .close {
+    float: none;
+    font-size: 24px;
+    margin-left: 0;
+}
