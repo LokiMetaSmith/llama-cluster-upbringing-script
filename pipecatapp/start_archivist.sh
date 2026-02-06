@@ -27,4 +27,5 @@ if [ -z "$ARCHIVIST_PORT" ]; then
     exit 1
 fi
 cd "$(dirname "$TARGET_SCRIPT")"
-exec python3 archivist_service.py
+HOST_IP=${HOST_IP:-0.0.0.0}
+exec uvicorn archivist_service:app --host "$HOST_IP" --port "$ARCHIVIST_PORT"
