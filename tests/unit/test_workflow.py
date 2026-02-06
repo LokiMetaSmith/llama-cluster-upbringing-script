@@ -66,7 +66,7 @@ async def test_workflow_execution_data_flow(mock_registry, mocker):
     # Define a simple workflow
     workflow_def = {
         "nodes": [
-            {"id": "start", "type": "InputNode", "outputs": [{"name": "initial_data"}]},
+            {"id": "start", "type": "InputNode", "config": {"outputs": [{"name": "initial_data"}]}},
             {"id": "end", "type": "OutputNode", "inputs": [{"name": "final_output", "connection": {"from_node": "start", "from_output": "initial_data"}}]}
         ]
     }
@@ -235,8 +235,8 @@ async def test_nested_output_resolution(mock_registry, mocker):
     """Tests that a workflow with nested connections in the output resolves correctly."""
     workflow_def = {
         "nodes": [
-            {"id": "source1", "type": "InputNode", "outputs": ["out1"]},
-            {"id": "source2", "type": "InputNode", "outputs": ["out2"]},
+            {"id": "source1", "type": "InputNode", "config": {"outputs": ["out1"]}},
+            {"id": "source2", "type": "InputNode", "config": {"outputs": ["out2"]}},
             {"id": "output", "type": "OutputNode", "inputs": [{
                 "name": "final_output",
                 "value": {

@@ -79,3 +79,24 @@ def test_performance_vs_json_dumps():
     # Expect make_serializable to be significantly faster
     # We use a conservative 10x factor for the assertion to be safe in CI environments
     assert duration_make < (duration_json / 10)
+
+def test_make_serializable_sanitization():
+    # SENSITIVE_KEYS = {"external_experts_config", "tools_dict", "twin_service"}
+    obj = {
+        "safe": "val",
+        "tools_dict": {"tool": "secret"},
+        "nested": {"twin_service": "secret", "ok": "val"}
+    }
+
+    # Sanitize=False
+    res_unsafe = make_serializable(obj, sanitize=False)
+    assert "tools_dict" in res_unsafe
+    assert "twin_service" in res_unsafe["nested"]
+
+    # Sanitize=True
+    res_safe = make_serializable(obj, sanitize=True)
+    assert "tools_dict" not in res_safe
+    assert "safe" in res_safe
+    assert "nested" in res_safe
+    assert "twin_service" not in res_safe["nested"]
+    assert "ok" in res_safe["nested"]
