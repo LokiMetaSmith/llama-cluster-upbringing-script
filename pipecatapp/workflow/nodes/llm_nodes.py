@@ -81,13 +81,14 @@ class SimpleLLMNode(Node):
             if any(i["name"] == "user_text" for i in self.config.get("inputs", [])):
                  user_text = self.get_input(context, "user_text") or ""
 
-            # Aggregate other inputs (e.g. reports)
+            # Aggregate other inputs (e.g. reports, file_content, context_summary)
+            # This ensures that any input connected to this node is included in the prompt
             for input_config in self.config.get("inputs", []):
                  name = input_config["name"]
-                 if name not in ["messages", "user_text", "reasoning"]:
+                 if name not in ["messages", "user_text", "reasoning", "system_prompt"]:
                      val = self.get_input(context, name)
                      if val:
-                         user_text += f"\n\n{name.replace('_', ' ').title()}:\n{val}"
+                         user_text += f"\n\n--- {name.replace('_', ' ').title()} ---\n{val}\n---------------------------"
 
             if not user_text:
                 user_text = "Hello"

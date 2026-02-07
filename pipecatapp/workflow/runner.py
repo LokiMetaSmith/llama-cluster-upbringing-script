@@ -172,6 +172,7 @@ class WorkflowRunner:
 
     def _instantiate_nodes(self):
         """Instantiate all nodes defined in the workflow."""
+        self.nodes = {}
         for node_config in self.workflow_definition["nodes"]:
             node_class = registry.get_node_class(node_config["type"])
             if not node_class:
@@ -182,6 +183,7 @@ class WorkflowRunner:
         """Determine the execution order of nodes using Kahn's algorithm for topological sorting."""
 
         # 1. Initialize graph and in-degrees
+        # Use a safe get for in-degree initialization to avoid KeyErrors if graph construction fails
         graph: Dict[str, List[str]] = {node["id"]: [] for node in self.workflow_definition["nodes"]}
         in_degree: Dict[str, int] = {node["id"]: 0 for node in self.workflow_definition["nodes"]}
 
