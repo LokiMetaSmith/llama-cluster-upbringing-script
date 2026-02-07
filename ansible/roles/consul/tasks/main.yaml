@@ -310,6 +310,23 @@
   tags:
     - consul_configure
 
+- name: Create Consul log file
+  become: true
+  ansible.builtin.file:
+    path: /var/log/consul.log
+    state: touch
+    owner: consul
+    group: consul
+    mode: '0640'
+  tags:
+    - consul_configure
+
+- name: Validate Consul configuration
+  become: true
+  ansible.builtin.command: consul validate {{ consul_config_dir }}
+  tags:
+    - consul_configure
+
 - name: Start and enable Consul service
   become: true
   ansible.builtin.systemd:
@@ -334,14 +351,23 @@
       retries: 30
       delay: 5
   rescue:
-    - name: Fetch Consul service logs
+    - name: Fetch Consul service logs (journald)
       ansible.builtin.shell: journalctl -u consul.service -n 50 --no-pager
-      register: consul_logs
+      register: consul_journal_logs
       ignore_errors: true
 
-    - name: Display Consul service logs
+    - name: Fetch Consul service logs (file)
+      ansible.builtin.command: tail -n 50 /var/log/consul.log
+      register: consul_file_logs
+      ignore_errors: true
+
+    - name: Display Consul service logs (journald)
       ansible.builtin.debug:
-        var: consul_logs.stdout_lines
+        var: consul_journal_logs.stdout_lines
+
+    - name: Display Consul service logs (file)
+      ansible.builtin.debug:
+        var: consul_file_logs.stdout_lines
 
     - name: Fail task
       ansible.builtin.fail:
