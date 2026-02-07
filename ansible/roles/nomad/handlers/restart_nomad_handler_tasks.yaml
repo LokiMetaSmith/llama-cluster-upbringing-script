@@ -1,3 +1,9 @@
+- name: Force kill stuck nomad processes
+  ansible.builtin.shell: "pkill -9 nomad || true"
+  ignore_errors: true
+  become: yes
+  when: not ansible_check_mode
+
 - name: Restart nomad service
   ansible.builtin.service:
     name: nomad
