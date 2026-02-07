@@ -7,6 +7,11 @@ import httpx
 import asyncio
 import re
 
+try:
+    from ...secret_manager import secret_manager
+except ImportError:
+    from secret_manager import secret_manager
+
 # This is a simplified version for now. We will need to make this more robust.
 async def discover_main_llm_service():
     # In a real scenario, this would involve Consul discovery.
@@ -113,7 +118,7 @@ class SimpleLLMNode(Node):
         # 3. Call Service
         if consul_http_addr:
             try:
-                token = os.getenv("CONSUL_HTTP_TOKEN")
+                token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
                 headers = {"X-Consul-Token": token} if token else {}
                 async with httpx.AsyncClient(headers=headers) as client:
                     # Discovery
@@ -236,7 +241,7 @@ class ExpertRouterNode(Node):
         expert_response = f"Could not find or contact expert service: {expert_name}"
 
         try:
-            token = os.getenv("CONSUL_HTTP_TOKEN")
+            token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
             headers = {"X-Consul-Token": token} if token else {}
             async with httpx.AsyncClient(headers=headers) as client:
                 response = await client.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
@@ -312,9 +317,9 @@ class ExternalLLMNode(Node):
         api_key_env = expert_config.get("api_key_env")
         model = expert_config.get("model")
 
-        api_key = os.getenv(api_key_env)
+        api_key = secret_manager.get_secret(api_key_env)
         if not api_key:
-             self.set_output(context, "response", f"Error: API key environment variable '{api_key_env}' not set.")
+             self.set_output(context, "response", f"Error: API key environment variable '{api_key_env}' not found in SecretManager.")
              return
 
         # Prepare payload
@@ -410,7 +415,7 @@ class LLMRouterNode(Node):
             response_text = f"Error: Could not reach {service_name}."
 
             if consul_http_addr:
-                token = os.getenv("CONSUL_HTTP_TOKEN")
+                token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
                 headers = {"X-Consul-Token": token} if token else {}
                 async with httpx.AsyncClient(headers=headers) as client:
                     response = await client.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")

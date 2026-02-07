@@ -2,6 +2,7 @@ import asyncio
 import subprocess
 import uuid
 import logging
+import json
 
 class ShellTool:
     """A tool for running shell commands in a persistent tmux session.
@@ -48,6 +49,16 @@ class ShellTool:
 
         logging.info(f"Sending command to tmux session {self.session_name}: {command}")
 
+        # Telepresence: Broadcast command to UI
+        try:
+            import web_server
+            await web_server.manager.broadcast(json.dumps({
+                "type": "shell_command",
+                "data": f"$ {command}"
+            }))
+        except Exception:
+            pass
+
         # Send keys
         send = await asyncio.create_subprocess_exec(
             "tmux", "send-keys", "-t", self.session_name, full_command, "C-m"
@@ -70,7 +81,19 @@ class ShellTool:
                 # We return the output up to the sentinel to keep it clean-ish?
                 # Or just return the whole buffer. The agent is smart.
                 # Let's strip the sentinel line to be nice.
-                return output.replace(f"echo '{sentinel}'", "").replace(sentinel, "").strip()
+                clean_output = output.replace(f"echo '{sentinel}'", "").replace(sentinel, "").strip()
+
+                # Telepresence: Broadcast output to UI
+                try:
+                    import web_server
+                    await web_server.manager.broadcast(json.dumps({
+                        "type": "shell_output",
+                        "data": clean_output
+                    }))
+                except Exception:
+                    pass
+
+                return clean_output
 
             await asyncio.sleep(0.5)
 

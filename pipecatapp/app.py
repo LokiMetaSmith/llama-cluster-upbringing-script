@@ -80,6 +80,7 @@ from workflow.nodes.tool_nodes import *
 from workflow.nodes.system_nodes import *
 from api_keys import initialize_api_keys
 from security import redact_sensitive_data
+from secret_manager import secret_manager
 try:
     from .net_utils import format_url
 except ImportError:
@@ -753,7 +754,7 @@ async def discover_services(service_names: list, consul_http_addr: str, delay=10
         The base URL (e.g., "http://1.2.3.4:5678/v1") of the first discovered service.
     """
     logging.info(f"Attempting to discover services: {service_names}")
-    token = os.getenv("CONSUL_HTTP_TOKEN", "").strip()
+    token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
     headers = {"X-Consul-Token": token} if token else {}
 
     async with httpx.AsyncClient() as client:
@@ -801,7 +802,7 @@ async def discover_main_llm_service(consul_http_addr="http://localhost:8500", de
          logging.warning("PRIMA_API_SERVICE_NAME not set, defaulting to llama-api-main")
          service_name = "llama-api-main"
 
-    token = os.getenv("CONSUL_HTTP_TOKEN", "").strip()
+    token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
     headers = {"X-Consul-Token": token} if token else {}
 
     async with httpx.AsyncClient() as client:
@@ -1069,7 +1070,7 @@ async def load_config_from_consul(consul_host, consul_port):
     """
     logging.info("Loading configuration from Consul KV store...")
     config = {}
-    token = os.getenv("CONSUL_HTTP_TOKEN", "").strip()
+    token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
     c = consul.aio.Consul(host=consul_host, port=consul_port, token=token)
     try:
         index, data = await c.kv.get('config/app/settings')
@@ -1098,14 +1099,27 @@ async def run_agent():
     """The main entry point for the conversational AI application logic."""
     logging.info("Starting agent background task...")
 
-    # Initialize API Keys
-    api_keys_str = os.getenv("PIPECAT_API_KEYS") or os.getenv("PIECAT_API_KEYS", "")
+    # Security: Initialize SecretManager and scrub environment
+    # This prevents ambient authority and accidental leakage via os.environ
+    sensitive_keys = {
+        "OPENAI_API_KEY",
+        "OPENROUTER_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "GROQ_API_KEY",
+        "PIPECAT_API_KEYS",
+        "PIECAT_API_KEYS",
+        "CONSUL_HTTP_TOKEN"
+    }
+    secret_manager.initialize_from_env(sensitive_keys)
+
+    # Initialize API Keys (retrieve from SecretManager)
+    api_keys_str = secret_manager.get_secret("PIPECAT_API_KEYS") or secret_manager.get_secret("PIECAT_API_KEYS")
     if api_keys_str:
         hashed_keys = [key.strip() for key in api_keys_str.split(',')]
         initialize_api_keys(hashed_keys)
         logging.info(f"Initialized with {len(hashed_keys)} API key(s).")
     else:
-        logging.warning("No API keys found in PIPECAT_API_KEYS (or PIECAT_API_KEYS). Sensitive endpoints will be insecure if not protected elsewhere.")
+        logging.warning("No API keys found in PIPECAT_API_KEYS. Sensitive endpoints will be insecure if not protected elsewhere.")
 
     # Set initial state for web server
     web_server.app.state.is_ready = False
@@ -1156,17 +1170,17 @@ async def run_agent():
 
     if llm_provider == "groq":
         llm_base_url = "https://api.groq.com/openai/v1"
-        llm_api_key = os.getenv("GROQ_API_KEY", "")
+        llm_api_key = secret_manager.get_secret("GROQ_API_KEY", "")
         llm_model = os.getenv("LLM_MODEL", "llama3-70b-8192")
         logging.info("Using Groq LLM provider.")
     elif llm_provider == "deepseek":
         llm_base_url = "https://api.deepseek.com"
-        llm_api_key = os.getenv("DEEPSEEK_API_KEY", "")
+        llm_api_key = secret_manager.get_secret("DEEPSEEK_API_KEY", "")
         llm_model = os.getenv("LLM_MODEL", "deepseek-chat")
         logging.info("Using DeepSeek LLM provider.")
     elif llm_provider == "openai":
         llm_base_url = "https://api.openai.com/v1"
-        llm_api_key = os.getenv("OPENAI_API_KEY", "")
+        llm_api_key = secret_manager.get_secret("OPENAI_API_KEY", "")
         llm_model = os.getenv("LLM_MODEL", "gpt-4o")
         logging.info("Using OpenAI LLM provider.")
     else:
@@ -1261,7 +1275,7 @@ async def run_agent():
             stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
             logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate 16000Hz.")
         elif stt_service_name == "groq":
-            groq_key = os.getenv("GROQ_API_KEY")
+            groq_key = secret_manager.get_secret("GROQ_API_KEY")
             if not groq_key:
                 raise RuntimeError("STT_SERVICE is 'groq' but GROQ_API_KEY is not set.")
             stt = GroqSTTService(api_key=groq_key)

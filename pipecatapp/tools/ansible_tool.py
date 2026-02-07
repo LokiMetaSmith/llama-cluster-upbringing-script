@@ -1,5 +1,9 @@
 import subprocess
 import os
+try:
+    from ..secret_manager import secret_manager
+except ImportError:
+    from secret_manager import secret_manager
 
 class Ansible_Tool:
     """A tool for running Ansible playbooks to configure and manage the cluster.
@@ -65,9 +69,17 @@ class Ansible_Tool:
         try:
             # Running the command from the project root is critical so that ansible.cfg,
             # inventory.yaml, and roles are all found correctly.
+
+            # Security: Inject secrets back into the subprocess environment
+            # This ensures Ansible has access to necessary API keys/tokens
+            # that were scrubbed from the main process environment.
+            env = os.environ.copy()
+            env.update(secret_manager.get_all_secrets())
+
             process = subprocess.run(
                 command,
                 cwd=self.project_root,
+                env=env,
                 capture_output=True,
                 text=True,
                 timeout=900  # 15 minute timeout for long playbook runs

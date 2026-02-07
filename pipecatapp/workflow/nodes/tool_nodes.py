@@ -90,14 +90,28 @@ class ToolExecutorNode(Node):
         method = getattr(tool, method_name)
 
         # Re-implement approval logic
+        # Security: Enforce mandatory approval for high-risk tools
+        HIGH_RISK_TOOLS = {"shell", "ansible", "ssh", "code_runner"}
         twin_service = context.global_inputs.get("twin_service")
-        if twin_service and twin_service.approval_mode and tool_name in ["ssh", "code_runner", "ansible"]:
+
+        requires_approval = tool_name in HIGH_RISK_TOOLS or (twin_service and twin_service.approval_mode)
+
+        if twin_service and requires_approval:
             if not await twin_service._request_approval({"tool": tool_string, "args": args}):
-                result = f"Action denied. I cannot use the {tool_name} tool."
+                result = f"Action denied by user. Execution of {tool_name} was blocked."
+                self.set_output(context, "tool_result", result)
+                return
             else:
                 result = method(**args)
         else:
-            result = method(**args)
+            # If no twin_service (e.g. headless test without UI) but tool is high-risk, we should arguably block it.
+            # But for now we assume twin_service is present in production.
+            if tool_name in HIGH_RISK_TOOLS and not twin_service:
+                 # Fallback for safety if approval mechanism is missing
+                 result = f"Action denied. High-risk tool {tool_name} requires approval service."
+            else:
+                 result = method(**args)
+
         if inspect.iscoroutine(result):
             result = await result
 
