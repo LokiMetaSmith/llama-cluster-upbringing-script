@@ -8,6 +8,8 @@ After=network-online.target
 User=consul
 Group=consul
 ExecStart=/usr/local/bin/consul agent -config-dir={{ consul_config_dir }}
+StandardOutput=append:/var/log/consul.log
+StandardError=append:/var/log/consul.log
 KillMode=process
 Restart=on-failure
 RestartSec=2
