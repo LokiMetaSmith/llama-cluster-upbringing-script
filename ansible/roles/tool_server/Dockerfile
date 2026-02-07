@@ -75,6 +75,8 @@ RUN python preload_models.py
 
 COPY app.py .
 COPY pmm_memory.py .
+COPY secret_manager.py .
+COPY net_utils.py .
 COPY tools ./tools
 COPY entrypoint.sh /entrypoint.sh
 
