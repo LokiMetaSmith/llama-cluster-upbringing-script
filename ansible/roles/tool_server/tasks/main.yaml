@@ -42,6 +42,24 @@
     mode: "0644"
   become: true
 
+- name: "Tool Server : Copy secret_manager.py"
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../pipecatapp/secret_manager.py"
+    dest: "/opt/tool_server/secret_manager.py"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0644"
+  become: true
+
+- name: "Tool Server : Copy net_utils.py"
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../pipecatapp/net_utils.py"
+    dest: "/opt/tool_server/net_utils.py"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0644"
+  become: true
+
 - name: "Tool Server : Copy tools directory"
   ansible.builtin.copy:
     src: "{{ role_path }}/../../../pipecatapp/tools"
