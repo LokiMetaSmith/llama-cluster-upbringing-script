@@ -48,6 +48,17 @@
       ansible.builtin.debug:
         var: nomad_logs.stdout_lines
 
+    - name: Get last 50 lines of Nomad logs (file)
+      ansible.builtin.command: tail -n 50 /var/log/nomad.log
+      register: nomad_file_logs
+      failed_when: false
+      changed_when: false
+      become: yes
+
+    - name: Display Nomad logs (file)
+      ansible.builtin.debug:
+        var: nomad_file_logs.stdout_lines
+
     - name: Fail with helpful message
       ansible.builtin.fail:
         msg: "Nomad failed to restart. Check the logs above."

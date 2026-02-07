@@ -265,6 +265,15 @@
     recurse: yes
   become: yes
 
+- name: Create Nomad log file
+  ansible.builtin.file:
+    path: /var/log/nomad.log
+    state: touch
+    owner: root
+    group: root
+    mode: '0640'
+  become: yes
+
 - name: Copy Nomad systemd service file
   ansible.builtin.template:
     src: nomad.service.j2
