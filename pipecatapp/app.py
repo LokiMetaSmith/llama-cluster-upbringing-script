@@ -909,8 +909,14 @@ class TwinService(FrameProcessor):
         active_workflows = ActiveWorkflows()
         request_id = self.current_request_meta.get("request_id", str(time.time()))
 
+        # Detect the requested workflow
+        workflow_file = "workflows/default_agent_loop.yaml"
+        if frame.text.strip().startswith("/deep"):
+            logging.info("Deep Context / Slow Thinking mode activated.")
+            workflow_file = "workflows/deep_context.yaml"
+
         try:
-            workflow_runner = WorkflowRunner("workflows/default_agent_loop.yaml", runner_id=request_id)
+            workflow_runner = WorkflowRunner(workflow_file, runner_id=request_id)
             active_workflows.add_runner(request_id, workflow_runner)
 
             global_inputs = {

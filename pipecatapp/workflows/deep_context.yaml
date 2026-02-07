@@ -1,0 +1,67 @@
+name: "Deep Context / Slow Thinking Workflow"
+nodes:
+  - id: "Input"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "user_text"
+    inputs: []
+
+  - id: "PathExtractor"
+    type: "SimpleLLMNode"
+    model_tier: "balanced"
+    inputs:
+      - name: "user_text"
+        connection:
+          from_node: "Input"
+          from_output: "user_text"
+      - name: "system_prompt"
+        value: "Extract the file path from the user's request. If the user says 'Use rules.txt', return 'rules.txt'. If they say 'Check /tmp/manual.md', return '/tmp/manual.md'. Return ONLY the file path. If no file path is found, return 'NO_FILE'."
+
+  - id: "FileReader"
+    type: "FileReadNode"
+    inputs:
+      - name: "file_path"
+        connection:
+          from_node: "PathExtractor"
+          from_output: "response"
+
+  - id: "ComprehensionStep"
+    type: "SimpleLLMNode"
+    model_tier: "balanced"
+    inputs:
+      - name: "file_content"
+        connection:
+          from_node: "FileReader"
+          from_output: "file_content"
+      - name: "system_prompt"
+        value: "You are a comprehension engine. Read the following RULES/CONTEXT carefully. Summarize the key constraints and instructions that differ from standard behavior. Be extremely precise. DO NOT SOLVE THE USER'S TASK YET. Just state the rules."
+      - name: "user_text"
+        value: "Analyze these rules." # Dummy input to satisfy the node logic if needed, but mainly we use the file_content injection
+
+  - id: "ReasoningStep"
+    type: "SimpleLLMNode"
+    model_tier: "capable"
+    inputs:
+      - name: "user_text"
+        connection:
+          from_node: "Input"
+          from_output: "user_text"
+      - name: "context_summary"
+        connection:
+          from_node: "ComprehensionStep"
+          from_output: "response"
+      - name: "full_context"
+        connection:
+          from_node: "FileReader"
+          from_output: "file_content"
+      - name: "system_prompt"
+        value: "You are a 'Deep Context' agent. You must solve the user's problem strictly adhering to the provided RULES/CONTEXT. Ignore your prior training if it conflicts with these rules. First, reason about the problem step-by-step using the new rules. Then, provide the final answer."
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_output"
+        connection:
+          from_node: "ReasoningStep"
+          from_output: "response"

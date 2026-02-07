@@ -36,6 +36,7 @@ from tools.openclaw_tool import OpenClawTool
 from tools.mkv_tool import MKV_Tool
 from tools.miniray_tool import MinirayTool
 from tools.scheduler_tool import SchedulerTool
+from tools.context_upload_tool import ContextUploadTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -92,6 +93,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "mkv_store": MKV_Tool(),
         "miniray_compute": MinirayTool(),
         "scheduler": SchedulerTool(),
+        "context_upload": ContextUploadTool(),
     }
 
     if config.get("use_summarizer", False) and twin_service:
