@@ -179,7 +179,7 @@
 
     - name: Wait for MQTT port to be open
       ansible.builtin.wait_for:
-        host: "127.0.0.1"  # Force check on localhost to bypass alias/hairpin issues
+        host: "{{ cluster_ip }}"  # Check on cluster_ip as Nomad may not bind to localhost in bridge mode
         port: "{{ mqtt_port }}"
         timeout: 60
       become: no

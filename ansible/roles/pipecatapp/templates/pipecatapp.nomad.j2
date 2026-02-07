@@ -30,7 +30,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       LLAMA_API_SERVICE_NAME = "{{ llama_api_service_name | default('llamacpp-rpc-api') }}"
       USE_SUMMARIZER         = "{{ use_summarizer | default('false') }}"
       STT_SERVICE            = "{{ stt_service | default('faster-whisper') }}"
-      PIECAT_API_KEYS        = "{{ pipecat_api_keys }}"
+      PIPECAT_API_KEYS        = "{{ pipecat_api_keys }}"
       EXTERNAL_EXPERTS_CONFIG = "{{ external_experts_config | to_json | replace('\"', '\\\"') }}"
       OPENAI_API_KEY         = "{{ openai_api_key }}"
       OPENROUTER_API_KEY     = "{{ openrouter_api_key }}"
