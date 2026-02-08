@@ -172,6 +172,21 @@
   become: yes
   changed_when: false
 
+- name: Kill any process using MQTT ports (cleanup zombies)
+  ansible.builtin.shell: "fuser -k {{ item }}/tcp || true"
+  become: yes
+  loop:
+    - "{{ mqtt_port }}"
+    - "{{ mqtt_websocket_port }}"
+  changed_when: false
+  ignore_errors: yes
+
+- name: Remove any zombie Mosquitto containers
+  ansible.builtin.shell: "docker ps -q --filter 'ancestor=eclipse-mosquitto:2' | xargs -r docker rm -f"
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+
 - name: Deploy MQTT Job
   block:
     - name: Run mqtt job
