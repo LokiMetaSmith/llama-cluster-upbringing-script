@@ -25,9 +25,9 @@
       persistence_location /mosquitto/data/
       log_dest stdout
       log_type all
-      listener {{ mqtt_port }} 0.0.0.0
+      listener {{ mqtt_port }}
       allow_anonymous true
-      listener {{ mqtt_websocket_port }} 0.0.0.0
+      listener {{ mqtt_websocket_port }}
       protocol websockets
     mode: '0644'
   become: yes
@@ -179,7 +179,7 @@
 
     - name: Wait for MQTT port to be open
       ansible.builtin.wait_for:
-        host: "127.0.0.1"  # Check on localhost as host mode binds to all interfaces
+        host: "{{ cluster_ip }}"
         port: "{{ mqtt_port }}"
         timeout: 60
       become: no
