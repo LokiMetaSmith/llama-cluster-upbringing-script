@@ -4,10 +4,12 @@ import sys
 from unittest.mock import MagicMock, patch, mock_open
 import threading
 
-# Add the path to the RAG tool
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
+# Add the path to the pipecatapp directory to resolve imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../pipecatapp')))
+# Add tools directory as well for direct import if needed
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../pipecatapp/tools')))
 
-import numpy as np # Now safe to import
+import numpy as np
 from rag_tool import RAG_Tool
 
 @pytest.fixture
@@ -28,7 +30,8 @@ def mock_faiss():
         mock_index = MagicMock()
         mock_index.add.return_value = None
         # Return 3 results to match k=3 in the search function
-        mock_index.search.return_value = (np.array([[1.0, 2.0, 3.0]]), np.array([[0, 1, 2]]))
+        # Ensure integer type for indices
+        mock_index.search.return_value = (np.array([[1.0, 2.0, 3.0]], dtype=np.float32), np.array([[0, 1, 2]], dtype=np.int64))
         mock.IndexFlatL2.return_value = mock_index
         yield mock
 
@@ -36,8 +39,8 @@ def mock_faiss():
 def mock_pmm_memory():
     """Fixture to mock the PMMMemory object."""
     mock_memory = MagicMock()
-    mock_memory.get_events.return_value = []
-    mock_memory.add_event.return_value = None
+    mock_memory.get_events_sync.return_value = []
+    mock_memory.add_event_sync.return_value = None
     return mock_memory
 
 @pytest.fixture(autouse=True)
@@ -59,7 +62,7 @@ def test_rag_tool_initialization(mock_sentence_transformer, mock_faiss, mock_pmm
         m = mock_open(read_data="This is a test file.")
         with patch('builtins.open', m):
             # Simulate memory being empty, then populated after scan
-            mock_pmm_memory.get_events.side_effect = [
+            mock_pmm_memory.get_events_sync.side_effect = [
                 [],
                 [{'content': 'This is a test file.', 'meta': {'source': '/fake/dir/test.md'}}]
             ]
@@ -67,7 +70,7 @@ def test_rag_tool_initialization(mock_sentence_transformer, mock_faiss, mock_pmm
             tool = RAG_Tool(pmm_memory=mock_pmm_memory, base_dir="/fake/dir")
 
             assert tool.is_ready
-            mock_pmm_memory.add_event.assert_called_once_with(
+            mock_pmm_memory.add_event_sync.assert_called_once_with(
                 kind="rag_document",
                 content="This is a test file.",
                 meta={"source": "/fake/dir/test.md"}
@@ -82,7 +85,10 @@ def test_rag_tool_search(mock_sentence_transformer, mock_faiss, mock_pmm_memory)
         {'content': "This is chunk 2.", 'meta': {"source": "/fake/dir/test2.txt"}},
         {'content': "This is chunk 3.", 'meta': {"source": "/fake/dir/test3.md"}}
     ]
-    mock_pmm_memory.get_events.return_value = docs
+    mock_pmm_memory.get_events_sync.return_value = docs
+
+    # Force explicit return value for search using side_effect to ensure it returns fresh objects
+    mock_faiss.IndexFlatL2.return_value.search.side_effect = lambda q, k: (np.array([[1.0, 2.0, 3.0]], dtype=np.float32), np.array([[0, 1, 2]], dtype=np.int64))
 
     with patch('os.walk') as mock_walk: # os.walk should not be called now
         tool = RAG_Tool(pmm_memory=mock_pmm_memory, base_dir="/fake/dir")
@@ -104,7 +110,7 @@ def test_rag_tool_search(mock_sentence_transformer, mock_faiss, mock_pmm_memory)
 def test_rag_tool_empty_knowledge_base(mock_sentence_transformer, mock_faiss, mock_pmm_memory):
     """Tests that the RAG tool handles an empty knowledge base gracefully."""
     # Memory is empty
-    mock_pmm_memory.get_events.return_value = []
+    mock_pmm_memory.get_events_sync.return_value = []
 
     with patch('os.walk') as mock_walk:
         # Filesystem is empty
@@ -122,13 +128,13 @@ def test_no_relevant_documents_found(mock_sentence_transformer, mock_faiss, mock
     """Tests the case where the search returns no relevant documents."""
     # Simulate that documents already exist in memory
     docs = [{'content': "This is a test file.", 'meta': {"source": "/fake/dir/test.md"}}]
-    mock_pmm_memory.get_events.return_value = docs
+    mock_pmm_memory.get_events_sync.return_value = docs
 
     tool = RAG_Tool(pmm_memory=mock_pmm_memory, base_dir="/fake/dir")
     assert tool.is_ready
 
     # Mock the FAISS search to return no results
-    mock_faiss.IndexFlatL2.return_value.search.return_value = (np.array([[-1, -1, -1]]), np.array([[-1, -1, -1]]))
+    mock_faiss.IndexFlatL2.return_value.search.side_effect = lambda q, k: (np.array([[-1, -1, -1]], dtype=np.int64), np.array([[-1, -1, -1]], dtype=np.int64))
 
     # Perform a search
     results = tool.search_knowledge_base("test query")
@@ -141,13 +147,13 @@ def test_rag_tool_search_with_fewer_than_k_results(mock_sentence_transformer, mo
         {'content': "This is chunk 1.", 'meta': {"source": "/fake/dir/test1.md"}},
         {'content': "This is chunk 2.", 'meta': {"source": "/fake/dir/test2.txt"}}
     ]
-    mock_pmm_memory.get_events.return_value = docs
+    mock_pmm_memory.get_events_sync.return_value = docs
 
     tool = RAG_Tool(pmm_memory=mock_pmm_memory, base_dir="/fake/dir")
     assert tool.is_ready
 
     # Mock the FAISS search to return only 2 valid results
-    mock_faiss.IndexFlatL2.return_value.search.return_value = (np.array([[1.0, 2.0, -1.0]]), np.array([[0, 1, -1]]))
+    mock_faiss.IndexFlatL2.return_value.search.side_effect = lambda q, k: (np.array([[1.0, 2.0, -1.0]], dtype=np.float32), np.array([[0, 1, -1]], dtype=np.int64))
 
     # Perform a search
     results = tool.search_knowledge_base("test query")

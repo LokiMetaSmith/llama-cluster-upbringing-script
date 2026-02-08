@@ -117,3 +117,18 @@ def test_rag_sibling_directory_isolation(rag_tool_class, mock_memory, test_dirs)
     sources = [d['meta']['source'] for d in tool.documents]
     assert str(subdir / "doc2.txt") in sources
     assert str(sibling / "secret.txt") not in sources
+
+def test_rag_mandatory_base_dir(rag_tool_class, mock_memory):
+    """Test that RAG_Tool raises ValueError if base_dir is missing."""
+    with pytest.raises(ValueError, match="base_dir must be provided"):
+        rag_tool_class(pmm_memory=mock_memory)
+
+def test_rag_root_scan_protection(rag_tool_class, mock_memory):
+    """Test that RAG_Tool blocks scanning root (/) by default."""
+    # Should fail without allow_root_scan=True
+    with pytest.raises(ValueError, match="Scanning the filesystem root"):
+        rag_tool_class(pmm_memory=mock_memory, base_dir="/")
+
+    # Should pass with allow_root_scan=True
+    tool = rag_tool_class(pmm_memory=mock_memory, base_dir="/", allow_root_scan=True)
+    assert tool.base_dir == "/"
