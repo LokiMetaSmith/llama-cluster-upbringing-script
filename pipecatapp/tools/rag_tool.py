@@ -15,19 +15,23 @@ class RAG_Tool:
     the agent to find relevant information to answer user queries about the
     project.
     """
-    def __init__(self, pmm_memory: Optional[PMMMemory] = None, base_dir="/", allowed_root: Optional[str] = None, model_name="all-MiniLM-L6-v2"):
+    def __init__(self, pmm_memory: Optional[PMMMemory] = None, base_dir=None, allowed_root: Optional[str] = None, model_name="all-MiniLM-L6-v2", allow_root_scan: bool = False):
         """Initializes the RAG_Tool.
 
         Args:
             pmm_memory (Optional[PMMMemory]): The PMMMemory object for persistent storage.
                 If None, a local PMMMemory instance will be created.
-            base_dir (str): The root directory to start scanning for documents.
+            base_dir (str): The root directory to start scanning for documents. Must be provided.
             allowed_root (str, optional): The security root. Subdirectories of this path are allowed.
                 Defaults to base_dir if not provided.
             model_name (str): The name of the SentenceTransformer model to use.
+            allow_root_scan (bool): Explicitly allow scanning the filesystem root (/). Defaults to False.
         """
         self.name = "rag"
         self.description = "Searches the project's documentation to answer questions."
+
+        if base_dir is None:
+            raise ValueError("base_dir must be provided for RAG_Tool.")
 
         if pmm_memory:
             self.pmm_memory = pmm_memory
@@ -43,6 +47,13 @@ class RAG_Tool:
 
         self.base_dir = os.path.abspath(base_dir)
         self.allowed_root = os.path.abspath(allowed_root) if allowed_root else self.base_dir
+
+        # Security Check: Prevent accidental root scanning
+        # If base_dir is root (/) and allow_root_scan is False, raise error.
+        # We check allowed_root too because if allowed_root is /, set_scope could later set it to /.
+        if not allow_root_scan:
+            if self.base_dir == "/" or self.allowed_root == "/":
+                 raise ValueError("RAG_Tool: Scanning the filesystem root (/) is forbidden for security reasons. Use allow_root_scan=True to override if absolutely necessary.")
 
         # Ensure initial base_dir is within allowed_root
         if os.path.commonpath([self.allowed_root, self.base_dir]) != self.allowed_root:
