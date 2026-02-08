@@ -25,9 +25,9 @@
       persistence_location /mosquitto/data/
       log_dest stdout
       log_type all
-      listener {{ mqtt_port }}
+      listener {{ mqtt_port }} 0.0.0.0
       allow_anonymous true
-      listener {{ mqtt_websocket_port }}
+      listener {{ mqtt_websocket_port }} 0.0.0.0
       protocol websockets
     mode: '0644'
   become: yes
@@ -202,8 +202,8 @@
       ansible.builtin.wait_for:
         host: "127.0.0.1"
         port: "{{ mqtt_port }}"
-        timeout: 60
-      become: no
+        timeout: 300
+        delay: 5
 
     - name: Wait for MQTT service to be healthy in Consul
       ansible.builtin.uri:
@@ -241,6 +241,16 @@
     - name: Display Nomad Node Status
       ansible.builtin.debug:
         var: nomad_node_status.stdout
+
+    - name: Check ports usage (debug)
+      ansible.builtin.shell: "ss -tulpn | grep {{ mqtt_port }}"
+      register: mqtt_port_check
+      ignore_errors: yes
+      become: yes
+
+    - name: Display ports usage
+      ansible.builtin.debug:
+        var: mqtt_port_check.stdout
 
     - name: Get MQTT allocations
       ansible.builtin.command:
