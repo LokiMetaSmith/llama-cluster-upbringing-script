@@ -27,10 +27,10 @@ job "mqtt" {
       port     = "mqtt"
       provider = "consul"
       check {
-        type     = "tcp"
+        type     = "script"
         name     = "mqtt_health"
-        port     = "mqtt"
-        address_mode = "host"
+        command  = "/usr/bin/env"
+        args     = ["python3", "-c", "import socket; s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.settimeout(2); s.connect(('127.0.0.1', {{ mqtt_port }})); s.close()"]
         interval = "10s"
         timeout  = "2s"
         check_restart {
