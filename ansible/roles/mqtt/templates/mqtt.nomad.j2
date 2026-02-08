@@ -6,6 +6,7 @@ job "mqtt" {
     count = 1
 
     network {
+      mode = "host"
       port "mqtt" {
         static = {{ mqtt_port }}
       }
@@ -25,33 +26,28 @@ job "mqtt" {
       name     = "mqtt"
       port     = "mqtt"
       provider = "consul"
-      #check {
-      #  type     = "tcp"
-      #  name     = "mqtt_tcp_health"
-      #  port     = "mqtt"
-      #  interval = "10s"
-      #  timeout  = "2s"
-      #}
-        check {
-          type     = "tcp"
-          name     = "mqtt_health"
-          port     = "mqtt"
-          interval = "10s"
-          timeout  = "2s"
-          check_restart {
-            limit = 3
-            grace = "90s"
-            ignore_warnings = false
-          }
+      check {
+        type     = "tcp"
+        name     = "mqtt_health"
+        port     = "mqtt"
+        address_mode = "host"
+        interval = "10s"
+        timeout  = "2s"
+        check_restart {
+          limit = 3
+          grace = "90s"
+          ignore_warnings = false
         }
-      
+      }
     }
+
     restart {
       attempts = 10
       interval = "5m"
       delay    = "25s"
       mode     = "delay"
     }
+
     task "mosquitto" {
       driver = "docker"
 
