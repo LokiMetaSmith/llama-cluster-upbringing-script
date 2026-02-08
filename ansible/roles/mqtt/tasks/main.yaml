@@ -166,6 +166,12 @@
     port: "{{ nomad_http_port }}"
     timeout: 60
 
+- name: Ensure Mosquitto image is pulled
+  ansible.builtin.command:
+    cmd: "docker pull eclipse-mosquitto:2"
+  become: yes
+  changed_when: false
+
 - name: Deploy MQTT Job
   block:
     - name: Run mqtt job
@@ -179,7 +185,7 @@
 
     - name: Wait for MQTT port to be open
       ansible.builtin.wait_for:
-        host: "{{ cluster_ip }}"
+        host: "127.0.0.1"
         port: "{{ mqtt_port }}"
         timeout: 60
       become: no
