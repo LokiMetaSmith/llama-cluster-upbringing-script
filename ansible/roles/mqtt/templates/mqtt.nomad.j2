@@ -6,13 +6,11 @@ job "mqtt" {
     count = 1
 
     network {
-      mode = "bridge"
+      mode = "host"
       port "mqtt" {
-        to     = {{ mqtt_port }}
         static = {{ mqtt_port }}
       }
       port "ws" {
-        to     = {{ mqtt_websocket_port }}
         static = {{ mqtt_websocket_port }}
       }
     }
