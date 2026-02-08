@@ -6,7 +6,6 @@ job "mqtt" {
     count = 1
 
     network {
-      mode = "host"
       port "mqtt" {
         static = {{ mqtt_port }}
       }
@@ -58,6 +57,7 @@ job "mqtt" {
 
       config {
         image = "eclipse-mosquitto:2"
+        network_mode = "host"
         # Host mode networking requires no port map here
         cap_add = ["SETUID", "SETGID", "CHOWN", "NET_BIND_SERVICE"]
         command = "mosquitto"
