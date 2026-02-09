@@ -61,7 +61,7 @@ nodes:
   - id: "Output"
     type: "OutputNode"
     inputs:
-      - name: "final_output"
+      - name: "final_response"
         connection:
           from_node: "ReasoningStep"
           from_output: "response"
