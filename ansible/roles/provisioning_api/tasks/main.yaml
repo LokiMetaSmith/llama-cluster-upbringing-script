@@ -20,6 +20,13 @@
   become: yes
   when: inventory_hostname in groups['controller_nodes']
 
+- name: Allow Provisioning API port in UFW
+  ansible.builtin.command: ufw allow {{ provisioning_api_port }}/tcp
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+  when: inventory_hostname in groups['controller_nodes']
+
 - name: Enable and start provisioning API service
   systemd:
     name: provisioning-api

@@ -22,9 +22,15 @@
     mode: '0644'
   become: yes
 
+- name: Allow Home Assistant port in UFW
+  ansible.builtin.command: ufw allow {{ home_assistant_port }}/tcp
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+
 - name: Wait for Nomad API to be ready before submitting job
   ansible.builtin.uri:
-    url: "http://{{ ansible_facts['default_ipv4']['address'] }}:{{ nomad_http_port }}/v1/status/leader"
+    url: "http://127.0.0.1:{{ nomad_http_port }}/v1/status/leader"
     method: GET
     status_code: 200
   register: home_assistant_nomad_api_status
@@ -47,7 +53,7 @@
 
 - name: Wait for MQTT service to be available in Consul before starting HA
   ansible.builtin.uri:
-    url: "http://{{ ansible_facts['default_ipv4']['address'] }}:{{ consul_http_port }}/v1/health/service/mqtt?passing"
+    url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/mqtt?passing"
     headers:
       X-Consul-Token: "{{ home_assistant_consul_token.content | b64decode | trim }}"
     return_content: yes

@@ -24,6 +24,12 @@
     NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
   register: nomad_job_run
 
+- name: Allow Docker Registry port in UFW
+  ansible.builtin.command: ufw allow {{ docker_registry_port }}/tcp
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+
 - name: Wait for Registry to be ready with debug on failure
   block:
     - name: Wait for Registry to be ready

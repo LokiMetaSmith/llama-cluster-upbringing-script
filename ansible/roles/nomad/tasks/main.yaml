@@ -366,9 +366,26 @@
   register: nomad_service_start
   when: not ansible_check_mode
 
+- name: Allow Nomad TCP ports in UFW
+  ansible.builtin.command: ufw allow {{ item }}/tcp
+  become: yes
+  loop:
+    - "{{ nomad_http_port }}"
+    - 4647
+  changed_when: false
+  ignore_errors: yes
+
+- name: Allow Nomad Mixed (TCP/UDP) ports in UFW
+  ansible.builtin.command: ufw allow {{ item }}
+  become: yes
+  loop:
+    - 4648
+  changed_when: false
+  ignore_errors: yes
+
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
+    url: "http://127.0.0.1:{{ nomad_http_port }}/v1/agent/self"
     status_code: 200
   register: nomad_api_status
   until: nomad_api_status.status == 200

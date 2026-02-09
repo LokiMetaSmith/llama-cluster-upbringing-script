@@ -97,3 +97,9 @@
     mode: '0644'
   become: yes
   notify: Run Nanochat Nomad job
+
+- name: Allow Nanochat port in UFW
+  ansible.builtin.command: ufw allow {{ nanochat_port }}/tcp
+  become: yes
+  changed_when: false
+  ignore_errors: yes

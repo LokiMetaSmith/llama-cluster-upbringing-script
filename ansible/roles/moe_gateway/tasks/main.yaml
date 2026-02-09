@@ -32,13 +32,19 @@
   notify:
     - Run moe-gateway job
 
+- name: Allow Router/Gateway port in UFW
+  ansible.builtin.command: ufw allow {{ router_port }}/tcp
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+
 - name: Debug Nomad Address
   ansible.builtin.debug:
     msg: "NOMAD_ADDR is http://{{ cluster_ip }}:{{ nomad_http_port }}"
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:{{ nomad_http_port }}/v1/status/leader"
+    url: "http://127.0.0.1:{{ nomad_http_port }}/v1/status/leader"
     method: GET
     status_code: 200
   register: nomad_api_status
@@ -79,7 +85,7 @@
 
     - name: Wait for the moe-gateway service to be healthy in Consul
       ansible.builtin.uri:
-        url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/moe-gateway"
+        url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/moe-gateway"
         method: GET
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token }}"
