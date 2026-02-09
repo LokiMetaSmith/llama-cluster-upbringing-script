@@ -914,6 +914,9 @@ class TwinService(FrameProcessor):
         if frame.text.strip().startswith("/deep"):
             logging.info("Deep Context / Slow Thinking mode activated.")
             workflow_file = "workflows/deep_context.yaml"
+        elif frame.text.strip().startswith(("/adversary", "/sim", "/redteam")):
+            logging.info("Adversarial Simulation / Red Teaming mode activated.")
+            workflow_file = "workflows/adversarial_simulation.yaml"
 
         try:
             workflow_runner = WorkflowRunner(workflow_file, runner_id=request_id)

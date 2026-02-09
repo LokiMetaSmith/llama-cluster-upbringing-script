@@ -1,0 +1,76 @@
+name: "Adversarial Simulation / Red Teaming Workflow"
+nodes:
+  - id: "Input"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "user_text"
+    inputs: []
+
+  - id: "DraftingStep"
+    type: "SimpleLLMNode"
+    model_tier: "balanced"
+    inputs:
+      - name: "user_text"
+        connection:
+          from_node: "Input"
+          from_output: "user_text"
+      - name: "system_prompt"
+        value: "You are a helpful assistant. Write a first draft response or plan to address the user's request. Keep it professional but standard."
+
+  - id: "ProfilingStep"
+    type: "SimpleLLMNode"
+    model_tier: "capable"
+    inputs:
+      - name: "user_text"
+        connection:
+          from_node: "Input"
+          from_output: "user_text"
+      - name: "draft_response"
+        connection:
+          from_node: "DraftingStep"
+          from_output: "response"
+      - name: "system_prompt"
+        value: "Identify the primary adversary, counterparty, or skeptic relevant to this request (e.g., Boss, Landlord, Vendor, Hacker, Judge). List their top 3 hidden incentives, fears, or constraints. Be cynical. Who are they and what do they really want?"
+
+  - id: "SimulationStep"
+    type: "SimpleLLMNode"
+    model_tier: "capable"
+    inputs:
+      - name: "draft_response"
+        connection:
+          from_node: "DraftingStep"
+          from_output: "response"
+      - name: "adversary_profile"
+        connection:
+          from_node: "ProfilingStep"
+          from_output: "response"
+      - name: "system_prompt"
+        value: "You are now role-playing the ADVERSARY identified in the profile. Read the 'Draft Response'. React to it from your selfish perspective. Find holes, ambiguities, or weaknesses you can exploit. What is your internal monologue? How would you counter this?"
+
+  - id: "RefinementStep"
+    type: "SimpleLLMNode"
+    model_tier: "capable"
+    inputs:
+      - name: "draft_response"
+        connection:
+          from_node: "DraftingStep"
+          from_output: "response"
+      - name: "adversary_profile"
+        connection:
+          from_node: "ProfilingStep"
+          from_output: "response"
+      - name: "simulation_result"
+        connection:
+          from_node: "SimulationStep"
+          from_output: "response"
+      - name: "system_prompt"
+        value: "You are a strategic advisor. Review the 'Draft Response' and the 'Adversary Simulation'. Rewrite the draft to be robust against the identified exploits. Address the adversary's hidden incentives directly or indirectly to gain leverage. The final output should be the improved response/plan only."
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_output"
+        connection:
+          from_node: "RefinementStep"
+          from_output: "response"

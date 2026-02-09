@@ -94,6 +94,12 @@ class SimpleLLMNode(Node):
                 user_text = "Hello"
 
             system_prompt = self.config.get("system_prompt", "You are a helpful assistant.")
+            # Allow overriding system prompt via input
+            if any(i["name"] == "system_prompt" for i in self.config.get("inputs", [])):
+                input_system_prompt = self.get_input(context, "system_prompt")
+                if input_system_prompt:
+                    system_prompt = input_system_prompt
+
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_text}
