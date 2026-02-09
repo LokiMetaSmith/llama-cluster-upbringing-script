@@ -49,6 +49,12 @@
     enabled: yes
     daemon_reload: yes
 
+- name: Allow Headscale port in UFW
+  ansible.builtin.command: ufw allow {{ headscale_port }}/tcp
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+
 - name: Wait for headscale to be up
   wait_for:
     port: "{{ headscale_port }}"

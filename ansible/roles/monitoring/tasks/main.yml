@@ -39,6 +39,17 @@
     mode: '0644'
   become: yes
 
+- name: Allow Monitoring ports in UFW
+  ansible.builtin.command: ufw allow {{ item }}/tcp
+  become: yes
+  loop:
+    - "{{ prometheus_port }}"
+    - "{{ grafana_port }}"
+    - "{{ node_exporter_port }}"
+    - "{{ mqtt_exporter_metrics_port }}"
+  changed_when: false
+  ignore_errors: yes
+
 - name: Deploy Node Exporter
   block:
     - name: Template node-exporter job
@@ -140,7 +151,7 @@
   block:
     - name: Wait for MQTT service to be ready
       ansible.builtin.wait_for:
-        host: "{{ cluster_ip }}"
+        host: "127.0.0.1"
         port: "{{ mqtt_port }}"
         timeout: 300
         state: started

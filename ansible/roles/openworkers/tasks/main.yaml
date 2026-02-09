@@ -8,6 +8,17 @@
     - openworkers-bootstrap
   notify: Run OpenWorkers jobs
 
+- name: Allow OpenWorkers ports in UFW
+  ansible.builtin.command: ufw allow {{ item }}/tcp
+  become: yes
+  loop:
+    - "{{ openworkers_api_port }}"
+    - "{{ openworkers_dash_port }}"
+    - "{{ postgate_port }}"
+  changed_when: false
+  ignore_errors: yes
+  when: openworkers_enabled | bool
+
 - name: Run OpenWorkers bootstrap job
   community.general.nomad_job:
     host: "{{ advertise_ip }}"

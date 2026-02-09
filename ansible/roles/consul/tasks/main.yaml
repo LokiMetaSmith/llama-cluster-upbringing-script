@@ -337,6 +337,25 @@
   tags:
     - consul_configure
 
+- name: Allow Consul TCP ports in UFW
+  ansible.builtin.command: ufw allow {{ item }}/tcp
+  become: yes
+  loop:
+    - "{{ consul_http_port }}"
+    - 8300
+  changed_when: false
+  ignore_errors: yes
+
+- name: Allow Consul Mixed (TCP/UDP) ports in UFW
+  ansible.builtin.command: ufw allow {{ item }}
+  become: yes
+  loop:
+    - 8600
+    - 8301
+    - 8302
+  changed_when: false
+  ignore_errors: yes
+
 - name: Flush handlers to ensure Consul is ready
   meta: flush_handlers
 
@@ -344,7 +363,7 @@
   block:
     - name: Wait for Consul API to be ready
       ansible.builtin.uri:
-        url: "http://{{ advertise_ip }}:{{ consul_http_port }}/v1/status/leader"
+        url: "http://127.0.0.1:{{ consul_http_port }}/v1/status/leader"
         validate_certs: no
       register: consul_status
       until: consul_status.status == 200
