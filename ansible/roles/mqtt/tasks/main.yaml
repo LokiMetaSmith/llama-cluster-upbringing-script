@@ -187,6 +187,18 @@
   changed_when: false
   ignore_errors: yes
 
+- name: Allow MQTT port in UFW
+  ansible.builtin.command: ufw allow {{ mqtt_port }}/tcp
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+
+- name: Allow MQTT Websocket port in UFW
+  ansible.builtin.command: ufw allow {{ mqtt_websocket_port }}/tcp
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+
 - name: Deploy MQTT Job
   block:
     - name: Run mqtt job
@@ -200,7 +212,7 @@
 
     - name: Wait for MQTT port to be open
       ansible.builtin.wait_for:
-        host: "{{ cluster_ip }}"
+        host: "127.0.0.1"
         port: "{{ mqtt_port }}"
         timeout: 60
       become: no
