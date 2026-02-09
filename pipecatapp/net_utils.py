@@ -3,6 +3,8 @@ import urllib.parse
 import socket
 import asyncio
 import logging
+import os
+import fnmatch
 
 def ensure_ipv6_brackets(host: str) -> str:
     """
@@ -51,8 +53,7 @@ async def validate_url(url: str) -> str:
         url (str): The URL to validate.
 
     Returns:
-        str: The safe URL to use. For HTTP, the hostname is replaced with the
-             validated IP address to prevent DNS rebinding attacks.
+        str: The original URL if it passes validation.
 
     Raises:
         ValueError: If the URL is unsafe or invalid.
@@ -69,7 +70,28 @@ async def validate_url(url: str) -> str:
     if not hostname:
          raise ValueError("Blocked: Invalid hostname.")
 
-    # Block localhost immediately
+    # Check against SSRF_ALLOWLIST env var
+    # Format: comma-separated list of domains/IPs/CIDRs (e.g., "*.internal,192.168.1.5,10.0.0.0/8")
+    allowlist_env = os.getenv("SSRF_ALLOWLIST", "")
+    allowlist = [entry.strip() for entry in allowlist_env.split(",") if entry.strip()]
+
+    is_allowed = False
+    for entry in allowlist:
+        if fnmatch.fnmatch(hostname, entry):
+            is_allowed = True
+            break
+        # Check if entry is CIDR and hostname is IP
+        try:
+            if ipaddress.ip_address(hostname) in ipaddress.ip_network(entry, strict=False):
+                is_allowed = True
+                break
+        except ValueError:
+            pass
+
+    if is_allowed:
+        return url
+
+    # Block localhost immediately unless allowed
     if hostname.lower() in ('localhost', '127.0.0.1', '::1', '0.0.0.0'):
          raise ValueError(f"Blocked: Access to {hostname} is forbidden.")
 
@@ -85,44 +107,28 @@ async def validate_url(url: str) -> str:
          # Fail closed if DNS fails
          raise ValueError(f"Blocked: Could not resolve hostname {hostname}.")
 
-    safe_ip = None
     for ip_str in ips:
          try:
             ip = ipaddress.ip_address(ip_str)
          except ValueError:
              continue
 
+         # Check allowlist for resolved IP as well
+         ip_allowed = False
+         for entry in allowlist:
+             try:
+                 if ip in ipaddress.ip_network(entry, strict=False):
+                     ip_allowed = True
+                     break
+             except ValueError:
+                 pass
+
+         if ip_allowed:
+             continue
+
          # Check for private, loopback, link-local (169.254.x.x), unspecified (0.0.0.0)
          if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_unspecified:
             raise ValueError(f"Blocked: Host {hostname} resolves to restricted IP {ip_str}.")
 
-         # Capture the first valid IP found
-         if not safe_ip:
-             safe_ip = ip_str
-
-    if not safe_ip:
-        raise ValueError(f"Blocked: Could not resolve valid IP for {hostname}.")
-
-    # DNS Rebinding Protection:
-    # If the scheme is HTTP, we rewrite the URL to use the resolved IP address.
-    # This ensures that the subsequent request goes to the IP we just validated,
-    # preventing an attacker from changing the DNS record between check and use.
-    if parsed.scheme == 'http':
-        safe_host = ensure_ipv6_brackets(safe_ip)
-        # Reconstruct URL using format_url helper
-        # format_url(scheme, host, port, path)
-        # We need to handle port if it was in the original URL
-        port = parsed.port
-        path = parsed.path
-        if parsed.query:
-            path += f"?{parsed.query}"
-        if parsed.fragment:
-            path += f"#{parsed.fragment}"
-
-        return format_url(parsed.scheme, safe_host, port, path)
-
-    # For HTTPS, we cannot replace the hostname with IP easily because SSL verification
-    # would fail (certificate is for hostname, not IP).
-    # DNS rebinding is mitigated for HTTPS if SSL verification is enabled (default),
-    # as the attacker cannot easily obtain a valid certificate for the target internal IP.
+    # Return original URL to preserve Virtual Host functionality
     return url

@@ -107,7 +107,8 @@ class WebBrowserTool:
         """
         try:
             # Security Check: Validate URL before navigation
-            # Use safe_url which may have hostname replaced by IP for HTTP to prevent DNS rebinding
+            # Returns the original URL if safe (or allowlisted) to support Virtual Hosts.
+            # Note: DNS rebinding protection is limited here to favor functionality.
             safe_url = await validate_url(url)
 
             await self.ensure_initialized()

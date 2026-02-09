@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import os
+from unittest.mock import patch
 
 # Add repo root to path so we can import pipecatapp
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -9,25 +10,21 @@ from pipecatapp.net_utils import validate_url
 
 async def test_validate_url_safe():
     print("Testing safe URLs...")
-    # Public URLs should pass and return rewritten URL for HTTP
+    # Public URLs should pass and return ORIGINAL URL
     try:
         url_https = "https://google.com"
         res_https = await validate_url(url_https)
         if res_https != url_https:
-            print(f"WARNING: HTTPS URL was rewritten: {res_https}")
+            print(f"FAILED: HTTPS URL was rewritten: {res_https}")
+            sys.exit(1)
 
         url_http = "http://example.com"
         res_http = await validate_url(url_http)
-        if res_http == url_http:
-             print(f"FAILED: HTTP URL was NOT rewritten to IP: {res_http}")
+        if res_http != url_http:
+             print(f"FAILED: HTTP URL was rewritten: {res_http}")
              sys.exit(1)
 
-        # Check if rewritten URL contains IP (simple check for digits)
-        if not any(char.isdigit() for char in res_http):
-             print(f"FAILED: HTTP URL does not look like it contains IP: {res_http}")
-             sys.exit(1)
-
-        print(f"Safe URLs passed. HTTP rewritten to: {res_http}")
+        print(f"Safe URLs passed. Original URL preserved: {res_http}")
     except ValueError as e:
         if "Could not resolve" in str(e):
             print(f"Skipping DNS test due to network issues: {e}")
@@ -77,6 +74,51 @@ async def test_validate_url_unsafe_scheme():
                 sys.exit(1)
     print("Unsafe schemes blocked correctly.")
 
+async def test_allowlist():
+    print("Testing SSRF_ALLOWLIST...")
+    # Simulate environment variable
+    with patch.dict(os.environ, {"SSRF_ALLOWLIST": "192.168.1.5,*.internal.local,10.0.0.0/24"}):
+
+        # Test allowed IP
+        allowed_ip = "http://192.168.1.5"
+        try:
+            res = await validate_url(allowed_ip)
+            print(f"Allowed IP passed: {res}")
+        except ValueError as e:
+            print(f"FAILED: Allowed IP {allowed_ip} was blocked: {e}")
+            sys.exit(1)
+
+        # Test blocked IP (not in list)
+        blocked_ip = "http://192.168.1.6"
+        try:
+            await validate_url(blocked_ip)
+            print(f"FAILED: Blocked IP {blocked_ip} passed (should be blocked)")
+            sys.exit(1)
+        except ValueError:
+            pass
+
+        # Test CIDR
+        cidr_ip = "http://10.0.0.42"
+        try:
+            res = await validate_url(cidr_ip)
+            print(f"CIDR IP passed: {res}")
+        except ValueError as e:
+            print(f"FAILED: CIDR IP {cidr_ip} was blocked: {e}")
+            sys.exit(1)
+
+        # Test Wildcard Domain (mock DNS resolution to unsafe IP)
+        wildcard_domain = "http://service.internal.local"
+        # We need to mock socket.getaddrinfo to return a private IP for this domain
+        # but since allowlist checks hostname first, it should pass regardless of IP resolution
+        try:
+            res = await validate_url(wildcard_domain)
+            print(f"Wildcard domain passed: {res}")
+        except ValueError as e:
+            print(f"FAILED: Wildcard domain {wildcard_domain} was blocked: {e}")
+            sys.exit(1)
+
+    print("Allowlist tests passed.")
+
 if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -85,6 +127,7 @@ if __name__ == "__main__":
         await test_validate_url_safe()
         await test_validate_url_unsafe_ip()
         await test_validate_url_unsafe_scheme()
+        await test_allowlist()
         print("All tests passed!")
 
     loop.run_until_complete(run_tests())
