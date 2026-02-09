@@ -1014,6 +1014,9 @@ class TwinService(FrameProcessor):
         elif frame.text.strip().startswith("/manager") or frame.text.strip().startswith("/openclaw"):
             logging.info("Project Manager / OpenClaw mode activated.")
             workflow_file = "workflows/manager.yaml"
+        elif frame.text.strip().startswith(("/adversary", "/sim", "/redteam")):
+            logging.info("Adversarial Simulation / Red Teaming mode activated.")
+            workflow_file = "workflows/adversarial_simulation.yaml"
 
         try:
             workflow_runner = WorkflowRunner(workflow_file, runner_id=request_id)
