@@ -200,7 +200,7 @@
 
     - name: Wait for MQTT port to be open
       ansible.builtin.wait_for:
-        host: "127.0.0.1"
+        host: "{{ cluster_ip }}"
         port: "{{ mqtt_port }}"
         timeout: 60
       become: no
