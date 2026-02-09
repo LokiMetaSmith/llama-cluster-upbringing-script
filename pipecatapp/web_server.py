@@ -277,6 +277,12 @@ async def internal_chat(payload: InternalChatRequest, api_key: str = Security(ge
         safe_url = await validate_url(str(payload.response_url))
         # Update payload with safe URL
         payload.response_url = safe_url
+
+        # Validate audio_url if present
+        if payload.audio_url:
+            safe_audio_url = await validate_url(str(payload.audio_url))
+            payload.audio_url = safe_audio_url
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -311,8 +317,10 @@ async def internal_chat_sync(payload: InternalChatRequest, api_key: str = Securi
         # Wait for response (timeout 60s)
         try:
             await asyncio.wait_for(event.wait(), timeout=60.0)
-            response_text = sync_response_store[request_id]["response"]
-            return JSONResponse(content={"response": response_text})
+            response_data = sync_response_store[request_id]["response"]
+            if isinstance(response_data, str):
+                 return JSONResponse(content={"response": response_data})
+            return JSONResponse(content=response_data)
         except asyncio.TimeoutError:
             return JSONResponse(status_code=504, content={"message": "Agent timeout"})
 

@@ -21,6 +21,7 @@ import threading
 from contextlib import asynccontextmanager
 
 from pipecat.frames.frames import (
+    Frame,
     AudioRawFrame,
     TextFrame,
     UserImageRawFrame as VisionImageRawFrame,
@@ -28,6 +29,15 @@ from pipecat.frames.frames import (
     UserStoppedSpeakingFrame,
     TranscriptionFrame,
 )
+import tempfile
+import uuid
+
+class AudioFileFrame(Frame):
+    """A frame containing a path to an audio file."""
+    def __init__(self, file_path: str, meta: dict = None):
+        super().__init__()
+        self.file_path = file_path
+        self.meta = meta or {}
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
@@ -276,6 +286,11 @@ class FasterWhisperSTTService(FrameProcessor):
         segments, _ = self.model.transcribe(audio_data, language="en")
         return "".join(segment.text for segment in segments).strip()
 
+    def _transcribe_file_sync(self, file_path: str) -> str:
+        """Synchronous helper for file transcription."""
+        segments, _ = self.model.transcribe(file_path, language="en")
+        return "".join(segment.text for segment in segments).strip()
+
     async def process_frame(self, frame, direction):
         """Processes audio frames, buffering and transcribing them.
 
@@ -301,6 +316,19 @@ class FasterWhisperSTTService(FrameProcessor):
 
             if full_text:
                 await self.push_frame(TranscriptionFrame(full_text))
+        elif isinstance(frame, AudioFileFrame):
+            logging.info(f"Processing AudioFileFrame: {frame.file_path}")
+            loop = asyncio.get_running_loop()
+            try:
+                full_text = await loop.run_in_executor(None, self._transcribe_file_sync, frame.file_path)
+                if full_text:
+                    await self.push_frame(TranscriptionFrame(full_text, meta=frame.meta))
+            except Exception as e:
+                logging.error(f"Error transcribing audio file: {e}")
+            finally:
+                # Cleanup temp file
+                if os.path.exists(frame.file_path):
+                    os.remove(frame.file_path)
         else:
             await self.push_frame(frame, direction)
 
@@ -342,6 +370,39 @@ class GroqSTTService(FrameProcessor):
             logging.error(f"Groq STT error: {e}")
             return ""
 
+    def _read_file_sync(self, file_path: str):
+        with open(file_path, "rb") as f:
+            return f.read()
+
+    async def _transcribe_file(self, file_path: str):
+        try:
+            loop = asyncio.get_running_loop()
+            file_content = await loop.run_in_executor(None, self._read_file_sync, file_path)
+
+            filename = os.path.basename(file_path)
+            # Basic mime type guess or fallback
+            mime_type = "audio/mpeg"
+            if filename.endswith(".wav"):
+                mime_type = "audio/wav"
+            elif filename.endswith(".ogg"):
+                mime_type = "audio/ogg"
+            elif filename.endswith(".m4a"):
+                mime_type = "audio/m4a"
+
+            files = {'file': (filename, file_content, mime_type)}
+            data = {'model': self.model, 'response_format': 'json'}
+
+            response = await self.client.post(
+                "https://api.groq.com/openai/v1/audio/transcriptions",
+                files=files,
+                data=data
+            )
+            response.raise_for_status()
+            return response.json().get("text", "").strip()
+        except Exception as e:
+            logging.error(f"Groq STT file error: {e}")
+            return ""
+
     async def process_frame(self, frame, direction):
         if isinstance(frame, UserStartedSpeakingFrame):
             self.audio_buffer.clear()
@@ -357,6 +418,13 @@ class GroqSTTService(FrameProcessor):
             text = await self._transcribe(audio_bytes)
             if text:
                 await self.push_frame(TranscriptionFrame(text))
+        elif isinstance(frame, AudioFileFrame):
+            logging.info(f"GroqSTT processing file: {frame.file_path}")
+            text = await self._transcribe_file(frame.file_path)
+            if text:
+                await self.push_frame(TranscriptionFrame(text, meta=frame.meta))
+            if os.path.exists(frame.file_path):
+                os.remove(frame.file_path)
         else:
             await self.push_frame(frame, direction)
 
@@ -648,17 +716,44 @@ class TextMessageInjector(FrameProcessor):
                 message = await self.queue.get()
                 # The message can be a simple string (from UI) or a dict (from gateway)
                 if isinstance(message, dict):
+                    audio_url = message.get("audio_url")
+                    audio_base64 = message.get("audio_base64")
                     text = message.get("text")
                     is_system_alert = message.get("is_system_alert", False)
 
-                    if is_system_alert:
-                        prefix = "SYSTEM ALERT: "
-                        logging.warning(f"Injecting system alert: {text}")
-                        # Prepend alert tag to text to ensure the agent takes it seriously
-                        text = f"{prefix}{text}"
+                    if audio_url:
+                        logging.info(f"Downloading audio from: {audio_url}")
+                        try:
+                            # Create a temp file to store the audio
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
+                                async with httpx.AsyncClient() as client:
+                                    resp = await client.get(audio_url)
+                                    if resp.status_code == 200:
+                                        tmp_file.write(resp.content)
+                                        tmp_path = tmp_file.name
+                                        await self.push_frame(AudioFileFrame(tmp_path, meta=message))
+                                    else:
+                                        logging.error(f"Failed to download audio from {audio_url}: {resp.status_code}")
+                        except Exception as e:
+                            logging.error(f"Error downloading audio: {e}")
 
-                    # Pass the whole dict along in the frame's meta attribute
-                    if text:
+                    elif audio_base64:
+                        logging.info("Decoding base64 audio message")
+                        try:
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
+                                tmp_file.write(base64.b64decode(audio_base64))
+                                tmp_path = tmp_file.name
+                                await self.push_frame(AudioFileFrame(tmp_path, meta=message))
+                        except Exception as e:
+                            logging.error(f"Error decoding base64 audio: {e}")
+
+                    elif text:
+                        if is_system_alert:
+                            prefix = "SYSTEM ALERT: "
+                            logging.warning(f"Injecting system alert: {text}")
+                            # Prepend alert tag to text to ensure the agent takes it seriously
+                            text = f"{prefix}{text}"
+
                         logging.info(f"Injecting text message from gateway: {text}")
                         await self.push_frame(TranscriptionFrame(text, meta=message))
                 elif isinstance(message, str):
@@ -836,7 +931,7 @@ class TwinService(FrameProcessor):
     initializes the workflow engine, and sends the final response.
     The core logic is now managed by the declarative workflow system.
     """
-    def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None, llm_base_url=None):
+    def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None, llm_base_url=None, tts_service=None):
         """Initializes the TwinService.
 
         Args:
@@ -846,6 +941,7 @@ class TwinService(FrameProcessor):
             app_config (dict): The application's configuration loaded from Consul.
             approval_queue: The queue for handling tool use approval requests.
             llm_base_url (str, optional): The base URL of the LLM service.
+            tts_service (FrameProcessor, optional): The TTS service for generating audio responses.
         """
         super().__init__()
         self.router_llm = llm
@@ -854,6 +950,7 @@ class TwinService(FrameProcessor):
         self.runner = runner
         self.app_config = app_config or {}
         self.approval_queue = approval_queue
+        self.tts_service = tts_service
         self.short_term_memory = []
 
         # Optimization: Pre-load external experts config to avoid json.loads in process_frame loop
@@ -914,6 +1011,9 @@ class TwinService(FrameProcessor):
         if frame.text.strip().startswith("/deep"):
             logging.info("Deep Context / Slow Thinking mode activated.")
             workflow_file = "workflows/deep_context.yaml"
+        elif frame.text.strip().startswith("/manager") or frame.text.strip().startswith("/openclaw"):
+            logging.info("Project Manager / OpenClaw mode activated.")
+            workflow_file = "workflows/manager.yaml"
 
         try:
             workflow_runner = WorkflowRunner(workflow_file, runner_id=request_id)
@@ -988,7 +1088,20 @@ class TwinService(FrameProcessor):
         if self.current_request_meta and self.current_request_meta.get("is_sync"):
             request_id = self.current_request_meta.get("request_id")
             if request_id and request_id in web_server.sync_response_store:
-                web_server.sync_response_store[request_id]["response"] = text
+                response_data = {"response": text}
+
+                # Generate TTS if available
+                if self.tts_service:
+                    try:
+                         # Use run_in_executor to avoid blocking
+                         loop = asyncio.get_running_loop()
+                         audio_bytes = await loop.run_in_executor(None, self.tts_service._synthesize_sync, text)
+                         audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+                         response_data["audio_base64"] = audio_b64
+                    except Exception as e:
+                         logging.error(f"TTS generation failed for sync response: {e}")
+
+                web_server.sync_response_store[request_id]["response"] = response_data
                 web_server.sync_response_store[request_id]["event"].set()
                 logging.info(f"Set synchronous response for request {request_id}")
             else:
@@ -996,9 +1109,22 @@ class TwinService(FrameProcessor):
         elif self.current_request_meta and "response_url" in self.current_request_meta:
             response_url = self.current_request_meta["response_url"]
             request_id = self.current_request_meta["request_id"]
+
+            response_payload = {"request_id": request_id, "content": text}
+
+            # Generate TTS if available
+            if self.tts_service:
+                 try:
+                     loop = asyncio.get_running_loop()
+                     audio_bytes = await loop.run_in_executor(None, self.tts_service._synthesize_sync, text)
+                     audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+                     response_payload["audio_base64"] = audio_b64
+                 except Exception as e:
+                     logging.error(f"TTS generation failed for callback response: {e}")
+
             try:
                 # Bolt ⚡ Optimization: Use reused client instead of creating new one
-                await self.http_client.post(response_url, json={"request_id": request_id, "content": text})
+                await self.http_client.post(response_url, json=response_payload)
                 logging.info(f"Sent response for request {request_id} to gateway.")
             except Exception as e:
                 logging.error(f"Failed to send response to gateway: {e}")
@@ -1221,29 +1347,7 @@ async def run_agent():
     if app_config.get("approval_mode", False):
         logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
 
-    twin = TwinService(
-        llm=llm,
-        vision_detector=vision_detector,
-        runner=runner,
-        app_config=app_config,
-        approval_queue=approval_queue,
-        llm_base_url=llm_base_url
-    )
-    web_server.app.state.twin_service_instance = twin
-
-    # Start Task Supervisor
-    task_supervisor = TaskSupervisor(twin)
-    asyncio.create_task(task_supervisor.start())
-
-    # Now that the twin service is initialized, mark the application as ready.
-    web_server.app.state.is_ready = True
-    logging.info("Application is fully initialized and ready.")
-
-    text_injector = TextMessageInjector(text_message_queue)
-
-    pipeline_steps = []
-
-    # Pre-initialize TTS services if available
+    # Pre-initialize TTS services if available (Moved up to pass to TwinService)
     tts = None
     websocket_streamer = None
 
@@ -1258,6 +1362,29 @@ async def run_agent():
             logging.warning("TTS voices not configured in Consul. Audio output will be disabled.")
     except Exception as e:
         logging.error(f"Failed to initialize TTS services: {e}")
+
+    twin = TwinService(
+        llm=llm,
+        vision_detector=vision_detector,
+        runner=runner,
+        app_config=app_config,
+        approval_queue=approval_queue,
+        llm_base_url=llm_base_url,
+        tts_service=tts
+    )
+    web_server.app.state.twin_service_instance = twin
+
+    # Start Task Supervisor
+    task_supervisor = TaskSupervisor(twin)
+    asyncio.create_task(task_supervisor.start())
+
+    # Now that the twin service is initialized, mark the application as ready.
+    web_server.app.state.is_ready = True
+    logging.info("Application is fully initialized and ready.")
+
+    text_injector = TextMessageInjector(text_message_queue)
+
+    pipeline_steps = []
 
     if audio_device_index is not None:
         logging.info("Audio device detected. Starting audio pipeline.")

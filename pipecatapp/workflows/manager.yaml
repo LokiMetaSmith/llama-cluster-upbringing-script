@@ -1,45 +1,60 @@
-name: "Agent Loop with Tools"
+name: "Project Manager Workflow"
 nodes:
   - id: "Input"
     type: "InputNode"
     config:
       outputs:
         - name: "user_text"
-        - name: "tools_dict"
         - name: "tool_result"
+        - name: "tools_dict"
     inputs: []
 
   - id: "SystemPrompt"
     type: "SystemPromptNode"
     inputs:
-      - name: "tools"
-        connection:
-          from_node: "Input"
-          from_output: "tools_dict"
+      - name: "custom_prompt"
+        value: |
+          You are an autonomous Project Manager and Lead Developer (OpenClaw style).
+          Your goal is to manage projects, plan tasks, and execute them using available tools.
 
-  - id: "Router"
+          CAPABILITIES:
+          - Plan complex projects using the 'planner' tool.
+          - Execute code using 'code_runner' or 'ansible'.
+          - Manage files using 'file_editor'.
+          - Search and research using 'web_browser' or 'rag'.
+
+          BEHAVIOR:
+          - Always start by creating a plan if the request is complex.
+          - Use tools proactively. Do not ask the user for permission unless critical.
+          - Delegate tasks to specialized tools/experts.
+          - Provide clear, concise status updates.
+          - If a tool fails, analyze the error and retry or adjust the plan.
+
+          Think step-by-step and use the available tools to achieve the goal.
+
+  - id: "ManagerReasoning"
     type: "SimpleLLMNode"
-    model_tier: "balanced"
+    model_tier: "capable"
     inputs:
       - name: "user_text"
         connection:
           from_node: "Input"
           from_output: "user_text"
-      - name: "system_prompt"
-        connection:
-          from_node: "SystemPrompt"
-          from_output: "system_prompt"
       - name: "tool_result"
         connection:
           from_node: "Input"
           from_output: "tool_result"
+      - name: "system_prompt"
+        connection:
+          from_node: "SystemPrompt"
+          from_output: "system_prompt"
 
   - id: "ToolParser"
     type: "ToolParserNode"
     inputs:
       - name: "llm_response"
         connection:
-          from_node: "Router"
+          from_node: "ManagerReasoning"
           from_output: "response"
 
   - id: "ToolExecutor"

@@ -17,10 +17,37 @@ class InputNode(Node):
 
 @registry.register
 class OutputNode(Node):
-    """A node that marks the final output of the workflow."""
+    """A node that marks the final output of the workflow.
+    It collects all connected inputs into a dictionary.
+    """
     async def execute(self, context: WorkflowContext):
-        final_output = self.get_input(context, "final_output")
-        context.final_output = final_output
+        result = {}
+        # Iterate over configured inputs and collect their values
+        if "inputs" in self.config:
+            for input_config in self.config["inputs"]:
+                name = input_config["name"]
+                try:
+                    val = self.get_input(context, name)
+                    if val is not None:
+                        result[name] = val
+                except ValueError:
+                    pass
+
+        # If "final_output" is present in result, and it's the only one,
+        # we might want to preserve legacy behavior?
+        # But TwinService expects a dict with specific keys.
+        # So we just return the result dict.
+
+        # Fallback for workflows that might not have defined inputs correctly
+        # or rely on the old behavior where only one input was allowed.
+        if not result:
+             try:
+                 val = self.get_input(context, "final_output")
+                 result = val # Legacy behavior: return value directly
+             except ValueError:
+                 pass
+
+        context.final_output = result
 
 @registry.register
 class MergeNode(Node):

@@ -11,12 +11,21 @@ class SystemPromptNode(Node):
         tools = context.global_inputs.get("tools", {})
         available_services = self.get_input(context, "available_services") or []
 
-        prompt_file = "prompts/router.txt" # Hardcoded for now
+        # Allow custom prompt override
         try:
-            with open(prompt_file, "r") as f:
-                base_prompt = f.read()
-        except FileNotFoundError:
-            base_prompt = "You are a helpful AI assistant."
+            custom_prompt = self.get_input(context, "custom_prompt")
+        except ValueError:
+            custom_prompt = None
+
+        if custom_prompt:
+            base_prompt = custom_prompt
+        else:
+            prompt_file = "prompts/router.txt" # Default
+            try:
+                with open(prompt_file, "r") as f:
+                    base_prompt = f.read()
+            except FileNotFoundError:
+                base_prompt = "You are a helpful AI assistant."
 
         tools_prompt = "You have access to the following tools:\\n"
         for tool_name, tool in tools.items():
@@ -44,14 +53,36 @@ class ScreenshotNode(Node):
         screenshot = desktop_control_tool.get_desktop_screenshot()
         self.set_output(context, "screenshot_base64", screenshot)
 
+import re
+
 @registry.register
 class ToolParserNode(Node):
     """Parses the LLM response to determine if it's a tool call or a final text response."""
     async def execute(self, context: WorkflowContext):
         llm_response_text = self.get_input(context, "llm_response")
+
+        if not llm_response_text:
+             self.set_output(context, "tool_call_data", None)
+             self.set_output(context, "final_response", "")
+             return
+
+        # Attempt to extract JSON from markdown code blocks
+        json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", llm_response_text, re.DOTALL)
+        if json_match:
+             text_to_parse = json_match.group(1)
+        else:
+             # Attempt to extract JSON object from the text if it looks like a tool call
+             # This handles cases where the LLM chats before the JSON
+             start = llm_response_text.find('{')
+             end = llm_response_text.rfind('}')
+             if start != -1 and end != -1 and end > start:
+                 text_to_parse = llm_response_text[start:end+1]
+             else:
+                 text_to_parse = llm_response_text
+
         try:
-            tool_call = json.loads(llm_response_text)
-            if "tool" in tool_call and "args" in tool_call:
+            tool_call = json.loads(text_to_parse)
+            if isinstance(tool_call, dict) and "tool" in tool_call and "args" in tool_call:
                 # It's a tool call
                 self.set_output(context, "tool_call_data", tool_call)
                 self.set_output(context, "final_response", None)
