@@ -27,9 +27,11 @@ job "mqtt" {
       port     = "mqtt"
       provider = "consul"
       check {
-        type     = "tcp"
+        type     = "script"
         name     = "mqtt_health"
-        port     = "mqtt"
+        task     = "mosquitto"
+        command  = "/bin/sh"
+        args     = ["-c", "nc -z -w 2 127.0.0.1 {{ mqtt_port }}"]
         interval = "10s"
         timeout  = "2s"
         check_restart {
