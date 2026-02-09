@@ -59,6 +59,9 @@ except ImportError:
                  if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_unspecified:
                     raise ValueError(f"Blocked: Host {hostname} resolves to restricted IP {ip_str}.")
 
+            # Fallback returns original URL (DNS rebinding protection limited in fallback mode)
+            return url
+
 class WebBrowserTool:
     """A tool for browsing the web to answer questions and interact with sites.
 
@@ -104,10 +107,12 @@ class WebBrowserTool:
         """
         try:
             # Security Check: Validate URL before navigation
-            await validate_url(url)
+            # Returns the original URL if safe (or allowlisted) to support Virtual Hosts.
+            # Note: DNS rebinding protection is limited here to favor functionality.
+            safe_url = await validate_url(url)
 
             await self.ensure_initialized()
-            await self.page.goto(url)
+            await self.page.goto(safe_url)
             return f"Successfully navigated to {url}."
         except ValueError as ve:
             return f"Security Error: {ve}"

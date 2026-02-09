@@ -3,6 +3,8 @@ import urllib.parse
 import socket
 import asyncio
 import logging
+import os
+import fnmatch
 
 def ensure_ipv6_brackets(host: str) -> str:
     """
@@ -44,11 +46,14 @@ def format_url(scheme: str, host: str, port: int | str | None = None, path: str 
 
     return url
 
-async def validate_url(url: str) -> None:
+async def validate_url(url: str) -> str:
     """Validates that the URL is safe to visit (SSRF protection).
 
     Args:
         url (str): The URL to validate.
+
+    Returns:
+        str: The original URL if it passes validation.
 
     Raises:
         ValueError: If the URL is unsafe or invalid.
@@ -65,7 +70,28 @@ async def validate_url(url: str) -> None:
     if not hostname:
          raise ValueError("Blocked: Invalid hostname.")
 
-    # Block localhost immediately
+    # Check against SSRF_ALLOWLIST env var
+    # Format: comma-separated list of domains/IPs/CIDRs (e.g., "*.internal,192.168.1.5,10.0.0.0/8")
+    allowlist_env = os.getenv("SSRF_ALLOWLIST", "")
+    allowlist = [entry.strip() for entry in allowlist_env.split(",") if entry.strip()]
+
+    is_allowed = False
+    for entry in allowlist:
+        if fnmatch.fnmatch(hostname, entry):
+            is_allowed = True
+            break
+        # Check if entry is CIDR and hostname is IP
+        try:
+            if ipaddress.ip_address(hostname) in ipaddress.ip_network(entry, strict=False):
+                is_allowed = True
+                break
+        except ValueError:
+            pass
+
+    if is_allowed:
+        return url
+
+    # Block localhost immediately unless allowed
     if hostname.lower() in ('localhost', '127.0.0.1', '::1', '0.0.0.0'):
          raise ValueError(f"Blocked: Access to {hostname} is forbidden.")
 
@@ -87,6 +113,22 @@ async def validate_url(url: str) -> None:
          except ValueError:
              continue
 
+         # Check allowlist for resolved IP as well
+         ip_allowed = False
+         for entry in allowlist:
+             try:
+                 if ip in ipaddress.ip_network(entry, strict=False):
+                     ip_allowed = True
+                     break
+             except ValueError:
+                 pass
+
+         if ip_allowed:
+             continue
+
          # Check for private, loopback, link-local (169.254.x.x), unspecified (0.0.0.0)
          if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_unspecified:
             raise ValueError(f"Blocked: Host {hostname} resolves to restricted IP {ip_str}.")
+
+    # Return original URL to preserve Virtual Host functionality
+    return url
