@@ -29,8 +29,9 @@ job "mqtt" {
       check {
         type     = "script"
         name     = "mqtt_health"
-        command  = "/usr/bin/env"
-        args     = ["python3", "-c", "import socket; s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.settimeout(2); s.connect(('127.0.0.1', {{ mqtt_port }})); s.close()"]
+        task     = "mosquitto"
+        command  = "/bin/sh"
+        args     = ["-c", "nc -z -w 2 127.0.0.1 {{ mqtt_port }}"]
         interval = "10s"
         timeout  = "2s"
         check_restart {
