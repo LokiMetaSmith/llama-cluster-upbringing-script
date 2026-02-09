@@ -44,11 +44,15 @@ def format_url(scheme: str, host: str, port: int | str | None = None, path: str 
 
     return url
 
-async def validate_url(url: str) -> None:
+async def validate_url(url: str) -> str:
     """Validates that the URL is safe to visit (SSRF protection).
 
     Args:
         url (str): The URL to validate.
+
+    Returns:
+        str: The safe URL to use. For HTTP, the hostname is replaced with the
+             validated IP address to prevent DNS rebinding attacks.
 
     Raises:
         ValueError: If the URL is unsafe or invalid.
@@ -81,6 +85,7 @@ async def validate_url(url: str) -> None:
          # Fail closed if DNS fails
          raise ValueError(f"Blocked: Could not resolve hostname {hostname}.")
 
+    safe_ip = None
     for ip_str in ips:
          try:
             ip = ipaddress.ip_address(ip_str)
@@ -90,3 +95,34 @@ async def validate_url(url: str) -> None:
          # Check for private, loopback, link-local (169.254.x.x), unspecified (0.0.0.0)
          if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_unspecified:
             raise ValueError(f"Blocked: Host {hostname} resolves to restricted IP {ip_str}.")
+
+         # Capture the first valid IP found
+         if not safe_ip:
+             safe_ip = ip_str
+
+    if not safe_ip:
+        raise ValueError(f"Blocked: Could not resolve valid IP for {hostname}.")
+
+    # DNS Rebinding Protection:
+    # If the scheme is HTTP, we rewrite the URL to use the resolved IP address.
+    # This ensures that the subsequent request goes to the IP we just validated,
+    # preventing an attacker from changing the DNS record between check and use.
+    if parsed.scheme == 'http':
+        safe_host = ensure_ipv6_brackets(safe_ip)
+        # Reconstruct URL using format_url helper
+        # format_url(scheme, host, port, path)
+        # We need to handle port if it was in the original URL
+        port = parsed.port
+        path = parsed.path
+        if parsed.query:
+            path += f"?{parsed.query}"
+        if parsed.fragment:
+            path += f"#{parsed.fragment}"
+
+        return format_url(parsed.scheme, safe_host, port, path)
+
+    # For HTTPS, we cannot replace the hostname with IP easily because SSL verification
+    # would fail (certificate is for hostname, not IP).
+    # DNS rebinding is mitigated for HTTPS if SSL verification is enabled (default),
+    # as the attacker cannot easily obtain a valid certificate for the target internal IP.
+    return url

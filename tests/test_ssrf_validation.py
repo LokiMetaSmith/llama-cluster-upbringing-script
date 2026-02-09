@@ -9,11 +9,25 @@ from pipecatapp.net_utils import validate_url
 
 async def test_validate_url_safe():
     print("Testing safe URLs...")
-    # Public URLs should pass
+    # Public URLs should pass and return rewritten URL for HTTP
     try:
-        await validate_url("https://google.com")
-        await validate_url("http://example.com")
-        print("Safe URLs passed.")
+        url_https = "https://google.com"
+        res_https = await validate_url(url_https)
+        if res_https != url_https:
+            print(f"WARNING: HTTPS URL was rewritten: {res_https}")
+
+        url_http = "http://example.com"
+        res_http = await validate_url(url_http)
+        if res_http == url_http:
+             print(f"FAILED: HTTP URL was NOT rewritten to IP: {res_http}")
+             sys.exit(1)
+
+        # Check if rewritten URL contains IP (simple check for digits)
+        if not any(char.isdigit() for char in res_http):
+             print(f"FAILED: HTTP URL does not look like it contains IP: {res_http}")
+             sys.exit(1)
+
+        print(f"Safe URLs passed. HTTP rewritten to: {res_http}")
     except ValueError as e:
         if "Could not resolve" in str(e):
             print(f"Skipping DNS test due to network issues: {e}")

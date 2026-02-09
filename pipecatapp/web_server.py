@@ -273,7 +273,10 @@ async def internal_chat(payload: InternalChatRequest, api_key: str = Security(ge
     """
     # Security Fix: Sentinel - Validate response_url to prevent SSRF
     try:
-        await validate_url(str(payload.response_url))
+        # Resolve and validate URL to prevent SSRF
+        safe_url = await validate_url(str(payload.response_url))
+        # Update payload with safe URL
+        payload.response_url = safe_url
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
