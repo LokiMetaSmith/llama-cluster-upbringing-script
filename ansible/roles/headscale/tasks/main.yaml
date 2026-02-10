@@ -20,11 +20,23 @@
     group: headscale
     mode: '0755'
 
+- name: Check current headscale version
+  command: /usr/local/bin/headscale version
+  register: headscale_current_version
+  ignore_errors: true
+  changed_when: false
+  failed_when: false
+
 - name: Download headscale binary
   get_url:
     url: "https://github.com/juanfont/headscale/releases/download/v{{ headscale_version }}/headscale_{{ headscale_version }}_linux_amd64"
     dest: /usr/local/bin/headscale
     mode: '0755'
+    timeout: 60
+    checksum: "sha256:https://github.com/juanfont/headscale/releases/download/v{{ headscale_version }}/checksums.txt"
+  when: >
+    headscale_current_version.rc != 0 or
+    headscale_version not in headscale_current_version.stdout
 
 - name: Deploy headscale config
   template:
