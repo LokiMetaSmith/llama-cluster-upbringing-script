@@ -4,9 +4,9 @@ import os
 import asyncio
 from unittest.mock import MagicMock, patch, AsyncMock
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
 
-from shell_tool import ShellTool
+from tools.shell_tool import ShellTool
 
 @pytest.mark.asyncio
 async def test_shell_tool_initialization():

@@ -57,3 +57,8 @@
 **Vulnerability:** The WebSocket endpoint accepted user messages containing metadata fields (like `response_url`) intended only for authenticated internal endpoints. This allowed unauthenticated WebSocket clients to trigger SSRF by supplying a `response_url`.
 **Learning:** Do not blindly trust JSON payloads from WebSockets. Explicitly define and sanitize the allowed fields for user messages, stripping any internal control metadata.
 **Prevention:** Sanitize incoming WebSocket messages by stripping sensitive fields (`response_url`, `is_system_alert`) before processing them in the pipeline.
+
+## 2026-02-07 - Sensitive Data Leak in ShellTool Broadcast
+**Vulnerability:** `ShellTool` broadcasted raw command execution output to all connected WebSocket clients, potentially leaking environment variables or secrets printed to stdout.
+**Learning:** Real-time feedback channels (like UI broadcasts) are often overlooked in security reviews but can leak sensitive data just like logs.
+**Prevention:** Apply data sanitization/redaction to all real-time broadcasts before transmission, treating them as public outputs.
