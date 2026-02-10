@@ -26,13 +26,14 @@ job "mqtt" {
       name     = "mqtt"
       port     = "mqtt"
       provider = "consul"
-      check {
-        type     = "tcp"
-        name     = "mqtt_health"
-        port     = "mqtt"
-        interval = "10s"
-        timeout  = "5s"
-      }
+      #check {
+      #  type     = "tcp"
+      #  name     = "mqtt_health"
+      #  port     = "mqtt"
+      #  interval = "10s"
+      #  timeout  = "5s"
+      #  address_mode = "host"
+      #}
     }
 
     restart {

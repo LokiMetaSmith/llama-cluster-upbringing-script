@@ -173,7 +173,7 @@ pxe_os: "debian"
 # -- OpenWorkers Configuration --
 openworkers_enabled: true
 openworkers_api_port: 7000
-openworkers_dash_port: 8081  # Changed from 80 to avoid conflict
+openworkers_dash_port: 8083  # Changed from 8081 to avoid conflict with router_port
 postgate_port: 6080
 postgres_user: "openworkers"
 postgres_password: "change_me_in_prod"
