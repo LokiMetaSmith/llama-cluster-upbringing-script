@@ -25,6 +25,7 @@
     url: "https://github.com/juanfont/headscale/releases/download/v{{ headscale_version }}/headscale_{{ headscale_version }}_linux_amd64"
     dest: /usr/local/bin/headscale
     mode: '0755'
+    timeout: 60
 
 - name: Deploy headscale config
   template:
