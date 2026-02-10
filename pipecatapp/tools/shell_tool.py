@@ -4,6 +4,11 @@ import uuid
 import logging
 import json
 
+try:
+    from ..security import redact_sensitive_data
+except ImportError:
+    from security import redact_sensitive_data
+
 class ShellTool:
     """A tool for running shell commands in a persistent tmux session.
 
@@ -52,9 +57,11 @@ class ShellTool:
         # Telepresence: Broadcast command to UI
         try:
             import web_server
+            # Security: Redact sensitive data before broadcasting to UI
+            safe_command = redact_sensitive_data(command)
             await web_server.manager.broadcast(json.dumps({
                 "type": "shell_command",
-                "data": f"$ {command}"
+                "data": f"$ {safe_command}"
             }))
         except Exception:
             pass
@@ -86,9 +93,11 @@ class ShellTool:
                 # Telepresence: Broadcast output to UI
                 try:
                     import web_server
+                    # Security: Redact sensitive data before broadcasting to UI
+                    safe_output = redact_sensitive_data(clean_output)
                     await web_server.manager.broadcast(json.dumps({
                         "type": "shell_output",
-                        "data": clean_output
+                        "data": safe_output
                     }))
                 except Exception:
                     pass
