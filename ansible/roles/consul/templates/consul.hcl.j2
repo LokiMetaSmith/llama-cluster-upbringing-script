@@ -1,7 +1,7 @@
 data_dir = "{{ consul_data_dir }}"
 bind_addr = "{{ cluster_ip }}"
 advertise_addr = "{{ cluster_ip }}"
-client_addr = "0.0.0.0"
+client_addr = "127.0.0.1 {{ cluster_ip }}"
 leave_on_terminate = true
 primary_datacenter = "{{ consul_datacenter }}"
 
