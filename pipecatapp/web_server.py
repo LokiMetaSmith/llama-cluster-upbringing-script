@@ -259,6 +259,17 @@ async def websocket_endpoint(websocket: WebSocket):
                 # /internal/chat endpoints, not from unauthenticated WebSocket clients.
                 if "response_url" in message:
                     del message["response_url"]
+
+                # Security Fix: Sentinel - Validate 'audio_url' to prevent SSRF
+                if "audio_url" in message:
+                    try:
+                        # Resolve and validate URL to prevent SSRF
+                        safe_url = await validate_url(message["audio_url"])
+                        message["audio_url"] = safe_url
+                    except ValueError as e:
+                        logging.warning(f"Rejected unsafe audio_url from WebSocket: {e}")
+                        del message["audio_url"]
+
                 await text_message_queue.put(message)
     except Exception:
         manager.disconnect(websocket)
