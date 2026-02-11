@@ -210,13 +210,6 @@
       register: mqtt_job_run
       #  notify: Restart Home Assistant
 
-    - name: Wait for MQTT port to be open
-      ansible.builtin.wait_for:
-        port: "{{ mqtt_port }}"
-        host: "{{ cluster_ip }}"
-        timeout: 60
-        delay: 2
-
     - name: Wait for MQTT service to be healthy in Consul
       ansible.builtin.uri:
         url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/mqtt?passing"
