@@ -30,7 +30,8 @@ ansible_python_interpreter: /usr/bin/python3
 # This variable dynamically determines the IP address for Nomad to advertise.
 # It is set to the default IPv4 address to align with the Nomad configuration
 # which explicitly binds to IPv4.
-advertise_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
+#advertise_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
+advertise_ip: "{{ cluster_ip }}"
 
 nomad_version: "1.7.7"
 nomad_namespace: "default"
