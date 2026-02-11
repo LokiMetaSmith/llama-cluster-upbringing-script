@@ -87,7 +87,7 @@ job "home-assistant" {
 
       # Environment variables — HA_TOKEN is included only if defined/non-empty
       env {
-        HA_SERVER = "http://127.0.0.1:{{ home_assistant_port }}"
+        HA_SERVER = "http://{{ cluster_ip }}:{{ home_assistant_port }}"
         {% if home_assistant_token is defined and home_assistant_token | length > 0 %}
         HA_TOKEN = "{{ home_assistant_token }}"
         {% endif %}
