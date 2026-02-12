@@ -13,7 +13,7 @@ class SearchTool:
     def __init__(self, root_dir="/"):
         self.name = "search"
         self.description = "Search the codebase for text patterns or file names."
-        self.root_dir = os.path.abspath(root_dir)
+        self.root_dir = os.path.realpath(root_dir)
 
     def _validate_path(self, path: str) -> str:
         """Ensures the path is within the allowed root directory."""
@@ -22,7 +22,7 @@ class SearchTool:
         else:
             full_path = path
 
-        full_path = os.path.abspath(full_path)
+        full_path = os.path.realpath(full_path)
 
         # Commonpath check is safer than startswith for symlinks/different drives
         try:
