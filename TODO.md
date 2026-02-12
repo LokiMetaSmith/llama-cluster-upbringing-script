@@ -126,6 +126,12 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
 - [x] **Vision Model Failover**: Implement failover or selection logic for vision models (see `pipecatapp/app.py`).
 - [ ] **Refactor Vision Role**: The `vision` role is currently minimal (only installs `libgl1`) and does not deploy Frigate as implied by the `frigate_port` variable. It needs to be refactored to actually deploy the service.
+- [ ] **Review Hardcoded Network References:**
+  - **Goal:** Align Ansible roles with the "Provisioning Underlay" vs. "Cluster Overlay" architecture.
+  - **Tasks:**
+    1. Audit `ansible/roles/power_manager/tasks/main.yaml` for hardcoded `10.0.0.0/24` subnet references.
+    2. Ensure that firewall rules (UFW/iptables) correctly handle both the provisioning underlay and the Tailscale overlay.
+    3. Verify that `group_vars/all.yaml` variables are consistently used instead of hardcoded IPs.
 
 ## Completed History
 
