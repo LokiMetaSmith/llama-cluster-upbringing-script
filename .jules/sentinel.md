@@ -1,7 +1,7 @@
 ## 2024-05-22 - Path Traversal Vulnerability
 **Vulnerability:** `os.path.join` in Python allows absolute paths in the second argument to override the first argument (base directory), enabling path traversal if user input is not sanitized or validated.
 **Learning:** Checking for `..` is insufficient to prevent path traversal when absolute paths can be supplied. Always validate the resolved absolute path.
-**Prevention:** Use `os.path.abspath` to resolve the path and check if it starts with the expected base directory using `startswith`.
+**Prevention:** Use `os.path.abspath` to resolve the path and check if the path starts with the expected base directory.
 
 ## 2026-01-08 - Fix Path Traversal in Ansible Tool
 **Vulnerability:** Path traversal in `Ansible_Tool.run_playbook` allowed arbitrary file access via `..` sequences in the `playbook` argument.
@@ -62,3 +62,8 @@
 **Vulnerability:** `ShellTool` broadcasted raw command execution output to all connected WebSocket clients, potentially leaking environment variables or secrets printed to stdout.
 **Learning:** Real-time feedback channels (like UI broadcasts) are often overlooked in security reviews but can leak sensitive data just like logs.
 **Prevention:** Apply data sanitization/redaction to all real-time broadcasts before transmission, treating them as public outputs.
+
+## 2026-02-08 - Path Traversal via Symlinks in SearchTool
+**Vulnerability:** `SearchTool` used `os.path.abspath` to validate paths, which does not resolve symbolic links. This allowed path traversal (e.g., reading secrets in `/etc`) if a symlink pointing outside the `root_dir` existed or was created within it.
+**Learning:** `os.path.abspath` only resolves `.` and `..` but preserves symlinks. To strictly enforce a directory boundary (sandbox), you must use `os.path.realpath` to resolve the canonical path before checking containment.
+**Prevention:** Use `os.path.realpath` to resolve inputs and the root directory, then use `os.path.commonpath` to verify the target is truly inside the allowed root.
