@@ -90,6 +90,24 @@
         version: "{{ latest_commit_hash }}"
         update: yes
 
+    - name: Reset git repo to clean state
+      ansible.builtin.command:
+        cmd: git reset --hard HEAD
+      args:
+        chdir: "{{ llama_cpp_build_dir }}"
+
+    - name: Copy real-time steering patch
+      ansible.builtin.copy:
+        src: realtime_steering.patch
+        dest: "{{ llama_cpp_build_dir }}/realtime_steering.patch"
+        mode: '0644'
+
+    - name: Apply real-time steering patch
+      ansible.builtin.command:
+        cmd: git apply realtime_steering.patch
+      args:
+        chdir: "{{ llama_cpp_build_dir }}"
+
     - name: Configure llama.cpp build with RPC and shared libraries
       ansible.builtin.command:
         cmd: cmake -B build -DGGML_RPC=ON -DLLAMA_SERVER_SSL=ON -DBUILD_SHARED_LIBS=OFF
@@ -245,6 +263,15 @@
 - name: Set benchmark_results fact from parsed content
   ansible.builtin.set_fact:
     benchmark_results: "{{ benchmark_parser_result.stdout | from_json }}"
+
+- name: Create control vectors directory
+  ansible.builtin.file:
+    path: "{{ nomad_models_dir }}/vectors"
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  become: yes
 
 - name: Template and run llamacpp-rpc nomad job for each model
   ansible.builtin.include_tasks: run_single_rpc_job.yaml
