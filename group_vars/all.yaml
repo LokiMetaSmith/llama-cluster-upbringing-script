@@ -69,6 +69,7 @@ mcp_dir: "/opt/mcp"
 
 # Pipecat application settings
 pipecat_deployment_style: 'docker' # Can be 'raw_exec' or 'docker'
+sandbox_executor: "hybrid" # Options: docker, nomad, hybrid
 llama_api_service_name: "router-api"
 use_summarizer: "false"
 stt_service: "faster-whisper"
