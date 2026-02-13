@@ -24,13 +24,13 @@
 - [x] **Implement Technician Agent:**
   - Create a 3-phase agent (Plan, Execute, Reflect) in `pipecatapp/technician_agent.py`.
   - Update `SwarmTool` to support spawning technician agents.
-- [ ] **Swarm Orchestration (Map-Reduce):**
+- [x] **Swarm Orchestration (Map-Reduce):**
   - **Goal:** Implement the "Swarm Migration" pattern where a manager agent splits a large task into chunks and dispatches them to multiple Technician Agents.
   - **Tasks:**
-    1. Create a `ManagerAgent` or update `TechnicianAgent` to have a "Manager Mode".
-    2. Implement the "Map" phase: Analysis of the task and generation of sub-task definitions.
-    3. Implement the "Dispatch" phase: Using `SwarmTool` to spawn multiple `technician` agents.
-    4. Implement the "Reduce" phase: Aggregating results from the spawned workers.
+    1. [x] Create a `ManagerAgent` or update `TechnicianAgent` to have a "Manager Mode".
+    2. [x] Implement the "Map" phase: Analysis of the task and generation of sub-task definitions.
+    3. [x] Implement the "Dispatch" phase: Using `SwarmTool` to spawn multiple `technician` agents.
+    4. [x] Implement the "Reduce" phase: Aggregating results from the spawned workers.
 - [ ] **Durable Execution Integration:**
   - **Goal:** Ensure `TechnicianAgent` can resume execution after a crash or restart.
   - **Tasks:**
@@ -95,6 +95,12 @@
 - [ ] **Replace ASCII art:** Create a more dynamic and expressive animated character or graphic.
 - [x] **Add a "Clear Terminal" button:** Provide a simple way for the user to clear the log history in the UI.
 - [x] **Improve status display:** Format the status display into a more readable table or list.
+- [ ] **Frontend for Real-Time Steering (UI Integration):**
+  - **Goal:** Expose the `PersonalityTool` capabilities in the web interface.
+  - **Tasks:**
+    1. Add a "Personality" or "Brain" tab to `cluster.html` or `monitor.html`.
+    2. Create sliders or controls to adjust specific axis vectors (e.g., "Assistant <-> Creative").
+    3. Connect the frontend controls to the `llama.cpp` `/control-vectors` API (possibly proxied through `web_server.py`).
 
 ## Future Enhancements and Backlog
 
@@ -147,6 +153,10 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] Harden the Core System: Phase 4 Workflow Engine (Steps 1-3).
 - [x] Refactor for Strict Idempotency in Ansible.
 - [x] Maintenance & Clean Up (Empty Handler, Corrupted Files, etc.).
+- [x] **Real-time Steering for llama.cpp:**
+  - Implemented `POST /control-vectors` endpoint in `llama.cpp`.
+  - Added `PersonalityTool` for dynamic steering.
+  - Included automation scripts for vector generation.
 
 ## Performance & I/O Optimization
 
