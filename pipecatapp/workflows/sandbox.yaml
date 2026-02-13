@@ -1,0 +1,79 @@
+name: "Sandbox Execution Workflow"
+nodes:
+  - id: "Input"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "user_text"
+        - name: "tool_result"
+        - name: "tools_dict"
+    inputs: []
+
+  - id: "SystemPrompt"
+    type: "SystemPromptNode"
+    inputs:
+      - name: "custom_prompt"
+        value: |
+          You are a secure Sandbox Execution Agent.
+          Your ONLY job is to take the user's code snippet and execute it using the 'code_runner' tool.
+
+          INSTRUCTIONS:
+          1. Extract the code from the user's message (e.g. "/sandbox print('hello')" -> "print('hello')").
+          2. Call `code_runner.run_code_in_sandbox(code=..., language="python")`.
+          3. Return the output of the tool execution as your final response.
+
+          Do not ask for confirmation. Do not explain the code unless asked. Just execute it.
+          If no code is provided, ask the user for code.
+
+  - id: "SandboxReasoning"
+    type: "SimpleLLMNode"
+    model_tier: "fast"
+    inputs:
+      - name: "user_text"
+        connection:
+          from_node: "Input"
+          from_output: "user_text"
+      - name: "tool_result"
+        connection:
+          from_node: "Input"
+          from_output: "tool_result"
+      - name: "system_prompt"
+        connection:
+          from_node: "SystemPrompt"
+          from_output: "system_prompt"
+
+  - id: "ToolParser"
+    type: "ToolParserNode"
+    inputs:
+      - name: "llm_response"
+        connection:
+          from_node: "SandboxReasoning"
+          from_output: "response"
+
+  - id: "ToolExecutor"
+    type: "ToolExecutorNode"
+    inputs:
+      - name: "tool_call_data"
+        connection:
+          from_node: "ToolParser"
+          from_output: "tool_call_data"
+      - name: "tools_dict"
+        connection:
+          from_node: "Input"
+          from_output: "tools_dict"
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_response"
+        connection:
+          from_node: "ToolParser"
+          from_output: "final_response"
+      - name: "tool_call"
+        connection:
+          from_node: "ToolParser"
+          from_output: "tool_call_data"
+      - name: "tool_result"
+        connection:
+          from_node: "ToolExecutor"
+          from_output: "tool_result"
