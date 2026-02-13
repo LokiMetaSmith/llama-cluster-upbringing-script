@@ -146,6 +146,19 @@ class RAG_Tool:
                 for file in files:
                     if file.endswith((".md", ".txt")):
                         file_path = os.path.join(root, file)
+
+                        # Security Check: Prevent symlink traversal
+                        # Ensure that if we follow a symlink, it points to a file within the allowed_root
+                        if os.path.islink(file_path):
+                            try:
+                                real_path = os.path.realpath(file_path)
+                                if os.path.commonpath([self.allowed_root, real_path]) != self.allowed_root:
+                                    logging.warning(f"RAG Tool: Skipping symlink {file_path} -> {real_path} (outside allowed root {self.allowed_root})")
+                                    continue
+                            except (ValueError, OSError):
+                                logging.warning(f"RAG Tool: Skipping invalid symlink {file_path}")
+                                continue
+
                         try:
                             with open(file_path, 'r', encoding='utf-8') as f:
                                 content = f.read()
