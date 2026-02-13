@@ -127,7 +127,8 @@ class ManagerAgent:
     async def dispatch_phase(self, subtasks: List[Dict]):
         """Dispatches sub-tasks to Technician Agents."""
         logger.info("PHASE 2: Dispatch - Spawning Technicians")
-        self.swarm_tool = SwarmTool()
+        # Initialize SwarmTool with memory client for wait_for_results capability
+        self.swarm_tool = SwarmTool(memory_client=self.memory_client)
         
         # Gas Town Integration: Check stats for potential assignees (simulated)
         # In a real dynamic dispatch, we'd query available agents.
@@ -148,46 +149,15 @@ class ManagerAgent:
         """Waits for results and aggregates them using targeted task polling."""
         logger.info(f"PHASE 3: Reduce - Aggregating Results for tasks: {task_ids}")
         
-        results = {}
-        start_time = time.time()
-        timeout = 600 # 10 minutes
+        # Use SwarmTool to wait for results
+        results_json = await self.swarm_tool.wait_for_results(task_ids, timeout=600)
+        results_data = json.loads(results_json)
         
-        while len(results) < len(task_ids):
-            if time.time() - start_time > timeout:
-                logger.warning("Timeout waiting for sub-tasks.")
-                break
-                
-            # Poll Memory Service for "worker_result" events
-            # In a real impl, we'd filter by task_id. 
-            # Here we simulate or mock if no memory service.
-            if self.memory_url:
-                try:
-                    async with httpx.AsyncClient() as client:
-                        # Iterate through pending tasks and check their status specifically
-                        # This avoids race conditions where an event might be missed in the global feed
-                        # if the limit is exceeded.
-                        for tid in task_ids:
-                            if tid in results:
-                                continue
+        results = results_data.get("results", {})
+        missing = results_data.get("missing", [])
 
-                            # Call the new /tasks/{task_id} endpoint
-                            resp = await client.get(f"{self.memory_url}/tasks/{tid}")
-                            if resp.status_code == 200:
-                                events = resp.json()
-                                # Look for a result event
-                                for evt in events:
-                                    if evt.get("kind") == "worker_result":
-                                        results[tid] = evt.get("content")
-                                        logger.info(f"Received result for {tid}")
-                                        break
-                                    elif evt.get("kind") == "worker_failure":
-                                        results[tid] = f"FAILURE: {evt.get('content')}"
-                                        logger.error(f"Task {tid} failed: {evt.get('content')}")
-                                        break
-                except Exception as e:
-                    logger.warning(f"Error polling memory service: {e}")
-            
-            await asyncio.sleep(5)
+        if missing:
+            logger.warning(f"Results missing for tasks: {missing}")
             
         # Aggregate
         aggregation_prompt = (

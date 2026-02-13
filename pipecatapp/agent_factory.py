@@ -98,6 +98,10 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "personality": PersonalityTool(api_url=config.get("llama_api_url")),
     }
 
+    # Inject memory client into SwarmTool if available (for Map-Reduce)
+    if "swarm" in tools and twin_service and hasattr(twin_service, "long_term_memory"):
+        tools["swarm"].memory_client = twin_service.long_term_memory
+
     if config.get("use_summarizer", False) and twin_service:
         tools["summarizer"] = SummarizerTool(twin_service)
 
