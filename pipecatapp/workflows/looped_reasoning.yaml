@@ -1,0 +1,31 @@
+name: "Looped Reasoning Demo"
+nodes:
+  - id: "Input"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "user_text"
+    inputs: []
+
+  - id: "LoopedResonator"
+    type: "LoopedReasoningNode"
+    config:
+      iterations: 3
+      model_service: "rpc-main"
+    inputs:
+      - name: "user_text"
+        connection:
+          from_node: "Input"
+          from_output: "user_text"
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_response"
+        connection:
+          from_node: "LoopedResonator"
+          from_output: "response"
+      - name: "reasoning_trace"
+        connection:
+          from_node: "LoopedResonator"
+          from_output: "trace"
