@@ -67,3 +67,8 @@
 **Vulnerability:** `SearchTool` used `os.path.abspath` to validate paths, which does not resolve symbolic links. This allowed path traversal (e.g., reading secrets in `/etc`) if a symlink pointing outside the `root_dir` existed or was created within it.
 **Learning:** `os.path.abspath` only resolves `.` and `..` but preserves symlinks. To strictly enforce a directory boundary (sandbox), you must use `os.path.realpath` to resolve the canonical path before checking containment.
 **Prevention:** Use `os.path.realpath` to resolve inputs and the root directory, then use `os.path.commonpath` to verify the target is truly inside the allowed root.
+
+## 2026-02-09 - Nomad Template Injection in CodeRunnerTool
+**Vulnerability:** The `CodeRunnerTool` embedded user-provided Python code directly into a Nomad job template using `EmbeddedTmpl`. This allowed malicious actors to inject Nomad template syntax (e.g., `[[ .Secrets ]]`) to potentially leak secrets or execute arbitrary template actions.
+**Learning:** Template engines are powerful and often have access to sensitive data (Consul KV, Vault). Treating user input as trusted template content is a critical vulnerability.
+**Prevention:** Use Base64 encoding to wrap user input before embedding it in templates. This ensures the template engine sees a safe string and prevents interpretation of delimiters. Decode the content at runtime within the task.
