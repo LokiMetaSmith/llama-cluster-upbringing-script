@@ -2,6 +2,7 @@ from .registry import registry
 from ..node import Node
 from ..context import WorkflowContext
 from pipecat.services.openai.llm import OpenAILLMService
+import logging
 import os
 import httpx
 import asyncio
@@ -454,3 +455,106 @@ class LLMRouterNode(Node):
             response_text = f"Error routing query: {e}"
 
         self.set_output(context, "response", response_text)
+
+@registry.register
+class LoopedReasoningNode(Node):
+    """
+    Implements iterative latent reasoning (Ouro concept) using standard LLMs.
+    It loops through a critique-and-refine process before outputting the final answer.
+    """
+    async def execute(self, context: WorkflowContext):
+        user_text = self.get_input(context, "user_text")
+
+        # Get configuration from "config" block or top-level
+        node_config = self.config.get("config", {})
+        iterations = node_config.get("iterations", self.config.get("iterations", 3))
+        target_service = node_config.get("model_service", self.config.get("model_service", "rpc-main"))
+
+        # Allow overriding iterations from input
+        input_iterations = self.get_input(context, "iterations")
+        if input_iterations:
+            try:
+                iterations = int(input_iterations)
+            except ValueError:
+                pass
+
+        if not user_text:
+             self.set_output(context, "response", "Error: No user_text provided.")
+             return
+
+        # Use the main expert for reasoning (rpc-main or rpc-coding depending on config, default to main)
+        consul_http_addr = context.global_inputs.get("consul_http_addr")
+
+        current_answer = None
+        history = []
+
+        if consul_http_addr:
+            try:
+                token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
+                headers = {"X-Consul-Token": token} if token else {}
+
+                async with httpx.AsyncClient(headers=headers) as client:
+                    # Discovery
+                    response = await client.get(f"{consul_http_addr}/v1/health/service/{target_service}?passing")
+                    response.raise_for_status()
+                    services = response.json()
+
+                    if not services:
+                        self.set_output(context, "response", f"Error: Service {target_service} not found.")
+                        return
+
+                    address = services[0]['Service']['Address']
+                    port = services[0]['Service']['Port']
+                    base_url = f"http://{address}:{port}/v1"
+                    chat_url = f"{base_url}/chat/completions"
+
+                    # --- Initial Pass ---
+                    initial_system_prompt = "You are a helpful AI assistant. Provide a comprehensive answer to the user's request."
+                    messages = [
+                        {"role": "system", "content": initial_system_prompt},
+                        {"role": "user", "content": user_text}
+                    ]
+
+                    payload = {
+                        "model": target_service,
+                        "messages": messages,
+                        "temperature": 0.7
+                    }
+
+                    logging.debug(f"LoopedReasoning - Initial Pass")
+                    res = await client.post(chat_url, json=payload, timeout=120)
+                    res.raise_for_status()
+                    current_answer = res.json()["choices"][0]["message"]["content"]
+                    history.append(f"Iteration 0: {current_answer}")
+
+                    # --- Iterative Refinement ---
+                    for i in range(1, iterations + 1):
+                        logging.debug(f"LoopedReasoning - Iteration {i}")
+                        refine_prompt = (
+                            f"Here is the user's original request:\n'{user_text}'\n\n"
+                            f"Here is your previous answer:\n'{current_answer}'\n\n"
+                            "Critique this answer for accuracy, reasoning flaws, missing information, and clarity. "
+                            "Then, provide a refined and improved answer. "
+                            "Do not mention the critique process in the final output unless necessary for clarity. "
+                            "Just provide the best possible answer."
+                        )
+
+                        messages = [
+                            {"role": "system", "content": "You are a meticulous editor and expert. Improve the previous answer."},
+                            {"role": "user", "content": refine_prompt}
+                        ]
+
+                        payload["messages"] = messages
+
+                        res = await client.post(chat_url, json=payload, timeout=120)
+                        res.raise_for_status()
+                        current_answer = res.json()["choices"][0]["message"]["content"]
+                        history.append(f"Iteration {i}: {current_answer}")
+
+            except Exception as e:
+                logging.error(f"Error in LoopedReasoningNode: {e}")
+                self.set_output(context, "response", f"Error: {e}")
+                return
+
+        self.set_output(context, "response", current_answer)
+        self.set_output(context, "trace", "\n\n---\n\n".join(history))
