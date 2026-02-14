@@ -6,6 +6,7 @@ import tempfile
 import time
 import uuid
 import requests
+import base64
 from llm_sandbox import SandboxSession
 from typing import List, Optional
 from .dependency_scanner_tool import DependencyScannerTool
@@ -119,7 +120,10 @@ class NomadSandboxExecutor(SandboxExecutor):
         job_id = f"sandbox-{uuid.uuid4()}"
         logging.info(f"Dispatching Nomad sandbox job: {job_id}")
 
-        # Construct Job JSON with custom delimiters to prevent template collision
+        # Security Enhancement: Base64 encode the code to prevent Nomad Template Injection
+        code_b64 = base64.b64encode(code.encode('utf-8')).decode('utf-8')
+
+        # Construct Job JSON
         job_payload = {
             "Job": {
                 "ID": job_id,
@@ -140,8 +144,12 @@ class NomadSandboxExecutor(SandboxExecutor):
                                 "Driver": "docker",
                                 "Config": {
                                     "image": "python:3.9-slim",
-                                    "command": "python",
-                                    "args": ["/local/script.py"],
+                                    "command": "/bin/sh",
+                                    # Decode base64 to script.py and then execute it
+                                    "args": [
+                                        "-c",
+                                        "python3 -c 'import base64; open(\"/local/script.py\", \"wb\").write(base64.b64decode(open(\"/local/script.b64\", \"rb\").read()))' && python3 /local/script.py"
+                                    ],
                                     "network_mode": "none"
                                 },
                                 "Resources": {
@@ -150,11 +158,10 @@ class NomadSandboxExecutor(SandboxExecutor):
                                 },
                                 "Templates": [
                                     {
-                                        "EmbeddedTmpl": code,
-                                        "DestPath": "local/script.py",
-                                        "ChangeMode": "noop",
-                                        "LeftDelim": "[[",
-                                        "RightDelim": "]]"
+                                        "EmbeddedTmpl": code_b64,
+                                        "DestPath": "local/script.b64",
+                                        "ChangeMode": "noop"
+                                        # Removed LeftDelim/RightDelim as base64 is safe with default {{ }}
                                     }
                                 ]
                             }
