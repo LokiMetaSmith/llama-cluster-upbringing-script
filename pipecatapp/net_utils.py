@@ -46,17 +46,10 @@ def format_url(scheme: str, host: str, port: int | str | None = None, path: str 
 
     return url
 
-async def validate_url(url: str) -> str:
-    """Validates that the URL is safe to visit (SSRF protection).
-
-    Args:
-        url (str): The URL to validate.
-
-    Returns:
-        str: The original URL if it passes validation.
-
-    Raises:
-        ValueError: If the URL is unsafe or invalid.
+async def _validate_url_logic(url: str) -> tuple[str, str | None]:
+    """
+    Internal logic for URL validation.
+    Returns (url, resolved_ip) tuple. resolved_ip is None if skipped via allowlist.
     """
     try:
         parsed = urllib.parse.urlparse(url)
@@ -89,7 +82,7 @@ async def validate_url(url: str) -> str:
             pass
 
     if is_allowed:
-        return url
+        return url, None
 
     # Block localhost immediately unless allowed
     if hostname.lower() in ('localhost', '127.0.0.1', '::1', '0.0.0.0'):
@@ -130,5 +123,41 @@ async def validate_url(url: str) -> str:
          if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_unspecified:
             raise ValueError(f"Blocked: Host {hostname} resolves to restricted IP {ip_str}.")
 
-    # Return original URL to preserve Virtual Host functionality
+    # Return original URL and one of the safe IPs
+    # We prefer IPv4 for compatibility if available, otherwise just take any
+    safe_ip = None
+    for ip in ips:
+        if "." in ip: # simple check for IPv4
+            safe_ip = ip
+            break
+    if not safe_ip and ips:
+        safe_ip = list(ips)[0]
+
+    return url, safe_ip
+
+async def validate_url(url: str) -> str:
+    """Validates that the URL is safe to visit (SSRF protection).
+
+    Args:
+        url (str): The URL to validate.
+
+    Returns:
+        str: The original URL if it passes validation.
+
+    Raises:
+        ValueError: If the URL is unsafe or invalid.
+    """
+    url, _ = await _validate_url_logic(url)
     return url
+
+async def resolve_and_validate_url(url: str) -> tuple[str, str | None]:
+    """Validates the URL and returns the resolved IP to prevent DNS rebinding.
+
+    Args:
+        url (str): The URL to validate.
+
+    Returns:
+        tuple[str, str | None]: (original_url, resolved_safe_ip).
+                                resolved_safe_ip may be None if allowlisted.
+    """
+    return await _validate_url_logic(url)
