@@ -1,6 +1,6 @@
 ---
-- name: Deploy Moltbot
+- name: Deploy OpenClaw
   hosts: controller_nodes
   become: yes
   roles:
-    - moltbot
+    - openclaw

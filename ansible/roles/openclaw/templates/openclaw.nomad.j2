@@ -1,4 +1,4 @@
-job "moltbot" {
+job "openclaw" {
   datacenters = ["dc1"]
   type        = "service"
 
@@ -11,11 +11,11 @@ job "moltbot" {
       }
     }
 
-    task "moltbot" {
+    task "openclaw" {
       driver = "docker"
 
       config {
-        image = "moltbot:latest"
+        image = "openclaw:latest"
         image_pull_timeout = "15m"
         ports = ["gateway"]
 
@@ -23,18 +23,18 @@ job "moltbot" {
         mounts = [
           {
             type   = "bind"
-            source = "/opt/moltbot/config"
-            target = "/root/.clawdbot"
+            source = "/opt/openclaw/config"
+            target = "/root/.openclaw"
           },
           {
             type   = "bind"
-            source = "/opt/moltbot/data"
-            target = "/root/clawd"
+            source = "/opt/openclaw/data"
+            target = "/root/.openclaw/workspace"
           },
           {
             type   = "bind"
-            source = "/opt/moltbot/skills/pipecat"
-            target = "/root/clawd/skills/pipecat"
+            source = "/opt/openclaw/skills/pipecat"
+            target = "/root/.openclaw/workspace/skills/pipecat"
           }
         ]
       }
@@ -42,8 +42,8 @@ job "moltbot" {
       env {
         TERM = "xterm-256color"
         # Enable Shell tool for integration
-        # Note: You may need to explicitly allow the shell tool in ~/.clawdbot/moltbot.json
-        # or via MOLTBOT_TOOL_POLICIES env vars if supported.
+        # Note: You may need to explicitly allow the shell tool in ~/.openclaw/openclaw.json
+        # or via OPENCLAW_TOOL_POLICIES env vars if supported.
       }
 
       resources {
@@ -52,9 +52,9 @@ job "moltbot" {
       }
 
       service {
-        name = "moltbot"
+        name = "openclaw"
         port = "gateway"
-        tags = ["moltbot", "gateway"]
+        tags = ["openclaw", "gateway"]
 
         check {
           name     = "alive"

@@ -89,7 +89,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "container_registry": ContainerRegistryTool(),
         "search": SearchTool(root_dir="/opt/pipecatapp"),
         "openclaw": OpenClawTool(
-            gateway_url=config.get("openclaw_gateway_url", "ws://moltbot.service.consul:18789")
+            gateway_url=config.get("openclaw_gateway_url", "ws://openclaw.service.consul:18789")
         ),
         "mkv_store": MKV_Tool(),
         "miniray_compute": MinirayTool(),
