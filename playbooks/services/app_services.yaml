@@ -96,7 +96,7 @@
         - claude_clone
         - moe_gateway
         - mcp_server
-        - moltbot
+        - openclaw
       loop_control:
         loop_var: role_name
       tags:

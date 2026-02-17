@@ -1,4 +1,4 @@
-- name: Create Moltbot directories
+- name: Create OpenClaw directories
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -6,27 +6,27 @@
     owner: "{{ target_user | default('root') }}"
     group: "{{ target_user | default('root') }}"
   loop:
-    - /opt/moltbot
-    - /opt/moltbot/config
-    - /opt/moltbot/data
-    - /opt/moltbot/skills/pipecat
-    - /opt/moltbot/docker
+    - /opt/openclaw
+    - /opt/openclaw/config
+    - /opt/openclaw/data
+    - /opt/openclaw/skills/pipecat
+    - /opt/openclaw/docker
 
-- name: Copy Moltbot Dockerfile
+- name: Copy OpenClaw Dockerfile
   ansible.builtin.copy:
     src: Dockerfile
-    dest: /opt/moltbot/docker/Dockerfile
+    dest: /opt/openclaw/docker/Dockerfile
     mode: '0644'
     owner: "{{ target_user | default('root') }}"
     group: "{{ target_user | default('root') }}"
 
-- name: Build Moltbot Docker image
+- name: Build OpenClaw Docker image
   community.docker.docker_image:
-    name: moltbot
+    name: openclaw
     tag: latest
     source: build
     build:
-      path: /opt/moltbot/docker
+      path: /opt/openclaw/docker
       pull: true
     force_source: true
 
@@ -39,11 +39,11 @@
   register: registry_check
   ignore_errors: true
 
-- name: Tag and push moltbot image to local registry
+- name: Tag and push openclaw image to local registry
   community.docker.docker_image:
-    name: moltbot
+    name: openclaw
     tag: latest
-    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/moltbot"
+    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/openclaw"
     push: true
     source: local
   when: registry_check is success
@@ -51,21 +51,21 @@
 - name: Copy Pipecat Skill
   ansible.builtin.copy:
     src: pipecat_skill.md
-    dest: /opt/moltbot/skills/pipecat/SKILL.md
+    dest: /opt/openclaw/skills/pipecat/SKILL.md
     mode: '0644'
     owner: "{{ target_user | default('root') }}"
     group: "{{ target_user | default('root') }}"
 
-- name: Template Moltbot Nomad job file
+- name: Template OpenClaw Nomad job file
   ansible.builtin.template:
-    src: moltbot.nomad.j2
-    dest: "{{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/moltbot.nomad"
+    src: openclaw.nomad.j2
+    dest: "{{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/openclaw.nomad"
     mode: '0644'
 
-- name: Run Moltbot Nomad job
+- name: Run OpenClaw Nomad job
   ansible.builtin.command:
-    cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/moltbot.nomad"
+    cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/openclaw.nomad"
   environment:
     NOMAD_ADDR: "http://{{ cluster_ip | default('localhost') }}:4646"
-  register: moltbot_job_run
+  register: openclaw_job_run
   changed_when: true

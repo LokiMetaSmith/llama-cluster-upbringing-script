@@ -2,7 +2,7 @@
 
 ## Description
 
-This skill allows Moltbot to delegate complex reasoning, heavy computation, or specific Pipecat agent tasks to the Pipecat cluster.
+This skill allows OpenClaw to delegate complex reasoning, heavy computation, or specific Pipecat agent tasks to the Pipecat cluster.
 It acts as a "Super Manager" when invoked with the `/manager` command.
 
 ## When to use
@@ -25,10 +25,10 @@ curl -X POST http://pipecatapp.service.consul:8000/internal/chat/sync \
 ```
 
 ### 2. Audio Query (If user provided an audio file)
-If the user provided an audio file (e.g., at `/root/clawd/downloads/msg.ogg`), encode it and send it:
+If the user provided an audio file (e.g., at `/root/.openclaw/workspace/downloads/msg.ogg`), encode it and send it:
 
 ```bash
-AUDIO_B64=$(base64 -w 0 /root/clawd/downloads/msg.ogg)
+AUDIO_B64=$(base64 -w 0 /root/.openclaw/workspace/downloads/msg.ogg)
 curl -X POST http://pipecatapp.service.consul:8000/internal/chat/sync \
   -H "Content-Type: application/json" \
   -d "{\"audio_base64\": \"$AUDIO_B64\", \"text\": \"Process this audio\", \"response_url\": \"http://dummy\"}"
