@@ -92,9 +92,9 @@ from api_keys import initialize_api_keys
 from security import redact_sensitive_data
 from secret_manager import secret_manager
 try:
-    from .net_utils import format_url
+    from .net_utils import format_url, validate_url
 except ImportError:
-    from net_utils import format_url
+    from net_utils import format_url, validate_url
 
 
 import uvicorn
@@ -724,6 +724,9 @@ class TextMessageInjector(FrameProcessor):
                     if audio_url:
                         logging.info(f"Downloading audio from: {audio_url}")
                         try:
+                            # Security Fix: Sentinel - Validate URL to prevent SSRF
+                            await validate_url(audio_url)
+
                             # Create a temp file to store the audio
                             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
                                 async with httpx.AsyncClient() as client:
@@ -1115,6 +1118,13 @@ class TwinService(FrameProcessor):
         elif self.current_request_meta and "response_url" in self.current_request_meta:
             response_url = self.current_request_meta["response_url"]
             request_id = self.current_request_meta["request_id"]
+
+            try:
+                # Security Fix: Sentinel - Validate URL to prevent SSRF
+                await validate_url(response_url)
+            except ValueError as e:
+                logging.error(f"Blocked SSRF attempt in response_url: {e}")
+                return
 
             response_payload = {"request_id": request_id, "content": text}
 
