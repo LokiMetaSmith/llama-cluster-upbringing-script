@@ -92,9 +92,9 @@ from api_keys import initialize_api_keys
 from security import redact_sensitive_data
 from secret_manager import secret_manager
 try:
-    from .net_utils import format_url, validate_url
+    from .net_utils import format_url, validate_url, resolve_and_validate_url, get_safe_url_and_headers
 except ImportError:
-    from net_utils import format_url, validate_url
+    from net_utils import format_url, validate_url, resolve_and_validate_url, get_safe_url_and_headers
 
 
 import uvicorn
@@ -724,13 +724,14 @@ class TextMessageInjector(FrameProcessor):
                     if audio_url:
                         logging.info(f"Downloading audio from: {audio_url}")
                         try:
-                            # Security Fix: Sentinel - Validate URL to prevent SSRF
-                            await validate_url(audio_url)
+                            # Security Fix: Sentinel - Validate URL and use resolved IP for HTTP to prevent DNS Rebinding
+                            original_url, safe_ip = await resolve_and_validate_url(audio_url)
+                            safe_url, headers = get_safe_url_and_headers(original_url, safe_ip)
 
                             # Create a temp file to store the audio
                             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
                                 async with httpx.AsyncClient() as client:
-                                    resp = await client.get(audio_url)
+                                    resp = await client.get(safe_url, headers=headers)
                                     if resp.status_code == 200:
                                         tmp_file.write(resp.content)
                                         tmp_path = tmp_file.name
@@ -1120,8 +1121,9 @@ class TwinService(FrameProcessor):
             request_id = self.current_request_meta["request_id"]
 
             try:
-                # Security Fix: Sentinel - Validate URL to prevent SSRF
-                await validate_url(response_url)
+                # Security Fix: Sentinel - Validate URL and use resolved IP for HTTP to prevent DNS Rebinding
+                original_url, safe_ip = await resolve_and_validate_url(response_url)
+                safe_url, headers = get_safe_url_and_headers(original_url, safe_ip)
             except ValueError as e:
                 logging.error(f"Blocked SSRF attempt in response_url: {e}")
                 return
@@ -1140,7 +1142,7 @@ class TwinService(FrameProcessor):
 
             try:
                 # Bolt ⚡ Optimization: Use reused client instead of creating new one
-                await self.http_client.post(response_url, json=response_payload)
+                await self.http_client.post(safe_url, json=response_payload, headers=headers)
                 logging.info(f"Sent response for request {request_id} to gateway.")
             except Exception as e:
                 logging.error(f"Failed to send response to gateway: {e}")

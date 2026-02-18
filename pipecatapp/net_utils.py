@@ -161,3 +161,39 @@ async def resolve_and_validate_url(url: str) -> tuple[str, str | None]:
                                 resolved_safe_ip may be None if allowlisted.
     """
     return await _validate_url_logic(url)
+
+def get_safe_url_and_headers(url: str, safe_ip: str | None) -> tuple[str, dict]:
+    """
+    Returns a URL that is safe against DNS rebinding (for HTTP), and necessary headers.
+
+    If the scheme is HTTP and a safe IP is provided, it rewrites the URL to use the IP
+    and returns a Host header.
+    For HTTPS, it relies on SSL verification to prevent DNS rebinding, so it returns
+    the original URL.
+    """
+    if not safe_ip:
+        return url, {}
+
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except Exception:
+        return url, {}
+
+    # Only rewrite HTTP. HTTPS is protected by SSL certificate validation.
+    if parsed.scheme != "http":
+        return url, {}
+
+    # Construct safe URL with IP
+    # Handle IPv6 brackets if needed
+    safe_host = f"[{safe_ip}]" if ":" in safe_ip else safe_ip
+
+    if parsed.port:
+        safe_netloc = f"{safe_host}:{parsed.port}"
+    else:
+        safe_netloc = safe_host
+
+    # Reconstruct URL
+    # usage of _replace is robust for namedtuple
+    safe_url = parsed._replace(netloc=safe_netloc).geturl()
+
+    return safe_url, {"Host": parsed.hostname}
