@@ -11,6 +11,10 @@ from llm_sandbox import SandboxSession
 from typing import List, Optional
 from .dependency_scanner_tool import DependencyScannerTool
 
+# Security: Limit the maximum size of the code payload to prevent DoS attacks
+# especially against Nomad templates which might expand significantly or cause OOM.
+MAX_CODE_LENGTH = 100000
+
 class SandboxExecutor(abc.ABC):
     """Abstract base class for sandbox execution strategies."""
 
@@ -270,6 +274,9 @@ class CodeRunnerTool:
 
         Preserves legacy behavior for Docker mode (simple execution).
         """
+        if len(code) > MAX_CODE_LENGTH:
+            return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
+
         if self.mode == "hybrid" and hasattr(self, 'fast_executor'):
             if self.fast_executor.client:
                  return self.fast_executor.execute_simple_python(code)
@@ -288,4 +295,7 @@ class CodeRunnerTool:
         libraries: Optional[List[str]] = None
     ) -> str:
         """Runs code in a secure sandbox, with support for multiple languages."""
+        if len(code) > MAX_CODE_LENGTH:
+            return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
+
         return self.executor.execute(code, language, libraries)
