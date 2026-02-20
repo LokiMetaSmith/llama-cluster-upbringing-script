@@ -53,6 +53,32 @@ class Git_Tool:
         if arg and arg.startswith("-"):
             raise ValueError(f"Security Error: Argument '{arg_name}' cannot start with '-'. Invalid value: {arg}")
 
+    def _validate_protocol(self, url: str):
+        """Validates that the URL uses a safe protocol.
+
+        Args:
+            url (str): The URL to validate.
+
+        Raises:
+            ValueError: If the protocol is not allowed.
+        """
+        if not url:
+            return
+
+        # Allowed protocols
+        allowed_protocols = ("http://", "https://", "ssh://", "git://", "git@")
+
+        # Check if URL starts with any allowed protocol
+        is_allowed = False
+        for proto in allowed_protocols:
+            if url.startswith(proto):
+                is_allowed = True
+                break
+
+        if not is_allowed:
+            # Explicitly block file:// and ext:: but also block any unknown protocol
+            raise ValueError(f"Security Error: Protocol not allowed for URL '{url}'. Allowed protocols: http, https, ssh, git.")
+
     def _run_git_command(self, command: list, working_dir: str) -> str:
         """A helper function to run a Git command.
 
@@ -113,6 +139,8 @@ class Git_Tool:
             # Security Fix: Sentinel - Prevent argument injection
             self._validate_arg(repo_url, "repo_url")
             self._validate_arg(directory, "directory")
+            # Security Fix: Sentinel - Prevent SSRF/LFI via dangerous protocols
+            self._validate_protocol(repo_url)
         except ValueError as e:
             return str(e)
 
