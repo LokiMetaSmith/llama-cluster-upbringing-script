@@ -21,6 +21,31 @@ class SpecLoaderTool:
             except OSError as e:
                 self.logger.error(f"Failed to create spec directory: {e}")
 
+    def _validate_protocol(self, url: str):
+        """Validates that the URL uses a safe protocol."""
+        if not url:
+            return
+        allowed_protocols = ("http://", "https://", "ssh://", "git://", "git@")
+        if not any(url.startswith(proto) for proto in allowed_protocols):
+            raise ValueError(f"Security Error: Protocol not allowed for URL '{url}'. Allowed protocols: http, https, ssh, git.")
+
+    def _validate_arg(self, arg: str, arg_name: str):
+        """Validates that an argument does not start with a dash to prevent injection."""
+        if arg and arg.startswith("-"):
+            raise ValueError(f"Security Error: Argument '{arg_name}' cannot start with '-'. Invalid value: {arg}")
+
+    def _validate_path(self, path: str) -> str:
+        """Ensures the path is within the work directory."""
+        full_path = os.path.abspath(os.path.join(self.work_dir, path))
+        try:
+            common = os.path.commonpath([os.path.abspath(self.work_dir), full_path])
+        except ValueError:
+            common = ""
+
+        if common != os.path.abspath(self.work_dir):
+            raise ValueError(f"Security Error: Access denied: {path} is outside the allowed directory {self.work_dir}")
+        return full_path
+
     def run(self, action: str, repo_url: str = None, repo_name: str = None) -> str:
         """
         Executes the spec loader action.
@@ -41,11 +66,24 @@ class SpecLoaderTool:
         if not repo_url:
             return "Error: repo_url is required for clone action."
 
+        try:
+            self._validate_protocol(repo_url)
+            self._validate_arg(repo_url, "repo_url")
+            if repo_name:
+                 self._validate_arg(repo_name, "repo_name")
+        except ValueError as e:
+            return str(e)
+
         if not repo_name:
             # Infer name from URL
             repo_name = repo_url.split("/")[-1].replace(".git", "")
 
-        target_path = os.path.join(self.work_dir, repo_name)
+        try:
+            # Validate target path to prevent traversal
+            # We pass repo_name because _validate_path joins it with work_dir
+            target_path = self._validate_path(repo_name)
+        except ValueError as e:
+            return str(e)
 
         # 1. Clone or Pull
         if os.path.exists(target_path):
