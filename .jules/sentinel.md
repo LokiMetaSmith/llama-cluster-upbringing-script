@@ -72,3 +72,8 @@
 **Vulnerability:** The `CodeRunnerTool` embedded user-provided Python code directly into a Nomad job template using `EmbeddedTmpl`. This allowed malicious actors to inject Nomad template syntax (e.g., `[[ .Secrets ]]`) to potentially leak secrets or execute arbitrary template actions.
 **Learning:** Template engines are powerful and often have access to sensitive data (Consul KV, Vault). Treating user input as trusted template content is a critical vulnerability.
 **Prevention:** Use Base64 encoding to wrap user input before embedding it in templates. This ensures the template engine sees a safe string and prevents interpretation of delimiters. Decode the content at runtime within the task.
+
+## 2026-02-21 - Unvalidated Git Operations in SpecLoaderTool
+**Vulnerability:** `SpecLoaderTool` allowed arbitrary `git clone` operations without protocol validation (enabling SSRF/LFI via `file://`) or argument sanitization (enabling command injection via `-options`). It also lacked path traversal protection for the destination directory.
+**Learning:** Wrapper tools around system commands (like `git`) must strictly validate all inputs, even if they seem like simple "URLs" or "names". Protocol allowlisting is essential for any tool fetching external resources.
+**Prevention:** Implement strict protocol validation (`http`, `https`, `ssh`, `git`), argument validation (reject starting with `-`), and path traversal checks (resolve absolute path and use `os.path.commonpath`) for all file system and network operations.
