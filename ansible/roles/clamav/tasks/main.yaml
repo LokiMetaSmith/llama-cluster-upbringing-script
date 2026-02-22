@@ -1,0 +1,42 @@
+- name: Install ClamAV packages
+  ansible.builtin.apt:
+    name:
+      - clamav
+      - clamav-daemon
+      - clamav-freshclam
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Ensure freshclam is running and enabled
+  ansible.builtin.service:
+    name: clamav-freshclam
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Ensure clamd is running and enabled
+  ansible.builtin.service:
+    name: clamav-daemon
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Create directory for custom signatures
+  file:
+    path: /var/lib/clamav
+    state: directory
+    owner: clamav
+    group: clamav
+    mode: '0755'
+  become: yes
+
+- name: Deploy custom rogue agent signatures
+  copy:
+    src: rogue_agent.ldb
+    dest: /var/lib/clamav/rogue_agent.ldb
+    owner: clamav
+    group: clamav
+    mode: '0644'
+  become: yes
+  notify: restart clamav-daemon
