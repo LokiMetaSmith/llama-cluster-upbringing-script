@@ -7,6 +7,7 @@ import asyncio
 import shutil
 import tempfile
 import subprocess
+import shlex
 import httpx
 from typing import List, Dict, Any, Optional
 from tools.swarm_tool import SwarmTool
@@ -277,18 +278,26 @@ class ExperimentTool:
             # Ensure directory exists
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
+            content = artifact.get("content", "")
+            # Security Fix: Sentinel - Prevent DoS via large file
+            if len(content) > 1024 * 1024:  # 1MB limit
+                return {"passed": False, "output": "Security Error: Artifact too large (>1MB)."}
+
             with open(full_path, 'w') as f:
-                f.write(artifact.get("content", ""))
+                f.write(content)
 
             # Run Command
             # we need to set PYTHONPATH if running python tests
             env = os.environ.copy()
             env["PYTHONPATH"] = temp_dir
 
+            # Security Fix: Sentinel - Use shell=False and split args to prevent command injection
+            cmd_args = shlex.split(test_command)
+
             result = subprocess.run(
-                test_command,
+                cmd_args,
                 cwd=temp_dir,
-                shell=True,
+                shell=False,
                 capture_output=True,
                 text=True,
                 timeout=60,
