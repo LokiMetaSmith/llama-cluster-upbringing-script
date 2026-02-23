@@ -77,3 +77,8 @@
 **Vulnerability:** `SpecLoaderTool` allowed arbitrary `git clone` operations without protocol validation (enabling SSRF/LFI via `file://`) or argument sanitization (enabling command injection via `-options`). It also lacked path traversal protection for the destination directory.
 **Learning:** Wrapper tools around system commands (like `git`) must strictly validate all inputs, even if they seem like simple "URLs" or "names". Protocol allowlisting is essential for any tool fetching external resources.
 **Prevention:** Implement strict protocol validation (`http`, `https`, `ssh`, `git`), argument validation (reject starting with `-`), and path traversal checks (resolve absolute path and use `os.path.commonpath`) for all file system and network operations.
+
+## 2026-03-05 - Path Traversal via URL in ContainerRegistryTool
+**Vulnerability:** `ContainerRegistryTool` constructed API requests by concatenating user input directly into the URL path (e.g., `f"{base_url}/v2/{repository}/tags/list"`). This allowed path traversal (e.g., `../secret`) because HTTP client libraries (like `requests`) do not automatically normalize paths when provided as a string, enabling access to arbitrary endpoints on the registry server or internal network.
+**Learning:** URL construction via string concatenation is dangerous if input is not validated. Do not assume libraries will sanitize or normalize paths for you.
+**Prevention:** Strictly validate all URL components against a whitelist (e.g., regex `^[a-z0-9]+...`) before constructing the URL, especially for path segments.
