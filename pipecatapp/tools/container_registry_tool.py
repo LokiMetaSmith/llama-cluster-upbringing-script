@@ -1,6 +1,7 @@
 import os
 import requests
 import logging
+import re
 from typing import Optional
 
 class ContainerRegistryTool:
@@ -25,6 +26,20 @@ class ContainerRegistryTool:
         self.name = "container_registry"
         self._registry_url = registry_url
         self.logger = logging.getLogger(__name__)
+
+    def _validate_repository(self, repository: str) -> bool:
+        """Validates the repository name to prevent path traversal and ensure compliance."""
+        if not repository:
+            return False
+
+        # Security Fix: Sentinel - Prevent path traversal explicitly
+        if ".." in repository:
+            return False
+
+        # Docker repository regex: [a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*
+        # We enforce strict compliance to prevent injection
+        pattern = r"^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*$"
+        return bool(re.match(pattern, repository))
 
     def _discover_registry(self) -> str:
         """Discovers the registry URL via Consul or returns the configured/fallback URL."""
@@ -84,6 +99,10 @@ class ContainerRegistryTool:
         Returns:
             str: A formatted list of tags or error message.
         """
+        # Security Fix: Sentinel - Validate repository name
+        if not self._validate_repository(repository):
+            return f"Error: Invalid repository name '{repository}'. It must match Docker repository naming conventions (lowercase alphanumeric, separators) and prevent path traversal."
+
         base_url = self._discover_registry()
         try:
             response = requests.get(f"{base_url}/v2/{repository}/tags/list", timeout=5)
@@ -127,6 +146,11 @@ class ContainerRegistryTool:
 
             result = f"Found {len(matches)} matching repositories:\n"
             for repo in matches:
+                # Security Fix: Sentinel - Validate repo from catalog as defense-in-depth
+                if not self._validate_repository(repo):
+                    result += f"- {repo}: [Skipped due to invalid name]\n"
+                    continue
+
                 # Fetch tags for each match to be helpful
                 tags_resp = requests.get(f"{base_url}/v2/{repo}/tags/list", timeout=2)
                 tags_info = "Error fetching tags"
