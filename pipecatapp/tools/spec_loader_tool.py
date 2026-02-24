@@ -3,6 +3,7 @@ import logging
 import shutil
 import subprocess
 import glob
+import re
 from typing import List, Optional
 
 class SpecLoaderTool:
@@ -46,6 +47,24 @@ class SpecLoaderTool:
             raise ValueError(f"Security Error: Access denied: {path} is outside the allowed directory {self.work_dir}")
         return full_path
 
+    def _validate_repo_name(self, name: str) -> str:
+        """Sanitizes and validates the repository name."""
+        if not name:
+            raise ValueError("Security Error: Repository name cannot be empty.")
+
+        # Remove trailing slashes which might be present if inferred from URL
+        name = name.rstrip("/")
+
+        if name in (".", ".."):
+            raise ValueError(f"Security Error: Repository name cannot be '{name}'.")
+
+        # Allow alphanumeric, dash, underscore, dot.
+        # This prevents path traversal (/) and shell injection characters (; & | etc)
+        if not re.match(r"^[a-zA-Z0-9_\-\.]+$", name):
+            raise ValueError(f"Security Error: Invalid characters in repository name '{name}'. Only alphanumeric, dash, underscore, and dot are allowed.")
+
+        return name
+
     def run(self, action: str, repo_url: str = None, repo_name: str = None) -> str:
         """
         Executes the spec loader action.
@@ -76,12 +95,21 @@ class SpecLoaderTool:
 
         if not repo_name:
             # Infer name from URL
-            repo_name = repo_url.split("/")[-1].replace(".git", "")
+            base_name = repo_url.rstrip("/").split("/")[-1]
+            if base_name.endswith(".git"):
+                repo_name = base_name[:-4]
+            else:
+                repo_name = base_name
 
         try:
-            # Validate target path to prevent traversal
+            # Validate and sanitize repo_name
+            repo_name = self._validate_repo_name(repo_name)
+
+            # Validate target path to prevent traversal (double check)
             # We pass repo_name because _validate_path joins it with work_dir
+            self.logger.info(f"Validating repo_name: {repo_name}")
             target_path = self._validate_path(repo_name)
+            self.logger.info(f"Validated target_path: {target_path}")
         except ValueError as e:
             return str(e)
 
