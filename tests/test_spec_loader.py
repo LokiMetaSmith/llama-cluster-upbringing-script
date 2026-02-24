@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
@@ -60,6 +61,37 @@ class TestSpecLoader(unittest.TestCase):
 
         stats = self.tool._scan_files(target_path)
         self.assertEqual(stats["count"], 2)
+
+    def test_security_validation(self):
+        # Test path traversal in explicit repo name
+        result = self.tool.run("clone", repo_url="http://example.com/repo.git", repo_name="../../etc/passwd")
+        self.assertIn("Security Error", result)
+
+        # Test path traversal in inferred repo name (ending in /..)
+        result = self.tool.run("clone", repo_url="http://example.com/..")
+        self.assertIn("Security Error", result)
+
+        # Test path traversal in inferred repo name (ending in /..git)
+        # Should be rejected as '..' or '.'
+        result = self.tool.run("clone", repo_url="http://example.com/..git")
+        self.assertIn("Security Error", result)
+
+        # Test malicious characters in repo name
+        result = self.tool.run("clone", repo_url="http://example.com/repo.git", repo_name="foo;rm -rf /")
+        self.assertIn("Security Error", result)
+
+        # Test URL that infers a valid name but tricky structure (.git..)
+        # This should attempt to clone (and fail network) but NOT be a security error
+        # because .git.. is a safe filename.
+        with patch("subprocess.run") as mock_run:
+            # Simulate a git error (e.g., repo not found)
+            mock_run.side_effect = subprocess.CalledProcessError(1, ["git", "clone"], stderr=b"Repository not found")
+            result = self.tool.run("clone", repo_url="http://example.com/.git..")
+
+            # Should not be a Security Error
+            self.assertNotIn("Security Error", result)
+            # Should be the git error message
+            self.assertIn("Failed to clone repo", result)
 
 if __name__ == "__main__":
     unittest.main()
