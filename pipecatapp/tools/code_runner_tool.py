@@ -66,11 +66,12 @@ class DockerSandboxExecutor(SandboxExecutor):
         except Exception as e:
             return f"An unexpected error occurred: {e}"
 
-    def execute_simple_python(self, code: str) -> str:
+    def execute_simple_python(self, code: str, timeout: int = 30) -> str:
         """Runs simple Python code using raw docker-py for speed/legacy support."""
         if not self.client:
             return "Error: Docker execution is not available (Docker client failed to initialize)."
 
+        container = None
         try:
             # Use TemporaryDirectory for better isolation than mounting /tmp
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -93,18 +94,36 @@ class DockerSandboxExecutor(SandboxExecutor):
                     cpu_period=100000,
                     cpu_quota=50000,      # Security: Limit CPU (50%)
                     pids_limit=20,        # Security: Limit processes
-                    remove=True,
+                    detach=True,          # Security: Run in background to support timeout
                     stderr=True,
                     stdout=True
                 )
 
-                output = container.decode('utf-8')
+                # Security: Implement timeout mechanism to prevent DoS via infinite loops
+                start_time = time.time()
+                while time.time() - start_time < timeout:
+                    container.reload()
+                    if container.status != 'running':
+                        break
+                    time.sleep(0.5)
+
+                if container.status == 'running':
+                    container.kill()
+                    return f"Error: Execution timed out after {timeout} seconds."
+
+                output = container.logs().decode('utf-8')
                 return output
 
         except docker.errors.ImageNotFound:
             return f"Error: The Docker image '{self.image}' was not found. Please pull it first."
         except Exception as e:
             return f"An error occurred: {e}"
+        finally:
+            if container:
+                try:
+                    container.remove(force=True)
+                except Exception:
+                    pass
 
 class NomadSandboxExecutor(SandboxExecutor):
     """Executes code by dispatching ephemeral Nomad batch jobs."""
