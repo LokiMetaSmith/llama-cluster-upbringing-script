@@ -2,6 +2,7 @@ from .registry import registry
 from ..node import Node
 from ..context import WorkflowContext
 import os
+import re
 import json
 import inspect
 import httpx
@@ -153,13 +154,29 @@ def deploy_nomad_job_tool(job_name: str) -> Dict[str, Any]:
     :return: The output of the nomad job run command.
     """
     try:
+        # Security: Validate job_name to prevent path traversal and injection characters
+        if not job_name or not re.match(r"^[a-zA-Z0-9_\-\.]+$", job_name) or ".." in job_name:
+            return {"error": "Invalid job name. Only alphanumeric, dashes, underscores, and dots are allowed."}
+
         # Resolve path to templates directory
         # We assume templates are in pipecatapp/nomad_templates/ relative to repo root
         # EMPEROR_ROOT_DIR usually points to repo root or is PWD
         root_dir = os.getenv("EMPEROR_ROOT_DIR", os.getcwd())
         template_dir = Path(root_dir) / "pipecatapp" / "nomad_templates"
 
-        job_file = template_dir / f"{job_name}.nomad.hcl"
+        # Resolve paths to prevent traversal
+        # We handle non-existent template_dir gracefully
+        template_dir = template_dir.resolve()
+
+        # Construct path safely
+        job_file = (template_dir / f"{job_name}.nomad.hcl").resolve()
+
+        # Security: Ensure resolved path is within template_dir
+        # This handles symlinks or weird path constructions
+        try:
+            job_file.relative_to(template_dir)
+        except ValueError:
+             return {"error": "Security Error: Path traversal attempt detected."}
 
         if not job_file.exists():
             # Try just checking if it's a file path provided directly?
@@ -167,30 +184,18 @@ def deploy_nomad_job_tool(job_name: str) -> Dict[str, Any]:
             return {"error": f"Template {job_name} not found in {template_dir}"}
 
         # Run nomad job run
-        # We assume 'nomad' is in PATH. The agent runs in a container/environment where nomad might be accessible
-        # via the shell_tool logic, but usually we need to ensure the binary is there.
-        # If running inside the pipecatapp container, it might NOT have nomad installed.
-        # However, the task says "The AI assistant's execution environment lacks the nomad binary".
-        # BUT this code runs inside the "EmperorAgentNode" which is part of the runtime application.
-        # The runtime application (pipecatapp) runs on the host or in a container.
-        # If in a container, it needs the binary or API access.
-        # The memory says: "Nomad commands must be executed via Ansible tasks or by the user directly...".
-        # But here we are building an AGENT that can do it.
-        # The agent *on the server* (Claude Code equivalent) likely has shell access.
-        # If this Python code runs inside the `pipecatapp` container, we might need to use the HTTP API or install nomad client.
-        # But simpler: use subprocess to call `nomad`. If it fails, the agent will report it.
-
-        cmd = f"nomad job run {job_file}"
+        # We use list argument to prevent shell injection
+        cmd = ["nomad", "job", "run", str(job_file)]
         result = subprocess.run(
             cmd,
-            shell=True,
+            shell=False,
             text=True,
             capture_output=True,
             timeout=120
         )
 
         return {
-            "command": cmd,
+            "command": " ".join(cmd), # For logging purposes
             "stdout": result.stdout,
             "stderr": result.stderr,
             "returncode": result.returncode
