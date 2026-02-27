@@ -731,13 +731,20 @@ class TextMessageInjector(FrameProcessor):
                             # Create a temp file to store the audio
                             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
                                 async with httpx.AsyncClient() as client:
-                                    resp = await client.get(safe_url, headers=headers)
-                                    if resp.status_code == 200:
-                                        tmp_file.write(resp.content)
-                                        tmp_path = tmp_file.name
-                                        await self.push_frame(AudioFileFrame(tmp_path, meta=message))
-                                    else:
-                                        logging.error(f"Failed to download audio from {audio_url}: {resp.status_code}")
+                                    # Security Fix: Sentinel - Enforce size limit on audio downloads to prevent DoS
+                                    MAX_AUDIO_SIZE = 50 * 1024 * 1024  # 50 MB limit
+                                    async with client.stream("GET", safe_url, headers=headers) as resp:
+                                        if resp.status_code == 200:
+                                            downloaded_size = 0
+                                            async for chunk in resp.aiter_bytes():
+                                                downloaded_size += len(chunk)
+                                                if downloaded_size > MAX_AUDIO_SIZE:
+                                                    raise ValueError(f"Audio file exceeds limit of {MAX_AUDIO_SIZE} bytes")
+                                                tmp_file.write(chunk)
+                                            tmp_path = tmp_file.name
+                                            await self.push_frame(AudioFileFrame(tmp_path, meta=message))
+                                        else:
+                                            logging.error(f"Failed to download audio from {audio_url}: {resp.status_code}")
                         except Exception as e:
                             logging.error(f"Error downloading audio: {e}")
 
