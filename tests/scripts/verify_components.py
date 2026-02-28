@@ -3,10 +3,13 @@ import subprocess
 import os
 import shutil
 import sys
+import shlex
 
 def run_command(command):
     try:
-        result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        # Security Fix: Sentinel - Use shell=False and split args to prevent command injection
+        cmd_args = shlex.split(command)
+        result = subprocess.run(cmd_args, shell=False, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         return True, result.stdout.strip()
     except subprocess.CalledProcessError as e:
         return False, e.stderr.strip()
