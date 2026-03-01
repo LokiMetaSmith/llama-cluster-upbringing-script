@@ -82,3 +82,8 @@
 **Vulnerability:** `ContainerRegistryTool` constructed API requests by concatenating user input directly into the URL path (e.g., `f"{base_url}/v2/{repository}/tags/list"`). This allowed path traversal (e.g., `../secret`) because HTTP client libraries (like `requests`) do not automatically normalize paths when provided as a string, enabling access to arbitrary endpoints on the registry server or internal network.
 **Learning:** URL construction via string concatenation is dangerous if input is not validated. Do not assume libraries will sanitize or normalize paths for you.
 **Prevention:** Strictly validate all URL components against a whitelist (e.g., regex `^[a-z0-9]+...`) before constructing the URL, especially for path segments.
+
+## 2026-03-06 - Path Traversal via Symlinks in ExperimentTool
+**Vulnerability:** `ExperimentTool` used `os.path.abspath` to validate paths, allowing path traversal if a symlink exists inside the allowed directory pointing outside.
+**Learning:** `os.path.abspath` does not resolve symlinks, which allows a malicious agent to traverse out of the intended root directory via a symlink trick.
+**Prevention:** Use `os.path.realpath` instead of `os.path.abspath` to resolve the canonical path before checking containment with `os.path.commonpath`.
