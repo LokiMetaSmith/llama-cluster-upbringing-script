@@ -176,7 +176,7 @@ class ExperimentTool:
 
     def _validate_path(self, root_dir: str, filepath: str) -> str:
         """Ensures the filepath is within the root directory."""
-        root_dir = os.path.abspath(root_dir)
+        root_dir = os.path.realpath(root_dir)
 
         # Handle absolute paths by stripping leading slash
         # This treats /etc/passwd as relative to root_dir
@@ -184,7 +184,7 @@ class ExperimentTool:
             filepath = filepath.lstrip(os.sep)
 
         full_path = os.path.join(root_dir, filepath)
-        full_path = os.path.abspath(full_path)
+        full_path = os.path.realpath(full_path)
 
         try:
             common = os.path.commonpath([root_dir, full_path])
