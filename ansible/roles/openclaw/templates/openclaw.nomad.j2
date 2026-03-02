@@ -35,6 +35,16 @@ job "openclaw" {
             type   = "bind"
             source = "/opt/openclaw/skills/pipecat"
             target = "/root/.openclaw/workspace/skills/pipecat"
+          },
+          {
+            type   = "bind"
+            source = "/opt/openclaw/skills/llmfit-advisor"
+            target = "/root/.openclaw/workspace/skills/llmfit-advisor"
+          },
+          {
+            type   = "bind"
+            source = "/usr/local/bin/llmfit"
+            target = "/usr/local/bin/llmfit"
           }
         ]
       }

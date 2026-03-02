@@ -1,0 +1,40 @@
+- name: Create llmfit directory
+  ansible.builtin.file:
+    path: /opt/llmfit
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user | default('root') }}"
+    group: "{{ target_user | default('root') }}"
+
+- name: Clone llmfit repository
+  ansible.builtin.git:
+    repo: https://github.com/AlexsJones/llmfit.git
+    dest: /opt/llmfit/src
+    version: main
+    update: yes
+
+- name: Install llmfit binary globally using Cargo
+  ansible.builtin.command:
+    cmd: cargo install --path . --root /usr/local
+    chdir: /opt/llmfit/src
+  environment:
+    PATH: "/usr/local/bin:/usr/bin:/bin:/root/.cargo/bin"
+  register: build_result
+  changed_when: "'Compiling' in build_result.stderr or 'Installed' in build_result.stderr"
+
+- name: Ensure OpenClaw skills directory exists
+  ansible.builtin.file:
+    path: /opt/openclaw/skills/llmfit-advisor
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user | default('root') }}"
+    group: "{{ target_user | default('root') }}"
+
+- name: Install llmfit-advisor OpenClaw skill
+  ansible.builtin.copy:
+    src: /opt/llmfit/src/skills/llmfit-advisor/SKILL.md
+    dest: /opt/openclaw/skills/llmfit-advisor/SKILL.md
+    mode: '0644'
+    remote_src: yes
+    owner: "{{ target_user | default('root') }}"
+    group: "{{ target_user | default('root') }}"
