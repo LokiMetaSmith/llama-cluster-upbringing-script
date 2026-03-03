@@ -63,3 +63,4 @@ tenacity
 redis
 cloudpickle
 tritonclient[http]
+cryptography

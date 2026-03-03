@@ -30,3 +30,4 @@ quibbler
 llm-sandbox[docker,podman]
 kubernetes
 paho-mqtt
+cryptography

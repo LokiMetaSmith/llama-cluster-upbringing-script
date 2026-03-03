@@ -2,6 +2,8 @@ import faiss
 import json
 from sentence_transformers import SentenceTransformer
 import os
+import logging
+from cryptography.fernet import Fernet, InvalidToken
 
 class MemoryStore:
     """Manages the agent's long-term memory using a vector database.
@@ -37,6 +39,17 @@ class MemoryStore:
         self.dimension = self.embedding_model.get_sentence_embedding_dimension()
         self.index_file = index_file
         self.store_file = store_file
+
+        encryption_key = os.getenv("MEMORY_ENCRYPTION_KEY")
+        if encryption_key:
+            try:
+                self.fernet = Fernet(encryption_key.encode())
+            except Exception as e:
+                logging.error(f"Failed to initialize encryption with provided key. Invalid key format. App cannot start securely. Error: {e}")
+                raise ValueError(f"Invalid MEMORY_ENCRYPTION_KEY provided: {e}")
+        else:
+            self.fernet = None
+
         self.index = self._load_index()
         self.store = self._load_store()
 
@@ -48,18 +61,48 @@ class MemoryStore:
             return faiss.IndexFlatL2(self.dimension)
 
     def _load_store(self):
-        """Loads the text store from the JSON file or creates a new one."""
+        """Loads the text store from the JSON file or creates a new one, decrypting if necessary."""
         if os.path.exists(self.store_file):
             with open(self.store_file, 'r') as f:
-                return json.load(f)
+                raw_store = json.load(f)
+
+            store = {}
+            for k, v in raw_store.items():
+                if self.fernet:
+                    if isinstance(v, str) and v.startswith("gAAAAA"):
+                        try:
+                            store[k] = self.fernet.decrypt(v.encode()).decode()
+                        except InvalidToken:
+                            logging.error(f"Failed to decrypt memory entry {k} with the current key. Data may be lost.")
+                            # Cannot decrypt, keep as is so it doesn't get overwritten with corruption,
+                            # or just leave it out? Best to keep raw to avoid data loss.
+                            store[k] = v
+                    else:
+                        # It doesn't look like a Fernet token, assume legacy plaintext
+                        store[k] = v
+                else:
+                    store[k] = v
+            return store
         else:
             return {}
 
     def _save(self):
-        """Saves the FAISS index and the text store to disk."""
+        """Saves the FAISS index and the text store to disk, encrypting if configured."""
         faiss.write_index(self.index, self.index_file)
+
+        store_to_save = {}
+        for k, v in self.store.items():
+            if self.fernet:
+                try:
+                    store_to_save[k] = self.fernet.encrypt(v.encode()).decode()
+                except Exception as e:
+                    logging.error(f"Failed to encrypt memory entry {k}: {e}")
+                    store_to_save[k] = v
+            else:
+                store_to_save[k] = v
+
         with open(self.store_file, 'w') as f:
-            json.dump(self.store, f)
+            json.dump(store_to_save, f)
 
     def add(self, text: str):
         """Adds a new text entry to the memory.
