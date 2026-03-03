@@ -87,18 +87,31 @@
   tags:
     - iptables
 
-- name: Allow traffic from Cluster IP (Backstage Network)
+- name: Allow traffic from Provisioning Underlay Network (iptables)
   become: yes
   ansible.builtin.command:
-    # This allows traffic from the internal 10.0.0.x network
-    cmd: "iptables -t mangle -A PREROUTING -s 10.0.0.0/24 -p tcp -j MARK --set-mark 0x1 -m comment --comment 'Allow Backstage Cluster Traffic'"
+    cmd: "iptables -t mangle -A PREROUTING -s {{ pxe_subnet | default('10.0.0.0') }}/24 -p tcp -j MARK --set-mark 0x1 -m comment --comment 'Allow Provisioning Underlay Traffic'"
   tags:
     - iptables
 
-- name: Allow Backstage Cluster Traffic (UFW)
+- name: Allow traffic from Cluster Overlay Network (iptables)
   become: yes
   ansible.builtin.command:
-    cmd: "ufw allow from 10.0.0.0/24 proto tcp"
+    cmd: "iptables -t mangle -A PREROUTING -s {{ overlay_subnet | default('100.64.0.0/10') }} -p tcp -j MARK --set-mark 0x1 -m comment --comment 'Allow Cluster Overlay Traffic'"
+  tags:
+    - iptables
+
+- name: Allow Provisioning Underlay Traffic (UFW)
+  become: yes
+  ansible.builtin.command:
+    cmd: "ufw allow from {{ pxe_subnet | default('10.0.0.0') }}/24 proto tcp"
+  tags:
+    - iptables
+
+- name: Allow Cluster Overlay Traffic (UFW)
+  become: yes
+  ansible.builtin.command:
+    cmd: "ufw allow from {{ overlay_subnet | default('100.64.0.0/10') }} proto tcp"
   tags:
     - iptables
 

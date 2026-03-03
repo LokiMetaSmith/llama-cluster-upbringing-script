@@ -202,3 +202,6 @@ pxe_netmask: "255.255.255.0"
 pxe_range_start: "10.0.0.200"
 pxe_range_end: "10.0.0.250"
 pxe_router: "10.0.0.1"
+
+# Cluster Overlay Network (Tailscale/Headscale)
+overlay_subnet: "100.64.0.0/10"
