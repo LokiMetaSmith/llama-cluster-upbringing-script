@@ -175,7 +175,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [ ] **Audit unauthenticated API endpoints:**
   - Review `pipecatapp/web_server.py` and other API definitions to ensure sensitive data endpoints are authenticated.
   - Specifically check endpoints returning user data or configuration.
-- [ ] **Audit WebSocket security:**
+- [x] **Audit WebSocket security:**
   - Verify that WebSocket connections enforce strict Origin checks to prevent Cross-Site WebSocket Hijacking (CSWSH).
   - Consider implementing authentication for WebSocket connections.
 - [ ] **Audit write access controls:**

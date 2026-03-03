@@ -209,8 +209,28 @@ async def websocket_endpoint(websocket: WebSocket):
     Args:
         websocket (WebSocket): The client's WebSocket connection.
     """
-    # Note: WebSocket authentication is trickier. For now, we leave it open as per "semi-unprotected" plan.
-    # If strict auth is needed later, we would check query params during connect.
+    # Security Fix: WebSocket authentication via query parameter "token"
+    # We only enforce this if API keys are configured in the system.
+    import api_keys
+    import secrets
+
+    if api_keys.API_KEYS:
+        token = websocket.query_params.get("token")
+        if not token:
+            logging.warning("Rejected WebSocket connection: Missing 'token' query parameter.")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+
+        hashed_provided_key = api_keys.get_api_key_hash(token)
+        is_valid = False
+        for valid_key_hash in api_keys.API_KEYS:
+            if secrets.compare_digest(hashed_provided_key, valid_key_hash):
+                is_valid = True
+
+        if not is_valid:
+            logging.warning("Rejected WebSocket connection: Invalid token.")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
 
     # Security Fix: Prevent Cross-Site WebSocket Hijacking (CSWSH)
     # Even without auth, we must ensure the connection comes from a trusted origin.

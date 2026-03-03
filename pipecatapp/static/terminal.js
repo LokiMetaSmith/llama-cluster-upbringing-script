@@ -1,7 +1,11 @@
 document.addEventListener("DOMContentLoaded", function() {
     const terminal = document.getElementById("terminal");
     const MAX_LOG_ENTRIES = 500; // Optimization: Limit terminal size to prevent DOM bloat
-    const ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+    // Support authenticating via API key in localStorage
+    const apiKey = localStorage.getItem('api_key') || '';
+    const wsUrl = `ws://${window.location.host}/ws` + (apiKey ? `?token=${encodeURIComponent(apiKey)}` : '');
+    const ws = new WebSocket(wsUrl);
 
     // Security Fix: Prevent XSS by escaping HTML special characters
     function escapeHtml(text) {
@@ -334,7 +338,12 @@ document.addEventListener("DOMContentLoaded", function() {
         const btn = (event instanceof Event) ? event.target : null;
         if (btn) setLoading(btn, true, "Checking...");
 
-        fetch("/api/status")
+        const headers = {};
+        if (apiKey) {
+            headers["Authorization"] = `Bearer ${apiKey}`;
+        }
+
+        fetch("/api/status", { headers })
             .then(response => response.json())
             .then(data => {
                 const statusText = data.status;
@@ -485,9 +494,14 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         setLoading(saveStateBtn, true, "Saving...");
 
+        const headers = { "Content-Type": "application/json" };
+        if (apiKey) {
+            headers["Authorization"] = `Bearer ${apiKey}`;
+        }
+
         fetch("/api/state/save", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: headers,
             body: JSON.stringify({ save_name: saveName })
         })
         .then(response => response.json())
@@ -504,9 +518,14 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         setLoading(loadStateBtn, true, "Loading...");
 
+        const headers = { "Content-Type": "application/json" };
+        if (apiKey) {
+            headers["Authorization"] = `Bearer ${apiKey}`;
+        }
+
         fetch("/api/state/load", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: headers,
             body: JSON.stringify({ save_name: saveName })
         })
         .then(response => response.json())
