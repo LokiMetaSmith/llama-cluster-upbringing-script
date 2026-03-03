@@ -44,7 +44,7 @@ Developer Spec:
 
     async def _discover_llm(self) -> str:
         """Asynchronously discovers the main LLM service via Consul."""
-        service_name = os.getenv("PRIMA_API_SERVICE_NAME", "llama-api-main")
+        service_name = os.getenv("MAIN_API_SERVICE_NAME", "llama-api-main")
         consul_addr = self.twin_service.consul_http_addr
         try:
             async with httpx.AsyncClient() as client:

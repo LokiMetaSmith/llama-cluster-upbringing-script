@@ -903,9 +903,9 @@ async def discover_main_llm_service(consul_http_addr="http://localhost:8500", de
         The base URL of the discovered LLM service.
     """
     # This is useful for vision-specific LLM calls (used by TwinService._call_vision_llm)
-    service_name = os.getenv("PRIMA_API_SERVICE_NAME")
+    service_name = os.getenv("MAIN_API_SERVICE_NAME")
     if not service_name:
-         logging.warning("PRIMA_API_SERVICE_NAME not set, defaulting to llama-api-main")
+         logging.warning("MAIN_API_SERVICE_NAME not set, defaulting to llama-api-main")
          service_name = "llama-api-main"
 
     token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
