@@ -132,11 +132,17 @@
     direction: in
     comment: "Allow all loopback traffic (critical for local health checks)"
 
-- name: "Firewall : Allow all Cluster Internal Traffic"
+- name: "Firewall : Allow all Provisioning Underlay Traffic"
   community.general.ufw:
     rule: allow
-    from_ip: "10.0.0.0/24"
-    comment: "Allow full communication between cluster nodes on the private network"
+    from_ip: "{{ pxe_subnet | default('10.0.0.0') }}/24"
+    comment: "Allow full communication on the provisioning underlay network"
+
+- name: "Firewall : Allow all Cluster Overlay Traffic (Tailscale)"
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ overlay_subnet | default('100.64.0.0/10') }}"
+    comment: "Allow full communication between cluster nodes on the overlay mesh network"
 
 - name: "Firewall : Allow Nomad/Consul UIs from Home Network"
   community.general.ufw:
