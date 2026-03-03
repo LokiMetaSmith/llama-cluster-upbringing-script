@@ -9,6 +9,7 @@ import json
 from typing import List, Dict, Any, Optional
 from agent_factory import create_tools
 from pmm_memory_client import PMMMemoryClient
+from durable_execution import DurableExecutionEngine, durable_step
 
 # Configure logging
 logging.basicConfig(
@@ -29,6 +30,9 @@ class TechnicianAgent:
         self.messages = []
         self.max_steps = int(os.getenv("MAX_STEPS", "15"))
         self.work_item_id = None # Root work item for this task
+
+        self.durable_engine = DurableExecutionEngine()
+        self.current_flow_id = self.task_id
 
     def discover_services(self):
         """Discovers LLM and Memory services via Consul."""
@@ -108,6 +112,7 @@ class TechnicianAgent:
                 logger.error(f"LLM call failed: {e}")
                 return f"Error: {str(e)}"
 
+    @durable_step
     async def phase_1_plan(self) -> str:
         """Generates a high-level plan and registers it in the Gas Town Work Ledger."""
         logger.info("PHASE 1: Planning")
@@ -183,49 +188,59 @@ Focus on one step at a time.
             step += 1
             logger.info(f"Step {step}/{self.max_steps}")
 
-            # Get LLM response
-            response = await self.call_llm(self.messages)
-            logger.info(f"LLM Thought: {response}")
-            self.messages.append({"role": "assistant", "content": response})
+            new_messages, final_answer = await self.execute_step(step, plan)
+            self.messages.extend(new_messages)
 
-            # Log thought to Memory (optional, maybe too verbose for main ledger?)
-            # await self.report_event("agent_thought", response)
-
-            # Parse for Final Answer
-            if "FINAL_ANSWER:" in response:
-                final_answer = response.split("FINAL_ANSWER:", 1)[1].strip()
+            if final_answer is not None:
                 break
-
-            # Parse for Tool Call
-            tool_call = self._parse_tool_call(response)
-            if tool_call:
-                tool_name = tool_call.get("tool")
-                tool_args = tool_call.get("args", {})
-
-                if tool_name in self.tools:
-                    logger.info(f"Executing tool: {tool_name}")
-                    try:
-                        tool_instance = self.tools[tool_name]
-                        if asyncio.iscoroutinefunction(tool_instance.run):
-                            output = await tool_instance.run(**tool_args)
-                        else:
-                            output = tool_instance.run(**tool_args)
-                    except Exception as e:
-                        output = f"Tool Execution Error: {e}"
-
-                    logger.info(f"Tool Output: {str(output)[:200]}...") # Truncate log
-                    self.messages.append({"role": "user", "content": f"Tool '{tool_name}' output: {output}"})
-                else:
-                    self.messages.append({"role": "user", "content": f"Error: Tool '{tool_name}' not found."})
-            else:
-                # No tool call found, treating as a thought or generic message
-                # If the LLM is just talking, prompt it to act
-                self.messages.append({"role": "user", "content": "Please continue with the next step or use a tool."})
 
         if not final_answer:
             final_answer = "Max steps reached without definitive completion."
 
         return final_answer
+
+    @durable_step
+    async def execute_step(self, step: int, plan: str) -> tuple[List[Dict[str, str]], Optional[str]]:
+        new_messages = []
+        final_answer = None
+
+        # Get LLM response
+        response = await self.call_llm(self.messages)
+        logger.info(f"LLM Thought: {response}")
+        new_messages.append({"role": "assistant", "content": response})
+
+        # Parse for Final Answer
+        if "FINAL_ANSWER:" in response:
+            final_answer = response.split("FINAL_ANSWER:", 1)[1].strip()
+            return new_messages, final_answer
+
+        # Parse for Tool Call
+        tool_call = self._parse_tool_call(response)
+        if tool_call:
+            tool_name = tool_call.get("tool")
+            tool_args = tool_call.get("args", {})
+
+            if tool_name in self.tools:
+                logger.info(f"Executing tool: {tool_name}")
+                try:
+                    tool_instance = self.tools[tool_name]
+                    if asyncio.iscoroutinefunction(tool_instance.run):
+                        output = await tool_instance.run(**tool_args)
+                    else:
+                        output = tool_instance.run(**tool_args)
+                except Exception as e:
+                    output = f"Tool Execution Error: {e}"
+
+                logger.info(f"Tool Output: {str(output)[:200]}...") # Truncate log
+                new_messages.append({"role": "user", "content": f"Tool '{tool_name}' output: {output}"})
+            else:
+                new_messages.append({"role": "user", "content": f"Error: Tool '{tool_name}' not found."})
+        else:
+            # No tool call found, treating as a thought or generic message
+            # If the LLM is just talking, prompt it to act
+            new_messages.append({"role": "user", "content": "Please continue with the next step or use a tool."})
+
+        return new_messages, final_answer
 
     def _parse_tool_call(self, text: str) -> Optional[Dict]:
         """Simple JSON extractor."""
@@ -239,6 +254,7 @@ Focus on one step at a time.
                 return None
         return None
 
+    @durable_step
     async def phase_3_reflect(self, result: str) -> str:
         """Reflects on the result."""
         logger.info("PHASE 3: Reflection")
