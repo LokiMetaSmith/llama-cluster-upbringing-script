@@ -17,17 +17,17 @@ class Git_Tool:
         self.description = "A tool for interacting with Git repositories."
         self.name = "git_tool"
         if root_dir:
-            self.root_dir = os.path.abspath(root_dir)
+            self.root_dir = os.path.realpath(root_dir)
         else:
-            self.root_dir = os.path.abspath(os.getcwd())
+            self.root_dir = os.path.realpath(os.getcwd())
 
     def _validate_path(self, path: str) -> str:
         """Ensures the path is within the root directory."""
-        # Resolve absolute path
+        # Resolve real canonical path, following symlinks
         if not os.path.isabs(path):
-            full_path = os.path.abspath(os.path.join(os.getcwd(), path))
+            full_path = os.path.realpath(os.path.join(os.getcwd(), path))
         else:
-            full_path = os.path.abspath(path)
+            full_path = os.path.realpath(path)
 
         # Security check: Ensure we don't break out of the allowed root
         try:
