@@ -6,7 +6,7 @@ This document tracks the progress and remaining tasks for integrating Obsidian C
 - [x] **Create Design Document**: `docs/OBSIDIAN_WORKFLOW_DESIGN.md`
 - [x] **Update Workflow Schema**: Added `position` (x,y,z), `dimensions` (w,h,d), `style` to `Node` class in `pipecatapp/workflow/node.py`.
 - [x] **Implement Canvas Converter**: Created `pipecatapp/workflow/canvas_converter.py` for bidirectional conversion.
-- [ ] **Verify Conversion**: Write tests to ensure data integrity during round-trip conversion.
+- [x] **Verify Conversion**: Write tests to ensure data integrity during round-trip conversion.
 
 ## Phase 2: 3D Visualization (Next Steps)
 - [ ] **Select 3D Library**: Decide between Three.js (standard web) or A-Frame (VR-first). *Recommendation: Three.js for broad compatibility, wrapped in A-Frame for VR.*
