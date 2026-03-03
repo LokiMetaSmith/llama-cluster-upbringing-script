@@ -96,7 +96,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         try {
             // Assuming workflowName corresponds to a file in workflows/ dir, accessible via API
             // The API might expect just the filename.
-            const response = await fetch(`/api/workflows/definition/${workflowName}`);
+            const headers = {};
+            const apiKey = localStorage.getItem('api_key');
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+            const response = await fetch(`/api/workflows/definition/${workflowName}`, { headers });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -297,7 +300,10 @@ document.addEventListener('DOMContentLoaded', async function () {
             // Palette UX: Show loading state in the list
             historyList.innerHTML = '<div class="empty-state">Loading history...</div>';
 
-            const response = await fetch('/api/workflows/history?limit=50');
+            const headers = {};
+            const apiKey = localStorage.getItem('api_key');
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+            const response = await fetch('/api/workflows/history?limit=50', { headers });
             if (response.ok) {
                 const history = await response.json();
                 renderHistoryList(history);
@@ -373,7 +379,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
 
         try {
-            const response = await fetch(`/api/workflows/history/${runId}`);
+            const headers = {};
+            const apiKey = localStorage.getItem('api_key');
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+            const response = await fetch(`/api/workflows/history/${runId}`, { headers });
             if (response.ok) {
                 const runData = await response.json();
                 // Ensure correct workflow definition is loaded
@@ -392,7 +401,10 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     async function pollActiveWorkflows() {
         try {
-            const activeResponse = await fetch('/api/workflows/active');
+            const headers = {};
+            const apiKey = localStorage.getItem('api_key');
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+            const activeResponse = await fetch('/api/workflows/active', { headers });
             const activeWorkflows = await activeResponse.json();
             const workflowIds = Object.keys(activeWorkflows);
 
@@ -439,7 +451,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                             try {
                                 await fetch('/api/gate/approve', {
                                     method: 'POST',
-                                    headers: {'Content-Type': 'application/json'},
+                                    headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('api_key') || ''}`},
                                     body: JSON.stringify({ request_id: reqId })
                                 });
                             } catch (error) {

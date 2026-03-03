@@ -172,7 +172,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Audit and remove hardcoded secrets:**
   - Audit frontend code (`pipecatapp/static/js`), workflows (`workflows/`), and tools (`pipecatapp/tools/`) for hardcoded secrets, API keys, or tokens.
   - Remove any found secrets and replace them with secure environment variable loading.
-- [ ] **Audit unauthenticated API endpoints:**
+- [x] **Audit unauthenticated API endpoints:**
   - Review `pipecatapp/web_server.py` and other API definitions to ensure sensitive data endpoints are authenticated.
   - Specifically check endpoints returning user data or configuration.
 - [x] **Audit WebSocket security:**

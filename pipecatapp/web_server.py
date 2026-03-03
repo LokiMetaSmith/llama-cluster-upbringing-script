@@ -408,7 +408,7 @@ async def get_cluster_viz():
         return HTMLResponse(f.read())
 
 @app.get("/api/cluster/metrics", summary="Get Cluster Metrics", description="Retrieves CPU and Memory metrics for services from Prometheus.", tags=["System"])
-async def get_cluster_metrics():
+async def get_cluster_metrics(api_key: str = Security(get_api_key)):
     """Retrieves cluster metrics from Prometheus."""
     # Bolt ⚡ Optimization: Return cached metrics if available
     cached_metrics = await metrics_cache.get()
@@ -484,7 +484,7 @@ async def get_cluster_metrics():
     return JSONResponse(content=services)
 
 @app.get("/api/status", summary="Get Agent Status", description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks.", tags=["Agent"])
-async def get_status(request: Request):
+async def get_status(request: Request, api_key: str = Security(get_api_key)):
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
     twin_service = request.app.state.twin_service_instance
     if twin_service and hasattr(twin_service, 'tools'):
@@ -513,7 +513,7 @@ async def get_health(request: Request):
         return JSONResponse(status_code=200, content={"status": "initializing"})
 
 @app.get("/api/workflows/active", response_class=JSONResponse)
-async def get_active_workflows():
+async def get_active_workflows(api_key: str = Security(get_api_key)):
     """Returns a snapshot of the state of all active workflows."""
     active_workflows = ActiveWorkflows()
     # Security Fix: Sanitize sensitive data from the active workflow states
@@ -521,7 +521,7 @@ async def get_active_workflows():
     return active_workflows.get_all_states(sanitize=True)
 
 @app.get("/api/workflows/history", response_class=JSONResponse, summary="Get Workflow History", description="Retrieves a list of past workflow runs.", tags=["Workflow"])
-async def get_workflow_history(limit: int = 50):
+async def get_workflow_history(limit: int = 50, api_key: str = Security(get_api_key)):
     """Retrieves a list of past workflow runs."""
     history = WorkflowHistory()
     loop = asyncio.get_running_loop()
@@ -541,7 +541,7 @@ async def get_workflow_history(limit: int = 50):
     return runs
 
 @app.get("/api/workflows/history/{runner_id}", response_class=JSONResponse, summary="Get Workflow Run Details", description="Retrieves the full details of a specific workflow run.", tags=["Workflow"])
-async def get_workflow_run(runner_id: str):
+async def get_workflow_run(runner_id: str, api_key: str = Security(get_api_key)):
     """Retrieves the full details of a specific workflow run."""
     history = WorkflowHistory()
     loop = asyncio.get_running_loop()
@@ -567,7 +567,7 @@ async def approve_gate(payload: Dict = Body(...), api_key: str = Security(get_ap
         raise HTTPException(status_code=404, detail=f"No open gate found for request {request_id}.")
 
 @app.get("/api/workflows/definition/{workflow_name}", response_class=JSONResponse)
-async def get_workflow_definition(workflow_name: str):
+async def get_workflow_definition(workflow_name: str, api_key: str = Security(get_api_key)):
     """Loads a workflow definition from a YAML file and returns it as JSON."""
     # Basic security to prevent directory traversal
     if ".." in workflow_name or not workflow_name.endswith((".yaml", ".yml")):
@@ -641,7 +641,7 @@ async def save_workflow_definition(payload: Dict = Body(...), api_key: str = Sec
         raise HTTPException(status_code=500, detail="An error occurred while saving the workflow.")
 
 @app.get("/api/web_uis")
-async def get_web_uis():
+async def get_web_uis(api_key: str = Security(get_api_key)):
     """
     Discovers web UIs from Consul.
     It explicitly adds Consul and Nomad, and then discovers other services

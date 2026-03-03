@@ -211,8 +211,8 @@
             try {
                 // Parallel fetch of metrics and web UIs
                 const [metricsRes, uisRes] = await Promise.all([
-                    fetch('/api/cluster/metrics'),
-                    fetch('/api/web_uis')
+                    fetch('/api/cluster/metrics', { headers: { 'Authorization': `Bearer ${localStorage.getItem('api_key') || ''}` } }),
+                    fetch('/api/web_uis', { headers: { 'Authorization': `Bearer ${localStorage.getItem('api_key') || ''}` } })
                 ]);
 
                 if (!metricsRes.ok) return;
