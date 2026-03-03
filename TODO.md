@@ -106,7 +106,7 @@
 - [ ] **Investigate Advanced Power Management:** Research and prototype a more advanced version that uses Wake-on-LAN.
 - [ ] **Expand the Model Collection:** Systematically test and add the remaining LiquidAI nano models to `group_vars/models.yaml`.
 - [ ] **Security Hardening:**
-  - **Remove passwordless sudo:** Modify the sudoers file configuration to require a password for the `target_user`.
+  - [x] **Remove passwordless sudo:** Modify the sudoers file configuration to require a password for the `target_user`.
   - **Run services as non-root users:** Audit all services and ensure they are running as dedicated, non-privileged users where possible.
 - [ ] **Robust Remote Node Recovery:** Add mechanism to recover remote nodes even if network stack is completely broken (possibly via serial console or IPMI automation).
 - [x] **Monitoring and Observability:** Deploy a monitoring stack like Prometheus and Grafana.
