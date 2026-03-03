@@ -83,5 +83,68 @@ class TestCanvasIntegration(unittest.TestCase):
             if os.path.exists("test_canvas.canvas"):
                 os.remove("test_canvas.canvas")
 
+    def test_workflow_to_canvas(self):
+        """Verify conversion from Workflow Schema to Canvas JSON."""
+        workflow = {
+            "name": "Generated from Canvas",
+            "nodes": [
+                {
+                    "id": "node1",
+                    "type": "code_runner",
+                    "config": {
+                        "content": "print('Hello')",
+                        "raw_text": "[TYPE: code_runner]\nprint('Hello')"
+                    },
+                    "position": {"x": 100.0, "y": 100.0, "z": 0.0},
+                    "dimensions": {"width": 400.0, "height": 200.0, "depth": 0.0},
+                    "style": {"color": "#ff0000", "shape": "box"}
+                },
+                {
+                    "id": "node2",
+                    "type": "note",
+                    "config": {
+                        "content": "Output Node",
+                        "raw_text": "Output Node"
+                    },
+                    "position": {"x": 600.0, "y": 100.0, "z": 0.0},
+                    "dimensions": {"width": 400.0, "height": 200.0, "depth": 0.0},
+                    "style": {"color": "#cccccc", "shape": "box"},
+                    "inputs": [
+                        {
+                            "name": "input_from_node1",
+                            "connection": {
+                                "from_node": "node1",
+                                "output_name": "output"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        output_path = "test_output.canvas"
+        try:
+            CanvasConverter.workflow_to_canvas(workflow, output_path)
+
+            self.assertTrue(os.path.exists(output_path))
+            with open(output_path, "r") as f:
+                canvas_data = json.load(f)
+
+            self.assertEqual(len(canvas_data["nodes"]), 2)
+            self.assertEqual(len(canvas_data["edges"]), 1)
+
+            node1 = next(n for n in canvas_data["nodes"] if n["id"] == "node1")
+            self.assertEqual(node1["x"], 100.0)
+            self.assertEqual(node1["color"], "#ff0000")
+
+            edge = canvas_data["edges"][0]
+            self.assertEqual(edge["fromNode"], "node1")
+            self.assertEqual(edge["toNode"], "node2")
+
+        finally:
+            if os.path.exists(output_path):
+                os.remove(output_path)
+
+
 if __name__ == '__main__':
     unittest.main()
