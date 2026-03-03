@@ -71,9 +71,3 @@
       when: not ansible_check_mode
       tags:
         - nomad-health
-
-    - name: Remove temporary passwordless sudo for '{{ target_user }}'
-      become: yes
-      ansible.builtin.file:
-        path: "/etc/sudoers.d/ansible-{{ target_user }}-nopasswd"
-        state: absent

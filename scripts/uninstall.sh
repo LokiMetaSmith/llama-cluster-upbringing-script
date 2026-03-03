@@ -66,10 +66,9 @@ sudo rm -rf /var/lib/docker
 sudo rm -rf /var/lib/containerd
 sudo rm -rf /etc/docker
 
-# Remove user and sudoers file
-echo "Removing user '$TARGET_USER' and sudoers file..."
+# Remove user
+echo "Removing user '$TARGET_USER'..."
 sudo userdel -r "$TARGET_USER" || true
-sudo rm -f "/etc/sudoers.d/ansible-$TARGET_USER-nopasswd"
 
 # Remove environment file
 echo "Removing environment file..."
