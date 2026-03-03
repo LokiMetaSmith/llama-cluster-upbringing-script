@@ -195,7 +195,10 @@
 
             // Load Default Workflow
             try {
-                const response = await fetch('/api/workflows/definition/default_agent_loop.yaml');
+                const headers = {};
+                const apiKey = localStorage.getItem('api_key');
+                if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+                const response = await fetch('/api/workflows/definition/default_agent_loop.yaml', { headers });
                 const yamlData = await response.json();
                 WorkflowEditor.importWorkflow(yamlData);
             } catch (e) {
@@ -326,7 +329,10 @@
                 liveBtn.style.backgroundColor = "#28a745";
                 pollingInterval = setInterval(async () => {
                     try {
-                        const res = await fetch('/api/workflows/active');
+                        const headers = {};
+                        const apiKey = localStorage.getItem('api_key');
+                        if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+                        const res = await fetch('/api/workflows/active', { headers });
                         const data = await res.json();
                         // Get first active workflow state
                         const runIds = Object.keys(data);
@@ -356,7 +362,10 @@
             const historyList = document.getElementById('history-list');
 
             async function loadHistory() {
-                const res = await fetch('/api/workflows/history?limit=20');
+                const headers = {};
+                const apiKey = localStorage.getItem('api_key');
+                if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+                const res = await fetch('/api/workflows/history?limit=20', { headers });
                 const runs = await res.json();
                 historyList.innerHTML = '';
                 runs.forEach(run => {
@@ -382,7 +391,10 @@
                         console.log("Loading run", run);
                         // Fetch full details
                         try {
-                            const detailRes = await fetch(`/api/workflows/history/${run.id}`);
+                            const headers = {};
+                            const apiKey = localStorage.getItem('api_key');
+                            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+                            const detailRes = await fetch(`/api/workflows/history/${run.id}`, { headers });
                             if (!detailRes.ok) throw new Error("Run not found");
                             const fullRun = await detailRes.json();
 

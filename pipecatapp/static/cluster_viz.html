@@ -306,7 +306,10 @@
         async function updateGraph() {
             if (!simulation) return;
             try {
-                const res = await fetch('/api/cluster/metrics');
+                const headers = {};
+                const apiKey = localStorage.getItem('api_key');
+                if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+                const res = await fetch('/api/cluster/metrics', { headers });
                 if (!res.ok) throw new Error("API Error " + res.status);
                 const metrics = await res.json();
 
