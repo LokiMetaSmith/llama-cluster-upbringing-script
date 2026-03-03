@@ -27,12 +27,12 @@
     2. [x] Implement the "Map" phase: Analysis of the task and generation of sub-task definitions.
     3. [x] Implement the "Dispatch" phase: Using `SwarmTool` to spawn multiple `technician` agents.
     4. [x] Implement the "Reduce" phase: Aggregating results from the spawned workers.
-- [ ] **Durable Execution Integration:**
+- [x] **Durable Execution Integration:**
   - **Goal:** Ensure `TechnicianAgent` can resume execution after a crash or restart.
   - **Tasks:**
-    1. Update `TechnicianAgent` to use `pipecatapp.durable_execution.DurableExecutionEngine`.
-    2. Decorate the `execute_step` method with `@durable_step`.
-    3. Ensure state (messages list, current plan) is checkpointed.
+    1. [x] Update `TechnicianAgent` to use `pipecatapp.durable_execution.DurableExecutionEngine`.
+    2. [x] Decorate the `execute_step` method with `@durable_step`.
+    3. [x] Ensure state (messages list, current plan) is checkpointed.
 - [ ] **Skill Library (Knowledge Persistence):**
   - **Goal:** Allow agents to save successful tool usage patterns for future use.
   - **Tasks:**
