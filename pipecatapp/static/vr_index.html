@@ -215,7 +215,9 @@
         }
 
         // 2. WebSocket Connection
-        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        const apiKey = localStorage.getItem('api_key') || '';
+        const wsUrl = `ws://${window.location.host}/ws` + (apiKey ? `?token=${encodeURIComponent(apiKey)}` : '');
+        const ws = new WebSocket(wsUrl);
         const agentLogText = document.querySelector('#agent-log-text');
         const visionDisplay = document.querySelector('#vision-display');
         const visionStatus = document.querySelector('#vision-status');

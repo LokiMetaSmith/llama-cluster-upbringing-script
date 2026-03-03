@@ -269,7 +269,13 @@
     <script src="/static/terminal.js"></script>
     <script>
         window.refreshAdminUIs = function() {
-            fetch('/api/web_uis')
+            const apiKey = localStorage.getItem('api_key') || '';
+            const headers = {};
+            if (apiKey) {
+                headers["Authorization"] = `Bearer ${apiKey}`;
+            }
+
+            fetch('/api/web_uis', { headers })
                 .then(response => response.json())
                 .then(data => {
                     const adminUiLinks = document.getElementById('admin-ui-links');
