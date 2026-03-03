@@ -44,7 +44,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       LLAMA_API_URL          = "http://{{ cluster_ip }}:{{ router_port }}/v1"
       WEB_PORT               = "${NOMAD_PORT_http}"
       YOLO_MODEL_PATH        = "{{ nomad_models_dir }}/vision/yolov8n.pt"
-      PRIMA_API_SERVICE_NAME = "llama-api-main"
+      MAIN_API_SERVICE_NAME = "llama-api-main"
     }
     {% endset %}
 
