@@ -37,13 +37,15 @@ class SpecLoaderTool:
 
     def _validate_path(self, path: str) -> str:
         """Ensures the path is within the work directory."""
-        full_path = os.path.abspath(os.path.join(self.work_dir, path))
+        # Use realpath to resolve symlinks and prevent directory traversal
+        work_dir_real = os.path.realpath(self.work_dir)
+        full_path = os.path.realpath(os.path.join(work_dir_real, path))
         try:
-            common = os.path.commonpath([os.path.abspath(self.work_dir), full_path])
+            common = os.path.commonpath([work_dir_real, full_path])
         except ValueError:
             common = ""
 
-        if common != os.path.abspath(self.work_dir):
+        if common != work_dir_real:
             raise ValueError(f"Security Error: Access denied: {path} is outside the allowed directory {self.work_dir}")
         return full_path
 
