@@ -87,3 +87,8 @@
 **Vulnerability:** `ExperimentTool` used `os.path.abspath` to validate paths, allowing path traversal if a symlink exists inside the allowed directory pointing outside.
 **Learning:** `os.path.abspath` does not resolve symlinks, which allows a malicious agent to traverse out of the intended root directory via a symlink trick.
 **Prevention:** Use `os.path.realpath` instead of `os.path.abspath` to resolve the canonical path before checking containment with `os.path.commonpath`.
+
+## 2026-03-07 - Path Traversal via Symlinks in SpecLoaderTool
+**Vulnerability:** `SpecLoaderTool._validate_path` used `os.path.abspath` instead of `os.path.realpath` to validate paths, allowing path traversal (e.g., cloning or scanning external resources into unauthorized directory areas) if a symlink exists inside the allowed directory pointing outside.
+**Learning:** `os.path.abspath` does not resolve symlinks, permitting an agent to traverse out of the intended root directory bounds using a symlink trick. `os.path.realpath` must be used to securely resolve the path to ensure it truly lies within the intended directory.
+**Prevention:** Use `os.path.realpath` instead of `os.path.abspath` to resolve the canonical path before verifying its confinement against the root boundary with `os.path.commonpath`.
