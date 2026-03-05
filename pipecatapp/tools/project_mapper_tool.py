@@ -29,8 +29,8 @@ class ProjectMapperTool:
         Returns a dictionary representing the file structure and imports.
         """
         # Resolve absolute paths to prevent traversal
-        root_abs = os.path.abspath(self.root_dir)
-        start_dir = os.path.abspath(os.path.join(root_abs, sub_path))
+        root_abs = os.path.realpath(self.root_dir)
+        start_dir = os.path.realpath(os.path.join(root_abs, sub_path))
 
         # Security check: Ensure we don't break out of the allowed root
         try:

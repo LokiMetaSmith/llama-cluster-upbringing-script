@@ -41,8 +41,8 @@ class Ansible_Tool:
             str: A string containing the output of the playbook run, or an
                 error message if the run fails or times out.
         """
-        playbook_path = os.path.abspath(os.path.join(self.project_root, playbook))
-        project_root_abs = os.path.abspath(self.project_root)
+        playbook_path = os.path.realpath(os.path.join(self.project_root, playbook))
+        project_root_abs = os.path.realpath(self.project_root)
 
         # Ensure strict directory containment to prevent partial path attacks
         # e.g., /opt/cluster-infra vs /opt/cluster-infra-secret

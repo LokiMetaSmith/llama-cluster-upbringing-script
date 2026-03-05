@@ -57,14 +57,15 @@ def test_rag_tool_initialization(mock_sentence_transformer, mock_faiss, mock_pmm
     """Tests that the RAG_Tool initializes without errors and builds from filesystem if memory is empty."""
     with patch('os.walk') as mock_walk:
         mock_walk.return_value = [
-            ('/fake/dir', [], ['test.md'])
+            (os.path.realpath('/fake/dir'), [], ['test.md'])
         ]
         m = mock_open(read_data="This is a test file.")
         with patch('builtins.open', m):
             # Simulate memory being empty, then populated after scan
+            base_dir_real = os.path.realpath("/fake/dir")
             mock_pmm_memory.get_events_sync.side_effect = [
                 [],
-                [{'content': 'This is a test file.', 'meta': {'source': '/fake/dir/test.md'}}]
+                [{'content': 'This is a test file.', 'meta': {'source': os.path.join(base_dir_real, 'test.md')}}]
             ]
 
             tool = RAG_Tool(pmm_memory=mock_pmm_memory, base_dir="/fake/dir")
@@ -73,7 +74,7 @@ def test_rag_tool_initialization(mock_sentence_transformer, mock_faiss, mock_pmm
             mock_pmm_memory.add_event_sync.assert_called_once_with(
                 kind="rag_document",
                 content="This is a test file.",
-                meta={"source": "/fake/dir/test.md"}
+                meta={"source": os.path.join(os.path.realpath("/fake/dir"), 'test.md')}
             )
             mock_faiss.IndexFlatL2.return_value.add.assert_called_once()
 
@@ -88,7 +89,7 @@ def test_rag_tool_search(mock_sentence_transformer, mock_faiss, mock_pmm_memory)
     mock_pmm_memory.get_events_sync.return_value = docs
 
     # Force explicit return value for search using side_effect to ensure it returns fresh objects
-    mock_faiss.IndexFlatL2.return_value.search.side_effect = lambda q, k: (np.array([[1.0, 2.0, 3.0]], dtype=np.float32), np.array([[0, 1, 2]], dtype=np.int64))
+    mock_faiss.IndexFlatL2.return_value.search.side_effect = lambda q, k: (np.array([[1.0, 2.0, 3.0]], dtype=np.float32), [[0, 1, 2]])
 
     with patch('os.walk') as mock_walk: # os.walk should not be called now
         tool = RAG_Tool(pmm_memory=mock_pmm_memory, base_dir="/fake/dir")
@@ -100,11 +101,12 @@ def test_rag_tool_search(mock_sentence_transformer, mock_faiss, mock_pmm_memory)
 
         # Verify that the search method was called on the index
         mock_faiss.IndexFlatL2.return_value.search.assert_called_once()
-        assert "From /fake/dir/test1.md" in results
+        base_dir_real = os.path.realpath("/fake/dir")
+        assert f"From {os.path.join(base_dir_real, 'test1.md')}" in results
         assert "This is chunk 1." in results
-        assert "From /fake/dir/test2.txt" in results
+        assert f"From {os.path.join(base_dir_real, 'test2.txt')}" in results
         assert "This is chunk 2." in results
-        assert "From /fake/dir/test3.md" in results
+        assert f"From {os.path.join(base_dir_real, 'test3.md')}" in results
         assert "This is chunk 3." in results
 
 def test_rag_tool_empty_knowledge_base(mock_sentence_transformer, mock_faiss, mock_pmm_memory):
@@ -134,7 +136,7 @@ def test_no_relevant_documents_found(mock_sentence_transformer, mock_faiss, mock
     assert tool.is_ready
 
     # Mock the FAISS search to return no results
-    mock_faiss.IndexFlatL2.return_value.search.side_effect = lambda q, k: (np.array([[-1, -1, -1]], dtype=np.int64), np.array([[-1, -1, -1]], dtype=np.int64))
+    mock_faiss.IndexFlatL2.return_value.search.side_effect = lambda q, k: (np.array([[-1, -1, -1]], dtype=np.float32), [[-1, -1, -1]])
 
     # Perform a search
     results = tool.search_knowledge_base("test query")
@@ -153,7 +155,7 @@ def test_rag_tool_search_with_fewer_than_k_results(mock_sentence_transformer, mo
     assert tool.is_ready
 
     # Mock the FAISS search to return only 2 valid results
-    mock_faiss.IndexFlatL2.return_value.search.side_effect = lambda q, k: (np.array([[1.0, 2.0, -1.0]], dtype=np.float32), np.array([[0, 1, -1]], dtype=np.int64))
+    mock_faiss.IndexFlatL2.return_value.search.side_effect = lambda q, k: (np.array([[1.0, 2.0, -1.0]], dtype=np.float32), [[0, 1, -1]])
 
     # Perform a search
     results = tool.search_knowledge_base("test query")

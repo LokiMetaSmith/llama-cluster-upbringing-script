@@ -45,8 +45,8 @@ class RAG_Tool:
                 logging.error("Could not import PMMMemory. RAG tool will not function.")
                 self.pmm_memory = None
 
-        self.base_dir = os.path.abspath(base_dir)
-        self.allowed_root = os.path.abspath(allowed_root) if allowed_root else self.base_dir
+        self.base_dir = os.path.realpath(base_dir)
+        self.allowed_root = os.path.realpath(allowed_root) if allowed_root else self.base_dir
 
         # Security Check: Prevent accidental root scanning
         # If base_dir is root (/) and allow_root_scan is False, raise error.
@@ -82,7 +82,7 @@ class RAG_Tool:
         Returns:
             bool: True if scope was updated, False if invalid or forbidden.
         """
-        abs_path = os.path.abspath(path)
+        abs_path = os.path.realpath(path)
         # Security check: ensure path is within allowed_root
         if os.path.commonpath([self.allowed_root, abs_path]) != self.allowed_root:
             logging.warning(f"RAG scope change denied: {path} is not within {self.allowed_root}")
