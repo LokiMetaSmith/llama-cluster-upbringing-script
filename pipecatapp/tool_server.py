@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 import inspect
 import os
+import secrets
 from typing import Optional
 
 from tools.ssh_tool import SSH_Tool
@@ -56,7 +57,7 @@ async def run_tool(request: ToolRequest, authorization: Optional[str] = Header(N
 
     try:
         auth_type, token = authorization.split()
-        if auth_type.lower() != "bearer" or token != API_KEY:
+        if auth_type.lower() != "bearer" or not secrets.compare_digest(token, API_KEY):
             raise HTTPException(status_code=403, detail="Invalid credentials.")
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid authorization header format.")
