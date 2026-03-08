@@ -2,6 +2,12 @@
 
 ## Immediate Actions
 
+- [ ] **Bootable System Installation & Auto-Configuration:**
+  - **Goal:** Create a slimmed-down, bootable Debian ISO and enhance `bootstrap.sh` to auto-detect hardware resources.
+  - **Tasks:**
+    1. Update `bootstrap.sh` to profile system resources (CPU cores, RAM).
+    2. Dynamically configure `--role` (controller, worker, all) and model settings based on available hardware (e.g., fallback to external models on 4GB machines).
+    3. Create a `live-build` configuration to generate a custom, headless Debian bootable ISO that includes the project source and dependencies.
 - [ ] **Migrate to Hybrid Architecture (Phase 1):**
   - **Goal:** Allow the application to choose between running tools in-process (Monolith) or via the Tool Server (Distributed).
   - Reference: `docs/TODO_Hybrid_Architecture.md`

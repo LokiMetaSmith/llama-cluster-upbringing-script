@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Set up the default root password to "pipecat" for live/install access
+echo "root:pipecat" | chpasswd
+
+# Setup user `pipecatapp`
+useradd -m -s /bin/bash pipecatapp
+echo "pipecatapp:pipecat" | chpasswd
+usermod -aG sudo pipecatapp
+
+# Give passwordless sudo to pipecatapp during bootstrap/live session
+echo "pipecatapp ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/pipecatapp
+
+# Ensure correct permissions for the project
+chown -R pipecatapp:pipecatapp /opt/pipecat-cluster

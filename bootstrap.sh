@@ -49,8 +49,39 @@ DO_CLEAN_GIT=false
 DO_SYSTEM_CLEANUP=false
 DO_PURGE_JOBS=false
 VERBOSE_LEVEL=0
-ROLE="all"
+ROLE=""
 CONTROLLER_IP=""
+
+# --- Profile System Resources ---
+profile_system() {
+    echo -e "\n${BOLD}=== Profiling System Resources ===${NC}"
+
+    local CPU_CORES=$(nproc 2>/dev/null || echo 1)
+    local RAM_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
+    local RAM_GB=$(( RAM_KB / 1024 / 1024 ))
+
+    echo -e "Detected CPU Cores: ${CYAN}${CPU_CORES}${NC}"
+    echo -e "Detected Total RAM: ${CYAN}${RAM_GB} GB${NC}"
+
+    # Auto-detect role if not explicitly set
+    if [ -z "$ROLE" ]; then
+        if [ "$RAM_GB" -le 4 ]; then
+            echo -e "${YELLOW}⚠️  Low resource machine detected ($RAM_GB GB RAM). Defaulting role to 'worker' and enabling external models.${NC}"
+            ROLE="worker"
+            PROCESSED_ARGS+=("--role" "worker" "--external-model-server")
+        elif [ "$RAM_GB" -ge 8 ] && [ "$CPU_CORES" -ge 4 ]; then
+            echo -e "${GREEN}✅ Powerful machine detected. Defaulting role to 'all'.${NC}"
+            ROLE="all"
+            PROCESSED_ARGS+=("--role" "all")
+        else
+            echo -e "${CYAN}ℹ️  Standard machine detected. Defaulting role to 'worker'.${NC}"
+            ROLE="worker"
+            PROCESSED_ARGS+=("--role" "worker")
+        fi
+    else
+        echo -e "Role explicitly set to: ${CYAN}${ROLE}${NC}"
+    fi
+}
 
 # --- Parse command-line arguments for wrapper logic ---
 # We use a while loop to handle optional values for flags like --verbose
@@ -100,6 +131,14 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
                 PROCESSED_ARGS+=("--verbose" "3")
             fi
             ;;
+        --role)
+            NEXT_ARG="${ARGS[$((i+1))]}"
+            if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
+                ROLE="$NEXT_ARG"
+                PROCESSED_ARGS+=("--role" "$ROLE")
+                SKIP_NEXT=true
+            fi
+            ;;
         -h|--help)
             show_help
             exit 0
@@ -109,6 +148,9 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             ;;
     esac
 done
+
+# Run system profiling before we proceed
+profile_system
 
 # --- Move to the script's directory ---
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
