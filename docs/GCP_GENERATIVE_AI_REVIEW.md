@@ -62,7 +62,7 @@ It provides a sophisticated, human-like memory system that completely bypasses t
 
 ## Implementation TODO List
 
-1. [ ] **Update `MemoryStore` (`pipecatapp/memory.py`)**
+1. [x] **Update `MemoryStore` (`pipecatapp/memory.py`)**
    - Implement a new SQLite backend (or extend the existing JSON store) to support the `memories` and `consolidations` tables.
    - Ensure the new SQLite backend respects the existing `MEMORY_ENCRYPTION_KEY` for data-at-rest encryption (potentially via SQLCipher or application-level field encryption).
 
