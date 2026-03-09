@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Workflow Viewer</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #1a1a1a; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: sans-serif;
+            pointer-events: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Pipecat 3D Workflow Viewer</div>
+
+    <!-- Import maps polyfill -->
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a);
+
+        // Camera setup
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 100);
+
+        // Renderer setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Controls setup
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(100, 100, 50);
+        scene.add(directionalLight);
+
+        // Workflow data structures
+        const nodeMeshes = new Map();
+        const edgeLines = [];
+        const nodeGroup = new THREE.Group();
+        scene.add(nodeGroup);
+
+        // Materials setup with status colors
+        const materials = {
+            active: new THREE.MeshStandardMaterial({ color: 0x00ff00, transparent: true, opacity: 0.8 }), // Green
+            pending: new THREE.MeshStandardMaterial({ color: 0xffff00, transparent: true, opacity: 0.8 }), // Yellow
+            failed: new THREE.MeshStandardMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 }), // Red
+            idle: new THREE.MeshStandardMaterial({ color: 0x888888, transparent: true, opacity: 0.5 }), // Gray
+            line: new THREE.LineBasicMaterial({ color: 0x444444, linewidth: 2 })
+        };
+
+        const defaultGeom = new THREE.BoxGeometry(10, 10, 10);
+        const nodeLabelRenderer = document.createElement('div');
+        nodeLabelRenderer.style.position = 'absolute';
+        nodeLabelRenderer.style.color = 'white';
+        nodeLabelRenderer.style.fontFamily = 'sans-serif';
+        nodeLabelRenderer.style.fontSize = '12px';
+        nodeLabelRenderer.style.pointerEvents = 'none';
+        document.body.appendChild(nodeLabelRenderer);
+
+        function clearGraph() {
+            for (let mesh of nodeMeshes.values()) {
+                nodeGroup.remove(mesh);
+                mesh.geometry.dispose();
+            }
+            nodeMeshes.clear();
+
+            for (let line of edgeLines) {
+                scene.remove(line);
+                line.geometry.dispose();
+            }
+            edgeLines.length = 0;
+            nodeLabelRenderer.innerHTML = '';
+        }
+
+        async function fetchWorkflowDefinition(workflowName) {
+            try {
+                const apiKey = localStorage.getItem('api_key') || '';
+                const headers = { 'Content-Type': 'application/json' };
+                if (apiKey) {
+                    headers['Authorization'] = `Bearer ${apiKey}`;
+                }
+                const response = await fetch(`/api/workflows/definition/${workflowName}`, { headers });
+                if (!response.ok) return null;
+                return await response.json();
+            } catch (e) {
+                console.error("Failed to load workflow definition", e);
+                return null;
+            }
+        }
+
+        async function build3DGraph(activeData) {
+            // In activeData, we have requestIds mapping to their states
+            const activeRuns = Object.values(activeData);
+            let activeNodesState = {};
+            let activeWorkflowName = 'default_agent_loop.yaml'; // Fallback
+
+            if (activeRuns.length > 0) {
+                // Visualize the first active run for now
+                activeNodesState = activeRuns[0].node_outputs || {};
+                // Use the active run's workflow name if available, else fallback
+                if (activeRuns[0].workflow_name) {
+                    activeWorkflowName = activeRuns[0].workflow_name;
+                }
+            }
+
+            let defWorkflow = await fetchWorkflowDefinition(activeWorkflowName);
+            if (!defWorkflow) {
+                console.warn(`Could not fetch workflow definition for ${activeWorkflowName}`);
+                return;
+            }
+
+            const nodesDef = defWorkflow.nodes || [];
+            const edgesDef = defWorkflow.edges || [];
+
+            // Clear old graph only after new data is fetched successfully to avoid flickering
+            clearGraph();
+
+            // 1. Create nodes
+            nodesDef.forEach((node, index) => {
+                // Determine layout based on provided attributes or fall back to grid layout
+                let px = 0, py = 0, pz = 0;
+                let sx = 10, sy = 10, sz = 10;
+
+                if (node.position) {
+                    px = node.position.x || px;
+                    py = node.position.y || py;
+                    pz = node.position.z || pz;
+                } else {
+                    // Fallback generic grid
+                    px = (index % 5) * 30 - 60;
+                    py = Math.floor(index / 5) * 30 - 30;
+                }
+
+                if (node.dimensions) {
+                    sx = node.dimensions.w || node.dimensions.width || sx;
+                    sy = node.dimensions.h || node.dimensions.height || sy;
+                    sz = node.dimensions.d || node.dimensions.depth || sz;
+                }
+
+                // Determine node status based on active state execution history
+                // (Using 'idle' as default, but you might want to adjust logic based on your specific run states)
+                let status = 'idle';
+                if (activeNodesState[node.name]) {
+                    // Node has output - it ran or is running
+                    // We assume green for completed/active unless we parse specific error states
+                    status = 'active';
+                }
+
+                const geometry = new THREE.BoxGeometry(sx, sy, sz);
+                const mesh = new THREE.Mesh(geometry, materials[status]);
+                mesh.position.set(px, py, pz);
+
+                mesh.userData = { name: node.name, type: node.type };
+                nodeGroup.add(mesh);
+                nodeMeshes.set(node.name, mesh);
+
+                // HTML Labels (simple positioning, normally you'd use CSS2DRenderer)
+                const label = document.createElement('div');
+                label.textContent = node.name;
+                label.style.position = 'absolute';
+                label.id = `label-${node.name}`;
+                nodeLabelRenderer.appendChild(label);
+            });
+
+            // 2. Create connections (edges)
+            edgesDef.forEach(edge => {
+                const sourceNode = nodeMeshes.get(edge.source);
+                const targetNode = nodeMeshes.get(edge.target);
+
+                if (sourceNode && targetNode) {
+                    const points = [
+                        sourceNode.position,
+                        targetNode.position
+                    ];
+                    const lineGeom = new THREE.BufferGeometry().setFromPoints(points);
+                    const line = new THREE.Line(lineGeom, materials.line);
+                    scene.add(line);
+                    edgeLines.push(line);
+                }
+            });
+        }
+
+        // Dynamic data loading
+        async function loadWorkflowData() {
+            try {
+                const apiKey = localStorage.getItem('api_key') || '';
+                const headers = { 'Content-Type': 'application/json' };
+                if (apiKey) {
+                    headers['Authorization'] = `Bearer ${apiKey}`;
+                }
+
+                const response = await fetch('/api/workflows/active', { headers });
+                if (!response.ok) {
+                    console.error('Failed to fetch workflow data:', response.status);
+                    return;
+                }
+
+                const data = await response.json();
+                await build3DGraph(data);
+
+            } catch (error) {
+                console.error('Error loading workflow data:', error);
+            }
+        }
+
+        // Poll for updates every 5 seconds
+        setInterval(loadWorkflowData, 5000);
+
+        // Initial load
+        loadWorkflowData();
+
+        // Window resize handler
+        window.addEventListener('resize', onWindowResize, false);
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Helper to update label positions
+        function updateLabels() {
+            nodeMeshes.forEach((mesh, name) => {
+                const label = document.getElementById(`label-${name}`);
+                if (label) {
+                    const vector = mesh.position.clone();
+                    vector.project(camera);
+
+                    const x = (vector.x * .5 + .5) * window.innerWidth;
+                    const y = (vector.y * -.5 + .5) * window.innerHeight;
+
+                    // Hide labels if behind camera
+                    if (vector.z > 1) {
+                        label.style.display = 'none';
+                    } else {
+                        label.style.display = 'block';
+                        label.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+                    }
+                }
+            });
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            updateLabels();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
