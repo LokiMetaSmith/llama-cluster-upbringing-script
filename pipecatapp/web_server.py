@@ -407,6 +407,13 @@ async def get_cluster_viz():
     with open(viz_html_path) as f:
         return HTMLResponse(f.read())
 
+@app.get("/workflow_3d", summary="Serve 3D Workflow UI", description="Serves the `workflow_3d.html` file for the 3D workflow visualization UI.", tags=["UI"])
+async def get_workflow_3d_ui():
+    """Serves the 3D workflow visualization UI."""
+    workflow_3d_html_path = os.path.join(static_dir, "workflow_3d.html")
+    with open(workflow_3d_html_path) as f:
+        return HTMLResponse(f.read())
+
 @app.get("/api/cluster/metrics", summary="Get Cluster Metrics", description="Retrieves CPU and Memory metrics for services from Prometheus.", tags=["System"])
 async def get_cluster_metrics(api_key: str = Security(get_api_key)):
     """Retrieves cluster metrics from Prometheus."""
