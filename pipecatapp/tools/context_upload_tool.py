@@ -8,7 +8,7 @@ class ContextUploadTool:
     This enables the "Deep Context" workflow to access user-provided rulebooks or manuals.
     """
     def __init__(self, **kwargs):
-        self.sandbox_dir = os.path.abspath("/tmp/pipecat_context")
+        self.sandbox_dir = os.path.realpath("/tmp/pipecat_context")
         os.makedirs(self.sandbox_dir, exist_ok=True)
 
     async def execute(self, content: str, filename: str) -> str:
