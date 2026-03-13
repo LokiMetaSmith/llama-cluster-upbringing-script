@@ -6,19 +6,19 @@ This document tracks the engineering tasks required to migrate to the Hybrid / C
 
 Objective: Allow the application to choose between running tools in-process (Monolith) or via the Tool Server (Distributed) based on configuration.
 
-- [ ] **Define Configuration Schema**
-  - [ ] Add `tool_execution_mode` (enum: `local`, `remote`) to `config/app/settings` in Consul.
-  - [ ] Update `ansible/roles/pipecatapp/templates/pipecat.env.j2` to expose this as an environment variable `TOOL_EXECUTION_MODE`.
+- [x] **Define Configuration Schema**
+  - [x] Add `tool_execution_mode` (enum: `local`, `remote`) to `config/app/settings` in Consul.
+  - [x] Update `ansible/roles/pipecatapp/templates/pipecat.env.j2` to expose this as an environment variable `TOOL_EXECUTION_MODE`.
 
-- [ ] **Implement Remote Tool Proxy**
-  - [ ] Create `pipecatapp/tools/remote_tool_proxy.py`.
-  - [ ] Implement a generic `RemoteToolProxy` class that accepts a `tool_name` and `base_url`.
-  - [ ] Implement `__getattr__` or explicit methods to forward calls to the Tool Server API (`POST /run_tool`).
-  - [ ] Handle authentication (forward `TOOL_SERVER_API_KEY`).
+- [x] **Implement Remote Tool Proxy**
+  - [x] Create `pipecatapp/tools/remote_tool_proxy.py`.
+  - [x] Implement a generic `RemoteToolProxy` class that accepts a `tool_name` and `base_url`.
+  - [x] Implement `__getattr__` or explicit methods to forward calls to the Tool Server API (`POST /run_tool`).
+  - [x] Handle authentication (forward `TOOL_SERVER_API_KEY`).
 
-- [ ] **Refactor Agent Factory (`pipecatapp/agent_factory.py`)**
-  - [ ] Update `create_tools(config, ...)` to read `config.get("tool_execution_mode")`.
-  - [ ] Implement conditional logic:
+- [x] **Refactor Agent Factory (`pipecatapp/agent_factory.py`)**
+  - [x] Update `create_tools(config, ...)` to read `config.get("tool_execution_mode")`.
+  - [x] Implement conditional logic:
 
         ```python
         if config.get("tool_execution_mode") == "remote":
@@ -27,8 +27,8 @@ Objective: Allow the application to choose between running tools in-process (Mon
             tools["ssh"] = SSH_Tool()
         ```
 
-  - [ ] Ensure "Heavy" tools (e.g., `CodeRunnerTool`) respect this setting.
-  - [ ] Ensure "Light" tools (e.g., `Calculator`) always run locally if possible, or add a split configuration (e.g., `heavy_tools_mode`).
+  - [x] Ensure "Heavy" tools (e.g., `CodeRunnerTool`) respect this setting.
+  - [x] Ensure "Light" tools (e.g., `Calculator`) always run locally if possible, or add a split configuration (e.g., `heavy_tools_mode`).
 
 ## Phase 2: In-Process Logic Consolidation
 
