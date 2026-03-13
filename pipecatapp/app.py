@@ -1247,6 +1247,12 @@ async def load_config_from_consul(consul_host, consul_port):
 
     except Exception as e:
         logging.error(f"Error loading configuration from Consul: {e}")
+
+    if "TOOL_EXECUTION_MODE" in os.environ:
+        config["tool_execution_mode"] = os.getenv("TOOL_EXECUTION_MODE")
+    if "TOOL_SERVER_URL" in os.environ:
+        config["tool_server_url"] = os.getenv("TOOL_SERVER_URL")
+
     return config
 
 # Global variable to hold the background task

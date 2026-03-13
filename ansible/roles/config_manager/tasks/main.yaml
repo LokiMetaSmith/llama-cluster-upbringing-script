@@ -104,7 +104,10 @@
           "expected_cluster_size": expected_cluster_size,
           "ha_url": "{{ ha_url | default('') }}",
           "ha_token": "{{ ha_token | default('') }}",
-          "audio_in_device_index": 0
+          "audio_in_device_index": 0,
+          "tool_execution_mode": "{{ tool_execution_mode | default('local') }}",
+          "tool_server_url": "{{ tool_server_url | default('') }}",
+          "tool_server_api_key": "{{ tool_server_api_key | default('') }}"
         } | to_json
       }}
     status_code: 200

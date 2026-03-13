@@ -8,7 +8,7 @@
     1. [x] Update `bootstrap.sh` to profile system resources (CPU cores, RAM).
     2. [x] Dynamically configure `--role` (controller, worker, all) and model settings based on available hardware (e.g., fallback to external models on 4GB machines).
     3. [x] Create a `live-build` configuration to generate a custom, headless Debian bootable ISO that includes the project source and dependencies.
-- [ ] **Migrate to Hybrid Architecture (Phase 1):**
+- [x] **Migrate to Hybrid Architecture (Phase 1):**
   - **Goal:** Allow the application to choose between running tools in-process (Monolith) or via the Tool Server (Distributed).
   - Reference: `docs/TODO_Hybrid_Architecture.md`
 - [ ] **Implement Active Vault Workflow (Phase 1):**
