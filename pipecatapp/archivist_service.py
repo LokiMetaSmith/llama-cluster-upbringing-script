@@ -10,12 +10,21 @@ import numpy as np
 import pickle
 from typing import List, Dict, Optional, Any
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Security, Depends
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
 import httpx
 from concurrent.futures import ThreadPoolExecutor
+
+if __package__:
+    from .api_keys import get_api_key
+    from .rate_limiter import RateLimiter
+    from .net_utils import format_url
+else:
+    from api_keys import get_api_key
+    from rate_limiter import RateLimiter
+    from net_utils import format_url
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -29,10 +38,6 @@ if not os.getenv("ARCHIVIST_PORT"):
     raise ValueError("ARCHIVIST_PORT environment variable must be set")
 PORT = int(os.getenv("ARCHIVIST_PORT"))
 
-try:
-    from net_utils import format_url
-except ImportError:
-    from pipecatapp.net_utils import format_url
 CONSUL_HOST = os.getenv("CONSUL_HOST", "127.0.0.1")
 CONSUL_PORT = int(os.getenv("CONSUL_PORT", 8500))
 LLAMA_API_SERVICE_NAME = os.getenv("LLAMA_API_SERVICE_NAME", "llamacpp-rpc-api")
@@ -574,8 +579,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Archivist Service", version="1.0", lifespan=lifespan)
 
+strict_limiter = RateLimiter(limit=10, window=60)
+
 @app.post("/research")
-async def research_endpoint(req: DeepResearchRequest):
+async def research_endpoint(req: DeepResearchRequest, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     if not researcher_instance:
         raise HTTPException(status_code=503, detail="Service initializing")
 
