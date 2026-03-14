@@ -184,10 +184,10 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Audit WebSocket security:**
   - Verify that WebSocket connections enforce strict Origin checks to prevent Cross-Site WebSocket Hijacking (CSWSH).
   - Consider implementing authentication for WebSocket connections.
-- [ ] **Audit write access controls:**
+- [x] **Audit write access controls:**
   - Ensure that all state-changing endpoints (POST, PUT, PATCH) require authentication and authorization.
   - Verify that unauthenticated users cannot modify workflows or agent state.
-- [ ] **Audit rate limiting configuration:**
+- [x] **Audit rate limiting configuration:**
   - Review rate limiting settings in `pipecatapp/rate_limiter.py` and `pipecatapp/web_server.py`.
   - Ensure critical endpoints have stricter limits to prevent abuse.
 - [x] **Audit data storage security:**

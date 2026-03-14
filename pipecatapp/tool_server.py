@@ -1,10 +1,15 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Depends
 from pydantic import BaseModel
 import inspect
 import os
 import secrets
 from typing import Optional
+
+if __package__:
+    from .rate_limiter import RateLimiter
+else:
+    from rate_limiter import RateLimiter
 
 from tools.ssh_tool import SSH_Tool
 from tools.desktop_control_tool import DesktopControlTool
@@ -44,16 +49,15 @@ tools = {
 }
 
 API_KEY = os.getenv("TOOL_SERVER_API_KEY")
+strict_limiter = RateLimiter(limit=10, window=60)
 
 @app.post("/run_tool/")
-async def run_tool(request: ToolRequest, authorization: Optional[str] = Header(None)):
+async def run_tool(request: ToolRequest, authorization: str = Header(...), rate_limit: None = Depends(strict_limiter)):
     """
     Executes a method on a specified tool with the given arguments.
     """
     if not API_KEY:
         raise HTTPException(status_code=500, detail="API key not configured on server.")
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header is missing.")
 
     try:
         auth_type, token = authorization.split()
