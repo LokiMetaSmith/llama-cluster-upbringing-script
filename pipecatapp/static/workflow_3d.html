@@ -22,6 +22,11 @@
 <body>
     <div id="info">Pipecat 3D Workflow Viewer</div>
 
+    <div id="zoom-control" style="position: absolute; bottom: 20px; width: 100%; text-align: center; color: white; font-family: sans-serif; z-index: 100; pointer-events: auto;">
+        <label for="z-slider">Semantic Zoom (Z-Layer): <span id="z-value">0</span></label><br>
+        <input type="range" id="z-slider" min="-200" max="200" value="0" style="width: 50%;">
+    </div>
+
     <!-- Import maps polyfill -->
     <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
 
@@ -178,7 +183,9 @@
                 }
 
                 const geometry = new THREE.BoxGeometry(sx, sy, sz);
-                const mesh = new THREE.Mesh(geometry, materials[status]);
+                // Clone the material so each node can fade independently
+                const material = materials[status].clone();
+                const mesh = new THREE.Mesh(geometry, material);
                 mesh.position.set(px, py, pz);
 
                 mesh.userData = { name: node.name, type: node.type };
@@ -204,7 +211,18 @@
                         targetNode.position
                     ];
                     const lineGeom = new THREE.BufferGeometry().setFromPoints(points);
-                    const line = new THREE.Line(lineGeom, materials.line);
+
+                    // Create a unique material for each line so we can fade them individually
+                    const lineMaterial = new THREE.LineBasicMaterial({
+                        color: 0x444444,
+                        linewidth: 2,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+
+                    const line = new THREE.Line(lineGeom, lineMaterial);
+                    // Store source and target positions for opacity calculation
+                    line.userData = { sourceZ: sourceNode.position.z, targetZ: targetNode.position.z };
                     scene.add(line);
                     edgeLines.push(line);
                 }
@@ -249,6 +267,16 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
+        // Semantic Zoom State
+        let targetZ = 0;
+        const zSlider = document.getElementById('z-slider');
+        const zValueDisplay = document.getElementById('z-value');
+
+        zSlider.addEventListener('input', (event) => {
+            targetZ = parseFloat(event.target.value);
+            zValueDisplay.textContent = targetZ;
+        });
+
         // Helper to update label positions
         function updateLabels() {
             nodeMeshes.forEach((mesh, name) => {
@@ -260,13 +288,40 @@
                     const x = (vector.x * .5 + .5) * window.innerWidth;
                     const y = (vector.y * -.5 + .5) * window.innerHeight;
 
-                    // Hide labels if behind camera
-                    if (vector.z > 1) {
+                    // Calculate opacity based on Semantic Zoom
+                    const distanceToTargetZ = Math.abs(mesh.position.z - targetZ);
+                    // Nodes within 50 units on Z axis are fully visible, fade out beyond that
+                    const opacity = Math.max(0, 1.0 - Math.max(0, distanceToTargetZ - 50) / 100);
+
+                    // Update material opacity
+                    if (mesh.material) {
+                        mesh.material.transparent = true;
+                        mesh.material.opacity = opacity * 0.8; // Max opacity 0.8 as defined in materials
+                        mesh.visible = opacity > 0.05;
+                    }
+
+                    // Hide labels if behind camera or if node is faded out
+                    if (vector.z > 1 || opacity <= 0.05) {
                         label.style.display = 'none';
                     } else {
                         label.style.display = 'block';
+                        label.style.opacity = opacity;
                         label.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
                     }
+                }
+            });
+
+            // Update edge lines opacity based on connected nodes
+            edgeLines.forEach(line => {
+                const sourceDist = Math.max(0, 1.0 - Math.max(0, Math.abs(line.userData.sourceZ - targetZ) - 50) / 100);
+                const targetDist = Math.max(0, 1.0 - Math.max(0, Math.abs(line.userData.targetZ - targetZ) - 50) / 100);
+
+                // If both ends are faded out, fade out the line
+                const lineOpacity = Math.max(sourceDist, targetDist);
+
+                if (line.material) {
+                    line.material.opacity = lineOpacity * 0.8;
+                    line.visible = lineOpacity > 0.05;
                 }
             });
         }

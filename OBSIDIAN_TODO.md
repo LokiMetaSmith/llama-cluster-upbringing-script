@@ -14,9 +14,9 @@ This document tracks the progress and remaining tasks for integrating Obsidian C
     - [x] Render nodes as 3D objects (boxes/spheres) at correct (x,y,z).
     - [x] Draw connections as 3D lines/curves.
     - [x] Implement camera controls (Orbit, Pan, Zoom).
-- [ ] **Implement "Semantic Zoom"**:
-    - [ ] Define Z-axis layers (e.g., Z=0 Logic, Z=100 Summary).
-    - [ ] Add UI slider or scroll interaction to fade layers in/out based on camera depth.
+- [x] **Implement "Semantic Zoom"**:
+    - [x] Define Z-axis layers (e.g., Z=0 Logic, Z=100 Summary).
+    - [x] Add UI slider or scroll interaction to fade layers in/out based on camera depth.
 
 ## Phase 3: The "Gardener" Agent (Automation)
 - [ ] **File Watcher Service**: Create a background service that monitors the Obsidian Vault path.
