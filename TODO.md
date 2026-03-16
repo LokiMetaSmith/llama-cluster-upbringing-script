@@ -11,7 +11,7 @@
 - [x] **Migrate to Hybrid Architecture (Phase 1):**
   - **Goal:** Allow the application to choose between running tools in-process (Monolith) or via the Tool Server (Distributed).
   - Reference: `docs/TODO_Hybrid_Architecture.md`
-- [ ] **Implement Active Vault Workflow (Phase 1):**
+- [x] **Implement Active Vault Workflow (Phase 1):**
   - **Goal:** Support 3D spatial properties in nodes and implement `CanvasConverter`.
   - Reference: `docs/OBSIDIAN_WORKFLOW_DESIGN.md`
 - [ ] **Train and Configure LLMRouter:**
