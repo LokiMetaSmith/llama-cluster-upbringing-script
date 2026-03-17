@@ -35,6 +35,26 @@ expert_models:
       url: "https://huggingface.co/LiquidAI/LFM2-1.2B-Extract-GGUF/resolve/main/LFM2-1.2B-Extract-Q4_K_M.gguf"
       filename: "LFM2-1.2B-Extract-Q4_K_M.gguf"
       memory_mb: 4096
+  rag:
+    - name: "LFM2-1.2B-RAG"
+      url: "https://huggingface.co/LiquidAI/LFM2-1.2B-RAG-GGUF/resolve/main/LFM2-1.2B-RAG-Q4_K_M.gguf"
+      filename: "LFM2-1.2B-RAG-Q4_K_M.gguf"
+      memory_mb: 4096
+  tool:
+    - name: "LFM2-1.2B-Tool"
+      url: "https://huggingface.co/LiquidAI/LFM2-1.2B-Tool-GGUF/resolve/main/LFM2-1.2B-Tool-Q4_K_M.gguf"
+      filename: "LFM2-1.2B-Tool-Q4_K_M.gguf"
+      memory_mb: 4096
+  thinking:
+    - name: "LFM2.5-1.2B-Thinking"
+      url: "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Thinking-GGUF/resolve/main/LFM2.5-1.2B-Thinking-Q4_K_M.gguf"
+      filename: "LFM2.5-1.2B-Thinking-Q4_K_M.gguf"
+      memory_mb: 4096
+  instruct:
+    - name: "LFM2.5-1.2B-Instruct"
+      url: "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF/resolve/main/LFM2.5-1.2B-Instruct-Q4_K_M.gguf"
+      filename: "LFM2.5-1.2B-Instruct-Q4_K_M.gguf"
+      memory_mb: 4096
   router:
     - name: "phi-3-mini-instruct"
       url: "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf"
