@@ -48,7 +48,7 @@
   when: not ansible_check_mode
 
 - name: Deploy Minikeyvalue Nomad Job
-  nomad_job:
+  community.general.nomad_job:
     host: localhost
     content: "{{ lookup('template', 'mkv.nomad.j2') }}"
     state: present

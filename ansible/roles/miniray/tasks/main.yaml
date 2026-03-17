@@ -24,7 +24,7 @@
   when: not ansible_check_mode
 
 - name: Deploy Miniray Nomad Job
-  nomad_job:
+  community.general.nomad_job:
     host: localhost
     content: "{{ lookup('template', 'miniray.nomad.j2') }}"
     state: present
