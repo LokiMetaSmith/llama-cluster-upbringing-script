@@ -46,6 +46,11 @@ from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
 from faster_whisper import WhisperModel
 from piper.voice import PiperVoice
+from wyoming.client import AsyncTcpClient
+from wyoming.audio import AudioChunk, AudioStart, AudioStop
+from wyoming.asr import Transcribe
+from wyoming.event import Event
+from kokoro import KPipeline
 import requests
 import httpx
 import consul.aio
@@ -221,6 +226,62 @@ class BenchmarkCollector(FrameProcessor):
         self.stt_end_time = 0
         self.llm_first_token_time = 0
         self.tts_first_audio_time = 0
+
+class WyomingSTTService(FrameProcessor):
+    """A Pipecat processor for Speech-to-Text using a Wyoming protocol server.
+
+    This service connects to a Wyoming server (e.g., Wyoming ONNX ASR), sends audio
+    frames, and waits for transcriptions.
+    """
+    def __init__(self, host: str, port: int, sample_rate: int = 16000):
+        super().__init__()
+        self.host = host
+        self.port = port
+        self.sample_rate = sample_rate
+        self.audio_buffer = bytearray()
+
+    async def process_frame(self, frame, direction):
+        if isinstance(frame, UserStartedSpeakingFrame):
+            self.audio_buffer.clear()
+        elif isinstance(frame, AudioRawFrame):
+            self.audio_buffer.extend(frame.audio)
+        elif isinstance(frame, UserStoppedSpeakingFrame):
+            if not self.audio_buffer:
+                return
+
+            audio_bytes = bytes(self.audio_buffer)
+            self.audio_buffer.clear()
+
+            try:
+                # Wyoming protocol interaction
+                client = AsyncTcpClient(self.host, self.port)
+                await client.connect()
+
+                await client.write_event(Transcribe().event())
+                await client.write_event(AudioStart(rate=self.sample_rate, width=2, channels=1).event())
+
+                # Send audio in chunks
+                chunk_size = 4096
+                for i in range(0, len(audio_bytes), chunk_size):
+                    chunk = audio_bytes[i:i + chunk_size]
+                    await client.write_event(AudioChunk(rate=self.sample_rate, width=2, channels=1, audio=chunk).event())
+
+                await client.write_event(AudioStop().event())
+
+                # Wait for response
+                while True:
+                    event = await client.read_event()
+                    if event is None:
+                        break
+                    if event.type == "transcript":
+                        text = event.data.get("text", "").strip()
+                        if text:
+                            await self.push_frame(TranscriptionFrame(text))
+                        break
+
+                await client.disconnect()
+            except Exception as e:
+                logging.error(f"Error communicating with Wyoming STT server: {e}")
 
 class FasterWhisperSTTService(FrameProcessor):
     """A Pipecat processor for Speech-to-Text using Faster-Whisper.
@@ -427,6 +488,52 @@ class GroqSTTService(FrameProcessor):
                 os.remove(frame.file_path)
         else:
             await self.push_frame(frame, direction)
+
+class KokoroTTSService(FrameProcessor):
+    """A Pipecat processor for Text-to-Speech using Kokoro.
+
+    This service synthesizes speech from text frames using the Kokoro TTS engine
+    and pushes the resulting raw audio frames back into the pipeline.
+    """
+    def __init__(self, model_path: str, lang_code: str = 'a', voice_name: str = 'af_heart'):
+        super().__init__()
+        self.pipeline = KPipeline(lang_code=lang_code)
+        self.voice_name = voice_name
+        self.sample_rate = 24000
+
+    def _synthesize_sync(self, text: str) -> bytes:
+        """Helper to run synthesis in a separate thread."""
+        audio_stream = io.BytesIO()
+        # Generate audio using Kokoro
+        # KPipeline returns an iterator of (graphemes, phonemes, audio)
+        result = list(self.pipeline(text, voice=self.voice_name, speed=1, split_pattern=r'\n+'))
+        if not result:
+             return b""
+
+        # Concatenate audio chunks if multiple
+        import numpy as np
+        audio_chunks = [chunk[2] for chunk in result if chunk[2] is not None]
+        if not audio_chunks:
+            return b""
+
+        full_audio = np.concatenate(audio_chunks)
+
+        # Convert to 16-bit PCM
+        import soundfile as sf
+        sf.write(audio_stream, full_audio, self.sample_rate, format='WAV', subtype='PCM_16')
+
+        audio_stream.seek(0)
+        with wave.open(audio_stream, "rb") as wf:
+            return wf.readframes(wf.getnframes())
+
+    async def process_frame(self, frame, direction):
+        if not isinstance(frame, TextFrame):
+            await self.push_frame(frame, direction)
+            return
+
+        loop = asyncio.get_running_loop()
+        audio_bytes = await loop.run_in_executor(None, self._synthesize_sync, frame.text)
+        await self.push_frame(AudioRawFrame(audio_bytes))
 
 class PiperTTSService(FrameProcessor):
     """A Pipecat processor for Text-to-Speech using Piper.
@@ -1385,8 +1492,12 @@ async def run_agent():
     try:
         tts_voices = app_config.get("tts_voices", [])
         if tts_voices:
-            model_path = f"/opt/nomad/models/tts/{tts_voices[0]['model']}"
-            tts = PiperTTSService(model_path=model_path)
+            first_voice = tts_voices[0]
+            if first_voice["name"].startswith("kokoro"):
+                tts = KokoroTTSService(model_path="")
+            else:
+                model_path = f"/opt/nomad/models/tts/{first_voice['model']}"
+                tts = PiperTTSService(model_path=model_path)
             websocket_streamer = WebsocketAudioStreamer(sample_rate=tts.sample_rate)
             logging.info("TTS and Websocket Audio Streamer initialized.")
         else:
@@ -1431,13 +1542,19 @@ async def run_agent():
         stt_service_name = app_config.get("stt_service") or os.getenv("STT_SERVICE")
         if stt_service_name == "faster-whisper":
             stt_provider = app_config.get("active_stt_provider", "faster-whisper")
-            stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
-            # Sanitize the model name if it contains the provider name as a prefix
-            if stt_model_name.startswith(f"{stt_provider}-"):
-                stt_model_name = stt_model_name[len(stt_provider) + 1:]
-            model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
-            stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
-            logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate 16000Hz.")
+            if stt_provider == "wyoming":
+                host = app_config.get("wyoming_host", "localhost")
+                port = int(app_config.get("wyoming_port", 10300))
+                stt = WyomingSTTService(host=host, port=port)
+                logging.info(f"Configured Wyoming for STT at {host}:{port}.")
+            else:
+                stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
+                # Sanitize the model name if it contains the provider name as a prefix
+                if stt_model_name.startswith(f"{stt_provider}-"):
+                    stt_model_name = stt_model_name[len(stt_provider) + 1:]
+                model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
+                stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
+                logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate 16000Hz.")
         elif stt_service_name == "groq":
             groq_key = secret_manager.get_secret("GROQ_API_KEY")
             if not groq_key:

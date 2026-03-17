@@ -50,6 +50,16 @@ expert_models:
       url: "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF-v2/resolve/main/Meta-Llama-3-8B-Instruct-v2.Q4_K_M.gguf"
       filename: "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
       memory_mb: 8192
+  gpt-oss:
+    - name: "gpt-oss-20B"
+      url: "https://huggingface.co/bartowski/gpt-oss-20B-GGUF/resolve/main/gpt-oss-20B-Q4_K_M.gguf"
+      filename: "gpt-oss-20B-Q4_K_M.gguf"
+      memory_mb: 16384
+  qwen3.5:
+    - name: "Qwen3.5-35B-A3B-MXFP4_MOE"
+      url: "https://huggingface.co/byteshape/Qwen3.5-35B-A3B-MXFP4_MOE-GGUF/resolve/main/Qwen3.5-35B-A3B-MXFP4_MOE-Q4_K_M.gguf"
+      filename: "Qwen3.5-35B-A3B-MXFP4_MOE-Q4_K_M.gguf"
+      memory_mb: 16384
 
 vllm_expert_models:
   - name: "vllm-main"
@@ -58,6 +68,8 @@ vllm_expert_models:
 
 # A list of voices for the PiperTTSService to use, in order of preference.
 tts_voices:
+  - name: "kokoro-v1"
+    model: "kokoro-v1.onnx"
   - name: "en_US-l2arctic-medium"
     repo_id: "rhasspy/piper-voices"
     path_in_repo: "en/en_US/l2arctic/medium"
@@ -95,6 +107,9 @@ stt_models:
   faster-whisper:
     - name: "tiny.en"
       repo_id: "Systran/faster-whisper-tiny.en"
+  wyoming:
+    - name: "nvidia-parakeet-v2"
+      repo_id: "nvidia/parakeet-v2-onnx"
 
 
 # The provider and name of the STT model to be used by the pipecat-app

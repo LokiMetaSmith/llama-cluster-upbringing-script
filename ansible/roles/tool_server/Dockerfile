@@ -51,6 +51,8 @@ RUN pip install --no-cache-dir \
     opencv-python-headless \
     paramiko \
     piper-tts \
+    kokoro \
+    wyoming \
     httpx \
     requests \
     python-consul2 \
