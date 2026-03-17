@@ -19,6 +19,11 @@ for module in MOCK_MODULES:
     sys.modules[module] = MagicMock()
 
 # Now it should be safe to import from app and other local files
+from unittest.mock import AsyncMock
+# Setup async mock for web_server broadcast
+mock_web_server = sys.modules['web_server']
+mock_web_server.manager.broadcast = AsyncMock()
+
 from app import FasterWhisperSTTService
 from stub_services import StubOutputService
 from pipecat.frames.frames import AudioRawFrame, EndFrame, StartFrame, TranscriptionFrame, UserStartedSpeakingFrame, UserStoppedSpeakingFrame

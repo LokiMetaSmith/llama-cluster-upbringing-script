@@ -34,6 +34,8 @@ pillow
 pipecat-ai[openai,local]
 pipecat-ai-whisker
 piper-tts
+kokoro
+wyoming
 playwright
 pydantic
 python-consul2

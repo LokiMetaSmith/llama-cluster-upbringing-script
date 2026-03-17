@@ -31,6 +31,8 @@ pipecat-ai
 pipecat-ai-whisker
 pip
 piper-tts
+kokoro
+wyoming
 playwright
 python-consul2
 python-dotenv
