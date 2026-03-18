@@ -58,7 +58,7 @@
   - Research alternative selection strategies from evolutionary computation (e.g., tournament selection, novelty search).
   - Add a new command-line argument to `evolve.py` to allow the user to choose the selection strategy (e.g., `--selection-method tournament`).
   - Implement the new selection logic in the `select_parent_from_archive` function.
-- [ ] **Web-Based UI for Campaign Analysis:**
+- [x] **Web-Based UI for Campaign Analysis:**
   - Create a new script `archive_server.py` using a lightweight web framework like Flask or FastAPI.
   - The server should have an endpoint that reads the entire `archive/` directory and constructs a JSON representation of the evolutionary tree.
   - Create a simple, single-page HTML/JavaScript frontend that fetches this JSON and uses a library (like D3.js or vis.js) to render an interactive evolutionary tree.
