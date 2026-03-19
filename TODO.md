@@ -39,13 +39,13 @@
     1. [x] Update `TechnicianAgent` to use `pipecatapp.durable_execution.DurableExecutionEngine`.
     2. [x] Decorate the `execute_step` method with `@durable_step`.
     3. [x] Ensure state (messages list, current plan) is checkpointed.
-- [ ] **Skill Library (Knowledge Persistence):**
+- [x] **Skill Library (Knowledge Persistence):**
   - **Goal:** Allow agents to save successful tool usage patterns for future use.
   - **Tasks:**
-    1. Create a simple file-based or database-backed Skill Library service (or use the existing Memory service).
-    2. Add a `save_skill` tool to the agent's toolkit.
-    3. Add a `search_skills` tool to the agent's toolkit.
-    4. Update the `TechnicianAgent` reflection phase to optionally suggest saving a new skill if the task was novel and successful.
+    1. [x] Create a simple file-based or database-backed Skill Library service (or use the existing Memory service).
+    2. [x] Add a `save_skill` tool to the agent's toolkit.
+    3. [x] Add a `search_skills` tool to the agent's toolkit.
+    4. [x] Update the `TechnicianAgent` reflection phase to optionally suggest saving a new skill if the task was novel and successful.
 
 ## Prompt Engineering Enhancements
 

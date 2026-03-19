@@ -36,6 +36,8 @@ from tools.openclaw_tool import OpenClawTool
 from tools.scheduler_tool import SchedulerTool
 from tools.context_upload_tool import ContextUploadTool
 from tools.personality_tool import PersonalityTool
+from tools.save_skill_tool import SaveSkillTool
+from tools.search_skills_tool import SearchSkillsTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -92,6 +94,8 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "scheduler": SchedulerTool(),
         "context_upload": ContextUploadTool(),
         "personality": PersonalityTool(api_url=config.get("llama_api_url")),
+        "save_skill": SaveSkillTool(),
+        "search_skills": SearchSkillsTool(),
     }
 
     # Inject memory client into SwarmTool if available (for Map-Reduce)
