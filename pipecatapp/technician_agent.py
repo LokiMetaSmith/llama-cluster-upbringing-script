@@ -268,7 +268,11 @@ Focus on one step at a time.
             f"Original Request: {self.prompt}\n"
             f"Result: {result}\n\n"
             "Is this result satisfactory and complete? "
-            "If yes, repeat the result. If no, succinctly describe what is missing."
+            "If yes, repeat the result. If no, succinctly describe what is missing.\n\n"
+            "Additionally, if this task was successfully completed and represents a novel, "
+            "useful approach, suggest saving it as a skill using the save_skill tool. "
+            "To suggest saving a skill, append a JSON block at the end of your response like this: "
+            '{"suggested_skill": {"name": "skill_name", "description": "short description", "content": "detailed steps or code"}}'
         )
 
         msgs = [
@@ -278,6 +282,29 @@ Focus on one step at a time.
 
         critique = await self.call_llm(msgs, temperature=0.0)
         logger.info(f"Reflection: {critique}")
+
+        # Check if the LLM suggested a skill
+        if "suggested_skill" in critique:
+            try:
+                import re
+                # Find the JSON block
+                match = re.search(r'\{.*\}', critique, re.DOTALL)
+                if match:
+                    json_str = match.group(0)
+                    suggestion = json.loads(json_str)
+                    if "suggested_skill" in suggestion:
+                        skill_data = suggestion["suggested_skill"]
+                        logger.info(f"LLM suggested saving a new skill: {skill_data.get('name')}")
+                        if "save_skill" in self.tools:
+                            tool = self.tools["save_skill"]
+                            tool_result = tool.run(
+                                name=skill_data.get("name", "unnamed_skill"),
+                                description=skill_data.get("description", ""),
+                                content=skill_data.get("content", "")
+                            )
+                            logger.info(f"Skill save result: {tool_result}")
+            except Exception as e:
+                logger.error(f"Failed to parse or save suggested skill: {e}")
 
         # Final Status Update
         if self.work_item_id and self.memory_client:
