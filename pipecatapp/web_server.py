@@ -821,6 +821,56 @@ async def load_state_endpoint(request: Request, payload: Dict = Body(..., exampl
         return {"message": result}
     return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
 
+@app.get("/api/personality", summary="Get Current Personality", description="Retrieves the current personality control vectors.", tags=["Agent"])
+async def get_personality(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """Retrieves current personality configuration."""
+    if not hasattr(app.state, 'personality_tool'):
+        if __package__:
+            from .tools.personality_tool import PersonalityTool
+        else:
+            from tools.personality_tool import PersonalityTool
+        app.state.personality_tool = PersonalityTool()
+
+    status_str = app.state.personality_tool.get_current_personality()
+    return JSONResponse(status_code=200, content={"status": status_str})
+
+@app.post("/api/personality", summary="Set Personality", description="Sets the personality using control vectors.", tags=["Agent"])
+async def set_personality(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """Sets a new personality vector."""
+    if not hasattr(app.state, 'personality_tool'):
+        if __package__:
+            from .tools.personality_tool import PersonalityTool
+        else:
+            from tools.personality_tool import PersonalityTool
+        app.state.personality_tool = PersonalityTool()
+
+    name = payload.get("name")
+    strength = payload.get("strength")
+
+    if not name or strength is None:
+        raise HTTPException(status_code=400, detail="Missing required parameters: 'name' and 'strength'")
+
+    try:
+        strength = float(strength)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="'strength' must be a number")
+
+    result = app.state.personality_tool.set_personality(name, strength)
+    return JSONResponse(status_code=200, content={"message": result})
+
+@app.delete("/api/personality", summary="Reset Personality", description="Resets all personality control vectors.", tags=["Agent"])
+async def reset_personality(api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """Resets the personality back to neutral."""
+    if not hasattr(app.state, 'personality_tool'):
+        if __package__:
+            from .tools.personality_tool import PersonalityTool
+        else:
+            from tools.personality_tool import PersonalityTool
+        app.state.personality_tool = PersonalityTool()
+
+    result = app.state.personality_tool.reset_personality()
+    return JSONResponse(status_code=200, content={"message": result})
+
 @app.post("/api/rag/configure", summary="Configure RAG Scope", description="Changes the search scope (base directory) for the RAG tool.", tags=["Agent"])
 async def configure_rag(request: Request, payload: Dict = Body(..., examples=[{"path": "/opt/pipecatapp/docs"}]), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """Configures the RAG tool's search scope.
