@@ -3,11 +3,17 @@ import subprocess
 import uuid
 import logging
 import json
+import os
+import re
 
 try:
     from ..security import redact_sensitive_data
 except ImportError:
     from security import redact_sensitive_data
+
+SAFE_COMMANDS = {"ls", "cat", "head", "tail", "wc", "date", "whoami", "echo", "pwd", "which"}
+DANGEROUS_PATTERNS = [r"\brm\b", r"\bsudo\b", r"\bchmod\b", r"\bcurl.*\|.*sh"]
+APPROVALS_FILE = "/opt/pipecatapp/exec-approvals.json"
 
 class ShellTool:
     """A tool for running shell commands in a persistent tmux session.
@@ -16,9 +22,51 @@ class ShellTool:
     across multiple tool calls, unlike single-shot subprocess executions.
     """
 
-    def __init__(self, session_name="agent_session"):
+    def __init__(self, session_name="agent_session", twin_service=None):
         self.session_name = session_name
         self.name = "shell"
+        self.twin_service = twin_service
+        self.description = "A tool for running shell commands in a persistent tmux session."
+
+    def load_approvals(self):
+        if os.path.exists(APPROVALS_FILE):
+            try:
+                with open(APPROVALS_FILE, 'r') as f:
+                    return json.load(f)
+            except Exception as e:
+                logging.error(f"Error loading approvals file: {e}")
+        return {"allowed": [], "denied": []}
+
+    def save_approval(self, command, approved):
+        approvals = self.load_approvals()
+        key = "allowed" if approved else "denied"
+        if command not in approvals[key]:
+            approvals[key].append(command)
+
+        try:
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(APPROVALS_FILE), exist_ok=True)
+            with open(APPROVALS_FILE, "w") as f:
+                json.dump(approvals, f, indent=2)
+        except Exception as e:
+            logging.error(f"Error saving approval: {e}")
+
+    def check_command_safety(self, command):
+        base_cmd = command.strip().split()[0] if command.strip() else ""
+        if base_cmd in SAFE_COMMANDS:
+            return "safe"
+
+        approvals = self.load_approvals()
+        if command in approvals["allowed"]:
+            return "approved"
+        if command in approvals["denied"]:
+            return "denied"
+
+        for pattern in DANGEROUS_PATTERNS:
+            if re.search(pattern, command):
+                return "needs_approval"
+
+        return "needs_approval"
 
     async def _ensure_session(self):
         """Ensures the tmux session exists."""
@@ -46,6 +94,24 @@ class ShellTool:
         Returns:
             str: The content of the tmux pane (last 200 lines) after execution.
         """
+        safety = self.check_command_safety(command)
+        if safety == "denied":
+            return "Permission denied by previous user choice."
+        elif safety == "needs_approval":
+            if self.twin_service and getattr(self.twin_service, "approval_mode", False):
+                logging.info(f"Command '{command}' requires approval.")
+                is_approved = await self.twin_service._request_approval({
+                    "name": self.name,
+                    "arguments": {"command": command}
+                })
+                if not is_approved:
+                    self.save_approval(command, False)
+                    return "Permission denied by user."
+                else:
+                    self.save_approval(command, True)
+            else:
+                return "Permission denied. Command requires approval and approval mode is off or TwinService is not attached."
+
         await self._ensure_session()
 
         sentinel = f"END_{uuid.uuid4().hex}"

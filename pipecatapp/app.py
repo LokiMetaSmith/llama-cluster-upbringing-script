@@ -19,6 +19,7 @@ import cv2
 import inspect
 import threading
 from contextlib import asynccontextmanager
+from collections import defaultdict
 
 from pipecat.frames.frames import (
     Frame,
@@ -953,6 +954,11 @@ def find_workable_audio_input_device():
             pa.terminate()
 
 # -----------------------
+# Session Locks
+# -----------------------
+session_locks = defaultdict(asyncio.Lock)
+
+# -----------------------
 # Service discovery helpers
 # -----------------------
 async def discover_services(service_names: list, consul_http_addr: str, delay=10):
@@ -1105,6 +1111,37 @@ class TwinService(FrameProcessor):
         # Add vision detector explicitly as it is a special case (frame processor)
         self.tools["vision"] = self.vision_detector
 
+    def compact_session(self):
+        """Compacts the short-term memory if it exceeds a certain token threshold."""
+        # Estimate token count (roughly 4 chars per token)
+        token_estimate = sum(len(str(m)) for m in self.short_term_memory) // 4
+
+        # Arbitrary threshold for context length. Let's use 4000 tokens.
+        if token_estimate < 4000:
+            return
+
+        logging.info("Compacting short-term memory...")
+        split = len(self.short_term_memory) // 2
+        old, recent = self.short_term_memory[:split], self.short_term_memory[split:]
+
+        # Ensure summarizer tool is available before trying to use it
+        summarizer = self.tools.get("summarizer")
+
+        if summarizer and hasattr(summarizer, "get_summary"):
+            # The summarizer extracts the top 3 most relevant turns. For a general
+            # compaction, we just summarize everything we want to compact.
+            # But the existing get_summary tool is an extractive summarizer focused on a query.
+            # If we don't have a specific query, we can use a general string, or just keep recent
+            summary_query = "important facts, decisions, and tasks"
+            summary_text = summarizer.get_summary(summary_query, conversation_history=old)
+
+            # get_summary might return a string starting with "Here are the most relevant points..."
+            self.short_term_memory = [f"[Previous conversation summary]\n{summary_text}"] + recent
+        else:
+            # Fallback if no summarizer available: just truncate to keep recent half
+            logging.info("No summarizer tool available; truncating short-term memory.")
+            self.short_term_memory = ["[Older conversation history truncated]"] + recent
+
     async def process_frame(self, frame, direction):
         """Entry point for the agent's logic, triggered by a transcription frame.
         This now uses the new workflow engine.
@@ -1115,6 +1152,9 @@ class TwinService(FrameProcessor):
         if not isinstance(frame, TranscriptionFrame):
             await self.push_frame(frame, direction)
             return
+
+        # Compact memory before executing workflow
+        self.compact_session()
 
         # Store meta for this request
         self.current_request_meta = frame.meta if hasattr(frame, 'meta') else None
@@ -1139,6 +1179,8 @@ class TwinService(FrameProcessor):
             logging.info("Adversarial Simulation / Red Teaming mode activated.")
             workflow_file = "workflows/adversarial_simulation.yaml"
 
+        session_id = self.current_request_meta.get("session_id", "default") if self.current_request_meta else "default"
+
         try:
             workflow_runner = WorkflowRunner(workflow_file, runner_id=request_id)
             active_workflows.add_runner(request_id, workflow_runner)
@@ -1154,52 +1196,53 @@ class TwinService(FrameProcessor):
 
             previous_tool_calls = []
 
-            for _ in range(10): # Allow up to 10 steps in the thought process
-                workflow_result = await workflow_runner.run(global_inputs)
+            async with session_locks[session_id]:
+                for _ in range(10): # Allow up to 10 steps in the thought process
+                    workflow_result = await workflow_runner.run(global_inputs)
 
-                final_response = workflow_result.get("final_response")
-                tool_call = workflow_result.get("tool_call")
+                    final_response = workflow_result.get("final_response")
+                    tool_call = workflow_result.get("tool_call")
 
-                if final_response:
-                    logging.info(f"Workflow produced final response: {final_response}")
-                    await self._send_response(final_response)
-                    await self.long_term_memory.add_event(kind="assistant_message", content=final_response)
-                    self.short_term_memory.append(f"Assistant: {final_response}")
-                    return # End the loop
+                    if final_response:
+                        logging.info(f"Workflow produced final response: {final_response}")
+                        await self._send_response(final_response)
+                        await self.long_term_memory.add_event(kind="assistant_message", content=final_response)
+                        self.short_term_memory.append(f"Assistant: {final_response}")
+                        return # End the loop
 
-                if tool_call:
-                    logging.info(f"Workflow produced tool call: {tool_call}")
+                    if tool_call:
+                        logging.info(f"Workflow produced tool call: {tool_call}")
 
-                    # Detect Loops
-                    tool_name = tool_call.get("name")
-                    tool_args = tool_call.get("arguments", {})
-                    # Normalize args to ensure consistent string representation
-                    try:
-                        tool_args_str = json.dumps(tool_args, sort_keys=True)
-                    except Exception:
-                        tool_args_str = str(tool_args)
+                        # Detect Loops
+                        tool_name = tool_call.get("name")
+                        tool_args = tool_call.get("arguments", {})
+                        # Normalize args to ensure consistent string representation
+                        try:
+                            tool_args_str = json.dumps(tool_args, sort_keys=True)
+                        except Exception:
+                            tool_args_str = str(tool_args)
 
-                    current_signature = (tool_name, tool_args_str)
-                    previous_tool_calls.append(current_signature)
+                        current_signature = (tool_name, tool_args_str)
+                        previous_tool_calls.append(current_signature)
 
-                    # Check if the last 3 calls are identical
-                    if len(previous_tool_calls) >= 3 and all(c == current_signature for c in previous_tool_calls[-3:]):
-                        logging.warning("Loop detected in tool calls. Injecting system alert.")
-                        global_inputs["tool_result"] = "SYSTEM ALERT: You have called this tool with these exact arguments 3 times in a row. Please change your strategy or ask the user for help."
+                        # Check if the last 3 calls are identical
+                        if len(previous_tool_calls) >= 3 and all(c == current_signature for c in previous_tool_calls[-3:]):
+                            logging.warning("Loop detected in tool calls. Injecting system alert.")
+                            global_inputs["tool_result"] = "SYSTEM ALERT: You have called this tool with these exact arguments 3 times in a row. Please change your strategy or ask the user for help."
+                        else:
+                            # The tool is executed within the workflow, so we just need to
+                            # grab the result and feed it back into the next iteration.
+                            global_inputs["tool_result"] = workflow_result.get("tool_result")
+
+                        # Continue the loop
                     else:
-                        # The tool is executed within the workflow, so we just need to
-                        # grab the result and feed it back into the next iteration.
-                        global_inputs["tool_result"] = workflow_result.get("tool_result")
+                        # This case should not be reached if the workflow is designed correctly
+                        logging.error("Workflow ended without a final response or a tool call.")
+                        await self._send_response("I'm sorry, my thought process ended unexpectedly.")
+                        return
 
-                    # Continue the loop
-                else:
-                    # This case should not be reached if the workflow is designed correctly
-                    logging.error("Workflow ended without a final response or a tool call.")
-                    await self._send_response("I'm sorry, my thought process ended unexpectedly.")
-                    return
-
-            # If the loop completes without a final answer
-            await self._send_response("I seem to be stuck in a thought loop. Could you please clarify your request?")
+                # If the loop completes without a final answer
+                await self._send_response("I seem to be stuck in a thought loop. Could you please clarify your request?")
 
         except Exception as e:
             logging.error(f"An error occurred during workflow execution: {e}", exc_info=True)

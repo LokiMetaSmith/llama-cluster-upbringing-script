@@ -69,7 +69,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "llxprt_code": LLxprt_Code_Tool(),
         "claude_clone": ClaudeCloneTool(),
         "final_answer": FinalAnswerTool(),
-        "shell": ShellTool(),
+        "shell": ShellTool(twin_service=twin_service),
         "prompt_improver": PromptImproverTool(twin_service) if twin_service else None,
         "council": CouncilTool(twin_service) if twin_service else None,
         "swarm": SwarmTool(),
