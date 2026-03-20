@@ -124,6 +124,8 @@ class ExperimentTool:
         snapshot_path = self._create_snapshot("/opt/pipecatapp")
 
         try:
+            eval_tasks = []
+            valid_results = []
             for t_id, evt in results.items():
                 content = evt.get("content", "")
 
@@ -140,22 +142,30 @@ class ExperimentTool:
                     })
                     continue
 
-                # Run Sandbox Eval
-                score_data = self._run_sandbox_eval(artifact, test_command, snapshot_path)
+                valid_results.append((t_id, artifact))
+                # Run Sandbox Eval concurrently using asyncio.to_thread
+                eval_tasks.append(
+                    asyncio.to_thread(self._run_sandbox_eval, artifact, test_command, snapshot_path)
+                )
 
-                result_entry = {
-                    "task_id": t_id,
-                    "status": "evaluated",
-                    "passed": score_data["passed"],
-                    "output": score_data["output"],
-                    "artifact": artifact
-                }
-                eval_report.append(result_entry)
+            if eval_tasks:
+                # Await all evaluations concurrently
+                scores = await asyncio.gather(*eval_tasks)
 
-                if score_data["passed"]:
-                    # Simple logic: First passing result is best (or could look for fastest/cleanest)
-                    if not best_candidate:
-                        best_candidate = result_entry
+                for (t_id, artifact), score_data in zip(valid_results, scores):
+                    result_entry = {
+                        "task_id": t_id,
+                        "status": "evaluated",
+                        "passed": score_data["passed"],
+                        "output": score_data["output"],
+                        "artifact": artifact
+                    }
+                    eval_report.append(result_entry)
+
+                    if score_data["passed"]:
+                        # Simple logic: First passing result is best (or could look for fastest/cleanest)
+                        if not best_candidate:
+                            best_candidate = result_entry
         finally:
             if snapshot_path and os.path.exists(snapshot_path):
                 os.remove(snapshot_path)
