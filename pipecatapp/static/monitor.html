@@ -11,6 +11,24 @@
 <body>
     <div class="container">
         <div id="sidebar">
+            <div id="personality-panel" style="margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #30363d;">
+                <h2>Personality</h2>
+                <div style="margin-top: 10px;">
+                    <label for="assistant-vector" style="display: block; margin-bottom: 5px;">Assistant</label>
+                    <input type="range" id="assistant-vector" name="assistant" min="-1" max="1" step="0.1" value="0" style="width: 100%;">
+                    <span id="assistant-value" style="font-size: 0.8em; float: right;">0</span>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label for="creative-vector" style="display: block; margin-bottom: 5px;">Creative</label>
+                    <input type="range" id="creative-vector" name="creative" min="-1" max="1" step="0.1" value="0" style="width: 100%;">
+                    <span id="creative-value" style="font-size: 0.8em; float: right;">0</span>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button id="reset-personality-btn" class="refresh-btn" style="width: 100%;">Reset Personality</button>
+                </div>
+                <div id="personality-status" style="margin-top: 10px; font-size: 0.8em; color: #8b949e;"></div>
+            </div>
+
             <h2>Workflow Runs</h2>
             <div style="padding: 5px;">
                 <button id="refresh-history-btn" class="refresh-btn" aria-label="Refresh workflow history">

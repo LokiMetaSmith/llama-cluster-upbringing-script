@@ -97,7 +97,7 @@
 - [ ] **Replace ASCII art:** Create a more dynamic and expressive animated character or graphic.
 - [x] **Add a "Clear Terminal" button:** Provide a simple way for the user to clear the log history in the UI.
 - [x] **Improve status display:** Format the status display into a more readable table or list.
-- [ ] **Frontend for Real-Time Steering (UI Integration):**
+- [x] **Frontend for Real-Time Steering (UI Integration):**
   - **Goal:** Expose the `PersonalityTool` capabilities in the web interface.
   - **Tasks:**
     1. Add a "Personality" or "Brain" tab to `cluster.html` or `monitor.html`.

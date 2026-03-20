@@ -519,13 +519,133 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
+    // --- Personality Logic ---
+
+    async function fetchPersonality() {
+        try {
+            const headers = {};
+            const apiKey = localStorage.getItem('api_key');
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+            const response = await fetch('/api/personality', { headers });
+            if (response.ok) {
+                const data = await response.json();
+                try {
+                    // status is likely a JSON string representing the current config
+                    const configStr = data.status.replace("Current configuration: ", "");
+                    const config = JSON.parse(configStr);
+
+                    let assistantVal = 0;
+                    let creativeVal = 0;
+
+                    config.forEach(item => {
+                        if (item.fname && item.fname.includes("assistant.gguf")) {
+                            assistantVal = item.strength;
+                        } else if (item.fname && item.fname.includes("creative.gguf")) {
+                            creativeVal = item.strength;
+                        }
+                    });
+
+                    document.getElementById('assistant-vector').value = assistantVal;
+                    document.getElementById('assistant-value').textContent = assistantVal;
+                    document.getElementById('creative-vector').value = creativeVal;
+                    document.getElementById('creative-value').textContent = creativeVal;
+
+                    document.getElementById('personality-status').textContent = "Loaded current personality.";
+                } catch (e) {
+                    document.getElementById('personality-status').textContent = "Failed to parse personality state.";
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching personality:', error);
+            document.getElementById('personality-status').textContent = "Connection failed.";
+        }
+    }
+
+    async function setPersonality(name, strength) {
+        document.getElementById('personality-status').textContent = `Setting ${name}...`;
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            const apiKey = localStorage.getItem('api_key');
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+
+            const response = await fetch('/api/personality', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({ name: name, strength: parseFloat(strength) })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('personality-status').textContent = "Personality updated.";
+            } else {
+                document.getElementById('personality-status').textContent = "Failed to update.";
+            }
+        } catch (error) {
+             console.error('Error setting personality:', error);
+             document.getElementById('personality-status').textContent = "Connection failed.";
+        }
+    }
+
+    async function resetPersonality() {
+        document.getElementById('personality-status').textContent = "Resetting...";
+        try {
+            const headers = {};
+            const apiKey = localStorage.getItem('api_key');
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+
+            const response = await fetch('/api/personality', {
+                method: 'DELETE',
+                headers: headers
+            });
+
+            if (response.ok) {
+                document.getElementById('assistant-vector').value = 0;
+                document.getElementById('assistant-value').textContent = 0;
+                document.getElementById('creative-vector').value = 0;
+                document.getElementById('creative-value').textContent = 0;
+                document.getElementById('personality-status').textContent = "Personality reset.";
+            } else {
+                 document.getElementById('personality-status').textContent = "Failed to reset.";
+            }
+        } catch (error) {
+            console.error('Error resetting personality:', error);
+            document.getElementById('personality-status').textContent = "Connection failed.";
+        }
+    }
+
+    let debounceTimers = {};
+    function handleSliderChange(e) {
+        const name = e.target.name;
+        const value = e.target.value;
+        document.getElementById(`${name}-value`).textContent = value;
+
+        if (debounceTimers[name]) {
+            clearTimeout(debounceTimers[name]);
+        }
+        debounceTimers[name] = setTimeout(() => {
+            setPersonality(name, value);
+        }, 500); // Debounce
+    }
+
+
     // --- Initialization ---
 
     document.getElementById('live-btn').addEventListener('click', togglePolling);
     document.getElementById('refresh-history-btn').addEventListener('click', fetchHistory);
 
+    const assistantSlider = document.getElementById('assistant-vector');
+    if (assistantSlider) assistantSlider.addEventListener('input', handleSliderChange);
+
+    const creativeSlider = document.getElementById('creative-vector');
+    if (creativeSlider) creativeSlider.addEventListener('input', handleSliderChange);
+
+    const resetBtn = document.getElementById('reset-personality-btn');
+    if (resetBtn) resetBtn.addEventListener('click', resetPersonality);
+
+
     // Initial load
     await loadWorkflowDefinition('default_agent_loop.yaml');
     startPolling();
     fetchHistory();
+    if (assistantSlider) fetchPersonality();
 });
