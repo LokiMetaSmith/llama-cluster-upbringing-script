@@ -82,12 +82,18 @@
       tags:
         - provisioning_api
 
+    - name: Run Vision Role
+      ansible.builtin.include_role:
+        name: vision
+      when: enable_frigate | default(false)
+      tags:
+        - vision
+
     - name: Run post-Home Assistant application roles
       ansible.builtin.include_role:
         name: "{{ role_name }}"
       loop:
         - desktop_extras
-        - vision
         - power_manager
         - world_model_service
         - term_everything
@@ -103,7 +109,6 @@
       tags:
         - provisioning_api
         - desktop_extras
-        - vision
         - power_manager
         - world_model_service
         - tool_server
