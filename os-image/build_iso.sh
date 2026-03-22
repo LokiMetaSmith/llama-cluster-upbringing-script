@@ -42,6 +42,8 @@ lb config \
   --archive-areas "main contrib non-free-firmware" \
   --apt-indices false \
   --apt-recommends false \
+  --security false \
+  --volatile false \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
 echo "=== Injecting project files ==="
