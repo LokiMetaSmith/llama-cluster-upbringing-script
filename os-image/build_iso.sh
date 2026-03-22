@@ -16,12 +16,10 @@ echo "=== Initializing live-build configuration ==="
 lb config \
   --distribution "$DISTRIBUTION" \
   --architecture "$ARCHITECTURE" \
-  --image-name "$ISO_NAME" \
   --debian-installer live \
   --archive-areas "main contrib non-free-firmware" \
   --apt-indices false \
   --apt-recommends false \
-  --syslinux-timeout 5 \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
 echo "=== Injecting project files ==="
@@ -37,6 +35,13 @@ if [ "$(id -u)" -ne 0 ]; then
     sudo lb build
 else
     lb build
+fi
+
+# Rename the generated ISO to match expected output name
+if [ -f "binary.hybrid.iso" ]; then
+    mv binary.hybrid.iso "${ISO_NAME}-${ARCHITECTURE}.iso"
+elif [ -f "binary.iso" ]; then
+    mv binary.iso "${ISO_NAME}-${ARCHITECTURE}.iso"
 fi
 
 echo "=== Build Complete ==="
