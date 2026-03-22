@@ -402,18 +402,204 @@ document.addEventListener("DOMContentLoaded", function() {
     const wanderingFrames = ["(o_o)", "(O_O)"];
     const thinkingFrames = ["(o.o?)", "(o.O?)", "(O.o?)", "(O.O!)"];
 
+    // We are replacing the ASCII art with a more dynamic HTML/CSS representation
+    // Let's create the character elements if they don't exist yet
+    if (robotArt && !document.getElementById("robot-character")) {
+        // Keep the original text-based ascii art to add flair to text!
+        // So we don't hide it, just style it nicely below the visual character
+        robotArt.style.display = 'block';
+        robotArt.style.marginTop = '10px';
+        robotArt.style.color = '#0f0';
+        robotArt.style.textShadow = '0 0 5px #0f0';
+
+        const characterContainer = document.createElement("div");
+        characterContainer.id = "robot-character";
+        characterContainer.style.cssText = `
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px auto 0 auto;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #2a2a35, #1a1a25);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 0 15px rgba(0, 255, 128, 0.2), inset 0 0 10px rgba(0,0,0,0.8);
+            border: 2px solid #334;
+            transition: all 0.3s ease;
+        `;
+
+        // Eyes container
+        const eyesContainer = document.createElement("div");
+        eyesContainer.id = "robot-eyes";
+        eyesContainer.style.cssText = `
+            display: flex;
+            justify-content: space-between;
+            width: 40px;
+            position: absolute;
+            top: 30%;
+            transition: all 0.2s ease;
+        `;
+
+        // Left Eye
+        const leftEye = document.createElement("div");
+        leftEye.className = "robot-eye";
+        leftEye.style.cssText = `
+            width: 12px;
+            height: 14px;
+            background-color: #0f0;
+            border-radius: 40%;
+            box-shadow: 0 0 8px #0f0;
+            transition: all 0.15s ease;
+        `;
+
+        // Right Eye
+        const rightEye = document.createElement("div");
+        rightEye.className = "robot-eye";
+        rightEye.style.cssText = `
+            width: 12px;
+            height: 14px;
+            background-color: #0f0;
+            border-radius: 40%;
+            box-shadow: 0 0 8px #0f0;
+            transition: all 0.15s ease;
+        `;
+
+        // Mouth
+        const mouth = document.createElement("div");
+        mouth.id = "robot-mouth";
+        mouth.style.cssText = `
+            position: absolute;
+            bottom: 25%;
+            width: 20px;
+            height: 4px;
+            background-color: #0f0;
+            border-radius: 2px;
+            box-shadow: 0 0 5px #0f0;
+            transition: all 0.2s ease;
+        `;
+
+        eyesContainer.appendChild(leftEye);
+        eyesContainer.appendChild(rightEye);
+        characterContainer.appendChild(eyesContainer);
+        characterContainer.appendChild(mouth);
+
+        // Insert right before the robotArt pre tag so it appears above the text
+        robotArt.parentNode.insertBefore(characterContainer, robotArt);
+    }
+
     let currentFrame = 0;
     let idleAnimation;
     let typingTimeout;
     let wanderTimeout;
     let thinkingAnimation;
 
-    // Accessibility Helper: Update aria-label and text content together
+    // Update both the screen reader text and the visual character
     function updateRobotState(text, stateLabel) {
         if (!robotArt) return;
+
+        // Screen reader update
         robotArt.textContent = text;
         if (stateLabel) {
             robotArt.setAttribute("aria-label", `Robot face: ${stateLabel}`);
+        }
+
+        // Visual update
+        const eyes = document.querySelectorAll('.robot-eye');
+        const mouth = document.getElementById('robot-mouth');
+        const container = document.getElementById('robot-character');
+        const eyesContainer = document.getElementById('robot-eyes');
+
+        if (!eyes.length || !mouth || !container || !eyesContainer) return;
+
+        // Reset transforms
+        eyesContainer.style.transform = 'translateX(0)';
+        eyes.forEach(eye => {
+            eye.style.height = '14px';
+            eye.style.transform = 'scaleY(1)';
+            eye.style.borderRadius = '40%';
+            eye.style.backgroundColor = '#0f0';
+            eye.style.boxShadow = '0 0 8px #0f0';
+        });
+        mouth.style.width = '20px';
+        mouth.style.height = '4px';
+        mouth.style.borderRadius = '2px';
+        mouth.style.bottom = '25%';
+        container.style.boxShadow = '0 0 15px rgba(0, 255, 128, 0.2), inset 0 0 10px rgba(0,0,0,0.8)';
+
+        switch(stateLabel) {
+            case "Idle":
+                if (text === "(-_-)") {
+                    // Blinking
+                    eyes.forEach(eye => {
+                        eye.style.height = '2px';
+                        eye.style.transform = 'scaleY(0.2)';
+                    });
+                } else {
+                    // Happy idle
+                    eyes.forEach(eye => {
+                        eye.style.borderRadius = '50% 50% 0 0';
+                    });
+                    mouth.style.borderRadius = '0 0 10px 10px';
+                    mouth.style.height = '6px';
+                }
+                break;
+            case "Thinking":
+                // Thinking/Confused
+                eyes[0].style.height = '16px'; // Wide
+                eyes[1].style.height = '6px';  // Squint
+                mouth.style.width = '10px';
+                mouth.style.borderRadius = '50%';
+                if (text === "(O.O!)") {
+                    eyes.forEach(eye => {
+                        eye.style.height = '18px';
+                        eye.style.width = '14px';
+                        eye.style.borderRadius = '50%';
+                    });
+                    mouth.style.width = '12px';
+                    mouth.style.height = '12px';
+                    container.style.boxShadow = '0 0 20px rgba(255, 255, 0, 0.4), inset 0 0 10px rgba(0,0,0,0.8)';
+                    eyes.forEach(eye => {
+                        eye.style.backgroundColor = '#ff0';
+                        eye.style.boxShadow = '0 0 10px #ff0';
+                    });
+                    mouth.style.backgroundColor = '#ff0';
+                    mouth.style.boxShadow = '0 0 8px #ff0';
+                }
+                break;
+            case "Typing":
+                // Busy/Concentrating (>_<)
+                eyes.forEach(eye => {
+                    eye.style.height = '4px';
+                    eye.style.width = '14px';
+                    eye.style.borderRadius = '2px';
+                });
+                mouth.style.width = '14px';
+                mouth.style.height = '8px';
+                mouth.style.borderRadius = '50%';
+                mouth.style.bottom = '22%';
+                container.style.boxShadow = '0 0 20px rgba(0, 150, 255, 0.4), inset 0 0 10px rgba(0,0,0,0.8)';
+                eyes.forEach(eye => {
+                    eye.style.backgroundColor = '#0af';
+                    eye.style.boxShadow = '0 0 10px #0af';
+                });
+                mouth.style.backgroundColor = '#0af';
+                mouth.style.boxShadow = '0 0 8px #0af';
+                break;
+            case "Wandering":
+                if (text === "(o_o)") {
+                    // Look left
+                    eyesContainer.style.transform = 'translateX(-6px)';
+                } else if (text === "(O_O)") {
+                    // Look right wide
+                    eyesContainer.style.transform = 'translateX(6px)';
+                    eyes.forEach(eye => {
+                        eye.style.height = '16px';
+                        eye.style.width = '14px';
+                        eye.style.borderRadius = '50%';
+                    });
+                }
+                break;
         }
     }
 
@@ -421,7 +607,7 @@ document.addEventListener("DOMContentLoaded", function() {
         currentFrame = (currentFrame + 1) % idleFrames.length;
         // Don't update aria-label on every frame to avoid spamming the screen reader
         // Just update text content. The state "Idle" remains valid.
-        robotArt.textContent = idleFrames[currentFrame];
+        updateRobotState(idleFrames[currentFrame], "Idle");
     }
 
     function stopAllAnimations() {
@@ -449,8 +635,8 @@ document.addEventListener("DOMContentLoaded", function() {
         // Set initial label
         updateRobotState(thinkingFrames[0], "Thinking");
         thinkingAnimation = setInterval(() => {
-            robotArt.textContent = thinkingFrames[frame];
             frame = (frame + 1) % thinkingFrames.length;
+            updateRobotState(thinkingFrames[frame], "Thinking");
         }, 500);
     }
 
@@ -540,11 +726,15 @@ document.addEventListener("DOMContentLoaded", function() {
     clearTerminalBtn.onclick = function() {
         // Find the robot art element within the terminal
         const robotArt = document.getElementById("robot-art");
+        const robotChar = document.getElementById("robot-character");
 
         // Clear all content of the terminal
         terminal.innerHTML = '';
 
         // Re-append the robot art if it was found
+        if (robotChar) {
+            terminal.appendChild(robotChar);
+        }
         if (robotArt) {
             terminal.appendChild(robotArt);
         }
