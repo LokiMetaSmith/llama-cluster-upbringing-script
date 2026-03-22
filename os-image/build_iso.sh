@@ -43,7 +43,8 @@ lb config \
   --apt-indices false \
   --apt-recommends false \
   --security false \
-  --volatile false \
+  --linux-packages "linux-image" \
+  --linux-flavours "amd64" \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
 echo "=== Injecting project files ==="
