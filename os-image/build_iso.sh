@@ -3,6 +3,15 @@
 
 set -euo pipefail
 
+# --- Arguments ---
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    echo "Usage: ./build_iso.sh"
+    echo ""
+    echo "Builds a custom, bootable, headless Debian ISO for the Pipecat agent cluster."
+    echo "Must be run as root (or with sudo) because live-build strictly requires root privileges."
+    exit 0
+fi
+
 # --- Configuration ---
 DISTRIBUTION="trixie" # Recommended in README
 ARCHITECTURE="amd64"
@@ -12,10 +21,23 @@ ISO_NAME="pipecat-installer"
 BUILD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$BUILD_DIR"
 
+echo "=== Cleaning previous build artifacts ==="
+# Ensure old configs or broken debootstrap artifacts don't interfere
+if [ "$(id -u)" -ne 0 ]; then
+    sudo lb clean || true
+else
+    lb clean || true
+fi
+
 echo "=== Initializing live-build configuration ==="
 lb config \
   --distribution "$DISTRIBUTION" \
   --architecture "$ARCHITECTURE" \
+  --mode debian \
+  --parent-mirror-bootstrap "http://deb.debian.org/debian/" \
+  --mirror-bootstrap "http://deb.debian.org/debian/" \
+  --parent-mirror-chroot "http://deb.debian.org/debian/" \
+  --mirror-chroot "http://deb.debian.org/debian/" \
   --debian-installer live \
   --archive-areas "main contrib non-free-firmware" \
   --apt-indices false \
