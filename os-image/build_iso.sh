@@ -46,6 +46,7 @@ lb config \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
   --initramfs "live-boot" \
+  --initsystem "systemd" \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
 echo "=== Injecting project files ==="
