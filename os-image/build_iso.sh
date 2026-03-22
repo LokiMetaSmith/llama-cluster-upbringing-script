@@ -38,6 +38,8 @@ lb config \
   --mirror-bootstrap "http://deb.debian.org/debian/" \
   --parent-mirror-chroot "http://deb.debian.org/debian/" \
   --mirror-chroot "http://deb.debian.org/debian/" \
+  --parent-mirror-binary "http://deb.debian.org/debian/" \
+  --mirror-binary "http://deb.debian.org/debian/" \
   --debian-installer live \
   --archive-areas "main contrib non-free-firmware" \
   --apt-indices false \
