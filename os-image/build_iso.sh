@@ -40,14 +40,19 @@ lb config \
   --mirror-chroot "http://deb.debian.org/debian/" \
   --parent-mirror-binary "http://deb.debian.org/debian/" \
   --mirror-binary "http://deb.debian.org/debian/" \
+  --parent-mirror-debian-installer "http://deb.debian.org/debian/" \
+  --mirror-debian-installer "http://deb.debian.org/debian/" \
   --archive-areas "main contrib non-free-firmware" \
-  --apt-indices false \
+  --apt-indices true \
   --apt-recommends false \
   --security false \
+  --firmware-chroot false \
+  --firmware-binary false \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
   --initramfs "live-boot" \
   --initsystem "systemd" \
+  --debian-installer-distribution "$DISTRIBUTION" \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
 echo "=== Injecting project files ==="
