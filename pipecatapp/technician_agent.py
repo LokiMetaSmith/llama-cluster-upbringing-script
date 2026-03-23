@@ -33,6 +33,55 @@ class TechnicianAgent:
 
         self.durable_engine = DurableExecutionEngine()
         self.current_flow_id = self.task_id
+        self.recovery_mode = False
+
+    def rehydrate_and_resume(self) -> bool:
+        """Checks for existing state and prepares to resume if a crash occurred."""
+        try:
+            cursor = self.durable_engine.conn.cursor()
+            # Find the highest sequence number for this task
+            cursor.execute("""
+                SELECT step_sequence, status, internal_context FROM execution_log
+                WHERE flowId = ? ORDER BY step_sequence DESC LIMIT 1
+            """, (self.task_id,))
+            row = cursor.fetchone()
+
+            if not row:
+                return False
+
+            last_seq, status_str, context_blob = row
+
+            # If the last recorded step is PENDING, we assume a crash happened
+            if status_str == "PENDING":
+                logger.info(f"Detected incomplete execution for {self.task_id} at sequence {last_seq}. Entering recovery mode.")
+                self.recovery_mode = True
+
+                # We need the state from the *last completed* step
+                if last_seq > 0:
+                    cursor.execute("""
+                        SELECT internal_context FROM execution_log
+                        WHERE flowId = ? AND step_sequence = ? AND status = 'COMPLETE'
+                    """, (self.task_id, last_seq - 1))
+                    prev_row = cursor.fetchone()
+                    if prev_row and prev_row[0]:
+                        import pickle
+                        try:
+                            context = pickle.loads(prev_row[0])
+                            if "messages" in context:
+                                self.messages = context["messages"]
+                                self.messages.append({"role": "system", "content": "Resuming from crash. Continue from your last thought."})
+                                logger.info("Successfully rehydrated messages from durable storage.")
+                            if "work_item_id" in context:
+                                self.work_item_id = context["work_item_id"]
+                                logger.info(f"Successfully rehydrated work_item_id: {self.work_item_id}")
+                        except Exception as e:
+                            logger.error(f"Failed to unpickle internal_context for recovery: {e}")
+                return True
+
+            return False
+        except Exception as e:
+            logger.error(f"Error checking for recovery state: {e}")
+            return False
 
     def discover_services(self):
         """Discovers LLM and Memory services via Consul."""
@@ -179,7 +228,11 @@ Instructions:
 Focus on one step at a time.
 """
 
-        self.messages = [{"role": "system", "content": system_prompt}]
+        if not self.recovery_mode or not self.messages:
+            self.messages = [{"role": "system", "content": system_prompt}]
+        else:
+            # We already have `self.messages` rehydrated from recovery_mode
+            logger.info("Skipping initial system prompt injection, using rehydrated messages history.")
 
         step = 0
         final_answer = None
@@ -330,8 +383,17 @@ Focus on one step at a time.
         await self.report_event("worker_started", f"Technician started task {self.task_id}")
 
         try:
-            # 1. Plan
-            plan = await self.phase_1_plan()
+            # Rehydrate if restarting after a crash
+            self.rehydrate_and_resume()
+
+            if not self.recovery_mode:
+                # 1. Plan
+                plan = await self.phase_1_plan()
+            else:
+                logger.info("Recovery Mode: Skipping Planning phase, reusing existing plan from history/context if needed.")
+                # We could extract plan from messages, or just pass a placeholder
+                # since the messages history already contains the plan and original thought process.
+                plan = "Resumed execution plan"
 
             # 2. Execute
             execution_result = await self.phase_2_execute(plan)
