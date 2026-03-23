@@ -405,12 +405,9 @@ document.addEventListener("DOMContentLoaded", function() {
     // We are replacing the ASCII art with a more dynamic HTML/CSS representation
     // Let's create the character elements if they don't exist yet
     if (robotArt && !document.getElementById("robot-character")) {
-        // Keep the original text-based ascii art to add flair to text!
-        // So we don't hide it, just style it nicely below the visual character
-        robotArt.style.display = 'block';
-        robotArt.style.marginTop = '10px';
-        robotArt.style.color = '#0f0';
-        robotArt.style.textShadow = '0 0 5px #0f0';
+        // Hide the original text-based ascii art from visual display
+        // to fully replace it with the dynamic character, but keep it for screen readers
+        robotArt.style.display = 'none';
 
         const characterContainer = document.createElement("div");
         characterContainer.id = "robot-character";

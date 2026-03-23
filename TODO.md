@@ -94,7 +94,7 @@
 
 ### Improve Web UI and User Experience
 
-- [ ] **Replace ASCII art:** Create a more dynamic and expressive animated character or graphic.
+- [x] **Replace ASCII art:** Create a more dynamic and expressive animated character or graphic.
 - [x] **Add a "Clear Terminal" button:** Provide a simple way for the user to clear the log history in the UI.
 - [x] **Improve status display:** Format the status display into a more readable table or list.
 - [x] **Frontend for Real-Time Steering (UI Integration):**
