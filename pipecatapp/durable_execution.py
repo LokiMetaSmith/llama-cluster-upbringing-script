@@ -45,6 +45,13 @@ class DurableExecutionEngine:
                     PRIMARY KEY (flowId, step_sequence)
                 )
             """)
+
+            # Check if internal_context exists (for schema migration)
+            cursor.execute("PRAGMA table_info(execution_log)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if "internal_context" not in columns:
+                cursor.execute("ALTER TABLE execution_log ADD COLUMN internal_context BLOB")
+
             self.conn.commit()
         except sqlite3.Error as e:
             logger.error(f"Error creating durable execution table: {e}")
@@ -53,17 +60,22 @@ class DurableExecutionEngine:
         try:
             cursor = self.conn.cursor()
             cursor.execute("""
-                SELECT status, return_value FROM execution_log
+                SELECT status, return_value, internal_context FROM execution_log
                 WHERE flowId = ? AND step_sequence = ?
             """, (flow_id, step_sequence))
             row = cursor.fetchone()
             if row:
-                status_str, return_value_blob = row
+                status_str, return_value_blob, internal_context_blob = row
                 try:
                     return_value = pickle.loads(return_value_blob) if return_value_blob else None
-                    return {"status": InvocationStatus(status_str), "return_value": return_value}
+                    internal_context = pickle.loads(internal_context_blob) if internal_context_blob else None
+                    return {
+                        "status": InvocationStatus(status_str),
+                        "return_value": return_value,
+                        "internal_context": internal_context
+                    }
                 except (pickle.UnpicklingError, EOFError) as e:
-                    logger.error(f"Error unpickling return value for flow {flow_id} step {step_sequence}: {e}")
+                    logger.error(f"Error unpickling return value or context for flow {flow_id} step {step_sequence}: {e}")
                     return None
             return None
         except sqlite3.Error as e:
@@ -82,8 +94,8 @@ class DurableExecutionEngine:
 
             timestamp = int(time.time() * 1000)
             cursor.execute("""
-                INSERT OR REPLACE INTO execution_log (flowId, step_sequence, step_name, timestamp, status, args, return_value)
-                VALUES (?, ?, ?, ?, ?, ?, NULL)
+                INSERT OR REPLACE INTO execution_log (flowId, step_sequence, step_name, timestamp, status, args, return_value, internal_context)
+                VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)
             """, (flow_id, step_sequence, step_name, timestamp, InvocationStatus.PENDING.value, args_blob))
             self.conn.commit()
             print("DEBUG: log_invocation_start committed")
@@ -91,7 +103,7 @@ class DurableExecutionEngine:
             print(f"DEBUG: log_invocation_start error: {e}")
             logger.error(f"Error logging invocation start: {e}")
 
-    def log_invocation_completion(self, flow_id, step_sequence, result):
+    def log_invocation_completion(self, flow_id, step_sequence, result, internal_context=None):
         print(f"DEBUG: log_invocation_completion {flow_id} seq {step_sequence}")
         try:
             cursor = self.conn.cursor()
@@ -101,11 +113,17 @@ class DurableExecutionEngine:
                 logger.error(f"Error pickling result for flow {flow_id} step {step_sequence}: {e}")
                 result_blob = pickle.dumps(f"<unpickleable_result: {str(e)}>")
 
+            try:
+                context_blob = pickle.dumps(internal_context) if internal_context else None
+            except Exception as e:
+                logger.error(f"Error pickling internal_context for flow {flow_id} step {step_sequence}: {e}")
+                context_blob = None
+
             cursor.execute("""
                 UPDATE execution_log
-                SET status = ?, return_value = ?
+                SET status = ?, return_value = ?, internal_context = ?
                 WHERE flowId = ? AND step_sequence = ?
-            """, (InvocationStatus.COMPLETE.value, result_blob, flow_id, step_sequence))
+            """, (InvocationStatus.COMPLETE.value, result_blob, context_blob, flow_id, step_sequence))
             self.conn.commit()
             print("DEBUG: log_invocation_completion committed")
         except sqlite3.Error as e:
@@ -145,7 +163,14 @@ def _post_execution(instance, context, result):
     """Helper to handle post-execution logic (logging completion)."""
     print("DEBUG: _post_execution")
     flow_id, current_step_seq = context
-    instance.durable_engine.log_invocation_completion(flow_id, current_step_seq, result)
+
+    internal_context = {}
+    if hasattr(instance, "messages"):
+        internal_context["messages"] = instance.messages
+    if hasattr(instance, "work_item_id"):
+        internal_context["work_item_id"] = instance.work_item_id
+
+    instance.durable_engine.log_invocation_completion(flow_id, current_step_seq, result, internal_context)
 
 def durable_step(func):
     """
