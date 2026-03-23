@@ -22,6 +22,7 @@ nodes:
           - Execute code using 'code_runner' or 'ansible'.
           - Manage files using 'file_editor'.
           - Search and research using 'web_browser' or 'rag'.
+          - Perform autonomous iterative code improvements using the `autoresearch` tool.
 
           BEHAVIOR:
           - Always start by creating a plan if the request is complex.

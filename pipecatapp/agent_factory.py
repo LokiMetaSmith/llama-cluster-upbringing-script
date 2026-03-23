@@ -29,6 +29,7 @@ from tools.dependency_scanner_tool import DependencyScannerTool
 from tools.remote_tool_proxy import RemoteToolProxy
 from tools.vr_tool import VRTool
 from tools.experiment_tool import ExperimentTool
+from tools.autoresearch_tool import AutoresearchTool
 from tools.submit_solution_tool import SubmitSolutionTool
 from tools.container_registry_tool import ContainerRegistryTool
 from tools.search_tool import SearchTool
@@ -84,6 +85,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         ),
         "dependency_scanner": DependencyScannerTool(),
         "vr": VRTool(),
+        "autoresearch": AutoresearchTool(llm_client=twin_service.llm_client if twin_service else None),
         "experiment": ExperimentTool(),
         "submit_solution": SubmitSolutionTool(),
         "container_registry": ContainerRegistryTool(),

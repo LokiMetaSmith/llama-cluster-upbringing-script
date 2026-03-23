@@ -197,6 +197,7 @@ These features are integrated directly into the `TwinService` or prompt system:
 The following tools are available in the codebase (`pipecatapp/tools/`):
 
 - **Ansible (`ansible`)**: Runs Ansible playbooks to manage the cluster.
+- **Autoresearch (`autoresearch`)**: Performs an iterative, autonomous code optimization loop.
 - **Archivist (`archivist`)**: Performs deep research on the agent's long-term memory.
 - **Claude Clone (`claude_clone`)**: A tool for interacting with a Claude-like model.
 - **Code Runner (`code_runner`)**: Executes Python code in a secure, sandboxed environment.
