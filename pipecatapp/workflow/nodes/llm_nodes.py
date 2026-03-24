@@ -233,6 +233,12 @@ class SimpleLLMNode(Node):
 
         self.set_output(context, "response", response_text)
 
+from collections import defaultdict
+import time
+import socket
+
+_cold_request_counts = defaultdict(list)
+
 @registry.register
 class ExpertRouterNode(Node):
     """A node that routes a query to a specific expert LLM service."""
@@ -281,11 +287,80 @@ class ExpertRouterNode(Node):
                                         expert_data["choices"][0]["message"].get("reasoning")
                     if reasoning_details:
                         self.set_output(context, "reasoning_details", reasoning_details)
+                else:
+                    # CAR: Service is cold. Track request.
+                    now = time.time()
+                    _cold_request_counts[service_name].append(now)
+                    # Clean up old requests (e.g., older than 5 minutes)
+                    _cold_request_counts[service_name] = [t for t in _cold_request_counts[service_name] if now - t < 300]
+
+                    request_count = len(_cold_request_counts[service_name])
+                    logging.info(f"ExpertRouterNode: {service_name} is cold. Request count in last 5m: {request_count}")
+
+                    # Backfill (Wakeup) logic if threshold met
+                    if request_count >= 2:
+                        logging.info(f"ExpertRouterNode: Threshold met for {service_name}. Triggering background wakeup.")
+                        asyncio.create_task(self._trigger_wakeup(client, consul_http_addr, service_name))
+
+                    # Substitute logic: Route to rpc-main instead
+                    logging.info(f"ExpertRouterNode: Falling back to substitute service 'rpc-main' for '{expert_name}'.")
+                    sub_service_name = "rpc-main"
+                    sub_response = await client.get(f"{consul_http_addr}/v1/health/service/{sub_service_name}?passing")
+                    sub_response.raise_for_status()
+                    sub_services = sub_response.json()
+
+                    if sub_services:
+                        address = sub_services[0]['Service']['Address']
+                        port = sub_services[0]['Service']['Port']
+                        base_url = f"http://{address}:{port}/v1"
+
+                        payload = {
+                            "model": "rpc-main",
+                            "messages": [{"role": "system", "content": f"You are acting as a substitute for the {expert_name} expert. Answer the following query as best you can."}, {"role": "user", "content": query}]
+                        }
+
+                        reasoning_config = self.get_input(context, "reasoning") or self.config.get("reasoning")
+                        if reasoning_config:
+                            payload["reasoning"] = reasoning_config
+
+                        chat_url = f"{base_url}/chat/completions"
+
+                        expert_res = await client.post(chat_url, json=payload, timeout=120)
+                        expert_res.raise_for_status()
+                        expert_data = expert_res.json()
+                        expert_response = f"[Substitute response from {sub_service_name}]: " + expert_data["choices"][0]["message"]["content"]
+
+                        reasoning_details = expert_data["choices"][0]["message"].get("reasoning_details") or \
+                                            expert_data["choices"][0]["message"].get("reasoning")
+                        if reasoning_details:
+                            self.set_output(context, "reasoning_details", reasoning_details)
+                    else:
+                        expert_response = f"Could not find expert service {expert_name} OR substitute service {sub_service_name}."
 
         except (httpx.RequestError, KeyError, IndexError) as e:
             print(f"Error routing to expert {expert_name}: {e}")
 
         self.set_output(context, "expert_response", expert_response)
+
+    async def _trigger_wakeup(self, client: httpx.AsyncClient, consul_http_addr: str, service_name: str):
+        """Sends a dummy request to the cold service's port to trigger the power agent."""
+        try:
+            response = await client.get(f"{consul_http_addr}/v1/catalog/service/{service_name}")
+            response.raise_for_status()
+            services = response.json()
+            if services:
+                address = services[0]['ServiceAddress'] or services[0]['Address']
+                port = services[0]['ServicePort']
+                logging.info(f"Sending wakeup ping to {service_name} at {address}:{port}")
+
+                # Send a simple dummy TCP connection to wake it up
+                reader, writer = await asyncio.open_connection(address, port)
+                writer.close()
+                await writer.wait_closed()
+            else:
+                logging.warning(f"Could not find catalog entry for {service_name} to wake it up.")
+        except Exception as e:
+            logging.error(f"Error triggering wakeup for {service_name}: {e}")
 
 @registry.register
 class ExternalLLMNode(Node):
