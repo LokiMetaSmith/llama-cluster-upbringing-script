@@ -14,3 +14,7 @@ sudo
 tmux
 vim
 wget
+grub-pc
+grub-efi-amd64-bin
+mtools
+xorriso
