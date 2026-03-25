@@ -23,4 +23,6 @@ ENV MQTT_PORT=1883
 ENV MQTT_TOPIC="#"
 
 # Run app.py when the container launches
+RUN useradd -m -s /bin/bash appuser && chown -R appuser:appuser /app
+USER appuser
 CMD ["python", "app.py"]

@@ -84,5 +84,7 @@ COPY entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh
 
+RUN useradd -m -s /bin/bash pipecatapp && chown -R pipecatapp:pipecatapp /app /entrypoint.sh
+USER pipecatapp
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]

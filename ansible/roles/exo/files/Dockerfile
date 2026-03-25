@@ -50,4 +50,6 @@ ENV PORT=52415
 
 # Entrypoint
 # We use `uv run` to ensure we use the managed environment
+RUN useradd -m -s /bin/bash appuser && chown -R appuser:appuser /app
+USER appuser
 ENTRYPOINT ["uv", "run", "exo"]

@@ -16,4 +16,6 @@ RUN mkdir -p /data
 EXPOSE 8000
 
 # Command to run the application
+RUN useradd -m -s /bin/bash appuser && chown -R appuser:appuser /app /data
+USER appuser
 CMD ["python", "/app/app.py"]

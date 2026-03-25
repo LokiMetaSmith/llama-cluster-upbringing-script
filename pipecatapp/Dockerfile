@@ -74,4 +74,6 @@ COPY . .
 RUN mv /opt/pipecatapp/start_pipecat.sh /opt/start_pipecat.sh && chmod +x /opt/start_pipecat.sh
 
 # Set the entrypoint for the container
+RUN useradd -m -s /bin/bash pipecatapp && chown -R pipecatapp:pipecatapp /opt/pipecatapp /opt/pipecat_venv /opt/start_pipecat.sh
+USER pipecatapp
 ENTRYPOINT ["/opt/start_pipecat.sh"]

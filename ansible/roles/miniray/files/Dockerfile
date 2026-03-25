@@ -17,4 +17,6 @@ COPY src/ .
 RUN pip install --no-cache-dir . redis numpy cloudpickle tritonclient[http] tenacity statsd wrapt
 
 # worker.py is in the root of the repo
+RUN useradd -m -s /bin/bash appuser && chown -R appuser:appuser /app
+USER appuser
 CMD ["python3", "worker.py"]
