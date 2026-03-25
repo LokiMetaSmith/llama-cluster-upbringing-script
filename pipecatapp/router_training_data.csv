@@ -1,0 +1,9 @@
+query,model_name,performance,embedding_id
+Write a python script to reverse a string,qwen2.5-coder,1,0
+Explain what a black hole is,llama-3-8b,1,1
+How many legs does a dog have,phi-3,1,2
+Translate this sentence to French,llama-3-8b,1,3
+Create a React component for a button,qwen2.5-coder,1,4
+Describe the image content,llava-llama-3,1,5
+What color is the sky,phi-3,1,6
+Write a bash script to find files older than 30 days,qwen2.5-coder,1,7

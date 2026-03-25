@@ -14,12 +14,12 @@
 - [x] **Implement Active Vault Workflow (Phase 1):**
   - **Goal:** Support 3D spatial properties in nodes and implement `CanvasConverter`.
   - Reference: `docs/OBSIDIAN_WORKFLOW_DESIGN.md`
-- [ ] **Train and Configure LLMRouter:**
+- [x] **Train and Configure LLMRouter:**
   - **Goal:** Replace the heuristic PoC logic in `LLMRouterNode` with a fully trained `LLMRouter` instance.
   - **Tasks:**
-    1. Generate a training dataset of queries and optimal models using `LLMRouter`'s data generation tools.
-    2. Train the router to map queries to our specific local experts.
-    3. Update `LLMRouterNode` to load the trained config/model.
+    1. [x] Generate a training dataset of queries and optimal models using `LLMRouter`'s data generation tools.
+    2. [x] Train the router to map queries to our specific local experts.
+    3. [x] Update `LLMRouterNode` to load the trained config/model.
 
 ## Agentic Patterns Implementation
 

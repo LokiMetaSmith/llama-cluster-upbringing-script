@@ -1,0 +1,8 @@
+{"query": "Write a python script to reverse a string", "model_name": "qwen2.5-coder", "performance": 1, "embedding_id": 0}
+{"query": "Explain what a black hole is", "model_name": "llama-3-8b", "performance": 1, "embedding_id": 1}
+{"query": "How many legs does a dog have", "model_name": "phi-3", "performance": 1, "embedding_id": 2}
+{"query": "Translate this sentence to French", "model_name": "llama-3-8b", "performance": 1, "embedding_id": 3}
+{"query": "Create a React component for a button", "model_name": "qwen2.5-coder", "performance": 1, "embedding_id": 4}
+{"query": "Describe the image content", "model_name": "llava-llama-3", "performance": 1, "embedding_id": 5}
+{"query": "What color is the sky", "model_name": "phi-3", "performance": 1, "embedding_id": 6}
+{"query": "Write a bash script to find files older than 30 days", "model_name": "qwen2.5-coder", "performance": 1, "embedding_id": 7}
