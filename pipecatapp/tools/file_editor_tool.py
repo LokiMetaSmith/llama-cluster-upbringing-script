@@ -18,6 +18,7 @@ class FileEditorTool:
         self.name = "file_editor"
         self.root_dir = os.path.realpath(root_dir)
         self.logger = logging.getLogger(__name__)
+        self._undo_history = {} # Maps filepath to list of previous contents
 
     def _validate_path(self, filepath: str) -> str:
         """Ensures the filepath is within the root directory."""
@@ -50,29 +51,81 @@ class FileEditorTool:
         # Use full line content including whitespace for precision
         return hashlib.sha256(line.encode('utf-8')).hexdigest()[:2]
 
-    def read_file(self, filepath: str, use_hashlines: bool = False) -> str:
+    def _save_for_undo(self, path: str):
+        """Saves the current file content to the undo history."""
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if path not in self._undo_history:
+                self._undo_history[path] = []
+            self._undo_history[path].append(content)
+        else:
+             if path not in self._undo_history:
+                self._undo_history[path] = []
+             self._undo_history[path].append(None) # None means file didn't exist
+
+    def undo_edit(self, filepath: str) -> str:
+        """Reverts the last edit made to the specified file."""
+        try:
+            path = self._validate_path(filepath)
+            if path not in self._undo_history or not self._undo_history[path]:
+                return f"Error: No undo history available for {filepath}."
+
+            previous_content = self._undo_history[path].pop()
+
+            if previous_content is None:
+                if os.path.exists(path):
+                    os.remove(path)
+                return f"Successfully reverted {filepath} (file deleted, as it didn't exist before the edit)."
+            else:
+                with open(path, 'w', encoding='utf-8') as f:
+                    f.write(previous_content)
+                return f"Successfully reverted last edit to {filepath}."
+        except Exception as e:
+            return f"Error undoing edit to {filepath}: {e}"
+
+    def read_file(self, filepath: str, use_hashlines: bool = False, view_range: list = None) -> str:
         """Reads the content of a file.
 
         Args:
             filepath (str): The path to the file.
             use_hashlines (bool): If True, returns content with line numbers and hashes.
                                   Format: <line_number>:<hash>| <content>
+            view_range (list): Optional [start_line, end_line] 1-based index to read only a portion of the file.
+                               Setting [start_line, -1] reads to the end.
         """
         try:
             path = self._validate_path(filepath)
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
+            lines = content.splitlines()
+
+            start_idx = 0
+            end_idx = len(lines)
+
+            if view_range and isinstance(view_range, list) and len(view_range) == 2:
+                start_line = int(view_range[0])
+                end_line = int(view_range[1])
+
+                # Convert 1-based to 0-based
+                start_idx = max(0, start_line - 1)
+
+                if end_line != -1:
+                    end_idx = min(len(lines), end_line)
+
+            view_lines = lines[start_idx:end_idx]
+
             if use_hashlines:
-                lines = content.splitlines()
                 output = []
-                for i, line in enumerate(lines):
+                for i, line in enumerate(view_lines):
                     line_hash = self._calculate_line_hash(line)
-                    # Using 1-based indexing for line numbers as it's more human-friendly for LLMs
-                    output.append(f"{i+1}:{line_hash}| {line}")
+                    # i+start_idx is 0-based index of original line. +1 to get 1-based line number.
+                    actual_line_num = i + start_idx + 1
+                    output.append(f"{actual_line_num}:{line_hash}| {line}")
                 return "\n".join(output)
 
-            return content
+            return "\n".join(view_lines) if view_range else content
         except FileNotFoundError:
             return f"Error: File not found at {filepath}"
         except Exception as e:
@@ -82,6 +135,7 @@ class FileEditorTool:
         """Overwrites a file with new content. Creates directories if needed."""
         try:
             path = self._validate_path(filepath)
+            self._save_for_undo(path)
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -96,6 +150,7 @@ class FileEditorTool:
         """
         try:
             path = self._validate_path(filepath)
+            self._save_for_undo(path)
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
@@ -130,6 +185,7 @@ class FileEditorTool:
         """
         try:
             path = self._validate_path(filepath)
+            self._save_for_undo(path)
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
@@ -232,6 +288,7 @@ class FileEditorTool:
         """Appends content to the end of a file."""
         try:
             path = self._validate_path(filepath)
+            self._save_for_undo(path)
             with open(path, 'a', encoding='utf-8') as f:
                 f.write(content)
             return f"Successfully appended to {filepath}"

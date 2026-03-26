@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import subprocess
 import shlex
+import docker
 from typing import List, Dict, Any, Optional
 
 class AutoresearchTool:
@@ -19,6 +20,11 @@ class AutoresearchTool:
         self.logger = logging.getLogger(__name__)
         # The LLM client to be used for generating code mutations
         self.llm_client = llm_client
+        try:
+            self.docker_client = docker.from_env()
+        except Exception as e:
+            self.logger.warning(f"Could not initialize Docker client for AutoresearchTool: {e}")
+            self.docker_client = None
 
     async def run(self,
                   target_file: str,
@@ -270,7 +276,88 @@ Think step-by-step first, then provide the final file content under a `<final_co
             return None
 
     def _run_sandbox_eval(self, artifact: Dict, test_command: str, snapshot_path: Optional[str] = None) -> Dict:
-        """Runs the artifact in a temp sandbox against the test command."""
+        """Runs the artifact in a Docker container sandbox against the test command."""
+        if not self.docker_client:
+            # Fallback to local subprocess if docker is unavailable
+            return self._run_sandbox_eval_local(artifact, test_command, snapshot_path)
+
+        temp_dir = tempfile.mkdtemp(prefix="pipecat_autoresearch_")
+
+        try:
+            # Populate Temp Directory Host-Side
+            if snapshot_path and os.path.exists(snapshot_path):
+                 cmd = ["tar", "-xf", snapshot_path, "-C", temp_dir]
+                 subprocess.run(cmd, check=True, capture_output=True)
+            else:
+                 src_dir = os.getcwd() # Fallback to current working dir
+                 shutil.copytree(src_dir, temp_dir, dirs_exist_ok=True,
+                                ignore=shutil.ignore_patterns('.git', '__pycache__', 'node_modules', '*.pyc'))
+
+            # Apply Artifact (The modified file)
+            file_path = artifact.get("file_path", "target.py")
+            try:
+                full_path = self._validate_path(temp_dir, file_path)
+            except ValueError as e:
+                return {"passed": False, "output": f"Security Error: {e}"}
+
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            content = artifact.get("content", "")
+
+            # Security Fix: Sentinel - Prevent DoS via large file
+            if len(content) > 1024 * 1024:
+                return {"passed": False, "output": "Security Error: Artifact too large (>1MB)."}
+
+            with open(full_path, 'w') as f:
+                f.write(content)
+
+            # Run Command in Docker
+            container_workdir = "/workspace"
+            volumes = {
+                os.path.abspath(temp_dir): {
+                    'bind': container_workdir,
+                    'mode': 'rw'
+                }
+            }
+
+            # Using python:3.12-slim as a safe base image
+            try:
+                # Wrap test command in a timeout directly in the shell
+                # Use shlex to safely pass the test_command into bash
+                safe_command = ["timeout", "60s", "bash", "-c", test_command]
+
+                result = self.docker_client.containers.run(
+                    "python:3.12-slim",
+                    command=safe_command,
+                    volumes=volumes,
+                    working_dir=container_workdir,
+                    environment={"PYTHONPATH": container_workdir},
+                    remove=True,
+                    stderr=True,
+                    stdout=True
+                )
+                output = result.decode('utf-8')
+                return {
+                    "passed": True,
+                    "output": output
+                }
+            except docker.errors.ContainerError as e:
+                output = e.stderr.decode('utf-8') if e.stderr else ""
+                if "Terminated" in output or "Killed" in output or e.exit_status == 124: # timeout exit code
+                    output = "Execution timed out after 60 seconds."
+                return {
+                    "passed": False,
+                    "output": output
+                }
+            except Exception as e:
+                 return {"passed": False, "output": f"Docker execution error: {str(e)}"}
+
+        except Exception as e:
+            return {"passed": False, "output": f"Error setting up sandbox: {e}"}
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def _run_sandbox_eval_local(self, artifact: Dict, test_command: str, snapshot_path: Optional[str] = None) -> Dict:
+        """Fallback for running the artifact locally without docker."""
         temp_dir = tempfile.mkdtemp(prefix="pipecat_autoresearch_")
 
         try:
