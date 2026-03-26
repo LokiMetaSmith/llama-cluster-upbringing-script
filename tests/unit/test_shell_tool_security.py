@@ -17,8 +17,8 @@ sys.modules["web_server"] = mock_web_server
 
 from pipecatapp.tools.shell_tool import ShellTool
 
-class TestShellToolLeak(unittest.TestCase):
-    async def run_test(self):
+class TestShellToolLeak(unittest.IsolatedAsyncioTestCase):
+    async def test_leak(self):
         tool = ShellTool()
         tool._ensure_session = AsyncMock()
 
@@ -93,9 +93,6 @@ class TestShellToolLeak(unittest.TestCase):
                 self.assertNotIn("sk-1234567890abcdef1234567890abcdef", output_broadcast)
                 self.assertIn("sk-[REDACTED]", output_broadcast)
                 print("Confirmed: Secret redacted in broadcast output")
-
-    def test_leak(self):
-        asyncio.run(self.run_test())
 
 if __name__ == "__main__":
     unittest.main()
