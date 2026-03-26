@@ -34,6 +34,7 @@ from tools.submit_solution_tool import SubmitSolutionTool
 from tools.container_registry_tool import ContainerRegistryTool
 from tools.search_tool import SearchTool
 from tools.openclaw_tool import OpenClawTool
+from tools.atproto_tool import ATProtoTool
 from tools.scheduler_tool import SchedulerTool
 from tools.context_upload_tool import ContextUploadTool
 from tools.personality_tool import PersonalityTool
@@ -93,6 +94,11 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "search": SearchTool(root_dir="/opt/pipecatapp"),
         "openclaw": OpenClawTool(
             gateway_url=config.get("openclaw_gateway_url", "ws://openclaw.service.consul:18789")
+        ),
+        "atproto": ATProtoTool(
+            username=config.get("pds_username", ""),
+            password=config.get("pds_password", ""),
+            pds_url=config.get("pds_url", "https://pds.local")
         ),
         "scheduler": SchedulerTool(),
         "context_upload": ContextUploadTool(),

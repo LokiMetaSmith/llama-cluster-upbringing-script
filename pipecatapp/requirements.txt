@@ -67,3 +67,4 @@ cloudpickle
 tritonclient[http]
 cryptography
 PyMuPDF
+atproto
