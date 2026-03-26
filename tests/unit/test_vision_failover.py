@@ -47,6 +47,11 @@ sys.modules["pipecat.processors.frame_processor"].FrameProcessor = MockFrameProc
 sys.modules["pipecat.frames.frames"].UserImageRawFrame = MockVisionImageRawFrame
 
 # Import the module under test AFTER mocks are set up
+from unittest.mock import MagicMock
+sys.modules['cv2'] = MagicMock()
+sys.modules['kokoro'] = MagicMock()
+sys.modules['ultralytics'] = MagicMock()
+sys.modules['pipecat.services.openai'] = MagicMock()
 from app import initialize_vision_detector, YOLOv8Detector
 
 # Correct patch target is where the object is looked up
@@ -106,6 +111,11 @@ async def test_yolo_internal_process_frame_failover():
     """Test that process_frame doesn't crash if the model failed to load."""
     with patch("app.YOLO", side_effect=Exception("Model file not found")):
         detector = YOLOv8Detector()
+        # Ensure push_frame is called if frame processing skips due to missing model
+        detector.push_frame = AsyncMock()
         frame = MockVisionImageRawFrame()
-        # This should now pass as the base class has the required method
+
         await detector.process_frame(frame, "downstream")
+
+        # Verify that push_frame was called, effectively bypassing processing gracefully
+        detector.push_frame.assert_awaited_once_with(frame, "downstream")
