@@ -12,8 +12,9 @@ from typing import List, Dict, Any, Optional
 class AutoresearchTool:
     """
     A tool that performs an iterative, autonomous code optimization loop (Autoresearch).
-    It continuously hypothesizes, edits a specific target file, runs a test/evaluation command
-    in an isolated sandbox, and commits or reverts the change based on the evaluation outcome.
+    It enforces Zero-Degree-of-Freedom coding by continuously hypothesizing, editing a specific target file,
+    running a test/evaluation command in an isolated sandbox, and committing or reverting the change
+    based on the evaluation outcome (e.g. strict exit_code).
     """
     def __init__(self, llm_client: Any = None):
         self.logger = logging.getLogger(__name__)

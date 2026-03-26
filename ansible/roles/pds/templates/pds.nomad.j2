@@ -1,0 +1,69 @@
+job "pds" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "pds" {
+    count = 1
+
+    network {
+      mode = "bridge"
+      port "http" {
+        static = {{ pds_port | default(3000) }}
+        to     = 3000
+      }
+    }
+
+    service {
+      name = "pds"
+      port = "http"
+
+      tags = [
+        "pds"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/xrpc/_health"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "pds-server" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/bluesky-social/pds:latest"
+
+        # In a real environment we'd want to mount volumes for persistence.
+        # But this is okay for a simple sandbox self-hosted instance.
+        volumes = [
+          "{{ pds_data_directory }}:/pds",
+          "{{ pds_blobstore_disk_location }}:/pds/blocks"
+        ]
+      }
+
+      env {
+        PDS_HOSTNAME                               = "{{ pds_hostname }}"
+        PDS_JWT_SECRET                             = "{{ pds_jwt_secret }}"
+        PDS_ADMIN_PASSWORD                         = "{{ pds_admin_password }}"
+        PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX  = "{{ pds_plc_rotation_key_k256_private_key_hex }}"
+        PDS_DATA_DIRECTORY                         = "/pds"
+        PDS_BLOBSTORE_DISK_LOCATION                = "/pds/blocks"
+        PDS_DID_PLC_URL                            = "https://plc.directory"
+        PDS_BSKY_APP_VIEW_URL                      = "https://api.bsky.app"
+        PDS_BSKY_APP_VIEW_DID                      = "did:web:api.bsky.app"
+        PDS_REPORT_SERVICE_URL                     = "https://mod.bsky.app"
+        PDS_REPORT_SERVICE_DID                     = "did:plc:ar7c4by46qjdydhdevvrndac"
+        PDS_CRAWLERS                               = "https://bsky.network"
+        PDS_PORT                                   = "3000"
+        LOG_ENABLED                                = "true"
+      }
+
+      resources {
+        cpu    = 500  # 500 MHz
+        memory = 512  # 512 MB
+      }
+    }
+  }
+}
