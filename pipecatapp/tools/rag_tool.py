@@ -28,7 +28,11 @@ class RAG_Tool:
             allow_root_scan (bool): Explicitly allow scanning the filesystem root (/). Defaults to False.
         """
         self.name = "rag"
-        self.description = "Searches the project's documentation to answer questions."
+        self.description = (
+            "Searches the project's documentation to answer questions. "
+            "Use this as an executable oracle to retrieve correct paths, API usage, or architecture details. "
+            "It embeds documents from the current scope into a vector index."
+        )
 
         if base_dir is None:
             raise ValueError("base_dir must be provided for RAG_Tool.")

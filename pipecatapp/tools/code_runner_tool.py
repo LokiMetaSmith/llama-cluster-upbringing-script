@@ -270,7 +270,13 @@ class CodeRunnerTool:
     """
     def __init__(self):
         """Initializes the CodeRunnerTool."""
-        self.description = "Execute Python code in a sandboxed Docker container."
+        self.description = (
+            "Execute Python code in a sandboxed Docker/Nomad container. "
+            "Use this tool as an executable oracle to test snippets before modifying host files. "
+            "Dependencies can be specified in the `libraries` argument (e.g., `['requests==2.31.0']`). "
+            "The tool validates dependencies against an OSV vulnerability scanner. "
+            "A timeout is enforced to prevent infinite loops."
+        )
         self.name = "code_runner"
 
         # Determine executor mode: 'docker' (default) or 'nomad'

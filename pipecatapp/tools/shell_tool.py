@@ -26,7 +26,12 @@ class ShellTool:
         self.session_name = session_name
         self.name = "shell"
         self.twin_service = twin_service
-        self.description = "A tool for running shell commands in a persistent tmux session."
+        self.description = (
+            "A tool for running shell commands in a persistent tmux session. "
+            "IMPORTANT: If running a long-running process (like a server), you MUST run it in the background "
+            "by appending `&` to the command and redirecting output to a file (e.g., `npm start > app.log 2>&1 &`). "
+            "Do not wait synchronously for long-running processes or the tool will timeout."
+        )
 
     def load_approvals(self):
         if os.path.exists(APPROVALS_FILE):
