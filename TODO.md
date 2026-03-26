@@ -193,3 +193,6 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Audit data storage security:**
   - Check how sensitive data (e.g., in `pipecatapp/memory.py` or database integrations) is stored.
   - Ensure encryption at rest is considered or implemented for sensitive fields.
+- [x] **Fix Lazy Tests:**
+  - [x] `tests/test_emperor_node.py:test_emperor_node` (dry run with simple pass instead of validation)
+  - [x] `tests/unit/test_vision_failover.py:test_yolo_internal_process_frame_failover` (relies on mock failure passing without asserts)
