@@ -55,6 +55,7 @@ lb config \
   --initsystem "systemd" \
   --debian-installer-distribution "$DISTRIBUTION" \
   --debian-installer false \
+  --win32-loader false \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
 echo "=== Injecting project files ==="
