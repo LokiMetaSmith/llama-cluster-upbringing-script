@@ -113,7 +113,39 @@ def select_parent(archive, selection_method="weighted", tournament_size=3, novel
                 return sorted_archive[i]
         return sorted_archive[-1]
 
-    # 5. Novelty Search
+    # 5. Score Proportional with Child Penalty (score_child_prop)
+    elif selection_method == "score_child_prop":
+        import math
+
+        # Calculate children counts
+        child_counts = {agent['id']: 0 for agent in archive}
+        for agent in archive:
+            parent_id = agent.get('parent_id')
+            if parent_id and parent_id in child_counts:
+                child_counts[parent_id] += 1
+
+        scores = [get_fitness_score(agent) for agent in archive]
+
+        # Apply sigmoid normalization if enough scores
+        if len(scores) >= 3:
+            top_3 = sorted(scores, reverse=True)[:3]
+            mid_point = sum(top_3) / len(top_3)
+            normalized_scores = [1 / (1 + math.exp(-10 * (score - mid_point))) for score in scores]
+        else:
+            normalized_scores = scores
+
+        penalties = [math.exp(-(child_counts[agent['id']]/8)**3) for agent in archive]
+
+        combined = [s * p for s, p in zip(normalized_scores, penalties)]
+        total = sum(combined)
+
+        if total > 0:
+            probabilities = [c / total for c in combined]
+            return random.choices(archive, weights=probabilities)[0]
+        else:
+            return random.choice(archive)
+
+    # 6. Novelty Search
     elif selection_method == "novelty":
         if len(archive) <= 1:
             return random.choice(archive)
