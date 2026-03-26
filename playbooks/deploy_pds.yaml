@@ -1,0 +1,6 @@
+---
+- name: Deploy Self-Hosted AT Protocol PDS
+  hosts: controller_nodes
+  become: yes
+  roles:
+    - pds

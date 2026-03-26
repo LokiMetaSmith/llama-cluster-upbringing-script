@@ -28,14 +28,38 @@ else:
     from net_utils import format_url, validate_url
 
 
+# OpenTelemetry Imports
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.sdk.resources import Resource
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+
+# Setup OpenTelemetry Tracer Provider
+resource = Resource(attributes={
+    "service.name": "pipecatapp"
+})
+provider = TracerProvider(resource=resource)
+# Only configure the OTLP exporter if the endpoint is provided to avoid errors when tracing is not expected
+if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
+    processor = BatchSpanProcessor(OTLPSpanExporter())
+    provider.add_span_processor(processor)
+trace.set_tracer_provider(provider)
 
 app = FastAPI(
     title="Pipecat Agent API",
     description="This API exposes endpoints to interact with the Pipecat agent, including real-time communication, status checks, and state management.",
     version="1.0.0",
 )
+
+# Instrument FastAPI and HTTPX with OpenTelemetry
+FastAPIInstrumentor.instrument_app(app)
+HTTPXClientInstrumentor().instrument()
 
 # Security Enhancement: Add CORS Middleware
 # Default to strict security (Same-Origin only), but support configuration via env var

@@ -176,6 +176,17 @@ experts:
 # Options: "debian" or "nixos". Defaults to "debian" for backward compatibility.
 pxe_os: "debian"
 
+# -- AT Protocol PDS Configuration --
+pds_enabled: true
+pds_hostname: "pds.local"
+pds_service_handle_domains: ".pds.local"
+pds_admin_password: "change_me_in_prod"
+pds_jwt_secret: "change_me_in_prod_jwt"
+pds_plc_rotation_key_k256_private_key_hex: "0000000000000000000000000000000000000000000000000000000000000000"
+pds_data_directory: "/opt/pds"
+pds_blobstore_disk_location: "/opt/pds/blocks"
+pds_port: 3000
+
 # -- OpenWorkers Configuration --
 openworkers_enabled: true
 openworkers_api_port: 7000
