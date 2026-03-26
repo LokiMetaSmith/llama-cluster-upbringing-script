@@ -12,6 +12,13 @@ if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
     exit 0
 fi
 
+# --- Dependencies Check ---
+if ! command -v isohybrid &> /dev/null; then
+    echo "Error: isohybrid is required but not installed."
+    echo "Please install syslinux-utils (e.g., 'sudo apt install syslinux-utils')."
+    exit 1
+fi
+
 # --- Configuration ---
 DISTRIBUTION="trixie" # Recommended in README
 ARCHITECTURE="amd64"
@@ -50,7 +57,7 @@ lb config \
   --firmware-binary false \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
-  --bootloader "grub-efi" \
+  --bootloader "syslinux,grub-efi" \
   --initramfs "live-boot" \
   --initsystem "systemd" \
   --debian-installer-distribution "$DISTRIBUTION" \

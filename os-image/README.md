@@ -12,15 +12,15 @@ sudo ./build_iso.sh
 ```
 
 **Requirements:**
-You must have `live-build` and `rsync` installed on your host system:
-`sudo apt install live-build rsync`
+You must have `live-build`, `syslinux-utils`, and `rsync` installed on your host system:
+`sudo apt install live-build syslinux-utils rsync`
 
 ## What's Included
 
-*   **Headless Debian (Trixie)**: Slimmed down distribution with essential networking tools.
-*   **Project Source**: Automatically bundled into `/opt/pipecat-cluster`.
-*   **Dependencies**: Packages like `ansible-core`, `python3`, `git`, `curl` are pre-installed.
-*   **Default User**: A default user `pipecatapp` (password: `pipecat`) with `sudo` access is created to immediately run the bootstrap scripts.
+* **Headless Debian (Trixie)**: Slimmed down distribution with essential networking tools.
+* **Project Source**: Automatically bundled into `/opt/pipecat-cluster`.
+* **Dependencies**: Packages like `ansible-core`, `python3`, `git`, `curl` are pre-installed.
+* **Default User**: A default user `pipecatapp` (password: `pipecat`) with `sudo` access is created to immediately run the bootstrap scripts.
 
 ## Usage
 

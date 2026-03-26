@@ -11,7 +11,7 @@ from pipecatapp.workflow.nodes.emperor_nodes import EmperorAgentNode
 
 async def test_emperor_node():
     # Setup dummy context
-    context = WorkflowContext(workflow_definition={"nodes": []})
+    context = WorkflowContext(workflow_definition={"nodes": [{"id": "test_node"}]})
 
     # We set inputs for the node
     # The node expects 'task' or 'user_text' in inputs
@@ -69,21 +69,44 @@ async def test_emperor_node():
     # We'll just define the inputs in the node config so get_input finds them
     node.config["inputs"] = [{"name": "task", "value": "Say hello"}]
 
-    try:
-        # We set a very short timeout to not block if LLM is missing
-        # Actually the node uses internal httpx.AsyncClient
-        # We can't easily mock that without patching.
-        # So we just instantiate it to ensure no syntax errors.
-        pass
-    except Exception as e:
-        print(f"Node Init Error: {e}")
+    # We need to set it in the context because get_input will look at connections/values
+    context.workflow_definition["nodes"][0]["inputs"] = [{"name": "task", "value": "Say hello"}]
 
-    print("Node instantiated successfully.")
+    from unittest.mock import patch, AsyncMock, MagicMock
+
+    with patch("pipecatapp.workflow.nodes.emperor_nodes.httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        # Mock LLM returning a final answer or tool call
+        # Since the loop runs until a final answer, we'll return a final answer directly to exit
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "FINAL_ANSWER: I have said hello."
+                    }
+                }
+            ]
+        }
+        mock_post.return_value = mock_response
+
+        # Execute the node
+        await node.execute(context)
+
+        # Verify the context output was set correctly
+        assert "test_node" in context.node_outputs
+        print("Node outputs:", context.node_outputs["test_node"])
+        assert "response" in context.node_outputs["test_node"]
+        assert context.node_outputs["test_node"]["response"] == "FINAL_ANSWER: I have said hello."
+
+    print("Node executed successfully with mocked LLM.")
 
 if __name__ == "__main__":
     try:
         asyncio.run(test_emperor_node())
         print("\nSUCCESS: Emperor Node Basic Tests Passed")
     except Exception as e:
+        import traceback
         print(f"\nFAILURE: {e}")
+        traceback.print_exc()
         sys.exit(1)

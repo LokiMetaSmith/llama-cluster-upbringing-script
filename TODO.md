@@ -206,3 +206,6 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [ ] Improve `test_websocket_allows_wildcard` in `pipecatapp/tests/test_websocket_security.py`
 - [ ] Improve `test_websocket_default_secure_same_origin_success` in `pipecatapp/tests/test_websocket_security.py`
 - [ ] Improve `test_yolo_internal_process_frame_failover` in `tests/unit/test_vision_failover.py`
+- [x] **Fix Lazy Tests:**
+  - [x] `tests/test_emperor_node.py:test_emperor_node` (dry run with simple pass instead of validation)
+  - [x] `tests/unit/test_vision_failover.py:test_yolo_internal_process_frame_failover` (relies on mock failure passing without asserts)
