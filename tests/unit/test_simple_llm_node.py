@@ -52,7 +52,7 @@ class TestSimpleLLMNode(unittest.IsolatedAsyncioTestCase):
 
             # Verification
             # Check if Consul was queried for the correct service
-            mock_client_instance.get.assert_called_with("http://localhost:8500/v1/health/service/llamacpp-rpc-router?passing")
+            mock_client_instance.get.assert_called_with("http://localhost:8500/v1/health/service/rpc-router?passing")
 
             # Check Output
             self.assertEqual(context.node_outputs["test_node"]["response"], "Fast Response")
@@ -83,7 +83,7 @@ class TestSimpleLLMNode(unittest.IsolatedAsyncioTestCase):
             await node.execute(context)
 
             # Check if Consul was queried for the MAIN service
-            mock_client_instance.get.assert_called_with("http://localhost:8500/v1/health/service/llamacpp-rpc-main?passing")
+            mock_client_instance.get.assert_called_with("http://localhost:8500/v1/health/service/rpc-main?passing")
 
 if __name__ == '__main__':
     unittest.main()
