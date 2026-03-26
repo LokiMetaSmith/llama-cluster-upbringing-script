@@ -113,6 +113,7 @@ class TestProvisioning(unittest.TestCase):
                      provisioning.main()
 
             mock_purge.assert_called_once()
+            self.assertEqual(mock_purge.call_count, 1)
 
     @patch('provisioning.purge_nomad_jobs')
     def test_main_only_purge(self, mock_purge):

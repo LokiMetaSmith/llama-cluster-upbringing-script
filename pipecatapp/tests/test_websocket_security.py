@@ -53,8 +53,11 @@ def test_websocket_allows_wildcard():
     Test that the WebSocket accepts all origins if EXPLICITLY configured with wildcard '*'.
     """
     with patch("web_server.allowed_origins", ["*"]):
-         with client.websocket_connect("/ws", headers={"Origin": "http://evil.com"}) as websocket:
-             pass
+         try:
+             with client.websocket_connect("/ws", headers={"Origin": "http://evil.com"}) as websocket:
+                 websocket.send_json({"type": "ping"})
+         except WebSocketDisconnect:
+             pytest.fail("WebSocket rejected wildcard origin")
 
 def test_websocket_default_secure_same_origin_success():
     """
@@ -64,8 +67,11 @@ def test_websocket_default_secure_same_origin_success():
     with patch("web_server.allowed_origins", []):
          # TestClient uses 'testserver' as Host by default.
          # So we set Origin to match it.
-         with client.websocket_connect("/ws", headers={"Origin": "http://testserver"}) as websocket:
-             websocket.send_json({"type": "ping"})
+         try:
+             with client.websocket_connect("/ws", headers={"Origin": "http://testserver"}) as websocket:
+                 websocket.send_json({"type": "ping"})
+         except WebSocketDisconnect:
+             pytest.fail("WebSocket rejected same-origin connection")
 
 def test_websocket_default_secure_same_origin_failure():
     """

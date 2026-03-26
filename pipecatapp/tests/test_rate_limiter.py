@@ -12,7 +12,7 @@ def test_rate_limiter():
     limiter = RateLimiter(limit=2, window=1)
 
     @app.get("/test")
-    async def test_endpoint(request: Request, limit: None = Depends(limiter)):
+    async def sample_endpoint(request: Request, limit: None = Depends(limiter)):
         return {"status": "ok"}
 
     client = TestClient(app)

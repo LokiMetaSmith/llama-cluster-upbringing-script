@@ -37,6 +37,7 @@ class TestSupervisor(unittest.TestCase):
     def test_run_script_failure(self, mock_run):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="Error")
         self.assertIsNone(supervisor.run_script("test.py"))
+        mock_run.assert_called_with(["python", "test.py"], capture_output=True, text=True)
 
     @patch('subprocess.run')
     def test_run_script_with_args(self, mock_run):
