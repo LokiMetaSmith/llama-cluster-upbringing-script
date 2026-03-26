@@ -64,7 +64,7 @@ class AutoresearchTool:
         # For simplicity and security, we'll snapshot the current working directory, and expect target_file
         # to be relative to it. If it's absolute, we try to make it relative.
 
-        target_file_abs = os.path.abspath(target_file)
+        target_file_abs = os.path.realpath(target_file)
         src_dir = os.getcwd()
 
         # Optimization: Create a source snapshot once to avoid repeatedly copying thousands of files.
