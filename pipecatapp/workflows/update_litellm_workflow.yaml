@@ -1,0 +1,81 @@
+name: "LiteLLM Security Update Workflow"
+nodes:
+  - id: "Input"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "user_text"
+        - name: "tool_result"
+        - name: "tools_dict"
+    inputs: []
+
+  - id: "SystemPrompt"
+    type: "SystemPromptNode"
+    inputs:
+      - name: "custom_prompt"
+        value: |
+          You are a Security Operations Agent responsible for protecting the infrastructure from supply chain attacks.
+          A critical vulnerability (malware injection) was recently discovered in the `litellm` package on PyPI (version 1.82.8).
+
+          Your objective is to update the `litellm` docker image tag used in our infrastructure (`ansible/jobs/router.nomad.j2`).
+
+          INSTRUCTIONS:
+          1. Use the `update_litellm_tool.fetch_releases` tool to get a list of recent `litellm` GitHub releases.
+          2. Evaluate the tags based on these criteria:
+             - MUST NOT be a release candidate, dev, nightly, alpha, or beta build.
+             - MUST be a stable release that is preferably 1-3 months old (to ensure it predates any recent undetected supply chain attacks).
+          3. Once you have selected a safe tag (e.g. `v1.82.3-stable` or similar older release), use the `update_litellm_tool.update_nomad_file(chosen_tag=...)` tool to apply the change.
+          4. Return a summary of the version you chose and why it was selected.
+
+  - id: "SecurityReasoning"
+    type: "SimpleLLMNode"
+    model_tier: "fast"
+    inputs:
+      - name: "user_text"
+        connection:
+          from_node: "Input"
+          from_output: "user_text"
+      - name: "tool_result"
+        connection:
+          from_node: "Input"
+          from_output: "tool_result"
+      - name: "system_prompt"
+        connection:
+          from_node: "SystemPrompt"
+          from_output: "system_prompt"
+
+  - id: "ToolParser"
+    type: "ToolParserNode"
+    inputs:
+      - name: "llm_response"
+        connection:
+          from_node: "SecurityReasoning"
+          from_output: "response"
+
+  - id: "ToolExecutor"
+    type: "ToolExecutorNode"
+    inputs:
+      - name: "tool_call_data"
+        connection:
+          from_node: "ToolParser"
+          from_output: "tool_call_data"
+      - name: "tools_dict"
+        connection:
+          from_node: "Input"
+          from_output: "tools_dict"
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_response"
+        connection:
+          from_node: "ToolParser"
+          from_output: "final_response"
+      - name: "tool_call"
+        connection:
+          from_node: "ToolParser"
+          from_output: "tool_call_data"
+      - name: "tool_result"
+        connection:
+          from_node: "ToolExecutor"
+          from_output: "tool_result"

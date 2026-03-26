@@ -73,7 +73,7 @@ job "router" {
       driver = "docker"
 
       config {
-        image = "ghcr.io/berriai/litellm:main-latest"
+        image = "ghcr.io/berriai/litellm:v1.82.0.patch5"
         ports = ["ollama"]
         args = [
           "--port", "${NOMAD_PORT_ollama}",
