@@ -103,3 +103,4 @@ Objective: Create a single, flexible Docker image that can run in any of the thr
 - [ ] **Update User Documentation**
   - [ ] Update `README.md` with "Deployment Options" section.
   - [ ] Document how to set `node_tier` in Ansible inventory.
+- [ ] Investigate if we can accept UEFI-only boot in the future to simplify the live-build ISO generation process.

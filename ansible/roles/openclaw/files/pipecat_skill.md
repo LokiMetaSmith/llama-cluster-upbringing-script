@@ -8,6 +8,7 @@ It acts as a "Super Manager" when invoked with the `/manager` command.
 ## When to use
 
 Use this skill when:
+
 - The user asks deep reasoning questions.
 - The user requests cluster status.
 - The user wants to interact with the Pipecat agent specifically.
@@ -18,6 +19,7 @@ Use this skill when:
 To query Pipecat, execute the following shell command using the `shell` tool:
 
 ### 1. Text Query (Standard)
+
 ```bash
 curl -X POST http://pipecatapp.service.consul:8000/internal/chat/sync \
   -H "Content-Type: application/json" \
@@ -25,6 +27,7 @@ curl -X POST http://pipecatapp.service.consul:8000/internal/chat/sync \
 ```
 
 ### 2. Audio Query (If user provided an audio file)
+
 If the user provided an audio file (e.g., at `/root/.openclaw/workspace/downloads/msg.ogg`), encode it and send it:
 
 ```bash
@@ -35,6 +38,7 @@ curl -X POST http://pipecatapp.service.consul:8000/internal/chat/sync \
 ```
 
 ### 3. Manager Mode (For complex projects)
+
 To activate the Project Manager workflow, prepend `/manager` to the text:
 
 ```bash

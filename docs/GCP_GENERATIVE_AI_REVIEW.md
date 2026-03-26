@@ -34,20 +34,25 @@ This pattern fundamentally shifts the paradigm of AI memory from passive retriev
 The GCP implementation relies on Google ADK (Agent Development Kit) and Gemini 3.1 Flash-Lite. To align with our project's constraints ("no external dependencies" and "models run entirely locally via Ollama/llama.cpp"), we must adapt this architecture.
 
 ### 1. Model Execution Layer
+
 Instead of calling Gemini APIs via the Google GenAI SDK, we will utilize our existing `CodeRunnerTool` or HTTP libraries to interface with local inference engines (Ollama, llama.cpp, or vLLM). Since the consolidation agent runs continuously in the background, a fast, lightweight local model (e.g., Llama 3 8B, Phi-3, or Mistral) is ideal.
 
 ### 2. State & Memory Management
+
 We already have a robust local setup. We can enhance our existing `MemoryStore` (`pipecatapp/memory.py`), which currently supports JSON storage and optional encryption, to support the structured relational schema required by the Always-On Memory Agent.
+
 - **SQLite Integration:** Implement a SQLite-backed memory provider within `pipecatapp/memory.py` to store:
   - `memories` (id, source, raw_text, summary, entities, topics, importance, consolidated flag)
   - `consolidations` (id, source_ids, summary, insight)
 
 ### 3. Asynchronous Background Loops
+
 Our `TechnicianAgent` uses a `DurableExecutionEngine`. We can introduce a new background worker node or a dedicated workflow in our Emperor node system (`pipecatapp/workflow/nodes/emperor_nodes.py`) that periodically executes the consolidation logic. This fits perfectly with our Nomad/cluster-native architecture, allowing long-running agents to live on the cluster.
 
 ## Security Considerations
 
 When adapting this pattern:
+
 - **Path Traversal / Ingestion:** The GCP agent uses a file watcher (`inbox/`) to automatically ingest files. If we implement local file ingestion, we must strictly validate file paths using our established `os.path.realpath` and `os.path.commonpath` boundary checks (similar to `SpecLoaderTool` and `Git_Tool`) to prevent agents from ingesting arbitrary host files.
 - **Resource Exhaustion (DoS):** Continuous background LLM inference can consume significant local cluster resources. We must implement rate limiting and chunking during the consolidation phase to prevent the agent from starving other cluster workloads.
 - **Data Privacy:** Local execution naturally resolves data privacy concerns associated with sending proprietary data to external APIs. Our existing `MEMORY_ENCRYPTION_KEY` Fernet encryption can be applied to the SQLite database files at rest.

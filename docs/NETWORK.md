@@ -82,8 +82,8 @@ graph TD
 
 The system dynamically selects the `cluster_ip` based on the node's state:
 
-1.  **Check for Tailscale:** If the `tailscale0` interface exists, its IP is used as the `cluster_ip`.
-2.  **Fallback:** If `tailscale0` is missing (e.g., during early boot or if Tailscale is disabled), it falls back to the static `10.0.0.x` alias derived from the hostname.
+1. **Check for Tailscale:** If the `tailscale0` interface exists, its IP is used as the `cluster_ip`.
+2. **Fallback:** If `tailscale0` is missing (e.g., during early boot or if Tailscale is disabled), it falls back to the static `10.0.0.x` alias derived from the hostname.
 
 ```yaml
 # Simplified Logic
