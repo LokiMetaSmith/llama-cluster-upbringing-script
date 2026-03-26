@@ -67,3 +67,10 @@ cloudpickle
 tritonclient[http]
 cryptography
 PyMuPDF
+
+# OpenTelemetry dependencies
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-httpx
+opentelemetry-exporter-otlp

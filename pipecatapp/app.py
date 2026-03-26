@@ -91,6 +91,7 @@ from moondream_detector import MoondreamDetector
 from workflow.runner import WorkflowRunner, ActiveWorkflows
 # Import all node classes to ensure they are registered
 from workflow.nodes.base_nodes import *
+from opentelemetry import trace
 from workflow.nodes.llm_nodes import *
 from workflow.nodes.tool_nodes import *
 from workflow.nodes.system_nodes import *
@@ -139,6 +140,9 @@ class WebSocketLogHandler(logging.Handler):
 
 logger = logging.getLogger()
 logger.addHandler(WebSocketLogHandler())
+
+# Setup generic tracer for the application module
+tracer = trace.get_tracer(__name__)
 
 # -----------------------
 # Frame processors
@@ -1142,6 +1146,7 @@ class TwinService(FrameProcessor):
             logging.info("No summarizer tool available; truncating short-term memory.")
             self.short_term_memory = ["[Older conversation history truncated]"] + recent
 
+    @tracer.start_as_current_span("TwinService.process_frame")
     async def process_frame(self, frame, direction):
         """Entry point for the agent's logic, triggered by a transcription frame.
         This now uses the new workflow engine.
@@ -1149,9 +1154,12 @@ class TwinService(FrameProcessor):
             frame: The incoming frame from the pipeline.
             direction: The direction of the frame in the pipeline.
         """
+        span = trace.get_current_span()
         if not isinstance(frame, TranscriptionFrame):
             await self.push_frame(frame, direction)
             return
+
+        span.set_attribute("agent.input_text", frame.text)
 
         # Compact memory before executing workflow
         self.compact_session()
@@ -1182,6 +1190,9 @@ class TwinService(FrameProcessor):
         session_id = self.current_request_meta.get("session_id", "default") if self.current_request_meta else "default"
 
         try:
+            span.set_attribute("agent.workflow_file", workflow_file)
+            span.set_attribute("agent.request_id", request_id)
+
             workflow_runner = WorkflowRunner(workflow_file, runner_id=request_id)
             active_workflows.add_runner(request_id, workflow_runner)
 
@@ -1197,8 +1208,17 @@ class TwinService(FrameProcessor):
             previous_tool_calls = []
 
             async with session_locks[session_id]:
-                for _ in range(10): # Allow up to 10 steps in the thought process
-                    workflow_result = await workflow_runner.run(global_inputs)
+                for step_idx in range(10): # Allow up to 10 steps in the thought process
+                    with tracer.start_as_current_span(f"Workflow.Step_{step_idx}") as step_span:
+                        workflow_result = await workflow_runner.run(global_inputs)
+
+                        final_response = workflow_result.get("final_response")
+                        if final_response:
+                            step_span.set_attribute("workflow.final_response", final_response)
+
+                        tool_call = workflow_result.get("tool_call")
+                        if tool_call:
+                            step_span.set_attribute("workflow.tool_call", str(tool_call.get("name")))
 
                     final_response = workflow_result.get("final_response")
                     tool_call = workflow_result.get("tool_call")
@@ -1250,8 +1270,12 @@ class TwinService(FrameProcessor):
         finally:
             active_workflows.remove_runner(request_id)
 
+    @tracer.start_as_current_span("TwinService._send_response")
     async def _send_response(self, text: str):
         """Sends a response back to the appropriate channel (TTS or Gateway)."""
+        span = trace.get_current_span()
+        span.set_attribute("agent.output_text", text)
+
         if self.current_request_meta and self.current_request_meta.get("is_sync"):
             request_id = self.current_request_meta.get("request_id")
             if request_id and request_id in web_server.sync_response_store:
