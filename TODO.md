@@ -106,20 +106,17 @@
 
 ## Future Enhancements and Backlog
 
-### Integrate LangChain
+### Integrate LangChain (Tandem/Hybrid Approach)
 
-- [ ] **Phase 1: Tool Standardization:**
-  - Decorate existing tools in `pipecatapp/tools/` with LangChain's `@tool` decorator.
-  - Refactor `SystemPromptNode` and `ToolParserNode` to use LangChain's `bind_tools()` and native LLM tool calling APIs instead of regex-based parsing.
-- [ ] **Phase 2: RAG and Document Ingestion:**
-  - Refactor `RAG_Tool` and `DocumentTool` to utilize LangChain's `DocumentLoaders` (e.g., `DirectoryLoader`, `PyMuPDFLoader`) and `RecursiveCharacterTextSplitter`.
-  - Replace custom FAISS vectorization logic with LangChain's `FAISS` VectorStore abstraction.
-- [ ] **Phase 3: Memory Wrappers:**
-  - Wrap the custom `pmm_memory.py` event-sourced ledger into a class that inherits from LangChain's `BaseChatMessageHistory`.
-  - Wrap the SQLite metadata features of `memory.py` to seamlessly integrate with standard LangChain Agents/Chains.
-- [ ] **Phase 4: LangGraph Workflow Engine (Evaluation):**
-  - Prototype replacing the custom `WorkflowRunner` (and custom Kahn's topological sort) in `pipecatapp/workflow/runner.py` with `LangGraph`.
-  - Migrate custom `Node` classes to LangGraph nodes and transition `WorkflowContext` to a LangGraph `StateGraph`.
+- [ ] **Phase 1: Build a `LangChainToolAdapter`:**
+  - Create a wrapper class in `pipecatapp/tools/` capable of ingesting any LangChain `BaseTool` and exposing it through the standard methods expected by our `ToolExecutorNode` and UI approval queue (`TwinService._request_approval`).
+- [ ] **Phase 2: RAG Internals Enhancement:**
+  - Update `RAG_Tool.add_document()` to utilize LangChain's `DocumentLoaders` (e.g., `DirectoryLoader`, `PyMuPDFLoader`) and `RecursiveCharacterTextSplitter` internally, maintaining the tool's external API.
+- [ ] **Phase 3: Create LangChain Memory Wrappers:**
+  - Implement `PMMChatMessageHistory` (inheriting from `BaseChatMessageHistory`) that reads/writes to our deterministic `pmm_memory.db` ledger.
+  - Implement `PipecatVectorStore` (inheriting from `VectorStore`) wrapping our custom `memory.py` FAISS/SQLite setup.
+- [ ] **Phase 4: Build a `LangGraphNode` for the Workflow Engine:**
+  - Create a custom node for `pipecatapp/workflow/nodes/` that compiles and executes a specialized LangGraph (e.g., a complex agentic research loop) as a single step within our hardware-aware, orchestrator-driven DAG.
 
 - [x] **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model.
 - [ ] **Re-evaluate Consul Connect Service Mesh:** Create a new feature branch to attempt to re-enable `sidecar_service` in the Nomad job files and document the process.
