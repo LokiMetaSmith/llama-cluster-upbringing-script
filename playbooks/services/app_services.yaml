@@ -104,6 +104,7 @@
         - mcp_server
         - llmfit
         - openclaw
+        - forgejo
       loop_control:
         loop_var: role_name
       tags:
@@ -112,6 +113,7 @@
         - power_manager
         - world_model_service
         - tool_server
+        - forgejo
 
     - name: Run Paddler Stack
       when: enable_paddler | default(false)

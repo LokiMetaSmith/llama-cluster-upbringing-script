@@ -1,0 +1,69 @@
+job "forgejo" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "forgejo" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" {
+        static = 3000
+      }
+      port "ssh" {
+        static = 2222
+      }
+    }
+
+    task "forgejo" {
+      driver = "docker"
+
+      config {
+        image = "codeberg.org/forgejo/forgejo:9"
+        ports = ["http", "ssh"]
+
+        volumes = [
+          "/opt/forgejo/data:/data"
+        ]
+      }
+
+      env {
+        USER_UID = "1000"
+        USER_GID = "1000"
+        FORGEJO__server__HTTP_PORT = "${NOMAD_PORT_http}"
+        FORGEJO__server__SSH_PORT  = "${NOMAD_PORT_ssh}"
+        FORGEJO__server__ROOT_URL  = "http://${attr.unique.network.ip-address}:${NOMAD_PORT_http}/"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+
+      service {
+        name = "forgejo-http"
+        port = "http"
+        tags = ["forgejo", "git", "web"]
+
+        check {
+          type     = "http"
+          path     = "/"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+
+      service {
+        name = "forgejo-ssh"
+        port = "ssh"
+        tags = ["forgejo", "git", "ssh"]
+
+        check {
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}
