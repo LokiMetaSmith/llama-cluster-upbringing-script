@@ -199,27 +199,39 @@ class RAG_Tool:
 
                     files_to_process.append(file_path)
 
-        # 5. Process files in batches
+        # 5. Process files in batches using LangChain
+        try:
+            from langchain_community.document_loaders import TextLoader
+            from langchain_text_splitters import RecursiveCharacterTextSplitter
+        except ImportError:
+            logging.error("LangChain libraries not installed. Run: pip install langchain-community langchain-text-splitters")
+            return
+
         batch_size = 150
         current_batch_docs = []
         current_batch_ids = []
         current_batch_metadatas = []
 
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200,
+            length_function=len,
+        )
+
         for i, file_path in enumerate(files_to_process):
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
+                loader = TextLoader(file_path, encoding='utf-8')
+                docs = loader.load()
+                split_docs = text_splitter.split_documents(docs)
 
-                if content.strip():
-                    chunks = content.split("\n\n")
-                    for chunk_idx, chunk_text in enumerate(chunks):
-                        if chunk_text.strip():
-                            doc_id = f"{file_path}_{chunk_idx}"
-                            current_batch_docs.append(chunk_text)
-                            current_batch_ids.append(doc_id)
-                            current_batch_metadatas.append({"source": file_path})
+                for chunk_idx, doc in enumerate(split_docs):
+                    if doc.page_content.strip():
+                        doc_id = f"{file_path}_{chunk_idx}"
+                        current_batch_docs.append(doc.page_content)
+                        current_batch_ids.append(doc_id)
+                        current_batch_metadatas.append({"source": file_path})
             except Exception as e:
-                logging.warning(f"Could not read or process file {file_path}: {e}")
+                logging.warning(f"Could not read or process file {file_path} via LangChain: {e}")
 
             processed_files.add(file_path)
 
