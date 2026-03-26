@@ -67,6 +67,15 @@
     recurse: yes
   become: yes
 
+- name: Ensure ChromaDB storage directory exists
+  ansible.builtin.file:
+    path: "{{ pipecat_app_dir }}/chromadb"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+  become: yes
+
 - name: Copy requirements.txt
   ansible.builtin.copy:
     src: "{{ inventory_dir }}/pipecatapp/requirements.txt"
