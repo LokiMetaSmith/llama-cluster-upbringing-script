@@ -50,9 +50,12 @@ lb config \
   --firmware-binary false \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
+  --bootloader "grub-efi" \
   --initramfs "live-boot" \
   --initsystem "systemd" \
   --debian-installer-distribution "$DISTRIBUTION" \
+  --debian-installer false \
+  --win32-loader false \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
 echo "=== Injecting project files ==="
