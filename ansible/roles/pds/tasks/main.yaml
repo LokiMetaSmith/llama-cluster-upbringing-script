@@ -1,0 +1,26 @@
+- name: Create PDS directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user | default('root') }}"
+    group: "{{ target_user | default('root') }}"
+  loop:
+    - "{{ pds_data_directory }}"
+    - "{{ pds_blobstore_disk_location }}"
+
+- name: Template PDS Nomad job file
+  ansible.builtin.template:
+    src: pds.nomad.j2
+    dest: "{{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/pds.nomad"
+    mode: '0644'
+  when: pds_enabled | default(false) | bool
+
+- name: Run PDS Nomad job
+  ansible.builtin.command:
+    cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/pds.nomad"
+  environment:
+    NOMAD_ADDR: "http://{{ cluster_ip | default('localhost') }}:4646"
+  register: pds_job_run
+  changed_when: true
+  when: pds_enabled | default(false) | bool
