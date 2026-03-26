@@ -193,3 +193,16 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Audit data storage security:**
   - Check how sensitive data (e.g., in `pipecatapp/memory.py` or database integrations) is stored.
   - Ensure encryption at rest is considered or implemented for sensitive fields.
+
+## Technical Debt & Lazy Code
+- [ ] Improve `test_allowlist` in `tests/test_ssrf_validation.py`
+- [ ] Improve `test_endpoint` in `pipecatapp/tests/test_rate_limiter.py`
+- [ ] Improve `test_leak` in `tests/unit/test_shell_tool_security.py`
+- [ ] Improve `test_main_purge_jobs` in `tests/unit/test_provisioning.py`
+- [ ] Improve `test_run_script_failure` in `tests/unit/test_supervisor.py`
+- [ ] Improve `test_validate_url_safe` in `tests/test_ssrf_validation.py`
+- [ ] Improve `test_validate_url_unsafe_ip` in `tests/test_ssrf_validation.py`
+- [ ] Improve `test_validate_url_unsafe_scheme` in `tests/test_ssrf_validation.py`
+- [ ] Improve `test_websocket_allows_wildcard` in `pipecatapp/tests/test_websocket_security.py`
+- [ ] Improve `test_websocket_default_secure_same_origin_success` in `pipecatapp/tests/test_websocket_security.py`
+- [ ] Improve `test_yolo_internal_process_frame_failover` in `tests/unit/test_vision_failover.py`
