@@ -193,3 +193,13 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Audit data storage security:**
   - Check how sensitive data (e.g., in `pipecatapp/memory.py` or database integrations) is stored.
   - Ensure encryption at rest is considered or implemented for sensitive fields.
+- [ ] **Fix Lazy Tests:**
+  - `tests/test_ssrf_validation.py:test_allowlist` (contains only a mocked pass)
+  - `tests/test_emperor_node.py:test_emperor_node` (dry run with simple pass instead of validation)
+  - `tests/test_event_bus.py:test_event_bus_flow` (cleanup is a simple pass)
+  - `tests/verify_dlq.py:test_server` (empty or passing context manager)
+  - `tests/unit/test_file_editor_security.py:test_symlink_bypass` (lacks proper assertions or only passes manually)
+  - `tests/unit/test_vision_failover.py:test_yolo_internal_process_frame_failover` (relies on mock failure passing without asserts)
+  - `tests/unit/test_ssh_tool.py:test_run_command_with_password_success` (mocking without validating side effects fully or simple assert)
+  - `tests/unit/test_audio_download_limit.py` (both tests contain `pass` in async context exits without proper assertions)
+  - `tests/unit/test_gemini_cli.py:test_gemini_cli_interaction` (contains `pass` in try-except block without checking exception)
