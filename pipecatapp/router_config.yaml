@@ -1,0 +1,15 @@
+name: "knn_router"
+hparam:
+  n_neighbors: 1
+  weights: "uniform"
+  algorithm: "auto"
+  leaf_size: 30
+  p: 2
+  metric: "minkowski"
+data_path:
+  routing_data_train: "router_training_data.jsonl"
+  query_embedding_data: "router_train_embeddings.pt"
+model_path:
+  ini_model_path: "router_trained_model.pkl"
+  save_model_path: "router_trained_model.pkl"
+  load_model_path: "router_trained_model.pkl"

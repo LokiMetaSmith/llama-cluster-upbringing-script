@@ -454,34 +454,31 @@ class LLMRouterNode(Node):
     async def execute(self, context: WorkflowContext):
         query = self.get_input(context, "user_text")
 
-        # NOTE: This implementation assumes LLMRouter is installed and configured.
-        # Since we are in a proof-of-concept phase, we might need to mock or
-        # configure it dynamically.
-
         try:
-            from llmrouter import LLMRouter
+            from llmrouter.models import KNNRouter
+            import os
 
-            # TODO: Load a real routing config or trained model here.
-            # For the PoC, we might use a simple rule-based or zero-shot router if supported,
-            # or just a mock if the library requires training data we don't have yet.
-            #
-            # Ideally, the router is initialized once at startup, not per-request.
-            # But for now, we'll keep it self-contained or use a singleton pattern if available.
+            # Determine paths for the trained router. Since we are running dynamically,
+            # we check if the trained model exists. If not, fallback to heuristic logic.
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            model_path = os.path.join(base_dir, "router_trained_model.pkl")
+            config_path = os.path.join(base_dir, "router_config.yaml")
 
-            # Mocking the router behavior for now until we have training data/config
-            # mapped to our local services.
-            # In a real scenario:
-            # router = LLMRouter(config_path="...")
-            # route = router.route(query)
-            # selected_model = route.model_name
-
-            # Simple heuristic fallback (PoC logic) mimicking what a router might do
-            if "code" in query.lower() or "python" in query.lower() or "function" in query.lower():
-                selected_model = "qwen2.5-coder"
-            elif "vision" in query.lower() or "see" in query.lower() or "image" in query.lower():
-                selected_model = "llava-llama-3"
+            if os.path.exists(model_path) and os.path.exists(config_path):
+                # We have a fully trained LLMRouter instance
+                router = KNNRouter(config_path)
+                route_result = router.route_single({"query": query})
+                selected_model = route_result.get("model_name", "llama-3-8b")
+                # knn_model returns a numpy str in some versions, so we cast it to standard string
+                selected_model = str(selected_model)
             else:
-                selected_model = "llama-3-8b"
+                # Simple heuristic fallback (PoC logic) mimicking what a router might do
+                if "code" in query.lower() or "python" in query.lower() or "function" in query.lower():
+                    selected_model = "qwen2.5-coder"
+                elif "vision" in query.lower() or "see" in query.lower() or "image" in query.lower():
+                    selected_model = "llava-llama-3"
+                else:
+                    selected_model = "llama-3-8b"
 
             # Map selected model to Consul service
             service_mapper = {
