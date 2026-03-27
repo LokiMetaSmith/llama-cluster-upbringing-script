@@ -13,6 +13,15 @@ if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
 fi
 
 # --- Dependencies Check ---
+if ! command -v xorriso &> /dev/null || ! command -v mtools &> /dev/null; then
+    echo "Dependencies xorriso and/or mtools are required but not installed. Installing..."
+    if [ "$(id -u)" -ne 0 ]; then
+        sudo apt-get update && sudo apt-get install -y xorriso mtools grub-pc-bin grub-efi-amd64-bin
+    else
+        apt-get update && apt-get install -y xorriso mtools grub-pc-bin grub-efi-amd64-bin
+    fi
+fi
+
 if ! command -v isohybrid &> /dev/null; then
     echo "isohybrid is required but not installed. Installing syslinux-utils..."
     if [ "$(id -u)" -ne 0 ]; then
@@ -60,7 +69,7 @@ lb config \
   --firmware-binary false \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
-  --bootloader "syslinux,grub-efi" \
+  --bootloader "grub-efi" \
   --initramfs "live-boot" \
   --initsystem "systemd" \
   --debian-installer-distribution "$DISTRIBUTION" \
@@ -69,9 +78,9 @@ lb config \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
 echo "=== Injecting project files ==="
-# Add syslinux-utils to chroot packages so isohybrid works inside the build environment
+# Add required packages to chroot so the build environment can generate a hybrid EFI ISO
 mkdir -p config/package-lists
-echo "syslinux-utils" > config/package-lists/syslinux-utils.list.chroot
+echo "syslinux-utils xorriso mtools grub-pc-bin grub-efi-amd64-bin" > config/package-lists/build-deps.list.chroot
 
 # Ensure the root of the repo is copied to /opt/pipecat-cluster
 # The `lb build` command automatically includes files placed in `config/includes.chroot/`
