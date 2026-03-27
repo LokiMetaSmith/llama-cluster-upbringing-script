@@ -60,7 +60,8 @@ lb config \
   --firmware-binary false \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
-  --bootloader "grub-efi" \
+  --packages "syslinux-utils" \
+  --bootloader "syslinux,grub-efi" \
   --initramfs "live-boot" \
   --initsystem "systemd" \
   --debian-installer-distribution "$DISTRIBUTION" \
