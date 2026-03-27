@@ -1,3 +1,5 @@
+# Plan
+
 1. **Create Skill Library Service (Memory-based)**
    - Utilize the existing SQLite-backed memory schema (`PMMMemoryClient` and `MemoryStore`) to persist skills.
    - We will add functions to manage skills via `PMMMemoryClient` (which talks to the `MemoryStore`).

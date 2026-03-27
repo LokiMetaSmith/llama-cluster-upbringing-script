@@ -207,6 +207,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - Ensure encryption at rest is considered or implemented for sensitive fields.
 
 ## Technical Debt & Lazy Code
+
 - [x] Improve `test_allowlist` in `tests/test_ssrf_validation.py`
 - [x] Improve `test_endpoint` in `pipecatapp/tests/test_rate_limiter.py`
 - [x] Improve `test_leak` in `tests/unit/test_shell_tool_security.py`
