@@ -14,9 +14,12 @@ fi
 
 # --- Dependencies Check ---
 if ! command -v isohybrid &> /dev/null; then
-    echo "Error: isohybrid is required but not installed."
-    echo "Please install syslinux-utils (e.g., 'sudo apt install syslinux-utils')."
-    exit 1
+    echo "isohybrid is required but not installed. Installing syslinux-utils..."
+    if [ "$(id -u)" -ne 0 ]; then
+        sudo apt-get update && sudo apt-get install -y syslinux-utils
+    else
+        apt-get update && apt-get install -y syslinux-utils
+    fi
 fi
 
 # --- Configuration ---
@@ -57,7 +60,7 @@ lb config \
   --firmware-binary false \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
-  --bootloader "syslinux,grub-efi" \
+  --bootloader "grub-efi" \
   --initramfs "live-boot" \
   --initsystem "systemd" \
   --debian-installer-distribution "$DISTRIBUTION" \
