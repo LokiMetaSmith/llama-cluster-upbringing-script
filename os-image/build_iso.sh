@@ -60,7 +60,6 @@ lb config \
   --firmware-binary false \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
-  --packages "syslinux-utils" \
   --bootloader "syslinux,grub-efi" \
   --initramfs "live-boot" \
   --initsystem "systemd" \
@@ -70,6 +69,10 @@ lb config \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
 echo "=== Injecting project files ==="
+# Add syslinux-utils to chroot packages so isohybrid works inside the build environment
+mkdir -p config/package-lists
+echo "syslinux-utils" > config/package-lists/syslinux-utils.list.chroot
+
 # Ensure the root of the repo is copied to /opt/pipecat-cluster
 # The `lb build` command automatically includes files placed in `config/includes.chroot/`
 mkdir -p config/includes.chroot/opt/pipecat-cluster
