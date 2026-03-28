@@ -8,20 +8,9 @@ if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
     echo "Usage: ./build_iso.sh"
     echo ""
     echo "Builds a custom, bootable, headless Debian ISO for the Pipecat agent cluster."
-    echo "Must be run as root (or with sudo) because live-build strictly requires root privileges."
+    echo "Automatically spins up a Debian Trixie Docker container to ensure native live-build compatibility."
     exit 0
 fi
-
-# --- Dependencies Check ---
-if ! command -v xorriso &> /dev/null || ! command -v mtools &> /dev/null; then
-    echo "Dependencies xorriso and/or mtools are required but not installed. Installing..."
-    if [ "$(id -u)" -ne 0 ]; then
-        sudo apt-get update && sudo apt-get install -y xorriso mtools grub-pc-bin grub-efi-amd64-bin
-    else
-        apt-get update && apt-get install -y xorriso mtools grub-pc-bin grub-efi-amd64-bin
-    fi
-fi
-
 
 # --- Configuration ---
 DISTRIBUTION="trixie" # Recommended in README
@@ -31,6 +20,30 @@ ISO_NAME="pipecat-installer"
 # Move to the build directory
 BUILD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$BUILD_DIR"
+
+# --- Docker Wrapper ---
+# Ensure we build inside a native Debian Trixie container to avoid host-chroot OS mismatches (e.g., Ubuntu vs Debian)
+# which cause bootloader generation failures and 'isohybrid' missing boot record errors.
+if [ ! -f /.dockerenv ]; then
+    echo "=== Not running in a container. Spinning up a Debian Trixie build environment ==="
+
+    # Check if docker is installed
+    if ! command -v docker &> /dev/null; then
+        echo "Error: Docker is not installed but is required to build the ISO natively."
+        exit 1
+    fi
+
+    # Run this script inside a privileged container
+    echo "Executing build inside debian:${DISTRIBUTION} container..."
+    sudo docker run --rm -it --privileged \
+        -v "$BUILD_DIR/..:/opt/pipecat-cluster" \
+        -w "/opt/pipecat-cluster/os-image" \
+        "debian:${DISTRIBUTION}" \
+        bash -c "apt-get update && apt-get install -y live-build xorriso mtools grub-pc-bin grub-efi-amd64-bin rsync && ./build_iso.sh"
+
+    echo "=== Build Complete (Host Wrapper) ==="
+    exit 0
+fi
 
 echo "=== Cleaning previous build artifacts ==="
 # Ensure old configs or broken debootstrap artifacts don't interfere
