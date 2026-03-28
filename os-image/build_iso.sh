@@ -39,7 +39,7 @@ if [ ! -f /.dockerenv ]; then
         -v "$BUILD_DIR/..:/opt/pipecat-cluster" \
         -w "/opt/pipecat-cluster/os-image" \
         "debian:${DISTRIBUTION}" \
-        bash -c "apt-get update && apt-get install -y live-build xorriso mtools grub-pc-bin grub-efi-amd64-bin rsync && ./build_iso.sh"
+        bash -c "apt-get update && apt-get install -y live-build xorriso mtools dosfstools grub-pc-bin grub-efi-amd64-bin rsync && ./build_iso.sh"
 
     echo "=== Build Complete (Host Wrapper) ==="
     exit 0
@@ -74,7 +74,7 @@ lb config \
   --firmware-binary false \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
-  --bootloader "grub-efi" \
+  --bootloader grub \
   --initramfs "live-boot" \
   --initsystem "systemd" \
   --debian-installer-distribution "$DISTRIBUTION" \
@@ -83,10 +83,6 @@ lb config \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
 echo "=== Injecting project files ==="
-# Add required packages to chroot so the build environment can generate a hybrid EFI ISO natively using xorriso
-mkdir -p config/package-lists
-echo "xorriso mtools grub-pc-bin grub-efi-amd64-bin" > config/package-lists/build-deps.list.chroot
-
 # Ensure the root of the repo is copied to /opt/pipecat-cluster
 # The `lb build` command automatically includes files placed in `config/includes.chroot/`
 mkdir -p config/includes.chroot/opt/pipecat-cluster
@@ -102,11 +98,13 @@ else
 fi
 
 # Rename the generated ISO to match expected output name
-if [ -f "binary.hybrid.iso" ]; then
+if [ -f "live-image-${ARCHITECTURE}.hybrid.iso" ]; then
+    mv "live-image-${ARCHITECTURE}.hybrid.iso" "${ISO_NAME}-${ARCHITECTURE}.iso"
+elif [ -f "binary.hybrid.iso" ]; then
     mv binary.hybrid.iso "${ISO_NAME}-${ARCHITECTURE}.iso"
 elif [ -f "binary.iso" ]; then
     mv binary.iso "${ISO_NAME}-${ARCHITECTURE}.iso"
 fi
 
 echo "=== Build Complete ==="
-echo "The ISO image should be available in the $BUILD_DIR directory as ${ISO_NAME}-${ARCHITECTURE}.iso"
+echo "The ISO image should be available locally as ${ISO_NAME}-${ARCHITECTURE}.iso"
