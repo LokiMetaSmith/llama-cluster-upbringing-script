@@ -22,14 +22,6 @@ if ! command -v xorriso &> /dev/null || ! command -v mtools &> /dev/null; then
     fi
 fi
 
-if ! command -v isohybrid &> /dev/null; then
-    echo "isohybrid is required but not installed. Installing syslinux-utils..."
-    if [ "$(id -u)" -ne 0 ]; then
-        sudo apt-get update && sudo apt-get install -y syslinux-utils
-    else
-        apt-get update && apt-get install -y syslinux-utils
-    fi
-fi
 
 # --- Configuration ---
 DISTRIBUTION="trixie" # Recommended in README
@@ -78,9 +70,9 @@ lb config \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
 echo "=== Injecting project files ==="
-# Add required packages to chroot so the build environment can generate a hybrid EFI ISO
+# Add required packages to chroot so the build environment can generate a hybrid EFI ISO natively using xorriso
 mkdir -p config/package-lists
-echo "syslinux-utils xorriso mtools grub-pc-bin grub-efi-amd64-bin" > config/package-lists/build-deps.list.chroot
+echo "xorriso mtools grub-pc-bin grub-efi-amd64-bin" > config/package-lists/build-deps.list.chroot
 
 # Ensure the root of the repo is copied to /opt/pipecat-cluster
 # The `lb build` command automatically includes files placed in `config/includes.chroot/`
