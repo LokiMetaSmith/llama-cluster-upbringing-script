@@ -39,7 +39,7 @@ if [ ! -f /.dockerenv ]; then
         -v "$BUILD_DIR/..:/opt/pipecat-cluster" \
         -w "/opt/pipecat-cluster/os-image" \
         "debian:${DISTRIBUTION}" \
-        bash -c "apt-get update && apt-get install -y live-build xorriso mtools dosfstools grub-pc-bin grub-efi-amd64-bin rsync && ./build_iso.sh"
+        bash -c "apt-get update && apt-get install -y live-build xorriso mtools dosfstools grub-pc-bin grub-efi-amd64-bin syslinux syslinux-utils isolinux rsync && ./build_iso.sh"
 
     echo "=== Build Complete (Host Wrapper) ==="
     exit 0
@@ -74,11 +74,11 @@ lb config \
   --firmware-binary false \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
-  --bootloader grub \
+  --bootloader "syslinux,grub-efi" \
   --initramfs "live-boot" \
   --initsystem "systemd" \
   --debian-installer-distribution "$DISTRIBUTION" \
-  --debian-installer false \
+  --debian-installer none \
   --win32-loader false \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
 
