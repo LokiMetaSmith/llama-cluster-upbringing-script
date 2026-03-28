@@ -102,11 +102,13 @@ else
 fi
 
 # Rename the generated ISO to match expected output name
-if [ -f "binary.hybrid.iso" ]; then
+if [ -f "live-image-${ARCHITECTURE}.hybrid.iso" ]; then
+    mv "live-image-${ARCHITECTURE}.hybrid.iso" "${ISO_NAME}-${ARCHITECTURE}.iso"
+elif [ -f "binary.hybrid.iso" ]; then
     mv binary.hybrid.iso "${ISO_NAME}-${ARCHITECTURE}.iso"
 elif [ -f "binary.iso" ]; then
     mv binary.iso "${ISO_NAME}-${ARCHITECTURE}.iso"
 fi
 
 echo "=== Build Complete ==="
-echo "The ISO image should be available in the $BUILD_DIR directory as ${ISO_NAME}-${ARCHITECTURE}.iso"
+echo "The ISO image should be available locally as ${ISO_NAME}-${ARCHITECTURE}.iso"
