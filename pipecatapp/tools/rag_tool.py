@@ -10,6 +10,8 @@ from chromadb.config import Settings
 from pmm_memory import PMMMemory
 import gc
 import json
+import subprocess
+import shutil
 
 class RAG_Tool:
     """A tool to retrieve information from a project-specific knowledge base.
@@ -178,14 +180,14 @@ class RAG_Tool:
             ".csv", ".json"
         }
 
-        for root, dirs, files in os.walk(self.base_dir):
-            dirs[:] = [d for d in dirs if d not in exclude_dirs]
-            for file in files:
-                ext = os.path.splitext(file)[1].lower()
+        git_files = self._list_files_git()
+        if git_files is not None:
+            for rel_path in git_files:
+                ext = os.path.splitext(rel_path)[1].lower()
                 if ext in excluded_extensions:
                     continue
-                if file.endswith((".md", ".txt")):
-                    file_path = os.path.join(root, file)
+                if rel_path.endswith((".md", ".txt")):
+                    file_path = os.path.join(self.base_dir, rel_path)
                     if file_path in processed_files or file_path in files_to_process:
                         continue
 
@@ -198,6 +200,27 @@ class RAG_Tool:
                             continue
 
                     files_to_process.append(file_path)
+        else:
+            for root, dirs, files in os.walk(self.base_dir):
+                dirs[:] = [d for d in dirs if d not in exclude_dirs]
+                for file in files:
+                    ext = os.path.splitext(file)[1].lower()
+                    if ext in excluded_extensions:
+                        continue
+                    if file.endswith((".md", ".txt")):
+                        file_path = os.path.join(root, file)
+                        if file_path in processed_files or file_path in files_to_process:
+                            continue
+
+                        if os.path.islink(file_path):
+                            try:
+                                real_path = os.path.realpath(file_path)
+                                if os.path.commonpath([self.allowed_root, real_path]) != self.allowed_root:
+                                    continue
+                            except (ValueError, OSError):
+                                continue
+
+                        files_to_process.append(file_path)
 
         # 5. Process files in batches using LangChain
         try:
@@ -271,6 +294,23 @@ class RAG_Tool:
         # Get count of documents in ChromaDB
         doc_count = collection.count()
         logging.info(f"RAG knowledge base built/loaded successfully. Total documents in ChromaDB: {doc_count}.")
+
+    def _list_files_git(self) -> Optional[list[str]]:
+        """Lists files using git ls-files if possible. Returns None if not a git repo."""
+        if not shutil.which("git"):
+            return None
+
+        try:
+            # Check if inside git repo
+            subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+                           cwd=self.base_dir, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            # git ls-files returns paths relative to cwd
+            res = subprocess.run(["git", "ls-files"], cwd=self.base_dir, check=True, capture_output=True, text=True)
+            files = res.stdout.splitlines()
+            return files
+        except Exception:
+            return None
 
     def search_knowledge_base(self, query: str) -> str:
         """Searches the knowledge base for text relevant to the query.

@@ -3,6 +3,8 @@ import json
 import sqlite3
 import requests
 import fitz  # PyMuPDF
+import subprocess
+import shutil
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 
@@ -66,8 +68,49 @@ class LocalDirectoryBackend(DocumentBackend):
         if not os.path.exists(self.directory):
             raise ValueError(f"Directory {self.directory} does not exist.")
 
+    def _list_files_git(self) -> Optional[List[str]]:
+        """Lists files using git ls-files if possible. Returns None if not a git repo."""
+        if not shutil.which("git"):
+            return None
+
+        try:
+            # Check if inside git repo
+            subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+                           cwd=self.directory, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            # git ls-files returns paths relative to cwd
+            res = subprocess.run(["git", "ls-files"], cwd=self.directory, check=True, capture_output=True, text=True)
+            files = res.stdout.splitlines()
+            return files
+        except Exception:
+            return None
+
     def search(self, query: str) -> List[Dict[str, Any]]:
         results = []
+
+        git_files = self._list_files_git()
+        if git_files is not None:
+            for rel_path in git_files:
+                filepath = os.path.join(self.directory, rel_path)
+                try:
+                    text = self._extract_text(filepath)
+                    if query.lower() in text.lower():
+                        # Extract a snippet around the first match
+                        idx = text.lower().find(query.lower())
+                        start = max(0, idx - 50)
+                        end = min(len(text), idx + len(query) + 50)
+                        snippet = text[start:end]
+                        results.append({
+                            "id": filepath,
+                            "title": os.path.basename(filepath),
+                            "type": "local",
+                            "snippet": f"...{snippet}..."
+                        })
+                except Exception as e:
+                    # Skip files that can't be read or aren't text/PDF
+                    continue
+            return results
+
         for root, _, files in os.walk(self.directory):
             for file in files:
                 filepath = os.path.join(root, file)
