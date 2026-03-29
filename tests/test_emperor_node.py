@@ -9,9 +9,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pipecatapp.workflow.context import WorkflowContext
 from pipecatapp.workflow.nodes.emperor_nodes import EmperorAgentNode
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_emperor_node():
     # Setup dummy context
     context = WorkflowContext(workflow_definition={"nodes": [{"id": "test_node"}]})
+    context.node_outputs = {}
 
     # We set inputs for the node
     # The node expects 'task' or 'user_text' in inputs

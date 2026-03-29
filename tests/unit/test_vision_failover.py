@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
 
 # Add the app's directory to the Python path to ensure correct module resolution
-app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../ansible/roles/pipecatapp/files'))
+app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../pipecatapp'))
 sys.path.insert(0, app_path)
 
 # Mock heavy dependencies before they are imported by the app
