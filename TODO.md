@@ -181,9 +181,10 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - Replaced `shutil.copytree` with `tar` snapshotting to reduce syscall overhead.
 - [x] **Optimize ProjectMapperTool Scanning:**
   - Implemented `git ls-files` strategy for faster file listing in git repositories.
-- [ ] **Review Codebase for I/O Inefficiencies:**
+- [x] **Review Codebase for I/O Inefficiencies:**
   - **Goal:** Identify and optimize other areas with heavy syscall usage (e.g., logging, data processing).
   - **Strategy:** Look for repeated file opens/closes in loops, inefficient directory traversals, and opportunities to batch I/O or use `tar`/`sqlite` strategies.
+  - **Action:** Batched synchronous writes to `pypicat_faiss_store.json` in `memory.py` by grouping saves and adding an `atexit` handler to safely flush pending changes on shutdown.
 
 ## Security Audit
 

@@ -1,6 +1,7 @@
 import faiss
 import json
 import sqlite3
+import atexit
 from sentence_transformers import SentenceTransformer
 import os
 import logging
@@ -57,6 +58,10 @@ class MemoryStore:
         self.index = self._load_index()
         self.store = self._load_store()
         self._init_sqlite()
+
+        self._add_count = 0
+        self._pending_save = False
+        atexit.register(self.force_save)
 
     def _load_index(self):
         """Loads the FAISS index from disk or creates a new one."""
@@ -312,7 +317,22 @@ class MemoryStore:
         new_id = self.index.ntotal
         self.index.add(embedding)
         self.store[str(new_id)] = text
-        self._save()
+
+        # Debounce/batch saving to reduce I/O overhead
+        self._add_count += 1
+        self._pending_save = True
+
+        if self._add_count >= 10:
+            self._save()
+            self._add_count = 0
+            self._pending_save = False
+
+    def force_save(self):
+        """Forces a synchronous save of the memory to disk if there are pending changes."""
+        if getattr(self, '_pending_save', False):
+            self._save()
+            self._add_count = 0
+            self._pending_save = False
 
     def search(self, query_text: str, k: int = 3) -> list[str]:
         """Searches the memory for the most relevant entries.
