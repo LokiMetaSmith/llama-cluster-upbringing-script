@@ -1,0 +1,18 @@
+[Unit]
+Description=Run Pipecat Bootstrap on First Boot of Installed OS
+After=network-online.target ssh.service
+Wants=network-online.target
+ConditionPathExists=!/var/lib/pipecat_bootstrapped
+ConditionKernelCommandLine=!boot=live
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 30
+ExecStart=/bin/bash -c "cd /opt/pipecat-cluster && ./bootstrap.sh"
+ExecStartPost=/bin/touch /var/lib/pipecat_bootstrapped
+RemainAfterExit=yes
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target

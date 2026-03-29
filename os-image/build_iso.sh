@@ -78,7 +78,7 @@ lb config \
   --initramfs "live-boot" \
   --initsystem "systemd" \
   --debian-installer-distribution "$DISTRIBUTION" \
-  --debian-installer none \
+  --debian-installer live \
   --win32-loader false \
   --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us live-config.username=pipecatapp live-config.user-fullname=PipecatApp"
 
