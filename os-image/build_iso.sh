@@ -80,9 +80,13 @@ lb config \
   --debian-installer-distribution "$DISTRIBUTION" \
   --debian-installer none \
   --win32-loader false \
-  --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us"
+  --bootappend-live "boot=live components quiet splash locales=en_US.UTF-8 keyboard-layouts=us live-config.username=pipecatapp live-config.user-fullname=PipecatApp"
 
 echo "=== Injecting project files ==="
+# Explicitly install live-config inside the chroot so autologin functions correctly
+mkdir -p config/package-lists
+echo "live-boot live-config live-config-systemd" > config/package-lists/live.list.chroot
+
 # Ensure the root of the repo is copied to /opt/pipecat-cluster
 # The `lb build` command automatically includes files placed in `config/includes.chroot/`
 mkdir -p config/includes.chroot/opt/pipecat-cluster
