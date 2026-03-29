@@ -13,3 +13,8 @@ echo "pipecatapp ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/pipecatapp
 
 # Ensure correct permissions for the project
 chown -R pipecatapp:pipecatapp /opt/pipecat-cluster
+
+# Ensure the .ssh directory exists for the pipecatapp user
+mkdir -p /home/pipecatapp/.ssh
+chmod 700 /home/pipecatapp/.ssh
+chown -R pipecatapp:pipecatapp /home/pipecatapp/.ssh

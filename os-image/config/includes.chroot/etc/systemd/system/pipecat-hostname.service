@@ -6,7 +6,7 @@ DefaultDependencies=no
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c 'if [ -f /etc/machine-id ]; then ID=$(cat /etc/machine-id | cut -c 1-6); else ID=$RANDOM; fi; HOSTNAME="pipecat-${ID}"; echo $HOSTNAME > /etc/hostname; hostname $HOSTNAME; sed -i -e "s/127.0.1.1.*/127.0.1.1\t$HOSTNAME/g" /etc/hosts; touch /etc/pipecat_hostname_randomized'
+ExecStart=/bin/bash -c 'ID=$(head -c 100 /dev/urandom | tr -dc "a-z0-9" | head -c 6); HOSTNAME="pipecat-${ID}"; echo $HOSTNAME > /etc/hostname; hostname $HOSTNAME; sed -i -e "s/127.0.1.1.*/127.0.1.1\t$HOSTNAME/g" /etc/hosts; touch /etc/pipecat_hostname_randomized'
 
 [Install]
 WantedBy=sysinit.target
