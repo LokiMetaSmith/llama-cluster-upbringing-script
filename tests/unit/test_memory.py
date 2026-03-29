@@ -44,6 +44,7 @@ def test_unencrypted_memory_store(mock_faiss, mock_st, mock_embedding_model, moc
 
     # Add a memory
     store.add("This is a test memory.")
+    store.force_save()
 
     assert store.store["0"] == "This is a test memory."
 
@@ -69,6 +70,7 @@ def test_encrypted_memory_store(mock_faiss, mock_st, mock_embedding_model, mock_
 
     # Add a memory
     store.add("This is a secret test memory.")
+    store.force_save()
 
     assert store.store["0"] == "This is a secret test memory."
 
@@ -111,6 +113,7 @@ def test_encrypted_store_loads_legacy_unencrypted_data(mock_faiss, mock_st, mock
 
     # Adding a new memory should encrypt both legacy and new data on next save
     store.add("New memory.")
+    store.force_save()
 
     with open(temp_store_file, 'r') as f:
         saved_data = json.load(f)
