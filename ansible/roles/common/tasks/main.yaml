@@ -108,15 +108,6 @@
     cmd: /usr/local/bin/update-ssh-authorized-keys.sh
   when: sync_script.changed
 
-- name: Disable password authentication for SSH
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^#?PasswordAuthentication'
-    line: 'PasswordAuthentication no'
-    state: present
-  notify: restart ssh
-  become: yes
-
 # --- Firewall Configuration ---
 
 - name: "Firewall : Allow SSH"
