@@ -9,7 +9,7 @@ torchvision
 torchaudio
 --extra-index-url https://pypi.org/simple
 accelerate
-ctranslate2==4.1.0
+ctranslate2==4.7.1
 cython
 docker
 einops
