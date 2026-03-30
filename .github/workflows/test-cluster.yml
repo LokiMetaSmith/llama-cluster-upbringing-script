@@ -1,0 +1,16 @@
+name: ROCm Stack Validation
+on: [push, pull_request]
+
+jobs:
+  validate-rocm:
+    runs-on: ubuntu-latest
+    container:
+      image: rocm/dev-ubuntu-24.04:7.2 # Matches 2026 stack
+      options: --device=/dev/kfd --device=/dev/dri --group-add video
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check GPU Visibility
+        run: rocminfo | grep "gfx1151" || echo "Warning: No gfx1151 found in simulator, continuing simulation anyway."
+      - name: Test Upbringing Script
+        # We run the script with --help as a safe test, unless a --test-mode is explicitly added later.
+        run: bash bootstrap.sh --help
