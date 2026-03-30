@@ -74,8 +74,8 @@
 
 ### Centralize All Configuration
 
-- [ ] **Convert all configuration files to templates:** Any file that contains a variable should be a Jinja2 template (`.j2`).
-- [ ] **Establish a clear variable hierarchy:** Use `group_vars/all.yaml` for system-wide defaults and consider `host_vars/<hostname>.yaml` for machine-specific overrides.
+- [ ] **Convert all configuration files to templates (Recurring Review):** Any file that contains a variable should be a Jinja2 template (`.j2`). Ensure new services follow this pattern.
+- [ ] **Establish a clear variable hierarchy (Recurring Review):** Use `group_vars/all.yaml` for system-wide defaults and consider `host_vars/<hostname>.yaml` for machine-specific overrides. Audit periodically.
 
 ### Pre-build a Docker Image for `pipecatapp`
 
