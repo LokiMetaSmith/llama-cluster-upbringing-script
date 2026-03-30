@@ -14,7 +14,7 @@ einops
 espeakng_loader
 faiss-cpu
 fastapi
-faster-whisper==1.0.3
+faster-whisper>=1.0.3
 fugashi-plus
 httpx
 huggingface-hub
@@ -43,7 +43,8 @@ python-multipart
 pyvips-binary
 PyYAML
 jinja2
-RealtimeSTT
+RealtimeSTT==0.2.7
+webrtcvad-wheels==2.0.14
 requests
 sentence-transformers
 soundfile
@@ -52,7 +53,7 @@ thinc>=8.3.0
 transformers
 ultralytics
 uvicorn
-websockets
+websockets>=13.1
 wikipedia
 llm-sandbox
 python-dotenv
