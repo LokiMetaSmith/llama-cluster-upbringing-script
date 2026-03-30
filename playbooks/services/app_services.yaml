@@ -39,6 +39,7 @@
         name: system_deps
       tags:
         - system_deps
+        - deploy_app
 
     - name: Install all python dependencies
       ansible.builtin.include_role:
