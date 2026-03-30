@@ -36,7 +36,7 @@ RUN pip install --no-cache-dir playwright && \
 # Now install the other requirements
 RUN pip install --no-cache-dir \
     av==16.0.1 \
-    ctranslate2==4.4.0 \
+    ctranslate2==4.7.1 \
     docker \
     einops \
     espeakng_loader \
