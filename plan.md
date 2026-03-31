@@ -1,24 +1,4 @@
-# Plan
-
-1. **Create Skill Library Service (Memory-based)**
-   - Utilize the existing SQLite-backed memory schema (`PMMMemoryClient` and `MemoryStore`) to persist skills.
-   - We will add functions to manage skills via `PMMMemoryClient` (which talks to the `MemoryStore`).
-   - Actually, since `MemoryStore` is for text embeddings, maybe we can just create a new table for `skills` in the `long_term_memory.sqlite` database and update `PMMMemoryClient` + `memory_service.py` to handle skills, OR just store it locally for the agent. Wait, looking at the Todo: "Create a simple file-based or database-backed Skill Library service (or use the existing Memory service)". We can just add a simple SQLite or file-based `SkillLibrary` in a new file `pipecatapp/skill_library.py`.
-
-2. **Add `save_skill` tool**
-   - Create `pipecatapp/tools/save_skill_tool.py`.
-   - Takes `skill_name`, `description`, and `code_or_steps` (the actual skill content).
-   - Saves it to the skill library.
-
-3. **Add `search_skills` tool**
-   - Create `pipecatapp/tools/search_skills_tool.py`.
-   - Takes a query string and searches the skill library for relevant skills.
-
-4. **Update `AgentFactory`**
-   - Add `save_skill` and `search_skills` to `create_tools()` in `pipecatapp/agent_factory.py`.
-
-5. **Update `TechnicianAgent` reflection phase**
-   - Modify `phase_3_reflect` in `pipecatapp/technician_agent.py` to optionally suggest saving a skill if the task was novel/successful.
-
-6. **Pre-commit Checks & Submission**
-   - Run tests, check syntax, etc.
+1. Add `system_deps` as a dependency to `python_deps` role. The `python_deps` task fails because it tries to compile `pyaudio` via `uv pip install`, which requires `portaudio19-dev` (and other compilation dependencies like gcc). The `python_deps` task is called directly from `playbooks/developer_tools.yaml` (via `heretic_tool` -> `python_deps`). But it is missing the C headers required to compile the Python packages. By adding `system_deps` to the `dependencies` array in `ansible/roles/python_deps/meta/main.yaml`, we ensure that `build-essential` and `portaudio19-dev` are installed prior to `uv pip install` compiling python modules.
+2. The `system_deps` is explicitly called in `app_services.yaml` *before* `python_deps`, but it is skipped when running `playbooks/developer_tools.yaml` directly or in isolation unless it's chained via dependencies.
+3. Pre-commit instructions.
+4. Submit the changes.
