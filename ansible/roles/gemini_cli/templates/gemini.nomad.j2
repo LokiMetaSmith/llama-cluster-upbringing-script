@@ -1,0 +1,39 @@
+job "gemini" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "gemini" {
+    count = 1
+
+    update {
+      max_parallel      = 1
+      min_healthy_time  = "10s"
+      healthy_deadline  = "15m"
+      progress_deadline = "20m"
+      auto_revert       = true
+      auto_promote      = false
+      canary            = 0
+    }
+
+    task "gemini-cli-server" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sh"
+        # We start a persistent process with sleep or expose it via a small wrapper if needed.
+        # Since gemini-cli is typically interactive or run ad-hoc, running it as a Nomad service
+        # means we either keep a container alive so `nomad alloc exec` can be used,
+        # or we run it as a server if it has a daemon mode.
+        # For now, we keep the container alive so the agent can execute commands in it.
+        args    = [
+          "-c",
+          "cd /tmp && while true; do sleep 3600; done"
+        ]
+      }
+
+      env {
+        GEMINI_API_KEY = "{{ gemini_api_key | default('') }}"
+      }
+    }
+  }
+}
