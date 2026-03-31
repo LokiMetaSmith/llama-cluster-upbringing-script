@@ -407,3 +407,29 @@ class EmperorAgentNode(Node):
                     })
 
         self.set_output(context, "response", final_response)
+
+
+def heretic_align_tool(model: str, harmful_dataset: str, harmless_dataset: str, reverse: bool = False, output_dir: str = None) -> Dict[str, Any]:
+    """
+    Runs Heretic to adjust the inhibitions of a language model.
+    :param model: The Hugging Face model ID or path to the model on disk.
+    :param harmful_dataset: Path to a dataset of prompts that tend to result in refusals.
+    :param harmless_dataset: Path to a dataset of prompts that tend to not result in refusals.
+    :param reverse: If True, increases inhibitions. If False, removes inhibitions (abliteration).
+    :param output_dir: Optional directory to save the modified model. If not provided, it saves in the current directory.
+    :return: A dictionary containing the stdout, stderr, and returncode of the heretic command.
+    """
+    try:
+        from pipecatapp.tools.heretic_tool import HereticTool
+        tool = HereticTool()
+        return tool.align_model(
+            model=model,
+            harmful_dataset=harmful_dataset,
+            harmless_dataset=harmless_dataset,
+            reverse=reverse,
+            output_dir=output_dir
+        )
+    except Exception as e:
+        return {"error": str(e)}
+
+TOOL_REGISTRY["heretic_align"] = heretic_align_tool
