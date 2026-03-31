@@ -20,6 +20,9 @@
     - role: opencode
       tags:
         - opencode
+    - role: gemini_cli
+      tags:
+        - gemini_cli
     - role: memory_service
       tags:
         - memory_service

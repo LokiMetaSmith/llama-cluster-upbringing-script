@@ -1,0 +1,5 @@
+- name: Run Gemini Job
+  ansible.builtin.command: nomad job run /opt/nomad/jobs/gemini.nomad
+  become: yes
+  environment:
+    NOMAD_ADDR: "http://{{ ansible_facts['default_ipv4']['address'] }}:4646"

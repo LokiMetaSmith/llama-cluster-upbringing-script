@@ -1,0 +1,26 @@
+- name: Install @google/gemini-cli via npm
+  community.general.npm:
+    name: "@google/gemini-cli"
+    global: yes
+    state: latest
+  become: yes
+
+- name: Find gemini binary path
+  ansible.builtin.command: npm prefix -g
+  register: gemini_npm_prefix_path
+  changed_when: false
+  become: yes
+
+- name: Set gemini binary path
+  ansible.builtin.set_fact:
+    gemini_bin_path: "{{ gemini_npm_prefix_path.stdout }}/bin/gemini"
+
+- name: Create Gemini Nomad job file
+  ansible.builtin.template:
+    src: gemini.nomad.j2
+    dest: /opt/nomad/jobs/gemini.nomad
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Run Gemini Job
