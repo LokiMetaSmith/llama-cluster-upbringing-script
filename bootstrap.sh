@@ -10,7 +10,7 @@
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-# BLUE='\033[0;34m'
+BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
@@ -51,7 +51,7 @@ DO_SYSTEM_CLEANUP=false
 DO_PURGE_JOBS=false
 VERBOSE_LEVEL=0
 ROLE=""
-# CONTROLLER_IP=""
+CONTROLLER_IP=""
 
 # --- Profile System Resources ---
 profile_system() {
@@ -87,6 +87,11 @@ profile_system() {
         fi
     else
         echo -e "Role explicitly set to: ${CYAN}${ROLE}${NC}"
+    fi
+
+    # Give some feedback about the network if it's set
+    if [ -n "$CONTROLLER_IP" ]; then
+         echo -e "Connecting to main controller at: ${BLUE}${CONTROLLER_IP}${NC}"
     fi
 }
 
