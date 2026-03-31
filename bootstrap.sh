@@ -33,6 +33,9 @@ show_help() {
     echo "  --debug                      Alias for --verbose 4."
     echo "  --leave-services-running     Do not clean up Nomad and Consul data on startup."
     echo "  --external-model-server      Skip large model downloads and builds, assuming an external server."
+    echo "  --deploy-full-stack          Deploy the full application stack (AI agents, models) instead of just infrastructure."
+    echo "  --deploy-partial-stack       Deploy a partial application stack (e.g. 4-8B models) for mid-tier worker nodes."
+    echo "  --deploy-minimal-stack       Deploy a minimal application stack (e.g. audio, kiosk, status) for low resource nodes."
     echo "  --continue                   Resume from the last successfully completed playbook."
     echo "  --benchmark                  Run benchmark tests."
     echo "  --deploy-docker              Deploy the pipecat application using Docker (Default)."
@@ -56,10 +59,13 @@ CONTROLLER_IP=""
 profile_system() {
     echo -e "\n${BOLD}=== Profiling System Resources ===${NC}"
 
-    local CPU_CORES=$(nproc 2>/dev/null || echo 1)
-    local RAM_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
+    local CPU_CORES
+    CPU_CORES=$(nproc 2>/dev/null || echo 1)
+    local RAM_KB
+    RAM_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
     local RAM_GB=$(( RAM_KB / 1024 / 1024 ))
-    local DISK_KB=$(df -k / | awk 'NR==2 {print $4}' 2>/dev/null || echo 0)
+    local DISK_KB
+    DISK_KB=$(df -k / | awk 'NR==2 {print $4}' 2>/dev/null || echo 0)
     local DISK_GB=$(( DISK_KB / 1024 / 1024 ))
 
     echo -e "Detected CPU Cores: ${CYAN}${CPU_CORES}${NC}"
@@ -69,20 +75,25 @@ profile_system() {
     # Auto-detect role if not explicitly set
     if [ -z "$ROLE" ]; then
         if [ "$RAM_GB" -le 4 ] || [ "$DISK_GB" -le 20 ]; then
-            echo -e "${YELLOW}⚠️  Low resource machine detected ($RAM_GB GB RAM, $DISK_GB GB Disk). Defaulting role to 'worker' and enabling external models.${NC}"
+            echo -e "${YELLOW}⚠️  Low resource machine detected ($RAM_GB GB RAM, $DISK_GB GB Disk). Defaulting role to 'worker', enabling external models and minimal stack.${NC}"
             ROLE="worker"
-            PROCESSED_ARGS+=("--role" "worker" "--external-model-server")
-        elif [ "$RAM_GB" -ge 8 ] && [ "$CPU_CORES" -ge 4 ] && [ "$DISK_GB" -ge 50 ]; then
-            echo -e "${GREEN}✅ Powerful machine detected. Defaulting role to 'all'.${NC}"
+            PROCESSED_ARGS+=("--role" "worker" "--external-model-server" "--deploy-minimal-stack")
+        elif [ "$RAM_GB" -ge 16 ] && [ "$CPU_CORES" -ge 4 ] && [ "$DISK_GB" -ge 256 ]; then
+            echo -e "${GREEN}✅ Powerful machine detected. Defaulting role to 'all' and enabling full stack deployment.${NC}"
             ROLE="all"
-            PROCESSED_ARGS+=("--role" "all")
+            PROCESSED_ARGS+=("--role" "all" "--deploy-full-stack")
         else
-            echo -e "${CYAN}ℹ️  Standard machine detected. Defaulting role to 'worker'.${NC}"
+            echo -e "${CYAN}ℹ️  Standard machine detected. Defaulting role to 'worker' and enabling partial stack deployment.${NC}"
             ROLE="worker"
-            PROCESSED_ARGS+=("--role" "worker")
+            PROCESSED_ARGS+=("--role" "worker" "--deploy-partial-stack")
         fi
     else
         echo -e "Role explicitly set to: ${CYAN}${ROLE}${NC}"
+    fi
+
+    # Give some feedback about the network if it's set
+    if [ -n "$CONTROLLER_IP" ]; then
+         echo -e "Connecting to main controller at: ${BLUE}${CONTROLLER_IP}${NC}"
     fi
 }
 
@@ -105,6 +116,15 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             DO_SYSTEM_CLEANUP=true
             DO_PURGE_JOBS=true
             DO_CLEAN_GIT=true
+            ;;
+        --deploy-full-stack)
+            PROCESSED_ARGS+=("--deploy-full-stack")
+            ;;
+        --deploy-partial-stack)
+            PROCESSED_ARGS+=("--deploy-partial-stack")
+            ;;
+        --deploy-minimal-stack)
+            PROCESSED_ARGS+=("--deploy-minimal-stack")
             ;;
         --clean-git|--clean) # Support legacy --clean just in case, but map to clean-git
             DO_CLEAN_GIT=true
@@ -157,10 +177,10 @@ profile_system
 
 # --- Move to the script's directory ---
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR" || exit 1
 
 LOG_FILE="bootstrap_debug.log"
-> "$LOG_FILE"
+true > "$LOG_FILE"
 
 # --- Helper: Run Step ---
 run_step() {
@@ -174,16 +194,17 @@ run_step() {
         eval "$cmd" 2>&1 | tee -a "$LOG_FILE"
         local status=${PIPESTATUS[0]} # Capture exit code of the evaluated command
 
-        if [ $status -eq 0 ]; then
+        if [ "$status" -eq 0 ]; then
             echo -e "${GREEN}✅ ${desc} complete.${NC}"
         else
             echo -e "${RED}❌ ${desc} failed.${NC}"
-            return $status
+            return "$status"
         fi
     else
         echo -n -e "⏳ ${desc}..."
 
-        local tmp_log=$(mktemp)
+        local tmp_log
+        tmp_log=$(mktemp)
         eval "$cmd" > "$tmp_log" 2>&1
         local status=$?
 
@@ -217,17 +238,20 @@ ask_confirm() {
 # --- Environment Setup (Reusable) ---
 VENV_DIR="$SCRIPT_DIR/.venv"
 
+# shellcheck disable=SC2317
+setup_venv() {
+    if [ ! -d "$VENV_DIR" ]; then
+        python3 -m venv "$VENV_DIR"
+    fi
+}
+
 ensure_python_environment() {
     echo -e "\n${BOLD}=== Environment Setup ===${NC}"
 
-    setup_venv() {
-        if [ ! -d "$VENV_DIR" ]; then
-            python3 -m venv "$VENV_DIR"
-        fi
-    }
     run_step "Creating Python virtual environment" "setup_venv"
 
     # Activate venv for this script execution
+    # shellcheck disable=SC1091
     source "$VENV_DIR/bin/activate"
 
     run_step "Upgrading pip" "pip install --upgrade pip"
