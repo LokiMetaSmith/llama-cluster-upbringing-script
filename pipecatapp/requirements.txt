@@ -43,7 +43,7 @@ python-multipart
 pyvips-binary
 PyYAML
 jinja2
-RealtimeSTT==0.2.7
+RealtimeSTT>=0.3.100
 webrtcvad-wheels==2.0.14
 requests
 sentence-transformers
