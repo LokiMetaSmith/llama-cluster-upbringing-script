@@ -394,6 +394,7 @@ def main():
     parser.add_argument("--run-local", action="store_true", help="Deploy via raw_exec")
     parser.add_argument("--home-assistant-debug", action="store_true", help="Debug Home Assistant")
     parser.add_argument("--watch", help="Pause for inspection after target")
+    parser.add_argument("--deploy-full-stack", action="store_true", help="Deploy the full application stack instead of just infrastructure")
 
     args, _ = parser.parse_known_args()
 
@@ -426,6 +427,9 @@ def main():
 
     if args.role == "worker":
         extra_vars["controller_ip"] = args.controller_ip
+
+    if args.deploy_full_stack:
+        extra_vars["deploy_full_stack"] = "true"
 
     if args.benchmark:
         extra_vars["run_benchmarks"] = "true"
@@ -489,6 +493,27 @@ def main():
         pb_path = os.path.join(REPO_ROOT, pb['path'])
 
         # --- Hooks / Smart Logic ---
+
+        # Check deployment mode (infrastructure vs application stack)
+        app_services_playbooks = [
+            "playbooks/services/app_services.yaml",
+            "playbooks/services/monitoring.yaml",
+            "playbooks/services/model_services.yaml",
+            "playbooks/services/core_ai_services.yaml",
+            "playbooks/services/ai_experts.yaml",
+            "playbooks/services/training_services.yaml",
+            "playbooks/services/distributed_compute.yaml",
+            "playbooks/services/streaming_services.yaml",
+            "playbooks/services/final_verification.yaml",
+        ]
+
+        # In worker.yaml, playbooks use {{ playbook_dir }}
+        normalized_path = pb['path'].replace("{{ playbook_dir }}", "playbooks")
+
+        if normalized_path in app_services_playbooks and not args.deploy_full_stack:
+            display_path = os.path.basename(pb['path'])
+            print(f"{Colors.OKCYAN}⏭️  Skipping application playbook (infrastructure only mode): {display_path}{Colors.ENDC}")
+            continue
 
         # Wait for ports before app services
         if "app_services.yaml" in pb['path']:

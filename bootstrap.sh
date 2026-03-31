@@ -10,7 +10,7 @@
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
+# BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
@@ -33,6 +33,7 @@ show_help() {
     echo "  --debug                      Alias for --verbose 4."
     echo "  --leave-services-running     Do not clean up Nomad and Consul data on startup."
     echo "  --external-model-server      Skip large model downloads and builds, assuming an external server."
+    echo "  --deploy-full-stack          Deploy the full application stack (AI agents, models) instead of just infrastructure."
     echo "  --continue                   Resume from the last successfully completed playbook."
     echo "  --benchmark                  Run benchmark tests."
     echo "  --deploy-docker              Deploy the pipecat application using Docker (Default)."
@@ -50,16 +51,19 @@ DO_SYSTEM_CLEANUP=false
 DO_PURGE_JOBS=false
 VERBOSE_LEVEL=0
 ROLE=""
-CONTROLLER_IP=""
+# CONTROLLER_IP=""
 
 # --- Profile System Resources ---
 profile_system() {
     echo -e "\n${BOLD}=== Profiling System Resources ===${NC}"
 
-    local CPU_CORES=$(nproc 2>/dev/null || echo 1)
-    local RAM_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
+    local CPU_CORES
+    CPU_CORES=$(nproc 2>/dev/null || echo 1)
+    local RAM_KB
+    RAM_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
     local RAM_GB=$(( RAM_KB / 1024 / 1024 ))
-    local DISK_KB=$(df -k / | awk 'NR==2 {print $4}' 2>/dev/null || echo 0)
+    local DISK_KB
+    DISK_KB=$(df -k / | awk 'NR==2 {print $4}' 2>/dev/null || echo 0)
     local DISK_GB=$(( DISK_KB / 1024 / 1024 ))
 
     echo -e "Detected CPU Cores: ${CYAN}${CPU_CORES}${NC}"
@@ -105,6 +109,9 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             DO_SYSTEM_CLEANUP=true
             DO_PURGE_JOBS=true
             DO_CLEAN_GIT=true
+            ;;
+        --deploy-full-stack)
+            PROCESSED_ARGS+=("--deploy-full-stack")
             ;;
         --clean-git|--clean) # Support legacy --clean just in case, but map to clean-git
             DO_CLEAN_GIT=true
@@ -157,10 +164,10 @@ profile_system
 
 # --- Move to the script's directory ---
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR" || exit 1
 
 LOG_FILE="bootstrap_debug.log"
-> "$LOG_FILE"
+true > "$LOG_FILE"
 
 # --- Helper: Run Step ---
 run_step() {
@@ -174,16 +181,17 @@ run_step() {
         eval "$cmd" 2>&1 | tee -a "$LOG_FILE"
         local status=${PIPESTATUS[0]} # Capture exit code of the evaluated command
 
-        if [ $status -eq 0 ]; then
+        if [ "$status" -eq 0 ]; then
             echo -e "${GREEN}✅ ${desc} complete.${NC}"
         else
             echo -e "${RED}❌ ${desc} failed.${NC}"
-            return $status
+            return "$status"
         fi
     else
         echo -n -e "⏳ ${desc}..."
 
-        local tmp_log=$(mktemp)
+        local tmp_log
+        tmp_log=$(mktemp)
         eval "$cmd" > "$tmp_log" 2>&1
         local status=$?
 
@@ -217,17 +225,20 @@ ask_confirm() {
 # --- Environment Setup (Reusable) ---
 VENV_DIR="$SCRIPT_DIR/.venv"
 
+# shellcheck disable=SC2317
+setup_venv() {
+    if [ ! -d "$VENV_DIR" ]; then
+        python3 -m venv "$VENV_DIR"
+    fi
+}
+
 ensure_python_environment() {
     echo -e "\n${BOLD}=== Environment Setup ===${NC}"
 
-    setup_venv() {
-        if [ ! -d "$VENV_DIR" ]; then
-            python3 -m venv "$VENV_DIR"
-        fi
-    }
     run_step "Creating Python virtual environment" "setup_venv"
 
     # Activate venv for this script execution
+    # shellcheck disable=SC1091
     source "$VENV_DIR/bin/activate"
 
     run_step "Upgrading pip" "pip install --upgrade pip"
