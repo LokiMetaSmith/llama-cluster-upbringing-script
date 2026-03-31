@@ -395,6 +395,7 @@ def main():
     parser.add_argument("--home-assistant-debug", action="store_true", help="Debug Home Assistant")
     parser.add_argument("--watch", help="Pause for inspection after target")
     parser.add_argument("--deploy-full-stack", action="store_true", help="Deploy the full application stack instead of just infrastructure")
+    parser.add_argument("--deploy-partial-stack", action="store_true", help="Deploy a partial application stack (e.g. 4-8B models) for mid-tier worker nodes")
 
     args, _ = parser.parse_known_args()
 
@@ -430,6 +431,9 @@ def main():
 
     if args.deploy_full_stack:
         extra_vars["deploy_full_stack"] = "true"
+
+    if args.deploy_partial_stack:
+        extra_vars["deploy_partial_stack"] = "true"
 
     if args.benchmark:
         extra_vars["run_benchmarks"] = "true"
@@ -507,13 +511,30 @@ def main():
             "playbooks/services/final_verification.yaml",
         ]
 
+        # Define what constitutes a "partial" stack
+        partial_stack_playbooks = [
+            "playbooks/services/app_services.yaml",
+            "playbooks/services/monitoring.yaml",
+            "playbooks/services/model_services.yaml",
+            "playbooks/services/core_ai_services.yaml",
+        ]
+
         # In worker.yaml, playbooks use {{ playbook_dir }}
         normalized_path = pb['path'].replace("{{ playbook_dir }}", "playbooks")
 
-        if normalized_path in app_services_playbooks and not args.deploy_full_stack:
-            display_path = os.path.basename(pb['path'])
-            print(f"{Colors.OKCYAN}⏭️  Skipping application playbook (infrastructure only mode): {display_path}{Colors.ENDC}")
-            continue
+        if normalized_path in app_services_playbooks:
+            if args.deploy_full_stack:
+                # Deploy everything
+                pass
+            elif args.deploy_partial_stack and normalized_path in partial_stack_playbooks:
+                # Deploy partial stack
+                pass
+            else:
+                # Skip
+                display_path = os.path.basename(pb['path'])
+                mode_reason = "partial stack mode" if args.deploy_partial_stack else "infrastructure only mode"
+                print(f"{Colors.OKCYAN}⏭️  Skipping application playbook ({mode_reason}): {display_path}{Colors.ENDC}")
+                continue
 
         # Wait for ports before app services
         if "app_services.yaml" in pb['path']:

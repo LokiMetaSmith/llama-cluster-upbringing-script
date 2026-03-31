@@ -34,6 +34,7 @@ show_help() {
     echo "  --leave-services-running     Do not clean up Nomad and Consul data on startup."
     echo "  --external-model-server      Skip large model downloads and builds, assuming an external server."
     echo "  --deploy-full-stack          Deploy the full application stack (AI agents, models) instead of just infrastructure."
+    echo "  --deploy-partial-stack       Deploy a partial application stack (e.g. 4-8B models) for mid-tier worker nodes."
     echo "  --continue                   Resume from the last successfully completed playbook."
     echo "  --benchmark                  Run benchmark tests."
     echo "  --deploy-docker              Deploy the pipecat application using Docker (Default)."
@@ -76,14 +77,14 @@ profile_system() {
             echo -e "${YELLOW}⚠️  Low resource machine detected ($RAM_GB GB RAM, $DISK_GB GB Disk). Defaulting role to 'worker' and enabling external models.${NC}"
             ROLE="worker"
             PROCESSED_ARGS+=("--role" "worker" "--external-model-server")
-        elif [ "$RAM_GB" -ge 8 ] && [ "$CPU_CORES" -ge 4 ] && [ "$DISK_GB" -ge 50 ]; then
+        elif [ "$RAM_GB" -ge 16 ] && [ "$CPU_CORES" -ge 4 ] && [ "$DISK_GB" -ge 256 ]; then
             echo -e "${GREEN}✅ Powerful machine detected. Defaulting role to 'all' and enabling full stack deployment.${NC}"
             ROLE="all"
             PROCESSED_ARGS+=("--role" "all" "--deploy-full-stack")
         else
-            echo -e "${CYAN}ℹ️  Standard machine detected. Defaulting role to 'worker'.${NC}"
+            echo -e "${CYAN}ℹ️  Standard machine detected. Defaulting role to 'worker' and enabling partial stack deployment.${NC}"
             ROLE="worker"
-            PROCESSED_ARGS+=("--role" "worker")
+            PROCESSED_ARGS+=("--role" "worker" "--deploy-partial-stack")
         fi
     else
         echo -e "Role explicitly set to: ${CYAN}${ROLE}${NC}"
@@ -117,6 +118,9 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             ;;
         --deploy-full-stack)
             PROCESSED_ARGS+=("--deploy-full-stack")
+            ;;
+        --deploy-partial-stack)
+            PROCESSED_ARGS+=("--deploy-partial-stack")
             ;;
         --clean-git|--clean) # Support legacy --clean just in case, but map to clean-git
             DO_CLEAN_GIT=true
