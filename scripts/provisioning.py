@@ -396,6 +396,7 @@ def main():
     parser.add_argument("--watch", help="Pause for inspection after target")
     parser.add_argument("--deploy-full-stack", action="store_true", help="Deploy the full application stack instead of just infrastructure")
     parser.add_argument("--deploy-partial-stack", action="store_true", help="Deploy a partial application stack (e.g. 4-8B models) for mid-tier worker nodes")
+    parser.add_argument("--deploy-minimal-stack", action="store_true", help="Deploy a minimal application stack (e.g. kiosk, audio) for low resource nodes")
 
     args, _ = parser.parse_known_args()
 
@@ -434,6 +435,9 @@ def main():
 
     if args.deploy_partial_stack:
         extra_vars["deploy_partial_stack"] = "true"
+
+    if args.deploy_minimal_stack:
+        extra_vars["deploy_minimal_stack"] = "true"
 
     if args.benchmark:
         extra_vars["run_benchmarks"] = "true"
@@ -519,6 +523,12 @@ def main():
             "playbooks/services/core_ai_services.yaml",
         ]
 
+        # Define what constitutes a "minimal" stack
+        minimal_stack_playbooks = [
+            "playbooks/services/app_services.yaml", # Needed for basic app connectivity, audio, kiosk
+            "playbooks/services/monitoring.yaml",   # Needed for health checks and status
+        ]
+
         # In worker.yaml, playbooks use {{ playbook_dir }}
         normalized_path = pb['path'].replace("{{ playbook_dir }}", "playbooks")
 
@@ -529,10 +539,18 @@ def main():
             elif args.deploy_partial_stack and normalized_path in partial_stack_playbooks:
                 # Deploy partial stack
                 pass
+            elif args.deploy_minimal_stack and normalized_path in minimal_stack_playbooks:
+                # Deploy minimal stack
+                pass
             else:
                 # Skip
                 display_path = os.path.basename(pb['path'])
-                mode_reason = "partial stack mode" if args.deploy_partial_stack else "infrastructure only mode"
+                if args.deploy_partial_stack:
+                    mode_reason = "partial stack mode"
+                elif args.deploy_minimal_stack:
+                    mode_reason = "minimal stack mode"
+                else:
+                    mode_reason = "infrastructure only mode"
                 print(f"{Colors.OKCYAN}⏭️  Skipping application playbook ({mode_reason}): {display_path}{Colors.ENDC}")
                 continue
 

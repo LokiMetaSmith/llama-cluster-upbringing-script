@@ -35,6 +35,7 @@ show_help() {
     echo "  --external-model-server      Skip large model downloads and builds, assuming an external server."
     echo "  --deploy-full-stack          Deploy the full application stack (AI agents, models) instead of just infrastructure."
     echo "  --deploy-partial-stack       Deploy a partial application stack (e.g. 4-8B models) for mid-tier worker nodes."
+    echo "  --deploy-minimal-stack       Deploy a minimal application stack (e.g. audio, kiosk, status) for low resource nodes."
     echo "  --continue                   Resume from the last successfully completed playbook."
     echo "  --benchmark                  Run benchmark tests."
     echo "  --deploy-docker              Deploy the pipecat application using Docker (Default)."
@@ -74,9 +75,9 @@ profile_system() {
     # Auto-detect role if not explicitly set
     if [ -z "$ROLE" ]; then
         if [ "$RAM_GB" -le 4 ] || [ "$DISK_GB" -le 20 ]; then
-            echo -e "${YELLOW}⚠️  Low resource machine detected ($RAM_GB GB RAM, $DISK_GB GB Disk). Defaulting role to 'worker' and enabling external models.${NC}"
+            echo -e "${YELLOW}⚠️  Low resource machine detected ($RAM_GB GB RAM, $DISK_GB GB Disk). Defaulting role to 'worker', enabling external models and minimal stack.${NC}"
             ROLE="worker"
-            PROCESSED_ARGS+=("--role" "worker" "--external-model-server")
+            PROCESSED_ARGS+=("--role" "worker" "--external-model-server" "--deploy-minimal-stack")
         elif [ "$RAM_GB" -ge 16 ] && [ "$CPU_CORES" -ge 4 ] && [ "$DISK_GB" -ge 256 ]; then
             echo -e "${GREEN}✅ Powerful machine detected. Defaulting role to 'all' and enabling full stack deployment.${NC}"
             ROLE="all"
@@ -121,6 +122,9 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             ;;
         --deploy-partial-stack)
             PROCESSED_ARGS+=("--deploy-partial-stack")
+            ;;
+        --deploy-minimal-stack)
+            PROCESSED_ARGS+=("--deploy-minimal-stack")
             ;;
         --clean-git|--clean) # Support legacy --clean just in case, but map to clean-git
             DO_CLEAN_GIT=true
