@@ -77,9 +77,9 @@ profile_system() {
             ROLE="worker"
             PROCESSED_ARGS+=("--role" "worker" "--external-model-server")
         elif [ "$RAM_GB" -ge 8 ] && [ "$CPU_CORES" -ge 4 ] && [ "$DISK_GB" -ge 50 ]; then
-            echo -e "${GREEN}✅ Powerful machine detected. Defaulting role to 'all'.${NC}"
+            echo -e "${GREEN}✅ Powerful machine detected. Defaulting role to 'all' and enabling full stack deployment.${NC}"
             ROLE="all"
-            PROCESSED_ARGS+=("--role" "all")
+            PROCESSED_ARGS+=("--role" "all" "--deploy-full-stack")
         else
             echo -e "${CYAN}ℹ️  Standard machine detected. Defaulting role to 'worker'.${NC}"
             ROLE="worker"
