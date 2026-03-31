@@ -223,3 +223,12 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Fix Lazy Tests:**
   - [x] `tests/test_emperor_node.py:test_emperor_node` (dry run with simple pass instead of validation)
   - [x] `tests/unit/test_vision_failover.py:test_yolo_internal_process_frame_failover` (relies on mock failure passing without asserts)
+
+## Agent Reliability and Security (Future Enhancements)
+
+- [ ] **Implement State-Based Tool Gating in Workflow Nodes:**
+  - **Goal:** Prevent agents from fabricating tool outputs or bypassing required tools by enforcing deterministic state transitions.
+  - **Context:** Currently, `EmperorAgentNode` and similar agents operate autoregressively and can hallucinate tool outputs if they choose to bypass the actual tool execution. To solve this, an orchestration layer should intercept the execution graph. If an agent tries to transition to a "response generation" state without a verified, required tool execution payload (e.g. `call_id` and verified output) present, the transition must be explicitly blocked at the router level.
+- [ ] **Integrate Cryptographic Receipts for Tool Execution:**
+  - **Goal:** Ensure that in a decentralized/zero-trust multi-agent system, tool outputs are genuinely executed by the designated node/enclave and not hallucinated by compromised nodes.
+  - **Context:** Since forcing language models to hallucinate raw SHA-256 hashes often fails due to tokenization, the deterministic runtime executing the tool should cryptographically sign the execution trace (input parameters and output payload) with a private key. The orchestration router must then verify this signature before allowing the state machine to proceed, creating an immutable proof of execution.
