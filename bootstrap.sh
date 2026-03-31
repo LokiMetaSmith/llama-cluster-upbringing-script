@@ -59,17 +59,20 @@ profile_system() {
     local CPU_CORES=$(nproc 2>/dev/null || echo 1)
     local RAM_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
     local RAM_GB=$(( RAM_KB / 1024 / 1024 ))
+    local DISK_KB=$(df -k / | awk 'NR==2 {print $4}' 2>/dev/null || echo 0)
+    local DISK_GB=$(( DISK_KB / 1024 / 1024 ))
 
     echo -e "Detected CPU Cores: ${CYAN}${CPU_CORES}${NC}"
     echo -e "Detected Total RAM: ${CYAN}${RAM_GB} GB${NC}"
+    echo -e "Detected Available Disk: ${CYAN}${DISK_GB} GB${NC}"
 
     # Auto-detect role if not explicitly set
     if [ -z "$ROLE" ]; then
-        if [ "$RAM_GB" -le 4 ]; then
-            echo -e "${YELLOW}⚠️  Low resource machine detected ($RAM_GB GB RAM). Defaulting role to 'worker' and enabling external models.${NC}"
+        if [ "$RAM_GB" -le 4 ] || [ "$DISK_GB" -le 20 ]; then
+            echo -e "${YELLOW}⚠️  Low resource machine detected ($RAM_GB GB RAM, $DISK_GB GB Disk). Defaulting role to 'worker' and enabling external models.${NC}"
             ROLE="worker"
             PROCESSED_ARGS+=("--role" "worker" "--external-model-server")
-        elif [ "$RAM_GB" -ge 8 ] && [ "$CPU_CORES" -ge 4 ]; then
+        elif [ "$RAM_GB" -ge 8 ] && [ "$CPU_CORES" -ge 4 ] && [ "$DISK_GB" -ge 50 ]; then
             echo -e "${GREEN}✅ Powerful machine detected. Defaulting role to 'all'.${NC}"
             ROLE="all"
             PROCESSED_ARGS+=("--role" "all")
