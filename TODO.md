@@ -104,6 +104,14 @@
     2. Create sliders or controls to adjust specific axis vectors (e.g., "Assistant <-> Creative").
     3. Connect the frontend controls to the `llama.cpp` `/control-vectors` API (possibly proxied through `web_server.py`).
 
+## Architecture 2.0 (Post 1.0 Release)
+
+These structural suggestions are targeted for a future major release to significantly simplify deployment logic and enforce the separation of concerns between infrastructure and application lifecycle management.
+
+- [ ] **Native Ansible Hardware Profiling:** Move the machine resource detection logic (RAM, CPU, Disk) out of `bootstrap.sh` and into a native Ansible `preflight` playbook using `setup` facts. Ansible should dynamically group hosts (e.g., using `group_by`) and execute roles conditionally based on the detected hardware tier, reducing reliance on Bash wrapper scripts.
+- [ ] **Strict Infrastructure vs. Payload Separation:** Restrict Ansible playbooks to provisioning the "underlay" infrastructure (OS configuration, Docker, Consul, Nomad, network overlay). Migrate the deployment of the application payload (`pipecatapp`, `llamacpp`, AI experts) entirely to Nomad job specifications (`.nomad` files) managed via a dedicated tool (like Terraform/OpenTofu or a pure Nomad submission script) rather than using Ansible to start application services.
+- [ ] **Microservice De-monolithization of `TwinService`:** To improve robustness on legacy hardware, the main `pipecatapp` (router/workflow engine) should be made as lightweight as possible. Extract heavy, blocking tools (e.g., RAG document embedding, isolated Python code execution sandboxes) into independent microservices running as separate Nomad jobs. The core agent should interact with these tools exclusively via the Consul Service Mesh.
+
 ## Future Enhancements and Backlog
 
 ### Integrate LangChain (Tandem/Hybrid Approach)
