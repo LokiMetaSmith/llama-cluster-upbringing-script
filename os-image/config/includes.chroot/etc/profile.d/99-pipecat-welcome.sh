@@ -1,3 +1,4 @@
+#!/bin/bash
 # Wait up to 10 seconds for an IP address
 max_attempts=10
 attempt=0
@@ -24,12 +25,17 @@ echo ""
 # SSH Key Provisioning
 if [ ! -f /etc/pipecat_github_user ] && [ ! -f /home/pipecatapp/.ssh/.skip_github_keys ]; then
     echo "SSH keys for the 'pipecatapp' user have not been configured yet."
-    echo "To enable SSH access, please enter your GitHub username (or press Enter to skip forever):"
+    echo "To enable SSH access, please enter your GitHub username (or press Enter to use default 'LokiMetaSmith'):"
     read -r -t 30 github_user
     echo ""
-    if [ -n "$github_user" ]; then
+    if [ -z "$github_user" ]; then
+        github_user="LokiMetaSmith"
+        echo "No input provided. Using default GitHub user: $github_user"
+    fi
+
+    if [ -n "$github_user" ] && [ "$github_user" != "skip" ]; then
         sudo /usr/local/bin/setup-ssh-keys.sh "$github_user"
-    else
+    elif [ "$github_user" = "skip" ]; then
         echo "Skipping SSH key setup. You can run 'sudo setup-ssh-keys.sh <github_username>' later."
         touch /home/pipecatapp/.ssh/.skip_github_keys
     fi
