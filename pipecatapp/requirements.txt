@@ -78,3 +78,4 @@ opentelemetry-instrumentation-httpx
 opentelemetry-exporter-otlp
 atproto
 heretic-llm @ git+https://github.com/LokiMetaSmith/heretic.git@refactor-mode-to-reverse
+autoloop-ai
