@@ -35,10 +35,23 @@ if [ ! -f /etc/pipecat_github_user ] && [ ! -f /home/pipecatapp/.ssh/.skip_githu
     fi
 elif [ -f /etc/pipecat_github_user ] && [ ! -f /home/pipecatapp/.ssh/.keys_fetched ]; then
     # Automatically fetch keys on first boot if pre-configured
+    github_user=$(cat /etc/pipecat_github_user)
     if [ "$IP" != "No IP found (check network)" ]; then
-        github_user=$(cat /etc/pipecat_github_user)
         sudo /usr/local/bin/setup-ssh-keys.sh "$github_user" >/dev/null 2>&1
         touch /home/pipecatapp/.ssh/.keys_fetched
+    else
+        echo "Warning: No IP found. Delaying SSH key fetch for $github_user."
+        (
+            # Wait up to 60 more seconds in the background
+            for i in {1..60}; do
+                if [ -n "$(hostname -I | awk '{print $1}')" ]; then
+                    sudo /usr/local/bin/setup-ssh-keys.sh "$github_user" >/dev/null 2>&1
+                    touch /home/pipecatapp/.ssh/.keys_fetched
+                    break
+                fi
+                sleep 1
+            done
+        ) &
     fi
 fi
 echo ""
