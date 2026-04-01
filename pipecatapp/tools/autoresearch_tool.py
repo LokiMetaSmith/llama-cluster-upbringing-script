@@ -32,7 +32,8 @@ class AutoresearchTool:
                   test_command: str,
                   program_instructions: str,
                   max_iterations: int = 5,
-                  eval_metric: str = "exit_code") -> str:
+                  eval_metric: str = "exit_code",
+                  backend: str = "custom") -> str:
         """
         Runs the Autoresearch loop.
 
@@ -42,15 +43,20 @@ class AutoresearchTool:
             program_instructions (str): The constraints, phases, or goals for the LLM to follow (e.g. contents of 'program.md').
             max_iterations (int): Maximum number of hypothesize -> edit -> eval loops to run.
             eval_metric (str): How to evaluate success. Defaults to "exit_code" (0 = pass). Future extensions could parse a float metric from stdout.
+            backend (str): Which logic loop to use. 'custom' (default) uses the internal Docker loop. 'autoloop' uses the autoloop-ai library.
 
         Returns:
             str: JSON summary of the autoresearch results, including the final scratchpad and best code artifact.
         """
-        self.logger.info(f"Starting Autoresearch on {target_file} for {max_iterations} iterations.")
+        self.logger.info(f"Starting Autoresearch on {target_file} for {max_iterations} iterations using {backend} backend.")
 
         # Read the current target file content
         if not os.path.exists(target_file):
             return json.dumps({"error": f"Target file {target_file} does not exist."})
+
+        if backend == "autoloop":
+            return await self._run_autoloop_backend(target_file, test_command, program_instructions, max_iterations)
+
 
         with open(target_file, 'r') as f:
             original_code = f.read()
@@ -186,6 +192,89 @@ Think step-by-step first, then provide the final file content under a `<final_co
         }
 
         return json.dumps(summary, indent=2)
+
+    async def _run_autoloop_backend(self, target_file: str, test_command: str, program_instructions: str, max_iterations: int) -> str:
+        """
+        Runs the Autoresearch loop using the `autoloop-ai` library but sandboxing the evaluations.
+        """
+        try:
+            from autoloop import AutoLoop
+        except ImportError:
+            return json.dumps({"error": "autoloop-ai is not installed. Use backend='custom' or install it."})
+
+        target_file_abs = os.path.realpath(target_file)
+        src_dir = os.getcwd()
+        snapshot_path = self._create_snapshot(src_dir)
+
+        if os.path.isabs(target_file):
+            try:
+                rel_target_file = os.path.relpath(target_file_abs, src_dir)
+            except ValueError:
+                rel_target_file = os.path.basename(target_file_abs)
+        else:
+            rel_target_file = target_file
+
+        # Write program_instructions to a temporary file
+        fd, directives_path = tempfile.mkstemp(suffix=".md", text=True)
+        with os.fdopen(fd, 'w') as f:
+            f.write(program_instructions)
+
+        # Create a synchronous wrapper for the evaluation since AutoLoop expects a sync metric
+        def sandbox_metric(current_target_path: str) -> float:
+            try:
+                with open(current_target_path, 'r') as f:
+                    content = f.read()
+            except Exception as e:
+                self.logger.error(f"Could not read {current_target_path}: {e}")
+                return 0.0
+
+            artifact = {
+                "file_path": rel_target_file,
+                "content": content
+            }
+
+            # AutoLoop evaluates sequentially in a thread, so we can use a small event loop
+            # or simply call the internal sync/async wrapper.
+            # `_run_sandbox_eval` is already synchronous!
+            eval_result = self._run_sandbox_eval(artifact, test_command, snapshot_path)
+
+            # Since higher_is_better=True, we return 1.0 for pass, 0.0 for fail.
+            # More complex metrics could parse stdout.
+            if eval_result["passed"]:
+                return 1.0
+            return 0.0
+
+        results_dir = tempfile.mkdtemp(prefix="autoloop_results_")
+
+        try:
+            loop = AutoLoop(
+                target=target_file,
+                metric=sandbox_metric,
+                directives=directives_path,
+                budget_seconds=60, # handled internally by our sandbox mostly
+                higher_is_better=True,
+                results_dir=results_dir,
+                verbose=False
+            )
+
+            # Run experiments sequentially (autoloop doesn't strictly support asyncio natively here, so we wrap it)
+            await asyncio.to_thread(loop.run, experiments=max_iterations)
+
+            summary = {
+                "target_file": target_file,
+                "total_iterations": max_iterations,
+                "best_score": loop.best_score,
+                "improvements_found": sum(1 for r in loop.results if r.improved),
+                "backend": "autoloop",
+                "results_dir": loop.config.results_dir
+            }
+            return json.dumps(summary, indent=2)
+
+        finally:
+            if snapshot_path and os.path.exists(snapshot_path):
+                os.remove(snapshot_path)
+            if os.path.exists(directives_path):
+                os.remove(directives_path)
 
     async def _call_llm(self, prompt: str) -> str:
         """

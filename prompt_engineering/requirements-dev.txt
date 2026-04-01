@@ -2,3 +2,4 @@ openevolve
 python-nomad
 pytest
 graphviz
+autoloop-ai
