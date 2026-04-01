@@ -4,13 +4,22 @@
 set -euo pipefail
 
 # --- Arguments ---
-if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
-    echo "Usage: ./build_iso.sh"
-    echo ""
-    echo "Builds a custom, bootable, headless Debian ISO for the Pipecat agent cluster."
-    echo "Automatically spins up a Debian Trixie Docker container to ensure native live-build compatibility."
-    exit 0
-fi
+KEEP_CACHE=0
+
+for arg in "$@"; do
+    if [ "$arg" = "-h" ] || [ "$arg" = "--help" ]; then
+        echo "Usage: ./build_iso.sh [--keep-cache]"
+        echo ""
+        echo "Builds a custom, bootable, headless Debian ISO for the Pipecat agent cluster."
+        echo "Automatically spins up a Debian Trixie Docker container to ensure native live-build compatibility."
+        echo ""
+        echo "Options:"
+        echo "  --keep-cache  Preserve the package cache and build artifacts to speed up subsequent runs"
+        exit 0
+    elif [ "$arg" = "--keep-cache" ]; then
+        KEEP_CACHE=1
+    fi
+done
 
 # --- Configuration ---
 DISTRIBUTION="trixie" # Recommended in README
@@ -33,13 +42,18 @@ if [ ! -f /.dockerenv ]; then
         exit 1
     fi
 
+    DOCKER_ARGS=""
+    if [ "$KEEP_CACHE" -eq 1 ]; then
+        DOCKER_ARGS="--keep-cache"
+    fi
+
     # Run this script inside a privileged container
     echo "Executing build inside debian:${DISTRIBUTION} container..."
     sudo docker run --rm -it --privileged \
         -v "$BUILD_DIR/..:/opt/pipecat-cluster" \
         -w "/opt/pipecat-cluster/os-image" \
         "debian:${DISTRIBUTION}" \
-        bash -c "apt-get update && apt-get install -y live-build xorriso mtools dosfstools grub-pc-bin grub-efi-amd64-bin syslinux syslinux-utils isolinux rsync && ./build_iso.sh"
+        bash -c "apt-get update && apt-get install -y live-build xorriso mtools dosfstools grub-pc-bin grub-efi-amd64-bin syslinux syslinux-utils isolinux rsync && ./build_iso.sh $DOCKER_ARGS"
 
     echo "=== Build Complete (Host Wrapper) ==="
     exit 0
@@ -115,18 +129,35 @@ echo "=== Cleaning up build artifacts ==="
 # Remove large working directories and leftover files to save space
 # Do NOT remove the 'config' directory as it contains tracked source files!
 # We do, however, clean up the dynamically injected files.
-if [ "$(id -u)" -ne 0 ]; then
-    sudo lb clean --purge || true
-    sudo rm -rf chroot cache binary .build \
-        *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
-    sudo rm -rf config/includes.chroot/opt/pipecat-cluster
-    sudo rm -f config/package-lists/live.list.chroot
+if [ "$KEEP_CACHE" -eq 1 ]; then
+    echo "Skipping full purge to keep cache (--keep-cache flag provided)."
+    if [ "$(id -u)" -ne 0 ]; then
+        sudo lb clean || true
+        sudo rm -rf chroot binary .build \
+            *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
+        sudo rm -rf config/includes.chroot/opt/pipecat-cluster
+        sudo rm -f config/package-lists/live.list.chroot
+    else
+        lb clean || true
+        rm -rf chroot binary .build \
+            *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
+        rm -rf config/includes.chroot/opt/pipecat-cluster
+        rm -f config/package-lists/live.list.chroot
+    fi
 else
-    lb clean --purge || true
-    rm -rf chroot cache binary .build \
-        *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
-    rm -rf config/includes.chroot/opt/pipecat-cluster
-    rm -f config/package-lists/live.list.chroot
+    if [ "$(id -u)" -ne 0 ]; then
+        sudo lb clean --purge || true
+        sudo rm -rf chroot cache binary .build \
+            *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
+        sudo rm -rf config/includes.chroot/opt/pipecat-cluster
+        sudo rm -f config/package-lists/live.list.chroot
+    else
+        lb clean --purge || true
+        rm -rf chroot cache binary .build \
+            *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
+        rm -rf config/includes.chroot/opt/pipecat-cluster
+        rm -f config/package-lists/live.list.chroot
+    fi
 fi
 
 echo "=== Build Complete ==="
