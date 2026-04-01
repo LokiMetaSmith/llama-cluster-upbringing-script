@@ -111,5 +111,23 @@ elif [ -f "binary.iso" ]; then
     mv binary.iso "${ISO_NAME}-${ARCHITECTURE}.iso"
 fi
 
+echo "=== Cleaning up build artifacts ==="
+# Remove large working directories and leftover files to save space
+# Do NOT remove the 'config' directory as it contains tracked source files!
+# We do, however, clean up the dynamically injected files.
+if [ "$(id -u)" -ne 0 ]; then
+    sudo lb clean --purge || true
+    sudo rm -rf chroot cache binary .build \
+        *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
+    sudo rm -rf config/includes.chroot/opt/pipecat-cluster
+    sudo rm -f config/package-lists/live.list.chroot
+else
+    lb clean --purge || true
+    rm -rf chroot cache binary .build \
+        *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
+    rm -rf config/includes.chroot/opt/pipecat-cluster
+    rm -f config/package-lists/live.list.chroot
+fi
+
 echo "=== Build Complete ==="
 echo "The ISO image should be available locally as ${ISO_NAME}-${ARCHITECTURE}.iso"
