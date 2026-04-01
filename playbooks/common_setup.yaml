@@ -2,6 +2,10 @@
   hosts: all
   become: yes
   tasks:
+    - name: Run apt-get update to ensure cache is populated before any modules run
+      raw: apt-get update
+      changed_when: false
+
     - name: Ensure the sudo package is installed
       tags:
         - sudo
