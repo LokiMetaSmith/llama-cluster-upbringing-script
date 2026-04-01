@@ -140,7 +140,7 @@ These structural suggestions are targeted for a future major release to signific
 - [x] Create a new integration test file for home assistant.
 - [x] Add the new test to `e2e-tests.yaml`.
 - [x] Modify `start_services.sh` to include the home assistant job.
-- [ ] Investigate <https://github.com/microsoft/agent-lightning> as a possible agent improvement method.
+- [x] Investigate <https://github.com/microsoft/agent-lightning> as a possible agent improvement method.
 - [ ] **Investigate RPC Provider Monitoring:** Research how to expose or scrape metrics from `llamacpp-rpc` providers to aggregate backend performance data.
 - [ ] **Evaluate Ouro/LoopLM Support in llama.cpp:** In 3 months, check if the upstream `llama.cpp` project has added support for the Ouro LoopLM architecture. If so, create a plan to integrate it as a native model option.
 
