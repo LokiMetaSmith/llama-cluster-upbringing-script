@@ -35,9 +35,11 @@ if [ ! -f /etc/pipecat_github_user ] && [ ! -f /home/pipecatapp/.ssh/.skip_githu
     fi
 elif [ -f /etc/pipecat_github_user ] && [ ! -f /home/pipecatapp/.ssh/.keys_fetched ]; then
     # Automatically fetch keys on first boot if pre-configured
-    github_user=$(cat /etc/pipecat_github_user)
-    sudo /usr/local/bin/setup-ssh-keys.sh "$github_user" >/dev/null 2>&1
-    touch /home/pipecatapp/.ssh/.keys_fetched
+    if [ "$IP" != "No IP found (check network)" ]; then
+        github_user=$(cat /etc/pipecat_github_user)
+        sudo /usr/local/bin/setup-ssh-keys.sh "$github_user" >/dev/null 2>&1
+        touch /home/pipecatapp/.ssh/.keys_fetched
+    fi
 fi
 echo ""
 echo " System Details:"
