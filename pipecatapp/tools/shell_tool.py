@@ -120,6 +120,23 @@ class ShellTool:
         await self._ensure_session()
 
         sentinel = f"END_{uuid.uuid4().hex}"
+        # Claude Code CLI Analysis: EAGAIN Handling for ripgrep
+        # Automatically retry ripgrep in single-threaded mode (-j 1) if it fails due to resource exhaustion
+        if "rg " in command or "ripgrep " in command:
+            # We wrap the ripgrep command to catch stderr and retry if it contains "os error 11" (EAGAIN)
+            # This is done entirely within the shell string to be executed in tmux
+            rg_fallback = (
+                f"tmp_err=$(mktemp); "
+                f"({command}) 2> $tmp_err; "
+                f"if grep -qi 'os error 11\\|resource temporarily unavailable' $tmp_err; then "
+                f"  echo 'EAGAIN detected, retrying ripgrep with -j 1...'; "
+                f"  {command} -j 1; "
+                f"fi; "
+                f"cat $tmp_err >&2; "
+                f"rm -f $tmp_err"
+            )
+            command = rg_fallback
+
         # Combine command with sentinel echo. We use '|| true' to ensure sentinel prints even if command fails.
         full_command = f"{command}; echo '{sentinel}'"
 

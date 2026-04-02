@@ -19,6 +19,7 @@ class FileEditorTool:
         self.root_dir = os.path.realpath(root_dir)
         self.logger = logging.getLogger(__name__)
         self._undo_history = {} # Maps filepath to list of previous contents
+        self._file_metadata = {} # Maps filepath to metadata (e.g. line endings)
 
     def _validate_path(self, filepath: str) -> str:
         """Ensures the filepath is within the root directory."""
@@ -85,7 +86,7 @@ class FileEditorTool:
             return f"Error undoing edit to {filepath}: {e}"
 
     def read_file(self, filepath: str, use_hashlines: bool = False, view_range: list = None) -> str:
-        """Reads the content of a file.
+        """Reads the content of a file and detects line endings metadata.
 
         Args:
             filepath (str): The path to the file.
@@ -96,6 +97,13 @@ class FileEditorTool:
         """
         try:
             path = self._validate_path(filepath)
+            with open(path, 'rb') as f_bin:
+                sample = f_bin.read(4096)
+                if b'\r\n' in sample:
+                    self._file_metadata[path] = {'newline': '\r\n'}
+                else:
+                    self._file_metadata[path] = {'newline': '\n'}
+
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
@@ -123,21 +131,30 @@ class FileEditorTool:
                     # i+start_idx is 0-based index of original line. +1 to get 1-based line number.
                     actual_line_num = i + start_idx + 1
                     output.append(f"{actual_line_num}:{line_hash}| {line}")
-                return "\n".join(output)
+                result_str = "\n".join(output)
+            else:
+                result_str = "\n".join(view_lines)
 
-            return "\n".join(view_lines) if view_range else content
+            # Transparent Pagination Feedback
+            if view_range and isinstance(view_range, list) and len(view_range) == 2:
+                if end_idx < len(lines):
+                     result_str += f"\n[Showing results with pagination = limit: {end_idx - start_idx}, offset: {start_idx}]"
+
+            return result_str
         except FileNotFoundError:
             return f"Error: File not found at {filepath}"
         except Exception as e:
             return f"Error reading file {filepath}: {e}"
 
     def write_file(self, filepath: str, content: str) -> str:
-        """Overwrites a file with new content. Creates directories if needed."""
+        """Overwrites a file with new content preserving line endings metadata. Creates directories if needed."""
         try:
             path = self._validate_path(filepath)
             self._save_for_undo(path)
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, 'w', encoding='utf-8') as f:
+
+            newline = self._file_metadata.get(path, {}).get('newline', None)
+            with open(path, 'w', encoding='utf-8', newline=newline) as f:
                 f.write(content)
             return f"Successfully wrote to {filepath}"
         except Exception as e:
