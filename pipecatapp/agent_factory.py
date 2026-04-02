@@ -43,6 +43,7 @@ from tools.search_skills_tool import SearchSkillsTool
 from tools.wol_tool import WOLTool
 from tools.scale_compute_tool import ScaleComputeTool
 from tools.cluster_status_tool import ClusterStatusTool
+from tools.polyphony_tool import PolyphonyTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -110,6 +111,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "wol": WOLTool(),
         "scale_compute": ScaleComputeTool(),
         "cluster_status": ClusterStatusTool(),
+        "polyphony": PolyphonyTool(),
     }
 
     # Inject memory client into SwarmTool if available (for Map-Reduce)
