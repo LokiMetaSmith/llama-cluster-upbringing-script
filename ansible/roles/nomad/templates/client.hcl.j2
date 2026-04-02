@@ -16,7 +16,7 @@ advertise {
 }
 
 consul {
-  address = "127.0.0.1:{{ consul_http_port }}"
+  address = "{{ cluster_ip }}:{{ consul_http_port }}"
   {% if consul_bootstrap_token is defined %}
   token   = "{{ consul_bootstrap_token }}"
   {% endif %}
@@ -48,7 +48,7 @@ telemetry {
 
 client {
   enabled = true
-  servers = ["127.0.0.1"]
+  servers = ["{{ hostvars[groups['controller_nodes'][0]]['cluster_ip'] }}"]
   
   meta {
     node_type = "worker"
