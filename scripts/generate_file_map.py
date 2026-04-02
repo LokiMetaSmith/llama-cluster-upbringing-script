@@ -10,13 +10,14 @@ from pathlib import Path
 # --- Configuration ---
 ROOT_DIR = "."
 OUTPUT_FILE = "FILE_MAP.md"
+JSON_OUTPUT_FILE = "FILE_MAP.json"
 IGNORE_DIRS = {
     ".git", ".venv", "venv", "node_modules", "__pycache__",
     ".idea", ".vscode", ".Jules", ".jules", "dist", "build",
     ".pytest_cache", "site-packages", "jules-scratch"
 }
 IGNORE_FILES = {
-    ".DS_Store", "FILE_MAP.md", "package-lock.json", "yarn.lock",
+    ".DS_Store", "FILE_MAP.md", "FILE_MAP.json", "package-lock.json", "yarn.lock",
     "pnpm-lock.yaml", ".gitkeep"
 }
 
@@ -56,12 +57,14 @@ def is_ignored(path):
 def extract_python_info(content, filepath):
     desc = ""
     imports = set()
+    classes = []
+    functions = []
     try:
         tree = ast.parse(content)
         # Extract Docstring
         desc = ast.get_docstring(tree) or ""
 
-        # Extract Imports
+        # Extract Imports, Classes, and Functions
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
@@ -69,14 +72,16 @@ def extract_python_info(content, filepath):
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
                     imports.add(node.module.split('.')[0])
-                    # Handle relative imports (approximate)
-                    # This is tricky without full project context, but we can try mapping back to files
+            elif isinstance(node, ast.ClassDef):
+                class_desc = ast.get_docstring(node) or ""
+                classes.append({"name": node.name, "docstring": class_desc.split('\n')[0][:100] if class_desc else ""})
+            elif isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef):
+                func_desc = ast.get_docstring(node) or ""
+                functions.append({"name": node.name, "docstring": func_desc.split('\n')[0][:100] if func_desc else ""})
     except Exception:
         pass # Parse error
 
-    # Regex fallback for string references to files
-    # Check for references to other known files in the codebase
-    return desc, imports
+    return desc, imports, classes, functions
 
 def extract_shell_info(content):
     desc = ""
@@ -201,10 +206,15 @@ def main():
             content = ""
 
         desc = ""
+        classes = []
+        functions = []
+
         # Description Extraction
         if f.endswith(".py"):
-            d, _ = extract_python_info(content, f)
+            d, _, c, fn = extract_python_info(content, f)
             desc = d
+            classes = c
+            functions = fn
         elif f.endswith(".sh"):
             desc = extract_shell_info(content)
 
@@ -221,6 +231,8 @@ def main():
 
         file_metadata[f] = {
             "description": desc,
+            "classes": classes,
+            "functions": functions,
             "links": set()
         }
 
@@ -290,7 +302,7 @@ def main():
         file_metadata[f]["status"] = status
 
     # 5. Generate Markdown
-    print("Generating report...")
+    print("Generating Markdown report...")
 
     with open(OUTPUT_FILE, "w") as out:
         out.write("# Codebase File Map\n\n")
@@ -298,8 +310,8 @@ def main():
 
         # Table
         out.write("## File List\n\n")
-        out.write("| File Path | Status | Description |\n")
-        out.write("| --- | --- | --- |\n")
+        out.write("| File Path | Status | Description | Details |\n")
+        out.write("| --- | --- | --- | --- |\n")
 
         # Sort for consistency
         for f in sorted(all_files):
@@ -312,7 +324,19 @@ def main():
 
             # Escape pipes in description
             safe_desc = meta["description"].replace("|", "\\|")
-            out.write(f"| `{f}` | {status_icon} {meta['status']} | {safe_desc} |\n")
+
+            # Construct details string
+            details = ""
+            classes = meta.get("classes", [])
+            functions = meta.get("functions", [])
+            if classes:
+                details += f"**Classes:** {', '.join([c['name'] for c in classes])}<br>"
+            if functions:
+                details += f"**Functions:** {', '.join([fn['name'] for fn in functions[:5]])}"
+                if len(functions) > 5:
+                    details += "..."
+
+            out.write(f"| `{f}` | {status_icon} {meta['status']} | {safe_desc} | {details} |\n")
 
         out.write("\n## Dependency Diagram\n\n")
         out.write("```mermaid\n")
@@ -351,7 +375,26 @@ def main():
 
         out.write("```\n")
 
-    print(f"Done. Report written to {OUTPUT_FILE}")
+    # 6. Generate JSON
+    print("Generating JSON report...")
+    json_data = {
+        "files": {},
+        "edges": [[src, tgt] for src, tgt in edges]
+    }
+    for f, meta in file_metadata.items():
+        json_data["files"][f] = {
+            "description": meta["description"],
+            "classes": meta.get("classes", []),
+            "functions": meta.get("functions", []),
+            "status": meta["status"],
+            "links_to": list(meta["links"])
+        }
+
+    with open(JSON_OUTPUT_FILE, "w") as out:
+        json.dump(json_data, out, indent=2)
+
+
+    print(f"Done. Reports written to {OUTPUT_FILE} and {JSON_OUTPUT_FILE}")
     print(f"Found {len(orphans)} potential orphans.")
     for o in orphans:
         print(f"  Orphan: {o}")
