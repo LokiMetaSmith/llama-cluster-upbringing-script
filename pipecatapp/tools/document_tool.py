@@ -7,6 +7,7 @@ import subprocess
 import shutil
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
+import functools
 
 class DocumentBackend(ABC):
     @abstractmethod
@@ -151,6 +152,7 @@ class LocalDirectoryBackend(DocumentBackend):
         except Exception as e:
             return f"Error extracting text from local file: {str(e)}"
 
+    @functools.lru_cache(maxsize=10)
     def _extract_text(self, filepath: str) -> str:
         ext = os.path.splitext(filepath)[1].lower()
         if ext == '.pdf':

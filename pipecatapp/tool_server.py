@@ -1,5 +1,7 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import inspect
 import os
@@ -26,6 +28,38 @@ from tools.orchestrator_tool import OrchestratorTool
 from tools.search_tool import SearchTool
 
 app = FastAPI()
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Format Pydantic validation errors into LLM-friendly instructions.
+    Instead of raw JSON schema errors, we provide explicit feedback
+    (e.g., 'The required parameter X is missing').
+    """
+    errors = exc.errors()
+    formatted_messages = []
+
+    for error in errors:
+        loc = ".".join(str(l) for l in error.get("loc", []))
+        msg = error.get("msg", "")
+        err_type = error.get("type", "")
+
+        if err_type == "missing":
+            formatted_messages.append(f"The required parameter `{loc}` is missing.")
+        elif err_type == "extra_forbidden":
+            formatted_messages.append(f"An unexpected parameter `{loc}` was provided.")
+        elif "type" in err_type:
+            formatted_messages.append(f"The parameter `{loc}` has an invalid type: {msg}.")
+        else:
+            formatted_messages.append(f"Validation error on `{loc}`: {msg}.")
+
+    # LLMs handle a single string block of instructions better than complex JSON error arrays
+    formatted_error_str = " ".join(formatted_messages)
+
+    return JSONResponse(
+        status_code=422,
+        content={"detail": f"Tool argument validation failed: {formatted_error_str} Please verify the required tool parameters."}
+    )
 
 class ToolRequest(BaseModel):
     tool: str
@@ -84,6 +118,11 @@ async def run_tool(request: ToolRequest, authorization: str = Header(...), rate_
         # If any tool methods were async, this would need to be awaited.
         result = method(**request.args)
         return {"result": result}
+    except TypeError as e:
+        # Provide LLM-friendly error message for missing/unexpected arguments
+        error_msg = str(e)
+        formatted_error = f"Tool argument validation failed: {error_msg}. Please check the required and available parameters for '{request.tool}.{request.method}'."
+        raise HTTPException(status_code=400, detail=formatted_error)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error executing tool: {str(e)}")
 

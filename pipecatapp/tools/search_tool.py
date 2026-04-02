@@ -2,6 +2,7 @@ import subprocess
 import shlex
 import os
 import logging
+import time
 
 class SearchTool:
     """A tool for searching the codebase using grep and find.
@@ -88,6 +89,17 @@ class SearchTool:
                 timeout=30 # Timeout to prevent hanging
             )
 
+            # EAGAIN Handling for grep (if run under heavy load in Docker/CI)
+            if result.stderr and ("os error 11" in result.stderr.lower() or "resource temporarily unavailable" in result.stderr.lower()):
+                logging.warning("EAGAIN encountered during grep. Retrying after 1s...")
+                time.sleep(1)
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+
             output = result.stdout
             if result.stderr:
                 output += f"\nStderr: {result.stderr}"
@@ -99,15 +111,16 @@ class SearchTool:
                     return f"Error running grep (exit code {result.returncode})"
 
             # Truncate output if too long (e.g. 500 lines)
+            limit = 500
             lines = output.splitlines()
-            if len(lines) > 500:
-                truncated = "\n".join(lines[:500])
-                return f"{truncated}\n... (Output truncated, {len(lines) - 500} more lines. Refine your search.)"
+            if len(lines) > limit:
+                truncated = "\n".join(lines[:limit])
+                return f"{truncated}\n[Showing results with pagination = limit: {limit}, offset: 0] (Output truncated, {len(lines) - limit} more lines. Refine your search.)"
 
             return output
 
         except subprocess.TimeoutExpired:
-            return "Error: Grep command timed out."
+            return "Error: Search timed out."
         except Exception as e:
             return f"Error executing grep: {e}"
 
@@ -146,6 +159,17 @@ class SearchTool:
                 timeout=30
             )
 
+            # EAGAIN Handling for find (if run under heavy load in Docker/CI)
+            if result.stderr and ("os error 11" in result.stderr.lower() or "resource temporarily unavailable" in result.stderr.lower()):
+                logging.warning("EAGAIN encountered during find. Retrying after 1s...")
+                time.sleep(1)
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+
             output = result.stdout
             if result.stderr:
                 output += f"\nStderr: {result.stderr}"
@@ -153,14 +177,15 @@ class SearchTool:
             if not output:
                 return "No files found."
 
+            limit = 500
             lines = output.splitlines()
-            if len(lines) > 500:
-                truncated = "\n".join(lines[:500])
-                return f"{truncated}\n... (Output truncated, {len(lines) - 500} more files found. Refine your search.)"
+            if len(lines) > limit:
+                truncated = "\n".join(lines[:limit])
+                return f"{truncated}\n[Showing results with pagination = limit: {limit}, offset: 0] (Output truncated, {len(lines) - limit} more files found. Refine your search.)"
 
             return output
 
         except subprocess.TimeoutExpired:
-             return "Error: Find command timed out."
+             return "Error: Search timed out."
         except Exception as e:
             return f"Error executing find: {e}"
