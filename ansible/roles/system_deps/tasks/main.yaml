@@ -18,7 +18,6 @@
       - cargo
       - chrony
       - cmatrix
-      - cowsay
       - curl
       - figlet
       - fio
