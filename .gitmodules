@@ -1,0 +1,3 @@
+[submodule "modules/keystone-polyphony"]
+	path = modules/keystone-polyphony
+	url = https://github.com/LokiMetaSmith/keystone-polyphony.git

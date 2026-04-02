@@ -29,6 +29,9 @@
     - role: memory_graph
       tags:
         - memory_graph
+    - role: polyphony
+      tags:
+        - polyphony
     - role: pipecatapp
       tags:
         - pipecatapp

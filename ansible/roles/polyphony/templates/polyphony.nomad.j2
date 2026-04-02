@@ -1,0 +1,53 @@
+job "polyphony" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "polyphony" {
+    count = 1
+
+    update {
+      max_parallel      = 1
+      min_healthy_time  = "10s"
+      healthy_deadline  = "15m"
+      progress_deadline = "20m"
+      auto_revert       = true
+      auto_promote      = false
+      canary            = 0
+    }
+
+    network {
+      port "http" {}
+    }
+
+    task "polyphony-daemon" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sh"
+        args    = [
+          "-c",
+          "cd {{ target_dir | default('/opt/pipecat/modules/keystone-polyphony') }} && exec ./polyphony daemon"
+        ]
+      }
+
+      env {
+        SWARM_KEY           = "{{ swarm_key | default('KEYSTONE-POLYPHONY-LOCAL') }}"
+        DUCKY_API_KEY       = "{{ openai_api_key | default('') }}"
+        DUCKY_MODEL         = "gpt-4o"
+      }
+    }
+
+    service {
+      name = "polyphony-api"
+      port = "http"
+      tags = ["polyphony", "api"]
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "20s"
+        timeout  = "10s"
+      }
+    }
+  }
+}

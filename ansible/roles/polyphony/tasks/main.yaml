@@ -1,0 +1,9 @@
+- name: Create Polyphony Nomad job file
+  ansible.builtin.template:
+    src: polyphony.nomad.j2
+    dest: /opt/nomad/jobs/polyphony.nomad
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Run Polyphony Job
