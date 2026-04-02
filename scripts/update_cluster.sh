@@ -41,18 +41,22 @@ fi
 
 echo -e "\n${BOLD}=== Updating Repository ===${NC}"
 
-# Ensure we are actually in a git repository before running git commands
+# Handle environments where the codebase was deployed without .git metadata (like os-image)
 if [ ! -d ".git" ]; then
-    echo -e "${RED}❌ Not a git repository. Cannot update via git.${NC}"
-    exit 1
-fi
+    echo -e "${YELLOW}⚠️  No .git directory found. Initializing a new repository and adding remote...${NC}"
+    git init
+    git remote add origin "https://github.com/LokiMetaSmith/llama-cluster-upbringing-script"
 
-# Get the current branch name
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-
-if [ -z "$CURRENT_BRANCH" ] || [ "$CURRENT_BRANCH" == "HEAD" ]; then
-    echo -e "${YELLOW}⚠️  Could not determine current branch or in detached HEAD state. Defaulting to 'main'.${NC}"
+    # We default to 'main' since we don't have local branch information
     CURRENT_BRANCH="main"
+else
+    # Get the current branch name
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+    if [ -z "$CURRENT_BRANCH" ] || [ "$CURRENT_BRANCH" == "HEAD" ]; then
+        echo -e "${YELLOW}⚠️  Could not determine current branch or in detached HEAD state. Defaulting to 'main'.${NC}"
+        CURRENT_BRANCH="main"
+    fi
 fi
 
 echo "Fetching latest changes for branch: $CURRENT_BRANCH (shallow pull)"
@@ -63,9 +67,10 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Resetting local state to match remote origin/$CURRENT_BRANCH..."
-git reset --hard "origin/$CURRENT_BRANCH"
+# Explicitly force the local branch name to match what we pulled to prevent master/main drift
+git checkout -B "$CURRENT_BRANCH" "origin/$CURRENT_BRANCH"
 if [ $? -ne 0 ]; then
-     echo -e "${RED}❌ Failed to reset local state.${NC}"
+     echo -e "${RED}❌ Failed to checkout and reset local state.${NC}"
      exit 1
 fi
 
