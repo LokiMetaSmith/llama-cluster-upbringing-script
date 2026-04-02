@@ -130,6 +130,13 @@ These structural suggestions are targeted for a future major release to signific
 - [ ] **Re-evaluate Consul Connect Service Mesh:** Create a new feature branch to attempt to re-enable `sidecar_service` in the Nomad job files and document the process.
 - [x] **Add Pre-flight System Health Checks:** Create a new Ansible role to perform non-destructive checks at the beginning of `playbook.yaml`.
 - [x] **Investigate Advanced Power Management:** Research and prototype a more advanced version that uses Wake-on-LAN.
+- [ ] **Implement Claude Code CLI Techniques:** Review `CLAUDE_CODE_ANALYSIS.md` and implement the recommended techniques in `pipecatapp/tools/`:
+  - Format Zod/Pydantic validation errors for LLMs.
+  - Add robust ripgrep fallback (EAGAIN handling) to `shell_tool.py`.
+  - Add transparent pagination feedback (e.g. `[Showing results with pagination...]`).
+  - Implement single-pass read with metadata extraction (encoding, line endings) for file editors.
+  - Implement `LRUCache` for file state to optimize `RAG_Tool` and `DocumentTool`.
+  - Integrate dynamic "thinking" feature support detection based on model string.
 - [x] **Expand the Model Collection:** Systematically test and add the remaining LiquidAI nano models to `group_vars/models.yaml`.
 - [ ] **Security Hardening:**
   - [x] **Remove passwordless sudo:** Modify the sudoers file configuration to require a password for the `target_user`.
