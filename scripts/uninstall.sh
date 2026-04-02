@@ -35,7 +35,7 @@ sudo rm -rf /etc/systemd/system/nomad.service.d
 # Purge packages
 echo "Purging installed packages..."
 sudo apt-get purge -y \
-    acl build-essential cmake cargo chrony cmatrix cowsay curl figlet fio \
+    acl build-essential cmake cargo chrony cmatrix curl figlet fio \
     fortune-mod fuse-overlayfs gstreamer1.0-libav git hollywood htop iperf3 jq \
     libavif16 libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev \
     libavfilter-dev libswscale-dev libswresample-dev libcurl4-openssl-dev \
