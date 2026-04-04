@@ -81,7 +81,7 @@
 
 - [x] **Add a flag to `bootstrap.sh`:** Add a `--run-local` or similar flag to the bootstrap script to allow switching between a Docker-based deployment and the old `raw_exec` method for debugging.
 - [x] **Create a `Dockerfile` for the `pipecatapp` application.**
-- [ ] **Build and push the image to a registry as part of the development process.**
+- [x] **Build and push the image to a registry as part of the development process.**
 - [x] **Simplify the Nomad job to use the `docker` driver with the pre-built image.**
 
 ## Testing and Usability
