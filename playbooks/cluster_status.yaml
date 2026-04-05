@@ -4,8 +4,8 @@
   become: no
 
   vars:
-    consul_api_url: "http://127.0.0.1:8500/v1/agent/members"
-    nomad_api_url: "http://127.0.0.1:4646/v1/nodes"
+    consul_api_url: "http://{{ cluster_ip | default('127.0.0.1') }}:8500/v1/agent/members"
+    nomad_api_url: "http://{{ cluster_ip | default('127.0.0.1') }}:4646/v1/nodes"
 
   tasks:
     - name: "Check Consul Cluster Members"

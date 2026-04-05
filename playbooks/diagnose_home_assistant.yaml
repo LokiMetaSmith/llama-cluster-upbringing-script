@@ -17,7 +17,7 @@
 
     - name: Get Home Assistant allocations from Nomad API
       ansible.builtin.uri:
-        url: "http://127.0.0.1:4646/v1/job/home-assistant/allocations"
+        url: "http://{{ cluster_ip | default('127.0.0.1') }}:4646/v1/job/home-assistant/allocations"
       register: ha_allocations_response
       when: job_status.rc == 0 and "'No allocations placed' not in job_status.stdout"
       ignore_errors: yes
