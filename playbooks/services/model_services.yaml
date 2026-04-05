@@ -1,5 +1,5 @@
 - name: Deploy Model Services
-  hosts: all
+  hosts: hw_tier_high,hw_tier_mid
   vars_files:
     - "../../group_vars/models.yaml"
     - "../../group_vars/external_experts.yaml"

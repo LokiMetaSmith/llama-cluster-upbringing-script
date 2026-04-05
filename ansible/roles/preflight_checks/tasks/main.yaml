@@ -7,12 +7,70 @@
   loop: "{{ ansible_facts['mounts'] }}"
   when: item.mount == '/'
 
+- name: Get root filesystem size facts
+  ansible.builtin.set_fact:
+    root_disk_size_gb: "{{ (item.size_total / 1073741824) | int }}"
+  loop: "{{ ansible_facts['mounts'] }}"
+  when: item.mount == '/'
+
 - name: Check available RAM
   ansible.builtin.assert:
     that:
       - ansible_facts['memtotal_mb'] >= 4096
     fail_msg: "Insufficient RAM. Detected {{ ansible_facts['memtotal_mb'] }} MB, but at least 4096 MB (4 GB) is required."
     success_msg: "RAM is sufficient ({{ ansible_facts['memtotal_mb'] }} MB detected)."
+
+- name: Evaluate Hardware Tier
+  ansible.builtin.set_fact:
+    hardware_tier: >-
+      {% if ansible_facts['memtotal_mb'] >= 16384 and ansible_facts['processor_vcpus'] >= 4 and (root_disk_size_gb | default(0) | int) >= 256 %}
+      high
+      {% elif ansible_facts['memtotal_mb'] <= 4096 or (root_disk_size_gb | default(0) | int) <= 20 %}
+      low
+      {% else %}
+      mid
+      {% endif %}
+
+- name: Evaluate default stack and roles
+  ansible.builtin.set_fact:
+    deploy_full_stack: "{{ True if hardware_tier == 'high' else False }}"
+    deploy_partial_stack: "{{ True if hardware_tier == 'mid' else False }}"
+    deploy_minimal_stack: "{{ True if hardware_tier == 'low' else False }}"
+    external_model_server: "{{ True if hardware_tier == 'low' else False }}"
+    default_role: "{{ 'all' if hardware_tier == 'high' else 'worker' }}"
+
+- name: Group hosts dynamically by hardware tier
+  ansible.builtin.group_by:
+    key: "hw_tier_{{ hardware_tier }}"
+
+- name: Create local facts directory
+  ansible.builtin.file:
+    path: /etc/ansible/facts.d
+    state: directory
+    mode: '0755'
+  become: yes
+  ignore_errors: yes
+
+- name: Persist hardware profiling to local facts
+  ansible.builtin.copy:
+    content: >
+      {
+        "hardware_tier": "{{ hardware_tier }}",
+        "deploy_full_stack": {{ deploy_full_stack | lower }},
+        "deploy_partial_stack": {{ deploy_partial_stack | lower }},
+        "deploy_minimal_stack": {{ deploy_minimal_stack | lower }},
+        "external_model_server": {{ external_model_server | lower }},
+        "default_role": "{{ default_role }}"
+      }
+    dest: /etc/ansible/facts.d/pipecat.fact
+    mode: '0644'
+  become: yes
+  ignore_errors: yes
+
+- name: Reload local facts
+  ansible.builtin.setup:
+    filter: ansible_local
+  ignore_errors: yes
 
 - name: Check Python version
   ansible.builtin.assert:

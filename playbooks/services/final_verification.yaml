@@ -1,5 +1,5 @@
 - name: Final Verification
-  hosts: all
+  hosts: hw_tier_high
   become: no
   gather_facts: yes
   tags:
