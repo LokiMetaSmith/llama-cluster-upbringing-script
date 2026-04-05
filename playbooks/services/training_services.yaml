@@ -1,4 +1,4 @@
-- hosts: all
+- hosts: hw_tier_high
   become: yes
   vars_files:
     - ../../group_vars/all.yaml

@@ -1,5 +1,5 @@
 - name: Deploy Core AI Services and Applications
-  hosts: controller_nodes[0]
+  hosts: controller_nodes[0]:&hw_tier_high,controller_nodes[0]:&hw_tier_mid
   connection: local
   gather_facts: yes
 

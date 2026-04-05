@@ -1,5 +1,5 @@
 - name: Deploy Distributed Compute Layer (MKV, Miniray)
-  hosts: all
+  hosts: hw_tier_high
   become: yes
   vars:
     # Default variables can be overridden in inventory/group_vars
