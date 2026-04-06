@@ -63,6 +63,12 @@
 
     - name: Build term.everything AppImage
       block:
+        - name: Fix alpineCompile.sh https to http
+          ansible.builtin.replace:
+            path: /tmp/term.everything/resources/alpineCompile.sh
+            regexp: 'https://dl-cdn.alpinelinux.org/'
+            replace: 'http://dl-cdn.alpinelinux.org/'
+
         - name: Attempt to build term.everything AppImage
           ansible.builtin.command:
             cmd: ./distribute.sh
