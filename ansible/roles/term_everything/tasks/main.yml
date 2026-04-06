@@ -74,7 +74,7 @@
           ansible.builtin.replace:
             path: /tmp/term.everything/distribute.sh
             regexp: '-it \\'
-            replace: '--network host \'
+            replace: '--network host \\'
 
         - name: Attempt to build term.everything AppImage
           ansible.builtin.command:
