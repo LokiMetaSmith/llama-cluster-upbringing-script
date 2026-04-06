@@ -90,7 +90,7 @@
 
     - name: Verify Consul Leader Status
       ansible.builtin.uri:
-        url: "http://127.0.0.1:{{ consul_http_port }}/v1/status/leader"
+        url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/status/leader"
         return_content: yes
       register: consul_leader_check
       ignore_errors: yes
@@ -101,7 +101,7 @@
 
     - name: Verify Consul Token Validity
       ansible.builtin.uri:
-        url: "http://127.0.0.1:{{ consul_http_port }}/v1/agent/self"
+        url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/agent/self"
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token }}"
         return_content: yes
@@ -212,7 +212,7 @@
 
     - name: Wait for MQTT service to be healthy in Consul
       ansible.builtin.uri:
-        url: "http://127.0.0.1:{{ consul_http_port }}/v1/health/service/mqtt?passing"
+        url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/health/service/mqtt?passing"
         method: GET
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token }}"

@@ -41,7 +41,7 @@
 
 - name: Populate Consul KV with Model Configurations
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ consul_http_port }}/v1/kv/config/models/{{ item.key }}"
+    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port }}/v1/kv/config/models/{{ item.key }}"
     method: PUT
     body: "{{ item.value | to_json }}"
     status_code: 200
@@ -64,7 +64,7 @@
 
 - name: Populate Consul KV with Home Assistant Token if found
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ consul_http_port }}/v1/kv/config/ha/token"
+    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port }}/v1/kv/config/ha/token"
     method: PUT
     body: "{{ ha_token }}"
     status_code: 200
@@ -84,7 +84,7 @@
 
 - name: Populate Consul KV with App Settings
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ consul_http_port }}/v1/kv/config/app/settings"
+    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port }}/v1/kv/config/app/settings"
     method: PUT
     body: >
       {{

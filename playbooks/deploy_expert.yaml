@@ -75,7 +75,7 @@
 
     - name: "Wait for Nomad API to be ready"
       ansible.builtin.uri:
-        url: http://127.0.0.1:4646/v1/status/leader
+        url: "http://{{ cluster_ip | default('127.0.0.1') }}:4646/v1/status/leader"
         method: GET
         status_code: 200
       register: nomad_api_status
