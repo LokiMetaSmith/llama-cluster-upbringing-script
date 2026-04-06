@@ -178,8 +178,8 @@
 
     - name: "World Model Service : Display World Model logs (stdout)"
       ansible.builtin.debug:
-        var: wm_logs_stdout.stdout
-      when: wm_logs_stdout is defined
+        msg: "{{ wm_logs_stdout.stdout }}"
+      when: wm_logs_stdout is defined and 'stdout' in wm_logs_stdout
 
     - name: "World Model Service : Fetch World Model logs (stderr)"
       ansible.builtin.command:
@@ -191,8 +191,8 @@
 
     - name: "World Model Service : Display World Model logs (stderr)"
       ansible.builtin.debug:
-        var: wm_logs_stderr.stdout
-      when: wm_logs_stderr is defined
+        msg: "{{ wm_logs_stderr.stdout }}"
+      when: wm_logs_stderr is defined and 'stdout' in wm_logs_stderr
 
     - name: "World Model Service : Clean up temp file"
       ansible.builtin.file:
