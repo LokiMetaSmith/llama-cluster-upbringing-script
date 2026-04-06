@@ -86,7 +86,7 @@ async def test_workflow_execution_data_flow(mock_registry, mocker):
     result = await runner.run(global_inputs={"initial_data": "hello world"})
 
     # Assert that the final output is what we expect
-    assert result == "hello world"
+    assert result == {"final_output": "hello world"}
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("response, expected_tool_call, expected_final_response", [
@@ -255,4 +255,4 @@ async def test_nested_output_resolution(mock_registry, mocker):
 
     result = await runner.run(global_inputs={"out1": "hello", "out2": "world"})
 
-    assert result == {"key1": "hello", "key2": "world"}
+    assert result == {"final_output": {"key1": "hello", "key2": "world"}}

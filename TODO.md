@@ -241,7 +241,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 
 ## Agent Reliability and Security (Future Enhancements)
 
-- [ ] **Implement State-Based Tool Gating in Workflow Nodes:**
+- [x] **Implement State-Based Tool Gating in Workflow Nodes:**
   - **Goal:** Prevent agents from fabricating tool outputs or bypassing required tools by enforcing deterministic state transitions.
   - **Context:** Currently, `EmperorAgentNode` and similar agents operate autoregressively and can hallucinate tool outputs if they choose to bypass the actual tool execution. To solve this, an orchestration layer should intercept the execution graph. If an agent tries to transition to a "response generation" state without a verified, required tool execution payload (e.g. `call_id` and verified output) present, the transition must be explicitly blocked at the router level.
 - [ ] **Integrate Cryptographic Receipts for Tool Execution:**

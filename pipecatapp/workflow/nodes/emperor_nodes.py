@@ -340,6 +340,8 @@ class EmperorAgentNode(Node):
         final_response = ""
         max_turns = 20 # Safety break
         turn = 0
+        tools_executed = False
+        require_tool = self.config.get("config", {}).get("require_tool", False)
 
         logger.info(f"Starting Emperor Agent Loop for task: {task}")
 
@@ -368,9 +370,18 @@ class EmperorAgentNode(Node):
 
                 if not tool_invocations:
                     # No tools called -> Final Answer
-                    final_response = assistant_response
-                    conversation.append({"role": "assistant", "content": assistant_response})
-                    break
+                    if require_tool and not tools_executed:
+                        # Feed the error back into the loop to force tool execution
+                        conversation.append({"role": "assistant", "content": assistant_response})
+                        conversation.append({
+                            "role": "user",
+                            "content": "Error: A required tool execution is missing. You must execute a tool before providing a final response."
+                        })
+                        continue
+                    else:
+                        final_response = assistant_response
+                        conversation.append({"role": "assistant", "content": assistant_response})
+                        break
 
                 # If tools called, add assistant msg and execute tools
                 conversation.append({"role": "assistant", "content": assistant_response})
@@ -405,6 +416,10 @@ class EmperorAgentNode(Node):
                         "role": "user",
                         "content": f"tool_result({json.dumps(result)})"
                     })
+
+                # Mark that at least one tool was executed in this turn
+                if tool_invocations:
+                    tools_executed = True
 
         self.set_output(context, "response", final_response)
 
