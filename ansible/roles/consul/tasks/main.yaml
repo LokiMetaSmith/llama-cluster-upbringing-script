@@ -9,27 +9,22 @@
   tags:
     - consul_configure
 
-- name: Wait for Consul to stop if cleanup requested
+- name: Force kill stuck Consul processes if cleanup requested
   become: true
-  ansible.builtin.shell: "pgrep consul"
-  register: consul_pid
-  until: consul_pid.rc != 0
-  retries: 10
-  delay: 2
-  failed_when: false
-  changed_when: false
+  ansible.builtin.command: killall -9 consul
+  ignore_errors: true
   when: cleanup_services | default(false) | bool
   tags:
     - consul_configure
 
-- name: Wait for Consul port 8500 to close if cleanup requested
+- name: Wait for Consul port {{ consul_http_port }} to close if cleanup requested
   ansible.builtin.wait_for:
     host: "127.0.0.1" # Explicitly check localhost since client_addr is 0.0.0.0
-    port: 8500
+    port: "{{ consul_http_port }}"
     state: stopped
-    delay: 5 # Add delay to ensure systemd has fully processed the stop
-    timeout: 30
-    msg: "Timeout waiting for Consul port 8500 to close."
+    delay: 2 # Add delay to ensure systemd has fully processed the stop
+    timeout: 10
+    msg: "Timeout waiting for Consul port {{ consul_http_port }} to close."
   when: cleanup_services | default(false) | bool
   tags:
     - consul_configure
@@ -342,7 +337,7 @@
   become: yes
   loop:
     - "{{ consul_http_port }}"
-    - 8300
+    - "{{ consul_rpc_port }}"
   changed_when: false
   ignore_errors: yes
 
@@ -350,9 +345,9 @@
   ansible.builtin.command: ufw allow {{ item }}
   become: yes
   loop:
-    - 8600
-    - 8301
-    - 8302
+    - "{{ consul_dns_port }}"
+    - "{{ consul_serf_lan_port }}"
+    - "{{ consul_serf_wan_port }}"
   changed_when: false
   ignore_errors: yes
 

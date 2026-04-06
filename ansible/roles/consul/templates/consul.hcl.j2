@@ -1,7 +1,11 @@
 data_dir = "{{ consul_data_dir }}"
 bind_addr = "{{ cluster_ip }}"
 advertise_addr = "{{ cluster_ip }}"
+{% if cluster_ip == '127.0.0.1' %}
+client_addr = "127.0.0.1"
+{% else %}
 client_addr = "127.0.0.1 {{ cluster_ip }}"
+{% endif %}
 leave_on_terminate = true
 primary_datacenter = "{{ consul_datacenter }}"
 
@@ -22,6 +26,14 @@ acl = {
 telemetry {
   prometheus_retention_time = "24h"
   disable_hostname = true
+}
+
+ports {
+  dns = {{ consul_dns_port }}
+  http = {{ consul_http_port }}
+  server = {{ consul_rpc_port }}
+  serf_lan = {{ consul_serf_lan_port }}
+  serf_wan = {{ consul_serf_wan_port }}
 }
 
 # Enable the UI
