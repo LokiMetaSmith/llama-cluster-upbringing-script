@@ -44,6 +44,7 @@ pyvips-binary
 PyYAML
 jinja2
 RealtimeSTT
+litert-lm>=0.10.1
 requests
 sentence-transformers
 soundfile

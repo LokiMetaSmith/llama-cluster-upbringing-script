@@ -44,6 +44,7 @@ pyvips-binary
 PyYAML
 jinja2
 RealtimeSTT>=0.3.100
+litert-lm>=0.10.1
 webrtcvad-wheels==2.0.14
 requests
 sentence-transformers
