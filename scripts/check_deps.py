@@ -40,6 +40,7 @@ pyvips
 pyvips-binary
 pyyaml
 RealtimeSTT
+litert-lm
 requests
 sentence-transformers
 langchain
