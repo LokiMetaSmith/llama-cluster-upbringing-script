@@ -60,6 +60,7 @@
         version: "{{ latest_commit_hash }}"
         recursive: yes
         update: yes
+        force: yes
 
     - name: Build term.everything AppImage
       block:
