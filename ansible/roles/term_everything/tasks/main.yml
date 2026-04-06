@@ -69,6 +69,12 @@
             regexp: 'https://dl-cdn.alpinelinux.org/'
             replace: 'http://dl-cdn.alpinelinux.org/'
 
+        - name: Add --network host to podman run in distribute.sh
+          ansible.builtin.replace:
+            path: /tmp/term.everything/distribute.sh
+            regexp: '-it \\'
+            replace: '--network host -it \'
+
         - name: Attempt to build term.everything AppImage
           ansible.builtin.command:
             cmd: ./distribute.sh
