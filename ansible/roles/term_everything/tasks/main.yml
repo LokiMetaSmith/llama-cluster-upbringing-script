@@ -70,11 +70,11 @@
             regexp: 'https://dl-cdn.alpinelinux.org/'
             replace: 'http://dl-cdn.alpinelinux.org/'
 
-        - name: Add --network host to podman run in distribute.sh
+        - name: Add --network host and remove -it from podman run in distribute.sh
           ansible.builtin.replace:
             path: /tmp/term.everything/distribute.sh
             regexp: '-it \\'
-            replace: '--network host -it \'
+            replace: '--network host \'
 
         - name: Attempt to build term.everything AppImage
           ansible.builtin.command:
@@ -84,15 +84,9 @@
           changed_when: build_result.rc == 0
           failed_when: build_result.rc != 0
       rescue:
-        - name: "Debug: Display build stdout"
+        - name: "Debug: Display full build result"
           ansible.builtin.debug:
-            var: build_result.stdout
-          when: build_result.stdout is defined and build_result.stdout != ""
-
-        - name: "Debug: Display build stderr"
-          ansible.builtin.debug:
-            var: build_result.stderr
-          when: build_result.stderr is defined and build_result.stderr != ""
+            var: build_result
 
         - name: Fail the playbook with a clear error message
           ansible.builtin.fail:
