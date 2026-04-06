@@ -41,6 +41,10 @@ nomad_models_dir: "/opt/nomad/models"
 
 # Standard Ports
 consul_http_port: 8500
+consul_dns_port: 8600
+consul_rpc_port: 8300
+consul_serf_lan_port: 8301
+consul_serf_wan_port: 8302
 nomad_http_port: 4646
 headscale_port: 8085
 mqtt_port: 1883
