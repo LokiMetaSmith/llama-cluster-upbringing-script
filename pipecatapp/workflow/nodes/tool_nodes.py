@@ -1,8 +1,12 @@
 from .registry import registry
 from ..node import Node
 from ..context import WorkflowContext
+from ..crypto_receipts import ToolExecutionSigner
 import json
 import inspect
+
+# Global signer instance for the workflow engine
+signer = ToolExecutionSigner()
 
 @registry.register
 class SystemPromptNode(Node):
@@ -157,7 +161,12 @@ class ToolExecutorNode(Node):
                     f"  - Score: {analysis_result['quality_score']}\n"
                     f"  - Report:\n{analysis_result['pylint_report']}"
                 )
+                receipt = signer.sign(tool_name, args, combined_result)
                 self.set_output(context, "tool_result", combined_result)
+                self.set_output(context, "tool_receipt", receipt)
                 return
 
-        self.set_output(context, "tool_result", str(result)) # Ensure result is a string
+        result_str = str(result)
+        receipt = signer.sign(tool_name, args, result_str)
+        self.set_output(context, "tool_result", result_str) # Ensure result is a string
+        self.set_output(context, "tool_receipt", receipt)

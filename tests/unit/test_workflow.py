@@ -4,6 +4,7 @@ import sys
 from unittest.mock import MagicMock, AsyncMock
 
 # Add the necessary path to import the workflow modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files')))
 
 from workflow.runner import WorkflowRunner
@@ -121,8 +122,8 @@ async def test_tool_parser_node(response, expected_tool_call, expected_final_res
     assert outputs.get("final_response") == expected_final_response
 
 @pytest.mark.asyncio
-async def test_tool_executor_node():
-    """Tests that the ToolExecutorNode correctly calls a mocked tool."""
+async def test_tool_executor_node(mocker):
+    """Tests that the ToolExecutorNode correctly calls a mocked tool and generates a receipt."""
     from workflow.nodes.tool_nodes import ToolExecutorNode
 
     # Create a mock tool
@@ -147,8 +148,9 @@ async def test_tool_executor_node():
     # Verify the tool was called correctly
     mock_tool.do_something.assert_called_once_with(foo="bar")
 
-    # Verify the output was set
-    context.set_output.assert_called_with("executor", "tool_result", "it worked")
+    # Verify the output and receipt were set
+    context.set_output.assert_any_call("executor", "tool_result", "it worked")
+    context.set_output.assert_any_call("executor", "tool_receipt", mocker.ANY)
 
 @pytest.mark.asyncio
 async def test_workflow_tool_loop(mock_registry, mocker):
