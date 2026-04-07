@@ -1,10 +1,13 @@
 from .registry import registry
 from ..node import Node
 from ..context import WorkflowContext
+from ..crypto_receipts import ToolExecutionSigner
 import os
 import re
 import json
 import inspect
+
+signer = ToolExecutionSigner()
 import httpx
 import subprocess
 from pathlib import Path
@@ -341,6 +344,7 @@ class EmperorAgentNode(Node):
         max_turns = 20 # Safety break
         turn = 0
         tools_executed = False
+        verified_receipts = []
         require_tool = self.config.get("config", {}).get("require_tool", False)
 
         logger.info(f"Starting Emperor Agent Loop for task: {task}")
@@ -370,7 +374,7 @@ class EmperorAgentNode(Node):
 
                 if not tool_invocations:
                     # No tools called -> Final Answer
-                    if require_tool and not tools_executed:
+                    if require_tool and (not tools_executed or not verified_receipts):
                         # Feed the error back into the loop to force tool execution
                         conversation.append({"role": "assistant", "content": assistant_response})
                         conversation.append({
@@ -411,6 +415,9 @@ class EmperorAgentNode(Node):
                             result = tool_func(args.get("job_name", ""))
                         else:
                             result = "Unknown tool"
+
+                    receipt = signer.sign(name, args, str(result))
+                    verified_receipts.append(receipt)
 
                     conversation.append({
                         "role": "user",
