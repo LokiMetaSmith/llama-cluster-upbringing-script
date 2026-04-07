@@ -28,7 +28,7 @@
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      /usr/local/bin/nomad job status -json mqtt | jq -r '.Allocations[0].ID'
+      /usr/local/bin/nomad job status -json mqtt | jq -r '.[0].Allocations[0].ID'
     executable: /bin/bash
   environment:
     NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
@@ -75,7 +75,7 @@
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      /usr/local/bin/nomad job status -json home-assistant | jq -r '.Allocations[0].ID'
+      /usr/local/bin/nomad job status -json home-assistant | jq -r '.[0].Allocations[0].ID'
     executable: /bin/bash
   environment:
     NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
