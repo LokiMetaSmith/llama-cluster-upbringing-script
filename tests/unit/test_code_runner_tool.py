@@ -23,29 +23,31 @@ def code_runner():
             runner.client = runner.executor.client
         yield runner
 
+@patch('pipecatapp.tools.code_runner_tool.multiprocessing.Process')
+@patch('pipecatapp.tools.code_runner_tool.multiprocessing.Queue')
 @patch('pipecatapp.tools.code_runner_tool.SandboxSession')
-def test_run_code_in_sandbox_success(mock_sandbox_session, code_runner):
+def test_run_code_in_sandbox_success(mock_sandbox_session, mock_queue, mock_process, code_runner):
     """
     Test that run_code_in_sandbox successfully executes Python code via llm-sandbox.
     """
-    # ... (rest of test remains same, code_runner fixture handles setup)
     code_to_run = "print('hello sandbox')"
     expected_output = "hello sandbox\n"
 
-    mock_result = MagicMock()
-    mock_result.stdout = expected_output
-    mock_result.stderr = ""
-    mock_result.exit_code = 0
-    mock_result.plots = []
+    # Mock the Queue so q.get() returns our expected result
+    mock_q = MagicMock()
+    mock_q.empty.return_value = False
+    mock_q.get.return_value = (0, expected_output, "", [])
+    mock_queue.return_value = mock_q
 
-    mock_session_instance = mock_sandbox_session.return_value.__enter__.return_value
-    mock_session_instance.run.return_value = mock_result
+    mock_p = MagicMock()
+    mock_p.is_alive.return_value = False
+    mock_process.return_value = mock_p
 
     result = code_runner.run_code_in_sandbox(code=code_to_run, language="python")
 
     assert result == expected_output
-    # Fix: verify method call on instance
-    mock_session_instance.run.assert_called_with(code_to_run, libraries=[])
+    mock_p.start.assert_called_once()
+    mock_p.join.assert_called_with(30) # default timeout
 
 def test_run_python_code_success(code_runner):
     """

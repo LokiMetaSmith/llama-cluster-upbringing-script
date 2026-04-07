@@ -7,6 +7,7 @@ import time
 import uuid
 import requests
 import base64
+import multiprocessing
 from llm_sandbox import SandboxSession
 from typing import List, Optional
 from .dependency_scanner_tool import DependencyScannerTool
@@ -19,7 +20,7 @@ class SandboxExecutor(abc.ABC):
     """Abstract base class for sandbox execution strategies."""
 
     @abc.abstractmethod
-    def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None) -> str:
+    def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
         pass
 
 class DockerSandboxExecutor(SandboxExecutor):
@@ -34,7 +35,7 @@ class DockerSandboxExecutor(SandboxExecutor):
             logging.warning(f"Failed to initialize Docker client for CodeRunnerTool: {e}")
             self.client = None
 
-    def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None) -> str:
+    def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
         """Executes code using llm-sandbox for robust multi-language support."""
         if libraries is None:
             libraries = []
@@ -51,22 +52,63 @@ class DockerSandboxExecutor(SandboxExecutor):
                 if "UNSAFE" in scan_result:
                     return f"Operation blocked by security policy. Vulnerability detected in dependency '{lib}':\n{scan_result}"
 
-        try:
-            with SandboxSession(lang=language) as session:
-                result = session.run(code, libraries=libraries)
-                if result.exit_code == 0:
-                    output = result.stdout
-                else:
-                    output = f"Exit Code: {result.exit_code}\n---STDERR---\n{result.stderr}\n---STDOUT---\n{result.stdout}"
+        import multiprocessing
 
-                if result.plots:
+        job_timeout = timeout if timeout is not None else 30
+
+        import sys
+
+        def _run_sandbox(q, c, l, lang):
+            import signal
+            # Signal handler to ensure graceful context manager exit on SIGTERM
+            class TimeoutException(Exception): pass
+            def sigterm_handler(signum, frame):
+                raise TimeoutException("Timed out")
+            signal.signal(signal.SIGTERM, sigterm_handler)
+
+            try:
+                with SandboxSession(lang=lang) as session:
+                    res = session.run(c, libraries=l)
+                    q.put((res.exit_code, res.stdout, res.stderr, res.plots))
+            except TimeoutException:
+                q.put("TIMEOUT")
+            except Exception as e:
+                q.put(e)
+
+        try:
+            q = multiprocessing.Queue()
+            p = multiprocessing.Process(target=_run_sandbox, args=(q, code, libraries, language))
+            p.start()
+            p.join(job_timeout)
+
+            if p.is_alive():
+                p.terminate()
+                p.join()
+                return f"Error: Execution timed out after {job_timeout} seconds."
+
+            if not q.empty():
+                res = q.get()
+                if res == "TIMEOUT":
+                    return f"Error: Execution timed out after {job_timeout} seconds."
+                if isinstance(res, Exception):
+                    raise res
+                exit_code, stdout, stderr, plots = res
+
+                if exit_code == 0:
+                    output = stdout
+                else:
+                    output = f"Exit Code: {exit_code}\n---STDERR---\n{stderr}\n---STDOUT---\n{stdout}"
+
+                if plots:
                     output += "\n\nGenerated plots are available."
 
                 return output
+            else:
+                return "Error: Sandbox execution failed to return a result."
         except Exception as e:
             return f"An unexpected error occurred: {e}"
 
-    def execute_simple_python(self, code: str, timeout: int = 30) -> str:
+    def execute_simple_python(self, code: str, timeout: Optional[int] = None) -> str:
         """Runs simple Python code using raw docker-py for speed/legacy support."""
         if not self.client:
             return "Error: Docker execution is not available (Docker client failed to initialize)."
@@ -99,9 +141,10 @@ class DockerSandboxExecutor(SandboxExecutor):
                     stdout=True
                 )
 
+                job_timeout = timeout if timeout is not None else 30
                 # Security: Implement timeout mechanism to prevent DoS via infinite loops
                 start_time = time.time()
-                while time.time() - start_time < timeout:
+                while time.time() - start_time < job_timeout:
                     container.reload()
                     if container.status != 'running':
                         break
@@ -109,7 +152,7 @@ class DockerSandboxExecutor(SandboxExecutor):
 
                 if container.status == 'running':
                     container.kill()
-                    return f"Error: Execution timed out after {timeout} seconds."
+                    return f"Error: Execution timed out after {job_timeout} seconds."
 
                 output = container.logs().decode('utf-8')
                 return output
@@ -131,10 +174,10 @@ class NomadSandboxExecutor(SandboxExecutor):
     def __init__(self):
         self.nomad_url = os.environ.get("NOMAD_ADDR", "http://localhost:4646")
         self.token = os.environ.get("NOMAD_TOKEN")
-        self.timeout = 300 # 5 minutes timeout for job execution
+        self.default_timeout = 300 # 5 minutes default timeout for job execution
         self.headers = {"X-Nomad-Token": self.token} if self.token else {}
 
-    def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None) -> str:
+    def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
         if language != "python":
             return "Error: Nomad executor currently only supports Python."
         if libraries:
@@ -194,6 +237,8 @@ class NomadSandboxExecutor(SandboxExecutor):
             }
         }
 
+        job_timeout = timeout if timeout is not None else self.default_timeout
+
         try:
             # 1. Register Job
             reg_resp = requests.post(f"{self.nomad_url}/v1/jobs", json=job_payload, headers=self.headers, timeout=10)
@@ -202,7 +247,7 @@ class NomadSandboxExecutor(SandboxExecutor):
             # 2. Wait for Allocation
             alloc_id = None
             start_time = time.time()
-            while time.time() - start_time < self.timeout:
+            while time.time() - start_time < job_timeout:
                 try:
                     allocs_resp = requests.get(f"{self.nomad_url}/v1/job/{job_id}/allocations", headers=self.headers, timeout=10)
                     allocs_resp.raise_for_status()
@@ -294,8 +339,12 @@ class CodeRunnerTool:
             self.executor = DockerSandboxExecutor()
             logging.info("CodeRunnerTool initialized in DOCKER mode.")
 
-    def run_python_code(self, code: str) -> str:
+    def run_python_code(self, code: str, timeout: Optional[int] = None) -> str:
         """Runs a string of Python code and returns the output.
+
+        Args:
+            code (str): The Python code to execute.
+            timeout (int, optional): The maximum execution time in seconds. Defaults to 30.
 
         Preserves legacy behavior for Docker mode (simple execution).
         """
@@ -304,23 +353,31 @@ class CodeRunnerTool:
 
         if self.mode == "hybrid" and hasattr(self, 'fast_executor'):
             if self.fast_executor.client:
-                 return self.fast_executor.execute_simple_python(code)
+                 return self.fast_executor.execute_simple_python(code, timeout=timeout)
             logging.warning("Local Docker client unavailable in hybrid mode. Falling back to Nomad.")
-            return self.executor.execute(code, language="python")
+            return self.executor.execute(code, language="python", timeout=timeout)
 
         if isinstance(self.executor, DockerSandboxExecutor):
-            return self.executor.execute_simple_python(code)
+            return self.executor.execute_simple_python(code, timeout=timeout)
 
-        return self.executor.execute(code, language="python")
+        return self.executor.execute(code, language="python", timeout=timeout)
 
     def run_code_in_sandbox(
         self,
         code: str,
         language: str = "python",
-        libraries: Optional[List[str]] = None
+        libraries: Optional[List[str]] = None,
+        timeout: Optional[int] = None
     ) -> str:
-        """Runs code in a secure sandbox, with support for multiple languages."""
+        """Runs code in a secure sandbox, with support for multiple languages.
+
+        Args:
+            code (str): The code to execute.
+            language (str, optional): The programming language (e.g., 'python', 'nodejs'). Defaults to 'python'.
+            libraries (List[str], optional): A list of library dependencies to install before running.
+            timeout (int, optional): The maximum execution time in seconds. Defaults to 30 for Docker and 300 for Nomad.
+        """
         if len(code) > MAX_CODE_LENGTH:
             return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
 
-        return self.executor.execute(code, language, libraries)
+        return self.executor.execute(code, language, libraries, timeout)
