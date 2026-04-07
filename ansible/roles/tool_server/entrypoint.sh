@@ -86,6 +86,9 @@ if [ -d "$WORKSPACE_DIR/.git" ]; then
     fi
 fi
 
+# Make sure we run the application from its installed directory
+cd /app
+
 # 4. Hand off to the main application
 echo "🚀 Starting Tool Server..."
 exec "$@"
