@@ -37,6 +37,7 @@ RUN pip install --no-cache-dir playwright && \
 RUN pip install --no-cache-dir \
     av==16.0.1 \
     ctranslate2==4.7.1 \
+    chromadb \
     docker \
     einops \
     espeakng_loader \
