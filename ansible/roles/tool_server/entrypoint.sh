@@ -30,6 +30,8 @@ if [ -d "$SOURCE_REPO" ]; then
     # -l: copy symlinks
     # -p: preserve permissions
     # -D: preserve devices/specials
+    # Ignore exit code 23 (Partial transfer due to error) as some files in host mount might be unreadable
+    set +e
     rsync -rlpD --info=progress2 \
         --exclude '.venv' \
         --exclude 'venv' \
@@ -37,7 +39,14 @@ if [ -d "$SOURCE_REPO" ]; then
         --exclude '__pycache__' \
         --exclude '*.pyc' \
         "$SOURCE_REPO/" "$WORKSPACE_DIR/"
-    echo "✅ Workspace populated."
+    RSYNC_EXIT=$?
+    set -e
+    if [ $RSYNC_EXIT -eq 0 ] || [ $RSYNC_EXIT -eq 23 ] || [ $RSYNC_EXIT -eq 24 ]; then
+        echo "✅ Workspace populated."
+    else
+        echo "❌ Rsync failed with exit code $RSYNC_EXIT"
+        exit $RSYNC_EXIT
+    fi
 else
     echo "❌ Source repo $SOURCE_REPO not found! Agent will have an empty workspace."
 fi
