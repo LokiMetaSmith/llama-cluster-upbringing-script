@@ -123,6 +123,8 @@
     - name: "Tool Server : Purge existing nomad job (force image update)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job stop -purge tool-server"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       ignore_errors: yes
       changed_when: true
       become: no
@@ -130,6 +132,8 @@
     - name: "Tool Server : Run nomad job"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/tool_server.nomad"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       changed_when: true
       become: no
       register: tool_server_job_run
@@ -138,24 +142,28 @@
     - name: "Tool Server : Get Tool Server job status"
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose tool-server
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       register: ts_job_status
       ignore_errors: yes
       become: no
 
     - name: "Tool Server : Display Tool Server job status"
       ansible.builtin.debug:
-        var: ts_job_status.stdout
+        msg: "{{ ts_job_status.stdout | default('No stdout from job status') }}"
 
     - name: "Tool Server : Get Tool Server allocations"
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json tool-server
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       register: ts_allocs
       ignore_errors: yes
       become: no
 
     - name: "Tool Server : Save Tool Server allocations to temp file"
       ansible.builtin.copy:
-        content: "{{ ts_allocs.stdout }}"
+        content: "{{ ts_allocs.stdout | default('[]') }}"
         dest: "/tmp/ts_allocs.json"
 
     - name: "Tool Server : Extract Allocation ID"
@@ -166,41 +174,47 @@
     - name: "Tool Server : Fetch Tool Server logs (stdout)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ ts_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       register: ts_logs_stdout
       ignore_errors: yes
       become: no
-      when: ts_alloc_id.stdout | length > 0
+      when: ts_alloc_id.stdout | default('') | length > 0
 
     - name: "Tool Server : Display Tool Server logs (stdout)"
       ansible.builtin.debug:
-        var: ts_logs_stdout.stdout
-      when: ts_logs_stdout is defined
+        msg: "{{ ts_logs_stdout.stdout }}"
+      when: ts_logs_stdout is defined and 'stdout' in ts_logs_stdout
 
     - name: "Tool Server : Fetch Tool Server logs (stderr)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ ts_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       register: ts_logs_stderr
       ignore_errors: yes
       become: no
-      when: ts_alloc_id.stdout | length > 0
+      when: ts_alloc_id.stdout | default('') | length > 0
 
     - name: "Tool Server : Display Tool Server logs (stderr)"
       ansible.builtin.debug:
-        var: ts_logs_stderr.stdout
-      when: ts_logs_stderr is defined
+        msg: "{{ ts_logs_stderr.stdout }}"
+      when: ts_logs_stderr is defined and 'stdout' in ts_logs_stderr
 
     - name: "Tool Server : Get Allocation Status (Detailed)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc status -verbose {{ ts_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       register: ts_alloc_status
       ignore_errors: yes
       become: no
-      when: ts_alloc_id.stdout | length > 0
+      when: ts_alloc_id.stdout | default('') | length > 0
 
     - name: "Tool Server : Display Allocation Status"
       ansible.builtin.debug:
-        var: ts_alloc_status.stdout
-      when: ts_alloc_status is defined
+        msg: "{{ ts_alloc_status.stdout }}"
+      when: ts_alloc_status is defined and 'stdout' in ts_alloc_status
 
     - name: "Tool Server : Clean up temp file"
       ansible.builtin.file:
