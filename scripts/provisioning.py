@@ -114,19 +114,29 @@ def check_port_open(host, port, timeout=2):
 
     return False
 
-def wait_for_ports_freed(ports, timeout=60):
-    """Waits for specified ports to be free (not listening)."""
+def wait_for_ports_freed(ports, timeout=10):
+    """Waits for specified ports to be free (not listening), and forcibly kills blocking processes if needed."""
     print(f"Waiting for ports {ports} to be free...")
     start_time = time.time()
 
     for port in ports:
         print(f"Checking port {port}...")
+        if check_port_open("127.0.0.1", port):
+            print(f"{Colors.WARNING}⚠️  Port {port} is in use. Attempting to kill blocking processes...{Colors.ENDC}")
+            try:
+                # Try to use lsof or fuser to kill the process on the port
+                subprocess.run(f"fuser -k {port}/tcp", shell=True, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+                time.sleep(2) # Give it a moment to release the port
+            except Exception as e:
+                print_warning(f"Failed to kill processes on port {port}: {e}")
+
         while check_port_open("127.0.0.1", port):
             if time.time() - start_time > timeout:
                 print_warning(f"Timeout waiting for port {port} to be free. Proceeding anyway.")
-                return
+                break # Move to next port
             time.sleep(2)
-        print(f"{Colors.OKGREEN}✅ Port {port} is free.{Colors.ENDC}")
+        else:
+            print(f"{Colors.OKGREEN}✅ Port {port} is free.{Colors.ENDC}")
 
 def cleanup_memory_for_core_ai():
     """Performs cleanup to free RAM before heavy AI services start."""
