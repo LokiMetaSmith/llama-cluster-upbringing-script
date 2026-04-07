@@ -25,9 +25,9 @@
       persistence_location /mosquitto/data/
       log_dest stdout
       log_type all
-      listener {{ mqtt_port }} {{ cluster_ip }}
+      listener {{ mqtt_port }}
       allow_anonymous true
-      listener {{ mqtt_websocket_port }} {{ cluster_ip }}
+      listener {{ mqtt_websocket_port }}
       protocol websockets
     mode: '0644'
   become: yes
