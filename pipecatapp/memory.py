@@ -140,6 +140,15 @@ class MemoryStore:
                 insight TEXT
             )
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS activity_timeline (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                activity_type TEXT NOT NULL,
+                description TEXT NOT NULL,
+                metadata TEXT
+            )
+        ''')
         self.conn.commit()
 
     def _encrypt(self, text: str) -> str:
@@ -303,6 +312,56 @@ class MemoryStore:
         cursor = self.conn.cursor()
         cursor.execute('UPDATE memories SET consolidated = 1 WHERE id = ?', (memory_id,))
         self.conn.commit()
+
+    def add_activity(self, activity_type: str, description: str, metadata: dict = None):
+        """Adds a new activity to the activity timeline.
+
+        Args:
+            activity_type (str): The type of activity (e.g., 'tool_invocation', 'agent_spawn').
+            description (str): A description of the activity.
+            metadata (dict, optional): Additional metadata associated with the activity.
+
+        Returns:
+            int: The new activity's ID.
+        """
+        metadata_str = json.dumps(metadata) if metadata is not None else None
+
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            INSERT INTO activity_timeline (activity_type, description, metadata)
+            VALUES (?, ?, ?)
+        ''', (
+            activity_type,
+            self._encrypt(description),
+            self._encrypt(metadata_str)
+        ))
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_activities(self, limit: int = 50) -> list[dict]:
+        """Fetches a list of activities from the activity timeline, chronologically ordered.
+
+        Args:
+            limit (int, optional): Maximum number of activities to return. Defaults to 50.
+
+        Returns:
+            list[dict]: A list of activity dictionaries.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT * FROM activity_timeline ORDER BY timestamp DESC, id DESC LIMIT ?', (limit,))
+        rows = cursor.fetchall()
+
+        activities = []
+        for row in rows:
+            activity = dict(row)
+            activity['description'] = self._decrypt(activity['description'])
+
+            metadata_str = self._decrypt(activity['metadata'])
+            activity['metadata'] = json.loads(metadata_str) if metadata_str else None
+
+            activities.append(activity)
+
+        return activities
 
     def add(self, text: str):
         """Adds a new text entry to the memory.
