@@ -55,6 +55,63 @@ VERBOSE_LEVEL=0
 ROLE=""
 CONTROLLER_IP=""
 
+# --- Network Discovery ---
+find_controller() {
+    echo -e "\n${BOLD}=== Network Discovery ===${NC}"
+    echo -e "Searching for an existing controller on the network..."
+
+    # 1. Provisioning Underlay
+    local PXE_SUBNET
+    PXE_SUBNET=$(grep -oP '^pxe_subnet:\s*"\K[^"]+' group_vars/all.yaml 2>/dev/null || echo "10.0.0.0")
+    if [[ ! "$PXE_SUBNET" == */* ]]; then
+        PXE_SUBNET="${PXE_SUBNET}/24"
+    fi
+
+    # 2. Cluster Overlay
+    local OVERLAY_SUBNET
+    OVERLAY_SUBNET=$(grep -oP '^overlay_subnet:\s*"\K[^"]+' group_vars/all.yaml 2>/dev/null || echo "100.64.0.0/10")
+
+    # 3. Local Host Network / Fallback
+    local LOCAL_SUBNET
+    LOCAL_SUBNET=$(ip route show default | awk '/default/ {print $3}' | awk -F. '{print $1"."$2"."$3".0/24"}' 2>/dev/null || echo "192.168.1.0/24")
+
+    # Install nmap if missing
+    if ! command -v nmap >/dev/null 2>&1; then
+        echo -e "⏳ Installing nmap for network scanning..."
+        if sudo -n true 2>/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y nmap -qq >/dev/null 2>&1
+        else
+            echo -e "${YELLOW}⚠️  Requires nmap. You may be prompted for your sudo password to install it.${NC}"
+            sudo apt-get update -qq && sudo apt-get install -y nmap -qq >/dev/null 2>&1
+        fi
+    fi
+
+    local SCAN_RESULTS=""
+    local SUBNETS_TO_SCAN=("$PXE_SUBNET" "$LOCAL_SUBNET" "$OVERLAY_SUBNET")
+
+    echo -e "Scanning networks on port 4646 (Nomad):"
+
+    for subnet in "${SUBNETS_TO_SCAN[@]}"; do
+        echo -e "  - ${CYAN}${subnet}${NC}..."
+
+        # Fast scan for /10 overlay limits max-retries and timeout aggressively
+        # shellcheck disable=SC2086
+        local nmap_args="-p 4646 --open -T5 --max-retries 1 --host-timeout 500ms"
+
+        # shellcheck disable=SC2086
+        SCAN_RESULTS=$(nmap $nmap_args -oG - "$subnet" 2>/dev/null | awk '/4646\/open/ {print $2}')
+
+        if [ -n "$SCAN_RESULTS" ]; then
+            CONTROLLER_IP=$(echo "$SCAN_RESULTS" | head -n 1)
+            echo -e "${GREEN}✅ Found controller at: ${CONTROLLER_IP} (on ${subnet})${NC}"
+            return 0
+        fi
+    done
+
+    echo -e "${YELLOW}⚠️  No controller found on any scanned networks.${NC}"
+    return 1
+}
+
 # --- Profile System Resources ---
 profile_system() {
     echo -e "\n${BOLD}=== Profiling System Resources ===${NC}"
@@ -89,6 +146,40 @@ profile_system() {
         fi
     else
         echo -e "Role explicitly set to: ${CYAN}${ROLE}${NC}"
+    fi
+
+    # Network Discovery & Role Fallback
+    if [ "$ROLE" = "worker" ] && [ -z "$CONTROLLER_IP" ]; then
+        if find_controller; then
+            # Controller found, CONTROLLER_IP is set. Add it to PROCESSED_ARGS.
+            PROCESSED_ARGS+=("--controller-ip" "$CONTROLLER_IP")
+        else
+            echo -e "${YELLOW}⚠️  No controller found. Falling back to role 'all' (initializing as controller).${NC}"
+            ROLE="all"
+
+            # Remove the previous --role worker and add --role all
+            local NEW_PROCESSED_ARGS=()
+            local SKIP_NEXT=false
+            for ((j=0; j<${#PROCESSED_ARGS[@]}; j++)); do
+                local arg="${PROCESSED_ARGS[$j]}"
+                if [ "$SKIP_NEXT" = true ]; then
+                    SKIP_NEXT=false
+                    continue
+                fi
+                if [ "$arg" = "--role" ]; then
+                    NEW_PROCESSED_ARGS+=("--role" "all")
+                    SKIP_NEXT=true
+                elif [[ "$arg" =~ ^--role=.*$ ]]; then
+                    NEW_PROCESSED_ARGS+=("--role" "all")
+                else
+                    NEW_PROCESSED_ARGS+=("$arg")
+                fi
+            done
+            PROCESSED_ARGS=("${NEW_PROCESSED_ARGS[@]}")
+
+            # Also add --deploy-full-stack since we are becoming the controller
+            PROCESSED_ARGS+=("--deploy-full-stack")
+        fi
     fi
 
     # Give some feedback about the network if it's set
