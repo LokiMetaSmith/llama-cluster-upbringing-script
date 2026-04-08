@@ -193,7 +193,8 @@ handle_error() {
         echo -e "\n${RED}❌ Critical error inside the recovery handler. Halting to prevent infinite loop.${NC}"
         exit 1
     fi
-    export IN_ERROR_HANDLER=1
+    # Use local variable instead of export to prevent state leakage across exec
+    local IN_ERROR_HANDLER=1
 
     echo -e "\n${BOLD}${RED}⚠️  Bootstrap failed at line ${error_line}!${NC}"
     echo -e "${YELLOW}Initiating autonomous recovery via OpenCode...${NC}"
@@ -218,24 +219,35 @@ ${log_snippet}
 Your task is to:
 1. Analyze the error carefully.
 2. Fix the underlying issue by modifying bootstrap.sh, Ansible playbooks, or other configuration files as necessary.
-3. Commit the changes to the Git repository with a descriptive commit message.
+3. Commit the changes to the Git repository with a descriptive commit message, and explicitly push them to the remote repository.
 4. Do not ask for user confirmation, execute the fix autonomously and exit.
 "
 
     echo -e "Agent thought process and actions will be logged to: ${CYAN}${AGENT_LOG}${NC}"
     echo -e "⏳ Please wait while the agent attempts to fix the issue..."
 
-    # Run OpenCode headlessly
-    opencode --yes --model gpt-4o-mini "$prompt" > "$AGENT_LOG" 2>&1
-    local agent_status=$?
+    # Configure API endpoint for Local/Network LLMs
+    local opencode_cmd=(opencode --yes)
+
+    if [ -n "${AGENT_API_BASE:-}" ]; then
+        opencode_cmd+=(--api-base "$AGENT_API_BASE")
+        opencode_cmd+=(--model "${AGENT_MODEL:-openai/qwen2.5-coder}")
+        opencode_cmd+=(--api-key "${AGENT_API_KEY:-sk-dummy}")
+    else
+        opencode_cmd+=(--model "${AGENT_MODEL:-gpt-4o-mini}")
+    fi
+
+    # Run OpenCode headlessly. Catch error explicitly in case set -e is active elsewhere
+    local agent_status=0
+    "${opencode_cmd[@]}" "$prompt" > "$AGENT_LOG" 2>&1 || agent_status=$?
 
     if [ "$agent_status" -eq 0 ]; then
         echo -e "${GREEN}✅ Autonomous recovery successful!${NC}"
         echo -e "${CYAN}Resuming bootstrap process...${NC}"
         # Prevent trap from firing again during exec
         trap - ERR
-        # Re-execute the script, appending --continue
-        exec "$0" "${ARGS[@]}" "--continue"
+        # Re-execute the script, appending --continue. Fallback to empty if ARGS is not defined yet.
+        exec "$0" "${ARGS[@]:-}" "--continue"
     else
         echo -e "${RED}❌ Autonomous recovery failed. Please review ${AGENT_LOG} for details.${NC}"
         exit 1
@@ -325,7 +337,7 @@ ensure_python_environment() {
         echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
     fi
 
-    run_step "Installing OpenCode AI Agent" "pip install opencode-interpreter"
+    run_step "Installing OpenCode AI Agent" "pip install opencode-ai"
 
     run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
 
