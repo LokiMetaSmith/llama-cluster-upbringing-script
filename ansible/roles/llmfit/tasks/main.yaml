@@ -15,7 +15,7 @@
 
 - name: Install llmfit binary globally using Cargo
   ansible.builtin.command:
-    cmd: cargo install --path llmfit-tui --root /usr/local
+    cmd: cargo install --path . --root /usr/local
     chdir: /opt/llmfit/src
   environment:
     PATH: "/usr/local/bin:/usr/bin:/bin:/root/.cargo/bin"
