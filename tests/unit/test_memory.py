@@ -146,3 +146,45 @@ def test_unencrypted_store_loads_encrypted_data_as_is(mock_faiss, mock_st, mock_
     # Verify it loaded the raw encrypted string since it doesn't have the key to decrypt
     assert "0" in store.store
     assert store.store["0"] == encrypted_memory
+
+@patch('pipecatapp.memory.SentenceTransformer')
+@patch('pipecatapp.memory.faiss')
+def test_activity_timeline(mock_faiss, mock_st, mock_embedding_model, mock_faiss_index, temp_index_file, temp_store_file, monkeypatch):
+    """Test MemoryStore activity timeline methods."""
+    monkeypatch.delenv("MEMORY_ENCRYPTION_KEY", raising=False)
+
+    mock_st.return_value = mock_embedding_model
+    mock_faiss.IndexFlatL2.return_value = mock_faiss_index
+    mock_faiss.read_index.return_value = mock_faiss_index
+
+    # Use an in-memory SQLite database for testing
+    store = MemoryStore(index_file=temp_index_file, store_file=temp_store_file, sqlite_file=":memory:")
+
+    # Add an activity
+    activity_id = store.add_activity(
+        activity_type="tool_invocation",
+        description="Invoked the calculator tool",
+        metadata={"tool": "calculator", "args": {"expression": "2+2"}}
+    )
+
+    assert activity_id == 1
+
+    # Add another activity
+    store.add_activity(
+        activity_type="agent_spawn",
+        description="Spawned a new agent",
+        metadata={"agent_id": "agent-123"}
+    )
+
+    # Fetch activities
+    activities = store.get_activities(limit=10)
+
+    assert len(activities) == 2
+    # The most recent activity should be first due to ORDER BY timestamp DESC
+    assert activities[0]['activity_type'] == "agent_spawn"
+    assert activities[0]['description'] == "Spawned a new agent"
+    assert activities[0]['metadata'] == {"agent_id": "agent-123"}
+
+    assert activities[1]['activity_type'] == "tool_invocation"
+    assert activities[1]['description'] == "Invoked the calculator tool"
+    assert activities[1]['metadata'] == {"tool": "calculator", "args": {"expression": "2+2"}}
