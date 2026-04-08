@@ -25,6 +25,7 @@ from tools.planner_tool import PlannerTool
 from tools.file_editor_tool import FileEditorTool
 from tools.archivist_tool import ArchivistTool
 from tools.opencode_tool import OpencodeTool
+from tools.opencode_provider_tool import OpenCodeProviderTool
 from tools.dependency_scanner_tool import DependencyScannerTool
 from tools.remote_tool_proxy import RemoteToolProxy
 from tools.vr_tool import VRTool
@@ -49,7 +50,7 @@ from tools.polyphony_tool import PolyphonyTool
 REMOTE_SUPPORTED_TOOLS = [
     "ssh", "desktop_control", "code_runner", "web_browser",
     "ansible", "power", "term_everything", "rag", "ha",
-    "git", "orchestrator"
+    "git", "orchestrator", "opencode_provider"
 ]
 
 def create_tools(config: dict, twin_service=None, runner=None) -> dict:
@@ -88,6 +89,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
             provider_id=config.get("opencode_provider", "openai"),
             model_id=config.get("opencode_model", "gpt-4o")
         ),
+        "opencode_provider": OpenCodeProviderTool(),
         "dependency_scanner": DependencyScannerTool(),
         "vr": VRTool(),
         "autoresearch": AutoresearchTool(llm_client=twin_service.llm_client if twin_service else None),
@@ -151,6 +153,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         )
         tools["git"] = Git_Tool(root_dir="/opt/pipecatapp")
         tools["orchestrator"] = OrchestratorTool()
+        tools["opencode_provider"] = OpenCodeProviderTool()
 
     # Filter out None values
     return {k: v for k, v in tools.items() if v is not None}
