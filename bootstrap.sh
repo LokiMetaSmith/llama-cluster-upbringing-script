@@ -180,7 +180,82 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit 1
 
 LOG_FILE="bootstrap_debug.log"
+AGENT_LOG="agent_recovery.log"
 true > "$LOG_FILE"
+
+# --- Error Handling & Auto-Recovery ---
+# shellcheck disable=SC2317
+handle_error() {
+    local error_line="$1"
+
+    # Avoid recursive error loops
+    if [ "${IN_ERROR_HANDLER:-0}" -eq 1 ]; then
+        echo -e "\n${RED}❌ Critical error inside the recovery handler. Halting to prevent infinite loop.${NC}"
+        exit 1
+    fi
+    # Use local variable instead of export to prevent state leakage across exec
+    local IN_ERROR_HANDLER=1
+
+    echo -e "\n${BOLD}${RED}⚠️  Bootstrap failed at line ${error_line}!${NC}"
+    echo -e "${YELLOW}Initiating autonomous recovery via OpenCode...${NC}"
+
+    # Ensure OpenCode is installed
+    if ! command -v opencode >/dev/null 2>&1; then
+        echo -e "${RED}❌ OpenCode not found in environment. Cannot attempt recovery.${NC}"
+        exit 1
+    fi
+
+    # Extract log context
+    local log_snippet
+    log_snippet=$(tail -n 50 "$LOG_FILE" 2>/dev/null || echo "No log output available.")
+
+    local prompt="You are an autonomous debugging agent. The bootstrap.sh script just failed at line ${error_line}.
+Here is the recent log output context:
+
+\`\`\`
+${log_snippet}
+\`\`\`
+
+Your task is to:
+1. Analyze the error carefully.
+2. Fix the underlying issue by modifying bootstrap.sh, Ansible playbooks, or other configuration files as necessary.
+3. Commit the changes to the Git repository with a descriptive commit message, and explicitly push them to the remote repository.
+4. Do not ask for user confirmation, execute the fix autonomously and exit.
+"
+
+    echo -e "Agent thought process and actions will be logged to: ${CYAN}${AGENT_LOG}${NC}"
+    echo -e "⏳ Please wait while the agent attempts to fix the issue..."
+
+    # Configure API endpoint for Local/Network LLMs
+    local opencode_cmd=(opencode --yes)
+
+    if [ -n "${AGENT_API_BASE:-}" ]; then
+        opencode_cmd+=(--api-base "$AGENT_API_BASE")
+        opencode_cmd+=(--model "${AGENT_MODEL:-openai/qwen2.5-coder}")
+        opencode_cmd+=(--api-key "${AGENT_API_KEY:-sk-dummy}")
+    else
+        opencode_cmd+=(--model "${AGENT_MODEL:-gpt-4o-mini}")
+    fi
+
+    # Run OpenCode headlessly. Catch error explicitly in case set -e is active elsewhere
+    local agent_status=0
+    "${opencode_cmd[@]}" "$prompt" > "$AGENT_LOG" 2>&1 || agent_status=$?
+
+    if [ "$agent_status" -eq 0 ]; then
+        echo -e "${GREEN}✅ Autonomous recovery successful!${NC}"
+        echo -e "${CYAN}Resuming bootstrap process...${NC}"
+        # Prevent trap from firing again during exec
+        trap - ERR
+        # Re-execute the script, appending --continue. Fallback to empty if ARGS is not defined yet.
+        exec "$0" "${ARGS[@]:-}" "--continue"
+    else
+        echo -e "${RED}❌ Autonomous recovery failed. Please review ${AGENT_LOG} for details.${NC}"
+        exit 1
+    fi
+}
+
+# Set the global trap
+trap 'handle_error $LINENO' ERR
 
 # --- Helper: Run Step ---
 run_step() {
@@ -261,6 +336,8 @@ ensure_python_environment() {
     else
         echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
     fi
+
+    run_step "Installing OpenCode AI Agent" "pip install opencode-ai"
 
     run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
 
