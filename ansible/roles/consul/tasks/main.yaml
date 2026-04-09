@@ -11,8 +11,9 @@
 
 - name: Force kill stuck Consul processes if cleanup requested
   become: true
-  ansible.builtin.command: killall -9 consul
+  ansible.builtin.command: pkill -9 consul
   ignore_errors: true
+  failed_when: false
   when: cleanup_services | default(false) | bool
   tags:
     - consul_configure
