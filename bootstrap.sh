@@ -96,7 +96,7 @@ find_controller() {
 
         # Fast scan for /10 overlay limits max-retries and timeout aggressively
         # shellcheck disable=SC2086
-        local nmap_args="-p 4646 --open -T5 --max-retries 1 --host-timeout 500ms"
+        local nmap_args="-n -p 4646 --open -T5 --max-retries 1 --host-timeout 500ms --min-rate 10000"
 
         # shellcheck disable=SC2086
         SCAN_RESULTS=$(nmap $nmap_args -oG - "$subnet" 2>/dev/null | awk '/4646\/open/ {print $2}')
