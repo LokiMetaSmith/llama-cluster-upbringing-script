@@ -382,6 +382,77 @@ def print_summary():
             print(f"  • {e}")
     print("\n")
 
+
+
+
+def get_primary_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
+def print_final_status(args, executed_playbooks):
+    print_header("Final Status Report")
+
+    # 1. Node Role & Controller info
+    print(f"{Colors.BOLD}Node Role:{Colors.ENDC} {args.role}")
+    if args.role == "worker" and args.controller_ip:
+        print(f"{Colors.BOLD}Controller IP:{Colors.ENDC} {args.controller_ip}")
+    elif args.role == "controller" or args.role == "all":
+        print(f"{Colors.BOLD}Controller IP:{Colors.ENDC} This node is the controller.")
+
+    # 2. Access IPs
+    ip = get_primary_ip()
+    print(f"\n{Colors.BOLD}Access Interfaces:{Colors.ENDC}")
+    print(f"  • {Colors.OKCYAN}Node IP Address:{Colors.ENDC} {ip}")
+    print(f"  • {Colors.OKCYAN}Nomad UI:{Colors.ENDC}        http://{ip}:4646")
+    print(f"  • {Colors.OKCYAN}Consul UI:{Colors.ENDC}       http://{ip}:8500")
+    print(f"  • {Colors.OKCYAN}Pipecat App:{Colors.ENDC}     http://{ip}:8000")
+    print(f"  • {Colors.OKCYAN}Home Assistant:{Colors.ENDC}  http://{ip}:8123")
+
+    # 3. Intended Services
+    print(f"\n{Colors.BOLD}Executed Playbooks (Intended Configuration):{Colors.ENDC}")
+    for pb in executed_playbooks:
+        print(f"  • {os.path.basename(pb)}")
+
+    # 4. Running System Services
+    print(f"\n{Colors.BOLD}System Services Status:{Colors.ENDC}")
+    services = ["nomad", "consul", "docker"]
+    for svc in services:
+        try:
+            result = subprocess.run(["systemctl", "is-active", svc], capture_output=True, text=True)
+            status = result.stdout.strip()
+            if status == "active":
+                print(f"  • {svc.capitalize()}: {Colors.OKGREEN}Active{Colors.ENDC}")
+            else:
+                print(f"  • {svc.capitalize()}: {Colors.FAIL}{status}{Colors.ENDC}")
+        except FileNotFoundError:
+            print(f"  • {svc.capitalize()}: {Colors.WARNING}systemctl not found{Colors.ENDC}")
+
+    # 5. Running Nomad Jobs
+    try:
+        # Check if nomad is reachable
+        env = os.environ.copy()
+        env["NOMAD_ADDR"] = f"http://{ip}:4646"
+        result = subprocess.run(["nomad", "job", "status", "-short"], capture_output=True, text=True, env=env)
+        if result.returncode == 0 and result.stdout.strip():
+            print(f"\n{Colors.BOLD}Running Nomad Jobs:{Colors.ENDC}")
+            lines = result.stdout.strip().split('\n')
+            for line in lines:
+                if line.strip():
+                    print(f"  • {line.strip()}")
+        elif result.returncode == 0:
+            print(f"\n{Colors.BOLD}Running Nomad Jobs:{Colors.ENDC} None")
+    except FileNotFoundError:
+        pass # nomad not installed or in path
+
+    print("\n")
+
 # --- Main Execution ---
 
 def main():
@@ -501,6 +572,7 @@ def main():
                 pass
 
     # --- Execution Loop ---
+    executed_playbooks = []
     for i, pb in enumerate(playbooks):
         if i < start_index:
             # Shorten path for display
@@ -566,7 +638,7 @@ def main():
 
         # Wait for ports before app services
         if "app_services.yaml" in pb['path']:
-             wait_for_ports_freed([8000, 8081, 1883])
+            wait_for_ports_freed([8000, 8081, 1883])
 
         # Cleanup before Core AI
         if "core_ai_services.yaml" in pb['path']:
@@ -574,6 +646,7 @@ def main():
 
         # --- Run ---
         run_playbook(pb_path, extra_vars, args.tags, verbose_level)
+        executed_playbooks.append(pb_path)
 
         # Save State
         with open(STATE_FILE, 'w') as f:
@@ -586,6 +659,7 @@ def main():
     print(f"{Colors.OKGREEN}✅ All tasks completed successfully.{Colors.ENDC}")
 
     print_summary()
+    print_final_status(args, executed_playbooks)
 
 if __name__ == "__main__":
     main()
