@@ -574,13 +574,16 @@ def main():
     # --- Execution Loop ---
     executed_playbooks = []
     for i, pb in enumerate(playbooks):
+        # In worker.yaml, playbooks use {{ playbook_dir }}
+        normalized_path = pb['path'].replace("{{ playbook_dir }}", "playbooks")
+
         if i < start_index:
             # Shorten path for display
-            display_path = os.path.basename(pb['path'])
+            display_path = os.path.basename(normalized_path)
             print(f"{Colors.OKBLUE}⏭️  Skipping completed: {display_path}{Colors.ENDC}")
             continue
 
-        pb_path = os.path.join(REPO_ROOT, pb['path'])
+        pb_path = os.path.join(REPO_ROOT, normalized_path)
 
         # --- Hooks / Smart Logic ---
 
@@ -611,9 +614,6 @@ def main():
             "playbooks/services/monitoring.yaml",   # Needed for health checks and status
         ]
 
-        # In worker.yaml, playbooks use {{ playbook_dir }}
-        normalized_path = pb['path'].replace("{{ playbook_dir }}", "playbooks")
-
         if normalized_path in app_services_playbooks:
             if args.deploy_full_stack:
                 # Deploy everything
@@ -626,7 +626,7 @@ def main():
                 pass
             else:
                 # Skip
-                display_path = os.path.basename(pb['path'])
+                display_path = os.path.basename(normalized_path)
                 if args.deploy_partial_stack:
                     mode_reason = "partial stack mode"
                 elif args.deploy_minimal_stack:
@@ -637,11 +637,11 @@ def main():
                 continue
 
         # Wait for ports before app services
-        if "app_services.yaml" in pb['path']:
+        if "app_services.yaml" in normalized_path:
             wait_for_ports_freed([8000, 8081, 1883])
 
         # Cleanup before Core AI
-        if "core_ai_services.yaml" in pb['path']:
+        if "core_ai_services.yaml" in normalized_path:
             cleanup_memory_for_core_ai()
 
         # --- Run ---
