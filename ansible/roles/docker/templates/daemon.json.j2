@@ -4,5 +4,8 @@
   "log-opts": {
     "max-size": "100m"
   },
-  "insecure-registries": ["localhost:5001"]
+  "insecure-registries": [
+    "localhost:{{ docker_registry_port | default(5001) }}",
+    "{{ docker_registry_host }}:{{ docker_registry_port | default(5001) }}"
+  ]
 }
