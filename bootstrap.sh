@@ -87,25 +87,65 @@ find_controller() {
     fi
 
     local SCAN_RESULTS=""
-    local SUBNETS_TO_SCAN=("$PXE_SUBNET" "$LOCAL_SUBNET" "$OVERLAY_SUBNET")
+
+    # Add a fast-path scan for the first /24 block of the overlay to save time
+    local OVERLAY_FAST_PATH="100.64.0.0/24"
+    # Only add OVERLAY_FAST_PATH to array if it is different from OVERLAY_SUBNET to avoid scanning same thing twice
+    local SUBNETS_TO_SCAN=("$PXE_SUBNET" "$LOCAL_SUBNET" "$OVERLAY_FAST_PATH")
+    if [ "$OVERLAY_SUBNET" != "$OVERLAY_FAST_PATH" ]; then
+        SUBNETS_TO_SCAN+=("$OVERLAY_SUBNET")
+    fi
+
+    spinner() {
+        local pid=$1
+        local delay=0.1
+        local spinstr="|\/-\\"
+        while kill -0 "$pid" 2>/dev/null; do
+            local temp=${spinstr#?}
+            printf " [%c]  " "$spinstr"
+            local spinstr=$temp${spinstr%"$temp"}
+            sleep $delay
+            printf ""
+        done
+        printf "    "
+    }
 
     echo -e "Scanning networks on port 4646 (Nomad):"
 
     for subnet in "${SUBNETS_TO_SCAN[@]}"; do
-        echo -e "  - ${CYAN}${subnet}${NC}..."
+        echo -n -e "  - ${CYAN}${subnet}${NC}... "
 
         # Fast scan for /10 overlay limits max-retries and timeout aggressively
         # shellcheck disable=SC2086
         local nmap_args="-n -p 4646 --open -T5 --max-retries 1 --host-timeout 500ms --min-rate 10000"
 
+        local tmp_file
+        tmp_file=$(mktemp)
+
+        # Run nmap in the background so we can show a spinner
         # shellcheck disable=SC2086
-        SCAN_RESULTS=$(nmap $nmap_args -oG - "$subnet" 2>/dev/null | awk '/4646\/open/ {print $2}')
+        nmap $nmap_args -oG - "$subnet" > "$tmp_file" 2>/dev/null &
+        local nmap_pid=$!
+
+        # Ensure we kill the background process and delete temp file if interrupted
+        # Note: escaping the command text for the python replacement
+        trap 'kill $nmap_pid 2>/dev/null; rm -f "$tmp_file"; exit 1' INT TERM
+
+        spinner "$nmap_pid"
+
+        # Reset trap back to script default
+        trap - INT TERM
+
+        SCAN_RESULTS=$(awk '/4646\/open/ {print $2}' "$tmp_file" 2>/dev/null)
+        rm -f "$tmp_file"
 
         if [ -n "$SCAN_RESULTS" ]; then
+            echo -e "\r  - ${CYAN}${subnet}${NC}... Done.          "
             CONTROLLER_IP=$(echo "$SCAN_RESULTS" | head -n 1)
             echo -e "${GREEN}✅ Found controller at: ${CONTROLLER_IP} (on ${subnet})${NC}"
             return 0
         fi
+        echo -e "\r  - ${CYAN}${subnet}${NC}... Done.          "
     done
 
     echo -e "${YELLOW}⚠️  No controller found on any scanned networks.${NC}"
