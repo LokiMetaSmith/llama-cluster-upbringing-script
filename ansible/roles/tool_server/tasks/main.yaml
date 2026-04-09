@@ -94,6 +94,7 @@
     timeout: 1
   register: registry_check
   ignore_errors: true
+  failed_when: false
 
 - name: "Tool Server : Tag and push tool-server image to local registry"
   community.docker.docker_image:
@@ -126,6 +127,7 @@
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       ignore_errors: yes
+      failed_when: false
       changed_when: true
       become: no
 

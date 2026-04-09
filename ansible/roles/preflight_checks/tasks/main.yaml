@@ -91,6 +91,7 @@
     timeout: 1
   register: preflight_port_check
   ignore_errors: true
+  failed_when: false
   loop:
     - 4646 # Nomad
     - 8500 # Consul
