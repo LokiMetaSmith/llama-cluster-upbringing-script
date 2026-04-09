@@ -44,6 +44,12 @@ show_help() {
     echo "  --container                  Run the entire infrastructure inside a single large container."
     echo "  --watch <target>             Pause for inspection after the specified target (task/role) completes."
     echo "  -h, --help                   Display this help message and exit."
+    echo ""
+    echo "Environment Variables (OpenCode Autonomous Recovery):"
+    echo "  If the script crashes, it will attempt to use an OpenCode AI agent to diagnose and fix the error."
+    echo "  AGENT_API_BASE               URL for a custom LLM provider, like a local Ollama instance (e.g. http://192.168.1.100:11434/v1)."
+    echo "  AGENT_MODEL                  The LLM model to use for debugging (e.g. qwen3:14b, llama3.2:3b, mistral, qwen2.5:1.5b)."
+    echo "  AGENT_API_KEY                API key for the model provider (a dummy key like 'sk-dummy' can be used for Ollama)."
 }
 
 # --- Initialize flags ---

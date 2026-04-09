@@ -92,3 +92,25 @@ Jobs submitted to Nomad stay in the "Pending" state and are not placed on any no
 * Run `nomad job allocs <job_name>` to see allocation status.
 * Check `nomad node status` to ensure workers are ready.
 * Check `nomad alloc status <alloc_id>` for placement failure reasons.
+
+### 4. Autonomous Recovery Configuration (OpenCode)
+
+The `bootstrap.sh` script features an autonomous recovery mechanism that uses an OpenCode AI agent to diagnose and attempt to fix errors if the script crashes. By default, it connects to standard APIs.
+
+If you want to use a local or external Ollama instance for the debugging agent, you can configure it using environment variables.
+
+**Configuration Variables:**
+* `AGENT_API_BASE`: The URL to your Ollama instance (e.g., `http://192.168.1.100:11434/v1`). Note the `/v1` suffix for OpenAI compatibility mode.
+* `AGENT_MODEL`: The model you want to use on the Ollama instance (e.g., `ollama/qwen2.5:1.5b`). Note the `ollama/` prefix if required by litellm/opencode, though simply `qwen2.5:1.5b` or `qwen3:14b` may also work depending on the backend router.
+* `AGENT_API_KEY`: A dummy key is required for API compatibility, even if Ollama does not enforce it (e.g., `sk-dummy`).
+
+**Example Usage:**
+
+```bash
+# Connect to an Ollama instance running on a desktop at 192.168.1.100
+export AGENT_API_BASE="http://192.168.1.100:11434/v1"
+export AGENT_MODEL="qwen3:14b" # Other options: llama3.2:3b, mistral, qwen2.5:1.5b
+export AGENT_API_KEY="sk-dummy"
+
+./bootstrap.sh
+```
