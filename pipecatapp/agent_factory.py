@@ -45,6 +45,8 @@ from tools.wol_tool import WOLTool
 from tools.scale_compute_tool import ScaleComputeTool
 from tools.cluster_status_tool import ClusterStatusTool
 from tools.polyphony_tool import PolyphonyTool
+from tools.skill_builder_tool import SkillBuilderTool
+from tools.dynamic_skill_tool import DynamicSkillTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -114,6 +116,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "scale_compute": ScaleComputeTool(),
         "cluster_status": ClusterStatusTool(),
         "polyphony": PolyphonyTool(),
+        "skill_builder": SkillBuilderTool(),
     }
 
     # Inject memory client into SwarmTool if available (for Map-Reduce)
@@ -154,6 +157,24 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         tools["git"] = Git_Tool(root_dir="/opt/pipecatapp")
         tools["orchestrator"] = OrchestratorTool()
         tools["opencode_provider"] = OpenCodeProviderTool()
+
+    # Load dynamic skills from memory store
+    if twin_service and hasattr(twin_service, "long_term_memory"):
+        try:
+            dynamic_skills = twin_service.long_term_memory.list_skills()
+            for skill in dynamic_skills:
+                # To prevent overriding built-in tools
+                if skill["name"] not in tools:
+                    # Create a DynamicSkillTool wrapper for the skill
+                    # Note: code_runner is used to execute any python code in the markdown
+                    tools[skill["name"]] = DynamicSkillTool(
+                        name=skill["name"],
+                        description=skill["description"],
+                        content=twin_service.long_term_memory.get_skill(skill["name"])["content"],
+                        code_runner=tools.get("code_runner")
+                    )
+        except Exception as e:
+            print(f"Warning: Failed to load dynamic skills: {e}")
 
     # Filter out None values
     return {k: v for k, v in tools.items() if v is not None}

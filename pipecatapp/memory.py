@@ -149,6 +149,16 @@ class MemoryStore:
                 metadata TEXT
             )
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS dynamic_skills (
+                name TEXT PRIMARY KEY,
+                description TEXT NOT NULL,
+                content TEXT NOT NULL,
+                version INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         self.conn.commit()
 
     def _encrypt(self, text: str) -> str:
@@ -418,3 +428,49 @@ class MemoryStore:
                 results.append(self.store.get(str(i)))
 
         return results
+
+    def save_skill(self, name: str, description: str, content: str) -> None:
+        """Saves a dynamic skill to the SQLite database. If it exists, updates it and increments the version."""
+        cursor = self.conn.cursor()
+
+        # Check if exists
+        cursor.execute("SELECT version FROM dynamic_skills WHERE name = ?", (name,))
+        row = cursor.fetchone()
+
+        if row:
+            new_version = row["version"] + 1
+            cursor.execute('''
+                UPDATE dynamic_skills
+                SET description = ?, content = ?, version = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE name = ?
+            ''', (description, content, new_version, name))
+        else:
+            cursor.execute('''
+                INSERT INTO dynamic_skills (name, description, content)
+                VALUES (?, ?, ?)
+            ''', (name, description, content))
+
+        self.conn.commit()
+
+    def get_skill(self, name: str) -> dict | None:
+        """Retrieves a dynamic skill by name."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT name, description, content, version FROM dynamic_skills WHERE name = ?", (name,))
+        row = cursor.fetchone()
+
+        if row:
+            return dict(row)
+        return None
+
+    def list_skills(self) -> list[dict]:
+        """Lists all dynamic skills."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT name, description, version FROM dynamic_skills ORDER BY name ASC")
+        return [dict(row) for row in cursor.fetchall()]
+
+    def delete_skill(self, name: str) -> bool:
+        """Deletes a dynamic skill by name. Returns True if deleted, False if not found."""
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM dynamic_skills WHERE name = ?", (name,))
+        self.conn.commit()
+        return cursor.rowcount > 0
