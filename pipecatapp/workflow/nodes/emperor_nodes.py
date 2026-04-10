@@ -207,12 +207,55 @@ def deploy_nomad_job_tool(job_name: str) -> Dict[str, Any]:
     except Exception as e:
         return {"error": str(e)}
 
+def create_agent_tool(task_id: str, prompt: str, context: str = "", agent_type: str = "worker") -> Dict[str, Any]:
+    """
+    Spawns a specialized sub-agent (e.g. TwinService or worker) to accomplish a task.
+    :param task_id: Unique identifier for the sub-task.
+    :param prompt: The instruction for the worker agent.
+    :param context: Relevant context or data for the agent to consider.
+    :param agent_type: The type of agent to spawn. Options: 'worker' (simple), 'technician' (advanced).
+    :return: A dictionary containing the job_ids, task_ids, and message of the dispatch execution.
+    """
+    try:
+        from pipecatapp.tools.swarm_tool import SwarmTool
+        import asyncio
+        tool = SwarmTool()
+        tasks = [{"id": task_id, "prompt": prompt, "context": context}]
+        result_json = asyncio.run(tool.spawn_workers(tasks=tasks, agent_type=agent_type))
+        return json.loads(result_json)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def wait_agent_tool(task_id: str, timeout: int = 600) -> Dict[str, Any]:
+    """
+    Waits for a spawned sub-agent to complete its task.
+    :param task_id: The unique identifier of the task being awaited.
+    :param timeout: Maximum time to wait in seconds (default: 600).
+    :return: A dictionary containing the result of the agent execution.
+    """
+    try:
+        from pipecatapp.tools.swarm_tool import SwarmTool
+        from pipecatapp.pmm_memory_client import PMMMemoryClient
+        import asyncio
+        import json
+
+        memory_client = PMMMemoryClient()
+        tool = SwarmTool(memory_client=memory_client)
+        result_json = asyncio.run(tool.wait_for_results(task_ids=[task_id], timeout=timeout))
+        return json.loads(result_json)
+    except Exception as e:
+        return {"error": str(e)}
+
+
 TOOL_REGISTRY = {
     "read_file": read_file_tool,
     "list_files": list_files_tool,
     "edit_file": edit_file_tool,
     "shell": shell_tool,
-    "deploy_nomad_job": deploy_nomad_job_tool
+    "deploy_nomad_job": deploy_nomad_job_tool,
+    "create_agent": create_agent_tool,
+    "wait_agent": wait_agent_tool
 }
 
 SYSTEM_PROMPT_TEMPLATE = """
@@ -413,6 +456,18 @@ class EmperorAgentNode(Node):
                             result = tool_func(args.get("command", ""))
                         elif name == "deploy_nomad_job":
                             result = tool_func(args.get("job_name", ""))
+                        elif name == "create_agent":
+                            result = tool_func(
+                                args.get("task_id", ""),
+                                args.get("prompt", ""),
+                                args.get("context", ""),
+                                args.get("agent_type", "worker")
+                            )
+                        elif name == "wait_agent":
+                            result = tool_func(
+                                args.get("task_id", ""),
+                                args.get("timeout", 600)
+                            )
                         else:
                             result = "Unknown tool"
 
