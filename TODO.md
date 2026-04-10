@@ -244,7 +244,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 This section tracks actionable ideas derived from the `PASEO_ANALYSIS.md` document for integrating Paseo's orchestration concepts into our custom Pipecat architecture.
 
 - [x] **Implement `OpenCodeProviderTool`:** Create a Python-based provider wrapper in `pipecatapp/tools/` that executes OpenCode via `NomadSandboxExecutor`, intercepts standard output streams, and standardizes them into Pipecat agent events.
-- [ ] **Add MCP-like Agent Management to `EmperorAgentNode`:** Expose new tools (e.g., `CreateAgentTool`, `WaitAgentTool`) to the Emperor node, allowing it to dynamically spawn and await specialized `TwinService` or Nomad worker instances (similar to Paseo's `agent-management-mcp.ts`).
+- [x] **Add MCP-like Agent Management to `EmperorAgentNode`:** Expose new tools (e.g., `CreateAgentTool`, `WaitAgentTool`) to the Emperor node, allowing it to dynamically spawn and await specialized `TwinService` or Nomad worker instances (similar to Paseo's `agent-management-mcp.ts`).
 - [x] **Implement Automated Verifier Loops ("Ralph Loop"):** Create a new workflow node in `pipecatapp/workflows/` that implements a worker-verifier loop (Worker -> Verifier -> Feedback) specifically for complex coding tasks, allowing automatic trial-and-error iterations before returning to the main graph.
 - [x] **Enhance `MemoryStore` with an Activity Timeline:** Extend `pipecatapp/memory.py` to support a chronologically ordered "Cluster Activity Timeline" that tracks tool invocations, agent spawns, and background process exit codes to provide better distributed system context.
 
