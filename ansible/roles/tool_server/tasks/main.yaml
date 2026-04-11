@@ -104,7 +104,7 @@
     push: true
     source: local
   become: yes
-  when: registry_check is success
+  when: registry_check.state | default('stopped') == 'started'
 
 - name: "Tool Server : Verify Docker image exists"
   ansible.builtin.command:

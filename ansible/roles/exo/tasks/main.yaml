@@ -47,6 +47,7 @@
     state: started
     timeout: 1
   register: registry_check
+  failed_when: false
   ignore_errors: true
   when: exo_enable
 
@@ -57,7 +58,7 @@
     push: true
     source: local
   become: yes
-  when: exo_enable and registry_check is success
+  when: exo_enable and registry_check.state | default('stopped') == 'started'
 
 - name: Cleanup build directory
   ansible.builtin.file:

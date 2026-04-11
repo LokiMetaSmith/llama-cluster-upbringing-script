@@ -36,6 +36,7 @@
     state: started
     timeout: 1
   register: registry_check
+  failed_when: false
   ignore_errors: true
 
 - name: Tag and push memory_service image to local registry
@@ -45,7 +46,7 @@
     repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/memory_service"
     push: true
     source: local
-  when: registry_check is success
+  when: registry_check.state | default('stopped') == 'started'
 
 - name: Template memory service Nomad job
   ansible.builtin.template:

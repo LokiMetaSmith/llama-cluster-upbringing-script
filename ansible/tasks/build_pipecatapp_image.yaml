@@ -83,6 +83,7 @@
     state: started
     timeout: 1
   register: registry_check
+  failed_when: false
   ignore_errors: true
   when: pipecat_deployment_style == 'docker'
 
@@ -94,7 +95,7 @@
     push: true
     source: local
   become: yes
-  when: pipecat_deployment_style == 'docker' and registry_check is success
+  when: pipecat_deployment_style == 'docker' and registry_check.state | default('stopped') == 'started'
 
 - name: Tag and push pipecatapp image (versioned) to local registry
   community.docker.docker_image:
@@ -104,4 +105,4 @@
     push: true
     source: local
   become: yes
-  when: pipecat_deployment_style == 'docker' and registry_check is success
+  when: pipecat_deployment_style == 'docker' and registry_check.state | default('stopped') == 'started'
