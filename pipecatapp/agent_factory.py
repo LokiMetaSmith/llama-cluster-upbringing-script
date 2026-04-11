@@ -94,7 +94,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "opencode_provider": OpenCodeProviderTool(),
         "dependency_scanner": DependencyScannerTool(),
         "vr": VRTool(),
-        "autoresearch": AutoresearchTool(llm_client=twin_service.llm_client if twin_service else None),
+        "autoresearch": AutoresearchTool(llm_client=getattr(twin_service, 'router_llm', None) if twin_service else None),
         "experiment": ExperimentTool(),
         "submit_solution": SubmitSolutionTool(),
         "container_registry": ContainerRegistryTool(),

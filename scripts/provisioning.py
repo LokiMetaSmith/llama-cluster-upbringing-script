@@ -478,6 +478,7 @@ def main():
     parser.add_argument("--deploy-full-stack", action="store_true", help="Deploy the full application stack instead of just infrastructure")
     parser.add_argument("--deploy-partial-stack", action="store_true", help="Deploy a partial application stack (e.g. 4-8B models) for mid-tier worker nodes")
     parser.add_argument("--deploy-minimal-stack", action="store_true", help="Deploy a minimal application stack (e.g. kiosk, audio) for low resource nodes")
+    parser.add_argument("--tier", default="mid", choices=["edge", "mid", "core"], help="Specify the node tier")
 
     args, _ = parser.parse_known_args()
 
@@ -535,6 +536,8 @@ def main():
 
     if args.deploy_docker:
         extra_vars["pipecat_deployment_style"] = "docker"
+    if args.tier:
+        extra_vars["node_tier"] = args.tier
     if args.run_local:
         extra_vars["pipecat_deployment_style"] = "raw_exec"
     if args.home_assistant_debug:

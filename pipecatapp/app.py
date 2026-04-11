@@ -977,6 +977,27 @@ async def discover_services(service_names: list, consul_http_addr: str, delay=10
         The base URL (e.g., "http://1.2.3.4:5678/v1") of the first discovered service.
     """
     logging.info(f"Attempting to discover services: {service_names}")
+
+    # Check for override URLs first
+    override_map = {
+        "llama-api-main": os.getenv("LLAMA_API_URL_OVERRIDE"),
+        "llamacpp-rpc-api": os.getenv("LLAMA_API_URL_OVERRIDE"),
+        "router-api": os.getenv("LLAMA_API_URL_OVERRIDE"),
+        "tool-server-api": os.getenv("TOOL_SERVER_URL_OVERRIDE"),
+        "memory-service": os.getenv("MEMORY_SERVICE_URL_OVERRIDE"),
+    }
+
+    for service_name in service_names:
+        override_url = override_map.get(service_name)
+        # also support generic naming OVERRIDE logic
+        if not override_url:
+            env_key = f"{service_name.replace('-', '_').upper()}_URL_OVERRIDE"
+            override_url = os.getenv(env_key)
+
+        if override_url:
+            logging.info(f"Using override URL for {service_name}: {override_url}")
+            return override_url
+
     token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
     headers = {"X-Consul-Token": token} if token else {}
 

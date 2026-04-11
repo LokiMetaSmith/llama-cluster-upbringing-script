@@ -56,24 +56,24 @@ Objective: Enable the main `pipecatapp` container to perform LLM inference and m
 
 Objective: Allow the application to seamlessly switch between finding services on `localhost` and finding them via Consul DNS, without code changes.
 
-- [ ] **Update Service Discovery Logic (`app.py`)**
-  - [ ] Modify `discover_services` function.
-  - [ ] Add logic to check for "Override URLs" in environment variables first:
-    - [ ] `LLAMA_API_URL_OVERRIDE`
-    - [ ] `TOOL_SERVER_URL_OVERRIDE`
-  - [ ] If override is present, use it directly and skip Consul lookup.
-  - [ ] If override is absent, proceed with Consul `health/service/` check.
+- [x] **Update Service Discovery Logic (`app.py`)**
+  - [x] Modify `discover_services` function.
+  - [x] Add logic to check for "Override URLs" in environment variables first:
+    - [x] `LLAMA_API_URL_OVERRIDE`
+    - [x] `TOOL_SERVER_URL_OVERRIDE`
+  - [x] If override is present, use it directly and skip Consul lookup.
+  - [x] If override is absent, proceed with Consul `health/service/` check.
 
-- [ ] **Configure Ansible for Tiered Deployment**
-  - [ ] Update `group_vars/all.yaml` or inventory vars to define `node_tier` (edge, mid, core).
-  - [ ] In `ansible/roles/pipecatapp/templates/pipecat.env.j2`:
-    - [ ] If `node_tier == 'mid'` (Monolith), set `LLAMA_API_URL_OVERRIDE = "http://localhost:8080"` (or internal pointer).
-    - [ ] If `node_tier == 'edge'`, set `LLAMA_API_URL_OVERRIDE` to the Core Node's address.
+- [x] **Configure Ansible for Tiered Deployment**
+  - [x] Update `group_vars/all.yaml` or inventory vars to define `node_tier` (edge, mid, core).
+  - [x] In `ansible/roles/pipecatapp/templates/pipecat.env.j2`:
+    - [x] If `node_tier == 'mid'` (Monolith), set `LLAMA_API_URL_OVERRIDE = "http://localhost:8080"` (or internal pointer).
+    - [x] If `node_tier == 'edge'`, set `LLAMA_API_URL_OVERRIDE` to the Core Node's address.
 
-- [ ] **Update Bootstrap CLI (`bootstrap.sh`)**
-  - [ ] Add a new flag `--tier [edge|mid|core]` to `bootstrap.sh`.
-  - [ ] Pass this flag as an extra-var `node_tier` to the Ansible playbook.
-  - [ ] Update the help menu to explain the new tier options.
+- [x] **Update Bootstrap CLI (`bootstrap.sh`)**
+  - [x] Add a new flag `--tier [edge|mid|core]` to `bootstrap.sh`.
+  - [x] Pass this flag as an extra-var `node_tier` to the Ansible playbook.
+  - [x] Update the help menu to explain the new tier options.
 
 ## Phase 4: Docker Image Optimization
 

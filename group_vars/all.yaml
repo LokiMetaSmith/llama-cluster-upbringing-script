@@ -2,6 +2,9 @@
 # It's a good place to define default values that might be overridden by
 # more specific group_vars files.
 
+# The tier of the node for deployment topology. Valid options: edge, mid, core
+node_tier: "mid"
+
 expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
 
 # This variable dynamically determines the node ID based on the hostname.

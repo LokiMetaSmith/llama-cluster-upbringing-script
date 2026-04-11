@@ -33,6 +33,7 @@ show_help() {
     echo "  --debug                      Alias for --verbose 4."
     echo "  --leave-services-running     Do not clean up Nomad and Consul data on startup."
     echo "  --external-model-server      Skip large model downloads and builds, assuming an external server."
+    echo "  --tier <tier>                Specify the node tier (edge, mid, core). Default: mid."
     echo "  --deploy-full-stack          Deploy the full application stack (AI agents, models) instead of just infrastructure."
     echo "  --deploy-partial-stack       Deploy a partial application stack (e.g. 4-8B models) for mid-tier worker nodes."
     echo "  --deploy-minimal-stack       Deploy a minimal application stack (e.g. audio, kiosk, status) for low resource nodes."
@@ -300,6 +301,14 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
                 ROLE="$NEXT_ARG"
                 PROCESSED_ARGS+=("--role" "$ROLE")
+                SKIP_NEXT=true
+            fi
+            ;;
+        --tier)
+            NEXT_ARG="${ARGS[$((i+1))]}"
+            if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
+                TIER="$NEXT_ARG"
+                PROCESSED_ARGS+=("--tier" "$TIER")
                 SKIP_NEXT=true
             fi
             ;;

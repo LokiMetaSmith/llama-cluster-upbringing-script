@@ -148,7 +148,8 @@ async def test_loop_detection_mechanism(mocker):
     # Instantiate TwinService
     # We patch PMMMemoryClient and PMMMemory to avoid side effects
     # We also patch docker.from_env because TwinService -> create_tools -> CodeRunnerTool -> docker.from_env()
-    with patch('app.PMMMemoryClient'), patch('app.PMMMemory'), patch('docker.from_env'):
+    # We patch MemoryStore to avoid SentenceTransformer initialization loading missing models
+    with patch('app.PMMMemoryClient'), patch('app.PMMMemory'), patch('docker.from_env'), patch('tools.skill_builder_tool.MemoryStore'):
         with patch.dict(os.environ, {"HA_URL": "http://mock-ha", "HA_TOKEN": "mock-token"}):
             service = TwinService(mock_llm, mock_vision, mock_runner, mock_config, mock_approval_queue)
 
