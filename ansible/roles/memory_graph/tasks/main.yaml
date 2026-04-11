@@ -22,6 +22,7 @@
     state: started
     timeout: 1
   register: registry_check
+  failed_when: false
   ignore_errors: true
 
 - name: Tag and push memory-graph service image to local registry
@@ -30,17 +31,17 @@
     repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/memory-graph-service:latest"
     push: true
     source: local
-  when: registry_check is success
+  when: registry_check.state | default('stopped') == 'started'
 
 - name: Set memory_graph_image (Registry)
   ansible.builtin.set_fact:
     memory_graph_image: "{{ docker_registry_host }}:{{ docker_registry_port }}/memory-graph-service:latest"
-  when: registry_check is success
+  when: registry_check.state | default('stopped') == 'started'
 
 - name: Set memory_graph_image (Local Fallback)
   ansible.builtin.set_fact:
     memory_graph_image: "memory-graph-service:local"
-  when: registry_check is failed
+  when: registry_check.state | default('stopped') != 'started'
 
 - name: Deploy memory-graph Nomad job
   community.general.nomad_job:

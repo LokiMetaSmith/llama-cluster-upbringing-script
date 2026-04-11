@@ -46,6 +46,7 @@
         state: started
         timeout: 5
       register: registry_check
+      failed_when: false
       ignore_errors: true
       when: registry_is_reachable | default(true)
 
@@ -58,7 +59,7 @@
         source: local
       when:
         - registry_is_reachable | default(true)
-        - registry_check is success
+        - registry_check.state | default('stopped') == 'started'
 
     - name: "Expert {{ expert_name }} : Ensure startup script exists (Dev Mode fallback)"
       ansible.builtin.template:
