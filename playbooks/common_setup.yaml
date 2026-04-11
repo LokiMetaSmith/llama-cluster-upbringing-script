@@ -1,6 +1,12 @@
 - name: Common Setup
   hosts: all
   become: yes
+  roles:
+    - role: tpm_ssh
+      tags:
+        - tpm_ssh
+        - common
+
   tasks:
     - name: Ensure Debian repositories are configured (needed for minimal/live ISOs)
       raw: |

@@ -1,0 +1,12 @@
+[Unit]
+Description=Headless TPM SSH Agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/tpm-ssh-agent.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

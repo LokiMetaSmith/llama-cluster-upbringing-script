@@ -1,0 +1,39 @@
+#!/bin/bash
+# Starts an ssh-agent and adds the TPM key using the stored PIN via expect
+
+USER="{{ target_user | default('pipecatapp') }}"
+USER_HOME="/home/$USER"
+AUTH_SOCK="$USER_HOME/.ssh/tpm_auth_sock"
+
+# Source the PIN
+if [ -f /etc/tpm_ssh_pins ]; then
+    source /etc/tpm_ssh_pins
+else
+    echo "Error: /etc/tpm_ssh_pins not found."
+fi
+
+# Clean up old socket
+rm -f "$AUTH_SOCK"
+
+# Start ssh-agent binding to our custom socket path
+eval $(ssh-agent -a "$AUTH_SOCK")
+
+# Use expect to script the ssh-add prompt
+export SSH_AUTH_SOCK="$AUTH_SOCK"
+export HOME="$USER_HOME"
+
+expect << EOD
+spawn su -c "ssh-add -s /usr/lib/x86_64-linux-gnu/pkcs11/libtpm2_pkcs11.so" $USER
+expect "Enter PIN for 'sshkey1':"
+send "$USERPIN\r"
+expect eof
+EOD
+
+# Ensure the user has permissions on the socket
+chown $USER:$USER "$AUTH_SOCK"
+chmod 600 "$AUTH_SOCK"
+
+echo "TPM SSH Agent is running. Set SSH_AUTH_SOCK=$AUTH_SOCK to use."
+
+# Wait forever using sleep infinity to avoid blocking scripts
+exec sleep infinity

@@ -45,3 +45,7 @@
     - role: common
       tags:
         - common
+    - role: tpm_ssh
+      tags:
+        - tpm_ssh
+        - common

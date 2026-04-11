@@ -14,38 +14,41 @@
       - acl
       - avahi-daemon
       - build-essential
-      - cmake
       - cargo
       - chrony
+      - cmake
       - cmatrix
       - curl
+      - expect
+      - ffmpeg
       - figlet
       - fio
-      - ffmpeg
       - fortune-mod
       - fuse-overlayfs
-      - gstreamer1.0-libav
       - git
+      - gstreamer1.0-libav
       - hollywood
       - htop
       - iperf3
       - jq
-      - libavif16
-      - libavformat-dev
       - libavcodec-dev
       - libavdevice-dev
-      - libavutil-dev
       - libavfilter-dev
-      - libswscale-dev
-      - libswresample-dev
+      - libavformat-dev
+      - libavif16
+      - libavutil-dev
       - libcurl4-openssl-dev
       - libevent-2.1-7t64
       - libflite1
-      - libgstreamer-plugins-bad1.0-0
       - libgl1
       - libglib2.0-0t64
+      - libgstreamer-plugins-bad1.0-0
       - libmecab-dev
       - libnss-mdns
+      - libswresample-dev
+      - libswscale-dev
+      - libtpm2-pkcs11-1
+      - libtpm2-pkcs11-tools
       - lolcat
       - make
       - mecab
@@ -53,6 +56,7 @@
       - mosh
       - ncdu
       - nfs-common
+      - opensc
       - openssh-server
       - pkg-config
       - portaudio19-dev
@@ -67,8 +71,10 @@
       - sl
       - sshpass
       - sysbench
-      - toilet
       - tmux
+      - toilet
+      - tpm2-abrmd
+      - tpm2-tools
       - ufw
       - unzip
       - yq

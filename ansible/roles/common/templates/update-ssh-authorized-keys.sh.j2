@@ -8,7 +8,7 @@ log_sync() {
 
 # The USERNAME is set in /etc/environment by a previous script, but we can default to 'user'
 if [ -z "$USERNAME" ]; then
-    USERNAME="user"
+    USERNAME="{{ target_user | default('pipecatapp') }}"
 fi
 
 USER_HOME="/home/$USERNAME"
