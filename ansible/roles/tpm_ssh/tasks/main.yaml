@@ -1,4 +1,3 @@
----
 - name: "TPM : Check if TPM device exists"
   stat:
     path: /dev/tpmrm0
@@ -131,9 +130,6 @@
         group: "{{ target_user | default('pipecatapp') }}"
         mode: '0644'
       when: tpm_pub_key is not failed
-
-
-
 
     - name: "TPM : Wait for Consul to be available before publishing key"
       ansible.builtin.wait_for:
