@@ -401,7 +401,25 @@ This project includes a web-based dashboard for real-time display and debugging.
 - A request-approval interface for sensitive tool actions.
 - The ability to save and load the agent's memory state.
 
-## 10. Testing and Verification
+## 10. Security & Authentication
+
+### 10.1. TPM-Backed SSH Identity
+
+The Pipecat cluster utilizes a Trusted Platform Module (TPM) to provide a unique, immutable identity for each node.
+Instead of storing traditional SSH private keys (`id_rsa`) in plaintext on the filesystem, the `tpm_ssh` Ansible role generates an SSH key and securely seals it inside the physical TPM chip.
+
+- **Security Guarantee:** The private key cannot be exfiltrated. Even if an attacker gains filesystem access, the key cannot be copied off the machine.
+- **Headless Agent Operations:** To support automated deployment and agentic workflows, the system automatically spawns a headless `tpm-ssh-agent` systemd service. It unlocks the TPM key on boot using a securely stored, randomly generated PIN (located at `/etc/tpm_ssh_pins` with `0600` root-only access), and provides a persistent `SSH_AUTH_SOCK`.
+
+### 10.2. Offline Consul Key Distribution
+
+To eliminate the dependency on external services (such as GitHub) for fetching `authorized_keys`, the cluster implements a purely offline key distribution model using the Consul Key-Value (KV) store.
+
+- **Node-to-Node Access:** When a node initializes its TPM identity, it automatically publishes its public key to Consul (`http://127.0.0.1:8500/v1/kv/ssh-keys/<hostname>`).
+- **Idempotent Synchronization:** A cron job on all nodes runs `/usr/local/bin/update-ssh-authorized-keys.sh` every 5 minutes. This script fetches all public keys from the Consul KV and idempotently updates the local `~/.ssh/authorized_keys` file.
+- **Human Fallback / Recovery:** If a node's TPM fails or is wiped, you can restore access by injecting your personal human SSH public key into the Consul KV. The synchronization script will automatically append your key to the cluster's authorized nodes, allowing you to log in and re-provision the failed node.
+
+## 11. Testing and Verification
 
 - **Check Cluster Status:** `nomad node status`
 - **Check Job Status:** `nomad job status`
@@ -425,14 +443,14 @@ To run all linters, use the following command:
 npm run lint
 ```
 
-## 11. Performance Tuning & Service Selection
+## 12. Performance Tuning & Service Selection
 
 - **Model Selection:** The `llama-expert.nomad` job is configured via Ansible variables in `group_vars/models.yaml`. You can define different model lists for different experts.
 - **Network:** Wired gigabit ethernet is strongly recommended over Wi-Fi for reduced latency.
 - **VAD Tuning:** The `RealtimeSTT` sensitivity can be tuned in `app.py` for better performance in noisy environments.
 - **STT/TTS Service Selection:** You can choose which Speech-to-Text and Text-to-Speech services to use by setting environment variables in the `pipecatapp.nomad` job file.
 
-## 12. Benchmarking
+## 13. Benchmarking
 
 This project includes two types of benchmarks.
 
@@ -450,11 +468,11 @@ nomad job run /opt/nomad/jobs/benchmark.nomad
 
 View results in the job logs: `nomad job logs llama-benchmark`
 
-## 13. Advanced Development: Prompt Evolution
+## 14. Advanced Development: Prompt Evolution
 
 For advanced users, this project includes a workflow for automatically improving the agent's core prompt using evolutionary algorithms. See `prompt_engineering/PROMPT_ENGINEERING.md` for details.
 
-## 14. Project Roadmap
+## 15. Project Roadmap
 
 This section outlines the major feature enhancements and maintenance tasks planned for the future.
 
@@ -475,10 +493,10 @@ This section outlines the major feature enhancements and maintenance tasks plann
   - Expand end-to-end tests in `e2e-tests.yaml` to verify core agent functions.
   - Increase unit test coverage for Python tools.
 
-## 15. Troubleshooting
+## 16. Troubleshooting
 
 For solutions to common issues, such as failing Nomad service checks or deployment errors, please refer to the **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)**.
 
-## 16. License
+## 17. License
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE).
