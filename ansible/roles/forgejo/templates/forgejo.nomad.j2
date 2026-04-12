@@ -32,6 +32,7 @@ job "forgejo" {
         USER_GID = "1000"
         FORGEJO__server__HTTP_PORT = "${NOMAD_PORT_http}"
         FORGEJO__server__SSH_PORT  = "${NOMAD_PORT_ssh}"
+        FORGEJO__server__START_SSH_SERVER = "true"
         FORGEJO__server__ROOT_URL  = "http://${attr.unique.network.ip-address}:${NOMAD_PORT_http}/"
       }
 
