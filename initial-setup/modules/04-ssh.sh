@@ -38,7 +38,15 @@ fi
 # --- Consul Integration ---
 # Publish public key to Consul KV store
 HOSTNAME=$(hostname)
-PUB_KEY_CONTENT=$(cat "$PUBLIC_KEY")
+
+if [ -f "$SSH_DIR/id_tpm.pub" ]; then
+    log "Found TPM public key. Using it instead of standard RSA key."
+    PUBLIC_KEY="$SSH_DIR/id_tpm.pub"
+    PUB_KEY_CONTENT=$(cat "$PUBLIC_KEY")
+else
+    PUB_KEY_CONTENT=$(cat "$PUBLIC_KEY")
+fi
+
 
 log "Checking for active Consul agent before attempting to publish SSH key..."
 if systemctl is-active --quiet consul; then

@@ -1,0 +1,6 @@
+---
+- name: restart tpm-ssh-agent
+  ansible.builtin.systemd:
+    name: tpm-ssh-agent
+    state: restarted
+    daemon_reload: yes

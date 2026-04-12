@@ -1,0 +1,176 @@
+---
+- name: "TPM : Check if TPM device exists"
+  stat:
+    path: /dev/tpmrm0
+  register: tpm_device
+
+- name: "TPM : Fallback check for raw TPM device"
+  stat:
+    path: /dev/tpm0
+  register: tpm0_device
+  when: not tpm_device.stat.exists
+
+- name: "TPM : Set TPM presence fact"
+  set_fact:
+    has_tpm: "{{ tpm_device.stat.exists or (tpm0_device.stat.exists | default(false)) }}"
+
+- block:
+    - name: "TPM : Ensure tss group exists"
+      ansible.builtin.group:
+        name: tss
+        state: present
+
+    - name: "TPM : Add pipecatapp user to tss group"
+      ansible.builtin.user:
+        name: "{{ target_user | default('pipecatapp') }}"
+        groups: tss
+        append: yes
+
+    - name: "TPM : Ensure SSH config directory exists"
+      ansible.builtin.file:
+        path: "/home/{{ target_user | default('pipecatapp') }}/.ssh"
+        state: directory
+        owner: "{{ target_user | default('pipecatapp') }}"
+        group: "{{ target_user | default('pipecatapp') }}"
+        mode: '0700'
+
+    - name: "TPM : Check if TPM token already initialized"
+      ansible.builtin.stat:
+        path: "/home/{{ target_user | default('pipecatapp') }}/.tpm2_pkcs11/tpm2_pkcs11.sqlite3"
+      register: tpm_db
+
+    - block:
+        - name: "TPM : Generate random SO PIN"
+          ansible.builtin.command: openssl rand -hex 16
+          register: sopin_gen
+
+        - name: "TPM : Generate random User PIN"
+          ansible.builtin.command: openssl rand -hex 16
+          register: userpin_gen
+
+        - name: "TPM : Save PINs securely"
+          ansible.builtin.template:
+            src: tpm_pins.j2
+            dest: /etc/tpm_ssh_pins
+            owner: root
+            group: root
+            mode: '0600'
+
+        - name: "TPM : Initialize PKCS#11 store"
+          ansible.builtin.command:
+            cmd: tpm2_ptool init
+          environment:
+            HOME: "/home/{{ target_user | default('pipecatapp') }}"
+          become: yes
+          become_user: "{{ target_user | default('pipecatapp') }}"
+
+        - name: "TPM : Add token"
+          ansible.builtin.command:
+            cmd: "tpm2_ptool addtoken --pid 1 --label sshtoken --sopin {{ sopin_gen.stdout }} --userpin {{ userpin_gen.stdout }}"
+          environment:
+            HOME: "/home/{{ target_user | default('pipecatapp') }}"
+          become: yes
+          become_user: "{{ target_user | default('pipecatapp') }}"
+
+        - name: "TPM : Generate temporary SSH key for import"
+          ansible.builtin.command:
+            cmd: "ssh-keygen -t rsa -b 4096 -f /tmp/tpm_temp_key -N '' -m PEM -q"
+          become: yes
+          become_user: "{{ target_user | default('pipecatapp') }}"
+
+        - name: "TPM : Convert to PEM format (already done by -m PEM but ensuring no password)"
+          ansible.builtin.command:
+            cmd: "ssh-keygen -p -f /tmp/tpm_temp_key -m PEM -P '' -N ''"
+          become: yes
+          become_user: "{{ target_user | default('pipecatapp') }}"
+
+        - name: "TPM : Import SSH key into TPM token"
+          ansible.builtin.command:
+            cmd: "tpm2_ptool import --label sshtoken --key-label sshkey1 --userpin {{ userpin_gen.stdout }} --privkey /tmp/tpm_temp_key --algorithm rsa"
+          environment:
+            HOME: "/home/{{ target_user | default('pipecatapp') }}"
+          become: yes
+          become_user: "{{ target_user | default('pipecatapp') }}"
+
+        - name: "TPM : Cleanup temporary SSH key"
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - /tmp/tpm_temp_key
+            - /tmp/tpm_temp_key.pub
+
+      when: not tpm_db.stat.exists
+
+    - name: "TPM : Ensure PKCS11Provider is in SSH config"
+      ansible.builtin.lineinfile:
+        path: "/home/{{ target_user | default('pipecatapp') }}/.ssh/config"
+        line: "PKCS11Provider /usr/lib/x86_64-linux-gnu/pkcs11/libtpm2_pkcs11.so"
+        create: yes
+        owner: "{{ target_user | default('pipecatapp') }}"
+        group: "{{ target_user | default('pipecatapp') }}"
+        mode: '0600'
+        insertbefore: BOF
+
+    - name: "TPM : Extract Public Key from TPM"
+      ansible.builtin.shell:
+        cmd: "ssh-keygen -D /usr/lib/x86_64-linux-gnu/pkcs11/libtpm2_pkcs11.so"
+      environment:
+        HOME: "/home/{{ target_user | default('pipecatapp') }}"
+      become: yes
+      become_user: "{{ target_user | default('pipecatapp') }}"
+      register: tpm_pub_key
+      changed_when: false
+      ignore_errors: yes
+
+    - name: "TPM : Save TPM public key locally"
+      ansible.builtin.copy:
+        content: "{{ tpm_pub_key.stdout }}\n"
+        dest: "/home/{{ target_user | default('pipecatapp') }}/.ssh/id_tpm.pub"
+        owner: "{{ target_user | default('pipecatapp') }}"
+        group: "{{ target_user | default('pipecatapp') }}"
+        mode: '0644'
+      when: tpm_pub_key is not failed
+
+
+
+
+    - name: "TPM : Wait for Consul to be available before publishing key"
+      ansible.builtin.wait_for:
+        port: 8500
+        host: 127.0.0.1
+        timeout: 120
+      ignore_errors: yes
+
+    - name: "TPM : Publish public key to Consul"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8500/v1/kv/ssh-keys/{{ inventory_hostname }}"
+        method: PUT
+        body: "{{ tpm_pub_key.stdout }}"
+        status_code: [200, 201]
+      when: tpm_pub_key is not failed and tpm_pub_key.stdout != ''
+      ignore_errors: yes
+
+    - name: "TPM : Create headless SSH Agent wrapper script"
+      ansible.builtin.template:
+        src: tpm-ssh-agent.sh.j2
+        dest: /usr/local/bin/tpm-ssh-agent.sh
+        mode: '0755'
+        owner: root
+
+    - name: "TPM : Create systemd service for headless SSH Agent"
+      ansible.builtin.template:
+        src: tpm-ssh-agent.service.j2
+        dest: /etc/systemd/system/tpm-ssh-agent.service
+        mode: '0644'
+        owner: root
+      notify: restart tpm-ssh-agent
+
+    - name: "TPM : Enable and start headless SSH Agent"
+      ansible.builtin.systemd:
+        name: tpm-ssh-agent
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+  when: has_tpm | bool
