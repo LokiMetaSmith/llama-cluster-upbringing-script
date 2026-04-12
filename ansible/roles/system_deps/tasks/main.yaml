@@ -14,7 +14,6 @@
       - acl
       - avahi-daemon
       - build-essential
-      - cargo
       - chrony
       - cmake
       - cmatrix
@@ -67,7 +66,6 @@
       - python3-venv
       - python3-virtualenv
       - rsync
-      - rustc
       - sl
       - sshpass
       - sysbench
@@ -87,4 +85,33 @@
     name: avahi-daemon
     state: started
     enabled: yes
+  become: yes
+
+- name: Check if Cargo is installed
+  ansible.builtin.stat:
+    path: /root/.cargo/bin/cargo
+  register: cargo_stat
+
+- name: Install Rust and Cargo via rustup
+  ansible.builtin.shell: |
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  when: not cargo_stat.stat.exists
+  become: yes
+
+- name: Add cargo to PATH for all users
+  ansible.builtin.copy:
+    dest: /etc/profile.d/rust.sh
+    content: |
+      export PATH="/root/.cargo/bin:$PATH"
+    mode: '0644'
+  become: yes
+
+- name: Create symlinks for cargo and rustc
+  ansible.builtin.file:
+    src: "/root/.cargo/bin/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    state: link
+  loop:
+    - cargo
+    - rustc
   become: yes

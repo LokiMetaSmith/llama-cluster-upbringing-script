@@ -35,14 +35,14 @@ sudo rm -rf /etc/systemd/system/nomad.service.d
 # Purge packages
 echo "Purging installed packages..."
 sudo apt-get purge -y \
-    acl build-essential cmake cargo chrony cmatrix curl figlet fio \
+    acl build-essential cmake chrony cmatrix curl figlet fio \
     fortune-mod fuse-overlayfs gstreamer1.0-libav git hollywood htop iperf3 jq \
     libavif16 libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev \
     libavfilter-dev libswscale-dev libswresample-dev libcurl4-openssl-dev \
     libevent-2.1-7t64 libflite1 libgstreamer-plugins-bad1.0-0 libmecab-dev \
     lolcat make mecab mecab-ipadic-utf8 mosh ncdu nfs-common openssh-server \
     pkg-config portaudio19-dev python3 python3-dev python3-full python3-pip \
-    python3-venv python3-virtualenv rsync rustc sl sshpass sysbench toilet \
+    python3-venv python3-virtualenv rsync sl sshpass sysbench toilet \
     tmux ufw unzip yq docker.io docker-doc docker-compose podman-docker \
     containerd runc
 sudo apt-get autoremove -y
@@ -81,3 +81,10 @@ sudo sed -i '/# ANSIBLE MANAGED BLOCK/d' /etc/hosts
 
 echo "Uninstall complete."
 echo "Please reboot the system to ensure all changes are applied."
+
+# Remove Rust installed via rustup
+echo "Removing Rust and Cargo..."
+sudo rm -rf /root/.rustup /root/.cargo
+sudo rm -f /etc/profile.d/rust.sh
+sudo rm -f /usr/local/bin/cargo
+sudo rm -f /usr/local/bin/rustc
