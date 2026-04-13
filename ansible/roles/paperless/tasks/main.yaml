@@ -1,0 +1,25 @@
+- name: Create Paperless directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  loop:
+    - /opt/paperless/data
+    - /opt/paperless/media
+    - /opt/paperless/export
+    - /opt/paperless/consume
+    - /opt/paperless/postgres
+    - /opt/paperless/redis
+  become: yes
+
+- name: Create Paperless Nomad job file
+  ansible.builtin.template:
+    src: paperless.nomad.j2
+    dest: /opt/nomad/jobs/paperless.nomad
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Run Paperless Job

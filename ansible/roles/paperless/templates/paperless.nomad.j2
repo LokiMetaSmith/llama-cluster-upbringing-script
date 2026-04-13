@@ -1,0 +1,107 @@
+job "paperless" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "paperless-stack" {
+    count = 1
+
+    network {
+      mode = "bridge"
+      port "http" {
+        static = {{ paperless_port | default(8010) }}
+        to     = 8000
+      }
+    }
+
+    service {
+      name     = "paperless"
+      port     = "http"
+      provider = "consul"
+
+      check {
+        name     = "Paperless Web UI"
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "postgres" {
+      driver = "docker"
+
+      config {
+        image = "postgres:16.0-alpine"
+        volumes = [
+          "/opt/paperless/postgres:/var/lib/postgresql/data"
+        ]
+      }
+
+      env {
+        POSTGRES_USER     = "paperless"
+        POSTGRES_PASSWORD = "paperless_password"
+        POSTGRES_DB       = "paperless"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+
+    task "redis" {
+      driver = "docker"
+
+      config {
+        image = "redis:7.2-alpine"
+        volumes = [
+          "/opt/paperless/redis:/data"
+        ]
+      }
+
+      env {
+        REDIS_ARGS = "--save 60 10"
+      }
+
+      resources {
+        cpu    = 250
+        memory = 256
+      }
+    }
+
+    task "paperless-ngx" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/paperless-ngx/paperless-ngx:latest"
+        ports = ["http"]
+        volumes = [
+          "/opt/paperless/data:/usr/src/paperless/data",
+          "/opt/paperless/media:/usr/src/paperless/media",
+          "/opt/paperless/export:/usr/src/paperless/export",
+          "/opt/paperless/consume:/usr/src/paperless/consume"
+        ]
+      }
+
+      env {
+        USERMAP_UID              = "1000"
+        USERMAP_GID              = "1000"
+        PAPERLESS_TIME_ZONE      = "UTC"
+        PAPERLESS_OCR_LANGUAGE   = "eng"
+        PAPERLESS_REDIS          = "redis://127.0.0.1:6379"
+        PAPERLESS_DBHOST         = "127.0.0.1"
+        PAPERLESS_DBNAME         = "paperless"
+        PAPERLESS_DBUSER         = "paperless"
+        PAPERLESS_DBPASS         = "paperless_password"
+        PAPERLESS_SECRET_KEY     = "change_me_in_prod"
+        PAPERLESS_URL            = "http://{{ cluster_ip }}:{{ paperless_port | default(8010) }}"
+        PAPERLESS_ADMIN_USER     = "admin"
+        PAPERLESS_ADMIN_PASSWORD = "admin"
+      }
+
+      resources {
+        cpu    = 1000
+        memory = 1024
+      }
+    }
+  }
+}
