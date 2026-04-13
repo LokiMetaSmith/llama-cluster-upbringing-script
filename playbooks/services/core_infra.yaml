@@ -49,3 +49,11 @@
       tags:
         - tpm_ssh
         - common
+    - role: traefik
+      tags:
+        - traefik
+        - proxy
+    - role: authentik
+      tags:
+        - authentik
+        - auth

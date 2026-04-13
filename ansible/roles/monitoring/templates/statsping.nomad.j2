@@ -1,0 +1,51 @@
+job "statsping" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "statsping" {
+    network {
+      port "http" {
+        to = 8080
+        static = {{ statsping_http_port | default(8088) }}
+      }
+    }
+
+    task "statsping" {
+      driver = "docker"
+
+      config {
+        image = "statping/statping:latest"
+        ports = ["http"]
+        volumes = [
+          "{{ nomad_volumes_dir }}/statsping:/app"
+        ]
+      }
+
+      env {
+        DB_CONN = "sqlite"
+        IS_DOCKER = "true"
+      }
+
+      service {
+        name = "statsping"
+        port = "http"
+        tags = [
+          "traefik.enable=true",
+          "traefik.http.routers.statsping.rule=Host(`statsping.service.consul`)"
+        ]
+        check {
+          name     = "alive"
+          type     = "http"
+          path     = "/health"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+
+      resources {
+        cpu    = 200
+        memory = 200
+      }
+    }
+  }
+}

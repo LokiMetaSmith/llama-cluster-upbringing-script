@@ -1,0 +1,72 @@
+job "traefik" {
+  datacenters = ["dc1"]
+  type        = "system"
+
+  group "traefik" {
+    network {
+      port "http" {
+        static = {{ traefik_http_port | default(80) }}
+      }
+      port "https" {
+        static = {{ traefik_https_port | default(443) }}
+      }
+      port "api" {
+        static = {{ traefik_api_port | default(8080) }}
+      }
+    }
+
+    service {
+      name = "traefik"
+      port = "http"
+
+      check {
+        name     = "alive"
+        type     = "tcp"
+        port     = "http"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "traefik" {
+      driver = "docker"
+
+      config {
+        image        = "traefik:v3.0"
+        network_mode = "host"
+        volumes = [
+          "local/traefik.yml:/etc/traefik/traefik.yml",
+        ]
+      }
+
+      template {
+        data = <<EOF
+entryPoints:
+  web:
+    address: ":{{ traefik_http_port | default(80) }}"
+  websecure:
+    address: ":{{ traefik_https_port | default(443) }}"
+  traefik:
+    address: ":{{ traefik_api_port | default(8080) }}"
+
+api:
+  dashboard: true
+  insecure: true
+
+providers:
+  consulCatalog:
+    prefix: "traefik"
+    exposedByDefault: false
+    endpoint:
+      address: "127.0.0.1:8500"
+EOF
+        destination = "local/traefik.yml"
+      }
+
+      resources {
+        cpu    = 100
+        memory = 128
+      }
+    }
+  }
+}

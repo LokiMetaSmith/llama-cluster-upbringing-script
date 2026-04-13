@@ -1,0 +1,97 @@
+job "beszel-agent" {
+  datacenters = ["dc1"]
+  type        = "system"
+
+  group "beszel" {
+    network {
+      port "agent" {
+        static = {{ beszel_agent_port | default(45876) }}
+      }
+    }
+
+    task "agent" {
+      driver = "docker"
+
+      config {
+        image        = "henrygd/beszel-agent"
+        network_mode = "host"
+        pid_mode     = "host"
+        privileged   = true
+        volumes = [
+          "/var/run/docker.sock:/var/run/docker.sock:ro",
+          "/:/host:ro",
+          "/dev/disk:/dev/disk:ro",
+        ]
+      }
+
+      env {
+        PORT       = "{{ beszel_agent_port | default(45876) }}"
+        KEY        = "{{ beszel_agent_key | default('change_me') }}"
+        FILESYSTEM = "/host"
+      }
+
+      resources {
+        cpu    = 50
+        memory = 50
+      }
+
+      service {
+        name = "beszel-agent"
+        port = "agent"
+        check {
+          name     = "alive"
+          type     = "tcp"
+          port     = "agent"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}
+
+job "beszel-hub" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "beszel-hub" {
+    network {
+      port "http" {
+        static = {{ beszel_hub_port | default(8090) }}
+      }
+    }
+
+    task "hub" {
+      driver = "docker"
+
+      config {
+        image        = "henrygd/beszel"
+        network_mode = "host"
+        volumes = [
+          "{{ nomad_volumes_dir }}/beszel:/beszel_data",
+        ]
+      }
+
+      service {
+        name = "beszel-hub"
+        port = "http"
+        tags = [
+          "traefik.enable=true",
+          "traefik.http.routers.beszel.rule=Host(`beszel.service.consul`)"
+        ]
+        check {
+          name     = "alive"
+          type     = "tcp"
+          port     = "http"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+
+      resources {
+        cpu    = 200
+        memory = 200
+      }
+    }
+  }
+}

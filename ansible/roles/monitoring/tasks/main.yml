@@ -65,6 +65,50 @@
         NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
       changed_when: true
 
+- name: Deploy Beszel
+  block:
+    - name: Create Beszel volume directory
+      ansible.builtin.file:
+        path: "{{ nomad_volumes_dir }}/beszel"
+        state: directory
+        mode: '0755'
+      become: yes
+
+    - name: Template beszel job
+      ansible.builtin.template:
+        src: beszel.nomad.j2
+        dest: "{{ nomad_jobs_dir }}/beszel.nomad"
+      become: yes
+
+    - name: Run beszel job
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/beszel.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true
+
+- name: Deploy Statsping
+  block:
+    - name: Create Statsping volume directory
+      ansible.builtin.file:
+        path: "{{ nomad_volumes_dir }}/statsping"
+        state: directory
+        mode: '0755'
+      become: yes
+
+    - name: Template statsping job
+      ansible.builtin.template:
+        src: statsping.nomad.j2
+        dest: "{{ nomad_jobs_dir }}/statsping.nomad"
+      become: yes
+
+    - name: Run statsping job
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/statsping.nomad
+      environment:
+        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+      changed_when: true
+
 - name: Deploy Memory Audit
   block:
     - name: Template memory-audit job
