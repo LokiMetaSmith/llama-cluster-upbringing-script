@@ -256,3 +256,13 @@ This section tracks actionable ideas derived from the `PASEO_ANALYSIS.md` docume
 - [x] **Integrate Cryptographic Receipts for Tool Execution:**
   - **Goal:** Ensure that in a decentralized/zero-trust multi-agent system, tool outputs are genuinely executed by the designated node/enclave and not hallucinated by compromised nodes.
   - **Context:** Since forcing language models to hallucinate raw SHA-256 hashes often fails due to tokenization, the deterministic runtime executing the tool should cryptographically sign the execution trace (input parameters and output payload) with a private key. The orchestration router must then verify this signature before allowing the state machine to proceed, creating an immutable proof of execution.
+
+## Flowise UI Integration Ideas
+
+This section tracks actionable ideas derived from the `FLOWISE_ANALYSIS.md` document for integrating visual workflow concepts into the `pipecatapp` architecture.
+
+- [ ] **Decouple Node Handlers (Input vs Output):** In the frontend, separate the visual node UI into dedicated Input and Output handlers that dynamically adjust their height to keep connection anchors perfectly aligned when configuration controls expand/collapse.
+- [ ] **Strict Visual Edge Validation:** Implement an `isValidConnection` hook on the frontend canvas that checks the backend Python/Pydantic schemas. Prevent users from visually connecting a text output port to a dictionary input port to avoid runtime crashes.
+- [ ] **Dynamic Variable Interpolation:** Standardize the `{{ $vars.NAME }}` syntax. Add a pre-processing step to the Python `WorkflowRunner` that resolves and injects these variables globally across all node configs before the graph execution begins.
+- [ ] **Expose UI Metadata from Backend:** Add a new REST API endpoint to the Python server that returns a JSON schema describing the available workflow nodes (including category, icon, accepted input types, and tooltips). Use this to dynamically construct the frontend node properties panel.
+- [ ] **Introduce a `PostProcessorNode`:** Implement an execution hook or a dedicated node that allows arbitrary Javascript/Python manipulation of the final output dictionary (e.g., reformatting or filtering data) before it is sent back to the client.
