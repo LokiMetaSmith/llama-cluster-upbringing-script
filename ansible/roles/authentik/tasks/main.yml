@@ -1,15 +1,26 @@
-- name: Create Authentik directories
+- name: Create Authentik non-database directories
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
+    owner: "1000"
+    group: "1000"
     recurse: yes
   become: yes
   loop:
     - "{{ nomad_volumes_dir }}/authentik/media"
     - "{{ nomad_volumes_dir }}/authentik/templates"
     - "{{ nomad_volumes_dir }}/authentik/certs"
-    - "{{ nomad_volumes_dir }}/authentik/postgres"
+
+- name: Create Authentik postgres directory
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/authentik/postgres"
+    state: directory
+    mode: '0700'
+    owner: "70"
+    group: "70"
+    recurse: yes
+  become: yes
 
 - name: Template Authentik Nomad job
   ansible.builtin.template:
