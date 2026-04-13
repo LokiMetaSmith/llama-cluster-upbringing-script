@@ -106,6 +106,7 @@
         - llmfit
         - openclaw
         - forgejo
+        - paperless
       loop_control:
         loop_var: role_name
       tags:
@@ -115,6 +116,7 @@
         - world_model_service
         - tool_server
         - forgejo
+        - paperless
 
     - name: Run Paddler Stack
       when: enable_paddler | default(false)

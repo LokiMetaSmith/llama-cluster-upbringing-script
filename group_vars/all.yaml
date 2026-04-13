@@ -157,6 +157,10 @@ nanochat_platform: "gpu"
 enable_provisioning_api: true
 enable_home_assistant: true
 enable_frigate: false
+enable_paperless: true
+
+# Service Ports
+paperless_port: 8010
 
 # The default user for remote connections and service execution.
 target_user: ubuntu
