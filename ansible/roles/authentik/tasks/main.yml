@@ -1,0 +1,25 @@
+- name: Create Authentik directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    recurse: yes
+  become: yes
+  loop:
+    - "{{ nomad_volumes_dir }}/authentik/media"
+    - "{{ nomad_volumes_dir }}/authentik/templates"
+    - "{{ nomad_volumes_dir }}/authentik/certs"
+    - "{{ nomad_volumes_dir }}/authentik/postgres"
+
+- name: Template Authentik Nomad job
+  ansible.builtin.template:
+    src: authentik.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/authentik.nomad"
+  become: yes
+
+- name: Run Authentik Nomad job
+  ansible.builtin.command: nomad job run {{ nomad_jobs_dir }}/authentik.nomad
+  environment:
+    NOMAD_ADDR: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+  register: authentik_deploy
+  changed_when: "'modified' in authentik_deploy.stdout or 'created' in authentik_deploy.stdout"

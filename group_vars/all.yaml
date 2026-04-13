@@ -45,6 +45,14 @@ nomad_models_dir: "/opt/nomad/models"
 # Standard Ports
 consul_http_port: 8500
 consul_dns_port: 8600
+traefik_http_port: 80
+traefik_https_port: 443
+traefik_api_port: 8080
+authentik_http_port: 9000
+authentik_https_port: 9443
+beszel_agent_port: 45876
+beszel_hub_port: 8090
+statsping_http_port: 8088
 consul_rpc_port: 8300
 consul_serf_lan_port: 8301
 consul_serf_wan_port: 8302

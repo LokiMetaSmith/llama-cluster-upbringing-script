@@ -1,0 +1,2 @@
+nomad_volumes_dir: /opt/nomad/volumes
+nomad_jobs_dir: /opt/nomad/jobs

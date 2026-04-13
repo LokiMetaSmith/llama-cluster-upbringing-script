@@ -529,7 +529,7 @@ ensure_python_environment() {
 
     # Install Ansible collections
     if [ -x "$ANSIBLE_GALAXY_EXEC" ]; then
-        run_step "Installing Ansible collections" "$ANSIBLE_GALAXY_EXEC collection install community.general ansible.posix community.docker"
+        run_step "Installing Ansible collections" "$ANSIBLE_GALAXY_EXEC collection install community.general ansible.posix community.docker community.sops"
     else
         echo "Error: ansible-galaxy not found in venv." >&2
         exit 1

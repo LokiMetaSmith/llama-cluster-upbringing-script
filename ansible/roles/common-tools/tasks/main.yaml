@@ -11,7 +11,15 @@
       - ufw
       - figlet
       - lolcat
+      - age
     state: present
+  become: yes
+
+- name: Download SOPS binary
+  ansible.builtin.get_url:
+    url: https://github.com/getsops/sops/releases/download/v3.8.1/sops-v3.8.1.linux.amd64
+    dest: /usr/local/bin/sops
+    mode: '0755'
   become: yes
 
 - name: Ensure Mosh is allowed through the firewall

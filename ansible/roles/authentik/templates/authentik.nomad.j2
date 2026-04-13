@@ -1,0 +1,136 @@
+job "authentik" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "authentik" {
+    network {
+      mode = "bridge"
+      port "http" {
+        static = {{ authentik_http_port | default(9000) }}
+        to     = 9000
+      }
+      port "https" {
+        static = {{ authentik_https_port | default(9443) }}
+        to     = 9443
+      }
+      port "redis" {
+        to = 6379
+      }
+      port "postgres" {
+        to = 5432
+      }
+    }
+
+    task "redis" {
+      driver = "docker"
+
+      config {
+        image = "redis:7.2-alpine"
+        ports = ["redis"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 128
+      }
+    }
+
+    task "postgresql" {
+      driver = "docker"
+
+      config {
+        image = "postgres:15-alpine"
+        ports = ["postgres"]
+        volumes = [
+          "{{ nomad_volumes_dir }}/authentik/postgres:/var/lib/postgresql/data"
+        ]
+      }
+
+      env {
+        POSTGRES_USER     = "{{ authentik_db_user | default('authentik') }}"
+        POSTGRES_PASSWORD = "{{ authentik_db_password | default('authentik_password') }}"
+        POSTGRES_DB       = "{{ authentik_db_name | default('authentik') }}"
+      }
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+    }
+
+    task "server" {
+      driver = "docker"
+
+      config {
+        image        = "ghcr.io/goauthentik/server:2024.2.2"
+        args         = ["server"]
+        ports        = ["http", "https"]
+        volumes = [
+          "{{ nomad_volumes_dir }}/authentik/media:/media",
+          "{{ nomad_volumes_dir }}/authentik/templates:/templates"
+        ]
+      }
+
+      env {
+        AUTHENTIK_REDIS__HOST = "127.0.0.1"
+        AUTHENTIK_POSTGRESQL__HOST = "127.0.0.1"
+        AUTHENTIK_POSTGRESQL__USER = "{{ authentik_db_user | default('authentik') }}"
+        AUTHENTIK_POSTGRESQL__NAME = "{{ authentik_db_name | default('authentik') }}"
+        AUTHENTIK_POSTGRESQL__PASSWORD = "{{ authentik_db_password | default('authentik_password') }}"
+        AUTHENTIK_SECRET_KEY = "{{ authentik_secret_key | default('change_me_to_a_random_string_in_production') }}"
+        AUTHENTIK_ERROR_REPORTING__ENABLED = "true"
+      }
+
+      service {
+        name = "authentik"
+        port = "http"
+        tags = [
+          "traefik.enable=true",
+          "traefik.http.routers.authentik.rule=Host(`authentik.service.consul`)",
+          "traefik.http.services.authentik.loadbalancer.server.port=9000"
+        ]
+        check {
+          name     = "alive"
+          type     = "http"
+          path     = "/-/health/live/"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+
+    task "worker" {
+      driver = "docker"
+
+      config {
+        image        = "ghcr.io/goauthentik/server:2024.2.2"
+        args         = ["worker"]
+        volumes = [
+          "{{ nomad_volumes_dir }}/authentik/media:/media",
+          "{{ nomad_volumes_dir }}/authentik/certs:/certs",
+          "{{ nomad_volumes_dir }}/authentik/templates:/templates"
+        ]
+      }
+
+      env {
+        AUTHENTIK_REDIS__HOST = "127.0.0.1"
+        AUTHENTIK_POSTGRESQL__HOST = "127.0.0.1"
+        AUTHENTIK_POSTGRESQL__USER = "{{ authentik_db_user | default('authentik') }}"
+        AUTHENTIK_POSTGRESQL__NAME = "{{ authentik_db_name | default('authentik') }}"
+        AUTHENTIK_POSTGRESQL__PASSWORD = "{{ authentik_db_password | default('authentik_password') }}"
+        AUTHENTIK_SECRET_KEY = "{{ authentik_secret_key | default('change_me_to_a_random_string_in_production') }}"
+        AUTHENTIK_ERROR_REPORTING__ENABLED = "true"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+  }
+}

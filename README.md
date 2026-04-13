@@ -403,7 +403,24 @@ This project includes a web-based dashboard for real-time display and debugging.
 
 ## 10. Security & Authentication
 
-### 10.1. TPM-Backed SSH Identity
+### 10.1. Secret Management with SOPS
+
+The cluster supports managing encrypted secrets (like API keys, database passwords) directly within the Git repository using [SOPS](https://github.com/getsops/sops) and `age` encryption.
+Ansible automatically decrypts variables from `*.sops.yaml` files during playbook runs, ensuring that sensitive data is secure at rest while enabling GitOps workflows.
+
+1. **Setup Age Key:**
+   ```bash
+   age-keygen -o ~/.config/sops/age/keys.txt
+   ```
+2. **Update SOPS Config:**
+   Update `.sops.yaml` at the root of the project to include the public key generated above.
+3. **Manage Secrets:**
+   Create encrypted variable files in `group_vars/` or `host_vars/` (e.g. `group_vars/secrets.sops.yaml`).
+   ```bash
+   sops group_vars/secrets.sops.yaml
+   ```
+
+### 10.2. TPM-Backed SSH Identity
 
 The Pipecat cluster utilizes a Trusted Platform Module (TPM) to provide a unique, immutable identity for each node.
 Instead of storing traditional SSH private keys (`id_rsa`) in plaintext on the filesystem, the `tpm_ssh` Ansible role generates an SSH key and securely seals it inside the physical TPM chip.
