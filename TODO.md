@@ -75,7 +75,7 @@
 ### Centralize All Configuration
 
 - [ ] **Convert all configuration files to templates (Recurring Review):** Any file that contains a variable should be a Jinja2 template (`.j2`). Ensure new services follow this pattern.
-- [ ] **Establish a clear variable hierarchy (Recurring Review):** Use `group_vars/all.yaml` for system-wide defaults and consider `host_vars/<hostname>.yaml` for machine-specific overrides. Audit periodically.
+- [x] **Establish a clear variable hierarchy (Recurring Review):** Use `group_vars/all.yaml` for system-wide defaults and consider `host_vars/<hostname>.yaml` for machine-specific overrides. Audit periodically.
 
 ### Pre-build a Docker Image for `pipecatapp`
 
@@ -141,7 +141,7 @@ These structural suggestions are targeted for a future major release to signific
 - [ ] **Security Hardening:**
   - [x] **Remove passwordless sudo:** Modify the sudoers file configuration to require a password for the `target_user`.
   - [x] **Run services as non-root users:** Audit all services and ensure they are running as dedicated, non-privileged users where possible.
-- [ ] **Robust Remote Node Recovery:** Add mechanism to recover remote nodes even if network stack is completely broken (possibly via serial console or IPMI automation).
+- [x] **Robust Remote Node Recovery:** Add mechanism to recover remote nodes even if network stack is completely broken (possibly via serial console or IPMI automation).
 - [x] **Monitoring and Observability:** Deploy a monitoring stack like Prometheus and Grafana.
 - [x] Add a `wait_for` to the `home_assistant` role to ensure the `mqtt` service is running before starting the `home-assistant` service.
 - [x] Create a new integration test file for home assistant.
