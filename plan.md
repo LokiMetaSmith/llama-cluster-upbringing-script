@@ -1,0 +1,4 @@
+1. Add `system_deps` as a dependency to `python_deps` role. The `python_deps` task fails because it tries to compile `pyaudio` via `uv pip install`, which requires `portaudio19-dev` (and other compilation dependencies like gcc). The `python_deps` task is called directly from `playbooks/developer_tools.yaml` (via `heretic_tool` -> `python_deps`). But it is missing the C headers required to compile the Python packages. By adding `system_deps` to the `dependencies` array in `ansible/roles/python_deps/meta/main.yaml`, we ensure that `build-essential` and `portaudio19-dev` are installed prior to `uv pip install` compiling python modules.
+2. The `system_deps` is explicitly called in `app_services.yaml` *before* `python_deps`, but it is skipped when running `playbooks/developer_tools.yaml` directly or in isolation unless it's chained via dependencies.
+3. Pre-commit instructions.
+4. Submit the changes.
