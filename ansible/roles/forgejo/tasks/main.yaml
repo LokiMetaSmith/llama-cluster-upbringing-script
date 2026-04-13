@@ -7,6 +7,15 @@
     group: "{{ target_user }}"
   become: yes
 
+- name: Create Forgejo config directory
+  ansible.builtin.file:
+    path: /opt/forgejo/config
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  become: yes
+
 - name: Create Forgejo Nomad job file
   ansible.builtin.template:
     src: forgejo.nomad.j2

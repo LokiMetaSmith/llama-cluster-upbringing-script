@@ -23,7 +23,8 @@ job "forgejo" {
         ports = ["http", "ssh"]
 
         volumes = [
-          "/opt/forgejo/data:/data"
+          "/opt/forgejo/data:/var/lib/gitea",
+          "/opt/forgejo/config:/etc/gitea"
         ]
       }
 
