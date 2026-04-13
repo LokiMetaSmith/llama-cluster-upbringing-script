@@ -19,5 +19,20 @@ class NodeRegistry:
         """Get a node class by its type name."""
         return self._registry.get(type_name)
 
+    def get_all_nodes_metadata(self) -> list:
+        """Returns metadata for all registered nodes for UI generation."""
+        metadata = []
+        for name, cls in self._registry.items():
+            doc = cls.__doc__ or ""
+            # Simple parsing of docstring if it follows a specific format, or just return basic info
+            node_info = {
+                "name": name,
+                "description": doc.strip().split("\n")[0] if doc else "No description available.",
+                "category": getattr(cls, "category", "General"),
+                "icon": getattr(cls, "icon", "node.svg")
+            }
+            metadata.append(node_info)
+        return metadata
+
 # Global registry instance
 registry = NodeRegistry()

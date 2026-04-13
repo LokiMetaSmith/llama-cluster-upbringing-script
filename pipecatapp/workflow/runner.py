@@ -230,6 +230,25 @@ class WorkflowRunner:
         context = getattr(self, 'context', None)
         return _safe_context_to_dict(context, sanitize=sanitize)
 
+    def _interpolate_variables(self, value: Any, global_inputs: Dict[str, Any], var_pattern=None) -> Any:
+        """Recursively search for and interpolate {{ $vars.KEY }} variables in strings."""
+        if var_pattern is None:
+            import re
+            var_pattern = re.compile(r"\{\{\s*\$vars\.([a-zA-Z0-9_]+)\s*\}\}")
+
+        if isinstance(value, str):
+            def replace_match(match):
+                var_name = match.group(1).strip()
+                if var_name in global_inputs:
+                    return str(global_inputs[var_name])
+                return match.group(0) # Leave unchanged if not found
+            return var_pattern.sub(replace_match, value)
+        elif isinstance(value, dict):
+            return {k: self._interpolate_variables(v, global_inputs, var_pattern) for k, v in value.items()}
+        elif isinstance(value, list):
+            return [self._interpolate_variables(v, global_inputs, var_pattern) for v in value]
+        return value
+
     async def run(self, global_inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the workflow.
 
@@ -244,18 +263,33 @@ class WorkflowRunner:
         error = None
 
         try:
-            self._instantiate_nodes()
-            self.context = WorkflowContext(self.workflow_definition)
-            for name, value in global_inputs.items():
-                self.context.set_global_input(name, value)
+            # Interpolate variables before node instantiation (do not permanently mutate self.workflow_definition)
+            interpolated_def = copy.deepcopy(self.workflow_definition)
+            for node in interpolated_def.get("nodes", []):
+                for input_config in node.get("inputs", []):
+                    if "value" in input_config:
+                        input_config["value"] = self._interpolate_variables(input_config["value"], global_inputs)
+                if "config" in node:
+                    node["config"] = self._interpolate_variables(node["config"], global_inputs)
 
-            execution_order = self._get_execution_order()
+            # Use the interpolated definition for this run only
+            original_def = self.workflow_definition
+            self.workflow_definition = interpolated_def
+            try:
+                self._instantiate_nodes()
+                self.context = WorkflowContext(self.workflow_definition)
+                for name, value in global_inputs.items():
+                    self.context.set_global_input(name, value)
 
-            for node_id in execution_order:
-                node = self.nodes[node_id]
-                await node.execute(self.context)
+                execution_order = self._get_execution_order()
 
-            return self.context.final_output
+                for node_id in execution_order:
+                    node = self.nodes[node_id]
+                    await node.execute(self.context)
+
+                return self.context.final_output
+            finally:
+                self.workflow_definition = original_def
 
         except Exception as e:
             status = "FAILED"
