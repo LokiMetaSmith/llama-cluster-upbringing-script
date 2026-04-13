@@ -1,4 +1,4 @@
-from typing import Dict, Type
+from typing import Dict, Type, Any
 from ..node import Node
 
 class NodeRegistry:
@@ -19,5 +19,22 @@ class NodeRegistry:
         """Get a node class by its type name."""
         return self._registry.get(type_name)
 
+
+    def get_all_nodes_metadata(self) -> Dict[str, Any]:
+        """Get metadata for all registered nodes."""
+        metadata = {}
+        for type_name, node_class in self._registry.items():
+            # For now just return name and basic empty inputs/outputs,
+            # If the node has a get_metadata classmethod, we could use that.
+            if hasattr(node_class, 'get_metadata'):
+                metadata[type_name] = node_class.get_metadata()
+            else:
+                metadata[type_name] = {
+                    "name": type_name,
+                    "description": node_class.__doc__ or f"A {type_name} node."
+                }
+        return metadata
+
 # Global registry instance
+
 registry = NodeRegistry()

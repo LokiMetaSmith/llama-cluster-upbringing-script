@@ -922,7 +922,15 @@ async def configure_rag(request: Request, payload: Dict = Body(..., examples=[{"
     else:
         return JSONResponse(status_code=400, content={"message": "Invalid path or security violation."})
 
+
+@app.get("/api/workflows/nodes/metadata", summary="Get Node Metadata", description="Get metadata for all available workflow nodes.", tags=["Workflow"])
+async def get_node_metadata(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """Returns the metadata for all available workflow nodes to be used in UI."""
+    from pipecatapp.workflow.nodes.registry import registry
+    return JSONResponse(content=registry.get_all_nodes_metadata())
+
 if __name__ == "__main__":
+
     import uvicorn
     host_ip = os.getenv("HOST_IP", "::")
     uvicorn.run(app, host=host_ip, port=8000)

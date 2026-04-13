@@ -224,7 +224,31 @@ class WorkflowRunner:
 
         return sorted_order
 
+
+    def _interpolate_variables(self, obj: Any, global_inputs: Dict[str, Any]) -> Any:
+        import re
+        if isinstance(obj, dict):
+            return {k: self._interpolate_variables(v, global_inputs) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._interpolate_variables(item, global_inputs) for item in obj]
+        elif isinstance(obj, str):
+            pattern = r'\{\{\s*\$vars\.([a-zA-Z0-9_]+)\s*\}\}'
+            exact_match = re.fullmatch(pattern, obj.strip())
+            if exact_match:
+                var_name = exact_match.group(1)
+                if var_name in global_inputs:
+                    return global_inputs[var_name]
+                return obj
+
+            def replace_func(match):
+                var_name = match.group(1)
+                return str(global_inputs.get(var_name, match.group(0)))
+
+            return re.sub(pattern, replace_func, obj)
+        return obj
+
     def context_to_dict(self, sanitize=False) -> Dict[str, Any]:
+
         """Returns a serializable dictionary of the current workflow context."""
         # Use shared helper
         context = getattr(self, 'context', None)
@@ -244,6 +268,7 @@ class WorkflowRunner:
         error = None
 
         try:
+            self.workflow_definition = self._interpolate_variables(self.workflow_definition, global_inputs)
             self._instantiate_nodes()
             self.context = WorkflowContext(self.workflow_definition)
             for name, value in global_inputs.items():
