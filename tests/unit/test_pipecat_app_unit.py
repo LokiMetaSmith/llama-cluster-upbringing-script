@@ -22,10 +22,10 @@ class MockFrameProcessor:
         self._next = None
 
     async def process_frame(self, frame, direction):
-        pass
+        raise NotImplementedError
 
     async def push_frame(self, frame, direction):
-        pass
+        raise NotImplementedError
 
 # Mock pipecat dependencies
 mock_pipecat = MagicMock()

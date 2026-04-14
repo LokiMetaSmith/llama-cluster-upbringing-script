@@ -24,7 +24,7 @@ if os.path.exists(DB_PATH):
     try:
         os.remove(DB_PATH)
     except:
-        pass
+        print("Could not remove db")
 
 # Set env before importing app to avoid PermissionError on /data
 os.environ["MEMORY_DB_PATH"] = DB_PATH
@@ -49,7 +49,7 @@ def test_server():
             try:
                 os.remove(DB_PATH)
             except:
-                pass
+                print("Could not remove db")
 
 async def run_test():
     with test_server() as url:
@@ -96,7 +96,7 @@ async def run_test():
         try:
              await asyncio.wait_for(janitor_task, timeout=1)
         except asyncio.TimeoutError:
-            pass # Expected
+            print("Timeout Error")
         except Exception as e:
             print(f"Janitor error: {e}")
 
