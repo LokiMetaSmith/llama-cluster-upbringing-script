@@ -543,6 +543,13 @@ async def get_health(request: Request):
         # during long startup phases (e.g., waiting for other services).
         return JSONResponse(status_code=200, content={"status": "initializing"})
 
+@app.get("/api/workflows/nodes/metadata", response_class=JSONResponse, summary="Get Workflow Nodes Metadata", description="Retrieves metadata for all registered workflow nodes to construct the UI.", tags=["Workflow"])
+async def get_workflow_nodes_metadata(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """Endpoint to get metadata for all workflow nodes."""
+    from pipecatapp.workflow.nodes.registry import registry
+    metadata = registry.get_all_nodes_metadata()
+    return JSONResponse(content={"nodes": metadata})
+
 @app.get("/api/workflows/active", response_class=JSONResponse)
 async def get_active_workflows(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """Returns a snapshot of the state of all active workflows."""

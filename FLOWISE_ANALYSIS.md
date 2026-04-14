@@ -13,7 +13,11 @@ Flowise is split into three main components:
 Flowise uses `ReactFlow` for its drag-and-drop canvas. Their approach to building visual nodes provides several useful abstractions.
 
 ### `CanvasNode`
+<<<<<<< HEAD
 The master container for visual nodes is `CanvasNode.jsx`. It defines the overarching visual card, handles node selection states, and provides actions like duplicate, delete, and open info dialogs.
+=======
+The master container for visual nodes is `CanvasNode.jsx`. It defines the overarching visual card, handles node selection states, and provides actions like duplicate, delete, and open info dialogs.
+>>>>>>> origin/main
 - **Visual Distinction:** Nodes render differently based on their `category` (e.g. Agents, Document Loaders, Memory).
 - **Tooltips & Info:** Every node has a tooltip that explains what it does, and an info dialog for more detailed configuration information.
 
@@ -46,7 +50,11 @@ The server uses graph traversal algorithms (`constructGraphs`, `getEndingNodes`,
 
 Execution generally follows a backward chaining model or topological sort:
 1. **Resolution:** The `resolveVariables` function traverses the `inputParams` of the nodes, looking for variable syntax (`{{ ... }}`). It interpolates these before passing them to the execution logic.
+<<<<<<< HEAD
 2. **Instantiation:** It traverses the graph, instantiating backend classes defined in `packages/components` (e.g., `ReActAgentChat_Agents`).
+=======
+2. **Instantiation:** It traverses the graph, instantiating backend classes defined in `packages/components` (e.g., `ReActAgentChat_Agents`).
+>>>>>>> origin/main
 3. **Initialization & Execution:** Each node implements an `init()` method (for setup, e.g., connecting to a DB) and a `run()` method (where the main LangChain/LLM logic happens).
 4. **Custom Post-Processing:** Flowise has a hook to run custom Javascript functions on the final text output of a flow before returning it to the client.
 
