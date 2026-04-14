@@ -104,7 +104,7 @@ class TestProvisioning(unittest.TestCase):
                 debug=False, continue_run=False, benchmark=False,
                 external_model_server=False, leave_services_running=False,
                 purge_jobs=True, only_purge=False, deploy_docker=False, run_local=False,
-                home_assistant_debug=False, watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False
+                home_assistant_debug=False, watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False, tier="mid"
             ), [])
 
             # Mock os.path.exists for manifest
@@ -123,7 +123,7 @@ class TestProvisioning(unittest.TestCase):
                 debug=False, continue_run=False, benchmark=False,
                 external_model_server=False, leave_services_running=False,
                 purge_jobs=True, only_purge=True, deploy_docker=False, run_local=False,
-                home_assistant_debug=False, watch=None, verbose=0
+                home_assistant_debug=False, watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False, tier="mid"
             ), [])
 
              # We want sys.exit(0) to actually interrupt the flow so main() stops
