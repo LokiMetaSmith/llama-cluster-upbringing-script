@@ -217,6 +217,7 @@ const WorkflowEditor = {
         createGenericNode("ToolExecutorNode", "Tool Executor", [{name: "tool_call_data", type: "object"}], [{name: "tool_result", type: "object"}]);
         createGenericNode("MergeNode", "Merge", [{name: "in1", type: "object"}, {name: "in2", type: "object"}], [{name: "merged_output", type: "object"}]);
         createGenericNode("OutputNode", "Output", [{name: "final_output", type: "object"}], []);
+        createGenericNode("PostProcessorNode", "Post Processor", [{name: "data", type: "object"}, {name: "expression", type: "string"}], [{name: "processed_data", type: "object"}], {expression: "data"});
 
     },
 
