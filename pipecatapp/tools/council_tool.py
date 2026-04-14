@@ -19,7 +19,8 @@ class CouncilTool:
         self.openrouter_models = [
             "openai/gpt-4-turbo",
             "anthropic/claude-3-opus",
-            "google/gemini-pro-1.5"
+            "google/gemini-pro-1.5",
+            "google/gemma-4-31b-it"
         ] if self.openrouter_api_key else []
 
     async def _discover_local_experts(self) -> Dict[str, str]:
