@@ -224,7 +224,31 @@ class WorkflowRunner:
 
         return sorted_order
 
+
+    def _interpolate_variables(self, obj: Any, global_inputs: Dict[str, Any]) -> Any:
+        import re
+        if isinstance(obj, dict):
+            return {k: self._interpolate_variables(v, global_inputs) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._interpolate_variables(item, global_inputs) for item in obj]
+        elif isinstance(obj, str):
+            pattern = r'\{\{\s*\$vars\.([a-zA-Z0-9_]+)\s*\}\}'
+            exact_match = re.fullmatch(pattern, obj.strip())
+            if exact_match:
+                var_name = exact_match.group(1)
+                if var_name in global_inputs:
+                    return global_inputs[var_name]
+                return obj
+
+            def replace_func(match):
+                var_name = match.group(1)
+                return str(global_inputs.get(var_name, match.group(0)))
+
+            return re.sub(pattern, replace_func, obj)
+        return obj
+
     def context_to_dict(self, sanitize=False) -> Dict[str, Any]:
+
         """Returns a serializable dictionary of the current workflow context."""
         # Use shared helper
         context = getattr(self, 'context', None)
@@ -263,18 +287,12 @@ class WorkflowRunner:
         error = None
 
         try:
-            # Interpolate variables before node instantiation (do not permanently mutate self.workflow_definition)
-            interpolated_def = copy.deepcopy(self.workflow_definition)
-            for node in interpolated_def.get("nodes", []):
-                for input_config in node.get("inputs", []):
-                    if "value" in input_config:
-                        input_config["value"] = self._interpolate_variables(input_config["value"], global_inputs)
-                if "config" in node:
-                    node["config"] = self._interpolate_variables(node["config"], global_inputs)
-
-            # Use the interpolated definition for this run only
+            # Create a deep copy to prevent permanent mutation of the workflow definition
+            # The upstream _interpolate_variables implementation handles dicts recursively,
+            # so we can just pass the whole definition to it.
             original_def = self.workflow_definition
-            self.workflow_definition = interpolated_def
+            self.workflow_definition = self._interpolate_variables(copy.deepcopy(self.workflow_definition), global_inputs)
+
             try:
                 self._instantiate_nodes()
                 self.context = WorkflowContext(self.workflow_definition)

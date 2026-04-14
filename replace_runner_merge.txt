@@ -1,0 +1,45 @@
+<<<<<<< SEARCH
+        try:
+<<<<<<< HEAD
+            # Interpolate variables before node instantiation (do not permanently mutate self.workflow_definition)
+            interpolated_def = copy.deepcopy(self.workflow_definition)
+            for node in interpolated_def.get("nodes", []):
+                for input_config in node.get("inputs", []):
+                    if "value" in input_config:
+                        input_config["value"] = self._interpolate_variables(input_config["value"], global_inputs)
+                if "config" in node:
+                    node["config"] = self._interpolate_variables(node["config"], global_inputs)
+
+            # Use the interpolated definition for this run only
+            original_def = self.workflow_definition
+            self.workflow_definition = interpolated_def
+            try:
+                self._instantiate_nodes()
+                self.context = WorkflowContext(self.workflow_definition)
+                for name, value in global_inputs.items():
+                    self.context.set_global_input(name, value)
+=======
+            self.workflow_definition = self._interpolate_variables(self.workflow_definition, global_inputs)
+            self._instantiate_nodes()
+            self.context = WorkflowContext(self.workflow_definition)
+            for name, value in global_inputs.items():
+                self.context.set_global_input(name, value)
+>>>>>>> origin/main
+
+                execution_order = self._get_execution_order()
+=======
+        try:
+            # Create a deep copy to prevent permanent mutation of the workflow definition
+            # The upstream _interpolate_variables implementation handles dicts recursively,
+            # so we can just pass the whole definition to it.
+            original_def = self.workflow_definition
+            self.workflow_definition = self._interpolate_variables(copy.deepcopy(self.workflow_definition), global_inputs)
+
+            try:
+                self._instantiate_nodes()
+                self.context = WorkflowContext(self.workflow_definition)
+                for name, value in global_inputs.items():
+                    self.context.set_global_input(name, value)
+
+                execution_order = self._get_execution_order()
+>>>>>>> REPLACE

@@ -1,4 +1,4 @@
-from typing import Dict, Type
+from typing import Dict, Type, Any
 from ..node import Node
 
 class NodeRegistry:
@@ -33,6 +33,8 @@ class NodeRegistry:
             }
             metadata.append(node_info)
         return metadata
+        return metadata
 
 # Global registry instance
+
 registry = NodeRegistry()
