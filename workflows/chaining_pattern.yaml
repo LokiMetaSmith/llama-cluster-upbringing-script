@@ -1,0 +1,35 @@
+name: Chaining Pattern Demonstration
+nodes:
+  - id: input_node
+    type: InputNode
+    config:
+      outputs:
+        - name: user_text
+
+  - id: extractor
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: input_node.user_text
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: "You are an extraction assistant. Extract the technical specifications (like cpu, memory, storage) from the user's text. Do not format it yet, just extract the raw data."
+      model_service: rpc-main
+
+  - id: transformer
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: extractor.response
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: "You are a formatting assistant. Transform the provided text into a strict JSON object with keys like 'cpu', 'memory', and 'storage'. Do not include any other markdown or explanation."
+      model_service: rpc-main
+
+  - id: output_node
+    type: OutputNode
+    inputs:
+      - name: final_output
+        source: transformer.response

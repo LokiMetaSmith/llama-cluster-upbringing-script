@@ -447,6 +447,90 @@ class ExternalLLMNode(Node):
             print(f"Error calling external expert {expert_id}: {e}")
             self.set_output(context, "response", f"Error calling external expert: {e}")
 @registry.register
+class DynamicRouterNode(Node):
+    """
+    Implements the Routing Pattern (Conditional Intelligence) by dynamically
+    deciding which path a request should take based on LLM classification.
+    """
+    async def execute(self, context: WorkflowContext):
+        query = self.get_input(context, "user_text")
+
+        node_config = self.config.get("config", {})
+        target_service = node_config.get("model_service", "rpc-main")
+        routes = node_config.get("routes", ["booker", "info", "unclear"])
+
+        if not query:
+             self.set_output(context, "decision", "unclear")
+             self.set_output(context, "unclear", query)
+             for route in routes:
+                 if route != "unclear":
+                     self.set_output(context, route, None)
+             return
+
+        consul_http_addr = context.global_inputs.get("consul_http_addr")
+
+        system_prompt = (
+            "Analyze the user's request and determine which specialist handler should process it.\n"
+            f"Available routes: {', '.join(routes)}.\n"
+            "If the request is related to booking flights or hotels, output 'booker'.\n"
+            "For all other general information questions, output 'info'.\n"
+            "If the request is unclear or doesn't fit either category, output 'unclear'.\n"
+            f"ONLY output one word from the available routes list."
+        )
+
+        decision = "unclear" # Default fallback
+
+        if consul_http_addr:
+            try:
+                token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
+                headers = {"X-Consul-Token": token} if token else {}
+
+                async with httpx.AsyncClient(headers=headers) as client:
+                    response = await client.get(f"{consul_http_addr}/v1/health/service/{target_service}?passing")
+                    response.raise_for_status()
+                    services = response.json()
+
+                    if services:
+                        address = services[0]['Service']['Address']
+                        port = services[0]['Service']['Port']
+                        base_url = f"http://{address}:{port}/v1"
+                        chat_url = f"{base_url}/chat/completions"
+
+                        messages = [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": query}
+                        ]
+
+                        payload = {
+                            "model": target_service,
+                            "messages": messages,
+                            "temperature": 0.0 # Deterministic routing
+                        }
+
+                        res = await client.post(chat_url, json=payload, timeout=30)
+                        res.raise_for_status()
+                        decision = res.json()["choices"][0]["message"]["content"].strip().lower()
+
+                        # Validate decision is one of the allowed routes
+                        if decision not in routes:
+                            decision = "unclear"
+
+            except Exception as e:
+                logging.error(f"Error in DynamicRouterNode: {e}")
+                decision = "unclear"
+
+        # We output the original request on the decided port
+        self.set_output(context, "decision", decision)
+
+        # Output the request to the specific dynamic port
+        self.set_output(context, decision, query)
+
+        # Set all other route ports to None so conditional logic downstream works
+        for route in routes:
+            if route != decision:
+                self.set_output(context, route, None)
+
+@registry.register
 class LLMRouterNode(Node):
     """
     Routes a query to the best available expert using LLMRouter.

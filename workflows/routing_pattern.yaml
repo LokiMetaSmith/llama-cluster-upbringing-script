@@ -1,0 +1,65 @@
+name: Routing Pattern Demonstration
+nodes:
+  - id: input_node
+    type: InputNode
+    config:
+      outputs:
+        - name: user_text
+
+  - id: router
+    type: DynamicRouterNode
+    inputs:
+      - name: user_text
+        source: input_node.user_text
+    config:
+      routes: ["booker", "info", "unclear"]
+      model_service: rpc-main
+
+  - id: booker_handler
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: router.booker
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: "You are a booking agent. Acknowledge the user's request and simulate booking the flight or hotel."
+      model_service: rpc-main
+
+  - id: info_handler
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: router.info
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: "You are an information agent. Provide a concise answer to the user's general knowledge question."
+      model_service: rpc-main
+
+  - id: unclear_handler
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: router.unclear
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: "You are a coordinator. The user's request was unclear or didn't match our specific routing paths. Ask them to clarify."
+      model_service: rpc-main
+
+  - id: merge_output
+    type: MergeNode
+    inputs:
+      - name: in1
+        source: booker_handler.response
+      - name: in2
+        source: info_handler.response
+      - name: in3
+        source: unclear_handler.response
+
+  - id: output_node
+    type: OutputNode
+    inputs:
+      - name: final_output
+        source: merge_output.merged_output
