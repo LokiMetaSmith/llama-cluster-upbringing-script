@@ -381,8 +381,11 @@ handle_error() {
     echo -e "\n${BOLD}${RED}⚠️  Bootstrap failed at line ${error_line}!${NC}"
     echo -e "${YELLOW}Initiating autonomous recovery via OpenCode...${NC}"
 
-    # Ensure OpenCode is installed
-    if ! command -v opencode >/dev/null 2>&1; then
+    # Determine OpenCode command path
+    local opencode_bin="opencode"
+    if [ -x "$SCRIPT_DIR/.venv/bin/opencode" ]; then
+        opencode_bin="$SCRIPT_DIR/.venv/bin/opencode"
+    elif ! command -v opencode >/dev/null 2>&1; then
         echo -e "${RED}❌ OpenCode not found in environment. Cannot attempt recovery.${NC}"
         exit 1
     fi
@@ -409,7 +412,7 @@ Your task is to:
     echo -e "⏳ Please wait while the agent attempts to fix the issue..."
 
     # Configure API endpoint for Local/Network LLMs
-    local opencode_cmd=(opencode --yes)
+    local opencode_cmd=("$opencode_bin" --yes)
 
     if [ -n "${AGENT_API_BASE:-}" ]; then
         opencode_cmd+=(--api-base "$AGENT_API_BASE")
