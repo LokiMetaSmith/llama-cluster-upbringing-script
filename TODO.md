@@ -108,6 +108,8 @@
 
 These structural suggestions are targeted for a future major release to significantly simplify deployment logic and enforce the separation of concerns between infrastructure and application lifecycle management.
 
+- [ ] **Decouple Task Supervisor from Subprocesses:** Consider replacing raw subprocess polling in `TaskSupervisor` with Nomad API task submission or a distributed task queue (like Celery) for better cluster-native fault tolerance.
+
 - [x] **Native Ansible Hardware Profiling:** Move the machine resource detection logic (RAM, CPU, Disk) out of `bootstrap.sh` and into a native Ansible `preflight` playbook using `setup` facts. Ansible should dynamically group hosts (e.g., using `group_by`) and execute roles conditionally based on the detected hardware tier, reducing reliance on Bash wrapper scripts.
 - [ ] **Strict Infrastructure vs. Payload Separation:** Restrict Ansible playbooks to provisioning the "underlay" infrastructure (OS configuration, Docker, Consul, Nomad, network overlay). Migrate the deployment of the application payload (`pipecatapp`, `llamacpp`, AI experts) entirely to Nomad job specifications (`.nomad` files) managed via a dedicated tool (like Terraform/OpenTofu or a pure Nomad submission script) rather than using Ansible to start application services.
 - [ ] **Microservice De-monolithization of `TwinService`:** To improve robustness on legacy hardware, the main `pipecatapp` (router/workflow engine) should be made as lightweight as possible. Extract heavy, blocking tools (e.g., RAG document embedding, isolated Python code execution sandboxes) into independent microservices running as separate Nomad jobs. The core agent should interact with these tools exclusively via the Consul Service Mesh.
@@ -192,6 +194,8 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 
 ## Performance & I/O Optimization
 
+- [ ] **Optimize Fast Path Security Redaction:** Evaluate the regex patterns in `security.py` (e.g., `_FAST_PATH_PATTERN`) under heavy concurrent load and consider implementing a Rust-based extension or a streaming redaction approach for large contexts.
+
 - [x] **Optimize ExperimentTool Sandbox Creation:**
   - Replaced `shutil.copytree` with `tar` snapshotting to reduce syscall overhead.
 - [x] **Optimize ProjectMapperTool Scanning:**
@@ -202,6 +206,10 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - **Action:** Batched synchronous writes to `pypicat_faiss_store.json` in `memory.py` by grouping saves and adding an `atexit` handler to safely flush pending changes on shutdown.
 
 ## Security Audit
+
+- [ ] **Audit Hardcoded Local IP Addresses:** Remove hardcoded `127.0.0.1` and `localhost` fallbacks in critical services (e.g., `app.py`, `workflow_nodes`, `web_server.py`) and replace them with robust environment-based configuration matching the cluster overlay architecture.
+- [ ] **Audit Subprocess Injection Risks:** Thoroughly review all tools using `subprocess.run` (like `heretic_tool.py`, `experiment_tool.py`, `autoloop_tool.py`) for potential command injection vulnerabilities when interpolating user or LLM input into shell commands without `shlex.quote`.
+- [ ] **Review Autoloop Tool Security:** The `autoloop_tool.py` executes code locally without a sandbox. Sandbox this tool or restrict its usage strictly to trusted, airgapped environments.
 
 - [x] **Audit and remove hardcoded secrets:**
   - Audit frontend code (`pipecatapp/static/js`), workflows (`workflows/`), and tools (`pipecatapp/tools/`) for hardcoded secrets, API keys, or tokens.
@@ -223,6 +231,10 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - Ensure encryption at rest is considered or implemented for sensitive fields.
 
 ## Technical Debt & Lazy Code
+
+- [ ] **Address Missing Tool Tests:** Create unit tests for tools lacking coverage (e.g., `atproto_tool.py`, `autoloop_tool.py`, `container_registry_tool.py`, `context_upload_tool.py`, `cq_tool.py`, `dependency_scanner_tool.py`, `document_tool.py`, `dynamic_skill_tool.py`, `openclaw_tool.py`, `save_skill_tool.py`, `scale_compute_tool.py`, `scheduler_tool.py`, `search_skills_tool.py`, `skill_builder_tool.py`, `spec_loader_tool.py`, `submit_solution_tool.py`, `update_litellm_tool.py`, `vr_tool.py`, `wol_tool.py`).
+- [ ] **Fix Lazy Tests:** Address tests that contain only `pass` without actual assertions (e.g., `tests/unit/test_pipecat_app_unit.py`, `tests/test_event_bus.py`, `tests/verify_dlq.py`).
+- [ ] **Decouple Subprocess Usage:** Refactor hardcoded `subprocess.run` calls in tools (like `heretic_tool.py`, `project_mapper_tool.py`, `autoresearch_tool.py`, `experiment_tool.py`, `ansible_tool.py`, etc.) to use a unified execution abstraction, enabling easier mocking and sandboxing.
 
 - [x] Improve `test_allowlist` in `tests/test_ssrf_validation.py`
 - [x] Improve `test_endpoint` in `pipecatapp/tests/test_rate_limiter.py`
