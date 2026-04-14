@@ -3,8 +3,8 @@
     path: /opt/forgejo/data
     state: directory
     mode: '0755'
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
+    owner: "1000"
+    group: "1000"
   become: yes
 
 - name: Create Forgejo config directory
@@ -12,8 +12,8 @@
     path: /opt/forgejo/config
     state: directory
     mode: '0755'
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
+    owner: "1000"
+    group: "1000"
   become: yes
 
 - name: Create Forgejo Nomad job file
