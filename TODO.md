@@ -130,7 +130,7 @@ These structural suggestions are targeted for a future major release to signific
 - [ ] **Re-evaluate Consul Connect Service Mesh:** Create a new feature branch to attempt to re-enable `sidecar_service` in the Nomad job files and document the process.
 - [x] **Add Pre-flight System Health Checks:** Create a new Ansible role to perform non-destructive checks at the beginning of `playbook.yaml`.
 - [x] **Investigate Advanced Power Management:** Research and prototype a more advanced version that uses Wake-on-LAN.
-- [x] **Implement Claude Code CLI Techniques:** Review `CLAUDE_CODE_ANALYSIS.md` and implement the recommended techniques in `pipecatapp/tools/`:
+- [x] **Implement Claude Code CLI Techniques:** Review `docs/CLAUDE_CODE_ANALYSIS.md` and implement the recommended techniques in `pipecatapp/tools/`:
   - Format Zod/Pydantic validation errors for LLMs.
   - Add robust ripgrep fallback (EAGAIN handling) to `shell_tool.py`.
   - Add transparent pagination feedback (e.g. `[Showing results with pagination...]`).
@@ -241,7 +241,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 
 ## Paseo Integration Ideas
 
-This section tracks actionable ideas derived from the `PASEO_ANALYSIS.md` document for integrating Paseo's orchestration concepts into our custom Pipecat architecture.
+This section tracks actionable ideas derived from the `docs/PASEO_ANALYSIS.md` document for integrating Paseo's orchestration concepts into our custom Pipecat architecture.
 
 - [x] **Implement `OpenCodeProviderTool`:** Create a Python-based provider wrapper in `pipecatapp/tools/` that executes OpenCode via `NomadSandboxExecutor`, intercepts standard output streams, and standardizes them into Pipecat agent events.
 - [x] **Add MCP-like Agent Management to `EmperorAgentNode`:** Expose new tools (e.g., `CreateAgentTool`, `WaitAgentTool`) to the Emperor node, allowing it to dynamically spawn and await specialized `TwinService` or Nomad worker instances (similar to Paseo's `agent-management-mcp.ts`).
@@ -259,7 +259,7 @@ This section tracks actionable ideas derived from the `PASEO_ANALYSIS.md` docume
 
 ## Flowise UI Integration Ideas
 
-This section tracks actionable ideas derived from the `FLOWISE_ANALYSIS.md` document for integrating visual workflow concepts into the `pipecatapp` architecture.
+This section tracks actionable ideas derived from the `docs/FLOWISE_ANALYSIS.md` document for integrating visual workflow concepts into the `pipecatapp` architecture.
 
 - [ ] **Decouple Node Handlers (Input vs Output):** In the frontend, separate the visual node UI into dedicated Input and Output handlers that dynamically adjust their height to keep connection anchors perfectly aligned when configuration controls expand/collapse.
 - [ ] **Strict Visual Edge Validation:** Implement an `isValidConnection` hook on the frontend canvas that checks the backend Python/Pydantic schemas. Prevent users from visually connecting a text output port to a dictionary input port to avoid runtime crashes.
