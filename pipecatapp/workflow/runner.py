@@ -244,6 +244,11 @@ class WorkflowRunner:
                 var_name = match.group(1)
                 return str(global_inputs.get(var_name, match.group(0)))
 
+
+            def replace_func(match):
+                var_name = match.group(1)
+                return str(global_inputs.get(var_name, match.group(0)))
+
             return re.sub(pattern, replace_func, obj)
         return obj
 
