@@ -29,6 +29,17 @@ job "authentik" {
         ports = ["redis"]
       }
 
+      service {
+        name = "redis"
+        port = "redis"
+        check {
+          name     = "alive"
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+
       resources {
         cpu    = 100
         memory = 128
@@ -44,6 +55,17 @@ job "authentik" {
         volumes = [
           "{{ nomad_volumes_dir }}/authentik/postgres:/var/lib/postgresql/data"
         ]
+      }
+
+      service {
+        name = "postgres"
+        port = "postgres"
+        check {
+          name     = "alive"
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
       }
 
       env {
@@ -74,8 +96,8 @@ job "authentik" {
       template {
         data = <<EOH
 AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
-AUTHENTIK_REDIS__HOST="{{ '{{' }} range service "redis" {{ '}}' }}{{ '{{' }} .Address {{ '}}' }}{{ '{{' }} end {{ '}}' }}"
-AUTHENTIK_POSTGRESQL__HOST="{{ '{{' }} range service "postgres" {{ '}}' }}{{ '{{' }} .Address {{ '}}' }}{{ '{{' }} end {{ '}}' }}"
+AUTHENTIK_REDIS__HOST="redis.service.consul"
+AUTHENTIK_POSTGRESQL__HOST="postgres.service.consul"
 EOH
         destination = "secrets/authentik.env"
         env         = true
@@ -127,8 +149,8 @@ EOH
       template {
         data = <<EOH
 AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
-AUTHENTIK_REDIS__HOST="{{ '{{' }} range service "redis" {{ '}}' }}{{ '{{' }} .Address {{ '}}' }}{{ '{{' }} end {{ '}}' }}"
-AUTHENTIK_POSTGRESQL__HOST="{{ '{{' }} range service "postgres" {{ '}}' }}{{ '{{' }} .Address {{ '}}' }}{{ '{{' }} end {{ '}}' }}"
+AUTHENTIK_REDIS__HOST="redis.service.consul"
+AUTHENTIK_POSTGRESQL__HOST="postgres.service.consul"
 EOH
         destination = "secrets/authentik.env"
         env         = true
