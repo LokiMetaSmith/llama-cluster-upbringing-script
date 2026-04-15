@@ -95,7 +95,7 @@ lb config \
   --debian-installer live \
   --win32-loader false \
   --bootappend-live "boot=live components quiet splash nomodeset locales=en_US.UTF-8 keyboard-layouts=us live-config.username=pipecatapp live-config.user-fullname=PipecatApp" \
-  --bootappend-install "auto=true priority=critical file=/preseed.cfg nomodeset"
+  --bootappend-install "auto=true priority=critical file=/preseed.cfg nomodeset netcfg/choose_interface=auto"
 
 echo "=== Injecting project files ==="
 # Explicitly install live-config inside the chroot so autologin functions correctly
