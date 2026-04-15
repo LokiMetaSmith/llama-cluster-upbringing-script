@@ -1,3 +1,12 @@
+- name: Create Authentik parent directory
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/authentik"
+    state: directory
+    mode: '0775'
+    owner: "{{ target_user | default('pipecatapp') }}"
+    group: "{{ target_user | default('pipecatapp') }}"
+  become: yes
+
 - name: Create Authentik non-database directories
   ansible.builtin.file:
     path: "{{ item }}"
@@ -5,7 +14,6 @@
     mode: '0755'
     owner: "1000"
     group: "1000"
-    recurse: yes
   become: yes
   loop:
     - "{{ nomad_volumes_dir }}/authentik/media"
@@ -19,7 +27,6 @@
     mode: '0700'
     owner: "70"
     group: "70"
-    recurse: yes
   become: yes
 
 - name: Template Authentik Nomad job
