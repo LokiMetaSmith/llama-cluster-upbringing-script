@@ -1,6 +1,7 @@
 import logging
 import subprocess
 import os
+from pipecatapp.utils.command_runner import CommandRunner
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class ClusterStatusTool:
             # Command to run the playbook
             command = ["ansible-playbook", playbook_path]
 
-            result = subprocess.run(command, capture_output=True, text=True, check=False)
+            result = CommandRunner.run(command, capture_output=True, text=True, check=False)
 
             if result.returncode == 0:
                 # Ansible's default output might be noisy.

@@ -12,6 +12,7 @@ import gc
 import json
 import subprocess
 import shutil
+from pipecatapp.utils.command_runner import CommandRunner
 
 class RAG_Tool:
     """A tool to retrieve information from a project-specific knowledge base.
@@ -302,11 +303,11 @@ class RAG_Tool:
 
         try:
             # Check if inside git repo
-            subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+            CommandRunner.run(["git", "rev-parse", "--is-inside-work-tree"],
                            cwd=self.base_dir, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             # git ls-files returns paths relative to cwd
-            res = subprocess.run(["git", "ls-files"], cwd=self.base_dir, check=True, capture_output=True, text=True)
+            res = CommandRunner.run(["git", "ls-files"], cwd=self.base_dir, check=True, capture_output=True, text=True)
             files = res.stdout.splitlines()
             return files
         except Exception:

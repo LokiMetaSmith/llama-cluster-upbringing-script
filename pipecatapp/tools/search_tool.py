@@ -3,6 +3,7 @@ import shlex
 import os
 import logging
 import time
+from pipecatapp.utils.command_runner import CommandRunner
 
 class SearchTool:
     """A tool for searching the codebase using grep and find.
@@ -82,7 +83,7 @@ class SearchTool:
 
         try:
             logging.info(f"Running grep command: {shlex.join(cmd)}")
-            result = subprocess.run(
+            result = CommandRunner.run(
                 cmd,
                 capture_output=True,
                 text=True,
@@ -93,7 +94,7 @@ class SearchTool:
             if result.stderr and ("os error 11" in result.stderr.lower() or "resource temporarily unavailable" in result.stderr.lower()):
                 logging.warning("EAGAIN encountered during grep. Retrying after 1s...")
                 time.sleep(1)
-                result = subprocess.run(
+                result = CommandRunner.run(
                     cmd,
                     capture_output=True,
                     text=True,
@@ -152,7 +153,7 @@ class SearchTool:
 
         try:
             logging.info(f"Running find command: {shlex.join(cmd)}")
-            result = subprocess.run(
+            result = CommandRunner.run(
                 cmd,
                 capture_output=True,
                 text=True,
@@ -163,7 +164,7 @@ class SearchTool:
             if result.stderr and ("os error 11" in result.stderr.lower() or "resource temporarily unavailable" in result.stderr.lower()):
                 logging.warning("EAGAIN encountered during find. Retrying after 1s...")
                 time.sleep(1)
-                result = subprocess.run(
+                result = CommandRunner.run(
                     cmd,
                     capture_output=True,
                     text=True,

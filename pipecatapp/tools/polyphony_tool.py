@@ -2,6 +2,7 @@ import os
 import subprocess
 import json
 from typing import Dict, Any, Optional
+from pipecatapp.utils.command_runner import CommandRunner
 
 class PolyphonyTool:
     """
@@ -63,7 +64,7 @@ class PolyphonyTool:
              return f"Error: Polyphony CLI not found at {self.cli_path}. Are you running this in the project root?"
 
         cmd = [self.cli_path] + args
-        result = subprocess.run(
+        result = CommandRunner.run(
             cmd,
             env=env,
             capture_output=True,

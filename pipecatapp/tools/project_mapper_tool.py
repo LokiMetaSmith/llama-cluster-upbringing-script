@@ -4,6 +4,7 @@ import fnmatch
 import subprocess
 import shutil
 from typing import Optional, List
+from pipecatapp.utils.command_runner import CommandRunner
 
 class ProjectMapperTool:
     """
@@ -93,11 +94,11 @@ class ProjectMapperTool:
 
         try:
             # Check if inside git repo
-            subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+            CommandRunner.run(["git", "rev-parse", "--is-inside-work-tree"],
                            cwd=start_dir, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             # git ls-files returns paths relative to cwd
-            res = subprocess.run(["git", "ls-files"], cwd=start_dir, check=True, capture_output=True, text=True)
+            res = CommandRunner.run(["git", "ls-files"], cwd=start_dir, check=True, capture_output=True, text=True)
             files = res.stdout.splitlines()
             return files
         except Exception:

@@ -3,6 +3,7 @@ import os
 import json
 import logging
 from typing import Dict, Any, Optional
+from pipecatapp.utils.command_runner import CommandRunner
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class HereticTool:
             logger.info(f"Running Heretic: {' '.join(cmd)}")
 
             # Run the command
-            result = subprocess.run(
+            result = CommandRunner.run(
                 cmd,
                 capture_output=True,
                 text=True,

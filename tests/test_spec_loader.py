@@ -14,7 +14,7 @@ class TestSpecLoader(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @patch("subprocess.run")
+    @patch("pipecatapp.utils.command_runner.CommandRunner.run")
     def test_clone_new_repo(self, mock_run):
         repo_url = "https://github.com/test/repo.git"
 
@@ -83,7 +83,7 @@ class TestSpecLoader(unittest.TestCase):
         # Test URL that infers a valid name but tricky structure (.git..)
         # This should attempt to clone (and fail network) but NOT be a security error
         # because .git.. is a safe filename.
-        with patch("subprocess.run") as mock_run:
+        with patch("pipecatapp.utils.command_runner.CommandRunner.run") as mock_run:
             # Simulate a git error (e.g., repo not found)
             mock_run.side_effect = subprocess.CalledProcessError(1, ["git", "clone"], stderr=b"Repository not found")
             result = self.tool.run("clone", repo_url="http://example.com/.git..")

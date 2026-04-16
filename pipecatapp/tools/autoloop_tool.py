@@ -5,6 +5,7 @@ import asyncio
 import subprocess
 import tempfile
 import shlex
+from pipecatapp.utils.command_runner import CommandRunner
 
 class AutoloopTool:
     """
@@ -57,7 +58,7 @@ class AutoloopTool:
         def local_metric(current_target_path: str) -> float:
             try:
                 cmd_args = shlex.split(metric_command)
-                result = subprocess.run(
+                result = CommandRunner.run(
                     cmd_args,
                     shell=False,
                     capture_output=True,

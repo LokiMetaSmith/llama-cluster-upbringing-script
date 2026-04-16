@@ -2,6 +2,7 @@ import subprocess
 import os
 import shlex
 from dotenv import load_dotenv
+from pipecatapp.utils.command_runner import CommandRunner
 
 class LLxprt_Code_Tool:
     """A tool for running llxprt-code commands.
@@ -34,7 +35,7 @@ class LLxprt_Code_Tool:
         try:
             load_dotenv("/opt/llxprt-code/.env")
             command_parts = ["llxprt"] + shlex.split(command)
-            process = subprocess.run(
+            process = CommandRunner.run(
                 command_parts,
                 capture_output=True,
                 text=True,

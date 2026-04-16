@@ -8,6 +8,7 @@ import shutil
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 import functools
+from pipecatapp.utils.command_runner import CommandRunner
 
 class DocumentBackend(ABC):
     @abstractmethod
@@ -76,11 +77,11 @@ class LocalDirectoryBackend(DocumentBackend):
 
         try:
             # Check if inside git repo
-            subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+            CommandRunner.run(["git", "rev-parse", "--is-inside-work-tree"],
                            cwd=self.directory, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             # git ls-files returns paths relative to cwd
-            res = subprocess.run(["git", "ls-files"], cwd=self.directory, check=True, capture_output=True, text=True)
+            res = CommandRunner.run(["git", "ls-files"], cwd=self.directory, check=True, capture_output=True, text=True)
             files = res.stdout.splitlines()
             return files
         except Exception:

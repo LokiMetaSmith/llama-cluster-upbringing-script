@@ -13,7 +13,7 @@ from llxprt_code_tool import LLxprt_Code_Tool
 def llxprt_tool():
     return LLxprt_Code_Tool()
 
-@patch('subprocess.run')
+@patch('pipecatapp.utils.command_runner.CommandRunner.run')
 def test_run_success(mock_run, llxprt_tool):
     """Test a successful command execution."""
     mock_process = MagicMock()
@@ -33,7 +33,7 @@ def test_run_success(mock_run, llxprt_tool):
         timeout=300
     )
 
-@patch('subprocess.run')
+@patch('pipecatapp.utils.command_runner.CommandRunner.run')
 def test_run_with_args_success(mock_run, llxprt_tool):
     """Test a successful command execution with arguments."""
     mock_process = MagicMock()
@@ -53,7 +53,7 @@ def test_run_with_args_success(mock_run, llxprt_tool):
         timeout=300
     )
 
-@patch('subprocess.run')
+@patch('pipecatapp.utils.command_runner.CommandRunner.run')
 def test_run_failure(mock_run, llxprt_tool):
     """Test a failed command execution."""
     mock_process = MagicMock()

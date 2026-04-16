@@ -5,6 +5,7 @@ import subprocess
 import glob
 import re
 from typing import List, Optional
+from pipecatapp.utils.command_runner import CommandRunner
 
 class SpecLoaderTool:
     """
@@ -119,13 +120,13 @@ class SpecLoaderTool:
         if os.path.exists(target_path):
             self.logger.info(f"Updating existing spec repo: {repo_name}")
             try:
-                subprocess.run(["git", "-C", target_path, "pull"], check=True, capture_output=True)
+                CommandRunner.run(["git", "-C", target_path, "pull"], check=True, capture_output=True)
             except subprocess.CalledProcessError as e:
                 return f"Failed to pull repo: {e.stderr.decode()}"
         else:
             self.logger.info(f"Cloning new spec repo: {repo_url}")
             try:
-                subprocess.run(["git", "clone", "--depth", "1", repo_url, target_path], check=True, capture_output=True)
+                CommandRunner.run(["git", "clone", "--depth", "1", repo_url, target_path], check=True, capture_output=True)
             except subprocess.CalledProcessError as e:
                 return f"Failed to clone repo: {e.stderr.decode()}"
 

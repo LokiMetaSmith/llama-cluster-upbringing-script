@@ -1,5 +1,6 @@
 import subprocess
 import os
+from pipecatapp.utils.command_runner import CommandRunner
 try:
     from ..secret_manager import secret_manager
 except ImportError:
@@ -76,7 +77,7 @@ class Ansible_Tool:
             env = os.environ.copy()
             env.update(secret_manager.get_all_secrets())
 
-            process = subprocess.run(
+            process = CommandRunner.run(
                 command,
                 cwd=self.project_root,
                 env=env,
