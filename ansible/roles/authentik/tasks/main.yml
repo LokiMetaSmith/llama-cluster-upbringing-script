@@ -31,20 +31,20 @@
 
 - name: Check if Authentik secret key exists in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ consul_http_port | default(8500) }}/v1/kv/authentik/secret-key"
+    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/kv/authentik/secret-key"
     method: GET
     status_code: [200, 404]
   register: authentik_consul_key
   ignore_errors: yes
 
 - name: Generate Authentik secret key
-  ansible.builtin.command: openssl rand -hex 32
+  ansible.builtin.command: openssl rand -hex 50
   register: authentik_generated_key
   when: authentik_consul_key is not failed and authentik_consul_key.status == 404
 
 - name: Publish Authentik secret key to Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ consul_http_port | default(8500) }}/v1/kv/authentik/secret-key"
+    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/kv/authentik/secret-key"
     method: PUT
     body: "{{ authentik_generated_key.stdout }}"
     status_code: [200, 201]
@@ -62,4 +62,3 @@
     NOMAD_ADDR: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
   register: authentik_deploy
   changed_when: "'modified' in authentik_deploy.stdout or 'created' in authentik_deploy.stdout"
-  when: false
