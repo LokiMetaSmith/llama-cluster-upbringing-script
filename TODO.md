@@ -2,6 +2,8 @@
 
 ## Immediate Actions
 
+- [ ] **Fix Authentik Nomad Job:**
+  - **Goal:** Resolve issues preventing the Authentik Nomad job from deploying successfully.
 - [x] **Bootable System Installation & Auto-Configuration:**
   - **Goal:** Create a slimmed-down, bootable Debian ISO and enhance `bootstrap.sh` to auto-detect hardware resources.
   - **Tasks:**
