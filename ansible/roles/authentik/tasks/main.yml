@@ -62,3 +62,4 @@
     NOMAD_ADDR: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
   register: authentik_deploy
   changed_when: "'modified' in authentik_deploy.stdout or 'created' in authentik_deploy.stdout"
+  when: false
