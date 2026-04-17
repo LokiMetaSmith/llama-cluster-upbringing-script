@@ -9,7 +9,7 @@ async def test_experiment_tool_flow():
     # Mock dependencies
     with patch("pipecatapp.tools.experiment_tool.SwarmTool") as MockSwarm, \
          patch("httpx.AsyncClient") as MockHttp, \
-         patch("subprocess.run") as mock_subprocess, \
+         patch("pipecatapp.utils.command_runner.CommandRunner.run") as mock_subprocess, \
          patch("shutil.copytree") as mock_copytree, \
          patch("os.makedirs") as mock_makedirs, \
          patch("os.path.exists", return_value=True) as mock_exists, \
@@ -104,7 +104,27 @@ async def test_experiment_tool_flow():
 
         # To make it robust, we can inspect the file written? No, that's complex with mock_open.
         # Let's just assume sequence: Fail, Pass.
-        mock_subprocess.side_effect = [mock_subprocess_fail, mock_subprocess_pass]
+
+        def subprocess_side_effect(*args, **kwargs):
+        cmd = args[0] if args else kwargs.get("cmd", [])
+        if cmd and cmd[0] == "tar":
+        m = MagicMock()
+        m.returncode = 0
+        m.stdout = ""
+        m.stderr = ""
+        return m
+        # It is a test command. Assuming "code_fails" and "code_passes" can be distinguished by call count or similar,
+        # but previously it relied on iteration order.
+        # Since we don't know which gets called first reliably if async, let's use call counter or just check if it is the second call
+        if not hasattr(subprocess_side_effect, "test_call_count"):
+        subprocess_side_effect.test_call_count = 0
+        subprocess_side_effect.test_call_count += 1
+        if subprocess_side_effect.test_call_count == 1:
+        return mock_subprocess_fail
+        else:
+        return mock_subprocess_pass
+        mock_subprocess.side_effect = subprocess_side_effect
+
 
         # 4. Run Experiment
         tool = ExperimentTool(event_bus_url="http://mock:8000")

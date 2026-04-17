@@ -1,6 +1,7 @@
 import logging
 import subprocess
 import os
+from pipecatapp.utils.command_runner import CommandRunner
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ class ScaleComputeTool:
             command = ["bash", script_path, "--role", "worker", "--controller-ip", node_ip]
 
             # Execute the command
-            result = subprocess.run(command, capture_output=True, text=True, check=False)
+            result = CommandRunner.run(command, capture_output=True, text=True, check=False)
 
             if result.returncode == 0:
                 logger.info(f"Successfully added node {node_ip} to the cluster.")

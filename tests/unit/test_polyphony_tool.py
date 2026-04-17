@@ -10,7 +10,7 @@ from pipecatapp.tools.polyphony_tool import PolyphonyTool
 
 class TestPolyphonyTool(unittest.TestCase):
     @patch('pipecatapp.tools.polyphony_tool.os.path.exists')
-    @patch('pipecatapp.tools.polyphony_tool.subprocess.run')
+    @patch('pipecatapp.tools.polyphony_tool.CommandRunner.run')
     def test_share_action(self, mock_run, mock_exists):
         mock_exists.return_value = True
         mock_result = MagicMock()
@@ -28,7 +28,7 @@ class TestPolyphonyTool(unittest.TestCase):
         self.assertEqual(cmd_args[2], "Hello Swarm")
 
     @patch('pipecatapp.tools.polyphony_tool.os.path.exists')
-    @patch('pipecatapp.tools.polyphony_tool.subprocess.run')
+    @patch('pipecatapp.tools.polyphony_tool.CommandRunner.run')
     def test_ping_action(self, mock_run, mock_exists):
         mock_exists.return_value = True
         mock_result = MagicMock()
@@ -47,7 +47,7 @@ class TestPolyphonyTool(unittest.TestCase):
         self.assertEqual(cmd_args[3], "Are you there?")
 
     @patch('pipecatapp.tools.polyphony_tool.os.path.exists')
-    @patch('pipecatapp.tools.polyphony_tool.subprocess.run')
+    @patch('pipecatapp.tools.polyphony_tool.CommandRunner.run')
     def test_task_list(self, mock_run, mock_exists):
         mock_exists.return_value = True
         mock_result = MagicMock()

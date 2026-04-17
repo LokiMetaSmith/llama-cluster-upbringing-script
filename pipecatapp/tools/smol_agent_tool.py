@@ -2,6 +2,7 @@ import subprocess
 import os
 import shutil
 import re
+from pipecatapp.utils.command_runner import CommandRunner
 
 # This is a placeholder for the actual smolagents library.
 # We will assume it's available in the environment. In a real scenario,
@@ -63,7 +64,7 @@ class SmolAgentTool:
             self.sandbox_script_path,
         ]
         try:
-            process = subprocess.run(
+            process = CommandRunner.run(
                 command,
                 input=code.encode("utf-8"),
                 capture_output=True,

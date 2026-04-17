@@ -10,7 +10,8 @@ import subprocess
 import shlex
 import httpx
 from typing import List, Dict, Any, Optional
-from tools.swarm_tool import SwarmTool
+from pipecatapp.tools.swarm_tool import SwarmTool
+from pipecatapp.utils.command_runner import CommandRunner
 
 class ExperimentTool:
     """
@@ -227,7 +228,7 @@ class ExperimentTool:
                 "--exclude", "*.pyc",
                 "."
             ]
-            subprocess.run(cmd, check=True, capture_output=True)
+            CommandRunner.run(cmd, check=True, capture_output=True)
             return archive_path
         except Exception as e:
             self.logger.error(f"Failed to create snapshot: {e}")
@@ -266,7 +267,7 @@ class ExperimentTool:
                  # Fast path: Extract tarball
                  # This avoids thousands of open/read/write/close syscalls
                  cmd = ["tar", "-xf", snapshot_path, "-C", temp_dir]
-                 subprocess.run(cmd, check=True, capture_output=True)
+                 CommandRunner.run(cmd, check=True, capture_output=True)
             else:
                  # Fallback: Copy Codebase (Assume /opt/pipecatapp is source)
                  src_dir = "/opt/pipecatapp"
@@ -304,7 +305,7 @@ class ExperimentTool:
             # Security Fix: Sentinel - Use shell=False and split args to prevent command injection
             cmd_args = shlex.split(test_command)
 
-            result = subprocess.run(
+            result = CommandRunner.run(
                 cmd_args,
                 cwd=temp_dir,
                 shell=False,

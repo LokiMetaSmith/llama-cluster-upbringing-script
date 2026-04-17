@@ -1,5 +1,6 @@
 import subprocess
 import os
+from pipecatapp.utils.command_runner import CommandRunner
 
 class Git_Tool:
     """A tool for interacting with Git repositories.
@@ -99,7 +100,7 @@ class Git_Tool:
             return f"Error: Working directory '{working_dir}' not found."
 
         try:
-            process = subprocess.run(
+            process = CommandRunner.run(
                 ["git"] + command,
                 cwd=working_dir,
                 capture_output=True,

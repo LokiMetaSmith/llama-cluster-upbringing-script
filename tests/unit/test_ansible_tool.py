@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
 
-from ansible_tool import Ansible_Tool
+from pipecatapp.tools.ansible_tool import Ansible_Tool
 
 def test_ansible_tool_instantiation():
     """Tests that the Ansible_Tool class can be instantiated."""
@@ -14,7 +14,7 @@ def test_ansible_tool_instantiation():
     assert tool.name == "ansible_tool"
     assert tool.project_root == "/opt/cluster-infra"
 
-@patch('subprocess.run')
+@patch('pipecatapp.utils.command_runner.CommandRunner.run')
 @patch('os.path.exists', return_value=True)
 def test_run_playbook_success(mock_exists, mock_run):
     """Tests a successful playbook run."""
@@ -29,7 +29,7 @@ def test_run_playbook_success(mock_exists, mock_run):
     assert "Playbook run completed successfully" in result
     mock_run.assert_called_once()
 
-@patch('subprocess.run')
+@patch('pipecatapp.utils.command_runner.CommandRunner.run')
 @patch('os.path.exists', return_value=True)
 def test_run_playbook_with_args(mock_exists, mock_run):
     """Tests a playbook run with all arguments."""
@@ -50,7 +50,7 @@ def test_run_playbook_with_args(mock_exists, mock_run):
     assert args[0][6] == '--extra-vars'
     assert '{"key": "value"}' in args[0][7]
 
-@patch('subprocess.run')
+@patch('pipecatapp.utils.command_runner.CommandRunner.run')
 @patch('os.path.exists', return_value=True)
 def test_run_playbook_failure(mock_exists, mock_run):
     """Tests a failed playbook run."""
@@ -73,7 +73,7 @@ def test_run_playbook_not_found(mock_exists):
     result = tool.run_playbook()
     assert "Error: Playbook" in result and "not found" in result
 
-@patch('subprocess.run', side_effect=subprocess.TimeoutExpired(cmd='ansible-playbook', timeout=900))
+@patch('pipecatapp.utils.command_runner.CommandRunner.run', side_effect=subprocess.TimeoutExpired(cmd='ansible-playbook', timeout=900))
 @patch('os.path.exists', return_value=True)
 def test_run_playbook_timeout(mock_exists, mock_run):
     """Tests a playbook run that times out."""
@@ -81,7 +81,7 @@ def test_run_playbook_timeout(mock_exists, mock_run):
     result = tool.run_playbook()
     assert "Error: Ansible playbook run timed out" in result
 
-@patch('subprocess.run', side_effect=Exception("Test exception"))
+@patch('pipecatapp.utils.command_runner.CommandRunner.run', side_effect=Exception("Test exception"))
 @patch('os.path.exists', return_value=True)
 def test_run_playbook_unexpected_error(mock_exists, mock_run):
     """Tests an unexpected error during a playbook run."""

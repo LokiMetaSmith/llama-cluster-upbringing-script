@@ -9,6 +9,7 @@ import subprocess
 import shlex
 import docker
 from typing import List, Dict, Any, Optional
+from pipecatapp.utils.command_runner import CommandRunner
 
 class AutoresearchTool:
     """
@@ -357,7 +358,7 @@ Think step-by-step first, then provide the final file content under a `<final_co
                 "--exclude", "*.pyc",
                 "."
             ]
-            subprocess.run(cmd, check=True, capture_output=True)
+            CommandRunner.run(cmd, check=True, capture_output=True)
             return archive_path
         except Exception as e:
             self.logger.error(f"Failed to create snapshot: {e}")
@@ -377,7 +378,7 @@ Think step-by-step first, then provide the final file content under a `<final_co
             # Populate Temp Directory Host-Side
             if snapshot_path and os.path.exists(snapshot_path):
                  cmd = ["tar", "-xf", snapshot_path, "-C", temp_dir]
-                 subprocess.run(cmd, check=True, capture_output=True)
+                 CommandRunner.run(cmd, check=True, capture_output=True)
             else:
                  src_dir = os.getcwd() # Fallback to current working dir
                  shutil.copytree(src_dir, temp_dir, dirs_exist_ok=True,
@@ -454,7 +455,7 @@ Think step-by-step first, then provide the final file content under a `<final_co
             # Populate Sandbox
             if snapshot_path and os.path.exists(snapshot_path):
                  cmd = ["tar", "-xf", snapshot_path, "-C", temp_dir]
-                 subprocess.run(cmd, check=True, capture_output=True)
+                 CommandRunner.run(cmd, check=True, capture_output=True)
             else:
                  src_dir = os.getcwd() # Fallback to current working dir
                  shutil.copytree(src_dir, temp_dir, dirs_exist_ok=True,
@@ -483,7 +484,7 @@ Think step-by-step first, then provide the final file content under a `<final_co
 
             cmd_args = shlex.split(test_command)
 
-            result = subprocess.run(
+            result = CommandRunner.run(
                 cmd_args,
                 cwd=temp_dir,
                 shell=False,
