@@ -205,6 +205,8 @@ pds_plc_rotation_key_k256_private_key_hex: "000000000000000000000000000000000000
 pds_data_directory: "/opt/pds"
 pds_blobstore_disk_location: "/opt/pds/blocks"
 pds_port: 3000
+forgejo_http_port: 3002
+forgejo_ssh_port: 3022
 
 # -- OpenWorkers Configuration --
 openworkers_enabled: true

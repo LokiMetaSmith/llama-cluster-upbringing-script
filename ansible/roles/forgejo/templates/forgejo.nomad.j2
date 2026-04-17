@@ -8,10 +8,10 @@ job "forgejo" {
     network {
       mode = "host"
       port "http" {
-        static = 3000
+        static = {{ forgejo_http_port | default(3002) }}
       }
       port "ssh" {
-        static = 2222
+        static = {{ forgejo_ssh_port | default(3022) }}
       }
     }
 
