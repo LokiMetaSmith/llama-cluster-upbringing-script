@@ -6,7 +6,7 @@ import sys
 
 async def send_message(message):
     """Connects to the WebSocket server and sends a user message."""
-    uri = "ws://localhost:8000/ws"
+    uri = f"ws://{os.getenv("CLUSTER_IP", "127.0.0.1")}:8000/ws"
     try:
         async with websockets.connect(uri) as websocket:
             # The message format should match what the server expects

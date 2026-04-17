@@ -29,7 +29,7 @@ class OpenWorkersTool:
     def _get_service_url(self, service_name: str, fallback_url: str) -> str:
         """Discovers a service via Consul."""
         try:
-            consul_host = os.getenv("CONSUL_HTTP_ADDR", "localhost:8500")
+            consul_host = os.getenv("CONSUL_HTTP_ADDR", f"{os.getenv("CLUSTER_IP", "127.0.0.1")}:8500")
             if not consul_host.startswith("http"):
                 consul_host = f"http://{consul_host}"
 

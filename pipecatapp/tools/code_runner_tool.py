@@ -172,7 +172,7 @@ class NomadSandboxExecutor(SandboxExecutor):
     """Executes code by dispatching ephemeral Nomad batch jobs."""
 
     def __init__(self):
-        self.nomad_url = os.environ.get("NOMAD_ADDR", "http://localhost:4646")
+        self.nomad_url = os.environ.get("NOMAD_ADDR", f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:4646")
         self.token = os.environ.get("NOMAD_TOKEN")
         self.default_timeout = 300 # 5 minutes default timeout for job execution
         self.headers = {"X-Nomad-Token": self.token} if self.token else {}

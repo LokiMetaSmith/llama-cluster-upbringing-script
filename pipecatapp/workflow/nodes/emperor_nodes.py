@@ -359,7 +359,7 @@ class EmperorAgentNode(Node):
 
         # Discovery logic reused from llm_nodes.py
         consul_http_addr = context.global_inputs.get("consul_http_addr") or os.getenv("CONSUL_HTTP_ADDR")
-        base_url = "http://127.0.0.1:8081/v1" # Default fallback
+        base_url = f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:8081/v1" # Default fallback
 
         if consul_http_addr:
             try:

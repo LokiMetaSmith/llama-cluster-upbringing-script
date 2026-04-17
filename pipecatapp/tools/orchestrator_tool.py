@@ -3,7 +3,7 @@ import os
 
 class OrchestratorTool:
     def __init__(self):
-        self.world_model_url = os.getenv("WORLD_MODEL_URL", "http://localhost:8000")
+        self.world_model_url = os.getenv("WORLD_MODEL_URL", f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:8000")
 
     def dispatch_job(self, model_name: str, prompt: str, cpu: int = 1000, memory: int = 4096, gpu_count: int = 1, context: str = ""):
         """Dispatches a Nomad batch job to run a model with the given prompt, resources, and optional context."""

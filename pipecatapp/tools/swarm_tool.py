@@ -11,7 +11,7 @@ class SwarmTool:
     A tool that allows the agent to spawn multiple 'worker' agents to perform tasks in parallel.
     This enables the 'Frontier Agent' capability of scaling by spawning 10 versions of itself.
     """
-    def __init__(self, nomad_url: str = "http://localhost:4646", memory_client=None):
+    def __init__(self, nomad_url: str = f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:4646", memory_client=None):
         self.nomad_url = nomad_url
         self.memory_client = memory_client
         self.logger = logging.getLogger(__name__)

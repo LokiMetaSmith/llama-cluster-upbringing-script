@@ -96,7 +96,7 @@ class TechnicianAgent:
                 services = resp.json()
                 if services:
                     svc = services[0]
-                    addr = svc.get("ServiceAddress", "localhost")
+                    addr = svc.get("ServiceAddress", os.getenv("CLUSTER_IP", "127.0.0.1"))
                     port = svc.get("ServicePort", 8000)
                     self.memory_url = f"http://{addr}:{port}"
                     self.memory_client = PMMMemoryClient(base_url=self.memory_url)
@@ -109,7 +109,7 @@ class TechnicianAgent:
                 services = resp.json()
                 if services:
                     svc = services[0]
-                    addr = svc.get("ServiceAddress", "localhost")
+                    addr = svc.get("ServiceAddress", os.getenv("CLUSTER_IP", "127.0.0.1"))
                     port = svc.get("ServicePort", int(os.getenv("ROUTER_PORT", 8081)))
                     self.llm_base_url = f"http://{addr}:{port}/v1"
                     logger.info(f"Discovered LLM Service at {self.llm_base_url}")

@@ -10,7 +10,7 @@ class PersonalityTool:
     """
     def __init__(self, api_url: str = None):
         # Default to local router or direct llama server if not specified
-        self.api_url = (api_url or "http://localhost:8080").rstrip("/")
+        self.api_url = (api_url or f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:8080").rstrip("/")
         # Base directory where control vectors are stored on the server side
         self.vectors_dir = "/opt/nomad/models/vectors"
 

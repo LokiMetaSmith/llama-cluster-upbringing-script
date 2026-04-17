@@ -23,7 +23,7 @@ class ExperimentTool:
         self.logger = logging.getLogger(__name__)
         # Try to find Event Bus URL from env if not provided
         if not event_bus_url:
-            host = os.getenv("EVENT_BUS_HOST", "localhost")
+            host = os.getenv("EVENT_BUS_HOST", os.getenv("CLUSTER_IP", "127.0.0.1"))
             port = os.getenv("EVENT_BUS_PORT", "8000")
             # In some setups, service name might be needed, but we default to direct address
             self.event_bus_url = f"http://{host}:{port}"

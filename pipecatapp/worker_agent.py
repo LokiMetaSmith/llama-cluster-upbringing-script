@@ -58,7 +58,7 @@ async def main_async():
             services = resp.json()
             if services:
                 svc = services[0]
-                addr = svc.get("ServiceAddress", "localhost")
+                addr = svc.get("ServiceAddress", os.getenv("CLUSTER_IP", "127.0.0.1"))
                 port = svc.get("ServicePort", 8000)
                 memory_url = f"http://{addr}:{port}"
                 memory_client = PMMMemoryClient(base_url=memory_url)
@@ -72,7 +72,7 @@ async def main_async():
             services = resp.json()
             if services:
                 svc = services[0]
-                addr = svc.get("ServiceAddress", "localhost")
+                addr = svc.get("ServiceAddress", os.getenv("CLUSTER_IP", "127.0.0.1"))
                 port = svc.get("ServicePort", int(os.getenv("ROUTER_PORT", 8081))) # Default likely 8081 for router
                 llm_base_url = f"http://{addr}:{port}/v1"
                 logger.info(f"Discovered LLM Service at {llm_base_url}")
