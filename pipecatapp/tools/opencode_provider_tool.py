@@ -20,7 +20,7 @@ class OpenCodeProviderTool:
             "Returns a dictionary with 'final_output' containing the execution result."
         )
         self.name = "opencode_provider"
-        self.nomad_url = os.environ.get("NOMAD_ADDR", "http://localhost:4646")
+        self.nomad_url = os.environ.get("NOMAD_ADDR", f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:4646")
         self.token = os.environ.get("NOMAD_TOKEN")
         self.default_timeout = 600  # 10 minutes default for coding agents
         self.headers = {"X-Nomad-Token": self.token} if self.token else {}

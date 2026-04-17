@@ -209,9 +209,9 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 
 ## Security Audit
 
-- [ ] **Audit Hardcoded Local IP Addresses:** Remove hardcoded `127.0.0.1` and `localhost` fallbacks in critical services (e.g., `app.py`, `workflow_nodes`, `web_server.py`) and replace them with robust environment-based configuration matching the cluster overlay architecture.
-- [ ] **Audit Subprocess Injection Risks:** Thoroughly review all tools using `subprocess.run` (like `heretic_tool.py`, `experiment_tool.py`, `autoloop_tool.py`) for potential command injection vulnerabilities when interpolating user or LLM input into shell commands without `shlex.quote`.
-- [ ] **Review Autoloop Tool Security:** The `autoloop_tool.py` executes code locally without a sandbox. Sandbox this tool or restrict its usage strictly to trusted, airgapped environments.
+- [x] **Audit Hardcoded Local IP Addresses:** Remove hardcoded `127.0.0.1` and `localhost` fallbacks in critical services (e.g., `app.py`, `workflow_nodes`, `web_server.py`) and replace them with robust environment-based configuration matching the cluster overlay architecture.
+- [x] **Audit Subprocess Injection Risks:** Thoroughly review all tools using `subprocess.run` (like `heretic_tool.py`, `experiment_tool.py`, `autoloop_tool.py`) for potential command injection vulnerabilities when interpolating user or LLM input into shell commands without `shlex.quote`.
+- [x] **Review Autoloop Tool Security:** The `autoloop_tool.py` executes code locally without a sandbox. Sandbox this tool or restrict its usage strictly to trusted, airgapped environments.
 
 - [x] **Audit and remove hardcoded secrets:**
   - Audit frontend code (`pipecatapp/static/js`), workflows (`workflows/`), and tools (`pipecatapp/tools/`) for hardcoded secrets, API keys, or tokens.

@@ -13,7 +13,7 @@ def get_nomad_job_definition(job_id):
         print(f"Error: Invalid job_id '{job_id}'. Only alphanumeric characters, dashes, underscores, and dots are allowed.", file=sys.stderr)
         return None
 
-    nomad_addr = os.environ.get("NOMAD_ADDR", "http://localhost:4646")
+    nomad_addr = os.environ.get("NOMAD_ADDR", f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:4646")
     url = f"{nomad_addr}/v1/job/{job_id}"
 
     try:

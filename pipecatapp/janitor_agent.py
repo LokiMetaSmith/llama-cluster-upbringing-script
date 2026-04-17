@@ -38,7 +38,7 @@ class JanitorAgent:
                 services = resp.json()
                 if services:
                     svc = services[0]
-                    addr = svc.get("ServiceAddress", "localhost")
+                    addr = svc.get("ServiceAddress", os.getenv("CLUSTER_IP", "127.0.0.1"))
                     port = svc.get("ServicePort", 8000)
                     self.memory_url = f"http://{addr}:{port}"
                     self.memory_client = PMMMemoryClient(base_url=self.memory_url)

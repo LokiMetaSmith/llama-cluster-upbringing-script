@@ -1027,7 +1027,11 @@ async def discover_services(service_names: list, consul_http_addr: str, delay=10
             logging.info(f"No healthy services found in list {service_names}, retrying in {delay} seconds...")
             await asyncio.sleep(delay)
 
-async def discover_main_llm_service(consul_http_addr="http://localhost:8500", delay=10):
+async def discover_main_llm_service(consul_http_addr=None, delay=10):
+    if consul_http_addr is None:
+        consul_host = os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1"))
+        consul_port = os.getenv("CONSUL_PORT", "8500")
+        consul_http_addr = f"http://{consul_host}:{consul_port}"
     """Discovers the main LLM service used for vision-related tasks.
 
     This is a specialized wrapper around `discover_service` for the primary
@@ -1129,7 +1133,7 @@ class TwinService(FrameProcessor):
 
         self.debug_mode = self.app_config.get("debug_mode", False)
         self.approval_mode = self.app_config.get("approval_mode", False)
-        self.consul_http_addr = format_url("http", self.app_config.get('consul_host', '127.0.0.1'), self.app_config.get('consul_port', 8500))
+        self.consul_http_addr = format_url("http", self.app_config.get('consul_host', os.getenv('CLUSTER_IP', '127.0.0.1')), self.app_config.get('consul_port', 8500))
 
         # Initialize tools via factory
         self.tools = create_tools(self.app_config, twin_service=self, runner=self.runner)
@@ -1486,8 +1490,8 @@ async def run_agent():
     # Load configuration from Consul
     consul_host = os.getenv("CONSUL_HOST")
     if not consul_host:
-         logging.warning("CONSUL_HOST environment variable not set. Defaulting to 127.0.0.1")
-         consul_host = "127.0.0.1"
+         logging.warning("CONSUL_HOST environment variable not set. Defaulting to CLUSTER_IP or 127.0.0.1")
+         consul_host = os.getenv("CLUSTER_IP", "127.0.0.1")
 
     consul_port_str = os.getenv("CONSUL_PORT")
     if not consul_port_str:

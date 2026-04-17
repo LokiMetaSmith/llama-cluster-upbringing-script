@@ -8,7 +8,7 @@ class PMMMemoryClient:
     A client for the remote PMM Memory Service.
     Implements the same interface as the local PMMMemory class but over HTTP.
     """
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:8000"):
         self.base_url = base_url.rstrip("/")
         self.logger = logging.getLogger(__name__)
 

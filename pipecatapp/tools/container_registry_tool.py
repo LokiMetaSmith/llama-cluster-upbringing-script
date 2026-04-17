@@ -46,7 +46,7 @@ class ContainerRegistryTool:
         if self._registry_url:
             return self._registry_url
 
-        consul_host = os.getenv("CONSUL_HTTP_ADDR", "localhost:8500")
+        consul_host = os.getenv("CONSUL_HTTP_ADDR", f"{os.getenv("CLUSTER_IP", "127.0.0.1")}:8500")
         if not consul_host.startswith("http"):
             consul_host = f"http://{consul_host}"
 
@@ -68,7 +68,7 @@ class ContainerRegistryTool:
             self.logger.warning(f"Failed to discover {service_name} via Consul: {e}")
 
         # Fallback to standard local registry port
-        return "http://localhost:5001"
+        return f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:5001"
 
     def list_repositories(self) -> str:
         """Lists all repositories available in the registry.

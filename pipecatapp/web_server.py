@@ -691,7 +691,7 @@ async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = D
         return JSONResponse(content=cached_uis)
 
     web_uis = []
-    consul_url = format_url("http", "127.0.0.1", 8500)
+    consul_url = format_url("http", os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1")), 8500)
 
     try:
         # Use the reusable client instead of creating a new one every time

@@ -7,7 +7,7 @@ class ArchivistTool(MCP_Tool):
     A tool that interacts with the Archivist service to perform deep research
     on the agent's long-term memory (historical events).
     """
-    def __init__(self, archivist_url="http://localhost:8008"):
+    def __init__(self, archivist_url=f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:8008"):
         # We don't need twin_service/runner for this simple tool usually,
         # but MCP_Tool might expect them. However, since we are just wrapping an API call,
         # we can define a minimal tool.

@@ -39,6 +39,9 @@ class AutoloopTool:
         Returns:
             str: JSON summary of the autoloop run.
         """
+        if os.getenv("AUTOLOOP_ALLOW_UNSANDBOXED", "false").lower() != "true":
+            return json.dumps({"error": "AutoloopTool is currently restricted due to running unsandboxed. Set AUTOLOOP_ALLOW_UNSANDBOXED=true in your environment to override if you are in a trusted, airgapped environment."})
+
         try:
             from autoloop import AutoLoop
         except ImportError:

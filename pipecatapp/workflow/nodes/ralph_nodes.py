@@ -24,7 +24,7 @@ class RalphLoopNode(Node):
         target_service = node_config.get("model_service", "rpc-main")
 
         consul_http_addr = context.global_inputs.get("consul_http_addr") or os.getenv("CONSUL_HTTP_ADDR")
-        base_url = "http://127.0.0.1:8081/v1" # Fallback
+        base_url = f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:8081/v1" # Fallback
 
         if consul_http_addr:
             try:
