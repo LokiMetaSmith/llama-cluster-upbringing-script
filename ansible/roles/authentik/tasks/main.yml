@@ -29,10 +29,29 @@
     group: "70"
   become: yes
 
+- name: Fetch Consul management token (if undefined)
+  ansible.builtin.slurp:
+    src: /etc/consul.d/management_token
+  register: consul_token_file_authentik
+  delegate_to: "{{ (groups['controller_nodes'] | first) if ('controller_nodes' in groups and groups['controller_nodes']) else inventory_hostname }}"
+  become: yes
+  until: consul_token_file_authentik is success
+  retries: 5
+  delay: 2
+  when: consul_bootstrap_token is undefined
+  ignore_errors: yes
+
+- name: Set Consul token fact (if undefined)
+  ansible.builtin.set_fact:
+    consul_bootstrap_token: "{{ consul_token_file_authentik['content'] | b64decode | trim }}"
+  when: consul_bootstrap_token is undefined and consul_token_file_authentik is success and consul_token_file_authentik.content is defined
+
 - name: Check if Authentik secret key exists in Consul
   ansible.builtin.uri:
     url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/kv/authentik/secret-key"
     method: GET
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     status_code: [200, 404]
   register: authentik_consul_key
   ignore_errors: yes
@@ -46,6 +65,8 @@
   ansible.builtin.uri:
     url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/kv/authentik/secret-key"
     method: PUT
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     body: "{{ authentik_generated_key.stdout }}"
     status_code: [200, 201]
   when: authentik_consul_key is not failed and authentik_consul_key.status == 404
