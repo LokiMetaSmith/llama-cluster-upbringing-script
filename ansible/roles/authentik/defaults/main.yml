@@ -1,2 +1,4 @@
 nomad_volumes_dir: /opt/nomad/volumes
 nomad_jobs_dir: /opt/nomad/jobs
+authentik_server_memory: 2048
+authentik_worker_memory: 1024
