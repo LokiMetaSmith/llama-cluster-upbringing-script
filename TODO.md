@@ -274,6 +274,15 @@ This section tracks actionable ideas derived from the `docs/PASEO_ANALYSIS.md` d
   - **Goal:** Ensure that in a decentralized/zero-trust multi-agent system, tool outputs are genuinely executed by the designated node/enclave and not hallucinated by compromised nodes.
   - **Context:** Since forcing language models to hallucinate raw SHA-256 hashes often fails due to tokenization, the deterministic runtime executing the tool should cryptographically sign the execution trace (input parameters and output payload) with a private key. The orchestration router must then verify this signature before allowing the state machine to proceed, creating an immutable proof of execution.
 
+## Haystack Architecture Integration Ideas
+
+This section tracks actionable ideas derived from the `docs/HAYSTACK_ANALYSIS.md` document for integrating Haystack's pipeline and component concepts into the `pipecatapp` architecture.
+
+- [ ] **Explicit Component I/O Typing:** Refactor the base `Node` class in `pipecatapp/workflow/nodes/base.py` to require explicitly defined input and output variables (e.g., using Pydantic) to allow for pre-runtime graph validation.
+- [ ] **Standardized Document Protocol:** Define a unified `Document` data class and refactor the FAISS `memory.py` implementation to adhere to a standard DocumentStore interface (e.g., `write_documents`, `filter_documents`), decoupling the `RAG_Tool` from the underlying storage mechanism.
+- [ ] **Separation of Indexing and Querying Workflows:** Create dedicated workflow definitions (e.g., `document_ingestion.yaml`) utilizing new `DocumentWriter` and `TextSplitter` nodes to handle document ingestion asynchronously as background Nomad jobs, separate from the real-time querying loop.
+- [ ] **Cyclic Workflow Support (Loops):** Update the `WorkflowRunner` to natively support cyclic graphs, allowing state to loop back based on conditional output edges for complex "Agentic Validation Loops" directly within YAML definitions.
+
 ## Flowise UI Integration Ideas
 
 This section tracks actionable ideas derived from the `docs/FLOWISE_ANALYSIS.md` document for integrating visual workflow concepts into the `pipecatapp` architecture.
