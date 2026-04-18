@@ -129,7 +129,7 @@ EOH
 
       resources {
         cpu    = 500
-        memory = 512
+        memory = {{ authentik_server_memory | default(2048) }}
       }
     }
 
@@ -166,7 +166,7 @@ EOH
 
       resources {
         cpu    = 500
-        memory = 512
+        memory = {{ authentik_worker_memory | default(1024) }}
       }
     }
   }
