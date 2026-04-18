@@ -1,0 +1,54 @@
+id: document_ingestion
+name: "Async Document Ingestion Workflow"
+description: "A Haystack-inspired workflow for processing raw text into standard Documents and saving them to the vector store."
+version: "1.0"
+nodes:
+  - id: "input"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "raw_text"
+        - name: "metadata"
+    position:
+      x: 100
+      y: 100
+
+  - id: "splitter"
+    type: "TextSplitterNode"
+    config:
+      chunk_size: 500
+      chunk_overlap: 50
+    inputs:
+      - name: "raw_text"
+        connection:
+          from_node: "input"
+          from_output: "raw_text"
+      - name: "metadata"
+        connection:
+          from_node: "input"
+          from_output: "metadata"
+    position:
+      x: 300
+      y: 100
+
+  - id: "writer"
+    type: "DocumentWriterNode"
+    inputs:
+      - name: "documents"
+        connection:
+          from_node: "splitter"
+          from_output: "documents"
+    position:
+      x: 500
+      y: 100
+
+  - id: "output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_output"
+        connection:
+          from_node: "writer"
+          from_output: "write_count"
+    position:
+      x: 700
+      y: 100

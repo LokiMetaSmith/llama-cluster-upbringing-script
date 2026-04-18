@@ -4,8 +4,21 @@ import sqlite3
 import atexit
 from sentence_transformers import SentenceTransformer
 import os
+import uuid
 import logging
+from typing import Dict, Any, List, Optional
+from dataclasses import dataclass, field
 from cryptography.fernet import Fernet, InvalidToken
+
+@dataclass
+class Document:
+    """Standardized Haystack-style Document Protocol for Pipecat memory."""
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    content: str = ""
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self):
+        return {"id": self.id, "content": self.content, "metadata": self.metadata}
 
 class MemoryStore:
     """Manages the agent's long-term memory using a vector database.
@@ -132,6 +145,16 @@ class MemoryStore:
                 consolidated BOOLEAN DEFAULT 0
             )
         ''')
+
+        # Safe schema migration for metadata column
+        cursor.execute("PRAGMA table_info(memories)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if "metadata" not in columns:
+            cursor.execute("ALTER TABLE memories ADD COLUMN metadata TEXT")
+
+        # Safe schema migration for string ID
+        if "doc_id" not in columns:
+            cursor.execute("ALTER TABLE memories ADD COLUMN doc_id TEXT")
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS consolidations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -175,7 +198,7 @@ class MemoryStore:
                 return text
         return text
 
-    def add_memory(self, source: str, raw_text: str, summary: str = None, entities: list = None, topics: list = None, importance: int = None, consolidated: bool = False):
+    def add_memory(self, source: str, raw_text: str, summary: str = None, entities: list = None, topics: list = None, importance: int = None, consolidated: bool = False, metadata: dict = None, doc_id: str = None):
         """Adds a new memory to the SQLite store.
 
         Args:
@@ -186,17 +209,22 @@ class MemoryStore:
             topics (list, optional): List of topics covered.
             importance (int, optional): Importance score (e.g., 1-10).
             consolidated (bool, optional): Whether this memory is already consolidated. Defaults to False.
+            metadata (dict, optional): Extra metadata to store alongside the memory.
+            doc_id (str, optional): Explicit string ID for Haystack Document linking.
 
         Returns:
-            int: The new memory's ID.
+            int: The new memory's SQLite ID.
         """
         entities_str = json.dumps(entities) if entities is not None else None
         topics_str = json.dumps(topics) if topics is not None else None
 
         cursor = self.conn.cursor()
+
+        metadata_str = json.dumps(metadata) if metadata else None
+
         cursor.execute('''
-            INSERT INTO memories (source, raw_text, summary, entities, topics, importance, consolidated)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO memories (source, raw_text, summary, entities, topics, importance, consolidated, metadata, doc_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             source,
             self._encrypt(raw_text),
@@ -204,8 +232,11 @@ class MemoryStore:
             self._encrypt(entities_str),
             self._encrypt(topics_str),
             importance,
-            1 if consolidated else 0
+            1 if consolidated else 0,
+            self._encrypt(metadata_str) if metadata_str else None,
+            doc_id
         ))
+
         self.conn.commit()
         return cursor.lastrowid
 
@@ -428,6 +459,78 @@ class MemoryStore:
                 results.append(self.store.get(str(i)))
 
         return results
+
+    # =========================================================================
+    # Standardized Document Protocol Methods (Haystack Integration)
+    # =========================================================================
+
+    def write_documents(self, documents: List[Document]) -> int:
+        """Writes a list of standardized Document objects into memory.
+        This provides a common ingestion interface for RAG pipelines."""
+        count = 0
+        for doc in documents:
+            # We prefix the content with metadata for the semantic search to be aware of it
+            meta_str = ", ".join(f"{k}: {v}" for k, v in doc.metadata.items())
+            full_text = f"[{meta_str}] {doc.content}" if meta_str else doc.content
+
+            # Using the existing SQLite/FAISS combination via self.add() or self.add_memory()
+            # For pure vector search we can just use self.add(). If it's conversational memory,
+            # we'd use add_memory. Here we treat them as generic RAG documents.
+            self.add(full_text)
+
+            # Also optionally store structured data in sqlite
+            source = doc.metadata.get("source", "document_writer")
+            self.add_memory(source=source, raw_text=doc.content, metadata=doc.metadata, doc_id=doc.id)
+            count += 1
+
+        return count
+
+    def filter_documents(self, filters: Dict[str, Any] = None) -> List[Document]:
+        """Filters documents based on metadata criteria.
+        This allows retrievers to query subsets of the store."""
+
+        # Currently, pipecatapp's memory is mostly a simple FAISS text store,
+        # but we can implement basic metadata filtering on the SQLite side.
+        if not filters:
+            return []
+
+        # Simplistic implementation fetching from the `memories` table
+        # (This would need to be expanded based on specific query languages later)
+        docs = []
+
+        # Use existing connection
+        cursor = self.conn.cursor()
+
+        # This is a very basic mock of a filter. In a real Haystack setup,
+        # DocumentStores translate filters into complex SQL/NoSQL queries.
+        query = "SELECT * FROM memories WHERE 1=1"
+        params = []
+        if "source" in filters:
+            query += " AND source = ?"
+            params.append(filters["source"])
+
+        cursor.execute(query, params)
+        for row in cursor.fetchall():
+                meta = {"source": row["source"]}
+
+                # Check for column existence since sqlite3.Row throws KeyError otherwise
+                keys = row.keys()
+                if "metadata" in keys and row["metadata"]:
+                    decrypted_meta = self._decrypt(row["metadata"])
+                    if decrypted_meta:
+                        try:
+                            meta.update(json.loads(decrypted_meta))
+                        except json.JSONDecodeError as e:
+                            logging.error(f"Failed to decode document metadata: {e}")
+
+                text = self._decrypt(row["raw_text"]) if row["raw_text"] else ""
+
+                # Favor the explicit string doc_id if it exists, fallback to sqlite row id
+                doc_id = row["doc_id"] if "doc_id" in keys and row["doc_id"] else str(row["id"])
+
+                docs.append(Document(id=doc_id, content=text, metadata=meta))
+
+        return docs
 
     def save_skill(self, name: str, description: str, content: str) -> None:
         """Saves a dynamic skill to the SQLite database. If it exists, updates it and increments the version."""
