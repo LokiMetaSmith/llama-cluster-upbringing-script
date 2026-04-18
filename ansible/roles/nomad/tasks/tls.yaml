@@ -1,0 +1,267 @@
+- name: Ensure openssl is installed on localhost
+  become: yes
+  ansible.builtin.package:
+    name: openssl
+    state: present
+  delegate_to: localhost
+  run_once: true
+
+- name: Ensure local certs directory exists and is writable by user
+  become: yes
+  ansible.builtin.file:
+    path: "{{ nomad_temp_cert_dir }}"
+    state: directory
+    owner: "{{ ansible_user_id }}"
+    mode: '0755'
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate Nomad CA key
+  ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/ca.key 2048"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/ca.key"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate Nomad CA certificate
+  ansible.builtin.command: "openssl req -new -x509 -days 3650 -key {{ nomad_temp_cert_dir }}/ca.key -out {{ nomad_temp_cert_dir }}/ca.pem -subj '/CN=Nomad CA'"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/ca.pem"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate CLI keys for Nomad nodes
+  ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/cli.key 2048"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/cli.key"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate CLI CSRs for Nomad nodes
+  ansible.builtin.command: "openssl req -new -key {{ nomad_temp_cert_dir }}/cli.key -out {{ nomad_temp_cert_dir }}/cli.csr -subj '/CN=cli.global.nomad'"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/cli.csr"
+  delegate_to: localhost
+  run_once: true
+
+- name: Sign CLI certificates for Nomad nodes
+  ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/cli.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/cli.pem -days 365"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/cli.pem"
+  delegate_to: localhost
+  run_once: true
+
+# Server Certs
+- name: Generate OpenSSL config for Nomad server nodes
+  ansible.builtin.copy:
+    dest: "{{ nomad_temp_cert_dir }}/{{ item }}.cnf"
+    content: |
+      [req]
+      distinguished_name = req_distinguished_name
+      req_extensions = v3_req
+      prompt = no
+      [req_distinguished_name]
+      CN = server.global.nomad
+      [v3_req]
+      keyUsage = keyEncipherment, dataEncipherment
+      extendedKeyUsage = serverAuth, clientAuth
+      subjectAltName = @alt_names
+      [alt_names]
+      DNS.1 = server.global.nomad
+      DNS.2 = localhost
+      IP.1 = 127.0.0.1
+      IP.2 = {{ hostvars[item]['cluster_ip'] }}
+  loop: "{{ groups['controller_nodes'] | default([]) }}"
+  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate OpenSSL config for localhost (local bootstrap mode)
+  ansible.builtin.copy:
+    dest: "{{ nomad_temp_cert_dir }}/localhost.cnf"
+    content: |
+      [req]
+      distinguished_name = req_distinguished_name
+      req_extensions = v3_req
+      prompt = no
+      [req_distinguished_name]
+      CN = server.global.nomad
+      [v3_req]
+      keyUsage = keyEncipherment, dataEncipherment
+      extendedKeyUsage = serverAuth, clientAuth
+      subjectAltName = @alt_names
+      [alt_names]
+      DNS.1 = server.global.nomad
+      DNS.2 = localhost
+      IP.1 = 127.0.0.1
+  when: "groups['controller_nodes'] is not defined or groups['controller_nodes'] | length == 0"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate server keys for controller nodes
+  ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/{{ item }}.key 2048"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/{{ item }}.key"
+  loop: "{{ groups['controller_nodes'] | default([]) }}"
+  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate server keys for localhost (local bootstrap mode)
+  ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/localhost.key 2048"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/localhost.key"
+  when: "groups['controller_nodes'] is not defined or groups['controller_nodes'] | length == 0"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate server CSRs for controller nodes
+  ansible.builtin.command: "openssl req -new -key {{ nomad_temp_cert_dir }}/{{ item }}.key -out {{ nomad_temp_cert_dir }}/{{ item }}.csr -config {{ nomad_temp_cert_dir }}/{{ item }}.cnf"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/{{ item }}.csr"
+  loop: "{{ groups['controller_nodes'] | default([]) }}"
+  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate server CSRs for localhost (local bootstrap mode)
+  ansible.builtin.command: "openssl req -new -key {{ nomad_temp_cert_dir }}/localhost.key -out {{ nomad_temp_cert_dir }}/localhost.csr -config {{ nomad_temp_cert_dir }}/localhost.cnf"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/localhost.csr"
+  when: "groups['controller_nodes'] is not defined or groups['controller_nodes'] | length == 0"
+  delegate_to: localhost
+  run_once: true
+
+- name: Sign server certificates for controller nodes
+  ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/{{ item }}.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/{{ item }}.pem -days 365 -extfile {{ nomad_temp_cert_dir }}/{{ item }}.cnf -extensions v3_req"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/{{ item }}.pem"
+  loop: "{{ groups['controller_nodes'] | default([]) }}"
+  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
+  delegate_to: localhost
+  run_once: true
+
+- name: Sign server certificates for localhost (local bootstrap mode)
+  ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/localhost.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/localhost.pem -days 365 -extfile {{ nomad_temp_cert_dir }}/localhost.cnf -extensions v3_req"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/localhost.pem"
+  when: "groups['controller_nodes'] is not defined or groups['controller_nodes'] | length == 0"
+  delegate_to: localhost
+  run_once: true
+
+# Client Certs
+- name: Generate OpenSSL config for Nomad client nodes
+  ansible.builtin.copy:
+    dest: "{{ nomad_temp_cert_dir }}/{{ item }}.cnf"
+    content: |
+      [req]
+      distinguished_name = req_distinguished_name
+      req_extensions = v3_req
+      prompt = no
+      [req_distinguished_name]
+      CN = client.global.nomad
+      [v3_req]
+      keyUsage = keyEncipherment, dataEncipherment
+      extendedKeyUsage = clientAuth, serverAuth
+      subjectAltName = @alt_names
+      [alt_names]
+      DNS.1 = client.global.nomad
+      DNS.2 = localhost
+      IP.1 = 127.0.0.1
+      IP.2 = {{ hostvars[item]['cluster_ip'] }}
+  loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
+  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate client keys for client nodes
+  ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/{{ item }}.key 2048"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/{{ item }}.key"
+  loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
+  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate client CSRs for client nodes
+  ansible.builtin.command: "openssl req -new -key {{ nomad_temp_cert_dir }}/{{ item }}.key -out {{ nomad_temp_cert_dir }}/{{ item }}.csr -config {{ nomad_temp_cert_dir }}/{{ item }}.cnf"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/{{ item }}.csr"
+  loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
+  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
+  delegate_to: localhost
+  run_once: true
+
+- name: Sign client certificates for client nodes
+  ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/{{ item }}.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/{{ item }}.pem -days 365 -extfile {{ nomad_temp_cert_dir }}/{{ item }}.cnf -extensions v3_req"
+  args:
+    creates: "{{ nomad_temp_cert_dir }}/{{ item }}.pem"
+  loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
+  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
+  delegate_to: localhost
+  run_once: true
+
+- name: Secure private keys on localhost
+  ansible.builtin.shell: "chmod 0600 {{ nomad_temp_cert_dir }}/*.key"
+  delegate_to: localhost
+  run_once: true
+
+- name: Set public certificates to readable on localhost
+  ansible.builtin.shell: "chmod 0644 {{ nomad_temp_cert_dir }}/*.pem {{ nomad_temp_cert_dir }}/*.csr {{ nomad_temp_cert_dir }}/*.cnf"
+  delegate_to: localhost
+  run_once: true
+
+- name: Check if CA certificate exists (localhost)
+  stat:
+    path: "{{ nomad_temp_cert_dir }}/ca.pem"
+  register: ca_cert_stat
+  delegate_to: localhost
+  check_mode: false
+
+- name: Create Nomad TLS directory
+  become: yes
+  ansible.builtin.file:
+    path: "{{ nomad_tls_dir }}"
+    state: directory
+    owner: nomad
+    group: nomad
+    mode: '0755'
+
+- name: Copy CA certificate to all nodes
+  copy:
+    src: "{{ nomad_temp_cert_dir }}/ca.pem"
+    dest: "{{ nomad_tls_dir }}/ca.pem"
+    mode: '0644'
+    owner: nomad
+    group: nomad
+    remote_src: no
+  become: yes
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
+
+- name: Copy CLI certificate and key to each node
+  copy:
+    src: "{{ nomad_temp_cert_dir }}/cli.{{ item.src }}"
+    dest: "{{ nomad_tls_dir }}/cli.{{ item.dest }}"
+    mode: '0644'
+    owner: nomad
+    group: nomad
+    remote_src: no
+  loop:
+    - { src: 'pem', dest: 'cert.pem' }
+    - { src: 'key', dest: 'key.pem' }
+  become: yes
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
+
+- name: Copy node certificate and key to each node
+  copy:
+    src: "{{ nomad_temp_cert_dir }}/{{ inventory_hostname }}.{{ item.src }}"
+    dest: "{{ nomad_tls_dir }}/{{ item.dest }}"
+    mode: '0600'
+    owner: nomad
+    group: nomad
+    remote_src: no
+  loop:
+    - { src: 'pem', dest: 'cert.pem' }
+    - { src: 'key', dest: 'key.pem' }
+  become: yes
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
