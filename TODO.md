@@ -280,8 +280,8 @@ This section tracks actionable ideas derived from the `docs/HAYSTACK_ANALYSIS.md
 
 - [x] **Explicit Component I/O Typing:** Refactor the base `Node` class in `pipecatapp/workflow/nodes/base.py` to require explicitly defined input and output variables (e.g., using Pydantic) to allow for pre-runtime graph validation.
 - [x] **Standardized Document Protocol:** Define a unified `Document` data class and refactor the FAISS `memory.py` implementation to adhere to a standard DocumentStore interface (e.g., `write_documents`, `filter_documents`), decoupling the `RAG_Tool` from the underlying storage mechanism.
-- [ ] **Separation of Indexing and Querying Workflows:** Create dedicated workflow definitions (e.g., `document_ingestion.yaml`) utilizing new `DocumentWriter` and `TextSplitter` nodes to handle document ingestion asynchronously as background Nomad jobs, separate from the real-time querying loop.
-- [ ] **Cyclic Workflow Support (Loops):** Update the `WorkflowRunner` to natively support cyclic graphs, allowing state to loop back based on conditional output edges for complex "Agentic Validation Loops" directly within YAML definitions.
+- [x] **Separation of Indexing and Querying Workflows:** Create dedicated workflow definitions (e.g., `document_ingestion.yaml`) utilizing new `DocumentWriter` and `TextSplitter` nodes to handle document ingestion asynchronously as background Nomad jobs, separate from the real-time querying loop.
+- [x] **Cyclic Workflow Support (Loops):** Update the `WorkflowRunner` to natively support cyclic graphs, allowing state to loop back based on conditional output edges for complex "Agentic Validation Loops" directly within YAML definitions.
 
 ## Flowise UI Integration Ideas
 
