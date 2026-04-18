@@ -166,6 +166,9 @@ paperless_port: 8010
 target_user: ubuntu
 target_user_home: "/home/{{ target_user }}"
 
+# GitHub usernames to automatically import SSH keys for via ssh-import-id
+github_ssh_users: []
+
 # --- Exo Configuration ---
 # By default, Exo is disabled. To enable it, set this to true.
 exo_enable: false

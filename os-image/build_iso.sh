@@ -100,7 +100,7 @@ lb config \
 echo "=== Injecting project files ==="
 # Explicitly install live-config inside the chroot so autologin functions correctly
 mkdir -p config/package-lists
-echo "live-boot live-config live-config-systemd" > config/package-lists/live.list.chroot
+echo "live-boot live-config live-config-systemd ssh-import-id" > config/package-lists/live.list.chroot
 
 # Ensure the root of the repo is copied to /opt/pipecat-cluster
 # The `lb build` command automatically includes files placed in `config/includes.chroot/`

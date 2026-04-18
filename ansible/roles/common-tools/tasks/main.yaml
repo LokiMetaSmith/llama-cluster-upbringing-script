@@ -28,3 +28,10 @@
     port: '60000:61000'
     proto: udp
   become: yes
+
+- name: Import GitHub SSH keys for specified users
+  ansible.builtin.command: ssh-import-id "gh:{{ item }}"
+  loop: "{{ github_ssh_users }}"
+  when: github_ssh_users | length > 0
+  become: yes
+  become_user: "{{ target_user }}"

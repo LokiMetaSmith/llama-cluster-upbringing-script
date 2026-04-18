@@ -461,6 +461,7 @@ def main():
     parser.add_argument("--controller-ip", help="IP of the controller (required for workers)")
     parser.add_argument("--tags", help="Ansible tags to run")
     parser.add_argument("--user", default="pipecatapp", dest="target_user", help="Target user for Ansible")
+    parser.add_argument("--github-ssh-user", action="append", default=[], help="GitHub username to import SSH keys for. Can be used multiple times.")
     parser.add_argument("--debug", action="store_true", help="Enable verbose logging (Legacy flag)")
     parser.add_argument("--verbose", type=int, default=0, help="Verbosity level (0-4)")
     parser.add_argument("--continue", action="store_true", dest="continue_run", help="Resume from last state")
@@ -508,6 +509,9 @@ def main():
     extra_vars = {
         "target_user": args.target_user
     }
+
+    if args.github_ssh_user:
+        extra_vars["github_ssh_users"] = json.dumps(args.github_ssh_user)
 
     if args.role == "worker":
         extra_vars["controller_ip"] = args.controller_ip

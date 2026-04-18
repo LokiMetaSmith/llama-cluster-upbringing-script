@@ -26,6 +26,7 @@ show_help() {
     echo "  --controller-ip <ip>         Required if --role is 'worker'. IP address of the controller node."
     echo "  --tags <tags>                Comma-separated list of Ansible tags to run."
     echo "  --user <user>                Specify the target user for Ansible. Default: pipecatapp."
+    echo "  --github-ssh-user <user>     Specify a GitHub username to import SSH keys for. Can be used multiple times."
     echo "  --purge-jobs                 Stop and purge all running Nomad jobs."
     echo "  --clean-git                  Clean the repository of all untracked files (interactive prompt)."
     echo "  --system-cleanup             Perform a full system cleanup (Purge Jobs, Clean System, Clean Git), with interactive prompts."
@@ -301,6 +302,13 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
                 ROLE="$NEXT_ARG"
                 PROCESSED_ARGS+=("--role" "$ROLE")
+                SKIP_NEXT=true
+            fi
+            ;;
+        --github-ssh-user)
+            NEXT_ARG="${ARGS[$((i+1))]}"
+            if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
+                PROCESSED_ARGS+=("--github-ssh-user" "$NEXT_ARG")
                 SKIP_NEXT=true
             fi
             ;;
