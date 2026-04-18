@@ -6,6 +6,7 @@ import glob
 import re
 from typing import List, Optional
 from pipecatapp.utils.command_runner import CommandRunner
+from pipecatapp.utils.ssh_utils import ensure_ssh_keys_initialized
 
 class SpecLoaderTool:
     """
@@ -22,6 +23,7 @@ class SpecLoaderTool:
                 os.makedirs(self.work_dir)
             except OSError as e:
                 self.logger.error(f"Failed to create spec directory: {e}")
+        ensure_ssh_keys_initialized()
 
     def _validate_protocol(self, url: str):
         """Validates that the URL uses a safe protocol."""

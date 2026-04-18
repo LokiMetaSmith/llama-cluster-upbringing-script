@@ -4,14 +4,14 @@ import os
 from unittest.mock import patch, MagicMock
 
 # Add tools directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'tools')))
 
 from git_tool import Git_Tool
 
 @pytest.fixture
 def git_tool():
     # Mock os.path.isdir to always return True for the tests
-    with patch('os.path.isdir', return_value=True):
+    with patch('os.path.isdir', return_value=True), patch('git_tool.ensure_ssh_keys_initialized'):
         yield Git_Tool()
 
 @patch("pipecatapp.utils.command_runner.CommandRunner.run")
@@ -101,7 +101,7 @@ def test_command_failed(mock_run, git_tool):
 
 def test_directory_not_found():
     """Test handling of a non-existent working directory."""
-    with patch('os.path.isdir', return_value=False):
+    with patch('os.path.isdir', return_value=False), patch('git_tool.ensure_ssh_keys_initialized'):
         tool = Git_Tool()
         result = tool.status("non_existent_dir")
         assert "Error: Working directory" in result and "non_existent_dir" in result

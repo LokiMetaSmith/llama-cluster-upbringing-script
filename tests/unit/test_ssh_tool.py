@@ -4,13 +4,14 @@ import os
 from unittest.mock import patch, MagicMock
 
 # Add tools directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'tools')))
 
 from ssh_tool import SSH_Tool
 
 @pytest.fixture
 def ssh_tool():
-    return SSH_Tool()
+    with patch('ssh_tool.ensure_ssh_keys_initialized'):
+        return SSH_Tool()
 
 @patch('ssh_tool.paramiko')
 def test_run_command_with_key_success(mock_paramiko, ssh_tool):
