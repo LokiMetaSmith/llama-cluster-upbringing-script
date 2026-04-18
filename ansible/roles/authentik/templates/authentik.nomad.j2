@@ -52,9 +52,6 @@ job "authentik" {
       config {
         image = "postgres:15-alpine"
         ports = ["postgres"]
-        volumes = [
-          "{{ nomad_volumes_dir }}/authentik/postgres:/var/lib/postgresql/data"
-        ]
       }
 
       service {
