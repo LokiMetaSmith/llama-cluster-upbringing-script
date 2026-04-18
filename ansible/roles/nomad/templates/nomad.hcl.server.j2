@@ -94,3 +94,15 @@ telemetry {
   publish_allocation_metrics = true
   publish_node_metrics = true
 }
+
+tls {
+  http = true
+  rpc  = true
+
+  ca_file   = "{{ nomad_tls_dir }}/ca.pem"
+  cert_file = "{{ nomad_tls_dir }}/cert.pem"
+  key_file  = "{{ nomad_tls_dir }}/key.pem"
+
+  verify_server_hostname = true
+  verify_https_client    = true
+}

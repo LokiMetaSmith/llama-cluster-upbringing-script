@@ -188,6 +188,12 @@
     - memory-data
   become: yes
 
+- name: Include Nomad TLS tasks
+  ansible.builtin.include_tasks: tls.yaml
+  tags:
+    - nomad
+    - nomad_tls
+
 - name: Fetch Consul management token
   ansible.builtin.slurp:
     src: /etc/consul.d/management_token
@@ -385,8 +391,11 @@
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
+    url: "https://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
     status_code: 200
+    validate_certs: no
+    client_cert: "{{ nomad_tls_dir }}/cli.cert.pem"
+    client_key: "{{ nomad_tls_dir }}/cli.key.pem"
   register: nomad_api_status
   until: nomad_api_status.status == 200
   retries: 12

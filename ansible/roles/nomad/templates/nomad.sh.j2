@@ -1,2 +1,5 @@
 #!/bin/sh
-export NOMAD_ADDR="http://{{ cluster_ip }}:{{ nomad_http_port }}"
+export NOMAD_ADDR="https://{{ cluster_ip }}:{{ nomad_http_port }}"
+export NOMAD_CACERT="{{ nomad_tls_dir }}/ca.pem"
+export NOMAD_CLIENT_CERT="{{ nomad_tls_dir }}/cli.cert.pem"
+export NOMAD_CLIENT_KEY="{{ nomad_tls_dir }}/cli.key.pem"
