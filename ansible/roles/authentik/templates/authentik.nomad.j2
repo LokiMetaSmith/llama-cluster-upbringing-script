@@ -2,6 +2,15 @@ job "authentik" {
   datacenters = ["dc1"]
   type        = "service"
 
+update {
+  max_parallel      = 1
+  min_healthy_time  = "30s"
+  healthy_deadline  = "10m"
+  progress_deadline = "15m"
+  canary            = 1
+  auto_revert       = false
+}
+
   group "authentik" {
     network {
       mode = "bridge"
@@ -116,13 +125,6 @@ EOH
           "traefik.http.routers.authentik.rule=Host(`authentik.service.consul`)",
           "traefik.http.services.authentik.loadbalancer.server.port=9000"
         ]
-        check {
-          name     = "alive"
-          type     = "http"
-          path     = "/-/health/live/"
-          interval = "10s"
-          timeout  = "2s"
-        }
       }
 
       resources {
