@@ -177,7 +177,17 @@ class WorkflowRunner:
             node_class = registry.get_node_class(node_config["type"])
             if not node_class:
                 raise ValueError(f"Unknown node type: {node_config['type']}")
-            self.nodes[node_config["id"]] = node_class(node_config)
+
+            node_instance = node_class(node_config)
+
+            # Haystack Idea: Pre-runtime component I/O validation
+            validation_errors = node_instance.validate_io()
+            if validation_errors:
+                print(f"Warning: Workflow validation failed for node {node_config['id']}:")
+                for err in validation_errors:
+                    print(f"  - {err}")
+
+            self.nodes[node_config["id"]] = node_instance
 
     def _get_execution_order(self) -> List[str]:
         """Determine the execution order of nodes using Kahn's algorithm for topological sorting."""
