@@ -302,9 +302,6 @@ class WorkflowRunner:
         error = None
 
         try:
-            # Create a deep copy to prevent permanent mutation of the workflow definition
-            # The upstream _interpolate_variables implementation handles dicts recursively,
-            # so we can just pass the whole definition to it.
             original_def = self.workflow_definition
             self.workflow_definition = self._interpolate_variables(copy.deepcopy(self.workflow_definition), global_inputs)
 
@@ -314,11 +311,22 @@ class WorkflowRunner:
                 for name, value in global_inputs.items():
                     self.context.set_global_input(name, value)
 
-                execution_order = self._get_execution_order()
+                # Use iterative execution if a cycle is detected or explicitly requested
+                has_cycle = False
+                try:
+                    execution_order = self._get_execution_order()
+                except ValueError as e:
+                    if "cycle" in str(e):
+                        has_cycle = True
+                    else:
+                        raise e
 
-                for node_id in execution_order:
-                    node = self.nodes[node_id]
-                    await node.execute(self.context)
+                if has_cycle:
+                    await self._execute_cyclic_graph()
+                else:
+                    for node_id in execution_order:
+                        node = self.nodes[node_id]
+                        await node.execute(self.context)
 
                 return self.context.final_output
             finally:
@@ -354,3 +362,74 @@ class WorkflowRunner:
             except Exception as h_e:
                 # Should rarely happen (scheduling error)
                 print(f"Failed to schedule workflow history saving: {h_e}")
+
+    async def _execute_cyclic_graph(self):
+        """Execute a graph with cycles iteratively until OutputNode is hit or max loops reached."""
+        max_iterations = 100 # Safety limit
+
+        # Determine root nodes (in-degree 0 ignoring loopback edges, or just start with InputNodes)
+        # For simplicity, we can just execute nodes when their input dependencies are met.
+        # A more robust state machine approach:
+        active_nodes = [node["id"] for node in self.workflow_definition["nodes"] if node["type"] == "InputNode"]
+        if not active_nodes:
+             active_nodes = [self.workflow_definition["nodes"][0]["id"]] # Fallback
+
+        executed_nodes = set()
+        iteration = 0
+
+        while active_nodes and iteration < max_iterations:
+            next_active = []
+            new_outputs = {}
+            for node_id in active_nodes:
+                node = self.nodes[node_id]
+
+                # Temporarily hide previous outputs to avoid routing based on stale data
+                # if this node crashes during execution
+                old_outputs = self.context.node_outputs.get(node_id, {})
+                self.context.node_outputs[node_id] = {}
+
+                try:
+                    await node.execute(self.context)
+                    new_outputs[node_id] = self.context.node_outputs.get(node_id, {})
+                except ValueError as e:
+                    self.context.node_outputs[node_id] = old_outputs
+                    new_outputs[node_id] = {}
+
+                executed_nodes.add(node_id)
+
+                if node_id == "output" or node.config["type"] == "OutputNode":
+                     return # End of cyclic execution when Output Node is successfully run
+
+            # Compute what to run next based on the NEW states
+            for node_id in active_nodes:
+                node_outputs = new_outputs.get(node_id, {})
+
+                # If the node produced absolutely no output during this tick
+                # it should not activate any edges to its children.
+                if not node_outputs:
+                     continue
+
+                # Find children
+                for potential_child in self.workflow_definition["nodes"]:
+                     child_id = potential_child["id"]
+
+                     edge_activated = False
+                     for input_config in potential_child.get("inputs", []):
+                         if "connection" in input_config and input_config["connection"]["from_node"] == node_id:
+                              required_output = input_config["connection"]["from_output"]
+
+                              # If the required output was produced (not None), this edge is active
+                              if required_output in node_outputs and node_outputs[required_output] is not None:
+                                  edge_activated = True
+                                  break
+
+                     if edge_activated:
+                          # Avoid queuing a node that is already in next_active to prevent duplicates in the next tick
+                          if child_id not in next_active:
+                              next_active.append(child_id)
+
+            active_nodes = next_active
+            iteration += 1
+
+        if iteration >= max_iterations:
+             raise RuntimeError("Cyclic workflow reached maximum iterations (100) without terminating.")
