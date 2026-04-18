@@ -20,6 +20,30 @@ const WorkflowEditor = {
         // Register custom nodes
         this.registerNodeTypes();
 
+        // Strict Visual Edge Validation
+        const originalIsValidConnection = LiteGraph.isValidConnection;
+        LiteGraph.isValidConnection = function(type_a, type_b) {
+            // Treat empty/wildcard types safely but enforce strict checks on known types
+            const a = type_a === 0 ? "0" : String(type_a || "").toLowerCase();
+            const b = type_b === 0 ? "0" : String(type_b || "").toLowerCase();
+
+            const strictTypes = ["string", "object", "array", "dict"];
+
+            // If both are strict types and they don't match, reject
+            if (strictTypes.includes(a) && strictTypes.includes(b) && a !== b) {
+                // Allow some specific exceptions if needed (e.g. object and dict could be considered same)
+                if ((a === "object" && b === "dict") || (a === "dict" && b === "object")) {
+                    // fall through to original
+                } else {
+                    return false;
+                }
+            }
+
+            // Wildcards (0, "", "*", null) are generic and should be allowed to connect to any strict type.
+            // Do not block connections involving wildcards.
+            return originalIsValidConnection.apply(this, arguments);
+        };
+
         if (!options.skipResize) {
             // Adjust canvas on resize
             window.addEventListener("resize", () => {
