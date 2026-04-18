@@ -1,6 +1,7 @@
 import paramiko
 import os
 import logging
+from pipecatapp.utils.ssh_utils import ensure_ssh_keys_initialized
 
 class SSH_Tool:
     """A tool for executing commands on a remote machine via SSH.
@@ -17,6 +18,7 @@ class SSH_Tool:
         """Initializes the SSH_Tool."""
         self.description = "Execute a command on a remote machine via SSH."
         self.name = "ssh_tool"
+        ensure_ssh_keys_initialized()
 
     def run_command(self, host: str, username: str, command: str, key_filename: str = None, password: str = None) -> str:
         """Executes a command on a remote machine via SSH.

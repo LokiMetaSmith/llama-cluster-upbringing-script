@@ -1,6 +1,7 @@
 import subprocess
 import os
 from pipecatapp.utils.command_runner import CommandRunner
+from pipecatapp.utils.ssh_utils import ensure_ssh_keys_initialized
 try:
     from ..secret_manager import secret_manager
 except ImportError:
@@ -24,6 +25,7 @@ class Ansible_Tool:
         self.name = "ansible_tool"
         # The main playbook synchronizes the repo to /opt/cluster-infra on all nodes.
         self.project_root = "/opt/cluster-infra"
+        ensure_ssh_keys_initialized()
 
     def run_playbook(self, playbook: str = 'playbook.yaml', limit: str = None, tags: str = None, extra_vars: dict = None) -> str:
         """Runs an Ansible playbook to provision or manage nodes in the cluster.

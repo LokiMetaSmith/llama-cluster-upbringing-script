@@ -1,6 +1,7 @@
 import subprocess
 import os
 from pipecatapp.utils.command_runner import CommandRunner
+from pipecatapp.utils.ssh_utils import ensure_ssh_keys_initialized
 
 class Git_Tool:
     """A tool for interacting with Git repositories.
@@ -21,6 +22,7 @@ class Git_Tool:
             self.root_dir = os.path.realpath(root_dir)
         else:
             self.root_dir = os.path.realpath(os.getcwd())
+        ensure_ssh_keys_initialized()
 
     def _validate_path(self, path: str) -> str:
         """Ensures the path is within the root directory."""

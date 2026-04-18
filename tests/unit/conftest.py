@@ -43,7 +43,8 @@ modules_to_mock = [
     'faster_whisper',
     'piper',
     'piper.voice',
-    'daily'
+    'daily',
+
 ]
 
 def mock_module_if_missing(module_name):
