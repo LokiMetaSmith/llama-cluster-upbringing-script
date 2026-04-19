@@ -29,9 +29,19 @@
     proto: udp
   become: yes
 
+- name: Ensure .ssh directory exists for user
+  ansible.builtin.file:
+    path: /home/user/.ssh
+    state: directory
+    owner: user
+    group: user
+    mode: '0700'
+  become: yes
+  when: github_ssh_users | length > 0
+
 - name: Import GitHub SSH keys for specified users
-  ansible.builtin.command: ssh-import-id "gh:{{ item }}"
+  ansible.builtin.command: ssh-import-id -o /home/user/.ssh/authorized_keys "gh:{{ item }}"
   loop: "{{ github_ssh_users }}"
   when: github_ssh_users | length > 0
   become: yes
-  become_user: "{{ target_user }}"
+  become_user: user
