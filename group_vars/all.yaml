@@ -163,7 +163,7 @@ enable_paperless: true
 paperless_port: 8010
 
 # The default user for remote connections and service execution.
-target_user: ubuntu
+target_user: pipecatapp
 target_user_home: "/home/{{ target_user }}"
 
 # --- Exo Configuration ---
