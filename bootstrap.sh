@@ -391,8 +391,8 @@ handle_error() {
 
     # Determine OpenCode command path
     local opencode_bin="opencode"
-    if [ -x "$SCRIPT_DIR/.venv/bin/opencode" ]; then
-        opencode_bin="$SCRIPT_DIR/.venv/bin/opencode"
+    if [ -x "$SCRIPT_DIR/node_modules/.bin/opencode" ]; then
+        opencode_bin="$SCRIPT_DIR/node_modules/.bin/opencode"
     elif ! command -v opencode >/dev/null 2>&1; then
         echo -e "${RED}❌ OpenCode not found in environment. Cannot attempt recovery.${NC}"
         exit 1
@@ -420,12 +420,13 @@ Your task is to:
     echo -e "⏳ Please wait while the agent attempts to fix the issue..."
 
     # Configure API endpoint for Local/Network LLMs
-    local opencode_cmd=("$opencode_bin" --yes)
+    local opencode_cmd=("$opencode_bin" run)
 
+    # We set these as environment variables since opencode run might not accept them directly as flags
     if [ -n "${AGENT_API_BASE:-}" ]; then
-        opencode_cmd+=(--api-base "$AGENT_API_BASE")
+        export OPENCODE_API_BASE="$AGENT_API_BASE"
+        export OPENCODE_API_KEY="${AGENT_API_KEY:-sk-dummy}"
         opencode_cmd+=(--model "${AGENT_MODEL:-openai/qwen2.5-coder}")
-        opencode_cmd+=(--api-key "${AGENT_API_KEY:-sk-dummy}")
     else
         opencode_cmd+=(--model "${AGENT_MODEL:-gpt-4o-mini}")
     fi
@@ -530,7 +531,7 @@ ensure_python_environment() {
         echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
     fi
 
-    run_step "Installing OpenCode AI Agent" "pip install opencode-ai"
+    run_step "Installing OpenCode AI Agent" "npm install"
 
     run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
 

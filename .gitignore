@@ -47,3 +47,4 @@ os-image/config/package-lists/live.list.chroot
 os-image/config/package-lists/syslinux-utils.list.chroot
 os-image/config/includes.chroot/opt/
 \nautoloop-results/
+test_env/
