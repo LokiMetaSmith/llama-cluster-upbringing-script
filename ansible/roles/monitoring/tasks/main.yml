@@ -62,7 +62,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/node-exporter.nomad
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       changed_when: true
 
 - name: Deploy Beszel
@@ -84,7 +87,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/beszel.nomad
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       changed_when: true
 
 - name: Deploy Statsping
@@ -106,7 +112,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/statsping.nomad
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       changed_when: true
 
 - name: Deploy Memory Audit
@@ -121,14 +130,20 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/memory-audit.nomad
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       changed_when: true
   rescue:
     - name: Get MQTT Exporter job status
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose mqtt-exporter
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: mqtt_exporter_job_status
       ignore_errors: yes
 
@@ -140,7 +155,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json mqtt-exporter
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: mqtt_exporter_allocs
       ignore_errors: yes
 
@@ -158,7 +176,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ mqtt_exporter_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: mqtt_exporter_logs_stdout
       ignore_errors: yes
       when: (mqtt_exporter_alloc_id.stdout | trim | length > 0) and (mqtt_exporter_alloc_id.stdout | trim != 'null')
@@ -172,7 +193,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ mqtt_exporter_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: mqtt_exporter_logs_stderr
       ignore_errors: yes
       when: (mqtt_exporter_alloc_id.stdout | trim | length > 0) and (mqtt_exporter_alloc_id.stdout | trim != 'null')
@@ -210,7 +234,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/mqtt-exporter.nomad
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       changed_when: true
 
 - name: Deploy Prometheus
@@ -225,7 +252,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/prometheus.nomad
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       changed_when: true
 
 - name: Deploy Grafana
@@ -240,5 +270,8 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/grafana.nomad
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       changed_when: true
