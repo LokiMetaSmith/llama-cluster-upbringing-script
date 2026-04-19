@@ -549,7 +549,10 @@
   changed_when: "pipecat_job_stop_status.rc == 0"
   failed_when: false
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
 
 - name: Flush handlers to ensure service is enabled and started
   ansible.builtin.meta: flush_handlers
@@ -567,7 +570,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/archivist.nomad"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       changed_when: true
       become: no
       register: archivist_job_run
@@ -576,7 +582,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose archivist
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: arch_job_status
       failed_when: false
       become: no
@@ -589,7 +598,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json archivist
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: arch_allocs
       failed_when: false
       become: no
@@ -608,7 +620,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ arch_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: arch_logs_stdout
       failed_when: false
       become: no
@@ -623,7 +638,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ arch_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: arch_logs_stderr
       failed_when: false
       become: no
@@ -656,7 +674,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/router.nomad"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       changed_when: true
       become: no
       register: router_job_run
@@ -669,7 +690,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose router
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: router_job_status
       failed_when: false
       become: no
@@ -682,7 +706,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json router
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: router_allocs
       failed_when: false
       become: no
@@ -701,7 +728,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -task litellm-proxy {{ router_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: litellm_logs_stdout
       failed_when: false
       become: no
@@ -716,7 +746,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr -task litellm-proxy {{ router_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: litellm_logs_stderr
       failed_when: false
       become: no
@@ -731,7 +764,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -task llama-server-router {{ router_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: llama_logs_stdout
       failed_when: false
       become: no
@@ -746,7 +782,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr -task llama-server-router {{ router_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: llama_logs_stderr
       failed_when: false
       become: no
@@ -818,7 +857,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/pipecatapp.nomad"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       changed_when: true
       become: no
       register: pipecat_job_run
@@ -841,7 +883,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose pipecat-app
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: pipecat_job_status
       failed_when: false
       become: no
@@ -854,7 +899,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json pipecat-app
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: pipecat_allocs
       failed_when: false
       become: no
@@ -873,7 +921,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ pipecat_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: pipecat_logs_stdout
       failed_when: false
       become: no
@@ -888,7 +939,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ pipecat_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
       register: pipecat_logs_stderr
       failed_when: false
       become: no

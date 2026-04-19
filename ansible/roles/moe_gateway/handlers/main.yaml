@@ -2,6 +2,9 @@
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/moe-gateway.nomad
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
   become: no
   changed_when: true
