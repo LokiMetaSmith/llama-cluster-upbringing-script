@@ -200,6 +200,12 @@
     NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port }}"
   when: build_llama_cpp
 
+- name: Check if benchmark log file exists
+  ansible.builtin.stat:
+    path: /var/log/llama_benchmarks.jsonl
+  register: benchmark_log_stat
+  become: yes
+
 - name: Run model benchmarking if enabled
   block:
     - name: Prepare for model benchmarking
@@ -227,7 +233,7 @@
       loop: "{{ all_models_to_benchmark }}"
       loop_control:
         loop_var: model_item
-  when: run_benchmarks | default(false) | bool
+  when: run_benchmarks | default(false) | bool or not benchmark_log_stat.stat.exists
 
 - name: Read benchmark log file
   ansible.builtin.slurp:
