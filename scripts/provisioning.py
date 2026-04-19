@@ -9,6 +9,7 @@ Usage:
 
 import argparse
 import os
+import re
 import sys
 import subprocess
 import time
@@ -137,6 +138,24 @@ def wait_for_ports_freed(ports, timeout=10):
             time.sleep(2)
         else:
             print(f"{Colors.OKGREEN}✅ Port {port} is free.{Colors.ENDC}")
+
+def get_current_ram_usage():
+    """Returns the current memory usage in MB by parsing /proc/meminfo."""
+    try:
+        with open('/proc/meminfo', 'r') as f:
+            meminfo = f.read()
+
+        mem_total_match = re.search(r'MemTotal:\s+(\d+)', meminfo)
+        mem_available_match = re.search(r'MemAvailable:\s+(\d+)', meminfo)
+
+        if mem_total_match and mem_available_match:
+            total_kb = int(mem_total_match.group(1))
+            available_kb = int(mem_available_match.group(1))
+            used_kb = total_kb - available_kb
+            return used_kb // 1024
+    except Exception:
+        pass
+    return None
 
 def cleanup_memory_for_core_ai():
     """Performs cleanup to free RAM before heavy AI services start."""
@@ -317,6 +336,41 @@ def run_playbook(playbook_path, extra_vars, tags, verbose_level):
             for line in captured_lines[-50:]:
                 sys.stdout.write(line)
             print(f"{Colors.WARNING}--- End Task Output ---{Colors.ENDC}")
+
+            # --- Smart Error Parsing ---
+            last_task = "Unknown Task"
+            error_details = []
+            capturing_error = False
+
+            for line in captured_lines:
+                # Capture the last TASK header we saw
+                if line.startswith("TASK ["):
+                    last_task = line.strip()
+                    capturing_error = False
+                    error_details = [] # Reset error details for new task
+                # Capture fatal or error lines
+                elif "fatal:" in line or "ERROR!" in line:
+                    capturing_error = True
+                    error_details.append(line.strip())
+                elif capturing_error and line.strip():
+                    # Capture subsequent lines of the error block (often indented)
+                    if line.startswith(" ") or line.startswith("	"):
+                        error_details.append(line.strip())
+                    elif "MSG:" in line:
+                         error_details.append(line.strip())
+                    else:
+                        capturing_error = False # Stop if it's a new top-level un-indented log (not part of the error block)
+
+            print(f"\n{Colors.FAIL}{Colors.BOLD}=== Parsed Error Summary ==={Colors.ENDC}")
+            print(f"{Colors.BOLD}Failed Task:{Colors.ENDC} {last_task}")
+            print(f"{Colors.BOLD}Reason:{Colors.ENDC}")
+            if error_details:
+                for err_line in error_details:
+                    print(f"  {err_line}")
+            else:
+                print("  Could not explicitly parse error details. Please check the logs above.")
+            print(f"{Colors.FAIL}{Colors.BOLD}============================{Colors.ENDC}\n")
+
             print(f"Full log available in: {LOG_FILE}")
 
         sys.exit(return_code)
@@ -623,25 +677,24 @@ def main():
 
         if normalized_path in app_services_playbooks:
             if args.deploy_full_stack:
-                # Deploy everything
-                pass
+                print(f"{Colors.OKCYAN}ℹ️  Including playbook '{os.path.basename(normalized_path)}' because full stack mode is enabled.{Colors.ENDC}")
             elif args.deploy_partial_stack and normalized_path in partial_stack_playbooks:
-                # Deploy partial stack
-                pass
+                print(f"{Colors.OKCYAN}ℹ️  Including playbook '{os.path.basename(normalized_path)}' because partial stack mode is enabled.{Colors.ENDC}")
             elif args.deploy_minimal_stack and normalized_path in minimal_stack_playbooks:
-                # Deploy minimal stack
-                pass
+                print(f"{Colors.OKCYAN}ℹ️  Including playbook '{os.path.basename(normalized_path)}' because minimal stack mode is enabled.{Colors.ENDC}")
             else:
                 # Skip
                 display_path = os.path.basename(normalized_path)
                 if args.deploy_partial_stack:
-                    mode_reason = "partial stack mode"
+                    mode_reason = "not part of partial stack"
                 elif args.deploy_minimal_stack:
-                    mode_reason = "minimal stack mode"
+                    mode_reason = "not part of minimal stack"
                 else:
                     mode_reason = "infrastructure only mode"
                 print(f"{Colors.OKCYAN}⏭️  Skipping application playbook ({mode_reason}): {display_path}{Colors.ENDC}")
                 continue
+        else:
+            print(f"{Colors.OKCYAN}ℹ️  Including playbook '{os.path.basename(normalized_path)}' as a core infrastructure dependency.{Colors.ENDC}")
 
         # Wait for ports before app services
         if "app_services.yaml" in normalized_path:
@@ -651,9 +704,19 @@ def main():
         if "core_ai_services.yaml" in normalized_path:
             cleanup_memory_for_core_ai()
 
+        # --- RAM Profiling Before ---
+        ram_before = get_current_ram_usage()
+
         # --- Run ---
         run_playbook(pb_path, extra_vars, args.tags, verbose_level)
         executed_playbooks.append(pb_path)
+
+        # --- RAM Profiling After ---
+        ram_after = get_current_ram_usage()
+        if ram_before is not None and ram_after is not None:
+            ram_delta = ram_after - ram_before
+            delta_str = f"+{ram_delta} MB" if ram_delta >= 0 else f"{ram_delta} MB"
+            print(f"{Colors.OKCYAN}📊 RAM Usage: {ram_after} MB ({delta_str} after running {os.path.basename(pb_path)}){Colors.ENDC}")
 
         # Save State
         with open(STATE_FILE, 'w') as f:
