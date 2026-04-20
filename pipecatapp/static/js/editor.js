@@ -123,10 +123,83 @@ const WorkflowEditor = {
             GenericNode.prototype.onSerialize = function(o) {
                 o.agentNodeType = this.agentNodeType;
             };
-
             GenericNode.prototype.onConfigure = function(o) {
                 this.agentNodeType = o.agentNodeType || type;
             };
+
+            GenericNode.prototype.computeSize = function(out) {
+                out = out || new Float32Array([0, 0]);
+                // Call original first to get base width
+                let size = LGraphNode.prototype.computeSize.call(this, out);
+
+                const inputsHeight = (this.inputs ? this.inputs.length : 0) * LiteGraph.NODE_SLOT_HEIGHT;
+
+                let widgetsHeight = 0;
+                if (this.widgets && this.widgets.length) {
+                    for (let i = 0; i < this.widgets.length; ++i) {
+                        if (this.widgets[i].computeSize) {
+                            widgetsHeight += this.widgets[i].computeSize(size[0])[1] + 4;
+                        } else {
+                            widgetsHeight += LiteGraph.NODE_WIDGET_HEIGHT + 4;
+                        }
+                    }
+                    widgetsHeight += 8;
+                }
+
+                const outputsHeight = (this.outputs ? this.outputs.length : 0) * LiteGraph.NODE_SLOT_HEIGHT;
+
+                // Inputs at top, then widgets, then outputs
+                this.widgets_start_y = inputsHeight > 0 ? inputsHeight + 10 : 10;
+
+                size[1] = this.widgets_start_y + widgetsHeight + outputsHeight + 10;
+
+                if (this.image) {
+                    const margin = 10;
+                    const requiredWidth = 240;
+                    const aspectRatio = this.image.height / this.image.width;
+                    const imageH = (Math.max(size[0], requiredWidth) - margin*2) * aspectRatio;
+                    size[1] += imageH + margin;
+                }
+
+                return size;
+            };
+
+            GenericNode.prototype.getConnectionPos = function(is_input, slot_number, out) {
+                out = out || new Float32Array(2);
+                const offset = LiteGraph.NODE_SLOT_HEIGHT * 0.5;
+
+                if (this.flags.collapsed) {
+                    return LGraphNode.prototype.getConnectionPos.call(this, is_input, slot_number, out);
+                }
+
+                if (is_input) {
+                    // Inputs at the top left
+                    out[0] = this.pos[0] + offset;
+                    out[1] = this.pos[1] + (slot_number + 0.7) * LiteGraph.NODE_SLOT_HEIGHT + (this.constructor.slot_start_y || 0);
+                } else {
+                    // Outputs at the bottom right, after widgets
+                    out[0] = this.pos[0] + this.size[0] + 1 - offset;
+
+                    const inputsHeight = (this.inputs ? this.inputs.length : 0) * LiteGraph.NODE_SLOT_HEIGHT;
+
+                    let widgetsHeight = 0;
+                    if (this.widgets && this.widgets.length) {
+                        for (let i = 0; i < this.widgets.length; ++i) {
+                            if (this.widgets[i].computeSize) {
+                                widgetsHeight += this.widgets[i].computeSize(this.size[0])[1] + 4;
+                            } else {
+                                widgetsHeight += LiteGraph.NODE_WIDGET_HEIGHT + 4;
+                            }
+                        }
+                        widgetsHeight += 8;
+                    }
+
+                    const outputsStartY = (inputsHeight > 0 ? inputsHeight + 10 : 10) + widgetsHeight + 10;
+                    out[1] = this.pos[1] + outputsStartY + (slot_number + 0.7) * LiteGraph.NODE_SLOT_HEIGHT;
+                }
+                return out;
+            };
+
 
             // Override onDrawForeground to render image
             GenericNode.prototype.onDrawForeground = function(ctx) {
