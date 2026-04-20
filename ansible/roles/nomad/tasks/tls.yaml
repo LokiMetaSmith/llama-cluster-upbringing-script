@@ -217,6 +217,12 @@
   register: ca_cert_stat
   delegate_to: localhost
   check_mode: false
+  ignore_errors: true
+
+- name: Use existing certificates from /etc/nomad.d/tls if temp certs missing
+  set_fact:
+    nomad_temp_cert_dir: "/etc/nomad.d/tls"
+  when: not ca_cert_stat.stat.exists
 
 - name: Create Nomad TLS directory
   become: yes

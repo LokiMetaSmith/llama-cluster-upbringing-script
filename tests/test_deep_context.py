@@ -3,6 +3,7 @@ import os
 import sys
 import shutil
 import re
+import pytest
 from unittest.mock import MagicMock, AsyncMock
 
 # Mock necessary modules before importing app
@@ -62,6 +63,7 @@ class MockSimpleLLMNode(SimpleLLMNode):
 from pipecatapp.workflow.nodes.registry import registry
 registry._registry["SimpleLLMNode"] = MockSimpleLLMNode
 
+@pytest.mark.asyncio
 async def test_deep_context_workflow():
     print("Testing Deep Context Workflow with Sandbox Security...")
 
