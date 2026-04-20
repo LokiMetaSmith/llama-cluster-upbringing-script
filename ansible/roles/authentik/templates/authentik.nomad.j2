@@ -101,11 +101,7 @@ update {
 
       template {
         data = <<EOH
-<<<<<<< HEAD
-CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
-=======
 CONSUL_HTTP_TOKEN="{{ consul_http_token | default('') }}"
->>>>>>> a2225ea0 (Re-applied original patch correctly, addressing all code review feedback.)
 AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
 AUTHENTIK_REDIS__HOST="redis.service.consul"
 AUTHENTIK_POSTGRESQL__HOST="postgres.service.consul"
@@ -152,11 +148,7 @@ EOH
 
       template {
         data = <<EOH
-<<<<<<< HEAD
-CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
-=======
 CONSUL_HTTP_TOKEN="{{ consul_http_token | default('') }}"
->>>>>>> a2225ea0 (Re-applied original patch correctly, addressing all code review feedback.)
 AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
 AUTHENTIK_REDIS__HOST="redis.service.consul"
 AUTHENTIK_POSTGRESQL__HOST="postgres.service.consul"
