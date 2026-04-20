@@ -101,7 +101,7 @@ update {
 
       template {
         data = <<EOH
-CONSUL_HTTP_TOKEN="{{ consul_http_token | default('') }}"
+CONSUL_HTTP_TOKEN="{{ consul_bootstrap_token | default('') }}"
 AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
 AUTHENTIK_REDIS__HOST="redis.service.consul"
 AUTHENTIK_POSTGRESQL__HOST="postgres.service.consul"
