@@ -66,6 +66,6 @@ LLMs are industrious but can be lazy. If a tool fails (e.g., command not found, 
 
 When updating the `bootstrap.sh` script (the primary upbringing script that manages and scales the cluster infrastructure), you MUST verify the changes using the local ROCm simulation to avoid recursive crash loops (the "Ouroboros Effect").
 
-* **Mandatory Action:** You must run `act` locally (the local GitHub Action runner) and verify the 'ROCm Stack Validation' workflow passes before proposing or submitting a merge to the primary branch.
+* **Mandatory Action:** You must run `act` locally (the local GitHub Action runner) and verify workflows pass before proposing or submitting a merge to the primary branch.
 * **Pre-commit Hook:** Always ensure the custom pre-commit hook is active by running `git config core.hooksPath .githooks`. This hook provides a safety net against logic errors and missing ROCm checks.
 * If the simulation fails with a 'VGPR Mismatch' or 'KFD Error', or other container crash, roll back the changes and search for recent amdgpu firmware patches or logic errors in the code. Do not bypass these local tests under any circumstances.
