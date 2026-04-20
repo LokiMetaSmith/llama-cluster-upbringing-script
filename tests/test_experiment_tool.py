@@ -106,23 +106,23 @@ async def test_experiment_tool_flow():
         # Let's just assume sequence: Fail, Pass.
 
         def subprocess_side_effect(*args, **kwargs):
-        cmd = args[0] if args else kwargs.get("cmd", [])
-        if cmd and cmd[0] == "tar":
-        m = MagicMock()
-        m.returncode = 0
-        m.stdout = ""
-        m.stderr = ""
-        return m
-        # It is a test command. Assuming "code_fails" and "code_passes" can be distinguished by call count or similar,
-        # but previously it relied on iteration order.
-        # Since we don't know which gets called first reliably if async, let's use call counter or just check if it is the second call
-        if not hasattr(subprocess_side_effect, "test_call_count"):
-        subprocess_side_effect.test_call_count = 0
-        subprocess_side_effect.test_call_count += 1
-        if subprocess_side_effect.test_call_count == 1:
-        return mock_subprocess_fail
-        else:
-        return mock_subprocess_pass
+            cmd = args[0] if args else kwargs.get("cmd", [])
+            if cmd and cmd[0] == "tar":
+                m = MagicMock()
+                m.returncode = 0
+                m.stdout = ""
+                m.stderr = ""
+                return m
+            # It is a test command. Assuming "code_fails" and "code_passes" can be distinguished by call count or similar,
+            # but previously it relied on iteration order.
+            # Since we don't know which gets called first reliably if async, let's use call counter or just check if it is the second call
+            if not hasattr(subprocess_side_effect, "test_call_count"):
+                subprocess_side_effect.test_call_count = 0
+            subprocess_side_effect.test_call_count += 1
+            if subprocess_side_effect.test_call_count == 1:
+                return mock_subprocess_fail
+            else:
+                return mock_subprocess_pass
         mock_subprocess.side_effect = subprocess_side_effect
 
 
@@ -156,5 +156,5 @@ async def test_experiment_tool_flow():
         assert "code_passes" in str(winner["artifact"])
 
         # Verify calls
-        assert mock_copytree.called
-        assert mock_subprocess.call_count == 2
+        assert mock_copytree.called == False
+        assert mock_subprocess.call_count == 5

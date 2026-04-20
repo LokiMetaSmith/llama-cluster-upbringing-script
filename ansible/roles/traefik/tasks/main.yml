@@ -16,7 +16,10 @@
 - name: Run Traefik Nomad job
   ansible.builtin.command: nomad job run {{ nomad_jobs_dir }}/traefik.nomad
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
   register: traefik_deploy
   changed_when: "'modified' in traefik_deploy.stdout or 'created' in traefik_deploy.stdout"
   become: yes

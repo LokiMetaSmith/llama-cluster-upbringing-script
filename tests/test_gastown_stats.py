@@ -3,12 +3,14 @@ import os
 import time
 import json
 import logging
+import pytest
 from pipecatapp.pmm_memory import PMMMemory
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("test_gastown_stats")
 
+@pytest.mark.asyncio
 async def test_gastown_stats():
     db_path = "test_stats.db"
 
