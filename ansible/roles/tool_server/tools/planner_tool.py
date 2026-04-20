@@ -4,6 +4,7 @@ import asyncio
 import httpx
 import os
 import re
+from pipecatapp.network_scanner import scan_network_for_llms
 
 class PlannerTool:
     """
@@ -47,7 +48,14 @@ class PlannerTool:
         if llm_base_url:
             return llm_base_url
 
+
+        # Network scan fallback
+        fallback_url = await scan_network_for_llms()
+        if fallback_url:
+            return fallback_url
+
         # Final fallback
+
         return os.getenv("LLAMA_API_URL", "http://localhost:8081/v1")
 
     async def _call_llm(self, prompt: str) -> list:

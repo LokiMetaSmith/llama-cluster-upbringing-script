@@ -3,6 +3,7 @@ import json
 import os
 import logging
 import aiohttp
+from pipecatapp.network_scanner import scan_network_for_llms
 from typing import List, Dict, Any, Optional
 
 class CouncilTool:
@@ -46,6 +47,13 @@ class CouncilTool:
                         logging.debug(f"Expert {expert_name} not found or error: {e}")
         except Exception as e:
             logging.error(f"Error initializing ClientSession for discovery: {e}")
+
+
+        # Fallback to local network scan if no local experts found
+        if not experts:
+            fallback_url = await scan_network_for_llms()
+            if fallback_url:
+                experts['fallback'] = fallback_url
 
         return experts
 
