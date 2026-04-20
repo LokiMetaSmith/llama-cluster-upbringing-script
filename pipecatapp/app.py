@@ -20,6 +20,7 @@ import inspect
 import threading
 from contextlib import asynccontextmanager
 from collections import defaultdict
+from pipecatapp.network_scanner import scan_network_for_llms
 
 from pipecat.frames.frames import (
     Frame,
@@ -1024,6 +1025,12 @@ async def discover_services(service_names: list, consul_http_addr: str, delay=10
                 except Exception as e:
                     logging.error(f"Unexpected error discovering {service_name}: {e}")
 
+            # Fallback to local network scan before sleeping
+            fallback_url = await scan_network_for_llms()
+            if fallback_url:
+                logging.info(f"Using fallback network LLM at {fallback_url}")
+                return fallback_url
+
             logging.info(f"No healthy services found in list {service_names}, retrying in {delay} seconds...")
             await asyncio.sleep(delay)
 
@@ -1072,6 +1079,13 @@ async def discover_main_llm_service(consul_http_addr=None, delay=10):
                         logging.info(f"Consul returned empty list for {service_name} at {url}")
             except Exception as e:
                 logging.warning(f"Could not find service {service_name}: {e}")
+
+            # Fallback to local network scan
+            fallback_url = await scan_network_for_llms()
+            if fallback_url:
+                logging.info(f"Using fallback network LLM at {fallback_url}")
+                return fallback_url
+
             await asyncio.sleep(delay)
 
 # -----------------------

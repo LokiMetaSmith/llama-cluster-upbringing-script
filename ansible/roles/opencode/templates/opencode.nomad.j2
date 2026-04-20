@@ -22,25 +22,110 @@ job "opencode" {
     task "opencode-server" {
       driver = "raw_exec"
 
+      template {
+        data = <<EOH
+import socket
+import urllib.request
+import json
+import os
+import time
+
+def scan_network_for_llms():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('10.255.255.255', 1))
+        local_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        local_ip = '127.0.0.1'
+
+    ports = [11434, 8080]
+
+    # Check localhost and local ip first
+    for ip in ['127.0.0.1', local_ip]:
+        for port in ports:
+            try:
+                # Fast connection check
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.5)
+                res = sock.connect_ex((ip, port))
+                sock.close()
+                if res == 0:
+                    url = f"http://{ip}:{port}/v1"
+                    # simple verify
+                    try:
+                        urllib.request.urlopen(f"http://{ip}:{port}/api/tags" if port == 11434 else f"http://{ip}:{port}/health", timeout=0.5)
+                    except Exception:
+                        pass
+                    return url
+            except Exception:
+                pass
+
+    # Subnet scan
+    if local_ip != '127.0.0.1':
+        parts = local_ip.split('.')
+        base_ip = f"{parts[0]}.{parts[1]}.{parts[2]}."
+
+        for i in range(1, 255):
+            ip = f"{base_ip}{i}"
+            if ip == local_ip:
+                continue
+            for port in ports:
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(0.1)
+                    res = sock.connect_ex((ip, port))
+                    sock.close()
+                    if res == 0:
+                        url = f"http://{ip}:{port}/v1"
+                        return url
+                except Exception:
+                    pass
+    return ""
+
+def discover_from_consul():
+    try:
+        req = urllib.request.Request("http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-api?passing")
+        with urllib.request.urlopen(req, timeout=2) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode())
+                if data:
+                    addr = data[0]['Service']['Address']
+                    port = data[0]['Service']['Port']
+                    return f"http://{addr}:{port}/v1"
+    except Exception:
+        pass
+    return ""
+
+def main():
+    llm_url = discover_from_consul()
+    if not llm_url:
+        import sys
+        print("No LLM in Consul, scanning network...", file=sys.stderr)
+        llm_url = scan_network_for_llms()
+
+    if llm_url:
+        print(f"export OPENAI_BASE_URL='{llm_url}'")
+        print(f"export OPENAI_API_KEY='dummy'")
+        print(f"export LLAMA_API_URL='{llm_url}'")
+
+if __name__ == "__main__":
+    main()
+EOH
+        destination = "local/discover.py"
+      }
+
       config {
         command = "/bin/sh"
         args    = [
           "-c",
-          "cd /tmp && exec {{ opencode_bin_path | default('/usr/bin/opencode') }} serve --port ${NOMAD_PORT_http} --hostname 0.0.0.0"
+          "cd /tmp && eval $(python3 ${NOMAD_TASK_DIR}/discover.py) && exec {{ opencode_bin_path | default('/usr/bin/opencode') }} serve --port ${NOMAD_PORT_http} --hostname 0.0.0.0"
         ]
       }
-
-      # Mount the cluster infrastructure directory to allow the agent to edit it
-      # Note: raw_exec runs as root/host user, so it has access to the filesystem.
-      # We just need to make sure it runs in the right directory or we pass the project path.
-      # The help says `opencode [project]`. `opencode serve` might not take a project arg directly
-      # but it probably serves the current directory or allows opening projects via API.
-      # For now, we set the working directory to the cluster infra.
 
       env {
         OPENAI_API_KEY      = "{{ openai_api_key | default('') }}"
         ANTHROPIC_API_KEY   = "{{ anthropic_api_key | default('') }}"
-        # Add other providers as needed
       }
     }
 
@@ -51,7 +136,7 @@ job "opencode" {
 
       check {
         type     = "http"
-        path     = "/global/health" # Verify health endpoint
+        path     = "/global/health"
         interval = "20s"
         timeout  = "10s"
       }

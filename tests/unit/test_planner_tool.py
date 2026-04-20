@@ -2,7 +2,7 @@ import pytest
 import json
 import os
 from unittest.mock import MagicMock, AsyncMock, patch
-from ansible.roles.pipecatapp.files.tools.planner_tool import PlannerTool
+from pipecatapp.tools.planner_tool import PlannerTool
 
 @pytest.fixture
 def mock_twin_service():
@@ -36,7 +36,7 @@ async def test_discover_llm_url_fallback(planner_tool):
     # Mock fallback to default
     url = await planner_tool._discover_llm_url()
     port = os.getenv("ROUTER_PORT", "8081")
-    assert url == f"http://localhost:{port}/v1"
+    assert url == f"http://127.0.0.1:{port}/v1"
 
 @pytest.mark.asyncio
 async def test_discover_llm_url_env_var(planner_tool):

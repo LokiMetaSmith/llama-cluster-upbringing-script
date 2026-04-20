@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 # Add tools directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
 
-from council_tool import CouncilTool
+from pipecatapp.tools.council_tool import CouncilTool
 
 # Mock TwinService
 class MockTwinService:

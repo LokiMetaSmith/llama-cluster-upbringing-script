@@ -4,6 +4,7 @@ import asyncio
 import httpx
 import os
 import re
+from pipecatapp.network_scanner import scan_network_for_llms
 
 class PlannerTool:
     """
@@ -28,7 +29,7 @@ class PlannerTool:
 
         # Fallback to Consul discovery
         try:
-            consul_addr = getattr(self.twin_service, 'consul_http_addr', f'http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:8500')
+            consul_addr = getattr(self.twin_service, 'consul_http_addr', f'http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8500')
             service_name = app_config.get("llama_api_service_name", "llamacpp-rpc-api")
 
             async with httpx.AsyncClient() as client:
@@ -47,8 +48,15 @@ class PlannerTool:
         if llm_base_url:
             return llm_base_url
 
+
+        # Network scan fallback
+        fallback_url = await scan_network_for_llms()
+        if fallback_url:
+            return fallback_url
+
         # Final fallback
-        return os.getenv("LLAMA_API_URL", f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:8081/v1")
+
+        return os.getenv("LLAMA_API_URL", f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8081/v1")
 
     async def _call_llm(self, prompt: str) -> list:
         """Calls the LLM to generate a plan."""
