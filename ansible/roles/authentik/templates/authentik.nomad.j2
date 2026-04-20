@@ -101,6 +101,7 @@ update {
 
       template {
         data = <<EOH
+CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
 AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
 AUTHENTIK_REDIS__HOST="redis.service.consul"
 AUTHENTIK_POSTGRESQL__HOST="postgres.service.consul"
@@ -110,7 +111,6 @@ EOH
       }
 
       env {
-        CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
         AUTHENTIK_POSTGRESQL__USER = "{{ authentik_db_user | default('authentik') }}"
         AUTHENTIK_POSTGRESQL__NAME = "{{ authentik_db_name | default('authentik') }}"
         AUTHENTIK_POSTGRESQL__PASSWORD = "{{ authentik_db_password | default('authentik_password') }}"
@@ -148,6 +148,7 @@ EOH
 
       template {
         data = <<EOH
+CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
 AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
 AUTHENTIK_REDIS__HOST="redis.service.consul"
 AUTHENTIK_POSTGRESQL__HOST="postgres.service.consul"
@@ -157,7 +158,6 @@ EOH
       }
 
       env {
-        CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
         AUTHENTIK_POSTGRESQL__USER = "{{ authentik_db_user | default('authentik') }}"
         AUTHENTIK_POSTGRESQL__NAME = "{{ authentik_db_name | default('authentik') }}"
         AUTHENTIK_POSTGRESQL__PASSWORD = "{{ authentik_db_password | default('authentik_password') }}"
