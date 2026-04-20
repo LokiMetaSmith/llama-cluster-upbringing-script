@@ -107,6 +107,7 @@
         - openclaw
         - forgejo
         - paperless
+        - opengist
       loop_control:
         loop_var: role_name
       tags:
@@ -117,6 +118,7 @@
         - tool_server
         - forgejo
         - paperless
+        - opengist
 
     - name: Run Paddler Stack
       when: enable_paddler | default(false)
