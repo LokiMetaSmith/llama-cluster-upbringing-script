@@ -50,6 +50,12 @@ traefik_https_port: 443
 traefik_api_port: 8080
 authentik_http_port: 9000
 authentik_https_port: 9443
+authentik_network_mode: "bridge"
+authentik_redis_host: "redis.service.consul"
+authentik_postgres_host: "postgres.service.consul"
+authentik_redis_port: 16379
+authentik_postgres_port: 15432
+authentik_internal_port: 9000
 beszel_agent_port: 45876
 beszel_hub_port: 8090
 statsping_http_port: 8088
