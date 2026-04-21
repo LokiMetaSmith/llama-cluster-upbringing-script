@@ -1,0 +1,18 @@
+- name: Create Opengist data directory
+  ansible.builtin.file:
+    path: /opt/opengist/data
+    state: directory
+    mode: '0755'
+    owner: "1001"
+    group: "1001"
+  become: yes
+
+- name: Create Opengist Nomad job file
+  ansible.builtin.template:
+    src: opengist.nomad.j2
+    dest: /opt/nomad/jobs/opengist.nomad
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Run Opengist Job
