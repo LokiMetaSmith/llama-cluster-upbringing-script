@@ -4,47 +4,90 @@ import pytest
 
 # List of modules to mock if they are missing in the test environment
 modules_to_mock = [
-    'torch',
-    'sentence_transformers',
-    'pipecat',
-    'pipecat.frames',
-    'pipecat.frames.frames',
-    'pipecat.pipeline',
-    'pipecat.pipeline.pipeline',
-    'pipecat.pipeline.runner',
-    'pipecat.pipeline.task',
-    'pipecat.processors',
-    'pipecat.processors.frame_processor',
-    'pipecat.processors.aggregators',
-    'pipecat.processors.aggregators.llm_response',
-    'pipecat.services',
-    'pipecat.services.ai_services',
-    'pipecat.services.openai',
-    'pipecat.services.openai.llm',
-    'pipecat.transports',
-    'pipecat.transports.services',
-    'pipecat.transports.services.daily',
-    'pipecat.transports.local',
-    'pipecat.transports.local.audio',
-    'pipecat.vad',
-    'pipecat.vad.silero',
-    'pipecat.vad.vad_analyzer',
-    'ultralytics',
-    'faiss',
-    'numpy',
-    'paho',
-    'paho.mqtt',
-    'paho.mqtt.client',
-    'openevolve',
     'llm_sandbox',
-    'dotenv',
-    'pyautogui',
+    'opentelemetry.exporter',
+    'kokoro',
+    'numpy',
+    'soundfile',
+    'opentelemetry.sdk.trace',
+    'apscheduler.triggers.date',
+    'pipecat',
+    'pipecat.vad.silero',
+    'aiohttp',
+    'pipecat.vad.vad_analyzer',
     'pyaudio',
-    'faster_whisper',
-    'piper',
-    'piper.voice',
+    'pipecat.services.openai.llm',
+    'apscheduler',
     'daily',
-
+    'paho',
+    'consul',
+    'pipecat.transports',
+    'wyoming',
+    'pipecat.transports.local',
+    'wyoming.wake',
+    'chromadb',
+    'opentelemetry.instrumentation.requests',
+    'opentelemetry.sdk.trace.export',
+    'pipecat.pipeline',
+    'pipecat.processors',
+    'piper',
+    'pipecat.vad',
+    'opencode_ai',
+    'opentelemetry.instrumentation.httpx',
+    'torch',
+    'opentelemetry.exporter.otlp',
+    'cv2',
+    'paho.mqtt',
+    'pipecat.transports.services',
+    'pipecat.processors.aggregators',
+    'paho.mqtt.client',
+    'pipecat.services',
+    'websockets',
+    'pipecat.pipeline.runner',
+    'ultralytics',
+    'cryptography.fernet',
+    'wyoming.audio',
+    'openevolve',
+    'opentelemetry.exporter.otlp.proto.grpc.trace_exporter',
+    'opentelemetry',
+    'cryptography',
+    'pipecat.frames',
+    'pipecat.pipeline.pipeline',
+    'pipecat.processors.frame_processor',
+    'faiss',
+    'pipecat.transports.local.audio',
+    'pyautogui',
+    'opentelemetry.exporter.otlp.proto.grpc',
+    'opentelemetry.sdk',
+    'pipecat.processors.aggregators.llm_response',
+    'apscheduler.triggers',
+    'pipecat.transports.services.daily',
+    'apscheduler.schedulers',
+    'pipecat.pipeline.task',
+    'pipecat.frames.frames',
+    'opentelemetry.instrumentation',
+    'transformers',
+    'pipecat.services.ai_services',
+    'dotenv',
+    'apscheduler.triggers.cron',
+    'pipecat.services.openai',
+    'opentelemetry.exporter.otlp.proto',
+    'wyoming.asr',
+    'sentence_transformers',
+    'apscheduler.schedulers.asyncio',
+    'websockets.exceptions',
+    'wyoming.client',
+    'opentelemetry.sdk.resources',
+    'wyoming.vad',
+    'paramiko',
+    'requests',
+    'apscheduler.triggers.interval',
+    'wyoming.event',
+    'chromadb.config',
+    'consul.aio',
+    'faster_whisper',
+    'opentelemetry.instrumentation.fastapi',
+    'piper.voice'
 ]
 
 def mock_module_if_missing(module_name):
@@ -54,10 +97,20 @@ def mock_module_if_missing(module_name):
     try:
         __import__(module_name)
     except (ImportError, Exception):
-        sys.modules[module_name] = MagicMock()
+        from unittest.mock import AsyncMock
+        m = MagicMock()
         if module_name == 'numpy':
-             # Ensure array creation returns a Mock that behaves like a list/array
-             sys.modules[module_name].array.side_effect = lambda x, **kwargs: MagicMock(tolist=lambda: x)
+             m.array.side_effect = lambda x, **kwargs: MagicMock(tolist=lambda: x)
+        if module_name == 'opentelemetry' or module_name == 'opentelemetry.trace':
+            class DummySpan:
+                def __enter__(self): return self
+                def __exit__(self, exc_type, exc_val, exc_tb): pass
+                def set_attribute(self, k, v): pass
+                def __call__(self, func): return func
+
+            m.trace.get_tracer.return_value.start_as_current_span.return_value = DummySpan()
+            m.get_tracer.return_value.start_as_current_span.return_value = DummySpan()
+        sys.modules[module_name] = m
 
 # Execute mocking at the top level to ensure it runs before test collection
 for m in modules_to_mock:

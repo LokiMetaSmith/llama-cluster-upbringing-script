@@ -101,7 +101,7 @@ def test_vision_selection_both_fail(mock_yolo, mock_moondream):
 
 def test_yolo_internal_initialization_failover():
     """Test that YOLOv8Detector's internal try/except to load the model works."""
-    with patch("app.YOLO", side_effect=Exception("Model file not found")):
+    with patch("app.YOLO", side_effect=Exception("Model file not found")), patch("app.VisionImageRawFrame", MockVisionImageRawFrame):
         detector = YOLOv8Detector()
         assert detector.model is None
         assert detector.get_observation() == "Vision system unavailable."
@@ -109,7 +109,7 @@ def test_yolo_internal_initialization_failover():
 @pytest.mark.asyncio
 async def test_yolo_internal_process_frame_failover():
     """Test that process_frame doesn't crash if the model failed to load."""
-    with patch("app.YOLO", side_effect=Exception("Model file not found")):
+    with patch("app.YOLO", side_effect=Exception("Model file not found")), patch("app.VisionImageRawFrame", MockVisionImageRawFrame):
         detector = YOLOv8Detector()
         # Ensure push_frame is called if frame processing skips due to missing model
         detector.push_frame = AsyncMock()
