@@ -79,20 +79,20 @@ Objective: Allow the application to seamlessly switch between finding services o
 
 Objective: Create a single, flexible Docker image that can run in any of the three modes.
 
-- [ ] **Update Python Dependencies**
-  - [ ] Review `pipecatapp/requirements.txt`.
-  - [ ] Ensure `llama-cpp-python` is included (or installed in the base image) but does not crash if no GPU is present (use CPU-only fallback build or conditional import).
-  - [ ] Ensure `fastapi` and `uvicorn` are present for the Web UI.
+- [x] **Update Python Dependencies**
+  - [x] Review `pipecatapp/requirements.txt`.
+  - [x] Ensure `llama-cpp-python` is included (or installed in the base image) but does not crash if no GPU is present (use CPU-only fallback build or conditional import).
+  - [x] Ensure `fastapi` and `uvicorn` are present for the Web UI.
 
-- [ ] **Enhance Startup Script (`pipecatapp/start_pipecat.sh`)**
-  - [ ] Add logic to `ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2` (or `pipecatapp/start_pipecat.sh`).
-  - [ ] Parse `NODE_ROLE` or `DEPLOYMENT_MODE`.
-  - [ ] If `MODE=monolith`, start `app.py` directly.
-  - [ ] If `MODE=distributed`, ensure `consul-template` or sidecars are ready before starting.
+- [x] **Enhance Startup Script (`pipecatapp/start_pipecat.sh`)**
+  - [x] Add logic to `ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2` (or `pipecatapp/start_pipecat.sh`).
+  - [x] Parse `NODE_ROLE` or `DEPLOYMENT_MODE`.
+  - [x] If `MODE=monolith`, start `app.py` directly.
+  - [x] If `MODE=distributed`, ensure `consul-template` or sidecars are ready before starting.
 
-- [ ] **Validate Build Process**
-  - [ ] Run `ansible-playbook` with `pipecat_deployment_style=docker` to verify image build.
-  - [ ] Verify image size impact (ensure we aren't bloating the Edge image with unused heavy libraries if possible, though a unified image is preferred for simplicity).
+- [x] **Validate Build Process**
+  - [x] Run `ansible-playbook` with `pipecat_deployment_style=docker` to verify image build.
+  - [x] Verify image size impact (ensure we aren't bloating the Edge image with unused heavy libraries if possible, though a unified image is preferred for simplicity).
 
 ## Phase 5: Verification & Documentation
 

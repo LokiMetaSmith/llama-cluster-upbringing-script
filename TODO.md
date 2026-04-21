@@ -10,6 +10,15 @@
     1. [x] Update `bootstrap.sh` to profile system resources (CPU cores, RAM).
     2. [x] Dynamically configure `--role` (controller, worker, all) and model settings based on available hardware (e.g., fallback to external models on 4GB machines).
     3. [x] Create a `live-build` configuration to generate a custom, headless Debian bootable ISO that includes the project source and dependencies.
+- [x] **Gas Town Integration:**
+  - **Goal:** Adapt Gas Town concepts (Work Ledger, Attribution, Agent CVs) into the Pipecat App ecosystem.
+  - Reference: `docs/GASTOWN_TODO.md`
+- [x] **Obsidian & 3D Workflow Integration:**
+  - **Goal:** Integrate Obsidian Canvas and 3D spatial reasoning into the Pipecat workflow engine.
+  - Reference: `docs/OBSIDIAN_TODO.md`
+- [x] **Scaling Long-Running Autonomous Coding:**
+  - **Goal:** Integrate the "Browser from Scratch" autonomous coding architecture into `pipecatapp`.
+  - Reference: `docs/SCALING_TODO.md`
 - [x] **Migrate to Hybrid Architecture (Phase 1):**
   - **Goal:** Allow the application to choose between running tools in-process (Monolith) or via the Tool Server (Distributed).
   - Reference: `docs/TODO_Hybrid_Architecture.md`
