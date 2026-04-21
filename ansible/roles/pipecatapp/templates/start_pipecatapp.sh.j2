@@ -184,9 +184,30 @@ log_msg "--- Launching pipecat-app: $(date) ---"
 export PYTHONPATH=$PYTHONPATH:$(dirname "$APP_DIR")
 
 log_msg "--- Pre-flight checks ---"
-log_msg "Environment: CONSUL_HOST=${CONSUL_HOST:-unset} CONSUL_PORT=${CONSUL_PORT:-unset}"
+log_msg "Environment: CONSUL_HOST=${CONSUL_HOST:-unset} CONSUL_PORT=${CONSUL_PORT:-unset} DEPLOYMENT_MODE=${DEPLOYMENT_MODE:-unset} NODE_ROLE=${NODE_ROLE:-unset}"
 log_msg "PYTHONPATH=$PYTHONPATH"
 log_msg "User: $(id)"
+
+# Set MODE based on environment variables
+MODE=${DEPLOYMENT_MODE:-${NODE_ROLE:-monolith}}
+log_msg "Operating MODE determined as: $MODE"
+
+if [ "$MODE" = "distributed" ]; then
+    log_msg "Distributed mode: Waiting for Consul HTTP API to become reachable..."
+    CONSUL_URL="http://${CONSUL_HOST:-127.0.0.1}:${CONSUL_PORT:-8500}/v1/status/leader"
+    MAX_RETRIES=30
+    RETRY_COUNT=0
+    until curl -s "$CONSUL_URL" > /dev/null; do
+        if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+            log_msg "CRITICAL: Consul HTTP API not reachable after $MAX_RETRIES attempts. Exiting."
+            exit 1
+        fi
+        log_msg "Waiting for Consul... (Attempt $((RETRY_COUNT+1))/$MAX_RETRIES)"
+        sleep 2
+        RETRY_COUNT=$((RETRY_COUNT+1))
+    done
+    log_msg "Consul HTTP API is reachable."
+fi
 
 # Pre-flight import check to catch missing dependencies early
 log_msg "Running pre-flight import check..."

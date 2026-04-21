@@ -39,6 +39,7 @@ wyoming
 playwright
 pydantic
 python-consul2
+llama-cpp-python
 python-multipart
 pyvips-binary
 PyYAML
