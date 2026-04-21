@@ -139,28 +139,17 @@ async def test_loop_detection_mechanism(mocker):
     and injects a system alert.
     """
     # Mock dependencies
-    mock_llm = MagicMock()
-    mock_vision = MagicMock()
-    mock_runner = MagicMock()
+    mock_llm = AsyncMock()
+    mock_vision = AsyncMock()
+    mock_runner = AsyncMock()
     mock_config = {"debug_mode": True}
     mock_approval_queue = asyncio.Queue()
 
-    # Instantiate TwinService
-    # We patch PMMMemoryClient and PMMMemory to avoid side effects
-    # We also patch docker.from_env because TwinService -> create_tools -> CodeRunnerTool -> docker.from_env()
-    # We patch MemoryStore to avoid SentenceTransformer initialization loading missing models
     with patch('app.PMMMemoryClient'), patch('app.PMMMemory'), patch('docker.from_env'), patch('tools.skill_builder_tool.MemoryStore'):
         with patch.dict(os.environ, {"HA_URL": "http://mock-ha", "HA_TOKEN": "mock-token"}):
             service = TwinService(mock_llm, mock_vision, mock_runner, mock_config, mock_approval_queue)
 
-    # Mock WorkflowRunner to return a sequence of repetitive tool calls
-    mock_workflow_runner = AsyncMock()
-
-    # We want to simulate:
-    # 1. Tool Call A
-    # 2. Tool Call A
-    # 3. Tool Call A (Loop detected!) -> "SYSTEM ALERT..."
-    # 4. Final Response (Break loop)
+    mock_workflow_runner = MagicMock()
 
     tool_call_payload = {
         "tool_call": {
@@ -177,7 +166,6 @@ async def test_loop_detection_mechanism(mocker):
         "final_response": "I broke the loop."
     }
 
-    # Use a mutable list for side effects to be consumed by the async function
     side_effect_values = [
         tool_call_payload,
         tool_call_payload,
@@ -185,50 +173,35 @@ async def test_loop_detection_mechanism(mocker):
         final_response_payload
     ]
 
-    async def side_effect_func(*args, **kwargs):
-        return side_effect_values.pop(0)
+    mock_workflow_runner.run = AsyncMock(side_effect=side_effect_values)
 
-    # Explicitly set side_effect to an async function to avoid AsyncMock wrapping issues
-    mock_workflow_runner.run.side_effect = side_effect_func
-
-    # Patch WorkflowRunner instantiation inside process_frame
-    with patch('app.WorkflowRunner', return_value=mock_workflow_runner):
-        # Patch _send_response to verify output
+    with patch('app.WorkflowRunner', return_value=mock_workflow_runner), patch('app.web_server.manager.broadcast', new_callable=AsyncMock):
         with patch.object(service, '_send_response', new_callable=AsyncMock) as mock_send_response:
-            # Patch long_term_memory to avoid errors
-            service.long_term_memory = AsyncMock()
+            service.long_term_memory = MagicMock()
+            service.long_term_memory.add_event = AsyncMock()
             service.short_term_memory = []
-
-            # Create a dummy frame
-            # Since TranscriptionFrame is a Mock, we need to ensure isinstance works.
-            # We will patch `app` module to use a local Mock class for TranscriptionFrame
-            # so we can control isinstance.
 
             class MockTranscriptionFrame:
                 def __init__(self, text, meta=None):
                     self.text = text
                     self.meta = meta or {}
 
-            # We patch the imported class inside app
             with patch('app.TranscriptionFrame', MockTranscriptionFrame):
                 frame = MockTranscriptionFrame("Run loop test", meta={"request_id": "test_req"})
 
-                # Ensure push_frame is safe
                 service.push_frame = AsyncMock()
+                import pipecat
+                pipecat.processors.frame_processor.FrameProcessor.push_frame = AsyncMock()
 
                 await service.process_frame(frame, direction=None)
 
-                # Verify that the workflow runner was called 4 times
                 assert mock_workflow_runner.run.call_count == 4
 
-                # Check the inputs to the 4th call to see if the system alert was injected
                 call_args_list = mock_workflow_runner.run.call_args_list
                 last_call_args = call_args_list[3]
                 global_inputs = last_call_args[0][0]
 
                 assert "SYSTEM ALERT" in global_inputs["tool_result"]
-                # The exact message might change, but "3 times" is in the injected string in app.py
                 assert "3 times" in global_inputs["tool_result"]
 
-                # Verify final response was sent
                 mock_send_response.assert_called_with("I broke the loop.")
