@@ -1,7 +1,10 @@
 import re
 import copy
 import html
-from typing import Any, Dict, List
+import asyncio
+from functools import lru_cache
+from typing import Any, Dict, List, Optional
+from collections.abc import AsyncIterator
 
 # Pre-compile regex for redaction to improve performance
 # Matches "sk-" followed by 20+ alphanumeric/hyphen characters
@@ -33,18 +36,18 @@ _FAST_PATH_PATTERN = re.compile(r'sk-|Bearer|AIza|AKIA|ASIA|ABIA|ACCA|xox|gh[pou
 # Bolt ⚡ Optimization: Use set for O(1) lookups
 SENSITIVE_KEYS = {"external_experts_config", "tools_dict", "twin_service"}
 
-def redact_sensitive_data(text: str) -> str:
-    """
-    Redacts sensitive information like API keys and Bearer tokens from a string.
-    """
-    if not text:
-        return text
+# Cache size for redacted results
+_REDACTION_CACHE_SIZE = 1024
 
-    # Fast path optimization: if potential triggers aren't present, skip expensive regex subs.
-    # We use a single compiled regex scan which is O(N) instead of O(N*K) where K is num triggers.
-    if not _FAST_PATH_PATTERN.search(text):
-        return text
+# LRU cache for redacted results (thread-safe via lru_cache)
+@lru_cache(maxsize=_REDACTION_CACHE_SIZE)
+def _redact_cached(text: str) -> str:
+    """Cached redaction for repeated strings."""
+    return _redact_impl(text)
 
+
+def _redact_impl(text: str) -> str:
+    """Internal redaction implementation."""
     # Redact generic API key patterns and Bearer tokens
     text = _OPENAI_KEY_PATTERN.sub(r'sk-[REDACTED]', text)
     text = _BEARER_TOKEN_PATTERN.sub(r'\1[REDACTED]', text)
@@ -59,6 +62,66 @@ def redact_sensitive_data(text: str) -> str:
     text = _URL_CREDENTIALS_PATTERN.sub(r'\1\2:[REDACTED]@', text)
 
     return text
+
+
+def redact_sensitive_data(text: str, use_cache: bool = True) -> str:
+    """
+    Redacts sensitive information like API keys and Bearer tokens from a string.
+
+    Args:
+        text: The input text to redact.
+        use_cache: Whether to use LRU cache for repeated strings (default: True).
+                   Set to False for unique/large texts to avoid cache pollution.
+
+    Returns:
+        The redacted text.
+    """
+    if not text:
+        return text
+
+    # Fast path optimization: if potential triggers aren't present, skip expensive regex subs.
+    if not _FAST_PATH_PATTERN.search(text):
+        return text
+
+    # Use cache for repeated strings (good for log messages)
+    if use_cache and len(text) < 10000:
+        return _redact_cached(text)
+    else:
+        return _redact_impl(text)
+
+
+async def redact_sensitive_data_stream(
+    text: str,
+    chunk_size: int = 8192,
+    use_cache: bool = True
+) -> AsyncIterator[str]:
+    """
+    Streaming redaction for large texts to reduce memory pressure.
+
+    Yields chunks of redacted text to handle large contexts efficiently.
+
+    Args:
+        text: The input text to redact.
+        chunk_size: Size of each chunk to process.
+        use_cache: Whether to use caching for chunks.
+
+    Yields:
+        Redacted text chunks.
+    """
+    if not text:
+        return
+
+    if not _FAST_PATH_PATTERN.search(text):
+        yield text
+        return
+
+    # Process in chunks for large texts
+    for i in range(0, len(text), chunk_size):
+        chunk = text[i:i + chunk_size]
+        if use_cache:
+            yield _redact_cached(chunk)
+        else:
+            yield _redact_impl(chunk)
 
 def escape_html_content(text: str) -> str:
     """

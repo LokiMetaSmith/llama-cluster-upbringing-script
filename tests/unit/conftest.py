@@ -1,5 +1,5 @@
 import sys
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, AsyncMock
 import pytest
 
 # List of modules to mock if they are missing in the test environment
@@ -97,8 +97,11 @@ def mock_module_if_missing(module_name):
     try:
         __import__(module_name)
     except (ImportError, Exception):
-        from unittest.mock import AsyncMock
-        m = MagicMock()
+        if any(p in module_name for p in ['pipecat', 'frame_processor', 'pipeline', 'services', 'transports']):
+            m = AsyncMock()
+        else:
+            m = MagicMock()
+
         if module_name == 'numpy':
              m.array.side_effect = lambda x, **kwargs: MagicMock(tolist=lambda: x)
         if module_name == 'opentelemetry' or module_name == 'opentelemetry.trace':
