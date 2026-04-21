@@ -23,9 +23,11 @@ update {
         to     = 9443
       }
       port "redis" {
+        static = {{ authentik_redis_port | default(16379) }}
         to = 6379
       }
       port "postgres" {
+        static = {{ authentik_postgres_port | default(15432) }}
         to = 5432
       }
     }
@@ -107,7 +109,9 @@ update {
 CONSUL_HTTP_TOKEN="{{ consul_bootstrap_token | default('') }}"
 AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
 AUTHENTIK_REDIS__HOST="{{ authentik_redis_host | default('redis.service.consul') }}"
+AUTHENTIK_REDIS__PORT="{{ authentik_redis_port | default(16379) }}"
 AUTHENTIK_POSTGRESQL__HOST="{{ authentik_postgres_host | default('postgres.service.consul') }}"
+AUTHENTIK_POSTGRESQL__PORT="{{ authentik_postgres_port | default(15432) }}"
 EOH
         destination = "secrets/authentik.env"
         env         = true
@@ -134,6 +138,12 @@ EOH
         cpu    = 500
         memory = {{ authentik_server_memory | default(2048) }}
       }
+
+      restart {
+        interval = "30s"
+        delay    = "15s"
+        mode     = "delay"
+      }
     }
 
     task "worker" {
@@ -155,7 +165,9 @@ EOH
 CONSUL_HTTP_TOKEN="{{ consul_bootstrap_token | default('') }}"
 AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
 AUTHENTIK_REDIS__HOST="{{ authentik_redis_host | default('redis.service.consul') }}"
+AUTHENTIK_REDIS__PORT="{{ authentik_redis_port | default(16379) }}"
 AUTHENTIK_POSTGRESQL__HOST="{{ authentik_postgres_host | default('postgres.service.consul') }}"
+AUTHENTIK_POSTGRESQL__PORT="{{ authentik_postgres_port | default(15432) }}"
 EOH
         destination = "secrets/authentik.env"
         env         = true
@@ -171,6 +183,12 @@ EOH
       resources {
         cpu    = 500
         memory = {{ authentik_worker_memory | default(1024) }}
+      }
+
+      restart {
+        interval = "30s"
+        delay    = "15s"
+        mode     = "delay"
       }
     }
   }
