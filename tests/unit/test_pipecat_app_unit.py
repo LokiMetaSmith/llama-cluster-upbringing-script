@@ -40,6 +40,9 @@ sys.modules["pipecat.processors"] = mock_pipecat.processors
 sys.modules["pipecat.processors.frame_processor"] = mock_pipecat.processors.frame_processor
 # CRITICAL: Set FrameProcessor to our Mock Class so inheritance works
 sys.modules["pipecat.processors.frame_processor"].FrameProcessor = MockFrameProcessor
+# ADDED TO FIX ASYNC MOCKING
+sys.modules["pipecat.processors.frame_processor"].FrameProcessor.push_frame = AsyncMock()
+sys.modules["pipecat.processors.frame_processor"].FrameProcessor.process_frame = AsyncMock()
 sys.modules["pipecat.services"] = mock_pipecat.services
 sys.modules["pipecat.services.openai"] = mock_pipecat.services.openai
 sys.modules["pipecat.services.openai.llm"] = mock_pipecat.services.openai.llm

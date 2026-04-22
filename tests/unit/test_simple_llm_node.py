@@ -11,8 +11,8 @@ import unittest
 import os
 from unittest.mock import AsyncMock, patch
 # Now we can import
-from ansible.roles.pipecatapp.files.workflow.nodes.llm_nodes import SimpleLLMNode
-from ansible.roles.pipecatapp.files.workflow.context import WorkflowContext
+from workflow.nodes.llm_nodes import SimpleLLMNode
+from workflow.context import WorkflowContext
 
 class TestSimpleLLMNode(unittest.IsolatedAsyncioTestCase):
     async def test_fast_tier_execution(self):

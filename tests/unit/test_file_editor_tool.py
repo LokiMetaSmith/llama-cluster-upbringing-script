@@ -2,7 +2,7 @@ import unittest
 import os
 import shutil
 import tempfile
-from ansible.roles.pipecatapp.files.tools.file_editor_tool import FileEditorTool
+from tools.file_editor_tool import FileEditorTool
 
 class TestFileEditorTool(unittest.TestCase):
     def setUp(self):

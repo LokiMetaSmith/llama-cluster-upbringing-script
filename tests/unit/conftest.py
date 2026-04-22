@@ -87,7 +87,8 @@ modules_to_mock = [
     'consul.aio',
     'faster_whisper',
     'opentelemetry.instrumentation.fastapi',
-    'piper.voice'
+    'piper.voice',
+    'graphviz'
 ]
 
 def mock_module_if_missing(module_name):
@@ -113,6 +114,11 @@ def mock_module_if_missing(module_name):
 
             m.trace.get_tracer.return_value.start_as_current_span.return_value = DummySpan()
             m.get_tracer.return_value.start_as_current_span.return_value = DummySpan()
+        if module_name == 'pipecat.processors.frame_processor':
+            m.FrameProcessor.push_frame = AsyncMock()
+            m.FrameProcessor.process_frame = AsyncMock()
+        if module_name == 'graphviz':
+            m.Digraph = MagicMock()
         sys.modules[module_name] = m
 
 # Execute mocking at the top level to ensure it runs before test collection
