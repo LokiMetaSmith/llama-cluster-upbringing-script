@@ -285,6 +285,7 @@ def run_playbook(playbook_path, extra_vars, tags, verbose_level):
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
     env["ANSIBLE_FORCE_COLOR"] = "1" # Keep colors if possible
+    env["ANSIBLE_CONFIG"] = os.path.abspath("ansible.cfg")
 
     try:
         with open(LOG_FILE, "a") as log_file:
