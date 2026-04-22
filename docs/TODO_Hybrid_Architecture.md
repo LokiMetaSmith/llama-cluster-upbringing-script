@@ -34,14 +34,14 @@ Objective: Allow the application to choose between running tools in-process (Mon
 
 Objective: Enable the main `pipecatapp` container to perform LLM inference and manage state locally, eliminating the need for sidecar containers on Tier 2 nodes.
 
-- [ ] **Refactor LLM Service Initialization (`pipecatapp/app.py`)**
-  - [ ] Add support for `llama-cpp-python` direct loading.
-  - [ ] In `main()`, check `RUN_LOCAL_LLM` environment variable.
-  - [ ] If true:
-    - [ ] Import `llama_cpp`.
-    - [ ] Initialize `Llama` class with model path from `nomad/models/`.
-    - [ ] Wrap it in a `LocalLLMService` class that adheres to the Pipecat `LLMService` interface.
-  - [ ] If false (default): Continue using `OpenAILLMService` pointing to `LLAMA_API_SERVICE_NAME`.
+- [x] **Refactor LLM Service Initialization (`pipecatapp/app.py`)**
+  - [x] Add support for `llama-cpp-python` direct loading.
+  - [x] In `main()`, check `RUN_LOCAL_LLM` environment variable.
+  - [x] If true:
+    - [x] Import `llama_cpp`.
+    - [x] Initialize `Llama` class with model path from `nomad/models/`.
+    - [x] Wrap it in a `LocalLLMService` class that adheres to the Pipecat `LLMService` interface.
+  - [x] If false (default): Continue using `OpenAILLMService` pointing to `LLAMA_API_SERVICE_NAME`.
 
 - [ ] **Integrate World Model**
   - [ ] Create `pipecatapp/local_world_model.py`.

@@ -1539,43 +1539,53 @@ async def run_agent():
 
     consul_http_addr = format_url("http", consul_host, consul_port)
 
-    # Determine LLM Provider
+    run_local_llm = os.getenv("RUN_LOCAL_LLM", "false").lower() == "true"
+
+    # Define variables in the outer scope
     llm_provider = os.getenv("LLM_PROVIDER", "local")
     llm_api_key = "dummy"
     llm_model = "dummy"
+    llm_base_url = ""
 
-    if llm_provider == "groq":
-        llm_base_url = "https://api.groq.com/openai/v1"
-        llm_api_key = secret_manager.get_secret("GROQ_API_KEY", "")
-        llm_model = os.getenv("LLM_MODEL", "llama3-70b-8192")
-        logging.info("Using Groq LLM provider.")
-    elif llm_provider == "deepseek":
-        llm_base_url = "https://api.deepseek.com"
-        llm_api_key = secret_manager.get_secret("DEEPSEEK_API_KEY", "")
-        llm_model = os.getenv("LLM_MODEL", "deepseek-chat")
-        logging.info("Using DeepSeek LLM provider.")
-    elif llm_provider == "openai":
-        llm_base_url = "https://api.openai.com/v1"
-        llm_api_key = secret_manager.get_secret("OPENAI_API_KEY", "")
-        llm_model = os.getenv("LLM_MODEL", "gpt-4o")
-        logging.info("Using OpenAI LLM provider.")
+    if run_local_llm:
+        from pipecatapp.local_llm import LocalLLMService
+        model_path = os.getenv("LOCAL_LLM_MODEL_PATH", "/opt/nomad/models/llama-2-7b-chat.gguf")
+        logging.info(f"RUN_LOCAL_LLM is true. Loading llama_cpp directly with model: {model_path}")
+        llm = LocalLLMService(model_path=model_path)
+        llm_base_url = "local"
     else:
-        # Bolt ⚡ Optimization: check for explicit LLAMA_API_BASE_URL (e.g. from Expert Sidecar)
-        # This bypasses Consul discovery for faster startup when the LLM is local.
-        explicit_llm_url = os.getenv("LLAMA_API_BASE_URL")
-        # We only use the explicit URL if it points to localhost (sidecar pattern)
-        # otherwise we prefer Consul discovery for load balancing.
-        if explicit_llm_url and "localhost" in explicit_llm_url:
-             logging.info(f"Using explicit LLAMA_API_BASE_URL from environment: {explicit_llm_url}")
-             llm_base_url = explicit_llm_url
+        if llm_provider == "groq":
+            llm_base_url = "https://api.groq.com/openai/v1"
+            llm_api_key = secret_manager.get_secret("GROQ_API_KEY", "")
+            llm_model = os.getenv("LLM_MODEL", "llama3-70b-8192")
+            logging.info("Using Groq LLM provider.")
+        elif llm_provider == "deepseek":
+            llm_base_url = "https://api.deepseek.com"
+            llm_api_key = secret_manager.get_secret("DEEPSEEK_API_KEY", "")
+            llm_model = os.getenv("LLM_MODEL", "deepseek-chat")
+            logging.info("Using DeepSeek LLM provider.")
+        elif llm_provider == "openai":
+            llm_base_url = "https://api.openai.com/v1"
+            llm_api_key = secret_manager.get_secret("OPENAI_API_KEY", "")
+            llm_model = os.getenv("LLM_MODEL", "gpt-4o")
+            logging.info("Using OpenAI LLM provider.")
         else:
-             llm_base_url = await discover_services(main_llm_service_names, consul_http_addr)
+            # Bolt ⚡ Optimization: check for explicit LLAMA_API_BASE_URL (e.g. from Expert Sidecar)
+            # This bypasses Consul discovery for faster startup when the LLM is local.
+            explicit_llm_url = os.getenv("LLAMA_API_BASE_URL")
+            # We only use the explicit URL if it points to localhost (sidecar pattern)
+            # otherwise we prefer Consul discovery for load balancing.
+            if explicit_llm_url and "localhost" in explicit_llm_url:
+                 logging.info(f"Using explicit LLAMA_API_BASE_URL from environment: {explicit_llm_url}")
+                 llm_base_url = explicit_llm_url
+            else:
+                 llm_base_url = await discover_services(main_llm_service_names, consul_http_addr)
 
-    llm = OpenAILLMService(
-        base_url=llm_base_url,
-        api_key=llm_api_key,
-        model=llm_model
-    )
+        llm = OpenAILLMService(
+            base_url=llm_base_url,
+            api_key=llm_api_key,
+            model=llm_model
+        )
 
     runner = PipelineRunner()
 
