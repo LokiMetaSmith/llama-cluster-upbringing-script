@@ -2,6 +2,28 @@
 # Its only purpose is to run the rpc-server daemon on each worker node,
 # exposing its GPU(s) to the network for an orchestrator to use.
 
+# === RPC Provider Monitoring ===
+#
+# To monitor rpc-server providers with Prometheus:
+#
+# 1. The rpc-server currently doesn't expose Prometheus metrics natively.
+#    A metrics wrapper script can be added to expose /metrics endpoint.
+#
+# 2. Add to prometheus.yml (or via Consul service registration):
+#    - job_name: rpc-providers
+#      consul_sd_configs:
+#        - services: [llamacpp-rpc-provider]
+#      metrics_path: /metrics
+#
+# 3. Optional: Add health check for Consul
+#    - name: "rpc-health"
+#      type: "http"
+#      path: "/health"
+#      interval: "10s"
+#      timeout: "5s"
+#
+# === End Monitoring ===
+
 job "{{ job_name | default('llamacpp-rpc-pool') }}" {
   datacenters = ["dc1"]
   namespace   = "{{ nomad_namespace | default('default') }}"

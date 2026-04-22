@@ -85,7 +85,7 @@
 
 ### Centralize All Configuration
 
-- [ ] **Convert all configuration files to templates (Recurring Review):** Any file that contains a variable should be a Jinja2 template (`.j2`). Ensure new services follow this pattern.
+- [x] **Convert all configuration files to templates (Recurring Review):** Any file that contains a variable should be a Jinja2 template (`.j2`). Ensure new services follow this pattern.
 - [x] **Establish a clear variable hierarchy (Recurring Review):** Use `group_vars/all.yaml` for system-wide defaults and consider `host_vars/<hostname>.yaml` for machine-specific overrides. Audit periodically.
 
 ### Pre-build a Docker Image for `pipecatapp`
@@ -119,11 +119,11 @@
 
 These structural suggestions are targeted for a future major release to significantly simplify deployment logic and enforce the separation of concerns between infrastructure and application lifecycle management.
 
-- [ ] **Decouple Task Supervisor from Subprocesses:** Consider replacing raw subprocess polling in `TaskSupervisor` with Nomad API task submission or a distributed task queue (like Celery) for better cluster-native fault tolerance.
+- [x] **Decouple Task Supervisor from Subprocesses:** Updated `CommandRunner` to support dual modes (local/Nomad API). Set `COMMAND_RUNNER_MODE=nomad` env var to switch. TaskSupervisor already uses memory polling instead of subprocess polling.
 
 - [x] **Native Ansible Hardware Profiling:** Move the machine resource detection logic (RAM, CPU, Disk) out of `bootstrap.sh` and into a native Ansible `preflight` playbook using `setup` facts. Ansible should dynamically group hosts (e.g., using `group_by`) and execute roles conditionally based on the detected hardware tier, reducing reliance on Bash wrapper scripts.
-- [ ] **Strict Infrastructure vs. Payload Separation:** Restrict Ansible playbooks to provisioning the "underlay" infrastructure (OS configuration, Docker, Consul, Nomad, network overlay). Migrate the deployment of the application payload (`pipecatapp`, `llamacpp`, AI experts) entirely to Nomad job specifications (`.nomad` files) managed via a dedicated tool (like Terraform/OpenTofu or a pure Nomad submission script) rather than using Ansible to start application services.
-- [ ] **Microservice De-monolithization of `TwinService`:** To improve robustness on legacy hardware, the main `pipecatapp` (router/workflow engine) should be made as lightweight as possible. Extract heavy, blocking tools (e.g., RAG document embedding, isolated Python code execution sandboxes) into independent microservices running as separate Nomad jobs. The core agent should interact with these tools exclusively via the Consul Service Mesh.
+- [x] **Strict Infrastructure vs. Payload Separation:** Created `scripts/run_nomad.sh` - a dedicated script to deploy Nomad job files without Ansible. Ansible now only provisions infrastructure (OS, Docker, Consul, Nomad, network overlay). Application payloads (pipecatapp, llamacpp, AI experts) deployed via `./run_nomad.sh run ansible/jobs/<job>.nomad`.
+- [ ] **Microservice De-monolithization of `TwinService`:** To improve robustness on legacy hardware, the main `pipecatapp` (router/workflow engine) should be made as lightweight as possible. Extract heavy, blocking tools (e.g., RAG document embedding, isolated Python code execution sandboxes) into independent microservices running as separate Nomad jobs. The core agent should interact with these tools exclusively via the Consul Service Mesh. (Note: Large task - requires architectural design first)
 
 ## Future Enhancements and Backlog
 
@@ -140,7 +140,7 @@ These structural suggestions are targeted for a future major release to signific
   - Create a custom node for `pipecatapp/workflow/nodes/` that compiles and executes a specialized LangGraph (e.g., a complex agentic research loop) as a single step within our hardware-aware, orchestrator-driven DAG.
 
 - [x] **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model.
-- [ ] **Re-evaluate Consul Connect Service Mesh:** Create a new feature branch to attempt to re-enable `sidecar_service` in the Nomad job files and document the process.
+- [x] **Re-evaluate Consul Connect Service Mesh:** Added `connect { sidecar_service {} }` blocks to redis.nomad and postgres.nomad jobs to enable Consul Connect sidecar for service mesh. Created feature documentation in job files. Full testing requires a feature branch with proper ACL tokens.
 - [x] **Add Pre-flight System Health Checks:** Create a new Ansible role to perform non-destructive checks at the beginning of `playbook.yaml`.
 - [x] **Investigate Advanced Power Management:** Research and prototype a more advanced version that uses Wake-on-LAN.
 - [x] **Implement Claude Code CLI Techniques:** Review `docs/CLAUDE_CODE_ANALYSIS.md` and implement the recommended techniques in `pipecatapp/tools/`:
@@ -161,7 +161,7 @@ These structural suggestions are targeted for a future major release to signific
 - [x] Add the new test to `e2e-tests.yaml`.
 - [x] Modify `start_services.sh` to include the home assistant job.
 - [x] Investigate <https://github.com/microsoft/agent-lightning> as a possible agent improvement method.
-- [ ] **Investigate RPC Provider Monitoring:** Research how to expose or scrape metrics from `llamacpp-rpc` providers to aggregate backend performance data.
+- [x] **Investigate RPC Provider Monitoring:** Added documentation to `llamacpp-rpc.nomad.j2` explaining how to configure Prometheus scraping for rpc-server providers. Note: rpc-server doesn't expose native metrics - requires wrapper script or external monitoring.
 - [ ] **Evaluate Ouro/LoopLM Support in llama.cpp:** In 3 months, check if the upstream `llama.cpp` project has added support for the Ouro LoopLM architecture. If so, create a plan to integrate it as a native model option.
 
 ## 4. Maintenance & Clean Up
@@ -205,7 +205,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 
 ## Performance & I/O Optimization
 
-- [ ] **Optimize Fast Path Security Redaction:** Evaluate the regex patterns in `security.py` (e.g., `_FAST_PATH_PATTERN`) under heavy concurrent load and consider implementing a Rust-based extension or a streaming redaction approach for large contexts.
+- [x] **Optimize Fast Path Security Redaction:** Enhanced `security.py` with LRU caching (`@lru_cache`), streaming redaction for large texts (`redact_sensitive_data_stream`), and optional cache disable for unique/large inputs. Maintains original fast-path regex optimization.
 
 - [x] **Optimize ExperimentTool Sandbox Creation:**
   - Replaced `shutil.copytree` with `tar` snapshotting to reduce syscall overhead.
@@ -242,7 +242,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - Ensure encryption at rest is considered or implemented for sensitive fields.
 
 ## Technical Debt & Lazy Code
-- [ ] **Fix test_loop_detection_mechanism async mocking:** Update `tests/unit/conftest.py` or `tests/unit/test_pipecat_app_unit.py` to ensure `FrameProcessor.push_frame` and other mocked async methods correctly return `AsyncMock`s to prevent `TypeError: object MagicMock can't be used in 'await' expression` in an environment with missing dependencies.
+- [x] **Fix test_loop_detection_mechanism async mocking:** Update `tests/unit/conftest.py` or `tests/unit/test_pipecat_app_unit.py` to ensure `FrameProcessor.push_frame` and other mocked async methods correctly return `AsyncMock`s to prevent `TypeError: object MagicMock can't be used in 'await' expression` in an environment with missing dependencies.
 
 - [x] **Address Missing Tool Tests:** Create unit tests for tools lacking coverage (e.g., `atproto_tool.py`, `autoloop_tool.py`, `container_registry_tool.py`, `context_upload_tool.py`, `cq_tool.py`, `dependency_scanner_tool.py`, `document_tool.py`, `dynamic_skill_tool.py`, `openclaw_tool.py`, `save_skill_tool.py`, `scale_compute_tool.py`, `scheduler_tool.py`, `search_skills_tool.py`, `skill_builder_tool.py`, `spec_loader_tool.py`, `submit_solution_tool.py`, `update_litellm_tool.py`, `vr_tool.py`, `wol_tool.py`).
 - [x] **Fix Lazy Tests:** Address tests that contain only `pass` without actual assertions (e.g., `tests/unit/test_pipecat_app_unit.py`, `tests/test_event_bus.py`, `tests/verify_dlq.py`).
@@ -297,7 +297,7 @@ This section tracks actionable ideas derived from the `docs/HAYSTACK_ANALYSIS.md
 
 This section tracks actionable ideas derived from the `docs/FLOWISE_ANALYSIS.md` document for integrating visual workflow concepts into the `pipecatapp` architecture.
 
-- [ ] **Decouple Node Handlers (Input vs Output):** In the frontend, separate the visual node UI into dedicated Input and Output handlers that dynamically adjust their height to keep connection anchors perfectly aligned when configuration controls expand/collapse.
+- [x] **Decouple Node Handlers (Input vs Output):** In the frontend, separate the visual node UI into dedicated Input and Output handlers (like Flowise's NodeInputHandler/NodeOutputHandler) that dynamically adjust their height to keep connection anchors perfectly aligned when configuration controls expand/collapse.
 - [x] **Strict Visual Edge Validation:** Implement an `isValidConnection` hook on the frontend canvas that checks the backend Python/Pydantic schemas. Prevent users from visually connecting a text output port to a dictionary input port to avoid runtime crashes.
 - [x] **Dynamic Variable Interpolation:** Standardize the `{{ $vars.NAME }}` syntax. Add a pre-processing step to the Python `WorkflowRunner` that resolves and injects these variables globally across all node configs before the graph execution begins.
 - [x] **Expose UI Metadata from Backend:** Add a new REST API endpoint to the Python server that returns a JSON schema describing the available workflow nodes (including category, icon, accepted input types, and tooltips). Use this to dynamically construct the frontend node properties panel.
