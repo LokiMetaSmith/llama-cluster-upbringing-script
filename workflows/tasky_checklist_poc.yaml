@@ -1,0 +1,35 @@
+name: Tasky Audit Proof of Concept
+description: A workflow that evaluates an execution result against a markdown checklist.
+
+nodes:
+  - id: input_data
+    type: InputNode
+    config:
+      outputs:
+        - task_markdown
+        - execution_result
+
+  - id: tasky_auditor
+    type: TaskyAuditNode
+    inputs:
+      - name: task_markdown
+        source: input_data
+        output: task_markdown
+      - name: execution_result
+        source: input_data
+        output: execution_result
+    config:
+      model_service: rpc-main
+
+  - id: output
+    type: OutputNode
+    inputs:
+      - name: updated_markdown
+        source: tasky_auditor
+        output: updated_markdown
+      - name: all_completed
+        source: tasky_auditor
+        output: all_completed
+      - name: final_report
+        source: tasky_auditor
+        output: audit_report
