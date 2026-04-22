@@ -285,6 +285,7 @@ def run_playbook(playbook_path, extra_vars, tags, verbose_level):
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
     env["ANSIBLE_FORCE_COLOR"] = "1" # Keep colors if possible
+    env["ANSIBLE_CONFIG"] = os.path.join(REPO_ROOT, "ansible.cfg")
 
     try:
         with open(LOG_FILE, "a") as log_file:
@@ -297,7 +298,8 @@ def run_playbook(playbook_path, extra_vars, tags, verbose_level):
                 stderr=subprocess.STDOUT, # Merge stderr into stdout
                 text=True,
                 env=env,
-                bufsize=1 # Line buffered
+                bufsize=1, # Line buffered
+                cwd=REPO_ROOT
             )
 
             captured_lines = []
