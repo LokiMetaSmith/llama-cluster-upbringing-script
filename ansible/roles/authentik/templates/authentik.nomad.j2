@@ -65,6 +65,9 @@ update {
         image = "postgres:15-alpine"
         network_mode = "{{ authentik_network_mode | default('bridge') }}"
         ports = ["postgres"]
+        volumes = [
+          "{{ nomad_volumes_dir }}/authentik/postgres:/var/lib/postgresql/data"
+        ]
       }
 
       service {
