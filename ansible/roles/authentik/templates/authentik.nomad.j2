@@ -37,7 +37,6 @@ update {
 
       config {
         image = "redis:7.2-alpine"
-        network_mode = "{{ authentik_network_mode | default('bridge') }}"
         ports = ["redis"]
       }
 
@@ -63,7 +62,6 @@ update {
 
       config {
         image = "postgres:15-alpine"
-        network_mode = "{{ authentik_network_mode | default('bridge') }}"
         ports = ["postgres"]
         volumes = [
           "{{ nomad_volumes_dir }}/authentik/postgres:/var/lib/postgresql/data"
@@ -99,7 +97,6 @@ update {
       config {
         image        = "ghcr.io/goauthentik/server:2024.2.2"
         args         = ["server"]
-        network_mode = "{{ authentik_network_mode | default('bridge') }}"
         ports        = ["http", "https"]
         volumes = [
           "{{ nomad_volumes_dir }}/authentik/media:/media",
@@ -155,7 +152,6 @@ EOH
       config {
         image        = "ghcr.io/goauthentik/server:2024.2.2"
         args         = ["worker"]
-        network_mode = "{{ authentik_network_mode | default('bridge') }}"
         volumes = [
           "{{ nomad_volumes_dir }}/authentik/media:/media",
           "{{ nomad_volumes_dir }}/authentik/certs:/certs",
