@@ -1,0 +1,38 @@
+- hosts: all
+  remote_user: "{{ target_user }}"
+  become: yes
+
+  tags:
+    - app-jobs
+
+  # This playbook runs Nomad jobs after core infrastructure is fully provisioned.
+  # It should be run AFTER core_infra.yaml and after Nomad/Consul are running.
+  #
+  # Usage:
+  #   ansible-playbook playbooks/app_jobs.yaml
+  #
+  # Or run via bootstrap.sh which will call this after core_infra:
+  #   ./bootstrap.sh --role controller
+
+  pre_tasks:
+    - name: Wait for Nomad to be ready
+      ansible.builtin.wait_for:
+        host: "{{ cluster_ip | default('127.0.0.1') }}"
+        port: "{{ nomad_http_port | default(4646) }}"
+        timeout: 30
+      tags:
+        - wait
+
+    - name: Wait for Consul to be ready
+      ansible.builtin.wait_for:
+        host: "{{ cluster_ip | default('127.0.0.1') }}"
+        port: "{{ consul_http_port | default(8500) }}"
+        timeout: 30
+      tags:
+        - wait
+
+  roles:
+    - role: authentik
+      tags:
+        - authentik
+        - auth
