@@ -62,7 +62,7 @@ fi
 run_pytest() {
     local target="$1"
     local report_file="$2"
-    $PYTHON_CMD -m pytest "$target" --junitxml="$report_file"
+    PYTHONPATH="$REPO_ROOT/pipecatapp:$REPO_ROOT/pipecatapp/tools:$REPO_ROOT" $PYTHON_CMD -m pytest "$target" --junitxml="$report_file"
 }
 
 # Run Unit Tests
