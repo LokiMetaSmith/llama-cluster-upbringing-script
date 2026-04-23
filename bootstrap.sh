@@ -428,7 +428,7 @@ Your task is to:
         export OPENCODE_API_KEY="${AGENT_API_KEY:-sk-dummy}"
         opencode_cmd+=(--model "${AGENT_MODEL:-openai/qwen2.5-coder}")
     else
-        opencode_cmd+=(--model "${AGENT_MODEL:-gpt-4o-mini}")
+        opencode_cmd+=(--model "${AGENT_MODEL:-openai/gpt-4o-mini}")
     fi
 
     # Run OpenCode headlessly. Catch error explicitly in case set -e is active elsewhere
