@@ -25,7 +25,6 @@ job "authentik" {
       config {
         image = "ghcr.io/goauthentik/server:2024.2.2"
         args  = ["server"]
-        network_mode = "bridge"
         ports = ["http"]
         volumes = [
           "/opt/nomad/volumes/authentik/media:/media",
@@ -72,7 +71,6 @@ EOH
       config {
         image = "ghcr.io/goauthentik/server:2024.2.2"
         args  = ["worker"]
-        network_mode = "bridge"
         volumes = [
           "/opt/nomad/volumes/authentik/media:/media",
           "/opt/nomad/volumes/authentik/certs:/certs",
