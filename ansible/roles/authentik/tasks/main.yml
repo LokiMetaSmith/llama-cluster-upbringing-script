@@ -83,7 +83,7 @@
     dest: "{{ nomad_jobs_dir }}/authentik.nomad"
   become: yes
 
-- name: Set posgres volume permissions
+- name: Set postgres volume permissions
   ansible.builtin.shell: chown -R 70:70 "{{ nomad_volumes_dir }}/authentik/postgres" && chmod 700 "{{ nomad_volumes_dir }}/authentik/postgres"
   become: yes
   changed_when: false

@@ -53,7 +53,3 @@
       tags:
         - traefik
         - proxy
-    - role: authentik
-      tags:
-        - authentik
-        - auth

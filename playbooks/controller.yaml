@@ -5,3 +5,4 @@
 - import_playbook: playbooks/services/docker.yaml
 - import_playbook: playbooks/services/nomad.yaml
 - import_playbook: playbooks/services/monitoring.yaml
+- import_playbook: playbooks/app_jobs.yaml
