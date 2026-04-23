@@ -59,7 +59,10 @@
 - name: Generate Authentik secret key
   ansible.builtin.command: openssl rand -hex 50
   register: authentik_generated_key
-  when: authentik_consul_key is not failed and authentik_consul_key.status == 404
+  when: >
+    authentik_consul_key is not failed and
+    (authentik_consul_key.status == 404 or
+    (authentik_consul_key.status == 200 and authentik_consul_key.json[0].Value | default('') | b64decode | length < 50))
 
 - name: Publish Authentik secret key to Consul
   ansible.builtin.uri:
@@ -69,7 +72,10 @@
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     body: "{{ authentik_generated_key.stdout }}"
     status_code: [200, 201]
-  when: authentik_consul_key is not failed and authentik_consul_key.status == 404
+  when: >
+    authentik_consul_key is not failed and
+    (authentik_consul_key.status == 404 or
+    (authentik_consul_key.status == 200 and authentik_consul_key.json[0].Value | default('') | b64decode | length < 50))
 
 - name: Template Authentik Nomad job
   ansible.builtin.template:
