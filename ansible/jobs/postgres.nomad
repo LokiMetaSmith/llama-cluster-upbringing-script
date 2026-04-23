@@ -20,7 +20,6 @@ job "postgres" {
       driver = "docker"
       config {
         image = "postgres:15-alpine"
-        network_mode = "bridge"
       }
       template {
         data = <<EOH

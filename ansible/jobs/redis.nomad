@@ -33,7 +33,6 @@ job "redis" {
       driver = "docker"
       config {
         image = "redis:7.2-alpine"
-        network_mode = "bridge"
       }
       service {
         name = "redis"
