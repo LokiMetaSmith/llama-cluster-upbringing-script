@@ -32,6 +32,10 @@
         - wait
 
   roles:
+    - role: traefik
+      tags:
+        - traefik
+        - proxy
     - role: authentik
       tags:
         - authentik
