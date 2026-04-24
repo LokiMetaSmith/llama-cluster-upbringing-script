@@ -122,6 +122,8 @@ EOH
         AUTHENTIK_POSTGRESQL__NAME = "{{ authentik_db_name | default('authentik') }}"
         AUTHENTIK_POSTGRESQL__PASSWORD = "{{ authentik_db_password | default('authentik_password') }}"
         AUTHENTIK_ERROR_REPORTING__ENABLED = "true"
+        AUTHENTIK_WEB__WORKERS = "{{ authentik_web_workers | default(2) }}"
+        GUNICORN_CMD_ARGS = "{{ authentik_gunicorn_cmd_args | default('--max-requests 250 --max-requests-jitter 50') }}"
       }
 
       service {
