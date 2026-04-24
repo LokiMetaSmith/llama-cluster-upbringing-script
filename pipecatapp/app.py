@@ -74,6 +74,9 @@ from tools.term_everything_tool import TermEverythingTool
 from tools.rag_tool import RAG_Tool
 from tools.ha_tool import HA_Tool
 from tools.git_tool import Git_Tool
+from local_world_model import LocalWorldModel
+from mqtt_world_model_client import MQTTWorldModelClient
+
 from tools.orchestrator_tool import OrchestratorTool
 from tools.llxprt_code_tool import LLxprt_Code_Tool
 from tools.claude_clone_tool import ClaudeCloneTool
@@ -1500,6 +1503,18 @@ async def run_agent():
     # Set initial state for web server
     web_server.app.state.is_ready = False
     web_server.app.state.twin_service_instance = None
+
+    # Initialize World Model
+    world_model_mode = os.getenv("WORLD_MODEL_MODE", "distributed")
+    if world_model_mode == "local":
+        logging.info("Initializing LocalWorldModel (Monolith mode)")
+        world_model = LocalWorldModel()
+    else:
+        logging.info("Initializing MQTTWorldModelClient (Distributed mode)")
+        world_model = MQTTWorldModelClient()
+
+    web_server.app.state.world_model = world_model
+
 
     # Load configuration from Consul
     consul_host = os.getenv("CONSUL_HOST")
