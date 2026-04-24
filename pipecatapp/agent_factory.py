@@ -155,7 +155,14 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
             ha_token=config.get("ha_token")
         )
         tools["git"] = Git_Tool(root_dir="/opt/pipecatapp")
-        tools["orchestrator"] = OrchestratorTool()
+        world_model = None
+        try:
+            from app import app as main_app
+            world_model = getattr(main_app.state, 'world_model', None)
+        except ImportError:
+            pass
+
+        tools["orchestrator"] = OrchestratorTool(world_model=world_model)
         tools["opencode_provider"] = OpenCodeProviderTool()
 
     # Load dynamic skills from memory store

@@ -13,7 +13,7 @@ def test_orchestrator_tool_instantiation():
     """Tests that the OrchestratorTool class can be instantiated."""
     # Test default URL
     tool = OrchestratorTool()
-    assert tool.world_model_url == "http://localhost:8000"
+    assert tool.world_model_url == f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8000"
 
     # Test with environment variable
     os.environ["WORLD_MODEL_URL"] = "http://test:8000"
@@ -40,7 +40,7 @@ def test_dispatch_job_success(mock_client_cls):
     assert result == {"status": "dispatched", "job_id": "123"}
 
     mock_client.post.assert_called_once_with(
-        "http://localhost:8000/dispatch-job",
+        f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8000/dispatch-job",
         json={
             "model_name": "test-model",
             "prompt": "hello",
