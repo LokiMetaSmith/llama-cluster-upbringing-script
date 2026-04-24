@@ -2,3 +2,5 @@ nomad_volumes_dir: /opt/nomad/volumes
 nomad_jobs_dir: /opt/nomad/jobs
 authentik_server_memory: 2048
 authentik_worker_memory: 1024
+authentik_web_workers: 2
+authentik_gunicorn_cmd_args: "--max-requests 250 --max-requests-jitter 50"
