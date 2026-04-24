@@ -531,7 +531,7 @@ ensure_python_environment() {
         echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
     fi
 
-    run_step "Installing OpenCode AI Agent" "npm install"
+    run_step "Installing OpenCode AI Agent" "npm ci"
 
     run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
 
