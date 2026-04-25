@@ -7,16 +7,16 @@
   run_once: true
 
 - name: Ensure local certs directory exists and is writable by user
-  become: yes
+  become: false
   ansible.builtin.file:
     path: "{{ nomad_temp_cert_dir }}"
     state: directory
-    owner: "{{ ansible_user_id }}"
     mode: '0755'
   delegate_to: localhost
   run_once: true
 
 - name: Generate Nomad CA key
+  become: false
   ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/ca.key 2048"
   args:
     creates: "{{ nomad_temp_cert_dir }}/ca.key"
@@ -24,6 +24,7 @@
   run_once: true
 
 - name: Generate Nomad CA certificate
+  become: false
   ansible.builtin.command: "openssl req -new -x509 -days 3650 -key {{ nomad_temp_cert_dir }}/ca.key -out {{ nomad_temp_cert_dir }}/ca.pem -subj '/CN=Nomad CA'"
   args:
     creates: "{{ nomad_temp_cert_dir }}/ca.pem"
@@ -31,6 +32,7 @@
   run_once: true
 
 - name: Generate CLI keys for Nomad nodes
+  become: false
   ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/cli.key 2048"
   args:
     creates: "{{ nomad_temp_cert_dir }}/cli.key"
@@ -38,6 +40,7 @@
   run_once: true
 
 - name: Generate CLI CSRs for Nomad nodes
+  become: false
   ansible.builtin.command: "openssl req -new -key {{ nomad_temp_cert_dir }}/cli.key -out {{ nomad_temp_cert_dir }}/cli.csr -subj '/CN=cli.global.nomad'"
   args:
     creates: "{{ nomad_temp_cert_dir }}/cli.csr"
@@ -45,6 +48,7 @@
   run_once: true
 
 - name: Sign CLI certificates for Nomad nodes
+  become: false
   ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/cli.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/cli.pem -days 365"
   args:
     creates: "{{ nomad_temp_cert_dir }}/cli.pem"
@@ -53,6 +57,7 @@
 
 # Server Certs
 - name: Generate OpenSSL config for Nomad server nodes
+  become: false
   ansible.builtin.copy:
     dest: "{{ nomad_temp_cert_dir }}/{{ item }}.cnf"
     content: |
@@ -77,6 +82,7 @@
   run_once: true
 
 - name: Generate OpenSSL config for localhost (local bootstrap mode)
+  become: false
   ansible.builtin.copy:
     dest: "{{ nomad_temp_cert_dir }}/localhost.cnf"
     content: |
@@ -99,6 +105,7 @@
   run_once: true
 
 - name: Generate server keys for controller nodes
+  become: false
   ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/{{ item }}.key 2048"
   args:
     creates: "{{ nomad_temp_cert_dir }}/{{ item }}.key"
@@ -108,6 +115,7 @@
   run_once: true
 
 - name: Generate server keys for localhost (local bootstrap mode)
+  become: false
   ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/localhost.key 2048"
   args:
     creates: "{{ nomad_temp_cert_dir }}/localhost.key"
@@ -116,6 +124,7 @@
   run_once: true
 
 - name: Generate server CSRs for controller nodes
+  become: false
   ansible.builtin.command: "openssl req -new -key {{ nomad_temp_cert_dir }}/{{ item }}.key -out {{ nomad_temp_cert_dir }}/{{ item }}.csr -config {{ nomad_temp_cert_dir }}/{{ item }}.cnf"
   args:
     creates: "{{ nomad_temp_cert_dir }}/{{ item }}.csr"
@@ -125,6 +134,7 @@
   run_once: true
 
 - name: Generate server CSRs for localhost (local bootstrap mode)
+  become: false
   ansible.builtin.command: "openssl req -new -key {{ nomad_temp_cert_dir }}/localhost.key -out {{ nomad_temp_cert_dir }}/localhost.csr -config {{ nomad_temp_cert_dir }}/localhost.cnf"
   args:
     creates: "{{ nomad_temp_cert_dir }}/localhost.csr"
@@ -133,6 +143,7 @@
   run_once: true
 
 - name: Sign server certificates for controller nodes
+  become: false
   ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/{{ item }}.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/{{ item }}.pem -days 365 -extfile {{ nomad_temp_cert_dir }}/{{ item }}.cnf -extensions v3_req"
   args:
     creates: "{{ nomad_temp_cert_dir }}/{{ item }}.pem"
@@ -142,6 +153,7 @@
   run_once: true
 
 - name: Sign server certificates for localhost (local bootstrap mode)
+  become: false
   ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/localhost.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/localhost.pem -days 365 -extfile {{ nomad_temp_cert_dir }}/localhost.cnf -extensions v3_req"
   args:
     creates: "{{ nomad_temp_cert_dir }}/localhost.pem"
@@ -151,6 +163,7 @@
 
 # Client Certs
 - name: Generate OpenSSL config for Nomad client nodes
+  become: false
   ansible.builtin.copy:
     dest: "{{ nomad_temp_cert_dir }}/{{ item }}.cnf"
     content: |
@@ -175,6 +188,7 @@
   run_once: true
 
 - name: Generate client keys for client nodes
+  become: false
   ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/{{ item }}.key 2048"
   args:
     creates: "{{ nomad_temp_cert_dir }}/{{ item }}.key"
@@ -184,6 +198,7 @@
   run_once: true
 
 - name: Generate client CSRs for client nodes
+  become: false
   ansible.builtin.command: "openssl req -new -key {{ nomad_temp_cert_dir }}/{{ item }}.key -out {{ nomad_temp_cert_dir }}/{{ item }}.csr -config {{ nomad_temp_cert_dir }}/{{ item }}.cnf"
   args:
     creates: "{{ nomad_temp_cert_dir }}/{{ item }}.csr"
@@ -193,6 +208,7 @@
   run_once: true
 
 - name: Sign client certificates for client nodes
+  become: false
   ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/{{ item }}.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/{{ item }}.pem -days 365 -extfile {{ nomad_temp_cert_dir }}/{{ item }}.cnf -extensions v3_req"
   args:
     creates: "{{ nomad_temp_cert_dir }}/{{ item }}.pem"
@@ -202,16 +218,19 @@
   run_once: true
 
 - name: Secure private keys on localhost
+  become: false
   ansible.builtin.shell: "chmod 0600 {{ nomad_temp_cert_dir }}/*.key"
   delegate_to: localhost
   run_once: true
 
 - name: Set public certificates to readable on localhost
+  become: false
   ansible.builtin.shell: "chmod 0644 {{ nomad_temp_cert_dir }}/*.pem {{ nomad_temp_cert_dir }}/*.csr {{ nomad_temp_cert_dir }}/*.cnf"
   delegate_to: localhost
   run_once: true
 
 - name: Check if CA certificate exists (localhost)
+  become: false
   stat:
     path: "{{ nomad_temp_cert_dir }}/ca.pem"
   register: ca_cert_stat
