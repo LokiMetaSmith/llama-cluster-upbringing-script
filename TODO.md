@@ -151,7 +151,7 @@ These structural suggestions are targeted for a future major release to signific
   - Implement `LRUCache` for file state to optimize `RAG_Tool` and `DocumentTool`.
   - Integrate dynamic "thinking" feature support detection based on model string.
 - [x] **Expand the Model Collection:** Systematically test and add the remaining LiquidAI nano models to `group_vars/models.yaml`.
-- [ ] **Security Hardening:**
+- [x] **Security Hardening:**
   - [x] **Remove passwordless sudo:** Modify the sudoers file configuration to require a password for the `target_user`.
   - [x] **Run services as non-root users:** Audit all services and ensure they are running as dedicated, non-privileged users where possible.
 - [x] **Robust Remote Node Recovery:** Add mechanism to recover remote nodes even if network stack is completely broken (possibly via serial console or IPMI automation).
@@ -162,7 +162,7 @@ These structural suggestions are targeted for a future major release to signific
 - [x] Modify `start_services.sh` to include the home assistant job.
 - [x] Investigate <https://github.com/microsoft/agent-lightning> as a possible agent improvement method.
 - [x] **Investigate RPC Provider Monitoring:** Added documentation to `llamacpp-rpc.nomad.j2` explaining how to configure Prometheus scraping for rpc-server providers. Note: rpc-server doesn't expose native metrics - requires wrapper script or external monitoring.
-- [ ] **Evaluate Ouro/LoopLM Support in llama.cpp:** In 3 months, check if the upstream `llama.cpp` project has added support for the Ouro LoopLM architecture. If so, create a plan to integrate it as a native model option.
+- [x] **Evaluate Ouro/LoopLM Support in llama.cpp:** In 3 months, check if the upstream `llama.cpp` project has added support for the Ouro LoopLM architecture. If so, create a plan to integrate it as a native model option. (Note: Ouro works in `llama.cpp` using the standard Llama GGUF format, but custom architectural features are skipped as they are not yet supported. Full native support for the LoopLM architecture is still lacking in llama.cpp, so no integration plan is needed at this time.)
 
 ## 4. Maintenance & Clean Up
 
