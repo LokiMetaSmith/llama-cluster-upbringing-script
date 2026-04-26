@@ -22,6 +22,9 @@ from contextlib import asynccontextmanager
 from collections import defaultdict
 from pipecatapp.network_scanner import scan_network_for_llms
 
+from pipecatapp.services.obsidian_gardener import ObsidianGardener
+from pipecatapp.workflow.runner import WorkflowRunner
+
 from pipecat.frames.frames import (
     Frame,
     AudioRawFrame,
@@ -1746,11 +1749,22 @@ async def run_agent():
 async def lifespan(app: FastAPI):
     """Manages the lifecycle of the agent background task."""
     global agent_task
+
+    # Initialize Obsidian Gardener if Vault path is provided
+    vault_path = os.getenv("OBSIDIAN_VAULT_PATH")
+    gardener = None
+    if vault_path:
+        gardener = ObsidianGardener(vault_path=vault_path, workflow_runner_class=WorkflowRunner)
+        gardener.start()
+
     # Start the agent loop in the background
     # We use a task name to easily identify it in debug tools
     agent_task = asyncio.create_task(run_agent(), name="pipecat_agent_loop")
     yield
     # Cleanup on shutdown
+    if gardener:
+        gardener.stop()
+
     if agent_task:
         logging.info("Cancelling agent background task...")
         agent_task.cancel()

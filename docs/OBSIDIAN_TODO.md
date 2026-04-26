@@ -22,12 +22,12 @@ This document tracks the progress and remaining tasks for integrating Obsidian C
 
 ## Phase 3: The "Gardener" Agent (Automation)
 
-- [ ] **File Watcher Service**: Create a background service that monitors the Obsidian Vault path.
-- [ ] **Active Document Logic**:
-  - [ ] Detect "seeds" (new files/nodes with specific tags).
-  - [ ] Parse directives (e.g., `<!-- run: python -->`).
-  - [ ] Trigger Workflow execution.
-  - [ ] Write results back to the file (Markdown append or Canvas node update).
+- [x] **File Watcher Service**: Create a background service that monitors the Obsidian Vault path.
+- [x] **Active Document Logic**:
+  - [x] Detect "seeds" (new files/nodes with specific tags).
+  - [x] Parse directives (e.g., `<!-- run: python -->`).
+  - [x] Trigger Workflow execution.
+  - [x] Write results back to the file (Markdown append or Canvas node update).
 
 ## Phase 4: Advanced Canvas Features
 
