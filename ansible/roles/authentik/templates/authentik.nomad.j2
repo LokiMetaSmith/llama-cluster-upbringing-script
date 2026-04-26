@@ -51,6 +51,12 @@ update {
         }
       }
 
+      restart {
+        interval = "30s"
+        delay    = "15s"
+        mode     = "delay"
+      }
+
       resources {
         cpu    = 100
         memory = 128
@@ -77,6 +83,12 @@ update {
           interval = "10s"
           timeout  = "2s"
         }
+      }
+
+      restart {
+        interval = "30s"
+        delay    = "15s"
+        mode     = "delay"
       }
 
       env {
@@ -107,7 +119,7 @@ update {
       template {
         data = <<EOH
 CONSUL_HTTP_TOKEN="{{ consul_bootstrap_token | default('') }}"
-AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
+AUTHENTIK_SECRET_KEY="{{ authentik_generated_key.stdout if authentik_generated_key.stdout is defined and authentik_generated_key.stdout != '' else (authentik_consul_key.json[0].Value | b64decode) }}"
 AUTHENTIK_REDIS__HOST="{{ authentik_redis_host | default('redis.service.consul') }}"
 AUTHENTIK_REDIS__PORT="{{ authentik_redis_port | default(16379) }}"
 AUTHENTIK_POSTGRESQL__HOST="{{ authentik_postgres_host | default('postgres.service.consul') }}"
@@ -164,7 +176,7 @@ EOH
       template {
         data = <<EOH
 CONSUL_HTTP_TOKEN="{{ consul_bootstrap_token | default('') }}"
-AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
+AUTHENTIK_SECRET_KEY="{{ authentik_generated_key.stdout if authentik_generated_key.stdout is defined and authentik_generated_key.stdout != '' else (authentik_consul_key.json[0].Value | b64decode) }}"
 AUTHENTIK_REDIS__HOST="{{ authentik_redis_host | default('redis.service.consul') }}"
 AUTHENTIK_REDIS__PORT="{{ authentik_redis_port | default(16379) }}"
 AUTHENTIK_POSTGRESQL__HOST="{{ authentik_postgres_host | default('postgres.service.consul') }}"
