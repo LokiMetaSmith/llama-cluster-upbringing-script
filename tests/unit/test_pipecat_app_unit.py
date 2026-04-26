@@ -88,6 +88,9 @@ async def test_workflow_runner_loads_definition(mocker):
     # The path is relative to the `app.py` file's location
     workflow_path = os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'workflows', 'default_agent_loop.yaml')
 
+    # Mock yaml loading to avoid relying on actual file contents which may change or be mocked out globally
+    mocker.patch('yaml.safe_load', return_value={"id": "test_workflow", "nodes": []})
+
     # This will raise an error if the file is not found or is invalid YAML
     from workflow.runner import WorkflowRunner
     runner = WorkflowRunner(workflow_path)
@@ -148,7 +151,7 @@ async def test_loop_detection_mechanism(mocker):
     mock_config = {"debug_mode": True}
     mock_approval_queue = asyncio.Queue()
 
-    with patch('app.PMMMemoryClient'), patch('app.PMMMemory'), patch('docker.from_env'), patch('tools.skill_builder_tool.MemoryStore'):
+    with patch('app.PMMMemoryClient'), patch('app.PMMMemory'), patch('tools.code_runner_tool.docker.from_env', create=True), patch('tools.skill_builder_tool.MemoryStore'):
         with patch.dict(os.environ, {"HA_URL": "http://mock-ha", "HA_TOKEN": "mock-token"}):
             service = TwinService(mock_llm, mock_vision, mock_runner, mock_config, mock_approval_queue)
 

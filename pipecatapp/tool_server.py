@@ -25,9 +25,42 @@ from tools.rag_tool import RAG_Tool
 from tools.ha_tool import HA_Tool
 from tools.git_tool import Git_Tool
 from tools.orchestrator_tool import OrchestratorTool
-from tools.search_tool import SearchTool
+from pmm_memory import PMMMemory
 
 app = FastAPI()
+
+class ToolRequest(BaseModel):
+    tool: str
+    method: str
+    args: dict = {}
+
+# Instantiate all available tools
+# Note: Some tools might require specific env vars or paths that need to be set in Nomad job
+tools = {
+    "ssh": SSH_Tool(),
+    "desktop_control": DesktopControlTool(),
+    "code_runner": CodeRunnerTool(),
+    "web_browser": WebBrowserTool(),
+    "ansible": Ansible_Tool(),
+    "power": Power_Tool(),
+    "summarizer": SummarizerTool(twin_service=None),
+    "term_everything": TermEverythingTool(app_image_path="/opt/mcp/tools/termeverything.AppImage"),
+    "rag": RAG_Tool(pmm_memory=None, base_dir="/mnt/host_repo"),
+    "git": Git_Tool(),
+    "orchestrator": OrchestratorTool(),
+}
+
+if os.getenv("HA_URL") and os.getenv("HA_TOKEN"):
+    try:
+        tools["ha"] = HA_Tool(
+            ha_url=os.getenv("HA_URL"),
+            ha_token=os.getenv("HA_TOKEN")
+        )
+    except ValueError as e:
+        print(f"Warning: Failed to initialize HA_Tool: {e}")
+
+API_KEY = os.getenv("TOOL_SERVER_API_KEY")
+strict_limiter = RateLimiter(limit=10, window=60)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -61,38 +94,20 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={"detail": f"Tool argument validation failed: {formatted_error_str} Please verify the required tool parameters."}
     )
 
-class ToolRequest(BaseModel):
-    tool: str
-    method: str
-    args: dict = {}
-
-# Instantiate all available tools
-tools = {
-    "ssh": SSH_Tool(),
-    "desktop_control": DesktopControlTool(),
-    "code_runner": CodeRunnerTool(),
-    "web_browser": WebBrowserTool(),
-    "ansible": Ansible_Tool(),
-    "power": Power_Tool(),
-    "term_everything": TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage"),
-    "rag": RAG_Tool(base_dir="/opt/pipecatapp"),
-    "ha": HA_Tool(ha_url=None, ha_token=None), # These will be configured later if needed
-    "git": Git_Tool(root_dir="/opt/pipecatapp"),
-    "orchestrator": OrchestratorTool(),
-    "search": SearchTool(root_dir="/opt/pipecatapp"),
-}
-
-API_KEY = os.getenv("TOOL_SERVER_API_KEY")
-strict_limiter = RateLimiter(limit=10, window=60)
+@app.get("/health")
+def read_health():
+    return {"status": "ok"}
 
 @app.post("/run_tool/")
-async def run_tool(request: ToolRequest, authorization: str = Header(...), rate_limit: None = Depends(strict_limiter)):
+async def run_tool(request: ToolRequest, authorization: Optional[str] = Header(None), rate_limit: None = Depends(strict_limiter)):
     """
     Executes a method on a specified tool with the given arguments.
     """
     if not API_KEY:
+        # If no API key is configured, we might want to fail open or closed. Failing closed for security.
         raise HTTPException(status_code=500, detail="API key not configured on server.")
-
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header is missing.")
     try:
         auth_type, token = authorization.split()
         if auth_type.lower() != "bearer" or not secrets.compare_digest(token, API_KEY):
@@ -114,9 +129,11 @@ async def run_tool(request: ToolRequest, authorization: str = Header(...), rate_
         raise HTTPException(status_code=403, detail=f"Method '{request.method}' is not a public callable method.")
 
     try:
-        # For simplicity, this example assumes synchronous tool methods.
-        # If any tool methods were async, this would need to be awaited.
-        result = method(**request.args)
+        # Check if the method is a coroutine (async)
+        if inspect.iscoroutinefunction(method):
+            result = await method(**request.args)
+        else:
+            result = method(**request.args)
         return {"result": result}
     except TypeError as e:
         # Provide LLM-friendly error message for missing/unexpected arguments
@@ -124,6 +141,7 @@ async def run_tool(request: ToolRequest, authorization: str = Header(...), rate_
         formatted_error = f"Tool argument validation failed: {error_msg}. Please check the required and available parameters for '{request.tool}.{request.method}'."
         raise HTTPException(status_code=400, detail=formatted_error)
     except Exception as e:
+        # Log the error potentially?
         raise HTTPException(status_code=500, detail=f"Error executing tool: {str(e)}")
 
 @app.get("/tools/")
@@ -144,5 +162,4 @@ async def list_tools():
     return available_tools
 
 if __name__ == "__main__":
-    host_ip = os.getenv("HOST_IP", "::")
-    uvicorn.run(app, host=host_ip, port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

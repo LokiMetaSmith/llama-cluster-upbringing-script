@@ -55,6 +55,9 @@ REMOTE_SUPPORTED_TOOLS = [
     "git", "orchestrator", "opencode_provider"
 ]
 
+# Heavy tools that should ideally be offloaded to the Tool Server for microservice de-monolithization
+HEAVY_TOOLS = ["rag", "code_runner", "ansible"]
+
 def create_tools(config: dict, twin_service=None, runner=None) -> dict:
     """
     Initializes and returns the dictionary of tools.
@@ -131,39 +134,53 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         for name in REMOTE_SUPPORTED_TOOLS:
             tools[name] = RemoteToolProxy(name, tool_server_url)
     else:
-        # Instantiate local versions of supported tools
-        tools["ssh"] = SSH_Tool()
-        tools["desktop_control"] = DesktopControlTool()
-        tools["code_runner"] = CodeRunnerTool()
-        tools["web_browser"] = WebBrowserTool()
-        tools["ansible"] = Ansible_Tool()
-        tools["power"] = Power_Tool()
-        tools["term_everything"] = TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage")
-
-        # RAG Tool has specific local dependencies (memory)
-        # Allow configurability for base_dir, but default to secure app dir
-        rag_base_dir = config.get("rag_base_dir", "/opt/pipecatapp")
-        rag_allowed_root = config.get("rag_allowed_root", rag_base_dir)
-        tools["rag"] = RAG_Tool(
-            pmm_memory=twin_service.long_term_memory if twin_service else None,
-            base_dir=rag_base_dir,
-            allowed_root=rag_allowed_root
-        )
-
-        tools["ha"] = HA_Tool(
-            ha_url=config.get("ha_url"),
-            ha_token=config.get("ha_token")
-        )
-        tools["git"] = Git_Tool(root_dir="/opt/pipecatapp")
-        world_model = None
-        try:
-            from app import app as main_app
-            world_model = getattr(main_app.state, 'world_model', None)
-        except ImportError:
-            pass
-
-        tools["orchestrator"] = OrchestratorTool(world_model=world_model)
-        tools["opencode_provider"] = OpenCodeProviderTool()
+        # We are in local or mixed mode. Offload HEAVY_TOOLS if a tool_server_url is available.
+        for name in REMOTE_SUPPORTED_TOOLS:
+            if name in HEAVY_TOOLS and tool_server_url:
+                tools[name] = RemoteToolProxy(name, tool_server_url)
+            else:
+                # Instantiate local versions of supported tools
+                if name == "ssh":
+                    tools["ssh"] = SSH_Tool()
+                elif name == "desktop_control":
+                    tools["desktop_control"] = DesktopControlTool()
+                elif name == "code_runner":
+                    tools["code_runner"] = CodeRunnerTool()
+                elif name == "web_browser":
+                    tools["web_browser"] = WebBrowserTool()
+                elif name == "ansible":
+                    tools["ansible"] = Ansible_Tool()
+                elif name == "power":
+                    tools["power"] = Power_Tool()
+                elif name == "term_everything":
+                    tools["term_everything"] = TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage")
+                elif name == "rag":
+                    # RAG Tool has specific local dependencies (memory)
+                    # Allow configurability for base_dir, but default to secure app dir
+                    rag_base_dir = config.get("rag_base_dir", "/opt/pipecatapp")
+                    rag_allowed_root = config.get("rag_allowed_root", rag_base_dir)
+                    tools["rag"] = RAG_Tool(
+                        pmm_memory=twin_service.long_term_memory if twin_service else None,
+                        base_dir=rag_base_dir,
+                        allowed_root=rag_allowed_root
+                    )
+                elif name == "ha":
+                    tools["ha"] = HA_Tool(
+                        ha_url=config.get("ha_url"),
+                        ha_token=config.get("ha_token")
+                    )
+                elif name == "git":
+                    tools["git"] = Git_Tool(root_dir="/opt/pipecatapp")
+                elif name == "orchestrator":
+                    world_model = None
+                    try:
+                        from app import app as main_app
+                        world_model = getattr(main_app.state, 'world_model', None)
+                    except ImportError:
+                        pass
+                    tools["orchestrator"] = OrchestratorTool(world_model=world_model)
+                elif name == "opencode_provider":
+                    tools["opencode_provider"] = OpenCodeProviderTool()
 
     # Load dynamic skills from memory store
     if twin_service and hasattr(twin_service, "long_term_memory"):
