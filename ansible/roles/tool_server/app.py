@@ -1,11 +1,18 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Depends, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import inspect
 import os
+import secrets
 from typing import Optional
 
-# Import tools - expecting 'tools' package to be in the python path
+if __package__:
+    from .rate_limiter import RateLimiter
+else:
+    from rate_limiter import RateLimiter
+
 from tools.ssh_tool import SSH_Tool
 from tools.desktop_control_tool import DesktopControlTool
 from tools.code_runner_tool import CodeRunnerTool
@@ -53,13 +60,46 @@ if os.getenv("HA_URL") and os.getenv("HA_TOKEN"):
         print(f"Warning: Failed to initialize HA_Tool: {e}")
 
 API_KEY = os.getenv("TOOL_SERVER_API_KEY")
+strict_limiter = RateLimiter(limit=10, window=60)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Format Pydantic validation errors into LLM-friendly instructions.
+    Instead of raw JSON schema errors, we provide explicit feedback
+    (e.g., 'The required parameter X is missing').
+    """
+    errors = exc.errors()
+    formatted_messages = []
+
+    for error in errors:
+        loc = ".".join(str(l) for l in error.get("loc", []))
+        msg = error.get("msg", "")
+        err_type = error.get("type", "")
+
+        if err_type == "missing":
+            formatted_messages.append(f"The required parameter `{loc}` is missing.")
+        elif err_type == "extra_forbidden":
+            formatted_messages.append(f"An unexpected parameter `{loc}` was provided.")
+        elif "type" in err_type:
+            formatted_messages.append(f"The parameter `{loc}` has an invalid type: {msg}.")
+        else:
+            formatted_messages.append(f"Validation error on `{loc}`: {msg}.")
+
+    # LLMs handle a single string block of instructions better than complex JSON error arrays
+    formatted_error_str = " ".join(formatted_messages)
+
+    return JSONResponse(
+        status_code=422,
+        content={"detail": f"Tool argument validation failed: {formatted_error_str} Please verify the required tool parameters."}
+    )
 
 @app.get("/health")
 def read_health():
     return {"status": "ok"}
 
 @app.post("/run_tool/")
-async def run_tool(request: ToolRequest, authorization: Optional[str] = Header(None)):
+async def run_tool(request: ToolRequest, authorization: Optional[str] = Header(None), rate_limit: None = Depends(strict_limiter)):
     """
     Executes a method on a specified tool with the given arguments.
     """
@@ -68,10 +108,9 @@ async def run_tool(request: ToolRequest, authorization: Optional[str] = Header(N
         raise HTTPException(status_code=500, detail="API key not configured on server.")
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header is missing.")
-
     try:
         auth_type, token = authorization.split()
-        if auth_type.lower() != "bearer" or token != API_KEY:
+        if auth_type.lower() != "bearer" or not secrets.compare_digest(token, API_KEY):
             raise HTTPException(status_code=403, detail="Invalid credentials.")
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid authorization header format.")
@@ -96,6 +135,11 @@ async def run_tool(request: ToolRequest, authorization: Optional[str] = Header(N
         else:
             result = method(**request.args)
         return {"result": result}
+    except TypeError as e:
+        # Provide LLM-friendly error message for missing/unexpected arguments
+        error_msg = str(e)
+        formatted_error = f"Tool argument validation failed: {error_msg}. Please check the required and available parameters for '{request.tool}.{request.method}'."
+        raise HTTPException(status_code=400, detail=formatted_error)
     except Exception as e:
         # Log the error potentially?
         raise HTTPException(status_code=500, detail=f"Error executing tool: {str(e)}")
