@@ -1,1 +1,0 @@
-print("Analyzing the logs")
