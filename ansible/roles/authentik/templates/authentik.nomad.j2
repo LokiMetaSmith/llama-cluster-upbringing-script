@@ -55,6 +55,12 @@ update {
         cpu    = 100
         memory = 128
       }
+
+      restart {
+        interval = "30s"
+        delay    = "15s"
+        mode     = "delay"
+      }
     }
 
     task "postgresql" {
@@ -88,6 +94,12 @@ update {
       resources {
         cpu    = 200
         memory = 256
+      }
+
+      restart {
+        interval = "30s"
+        delay    = "15s"
+        mode     = "delay"
       }
     }
 
