@@ -49,8 +49,8 @@ Objective: Enable the main `pipecatapp` container to perform LLM inference and m
   - [x] In `app.py`, conditionally instantiate `LocalWorldModel` vs `MQTTWorldModelClient` based on `WORLD_MODEL_MODE` (local/distributed).
   - [x] Ensure `LocalWorldModel` still publishes updates to MQTT (fire-and-forget) so external observers (Home Assistant) stay in sync, even if the app doesn't read from MQTT.
 
-- [ ] **Deprecate "Expert" Container**
-  - [ ] Update `ansible/roles/pipecatapp/tasks/main.yaml` to make the deployment of `expert-*.nomad` jobs conditional on `deploy_topology != 'monolith'`.
+- [x] **Deprecate "Expert" Container**
+  - [x] Update `ansible/roles/pipecatapp/tasks/main.yaml` to make the deployment of `expert-*.nomad` jobs conditional on `deploy_topology != 'monolith'`.
 
 ## Phase 3: Adaptive Service Discovery
 

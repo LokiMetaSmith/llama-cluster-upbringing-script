@@ -477,7 +477,10 @@
   loop: "{{ verified_experts | default([]) }}"
   loop_control:
     loop_var: current_expert # Using the previously updated loop variable name
-  when: verified_experts is defined and verified_experts | length > 0
+  when: >
+    verified_experts is defined and
+    verified_experts | length > 0 and
+    deploy_topology != 'monolith'
   vars:
     # Define ONLY loop-specific variables here
     nomad_namespace: "{{ nomad_namespace }}"
@@ -513,7 +516,9 @@
     msg: >
       ⚠️  No verified experts found! Skipping expert job creation.
       (Check /var/log/llama_benchmarks.jsonl for failed benchmarks.)
-  when: verified_experts is not defined or verified_experts | length == 0
+  when: >
+    deploy_topology != 'monolith' and
+    (verified_experts is not defined or verified_experts | length == 0)
 
 - name: Copy test runner Nomad job template
   ansible.builtin.copy:
