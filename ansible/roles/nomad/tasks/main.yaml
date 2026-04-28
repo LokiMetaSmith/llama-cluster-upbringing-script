@@ -316,6 +316,48 @@
     src: nomad.sh.j2
   become: yes
 
+- name: Ensure br_netfilter module is loaded for CNI bridge networking
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
+  become: yes
+  check_mode: no
+
+- name: Ensure br_netfilter module is loaded on boot
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/br_netfilter.conf
+    content: "br_netfilter
+"
+    mode: '0644'
+  become: yes
+
+- name: Enable bridge-nf-call-arptables for CNI
+  ansible.posix.sysctl:
+    name: net.bridge.bridge-nf-call-arptables
+    value: '1'
+    state: present
+    reload: yes
+  become: yes
+  ignore_errors: yes
+
+- name: Enable bridge-nf-call-ip6tables for CNI
+  ansible.posix.sysctl:
+    name: net.bridge.bridge-nf-call-ip6tables
+    value: '1'
+    state: present
+    reload: yes
+  become: yes
+  ignore_errors: yes
+
+- name: Enable bridge-nf-call-iptables for CNI
+  ansible.posix.sysctl:
+    name: net.bridge.bridge-nf-call-iptables
+    value: '1'
+    state: present
+    reload: yes
+  become: yes
+  ignore_errors: yes
+
 - name: Ensure CNI plugin directory exists
   ansible.builtin.file:
     path: /opt/cni/bin
