@@ -630,6 +630,43 @@ async def get_workflow_definition(workflow_name: str, api_key: str = Security(ge
         # Security fix: Do not expose internal exception details
         raise HTTPException(status_code=500, detail="An error occurred while loading the workflow.")
 
+
+@app.post("/api/workflows/import/nodered", summary="Import Node-RED Flow", description="Imports a Node-RED flow JSON and converts it to a Pipecat workflow.", tags=["Workflow"])
+async def import_nodered_flow(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """
+    Imports a Node-RED flow JSON and returns the converted Pipecat workflow definition.
+    Payload: { "nodered_data": [ ... ] }
+    """
+    nodered_data = payload.get("nodered_data")
+    if not nodered_data or not isinstance(nodered_data, list):
+        raise HTTPException(status_code=400, detail="Invalid Node-RED data format. Expected a JSON array.")
+
+    try:
+        from pipecatapp.workflow.nodered_converter import NodeRedConverter
+        workflow = NodeRedConverter.nodered_to_workflow(nodered_data=nodered_data)
+        return workflow
+    except Exception as e:
+        logger.error(f"Node-RED import failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to convert Node-RED flow.")
+
+@app.post("/api/workflows/export/nodered", summary="Export Node-RED Flow", description="Exports a Pipecat workflow definition to a Node-RED flow JSON.", tags=["Workflow"])
+async def export_nodered_flow(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """
+    Exports a Pipecat workflow definition to a Node-RED flow JSON.
+    Payload: { "workflow": { ... } }
+    """
+    workflow = payload.get("workflow")
+    if not workflow or not isinstance(workflow, dict):
+        raise HTTPException(status_code=400, detail="Invalid workflow data format. Expected a JSON object.")
+
+    try:
+        from pipecatapp.workflow.nodered_converter import NodeRedConverter
+        nodered_data = NodeRedConverter.workflow_to_nodered(workflow=workflow)
+        return nodered_data
+    except Exception as e:
+        logger.error(f"Node-RED export failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export to Node-RED flow.")
+
 @app.post("/api/workflows/save", summary="Save Workflow", description="Saves a workflow definition to a YAML file.", tags=["Workflow"])
 async def save_workflow_definition(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """
