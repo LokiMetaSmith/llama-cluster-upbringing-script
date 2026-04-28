@@ -14,6 +14,9 @@ update {
   group "authentik" {
     network {
       mode = "{{ authentik_network_mode | default('bridge') }}"
+      dns {
+        servers = ["{{ cluster_ip | default('172.17.0.1') }}", "8.8.8.8"]
+      }
       port "http" {
         static = {{ authentik_http_port | default(9000) }}
         to     = 9000
@@ -68,6 +71,7 @@ update {
 
       config {
         image = "postgres:15-alpine"
+        user = "root"
         ports = ["postgres"]
         volumes = [
           "{{ nomad_volumes_dir }}/authentik/postgres:/var/lib/postgresql/data"
