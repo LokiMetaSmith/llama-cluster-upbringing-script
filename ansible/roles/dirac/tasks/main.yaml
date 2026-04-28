@@ -1,0 +1,6 @@
+- name: Install dirac-cli via npm
+  community.general.npm:
+    name: dirac-cli
+    global: yes
+    state: latest
+  become: yes

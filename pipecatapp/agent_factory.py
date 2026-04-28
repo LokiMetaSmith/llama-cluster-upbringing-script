@@ -47,16 +47,17 @@ from tools.cluster_status_tool import ClusterStatusTool
 from tools.polyphony_tool import PolyphonyTool
 from tools.skill_builder_tool import SkillBuilderTool
 from tools.dynamic_skill_tool import DynamicSkillTool
+from tools.dirac_tool import DiracTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
     "ssh", "desktop_control", "code_runner", "web_browser",
     "ansible", "power", "term_everything", "rag", "ha",
-    "git", "orchestrator", "opencode_provider"
+    "git", "orchestrator", "opencode_provider", "dirac"
 ]
 
 # Heavy tools that should ideally be offloaded to the Tool Server for microservice de-monolithization
-HEAVY_TOOLS = ["rag", "code_runner", "ansible"]
+HEAVY_TOOLS = ["rag", "code_runner", "ansible", "dirac"]
 
 def create_tools(config: dict, twin_service=None, runner=None) -> dict:
     """
@@ -120,6 +121,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "cluster_status": ClusterStatusTool(),
         "polyphony": PolyphonyTool(),
         "skill_builder": SkillBuilderTool(),
+        "dirac": DiracTool(),
     }
 
     # Inject memory client into SwarmTool if available (for Map-Reduce)
