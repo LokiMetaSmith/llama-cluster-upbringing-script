@@ -8,24 +8,24 @@ The goal of Phase 1 is to wrap the official `dirac-cli` in a Python tool so our 
 
 ### Step 1: Ansible Environment Setup
 We need to ensure Node.js and the `dirac-cli` are installed on the worker nodes where the tool will execute.
-- [ ] **Create/Update Ansible Tasks:** Modify `ansible/roles/pipecatapp/tasks/main.yml` (or create a new `node` role) to ensure Node.js (via NVM or apt) is installed.
-- [ ] **Install Dirac:** Add an Ansible task to run `npm install -g dirac-cli`.
-- [ ] **API Keys:** Ensure the necessary environment variables (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or local base URLs) are passed securely via SOPS/Vault to the `dirac` execution environment in Nomad.
+- [x] **Create/Update Ansible Tasks:** Modify `ansible/roles/pipecatapp/tasks/main.yml` (or create a new `node` role) to ensure Node.js (via NVM or apt) is installed.
+- [x] **Install Dirac:** Add an Ansible task to run `npm install -g dirac-cli`.
+- [x] **API Keys:** Ensure the necessary environment variables (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or local base URLs) are passed securely via SOPS/Vault to the `dirac` execution environment in Nomad.
 
 ### Step 2: Develop `DiracTool`
-- [ ] **Create Tool File:** Create `pipecatapp/tools/dirac_tool.py`.
-- [ ] **Define Schema:** Implement the `Tool` base class with arguments like `prompt` (the coding task) and optionally `mode` (e.g., `-y` for yolo auto-approve mode).
-- [ ] **Subprocess Execution:** Use `subprocess.Popen` or `asyncio.create_subprocess_shell` to execute `dirac -y "<prompt>"`.
-- [ ] **Stream Output:** Capture and stream the stdout/stderr of Dirac back to the main agent's context or UI so the user can monitor progress.
-- [ ] **Handle Exit Codes:** Parse the exit code to determine if the task was successful or if the agent needs to retry/intervene.
+- [x] **Create Tool File:** Create `pipecatapp/tools/dirac_tool.py`.
+- [x] **Define Schema:** Implement the `Tool` base class with arguments like `prompt` (the coding task) and optionally `mode` (e.g., `-y` for yolo auto-approve mode).
+- [x] **Subprocess Execution:** Use `subprocess.Popen` or `asyncio.create_subprocess_shell` to execute `dirac -y "<prompt>"`.
+- [x] **Stream Output:** Capture and stream the stdout/stderr of Dirac back to the main agent\'s context or UI so the user can monitor progress.
+- [x] **Handle Exit Codes:** Parse the exit code to determine if the task was successful or if the agent needs to retry/intervene.
 
 ### Step 3: Register Tool & Prompting
-- [ ] **Register Tool:** Add `dirac_tool` to the `TOOL_REGISTRY` in `pipecatapp/agent_factory.py`.
-- [ ] **Update Router Prompt:** Update `ansible/roles/pipecatapp/files/prompts/router.txt` (or the specific coding expert's prompt) to instruct the agent on *when* to use `dirac_tool` vs the legacy `file_editor` (e.g., "For complex multi-file refactors, use dirac_tool...").
+- [x] **Register Tool:** Add `dirac_tool` to the `TOOL_REGISTRY` in `pipecatapp/agent_factory.py`.
+- [x] **Update Router Prompt:** Update `ansible/roles/pipecatapp/files/prompts/router.txt` (or the specific coding expert\'s prompt) to instruct the agent on *when* to use `dirac_tool` vs the legacy `file_editor` (e.g., "For complex multi-file refactors, use dirac_tool...").
 
 ### Step 4: Testing & Verification
-- [ ] Write unit tests for `dirac_tool.py` mocking the subprocess call.
-- [ ] Run an integration test on the cluster: Ask the agent to "Use dirac to refactor the memory.py file". Verify Dirac runs, edits the file, and exits successfully.
+- [x] Write unit tests for `dirac_tool.py` mocking the subprocess call.
+- [x] Run an integration test on the cluster: Ask the agent to "Use dirac to refactor the memory.py file". Verify Dirac runs, edits the file, and exits successfully.
 
 ---
 
