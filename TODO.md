@@ -127,6 +127,11 @@ These structural suggestions are targeted for a future major release to signific
 
 ## Future Enhancements and Backlog
 
+### Dirac Token-Efficient Agent Integration
+- [ ] **Implement Dirac Hybrid Approach:**
+  - **Goal:** Integrate the Dirac coding agent capabilities (hash-anchored edits, AST parsing, multi-file batching) to significantly reduce token costs and improve refactoring on our legacy hardware.
+  - Reference: `docs/DIRAC_TODO.md`
+
 ### Integrate LangChain (Tandem/Hybrid Approach)
 
 - [x] **Phase 1: Build a `LangChainToolAdapter`:**
