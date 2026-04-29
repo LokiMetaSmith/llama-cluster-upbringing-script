@@ -71,7 +71,6 @@ update {
 
       config {
         image = "postgres:15-alpine"
-        user = "root"
         ports = ["postgres"]
         volumes = [
           "{{ nomad_volumes_dir }}/authentik/postgres:/var/lib/postgresql/data"
@@ -89,9 +88,18 @@ update {
         }
       }
 
+      template {
+        data = <<EOH
+{{ '{{' }} with secret "kv/data/authentik/config" {{ '}}' }}
+POSTGRES_PASSWORD="{{ '{{' }} .Data.data.db_password {{ '}}' }}"
+{{ '{{' }} end {{ '}}' }}
+EOH
+        destination = "secrets/postgres.env"
+        env         = true
+      }
+
       env {
         POSTGRES_USER     = "{{ authentik_db_user | default('authentik') }}"
-        POSTGRES_PASSWORD = "{{ authentik_db_password | default('authentik_password') }}"
         POSTGRES_DB       = "{{ authentik_db_name | default('authentik') }}"
       }
 
@@ -128,6 +136,9 @@ AUTHENTIK_REDIS__HOST="{{ authentik_redis_host | default('redis.service.consul')
 AUTHENTIK_REDIS__PORT="{{ authentik_redis_port | default(16379) }}"
 AUTHENTIK_POSTGRESQL__HOST="{{ authentik_postgres_host | default('postgres.service.consul') }}"
 AUTHENTIK_POSTGRESQL__PORT="{{ authentik_postgres_port | default(15432) }}"
+{{ '{{' }} with secret "kv/data/authentik/config" {{ '}}' }}
+AUTHENTIK_POSTGRESQL__PASSWORD="{{ '{{' }} .Data.data.db_password {{ '}}' }}"
+{{ '{{' }} end {{ '}}' }}
 EOH
         destination = "secrets/authentik.env"
         env         = true
@@ -136,7 +147,6 @@ EOH
       env {
         AUTHENTIK_POSTGRESQL__USER = "{{ authentik_db_user | default('authentik') }}"
         AUTHENTIK_POSTGRESQL__NAME = "{{ authentik_db_name | default('authentik') }}"
-        AUTHENTIK_POSTGRESQL__PASSWORD = "{{ authentik_db_password | default('authentik_password') }}"
         AUTHENTIK_ERROR_REPORTING__ENABLED = "true"
         AUTHENTIK_WEB__WORKERS = "{{ authentik_web_workers | default(2) }}"
         GUNICORN_CMD_ARGS = "{{ authentik_gunicorn_cmd_args | default('--max-requests 250 --max-requests-jitter 50') }}"
@@ -185,6 +195,9 @@ AUTHENTIK_REDIS__HOST="{{ authentik_redis_host | default('redis.service.consul')
 AUTHENTIK_REDIS__PORT="{{ authentik_redis_port | default(16379) }}"
 AUTHENTIK_POSTGRESQL__HOST="{{ authentik_postgres_host | default('postgres.service.consul') }}"
 AUTHENTIK_POSTGRESQL__PORT="{{ authentik_postgres_port | default(15432) }}"
+{{ '{{' }} with secret "kv/data/authentik/config" {{ '}}' }}
+AUTHENTIK_POSTGRESQL__PASSWORD="{{ '{{' }} .Data.data.db_password {{ '}}' }}"
+{{ '{{' }} end {{ '}}' }}
 EOH
         destination = "secrets/authentik.env"
         env         = true
@@ -193,7 +206,6 @@ EOH
       env {
         AUTHENTIK_POSTGRESQL__USER = "{{ authentik_db_user | default('authentik') }}"
         AUTHENTIK_POSTGRESQL__NAME = "{{ authentik_db_name | default('authentik') }}"
-        AUTHENTIK_POSTGRESQL__PASSWORD = "{{ authentik_db_password | default('authentik_password') }}"
         AUTHENTIK_ERROR_REPORTING__ENABLED = "true"
       }
 
