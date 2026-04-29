@@ -18,7 +18,17 @@
       changed_when: false
 
     - name: Import missing Debian GPG keys
-      raw: apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131 78DBA3BC47EF2265 762F67A0B2C39DE4 BDE6D2B9216EC7A8 8E9F831205B4BA95
+      raw: |
+        mkdir -p /etc/apt/trusted.gpg.d
+        for key in 6ED0E7B82643E131 78DBA3BC47EF2265 762F67A0B2C39DE4 BDE6D2B9216EC7A8 8E9F831205B4BA95; do
+          if command -v wget >/dev/null 2>&1; then
+            wget -qO- "http://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x$key" > "/etc/apt/trusted.gpg.d/$key.asc"
+          elif command -v curl >/dev/null 2>&1; then
+            curl -sL "http://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x$key" > "/etc/apt/trusted.gpg.d/$key.asc"
+          else
+            python3 -c "import urllib.request; urllib.request.urlretrieve('http://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x$key', '/etc/apt/trusted.gpg.d/' + '$key' + '.asc')"
+          fi
+        done
       changed_when: false
 
     - name: Run apt-get update to ensure cache is populated before any modules run
