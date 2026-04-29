@@ -23,9 +23,7 @@ job "postgres" {
       }
       template {
         data = <<EOH
-{{ with secret "kv/data/authentik/config" }}
-POSTGRES_PASSWORD={{ .Data.data.db_password }}
-{{ end }}
+POSTGRES_PASSWORD={{ key "authentik/db-password" }}
 EOH
         destination = "secrets/postgres.env"
         env         = true
