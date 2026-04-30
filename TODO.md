@@ -247,7 +247,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - Ensure encryption at rest is considered or implemented for sensitive fields.
 
 ## Technical Debt & Lazy Code
-- [ ] **Investigate Broken Test Suite:** Fix missing dependencies (e.g., `pytest-asyncio`) and other import errors that are causing the unit test suite to fail globally.
+- [x] **Investigate Broken Test Suite:** Fix missing dependencies (e.g., `pytest-asyncio`) and other import errors that are causing the unit test suite to fail globally.
 - [x] **Fix test_loop_detection_mechanism async mocking:** Update `tests/unit/conftest.py` or `tests/unit/test_pipecat_app_unit.py` to ensure `FrameProcessor.push_frame` and other mocked async methods correctly return `AsyncMock`s to prevent `TypeError: object MagicMock can't be used in 'await' expression` in an environment with missing dependencies.
 
 - [x] **Address Missing Tool Tests:** Create unit tests for tools lacking coverage (e.g., `atproto_tool.py`, `autoloop_tool.py`, `container_registry_tool.py`, `context_upload_tool.py`, `cq_tool.py`, `dependency_scanner_tool.py`, `document_tool.py`, `dynamic_skill_tool.py`, `openclaw_tool.py`, `save_skill_tool.py`, `scale_compute_tool.py`, `scheduler_tool.py`, `search_skills_tool.py`, `skill_builder_tool.py`, `spec_loader_tool.py`, `submit_solution_tool.py`, `update_litellm_tool.py`, `vr_tool.py`, `wol_tool.py`).

@@ -105,7 +105,7 @@ def mock_module_if_missing(module_name):
     try:
         __import__(module_name)
     except (ImportError, Exception):
-        if any(p in module_name for p in ['pipecat', 'frame_processor', 'pipeline', 'services', 'transports']):
+        if module_name == 'pipecat.pipeline.runner' or any(p in module_name for p in ['pipecat', 'frame_processor', 'pipeline', 'services', 'transports']):
             m = AsyncMock()
         else:
             m = MagicMock()
