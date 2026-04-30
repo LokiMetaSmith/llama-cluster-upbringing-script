@@ -48,14 +48,14 @@ sys.modules["pipecat.services.openai"] = mock_pipecat.services.openai
 sys.modules["pipecat.services.openai.llm"] = mock_pipecat.services.openai.llm
 
 # Now we can import from the files in ansible/roles/pipecatapp/files
-from app import TwinService
-from web_server import app
+from pipecatapp.app import TwinService
+from pipecatapp.web_server import app
 from fastapi.testclient import TestClient
 
 # Since we mocked pipecat, TranscriptionFrame is now a Mock class
 # But we might need a consistent class for testing if isinstance is used
 # Re-define TranscriptionFrame if needed, but for existing tests mocking might be enough.
-from pipecat.frames.frames import TranscriptionFrame
+# from pipecat.frames.frames import TranscriptionFrame
 
 @pytest.fixture
 def client(mocker):
@@ -181,7 +181,7 @@ async def test_loop_detection_mechanism(mocker):
 
     mock_workflow_runner.run = AsyncMock(side_effect=side_effect_values)
 
-    with patch('app.WorkflowRunner', return_value=mock_workflow_runner), patch('app.web_server.manager.broadcast', new_callable=AsyncMock):
+    with patch('pipecatapp.app.WorkflowRunner', return_value=mock_workflow_runner), patch('pipecatapp.web_server.manager.broadcast', new_callable=AsyncMock):
         with patch.object(service, '_send_response', new_callable=AsyncMock) as mock_send_response:
             service.long_term_memory = MagicMock()
             service.long_term_memory.add_event = AsyncMock()
@@ -192,7 +192,7 @@ async def test_loop_detection_mechanism(mocker):
                     self.text = text
                     self.meta = meta or {}
 
-            with patch('app.TranscriptionFrame', MockTranscriptionFrame):
+            with patch('pipecatapp.app.TranscriptionFrame', MockTranscriptionFrame):
                 frame = MockTranscriptionFrame("Run loop test", meta={"request_id": "test_req"})
 
                 service.push_frame = AsyncMock()
