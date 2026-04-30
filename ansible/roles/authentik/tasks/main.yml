@@ -119,6 +119,31 @@
   become: yes
   changed_when: false
 
+- name: Check Authentik Nomad job status
+  ansible.builtin.command: nomad job status authentik
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+  register: authentik_job_status
+  failed_when: false
+  changed_when: false
+
+- name: Purge stuck Authentik job
+  ansible.builtin.command: nomad job stop -purge authentik
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+  when: >
+    authentik_job_status.rc == 0 and
+    ('Status = dead' in authentik_job_status.stdout or
+     'Status = failed' in authentik_job_status.stdout or
+     'Failed due to progress deadline' in authentik_job_status.stdout)
+  changed_when: true
+
 - name: Run Authentik Nomad job
   ansible.builtin.command: nomad job run {{ nomad_jobs_dir }}/authentik.nomad
   environment:
