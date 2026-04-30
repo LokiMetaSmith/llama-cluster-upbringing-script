@@ -4,9 +4,9 @@ job "authentik" {
 
 update {
   max_parallel      = 1
-  min_healthy_time  = "30s"
-  healthy_deadline  = "10m"
-  progress_deadline = "15m"
+  min_healthy_time  = "60s"
+  healthy_deadline  = "15m"
+  progress_deadline = "30m"
   canary            = 1
   auto_revert       = false
 }
@@ -90,9 +90,7 @@ update {
 
       template {
         data = <<EOH
-{{ '{{' }} with secret "kv/data/authentik/config" {{ '}}' }}
-POSTGRES_PASSWORD="{{ '{{' }} .Data.data.db_password {{ '}}' }}"
-{{ '{{' }} end {{ '}}' }}
+POSTGRES_PASSWORD="{{ '{{' }} key "authentik/db-password" {{ '}}' }}"
 EOH
         destination = "secrets/postgres.env"
         env         = true
@@ -136,9 +134,7 @@ AUTHENTIK_REDIS__HOST="{{ authentik_redis_host | default('redis.service.consul')
 AUTHENTIK_REDIS__PORT="{{ authentik_redis_port | default(16379) }}"
 AUTHENTIK_POSTGRESQL__HOST="{{ authentik_postgres_host | default('postgres.service.consul') }}"
 AUTHENTIK_POSTGRESQL__PORT="{{ authentik_postgres_port | default(15432) }}"
-{{ '{{' }} with secret "kv/data/authentik/config" {{ '}}' }}
-AUTHENTIK_POSTGRESQL__PASSWORD="{{ '{{' }} .Data.data.db_password {{ '}}' }}"
-{{ '{{' }} end {{ '}}' }}
+AUTHENTIK_POSTGRESQL__PASSWORD="{{ '{{' }} key "authentik/db-password" {{ '}}' }}"
 EOH
         destination = "secrets/authentik.env"
         env         = true
@@ -195,9 +191,7 @@ AUTHENTIK_REDIS__HOST="{{ authentik_redis_host | default('redis.service.consul')
 AUTHENTIK_REDIS__PORT="{{ authentik_redis_port | default(16379) }}"
 AUTHENTIK_POSTGRESQL__HOST="{{ authentik_postgres_host | default('postgres.service.consul') }}"
 AUTHENTIK_POSTGRESQL__PORT="{{ authentik_postgres_port | default(15432) }}"
-{{ '{{' }} with secret "kv/data/authentik/config" {{ '}}' }}
-AUTHENTIK_POSTGRESQL__PASSWORD="{{ '{{' }} .Data.data.db_password {{ '}}' }}"
-{{ '{{' }} end {{ '}}' }}
+AUTHENTIK_POSTGRESQL__PASSWORD="{{ '{{' }} key "authentik/db-password" {{ '}}' }}"
 EOH
         destination = "secrets/authentik.env"
         env         = true

@@ -77,6 +77,37 @@
     (authentik_consul_key.status == 404 or
     (authentik_consul_key.status == 200 and authentik_consul_key.json[0].Value | default('') | b64decode | length < 50))
 
+- name: Check if Authentik DB password exists in Consul
+  ansible.builtin.uri:
+    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/kv/authentik/db-password"
+    method: GET
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
+    status_code: [200, 404]
+  register: authentik_db_password_key
+  ignore_errors: yes
+
+- name: Generate Authentik DB password
+  ansible.builtin.command: openssl rand -base64 32
+  register: authentik_generated_db_password
+  when: >
+    authentik_db_password_key is not failed and
+    (authentik_db_password_key.status == 404 or
+    (authentik_db_password_key.status == 200 and authentik_db_password_key.json[0].Value | default('') | b64decode | length < 10))
+
+- name: Publish Authentik DB password to Consul
+  ansible.builtin.uri:
+    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/kv/authentik/db-password"
+    method: PUT
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
+    body: "{{ authentik_generated_db_password.stdout }}"
+    status_code: [200, 201]
+  when: >
+    authentik_db_password_key is not failed and
+    (authentik_db_password_key.status == 404 or
+    (authentik_db_password_key.status == 200 and authentik_db_password_key.json[0].Value | default('') | b64decode | length < 10))
+
 - name: Template Authentik Nomad job
   ansible.builtin.template:
     src: authentik.nomad.j2
