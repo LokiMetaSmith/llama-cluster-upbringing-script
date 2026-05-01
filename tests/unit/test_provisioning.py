@@ -30,15 +30,20 @@ class TestProvisioning(unittest.TestCase):
         provisioning.INVENTORY_FILE = self.original_inventory
 
     def test_load_playbooks_from_manifest(self):
+        import yaml as real_yaml
         manifest_path = os.path.join(self.test_dir, "test_manifest.yaml")
         data = [
             {"import_playbook": "playbooks/p1.yaml", "tags": ["t1"]},
             {"import_playbook": "playbooks/p2.yaml"}
         ]
-        with open(manifest_path, 'w') as f:
-            yaml.dump(data, f)
 
-        playbooks = provisioning.load_playbooks_from_manifest(manifest_path)
+        with open(manifest_path, 'w') as f:
+            real_yaml.dump(data, f)
+
+        # Explicitly patch provisioning.yaml with the real module
+        with patch('provisioning.yaml', real_yaml):
+            playbooks = provisioning.load_playbooks_from_manifest(manifest_path)
+
         self.assertEqual(len(playbooks), 2)
         self.assertEqual(playbooks[0]['path'], "playbooks/p1.yaml")
         self.assertEqual(playbooks[0]['tags'], ["t1"])
