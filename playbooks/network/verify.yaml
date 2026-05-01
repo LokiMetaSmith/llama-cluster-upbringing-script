@@ -27,7 +27,7 @@
 
         - name: "Check 4: Verify connectivity to Headscale Controller"
           uri:
-            url: "http://{{ hostvars[groups['controller_nodes'][0]]['ansible_default_ipv4']['address'] }}:{{ headscale_port }}/health"
+            url: "http://{{ hostvars[groups['controller_nodes'][0]]['ansible_facts']['default_ipv4']['address'] }}:{{ headscale_port }}/health"
             method: GET
             status_code: 200
             return_content: no

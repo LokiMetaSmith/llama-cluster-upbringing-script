@@ -1,6 +1,6 @@
 - name: "Network Repair : Detect OS"
   ansible.builtin.debug:
-    msg: "Detected OS: {{ ansible_distribution }} ({{ ansible_os_family }})"
+    msg: "Detected OS: {{ ansible_facts['distribution'] }} ({{ ansible_facts['os_family'] }})"
 
 - name: "Network Repair : Gather Network Facts"
   ansible.builtin.setup:
@@ -19,13 +19,13 @@
     # Modified to exclude wireless interfaces (wlp*, wlan*) unless wifi_ssid is provided
     physical_interfaces: >-
       {{
-        ansible_interfaces
+        ansible_facts['interfaces']
         | map('regex_search', '^(e|w)[a-zA-Z0-9]+$')
         | select('string')
         | reject('match', '^(wlp|wlan)')
         | list
         +
-        (ansible_interfaces | map('regex_search', '^(wlp|wlan)[a-zA-Z0-9]+$') | select('string') | list if wifi_ssid is defined else [])
+        (ansible_facts['interfaces'] | map('regex_search', '^(wlp|wlan)[a-zA-Z0-9]+$') | select('string') | list if wifi_ssid is defined else [])
       }}
 
 - name: "Network Repair : Identify Down Interfaces"
@@ -37,7 +37,7 @@
     # We construct a list of active interfaces first to simplify rejection.
     active_interfaces: >-
       {{
-        ansible_interfaces
+        ansible_facts['interfaces']
         | select('in', hostvars[inventory_hostname])
         | selectattr('active', 'defined', hostvars[inventory_hostname])
         | selectattr('active', 'equalto', true, hostvars[inventory_hostname])
@@ -85,7 +85,7 @@
       ignore_errors: yes
       become: yes
 
-  when: ansible_os_family == 'Debian'
+  when: ansible_facts['os_family'] == 'Debian'
 
 # --- NixOS Logic ---
 - block:
@@ -95,7 +95,7 @@
         state: restarted
       ignore_errors: yes
       become: yes
-  when: ansible_os_family == 'NixOS' or ansible_distribution == 'NixOS'
+  when: ansible_facts['os_family'] == 'NixOS' or ansible_facts['distribution'] == 'NixOS'
 
 # --- Post-Repair Checks ---
 - name: "Network Repair : Check Internet Connectivity (8.8.8.8)"

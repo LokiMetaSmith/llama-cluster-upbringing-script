@@ -22,7 +22,7 @@
             | default('0')
             | float
           ),
-          'timestamp': ansible_date_time.iso8601,
+          'timestamp': ansible_facts['date_time'].iso8601,
           'rc': benchmark_result.rc,
           'stdout': (benchmark_result.stdout | regex_replace('\\s+', ' ') | truncate(400)),
           'stderr': (benchmark_result.stderr | regex_replace('\\s+', ' ') | truncate(400))

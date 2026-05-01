@@ -117,7 +117,7 @@
 
     - name: Build llama.cpp
       ansible.builtin.command:
-        cmd: cmake --build build --config Release -j {{ ansible_processor_vcpus }}
+        cmd: cmake --build build --config Release -j {{ ansible_facts['processor_vcpus'] }}
       args:
         chdir: "{{ llama_cpp_build_dir }}"
         creates: "{{ llama_cpp_build_dir }}/build/bin/llama-server"

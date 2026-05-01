@@ -10,7 +10,7 @@
 
 - name: Debug bind address
   ansible.builtin.debug:
-    msg: "Magic Mirror will bind to IP: {{ (ansible_default_ipv4 | default({})).get('address', '127.0.0.1') }}"
+    msg: "Magic Mirror will bind to IP: {{ (ansible_facts['default_ipv4'] | default({})).get('address', '127.0.0.1') }}"
 
 - name: Deploy Magic Mirror
   block:
@@ -24,7 +24,7 @@
 
     - name: Determine correct libasound package
       ansible.builtin.set_fact:
-        libasound_pkg: "{{ 'libasound2t64' if ansible_distribution == 'Ubuntu' and ansible_distribution_major_version | int >= 24 else 'libasound2' }}"
+        libasound_pkg: "{{ 'libasound2t64' if ansible_facts['distribution'] == 'Ubuntu' and ansible_facts['distribution_major_version'] | int >= 24 else 'libasound2' }}"
 
     - name: Install libasound
       ansible.builtin.apt:

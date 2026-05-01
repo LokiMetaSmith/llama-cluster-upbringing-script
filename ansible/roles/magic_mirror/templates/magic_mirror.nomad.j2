@@ -51,7 +51,7 @@ EOH
         check {
           type     = "script"
           command  = "/bin/bash"
-          args     = ["-c", "echo > /dev/tcp/{{ (ansible_default_ipv4 | default({})).get('address', '127.0.0.1') }}/41111"]
+          args     = ["-c", "echo > /dev/tcp/{{ (ansible_facts['default_ipv4'] | default({})).get('address', '127.0.0.1') }}/41111"]
           interval = "10s"
           timeout  = "2s"
         }

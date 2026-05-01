@@ -13,9 +13,9 @@
     # Note: pipecat_image_id and pipecat_api_keys are inherited from global/play scope
     # to avoid recursive loop errors if redefined here as "{{ var }}".
     avg_tokens: "{{ (expert_benchmark_data.get(current_expert, {})).get('avg_tokens', 0) | float | round(2) }}"
-    # DO NOT redefine ansible_memtotal_mb here
+    # DO NOT redefine ansible_facts['memtotal_mb'] here
     current_expert_tags:
       - "expert={{ current_expert }}"
       - "avg_tps={{ avg_tokens }}"
-      - "memory_mb={{ ansible_memtotal_mb }}"
+      - "memory_mb={{ ansible_facts['memtotal_mb'] }}"
       - "models={{ model_list | map(attribute='filename') | join(',') }}"
