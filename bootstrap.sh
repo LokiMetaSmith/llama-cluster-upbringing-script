@@ -422,13 +422,43 @@ Your task is to:
     # Configure API endpoint for Local/Network LLMs
     local opencode_cmd=("$opencode_bin" run)
 
-    # We set these as environment variables since opencode run might not accept them directly as flags
+    # Determine the model and provider settings with a local-first priority
     if [ -n "${AGENT_API_BASE:-}" ]; then
+        # 1. User explicitly provided an API base via CLI or ENV
         export OPENCODE_API_BASE="$AGENT_API_BASE"
         export OPENCODE_API_KEY="${AGENT_API_KEY:-sk-dummy}"
         opencode_cmd+=(--model "${AGENT_MODEL:-openai/qwen2.5-coder}")
+    elif [ -f ~/.config/opencode/opencode.json ] && grep -q '"provider"' ~/.config/opencode/opencode.json; then
+        # 2. Check for an existing, working local OpenCode configuration (e.g. Ollama)
+        local configured_provider
+        local configured_model
+        # Use python to safely parse the JSON if possible, otherwise rely on fallback
+        configured_provider=$(python3 -c "import json, sys; config=json.load(sys.stdin); provider_keys=list(config.get('provider', {}).keys()); print(provider_keys[0] if provider_keys else '')" < ~/.config/opencode/opencode.json 2>/dev/null)
+        if [ -n "$configured_provider" ]; then
+            configured_model=$(python3 -c "import json, sys; provider='$configured_provider'; config=json.load(sys.stdin); model_keys=list(config.get('provider', {}).get(provider, {}).get('models', {}).keys()); print(model_keys[0] if model_keys else '')" < ~/.config/opencode/opencode.json 2>/dev/null)
+            if [ -n "$configured_model" ]; then
+                opencode_cmd+=(--model "${AGENT_MODEL:-${configured_provider}/${configured_model}}")
+            else
+                # Fallback if parsing failed
+                opencode_cmd+=(--model "${AGENT_MODEL:-openai/gpt-4o-mini}")
+                export OPENAI_API_KEY="${AGENT_API_KEY:-${OPENAI_API_KEY:-sk-dummy}}"
+            fi
+        else
+            opencode_cmd+=(--model "${AGENT_MODEL:-openai/gpt-4o-mini}")
+            export OPENAI_API_KEY="${AGENT_API_KEY:-${OPENAI_API_KEY:-sk-dummy}}"
+        fi
+    elif curl -s http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-api?passing | grep -qi '"Status":\s*"passing"' 2>/dev/null; then
+        # 3. Check for a local llamacpp-rpc cluster instance via Consul
+        # Currently, if this matches, OpenCode still needs a compatible openai wrapper.
+        # We assume the default wrapper is accessible locally.
+        export OPENCODE_API_BASE="http://127.0.0.1:8000/v1" # Adjust if your local cluster exposes OpenAI compat on a different port
+        export OPENCODE_API_KEY="${AGENT_API_KEY:-sk-dummy}"
+        opencode_cmd+=(--model "${AGENT_MODEL:-openai/local-model}")
     else
+        # 4. Fallback to remote provider
         opencode_cmd+=(--model "${AGENT_MODEL:-openai/gpt-4o-mini}")
+        # Explicitly export OPENAI_API_KEY so the OpenAI provider doesn't fail
+        export OPENAI_API_KEY="${AGENT_API_KEY:-${OPENAI_API_KEY:-sk-dummy}}"
     fi
 
     # Run OpenCode headlessly. Catch error explicitly in case set -e is active elsewhere
