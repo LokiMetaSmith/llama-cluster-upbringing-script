@@ -466,10 +466,18 @@ def print_final_status(args, executed_playbooks):
     ip = get_primary_ip()
     print(f"\n{Colors.BOLD}Access Interfaces:{Colors.ENDC}")
     print(f"  • {Colors.OKCYAN}Node IP Address:{Colors.ENDC} {ip}")
-    print(f"  • {Colors.OKCYAN}Nomad UI:{Colors.ENDC}        http://{ip}:4646")
-    print(f"  • {Colors.OKCYAN}Consul UI:{Colors.ENDC}       http://{ip}:8500")
-    print(f"  • {Colors.OKCYAN}Pipecat App:{Colors.ENDC}     http://{ip}:8000")
-    print(f"  • {Colors.OKCYAN}Home Assistant:{Colors.ENDC}  http://{ip}:8123")
+
+    interfaces = [
+        ("Nomad UI", 4646, f"http://{ip}:4646"),
+        ("Consul UI", 8500, f"http://{ip}:8500"),
+        ("Pipecat App", 8000, f"http://{ip}:8000"),
+        ("Home Assistant", 8123, f"http://{ip}:8123"),
+    ]
+
+    for name, port, url in interfaces:
+        is_open = check_port_open(ip, port)
+        status = f"{Colors.OKGREEN}(Active){Colors.ENDC}" if is_open else f"{Colors.FAIL}(Inactive){Colors.ENDC}"
+        print(f"  • {Colors.OKCYAN}{name:<15}:{Colors.ENDC} {url:<25} {status}")
 
     # 3. Intended Services
     print(f"\n{Colors.BOLD}Executed Playbooks (Intended Configuration):{Colors.ENDC}")
@@ -478,9 +486,24 @@ def print_final_status(args, executed_playbooks):
 
     # 4. Running System Services
     print(f"\n{Colors.BOLD}System Services Status:{Colors.ENDC}")
-    services = ["nomad", "consul", "docker"]
-    for svc in services:
+
+    potential_services = [
+        "nomad", "consul", "docker", "headscale",
+        "provisioning-api", "power-agent", "paddler-balancer",
+        "paddler-agent", "librarian", "spacedrive",
+        "unified_fs", "tpm-ssh-agent"
+    ]
+    core_services = ["nomad", "consul", "docker"]
+
+    for svc in potential_services:
         try:
+            # First check if the service exists
+            check_exists = subprocess.run(["systemctl", "list-unit-files", f"{svc}.service"], capture_output=True, text=True)
+            if check_exists.returncode != 0 or "0 unit files listed" in check_exists.stdout:
+                if svc in core_services:
+                    print(f"  • {svc.capitalize()}: {Colors.WARNING}Not Installed{Colors.ENDC}")
+                continue
+
             result = subprocess.run(["systemctl", "is-active", svc], capture_output=True, text=True)
             status = result.stdout.strip()
             if status == "active":
@@ -488,7 +511,8 @@ def print_final_status(args, executed_playbooks):
             else:
                 print(f"  • {svc.capitalize()}: {Colors.FAIL}{status}{Colors.ENDC}")
         except FileNotFoundError:
-            print(f"  • {svc.capitalize()}: {Colors.WARNING}systemctl not found{Colors.ENDC}")
+            if svc in core_services:
+                print(f"  • {svc.capitalize()}: {Colors.WARNING}systemctl not found{Colors.ENDC}")
 
     # 5. Running Nomad Jobs
     try:
@@ -504,6 +528,8 @@ def print_final_status(args, executed_playbooks):
                     print(f"  • {line.strip()}")
         elif result.returncode == 0:
             print(f"\n{Colors.BOLD}Running Nomad Jobs:{Colors.ENDC} None")
+        else:
+            print(f"\n{Colors.BOLD}Running Nomad Jobs:{Colors.ENDC} {Colors.FAIL}Unable to query Nomad (is it running?){Colors.ENDC}")
     except FileNotFoundError:
         pass # nomad not installed or in path
 
