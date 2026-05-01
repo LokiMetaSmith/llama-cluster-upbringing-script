@@ -85,6 +85,7 @@ modules_to_mock = [
     'yaml',
     'jinja2',
     'fastapi',
+    'fastapi.responses',
     'openai',
     'supervisor',
     'starlette',
@@ -95,7 +96,8 @@ modules_to_mock = [
     'faster_whisper',
     'opentelemetry.instrumentation.fastapi',
     'piper.voice',
-    'graphviz'
+    'graphviz',
+    'pmm_memory'
 ]
 
 def mock_module_if_missing(module_name):
