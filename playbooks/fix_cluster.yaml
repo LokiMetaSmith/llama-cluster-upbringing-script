@@ -7,10 +7,10 @@
       ansible.builtin.set_fact:
         is_controller_candidate: true
       when:
-        - ansible_processor_vcpus is defined
-        - ansible_processor_vcpus >= 2
-        - ansible_memtotal_mb is defined
-        - ansible_memtotal_mb >= 8000
+        - ansible_facts['processor_vcpus'] is defined
+        - ansible_facts['processor_vcpus'] >= 2
+        - ansible_facts['memtotal_mb'] is defined
+        - ansible_facts['memtotal_mb'] >= 8000
 
     - name: Add suitable candidates to the 'new_controllers' group
       ansible.builtin.add_host:
@@ -42,8 +42,8 @@
 
     - name: Find block devices
       ansible.builtin.set_fact:
-        block_devices: "{{ ansible_devices.keys() | select('match', '^(s|xv)d[a-z]+$') | list }}"
-      when: ansible_devices is defined
+        block_devices: "{{ ansible_facts['devices'].keys() | select('match', '^(s|xv)d[a-z]+$') | list }}"
+      when: ansible_facts['devices'] is defined
 
     - name: Check SMART health for each block device
       ansible.builtin.command:

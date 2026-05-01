@@ -19,7 +19,7 @@
     current_expert_tags:
       - "expert={{ current_expert }}"
       - "avg_tps={{ avg_tokens_for_template }}"
-      - "memory_mb={{ ansible_memtotal_mb }}"
+      - "memory_mb={{ ansible_facts['memtotal_mb'] }}"
       - "models={{ model_list | map(attribute='filename') | join(',') }}"
 
   tasks:
@@ -51,7 +51,7 @@
             'job_name': job_name,
             'service_name': service_name,
             'rpc_pool_job_name': rpc_pool_job_name,
-            'ansible_memtotal_mb': ansible_memtotal_mb
+            'ansible_memtotal_mb': ansible_facts['memtotal_mb']
           } | to_json }}"
         dest: "{{ playbook_dir }}/tmp/expert-{{ current_expert }}-vars.json"
         mode: '0644'
