@@ -455,8 +455,21 @@ def get_primary_ip():
 def print_final_status(args, executed_playbooks):
     print_header("Final Status Report")
 
-    # 1. Node Role & Controller info
+    # Determine stack mode
+    if args.deploy_full_stack:
+        stack_mode = "Full"
+    elif args.deploy_partial_stack:
+        stack_mode = "Partial"
+    elif args.deploy_minimal_stack:
+        stack_mode = "Minimal"
+    else:
+        stack_mode = "Infrastructure Only"
+
+    # 1. Node Role & Configuration info
     print(f"{Colors.BOLD}Node Role:{Colors.ENDC} {args.role}")
+    print(f"{Colors.BOLD}Deployment Tier:{Colors.ENDC} {args.tier}")
+    print(f"{Colors.BOLD}Stack Profile:{Colors.ENDC} {stack_mode}")
+
     if args.role == "worker" and args.controller_ip:
         print(f"{Colors.BOLD}Controller IP:{Colors.ENDC} {args.controller_ip}")
     elif args.role == "controller" or args.role == "all":
@@ -468,15 +481,21 @@ def print_final_status(args, executed_playbooks):
     print(f"  • {Colors.OKCYAN}Node IP Address:{Colors.ENDC} {ip}")
 
     interfaces = [
-        ("Nomad UI", 4646, f"http://{ip}:4646"),
-        ("Consul UI", 8500, f"http://{ip}:8500"),
-        ("Pipecat App", 8000, f"http://{ip}:8000"),
-        ("Home Assistant", 8123, f"http://{ip}:8123"),
+        ("Nomad UI", 4646, f"https://{ip}:4646", True),
+        ("Consul UI", 8500, f"https://{ip}:8500", True),
+        ("Pipecat App", 8000, f"https://{ip}:8000", stack_mode != "Infrastructure Only"),
+        ("Home Assistant", 8123, f"https://{ip}:8123", stack_mode != "Infrastructure Only" and stack_mode != "Minimal"),
     ]
 
-    for name, port, url in interfaces:
+    for name, port, url, should_be_active in interfaces:
         is_open = check_port_open(ip, port)
-        status = f"{Colors.OKGREEN}(Active){Colors.ENDC}" if is_open else f"{Colors.FAIL}(Inactive){Colors.ENDC}"
+        if is_open:
+            status = f"{Colors.OKGREEN}(Active){Colors.ENDC}"
+        else:
+            if not should_be_active:
+                status = f"{Colors.WARNING}(Skipped - Profile: {stack_mode}){Colors.ENDC}"
+            else:
+                status = f"{Colors.FAIL}(Inactive){Colors.ENDC}"
         print(f"  • {Colors.OKCYAN}{name:<15}:{Colors.ENDC} {url:<25} {status}")
 
     # 3. Intended Services
@@ -518,8 +537,15 @@ def print_final_status(args, executed_playbooks):
     try:
         # Check if nomad is reachable
         env = os.environ.copy()
-        env["NOMAD_ADDR"] = f"http://{ip}:4646"
+        env["NOMAD_ADDR"] = f"https://{ip}:4646"
+        env["NOMAD_TLS_SKIP_VERIFY"] = "1"
         result = subprocess.run(["nomad", "job", "status", "-short"], capture_output=True, text=True, env=env)
+
+        # If it fails, fallback to 127.0.0.1 in case nomad is only bound locally
+        if result.returncode != 0:
+            env["NOMAD_ADDR"] = "https://127.0.0.1:4646"
+            result = subprocess.run(["nomad", "job", "status", "-short"], capture_output=True, text=True, env=env)
+
         if result.returncode == 0 and result.stdout.strip():
             print(f"\n{Colors.BOLD}Running Nomad Jobs:{Colors.ENDC}")
             lines = result.stdout.strip().split('\n')
