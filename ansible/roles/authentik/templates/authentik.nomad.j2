@@ -130,9 +130,9 @@ EOH
         data = <<EOH
 CONSUL_HTTP_TOKEN="{{ consul_bootstrap_token | default('') }}"
 AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
-AUTHENTIK_REDIS__HOST="{{ authentik_redis_host | default('redis.service.consul') }}"
+AUTHENTIK_REDIS__HOST="{{ '{{' }} env "attr.unique.network.ip-address" {{ '}}' }}"
 AUTHENTIK_REDIS__PORT="{{ authentik_redis_port | default(16379) }}"
-AUTHENTIK_POSTGRESQL__HOST="{{ authentik_postgres_host | default('postgres.service.consul') }}"
+AUTHENTIK_POSTGRESQL__HOST="{{ '{{' }} env "attr.unique.network.ip-address" {{ '}}' }}"
 AUTHENTIK_POSTGRESQL__PORT="{{ authentik_postgres_port | default(15432) }}"
 AUTHENTIK_POSTGRESQL__PASSWORD="{{ '{{' }} key "authentik/db-password" {{ '}}' }}"
 EOH
@@ -187,9 +187,9 @@ EOH
         data = <<EOH
 CONSUL_HTTP_TOKEN="{{ consul_bootstrap_token | default('') }}"
 AUTHENTIK_SECRET_KEY="{{ '{{' }} key "authentik/secret-key" {{ '}}' }}"
-AUTHENTIK_REDIS__HOST="{{ authentik_redis_host | default('redis.service.consul') }}"
+AUTHENTIK_REDIS__HOST="{{ '{{' }} env "attr.unique.network.ip-address" {{ '}}' }}"
 AUTHENTIK_REDIS__PORT="{{ authentik_redis_port | default(16379) }}"
-AUTHENTIK_POSTGRESQL__HOST="{{ authentik_postgres_host | default('postgres.service.consul') }}"
+AUTHENTIK_POSTGRESQL__HOST="{{ '{{' }} env "attr.unique.network.ip-address" {{ '}}' }}"
 AUTHENTIK_POSTGRESQL__PORT="{{ authentik_postgres_port | default(15432) }}"
 AUTHENTIK_POSTGRESQL__PASSWORD="{{ '{{' }} key "authentik/db-password" {{ '}}' }}"
 EOH
