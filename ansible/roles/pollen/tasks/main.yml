@@ -1,0 +1,23 @@
+---
+- name: Check if Pollen is already installed
+  command: which pln
+  register: pln_check
+  failed_when: false
+  changed_when: false
+
+- name: Install Pollen via official script
+  shell: curl -fsSL https://pln.sh/install.sh | bash
+  when: pln_check.rc != 0
+  args:
+    executable: /bin/bash
+
+- name: Verify Pollen installation
+  command: pln --version
+  register: pln_version
+  changed_when: false
+  when: pln_check.rc != 0
+
+- name: Display Pollen version
+  debug:
+    msg: "Pollen is installed: {{ pln_version.stdout }}"
+  when: pln_check.rc != 0

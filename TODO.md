@@ -316,3 +316,11 @@ This section tracks actionable ideas derived from the `docs/FLOWISE_ANALYSIS.md`
 - [x] **Fix FastAPI Mocking:** Ensure FastAPI and `fastapi.responses` are properly mocked in test collection so `app.py` doesn't crash test discovery.
 - [x] **Implement Mobile UI Fixes for LiteGraph:** As noted in `litegraph.js` TODOs, improve the `dialog_close_on_mouse_leave` logic to work nicely on touch devices.
 - [ ] **Fix Type Filtering in LiteGraph:** Complete the `do_type_filter` implementation in `litegraph.js` to prevent users from making invalid edge connections based on `registered_slot_[in/out]_types`.
+
+## Pollen Architecture Integration Ideas (Secret Sauce to Borrow)
+
+This section tracks actionable ideas derived from the `docs/POLLEN_COMPARISON.md` document for integrating Pollen's generic WASM mesh efficiencies into our custom Nomad/Pipecat AI architecture.
+
+- [ ] **Evaluate WASM:** Investigate using `Extism` or `Wasmtime` to run Python-based AI tools as lightweight WASM plugins within Nomad to reduce Docker memory overhead.
+- [ ] **P2P Weight Sharing:** Develop a peer-to-peer mechanism (inspired by Pollen's content-addressed mesh) for distributing `.gguf` model files across the legacy cluster.
+- [ ] **CRDT Agent Memory:** Prototype using a CRDT library (like `automerge` or `yjs`) for storing active agent conversation state to enable seamless failover if a Nomad node crashes.
