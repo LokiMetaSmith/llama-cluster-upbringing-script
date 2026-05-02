@@ -72,3 +72,11 @@ The primary constraint of our cluster is the reliance on legacy desktop hardware
 1. **Evaluate WASM:** Investigate using `Extism` or `Wasmtime` to run our Python-based AI tools as lightweight WASM plugins within Nomad, bypassing Docker overhead.
 2. **P2P Weight Sharing:** Develop a peer-to-peer mechanism for distributing `.gguf` model files across the legacy cluster to reduce central server load.
 3. **CRDT Agent Memory:** Experiment with CRDT libraries (like `automerge` or `yjs`) for storing active agent conversation state, enabling seamless failover if a Nomad node crashes mid-thought.
+
+## TODO: Secret Sauce to Borrow
+
+The following are concrete action items derived from this research to be implemented in our cluster:
+
+*   [ ] **Evaluate WASM:** Investigate using `Extism` or `Wasmtime` to run Python-based AI tools as lightweight WASM plugins within Nomad to reduce Docker memory overhead.
+*   [ ] **P2P Weight Sharing:** Develop a peer-to-peer mechanism (inspired by Pollen's content-addressed mesh) for distributing `.gguf` model files across the legacy cluster.
+*   [ ] **CRDT Agent Memory:** Prototype using a CRDT library (like `automerge` or `yjs`) for storing active agent conversation state to enable seamless failover if a Nomad node crashes.
