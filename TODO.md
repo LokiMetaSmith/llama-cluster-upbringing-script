@@ -314,5 +314,5 @@ This section tracks actionable ideas derived from the `docs/FLOWISE_ANALYSIS.md`
 
 - [ ] **Fix Missing Test Dependencies:** Update requirements-dev.txt to include `pytest`, `pytest-asyncio`, and `httpx` to fix the test suite.
 - [x] **Fix FastAPI Mocking:** Ensure FastAPI and `fastapi.responses` are properly mocked in test collection so `app.py` doesn't crash test discovery.
-- [ ] **Implement Mobile UI Fixes for LiteGraph:** As noted in `litegraph.js` TODOs, improve the `dialog_close_on_mouse_leave` logic to work nicely on touch devices.
+- [x] **Implement Mobile UI Fixes for LiteGraph:** As noted in `litegraph.js` TODOs, improve the `dialog_close_on_mouse_leave` logic to work nicely on touch devices.
 - [ ] **Fix Type Filtering in LiteGraph:** Complete the `do_type_filter` implementation in `litegraph.js` to prevent users from making invalid edge connections based on `registered_slot_[in/out]_types`.
