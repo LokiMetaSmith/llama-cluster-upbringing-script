@@ -145,7 +145,6 @@
   changed_when: true
 
 - name: Run Authentik Nomad job
-  when: false
   ansible.builtin.command: nomad job run {{ nomad_jobs_dir }}/authentik.nomad
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
