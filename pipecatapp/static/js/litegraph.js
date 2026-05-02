@@ -110,13 +110,13 @@
 		node_box_coloured_when_on: false, // [true!] this make the nodes box (top left circle) coloured when triggered (execute/action), visual feedback
         node_box_coloured_by_mode: false, // [true!] nodebox based on node mode, visual feedback
 
-        dialog_close_on_mouse_leave: true, // [false on mobile] better true if not touch device, TODO add an helper/listener to close if false
+        dialog_close_on_mouse_leave: (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ? false : true, // [false on mobile] better true if not touch device, TODO add an helper/listener to close if false
         dialog_close_on_mouse_leave_delay: 500,
 
         shift_click_do_break_link_from: false, // [false!] prefer false if results too easy to break links - implement with ALT or TODO custom keys
         click_do_break_link_to: false, // [false!]prefer false, way too easy to break links
 
-        search_hide_on_mouse_leave: true, // [false on mobile] better true if not touch device, TODO add an helper/listener to close if false
+        search_hide_on_mouse_leave: (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ? false : true, // [false on mobile] better true if not touch device, TODO add an helper/listener to close if false
         search_filter_enabled: false, // [true!] enable filtering slots type in the search widget, !requires auto_load_slot_types or manual set registered_slot_[in/out]_types and slot_types_[in/out]
         search_show_all_on_open: true, // [true!] opens the results list when opening the search widget
 
@@ -11357,6 +11357,23 @@ LGraphNode.prototype.executeAction = function(action)
         if(input) input.focus();
 
         var dialogCloseTimer = null;
+
+        // Helper listener to close dialog on touch devices when clicking outside
+        var outsideClickListener = function(e) {
+            if (!dialog.contains(e.target) && dialog.parentNode) {
+                dialog.close();
+            }
+        };
+        setTimeout(function() {
+            root_document.addEventListener("pointerdown", outsideClickListener);
+        }, 10);
+
+        var originalClose = dialog.close;
+        dialog.close = function() {
+            root_document.removeEventListener("pointerdown", outsideClickListener);
+            if (originalClose) originalClose.apply(dialog, arguments);
+        };
+
         dialog.addEventListener("mouseleave", function(e) {
             if(LiteGraph.dialog_close_on_mouse_leave)
                 if (!dialog.is_modified && LiteGraph.dialog_close_on_mouse_leave)
@@ -11415,6 +11432,23 @@ LGraphNode.prototype.executeAction = function(action)
 
         var dialogCloseTimer = null;
         var prevent_timeout = false;
+
+        // Helper listener to close dialog on touch devices when clicking outside
+        var outsideClickListener = function(e) {
+            if (!dialog.contains(e.target) && dialog.parentNode) {
+                dialog.close();
+            }
+        };
+        setTimeout(function() {
+            root_document.addEventListener("pointerdown", outsideClickListener);
+        }, 10);
+
+        var originalClose = dialog.close;
+        dialog.close = function() {
+            root_document.removeEventListener("pointerdown", outsideClickListener);
+            if (originalClose) originalClose.apply(dialog, arguments);
+        };
+
         LiteGraph.pointerListenerAdd(dialog,"leave", function(e) {
             if (prevent_timeout)
                 return;
@@ -12275,6 +12309,23 @@ LGraphNode.prototype.executeAction = function(action)
 
         var dialogCloseTimer = null;
         var prevent_timeout = false;
+
+        // Helper listener to close dialog on touch devices when clicking outside
+        var outsideClickListener = function(e) {
+            if (!dialog.contains(e.target) && dialog.parentNode) {
+                dialog.close();
+            }
+        };
+        setTimeout(function() {
+            root_document.addEventListener("pointerdown", outsideClickListener);
+        }, 10);
+
+        var originalClose = dialog.close;
+        dialog.close = function() {
+            root_document.removeEventListener("pointerdown", outsideClickListener);
+            if (originalClose) originalClose.apply(dialog, arguments);
+        };
+
         dialog.addEventListener("mouseleave", function(e) {
             if (prevent_timeout)
                 return;
