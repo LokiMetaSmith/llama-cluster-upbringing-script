@@ -24,6 +24,7 @@
       persistence true
       persistence_location /mosquitto/data/
       log_dest stdout
+      log_dest stderr
       log_type all
       listener {{ mqtt_port }} 0.0.0.0
       allow_anonymous true
