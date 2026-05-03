@@ -321,6 +321,6 @@ This section tracks actionable ideas derived from the `docs/FLOWISE_ANALYSIS.md`
 
 This section tracks actionable ideas derived from the `docs/POLLEN_COMPARISON.md` document for integrating Pollen's generic WASM mesh efficiencies into our custom Nomad/Pipecat AI architecture.
 
-- [ ] **Evaluate WASM:** Investigate using `Extism` or `Wasmtime` to run Python-based AI tools as lightweight WASM plugins within Nomad to reduce Docker memory overhead.
-- [ ] **P2P Weight Sharing:** Develop a peer-to-peer mechanism (inspired by Pollen's content-addressed mesh) for distributing `.gguf` model files across the legacy cluster.
-- [ ] **CRDT Agent Memory:** Prototype using a CRDT library (like `automerge` or `yjs`) for storing active agent conversation state to enable seamless failover if a Nomad node crashes.
+- [x] **Evaluate WASM:** Investigate using `Extism` or `Wasmtime` to run Python-based AI tools as lightweight WASM plugins within Nomad to reduce Docker memory overhead.
+- [x] **P2P Weight Sharing:** Develop a peer-to-peer mechanism (inspired by Pollen's content-addressed mesh) for distributing `.gguf` model files across the legacy cluster.
+- [x] **CRDT Agent Memory:** Prototype using a CRDT library (like `automerge` or `yjs`) for storing active agent conversation state to enable seamless failover if a Nomad node crashes.
