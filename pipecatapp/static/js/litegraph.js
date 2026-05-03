@@ -11546,7 +11546,7 @@ LGraphNode.prototype.executeAction = function(action)
         var def_options = { slot_from: null
                         ,node_from: null
                         ,node_to: null
-                        ,do_type_filter: LiteGraph.search_filter_enabled // TODO check for registered_slot_[in/out]_types not empty // this will be checked for functionality enabled : filter on slot type, in and out
+                        ,do_type_filter: LiteGraph.search_filter_enabled || Object.keys(LiteGraph.registered_slot_in_types || {}).length > 0 || Object.keys(LiteGraph.registered_slot_out_types || {}).length > 0
                         ,type_filter_in: false                          // these are default: pass to set initially set values
                         ,type_filter_out: false
                         ,show_general_if_none_on_typefilter: true
@@ -12050,17 +12050,13 @@ LGraphNode.prototype.executeAction = function(action)
 						//if (sV.toLowerCase() == "_event_") sV = LiteGraph.EVENT; // -1
 
                         if(sIn && sV){
-                            //console.log("will check filter against "+sV);
-                            if (LiteGraph.registered_slot_in_types[sV] && LiteGraph.registered_slot_in_types[sV].nodes){ // type is stored
-                                //console.debug("check "+sType+" in "+LiteGraph.registered_slot_in_types[sV].nodes);
+                            if (LiteGraph.registered_slot_in_types[sV] && LiteGraph.registered_slot_in_types[sV].nodes){
                                 var doesInc = LiteGraph.registered_slot_in_types[sV].nodes.includes(sType);
-                                if (doesInc!==false){
-                                    //console.log(sType+" HAS "+sV);
-                                }else{
-                                    /*console.debug(LiteGraph.registered_slot_in_types[sV]);
-                                    console.log(+" DONT includes "+type);*/
+                                if (doesInc === false && sType !== "*" && sV !== "*"){
                                     return false;
                                 }
+                            } else if (sV && sType && sV !== "*" && sType !== "*" && sV !== sType && sV !== String(LiteGraph.EVENT) && sType !== String(LiteGraph.EVENT)) {
+                                return false;
                             }
                         }
 
@@ -12069,17 +12065,13 @@ LGraphNode.prototype.executeAction = function(action)
                         //if (sV.toLowerCase() == "_event_") sV = LiteGraph.EVENT; // -1
 
                         if(sOut && sV){
-                            //console.log("search will check filter against "+sV);
-                            if (LiteGraph.registered_slot_out_types[sV] && LiteGraph.registered_slot_out_types[sV].nodes){ // type is stored
-                                //console.debug("check "+sType+" in "+LiteGraph.registered_slot_out_types[sV].nodes);
+                            if (LiteGraph.registered_slot_out_types[sV] && LiteGraph.registered_slot_out_types[sV].nodes){
                                 var doesInc = LiteGraph.registered_slot_out_types[sV].nodes.includes(sType);
-                                if (doesInc!==false){
-                                    //console.log(sType+" HAS "+sV);
-                                }else{
-                                    /*console.debug(LiteGraph.registered_slot_out_types[sV]);
-                                    console.log(+" DONT includes "+type);*/
+                                if (doesInc === false && sType !== "*" && sV !== "*"){
                                     return false;
                                 }
+                            } else if (sV && sType && sV !== "*" && sType !== "*" && sV !== sType && sV !== String(LiteGraph.EVENT) && sType !== String(LiteGraph.EVENT)) {
+                                return false;
                             }
                         }
                     }
