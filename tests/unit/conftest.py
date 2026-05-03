@@ -97,7 +97,9 @@ modules_to_mock = [
     'opentelemetry.instrumentation.fastapi',
     'piper.voice',
     'graphviz',
-    'pmm_memory'
+    'pmm_memory',
+    'pmm_memory_client',
+    'quality_control'
 ]
 
 def mock_module_if_missing(module_name):
