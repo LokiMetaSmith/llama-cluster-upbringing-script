@@ -235,7 +235,7 @@
   block:
     - name: Wait for MQTT service to be ready
       ansible.builtin.wait_for:
-        host: "{{ cluster_ip | default('127.0.0.1') }}"
+        host: "{{ advertise_ip }}"
         port: "{{ mqtt_port }}"
         timeout: 300
         state: started
