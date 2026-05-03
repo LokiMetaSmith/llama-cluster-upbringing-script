@@ -66,15 +66,41 @@ update {
       }
     }
 
+    volume "authentik-postgres" {
+      type      = "host"
+      read_only = false
+      source    = "authentik-postgres"
+    }
+
+    volume "authentik-media" {
+      type      = "host"
+      read_only = false
+      source    = "authentik-media"
+    }
+
+    volume "authentik-templates" {
+      type      = "host"
+      read_only = false
+      source    = "authentik-templates"
+    }
+
+    volume "authentik-certs" {
+      type      = "host"
+      read_only = false
+      source    = "authentik-certs"
+    }
+
     task "postgresql" {
       driver = "docker"
+
+      volume_mount {
+        volume      = "authentik-postgres"
+        destination = "/var/lib/postgresql/data"
+      }
 
       config {
         image = "postgres:15-alpine"
         ports = ["postgres"]
-        volumes = [
-          "{{ nomad_volumes_dir }}/authentik/postgres:/var/lib/postgresql/data"
-        ]
       }
 
       service {
@@ -116,14 +142,20 @@ EOH
     task "server" {
       driver = "docker"
 
+      volume_mount {
+        volume      = "authentik-media"
+        destination = "/media"
+      }
+
+      volume_mount {
+        volume      = "authentik-templates"
+        destination = "/templates"
+      }
+
       config {
         image        = "ghcr.io/goauthentik/server:2024.2.2"
         args         = ["server"]
         ports        = ["http", "https"]
-        volumes = [
-          "{{ nomad_volumes_dir }}/authentik/media:/media",
-          "{{ nomad_volumes_dir }}/authentik/templates:/templates"
-        ]
       }
 
       template {
@@ -173,14 +205,24 @@ EOH
     task "worker" {
       driver = "docker"
 
+      volume_mount {
+        volume      = "authentik-media"
+        destination = "/media"
+      }
+
+      volume_mount {
+        volume      = "authentik-certs"
+        destination = "/certs"
+      }
+
+      volume_mount {
+        volume      = "authentik-templates"
+        destination = "/templates"
+      }
+
       config {
         image        = "ghcr.io/goauthentik/server:2024.2.2"
         args         = ["worker"]
-        volumes = [
-          "{{ nomad_volumes_dir }}/authentik/media:/media",
-          "{{ nomad_volumes_dir }}/authentik/certs:/certs",
-          "{{ nomad_volumes_dir }}/authentik/templates:/templates"
-        ]
       }
 
       template {
