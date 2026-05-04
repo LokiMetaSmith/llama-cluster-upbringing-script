@@ -27,6 +27,7 @@ job "mqtt" {
       port     = "mqtt"
       provider = "consul"
       check {
+        # Changed from script to tcp as group level script checks run on host without nc
         type     = "tcp"
         name     = "mqtt_health"
         interval = "10s"
