@@ -233,40 +233,6 @@
 
 - name: Deploy MQTT Exporter
   block:
-    - name: Fetch Consul management token for monitoring (if undefined)
-      ansible.builtin.slurp:
-        src: /etc/consul.d/management_token
-      register: consul_token_file_monitoring
-      until: consul_token_file_monitoring is success
-      retries: 5
-      delay: 2
-      when: consul_bootstrap_token is undefined
-      ignore_errors: yes
-
-    - name: Set Consul token fact for monitoring (if undefined)
-      set_fact:
-        consul_bootstrap_token: "{{ consul_token_file_monitoring['content'] | b64decode | trim }}"
-      when: consul_bootstrap_token is undefined and consul_token_file_monitoring is success and consul_token_file_monitoring.content is defined
-
-    - name: Wait for MQTT service to be healthy in Consul
-      ansible.builtin.uri:
-        url: "http://{{ advertise_ip }}:{{ consul_http_port }}/v1/health/service/mqtt?passing"
-        method: GET
-        headers:
-          X-Consul-Token: "{{ consul_bootstrap_token | default('') }}"
-        return_content: yes
-        status_code: 200
-      register: consul_check
-      until: consul_check.json | length > 0
-      retries: 150
-      delay: 2
-    - name: Wait for MQTT service to be ready
-      ansible.builtin.wait_for:
-        host: "{{ advertise_ip }}"
-        port: "{{ mqtt_port }}"
-        timeout: 300
-        state: started
-
     - name: Template mqtt-exporter job
       ansible.builtin.template:
         src: mqtt-exporter.nomad.j2
