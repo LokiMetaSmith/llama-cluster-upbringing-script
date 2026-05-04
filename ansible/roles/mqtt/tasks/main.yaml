@@ -107,7 +107,7 @@
       ansible.builtin.uri:
         url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/agent/self"
         headers:
-          X-Consul-Token: "{{ consul_bootstrap_token }}"
+          X-Consul-Token: "{{ consul_bootstrap_token | default('') }}"
         return_content: yes
       register: consul_token_check
       ignore_errors: yes
@@ -228,7 +228,7 @@
         url: "http://{{ advertise_ip }}:{{ consul_http_port }}/v1/health/service/mqtt?passing"
         method: GET
         headers:
-          X-Consul-Token: "{{ consul_bootstrap_token }}"
+          X-Consul-Token: "{{ consul_bootstrap_token | default('') }}"
         return_content: yes
         status_code: 200
       register: consul_check
