@@ -40,9 +40,8 @@ class TestProvisioning(unittest.TestCase):
         with open(manifest_path, 'w') as f:
             real_yaml.dump(data, f)
 
-        # Explicitly patch provisioning.yaml with the real module
-        with patch('provisioning.yaml', real_yaml):
-            playbooks = provisioning.load_playbooks_from_manifest(manifest_path)
+        with patch('provisioning.yaml.safe_load', side_effect=lambda f: real_yaml.load(f, Loader=real_yaml.SafeLoader)):
+             playbooks = provisioning.load_playbooks_from_manifest(manifest_path)
 
         self.assertEqual(len(playbooks), 2)
         self.assertEqual(playbooks[0]['path'], "playbooks/p1.yaml")

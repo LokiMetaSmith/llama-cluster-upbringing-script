@@ -63,6 +63,26 @@ client {
     path      = "{{ nomad_volumes_dir }}/memory-data"
     read_only = false
   }
+
+  host_volume "authentik-postgres" {
+    path      = "{{ nomad_volumes_dir }}/authentik/postgres"
+    read_only = false
+  }
+
+  host_volume "authentik-media" {
+    path      = "{{ nomad_volumes_dir }}/authentik/media"
+    read_only = false
+  }
+
+  host_volume "authentik-templates" {
+    path      = "{{ nomad_volumes_dir }}/authentik/templates"
+    read_only = false
+  }
+
+  host_volume "authentik-certs" {
+    path      = "{{ nomad_volumes_dir }}/authentik/certs"
+    read_only = false
+  }
 }
 
 consul {
