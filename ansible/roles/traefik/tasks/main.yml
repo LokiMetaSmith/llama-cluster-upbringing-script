@@ -14,7 +14,7 @@
   become: yes
 
 - name: Run Traefik Nomad job
-  ansible.builtin.command: nomad job run {{ nomad_jobs_dir }}/traefik.nomad
+  ansible.builtin.command: nomad job run -detach {{ nomad_jobs_dir }}/traefik.nomad
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"

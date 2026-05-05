@@ -8,7 +8,7 @@
 
 - name: "Run benchmark job for model {{ model.name }}"
   ansible.builtin.command:
-    cmd: "nomad job run /tmp/model-benchmark-{{ model.filename }}.nomad"
+    cmd: "nomad job run -detach /tmp/model-benchmark-{{ model.filename }}.nomad"
   register: benchmark_models_job_run_result
   changed_when: "'job registration' in benchmark_models_job_run_result.stdout"
 
