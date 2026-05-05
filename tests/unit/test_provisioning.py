@@ -30,7 +30,6 @@ class TestProvisioning(unittest.TestCase):
         provisioning.INVENTORY_FILE = self.original_inventory
 
     def test_load_playbooks_from_manifest(self):
-        import yaml as real_yaml
         manifest_path = os.path.join(self.test_dir, "test_manifest.yaml")
         data = [
             {"import_playbook": "playbooks/p1.yaml", "tags": ["t1"]},
@@ -38,9 +37,9 @@ class TestProvisioning(unittest.TestCase):
         ]
 
         with open(manifest_path, 'w') as f:
-            real_yaml.dump(data, f)
+            f.write("dummy")
 
-        with patch('provisioning.yaml.safe_load', side_effect=lambda f: real_yaml.load(f, Loader=real_yaml.SafeLoader)):
+        with patch('provisioning.yaml.safe_load', return_value=data):
              playbooks = provisioning.load_playbooks_from_manifest(manifest_path)
 
         self.assertEqual(len(playbooks), 2)

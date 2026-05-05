@@ -327,4 +327,4 @@ This section tracks actionable ideas derived from the `docs/POLLEN_COMPARISON.md
 
 ## Test failures
 
-- [ ] Investigate and fix `test_load_playbooks_from_manifest` failure in `tests/unit/test_provisioning.py` caused by `yaml` mocking issues.
+- [x] Investigate and fix `test_load_playbooks_from_manifest` failure in `tests/unit/test_provisioning.py` caused by `yaml` mocking issues.
