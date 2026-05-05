@@ -573,7 +573,7 @@
 
     - name: "Archivist : Run nomad job"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/archivist.nomad"
+        cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/archivist.nomad"
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
@@ -677,7 +677,7 @@
 
     - name: "Router : Run nomad job"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/router.nomad"
+        cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/router.nomad"
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"

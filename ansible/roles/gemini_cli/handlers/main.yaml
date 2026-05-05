@@ -1,5 +1,5 @@
 - name: Run Gemini Job
-  ansible.builtin.command: nomad job run /opt/nomad/jobs/gemini.nomad
+  ansible.builtin.command: nomad job run -detach /opt/nomad/jobs/gemini.nomad
   become: yes
   environment:
     NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"

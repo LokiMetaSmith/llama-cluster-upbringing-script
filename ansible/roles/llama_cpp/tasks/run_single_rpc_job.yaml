@@ -23,7 +23,7 @@
   block:
     - name: Deploy rpc job
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad job run /tmp/rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
+        cmd: "/usr/local/bin/nomad job run -detach /tmp/rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
       register: rpc_job_run
       changed_when: "'Eval ID' in rpc_job_run.stdout"
       environment:

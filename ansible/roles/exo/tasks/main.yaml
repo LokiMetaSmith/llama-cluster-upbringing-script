@@ -85,7 +85,7 @@
 
 - name: Run Exo Nomad job
   ansible.builtin.command:
-    cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/exo.nomad"
+    cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/exo.nomad"
   environment:
     NOMAD_ADDR: "http://{{ advertise_ip }}:{{ nomad_http_port }}"
   register: exo_job_run
