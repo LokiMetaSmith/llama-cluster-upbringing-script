@@ -69,3 +69,13 @@ When updating the `bootstrap.sh` script (the primary upbringing script that mana
 * **Mandatory Action:** You must run `act` locally (the local GitHub Action runner) and verify workflows pass before proposing or submitting a merge to the primary branch.
 * **Pre-commit Hook:** Always ensure the custom pre-commit hook is active by running `git config core.hooksPath .githooks`. This hook provides a safety net against logic errors and missing ROCm checks.
 * If the simulation fails with a 'VGPR Mismatch' or 'KFD Error', or other container crash, roll back the changes and search for recent amdgpu firmware patches or logic errors in the code. Do not bypass these local tests under any circumstances.
+
+## 7. Five Principles of Agent Skills
+
+Lifted from Addy Osmani's Agent Skills, these are the core principles for agent behavior:
+
+1. **Process over prose:** Workflows are actionable; essays are not. Use defined sequences of steps with checkpoints.
+2. **Anti-rationalization tables:** Anticipate and rebut excuses for skipping workflows (e.g., "This is too simple to need a test").
+3. **Verification is non-negotiable:** Every task must terminate with concrete evidence (passing tests, clean build output, etc.) rather than "seems right".
+4. **Progressive disclosure:** Only load the skills and context relevant to the current phase of the task.
+5. **Scope discipline:** Touch only what you are asked to touch. Avoid refactoring adjacent systems or unrelated code without explicit instruction.
