@@ -136,7 +136,7 @@
 
     - name: "World Model Service : Run nomad job"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/world_model.nomad"
+        cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/world_model.nomad"
       environment:
         NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
       changed_when: true
@@ -229,7 +229,7 @@
 
 - name: "World Model Service : Register batch nomad job"
   ansible.builtin.command:
-    cmd: "/usr/local/bin/nomad job run {{ nomad_jobs_dir }}/llamacpp-batch.nomad"
+    cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/llamacpp-batch.nomad"
   environment:
     NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
   changed_when: true

@@ -1,5 +1,5 @@
 - name: Run Opengist Job
-  ansible.builtin.command: nomad job run /opt/nomad/jobs/opengist.nomad
+  ansible.builtin.command: nomad job run -detach /opt/nomad/jobs/opengist.nomad
   become: yes
   environment:
     NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"

@@ -19,7 +19,7 @@
 
 - name: Run docker-registry job
   ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run {{ nomad_jobs_dir }}/docker-registry.nomad
+    cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/docker-registry.nomad
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"

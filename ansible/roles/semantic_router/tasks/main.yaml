@@ -39,7 +39,7 @@
 
 - name: Run Semantic Router Nomad job
   ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job run "{{ nomad_jobs_dir }}/semantic-router.nomad"
+    cmd: /usr/local/bin/nomad job run -detach "{{ nomad_jobs_dir }}/semantic-router.nomad"
   environment:
     NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
   register: nomad_job_run_result
