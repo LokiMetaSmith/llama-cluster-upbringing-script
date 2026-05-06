@@ -1,7 +1,0 @@
-- hosts: all
-  become: yes
-  vars:
-    target_user: "root"
-  tasks:
-    - import_role:
-        name: authentik
