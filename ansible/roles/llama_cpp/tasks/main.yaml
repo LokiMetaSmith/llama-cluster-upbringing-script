@@ -188,8 +188,8 @@
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   when: build_llama_cpp
 
 - name: Stop and purge any existing expert jobs if llama.cpp was rebuilt
@@ -202,8 +202,8 @@
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   when: build_llama_cpp
 
 - name: Check if benchmark log file exists

@@ -539,6 +539,8 @@ def print_final_status(args, executed_playbooks):
         env = os.environ.copy()
         env["NOMAD_ADDR"] = f"https://{ip}:4646"
         env["NOMAD_TLS_SKIP_VERIFY"] = "1"
+        env["NOMAD_CLIENT_CERT"] = "/etc/nomad.d/tls/cli.cert.pem"
+        env["NOMAD_CLIENT_KEY"] = "/etc/nomad.d/tls/cli.key.pem"
         result = subprocess.run(["nomad", "job", "status", "-short"], capture_output=True, text=True, env=env)
 
         # If it fails, fallback to 127.0.0.1 in case nomad is only bound locally

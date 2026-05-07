@@ -64,8 +64,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
 
 - name: Deploy Beszel
@@ -89,8 +89,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
 
     - name: Template beszel-hub job
@@ -105,8 +105,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
 
 - name: Deploy Statsping
@@ -130,8 +130,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
 
 - name: Deploy Memory Audit
@@ -148,8 +148,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
   rescue:
     - name: Get MQTT Exporter job status
@@ -158,8 +158,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: mqtt_exporter_job_status
       ignore_errors: yes
 
@@ -173,8 +173,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: mqtt_exporter_allocs
       ignore_errors: yes
 
@@ -194,8 +194,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: mqtt_exporter_logs_stdout
       ignore_errors: yes
       when: (mqtt_exporter_alloc_id.stdout | trim | length > 0) and (mqtt_exporter_alloc_id.stdout | trim != 'null')
@@ -211,8 +211,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: mqtt_exporter_logs_stderr
       ignore_errors: yes
       when: (mqtt_exporter_alloc_id.stdout | trim | length > 0) and (mqtt_exporter_alloc_id.stdout | trim != 'null')
@@ -267,8 +267,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
 
 - name: Deploy Prometheus
@@ -285,8 +285,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
 
 - name: Deploy Grafana
@@ -303,6 +303,6 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
