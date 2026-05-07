@@ -3,7 +3,7 @@
 ## Immediate Actions
 
 - [x] **Fix Authentik Nomad Job:**
-  - [ ] **Re-enable Authentik Nomad Job:** The job was temporarily disabled during cluster upbringing. Re-enable it and investigate the 'progress deadline' issue once the rest of the cluster is running.
+  - [x] **Re-enable Authentik Nomad Job:** The job was temporarily disabled during cluster upbringing. Re-enable it and investigate the 'progress deadline' issue once the rest of the cluster is running.
   - **Goal:** Resolve issues preventing the Authentik Nomad job from deploying successfully.
 - [x] **Bootable System Installation & Auto-Configuration:**
   - **Goal:** Create a slimmed-down, bootable Debian ISO and enhance `bootstrap.sh` to auto-detect hardware resources.
