@@ -442,6 +442,17 @@ def print_summary():
 
 
 def get_primary_ip():
+    # Check for tailscale0 first, matching ansible's logic
+    import subprocess
+    try:
+        result = subprocess.run(['ip', '-4', 'addr', 'show', 'tailscale0'], capture_output=True, text=True)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                if 'inet ' in line:
+                    return line.strip().split(' ')[1].split('/')[0]
+    except Exception:
+        pass
+
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(('10.255.255.255', 1))
