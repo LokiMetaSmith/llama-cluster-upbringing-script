@@ -233,6 +233,28 @@
 
 - name: Deploy MQTT Exporter
   block:
+    - name: Check MQTT Exporter job status before deployment
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status mqtt-exporter
+      register: pre_mqtt_exporter_job_status
+      ignore_errors: yes
+      changed_when: false
+      environment:
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+
+    - name: Purge failing MQTT Exporter deployment
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job stop -purge mqtt-exporter
+      when: pre_mqtt_exporter_job_status.rc == 0 and ('dead' in pre_mqtt_exporter_job_status.stdout or 'failed' in pre_mqtt_exporter_job_status.stdout or 'progress deadline' in pre_mqtt_exporter_job_status.stdout)
+      environment:
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+
     - name: Template mqtt-exporter job
       ansible.builtin.template:
         src: mqtt-exporter.nomad.j2
