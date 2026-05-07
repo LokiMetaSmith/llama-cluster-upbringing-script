@@ -556,8 +556,8 @@
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
 
 - name: Flush handlers to ensure service is enabled and started
   ansible.builtin.meta: flush_handlers
@@ -577,8 +577,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
       become: no
       register: archivist_job_run
@@ -589,8 +589,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: arch_job_status
       failed_when: false
       become: no
@@ -605,8 +605,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: arch_allocs
       failed_when: false
       become: no
@@ -627,8 +627,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: arch_logs_stdout
       failed_when: false
       become: no
@@ -645,8 +645,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: arch_logs_stderr
       failed_when: false
       become: no
@@ -681,8 +681,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
       become: no
       register: router_job_run
@@ -697,8 +697,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: router_job_status
       failed_when: false
       become: no
@@ -713,8 +713,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: router_allocs
       failed_when: false
       become: no
@@ -735,8 +735,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: litellm_logs_stdout
       failed_when: false
       become: no
@@ -753,8 +753,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: litellm_logs_stderr
       failed_when: false
       become: no
@@ -771,8 +771,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: llama_logs_stdout
       failed_when: false
       become: no
@@ -789,8 +789,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: llama_logs_stderr
       failed_when: false
       become: no
@@ -864,8 +864,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
       become: no
       register: pipecat_job_run
@@ -890,8 +890,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: pipecat_job_status
       failed_when: false
       become: no
@@ -906,8 +906,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: pipecat_allocs
       failed_when: false
       become: no
@@ -928,8 +928,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: pipecat_logs_stdout
       failed_when: false
       become: no
@@ -946,8 +946,8 @@
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/key.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       register: pipecat_logs_stderr
       failed_when: false
       become: no
