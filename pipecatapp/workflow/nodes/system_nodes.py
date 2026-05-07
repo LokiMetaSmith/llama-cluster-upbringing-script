@@ -81,3 +81,58 @@ class FileReadNode(Node):
 
         except Exception as e:
             self.set_output(context, "file_content", f"Error reading file: {e}")
+
+@registry.register
+class DreamNode(Node):
+    """A node that fetches recent memories/history via the Archivist service to enable model dreaming."""
+    async def execute(self, context: WorkflowContext):
+        query = self.get_input(context, "query") or "recent important events and conversations"
+        archivist_url = self.get_input(context, "archivist_url") or f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8008"
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{archivist_url}/research",
+                    json={"query": query, "max_steps": 5},
+                    timeout=120
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    content = data.get("content", "No content returned.")
+                    self.set_output(context, "history", content)
+                else:
+                    self.set_output(context, "history", f"Error querying Archivist: {response.status_code} - {response.text}")
+        except Exception as e:
+            self.set_output(context, "history", f"Failed to connect to Archivist service: {e}")
+
+@registry.register
+class FileWriteNode(Node):
+    """A node that safely writes text to a file in the context sandbox.
+    Input: 'file_path' (relative to sandbox), 'file_content'
+    Output: 'write_status'
+    """
+    async def execute(self, context: WorkflowContext):
+        # file_path might come from config or input
+        file_path = self.get_input(context, "file_path") or self.config.get("config", {}).get("file_path")
+        file_content = self.get_input(context, "file_content")
+
+        sandbox_dir = os.path.realpath("/tmp/pipecat_context")
+        os.makedirs(sandbox_dir, exist_ok=True)
+
+        if not file_path:
+             self.set_output(context, "write_status", "Error: No file path provided.")
+             return
+
+        try:
+            full_path = os.path.realpath(os.path.join(sandbox_dir, file_path.strip()))
+
+            if os.path.commonpath([sandbox_dir, full_path]) != sandbox_dir:
+                self.set_output(context, "write_status", f"Error: Access denied. File path '{file_path}' attempts to escape the sandbox directory.")
+                return
+
+            with open(full_path, 'w', encoding='utf-8') as f:
+                f.write(file_content or "")
+            self.set_output(context, "write_status", f"Successfully wrote to {full_path}")
+
+        except Exception as e:
+            self.set_output(context, "write_status", f"Error writing file: {e}")
