@@ -1,0 +1,84 @@
+name: "Model Dream Workflow"
+description: "Regularly causes the model to dream by fetching past history, reflecting on it, and using Heretic for reinforcement/ablation."
+nodes:
+  - id: "Trigger"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "query"
+        - name: "model"
+        - name: "harmful_dataset"
+        - name: "harmless_dataset"
+        - name: "reverse"
+        - name: "output_dir"
+    inputs: []
+
+  - id: "FetchMemories"
+    type: "DreamNode"
+    config: {}
+    inputs:
+      - name: "query"
+        connection:
+          from_node: "Trigger"
+          from_output: "query"
+
+  - id: "ReflectOnMemories"
+    type: "SimpleLLMNode"
+    config:
+      model_tier: "capable"
+      system_prompt: "You are an AI model dreaming. Review the following recent memories and history. Synthesize the core behavioral patterns, identify areas where you should have been more helpful but were overly cautious or inhibited, and generate a brief reflection summarizing this."
+    inputs:
+      - name: "user_text"
+        connection:
+          from_node: "FetchMemories"
+          from_output: "history"
+
+  - id: "SaveReflectionDataset"
+    type: "FileWriteNode"
+    config:
+      file_path: "/tmp/pipecat_context/dream_reflection.txt"
+    inputs:
+      - name: "file_content"
+        connection:
+          from_node: "ReflectOnMemories"
+          from_output: "response"
+
+  - id: "ReinforceBehavior"
+    type: "HereticNode"
+    config: {}
+    inputs:
+      - name: "model"
+        connection:
+          from_node: "Trigger"
+          from_output: "model"
+      - name: "harmful_dataset"
+        connection:
+          from_node: "Trigger"
+          from_output: "harmful_dataset"
+      - name: "harmless_dataset"
+        connection:
+          from_node: "Trigger"
+          from_output: "harmless_dataset"
+      - name: "reverse"
+        connection:
+          from_node: "Trigger"
+          from_output: "reverse"
+      - name: "output_dir"
+        connection:
+          from_node: "Trigger"
+          from_output: "output_dir"
+      # While Heretic doesn't currently directly consume the raw reflection text in this simple tool signature,
+      # we can trigger it sequentially so it only runs after the dream reflection occurs.
+      # A more complex setup would dynamically build the dataset files based on the reflection.
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "dream_reflection"
+        connection:
+          from_node: "ReflectOnMemories"
+          from_output: "response"
+      - name: "reinforcement_result"
+        connection:
+          from_node: "ReinforceBehavior"
+          from_output: "result"

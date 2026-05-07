@@ -170,3 +170,51 @@ class ToolExecutorNode(Node):
         receipt = signer.sign(tool_name, args, result_str)
         self.set_output(context, "tool_result", result_str) # Ensure result is a string
         self.set_output(context, "tool_receipt", receipt)
+
+@registry.register
+class HereticNode(Node):
+    """A node that uses the HereticTool to align/ablate a model."""
+    async def execute(self, context: WorkflowContext):
+        model = self.get_input(context, "model")
+        harmful_dataset = self.get_input(context, "harmful_dataset")
+        harmless_dataset = self.get_input(context, "harmless_dataset")
+        reverse = self.get_input(context, "reverse") or False
+        output_dir = self.get_input(context, "output_dir")
+
+        if not model or not harmful_dataset or not harmless_dataset:
+            self.set_output(context, "result", "Error: model, harmful_dataset, and harmless_dataset are required inputs.")
+            return
+
+        try:
+            # We delay the import so the tool is only instantiated when needed
+            from pipecatapp.tools.heretic_tool import HereticTool
+            tool = HereticTool()
+
+            # The tool executes the subprocess command synchronously,
+            # ideally it should run in a thread/executor, but since this is a PoC workflow:
+            import asyncio
+            loop = asyncio.get_running_loop()
+
+            result = await loop.run_in_executor(
+                None,
+                tool.align_model,
+                model,
+                harmful_dataset,
+                harmless_dataset,
+                reverse,
+                output_dir
+            )
+
+            # Formulate the response
+            if "error" in result:
+                self.set_output(context, "result", f"Heretic error: {result['error']}")
+            else:
+                output_msg = f"Heretic command completed.\nCommand: {result.get('command')}\nReturn Code: {result.get('returncode')}\n"
+                if result.get('stdout'):
+                    output_msg += f"Stdout: {result.get('stdout')[:500]}...\n"
+                if result.get('stderr'):
+                    output_msg += f"Stderr: {result.get('stderr')[:500]}...\n"
+                self.set_output(context, "result", output_msg)
+
+        except Exception as e:
+             self.set_output(context, "result", f"Failed to execute HereticNode: {e}")
