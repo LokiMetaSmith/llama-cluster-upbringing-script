@@ -566,15 +566,14 @@ ensure_python_environment() {
     run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
 
     # --- Find Ansible Playbook executable ---
-    # Since we are in a venv, these are guaranteed to be in the path
-    ANSIBLE_GALAXY_EXEC="$(which ansible-galaxy)"
+    ANSIBLE_GALAXY_EXEC="$VENV_DIR/bin/ansible-galaxy"
 
     # Install Ansible collections
     if [ -x "$ANSIBLE_GALAXY_EXEC" ]; then
         export ANSIBLE_CONFIG="$(pwd)/ansible.cfg"
         run_step "Installing Ansible collections" "$ANSIBLE_GALAXY_EXEC collection install community.general ansible.posix community.docker community.sops"
     else
-        echo "Error: ansible-galaxy not found in venv." >&2
+        echo "Error: ansible-galaxy not found at $ANSIBLE_GALAXY_EXEC." >&2
         exit 1
     fi
 }

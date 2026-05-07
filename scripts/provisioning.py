@@ -249,7 +249,7 @@ def purge_nomad_jobs():
 
 def run_playbook(playbook_path, extra_vars, tags, verbose_level):
     """Runs a single ansible playbook."""
-    cmd = ["ansible-playbook", "-i", INVENTORY_FILE, playbook_path]
+    cmd = [".venv/bin/ansible-playbook", "-i", INVENTORY_FILE, playbook_path]
 
     for key, value in extra_vars.items():
         cmd.extend(["--extra-vars", f"{key}={value}"])

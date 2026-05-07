@@ -91,7 +91,7 @@ class TestProvisioning(unittest.TestCase):
 
         args, _ = mock_popen.call_args
         cmd = args[0]
-        self.assertEqual(cmd[0], "ansible-playbook")
+        self.assertEqual(cmd[0], ".venv/bin/ansible-playbook")
         self.assertIn("test.yaml", cmd)
         self.assertIn("--extra-vars", cmd)
         self.assertIn("k=v", cmd)
