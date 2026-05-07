@@ -39,6 +39,7 @@
       - python3-pip
       - libcurl4-openssl-dev
       - rsync
+      - xdg-utils
     state: present
 
 - name: Manage /etc/hosts file on controller for name resolution
