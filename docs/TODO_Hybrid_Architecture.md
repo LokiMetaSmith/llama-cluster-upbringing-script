@@ -96,11 +96,11 @@ Objective: Create a single, flexible Docker image that can run in any of the thr
 
 ## Phase 5: Verification & Documentation
 
-- [ ] **Create Architecture Test Suite**
-  - [ ] Create a test for "Monolith Mode": Mock network/Consul, verify App can answer "Hello" using only local classes.
-  - [ ] Create a test for "Distributed Mode": Verify App fails if Consul/Remote LLM is missing.
+- [x] **Create Architecture Test Suite**
+  - [x] Create a test for "Monolith Mode": Mock network/Consul, verify App can answer "Hello" using only local classes.
+  - [x] Create a test for "Distributed Mode": Verify App fails if Consul/Remote LLM is missing.
 
-- [ ] **Update User Documentation**
-  - [ ] Update `README.md` with "Deployment Options" section.
-  - [ ] Document how to set `node_tier` in Ansible inventory.
-- [ ] Investigate if we can accept UEFI-only boot in the future to simplify the live-build ISO generation process.
+- [x] **Update User Documentation**
+  - [x] Update `README.md` with "Deployment Options" section.
+  - [x] Document how to set `node_tier` in Ansible inventory.
+- [x] Investigate if we can accept UEFI-only boot in the future to simplify the live-build ISO generation process.
