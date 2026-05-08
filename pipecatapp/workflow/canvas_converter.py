@@ -28,19 +28,33 @@ class CanvasConverter:
 
         # 1. Map Nodes
         # Canvas Nodes: { "id": "...", "type": "text/file/group", "text": "...", "x": 0, "y": 0, "width": 0, "height": 0, "color": "..." }
+        # Step 1.1: Identify all groups to infer parent-child relationships
+        groups = []
+        for canvas_node in canvas_data.get("nodes", []):
+            if canvas_node.get("type") == "group":
+                groups.append({
+                    "id": canvas_node["id"],
+                    "rect": {
+                        "left": canvas_node.get("x", 0),
+                        "top": canvas_node.get("y", 0),
+                        "right": canvas_node.get("x", 0) + canvas_node.get("width", 0),
+                        "bottom": canvas_node.get("y", 0) + canvas_node.get("height", 0)
+                    }
+                })
+
         for canvas_node in canvas_data.get("nodes", []):
             workflow_node = {
                 "id": canvas_node["id"],
                 "type": CanvasConverter._infer_node_type(canvas_node),
                 "config": CanvasConverter._extract_config(canvas_node),
                 "position": {
-                    "x": canvas_node.get("x", 0.0),
-                    "y": canvas_node.get("y", 0.0),
+                    "x": float(canvas_node.get("x", 0.0)),
+                    "y": float(canvas_node.get("y", 0.0)),
                     "z": 0.0 # Default depth
                 },
                 "dimensions": {
-                    "width": canvas_node.get("width", 400.0),
-                    "height": canvas_node.get("height", 200.0),
+                    "width": float(canvas_node.get("width", 400.0)),
+                    "height": float(canvas_node.get("height", 200.0)),
                     "depth": 0.0 # Default visual depth
                 },
                 "style": {
@@ -50,11 +64,32 @@ class CanvasConverter:
             }
 
             # Handle Grouping (Parent)
-            # Obsidian Canvas uses implicit spatial containment for groups, or explicit "parent" if grouped.
-            # We'll use the "group" type node as a parent container.
-            if canvas_node["type"] == "group":
-                # Groups are nodes too, but maybe with special type
-                workflow_node["type"] = "scope" # Assuming a 'scope' node type exists or will exist
+            if canvas_node.get("type") == "group":
+                workflow_node["type"] = "scope"
+
+            # Infer parent from bounding boxes (applies to all nodes, including nested groups)
+            x = float(canvas_node.get("x", 0.0))
+            y = float(canvas_node.get("y", 0.0))
+
+            best_group = None
+            min_area = float('inf')
+
+            for group in groups:
+                # Do not assign a group as its own parent
+                if group["id"] == canvas_node["id"]:
+                    continue
+
+                rect = group["rect"]
+                # A node is "inside" if its top-left coordinates are inside the group rect
+                # We could do a full bounds check, but checking x/y is standard for Obsidian Canvas
+                if rect["left"] <= x <= rect["right"] and rect["top"] <= y <= rect["bottom"]:
+                    area = (rect["right"] - rect["left"]) * (rect["bottom"] - rect["top"])
+                    if area < min_area:
+                        min_area = area
+                        best_group = group["id"]
+
+            if best_group:
+                workflow_node["parent"] = best_group
 
             workflow["nodes"].append(workflow_node)
 
@@ -155,24 +190,25 @@ class CanvasConverter:
 
         for node in workflow.get("nodes", []):
             # 1. Create Canvas Node
+            node_type = node.get("type", "unknown")
+            is_group = (node_type == "scope")
+
             canvas_node = {
                 "id": node["id"],
                 "x": node.get("position", {}).get("x", 0),
                 "y": node.get("position", {}).get("y", 0),
-                "width": node.get("dimensions", {}).get("width", 400),
-                "height": node.get("dimensions", {}).get("height", 200),
-                "color": node.get("style", {}).get("color", "#cccccc"),
-                "type": "text" # Default to text for visualization
+                "width": node.get("dimensions", {}).get("width", 400 if not is_group else 800),
+                "height": node.get("dimensions", {}).get("height", 200 if not is_group else 600),
+                "color": node.get("style", {}).get("color", "#cccccc" if not is_group else "1")
             }
 
-            # Set content based on node type
-            # We'll put the config in the text for now
-            node_type = node.get("type", "unknown")
-            config_str = json.dumps(node.get("config", {}), indent=2)
-            canvas_node["text"] = f"**{node_type.upper()}**\n\n```json\n{config_str}\n```"
-
-            # Map specific types if needed (e.g., file -> file node)
-            # if node_type == "file_reader": ...
+            if is_group:
+                canvas_node["type"] = "group"
+                canvas_node["label"] = node.get("name", node["id"])
+            else:
+                canvas_node["type"] = "text"
+                config_str = json.dumps(node.get("config", {}), indent=2)
+                canvas_node["text"] = f"**{node_type.upper()}**\n\n```json\n{config_str}\n```"
 
             canvas["nodes"].append(canvas_node)
 
