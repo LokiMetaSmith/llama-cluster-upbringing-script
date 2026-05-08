@@ -428,7 +428,16 @@ Instead of storing traditional SSH private keys (`id_rsa`) in plaintext on the f
 - **Security Guarantee:** The private key cannot be exfiltrated. Even if an attacker gains filesystem access, the key cannot be copied off the machine.
 - **Headless Agent Operations:** To support automated deployment and agentic workflows, the system automatically spawns a headless `tpm-ssh-agent` systemd service. It unlocks the TPM key on boot using a securely stored, randomly generated PIN (located at `/etc/tpm_ssh_pins` with `0600` root-only access), and provides a persistent `SSH_AUTH_SOCK`.
 
-### 10.2. Offline Consul Key Distribution
+### 10.3. Hardware Key Tailscale Enrollment
+
+The cluster employs an Identity-Based Debugging flow to manage the dynamic Tailscale (Headscale) mesh network, separating automated machine identities from human administrative access.
+
+Rather than distributing static Tailscale Auth Keys, human operators must use a hardware security key (e.g., YubiKey) to enroll their external machines into the cluster. This relies on an SSH challenge to the controller node.
+
+- **Automated Enrollment:** Execute the `scripts/enroll-admin.sh` helper script on your external machine.
+- **How it Works:** The script triggers an SSH challenge to the controller node. Upon successful physical verification (tapping your hardware key), the controller generates a temporary, single-use pre-auth key valid for 1 hour. Your machine then automatically uses this key to join the `headscale.local.mesh` Tailnet over HTTPS (routed via Traefik).
+
+### 10.4. Offline Consul Key Distribution
 
 To eliminate the dependency on external services (such as GitHub) for fetching `authorized_keys`, the cluster implements a purely offline key distribution model using the Consul Key-Value (KV) store.
 
