@@ -28,7 +28,7 @@ job "pipecat-app" {
     network {
       mode = "host"
       port "http" {
-        to = 8005
+        to = {{ nanochat_port | default(8005) }}
       }
     }
 

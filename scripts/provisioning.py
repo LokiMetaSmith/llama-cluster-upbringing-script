@@ -67,6 +67,19 @@ def print_task_header(msg):
     print(f"│ 🚀 {msg:<50} │")
     print(f"└────────────────────────────────────────────────────────┘{Colors.ENDC}")
 
+
+def load_global_vars():
+    """Loads global variables from group_vars/all.yaml"""
+    vars_file = os.path.join(REPO_ROOT, "group_vars/all.yaml")
+    if os.path.exists(vars_file):
+        try:
+            with open(vars_file, 'r') as f:
+                return yaml.safe_load(f) or {}
+        except yaml.YAMLError as e:
+            print_warning(f"Failed to parse global vars: {e}")
+            return {}
+    return {}
+
 def load_playbooks_from_manifest(manifest_path):
     """Parses a YAML manifest to extract the list of playbooks."""
     if not os.path.exists(manifest_path):
@@ -488,14 +501,19 @@ def print_final_status(args, executed_playbooks):
 
     # 2. Access IPs
     ip = get_primary_ip()
+    global_vars = load_global_vars()
+    nomad_port = global_vars.get("nomad_http_port", 4646)
+    consul_port = global_vars.get("consul_http_port", 8500)
+    pipecat_port = global_vars.get("nanochat_port", 8005)
+    ha_port = global_vars.get("home_assistant_port", 8123)
     print(f"\n{Colors.BOLD}Access Interfaces:{Colors.ENDC}")
     print(f"  • {Colors.OKCYAN}Node IP Address:{Colors.ENDC} {ip}")
 
     interfaces = [
-        ("Nomad UI", 4646, f"https://{ip}:4646", True),
-        ("Consul UI", 8500, f"https://{ip}:8500", True),
-        ("Pipecat App", 8005, f"https://{ip}:8005", stack_mode != "Infrastructure Only"),
-        ("Home Assistant", 8123, f"https://{ip}:8123", stack_mode != "Infrastructure Only" and stack_mode != "Minimal"),
+        ("Nomad UI", nomad_port, f"https://{ip}:{nomad_port}", True),
+        ("Consul UI", consul_port, f"https://{ip}:{consul_port}", True),
+        ("Pipecat App", pipecat_port, f"https://{ip}:{pipecat_port}", stack_mode != "Infrastructure Only"),
+        ("Home Assistant", ha_port, f"https://{ip}:{ha_port}", stack_mode != "Infrastructure Only" and stack_mode != "Minimal"),
     ]
 
     for name, port, url, should_be_active in interfaces:
@@ -765,7 +783,11 @@ def main():
 
         # Wait for ports before app services
         if "app_services.yaml" in normalized_path:
-            wait_for_ports_freed([8005, 8081, 1883])
+            global_vars = load_global_vars()
+            pipecat_port = global_vars.get("nanochat_port", 8005)
+            router_port = global_vars.get("router_port", 8081)
+            mqtt_port = global_vars.get("mqtt_port", 1883)
+            wait_for_ports_freed([pipecat_port, router_port, mqtt_port])
 
         # Cleanup before Core AI
         if "core_ai_services.yaml" in normalized_path:
