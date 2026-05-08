@@ -53,10 +53,10 @@ class TestProvisioning(unittest.TestCase):
         mock_check.side_effect = [True, False]
 
         with patch('sys.stdout', new=StringIO()) as fake_out:
-            provisioning.wait_for_ports_freed([8000], timeout=1)
+            provisioning.wait_for_ports_freed([8005], timeout=1)
             output = fake_out.getvalue()
-            self.assertIn("Waiting for ports [8000]", output)
-            self.assertIn("Port 8000 is free", output)
+            self.assertIn("Waiting for ports [8005]", output)
+            self.assertIn("Port 8005 is free", output)
 
     @patch('subprocess.run')
     def test_cleanup_memory_for_core_ai(self, mock_run):
