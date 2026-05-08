@@ -25,7 +25,20 @@ class TestProvisioning(unittest.TestCase):
         self.original_inventory = provisioning.INVENTORY_FILE
         provisioning.INVENTORY_FILE = self.inventory_file
 
+        # Patch load_global_vars to avoid file IO
+        self.mock_global_vars = {
+            'nomad_http_port': 4646,
+            'consul_http_port': 8500,
+            'nanochat_port': 8005,
+            'home_assistant_port': 8123,
+            'router_port': 8081,
+            'mqtt_port': 1883
+        }
+        self.patcher = patch('provisioning.load_global_vars', return_value=self.mock_global_vars)
+        self.patcher.start()
+
     def tearDown(self):
+        self.patcher.stop()
         shutil.rmtree(self.test_dir)
         provisioning.INVENTORY_FILE = self.original_inventory
 
