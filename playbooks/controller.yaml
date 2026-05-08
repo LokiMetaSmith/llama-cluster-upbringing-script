@@ -6,3 +6,11 @@
 - import_playbook: playbooks/services/nomad.yaml
 - import_playbook: playbooks/services/monitoring.yaml
 - import_playbook: playbooks/app_jobs.yaml
+- import_playbook: playbooks/services/app_services.yaml
+- import_playbook: playbooks/services/model_services.yaml
+- import_playbook: playbooks/services/core_ai_services.yaml
+- import_playbook: playbooks/services/ai_experts.yaml
+- import_playbook: playbooks/services/training_services.yaml
+- import_playbook: playbooks/services/distributed_compute.yaml
+- import_playbook: playbooks/services/streaming_services.yaml
+- import_playbook: playbooks/services/final_verification.yaml

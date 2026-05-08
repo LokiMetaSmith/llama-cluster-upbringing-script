@@ -752,6 +752,7 @@ def main():
             "playbooks/services/monitoring.yaml",
             "playbooks/services/model_services.yaml",
             "playbooks/services/core_ai_services.yaml",
+            "playbooks/services/ai_experts.yaml",
         ]
 
         # Define what constitutes a "minimal" stack
