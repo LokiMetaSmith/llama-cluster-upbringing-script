@@ -67,9 +67,9 @@
     cmd: /usr/local/bin/nomad node status -self -json
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   register: nomad_status_json
   changed_when: false
   ignore_errors: yes
@@ -146,9 +146,9 @@
     cmd: /usr/local/bin/nomad job status mqtt
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   register: mqtt_job_check
   failed_when: false
   changed_when: false
@@ -158,9 +158,9 @@
     cmd: /usr/local/bin/nomad job stop -purge mqtt
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   when: mqtt_job_check.rc == 0
   changed_when: true
 
