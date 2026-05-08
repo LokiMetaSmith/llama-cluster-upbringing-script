@@ -494,7 +494,7 @@ def print_final_status(args, executed_playbooks):
     interfaces = [
         ("Nomad UI", 4646, f"https://{ip}:4646", True),
         ("Consul UI", 8500, f"https://{ip}:8500", True),
-        ("Pipecat App", 8000, f"https://{ip}:8000", stack_mode != "Infrastructure Only"),
+        ("Pipecat App", 8005, f"https://{ip}:8005", stack_mode != "Infrastructure Only"),
         ("Home Assistant", 8123, f"https://{ip}:8123", stack_mode != "Infrastructure Only" and stack_mode != "Minimal"),
     ]
 
@@ -765,7 +765,7 @@ def main():
 
         # Wait for ports before app services
         if "app_services.yaml" in normalized_path:
-            wait_for_ports_freed([8000, 8081, 1883])
+            wait_for_ports_freed([8005, 8081, 1883])
 
         # Cleanup before Core AI
         if "core_ai_services.yaml" in normalized_path:
