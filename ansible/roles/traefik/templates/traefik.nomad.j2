@@ -36,6 +36,7 @@ job "traefik" {
         network_mode = "host"
         volumes = [
           "local/traefik.yml:/etc/traefik/traefik.yml",
+          "local/dynamic:/etc/traefik/dynamic",
         ]
       }
 
@@ -59,8 +60,18 @@ providers:
     exposedByDefault: false
     endpoint:
       address: "127.0.0.1:8500"
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
 EOF
         destination = "local/traefik.yml"
+      }
+
+      template {
+        data = <<EOF
+{{ lookup('template', 'headscale-router.yaml.j2') }}
+EOF
+        destination = "local/dynamic/headscale-router.yaml"
       }
 
       resources {

@@ -1,0 +1,15 @@
+http:
+  routers:
+    headscale:
+      rule: "Host(`headscale.{{ cluster_domain | default('local.mesh') }}`)"
+      service: headscale
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: local  # Assumes you have a local cert resolver defined in Traefik
+
+  services:
+    headscale:
+      loadBalancer:
+        servers:
+          - url: "http://{{ hostvars[groups['controller_nodes'][0]]['ansible_host'] | default(hostvars[groups['controller_nodes'][0]]['ansible_default_ipv4']['address'] | default('127.0.0.1')) }}:8085"

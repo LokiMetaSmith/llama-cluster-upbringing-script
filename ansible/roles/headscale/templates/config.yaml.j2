@@ -1,9 +1,9 @@
 ---
-server_url: http://{{ ansible_default_ipv4.address }}:{{ headscale_port }}
+server_url: https://headscale.{{ cluster_domain | default('local.mesh') }}
 listen_addr: {{ headscale_listen_addr }}:{{ headscale_port }}
 metrics_listen_addr: 127.0.0.1:{{ headscale_metrics_port }}
-grpc_listen_addr: 127.0.0.1:50443
-grpc_allow_insecure: false
+grpc_listen_addr: 0.0.0.0:50443
+grpc_allow_insecure: true
 
 private_key_path: /var/lib/headscale/private.key
 noise:
