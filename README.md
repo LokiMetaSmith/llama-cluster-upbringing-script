@@ -517,3 +517,44 @@ For solutions to common issues, such as failing Nomad service checks or deployme
 ## 17. License
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE).
+
+## 18. Deployment Options
+
+The project supports a **Hybrid / Cluster-Native architecture**, which means it can be deployed in different configurations depending on the hardware available.
+
+1. **Monolith Mode** (Tier: `mid`):
+   Runs all tools, inference (LLM), and core logic on a single node. Ideal for a standalone server with adequate resources.
+2. **Distributed Mode** (Tier: `edge`, `core`):
+   Distributes the workload across a cluster using Consul for service discovery.
+   - **Edge Nodes**: Run lightweight clients/tools.
+   - **Core Nodes**: Handle heavy computation like LLM inference.
+
+### How to set `node_tier` in Ansible inventory
+
+You can specify the tier of a node by setting the `node_tier` variable in your Ansible inventory file.
+
+Example `inventory.yaml`:
+
+```yaml
+all:
+  children:
+    controllers:
+      hosts:
+        controller1:
+          ansible_host: 192.168.1.100
+          node_tier: core
+    workers:
+      hosts:
+        worker1:
+          ansible_host: 192.168.1.101
+          node_tier: edge
+        worker2:
+          ansible_host: 192.168.1.102
+          node_tier: mid
+```
+
+Alternatively, if you're using `bootstrap.sh`, you can specify the tier via the command line:
+
+```bash
+./bootstrap.sh --tier [edge|mid|core]
+```
