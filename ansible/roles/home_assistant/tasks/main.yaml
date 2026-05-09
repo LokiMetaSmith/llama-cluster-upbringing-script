@@ -2,11 +2,43 @@
   ansible.builtin.file:
     path: "{{ nomad_volumes_dir }}/ha-config"
     state: directory
-    owner: "{{ home_assistant_uid | default(568) }}"
-    group: "{{ home_assistant_gid | default(568) }}"
+    owner: "568"
+    group: "568"
     mode: '0775'
     recurse: yes
   become: yes
+
+- name: Check if home-assistant job exists and get status
+  ansible.builtin.shell: |
+    set -o pipefail
+    /usr/local/bin/nomad job status -json home-assistant || echo '{"Status": "missing"}'
+  args:
+    executable: /bin/bash
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+  register: home_assistant_job_status
+  failed_when: false
+  changed_when: false
+  become: no
+
+- name: Extract job status
+  ansible.builtin.set_fact:
+    home_assistant_job_state: "{{ (home_assistant_job_status.stdout | from_json).Status | default('missing') }}"
+
+- name: Purge home-assistant job if in failed state
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job stop -purge home-assistant
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+  when: home_assistant_job_state in ['dead', 'failed', 'progress_deadline']
+  changed_when: true
+  become: no
 
 - name: Template home-assistant Nomad job file
   ansible.builtin.template:
@@ -39,29 +71,6 @@
   delay: 5
   changed_when: false
   become: no # Should be accessible locally
-
-- name: Check if home-assistant job exists
-  ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job status home-assistant
-  environment:
-    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-  register: ha_job_check
-  failed_when: false
-  changed_when: false
-
-- name: Purge home-assistant job
-  ansible.builtin.command:
-    cmd: /usr/local/bin/nomad job stop -purge home-assistant
-  environment:
-    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-  when: ha_job_check.rc == 0
-  changed_when: true
 
 - name: Fetch Consul management token
   ansible.builtin.slurp:
