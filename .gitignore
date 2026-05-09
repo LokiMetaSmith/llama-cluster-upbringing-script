@@ -51,3 +51,4 @@ os-image/config/includes.chroot/opt/
 test_env/
 poc/wasm_tool_bridge/text_processor/target/
 poc/p2p_sync/syncthing
+collections/
