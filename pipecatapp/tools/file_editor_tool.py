@@ -1,3 +1,4 @@
+from pipecatapp.utils.file_utils import calculate_line_hash
 import os
 import re
 import logging
@@ -20,6 +21,91 @@ class FileEditorTool:
         self.logger = logging.getLogger(__name__)
         self._undo_history = {} # Maps filepath to list of previous contents
         self._file_metadata = {} # Maps filepath to metadata (e.g. line endings)
+
+
+    def get_schema(self) -> dict:
+        """Returns the schema for the file editor tool."""
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": "Reads, writes, and patches files in the codebase.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["read", "write", "patch", "hash_replace", "append", "undo"],
+                            "description": "The action to perform on the file."
+                        },
+                        "filepath": {
+                            "type": "string",
+                            "description": "The path to the file to modify or read."
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "The content to write or append to the file (used for write, append)."
+                        },
+                        "search_block": {
+                            "type": "string",
+                            "description": "The block of text to replace (used for patch)."
+                        },
+                        "replace_block": {
+                            "type": "string",
+                            "description": "The block of text to insert (used for patch)."
+                        },
+                        "edits": {
+                            "type": "array",
+                            "description": "A list of edit objects (used for hash_replace).",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "type": { "type": "string", "enum": ["replace", "replace_range", "insert_after", "delete"] },
+                                    "id": { "type": "string", "description": "The target line in format <line_number>:<hash>" },
+                                    "end_id": { "type": "string", "description": "The end target line for replace_range" },
+                                    "content": { "type": "string", "description": "The new content" }
+                                },
+                                "required": ["type", "id"]
+                            }
+                        },
+                        "use_hashlines": {
+                            "type": "boolean",
+                            "description": "Whether to return lines with line numbers and hashes (used for read). Defaults to False."
+                        },
+                        "view_range": {
+                            "type": "array",
+                            "items": { "type": "integer" },
+                            "description": "Optional [start_line, end_line] 1-based index to read only a portion of the file."
+                        }
+                    },
+                    "required": ["action", "filepath"]
+                }
+            }
+        }
+
+    async def execute(self, action: str, filepath: str, **kwargs) -> str:
+        """Executes the file editor action."""
+        if action == "read":
+            use_hashlines = kwargs.get("use_hashlines", False)
+            view_range = kwargs.get("view_range", None)
+            return self.read_file(filepath, use_hashlines=use_hashlines, view_range=view_range)
+        elif action == "write":
+            content = kwargs.get("content", "")
+            return self.write_file(filepath, content)
+        elif action == "patch":
+            search_block = kwargs.get("search_block", "")
+            replace_block = kwargs.get("replace_block", "")
+            return self.apply_patch(filepath, search_block, replace_block)
+        elif action == "hash_replace":
+            edits = kwargs.get("edits", [])
+            return self.apply_hash_edits(filepath, edits)
+        elif action == "append":
+            content = kwargs.get("content", "")
+            return self.append_to_file(filepath, content)
+        elif action == "undo":
+            return self.undo_edit(filepath)
+        else:
+            return f"Error: Unknown action '{action}'"
 
     def _validate_path(self, filepath: str) -> str:
         """Ensures the filepath is within the root directory."""
@@ -46,11 +132,6 @@ class FileEditorTool:
              raise ValueError(f"Access denied: {filepath} is outside the allowed root {self.root_dir}")
 
         return full_path
-
-    def _calculate_line_hash(self, line: str) -> str:
-        """Calculates a short hash for a line of text."""
-        # Use full line content including whitespace for precision
-        return hashlib.sha256(line.encode('utf-8')).hexdigest()[:2]
 
     def _save_for_undo(self, path: str):
         """Saves the current file content to the undo history."""
@@ -127,7 +208,7 @@ class FileEditorTool:
             if use_hashlines:
                 output = []
                 for i, line in enumerate(view_lines):
-                    line_hash = self._calculate_line_hash(line)
+                    line_hash = calculate_line_hash(line)
                     # i+start_idx is 0-based index of original line. +1 to get 1-based line number.
                     actual_line_num = i + start_idx + 1
                     output.append(f"{actual_line_num}:{line_hash}| {line}")
@@ -207,7 +288,7 @@ class FileEditorTool:
                 content = f.read()
 
             lines = content.splitlines()
-            current_hashes = [self._calculate_line_hash(line) for line in lines]
+            current_hashes = [calculate_line_hash(line) for line in lines]
 
             operations = []
 

@@ -24,7 +24,7 @@ class TestHashlineEditor(unittest.TestCase):
         shutil.rmtree(self.test_dir)
 
     def get_hash(self, s):
-        return hashlib.sha256(s.encode('utf-8')).hexdigest()[:2]
+        return hashlib.sha256(s.encode('utf-8')).hexdigest()[:4]
 
     def test_read_with_hashlines(self):
         content = self.tool.read_file(self.test_file_name, use_hashlines=True)
