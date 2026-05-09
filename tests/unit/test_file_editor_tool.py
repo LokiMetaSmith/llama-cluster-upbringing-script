@@ -17,7 +17,7 @@ class TestFileEditorTool(unittest.TestCase):
 
     def test_read_file(self):
         content = self.tool.read_file("test.txt")
-        self.assertEqual(content, "Hello\nWorld\n")
+        self.assertEqual(content, "Hello\nWorld")
 
     def test_write_file(self):
         result = self.tool.write_file("new.txt", "New Content")

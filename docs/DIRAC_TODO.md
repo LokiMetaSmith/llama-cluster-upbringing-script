@@ -34,10 +34,10 @@ We need to ensure Node.js and the `dirac-cli` are installed on the worker nodes 
 The goal of Phase 2 is to build Dirac's token-saving techniques natively into our Python `file_editor` tool, eventually removing the Node.js dependency.
 
 ### Step 1: Hash-Anchored Edits
-- [ ] **Analyze Dirac's Hash Logic:** Study how Dirac hashes lines (e.g., stripping whitespace, handling blank lines).
-- [ ] **Implement Python Hasher:** Create a utility function in `pipecatapp/utils/file_utils.py` that reads a file and generates a list of `(line_number, hash, content)`.
-- [ ] **Update `file_editor` schema:** Add a new command to the `file_editor` tool like `hash_replace`, which accepts a start_hash, end_hash, and the replacement text.
-- [ ] **Implement Replacement Logic:** Write the logic to find the exact line ranges based on the hashes and safely splice in the new text.
+- [x] **Analyze Dirac's Hash Logic:** Study how Dirac hashes lines (e.g., stripping whitespace, handling blank lines).
+- [x] **Implement Python Hasher:** Create a utility function in `pipecatapp/utils/file_utils.py` that reads a file and generates a list of `(line_number, hash, content)`.
+- [x] **Update `file_editor` schema:** Add a new command to the `file_editor` tool like `hash_replace`, which accepts a start_hash, end_hash, and the replacement text.
+- [x] **Implement Replacement Logic:** Write the logic to find the exact line ranges based on the hashes and safely splice in the new text.
 
 ### Step 2: AST-Native Parsing (Python focus first)
 - [ ] **Research Libraries:** Evaluate `ast` (built-in, read-only) vs `libcst` (Concrete Syntax Tree, better for modifying code while preserving comments/formatting).
