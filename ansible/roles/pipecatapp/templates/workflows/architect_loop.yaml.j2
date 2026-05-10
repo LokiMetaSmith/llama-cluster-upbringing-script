@@ -11,6 +11,11 @@ nodes:
         Analyze the input and outline the architectural specification needed to achieve the goal.
         Do not write code or execute commands. You only produce the blueprint.
       temperature: 0.2
+      stream: false
+      model: "gemma"
+      fallback_models: ["olmo"]
+      retry_on_403: true
+      timeout: 60
 
   - id: pass_to_executor
     type: ToolNode

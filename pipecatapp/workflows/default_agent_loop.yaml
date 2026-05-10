@@ -19,6 +19,12 @@ nodes:
 
   - id: "Router"
     type: "SimpleLLMNode"
+    config:
+      stream: false
+      model: "gemma"
+      fallback_models: ["olmo"]
+      retry_on_403: true
+      timeout: 60
     model_tier: "balanced"
     inputs:
       - name: "user_text"

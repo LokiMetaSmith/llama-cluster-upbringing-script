@@ -32,6 +32,11 @@ job "seed-agent" {
       CONSUL_PORT            = "{{ consul_http_port }}"
       CONSUL_HTTP_TOKEN      = "{{ consul_bootstrap_token | default('') }}"
       ANSIBLE_CONFIG         = "/app/ansible.cfg"
+      PRIMARY_MODEL          = "gemma"
+      FALLBACK_MODEL         = "olmo"
+      PIPECAT_API_KEYS        = "{{ pipecat_api_keys }}"
+      OPENAI_API_KEY         = "{{ openai_api_key }}"
+      OPENROUTER_API_KEY     = "{{ openrouter_api_key }}"
     }
     {% endset %}
 

@@ -6,6 +6,12 @@ nodes:
 
   - id: "Summarizer"
     type: "SimpleLLMNode"
+    config:
+      stream: false
+      model: "gemma"
+      fallback_models: ["olmo"]
+      retry_on_403: true
+      timeout: 60
     model_tier: "fast"
     system_prompt: "You are a concise summarizer. Summarize the user's input in one sentence."
     inputs:
@@ -16,6 +22,12 @@ nodes:
 
   - id: "Reasoning"
     type: "SimpleLLMNode"
+    config:
+      stream: false
+      model: "gemma"
+      fallback_models: ["olmo"]
+      retry_on_403: true
+      timeout: 60
     model_tier: "balanced"
     system_prompt: "You are a thoughtful assistant. Answer the user based on the summary provided."
     inputs:

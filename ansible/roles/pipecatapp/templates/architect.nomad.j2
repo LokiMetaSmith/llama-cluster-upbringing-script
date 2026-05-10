@@ -44,6 +44,8 @@ job "architect" {
       LLAMA_API_URL          = "http://{{ cluster_ip }}:{{ router_port }}/v1"
       MAIN_API_SERVICE_NAME = "llama-api-main"
       WORKFLOW_FILE         = "/app/workflows/architect_loop.yaml"
+      PRIMARY_MODEL         = "gemma"
+      FALLBACK_MODEL        = "olmo"
     }
     {% endset %}
 
@@ -75,6 +77,7 @@ job "architect" {
           "/opt/nomad/models:/opt/nomad/models:ro",
           "/opt/pipecatapp:/opt/pipecatapp",
           "/opt/pipecatapp/chromadb:/app/chromadb_storage",
+          "/opt/pipecatapp/workflows:/app/workflows",
         ]
       }
 

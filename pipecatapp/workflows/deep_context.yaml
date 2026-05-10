@@ -9,6 +9,8 @@ nodes:
 
   - id: "PathExtractor"
     type: "SimpleLLMNode"
+    config:
+      stream: false
     model_tier: "balanced"
     inputs:
       - name: "user_text"
@@ -28,6 +30,8 @@ nodes:
 
   - id: "ComprehensionStep"
     type: "SimpleLLMNode"
+    config:
+      stream: false
     model_tier: "balanced"
     inputs:
       - name: "file_content"
@@ -41,6 +45,8 @@ nodes:
 
   - id: "ReasoningStep"
     type: "SimpleLLMNode"
+    config:
+      stream: false
     model_tier: "capable"
     inputs:
       - name: "user_text"
