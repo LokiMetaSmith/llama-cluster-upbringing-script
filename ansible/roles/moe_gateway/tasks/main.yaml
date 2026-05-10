@@ -48,6 +48,8 @@
     validate_certs: no
     method: GET
     status_code: 200
+    client_cert: "{{ nomad_tls_dir }}/cli.cert.pem"
+    client_key: "{{ nomad_tls_dir }}/cli.key.pem"
   register: nomad_api_status
   until: nomad_api_status.status == 200
   retries: 12 # Total wait time = retries * delay = 60 seconds
