@@ -99,7 +99,27 @@ modules_to_mock = [
     'graphviz',
     'pmm_memory',
     'pmm_memory_client',
-    'quality_control'
+    'quality_control',
+    'httpx',
+    'desktop_control_tool',
+    'final_answer_tool',
+    'fastapi.staticfiles',
+    'fastapi.security',
+    'fastapi.middleware.cors',
+    'fastapi.middleware',
+    'pydantic',
+    'watchdog',
+    'watchdog.events',
+    'watchdog.observers',
+    'uvicorn',
+    'uvicorn.middleware',
+    'uvicorn.middleware.proxy_headers',
+    'starlette.middleware',
+    'starlette.middleware.base',
+    'starlette.requests',
+    'starlette.responses',
+    'starlette.types',
+    'claude_clone_tool'
 ]
 
 def mock_module_if_missing(module_name):
