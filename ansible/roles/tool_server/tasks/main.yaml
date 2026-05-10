@@ -125,7 +125,11 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job stop -purge tool-server"
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       ignore_errors: yes
       failed_when: false
       changed_when: true
@@ -135,7 +139,11 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/tool_server.nomad"
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       changed_when: true
       become: no
       register: tool_server_job_run
@@ -145,7 +153,11 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose tool-server
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       register: ts_job_status
       ignore_errors: yes
       become: no
@@ -158,7 +170,11 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json tool-server
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       register: ts_allocs
       ignore_errors: yes
       become: no
@@ -177,7 +193,11 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ ts_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       register: ts_logs_stdout
       ignore_errors: yes
       become: no
@@ -192,7 +212,11 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ ts_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       register: ts_logs_stderr
       ignore_errors: yes
       become: no
@@ -207,7 +231,11 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc status -verbose {{ ts_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       register: ts_alloc_status
       ignore_errors: yes
       become: no
