@@ -20,9 +20,9 @@
   changed_when: false
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
 
 - name: Deploy the main Llama.cpp RPC service to Nomad
   ansible.builtin.command:
@@ -32,9 +32,9 @@
   failed_when: llama_job_run.rc != 0
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   when: job_file.changed or job_status.rc != 0
 
 - name: Check for Consul management token file
