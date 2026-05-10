@@ -458,7 +458,7 @@
   changed_when: "'Running' in expert_job_stop_status.stdout"
   failed_when: false
   environment:
-    NOMAD_ADDR: "http://{{ advertise_ip }}:{{ nomad_http_port }}"
+    NOMAD_ADDR: "https://{{ advertise_ip }}:{{ nomad_http_port }}"
 
 - name: Debug Nomad namespace
   debug:
@@ -539,7 +539,8 @@
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:{{ nomad_http_port }}/v1/status/leader"
+    url: "https://{{ cluster_ip }}:{{ nomad_http_port }}/v1/status/leader"
+    validate_certs: no
     method: GET
     status_code: 200
   register: nomad_api_status

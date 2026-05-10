@@ -2,5 +2,5 @@
   ansible.builtin.command:
     cmd: "nomad job run -detach {{ nomad_jobs_dir }}/nanochat.nomad"
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_ADDR: "https://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
   become: yes

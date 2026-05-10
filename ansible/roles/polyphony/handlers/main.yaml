@@ -1,5 +1,5 @@
 - name: Run Polyphony Job
   ansible.builtin.command: nomad job run -detach /opt/nomad/jobs/polyphony.nomad
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
   changed_when: true

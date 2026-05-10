@@ -40,12 +40,12 @@ The goal of Phase 2 is to build Dirac's token-saving techniques natively into ou
 - [x] **Implement Replacement Logic:** Write the logic to find the exact line ranges based on the hashes and safely splice in the new text.
 
 ### Step 2: AST-Native Parsing (Python focus first)
-- [ ] **Research Libraries:** Evaluate `ast` (built-in, read-only) vs `libcst` (Concrete Syntax Tree, better for modifying code while preserving comments/formatting).
-- [ ] **Implement `ast_editor` Tool:** Create a new tool (or expand `file_editor`) with structural commands:
+- [x] **Research Libraries:** Evaluate `ast` (built-in, read-only) vs `libcst` (Concrete Syntax Tree, better for modifying code while preserving comments/formatting).
+- [x] **Implement `ast_editor` Tool:** Create a new tool (or expand `file_editor`) with structural commands:
     - `extract_function(filepath, func_name, target_filepath)`
     - `rename_symbol(filepath, old_name, new_name)`
     - `add_import(filepath, import_statement)`
-- [ ] **Test Robustness:** Ensure the AST editor gracefully handles syntax errors or malformed input without corrupting the file.
+- [x] **Test Robustness:** Ensure the AST editor gracefully handles syntax errors or malformed input without corrupting the file.
 
 ### Step 3: Multi-file Batching
 - [ ] **Update Tool Schemas:** Modify the new `hash_replace` and `ast_editor` commands to accept lists of operations across multiple files in a single JSON payload.

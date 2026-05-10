@@ -128,7 +128,7 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job stop -purge world-model-service"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
       register: stop_job_result
       failed_when: stop_job_result.rc != 0 and "No job(s) with prefix or ID" not in stop_job_result.stderr
       changed_when: stop_job_result.rc == 0
@@ -138,7 +138,7 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/world_model.nomad"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
       changed_when: true
       become: no
       register: world_model_job_run
@@ -148,7 +148,7 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose world-model-service
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
       register: wm_job_status
       ignore_errors: yes
       become: no
@@ -161,7 +161,7 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json world-model-service
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
       register: wm_allocs
       ignore_errors: yes
       become: no
@@ -180,7 +180,7 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ wm_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
       register: wm_logs_stdout
       ignore_errors: yes
       become: no
@@ -195,7 +195,7 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ wm_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
       register: wm_logs_stderr
       ignore_errors: yes
       become: no
@@ -231,6 +231,6 @@
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/llamacpp-batch.nomad"
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
   changed_when: true
   become: no

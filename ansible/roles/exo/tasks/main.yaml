@@ -87,7 +87,7 @@
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/exo.nomad"
   environment:
-    NOMAD_ADDR: "http://{{ advertise_ip }}:{{ nomad_http_port }}"
+    NOMAD_ADDR: "https://{{ advertise_ip }}:{{ nomad_http_port }}"
   register: exo_job_run
   changed_when: "'Eval ID' in exo_job_run.stdout"
   when: exo_enable
