@@ -128,7 +128,11 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job stop -purge world-model-service"
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       register: stop_job_result
       failed_when: stop_job_result.rc != 0 and "No job(s) with prefix or ID" not in stop_job_result.stderr
       changed_when: stop_job_result.rc == 0
@@ -138,7 +142,11 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/world_model.nomad"
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       changed_when: true
       become: no
       register: world_model_job_run
@@ -148,7 +156,11 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose world-model-service
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       register: wm_job_status
       ignore_errors: yes
       become: no
@@ -161,7 +173,11 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json world-model-service
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       register: wm_allocs
       ignore_errors: yes
       become: no
@@ -180,7 +196,11 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ wm_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       register: wm_logs_stdout
       ignore_errors: yes
       become: no
@@ -195,7 +215,11 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ wm_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       register: wm_logs_stderr
       ignore_errors: yes
       become: no
@@ -231,6 +255,10 @@
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/llamacpp-batch.nomad"
   environment:
-    NOMAD_ADDR: "https://{{ cluster_ip }}:4646"
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
   changed_when: true
   become: no
