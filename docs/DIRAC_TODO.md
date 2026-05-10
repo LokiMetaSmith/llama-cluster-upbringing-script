@@ -49,7 +49,7 @@ The goal of Phase 2 is to build Dirac's token-saving techniques natively into ou
 
 ### Step 3: Multi-file Batching
 - [x] **Update Tool Schemas:** Modify the new `hash_replace` and `ast_editor` commands to accept lists of operations across multiple files in a single JSON payload.
-- [ ] **Refactor Prompt:** Update the system prompt to explicitly teach the model how to batch these commands to save tokens.
+- [x] **Refactor Prompt:** Update the system prompt to explicitly teach the model how to batch these commands to save tokens.
 
 ### Step 4: Transition
 - [ ] **Benchmarking:** Run our native tools through our internal TerminalBench suite. Compare token usage and success rate against the Node.js `dirac_tool`.
