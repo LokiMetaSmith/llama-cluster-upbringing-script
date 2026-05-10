@@ -364,11 +364,14 @@
 
 - name: Template workflow files
   ansible.builtin.template:
-    src: "workflows/default_agent_loop.yaml.j2"
-    dest: "{{ pipecat_app_dir }}/workflows/default_agent_loop.yaml"
+    src: "workflows/{{ item }}.j2"
+    dest: "{{ pipecat_app_dir }}/workflows/{{ item }}"
     mode: '0644'
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
+  with_items:
+    - default_agent_loop.yaml
+    - architect_loop.yaml
   become: yes
   tags:
     - deploy_app
@@ -436,6 +439,18 @@
   ansible.builtin.template:
     src: pipecatapp.nomad.j2
     dest: "{{ nomad_jobs_dir }}/pipecatapp.nomad"
+  become: yes
+
+- name: Template seed-agent Nomad job file
+  ansible.builtin.template:
+    src: seed-agent.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/seed-agent.nomad"
+  become: yes
+
+- name: Template architect Nomad job file
+  ansible.builtin.template:
+    src: architect.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/architect.nomad"
   become: yes
 
 - name: Template prompt evolution Nomad job file
