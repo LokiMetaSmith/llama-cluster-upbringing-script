@@ -69,6 +69,12 @@ nodes:
 
   - id: "call_vision_llm"
     type: "VisionLLMNode"
+    config:
+      stream: false
+      model: "gemma"
+      fallback_models: ["olmo"]
+      retry_on_403: true
+      timeout: 60
     inputs:
       - name: "messages"
         connection:

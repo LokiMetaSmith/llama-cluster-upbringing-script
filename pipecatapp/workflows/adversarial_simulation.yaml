@@ -9,6 +9,8 @@ nodes:
 
   - id: "DraftingStep"
     type: "SimpleLLMNode"
+    config:
+      stream: false
     model_tier: "balanced"
     inputs:
       - name: "user_text"
@@ -20,6 +22,8 @@ nodes:
 
   - id: "ProfilingStep"
     type: "SimpleLLMNode"
+    config:
+      stream: false
     model_tier: "capable"
     inputs:
       - name: "user_text"
@@ -35,6 +39,8 @@ nodes:
 
   - id: "SimulationStep"
     type: "SimpleLLMNode"
+    config:
+      stream: false
     model_tier: "capable"
     inputs:
       - name: "draft_response"
@@ -50,6 +56,8 @@ nodes:
 
   - id: "RefinementStep"
     type: "SimpleLLMNode"
+    config:
+      stream: false
     model_tier: "capable"
     inputs:
       - name: "draft_response"

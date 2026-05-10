@@ -29,6 +29,8 @@ nodes:
 
   - id: "SecurityReasoning"
     type: "SimpleLLMNode"
+    config:
+      stream: false
     model_tier: "fast"
     inputs:
       - name: "user_text"

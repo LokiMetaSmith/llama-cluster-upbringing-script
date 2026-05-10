@@ -35,6 +35,8 @@ nodes:
 
   - id: "ManagerReasoning"
     type: "SimpleLLMNode"
+    config:
+      stream: false
     model_tier: "capable"
     inputs:
       - name: "user_text"
