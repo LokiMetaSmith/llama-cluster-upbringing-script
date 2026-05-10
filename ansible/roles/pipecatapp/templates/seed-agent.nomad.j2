@@ -1,0 +1,79 @@
+job "seed-agent" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  meta {
+    version = "{{ pipecat_versioned_tag | default('local') }}"
+  }
+
+  group "seed-agent-group" {
+    count = 1
+
+    update {
+      max_parallel     = 1
+      min_healthy_time = "30s"
+      healthy_deadline = "15m"
+      progress_deadline = "20m"
+      auto_revert      = true
+      canary           = 0
+    }
+
+    reschedule {
+      attempts  = 3
+      interval  = "10m"
+      delay     = "30s"
+      unlimited = false
+    }
+
+    {% set env_vars %}
+    env {
+      NOMAD_ADDR             = "http://{{ cluster_ip }}:4646"
+      CONSUL_HOST            = "{{ cluster_ip }}"
+      CONSUL_PORT            = "{{ consul_http_port }}"
+      CONSUL_HTTP_TOKEN      = "{{ consul_bootstrap_token | default('') }}"
+      ANSIBLE_CONFIG         = "/app/ansible.cfg"
+    }
+    {% endset %}
+
+    network {
+      mode = "host"
+    }
+
+    service {
+      name     = "seed-agent"
+      provider = "consul"
+      address  = "{{ cluster_ip }}"
+      tags     = ["seed", "infrastructure-manager"]
+    }
+
+    task "seed-agent-task" {
+      driver = "docker"
+      {{ env_vars }}
+
+      constraint {
+        attribute = "${meta.node_type}"
+        value     = "controller"
+      }
+
+      config {
+        image = "{{ pipecatapp_image_ref | default('pipecatapp:local') }}"
+        force_pull = false
+
+        # Granting elevated privileges since it's the infrastructure manager
+        privileged = true
+
+        volumes = [
+          "/opt/nomad/models:/opt/nomad/models:ro",
+          "/opt/pipecatapp:/opt/pipecatapp",
+          "/root/.ssh:/root/.ssh:ro",
+          "/etc/nomad.d/tls:/etc/nomad.d/tls:ro",
+        ]
+      }
+
+      resources {
+        cpu    = 1000 # 1 GHz
+        memory = 1024 # 1 GB
+      }
+    }
+  }
+}

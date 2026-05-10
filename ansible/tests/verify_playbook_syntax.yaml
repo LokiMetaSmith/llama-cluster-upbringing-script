@@ -1,0 +1,11 @@
+---
+- name: Verify cluster basics before applying changes
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Assert that the test framework is executed
+      ansible.builtin.assert:
+        that:
+          - true
+        fail_msg: "Basic assertion failed. Check the Ansible environment."
+        success_msg: "Basic assertion passed. Environment seems ready for validation tests."

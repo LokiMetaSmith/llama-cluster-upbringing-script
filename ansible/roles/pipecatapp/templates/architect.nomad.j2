@@ -1,0 +1,87 @@
+job "architect" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  meta {
+    version = "{{ pipecat_versioned_tag | default('local') }}"
+  }
+
+  group "architect-group" {
+    count = 1
+
+    update {
+      max_parallel     = 1
+      min_healthy_time = "30s"
+      healthy_deadline = "15m"
+      progress_deadline = "20m"
+      auto_revert      = true
+      canary           = 0
+    }
+
+    reschedule {
+      attempts  = 3
+      interval  = "10m"
+      delay     = "30s"
+      unlimited = false
+    }
+
+    {% set env_vars %}
+    env {
+      LLAMA_API_SERVICE_NAME = "{{ llama_api_service_name | default('llamacpp-rpc-api') }}"
+      USE_SUMMARIZER         = "{{ use_summarizer | default('false') }}"
+      STT_SERVICE            = "{{ stt_service | default('faster-whisper') }}"
+      SANDBOX_EXECUTOR       = "{{ sandbox_executor | default('docker') }}"
+      NOMAD_ADDR             = "http://{{ cluster_ip }}:4646"
+      PIPECAT_API_KEYS        = "{{ pipecat_api_keys }}"
+      EXTERNAL_EXPERTS_CONFIG = "{{ external_experts_config | to_json | replace('\"', '\\\"') }}"
+      OPENAI_API_KEY         = "{{ openai_api_key }}"
+      OPENROUTER_API_KEY     = "{{ openrouter_api_key }}"
+      MEMORY_SERVICE_URL     = "http://{{ cluster_ip }}:8000"
+      CONSUL_HOST            = "{{ cluster_ip }}"
+      CONSUL_PORT            = "{{ consul_http_port }}"
+      CONSUL_HTTP_TOKEN      = "{{ consul_bootstrap_token | default('') }}"
+      ROUTER_PORT            = "{{ router_port }}"
+      LLAMA_API_URL          = "http://{{ cluster_ip }}:{{ router_port }}/v1"
+      MAIN_API_SERVICE_NAME = "llama-api-main"
+      WORKFLOW_FILE         = "/app/workflows/architect_loop.yaml"
+    }
+    {% endset %}
+
+    network {
+      mode = "host"
+    }
+
+    service {
+      name     = "architect"
+      provider = "consul"
+      address  = "{{ cluster_ip }}"
+      tags     = ["architect", "ai-agent"]
+    }
+
+    task "architect-task" {
+      driver = "docker"
+      {{ env_vars }}
+
+      constraint {
+        attribute = "${meta.node_type}"
+        value     = "controller"
+      }
+
+      config {
+        image = "{{ pipecatapp_image_ref | default('pipecatapp:local') }}"
+        force_pull = false
+
+        volumes = [
+          "/opt/nomad/models:/opt/nomad/models:ro",
+          "/opt/pipecatapp:/opt/pipecatapp",
+          "/opt/pipecatapp/chromadb:/app/chromadb_storage",
+        ]
+      }
+
+      resources {
+        cpu    = 2000 # 2 GHz
+        memory = 2048 # 2 GB
+      }
+    }
+  }
+}

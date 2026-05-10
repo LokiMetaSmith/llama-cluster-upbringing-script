@@ -1,0 +1,33 @@
+nodes:
+  - id: input
+    type: InputNode
+    config: {}
+
+  - id: define_goals
+    type: SimpleLLMNode
+    config:
+      system_prompt: |
+        You are the Architect. Your job is to read goals, define system state, and generate specifications.
+        Analyze the input and outline the architectural specification needed to achieve the goal.
+        Do not write code or execute commands. You only produce the blueprint.
+      temperature: 0.2
+
+  - id: pass_to_executor
+    type: ToolNode
+    config:
+      tools:
+        - orchestrator # Or a custom tool if needed to pass to Seed Agent/Execution team
+
+  - id: output
+    type: OutputNode
+    config: {}
+
+edges:
+  - source: input
+    target: define_goals
+
+  - source: define_goals
+    target: pass_to_executor
+
+  - source: pass_to_executor
+    target: output
