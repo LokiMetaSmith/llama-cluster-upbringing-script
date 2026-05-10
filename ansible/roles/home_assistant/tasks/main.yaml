@@ -62,7 +62,8 @@
 
 - name: Wait for Nomad API to be ready before submitting job
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:{{ nomad_http_port }}/v1/status/leader"
+    url: "https://{{ cluster_ip }}:{{ nomad_http_port }}/v1/status/leader"
+    validate_certs: no
     method: GET
     status_code: 200
   register: home_assistant_nomad_api_status

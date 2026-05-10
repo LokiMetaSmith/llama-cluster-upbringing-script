@@ -8,7 +8,11 @@
 - name: Check Nomad job status for MQTT
   ansible.builtin.command: "/usr/local/bin/nomad job status mqtt"
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_ADDR: "https://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   register: mqtt_job_status
   changed_when: false
   ignore_errors: yes
@@ -31,7 +35,11 @@
       /usr/local/bin/nomad job status -json mqtt | jq -r '.[0].Allocations[0].ID'
     executable: /bin/bash
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_ADDR: "https://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   register: mqtt_alloc_id
   changed_when: false
   when: mqtt_job_status.rc == 0
@@ -39,7 +47,11 @@
 - name: Get MQTT allocation logs
   ansible.builtin.command: "/usr/local/bin/nomad alloc logs {{ mqtt_alloc_id.stdout }}"
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_ADDR: "https://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   register: mqtt_alloc_logs
   changed_when: false
   when: mqtt_alloc_id.stdout is defined and mqtt_alloc_id.stdout != ""
@@ -55,7 +67,11 @@
 - name: Check Nomad job status
   ansible.builtin.command: "/usr/local/bin/nomad job status home-assistant"
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_ADDR: "https://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   register: job_status
   changed_when: false
   ignore_errors: yes
@@ -78,7 +94,11 @@
       /usr/local/bin/nomad job status -json home-assistant | jq -r '.[0].Allocations[0].ID'
     executable: /bin/bash
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_ADDR: "https://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   register: alloc_id
   changed_when: false
   when: job_status.rc == 0
@@ -86,7 +106,11 @@
 - name: Get allocation details
   ansible.builtin.command: "/usr/local/bin/nomad alloc status {{ alloc_id.stdout }}"
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_ADDR: "https://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   register: alloc_status
   changed_when: false
   when: alloc_id.stdout is defined and alloc_id.stdout != ""
@@ -102,7 +126,11 @@
 - name: Get allocation logs
   ansible.builtin.command: "/usr/local/bin/nomad alloc logs {{ alloc_id.stdout }}"
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_ADDR: "https://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   register: alloc_logs
   changed_when: false
   when: alloc_id.stdout is defined and alloc_id.stdout != ""

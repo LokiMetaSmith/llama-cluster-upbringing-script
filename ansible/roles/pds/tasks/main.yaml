@@ -20,7 +20,7 @@
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/pds.nomad"
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip | default('localhost') }}:4646"
+    NOMAD_ADDR: "https://{{ cluster_ip | default('localhost') }}:4646"
   register: pds_job_run
   changed_when: true
   when: pds_enabled | default(false) | bool
