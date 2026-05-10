@@ -31,6 +31,8 @@ A brief overview of the key directories in this repository:
 
 ## 3. Initial Machine Setup
 
+> **SECURITY WARNING:** Before provisioning any machines, it is strongly recommended to isolate your cluster network. Operating an autonomous AI agent on your primary home network presents significant risks. See the **[Network Isolation Guide](docs/NETWORK_ISOLATION.md)** for instructions on setting up a secure DMZ/VLAN.
+
 Setting up a new cluster involves two main methods: a one-time manual setup for the first node, and a fully automated setup for all subsequent nodes.
 
 ### 3.1. Manual Setup (First Node / PXE Server)
@@ -409,13 +411,16 @@ The cluster supports managing encrypted secrets (like API keys, database passwor
 Ansible automatically decrypts variables from `*.sops.yaml` files during playbook runs, ensuring that sensitive data is secure at rest while enabling GitOps workflows.
 
 1. **Setup Age Key:**
+
    ```bash
    age-keygen -o ~/.config/sops/age/keys.txt
    ```
+
 2. **Update SOPS Config:**
    Update `.sops.yaml` at the root of the project to include the public key generated above.
 3. **Manage Secrets:**
    Create encrypted variable files in `group_vars/` or `host_vars/` (e.g. `group_vars/secrets.sops.yaml`).
+
    ```bash
    sops group_vars/secrets.sops.yaml
    ```
