@@ -180,33 +180,6 @@ def durable_step(func):
     if inspect.iscoroutinefunction(func):
         @functools.wraps(func)
         async def async_wrapper(self, *args, **kwargs):
-            cached_result, is_cached = _pre_execution(self, func.__name__, args, kwargs)
-            if is_cached:
-                return cached_result
-
-            # Execute original async function
-            result = await func(self, *args, **kwargs)
-
-            # Only log completion if we had a valid context (meaning logging started)
-            # We need to re-check/re-calculate context or return it from pre_execution.
-            # But _pre_execution returns None as context if skipped.
-            # Wait, _pre_execution returns (context, is_cached).
-            # If skipped, context is None.
-            # But if I call _pre_execution again, it increments counter!
-            # So I need to capture the return value of _pre_execution.
-            # I did: cached_result, is_cached = ...
-            # But cached_result IS the context if not cached? No.
-            # Refactor _pre_execution to return (result_or_context, status_enum)?
-
-            # Let's inline the check to avoid confusion or return a structured object.
-            pass # see below for better logic flow
-
-            # Re-implementing wrapper logic using local variables correctly
-            return result
-
-        # Correct async implementation
-        @functools.wraps(func)
-        async def async_wrapper_corrected(self, *args, **kwargs):
             context_or_result, is_cached = _pre_execution(self, func.__name__, args, kwargs)
             if is_cached:
                 return context_or_result
@@ -218,7 +191,7 @@ def durable_step(func):
                 _post_execution(self, context, result)
             return result
 
-        return async_wrapper_corrected
+        return async_wrapper
 
     else:
         @functools.wraps(func)
