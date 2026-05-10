@@ -48,7 +48,7 @@ The goal of Phase 2 is to build Dirac's token-saving techniques natively into ou
 - [x] **Test Robustness:** Ensure the AST editor gracefully handles syntax errors or malformed input without corrupting the file.
 
 ### Step 3: Multi-file Batching
-- [ ] **Update Tool Schemas:** Modify the new `hash_replace` and `ast_editor` commands to accept lists of operations across multiple files in a single JSON payload.
+- [x] **Update Tool Schemas:** Modify the new `hash_replace` and `ast_editor` commands to accept lists of operations across multiple files in a single JSON payload.
 - [ ] **Refactor Prompt:** Update the system prompt to explicitly teach the model how to batch these commands to save tokens.
 
 ### Step 4: Transition

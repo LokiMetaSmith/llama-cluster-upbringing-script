@@ -30,12 +30,12 @@ class ASTEditorTool:
                     "properties": {
                         "action": {
                             "type": "string",
-                            "enum": ["extract_function", "rename_symbol", "add_import"],
+                            "enum": ["extract_function", "rename_symbol", "add_import", "batch_edit"],
                             "description": "The AST edit action to perform."
                         },
                         "filepath": {
                             "type": "string",
-                            "description": "The path to the Python file to modify."
+                            "description": "The path to the Python file to modify. Optional for batch_edit."
                         },
                         "func_name": {
                             "type": "string",
@@ -56,32 +56,94 @@ class ASTEditorTool:
                         "import_statement": {
                             "type": "string",
                             "description": "The full import statement to add (used for add_import)."
+                        },
+                        "batch_operations": {
+                            "type": "array",
+                            "description": "A list of operations across multiple files (used for batch_edit).",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "enum": ["extract_function", "rename_symbol", "add_import"],
+                                        "description": "The AST edit action to perform."
+                                    },
+                                    "filepath": {
+                                        "type": "string",
+                                        "description": "The path to the Python file to modify."
+                                    },
+                                    "func_name": { "type": "string" },
+                                    "target_filepath": { "type": "string" },
+                                    "old_name": { "type": "string" },
+                                    "new_name": { "type": "string" },
+                                    "import_statement": { "type": "string" }
+                                },
+                                "required": ["action", "filepath"]
+                            }
                         }
                     },
-                    "required": ["action", "filepath"]
+                    "required": ["action"]
                 }
             }
         }
 
-    async def execute(self, action: str, filepath: str, **kwargs) -> str:
+    async def execute(self, action: str, filepath: str = "", **kwargs) -> str:
         """Executes the AST editor action."""
         if action == "extract_function":
+            if not filepath: return "Error: filepath is required for extract_function action."
             func_name = kwargs.get("func_name")
             target_filepath = kwargs.get("target_filepath")
             if not func_name or not target_filepath:
                 return "Error: extract_function requires func_name and target_filepath."
             return self.extract_function(filepath, func_name, target_filepath)
         elif action == "rename_symbol":
+            if not filepath: return "Error: filepath is required for rename_symbol action."
             old_name = kwargs.get("old_name")
             new_name = kwargs.get("new_name")
             if not old_name or not new_name:
                 return "Error: rename_symbol requires old_name and new_name."
             return self.rename_symbol(filepath, old_name, new_name)
         elif action == "add_import":
+            if not filepath: return "Error: filepath is required for add_import action."
             import_statement = kwargs.get("import_statement")
             if not import_statement:
                 return "Error: add_import requires import_statement."
             return self.add_import(filepath, import_statement)
+        elif action == "batch_edit":
+            batch_operations = kwargs.get("batch_operations", [])
+            if not batch_operations:
+                return "Error: batch_operations is required for batch_edit action."
+            results = []
+            for op in batch_operations:
+                op_action = op.get("action")
+                op_filepath = op.get("filepath")
+                if not op_action or not op_filepath:
+                    results.append("Error: action and filepath are required for each batch operation.")
+                    continue
+
+                if op_action == "extract_function":
+                    func_name = op.get("func_name")
+                    target_filepath = op.get("target_filepath")
+                    if not func_name or not target_filepath:
+                        results.append(f"[{op_filepath}] Error: extract_function requires func_name and target_filepath.")
+                    else:
+                        results.append(f"[{op_filepath}] " + self.extract_function(op_filepath, func_name, target_filepath))
+                elif op_action == "rename_symbol":
+                    old_name = op.get("old_name")
+                    new_name = op.get("new_name")
+                    if not old_name or not new_name:
+                        results.append(f"[{op_filepath}] Error: rename_symbol requires old_name and new_name.")
+                    else:
+                        results.append(f"[{op_filepath}] " + self.rename_symbol(op_filepath, old_name, new_name))
+                elif op_action == "add_import":
+                    import_statement = op.get("import_statement")
+                    if not import_statement:
+                        results.append(f"[{op_filepath}] Error: add_import requires import_statement.")
+                    else:
+                        results.append(f"[{op_filepath}] " + self.add_import(op_filepath, import_statement))
+                else:
+                    results.append(f"[{op_filepath}] Error: Unknown action '{op_action}'")
+            return "\n".join(results)
         else:
             return f"Error: Unknown action '{action}'"
 

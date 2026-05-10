@@ -35,12 +35,12 @@ class FileEditorTool:
                     "properties": {
                         "action": {
                             "type": "string",
-                            "enum": ["read", "write", "patch", "hash_replace", "append", "undo"],
+                            "enum": ["read", "write", "patch", "hash_replace", "batch_hash_replace", "append", "undo"],
                             "description": "The action to perform on the file."
                         },
                         "filepath": {
                             "type": "string",
-                            "description": "The path to the file to modify or read."
+                            "description": "The path to the file to modify or read. Optional for batch_hash_replace."
                         },
                         "content": {
                             "type": "string",
@@ -68,6 +68,30 @@ class FileEditorTool:
                                 "required": ["type", "id"]
                             }
                         },
+                        "batch_edits": {
+                            "type": "array",
+                            "description": "A list of files and their edits (used for batch_hash_replace).",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "filepath": { "type": "string", "description": "The path to the file to modify." },
+                                    "edits": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "type": { "type": "string", "enum": ["replace", "replace_range", "insert_after", "delete"] },
+                                                "id": { "type": "string", "description": "The target line in format <line_number>:<hash>" },
+                                                "end_id": { "type": "string", "description": "The end target line for replace_range" },
+                                                "content": { "type": "string", "description": "The new content" }
+                                            },
+                                            "required": ["type", "id"]
+                                        }
+                                    }
+                                },
+                                "required": ["filepath", "edits"]
+                            }
+                        },
                         "use_hashlines": {
                             "type": "boolean",
                             "description": "Whether to return lines with line numbers and hashes (used for read). Defaults to False."
@@ -78,31 +102,51 @@ class FileEditorTool:
                             "description": "Optional [start_line, end_line] 1-based index to read only a portion of the file."
                         }
                     },
-                    "required": ["action", "filepath"]
+                    "required": ["action"]
                 }
             }
         }
 
-    async def execute(self, action: str, filepath: str, **kwargs) -> str:
+    async def execute(self, action: str, filepath: str = "", **kwargs) -> str:
         """Executes the file editor action."""
         if action == "read":
+            if not filepath: return "Error: filepath is required for read action."
             use_hashlines = kwargs.get("use_hashlines", False)
             view_range = kwargs.get("view_range", None)
             return self.read_file(filepath, use_hashlines=use_hashlines, view_range=view_range)
         elif action == "write":
+            if not filepath: return "Error: filepath is required for write action."
             content = kwargs.get("content", "")
             return self.write_file(filepath, content)
         elif action == "patch":
+            if not filepath: return "Error: filepath is required for patch action."
             search_block = kwargs.get("search_block", "")
             replace_block = kwargs.get("replace_block", "")
             return self.apply_patch(filepath, search_block, replace_block)
         elif action == "hash_replace":
+            if not filepath: return "Error: filepath is required for hash_replace action."
             edits = kwargs.get("edits", [])
             return self.apply_hash_edits(filepath, edits)
+        elif action == "batch_hash_replace":
+            batch_edits = kwargs.get("batch_edits", [])
+            if not batch_edits:
+                return "Error: batch_edits is required for batch_hash_replace action."
+            results = []
+            for batch in batch_edits:
+                path = batch.get("filepath")
+                edits = batch.get("edits", [])
+                if not path:
+                    results.append("Error: filepath missing in batch edit.")
+                else:
+                    result = self.apply_hash_edits(path, edits)
+                    results.append(f"[{path}] {result}")
+            return "\n".join(results)
         elif action == "append":
+            if not filepath: return "Error: filepath is required for append action."
             content = kwargs.get("content", "")
             return self.append_to_file(filepath, content)
         elif action == "undo":
+            if not filepath: return "Error: filepath is required for undo action."
             return self.undo_edit(filepath)
         else:
             return f"Error: Unknown action '{action}'"
