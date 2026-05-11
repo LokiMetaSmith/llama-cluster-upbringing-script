@@ -1,0 +1,45 @@
+- name: "Build Cached Image : Get checksum of all files in {{ build_dir }}"
+  ansible.builtin.find:
+    paths: "{{ build_dir }}"
+    recurse: yes
+    get_checksum: yes
+    checksum_algorithm: sha256
+  register: _build_files
+  become: yes
+
+- name: "Build Cached Image : Generate build configuration hash"
+  ansible.builtin.set_fact:
+    _build_hash: >-
+      {{
+        _build_files.files
+        | sort(attribute='path')
+        | map(attribute='path')
+        | zip(_build_files.files | sort(attribute='path') | map(attribute='checksum'))
+        | map('join', ':')
+        | join(',')
+        | hash('sha256')
+      }}
+
+- name: "Build Cached Image : Set versioned tag"
+  ansible.builtin.set_fact:
+    _versioned_tag: "v-{{ _build_hash }}"
+
+- name: "Build Cached Image : Check if versioned image exists locally"
+  ansible.builtin.command: "docker image inspect {{ image_name }}:{{ _versioned_tag }}"
+  register: _versioned_image_check
+  failed_when: false
+  changed_when: false
+  become: yes
+
+- name: "Build Cached Image : Build the docker image"
+  ansible.builtin.command:
+    cmd: "docker build --no-cache -t {{ image_name }}:{{ _versioned_tag }} ."
+    chdir: "{{ build_dir }}"
+  register: _docker_build_result
+  changed_when: "_docker_build_result.stdout is defined and ('Successfully built' in _docker_build_result.stdout or 'writing image' in _docker_build_result.stdout)"
+  become: yes
+  when: _versioned_image_check.rc != 0 or (force_rebuild | default(false) | bool)
+
+- name: "Build Cached Image : Tag image with target tag"
+  ansible.builtin.command: "docker tag {{ image_name }}:{{ _versioned_tag }} {{ image_name }}:{{ image_tag | default('latest') }}"
+  become: yes

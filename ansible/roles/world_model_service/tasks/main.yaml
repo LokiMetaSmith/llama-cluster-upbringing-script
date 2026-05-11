@@ -28,63 +28,15 @@
     - "Dockerfile"
   become: true
 
-- name: "World Model Service : Get checksum of all files in world_model_service directory"
+- name: "World Model Service : Build the docker image (cached)"
   tags:
     - world_model_service
-  ansible.builtin.find:
-    paths: "/opt/world_model_service"
-    recurse: yes
-    get_checksum: yes
-    checksum_algorithm: sha256
-  register: build_files
-  become: yes
-
-- name: "World Model Service : Generate build configuration hash"
-  tags:
-    - world_model_service
-  ansible.builtin.set_fact:
-    build_hash: >-
-      {{
-        build_files.files
-        | sort(attribute='path')
-        | map(attribute='path')
-        | zip(build_files.files | sort(attribute='path') | map(attribute='checksum'))
-        | map('join', ':')
-        | join(',')
-        | hash('sha256')
-      }}
-
-- name: "World Model Service : Set versioned tag"
-  tags:
-    - world_model_service
-  ansible.builtin.set_fact:
-    versioned_tag: "v-{{ build_hash }}"
-
-- name: "World Model Service : Check if versioned image exists locally"
-  tags:
-    - world_model_service
-  ansible.builtin.command: "docker image inspect world-model-service:{{ versioned_tag }}"
-  register: versioned_image_check
-  failed_when: false
-  changed_when: false
-  become: yes
-
-- name: "World Model Service : Build the docker image"
-  tags:
-    - world_model_service
-  ansible.builtin.command:
-    cmd: "docker build --no-cache -t world-model-service:{{ versioned_tag }} ."
-    chdir: "/opt/world_model_service/"
-  register: docker_build_result
-  changed_when: "'Successfully built' in docker_build_result.stdout or 'writing image' in docker_build_result.stdout"
-  become: true
-  when: versioned_image_check.rc != 0
-
-- name: "World Model Service : Tag image with local tag"
-  tags:
-    - world_model_service
-  ansible.builtin.command: "docker tag world-model-service:{{ versioned_tag }} world-model-service:local"
-  become: yes
+  ansible.builtin.include_tasks:
+    file: "../../tasks/build_cached_image.yaml"
+  vars:
+    build_dir: "/opt/world_model_service"
+    image_name: "world-model-service"
+    image_tag: "local"
 
 - name: "World Model Service : Copy debug script"
   tags:
