@@ -57,7 +57,7 @@
 
 - name: Discover tool-server-api address
   ansible.builtin.uri:
-    url: "http://localhost:{{ consul_http_port }}/v1/health/service/tool-server-api?passing"
+    url: "http://{{ advertise_ip }}:{{ consul_http_port }}/v1/health/service/tool-server-api?passing"
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token }}"
     return_content: yes
