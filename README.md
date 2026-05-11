@@ -5,7 +5,7 @@ Last updated: 2026-02-01
 It uses Ansible for automated provisioning, Nomad for cluster orchestration, and
 a state-of-the-art AI stack to create a responsive, streaming, and embodied
 voice agent. For a detailed technical description of the system's layers, see
-the [Holistic Project Architecture](docs/ARCHITECTURE.md) document.
+the [Holistic Project Architecture](docs/manual/ARCHITECTURE.md) document.
 
 ## 1. System Requirements
 
@@ -31,7 +31,7 @@ A brief overview of the key directories in this repository:
 
 ## 3. Initial Machine Setup
 
-> **SECURITY WARNING:** Before provisioning any machines, it is strongly recommended to isolate your cluster network. Operating an autonomous AI agent on your primary home network presents significant risks. See the **[Network Isolation Guide](docs/NETWORK_ISOLATION.md)** for instructions on setting up a secure DMZ/VLAN.
+> **SECURITY WARNING:** Before provisioning any machines, it is strongly recommended to isolate your cluster network. Operating an autonomous AI agent on your primary home network presents significant risks. See the **[Network Isolation Guide](docs/manual/NETWORK_ISOLATION.md)** for instructions on setting up a secure DMZ/VLAN.
 
 Setting up a new cluster involves two main methods: a one-time manual setup for the first node, and a fully automated setup for all subsequent nodes.
 
@@ -61,7 +61,7 @@ Once your first node has been provisioned by Ansible and the `pxe_server` role h
 This system uses an advanced iPXE-over-HTTP method that is significantly faster
 and more reliable than traditional PXE. For detailed instructions on how to
 apply the Ansible role and prepare the client machines for network booting, see
-the **[iPXE Boot Server Setup Guide](docs/PXE_BOOT_SETUP.md)**.
+the **[iPXE Boot Server Setup Guide](docs/manual/PXE_BOOT_SETUP.md)**.
 
 ## 4. Easy Bootstrap (Single-Server Setup)
 
@@ -526,7 +526,7 @@ This section outlines the major feature enhancements and maintenance tasks plann
 
 ## 16. Troubleshooting
 
-For solutions to common issues, such as failing Nomad service checks or deployment errors, please refer to the **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)**.
+For solutions to common issues, such as failing Nomad service checks or deployment errors, please refer to the **[Troubleshooting Guide](docs/manual/TROUBLESHOOTING.md)**.
 
 ## 17. License
 
