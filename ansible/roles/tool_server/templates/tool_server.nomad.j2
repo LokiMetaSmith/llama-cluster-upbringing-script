@@ -6,7 +6,9 @@ job "tool-server" {
     count = 1
 
     network {
-      port "http" {}
+      port "http" {
+        static = "{{ tool_server_port | default(8006) }}"
+      }
     }
 
     task "tool-server-task" {

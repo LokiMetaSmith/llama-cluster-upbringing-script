@@ -74,6 +74,7 @@ home_assistant_port: 8123
 router_port: 8081
 router_count: 1
 nanochat_port: 8005
+tool_server_port: 8006
 frigate_port: 5000
 docker_registry_host: "{{ controller_ip | default('localhost') }}"
 docker_registry_port: 5001
