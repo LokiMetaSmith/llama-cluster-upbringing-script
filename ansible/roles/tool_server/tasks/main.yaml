@@ -73,51 +73,13 @@
   ansible.builtin.command: "ls -R {{ role_path }}"
   changed_when: false
 
-- name: "Tool Server : Get checksum of all files in tool_server directory"
-  ansible.builtin.find:
-    paths: "/opt/tool_server"
-    recurse: yes
-    get_checksum: yes
-    checksum_algorithm: sha256
-  register: build_files
-  become: yes
-
-- name: "Tool Server : Generate build configuration hash"
-  ansible.builtin.set_fact:
-    build_hash: >-
-      {{
-        build_files.files
-        | sort(attribute='path')
-        | map(attribute='path')
-        | zip(build_files.files | sort(attribute='path') | map(attribute='checksum'))
-        | map('join', ':')
-        | join(',')
-        | hash('sha256')
-      }}
-
-- name: "Tool Server : Set versioned tag"
-  ansible.builtin.set_fact:
-    versioned_tag: "v-{{ build_hash }}"
-
-- name: "Tool Server : Check if versioned image exists locally"
-  ansible.builtin.command: "docker image inspect tool-server:{{ versioned_tag }}"
-  register: versioned_image_check
-  failed_when: false
-  changed_when: false
-  become: yes
-
-- name: Build tool-server docker image
-  ansible.builtin.command:
-    cmd: "docker build --no-cache -t tool-server:{{ versioned_tag }} ."
-    chdir: "/opt/tool_server"
-  become: yes
-  register: tool_server_docker_build_result
-  changed_when: "'Successfully built' in tool_server_docker_build_result.stdout or 'writing image' in tool_server_docker_build_result.stdout"
-  when: versioned_image_check.rc != 0
-
-- name: "Tool Server : Tag image with local tag"
-  ansible.builtin.command: "docker tag tool-server:{{ versioned_tag }} tool-server:local"
-  become: yes
+- name: "Tool Server : Build tool-server docker image (cached)"
+  ansible.builtin.include_tasks:
+    file: "../../tasks/build_cached_image.yaml"
+  vars:
+    build_dir: "/opt/tool_server"
+    image_name: "tool-server"
+    image_tag: "local"
 
 - name: Verify tool-server image exists
   ansible.builtin.command: docker image inspect tool-server:local
