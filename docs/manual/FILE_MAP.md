@@ -357,10 +357,10 @@ This document maps every file in the repository, their description, and utilizat
 | `docker/README.md` | 🟢 Referenced | Docker |  |
 | `docker/dev_container/Dockerfile` | 🟢 Referenced | Install system dependencies |  |
 | `docker/memory_service/Dockerfile` | 🟢 Referenced | Install dependencies |  |
-| `docs/AGENTS.md` | 🟢 Referenced | AI Agent Architectures |  |
+| `docs/manual/AGENTS.md` | 🟢 Referenced | AI Agent Architectures |  |
 | `docs/AGENT_LIGHTNING_ANALYSIS.md` | 📄 Documentation/Asset | Agent Lightning Analysis |  |
 | `docs/AI_GOVERNANCE.md` | 📄 Documentation/Asset | AI Governance & Architecture Plan |  |
-| `docs/ARCHITECTURE.md` | 🟢 Referenced | Holistic Project Architecture |  |
+| `docs/manual/ARCHITECTURE.md` | 🟢 Referenced | Holistic Project Architecture |  |
 | `docs/BENCHMARKING.MD` | 🟢 Referenced | A Guide to Benchmarking Your AI Cluster |  |
 | `docs/CLAMAV_EVALUATION.md` | 📄 Documentation/Asset | ClamAV Evaluation Report |  |
 | `docs/CLAUDE_CODE_ANALYSIS.md` | 🟢 Referenced | Claude Code CLI Analysis |  |
@@ -384,7 +384,7 @@ This document maps every file in the repository, their description, and utilizat
 | `docs/PASEO_ANALYSIS.md` | 🟢 Referenced | Paseo Analysis: Architecture and Concepts for PipecatApp Integration |  |
 | `docs/PERFORMANCE_OPTIMIZATION.md` | 📄 Documentation/Asset | Performance & I/O Optimization |  |
 | `docs/PROJECT_SUMMARY.md` | 🟢 Referenced | Project Summary: Architecting a Responsive, Distributed Conversational AI Pipeline |  |
-| `docs/PXE_BOOT_SETUP.md` | 🟢 Referenced | iPXE Boot Server Setup for Automated Debian Installation |  |
+| `docs/manual/PXE_BOOT_SETUP.md` | 🟢 Referenced | iPXE Boot Server Setup for Automated Debian Installation |  |
 | `docs/README.md` | 🟢 Referenced | Project Documentation |  |
 | `docs/REFACTOR_PROPOSAL_hybrid_architecture.md` | 🟢 Referenced | Refactoring Proposal: Hybrid / Cluster-Native Architecture |  |
 | `docs/REMOTE_WORKFLOW.md` | 🟢 Referenced | Improving Your Remote Workflow with Mosh and Tmux |  |
@@ -392,10 +392,10 @@ This document maps every file in the repository, their description, and utilizat
 | `docs/SECURITY_AUDIT.md` | 📄 Documentation/Asset | Security Audit Log |  |
 | `docs/TODO_Hybrid_Architecture.md` | 🟢 Referenced | Hybrid Architecture Implementation To-Do List |  |
 | `docs/TOOL_EVALUATION.md` | 🟢 Referenced | Tool Evaluation and Strategic Direction |  |
-| `docs/TROUBLESHOOTING.md` | 🟢 Referenced | Troubleshooting Guide |  |
+| `docs/manual/TROUBLESHOOTING.md` | 🟢 Referenced | Troubleshooting Guide |  |
 | `docs/VLLM_PROJECT_EVALUATION.md` | 📄 Documentation/Asset | vLLM Project Evaluation |  |
 | `docs/YAML_FILES_REPORT.md` | 📄 Documentation/Asset | Report on YAML Files in Root Directory |  |
-| `docs/aid_e_log.txt` | 🟢 Referenced | File: aid_e_log.txt |  |
+| `docs/analysis/aid_e_log.txt` | 🟢 Referenced | File: aid_e_log.txt |  |
 | `docs/heretic_evaluation.md` | 🟢 Referenced | Heretic Repository Evaluation |  |
 | `docs/media/initial_state.png` | 📄 Documentation/Asset | File: initial_state.png |  |
 | `docs/media/paused_state.png` | 📄 Documentation/Asset | File: paused_state.png |  |

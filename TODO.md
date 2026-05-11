@@ -13,19 +13,19 @@
     3. [x] Create a `live-build` configuration to generate a custom, headless Debian bootable ISO that includes the project source and dependencies.
 - [x] **Gas Town Integration:**
   - **Goal:** Adapt Gas Town concepts (Work Ledger, Attribution, Agent CVs) into the Pipecat App ecosystem.
-  - Reference: `docs/GASTOWN_TODO.md`
+  - Reference: `docs/manual/GASTOWN_TODO.md`
 - [x] **Obsidian & 3D Workflow Integration:**
   - **Goal:** Integrate Obsidian Canvas and 3D spatial reasoning into the Pipecat workflow engine.
-  - Reference: `docs/OBSIDIAN_TODO.md`
+  - Reference: `docs/manual/OBSIDIAN_TODO.md`
 - [x] **Scaling Long-Running Autonomous Coding:**
   - **Goal:** Integrate the "Browser from Scratch" autonomous coding architecture into `pipecatapp`.
-  - Reference: `docs/SCALING_TODO.md`
+  - Reference: `docs/manual/SCALING_TODO.md`
 - [x] **Migrate to Hybrid Architecture (Phase 1):**
   - **Goal:** Allow the application to choose between running tools in-process (Monolith) or via the Tool Server (Distributed).
-  - Reference: `docs/TODO_Hybrid_Architecture.md`
+  - Reference: `docs/manual/TODO_Hybrid_Architecture.md`
 - [x] **Implement Active Vault Workflow (Phase 1):**
   - **Goal:** Support 3D spatial properties in nodes and implement `CanvasConverter`.
-  - Reference: `docs/OBSIDIAN_WORKFLOW_DESIGN.md`
+  - Reference: `docs/manual/OBSIDIAN_WORKFLOW_DESIGN.md`
 - [x] **Train and Configure LLMRouter:**
   - **Goal:** Replace the heuristic PoC logic in `LLMRouterNode` with a fully trained `LLMRouter` instance.
   - **Tasks:**
@@ -131,7 +131,7 @@ These structural suggestions are targeted for a future major release to signific
 ### Dirac Token-Efficient Agent Integration
 - [x] **Implement Dirac Hybrid Approach:**
   - **Goal:** Integrate the Dirac coding agent capabilities (hash-anchored edits, AST parsing, multi-file batching) to significantly reduce token costs and improve refactoring on our legacy hardware.
-  - Reference: `docs/DIRAC_TODO.md`
+  - Reference: `docs/manual/DIRAC_TODO.md`
 
 ### Integrate LangChain (Tandem/Hybrid Approach)
 
@@ -149,7 +149,7 @@ These structural suggestions are targeted for a future major release to signific
 - [x] **Re-evaluate Consul Connect Service Mesh:** Added `connect { sidecar_service {} }` blocks to redis.nomad and postgres.nomad jobs to enable Consul Connect sidecar for service mesh. Created feature documentation in job files. Full testing requires a feature branch with proper ACL tokens.
 - [x] **Add Pre-flight System Health Checks:** Create a new Ansible role to perform non-destructive checks at the beginning of `playbook.yaml`.
 - [x] **Investigate Advanced Power Management:** Research and prototype a more advanced version that uses Wake-on-LAN.
-- [x] **Implement Claude Code CLI Techniques:** Review `docs/CLAUDE_CODE_ANALYSIS.md` and implement the recommended techniques in `pipecatapp/tools/`:
+- [x] **Implement Claude Code CLI Techniques:** Review `docs/analysis/CLAUDE_CODE_ANALYSIS.md` and implement the recommended techniques in `pipecatapp/tools/`:
   - Format Zod/Pydantic validation errors for LLMs.
   - Add robust ripgrep fallback (EAGAIN handling) to `shell_tool.py`.
   - Add transparent pagination feedback (e.g. `[Showing results with pagination...]`).
@@ -275,7 +275,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 
 ## Paseo Integration Ideas
 
-This section tracks actionable ideas derived from the `docs/PASEO_ANALYSIS.md` document for integrating Paseo's orchestration concepts into our custom Pipecat architecture.
+This section tracks actionable ideas derived from the `docs/analysis/PASEO_ANALYSIS.md` document for integrating Paseo's orchestration concepts into our custom Pipecat architecture.
 
 - [x] **Implement `OpenCodeProviderTool`:** Create a Python-based provider wrapper in `pipecatapp/tools/` that executes OpenCode via `NomadSandboxExecutor`, intercepts standard output streams, and standardizes them into Pipecat agent events.
 - [x] **Add MCP-like Agent Management to `EmperorAgentNode`:** Expose new tools (e.g., `CreateAgentTool`, `WaitAgentTool`) to the Emperor node, allowing it to dynamically spawn and await specialized `TwinService` or Nomad worker instances (similar to Paseo's `agent-management-mcp.ts`).
@@ -293,7 +293,7 @@ This section tracks actionable ideas derived from the `docs/PASEO_ANALYSIS.md` d
 
 ## Haystack Architecture Integration Ideas
 
-This section tracks actionable ideas derived from the `docs/HAYSTACK_ANALYSIS.md` document for integrating Haystack's pipeline and component concepts into the `pipecatapp` architecture.
+This section tracks actionable ideas derived from the `docs/analysis/HAYSTACK_ANALYSIS.md` document for integrating Haystack's pipeline and component concepts into the `pipecatapp` architecture.
 
 - [x] **Explicit Component I/O Typing:** Refactor the base `Node` class in `pipecatapp/workflow/nodes/base.py` to require explicitly defined input and output variables (e.g., using Pydantic) to allow for pre-runtime graph validation.
 - [x] **Standardized Document Protocol:** Define a unified `Document` data class and refactor the FAISS `memory.py` implementation to adhere to a standard DocumentStore interface (e.g., `write_documents`, `filter_documents`), decoupling the `RAG_Tool` from the underlying storage mechanism.
@@ -302,7 +302,7 @@ This section tracks actionable ideas derived from the `docs/HAYSTACK_ANALYSIS.md
 
 ## Flowise UI Integration Ideas
 
-This section tracks actionable ideas derived from the `docs/FLOWISE_ANALYSIS.md` document for integrating visual workflow concepts into the `pipecatapp` architecture.
+This section tracks actionable ideas derived from the `docs/analysis/FLOWISE_ANALYSIS.md` document for integrating visual workflow concepts into the `pipecatapp` architecture.
 
 - [x] **Decouple Node Handlers (Input vs Output):** In the frontend, separate the visual node UI into dedicated Input and Output handlers (like Flowise's NodeInputHandler/NodeOutputHandler) that dynamically adjust their height to keep connection anchors perfectly aligned when configuration controls expand/collapse.
 - [x] **Strict Visual Edge Validation:** Implement an `isValidConnection` hook on the frontend canvas that checks the backend Python/Pydantic schemas. Prevent users from visually connecting a text output port to a dictionary input port to avoid runtime crashes.
@@ -319,7 +319,7 @@ This section tracks actionable ideas derived from the `docs/FLOWISE_ANALYSIS.md`
 
 ## Pollen Architecture Integration Ideas (Secret Sauce to Borrow)
 
-This section tracks actionable ideas derived from the `docs/POLLEN_COMPARISON.md` document for integrating Pollen's generic WASM mesh efficiencies into our custom Nomad/Pipecat AI architecture.
+This section tracks actionable ideas derived from the `docs/analysis/POLLEN_COMPARISON.md` document for integrating Pollen's generic WASM mesh efficiencies into our custom Nomad/Pipecat AI architecture.
 
 - [x] **Evaluate WASM:** Investigate using `Extism` or `Wasmtime` to run Python-based AI tools as lightweight WASM plugins within Nomad to reduce Docker memory overhead.
 - [x] **P2P Weight Sharing:** Develop a peer-to-peer mechanism (inspired by Pollen's content-addressed mesh) for distributing `.gguf` model files across the legacy cluster.
