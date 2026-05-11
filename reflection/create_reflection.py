@@ -3,12 +3,12 @@ import requests
 def create_reflection():
     """Generates a structured reflection from an AI's interaction log.
 
-    This function reads the content of `docs/aid_e_log.txt`, formats it into a
+    This function reads the content of `docs/analysis/aid_e_log.txt`, formats it into a
     prompt using the "Learn, Reflect, Apply, Prepare" framework, and sends it
     to a local LLaMA C++ server. The generated reflection is then printed to the
     console and saved to a Markdown file.
     """
-    log_file_path = "docs/aid_e_log.txt"
+    log_file_path = "docs/analysis/aid_e_log.txt"
     reflection_output_path = "reflection/daily_reflection.md"
     llama_cpp_url = os.getenv("LLAMA_COMPLETION_URL", "http://localhost:8081/completion")
 

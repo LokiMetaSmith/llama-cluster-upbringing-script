@@ -269,7 +269,7 @@ Agent memories related to the project.
 * Debug script documentation is maintained in `scripts/debug/README.md`.
 * Project uses `pytest`. `app.py` unit tests are in `tests/unit/test_pipecat_app_unit.py`.
 * `fix_yaml.sh` and `fix_markdown.sh` automate linting fixes.
-* Common operational issues, such as stale Nomad service registrations, are documented in `docs/TROUBLESHOOTING.md`.
+* Common operational issues, such as stale Nomad service registrations, are documented in `docs/manual/TROUBLESHOOTING.md`.
 * Use `nomad job status -json` for machine-readable output in scripts.
 * Prompt evaluation test cases are in `prompt_engineering/evaluation_suite/`.
 * Do not remove existing documentation sections during updates.

@@ -83,9 +83,9 @@ We propose a tiered architecture where components can be "Colocated" (Monolith) 
 
 ## 5. Relationship to Existing Architecture
 
-This proposal modifies **Layer 3 (Orchestration)** and **Layer 4 (AI Stack)** of `docs/ARCHITECTURE.md`.
+This proposal modifies **Layer 3 (Orchestration)** and **Layer 4 (AI Stack)** of `docs/manual/ARCHITECTURE.md`.
 
 * **Layer 3:** Reduces reliance on Nomad for internal component communication on single nodes.
 * **Layer 4:** Merges distinct `TwinService` satellites into a unified application runtime.
 
-Refer to `docs/ARCHITECTURE.md` for the baseline definition of these layers.
+Refer to `docs/manual/ARCHITECTURE.md` for the baseline definition of these layers.

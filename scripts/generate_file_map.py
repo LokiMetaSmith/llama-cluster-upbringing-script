@@ -9,8 +9,8 @@ from pathlib import Path
 
 # --- Configuration ---
 ROOT_DIR = "."
-OUTPUT_FILE = "docs/FILE_MAP.md"
-JSON_OUTPUT_FILE = "docs/FILE_MAP.json"
+OUTPUT_FILE = "docs/manual/FILE_MAP.md"
+JSON_OUTPUT_FILE = "docs/manual/FILE_MAP.json"
 IGNORE_DIRS = {
     ".git", ".venv", "venv", "node_modules", "__pycache__",
     ".idea", ".vscode", ".Jules", ".jules", "dist", "build",
