@@ -15,53 +15,21 @@
   become: yes
   register: dockerfile_status
 
-- name: Get checksum of all files in semantic_router build directory
-  ansible.builtin.find:
-    paths: "{{ semantic_router_build_dir }}"
-    recurse: yes
-    get_checksum: yes
-    checksum_algorithm: sha256
-  register: build_files
-  become: yes
-
-- name: Generate build configuration hash
-  ansible.builtin.set_fact:
-    build_hash: >-
-      {{
-        build_files.files
-        | sort(attribute='path')
-        | map(attribute='path')
-        | zip(build_files.files | sort(attribute='path') | map(attribute='checksum'))
-        | map('join', ':')
-        | join(',')
-        | hash('sha256')
-      }}
-
 - name: Extract base image name
   ansible.builtin.set_fact:
-    base_image_name: "{{ semantic_router_image_name | split(':') | first }}"
+    _semantic_router_base_image: "{{ semantic_router_image_name | regex_replace(':[^/:]+$', '') }}"
 
-- name: Set versioned tag
+- name: Extract tag name
   ansible.builtin.set_fact:
-    versioned_tag: "v-{{ build_hash }}"
+    _semantic_router_tag: "{{ semantic_router_image_name | regex_search('(?<=:)[^/:]+$') | default('latest', true) }}"
 
-- name: Check if versioned image exists locally
-  ansible.builtin.command: "docker image inspect {{ base_image_name }}:{{ versioned_tag }}"
-  register: versioned_image_check
-  failed_when: false
-  changed_when: false
-  become: yes
-
-- name: Build Semantic Router Docker Image
-  ansible.builtin.command:
-    cmd: "docker build -t {{ base_image_name }}:{{ versioned_tag }} ."
-    chdir: "{{ semantic_router_build_dir }}"
-  become: yes
-  when: dockerfile_status.changed or force_rebuild | default(false) or versioned_image_check.rc != 0
-
-- name: Tag image with target tag
-  ansible.builtin.command: "docker tag {{ base_image_name }}:{{ versioned_tag }} {{ semantic_router_image_name }}"
-  become: yes
+- name: Build Semantic Router Docker Image (cached)
+  ansible.builtin.include_tasks:
+    file: "../../tasks/build_cached_image.yaml"
+  vars:
+    build_dir: "{{ semantic_router_build_dir }}"
+    image_name: "{{ _semantic_router_base_image }}"
+    image_tag: "{{ _semantic_router_tag }}"
 
 - name: Ensure Nomad jobs directory exists
   ansible.builtin.file:
