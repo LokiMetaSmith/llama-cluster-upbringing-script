@@ -1,0 +1,82 @@
+---
+- name: Verify Grafana Dashboard and Health
+  hosts: controller_nodes
+  gather_facts: false
+  become: yes
+  tasks:
+    - name: Load global variables
+      ansible.builtin.include_vars:
+        file: "{{ inventory_dir | default(playbook_dir + '/../../') }}/group_vars/all.yaml"
+
+    - name: Set facts for Grafana access
+      ansible.builtin.set_fact:
+        # Default to 3000 if not defined in all.yaml
+        actual_grafana_port: "{{ grafana_port | default(3000) }}"
+        # Default cluster IP or localhost
+        target_ip: "{{ cluster_ip | default('127.0.0.1') }}"
+        nomad_http_port: "{{ nomad_http_port | default(4646) }}"
+
+    - name: Verify Grafana job is running in Nomad
+      ansible.builtin.uri:
+        url: "https://{{ target_ip }}:{{ nomad_http_port }}/v1/job/grafana"
+        method: GET
+        status_code: 200
+        return_content: yes
+        client_cert: "/etc/nomad.d/tls/cli.cert.pem"
+        client_key: "/etc/nomad.d/tls/cli.key.pem"
+        validate_certs: no
+      register: grafana_job_status
+      retries: 5
+      delay: 5
+      until: grafana_job_status.status == 200
+
+    - name: Assert Grafana job exists
+      ansible.builtin.assert:
+        that:
+          - "grafana_job_status.status == 200"
+          - "grafana_job_status.json.Status == 'running' or grafana_job_status.json.Status == 'pending'"
+        fail_msg: "Nomad job 'grafana' is not running."
+        success_msg: "Nomad job 'grafana' is submitted."
+
+    - name: Verify Grafana health endpoint is accessible
+      ansible.builtin.uri:
+        url: "http://{{ target_ip }}:{{ actual_grafana_port }}/api/health"
+        method: GET
+        status_code: 200
+        return_content: yes
+      register: grafana_health
+      # Retries for robustness if just started
+      retries: 5
+      delay: 5
+      until: grafana_health.status == 200
+
+    - name: Assert Grafana health is ok
+      ansible.builtin.assert:
+        that:
+          - "'database' in grafana_health.json"
+          - "grafana_health.json.database == 'ok'"
+        fail_msg: "Grafana health check failed or returned unexpected content."
+        success_msg: "Grafana health endpoint verified successfully."
+
+    - name: Verify expected dashboards are provisioned
+      ansible.builtin.uri:
+        url: "http://{{ target_ip }}:{{ actual_grafana_port }}/api/search?type=dash-db"
+        method: GET
+        user: "admin"
+        password: "{{ grafana_admin_password | default('admin') }}"
+        force_basic_auth: yes
+        status_code: 200
+        return_content: yes
+      register: grafana_search
+
+    - name: Check for specific dashboard titles
+      ansible.builtin.set_fact:
+        dashboard_titles: "{{ grafana_search.json | map(attribute='title') | list }}"
+
+    - name: Assert core dashboards exist
+      ansible.builtin.assert:
+        that:
+          - "dashboard_titles | select('search', '(?i)nomad') | list | length > 0"
+          - "dashboard_titles | select('search', '(?i)node exporter') | list | length > 0"
+        fail_msg: "Required dashboards (Nomad, Node Exporter) not found in Grafana."
+        success_msg: "Required dashboards are present in Grafana."
