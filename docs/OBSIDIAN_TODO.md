@@ -32,5 +32,5 @@ This document tracks the progress and remaining tasks for integrating Obsidian C
 ## Phase 4: Advanced Canvas Features
 
 - [x] **Scope/Group Support**:  Map Canvas "Groups" to Workflow "Scopes" or "Sub-workflows".
-- [ ] **Rich Content Embedding**: Allow Workflow nodes to reference local assets (images, PDFs) from the Vault.
+- [x] **Rich Content Embedding**: Allow Workflow nodes to reference local assets (images, PDFs) from the Vault.
 - [ ] **Bi-directional Sync**: Real-time updates (using WebSocket) to the open Canvas file in Obsidian (if possible via plugin) or just file polling.

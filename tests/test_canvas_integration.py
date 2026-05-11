@@ -46,6 +46,36 @@ class TestCanvasIntegration(unittest.TestCase):
                     "type": "text",
                     "text": "Output Node",
                     "x": 600, "y": 100
+                },
+                {
+                    "id": "node3",
+                    "type": "file",
+                    "file": "image.png",
+                    "x": 100, "y": 300
+                },
+                {
+                    "id": "node4",
+                    "type": "file",
+                    "file": "document.pdf",
+                    "x": 100, "y": 400
+                },
+                {
+                    "id": "node5",
+                    "type": "file",
+                    "file": "notes.md",
+                    "x": 100, "y": 500
+                },
+                {
+                    "id": "node6",
+                    "type": "file",
+                    "file": "video.mp4",
+                    "x": 100, "y": 600
+                },
+                {
+                    "id": "node7",
+                    "type": "file",
+                    "file": "unknown.xyz",
+                    "x": 100, "y": 700
                 }
             ],
             "edges": [
@@ -67,11 +97,28 @@ class TestCanvasIntegration(unittest.TestCase):
             workflow = CanvasConverter.canvas_to_workflow("test_canvas.canvas")
 
             # Verify Node Mapping
-            self.assertEqual(len(workflow["nodes"]), 2)
+            self.assertEqual(len(workflow["nodes"]), 7)
             node1 = next(n for n in workflow["nodes"] if n["id"] == "node1")
             self.assertEqual(node1["type"], "code_runner") # Inferred type
             self.assertEqual(node1["position"]["z"], 0.0) # Default Z
             self.assertEqual(node1["style"]["color"], "#ff0000")
+
+            # Verify inferred file node types
+            node3 = next(n for n in workflow["nodes"] if n["id"] == "node3")
+            self.assertEqual(node3["type"], "image_reader")
+            self.assertEqual(node3["config"]["filepath"], "image.png")
+
+            node4 = next(n for n in workflow["nodes"] if n["id"] == "node4")
+            self.assertEqual(node4["type"], "pdf_reader")
+
+            node5 = next(n for n in workflow["nodes"] if n["id"] == "node5")
+            self.assertEqual(node5["type"], "markdown_reader")
+
+            node6 = next(n for n in workflow["nodes"] if n["id"] == "node6")
+            self.assertEqual(node6["type"], "media_reader")
+
+            node7 = next(n for n in workflow["nodes"] if n["id"] == "node7")
+            self.assertEqual(node7["type"], "file_reader")
 
             # Verify Connection
             node2 = next(n for n in workflow["nodes"] if n["id"] == "node2")
