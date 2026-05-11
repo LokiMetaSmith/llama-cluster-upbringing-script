@@ -147,6 +147,15 @@ class CanvasConverter:
             return "note" # Default for plain text
 
         if node["type"] == "file":
+            file_path = node.get("file", "").lower()
+            if file_path.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg")):
+                return "image_reader"
+            if file_path.endswith(".pdf"):
+                return "pdf_reader"
+            if file_path.endswith(".md"):
+                return "markdown_reader"
+            if file_path.endswith((".mp3", ".mp4", ".wav")):
+                return "media_reader"
             return "file_reader"
 
         if node["type"] == "group":
