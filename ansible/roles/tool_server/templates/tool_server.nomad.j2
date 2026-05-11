@@ -62,14 +62,7 @@ job "tool-server" {
       service {
         name = "tool-server-api"
         port = "http"
-        tags = [
-          "tool-server-api",
-          "http",
-          "traefik.enable=true",
-          "traefik.http.routers.tool-server.rule=Host(`tool-server-api.service.consul`)",
-          "traefik.http.routers.tool-server.entrypoints=websecure",
-          "traefik.http.routers.tool-server.tls=true"
-        ]
+        tags = ["tool-server-api", "http"]
 
         check {
           type     = "http"

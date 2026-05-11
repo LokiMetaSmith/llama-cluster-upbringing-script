@@ -77,7 +77,7 @@
       - tool-server
       - npx
       - mcp-remote@latest
-      - "https://tool-server-api.service.consul/run_tool/"
+      - "http://tool-server-api.service.consul:{{ tool_server_port | default(8006) }}/run_tool/"
       - --header
       - "Authorization: Bearer {{ openai_api_key }}"
     chdir: "{{ llxprt_code_dir }}"
