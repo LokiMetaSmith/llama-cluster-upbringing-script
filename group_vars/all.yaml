@@ -43,6 +43,7 @@ nomad_version: "1.7.7"
 nomad_namespace: "default"
 nomad_jobs_dir: "/opt/nomad/jobs"
 nomad_volumes_dir: "/opt/nomad/volumes"
+nomad_tls_dir: "/etc/nomad.d/tls"
 nomad_models_dir: "/opt/nomad/models"
 
 # Standard Ports
