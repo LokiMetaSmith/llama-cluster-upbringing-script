@@ -1,0 +1,86 @@
+---
+- name: Verify Cluster Network Connectivity
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tasks:
+    - name: Get primary Tailscale IP (if tailscale0 interface exists)
+      ansible.builtin.set_fact:
+        my_tailscale_ip: "{{ ansible_facts['tailscale0']['ipv4']['address'] | default(ansible_facts['default_ipv4']['address']) }}"
+      when: "'tailscale0' in ansible_facts"
+
+    - name: Get default IP if tailscale0 is missing
+      ansible.builtin.set_fact:
+        my_tailscale_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
+      when: "'tailscale0' not in ansible_facts"
+
+    - name: Ping all other nodes' Tailscale IPs
+      ansible.builtin.command: ping -c 1 -W 2 {{ hostvars[item]['my_tailscale_ip'] }}
+      loop: "{{ groups['all'] }}"
+      when: hostvars[item]['my_tailscale_ip'] is defined and item != inventory_hostname
+      register: ping_results
+      ignore_errors: yes
+
+    - name: Assert Tailscale ping success
+      ansible.builtin.assert:
+        that:
+          - item.rc == 0
+        fail_msg: "Failed to ping {{ item.item }} from {{ inventory_hostname }}"
+        success_msg: "Successfully pinged {{ item.item }} from {{ inventory_hostname }}"
+      loop: "{{ ping_results.results }}"
+      when: item.skipped is not defined
+
+    - name: Verify Consul DNS resolution for local node
+      ansible.builtin.command: dig @127.0.0.1 -p 8600 consul.service.consul +short
+      register: consul_dns_result
+      ignore_errors: yes
+
+    - name: Assert Consul DNS resolution success
+      ansible.builtin.assert:
+        that:
+          - consul_dns_result.rc == 0
+          - consul_dns_result.stdout | length > 0
+        fail_msg: "Consul DNS resolution failed on {{ inventory_hostname }}"
+        success_msg: "Consul DNS resolution works on {{ inventory_hostname }}"
+
+    - name: Verify Nomad API connectivity to controller (HTTPS with mTLS)
+      ansible.builtin.uri:
+        url: "https://{{ hostvars[groups['controller_nodes'][0]]['my_tailscale_ip'] }}:4646/v1/agent/self"
+        method: GET
+        client_cert: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
+        client_key: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.key.pem"
+        validate_certs: no # Skip verify if using self-signed
+      register: nomad_api_result
+      ignore_errors: yes
+
+    - name: Assert Nomad API connectivity
+      ansible.builtin.assert:
+        that:
+          - nomad_api_result.status == 200
+        fail_msg: "Failed to connect to Nomad API on {{ groups['controller_nodes'][0] }} from {{ inventory_hostname }}"
+        success_msg: "Successfully connected to Nomad API on {{ groups['controller_nodes'][0] }} from {{ inventory_hostname }}"
+
+    - name: Verify Traefik accessibility on port 80
+      ansible.builtin.uri:
+        url: "http://{{ my_tailscale_ip }}:80/ping" # Assuming traefik ping endpoint or default catch-all
+        method: GET
+      register: traefik_result
+      ignore_errors: yes
+      when: inventory_hostname in groups['controller_nodes'] # Usually traefik is on controllers, or we can check its service
+
+    # Let's check the Traefik dashboard/ping endpoint instead
+    - name: Check Traefik ping via Consul
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8500/v1/health/service/traefik?passing"
+        method: GET
+      register: traefik_consul_health
+      ignore_errors: yes
+
+    - name: Assert Traefik is passing health checks in Consul
+      ansible.builtin.assert:
+        that:
+          - traefik_consul_health.status == 200
+          - traefik_consul_health.json | length > 0
+        fail_msg: "Traefik service is not passing health checks in Consul."
+        success_msg: "Traefik service is healthy in Consul."
+      when: inventory_hostname in groups['controller_nodes']
