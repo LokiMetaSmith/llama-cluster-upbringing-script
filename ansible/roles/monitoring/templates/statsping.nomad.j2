@@ -29,10 +29,7 @@ job "statsping" {
       service {
         name = "statsping"
         port = "http"
-        tags = [
-          "traefik.enable=true",
-          "traefik.http.routers.statsping.rule=Host(`statsping.service.consul`)"
-        ]
+        tags = []
         check {
           name     = "alive"
           type     = "http"

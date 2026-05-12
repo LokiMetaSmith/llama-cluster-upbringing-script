@@ -16,12 +16,7 @@ job "dummy-web-service" {
       port = "http"
 
       # Register with Traefik for load balancing
-      tags = [
-        "traefik.enable=true",
-        "traefik.http.routers.dummy-web.rule=Host(`dummy.local.mesh`)", # Requires requests to use this Host header
-        "traefik.http.routers.dummy-web.entrypoints=web",
-        "traefik.http.services.dummy-web.loadbalancer.server.port=${NOMAD_PORT_http}"
-      ]
+      tags = []
 
       check {
         type     = "http"

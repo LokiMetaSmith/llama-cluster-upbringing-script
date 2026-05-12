@@ -37,6 +37,7 @@ job "traefik" {
         volumes = [
           "local/traefik.yml:/etc/traefik/traefik.yml",
           "local/dynamic:/etc/traefik/dynamic",
+          "local/certs:/etc/traefik/certs",
         ]
       }
 
@@ -72,6 +73,35 @@ EOF
 {{ lookup('template', 'headscale-router.yaml.j2') }}
 EOF
         destination = "local/dynamic/headscale-router.yaml"
+      }
+
+      template {
+        data = <<EOF
+tls:
+  certificates:
+    - certFile: "/etc/traefik/certs/mesh/tls.crt"
+      keyFile: "/etc/traefik/certs/mesh/tls.key"
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "/etc/traefik/certs/mesh/tls.crt"
+        keyFile: "/etc/traefik/certs/mesh/tls.key"
+EOF
+        destination = "local/dynamic/tls.yml"
+      }
+
+      template {
+        data = <<EOF
+{{ key "certs/mesh/tls.crt" }}
+EOF
+        destination = "local/certs/mesh/tls.crt"
+      }
+
+      template {
+        data = <<EOF
+{{ key "certs/mesh/tls.key" }}
+EOF
+        destination = "local/certs/mesh/tls.key"
       }
 
       resources {

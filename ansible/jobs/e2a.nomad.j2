@@ -1,0 +1,47 @@
+job "e2a" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "web" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 8080
+      }
+    }
+
+    service {
+      name = "e2a"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.e2a.rule=Host(`e2a.{{ cluster_domain | default('local.mesh') }}`)",
+        "traefik.http.routers.e2a.entrypoints=websecure",
+        "traefik.http.routers.e2a.tls=true"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "server" {
+      driver = "docker"
+
+      config {
+        image = "e2a:placeholder"
+        ports = ["http"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 128
+      }
+    }
+  }
+}

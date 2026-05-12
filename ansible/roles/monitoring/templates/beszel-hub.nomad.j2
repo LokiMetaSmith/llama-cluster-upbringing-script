@@ -23,10 +23,7 @@ job "beszel-hub" {
       service {
         name = "beszel-hub"
         port = "http"
-        tags = [
-          "traefik.enable=true",
-          "traefik.http.routers.beszel.rule=Host(`beszel.service.consul`)"
-        ]
+        tags = []
         check {
           name     = "alive"
           type     = "tcp"
