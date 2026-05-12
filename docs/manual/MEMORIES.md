@@ -463,3 +463,4 @@ Agent memories related to the project.
 
 * API key verification in `pipecatapp/api_keys.py` utilizes SHA-256 hashing for storage and comparison.
 * The `pipecatapp` web server (`web_server.py`) currently configures Content Security Policy (CSP) with `script-src 'self' 'unsafe-inline'`, which limits protection against Cross-Site Scripting (XSS).
+* When writing Ansible test playbooks (e.g., in `ansible/tests/`) that use the `uri` module to verify service health or APIs, do not use `ignore_errors: yes` combined with conditional skipped assertions. This allows the test playbook to falsely pass if the service is unreachable. Instead, allow the `uri` task to fail naturally on network or HTTP errors, ensuring the verification acts as a true block.
