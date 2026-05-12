@@ -1,6 +1,6 @@
 # This Nomad job file runs the "router" service.
 job "router" {
-  datacenters = ["dc1"]
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   type        = "service"
   namespace   = "{{ nomad_namespace | default('default') }}"
   priority    = 50

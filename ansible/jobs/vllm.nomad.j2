@@ -1,5 +1,5 @@
 job "vllm-server-{{ model.name }}" {
-  datacenters = ["dc1"]
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   namespace   = "{{ nomad_namespace | default('default') }}"
 
   meta {

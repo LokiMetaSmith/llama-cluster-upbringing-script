@@ -25,7 +25,7 @@ variable "rpc_pool_job_name" {
 {% set best_model_sanitized = best_model.filename | regex_replace('[^a-zA-Z0-9-]', '-') %}
 
 job "{{ job_name }}" {
-  datacenters = ["dc1"]
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
 
   group "{{ job_name }}-group" {
     count = 1

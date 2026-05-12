@@ -1,5 +1,5 @@
 - name: Deploy Model Services
-  hosts: hw_tier_high,hw_tier_mid
+  hosts: all
   vars_files:
     - "../../group_vars/models.yaml"
     - "../../group_vars/external_experts.yaml"
@@ -14,6 +14,7 @@
       include_role:
         name: config_manager
       run_once: true
+      when: node_tier in ['mid', 'core']
       tags:
         - config_manager
 
@@ -28,7 +29,7 @@
         - exo
       loop_control:
         loop_var: role_name
-      when: not external_model_server
+      when: not external_model_server and node_tier in ['mid', 'core']
       tags:
         - download_models
         - llama_cpp
