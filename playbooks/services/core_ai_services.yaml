@@ -35,6 +35,9 @@
     - role: pipecatapp
       tags:
         - pipecatapp
+    - role: opengravity
+      tags:
+        - opengravity
     - role: tml_interaction
       tags:
         - tml_interaction
