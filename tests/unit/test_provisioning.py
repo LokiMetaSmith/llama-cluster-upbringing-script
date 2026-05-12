@@ -119,7 +119,7 @@ class TestProvisioning(unittest.TestCase):
                 role="all", controller_ip=None, tags=None, target_user="u",
                 debug=False, continue_run=False, benchmark=False,
                 external_model_server=False, leave_services_running=False,
-                purge_jobs=True, only_purge=False, deploy_docker=False, run_local=False,
+                purge_jobs=True, only_purge=False, only_status=False, deploy_docker=False, run_local=False,
                 github_ssh_user=[], home_assistant_debug=False, watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False, tier="mid"
             ), [])
 
@@ -138,7 +138,7 @@ class TestProvisioning(unittest.TestCase):
                 role="all", controller_ip=None, tags=None, target_user="u",
                 debug=False, continue_run=False, benchmark=False,
                 external_model_server=False, leave_services_running=False,
-                purge_jobs=True, only_purge=True, deploy_docker=False, run_local=False,
+                purge_jobs=True, only_purge=True, only_status=False, deploy_docker=False, run_local=False,
                 github_ssh_user=[], home_assistant_debug=False, watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False, tier="mid"
             ), [])
 
@@ -151,6 +151,24 @@ class TestProvisioning(unittest.TestCase):
 
                  mock_purge.assert_called_once()
                  mock_exit.assert_called_with(0)
+
+    @patch('provisioning.print_final_status')
+    def test_main_only_status(self, mock_print_final_status):
+        with patch('argparse.ArgumentParser.parse_known_args') as mock_args:
+            mock_args.return_value = (argparse.Namespace(
+                role="all", controller_ip=None, tags=None, target_user="u",
+                debug=False, continue_run=False, benchmark=False,
+                external_model_server=False, leave_services_running=False,
+                purge_jobs=False, only_purge=False, only_status=True, deploy_docker=False, run_local=False,
+                github_ssh_user=[], home_assistant_debug=False, watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False, tier="mid"
+            ), [])
+
+            with patch('sys.exit') as mock_exit:
+                mock_exit.side_effect = SystemExit(0)
+                with self.assertRaises(SystemExit):
+                    provisioning.main()
+
+            mock_print_final_status.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()
