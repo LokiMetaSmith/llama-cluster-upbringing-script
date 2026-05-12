@@ -1,0 +1,47 @@
+job "opengravity" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "web" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 80
+      }
+    }
+
+    service {
+      name = "opengravity"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.opengravity.rule=PathPrefix(`/opengravity`)",
+        "traefik.http.middlewares.opengravity-stripprefix.stripprefix.prefixes=/opengravity",
+        "traefik.http.routers.opengravity.middlewares=opengravity-stripprefix"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "nginx" {
+      driver = "docker"
+
+      config {
+        image = "opengravity:{{ image_tag | default('latest') }}"
+        ports = ["http"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 64
+      }
+    }
+  }
+}
