@@ -80,6 +80,23 @@ def load_global_vars():
             return {}
     return {}
 
+def get_nomad_env(ip=None):
+    """Returns the environment variables required to interact with Nomad."""
+    env = os.environ.copy()
+    global_vars = load_global_vars()
+    nomad_tls_dir = global_vars.get("nomad_tls_dir", "/etc/nomad.d/tls")
+    nomad_port = global_vars.get("nomad_http_port", 4646)
+
+    if not ip:
+        ip = get_primary_ip()
+
+    env["NOMAD_ADDR"] = f"https://{ip}:{nomad_port}"
+    env["NOMAD_TLS_SKIP_VERIFY"] = "1"
+    env["NOMAD_CACERT"] = f"{nomad_tls_dir}/ca.pem"
+    env["NOMAD_CLIENT_CERT"] = f"{nomad_tls_dir}/cli.cert.pem"
+    env["NOMAD_CLIENT_KEY"] = f"{nomad_tls_dir}/cli.key.pem"
+    return env
+
 def load_playbooks_from_manifest(manifest_path):
     """Parses a YAML manifest to extract the list of playbooks."""
     if not os.path.exists(manifest_path):
@@ -177,16 +194,17 @@ def cleanup_memory_for_core_ai():
     # Stop llamacpp-rpc jobs
     try:
         if shutil.which("nomad"):
+            env = get_nomad_env()
             # Get job IDs containing 'llamacpp-rpc'
             cmd = "nomad job status | awk '/llamacpp-rpc/ {print $1}'"
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, env=env)
             job_ids = result.stdout.strip().split('\n')
 
             for job_id in job_ids:
                 if job_id:
                     print(f"Stopping job: {job_id}")
                     subprocess.run(["nomad", "job", "stop", "-purge", job_id],
-                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
     except Exception as e:
         print_warning(f"Failed to cleanup Nomad jobs: {e}")
 
@@ -218,9 +236,10 @@ def purge_nomad_jobs():
 
     print(f"{Colors.WARNING}🔥 --purge-jobs flag detected. Stopping and purging all Nomad jobs...{Colors.ENDC}")
     try:
+        env = get_nomad_env()
         # Get all job IDs
         cmd = "nomad job status | awk 'NR>1 {print $1}'"
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, env=env)
         job_ids = result.stdout.strip().split('\n')
 
         found_jobs = False
@@ -229,7 +248,7 @@ def purge_nomad_jobs():
                 found_jobs = True
                 print(f"Stopping and purging job: {job_id}")
                 subprocess.run(["nomad", "job", "stop", "-purge", job_id],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
 
         if found_jobs:
             print(f"{Colors.OKGREEN}✅ All Nomad jobs have been purged.{Colors.ENDC}")
@@ -246,7 +265,8 @@ def purge_nomad_jobs():
     # but we killed the jobs. If nomad is NOT running, we definitely want to kill orphans.)
     nomad_running = False
     try:
-        if subprocess.run(["nomad", "node", "status"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        env = get_nomad_env()
+        if subprocess.run(["nomad", "node", "status"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env).returncode == 0:
             nomad_running = True
     except:
         pass
@@ -565,16 +585,12 @@ def print_final_status(args, executed_playbooks):
     # 5. Running Nomad Jobs
     try:
         # Check if nomad is reachable
-        env = os.environ.copy()
-        env["NOMAD_ADDR"] = f"https://{ip}:4646"
-        env["NOMAD_TLS_SKIP_VERIFY"] = "1"
-        env["NOMAD_CLIENT_CERT"] = "/etc/nomad.d/tls/cli.cert.pem"
-        env["NOMAD_CLIENT_KEY"] = "/etc/nomad.d/tls/cli.key.pem"
+        env = get_nomad_env(ip)
         result = subprocess.run(["nomad", "job", "status", "-short"], capture_output=True, text=True, env=env)
 
         # If it fails, fallback to 127.0.0.1 in case nomad is only bound locally
         if result.returncode != 0:
-            env["NOMAD_ADDR"] = "https://127.0.0.1:4646"
+            env = get_nomad_env("127.0.0.1")
             result = subprocess.run(["nomad", "job", "status", "-short"], capture_output=True, text=True, env=env)
 
         if result.returncode == 0 and result.stdout.strip():
