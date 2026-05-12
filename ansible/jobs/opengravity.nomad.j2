@@ -1,0 +1,47 @@
+job "opengravity" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "web" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 3000
+      }
+    }
+
+    service {
+      name = "opengravity"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.opengravity.rule=Host(`opengravity.{{ cluster_domain | default('local.mesh') }}`)",
+        "traefik.http.routers.opengravity.entrypoints=websecure",
+        "traefik.http.routers.opengravity.tls=true"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "server" {
+      driver = "docker"
+
+      config {
+        image = "opengravity:placeholder"
+        ports = ["http"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 128
+      }
+    }
+  }
+}

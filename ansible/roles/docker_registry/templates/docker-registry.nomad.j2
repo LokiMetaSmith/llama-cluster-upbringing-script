@@ -19,10 +19,7 @@ job "docker-registry" {
     service {
       name = "docker-registry"
       port = "http"
-      tags = [
-        "traefik.enable=true",
-        "traefik.http.routers.registry.rule=Host(`registry.service.consul`)",
-      ]
+      tags = []
       check {
         type     = "tcp"
         interval = "10s"

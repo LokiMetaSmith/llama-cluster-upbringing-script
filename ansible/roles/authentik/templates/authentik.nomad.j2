@@ -185,7 +185,9 @@ EOH
         port = "http"
         tags = [
           "traefik.enable=true",
-          "traefik.http.routers.authentik.rule=Host(`authentik.service.consul`)",
+          "traefik.http.routers.authentik.rule=Host(`authentik.{{ cluster_domain | default('local.mesh') }}`)",
+          "traefik.http.routers.authentik.entrypoints=websecure",
+          "traefik.http.routers.authentik.tls=true",
           "traefik.http.services.authentik.loadbalancer.server.port={{ authentik_internal_port | default(9000) }}"
         ]
       }

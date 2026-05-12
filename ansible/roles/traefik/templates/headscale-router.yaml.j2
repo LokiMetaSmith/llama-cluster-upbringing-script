@@ -5,8 +5,7 @@ http:
       service: headscale
       entryPoints:
         - websecure
-      tls:
-        certResolver: local  # Assumes you have a local cert resolver defined in Traefik
+      tls: {}
 
   services:
     headscale:

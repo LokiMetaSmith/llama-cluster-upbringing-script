@@ -14,10 +14,7 @@ job "filebrowser" {
     service {
       name = "filebrowser"
       port = "http"
-      tags = [
-        "traefik.enable=true",
-        "traefik.http.routers.filebrowser.rule=Host(`filebrowser.service.consul`)",
-      ]
+      tags = []
       check {
         type     = "http"
         path     = "/"
