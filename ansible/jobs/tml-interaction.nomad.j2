@@ -1,0 +1,93 @@
+job "{{ job_name | default('tml-interaction') }}" {
+  datacenters = ["dc1"]
+  namespace   = "{{ nomad_namespace | default('default') }}"
+  type        = "service"
+
+  group "interaction-group" {
+    count = 1
+
+    network {
+      # The HTTP port for configuration and control plane communication
+      port "http" {
+        to = 8000
+      }
+      # The WebRTC port for the continuous audio/video micro-turn stream
+      port "webrtc" {
+        to = 8080
+      }
+    }
+
+    service {
+      name = "tml-interaction-http"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.tml-interaction.rule=Host(`interaction.{{ mesh_domain | default('local.mesh') }}`)",
+        "traefik.http.routers.tml-interaction.entrypoints=websecure",
+        "traefik.http.routers.tml-interaction.tls=true"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    service {
+      name = "tml-interaction-stream"
+      port = "webrtc"
+
+      tags = [
+        # Traefik routing could be set up for WebRTC if desired (e.g., via UDP/TCP routers)
+        "traefik.enable=true",
+        "traefik.udp.routers.tml-stream.entrypoints=webrtc",
+        "traefik.udp.services.tml-stream.loadbalancer.server.port=8080"
+      ]
+
+      # Minimal TCP check to ensure the streaming port is bound
+      check {
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "tml-runtime" {
+      driver = "docker"
+
+      config {
+        # This is a placeholder for the actual TML interaction runtime image
+        image = "thinkingmachines/interaction-runtime:preview"
+
+        ports = ["http", "webrtc"]
+
+        # Ensure GPUs are passed through for real-time model inference
+        # (Assuming the model runs natively requiring GPU acceleration)
+        {% if enable_gpu | default(true) %}
+        # Experimental feature in Nomad Docker driver for GPU passthrough
+        # Some setups use `device` blocks or `gpus = "all"`
+        args = [
+          "--gpus", "all"
+        ]
+        {% endif %}
+      }
+
+      env {
+        MODEL_PATH = "{{ nomad_models_dir }}/{{ model.filename | default('tml-interaction-small.gguf') }}"
+        STREAMING_PORT = "8080"
+        HTTP_PORT = "8000"
+        # Enable multi-modal processing for micro-turns
+        ENABLE_AUDIO = "true"
+        ENABLE_VIDEO = "true"
+      }
+
+      resources {
+        # Allocate sufficient memory for a large MoE model and streaming buffers
+        memory = {{ model.memory_mb | default(16384) }}
+      }
+    }
+  }
+}
