@@ -5,3 +5,10 @@
     name: docker
     state: restarted
   become: true
+
+- name: Restart Docker Prune Timer
+  ansible.builtin.systemd:
+    name: docker-prune.timer
+    state: restarted
+    daemon_reload: yes
+  become: true

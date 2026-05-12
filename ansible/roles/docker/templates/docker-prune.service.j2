@@ -1,0 +1,7 @@
+[Unit]
+Description=Prune Docker/Containerd unused images and containers
+Documentation=https://docs.docker.com/engine/reference/commandline/system_prune/
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker system prune -af --filter "until=168h"
