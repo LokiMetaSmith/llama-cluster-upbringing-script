@@ -35,3 +35,7 @@
     - role: pipecatapp
       tags:
         - pipecatapp
+    - role: tml_interaction
+      tags:
+        - tml_interaction
+        - interaction_models
