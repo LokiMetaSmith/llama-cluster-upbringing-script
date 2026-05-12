@@ -108,6 +108,7 @@
         - forgejo
         - paperless
         - opengist
+        - e2a
       loop_control:
         loop_var: role_name
       tags:
@@ -119,6 +120,7 @@
         - forgejo
         - paperless
         - opengist
+        - e2a
 
     - name: Run Paddler Stack
       when: enable_paddler | default(false)

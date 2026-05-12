@@ -1,0 +1,24 @@
+- name: Create e2a data directory
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/e2a/data"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Template e2a Nomad job
+  ansible.builtin.template:
+    src: e2a.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/e2a.nomad"
+  become: yes
+
+- name: Run e2a Nomad job
+  ansible.builtin.command: nomad job run -detach {{ nomad_jobs_dir }}/e2a.nomad
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ nomad_tls_dir }}/ca.pem"
+    NOMAD_CLIENT_CERT: "{{ nomad_tls_dir }}/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "{{ nomad_tls_dir }}/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+  register: e2a_deploy
+  changed_when: "'modified' in e2a_deploy.stdout or 'created' in e2a_deploy.stdout"
+  become: yes
