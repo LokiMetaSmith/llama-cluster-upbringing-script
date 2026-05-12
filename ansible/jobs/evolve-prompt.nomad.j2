@@ -1,5 +1,5 @@
 job "evolve-prompt" {
-  datacenters = ["dc1"]
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   namespace   = "default"
   type        = "batch"
 

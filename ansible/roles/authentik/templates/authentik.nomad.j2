@@ -1,5 +1,5 @@
 job "authentik" {
-  datacenters = ["dc1"]
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   type        = "service"
 
 update {

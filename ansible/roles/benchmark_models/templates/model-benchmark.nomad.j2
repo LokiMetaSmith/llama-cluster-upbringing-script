@@ -2,7 +2,7 @@
 # It is designed to be a short-lived batch job.
 
 job "model-benchmark-{{ model_filename | regex_replace('[^a-zA-Z0-9-]', '-') }}" {
-  datacenters = ["dc1"]
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   type        = "batch"
   namespace   = "{{ nomad_namespace | default('default') }}"
 
