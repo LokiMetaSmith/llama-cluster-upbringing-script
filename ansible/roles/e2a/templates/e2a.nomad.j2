@@ -1,0 +1,80 @@
+job "e2a" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  # Deploy on edge tier node (as specified by the user)
+  constraint {
+    attribute = "${node.class}"
+    value     = "edge"
+  }
+
+  group "e2a" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 8080
+      }
+      port "smtp" {
+        to = 25
+      }
+    }
+
+    service {
+      name = "e2a"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.e2a.rule=Host(`e2a.{{ cluster_domain | default('local.mesh') }}`)",
+        "traefik.http.routers.e2a.entrypoints=websecure",
+        "traefik.http.routers.e2a.tls=true",
+        "traefik.http.routers.e2a.tls.certresolver=local"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    # TCP router for SMTP if needed
+    service {
+      name = "e2a-smtp"
+      port = "smtp"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.tcp.routers.e2a-smtp.rule=HostSNI(`*`)",
+        "traefik.tcp.routers.e2a-smtp.entrypoints=smtp"
+      ]
+    }
+
+    task "e2a" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/mnexa-ai/e2a:latest"
+        ports = ["http", "smtp"]
+
+        # Volumes for e2a data persistence
+        volumes = [
+          "{{ nomad_volumes_dir }}/e2a/data:/data"
+        ]
+      }
+
+      env {
+        PORT = "8080"
+        SMTP_PORT = "25"
+        # Additional required env vars for e2a can be configured here
+      }
+
+      resources {
+        cpu    = 200 # MHz
+        memory = 256 # MB
+      }
+    }
+  }
+}
