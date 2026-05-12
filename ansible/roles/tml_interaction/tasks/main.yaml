@@ -1,0 +1,46 @@
+---
+- name: Set job facts for TML Interaction Models
+  ansible.builtin.set_fact:
+    tml_models: "{{ interaction_models.tml | default([]) }}"
+
+- name: Stop and purge any existing tml-interaction jobs (for updates)
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job stop -purge "tml-interaction-{{ item.name | regex_replace('[^a-zA-Z0-9-]', '-') | lower }}"
+  loop: "{{ tml_models }}"
+  register: tml_job_stop_status
+  changed_when: "'Running' in tml_job_stop_status.stdout"
+  failed_when: false # Don't fail if the job doesn't exist
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+
+- name: Template tml-interaction nomad job for each model
+  ansible.builtin.template:
+    src: ../../jobs/tml-interaction.nomad.j2
+    dest: "/tmp/tml-interaction-{{ item.name | regex_replace('[^a-zA-Z0-9-]', '-') | lower }}.nomad"
+    mode: '0644'
+  loop: "{{ tml_models }}"
+  vars:
+    # Safely create a job name string
+    job_name: "tml-interaction-{{ item.name | regex_replace('[^a-zA-Z0-9-]', '-') | lower }}"
+    model: "{{ item }}"
+
+- name: Run tml-interaction job for each model
+  ansible.builtin.command:
+    cmd: "/usr/local/bin/nomad job run -detach /tmp/tml-interaction-{{ item.name | regex_replace('[^a-zA-Z0-9-]', '-') | lower }}.nomad"
+  loop: "{{ tml_models }}"
+  register: tml_job_run
+  changed_when: "'Eval ID' in tml_job_run.stdout"
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+
+- name: Clean up temporary job files
+  ansible.builtin.file:
+    path: "/tmp/tml-interaction-{{ item.name | regex_replace('[^a-zA-Z0-9-]', '-') | lower }}.nomad"
+    state: absent
+  loop: "{{ tml_models }}"

@@ -60,6 +60,7 @@ USE_CONTAINER=false
 DO_CLEAN_GIT=false
 DO_SYSTEM_CLEANUP=false
 DO_PURGE_JOBS=false
+DO_STATUS=false
 VERBOSE_LEVEL=0
 ROLE=""
 CONTROLLER_IP=""
@@ -255,6 +256,9 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
     fi
 
     case $arg in
+        --status)
+            DO_STATUS=true
+            ;;
         --system-cleanup)
             DO_SYSTEM_CLEANUP=true
             DO_PURGE_JOBS=true
@@ -362,12 +366,14 @@ if [ -n "$CLI_AGENT_API_KEY" ]; then
     export AGENT_API_KEY="$CLI_AGENT_API_KEY"
 fi
 
-# Run system profiling before we proceed
-profile_system
-
 # --- Move to the script's directory ---
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit 1
+
+# Run system profiling before we proceed, unless just asking for status
+if [ "$DO_STATUS" != true ]; then
+    profile_system
+fi
 
 LOG_FILE="bootstrap_debug.log"
 AGENT_LOG="agent_recovery.log"
@@ -638,6 +644,14 @@ perform_git_clean() {
         echo "Git clean cancelled."
     fi
 }
+
+# --- Status Action ---
+if [ "$DO_STATUS" = true ]; then
+    echo -e "${BOLD}=== Cluster Status ===${NC}"
+    ensure_python_environment
+    python3 scripts/provisioning.py --only-status
+    exit $?
+fi
 
 # --- Execute Cleanup Actions ---
 # We execute these BEFORE everything else to ensure a clean slate if requested.

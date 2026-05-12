@@ -38,3 +38,7 @@
     - role: opengravity
       tags:
         - opengravity
+    - role: tml_interaction
+      tags:
+        - tml_interaction
+        - interaction_models

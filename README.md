@@ -514,7 +514,7 @@ This section outlines the major feature enhancements and maintenance tasks plann
 - **Security Hardening:**
   - Remove passwordless sudo and require a password for the `target_user`.
   - Audit all services to ensure they run as dedicated, non-privileged users.
-- **Monitoring and Observability:** Deploy a monitoring stack like Prometheus and Grafana to collect and visualize metrics from Nomad, Consul, and the application itself.
+- [x] **Monitoring and Observability:** Deploy a monitoring stack like Prometheus and Grafana to collect and visualize metrics from Nomad, Consul, and the application itself.
 - **Web UI/UX Improvements:**
   - [x] Replace ASCII art with a more dynamic animated character.
   - [x] Add a "Clear Terminal" button to the UI.

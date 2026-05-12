@@ -144,3 +144,13 @@ vision_models:
   - name: "moondream2"
     repo_id: "vikhyatk/moondream2"
     # This model will be downloaded using the huggingface_hub module.
+
+# Interaction Models (Research Preview Placeholder)
+# Specialized models handling continuous audio/video micro-turns directly.
+interaction_models:
+  tml:
+    - name: "TML-Interaction-Small"
+      url: "placeholder://thinkingmachines.ai/tml-interaction-small"
+      filename: "tml-interaction-small.gguf"
+      memory_mb: 16384 # Estimate for a 12B active parameter MoE model
+      description: "Thinking Machines Lab Interaction Model (Research Preview)"
