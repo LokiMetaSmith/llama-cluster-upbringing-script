@@ -101,6 +101,14 @@
   tags:
     - deploy_app
 
+- name: Clean up uv cache
+  ansible.builtin.command:
+    cmd: "/opt/pipecatapp/venv/bin/uv cache clean"
+  become: yes
+  become_user: "{{ target_user }}"
+  tags:
+    - deploy_app
+
 - name: Clean up pip build directory
   ansible.builtin.file:
     path: /var/tmp/ansible_pip_build
