@@ -984,10 +984,3 @@
     - name: "Pipecat App : Fail after debugging"
       ansible.builtin.fail:
         msg: "Pipecat App job failed to start. See logs above."
-- name: Ensure nodejs role is executed
-  ansible.builtin.include_role:
-    name: node_js
-
-- name: Ensure dirac role is executed
-  ansible.builtin.include_role:
-    name: dirac

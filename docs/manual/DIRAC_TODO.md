@@ -52,5 +52,5 @@ The goal of Phase 2 is to build Dirac's token-saving techniques natively into ou
 - [x] **Refactor Prompt:** Update the system prompt to explicitly teach the model how to batch these commands to save tokens.
 
 ### Step 4: Transition
-- [ ] **Benchmarking:** Run our native tools through our internal TerminalBench suite. Compare token usage and success rate against the Node.js `dirac_tool`.
-- [ ] **Deprecation:** Once parity is reached, remove `dirac_tool` from the active toolset and uninstall `dirac-cli` and Node.js from the worker node Ansible roles.
+- [x] **Benchmarking:** Run our native tools through our internal TerminalBench suite. Compare token usage and success rate against the Node.js `dirac_tool`.
+- [x] **Deprecation:** Once parity is reached, remove `dirac_tool` from the active toolset and uninstall `dirac-cli` and Node.js from the worker node Ansible roles.
