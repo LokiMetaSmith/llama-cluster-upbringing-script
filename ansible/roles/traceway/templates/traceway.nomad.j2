@@ -1,0 +1,64 @@
+job "traceway" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type = "service"
+
+  group "traceway" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 80
+        static = {{ traceway_port | default(8089) }}
+      }
+    }
+
+    volume "traceway-data" {
+      type      = "host"
+      read_only = false
+      source    = "traceway"
+    }
+
+    service {
+      name = "traceway"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.traceway.rule=Host(`traceway.{{ cluster_domain | default('local.mesh') }}`)",
+        "traefik.http.routers.traceway.entrypoints=websecure",
+        "traefik.http.routers.traceway.tls=true"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "traceway" {
+      driver = "docker"
+
+      config {
+        image = "tracewayapp/traceway:latest"
+        ports = ["http"]
+      }
+
+      env {
+        JWT_SECRET = "{{ traceway_jwt_secret }}"
+      }
+
+      volume_mount {
+        volume      = "traceway-data"
+        destination = "/data"
+        read_only   = false
+      }
+
+      resources {
+        cpu    = 256
+        memory = 512
+      }
+    }
+  }
+}

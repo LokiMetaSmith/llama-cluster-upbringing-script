@@ -84,6 +84,11 @@ client {
     read_only = false
   }
 
+  host_volume "traceway" {
+    path      = "{{ nomad_volumes_dir }}/traceway"
+    read_only = false
+  }
+
   host_volume "ha-config" {
     path      = "{{ nomad_volumes_dir }}/ha-config"
     read_only = false
