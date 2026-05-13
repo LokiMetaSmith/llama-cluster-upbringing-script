@@ -84,6 +84,7 @@ node_exporter_port: 9100
 prometheus_port: 9090
 grafana_port: 3000
 mqtt_exporter_metrics_port: 9341
+traceway_port: 8089
 
 # Standard Paths
 consul_data_dir: "/opt/consul"
@@ -170,6 +171,7 @@ enable_home_assistant: true
 enable_frigate: false
 enable_paperless: true
 enable_opengist: true
+enable_traceway: true
 
 # Service Ports
 paperless_port: 8010
@@ -218,6 +220,7 @@ pds_hostname: "pds.local"
 pds_service_handle_domains: ".pds.local"
 pds_admin_password: "change_me_in_prod"
 pds_jwt_secret: "change_me_in_prod_jwt"
+traceway_jwt_secret: "change-this-to-a-secure-secret-at-least-32-chars"
 pds_plc_rotation_key_k256_private_key_hex: "0000000000000000000000000000000000000000000000000000000000000000"
 pds_data_directory: "/opt/pds"
 pds_blobstore_disk_location: "/opt/pds/blocks"

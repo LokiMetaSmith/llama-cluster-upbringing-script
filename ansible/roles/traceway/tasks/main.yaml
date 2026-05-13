@@ -1,0 +1,49 @@
+---
+- name: Deploy Traceway
+  when: enable_traceway | default(true)
+  block:
+    - name: Create Traceway volume directory
+      ansible.builtin.file:
+        path: "{{ nomad_volumes_dir }}/traceway"
+        state: directory
+        mode: '0755'
+      become: yes
+
+    - name: Template traceway job
+      ansible.builtin.template:
+        src: traceway.nomad.j2
+        dest: "{{ nomad_jobs_dir }}/traceway.nomad"
+      become: yes
+
+    - name: Check Traceway job status before deployment
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job status traceway
+      register: pre_traceway_job_status
+      ignore_errors: yes
+      failed_when: false
+      changed_when: false
+      environment:
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ nomad_tls_dir }}/ca.pem"
+        NOMAD_CLIENT_CERT: "{{ nomad_tls_dir }}/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "{{ nomad_tls_dir }}/cli.key.pem"
+
+    - name: Purge failing Traceway deployment
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job stop -purge traceway
+      when: pre_traceway_job_status.rc == 0 and ('dead' in pre_traceway_job_status.stdout or 'failed' in pre_traceway_job_status.stdout or 'progress deadline' in pre_traceway_job_status.stdout)
+      environment:
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ nomad_tls_dir }}/ca.pem"
+        NOMAD_CLIENT_CERT: "{{ nomad_tls_dir }}/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "{{ nomad_tls_dir }}/cli.key.pem"
+
+    - name: Run traceway job
+      ansible.builtin.command:
+        cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/traceway.nomad
+      environment:
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ nomad_tls_dir }}/ca.pem"
+        NOMAD_CLIENT_CERT: "{{ nomad_tls_dir }}/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "{{ nomad_tls_dir }}/cli.key.pem"
+      changed_when: true
