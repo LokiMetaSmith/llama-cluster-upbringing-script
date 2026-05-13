@@ -1,8 +1,8 @@
 diff --git a/tools/server/server-common.cpp b/tools/server/server-common.cpp
-index a853f65c8..360d14745 100644
+index 21c843c0d..9853683a6 100644
 --- a/tools/server/server-common.cpp
 +++ b/tools/server/server-common.cpp
-@@ -153,6 +153,20 @@ std::vector<size_t> lora_get_enabled_ids(const std::vector<common_adapter_lora_i
+@@ -165,6 +165,20 @@ std::vector<size_t> lora_get_enabled_ids(const std::vector<common_adapter_lora_i
      return enabled_ids;
  }
 
@@ -24,10 +24,10 @@ index a853f65c8..360d14745 100644
  // base64 utils (TODO: use the base64::decode from base64.hpp)
  //
 diff --git a/tools/server/server-common.h b/tools/server/server-common.h
-index 2629a6bee..37431fab9 100644
+index 4681f9c51..c67701b23 100644
 --- a/tools/server/server-common.h
 +++ b/tools/server/server-common.h
-@@ -114,6 +114,12 @@ bool are_lora_equal(
+@@ -117,6 +117,12 @@ bool are_lora_equal(
  // get the ids of all enabled loras
  std::vector<size_t> lora_get_enabled_ids(const std::vector<common_adapter_lora_info> & loras);
 
@@ -41,10 +41,10 @@ index 2629a6bee..37431fab9 100644
  // server_tokens
  //
 diff --git a/tools/server/server-context.cpp b/tools/server/server-context.cpp
-index ceafcac17..a17fc7988 100644
+index ce743e665..30dbfa942 100644
 --- a/tools/server/server-context.cpp
 +++ b/tools/server/server-context.cpp
-@@ -1923,6 +1923,43 @@ private:
+@@ -2088,6 +2088,43 @@ private:
                      res->id = task.id;
                      queue_results.send(std::move(res));
                  } break;
@@ -88,7 +88,7 @@ index ceafcac17..a17fc7988 100644
          }
      }
 
-@@ -2879,6 +2916,13 @@ server_response_reader server_context::get_response_reader() {
+@@ -3240,6 +3277,13 @@ server_response_reader server_context::get_response_reader() {
      return impl->get_response_reader();
  }
 
@@ -102,7 +102,7 @@ index ceafcac17..a17fc7988 100644
  server_context_meta server_context::get_meta() const {
      auto bos_id = llama_vocab_bos(impl->vocab);
      auto eos_id = llama_vocab_eos(impl->vocab);
-@@ -3904,6 +3948,44 @@ void server_routes::init_routes() {
+@@ -4264,6 +4308,44 @@ void server_routes::init_routes() {
          res->ok(result->to_json());
          return res;
      };
@@ -146,32 +146,32 @@ index ceafcac17..a17fc7988 100644
 +    };
  }
 
- std::unique_ptr<server_res_generator> server_routes::handle_slots_save(const server_http_req & req, int id_slot) {
+ json server_routes::get_model_info() const {
 diff --git a/tools/server/server-context.h b/tools/server/server-context.h
-index c0b5d373f..633e8230a 100644
+index 58dda8914..98fe0935c 100644
 --- a/tools/server/server-context.h
 +++ b/tools/server/server-context.h
-@@ -66,6 +66,9 @@ struct server_context {
-     // get server metadata (read-only), can only be called after load_model()
+@@ -78,6 +78,9 @@ struct server_context {
      // not thread-safe, should only be used from the main thread
      server_context_meta get_meta() const;
-+
+
 +    // update control vectors
 +    void update_control_vectors(const std::vector<common_control_vector_load_info> & vectors);
- };
-
-
-@@ -107,6 +110,8 @@ struct server_routes {
++
+     // register a callback to be called when sleeping state changes
+     // must be set before load_model() is called
+     void on_sleeping_changed(std::function<void(bool)> callback);
+@@ -122,6 +125,8 @@ struct server_routes {
      server_http_context::handler_t post_rerank;
      server_http_context::handler_t get_lora_adapters;
      server_http_context::handler_t post_lora_adapters;
 +    server_http_context::handler_t get_control_vectors;
 +    server_http_context::handler_t post_control_vectors;
- private:
-     std::unique_ptr<server_res_generator> handle_completions_impl(
-             const server_http_req & req,
+
+     // to be used in router mode
+     json get_model_info() const;
 diff --git a/tools/server/server-task.h b/tools/server/server-task.h
-index a69e8f1a3..3ab011d69 100644
+index 64bdecd79..1c9efe1b0 100644
 --- a/tools/server/server-task.h
 +++ b/tools/server/server-task.h
 @@ -26,6 +26,7 @@ enum server_task_type {
@@ -182,7 +182,7 @@ index a69e8f1a3..3ab011d69 100644
  };
 
  // TODO: change this to more generic "response_format" to replace the "format_response_*" in server-common
-@@ -165,6 +166,9 @@ struct server_task {
+@@ -168,6 +169,9 @@ struct server_task {
      // used by SERVER_TASK_TYPE_SET_LORA
      std::map<int, float> set_lora; // mapping adapter ID -> scale
 
@@ -192,7 +192,7 @@ index a69e8f1a3..3ab011d69 100644
      server_task() = default;
 
      server_task(server_task_type type) : type(type) {}
-@@ -553,6 +557,14 @@ struct server_task_result_apply_lora : server_task_result {
+@@ -565,6 +569,14 @@ struct server_task_result_apply_lora : server_task_result {
      virtual json to_json() override;
  };
 
@@ -204,20 +204,20 @@ index a69e8f1a3..3ab011d69 100644
 +    }
 +};
 +
- struct server_prompt_checkpoint {
-     llama_pos pos_min;
-     llama_pos pos_max;
+ struct server_prompt_data {
+     std::vector<uint8_t> main;
+     std::vector<uint8_t> drft;
 diff --git a/tools/server/server.cpp b/tools/server/server.cpp
-index d3d431602..60fd2e13d 100644
+index 371b13c44..463db80dd 100644
 --- a/tools/server/server.cpp
 +++ b/tools/server/server.cpp
-@@ -194,6 +194,9 @@ int main(int argc, char ** argv) {
+@@ -201,6 +201,9 @@ int main(int argc, char ** argv) {
      // LoRA adapters hotswap
-     ctx_http.get ("/lora-adapters",       ex_wrapper(routes.get_lora_adapters));
-     ctx_http.post("/lora-adapters",       ex_wrapper(routes.post_lora_adapters));
+     ctx_http.get ("/lora-adapters",            ex_wrapper(routes.get_lora_adapters));
+     ctx_http.post("/lora-adapters",            ex_wrapper(routes.post_lora_adapters));
 +    // Control vectors hotswap
-+    ctx_http.get ("/control-vectors",     ex_wrapper(routes.get_control_vectors));
-+    ctx_http.post("/control-vectors",     ex_wrapper(routes.post_control_vectors));
++    ctx_http.get ("/control-vectors",          ex_wrapper(routes.get_control_vectors));
++    ctx_http.post("/control-vectors",          ex_wrapper(routes.post_control_vectors));
      // Save & load slots
-     ctx_http.get ("/slots",               ex_wrapper(routes.get_slots));
-     ctx_http.post("/slots/:id_slot",      ex_wrapper(routes.post_slots));
+     ctx_http.get ("/slots",                    ex_wrapper(routes.get_slots));
+     ctx_http.post("/slots/:id_slot",           ex_wrapper(routes.post_slots));
