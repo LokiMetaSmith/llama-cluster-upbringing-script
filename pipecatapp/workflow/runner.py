@@ -312,43 +312,45 @@ class WorkflowRunner:
                     self.context.set_global_input(name, value)
 
                 # HITL Enforcement Check
-                high_risk_tools = {"shell", "ansible", "desktop_control", "autoresearch"}
-                uses_high_risk = False
-                has_approval_node = False
+                enforce_hitl = global_inputs.get("enforce_hitl", False)
+                if enforce_hitl:
+                    high_risk_tools = {"shell", "ansible", "desktop_control", "autoresearch"}
+                    uses_high_risk = False
+                    has_approval_node = False
 
-                if "nodes" in self.workflow_definition:
-                    for node_def in self.workflow_definition["nodes"]:
-                        node_type = node_def.get("type", "")
-                        if node_type == "HumanApprovalNode":
-                            has_approval_node = True
+                    if "nodes" in self.workflow_definition:
+                        for node_def in self.workflow_definition["nodes"]:
+                            node_type = node_def.get("type", "")
+                            if node_type == "HumanApprovalNode":
+                                has_approval_node = True
 
-                        # Check for high-risk tools in configuration
-                        config = node_def.get("config", {})
+                            # Check for high-risk tools in configuration
+                            config = node_def.get("config", {})
 
-                        # Check if it's a ToolNode using a high-risk tool directly
-                        if node_type == "ToolNode" and config.get("tool_name") in high_risk_tools:
-                            uses_high_risk = True
-
-                        # Check if it's an Agent node that is configured with high-risk tools
-                        agent_tools = config.get("tools", [])
-                        if isinstance(agent_tools, list):
-                            for tool in agent_tools:
-                                tool_name = tool if isinstance(tool, str) else tool.get("name", "")
-                                if tool_name in high_risk_tools:
-                                    uses_high_risk = True
-                                    break
-
-                        # Fallback heuristic: check if any high-risk tool name is literally anywhere in the config values
-                        for val in config.values():
-                            if isinstance(val, str) and val in high_risk_tools:
+                            # Check if it's a ToolNode using a high-risk tool directly
+                            if node_type == "ToolNode" and config.get("tool_name") in high_risk_tools:
                                 uses_high_risk = True
-                            elif isinstance(val, list):
-                                for item in val:
-                                    if isinstance(item, str) and item in high_risk_tools:
-                                        uses_high_risk = True
 
-                if uses_high_risk and not has_approval_node:
-                    raise ValueError("HITL Enforcement: HumanApprovalNode is required for workflows utilizing shell, ansible, desktop_control, or autoresearch.")
+                            # Check if it's an Agent node that is configured with high-risk tools
+                            agent_tools = config.get("tools", [])
+                            if isinstance(agent_tools, list):
+                                for tool in agent_tools:
+                                    tool_name = tool if isinstance(tool, str) else tool.get("name", "")
+                                    if tool_name in high_risk_tools:
+                                        uses_high_risk = True
+                                        break
+
+                            # Fallback heuristic: check if any high-risk tool name is literally anywhere in the config values
+                            for val in config.values():
+                                if isinstance(val, str) and val in high_risk_tools:
+                                    uses_high_risk = True
+                                elif isinstance(val, list):
+                                    for item in val:
+                                        if isinstance(item, str) and item in high_risk_tools:
+                                            uses_high_risk = True
+
+                    if uses_high_risk and not has_approval_node:
+                        raise ValueError("HITL Enforcement: HumanApprovalNode is required for workflows utilizing shell, ansible, desktop_control, or autoresearch when enforce_hitl is enabled.")
 
                 # Use iterative execution if a cycle is detected or explicitly requested
                 has_cycle = False
