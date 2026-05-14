@@ -65,15 +65,15 @@ index ce743e665..30dbfa942 100644
 +                         // If load fails, we clear the current vectors to be safe/consistent?
 +                         // Or maybe we should keep the old ones?
 +                         // For now, let's clear to avoid stale state if the user intended to switch.
-+                         llama_apply_adapter_cvec(ctx, nullptr, 0, 0, 0, 0);
++                         llama_set_adapter_cvec(ctx_tgt, nullptr, 0, 0, 0, 0);
 +                    } else if (cv_data.data.empty()) {
 +                        SRV_INF("%s", "clearing control vectors\n");
-+                        llama_apply_adapter_cvec(ctx, nullptr, 0, 0, 0, 0);
++                        llama_set_adapter_cvec(ctx_tgt, nullptr, 0, 0, 0, 0);
 +                    } else {
 +                        int il_start = params_base.control_vector_layer_start;
 +                        int il_end   = params_base.control_vector_layer_end;
 +
-+                        int ret = llama_apply_adapter_cvec(ctx, cv_data.data.data(), cv_data.data.size(), cv_data.n_embd, il_start, il_end);
++                        int ret = llama_set_adapter_cvec(ctx_tgt, cv_data.data.data(), cv_data.data.size(), cv_data.n_embd, il_start, il_end);
 +                        if (ret != 0) {
 +                            SRV_ERR("failed to apply control vectors, ret=%d\n", ret);
 +                        } else {
