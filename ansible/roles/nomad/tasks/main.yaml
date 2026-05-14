@@ -186,6 +186,11 @@
     - world_model_storage
     - postgres_data
     - memory-data
+    - traceway
+    - authentik/postgres
+    - authentik/media
+    - authentik/templates
+    - authentik/certs
   become: yes
 
 - name: Include Nomad TLS tasks
