@@ -136,3 +136,56 @@ class FileWriteNode(Node):
 
         except Exception as e:
             self.set_output(context, "write_status", f"Error writing file: {e}")
+
+@registry.register
+class HumanApprovalNode(Node):
+    """A node that pauses execution to request human approval for high-risk actions.
+    Input: 'prompt', 'action_details'
+    Output: 'approval_status', 'human_feedback'
+    """
+    async def execute(self, context: WorkflowContext):
+        try:
+            prompt = self.get_input(context, "prompt")
+        except ValueError:
+            prompt = "Human approval required for action."
+
+        try:
+            action_details = self.get_input(context, "action_details")
+        except ValueError:
+            action_details = "No details provided."
+
+        # Check if auto-approved via global inputs (for testing/automation)
+        if context.global_inputs.get("human_approval_granted") is True:
+            self.set_output(context, "approval_status", "approved")
+            self.set_output(context, "human_feedback", "Auto-approved via global input.")
+            return
+
+        if context.global_inputs.get("human_approval_granted") is False:
+            self.set_output(context, "approval_status", "rejected")
+            self.set_output(context, "human_feedback", "Auto-rejected via global input.")
+            raise ValueError(f"Workflow execution halted: Human approval rejected. Action: {action_details}")
+
+        # Fallback to CLI interaction
+        import asyncio
+        import os
+
+        print(f"\n=== HUMAN APPROVAL REQUIRED ===")
+        print(f"Prompt: {prompt}")
+        print(f"Action Details: {action_details}")
+        print(f"===============================\n")
+
+        loop = asyncio.get_event_loop()
+        try:
+            # We use run_in_executor to avoid blocking the async event loop with input()
+            user_input = await loop.run_in_executor(None, input, "Approve this action? (yes/no): ")
+        except EOFError:
+            user_input = "no"
+
+        user_input = user_input.strip().lower()
+        if user_input in ['y', 'yes']:
+            self.set_output(context, "approval_status", "approved")
+            self.set_output(context, "human_feedback", "Approved by human via CLI.")
+        else:
+            self.set_output(context, "approval_status", "rejected")
+            self.set_output(context, "human_feedback", "Rejected by human via CLI.")
+            raise ValueError(f"Workflow execution halted: Human approval rejected. Action: {action_details}")
