@@ -1,7 +1,7 @@
-- hosts: hw_tier_high
+- hosts: all
   become: yes
   vars_files:
     - ../../group_vars/all.yaml
   roles:
-    - { role: sunshine, tags: ['sunshine', 'streaming'] }
-    - { role: magic_mirror, tags: ['magic_mirror', 'streaming'] }
+    - { role: sunshine, tags: ['sunshine', 'streaming'] , when: "node_tier == 'high'" }
+    - { role: magic_mirror, tags: ['magic_mirror', 'streaming'] , when: "node_tier == 'high'" }
