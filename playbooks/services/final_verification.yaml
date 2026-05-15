@@ -1,73 +1,76 @@
 - name: Final Verification
-  hosts: hw_tier_high
+  hosts: all
   become: no
   gather_facts: yes
   tags:
     - final-verification
   tasks:
-    - name: Check if the Consul service is running
-      ansible.builtin.systemd:
-        name: consul
-      register: consul_service_status
-      failed_when: "consul_service_status.status.ActiveState != 'active'"
-      changed_when: false
-      ignore_errors: yes # We'll provide a better error message in the next task
-      when: not ansible_check_mode
-      tags:
-        - consul-health
+    - block:
+          - name: Check if the Consul service is running
+            ansible.builtin.systemd:
+              name: consul
+            register: consul_service_status
+            failed_when: "consul_service_status.status.ActiveState != 'active'"
+            changed_when: false
+            ignore_errors: yes # We'll provide a better error message in the next task
+            when: not ansible_check_mode
+            tags:
+              - consul-health
 
-    - name: Fail gracefully if Consul service is not running
-      ansible.builtin.fail:
-        msg: |
-          The Consul service is not running or has failed.
-          Playbook cannot continue without a functioning Consul service.
-          Please check the service logs by running 'journalctl -u consul.service' on the target node.
-          Status details: {{ consul_service_status }}
-      when: consul_service_status.skipped is not defined and consul_service_status.failed and not ansible_check_mode
-      tags:
-        - consul-health
+          - name: Fail gracefully if Consul service is not running
+            ansible.builtin.fail:
+              msg: |
+                The Consul service is not running or has failed.
+                Playbook cannot continue without a functioning Consul service.
+                Please check the service logs by running 'journalctl -u consul.service' on the target node.
+                Status details: {{ consul_service_status }}
+            when: consul_service_status.skipped is not defined and consul_service_status.failed and not ansible_check_mode
+            tags:
+              - consul-health
 
-    - name: Wait for a Consul leader to be elected
-      ansible.builtin.uri:
-        url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/status/leader"
-        return_content: yes
-      register: consul_leader_status
-      until: consul_leader_status.content != '""' and consul_leader_status.status == 200
-      retries: 12
-      delay: 5
-      ignore_errors: yes
-      when: not ansible_check_mode
-      tags:
-        - consul-health
+          - name: Wait for a Consul leader to be elected
+            ansible.builtin.uri:
+              url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/status/leader"
+              return_content: yes
+            register: consul_leader_status
+            until: consul_leader_status.content != '""' and consul_leader_status.status == 200
+            retries: 12
+            delay: 5
+            ignore_errors: yes
+            when: not ansible_check_mode
+            tags:
+              - consul-health
 
-    - name: Fail gracefully if no Consul leader is found
-      ansible.builtin.fail:
-        msg: |
-          The Consul service is running, but it has not elected a leader after 60 seconds.
-          This usually means the `bootstrap_expect` value in your Consul configuration is
-          higher than the number of server nodes available.
-          - For a single-node setup, ensure `bootstrap_expect` is 1.
-          - For a multi-node setup, ensure enough controller nodes are running to form a quorum.
-      when: consul_leader_status.skipped is not defined and (consul_leader_status.failed or consul_leader_status.content == '""') and not ansible_check_mode
-      tags:
-        - consul-health
+          - name: Fail gracefully if no Consul leader is found
+            ansible.builtin.fail:
+              msg: |
+                The Consul service is running, but it has not elected a leader after 60 seconds.
+                This usually means the `bootstrap_expect` value in your Consul configuration is
+                higher than the number of server nodes available.
+                - For a single-node setup, ensure `bootstrap_expect` is 1.
+                - For a multi-node setup, ensure enough controller nodes are running to form a quorum.
+            when: consul_leader_status.skipped is not defined and (consul_leader_status.failed or consul_leader_status.content == '""') and not ansible_check_mode
+            tags:
+              - consul-health
 
-    - name: Verify Consul is listening on Mesh IP (Serf LAN)
-      wait_for:
-        host: "{{ cluster_ip }}"
-        port: 8301
-        timeout: 10
-        state: started
-      when: not ansible_check_mode
-      tags:
-        - consul-health
+          - name: Verify Consul is listening on Mesh IP (Serf LAN)
+            wait_for:
+              host: "{{ cluster_ip }}"
+              port: 8301
+              timeout: 10
+              state: started
+            when: not ansible_check_mode
+            tags:
+              - consul-health
 
-    - name: Verify Nomad is listening on Mesh IP (RPC)
-      wait_for:
-        host: "{{ cluster_ip }}"
-        port: 4647
-        timeout: 10
-        state: started
-      when: not ansible_check_mode
-      tags:
-        - nomad-health
+          - name: Verify Nomad is listening on Mesh IP (RPC)
+            wait_for:
+              host: "{{ cluster_ip }}"
+              port: 4647
+              timeout: 10
+              state: started
+            when: not ansible_check_mode
+            tags:
+              - nomad-health
+
+      when: node_tier == 'high'
