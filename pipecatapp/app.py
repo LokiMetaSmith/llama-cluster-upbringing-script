@@ -1191,6 +1191,21 @@ class TwinService(FrameProcessor):
             logging.info("No summarizer tool available; truncating short-term memory.")
             self.short_term_memory = ["[Older conversation history truncated]"] + recent
 
+    def audit_log_tool_call(self, tool_name: str, args: dict, result: str, signature: str):
+        """Appends a tamper-evident JSON log of the tool execution trace."""
+        log_entry = {
+            "timestamp": time.time(),
+            "action": tool_name,
+            "prompt": args,
+            "response": result,
+            "signature": signature
+        }
+        try:
+            with open("audit.log", "a") as f:
+                f.write(json.dumps(log_entry) + "\n")
+        except Exception as e:
+            logging.error(f"Failed to write to audit log: {e}")
+
     @tracer.start_as_current_span("TwinService.process_frame")
     async def process_frame(self, frame, direction):
         """Entry point for the agent's logic, triggered by a transcription frame.
@@ -1298,6 +1313,17 @@ class TwinService(FrameProcessor):
                             # The tool is executed within the workflow, so we just need to
                             # grab the result and feed it back into the next iteration.
                             global_inputs["tool_result"] = workflow_result.get("tool_result")
+
+                            # Extract tool_receipt to log audit trail
+                            tool_receipt = None
+                            for node_id, outputs in workflow_runner.context.node_outputs.items():
+                                if "tool_receipt" in outputs:
+                                    tool_receipt = outputs["tool_receipt"]
+                                    break
+
+                            # Always log the audit trail even if receipt is None to maintain a complete record
+                            if global_inputs.get("tool_result") is not None:
+                                self.audit_log_tool_call(tool_name, tool_args, str(global_inputs["tool_result"]), tool_receipt)
 
                         # Continue the loop
                     else:
