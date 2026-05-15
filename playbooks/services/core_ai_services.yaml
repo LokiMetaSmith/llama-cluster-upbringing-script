@@ -1,5 +1,5 @@
 - name: Deploy Core AI Services and Applications
-  hosts: controller_nodes[0]:&hw_tier_high,controller_nodes[0]:&hw_tier_mid
+  hosts: controller_nodes[0]
   connection: local
   gather_facts: yes
 
@@ -12,33 +12,43 @@
 
   roles:
     - role: bootstrap_agent
+      when: node_tier in ['mid', 'core', 'high']
       tags:
         - bootstrap_agent
     - role: term_everything
+      when: node_tier in ['mid', 'core', 'high']
       tags:
         - term_everything
     - role: opencode
+      when: node_tier in ['mid', 'core', 'high']
       tags:
         - opencode
     - role: gemini_cli
+      when: node_tier in ['mid', 'core', 'high']
       tags:
         - gemini_cli
     - role: memory_service
+      when: node_tier in ['mid', 'core', 'high']
       tags:
         - memory_service
     - role: memory_graph
+      when: node_tier in ['mid', 'core', 'high']
       tags:
         - memory_graph
     - role: polyphony
+      when: node_tier in ['mid', 'core', 'high']
       tags:
         - polyphony
     - role: pipecatapp
+      when: node_tier in ['mid', 'core', 'high']
       tags:
         - pipecatapp
     - role: opengravity
+      when: node_tier in ['mid', 'core', 'high']
       tags:
         - opengravity
     - role: tml_interaction
+      when: node_tier in ['mid', 'core', 'high']
       tags:
         - tml_interaction
         - interaction_models
