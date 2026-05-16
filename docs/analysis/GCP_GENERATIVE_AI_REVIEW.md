@@ -71,7 +71,7 @@ It provides a sophisticated, human-like memory system that completely bypasses t
    - Implement a new SQLite backend (or extend the existing JSON store) to support the `memories` and `consolidations` tables.
    - Ensure the new SQLite backend respects the existing `MEMORY_ENCRYPTION_KEY` for data-at-rest encryption (potentially via SQLCipher or application-level field encryption).
 
-2. [ ] **Create the Agent Prompts & Logic**
+2. [x] **Create the Agent Prompts & Logic**
    - Create local LLM prompts corresponding to the three agent roles:
      - *Ingestion Prompt:* Extract summary, entities, topics, and calculate importance.
      - *Consolidation Prompt:* Review unconsolidated memories, map connections, and generate insights.
