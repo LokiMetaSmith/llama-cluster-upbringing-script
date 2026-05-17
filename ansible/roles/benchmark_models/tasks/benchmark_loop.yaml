@@ -9,12 +9,24 @@
 - name: "Run benchmark job for model {{ model.name }}"
   ansible.builtin.command:
     cmd: "nomad job run -detach /tmp/model-benchmark-{{ model.filename }}.nomad"
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
   register: benchmark_models_job_run_result
   changed_when: "'job registration' in benchmark_models_job_run_result.stdout"
 
 - name: "Wait for benchmark job to complete for model {{ model.name }}"
   ansible.builtin.command:
     cmd: "nomad job status -json model-benchmark-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
   register: benchmark_models_job_status_result
   until: "((benchmark_models_job_status_result.stdout | from_json).Status == 'dead') and ((benchmark_models_job_status_result.stdout | from_json).JobSummary.Summary.Complete == 1)"
   retries: 60 # 5 minutes (60 * 5s)
@@ -24,12 +36,24 @@
 - name: "Get allocation ID for model {{ model.name }}"
   ansible.builtin.command:
     cmd: "nomad job allocs -json model-benchmark-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
   register: benchmark_models_job_allocs_result
   changed_when: false
 
 - name: "Capture benchmark logs for model {{ model.name }}"
   ansible.builtin.command:
     cmd: "nomad alloc logs {{ (benchmark_models_job_allocs_result.stdout | from_json)[0].ID }} benchmark-task"
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
   register: benchmark_models_benchmark_logs
   changed_when: false
 
@@ -48,6 +72,12 @@
     - name: "Purge benchmark job for model {{ model.name }}"
       ansible.builtin.command:
         cmd: "nomad job stop -purge model-benchmark-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
+      environment:
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       changed_when: false
 
     - name: "Remove temporary job file for model {{ model.name }}"

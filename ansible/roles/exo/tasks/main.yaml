@@ -88,6 +88,10 @@
     cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/exo.nomad"
   environment:
     NOMAD_ADDR: "https://{{ advertise_ip }}:{{ nomad_http_port }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
   register: exo_job_run
   changed_when: "'Eval ID' in exo_job_run.stdout"
   when: exo_enable
