@@ -328,3 +328,7 @@ This section tracks actionable ideas derived from the `docs/analysis/POLLEN_COMP
 ## Test failures
 
 - [x] Investigate and fix `test_load_playbooks_from_manifest` failure in `tests/unit/test_provisioning.py` caused by `yaml` mocking issues.
+
+## Future Model Integrations
+
+- [ ] **Orthrus Integration:** Track upstream support in `llama.cpp` or native `vLLM` for "Orthrus" (dual-view diffusion decoding model, e.g., `chiennv/Orthrus-Qwen3-8B`). Once supported by our core inference engines, integrate it into `group_vars/models.yaml` to take advantage of its memory-efficient parallel token generation for complex reasoning tasks.
