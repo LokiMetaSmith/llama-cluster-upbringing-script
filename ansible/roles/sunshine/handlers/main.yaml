@@ -1,4 +1,10 @@
 - name: Run Sunshine Job
   ansible.builtin.command:
     cmd: nomad job run -detach /opt/nomad/jobs/sunshine.nomad
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
   listen: "Run Sunshine Job"
