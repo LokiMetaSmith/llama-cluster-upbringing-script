@@ -43,10 +43,19 @@
     memory_graph_image: "memory-graph-service:local"
   when: registry_check.state | default('stopped') != 'started'
 
+- name: Ensure memory-graph.nomad job file exists
+  ansible.builtin.template:
+    src: memory-graph.nomad.j2
+    dest: "{{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/memory-graph.nomad"
+
 - name: Deploy memory-graph Nomad job
-  community.general.nomad_job:
-    content: "{{ lookup('template', 'memory-graph.nomad.j2') }}"
-    state: present
-    host: localhost
-    port: 4646
-    use_ssl: false
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/memory-graph.nomad
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+    NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+  register: nomad_job_run
+  changed_when: "'Job registration successful' in nomad_job_run.stdout or 'modified' in nomad_job_run.stdout"
