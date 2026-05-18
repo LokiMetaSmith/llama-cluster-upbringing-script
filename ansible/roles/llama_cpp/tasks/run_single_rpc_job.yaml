@@ -24,6 +24,12 @@
     - name: Deploy rpc job
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job run -detach /tmp/rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
+      environment:
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+        NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cert.pem"
+        NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       register: rpc_job_run
       changed_when: "'Eval ID' in rpc_job_run.stdout"
       environment:

@@ -50,6 +50,12 @@
 - name: "Run the GPU Provider Pool job for {{ model.name }}"
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run /tmp/{{ rpc_job_name }}.nomad"
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+    NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cert.pem"
+    NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
   changed_when: true
 
 - name: "Wait for GPU Provider for {{ model.name }} to become healthy in Consul"
