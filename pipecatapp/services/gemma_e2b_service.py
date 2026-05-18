@@ -18,7 +18,7 @@ from pipecat.frames.frames import (
     Frame,
     CancelFrame,
     UserImageRawFrame,
-    VisionImageRawFrame,
+    UserImageRawFrame as VisionImageRawFrame,
     StartFrame,
     EndFrame,
     UserStoppedSpeakingFrame

@@ -75,7 +75,7 @@ expert_models:
       url: "https://huggingface.co/bartowski/gpt-oss-20B-GGUF/resolve/main/gpt-oss-20B-Q4_K_M.gguf"
       filename: "gpt-oss-20B-Q4_K_M.gguf"
       memory_mb: 16384
-  qwen3.5:
+  qwen3-5:
     - name: "Qwen3.5-35B-A3B-MXFP4_MOE"
       url: "https://huggingface.co/byteshape/Qwen3.5-35B-A3B-MXFP4_MOE-GGUF/resolve/main/Qwen3.5-35B-A3B-MXFP4_MOE-Q4_K_M.gguf"
       filename: "Qwen3.5-35B-A3B-MXFP4_MOE-Q4_K_M.gguf"
