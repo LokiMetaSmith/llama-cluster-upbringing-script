@@ -249,6 +249,12 @@
     - name: Purge failing MQTT Exporter deployment
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job stop -purge mqtt-exporter
+      environment:
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+        NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cert.pem"
+        NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/key.pem"
+        NOMAD_TLS_SKIP_VERIFY: "1"
       when: pre_mqtt_exporter_job_status.rc == 0 and ('dead' in pre_mqtt_exporter_job_status.stdout or 'failed' in pre_mqtt_exporter_job_status.stdout or 'progress deadline' in pre_mqtt_exporter_job_status.stdout)
       environment:
         NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
