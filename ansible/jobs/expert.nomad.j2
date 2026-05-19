@@ -18,10 +18,14 @@ variable "rpc_pool_job_name" {
 {% set memory_buffer_mb = 2048 %}
 {% set available_memory_mb = (ansible_memtotal_mb | int) - memory_buffer_mb %}
 {% set model_list = expert_models[current_expert] %}
-{% set models_with_memory = model_list | selectattr('memory_mb', 'defined') %}
+{% set models_with_memory = model_list | selectattr('memory_mb', 'defined') | list %}
 {% set suitable_models_unsorted = models_with_memory | selectattr('memory_mb', 'le', available_memory_mb) %}
 {% set suitable_models = suitable_models_unsorted | sort(attribute='memory_mb', reverse=true) | list %}
+{% if suitable_models | length > 0 %}
 {% set best_model = suitable_models[0] %}
+{% else %}
+{% set best_model = (models_with_memory | sort(attribute='memory_mb') | list)[0] %}
+{% endif %}
 {% set best_model_sanitized = best_model.filename | regex_replace('[^a-zA-Z0-9-]', '-') %}
 
 job "{{ job_name }}" {
