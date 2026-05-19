@@ -68,6 +68,6 @@
     validate_certs: false
     return_content: yes
   register: consul_health
-  until: "consul_health.json | length >= expected_worker_count | int"
+  until: "consul_health.json is defined and consul_health.json | length >= expected_worker_count | int"
   retries: 30
   delay: 10
