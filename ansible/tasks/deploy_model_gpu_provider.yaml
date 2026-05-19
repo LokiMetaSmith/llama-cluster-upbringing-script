@@ -60,7 +60,7 @@
 
 - name: "Wait for GPU Provider for {{ model.name }} to become healthy in Consul"
   ansible.builtin.uri:
-    url: "https://127.0.0.1:{{ consul_https_port | default(8501) }}/v1/health/service/{{ rpc_service_name }}?passing"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/health/service/{{ rpc_service_name }}?passing"
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
