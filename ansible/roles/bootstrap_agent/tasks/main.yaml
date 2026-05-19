@@ -40,7 +40,7 @@
         client_cert: "{{ nomad_tls_dir }}/cli.cert.pem"
         client_key: "{{ nomad_tls_dir }}/cli.key.pem"
       register: nomad_peers
-      until: nomad_peers.json | length >= 1
+      until: nomad_peers.json is defined and nomad_peers.json | length >= 1
       retries: 20
       delay: 6
       changed_when: false

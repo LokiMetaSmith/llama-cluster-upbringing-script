@@ -80,7 +80,7 @@
       ansible.builtin.assert:
         that:
           - traefik_consul_health.status == 200
-          - traefik_consul_health.json | length > 0
+          - traefik_consul_health.json is defined and traefik_consul_health.json | length > 0
         fail_msg: "Traefik service is not passing health checks in Consul."
         success_msg: "Traefik service is healthy in Consul."
       when: inventory_hostname in groups['controller_nodes']

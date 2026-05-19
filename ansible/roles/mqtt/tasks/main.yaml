@@ -235,7 +235,7 @@
         return_content: yes
         status_code: 200
       register: consul_check
-      until: consul_check.json | length > 0
+      until: consul_check.json is defined and consul_check.json | length > 0
       retries: 30
       delay: 2
   rescue:
