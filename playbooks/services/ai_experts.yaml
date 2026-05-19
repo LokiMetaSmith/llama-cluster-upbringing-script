@@ -294,9 +294,12 @@
 
         - name: Wait for the expert services to be healthy in Consul
           ansible.builtin.uri:
-            url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/health/service/expert-api-{{ item }}"
+            url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/health/service/expert-api-{{ item }}"
             headers:
               X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
+            client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+            client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+            validate_certs: false
             return_content: yes
           register: expert_health
           until: >
