@@ -273,7 +273,7 @@
         - name: Create Expert Orchestrator job files
           include_tasks:
             file: "{{ playbook_dir }}/../../ansible/tasks/create_expert_job.yaml"
-          loop: "{{ verified_experts if (verified_experts is defined and verified_experts | length > 0) else experts }}"
+          loop: "{{ verified_experts | default([]) }}"
           loop_control:
             loop_var: current_expert
           when: benchmark_results is defined
@@ -285,7 +285,7 @@
             file: "{{ playbook_dir }}/../../ansible/tasks/deploy_expert_wrapper.yaml"
           vars:
             registry_is_reachable: "{{ global_registry_check.state | default('stopped') == 'started' }}"
-          loop: "{{ verified_experts if (verified_experts is defined and verified_experts | length > 0) else experts }}"
+          loop: "{{ verified_experts | default([]) }}"
           loop_control:
             loop_var: expert_name
           when: benchmark_results is defined
@@ -307,7 +307,7 @@
             expert_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
           retries: 60
           delay: 10
-          loop: "{{ verified_experts if (verified_experts is defined and verified_experts | length > 0) else experts }}"
+          loop: "{{ verified_experts | default([]) }}"
           changed_when: false
           when: benchmark_results is defined
           tags:
