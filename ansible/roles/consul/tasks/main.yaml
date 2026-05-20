@@ -349,6 +349,7 @@
   become: yes
   loop:
     - "{{ consul_http_port }}"
+    - "{{ consul_https_port }}"
     - "{{ consul_rpc_port }}"
   changed_when: false
   ignore_errors: yes
