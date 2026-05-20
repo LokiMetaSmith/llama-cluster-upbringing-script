@@ -94,7 +94,10 @@
 
     - name: Verify Consul Leader Status
       ansible.builtin.uri:
-        url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/status/leader"
+        url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/status/leader"
+        client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+        client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+        validate_certs: false
         return_content: yes
       register: consul_leader_check
       ignore_errors: yes
@@ -105,7 +108,10 @@
 
     - name: Verify Consul Token Validity
       ansible.builtin.uri:
-        url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/agent/self"
+        url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/agent/self"
+        client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+        client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+        validate_certs: false
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default('') }}"
         return_content: yes
@@ -228,7 +234,10 @@
 
     - name: Wait for MQTT service to be healthy in Consul
       ansible.builtin.uri:
-        url: "http://{{ advertise_ip }}:{{ consul_http_port }}/v1/health/service/mqtt?passing"
+        url: "https://{{ advertise_ip }}:{{ consul_https_port }}/v1/health/service/mqtt?passing"
+        client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+        client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+        validate_certs: false
         method: GET
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default('') }}"

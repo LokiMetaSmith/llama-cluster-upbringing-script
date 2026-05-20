@@ -48,7 +48,10 @@
 
 - name: Check if Authentik secret key exists in Consul
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/kv/authentik/secret-key"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/authentik/secret-key"
+    client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+    client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+    validate_certs: false
     method: GET
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
@@ -66,7 +69,10 @@
 
 - name: Publish Authentik secret key to Consul
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/kv/authentik/secret-key"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/authentik/secret-key"
+    client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+    client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+    validate_certs: false
     method: PUT
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
@@ -79,7 +85,10 @@
 
 - name: Check if Authentik DB password exists in Consul
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/kv/authentik/db-password"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/authentik/db-password"
+    client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+    client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+    validate_certs: false
     method: GET
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
@@ -97,7 +106,10 @@
 
 - name: Publish Authentik DB password to Consul
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port | default(8500) }}/v1/kv/authentik/db-password"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/authentik/db-password"
+    client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+    client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+    validate_certs: false
     method: PUT
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
