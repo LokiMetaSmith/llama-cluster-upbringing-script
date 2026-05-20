@@ -29,6 +29,10 @@ telemetry {
   disable_hostname = true
 }
 
+addresses {
+  https = "0.0.0.0"
+}
+
 ports {
   dns = {{ consul_dns_port }}
   http = {{ consul_http_port }}
