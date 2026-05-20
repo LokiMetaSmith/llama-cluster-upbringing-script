@@ -14,7 +14,10 @@
 
 - name: Query Consul for all model configurations
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port }}/v1/kv/config/models/{{ item }}?raw=true"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port }}/v1/kv/config/models/{{ item }}?raw=true"
+    client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+    client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+    validate_certs: false
     method: GET
     headers:
       X-Consul-Token: "{{ consul_token }}"

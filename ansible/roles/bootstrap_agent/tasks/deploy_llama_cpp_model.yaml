@@ -70,7 +70,10 @@
 # Ensure we check the provider service, not the API (which is just a label in some contexts)
 - name: Wait for the main expert service to be healthy in Consul
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_http_port }}/v1/health/service/llamacpp-rpc-provider"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port }}/v1/health/service/llamacpp-rpc-provider"
+    client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+    client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+    validate_certs: false
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     return_content: yes

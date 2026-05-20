@@ -48,6 +48,7 @@ nomad_models_dir: "/opt/nomad/models"
 
 # Standard Ports
 consul_http_port: 8500
+consul_https_port: 8501
 consul_dns_port: 8600
 traefik_http_port: 80
 traefik_https_port: 443

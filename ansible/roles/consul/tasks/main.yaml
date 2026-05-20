@@ -370,8 +370,11 @@
   block:
     - name: Wait for Consul API to be ready
       ansible.builtin.uri:
-        url: "http://{{ cluster_ip }}:{{ consul_http_port }}/v1/status/leader"
-        validate_certs: no
+        url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/status/leader"
+        client_cert: "{{ consul_config_dir | default('/etc/consul.d') }}/cert.pem"
+        client_key: "{{ consul_config_dir | default('/etc/consul.d') }}/key.pem"
+        validate_certs: false
+
       register: consul_status
       until: consul_status.status == 200
       retries: 30
