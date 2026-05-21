@@ -27,8 +27,8 @@
 
     - name: Remove host from workers
       ansible.builtin.set_fact:
-        inventory: "{{ inventory | combine({'all': {'children': {'workers': {'hosts': inventory.all.children.workers.hosts | dict2items | rejectattr('key', 'equalto', target_hostname) | list | items2dict}}}}, recursive=True) }}"
-      when: inventory.all.children.workers.hosts[target_hostname] is defined
+        inventory: "{{ inventory | combine({'all': {'children': {'worker_nodes': {'hosts': inventory.all.children.worker_nodes.hosts | dict2items | rejectattr('key', 'equalto', target_hostname) | list | items2dict}}}}, recursive=True) }}"
+      when: inventory.all.children.worker_nodes.hosts[target_hostname] is defined
 
     - name: Write the updated inventory back to the file
       ansible.builtin.copy:

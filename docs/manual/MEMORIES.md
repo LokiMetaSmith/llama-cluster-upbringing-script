@@ -21,7 +21,7 @@ Agent memories related to the project.
 * Ansible task files should not begin with `---` as per `.yamllint` configuration.
 * For `unarchive` tasks in Ansible to succeed in check mode, the destination directory creation task must be forced to run (`check_mode: false`) or the unarchive task must be skipped.
 * The `ansible.builtin.uri` module does not support `--check` mode.
-* Provide default values for variables dependent on inventory groups (e.g., `groups['workers']`) to prevent errors in partial inventories.
+* Provide default values for variables dependent on inventory groups (e.g., `groups['worker_nodes']`) to prevent errors in partial inventories.
 * When `replace_with_git_merge_diff` fails due to context matching issues, `overwrite_file_with_block` is a reliable alternative for ensuring file correctness.
 * In Ansible, the `loop` keyword must be at the same indentation level as task attributes.
 * Use `listen: "Handler Name"` in Ansible handlers to group multiple tasks (e.g., restart service and wait for port) under a single notification name.

@@ -1,7 +1,7 @@
 - name: Set service name facts for {{ model.name }}
   ansible.builtin.set_fact:
-    rpc_job_name: "rpc-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
-    rpc_service_name: "rpc-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}-provider"
+    rpc_job_name: "rpc-{{ ((model.filename | regex_replace('[^a-zA-Z0-9-]', '-'))[:40]) | regex_replace('-$', '') }}"
+    rpc_service_name: "rpc-{{ ((model.filename | regex_replace('[^a-zA-Z0-9-]', '-'))[:40]) | regex_replace('-$', '') }}-provider"
 
 - name: Debug service name for {{ model.name }}
   ansible.builtin.debug:
@@ -42,14 +42,14 @@
     # Expert expects: "rpc-<model>-provider".
     # Therefore, we set job_name to "rpc-<model>".
     job_name: "{{ rpc_job_name }}"
-    worker_count: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
+    worker_count: "{{ groups['worker_nodes'] | length if 'worker_nodes' in groups else 1 }}"
     # model variable is passed in implicitly
 
   when: model is defined
 
 - name: "Run the GPU Provider Pool job for {{ model.name }}"
   ansible.builtin.command:
-    cmd: "/usr/local/bin/nomad job run /tmp/{{ rpc_job_name }}.nomad"
+    cmd: "/usr/local/bin/nomad job run -detach /tmp/{{ rpc_job_name }}.nomad"
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
@@ -60,7 +60,7 @@
 
 - name: Set expected_worker_count
   ansible.builtin.set_fact:
-    expected_worker_count: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
+    expected_worker_count: "{{ groups['worker_nodes'] | length if 'worker_nodes' in groups else 1 }}"
 
 - name: "Wait for GPU Provider for {{ model.name }} to become healthy in Consul"
   ansible.builtin.uri:

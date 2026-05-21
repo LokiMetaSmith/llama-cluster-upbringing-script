@@ -38,10 +38,10 @@ echo "--> SSH key copied."
 
 # --- Step 3: Update the Ansible Inventory File ---
 echo "--> Adding new worker to the inventory file: $INVENTORY_FILE"
-# This command uses yq to safely add a new host to the workers group.
+# This command uses yq to safely add a new host to the worker_nodes group.
 # It checks if the host already exists before adding it.
-if ! yq e ".all.children.workers.hosts | has(\"$NEW_HOSTNAME\")" "$INVENTORY_FILE" | grep -q "true"; then
-    yq e ".all.children.workers.hosts += {\"$NEW_HOSTNAME\": {\"ansible_host\": \"$NEW_IP\"}}" -i "$INVENTORY_FILE"
+if ! yq e ".all.children.worker_nodes.hosts | has(\"$NEW_HOSTNAME\")" "$INVENTORY_FILE" | grep -q "true"; then
+    yq e ".all.children.worker_nodes.hosts += {\"$NEW_HOSTNAME\": {\"ansible_host\": \"$NEW_IP\"}}" -i "$INVENTORY_FILE"
     echo "--> $NEW_HOSTNAME added to inventory."
 else
     echo "--> $NEW_HOSTNAME already exists in inventory. Skipping."
