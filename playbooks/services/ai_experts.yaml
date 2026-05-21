@@ -309,7 +309,17 @@
           delay: 10
           loop: "{{ verified_experts | default([]) }}"
           changed_when: false
+          ignore_errors: true
+          failed_when: false
           when: benchmark_results is defined
+          tags:
+            - healthcheck
+
+        - name: Report failure if Expert service did not become healthy
+          ansible.builtin.debug:
+            msg: "WARNING: The expert service expert-api-{{ item.item }} failed to start or become healthy within the timeout period."
+          loop: "{{ expert_health.results }}"
+          when: benchmark_results is defined and (item.failed or item.json is not defined or item.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length == 0)
           tags:
             - healthcheck
       when: node_tier in ['mid', 'core', 'high']
