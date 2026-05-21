@@ -26,7 +26,7 @@ variable "rpc_pool_job_name" {
 {% else %}
 {% set best_model = (models_with_memory | sort(attribute='memory_mb') | list)[0] %}
 {% endif %}
-{% set best_model_sanitized = best_model.filename | regex_replace('[^a-zA-Z0-9-]', '-') %}
+{% set best_model_sanitized = ((best_model.filename | regex_replace('[^a-zA-Z0-9-]', '-'))[:40]) | regex_replace('-$', '') %}
 
 job "{{ job_name }}" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
