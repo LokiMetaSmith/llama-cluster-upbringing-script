@@ -68,6 +68,7 @@ job "tool-server" {
           type     = "http"
           path     = "/health"
           interval = "15s"
+          initial_delay = "60s"
           timeout  = "5s"
         }
       }

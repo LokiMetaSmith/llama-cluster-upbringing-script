@@ -810,7 +810,7 @@ def main():
             pipecat_port = global_vars.get("nanochat_port", 8005)
             router_port = global_vars.get("router_port", 8081)
             mqtt_port = global_vars.get("mqtt_port", 1883)
-            wait_for_ports_freed([pipecat_port, router_port, mqtt_port])
+            # wait_for_ports_freed([pipecat_port, router_port, mqtt_port])  # Disabled as these are Nomad-managed
 
         # Cleanup before Core AI
         if "core_ai_services.yaml" in normalized_path:

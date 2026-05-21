@@ -1,9 +1,23 @@
-- name: Run Paperless Job
-  command: nomad job run -detach /opt/nomad/jobs/paperless.nomad
+- name: Run Paperless DB Job
+  command: /usr/local/bin/nomad job run -detach /opt/nomad/jobs/paperless-db.nomad
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-    NOMAD_TLS_SKIP_VERIFY: "1"
-  become: yes
+    NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+    NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.key.pem"
+
+- name: Run Paperless Redis Job
+  command: /usr/local/bin/nomad job run -detach /opt/nomad/jobs/paperless-redis.nomad
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+    NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.key.pem"
+
+- name: Run Paperless App Job
+  command: /usr/local/bin/nomad job run -detach /opt/nomad/jobs/paperless-app.nomad
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+    NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.key.pem"

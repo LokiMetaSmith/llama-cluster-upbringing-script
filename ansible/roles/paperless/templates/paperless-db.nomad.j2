@@ -1,0 +1,51 @@
+job "paperless-db" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "service"
+
+  group "paperless-db-group" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "db" {
+        to = 5432
+      }
+    }
+
+    service {
+      name     = "paperless-db"
+      port     = "db"
+      provider = "consul"
+
+      check {
+        name     = "Paperless Postgres"
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "postgres" {
+      driver = "docker"
+
+      config {
+        image = "postgres:16.0-alpine"
+        ports = ["db"]
+        volumes = [
+          "/opt/paperless/postgres:/var/lib/postgresql/data"
+        ]
+      }
+
+      env {
+        POSTGRES_USER     = "paperless"
+        POSTGRES_PASSWORD = "paperless_password"
+        POSTGRES_DB       = "paperless"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+  }
+}
