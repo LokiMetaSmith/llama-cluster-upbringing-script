@@ -42,7 +42,7 @@
     # Expert expects: "rpc-<model>-provider".
     # Therefore, we set job_name to "rpc-<model>".
     job_name: "{{ rpc_job_name }}"
-    worker_count: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
+    worker_count: "{{ groups['worker_nodes'] | length if 'worker_nodes' in groups else 1 }}"
     # model variable is passed in implicitly
 
   when: model is defined

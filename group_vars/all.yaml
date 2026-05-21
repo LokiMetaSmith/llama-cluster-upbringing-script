@@ -8,7 +8,7 @@ node_tier: "mid"
 # Deployment topology setting: monolith vs distributed
 deploy_topology: "distributed"
 
-expected_cluster_size: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
+expected_cluster_size: "{{ groups['worker_nodes'] | length if 'worker_nodes' in groups else 1 }}"
 
 # This variable dynamically determines the node ID based on the hostname.
 # If the hostname is 'devbox', the ID is 10.

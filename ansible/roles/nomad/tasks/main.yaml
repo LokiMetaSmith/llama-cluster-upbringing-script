@@ -90,7 +90,7 @@
   loop:
     - "{{ nomad_config_dir }}/client.hcl"
     - "{{ nomad_config_dir }}/server.hcl"
-  when: "inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names and ('controller_nodes' not in groups or inventory_hostname not in groups['controller_nodes'])"
+  when: "inventory_hostname == 'localhost' and 'controller' not in group_names and 'worker_nodes' not in group_names and ('controller_nodes' not in groups or inventory_hostname not in groups['controller_nodes'])"
   become: yes
   notify: Restart nomad
 
@@ -98,7 +98,7 @@
   ansible.builtin.file:
     path: "{{ nomad_config_dir }}/nomad.hcl"
     state: absent
-  when: "not (inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names) or ('controller_nodes' in groups and inventory_hostname in groups['controller_nodes'])"
+  when: "not (inventory_hostname == 'localhost' and 'controller' not in group_names and 'worker_nodes' not in group_names) or ('controller_nodes' in groups and inventory_hostname in groups['controller_nodes'])"
   become: yes
   notify: Restart nomad
 
@@ -251,7 +251,7 @@
   ansible.builtin.template:
     src: nomad.hcl.server.j2
     dest: "{{ nomad_config_dir }}/nomad.hcl"
-  when: "inventory_hostname == 'localhost' and 'controller' not in group_names and 'workers' not in group_names and ('controller_nodes' not in groups or inventory_hostname not in groups['controller_nodes'])"
+  when: "inventory_hostname == 'localhost' and 'controller' not in group_names and 'worker_nodes' not in group_names and ('controller_nodes' not in groups or inventory_hostname not in groups['controller_nodes'])"
   notify:
     - Restart nomad
 
@@ -263,7 +263,7 @@
     group: root
     mode: "0644"
   become: yes
-  when: "'workers' in groups and inventory_hostname in groups['workers']"
+  when: "'worker_nodes' in groups and inventory_hostname in groups['worker_nodes']"
   notify:
     - Restart nomad
 
