@@ -312,6 +312,8 @@ This section tracks actionable ideas derived from the `docs/analysis/FLOWISE_ANA
 
 ## Suggested New Items
 
+- [ ] **Review and Implement MCP Migration Plan:** Execute the phases outlined in `docs/manual/MCP_MIGRATION_PLAN.md` to transition custom tools to the Model Context Protocol.
+
 - [x] **Fix Missing Test Dependencies:** Update requirements-dev.txt to include `pytest`, `pytest-asyncio`, and `httpx` to fix the test suite.
 - [x] **Fix FastAPI Mocking:** Ensure FastAPI and `fastapi.responses` are properly mocked in test collection so `app.py` doesn't crash test discovery.
 - [x] **Implement Mobile UI Fixes for LiteGraph:** As noted in `litegraph.js` TODOs, improve the `dialog_close_on_mouse_leave` logic to work nicely on touch devices.
