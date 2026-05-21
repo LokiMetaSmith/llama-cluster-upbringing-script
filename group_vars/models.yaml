@@ -31,27 +31,27 @@ expert_models:
       filename: "LFM2-350M-Math-Q4_K_M.gguf"
       memory_mb: 2048
   extract:
-    - name: "LFM2-1.2B-Extract"
+    - name: "LFM2-1-2B-Extract"
       url: "https://huggingface.co/LiquidAI/LFM2-1.2B-Extract-GGUF/resolve/main/LFM2-1.2B-Extract-Q4_K_M.gguf"
       filename: "LFM2-1.2B-Extract-Q4_K_M.gguf"
       memory_mb: 4096
   rag:
-    - name: "LFM2-1.2B-RAG"
+    - name: "LFM2-1-2B-RAG"
       url: "https://huggingface.co/LiquidAI/LFM2-1.2B-RAG-GGUF/resolve/main/LFM2-1.2B-RAG-Q4_K_M.gguf"
       filename: "LFM2-1.2B-RAG-Q4_K_M.gguf"
       memory_mb: 4096
   tool:
-    - name: "LFM2-1.2B-Tool"
+    - name: "LFM2-1-2B-Tool"
       url: "https://huggingface.co/LiquidAI/LFM2-1.2B-Tool-GGUF/resolve/main/LFM2-1.2B-Tool-Q4_K_M.gguf"
       filename: "LFM2-1.2B-Tool-Q4_K_M.gguf"
       memory_mb: 4096
   thinking:
-    - name: "LFM2.5-1.2B-Thinking"
+    - name: "LFM2-5-1-2B-Thinking"
       url: "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Thinking-GGUF/resolve/main/LFM2.5-1.2B-Thinking-Q4_K_M.gguf"
       filename: "LFM2.5-1.2B-Thinking-Q4_K_M.gguf"
       memory_mb: 4096
   instruct:
-    - name: "LFM2.5-1.2B-Instruct"
+    - name: "LFM2-5-1-2B-Instruct"
       url: "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF/resolve/main/LFM2.5-1.2B-Instruct-Q4_K_M.gguf"
       filename: "LFM2.5-1.2B-Instruct-Q4_K_M.gguf"
       memory_mb: 4096
@@ -76,12 +76,12 @@ expert_models:
       filename: "gpt-oss-20B-Q4_K_M.gguf"
       memory_mb: 16384
   qwen3-5:
-    - name: "Qwen3.5-35B-A3B-MXFP4_MOE"
+    - name: "Qwen3-5-35B-A3B-MXFP4_MOE"
       url: "https://huggingface.co/byteshape/Qwen3.5-35B-A3B-MXFP4_MOE-GGUF/resolve/main/Qwen3.5-35B-A3B-MXFP4_MOE-Q4_K_M.gguf"
       filename: "Qwen3.5-35B-A3B-MXFP4_MOE-Q4_K_M.gguf"
       memory_mb: 16384
   orthrus:
-    - name: "Orthrus-9b-v0.3-Q6_K"
+    - name: "Orthrus-9b-v0-3-Q6_K"
       url: "https://huggingface.co/Pyroserenus/Orthrus-9b-v0.3-Q6_K-GGUF/resolve/main/orthrus-9b-v0.3-q6_k.gguf"
       filename: "orthrus-9b-v0.3-q6_k.gguf"
       memory_mb: 9216
@@ -119,7 +119,7 @@ piper_voice_files:
 
 # Embedding models
 embedding_models:
-  - name: "bge-large-en-v1.5"
+  - name: "bge-large-en-v1-5"
     repo_id: "BAAI/bge-large-en-v1.5"
     # This model will be downloaded using the huggingface_hub module, which handles the whole repository.
 
@@ -130,7 +130,7 @@ stt_models:
       url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin"
       filename: "ggml-large-v3.bin"
   faster-whisper:
-    - name: "tiny.en"
+    - name: "tiny-en"
       repo_id: "Systran/faster-whisper-tiny.en"
   wyoming:
     - name: "nvidia-parakeet-v2"
@@ -139,7 +139,7 @@ stt_models:
 
 # The provider and name of the STT model to be used by the pipecat-app
 active_stt_provider: "faster-whisper"
-active_stt_model_name: "tiny.en"
+active_stt_model_name: "tiny-en"
 
 # Vision models
 vision_models:

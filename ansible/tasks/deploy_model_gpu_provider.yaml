@@ -49,7 +49,7 @@
 
 - name: "Run the GPU Provider Pool job for {{ model.name }}"
   ansible.builtin.command:
-    cmd: "/usr/local/bin/nomad job run /tmp/{{ rpc_job_name }}.nomad"
+    cmd: "/usr/local/bin/nomad job run -detach /tmp/{{ rpc_job_name }}.nomad"
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
