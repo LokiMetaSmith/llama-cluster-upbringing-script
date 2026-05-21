@@ -68,7 +68,7 @@
 
 - name: Set expected cluster size
   ansible.builtin.set_fact:
-    expected_cluster_size: "{{ groups['workers'] | default([]) | length }}"
+    expected_cluster_size: "{{ groups['worker_nodes'] | default([]) | length }}"
 
 - name: Force all pending handlers to run now
   meta: flush_handlers

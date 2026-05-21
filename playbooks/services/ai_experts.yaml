@@ -12,7 +12,7 @@
 
   vars:
     experts: "{{ expert_models.keys() | reject('equalto', 'router') | list }}"
-    expected_worker_count: "{{ ((groups['workers'] | default([]) | length) if (groups['workers'] | default([]) | length) > 0 else 1) | int }}"
+    expected_worker_count: "{{ ((groups['worker_nodes'] | default([]) | length) if (groups['worker_nodes'] | default([]) | length) > 0 else 1) | int }}"
     # Extract all models from all experts, then deduplicate based on filename.
     # 1. Flatten the list of lists of models
     # 2. Use 'unique' filter on the objects (requires hashable objects, dicts might work if identical)
