@@ -154,7 +154,7 @@ EOH
 
       resources {
         cpu    = 1000
-        memory = 1024
+        memory = 256
       }
     }
 
@@ -209,7 +209,7 @@ EOH
 
       resources {
         cpu    = 500 # 500 MHz
-        memory = {{ pipecat_memory_mb | default(4096) }} # 4096MB
+        memory = {{ pipecat_memory_mb | default(512) }} # 512MB
       }
     }
   }
