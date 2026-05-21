@@ -58,6 +58,10 @@
     NOMAD_TLS_SKIP_VERIFY: "1"
   changed_when: true
 
+- name: Set expected_worker_count
+  ansible.builtin.set_fact:
+    expected_worker_count: "{{ groups['workers'] | length if 'workers' in groups else 1 }}"
+
 - name: "Wait for GPU Provider for {{ model.name }} to become healthy in Consul"
   ansible.builtin.uri:
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/health/service/{{ rpc_service_name }}?passing"
@@ -71,3 +75,10 @@
   until: "consul_health.json is defined and consul_health.json | length >= expected_worker_count | int"
   retries: 30
   delay: 10
+  ignore_errors: true
+  failed_when: false
+
+- name: Report failure if GPU Provider for {{ model.name }} did not become healthy
+  ansible.builtin.debug:
+    msg: "WARNING: The model {{ model.name }} failed to start or become healthy within the timeout period. This could be because the model hasn't been profiled yet, the hardware cannot run it, or other reasons. The deployment will continue with other models."
+  when: consul_health.failed or consul_health.json is not defined or consul_health.json | length < expected_worker_count | int
