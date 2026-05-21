@@ -1,7 +1,7 @@
 - name: Set service name facts for {{ model.name }}
   ansible.builtin.set_fact:
-    rpc_job_name: "rpc-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
-    rpc_service_name: "rpc-{{ model.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}-provider"
+    rpc_job_name: "rpc-{{ ((model.filename | regex_replace('[^a-zA-Z0-9-]', '-'))[:40]) | regex_replace('-$', '') }}"
+    rpc_service_name: "rpc-{{ ((model.filename | regex_replace('[^a-zA-Z0-9-]', '-'))[:40]) | regex_replace('-$', '') }}-provider"
 
 - name: Debug service name for {{ model.name }}
   ansible.builtin.debug:
