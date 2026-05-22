@@ -1,0 +1,62 @@
+name: "Distribution Fine Tuning (DFT) Writer"
+nodes:
+  - id: "Input"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "prompt"
+        - name: "outline"
+        - name: "style"
+        - name: "use_case"
+    inputs: []
+
+  - id: "SystemPrompt"
+    type: "SystemPromptNode"
+    inputs:
+      - name: "custom_prompt"
+        value: |
+          You are a highly capable writing assistant that strictly follows the principles of Distribution Fine Tuning (DFT).
+          Your goal is to produce text that perfectly matches the distribution of human writing, ensuring high clarity, deep meaningful detail, coherence, and creativity.
+
+          CRITICAL INSTRUCTIONS (ANTI-SLOP):
+          1. Do NOT overuse emdashes (—).
+          2. Do NOT use cliché repetitive structures like "It's not X, it's Y", "delve", or starting multiple consecutive sentences with the same word.
+          3. Ensure the text has substantial depth and avoids generic, surface-level descriptions.
+          4. If an outline is provided, follow its structure and include any stats/quotes it mentions.
+          5. Match the requested style exactly.
+
+  - id: "WriterLLM"
+    type: "SimpleLLMNode"
+    config:
+      stream: false
+      timeout: 120
+    model_tier: "capable"
+    inputs:
+      - name: "user_text"
+        connection:
+          from_node: "Input"
+          from_output: "prompt"
+      - name: "outline"
+        connection:
+          from_node: "Input"
+          from_output: "outline"
+      - name: "style"
+        connection:
+          from_node: "Input"
+          from_output: "style"
+      - name: "use_case"
+        connection:
+          from_node: "Input"
+          from_output: "use_case"
+      - name: "system_prompt"
+        connection:
+          from_node: "SystemPrompt"
+          from_output: "system_prompt"
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_response"
+        connection:
+          from_node: "WriterLLM"
+          from_output: "response"
