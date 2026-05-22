@@ -1,0 +1,49 @@
+job "paperless-redis" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "service"
+
+  group "paperless-redis-group" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "redis" {
+        to = 6379
+      }
+    }
+
+    service {
+      name     = "paperless-redis"
+      port     = "redis"
+      provider = "consul"
+
+      check {
+        name     = "Paperless Redis"
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "redis" {
+      driver = "docker"
+
+      config {
+        image = "redis:7.2-alpine"
+        ports = ["redis"]
+        volumes = [
+          "/opt/paperless/redis:/data"
+        ]
+      }
+
+      env {
+        REDIS_ARGS = "--save 60 10"
+      }
+
+      resources {
+        cpu    = 250
+        memory = 256
+      }
+    }
+  }
+}

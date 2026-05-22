@@ -14,12 +14,32 @@
     - /opt/paperless/redis
   become: yes
 
-- name: Create Paperless Nomad job file
+- name: Create Paperless DB Nomad job file
   ansible.builtin.template:
-    src: paperless.nomad.j2
-    dest: /opt/nomad/jobs/paperless.nomad
+    src: paperless-db.nomad.j2
+    dest: /opt/nomad/jobs/paperless-db.nomad
     owner: root
     group: root
     mode: '0644'
   become: yes
-  notify: Run Paperless Job
+  notify: Run Paperless DB Job
+
+- name: Create Paperless Redis Nomad job file
+  ansible.builtin.template:
+    src: paperless-redis.nomad.j2
+    dest: /opt/nomad/jobs/paperless-redis.nomad
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Run Paperless Redis Job
+
+- name: Create Paperless App Nomad job file
+  ansible.builtin.template:
+    src: paperless-app.nomad.j2
+    dest: /opt/nomad/jobs/paperless-app.nomad
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Run Paperless App Job
