@@ -92,7 +92,6 @@ job "{{ job_name | default('pipecat-app') }}" {
         path     = "/health"
         interval = "20s"
         timeout  = "5s"
-        initial_delay = "60s"
       }
 
       check {
@@ -101,7 +100,6 @@ job "{{ job_name | default('pipecat-app') }}" {
         path     = "/api/status"
         interval = "30s"
         timeout  = "5s"
-        initial_delay = "60s"
       }
     }
 
