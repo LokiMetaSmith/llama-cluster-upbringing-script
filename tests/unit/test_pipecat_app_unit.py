@@ -58,7 +58,7 @@ from fastapi.testclient import TestClient
 # from pipecat.frames.frames import TranscriptionFrame
 
 @pytest.fixture
-def client(mocker):
+def client():
     client = TestClient(app)
     return client
 

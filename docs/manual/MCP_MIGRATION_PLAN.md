@@ -15,16 +15,16 @@ The `pipecatapp/tools/` directory contains numerous custom tools (e.g., `shell_t
 The migration to MCP will decouple tools from the core agentic framework, treating them as independent, standardized "Servers" and our agents as "Clients".
 
 ### Phase 1: Core MCP Infrastructure
-1.  **Introduce MCP SDK:** Add the official MCP Python SDK (`mcp`) to the project dependencies.
-2.  **Build a Universal MCP Client Wrapper:** Create a new tool adapter in `pipecatapp/tools/mcp_client_adapter.py`. This class will implement our existing internal `Tool` interface but proxy all calls via JSON-RPC to a target MCP Server using the standard MCP protocol.
-3.  **Establish Server Runner:** Define a standard mechanism (e.g., a Nomad job template or a local process manager) to launch tools as independent MCP servers over stdio or HTTP/SSE.
+- [x] 1.  **Introduce MCP SDK:** Add the official MCP Python SDK (`mcp`) to the project dependencies.
+- [x] 2.  **Build a Universal MCP Client Wrapper:** Create a new tool adapter in `pipecatapp/tools/mcp_client_adapter.py`. This class will implement our existing internal `Tool` interface but proxy all calls via JSON-RPC to a target MCP Server using the standard MCP protocol.
+- [x] 3.  **Establish Server Runner:** Define a standard mechanism (e.g., a Nomad job template or a local process manager) to launch tools as independent MCP servers over stdio or HTTP/SSE.
 
 ### Phase 2: Refactoring Existing Tools
 We will migrate tools iteratively. For each tool:
-1.  Create a standalone server script (e.g., `servers/shell_server.py`) using the MCP `@server.tool()` decorators.
-2.  Define explicit Pydantic schemas for the tool's inputs and outputs, replacing loose `**kwargs`.
-3.  Remove internal `TwinService` dependencies. If a tool needs state, it must receive it via the MCP context or request it explicitly.
-4.  Update the tool registry in `agent_factory.py` to map the old tool name to an instantiation of the new `MCPClientAdapter` pointing to the new server.
+- [x] (shell_tool) 1.  Create a standalone server script (e.g., `servers/shell_server.py`) using the MCP `@server.tool()` decorators.
+- [x] (shell_tool) 2.  Define explicit Pydantic schemas for the tool's inputs and outputs, replacing loose `**kwargs`.
+- [x] (shell_tool) 3.  Remove internal `TwinService` dependencies. If a tool needs state, it must receive it via the MCP context or request it explicitly.
+- [x] (shell_tool) 4.  Update the tool registry in `agent_factory.py` to map the old tool name to an instantiation of the new `MCPClientAdapter` pointing to the new server.
 
 **Priority Tools for Migration:**
 1.  `shell_tool.py` and `code_runner_tool.py` (High risk, immediate benefit from sandbox decoupling).
