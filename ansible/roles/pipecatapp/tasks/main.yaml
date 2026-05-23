@@ -591,7 +591,8 @@
         NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cert.pem"
         NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/key.pem"
         NOMAD_TLS_SKIP_VERIFY: "1"
-      ignore_errors: yes
+      ignore_errors: true
+      failed_when: false
       changed_when: true
       become: no
 
@@ -701,7 +702,8 @@
         NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cert.pem"
         NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/key.pem"
         NOMAD_TLS_SKIP_VERIFY: "1"
-      ignore_errors: yes
+      ignore_errors: true
+      failed_when: false
       changed_when: true
       become: no
 

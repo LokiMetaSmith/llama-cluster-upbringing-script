@@ -16,7 +16,7 @@ variable "rpc_pool_job_name" {
 
 # --- DYNAMIC MODEL SELECTION & TPS CALCULATION ---
 {% set memory_buffer_mb = 2048 %}
-{% set available_memory_mb = (ansible_memtotal_mb | int) - memory_buffer_mb %}
+{% set available_memory_mb = (ansible_facts['memtotal_mb'] | int) - memory_buffer_mb %}
 {% set model_list = expert_models[current_expert] %}
 {% set models_with_memory = model_list | selectattr('memory_mb', 'defined') | list %}
 {% set suitable_models_unsorted = models_with_memory | selectattr('memory_mb', 'le', available_memory_mb) %}
