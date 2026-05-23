@@ -219,7 +219,7 @@ profile_system() {
     fi
 
     # Network Discovery & Role Fallback
-    if [ "$ROLE" = "worker" ] && [ -z "$CONTROLLER_IP" ]; then
+    if [ "$ROLE" = "worker" ] && [ -z "$CONTROLLER_IP" ] && [ "$DO_STATUS" != true ]; then
         if find_controller; then
             # Controller found, CONTROLLER_IP is set. Add it to PROCESSED_ARGS.
             PROCESSED_ARGS+=("--controller-ip" "$CONTROLLER_IP")
@@ -430,9 +430,9 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit 1
 
 # Run system profiling before we proceed, unless just asking for status
-if [ "$DO_STATUS" != true ]; then
-    profile_system
-fi
+
+profile_system
+
 
 LOG_FILE="bootstrap_debug.log"
 AGENT_LOG="agent_recovery.log"
