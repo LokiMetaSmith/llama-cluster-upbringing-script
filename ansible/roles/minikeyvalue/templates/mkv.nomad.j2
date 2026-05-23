@@ -24,7 +24,7 @@ job "minikeyvalue" {
 
       env {
         MKV_REPLICAS = "{{ mkv_replicas | default(1) }}"
-        CONSUL_HTTP_ADDR = "http://{{ ansible_default_ipv4.address }}:8500"
+        CONSUL_HTTP_ADDR = "http://{{ ansible_facts['default_ipv4'].address }}:8500"
       }
 
       resources {

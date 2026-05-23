@@ -29,7 +29,7 @@ job "magic_mirror" {
       template {
         data = <<EOH
 [server]
-bind = "{{ (ansible_default_ipv4 | default({})).get('address', '127.0.0.1') }}:41111"
+bind = "{{ (ansible_facts['default_ipv4'] | default({})).get('address', '127.0.0.1') }}:41111"
 
 [apps.terminal]
 description = "Terminal"

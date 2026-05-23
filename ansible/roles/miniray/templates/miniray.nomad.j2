@@ -67,7 +67,7 @@ job "miniray" {
       }
 
       env {
-        REDIS_HOST = "{{ ansible_default_ipv4.address }}"
+        REDIS_HOST = "{{ ansible_facts['default_ipv4'].address }}"
         # Ideally we use Consul DNS: 'redis.service.consul'
         # But if DNS isn't set up in the container, we fall back to host IP (since redis is on host network port 6379 static)
         # Actually, in bridge mode, container DNS depends on Nomad setup.
