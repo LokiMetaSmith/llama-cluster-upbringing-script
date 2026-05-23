@@ -64,7 +64,7 @@ if ! command -v ansible-playbook &> /dev/null; then
 fi
 
 # Run the playbook
-ansible-playbook "$PLAYBOOK" \
+ansible-playbook -i "$REPO_ROOT/inventory.yaml" "$PLAYBOOK" \
     -e "target_user=$TARGET_USER" \
     -e "ansible_python_interpreter=$(which python3)"
 
