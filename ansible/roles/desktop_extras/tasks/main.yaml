@@ -15,7 +15,7 @@
 - name: Clone figlet-fonts repository
   ansible.builtin.git:
     repo: 'https://github.com/xero/figlet-fonts.git'
-    dest: "{{ ansible_user_dir }}/.local/share/fonts"
+    dest: "{{ ansible_facts['user_dir'] }}/.local/share/fonts"
     version: main
     update: yes
   register: clone_figlet
