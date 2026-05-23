@@ -19,7 +19,7 @@
     current_expert_tags:
       - "expert={{ current_expert }}"
       - "avg_tps={{ avg_tokens_for_template }}"
-      - "memory_mb={{ ansible_facts['memtotal_mb'] }}"
+      - "memory_mb={{ ansible_memtotal_mb }}"
       - "models={{ model_list | map(attribute='filename') | join(',') }}"
 
   tasks:
