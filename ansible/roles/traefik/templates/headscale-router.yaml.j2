@@ -11,4 +11,4 @@ http:
     headscale:
       loadBalancer:
         servers:
-          - url: "http://{{ hostvars[groups['controller_nodes'][0]]['ansible_host'] | default(hostvars[groups['controller_nodes'][0]]['ansible_default_ipv4']['address'] | default('127.0.0.1')) }}:8085"
+          - url: "http://{{ hostvars[groups['controller_nodes'][0]]['ansible_host'] | default(hostvars[groups['controller_nodes'][0]]['ansible_facts']['default_ipv4']['address'] | default('127.0.0.1')) }}:8085"
