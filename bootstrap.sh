@@ -47,6 +47,15 @@ show_help() {
     echo "  --watch <target>             Pause for inspection after the specified target (task/role) completes."
     echo "  -h, --help                   Display this help message and exit."
     echo ""
+    echo "Cluster and Node Recovery Options:"
+    echo "  --heal-cluster               Run the cluster healing playbook to restore core services."
+    echo "  --recover-node <ip>          Attempt to recover a remote node by its IP address."
+    echo "  --ipmi-host <host>           IPMI network address (BMC IP) for remote node recovery."
+    echo "  --ipmi-user <user>           IPMI username for remote node recovery."
+    echo "  --ipmi-password <pass>       IPMI password for remote node recovery."
+    echo "  --force-pxe                  Force the node to boot into PXE on reset during recovery."
+    echo "  --pxe-server-ip <ip>         IP address of the PXE server to check before forcing PXE."
+    echo ""
     echo "OpenCode Autonomous Recovery Options:"
     echo "  If the script crashes, it will attempt to use an OpenCode AI agent to diagnose and fix the error."
     echo "  These can also be set via environment variables (AGENT_API_BASE, AGENT_MODEL, AGENT_API_KEY)."
@@ -61,9 +70,17 @@ DO_CLEAN_GIT=false
 DO_SYSTEM_CLEANUP=false
 DO_PURGE_JOBS=false
 DO_STATUS=false
+DO_HEAL_CLUSTER=false
+DO_RECOVER_NODE=false
 VERBOSE_LEVEL=0
 ROLE=""
 CONTROLLER_IP=""
+RECOVER_NODE_IP=""
+IPMI_HOST=""
+IPMI_USER=""
+IPMI_PASSWORD=""
+FORCE_PXE=false
+PXE_SERVER_IP=""
 CLI_AGENT_API_BASE=""
 CLI_AGENT_MODEL=""
 CLI_AGENT_API_KEY=""
@@ -321,6 +338,48 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
                 TIER="$NEXT_ARG"
                 PROCESSED_ARGS+=("--tier" "$TIER")
+                SKIP_NEXT=true
+            fi
+            ;;
+        --heal-cluster)
+            DO_HEAL_CLUSTER=true
+            ;;
+        --recover-node)
+            DO_RECOVER_NODE=true
+            NEXT_ARG="${ARGS[$((i+1))]}"
+            if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
+                RECOVER_NODE_IP="$NEXT_ARG"
+                SKIP_NEXT=true
+            fi
+            ;;
+        --ipmi-host)
+            NEXT_ARG="${ARGS[$((i+1))]}"
+            if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
+                IPMI_HOST="$NEXT_ARG"
+                SKIP_NEXT=true
+            fi
+            ;;
+        --ipmi-user)
+            NEXT_ARG="${ARGS[$((i+1))]}"
+            if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
+                IPMI_USER="$NEXT_ARG"
+                SKIP_NEXT=true
+            fi
+            ;;
+        --ipmi-password)
+            NEXT_ARG="${ARGS[$((i+1))]}"
+            if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
+                IPMI_PASSWORD="$NEXT_ARG"
+                SKIP_NEXT=true
+            fi
+            ;;
+        --force-pxe)
+            FORCE_PXE=true
+            ;;
+        --pxe-server-ip)
+            NEXT_ARG="${ARGS[$((i+1))]}"
+            if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
+                PXE_SERVER_IP="$NEXT_ARG"
                 SKIP_NEXT=true
             fi
             ;;
@@ -650,6 +709,38 @@ if [ "$DO_STATUS" = true ]; then
     echo -e "${BOLD}=== Cluster Status ===${NC}"
     ensure_python_environment
     python3 scripts/provisioning.py --only-status "${PROCESSED_ARGS[@]}"
+    exit $?
+fi
+
+# --- Recovery Actions ---
+if [ "$DO_HEAL_CLUSTER" = true ]; then
+    echo -e "${BOLD}=== Cluster Healing ===${NC}"
+    ./scripts/heal_cluster.sh
+    exit $?
+fi
+
+if [ "$DO_RECOVER_NODE" = true ]; then
+    echo -e "${BOLD}=== Node Recovery ===${NC}"
+    ensure_python_environment
+
+    RECOVER_CMD=(python3 scripts/recover_node.py --node-ip "$RECOVER_NODE_IP")
+    if [ -n "$IPMI_HOST" ]; then
+        RECOVER_CMD+=(--ipmi-host "$IPMI_HOST")
+    fi
+    if [ -n "$IPMI_USER" ]; then
+        RECOVER_CMD+=(--ipmi-user "$IPMI_USER")
+    fi
+    if [ -n "$IPMI_PASSWORD" ]; then
+        RECOVER_CMD+=(--ipmi-password "$IPMI_PASSWORD")
+    fi
+    if [ "$FORCE_PXE" = true ]; then
+        RECOVER_CMD+=(--force-pxe)
+    fi
+    if [ -n "$PXE_SERVER_IP" ]; then
+        RECOVER_CMD+=(--pxe-server-ip "$PXE_SERVER_IP")
+    fi
+
+    "${RECOVER_CMD[@]}"
     exit $?
 fi
 
