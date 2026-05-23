@@ -14,10 +14,13 @@
 
     - name: Wait for a Consul leader to be elected
       ansible.builtin.uri:
-        url: "http://{{ cluster_ip }}:{{ consul_http_port | default(8500) }}/v1/status/leader"
+        url: "https://{{ cluster_ip }}:{{ consul_https_port | default(8501) }}/v1/status/leader"
+        client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+        client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+        validate_certs: false
         return_content: yes
       register: consul_leader_status
-      until: consul_leader_status.content != '""' and consul_leader_status.status == 200
+      until: consul_leader_status.status is defined and consul_leader_status.status == 200 and consul_leader_status.content is defined and consul_leader_status.content != '""'
       retries: 12
       delay: 5
       ignore_errors: yes
