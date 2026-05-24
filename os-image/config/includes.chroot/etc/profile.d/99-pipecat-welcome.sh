@@ -52,8 +52,12 @@ echo " System Details:"
 echo "   Hostname: $(hostname)"
 echo "   IP Address: $IP"
 echo ""
-echo " The system is running from the bootable media."
-echo " To install and configure the cluster agent or control node, run:"
+if grep -q "boot=live" /proc/cmdline; then
+    echo " The system is running from the bootable media."
+    echo " To install and configure the cluster agent or control node, run:"
+else
+    echo " To configure or update the cluster agent or control node, run:"
+fi
 echo ""
 echo "   cd /opt/pipecat-cluster && sudo ./bootstrap.sh"
 echo ""
