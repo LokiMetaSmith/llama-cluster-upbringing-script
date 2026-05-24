@@ -4,6 +4,7 @@
       register: pipecat_image_check
       failed_when: false
       changed_when: false
+      when: pipecat_deployment_style == 'docker'
 
     - name: "Expert {{ expert_name }} : Ensure pipecatapp directory exists"
       ansible.builtin.file:
@@ -33,33 +34,36 @@
 
         - name: "Expert {{ expert_name }} : Tag {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
           ansible.builtin.command: "docker tag {{ pipecat_image_name }}:{{ pipecat_image_tag }} {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
-      when: pipecat_image_check.rc != 0
+      when: pipecat_deployment_style == 'docker' and (pipecat_image_check.rc | default(0)) != 0
 
-    - name: "Expert {{ expert_name }} : Refresh {{ pipecat_image_name }}:{{ pipecat_image_tag }} tag for Nomad"
-      ansible.builtin.command: "docker tag {{ pipecat_image_name }}:{{ pipecat_image_tag }} {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
-      changed_when: false
+    - name: Docker-specific tags and registry checks
+      block:
+        - name: "Expert {{ expert_name }} : Refresh {{ pipecat_image_name }}:{{ pipecat_image_tag }} tag for Nomad"
+          ansible.builtin.command: "docker tag {{ pipecat_image_name }}:{{ pipecat_image_tag }} {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
+          changed_when: false
 
-    - name: "Expert {{ expert_name }} : Check if local registry is reachable"
-      ansible.builtin.wait_for:
-        host: "{{ docker_registry_host }}"
-        port: "{{ docker_registry_port }}"
-        state: started
-        timeout: 5
-      register: registry_check
-      failed_when: false
-      ignore_errors: true
-      when: registry_is_reachable | default(true)
+        - name: "Expert {{ expert_name }} : Check if local registry is reachable"
+          ansible.builtin.wait_for:
+            host: "{{ docker_registry_host }}"
+            port: "{{ docker_registry_port }}"
+            state: started
+            timeout: 5
+          register: registry_check
+          failed_when: false
+          ignore_errors: true
+          when: registry_is_reachable | default(true)
 
-    - name: "Expert {{ expert_name }} : Tag and push {{ pipecat_image_name }} image to local registry"
-      community.docker.docker_image:
-        name: "{{ pipecat_image_name }}"
-        tag: "{{ pipecat_image_tag }}"
-        repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/{{ pipecat_image_name }}"
-        push: true
-        source: local
-      when:
-        - registry_is_reachable | default(true)
-        - registry_check.state | default('stopped') == 'started'
+        - name: "Expert {{ expert_name }} : Tag and push {{ pipecat_image_name }} image to local registry"
+          community.docker.docker_image:
+            name: "{{ pipecat_image_name }}"
+            tag: "{{ pipecat_image_tag }}"
+            repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/{{ pipecat_image_name }}"
+            push: true
+            source: local
+          when:
+            - registry_is_reachable | default(true)
+            - registry_check.state | default('stopped') == 'started'
+      when: pipecat_deployment_style == 'docker'
 
     - name: "Expert {{ expert_name }} : Ensure startup script exists (Dev Mode fallback)"
       ansible.builtin.template:
