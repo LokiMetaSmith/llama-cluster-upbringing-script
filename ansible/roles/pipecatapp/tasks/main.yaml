@@ -404,10 +404,12 @@
 
 - name: Handle docker specific tasks for pipecatapp
   block:
-    - name: Inspect pipecatapp:local image
-      ansible.builtin.command: docker image inspect pipecatapp:local
+    - name: Inspect pipecatapp:{{ pipecat_image_tag | default('local') }} image
+      ansible.builtin.command: docker image inspect pipecatapp:{{ pipecat_image_tag | default('local') }}
       register: pipecatapp_local_image_info
       changed_when: false
+      failed_when: false
+      ignore_errors: true
       become: yes
 
     - name: Check if local registry is reachable (Pipecat App)
@@ -422,12 +424,12 @@
 
     - name: Set pipecatapp_image_ref (Registry)
       ansible.builtin.set_fact:
-        pipecatapp_image_ref: "{{ docker_registry_host }}:{{ docker_registry_port }}/pipecatapp:local"
+        pipecatapp_image_ref: "{{ docker_registry_host }}:{{ docker_registry_port }}/pipecatapp:{{ pipecat_image_tag | default('local') }}"
       when: pipecatapp_registry_check.state | default('stopped') == 'started'
 
     - name: Set pipecatapp_image_ref (Local Fallback)
       ansible.builtin.set_fact:
-        pipecatapp_image_ref: "pipecatapp:local"
+        pipecatapp_image_ref: "pipecatapp:{{ pipecat_image_tag | default('local') }}"
       when: pipecatapp_registry_check.state | default('stopped') != 'started'
   when: pipecat_deployment_style == 'docker'
 
