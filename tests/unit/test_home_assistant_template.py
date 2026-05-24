@@ -14,7 +14,9 @@ def test_home_assistant_template():
         # Fallback if running from tests directory
         template_dir = '../../ansible/roles/home_assistant/templates'
 
+    import json
     j2_env = Environment(loader=FileSystemLoader(template_dir), trim_blocks=True)
+    j2_env.filters['to_json'] = lambda value: json.dumps(value)
     template = j2_env.get_template('home_assistant.nomad.j2')
 
     # Mock context variables
