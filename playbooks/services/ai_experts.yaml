@@ -116,50 +116,53 @@
           tags:
             - deploy-expert
 
-        - name: Explicitly tag pipecatapp:expert to refresh metadata
-          ansible.builtin.command: "docker tag {{ pipecat_image_name }}:{{ pipecat_image_tag }} {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
-          changed_when: false
-          tags:
-            - deploy-expert
+        - name: Docker-specific tasks
+          block:
+            - name: Explicitly tag pipecatapp:expert to refresh metadata
+              ansible.builtin.command: "docker tag {{ pipecat_image_name }}:{{ pipecat_image_tag }} {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
+              changed_when: false
+              tags:
+                - deploy-expert
 
-        - name: Verify pipecatapp Docker image exists
-          ansible.builtin.command: "docker image inspect {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
-          changed_when: false
-          register: pipecat_image_info
-          tags:
-            - deploy-expert
+            - name: Verify pipecatapp Docker image exists
+              ansible.builtin.command: "docker image inspect {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
+              changed_when: false
+              register: pipecat_image_info
+              tags:
+                - deploy-expert
 
-        - name: Verify pipecatapp Docker image is runnable
-          ansible.builtin.command: "docker run --rm --entrypoint /bin/true {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
-          changed_when: false
-          tags:
-            - deploy-expert
+            - name: Verify pipecatapp Docker image is runnable
+              ansible.builtin.command: "docker run --rm --entrypoint /bin/true {{ pipecat_image_name }}:{{ pipecat_image_tag }}"
+              changed_when: false
+              tags:
+                - deploy-expert
 
-        - name: Check if local registry is reachable (Global)
-          ansible.builtin.wait_for:
-            host: "{{ docker_registry_host }}"
-            port: "{{ docker_registry_port }}"
-            state: started
-            timeout: 5
-          register: global_registry_check
-          failed_when: false
-          ignore_errors: true
-          tags:
-            - deploy-expert
+            - name: Check if local registry is reachable (Global)
+              ansible.builtin.wait_for:
+                host: "{{ docker_registry_host }}"
+                port: "{{ docker_registry_port }}"
+                state: started
+                timeout: 5
+              register: global_registry_check
+              failed_when: false
+              ignore_errors: true
+              tags:
+                - deploy-expert
 
-        - name: Set pipecat_image_id fact (Registry)
-          ansible.builtin.set_fact:
-            pipecat_image_id: "{{ docker_registry_host }}:{{ docker_registry_port }}/{{ pipecat_image_name }}:{{ pipecat_image_tag }}"
-          when: global_registry_check.state | default('stopped') == 'started'
-          tags:
-            - deploy-expert
+            - name: Set pipecat_image_id fact (Registry)
+              ansible.builtin.set_fact:
+                pipecat_image_id: "{{ docker_registry_host }}:{{ docker_registry_port }}/{{ pipecat_image_name }}:{{ pipecat_image_tag }}"
+              when: global_registry_check.state | default('stopped') == 'started'
+              tags:
+                - deploy-expert
 
-        - name: Set pipecat_image_id fact (Local Fallback)
-          ansible.builtin.set_fact:
-            pipecat_image_id: "{{ (pipecat_image_info.stdout | from_json)[0].Id }}"
-          when: global_registry_check.state | default('stopped') != 'started'
-          tags:
-            - deploy-expert
+            - name: Set pipecat_image_id fact (Local Fallback)
+              ansible.builtin.set_fact:
+                pipecat_image_id: "{{ (pipecat_image_info.stdout | from_json)[0].Id }}"
+              when: global_registry_check.state | default('stopped') != 'started'
+              tags:
+                - deploy-expert
+          when: pipecat_deployment_style == 'docker'
 
         - name: Deploy and run the GPU Provider Pool job for verified models
           include_tasks:
