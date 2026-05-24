@@ -158,6 +158,7 @@ EOH
       }
     }
 
+    {% if pipecat_deployment_style | default('docker') == 'docker' %}
     task "{{ job_name }}" {
       driver = "docker"
 
@@ -212,5 +213,42 @@ EOH
         memory = {{ pipecat_memory_mb | default(512) }} # 512MB
       }
     }
+    {% else %}
+    task "{{ job_name }}" {
+      driver = "raw_exec"
+
+      constraint {
+        attribute = "${meta.node_type}"
+        value     = "controller"
+      }
+
+      config {
+        command = "/bin/bash"
+        args = ["-c", "if [ -f /opt/pipecatapp/start_pipecat.sh ]; then exec /opt/pipecatapp/start_pipecat.sh; else exec /opt/start_pipecat.sh; fi"]
+      }
+
+      env {
+        STT_SERVICE = "faster-whisper"
+        WEB_PORT = "${NOMAD_PORT_http}"
+
+        # Point to the local llama-server we just started
+        LLAMA_API_BASE_URL = "http://localhost:${NOMAD_PORT_api}/v1"
+        LLAMA_API_SERVICE_NAME = "{{ service_name }}" # For discovery fallback
+
+        PIPECAT_API_KEYS = "{{ pipecat_api_keys | default('') }}"
+
+        # Necessary for service discovery
+        CONSUL_HOST = "${attr.unique.network.ip-address}"
+        CONSUL_PORT = "8500"
+        CONSUL_HTTP_ADDR = "http://${attr.unique.network.ip-address}:8500"
+        CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
+      }
+
+      resources {
+        cpu    = 500 # 500 MHz
+        memory = {{ pipecat_memory_mb | default(512) }} # 512MB
+      }
+    }
+    {% endif %}
   }
 }
