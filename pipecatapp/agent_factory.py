@@ -16,7 +16,7 @@ from tools.llxprt_code_tool import LLxprt_Code_Tool
 from tools.claude_clone_tool import ClaudeCloneTool
 from tools.smol_agent_tool import SmolAgentTool
 from tools.final_answer_tool import FinalAnswerTool
-from tools.shell_tool import ShellTool
+from tools.mcp_client_adapter import MCPClientAdapter
 from tools.prompt_improver_tool import PromptImproverTool
 from tools.council_tool import CouncilTool
 from tools.swarm_tool import SwarmTool
@@ -82,7 +82,18 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "llxprt_code": LLxprt_Code_Tool(),
         "claude_clone": ClaudeCloneTool(),
         "final_answer": FinalAnswerTool(),
-        "shell": ShellTool(twin_service=twin_service),
+        "shell": MCPClientAdapter(
+            name="shell",
+            server_command="python3",
+            server_args=["-m", "servers.shell_server"],
+            description=(
+                "A tool for running shell commands in a persistent tmux session. "
+                "IMPORTANT: If running a long-running process (like a server), you MUST run it in the background "
+                "by appending `&` to the command and redirecting output to a file (e.g., `npm start > app.log 2>&1 &`). "
+                "Do not wait synchronously for long-running processes or the tool will timeout."
+            ),
+            twin_service=twin_service
+        ),
         "prompt_improver": PromptImproverTool(twin_service) if twin_service else None,
         "council": CouncilTool(twin_service) if twin_service else None,
         "swarm": SwarmTool(),
