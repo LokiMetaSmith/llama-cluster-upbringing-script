@@ -118,10 +118,9 @@ job "{{ job_name | default('pipecat-app') }}" {
         force_pull = false
         ports = ["http"]
         # Mount volumes for models and config. Models are read-only.
-        # Assumes /app is the WORKDIR in the container, where pipecat_config.json will be placed.
+        # Assumes /app is the WORKDIR in the container.
         volumes = [
           "/opt/nomad/models:/opt/nomad/models:ro",
-          "/opt/pipecatapp/pipecat_config.json:/app/pipecat_config.json:ro",
           "/opt/pipecatapp:/opt/pipecatapp",
           "/opt/pipecatapp/chromadb:/app/chromadb_storage",
         ]

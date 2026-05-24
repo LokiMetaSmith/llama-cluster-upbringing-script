@@ -86,6 +86,22 @@
     msg: "Token length: {{ (home_assistant_consul_token.content | b64decode | trim) | length }}"
   when: home_assistant_consul_token.content is defined
 
+- name: Wait for MQTT service to be healthy in Consul before running home-assistant
+  ansible.builtin.uri:
+    url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/health/service/mqtt?passing"
+    client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+    client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+    validate_certs: false
+    method: GET
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default('') }}"
+    return_content: yes
+    status_code: 200
+  register: mqtt_consul_check
+  until: mqtt_consul_check.json is defined and mqtt_consul_check.json | length > 0
+  retries: 30
+  delay: 2
+
 - name: Run home-assistant job asynchronously
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/home-assistant.nomad

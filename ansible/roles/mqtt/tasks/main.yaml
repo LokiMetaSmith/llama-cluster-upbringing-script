@@ -230,7 +230,7 @@
         NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
       register: mqtt_job_run
-      #  notify: Restart Home Assistant
+      notify: Restart Home Assistant
 
     - name: Wait for MQTT service to be healthy in Consul
       ansible.builtin.uri:
