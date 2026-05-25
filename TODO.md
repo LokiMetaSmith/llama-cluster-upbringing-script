@@ -26,10 +26,10 @@
 - [x] **Implement Active Vault Workflow (Phase 1):**
   - **Goal:** Support 3D spatial properties in nodes and implement `CanvasConverter`.
   - Reference: `docs/manual/OBSIDIAN_WORKFLOW_DESIGN.md`
-- [ ] **Implement Active Vault Workflow (Phase 2):**
+- [x] **Implement Active Vault Workflow (Phase 2):**
   - **Goal:** Implement the 3D Visualizer using Three.js and A-Frame.
   - Reference: `docs/manual/OBSIDIAN_TODO.md`
-- [ ] **Implement Active Vault Workflow (Phase 3):**
+- [x] **Implement Active Vault Workflow (Phase 3):**
   - **Goal:** Implement the Gardener Service for automation.
   - Reference: `docs/manual/OBSIDIAN_TODO.md`
 - [ ] **Implement Active Vault Workflow (Phase 4):**
