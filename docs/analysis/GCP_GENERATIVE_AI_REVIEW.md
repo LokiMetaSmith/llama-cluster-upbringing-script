@@ -81,7 +81,7 @@ It provides a sophisticated, human-like memory system that completely bypasses t
    - Create a durable, background execution loop (potentially leveraging `DurableExecutionEngine` or an Emperor Workflow node) that triggers the Consolidation logic on a configurable interval (e.g., every 30 minutes).
    - Implement resource safeguards to limit the number of tokens/memories processed per cycle to prevent local GPU/CPU starvation.
 
-4. [ ] **Implement Local File Ingestion**
+4. [x] **Implement Local File Ingestion**
    - If a file watcher is desired, implement a secure inbox directory monitor.
    - **Security Requirement:** Ensure the file watcher strictly uses `os.path.realpath` and `os.path.commonpath` to prevent path traversal attacks during file ingestion.
 
