@@ -3,8 +3,12 @@ import time
 import logging
 import asyncio
 import re
+import json
+import uuid
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
+from pipecatapp.workflow.canvas_converter import CanvasConverter
 
 logger = logging.getLogger(__name__)
 
@@ -121,9 +125,116 @@ class ObsidianGardener(FileSystemEventHandler):
              logger.error(f"Failed to write results to {filepath}: {e}")
 
     async def _process_canvas(self, filepath: str):
-         """Process canvas file. Can be expanded based on CanvasConverter logic."""
-         # TODO: implement canvas-specific active logic
-         pass
+        """Process canvas file using CanvasConverter logic to execute active nodes."""
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                canvas_data = json.load(f)
+        except Exception as e:
+            logger.error(f"Could not read canvas {filepath}: {e}")
+            return
+
+        # Simple seed logic: Does any node mention "#agent" or a run directive?
+        should_run = False
+        workflow_name = None
+        for node in canvas_data.get("nodes", []):
+            if node.get("type") == "text":
+                text = node.get("text", "")
+                if "#agent" in text:
+                    should_run = True
+
+                # Check for run directive
+                match = re.search(r'<!--\s*run:\s*(.*?)\s*-->', text)
+                if match:
+                    workflow_name = match.group(1).strip()
+                    should_run = True
+
+                # Check if it was already processed to avoid loops
+                if "<!-- done: canvas -->" in text or (workflow_name and f"<!-- done: {workflow_name} -->" in text):
+                    should_run = False
+                    break
+
+        if not should_run:
+            return
+
+        logger.info(f"Found active directive in canvas: {filepath}")
+
+        result = None
+        if workflow_name and self.workflow_runner_class:
+            try:
+                workflow_path = os.path.join(os.path.dirname(filepath), workflow_name)
+                if not os.path.exists(workflow_path):
+                    workflow_path = os.path.join("workflows", workflow_name)
+
+                if os.path.exists(workflow_path):
+                    runner = self.workflow_runner_class(workflow_path)
+                    # Pass the canvas file path as input context
+                    result = await runner.run({"filepath": filepath, "source_type": "canvas"})
+                else:
+                    logger.error(f"Workflow not found: {workflow_path}")
+            except Exception as e:
+                logger.error(f"Failed to execute workflow {workflow_name} from canvas: {e}")
+        else:
+            # Native Canvas Workflow Execution
+            # Convert canvas to Pipecat Workflow Dictionary
+            workflow_dict = CanvasConverter.canvas_to_workflow(filepath)
+            if workflow_dict and self.workflow_runner_class:
+                # To execute this dynamically, we can write it to a temporary yaml, or
+                # since WorkflowRunner expects a file path, we'll serialize to a temp YAML file.
+                import yaml
+                import tempfile
+
+                with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False, mode="w") as tmp:
+                    yaml.dump(workflow_dict, tmp)
+                    tmp_path = tmp.name
+
+                try:
+                    runner = self.workflow_runner_class(tmp_path)
+                    result = await runner.run({"filepath": filepath, "source_type": "canvas_native"})
+                except Exception as e:
+                    logger.error(f"Failed to execute native canvas workflow: {e}")
+                finally:
+                    if os.path.exists(tmp_path):
+                        os.remove(tmp_path)
+
+        if result is not None:
+            await self._append_result_to_canvas(filepath, workflow_name or "canvas", result)
+
+    async def _append_result_to_canvas(self, filepath: str, workflow_name: str, result: dict):
+        """Appends the workflow execution result back to the canvas file as a new node."""
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                canvas_data = json.load(f)
+
+            # Create a new text node with the result
+            new_node = {
+                "id": str(uuid.uuid4()),
+                "type": "text",
+                "text": f"### Result from {workflow_name}\n<!-- done: {workflow_name} -->\n```json\n{json.dumps(result, indent=2)}\n```",
+                "x": 100,
+                "y": 100, # Ideally we calculate a good position, but top-left is ok for now
+                "width": 600,
+                "height": 400,
+                "color": "3" # Greenish in Obsidian
+            }
+
+            # Find a good y position below existing nodes
+            max_y = 0
+            for node in canvas_data.get("nodes", []):
+                y = node.get("y", 0) + node.get("height", 0)
+                if y > max_y:
+                    max_y = y
+
+            new_node["y"] = max_y + 50
+            new_node["x"] = 0
+
+            canvas_data.setdefault("nodes", []).append(new_node)
+
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(canvas_data, f, indent=2)
+
+            logger.info(f"Appended results to canvas {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to write results to canvas {filepath}: {e}")
 
     def start(self):
         if not os.path.exists(self.vault_path):

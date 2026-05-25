@@ -32,7 +32,7 @@
 - [x] **Implement Active Vault Workflow (Phase 3):**
   - **Goal:** Implement the Gardener Service for automation.
   - Reference: `docs/manual/OBSIDIAN_TODO.md`
-- [ ] **Implement Active Vault Workflow (Phase 4):**
+- [x] **Implement Active Vault Workflow (Phase 4):**
   - **Goal:** Support advanced Canvas features like Scope/Group Support and Rich Content Embedding.
   - Reference: `docs/manual/OBSIDIAN_TODO.md`
 - [x] **Train and Configure LLMRouter:**
