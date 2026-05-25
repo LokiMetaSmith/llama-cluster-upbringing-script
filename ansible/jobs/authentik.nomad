@@ -33,8 +33,8 @@ job "authentik" {
       }
       template {
         data = <<EOH
-AUTHENTIK_SECRET_KEY={{ key "authentik/secret-key" }}
-AUTHENTIK_POSTGRESQL__PASSWORD={{ key "authentik/db-password" }}
+AUTHENTIK_SECRET_KEY={% raw %}{{ key "authentik/secret-key" }}{% endraw %}
+AUTHENTIK_POSTGRESQL__PASSWORD={% raw %}{{ key "authentik/db-password" }}{% endraw %}
 EOH
         destination = "secrets/authentik.env"
         env         = true
@@ -77,8 +77,8 @@ EOH
       }
       template {
         data = <<EOH
-AUTHENTIK_SECRET_KEY={{ key "authentik/secret-key" }}
-AUTHENTIK_POSTGRESQL__PASSWORD={{ key "authentik/db-password" }}
+AUTHENTIK_SECRET_KEY={% raw %}{{ key "authentik/secret-key" }}{% endraw %}
+AUTHENTIK_POSTGRESQL__PASSWORD={% raw %}{{ key "authentik/db-password" }}{% endraw %}
 EOH
         destination = "secrets/authentik.env"
         env         = true

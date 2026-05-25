@@ -23,7 +23,7 @@ job "postgres" {
       }
       template {
         data = <<EOH
-POSTGRES_PASSWORD={{ key "authentik/db-password" }}
+POSTGRES_PASSWORD={% raw %}{{ key "authentik/db-password" }}{% endraw %}
 EOH
         destination = "secrets/postgres.env"
         env         = true

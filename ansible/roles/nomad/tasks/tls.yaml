@@ -74,6 +74,9 @@
       [alt_names]
       DNS.1 = server.global.nomad
       DNS.2 = localhost
+      DNS.3 = server.dc1.consul
+      DNS.4 = server.global.nomad
+      DNS.5 = client.global.nomad
       IP.1 = 127.0.0.1
       IP.2 = {{ hostvars[item]['cluster_ip'] }}
   loop: "{{ groups['controller_nodes'] | default([]) }}"
@@ -99,6 +102,9 @@
       [alt_names]
       DNS.1 = server.global.nomad
       DNS.2 = localhost
+      DNS.3 = server.dc1.consul
+      DNS.4 = server.global.nomad
+      DNS.5 = client.global.nomad
       IP.1 = 127.0.0.1
   when: "groups['controller_nodes'] is not defined or groups['controller_nodes'] | length == 0"
   delegate_to: localhost
