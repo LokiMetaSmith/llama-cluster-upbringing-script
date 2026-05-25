@@ -39,9 +39,10 @@ job "prometheus" {
       }
 
       template {
-        data = <<EOF
+        data = <<-EOF
 {{ lookup('template', 'prometheus.yml.j2') }}
 EOF
+
         destination = "local/prometheus.yml"
         change_mode = "restart"
       }
