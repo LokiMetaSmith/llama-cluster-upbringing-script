@@ -85,7 +85,6 @@ from tools.llxprt_code_tool import LLxprt_Code_Tool
 from tools.claude_clone_tool import ClaudeCloneTool
 from tools.smol_agent_tool import SmolAgentTool
 from tools.final_answer_tool import FinalAnswerTool
-from tools.shell_tool import ShellTool
 from tools.prompt_improver_tool import PromptImproverTool
 from tools.council_tool import CouncilTool
 from tools.swarm_tool import SwarmTool
