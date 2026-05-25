@@ -75,7 +75,7 @@ job "home-assistant" {
         # Docker logging driver options — ensures rotation if supported
         logging {
           type = "json-file"
-          config {
+          config = {
             "max-size" = "15m"
             "max-file" = "5"
           }
