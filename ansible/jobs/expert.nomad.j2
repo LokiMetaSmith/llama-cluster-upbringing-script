@@ -168,7 +168,7 @@ EOH
       }
 
       config {
-        image = "{{ pipecat_image_id }}"
+        image = "{{ pipecat_image_id | default('pipecatapp:' ~ (pipecat_image_tag | default('local'))) }}"
         force_pull = false
         ports = ["http"]
         command = "/bin/bash"
