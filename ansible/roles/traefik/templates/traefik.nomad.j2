@@ -93,14 +93,14 @@ EOF
 
       template {
         data = <<EOF
-{{ key "certs/mesh/tls.crt" }}
+{% raw %}{{ key "certs/mesh/tls.crt" }}{% endraw %}
 EOF
         destination = "local/certs/mesh/tls.crt"
       }
 
       template {
         data = <<EOF
-{{ key "certs/mesh/tls.key" }}
+{% raw %}{{ key "certs/mesh/tls.key" }}{% endraw %}
 EOF
         destination = "local/certs/mesh/tls.key"
       }
