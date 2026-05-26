@@ -59,6 +59,7 @@ job "grafana" {
       template {
         data = <<-EOF
 {{ lookup('template', 'datasource.yaml.j2') }}
+
 EOF
 
         destination = "local/provisioning/datasources/datasource.yaml"
@@ -67,6 +68,7 @@ EOF
       template {
         data = <<-EOF
 {{ lookup('template', 'dashboards.yaml.j2') }}
+
 EOF
 
         destination = "local/provisioning/dashboards/dashboards.yaml"
