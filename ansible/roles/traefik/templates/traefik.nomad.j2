@@ -72,6 +72,7 @@ EOF
       template {
         data = <<EOF
 {{ lookup('template', 'headscale-router.yaml.j2') }}
+
 EOF
         destination = "local/dynamic/headscale-router.yaml"
       }
