@@ -73,6 +73,7 @@ EOF
       template {
         data = <<-EOF
 {{ lookup('template', 'headscale-router.yaml.j2') }}
+
 EOF
 
         destination = "local/dynamic/headscale-router.yaml"
@@ -97,6 +98,7 @@ EOF
       template {
         data = <<-EOF
 {% raw %}{{ key "certs/mesh/tls.crt" }}{% endraw %}
+
 EOF
 
         destination = "local/certs/mesh/tls.crt"
@@ -105,6 +107,7 @@ EOF
       template {
         data = <<-EOF
 {% raw %}{{ key "certs/mesh/tls.key" }}{% endraw %}
+
 EOF
 
         destination = "local/certs/mesh/tls.key"
