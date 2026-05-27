@@ -1,0 +1,38 @@
+name: "Continuous Consolidation Loop"
+description: "A background loop that continuously runs to consolidate disjointed memories into cross-cutting insights."
+cyclic: true
+nodes:
+  - id: "Trigger"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "interval_seconds"
+    inputs: []
+
+  - id: "Consolidate"
+    type: "ContinuousConsolidationNode"
+    config:
+      limit: 10
+    inputs:
+      - name: "loop_trigger"
+        connection:
+          from_node: "Trigger"
+          from_output: "interval_seconds"
+      - name: "resume_trigger"
+        connection:
+          from_node: "Sleep"
+          from_output: "status"
+
+  - id: "Sleep"
+    type: "SleepNode"
+    config:
+      seconds: 1800 # 30 minutes default
+    inputs:
+      - name: "override_seconds"
+        connection:
+          from_node: "Trigger"
+          from_output: "interval_seconds"
+      - name: "wait_for_consolidation"
+        connection:
+          from_node: "Consolidate"
+          from_output: "insight"

@@ -77,7 +77,7 @@ It provides a sophisticated, human-like memory system that completely bypasses t
      - *Consolidation Prompt:* Review unconsolidated memories, map connections, and generate insights.
      - *Query Prompt:* Synthesize answers based on the local SQLite memory state.
 
-3. [ ] **Implement the Continuous Consolidation Loop**
+3. [x] **Implement the Continuous Consolidation Loop**
    - Create a durable, background execution loop (potentially leveraging `DurableExecutionEngine` or an Emperor Workflow node) that triggers the Consolidation logic on a configurable interval (e.g., every 30 minutes).
    - Implement resource safeguards to limit the number of tokens/memories processed per cycle to prevent local GPU/CPU starvation.
 
@@ -85,5 +85,5 @@ It provides a sophisticated, human-like memory system that completely bypasses t
    - If a file watcher is desired, implement a secure inbox directory monitor.
    - **Security Requirement:** Ensure the file watcher strictly uses `os.path.realpath` and `os.path.commonpath` to prevent path traversal attacks during file ingestion.
 
-5. [ ] **Update Local LLM Interface**
+5. [x] **Update Local LLM Interface**
    - Ensure the agent's LLM calls route through our local interface (Ollama/llama.cpp) via existing HTTP clients (`httpx`), entirely avoiding Google SDK dependencies.
