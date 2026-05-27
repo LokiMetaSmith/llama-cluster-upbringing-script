@@ -61,7 +61,7 @@ job "home-assistant" {
     task "home-assistant" {
       driver = "docker"
 
-      config = {
+      config {
         image = "homeassistant/home-assistant:stable"
         {% if not use_host_network | default(false) %}
         ports = ["http"]
@@ -73,11 +73,11 @@ job "home-assistant" {
         ]
 
         # Docker logging driver options — ensures rotation if supported
-        logging = {
+        logging {
           type = "json-file"
-          config = {
-            "max-size" = "15m"
-            "max-file" = "5"
+          config {
+            max-size = "15m"
+            max-file = "5"
           }
         }
 
