@@ -6,3 +6,4 @@ from . import emperor_nodes
 from . import rag_nodes
 from . import ralph_nodes
 from . import tasky_nodes
+from . import consolidation_nodes

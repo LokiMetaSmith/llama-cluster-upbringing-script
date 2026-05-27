@@ -189,3 +189,19 @@ class HumanApprovalNode(Node):
             self.set_output(context, "approval_status", "rejected")
             self.set_output(context, "human_feedback", "Rejected by human via CLI.")
             raise ValueError(f"Workflow execution halted: Human approval rejected. Action: {action_details}")
+
+@registry.register
+class SleepNode(Node):
+    """A node that sleeps for a configurable amount of time."""
+    async def execute(self, context: WorkflowContext):
+        import asyncio
+        seconds = self.config.get("config", {}).get("seconds", 1)
+        try:
+            override = self.get_input(context, "override_seconds")
+            if override is not None:
+                seconds = float(override)
+        except ValueError:
+            pass
+
+        await asyncio.sleep(seconds)
+        self.set_output(context, "status", f"Slept for {seconds} seconds")

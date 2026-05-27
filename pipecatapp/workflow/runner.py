@@ -406,71 +406,68 @@ class WorkflowRunner:
 
     async def _execute_cyclic_graph(self):
         """Execute a graph with cycles iteratively until OutputNode is hit or max loops reached."""
-        max_iterations = 100 # Safety limit
-
-        # Determine root nodes (in-degree 0 ignoring loopback edges, or just start with InputNodes)
-        # For simplicity, we can just execute nodes when their input dependencies are met.
-        # A more robust state machine approach:
+        # Start with all nodes that don't depend on another node OR depend on a node that is "optional" (we won't check optional here but rely on inputs)
         active_nodes = [node["id"] for node in self.workflow_definition["nodes"] if node["type"] == "InputNode"]
         if not active_nodes:
              active_nodes = [self.workflow_definition["nodes"][0]["id"]] # Fallback
 
         executed_nodes = set()
         iteration = 0
+        is_infinite = self.workflow_definition.get("cyclic") == "infinite" or self.workflow_definition.get("cyclic") == True
+        max_iterations = 1000000 if is_infinite else 100
 
         while active_nodes and iteration < max_iterations:
-            next_active = []
-            new_outputs = {}
+            next_active = set()
             for node_id in active_nodes:
                 node = self.nodes[node_id]
 
-                # Temporarily hide previous outputs to avoid routing based on stale data
-                # if this node crashes during execution
-                old_outputs = self.context.node_outputs.get(node_id, {})
-                self.context.node_outputs[node_id] = {}
-
+                # If this node crashes during execution we just let the error bubble up, keeping outputs clean.
                 try:
                     await node.execute(self.context)
-                    new_outputs[node_id] = self.context.node_outputs.get(node_id, {})
                 except ValueError as e:
-                    self.context.node_outputs[node_id] = old_outputs
-                    new_outputs[node_id] = {}
+                    pass
 
                 executed_nodes.add(node_id)
 
                 if node_id == "output" or node.config["type"] == "OutputNode":
-                     return # End of cyclic execution when Output Node is successfully run
+                     if not is_infinite:
+                         return # End of cyclic execution when Output Node is successfully run
 
             # Compute what to run next based on the NEW states
-            for node_id in active_nodes:
-                node_outputs = new_outputs.get(node_id, {})
+            for potential_child in self.workflow_definition["nodes"]:
+                child_id = potential_child["id"]
 
-                # If the node produced absolutely no output during this tick
-                # it should not activate any edges to its children.
-                if not node_outputs:
-                     continue
+                edge_activated = False
+                for input_config in potential_child.get("inputs", []):
+                    if "connection" in input_config:
+                        from_node_id = input_config["connection"]["from_node"]
 
-                # Find children
-                for potential_child in self.workflow_definition["nodes"]:
-                     child_id = potential_child["id"]
+                        # Only activate if the from_node was just executed in this active_nodes pass
+                        if from_node_id in active_nodes:
+                            required_output = input_config["connection"]["from_output"]
 
-                     edge_activated = False
-                     for input_config in potential_child.get("inputs", []):
-                         if "connection" in input_config and input_config["connection"]["from_node"] == node_id:
-                              required_output = input_config["connection"]["from_output"]
+                            node_outputs = self.context.node_outputs.get(from_node_id, {})
 
-                              # If the required output was produced (not None), this edge is active
-                              if required_output in node_outputs and node_outputs[required_output] is not None:
-                                  edge_activated = True
-                                  break
+                            # If the required output was produced (not None), this edge is active
+                            if required_output in node_outputs and node_outputs[required_output] is not None:
+                                edge_activated = True
+                                break
 
-                     if edge_activated:
-                          # Avoid queuing a node that is already in next_active to prevent duplicates in the next tick
-                          if child_id not in next_active:
-                              next_active.append(child_id)
+                if edge_activated:
+                    next_active.add(child_id)
 
-            active_nodes = next_active
+            # To avoid an infinite state history, we must periodically prune old histories for infinite loops
+            # Only prune nodes that are not active anymore and not needed for next step
+            # We don't prune InputNode since it might hold static configurations
+            if is_infinite and iteration > 0 and iteration % 10 == 0:
+                nodes_to_keep = set(next_active) | set(active_nodes) | {n["id"] for n in self.workflow_definition["nodes"] if n["type"] == "InputNode"}
+                keys_to_delete = [k for k in self.context.node_outputs if k not in nodes_to_keep]
+                for k in keys_to_delete:
+                    del self.context.node_outputs[k]
+
+            active_nodes = list(next_active)
+
             iteration += 1
 
         if iteration >= max_iterations:
-             raise RuntimeError("Cyclic workflow reached maximum iterations (100) without terminating.")
+             raise RuntimeError(f"Cyclic workflow reached maximum iterations ({max_iterations}) without terminating.")
