@@ -5,12 +5,12 @@ logger = logging.getLogger(__name__)
 
 class ProjectOverviewTool:
     """
-    A tool to quickly give an agent a project overview by reading README.md, AGENTS.md,
+    A tool to quickly give an agent a project overview by reading README.md, AGENTS.md, docs/README.md,
     and listing the root directory structure.
     """
     def __init__(self):
         self.name = "project_overview"
-        self.description = "Provides a high-level project overview by returning the contents of key documentation files (like README.md and AGENTS.md) along with the root directory structure. Takes no arguments."
+        self.description = "Provides a high-level project overview by returning the contents of key documentation files (like README.md, AGENTS.md, and docs/README.md) along with the root directory structure. Takes no arguments."
 
     def execute(self, arguments: dict = None) -> str:
         """
@@ -54,6 +54,15 @@ class ProjectOverviewTool:
                     overview_parts.append(f.read())
             else:
                 overview_parts.append("README.md not found.")
+
+            # 4. Read docs/README.md
+            docs_readme_path = os.path.join(root_dir, "docs", "README.md")
+            overview_parts.append("\n=== docs/README.md ===")
+            if os.path.exists(docs_readme_path):
+                with open(docs_readme_path, 'r', encoding='utf-8') as f:
+                    overview_parts.append(f.read())
+            else:
+                overview_parts.append("docs/README.md not found.")
 
             return "\n".join(overview_parts)
 

@@ -17,6 +17,7 @@ class TestProjectOverviewTool(unittest.TestCase):
         self.assertIn("=== Project Root Directory Structure ===", result)
         self.assertIn("=== AGENTS.md ===", result)
         self.assertIn("=== README.md ===", result)
+        self.assertIn("=== docs/README.md ===", result)
         self.assertGreater(len(result), 100)  # Should return substantial content
 
 if __name__ == '__main__':
