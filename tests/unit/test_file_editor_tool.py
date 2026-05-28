@@ -19,6 +19,15 @@ class TestFileEditorTool(unittest.TestCase):
         content = self.tool.read_file("test.txt")
         self.assertEqual(content, "Hello\nWorld")
 
+    def test_read_file_pagination(self):
+        self.tool.write_file("test_pag.txt", "1\n2\n3\n4\n5")
+        content1 = self.tool.read_file("test_pag.txt", view_range=[2, 4])
+        self.assertIn("Showing results with pagination", content1)
+        content2 = self.tool.read_file("test_pag.txt", view_range=[1, 4])
+        self.assertIn("Showing results with pagination", content2)
+        content3 = self.tool.read_file("test_pag.txt", view_range=[2, 5])
+        self.assertIn("Showing results with pagination", content3)
+
     def test_write_file(self):
         result = self.tool.write_file("new.txt", "New Content")
         self.assertIn("Successfully wrote", result)
