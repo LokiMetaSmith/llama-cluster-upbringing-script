@@ -530,6 +530,26 @@ class DynamicRouterNode(Node):
             if route != decision:
                 self.set_output(context, route, None)
 
+
+class ModelCapabilitiesRegistry:
+    """
+    A registry mapping model families to specific capabilities and features.
+    """
+    _registry = {
+        "claude-3-7-sonnet": {"supports_reasoning_effort": True},
+        "o1": {"supports_reasoning_effort": True},
+        "o3": {"supports_reasoning_effort": True},
+        "deepseek-reasoner": {"supports_reasoning_effort": True},
+    }
+
+    @classmethod
+    def get_capabilities(cls, model_name: str) -> dict:
+        capabilities = {}
+        for key, value in cls._registry.items():
+            if key in model_name.lower():
+                capabilities.update(value)
+        return capabilities
+
 @registry.register
 class LLMRouterNode(Node):
     """
@@ -596,6 +616,11 @@ class LLMRouterNode(Node):
                             "messages": [{"role": "user", "content": query}],
                             "temperature": 0.7
                         }
+
+                        # Dynamically inject feature flags like reasoning effort
+                        caps = ModelCapabilitiesRegistry.get_capabilities(selected_model)
+                        if caps.get("supports_reasoning_effort"):
+                            payload["reasoning_effort"] = "medium"
 
                         chat_url = f"{base_url}/chat/completions"
                         llm_res = await client.post(chat_url, json=payload, timeout=120)
