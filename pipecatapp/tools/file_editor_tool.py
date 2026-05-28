@@ -262,7 +262,7 @@ class FileEditorTool:
 
             # Transparent Pagination Feedback
             if view_range and isinstance(view_range, list) and len(view_range) == 2:
-                if end_idx < len(lines):
+                if end_idx < len(lines) or start_idx > 0:
                      result_str += f"\n[Showing results with pagination = limit: {end_idx - start_idx}, offset: {start_idx}]"
 
             return result_str
