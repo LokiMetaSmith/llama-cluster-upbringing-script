@@ -8,7 +8,7 @@
       ansible.builtin.lineinfile:
         create: yes
         path: "{{ log_file }}"
-        line: "--- Diagnostic run for Home Assistant at {{ ansible_facts['date_time']['iso8661'] }} ---"
+        line: "--- Diagnostic run for Home Assistant at {{ ansible_facts['date_time']['iso8601'] }} ---"
         mode: '0644'
 
     - name: Check Nomad job status
