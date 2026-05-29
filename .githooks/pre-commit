@@ -31,5 +31,14 @@ if git diff --cached --name-only | grep -q "bootstrap.sh"; then
     }
 fi
 
+# We run unit tests if any Python files are staged
+if git diff --cached --name-only | grep -q "\.py$"; then
+    echo "Python files changed. Running unit tests..."
+    ./scripts/run_tests.sh --unit || {
+        echo "Error: Unit tests failed. Please fix them before committing."
+        exit 1
+    }
+fi
+
 echo "Pre-commit safety check passed."
 exit 0
