@@ -169,7 +169,7 @@
     owner: "root"
     group: "root"
     mode: '0755'
-    recurse: yes
+    recurse: no
   become: yes
 
 - name: Create subdirectories for Nomad volumes
