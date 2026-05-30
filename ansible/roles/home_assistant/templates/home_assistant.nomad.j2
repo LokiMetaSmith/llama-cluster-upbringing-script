@@ -72,15 +72,6 @@ job "home-assistant" {
           "/etc/localtime:/etc/localtime:ro",
         ]
 
-        # Docker logging driver options — ensures rotation if supported
-        logging {
-          type = "json-file"
-          config {
-            max_size = "15m"
-            max_file = "5"
-          }
-        }
-
         # Keep container capabilities required for some network features (as you had)
         cap_add = ["NET_RAW", "NET_ADMIN"]
       }
