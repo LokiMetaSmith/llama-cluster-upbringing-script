@@ -182,6 +182,7 @@
     recurse: yes
   loop:
     - mqtt-data
+    - ha-config
     - world_model_storage
     - postgres_data
     - memory-data
