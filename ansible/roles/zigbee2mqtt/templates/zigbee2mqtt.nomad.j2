@@ -1,0 +1,73 @@
+job "zigbee2mqtt" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "service"
+
+  group "zigbee2mqtt" {
+    count = 1
+
+    network {
+      port "http" {
+        to = {{ zigbee2mqtt_port | default(8080) }}
+      }
+    }
+
+    volume "zigbee2mqtt-data" {
+      type      = "host"
+      source    = "zigbee2mqtt-data"
+      read_only = false
+    }
+
+    service {
+      name     = "zigbee2mqtt"
+      port     = "http"
+      provider = "consul"
+
+      check {
+        type     = "http"
+        path     = "/"
+        interval = "30s"
+        timeout  = "5s"
+      }
+    }
+
+    task "zigbee2mqtt" {
+      driver = "docker"
+
+      constraint {
+        attribute = "${meta.zigbee_coordinator}"
+        value     = "true"
+      }
+
+      config {
+        image = "koenkk/zigbee2mqtt:latest"
+        ports = ["http"]
+
+        devices = [
+          {
+            host_path = "{{ zigbee_serial_port | default('/dev/ttyACM0') }}"
+            container_path = "{{ zigbee_serial_port | default('/dev/ttyACM0') }}"
+          }
+        ]
+      }
+
+      env {
+        TZ = "UTC"
+        # Base config, points directly to mqtt broker
+        ZIGBEE2MQTT_CONFIG_MQTT_SERVER = "mqtt://{{ hostvars['controller_node_1']['ansible_host'] | default(advertise_ip) }}:{{ mqtt_port | default(1883) }}"
+        ZIGBEE2MQTT_CONFIG_FRONTEND_PORT = "{{ zigbee2mqtt_port | default(8080) }}"
+        ZIGBEE2MQTT_CONFIG_SERIAL_PORT = "{{ zigbee_serial_port | default('/dev/ttyACM0') }}"
+      }
+
+      volume_mount {
+        volume      = "zigbee2mqtt-data"
+        destination = "/app/data"
+        read_only   = false
+      }
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+    }
+  }
+}

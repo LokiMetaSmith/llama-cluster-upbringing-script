@@ -60,9 +60,15 @@ job "mqtt" {
         read_only   = false
       }
 
+      volume_mount {
+        volume      = "mqtt-data"
+        destination = "/mosquitto/config"
+        read_only   = false
+      }
+
       resources {
-        cpu    = 200
-        memory = 128
+        cpu    = 500
+        memory = 256
       }
 
       user = "1883"

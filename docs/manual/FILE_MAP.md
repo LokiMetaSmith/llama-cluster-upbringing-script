@@ -109,11 +109,6 @@ This document maps every file in the repository, their description, and utilizat
 | `ansible/roles/heretic_tool/defaults/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/heretic_tool/meta/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/heretic_tool/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
-| `ansible/roles/home_assistant/meta/main.yaml` | 🟢 Referenced | File: main.yaml |  |
-| `ansible/roles/home_assistant/meta/main.yml` | 🟢 Referenced | File: main.yml |  |
-| `ansible/roles/home_assistant/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
-| `ansible/roles/home_assistant/templates/configuration.yaml.j2` | 🟢 Referenced | Enables the default configuration for Home Assistant |  |
-| `ansible/roles/home_assistant/templates/home_assistant.nomad.j2` | 🟢 Referenced | File: home_assistant.nomad.j2 |  |
 | `ansible/roles/kittentts/tasks/main.yaml` | 🟢 Referenced | This role is deprecated and will be replaced by a Piper TTS implementation. |  |
 | `ansible/roles/librarian/defaults/main.yml` | 🟢 Referenced | File: main.yml |  |
 | `ansible/roles/librarian/handlers/main.yml` | 🟢 Referenced | File: main.yml |  |
@@ -769,9 +764,7 @@ This document maps every file in the repository, their description, and utilizat
 | `playbooks/deploy_pds.yaml` | 🔴 Orphan | File: deploy_pds.yaml |  |
 | `playbooks/deploy_prompt_evolution.yaml` | 🟢 Referenced | File: deploy_prompt_evolution.yaml |  |
 | `playbooks/developer_tools.yaml` | 🟢 Referenced | File: developer_tools.yaml |  |
-| `playbooks/diagnose_and_log_home_assistant.yaml` | 🟢 Referenced | File: diagnose_and_log_home_assistant.yaml |  |
 | `playbooks/diagnose_failure.yaml` | 🟢 Referenced | File: diagnose_failure.yaml |  |
-| `playbooks/diagnose_home_assistant.yaml` | 🟢 Referenced | File: diagnose_home_assistant.yaml |  |
 | `playbooks/fix_cluster.yaml` | 🟢 Referenced | File: fix_cluster.yaml |  |
 | `playbooks/heal_cluster.yaml` | 🟢 Referenced | File: heal_cluster.yaml |  |
 | `playbooks/heal_job.yaml` | 🟢 Referenced | This variable would be passed in from the orchestrator script |  |
@@ -803,7 +796,6 @@ This document maps every file in the repository, their description, and utilizat
 | `playbooks/services/nomad_client.yaml` | 🟢 Referenced | File: nomad_client.yaml |  |
 | `playbooks/services/registry.yaml` | 🟢 Referenced | File: registry.yaml |  |
 | `playbooks/services/streaming_services.yaml` | 🟢 Referenced | File: streaming_services.yaml |  |
-| `playbooks/services/tasks/diagnose_home_assistant.yaml` | 🟢 Referenced | File: diagnose_home_assistant.yaml |  |
 | `playbooks/services/training_services.yaml` | 🟢 Referenced | File: training_services.yaml |  |
 | `playbooks/status-check.yaml` | 🟢 Referenced | File: status-check.yaml |  |
 | `playbooks/wake.yaml` | 🟢 Referenced | File: wake.yaml |  |
@@ -922,10 +914,8 @@ This document maps every file in the repository, their description, and utilizat
 | `tests/e2e/test_regression.py` | 🟢 Referenced | File: test_regression.py | **Functions:** test_code_runner_tool |
 | `tests/integration/README.md` | 🟢 Referenced | Integration Tests |  |
 | `tests/integration/__init__.py` | 🟢 Referenced | File: __init__.py |  |
-| `tests/integration/roles/test_home_assistant/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `tests/integration/stub_services.py` | 🟢 Referenced | File: stub_services.py | **Classes:** StubOutputService<br>**Functions:** __init__, process_frame, wait_for_frame |
 | `tests/integration/test_consul_role.yaml` | 🟢 Referenced | File: test_consul_role.yaml |  |
-| `tests/integration/test_home_assistant.yaml` | 🟢 Referenced | File: test_home_assistant.yaml |  |
 | `tests/integration/test_mini_pipeline.py` | 🧪 Test | File: test_mini_pipeline.py | **Classes:** MockListAudioSource<br>**Functions:** test_stt_mini_pipeline, __init__, start |
 | `tests/integration/test_mqtt_exporter.py` | 🧪 Test | File: test_mqtt_exporter.py | **Classes:** TestMqttExporter<br>**Functions:** setUpClass, setUp, tearDown, cleanup, test_metrics_collection |
 | `tests/integration/test_nomad_role.yaml` | 🟢 Referenced | File: test_nomad_role.yaml |  |
@@ -986,7 +976,6 @@ This document maps every file in the repository, their description, and utilizat
 | `tests/unit/test_ha_tool.py` | 🧪 Test | File: test_ha_tool.py | **Functions:** test_init_success, test_init_failure, test_call_ai_task_success, test_call_ai_task_failure |
 | `tests/unit/test_hashline_editor.py` | 🧪 Test | File: test_hashline_editor.py | **Classes:** TestHashlineEditor<br>**Functions:** setUp, tearDown, get_hash, test_read_with_hashlines, test_apply_hash_edits_replace... |
 | `tests/unit/test_heretic_tool.py` | 🧪 Test | File: test_heretic_tool.py | **Functions:** test_heretic_tool_align_model |
-| `tests/unit/test_home_assistant_template.py` | 🟢 Referenced | File: test_home_assistant_template.py | **Functions:** test_home_assistant_template |
 | `tests/unit/test_infrastructure.py` | 🧪 Test | File: test_infrastructure.py | **Classes:** TestInfrastructure<br>**Functions:** test_consul_running, test_nomad_running |
 | `tests/unit/test_lint_script.py` | 🟢 Referenced | File: test_lint_script.py | **Classes:** TestLintScript<br>**Functions:** setUp, tearDown, test_lint_script |
 | `tests/unit/test_llxprt_code_tool.py` | 🟢 Referenced | File: test_llxprt_code_tool.py | **Functions:** llxprt_tool, test_run_success, test_run_with_args_success, test_run_failure, test_run_timeout... |
@@ -1331,19 +1320,15 @@ graph LR
         direction TB
         node_873["main.yaml"]
     end
-    subgraph dir_ansible_roles_home_assistant_meta [ansible/roles/home_assistant/meta]
         direction TB
         node_899["main.yaml"]
         node_900["main.yml"]
     end
-    subgraph dir_ansible_roles_home_assistant_tasks [ansible/roles/home_assistant/tasks]
         direction TB
         node_898["main.yaml"]
     end
-    subgraph dir_ansible_roles_home_assistant_templates [ansible/roles/home_assistant/templates]
         direction TB
         node_896["configuration.yaml.j2"]
-        node_897["home_assistant.nomad.j2"]
     end
     subgraph dir_ansible_roles_kittentts_tasks [ansible/roles/kittentts/tasks]
         direction TB
@@ -2619,9 +2604,7 @@ graph LR
         node_455["deploy_pds.yaml"]
         node_457["deploy_prompt_evolution.yaml"]
         node_446["developer_tools.yaml"]
-        node_453["diagnose_and_log_home_assistant.yaml"]
         node_458["diagnose_failure.yaml"]
-        node_456["diagnose_home_assistant.yaml"]
         node_452["fix_cluster.yaml"]
         node_451["heal_cluster.yaml"]
         node_470["heal_job.yaml"]
@@ -2672,7 +2655,6 @@ graph LR
     end
     subgraph dir_playbooks_services_tasks [playbooks/services/tasks]
         direction TB
-        node_489["diagnose_home_assistant.yaml"]
     end
     subgraph dir_prompt_engineering [prompt_engineering]
         direction TB
@@ -2832,14 +2814,12 @@ graph LR
         node_585["__init__.py"]
         node_591["stub_services.py"]
         node_584["test_consul_role.yaml"]
-        node_586["test_home_assistant.yaml"]
         node_587["test_mini_pipeline.py"]
         node_588["test_mqtt_exporter.py"]
         node_583["test_nomad_role.yaml"]
         node_589["test_pipecat_app.py"]
         node_590["test_preemption.py"]
     end
-    subgraph dir_tests_integration_roles_test_home_assistant_tasks [tests/integration/roles/test_home_assistant/tasks]
         direction TB
         node_593["main.yaml"]
     end
@@ -2891,7 +2871,6 @@ graph LR
         node_624["test_ha_tool.py"]
         node_645["test_hashline_editor.py"]
         node_617["test_heretic_tool.py"]
-        node_653["test_home_assistant_template.py"]
         node_664["test_infrastructure.py"]
         node_628["test_lint_script.py"]
         node_603["test_llxprt_code_tool.py"]

@@ -7,7 +7,6 @@ This directory contains unit tests.
 - **test_adaptation_manager.py**: Unit tests for the adaptation manager.
 - **test_agent_definitions.py**: Unit tests for the agent definitions.
 - **test_ansible_tool.py**: Unit tests for the Ansible tool.
-- **test_home_assistant_template.py**: Unit tests for the Home Assistant template.
 - **test_lint_script.py**: Unit tests for the lint script.
 - **test_pipecat_app.py**: Unit tests for the pipecat application.
 - **test_playbook_integration.py**: Unit tests for playbook integration.

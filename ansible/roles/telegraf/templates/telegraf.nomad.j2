@@ -1,0 +1,50 @@
+job "telegraf" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "system"
+
+  group "telegraf" {
+    network {
+      mode = "host"
+    }
+
+    volume "telegraf-config" {
+      type      = "host"
+      source    = "telegraf-config"
+      read_only = true
+    }
+
+    task "telegraf" {
+      driver = "docker"
+
+      config {
+        image = "telegraf:latest"
+        network_mode = "host"
+
+        # Mount host metrics
+        volumes = [
+          "/var/run/docker.sock:/var/run/docker.sock:ro",
+          "/sys:/rootfs/sys:ro",
+          "/proc:/rootfs/proc:ro",
+          "/etc:/rootfs/etc:ro"
+        ]
+      }
+
+      env {
+        HOST_PROC = "/rootfs/proc"
+        HOST_SYS = "/rootfs/sys"
+        HOST_ETC = "/rootfs/etc"
+      }
+
+      volume_mount {
+        volume      = "telegraf-config"
+        destination = "/etc/telegraf"
+        read_only   = true
+      }
+
+      resources {
+        cpu    = 200
+        memory = 128
+      }
+    }
+  }
+}

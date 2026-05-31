@@ -51,33 +51,23 @@
         - python_deps
         - deploy_app
 
-    - name: Run pre-Home Assistant application roles
-      ansible.builtin.include_role:
-        name: "{{ role_name }}"
-      loop:
-        - mqtt
-      loop_control:
-        loop_var: role_name
+    - name: Deploy MQTT
       tags:
         - mqtt
-
-    - name: Deploy Home Assistant with error handling
-      tags:
-        - home_assistant
       block:
-        - name: Run home_assistant role
+        - name: Run mqtt role
           ansible.builtin.include_role:
-            name: home_assistant
-      rescue:
-        - name: On failure, run Home Assistant diagnostic tasks
-          ansible.builtin.include_tasks:
-            file: tasks/diagnose_home_assistant.yaml
-          vars:
-            log_file: "{{ playbook_dir }}/home_assistant_debug.log"
-        - name: Fail the playbook after diagnostics
-          ansible.builtin.fail:
-            msg: "Home Assistant deployment failed. Diagnostic log has been created at {{ playbook_dir }}/home_assistant_debug.log"
-      when: enable_home_assistant | default(true)
+            name: mqtt
+      when: enable_mqtt | default(true)
+
+    - name: Deploy Zigbee2MQTT
+      tags:
+        - zigbee2mqtt
+      block:
+        - name: Run zigbee2mqtt role
+          ansible.builtin.include_role:
+            name: zigbee2mqtt
+      when: enable_zigbee2mqtt | default(true)
 
     - name: Run Provisioning API
       ansible.builtin.include_role:
@@ -93,7 +83,25 @@
       tags:
         - vision
 
-    - name: Run post-Home Assistant application roles
+    - name: Deploy InfluxDB
+      tags:
+        - influxdb
+      block:
+        - name: Run influxdb role
+          ansible.builtin.include_role:
+            name: influxdb
+      when: enable_influxdb | default(true)
+
+    - name: Deploy Telegraf
+      tags:
+        - telegraf
+      block:
+        - name: Run telegraf role
+          ansible.builtin.include_role:
+            name: telegraf
+      when: enable_telegraf | default(true)
+
+    - name: Run application roles
       ansible.builtin.include_role:
         name: "{{ role_name }}"
       loop:

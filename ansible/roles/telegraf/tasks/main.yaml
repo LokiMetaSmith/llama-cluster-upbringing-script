@@ -1,0 +1,67 @@
+---
+- name: Ensure telegraf config directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/telegraf-config"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Template telegraf.conf
+  ansible.builtin.template:
+    src: telegraf.conf.j2
+    dest: "{{ nomad_volumes_dir }}/telegraf-config/telegraf.conf"
+    mode: '0644'
+  become: yes
+
+- name: Check if telegraf job exists and get status
+  ansible.builtin.shell: |
+    set -o pipefail
+    /usr/local/bin/nomad job status -json telegraf || echo '{"Status": "missing"}'
+  args:
+    executable: /bin/bash
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+  register: telegraf_job_status
+  failed_when: false
+  changed_when: false
+  become: no
+
+- name: Extract job status
+  ansible.builtin.set_fact:
+    telegraf_job_state: "{{ (telegraf_job_status.stdout | from_json).Status | default('missing') }}"
+
+- name: Purge telegraf job if in failed state
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job stop -purge telegraf
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+  when: telegraf_job_state in ['dead', 'failed', 'progress_deadline']
+  changed_when: true
+  become: no
+
+- name: Template telegraf Nomad job file
+  ansible.builtin.template:
+    src: telegraf.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/telegraf.nomad"
+    mode: '0644'
+  become: yes
+
+- name: Run telegraf job asynchronously
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/telegraf.nomad
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+    NOMAD_TLS_SKIP_VERIFY: "1"
+  changed_when: true
+  become: no

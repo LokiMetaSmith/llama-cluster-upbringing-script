@@ -72,7 +72,6 @@ headscale_port: 8085
 mqtt_port: 1883
 mqtt_websocket_port: 9001
 provisioning_api_port: 8002
-home_assistant_port: 8123
 router_port: 8081
 router_count: 1
 nanochat_port: 8005
@@ -143,23 +142,6 @@ llm_model: "" # Explicit model override (e.g. llama3-70b-8192)
 hf_token: ""
 jules_api_key: "your_jules_api_key_here"
 
-# Home Assistant User and Group IDs
-# These should match the user ID and group ID that the Home Assistant
-# container runs as. This ensures that the configuration files on the
-# host have the correct ownership. The default is 568.
-home_assistant_uid: 568
-home_assistant_gid: 568
-
-# Home Assistant Long-Lived Access Token
-# 1. Go to your Home Assistant UI -> Your Profile (bottom left)
-# 2. Scroll down to "Long-Lived Access Tokens"
-# 3. Click "Create Token", give it a name (e.g., "Ansible"), and copy the generated token here.
-home_assistant_token: "your_long_lived_access_token_here"
-
-# When set to true, this will prevent the Home Assistant Nomad job from
-# automatically restarting after a crash. This is useful for debugging.
-home_assistant_debug_mode: false
-
 # Model definitions have been moved to group_vars/models.yaml
 
 # Nanochat configuration
@@ -167,8 +149,10 @@ enable_nanochat: false
 nanochat_platform: "gpu"
 
 # Service Enablement Flags
+enable_influxdb: true
+enable_telegraf: true
 enable_provisioning_api: true
-enable_home_assistant: true
+enable_zigbee2mqtt: true
 enable_frigate: false
 enable_paperless: true
 enable_opengist: true
