@@ -194,14 +194,6 @@
     comment: "Allow Provisioning API"
   when: enable_provisioning_api | default(true)
 
-- name: "Firewall : Allow Home Assistant"
-  community.general.ufw:
-    rule: allow
-    port: "{{ home_assistant_port }}"
-    proto: tcp
-    comment: "Allow Home Assistant UI"
-  when: enable_home_assistant | default(true)
-
 - name: "Firewall : Allow Nanochat"
   community.general.ufw:
     rule: allow

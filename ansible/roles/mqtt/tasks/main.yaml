@@ -173,6 +173,20 @@
   when: mqtt_job_check.rc == 0
   changed_when: true
 
+- name: Ensure MQTT configuration directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/mqtt-data/config"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Template mosquitto.conf
+  ansible.builtin.template:
+    src: mosquitto.conf.j2
+    dest: "{{ nomad_volumes_dir }}/mqtt-data/config/mosquitto.conf"
+    mode: '0644'
+  become: yes
+
 - name: Template mqtt Nomad job file
   ansible.builtin.template:
     src: mqtt.nomad.j2
@@ -230,7 +244,6 @@
         NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
       register: mqtt_job_run
-      notify: Restart Home Assistant
 
     - name: Wait for MQTT service to be healthy in Consul
       ansible.builtin.uri:

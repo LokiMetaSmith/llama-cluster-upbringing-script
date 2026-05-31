@@ -525,7 +525,6 @@ def print_final_status(args, executed_playbooks):
     nomad_port = global_vars.get("nomad_http_port", 4646)
     consul_port = global_vars.get("consul_http_port", 8500)
     pipecat_port = global_vars.get("nanochat_port", 8005)
-    ha_port = global_vars.get("home_assistant_port", 8123)
     print(f"\n{Colors.BOLD}Access Interfaces:{Colors.ENDC}")
     print(f"  • {Colors.OKCYAN}Node IP Address:{Colors.ENDC} {ip}")
 
@@ -533,7 +532,6 @@ def print_final_status(args, executed_playbooks):
         ("Nomad UI", nomad_port, f"https://{ip}:{nomad_port}", True),
         ("Consul UI", consul_port, f"https://{ip}:{consul_port}", True),
         ("Pipecat App", pipecat_port, f"https://{ip}:{pipecat_port}", stack_mode != "Infrastructure Only"),
-        ("Home Assistant", ha_port, f"https://{ip}:{ha_port}", stack_mode != "Infrastructure Only" and stack_mode != "Minimal"),
     ]
 
     for name, port, url, should_be_active in interfaces:
@@ -705,8 +703,6 @@ def main():
         extra_vars["node_tier"] = args.tier
     if args.run_local:
         extra_vars["pipecat_deployment_style"] = "raw_exec"
-    if args.home_assistant_debug:
-        extra_vars["home_assistant_debug_mode"] = "true"
     if args.watch:
         extra_vars["watch_target"] = args.watch
 

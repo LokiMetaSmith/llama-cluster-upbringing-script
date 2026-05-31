@@ -30,7 +30,6 @@ class TestProvisioning(unittest.TestCase):
             'nomad_http_port': 4646,
             'consul_http_port': 8500,
             'nanochat_port': 8005,
-            'home_assistant_port': 8123,
             'router_port': 8081,
             'mqtt_port': 1883
         }
@@ -120,7 +119,7 @@ class TestProvisioning(unittest.TestCase):
                 debug=False, continue_run=False, benchmark=False,
                 external_model_server=False, leave_services_running=False,
                 purge_jobs=True, only_purge=False, only_status=False, deploy_docker=False, run_local=False,
-                github_ssh_user=[], home_assistant_debug=False, watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False, tier="mid"
+                github_ssh_user=[], watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False, tier="mid"
             ), [])
 
             # Mock os.path.exists for manifest
@@ -139,7 +138,7 @@ class TestProvisioning(unittest.TestCase):
                 debug=False, continue_run=False, benchmark=False,
                 external_model_server=False, leave_services_running=False,
                 purge_jobs=True, only_purge=True, only_status=False, deploy_docker=False, run_local=False,
-                github_ssh_user=[], home_assistant_debug=False, watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False, tier="mid"
+                github_ssh_user=[], watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False, tier="mid"
             ), [])
 
              # We want sys.exit(0) to actually interrupt the flow so main() stops
@@ -160,7 +159,7 @@ class TestProvisioning(unittest.TestCase):
                 debug=False, continue_run=False, benchmark=False,
                 external_model_server=False, leave_services_running=False,
                 purge_jobs=False, only_purge=False, only_status=True, deploy_docker=False, run_local=False,
-                github_ssh_user=[], home_assistant_debug=False, watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False, tier="mid"
+                github_ssh_user=[], watch=None, verbose=0, deploy_full_stack=False, deploy_partial_stack=False, deploy_minimal_stack=False, tier="mid"
             ), [])
 
             with patch('sys.exit') as mock_exit:

@@ -114,5 +114,3 @@
         that:
           - "'files' in mapper_response.json.text or 'structure' in mapper_response.json.text or 'ansible' in mapper_response.json.text"
         fail_msg: "Agent did not return a valid project map. Response: {{ mapper_response.json.text }}"
-
-- import_playbook: ../integration/test_home_assistant.yaml

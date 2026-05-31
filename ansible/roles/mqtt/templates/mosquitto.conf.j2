@@ -1,0 +1,19 @@
+listener 1883
+protocol mqtt
+allow_anonymous true
+
+listener 9001
+protocol websockets
+
+# Persistence settings
+persistence true
+persistence_location /mosquitto/data/
+autosave_interval 1800
+
+# High-frequency tuning
+max_connections -1
+max_queued_messages 1000
+log_type error
+log_type warning
+log_type notice
+log_type information
