@@ -332,6 +332,68 @@ class PMMMemory:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.list_work_items_sync, status, assignee_id, limit)
 
+
+    def sync_work_items_sync(self, remote_items: List[Dict]) -> List[Dict]:
+        """Merges remote work items into the local ledger, resolving conflicts by updated_at."""
+        cursor = self.conn.cursor()
+        merged_items = []
+
+        for r_item in remote_items:
+            cursor.execute("SELECT updated_at FROM work_items WHERE id = ?", (r_item['id'],))
+            l_row = cursor.fetchone()
+
+            should_update = False
+            if not l_row:
+                # Insert
+                should_update = True
+                cursor.execute("""
+                    INSERT INTO work_items (id, title, status, assignee_id, created_by, created_at, updated_at, parent_id, meta, validation_results)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    r_item['id'], r_item['title'], r_item['status'], r_item.get('assignee_id'), r_item['created_by'],
+                    r_item['created_at'], r_item['updated_at'], r_item.get('parent_id'),
+                    json.dumps(r_item.get('meta', {})), json.dumps(r_item.get('validation_results', {}))
+                ))
+            elif r_item['updated_at'] > l_row[0]:
+                # Update
+                should_update = True
+                cursor.execute("""
+                    UPDATE work_items
+                    SET title = ?, status = ?, assignee_id = ?, updated_at = ?, parent_id = ?, meta = ?, validation_results = ?
+                    WHERE id = ?
+                """, (
+                    r_item['title'], r_item['status'], r_item.get('assignee_id'), r_item['updated_at'],
+                    r_item.get('parent_id'), json.dumps(r_item.get('meta', {})),
+                    json.dumps(r_item.get('validation_results', {})), r_item['id']
+                ))
+
+            if should_update:
+                merged_items.append(r_item)
+
+        self.conn.commit()
+        return merged_items
+
+    async def sync_work_items(self, remote_items: List[Dict]) -> List[Dict]:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.sync_work_items_sync, remote_items)
+
+    def get_work_items_since_sync(self, since_timestamp: float) -> List[Dict]:
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM work_items WHERE updated_at > ?", (since_timestamp,))
+        rows = cursor.fetchall()
+        columns = [description[0] for description in cursor.description]
+        items = []
+        for row in rows:
+            item = dict(zip(columns, row))
+            item['meta'] = json.loads(item['meta']) if item['meta'] else {}
+            item['validation_results'] = json.loads(item['validation_results']) if item['validation_results'] else {}
+            items.append(item)
+        return items
+
+    async def get_work_items_since(self, since_timestamp: float) -> List[Dict]:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.get_work_items_since_sync, since_timestamp)
+
     def get_agent_stats_sync(self, assignee_id: str) -> Dict[str, Any]:
         """Aggregates work statistics for a specific agent."""
         cursor = self.conn.cursor()
