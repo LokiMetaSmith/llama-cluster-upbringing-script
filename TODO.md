@@ -159,7 +159,7 @@ These structural suggestions are targeted for a future major release to signific
 - [x] **Add Pre-flight System Health Checks:** Create a new Ansible role to perform non-destructive checks at the beginning of `playbook.yaml`.
 - [x] **Investigate Advanced Power Management:** Research and prototype a more advanced version that uses Wake-on-LAN.
 - [x] **Implement Claude Code CLI Techniques:** Review `docs/analysis/CLAUDE_CODE_ANALYSIS.md` and implement the recommended techniques in `pipecatapp/tools/`:
-  - Format Zod/Pydantic validation errors for LLMs.
+  - [x] Format Zod/Pydantic validation errors for LLMs.
   - Add robust ripgrep fallback (EAGAIN handling) to `shell_tool.py`.
   - [x] Add transparent pagination feedback (e.g. `[Showing results with pagination...]`).
   - Implement single-pass read with metadata extraction (encoding, line endings) for file editors.
