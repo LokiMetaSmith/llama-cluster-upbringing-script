@@ -3,7 +3,9 @@
 Flowise is an open-source visual workflow builder that provides a drag-and-drop UI to build customized LLM flows using LangChainJS and LlamaIndex. Our workflow engine (`pipecatapp/workflow`) shares conceptual similarities with Flowise. This document serves to highlight how Flowise structures its visual canvas, state management, and node execution, with specific recommendations on ideas that can be adapted for our implementation.
 
 ## 1. Architecture Overview
+
 Flowise is split into three main components:
+
 - **`ui`:** A React single-page application built around `ReactFlow`. It allows users to visually compose flows.
 - **`server`:** An Express.js backend that serves the REST API, executes the workflows, and manages database state.
 - **`components`:** The node definitions mapping to backend executable code.
@@ -12,16 +14,13 @@ Flowise is split into three main components:
 
 Flowise uses `ReactFlow` for its drag-and-drop canvas. Their approach to building visual nodes provides several useful abstractions.
 
-### `CanvasNode`
-<<<<<<< HEAD
 The master container for visual nodes is `CanvasNode.jsx`. It defines the overarching visual card, handles node selection states, and provides actions like duplicate, delete, and open info dialogs.
-=======
-The master container for visual nodes is `CanvasNode.jsx`. It defines the overarching visual card, handles node selection states, and provides actions like duplicate, delete, and open info dialogs.
->>>>>>> origin/main
+
 - **Visual Distinction:** Nodes render differently based on their `category` (e.g. Agents, Document Loaders, Memory).
 - **Tooltips & Info:** Every node has a tooltip that explains what it does, and an info dialog for more detailed configuration information.
 
 ### `NodeInputHandler` and `NodeOutputHandler`
+
 Flowise specifically separates input logic from output logic into `NodeInputHandler` and `NodeOutputHandler`.
 
 - **`NodeInputHandler`:**
@@ -38,28 +37,27 @@ Flowise specifically separates input logic from output logic into `NodeInputHand
 ## 3. State Management
 
 The canvas state is primarily managed through two mechanisms:
+
 1. **Redux (`canvasReducer`):** Manages high-level state such as whether the canvas `isDirty` (has unsaved changes), the current `chatflow` object, and available node components/credentials loaded from the backend API.
 2. **React Context (`flowContext`):** Manages the immediate UI state of the canvas, such as the active `reactFlowInstance`, node deletion, and duplication actions. By storing the `reactFlowInstance` in context, any deeply nested UI component can interact with the graph.
 
 ## 4. Graph Serialization & Backend Execution
 
-When a user saves a flow or submits a message, the ReactFlow graph (`nodes` and `edges`) is serialized to JSON and sent to the backend.
-
 ### `buildChatflow` and `buildFlow`
+
 The server uses graph traversal algorithms (`constructGraphs`, `getEndingNodes`, `getStartingNodes`) to build a directed acyclic graph (DAG) and calculate node dependencies (`depthQueue`).
 
 Execution generally follows a backward chaining model or topological sort:
+
 1. **Resolution:** The `resolveVariables` function traverses the `inputParams` of the nodes, looking for variable syntax (`{{ ... }}`). It interpolates these before passing them to the execution logic.
-<<<<<<< HEAD
 2. **Instantiation:** It traverses the graph, instantiating backend classes defined in `packages/components` (e.g., `ReActAgentChat_Agents`).
-=======
-2. **Instantiation:** It traverses the graph, instantiating backend classes defined in `packages/components` (e.g., `ReActAgentChat_Agents`).
->>>>>>> origin/main
 3. **Initialization & Execution:** Each node implements an `init()` method (for setup, e.g., connecting to a DB) and a `run()` method (where the main LangChain/LLM logic happens).
 4. **Custom Post-Processing:** Flowise has a hook to run custom Javascript functions on the final text output of a flow before returning it to the client.
 
 ### Component Structure (`packages/components`)
+
 Backend nodes explicitly declare their expected inputs via JSON arrays in their class constructors. Example properties:
+
 - `name`: Internal name.
 - `type`: Expected input type (e.g., `boolean`, `string`, `Memory`).
 - `acceptVariable`: Boolean indicating if the field supports `{{ }}` interpolation.

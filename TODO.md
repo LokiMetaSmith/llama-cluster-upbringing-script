@@ -138,6 +138,7 @@ These structural suggestions are targeted for a future major release to signific
 ## Future Enhancements and Backlog
 
 ### Dirac Token-Efficient Agent Integration
+
 - [x] **Implement Dirac Hybrid Approach:**
   - **Goal:** Integrate the Dirac coding agent capabilities (hash-anchored edits, AST parsing, multi-file batching) to significantly reduce token costs and improve refactoring on our legacy hardware.
   - Reference: `docs/manual/DIRAC_TODO.md`
@@ -257,6 +258,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - Ensure encryption at rest is considered or implemented for sensitive fields.
 
 ## Technical Debt & Lazy Code
+
 - [x] **Investigate Broken Test Suite:** Fix missing dependencies (e.g., `pytest-asyncio`) and other import errors that are causing the unit test suite to fail globally.
 - [x] **Fix test_loop_detection_mechanism async mocking:** Update `tests/unit/conftest.py` or `tests/unit/test_pipecat_app_unit.py` to ensure `FrameProcessor.push_frame` and other mocked async methods correctly return `AsyncMock`s to prevent `TypeError: object MagicMock can't be used in 'await' expression` in an environment with missing dependencies.
 
@@ -318,6 +320,9 @@ This section tracks actionable ideas derived from the `docs/analysis/FLOWISE_ANA
 - [x] **Dynamic Variable Interpolation:** Standardize the `{{ $vars.NAME }}` syntax. Add a pre-processing step to the Python `WorkflowRunner` that resolves and injects these variables globally across all node configs before the graph execution begins.
 - [x] **Expose UI Metadata from Backend:** Add a new REST API endpoint to the Python server that returns a JSON schema describing the available workflow nodes (including category, icon, accepted input types, and tooltips). Use this to dynamically construct the frontend node properties panel.
 - [x] **Introduce a `PostProcessorNode`:** Implement an execution hook or a dedicated node that allows arbitrary Javascript/Python manipulation of the final output dictionary (e.g., reformatting or filtering data) before it is sent back to the client.
+- [ ] **Implement Auto-Layout:** Integrate a library like `dagre.js` to calculate node positions, then apply those `x,y` coordinates to our LiteGraph nodes.
+- [ ] **Enhance Node Metadata:** As noted in `FLOWISE_ANALYSIS.md`, we should build a strong separation between the visual card and the backend execution logic, allowing dynamic UI generation based on Python schema definitions.
+- [ ] **Group Support:** We need to explicitly build "Group" visual boundaries in LiteGraph to support the Obsidian Canvas grouping feature.
 
 ## Suggested New Items
 
