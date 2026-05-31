@@ -605,6 +605,14 @@ VENV_DIR="$SCRIPT_DIR/.venv"
 # shellcheck disable=SC2317
 setup_venv() {
     if [ ! -d "$VENV_DIR" ]; then
+        # If a virtual environment is active but the directory is gone, deactivate it
+        if [ -n "$VIRTUAL_ENV" ]; then
+            if type deactivate >/dev/null 2>&1; then
+                deactivate
+            fi
+            # Clear hashed executable paths (like python3)
+            hash -r 2>/dev/null || true
+        fi
         python3 -m venv "$VENV_DIR"
     fi
 }
