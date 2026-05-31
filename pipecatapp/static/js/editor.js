@@ -470,6 +470,54 @@ const WorkflowEditor = {
     },
 
     autoLayout: function() {
+        if (typeof dagre === 'undefined') {
+            console.warn("dagre.js not found. Using simple fallback layout.");
+            this.fallbackAutoLayout();
+            return;
+        }
+
+        const g = new dagre.graphlib.Graph();
+        g.setGraph({
+            rankdir: 'LR',
+            nodesep: 50,
+            edgesep: 10,
+            ranksep: 100,
+        });
+        g.setDefaultEdgeLabel(function() { return {}; });
+
+        const nodes = this.graph._nodes;
+
+        nodes.forEach(n => {
+            g.setNode(n.id, { width: n.size[0], height: n.size[1] });
+        });
+
+        nodes.forEach(n => {
+            if (n.inputs) {
+                for (let i = 0; i < n.inputs.length; i++) {
+                    const linkId = n.inputs[i].link;
+                    if (linkId !== null) {
+                        const link = this.graph.links[linkId];
+                        if (link && link.origin_id) {
+                            g.setEdge(link.origin_id, n.id);
+                        }
+                    }
+                }
+            }
+        });
+
+        dagre.layout(g);
+
+        nodes.forEach(n => {
+            const dagreNode = g.node(n.id);
+            if (dagreNode) {
+                n.pos = [dagreNode.x - n.size[0] / 2, dagreNode.y - n.size[1] / 2];
+            }
+        });
+
+        this.graph.setDirtyCanvas(true, true);
+    },
+
+    fallbackAutoLayout: function() {
         // A very basic layout algorithm
         const nodes = this.graph._nodes;
         const columns = {};
