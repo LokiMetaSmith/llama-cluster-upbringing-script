@@ -380,6 +380,28 @@ const WorkflowEditor = {
 
         // 1. Create Nodes
         yamlNodes.forEach(n => {
+            if (n.type === "scope" || n.type === "group") {
+                const group = new LiteGraph.LGraphGroup();
+                group.title = n.id || n.name || "Group";
+
+                if (n.position) {
+                    group.pos = [n.position.x || 0, n.position.y || 0];
+                } else {
+                    group.pos = [Math.random() * 800 + 100, Math.random() * 600 + 100];
+                }
+
+                if (n.dimensions) {
+                    group.size = [n.dimensions.width || 400, n.dimensions.height || 200];
+                }
+
+                if (n.style && n.style.color) {
+                    group.color = n.style.color;
+                }
+
+                this.graph.add(group);
+                return;
+            }
+
             const nodeTypeString = "agent/" + n.type;
             const node = LiteGraph.createNode(nodeTypeString);
 
@@ -405,9 +427,21 @@ const WorkflowEditor = {
                 }
             }
 
-            // Attempt to layout nodes roughly (Auto-layout would be better)
-            // For now, place them randomly or in a grid
-            node.pos = [Math.random() * 800 + 100, Math.random() * 600 + 100];
+            if (n.position) {
+                node.pos = [n.position.x || 0, n.position.y || 0];
+            } else {
+                // Attempt to layout nodes roughly (Auto-layout would be better)
+                // For now, place them randomly or in a grid
+                node.pos = [Math.random() * 800 + 100, Math.random() * 600 + 100];
+            }
+
+            if (n.dimensions) {
+                node.size = [n.dimensions.width || LiteGraph.NODE_WIDTH, n.dimensions.height || LiteGraph.NODE_SLOT_HEIGHT];
+            }
+
+            if (n.style && n.style.color) {
+                node.color = n.style.color;
+            }
 
             this.graph.add(node);
             nodesMap[n.id] = node;
@@ -529,13 +563,51 @@ const WorkflowEditor = {
 
     exportWorkflow: function() {
         const nodes = this.graph._nodes;
+        const groups = this.graph._groups || [];
         const yamlNodes = [];
+
+        // Export groups (scopes)
+        groups.forEach(group => {
+            const yamlNode = {
+                id: group.title || "Group",
+                type: "scope",
+                position: {
+                    x: group._pos[0],
+                    y: group._pos[1],
+                    z: 0
+                },
+                dimensions: {
+                    width: group._size[0],
+                    height: group._size[1],
+                    depth: 0
+                },
+                style: {
+                    color: group.color || "#cccccc",
+                    shape: "box"
+                }
+            };
+            yamlNodes.push(yamlNode);
+        });
 
         nodes.forEach(node => {
             const yamlNode = {
                 id: node.title, // Assuming title is kept as ID
-                type: node.agentNodeType.replace("agent/", "") // Strip prefix
+                type: node.agentNodeType.replace("agent/", ""), // Strip prefix
+                position: {
+                    x: node.pos[0],
+                    y: node.pos[1],
+                    z: 0
+                },
+                dimensions: {
+                    width: node.size[0],
+                    height: node.size[1],
+                    depth: 0
+                }
             };
+
+            if (node.color) {
+                yamlNode.style = { color: node.color };
+            }
 
             // Properties
             for (const key in node.properties) {
