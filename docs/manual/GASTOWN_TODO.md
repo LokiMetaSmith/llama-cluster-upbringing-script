@@ -31,4 +31,4 @@ This roadmap tracks the adaptation of Gas Town concepts (Work Ledger, Attributio
 
 ## Phase 5: Federation (Future)
 
-- [ ] **Remote Ledgers:** Investigate syncing work items across multiple Memory Service instances.
+- [x] **Remote Ledgers:** Investigate syncing work items across multiple Memory Service instances.

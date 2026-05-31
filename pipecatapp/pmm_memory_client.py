@@ -209,3 +209,48 @@ class PMMMemoryClient:
     def close(self):
         """No-op for HTTP client, but kept for interface compatibility."""
         pass
+
+
+    def get_work_items_since_sync(self, since: float = 0.0) -> List[Dict]:
+        url = f"{self.base_url}/work_items/sync"
+        try:
+            with httpx.Client() as client:
+                resp = client.get(url, params={"since": since})
+                resp.raise_for_status()
+                return resp.json()
+        except Exception as e:
+            self.logger.error(f"Failed to fetch work items since {since}: {e}")
+            return []
+
+    async def get_work_items_since(self, since: float = 0.0) -> List[Dict]:
+        url = f"{self.base_url}/work_items/sync"
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url, params={"since": since})
+                resp.raise_for_status()
+                return resp.json()
+        except Exception as e:
+            self.logger.error(f"Failed to fetch work items since {since}: {e}")
+            return []
+
+    def push_work_items_sync(self, items: List[Dict]) -> bool:
+        url = f"{self.base_url}/work_items/sync"
+        try:
+            with httpx.Client() as client:
+                resp = client.post(url, json=items)
+                resp.raise_for_status()
+                return True
+        except Exception as e:
+            self.logger.error(f"Failed to push work items: {e}")
+            return False
+
+    async def push_work_items(self, items: List[Dict]) -> bool:
+        url = f"{self.base_url}/work_items/sync"
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=items)
+                resp.raise_for_status()
+                return True
+        except Exception as e:
+            self.logger.error(f"Failed to push work items: {e}")
+            return False

@@ -7,6 +7,71 @@ import uvicorn
 
 app = FastAPI()
 
+import asyncio
+import httpx
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+async def background_sync_task():
+    """Periodically syncs work items with remote ledgers."""
+    remote_ledgers_env = os.getenv("REMOTE_LEDGERS", "")
+    if not remote_ledgers_env:
+        return
+
+    remote_urls = [url.strip() for url in remote_ledgers_env.split(",") if url.strip()]
+    if not remote_urls:
+        return
+
+    logger.info(f"Starting background sync task with remote ledgers: {remote_urls}")
+    last_local_sync_time = 0.0
+    remote_sync_times = {url: 0.0 for url in remote_urls}
+
+    while True:
+        try:
+            # 1. Get local items updated since last sync to push out
+            local_items = await memory.get_work_items_since(last_local_sync_time)
+
+            if local_items:
+                last_local_sync_time = max(item['updated_at'] for item in local_items)
+
+            for remote_url in remote_urls:
+                # 2. Push local updates to remote
+                if local_items:
+                    try:
+                        async with httpx.AsyncClient() as client:
+                            resp = await client.post(f"{remote_url}/work_items/sync", json=local_items)
+                            resp.raise_for_status()
+                    except Exception as e:
+                        logger.error(f"Failed to push to {remote_url}: {e}")
+
+                # 3. Pull remote updates
+                try:
+                    async with httpx.AsyncClient() as client:
+                        resp = await client.get(f"{remote_url}/work_items/sync", params={"since": remote_sync_times[remote_url]})
+                        resp.raise_for_status()
+                        remote_items = resp.json()
+                        if remote_items:
+                            await memory.sync_work_items(remote_items)
+                            remote_sync_times[remote_url] = max(item['updated_at'] for item in remote_items)
+                            # Also update last_local_sync_time so we don't push these back immediately
+                            # (though pushing back is idempotent if timestamps match, it saves bandwidth)
+                            last_local_sync_time = max(last_local_sync_time, remote_sync_times[remote_url])
+                except Exception as e:
+                    logger.error(f"Failed to pull from {remote_url}: {e}")
+
+        except Exception as e:
+            logger.error(f"Error in background sync task: {e}")
+
+        await asyncio.sleep(30) # Sync every 30 seconds
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(background_sync_task())
+
+
+
 # Initialize PMMMemory with a persistent path
 # In Nomad, this should be a mounted volume
 DB_PATH = os.getenv("MEMORY_DB_PATH", "/data/pmm_memory.db")
@@ -114,6 +179,23 @@ async def update_work_item(item_id: str, update: WorkItemUpdate):
         return {"status": "success"}
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/work_items/sync")
+async def get_work_items_sync(since: float = 0.0):
+    try:
+        items = await memory.get_work_items_since(since)
+        return items
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/work_items/sync")
+async def post_work_items_sync(items: List[Dict[str, Any]]):
+    try:
+        merged = await memory.sync_work_items(items)
+        return {"status": "success", "merged_count": len(merged)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
