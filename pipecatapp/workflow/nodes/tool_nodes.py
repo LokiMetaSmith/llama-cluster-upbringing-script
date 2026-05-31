@@ -4,6 +4,7 @@ from ..context import WorkflowContext
 from ..crypto_receipts import ToolExecutionSigner
 import json
 import inspect
+from pydantic import create_model, ValidationError
 
 # Global signer instance for the workflow engine
 signer = ToolExecutionSigner()
@@ -123,6 +124,42 @@ class ToolExecutorNode(Node):
             raise ValueError(f"Tool '{tool_name}' not found.")
 
         method = getattr(tool, method_name)
+
+        # Validate arguments using Pydantic
+        sig = inspect.signature(method)
+        fields = {}
+        for param_name, param in sig.parameters.items():
+            if param_name == 'self':
+                continue
+            annotation = param.annotation if param.annotation is not inspect.Parameter.empty else str
+            default = param.default if param.default is not inspect.Parameter.empty else ...
+            fields[param_name] = (annotation, default)
+
+        try:
+            DynamicModel = create_model("DynamicModel", **fields)
+            validated_args = DynamicModel(**args)
+            args = validated_args.model_dump()
+        except ValidationError as e:
+            errors = e.errors()
+            formatted_messages = []
+            for error in errors:
+                loc = ".".join(str(l) for l in error.get("loc", []))
+                msg = error.get("msg", "")
+                err_type = error.get("type", "")
+
+                if err_type == "missing":
+                    formatted_messages.append(f"The required parameter `{loc}` is missing.")
+                elif err_type == "extra_forbidden":
+                    formatted_messages.append(f"An unexpected parameter `{loc}` was provided.")
+                elif "type" in err_type:
+                    formatted_messages.append(f"The parameter `{loc}` has an invalid type: {msg}.")
+                else:
+                    formatted_messages.append(f"Validation error on `{loc}`: {msg}.")
+
+            formatted_error_str = " ".join(formatted_messages)
+            error_result = f"Tool argument validation failed: {formatted_error_str} Please verify the required tool parameters."
+            self.set_output(context, "tool_result", error_result)
+            return
 
         # Re-implement approval logic
         # Security: Enforce mandatory approval for high-risk tools

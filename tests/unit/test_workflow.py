@@ -127,8 +127,13 @@ async def test_tool_executor_node(mocker):
     from workflow.nodes.tool_nodes import ToolExecutorNode
 
     # Create a mock tool
-    mock_tool = MagicMock()
-    mock_tool.do_something = MagicMock(return_value="it worked")
+    class MockTool:
+        def do_something(self, foo: str):
+            return "it worked"
+
+    mock_tool = MockTool()
+    # We still want to spy on the method call
+    mocker.spy(mock_tool, 'do_something')
 
     tools = {"my_tool": mock_tool}
     tool_call = {"tool": "my_tool.do_something", "args": {"foo": "bar"}}
@@ -193,8 +198,12 @@ async def test_workflow_tool_loop(mock_registry, mocker):
     runner = WorkflowRunner("dummy/path.yaml")
 
     # Mock the tool
-    mock_dummy_tool = MagicMock()
-    mock_dummy_tool.run = MagicMock(return_value="tool_output")
+    class DummyTool:
+        def run(self):
+            return "tool_output"
+
+    mock_dummy_tool = DummyTool()
+    mocker.spy(mock_dummy_tool, 'run')
 
     # Run with no initial tool result
     await runner.run(global_inputs={"tool_result": None, "tools": {"dummy": mock_dummy_tool}})
