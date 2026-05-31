@@ -8,6 +8,7 @@
         cmd: "nomad job status home-assistant"
       register: job_status
       changed_when: false
+      failed_when: false
       ignore_errors: yes
       check_mode: no
 

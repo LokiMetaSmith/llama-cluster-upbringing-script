@@ -15,6 +15,7 @@
     NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   register: mqtt_job_status
   changed_when: false
+  failed_when: false
   ignore_errors: yes
 
 - name: Log MQTT job status
@@ -74,6 +75,7 @@
     NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   register: job_status
   changed_when: false
+  failed_when: false
   ignore_errors: yes
 
 - name: Log job status
