@@ -46,6 +46,13 @@
     dest: /opt/power_manager/config.json
     mode: '0644'
 
+- name: Copy watchdog script
+  become: yes
+  ansible.builtin.copy:
+    src: watchdog.sh
+    dest: /opt/power_manager/watchdog.sh
+    mode: '0755'
+
 - name: Create systemd service for the power agent
   become: yes
   ansible.builtin.template:
@@ -53,6 +60,14 @@
     dest: /etc/systemd/system/power-agent.service
     mode: '0644'
   notify: restart power agent
+
+- name: Create systemd service for nomad watchdog
+  become: yes
+  ansible.builtin.template:
+    src: nomad-watchdog.service.j2
+    dest: /etc/systemd/system/nomad-watchdog.service
+    mode: '0644'
+  notify: restart nomad watchdog
 
 - name: Check for existing iptables rule for Consul health checks
   become: yes
@@ -126,6 +141,14 @@
   become: yes
   ansible.builtin.systemd:
     name: power-agent
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Enable and start the nomad watchdog service
+  become: yes
+  ansible.builtin.systemd:
+    name: nomad-watchdog
     enabled: yes
     state: started
     daemon_reload: yes

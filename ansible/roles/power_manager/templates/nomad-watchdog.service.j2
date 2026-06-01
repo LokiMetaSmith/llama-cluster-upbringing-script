@@ -1,0 +1,14 @@
+[Unit]
+Description=Nomad Single-Node Recovery Watchdog
+After=network-online.target nomad.service
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /opt/power_manager/watchdog.sh
+Restart=always
+RestartSec=5
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

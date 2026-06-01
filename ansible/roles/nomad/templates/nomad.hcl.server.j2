@@ -13,7 +13,13 @@ advertise {
 
 server {
   enabled = true
-  bootstrap_expect = {{ nomad_bootstrap_expect }}
+
+  autopilot {
+    cleanup_dead_servers = true
+    last_contact_threshold = "20s"
+    max_trailing_logs    = 250
+    server_stabilization_time = "10s"
+  }
 }
 
 client {

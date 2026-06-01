@@ -285,6 +285,17 @@
     mode: '0640'
   become: yes
 
+- name: Deploy Nomad startup wrapper script
+  ansible.builtin.template:
+    src: start_nomad.sh.j2
+    dest: /usr/local/bin/start_nomad.sh
+    mode: '0755'
+    owner: root
+    group: root
+  become: yes
+  notify:
+    - Restart nomad
+
 - name: Copy Nomad systemd service file
   ansible.builtin.template:
     src: nomad.service.j2
