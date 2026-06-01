@@ -47,6 +47,7 @@ We propose a tiered architecture where components can be "Colocated" (Monolith) 
 ## 4. Implementation Plan
 
 > **Note:** All tasks outlined in this proposal have been successfully implemented.
+>
 > * **Phase 1:** Configurable tool execution mode added to `agent_factory.py` with the creation of `RemoteToolProxy`.
 > * **Phase 2:** Direct local LLM bindings implemented in `app.py` via `LocalLLMService` and integration of `LocalWorldModel`.
 > * **Phase 3:** Adaptive Service Discovery introduced allowing bypass of Consul via `LLAMA_API_URL_OVERRIDE` in `app.py`, with `--tier` support added to `bootstrap.sh`.

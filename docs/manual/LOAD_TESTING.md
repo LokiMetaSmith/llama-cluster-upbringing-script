@@ -20,10 +20,10 @@ ansible-playbook -i inventory.yaml tests/playbooks/verify_cluster_network.yaml -
 
 ### What It Tests
 
-1.  **Tailscale Mesh Pings**: It finds the `tailscale0` IP of every node in the cluster and ensures every node can ping every other node over the VPN overlay.
-2.  **Consul DNS Resolution**: It queries the local Consul DNS resolver (port 8600) on each node to ensure it can successfully look up standard Consul `.service.consul` domains.
-3.  **Nomad API (mTLS)**: It performs an authenticated `GET` request to the Nomad Controller API from every worker node using the local client certificates (`cli.cert.pem`), verifying that mTLS is functioning and certificates are valid.
-4.  **Traefik Health**: It queries the Consul health endpoint to ensure Traefik is running and registered as a passing service.
+1. **Tailscale Mesh Pings**: It finds the `tailscale0` IP of every node in the cluster and ensures every node can ping every other node over the VPN overlay.
+2. **Consul DNS Resolution**: It queries the local Consul DNS resolver (port 8600) on each node to ensure it can successfully look up standard Consul `.service.consul` domains.
+3. **Nomad API (mTLS)**: It performs an authenticated `GET` request to the Nomad Controller API from every worker node using the local client certificates (`cli.cert.pem`), verifying that mTLS is functioning and certificates are valid.
+4. **Traefik Health**: It queries the Consul health endpoint to ensure Traefik is running and registered as a passing service.
 
 ---
 
@@ -35,11 +35,14 @@ To verify that HTTP traffic is being evenly distributed across multiple worker n
 
 We have provided a lightweight Python web server job that simply echoes its Nomad Node ID and Allocation ID.
 
-1.  Deploy the job to the cluster:
+1. Deploy the job to the cluster:
+
     ```bash
     nomad job run ansible/jobs/dummy_web_service.nomad
     ```
-2.  Wait a few seconds, then verify it is running (it is configured to launch 3 instances by default):
+
+2. Wait a few seconds, then verify it is running (it is configured to launch 3 instances by default):
+
     ```bash
     nomad job status dummy-web-service
     ```
@@ -56,10 +59,10 @@ Run the script from your development machine or the controller node:
 python3 tests/scripts/stress_test_cluster.py --url "http://<controller_ip>" --host "dummy.local.mesh" --requests 1000 --concurrency 50
 ```
 
-*   **`--url`**: The IP address of the node running Traefik (usually your primary controller).
-*   **`--host`**: The Traefik Host routing rule defined in the dummy job (`dummy.local.mesh`).
-*   **`--requests`**: Total number of requests to execute.
-*   **`--concurrency`**: Number of simultaneous workers.
+* **`--url`**: The IP address of the node running Traefik (usually your primary controller).
+* **`--host`**: The Traefik Host routing rule defined in the dummy job (`dummy.local.mesh`).
+* **`--requests`**: Total number of requests to execute.
+* **`--concurrency`**: Number of simultaneous workers.
 
 ### Step 2.3: Analyze the Results
 

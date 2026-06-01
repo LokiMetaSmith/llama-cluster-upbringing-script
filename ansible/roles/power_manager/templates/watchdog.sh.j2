@@ -2,10 +2,12 @@
 # Automated Watchdog Loop
 
 NODE_IP=$(hostname -I | awk '{print $1}')
+NOMAD_PORT={{ nomad_http_port | default(4646) }}
+TLS_DIR={{ nomad_tls_dir | default('/etc/nomad.d/tls') }}
 
 while true; do
     # Check if Nomad is reporting a leadership error
-    STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4646/v1/status/leader)
+    STATUS_CODE=$(curl -s --cacert ${TLS_DIR}/ca.pem --cert ${TLS_DIR}/cli.cert.pem --key ${TLS_DIR}/cli.key.pem -o /dev/null -w "%{http_code}" https://${NODE_IP}:${NOMAD_PORT}/v1/status/leader)
 
     if [ "$STATUS_CODE" -eq 500 ]; then
         echo "Leader anomaly detected. Checking if we are alone..."

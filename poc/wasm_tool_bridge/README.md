@@ -10,22 +10,24 @@ This PoC evaluates WASM as a plug-in architecture for our AI pipeline, heavily i
 
 ## Project Structure
 
-*   `text_processor/`: A Rust crate that compiles to WASM. It accepts a JSON payload with text and an action (`uppercase`, `lowercase`, `reverse`) and returns the processed text.
-*   `host.py`: A Python script simulating the `TwinService`. It uses the `extism` SDK to load the WASM plugin, invoke it, and track execution stats.
-*   `python_tool.py`: A pure-Python equivalent of the text processor for comparison.
+* `text_processor/`: A Rust crate that compiles to WASM. It accepts a JSON payload with text and an action (`uppercase`, `lowercase`, `reverse`) and returns the processed text.
+* `host.py`: A Python script simulating the `TwinService`. It uses the `extism` SDK to load the WASM plugin, invoke it, and track execution stats.
+* `python_tool.py`: A pure-Python equivalent of the text processor for comparison.
 
 ## Requirements
 
-*   Rust (`cargo`) with the `wasm32-wasip1` target.
-*   Python 3 with the `extism` package installed.
+* Rust (`cargo`) with the `wasm32-wasip1` target.
+* Python 3 with the `extism` package installed.
 
 ### Setup Environment
+
 ```bash
 rustup target add wasm32-wasip1
 pip install extism
 ```
 
 ### Build the WASM Plugin
+
 ```bash
 cd text_processor
 cargo build --release --target wasm32-wasip1
@@ -36,10 +38,13 @@ cargo build --release --target wasm32-wasip1
 To evaluate the footprint of the WASM sandbox vs a native python execution:
 
 **1. Run the Python Equivalent:**
+
 ```bash
 python3 python_tool.py reverse "Hello Extism!"
 ```
+
 *Outputs:*
+
 ```
 Result: !msitxE olleH
 Execution time: ~0.01 ms
@@ -47,10 +52,13 @@ Peak memory usage: ~0.000 MB
 ```
 
 **2. Run the WASM Sandbox:**
+
 ```bash
 python3 host.py reverse "Hello Extism!"
 ```
+
 *Outputs:*
+
 ```
 Result: !msitxE olleH
 Execution time: ~100.00 ms (includes cold-start load of the sandbox)

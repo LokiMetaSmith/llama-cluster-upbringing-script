@@ -48,8 +48,8 @@
 
 - name: Copy watchdog script
   become: yes
-  ansible.builtin.copy:
-    src: watchdog.sh
+  ansible.builtin.template:
+    src: watchdog.sh.j2
     dest: /opt/power_manager/watchdog.sh
     mode: '0755'
 
