@@ -17,21 +17,6 @@
     - "{{ nomad_volumes_dir }}/mqtt-data/log"
     - "{{ nomad_volumes_dir }}/mqtt-data/config"
 
-- name: Create Mosquitto config file
-  ansible.builtin.copy:
-    dest: "{{ nomad_volumes_dir }}/mqtt-data/config/mosquitto.conf"
-    content: |
-      persistence true
-      persistence_location /mosquitto/data/
-      log_dest stdout
-      log_dest stderr
-      log_type all
-      listener {{ mqtt_port }} 0.0.0.0
-      allow_anonymous true
-      listener {{ mqtt_websocket_port }} 0.0.0.0
-      protocol websockets
-    mode: '0644'
-  become: yes
 
 - name: Set ownership for Mosquitto directories
   ansible.builtin.file:
@@ -172,13 +157,6 @@
     NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
   when: mqtt_job_check.rc == 0
   changed_when: true
-
-- name: Ensure MQTT configuration directory exists
-  ansible.builtin.file:
-    path: "{{ nomad_volumes_dir }}/mqtt-data/config"
-    state: directory
-    mode: '0755'
-  become: yes
 
 - name: Template mosquitto.conf
   ansible.builtin.template:
