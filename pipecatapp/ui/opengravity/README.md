@@ -13,6 +13,7 @@ An experimental, lightweight, BYOK (Bring Your Own Key) recreation of the Google
 Built in pure HTML/CSS/JS for maximum speed and zero installation.
 
 ## Origin
+
 - I was using Google Antigravity quite intensively for a load of projects I was making.
 - Very quickly, I got hit with *rate limits*.
 - Google Antigravity has become over the past few months quite infamous for this, and doesnt seem to be improving.
@@ -23,6 +24,7 @@ Built in pure HTML/CSS/JS for maximum speed and zero installation.
 ## 📸 Examples
 
 ### Autonomous Web Development
+
 The agent can proactively initialize projects, install dependencies using `pnpm`, and build complete applications while you watch.
 
 ![HTML Site Examples](https://github.com/ab-613/OpenGravity/blob/main/assets/screenshot.png?raw=true)
@@ -32,6 +34,7 @@ The agent can proactively initialize projects, install dependencies using `pnpm`
 ---
 
 ### ✨ Features
+
 - **BYOK (Bring Your Own Key):** Total privacy. Currently **ONLY** supports Gemini API models (e.g. `gemini-3.1-pro-preview`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite`, \[though to change you will need to modify `agent.js:8`\]).
 - **Proactive Agentic Reasoning:** Uses advanced thinking models to plan, execute, and validate tasks without constant user intervention.
 - **High-Performance Terminal:** Integrated **xterm.js** with a real Linux-like environment provided by **WebContainer API**.
@@ -40,9 +43,11 @@ The agent can proactively initialize projects, install dependencies using `pnpm`
 - **Secure by Design:** API keys are stored only in your browser's `localStorage`.
 
 ## 🛠️ How you can help
+
 I’m currently heads-down in my studies, so I’m handing the baton to the community. The UI looks great and the basic logic is there, but it needs "pro" features to truly beat the original.
 
 I want people to take this and make it usable for the average person. Specifically:
+
 - **Better Orchestration:** The current agent logic is basic; it needs better "Manager/Sub-agent" handling.
 - **Provider Support:** Right now it's Gemini-only. Help me add OpenAI, Anthropic, etc...
 - **Bugs:** The file sync and terminal can be finicky—it needs some "battle-hardening."
@@ -52,19 +57,20 @@ I want people to take this and make it usable for the average person. Specifical
 - **Git Support:** The icon is present, but there is no logic behind it yet.
 - **Settings UI:** Users must click the small "a" icon in the top right to enter an API key. A proper, user-friendly settings panel is needed.
 
-
 ### 🚀 Getting Started
+
 1. Serve the project root using a local server (`python3 server.py`).
 2. Open `http://localhost:8000` in your browser.
 3. Click the tiny "a" icon in the top-right corner (yeah, it's awkward—it's on the to-do list to fix!) and enter your Gemini API Key.
 4. Start chatting with Antigravity in the right panel.
 
 ### 🛠️ Status: On Hiatus
+
 I'm balancing this with my GCSEs, so I will be reviewing and merging PRs every Sunday evening.
 
 ### 📜 License
-Licensed under **GPL-3.0**. See the LICENSE file for details on commercial use and contributions.
 
+Licensed under **GPL-3.0**. See the LICENSE file for details on commercial use and contributions.
 
 ## ⭐ Star History
 

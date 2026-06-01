@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Inside start_nomad.sh
+
+# Default fallback to single-node mode
+BOOTSTRAP_COUNT=1
+
+# Check network connectivity to your expected cluster peers
+# Dynamically calculate BOOTSTRAP_COUNT based on other controller nodes
+ONLINE_PEERS=0
+{% if groups['controller_nodes'] is defined %}
+{% for host in groups['controller_nodes'] %}
+{% if hostvars[host]['cluster_ip'] is defined and hostvars[host]['cluster_ip'] != cluster_ip %}
+# Ping peer {{ hostvars[host]['cluster_ip'] }}
+if ping -c 1 -W 1 {{ hostvars[host]['cluster_ip'] }} > /dev/null 2>&1; then
+    ONLINE_PEERS=$((ONLINE_PEERS + 1))
+fi
+{% endif %}
+{% endfor %}
+{% endif %}
+
+# If peers are online, seamlessly scale up the bootstrap expectation
+if [ "$ONLINE_PEERS" -ge 2 ]; then
+    BOOTSTRAP_COUNT=3
+elif [ "$ONLINE_PEERS" -eq 1 ]; then
+    BOOTSTRAP_COUNT=2
+fi
+
+echo "Detected server landscape. Launching Nomad with bootstrap_expect=$BOOTSTRAP_COUNT"
+
+# Launch Nomad and override the HCL configuration via CLI flags
+exec /usr/local/bin/nomad agent -config=/etc/nomad.d -bootstrap-expect=$BOOTSTRAP_COUNT

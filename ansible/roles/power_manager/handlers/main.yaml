@@ -4,3 +4,9 @@
   ansible.builtin.systemd:
     name: power-agent
     state: restarted
+
+- name: restart nomad watchdog
+  become: yes
+  ansible.builtin.systemd:
+    name: nomad-watchdog
+    state: restarted

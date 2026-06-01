@@ -20,6 +20,7 @@ Agent Lightning is a library from Microsoft Research designed to provide trainin
 Our project relies heavily on custom abstractions like `TwinService`, `WorkflowContext`, and various specific nodes (`EmperorAgentNode`, `LLMRouterNode`, etc.) rather than standard frameworks.
 
 **How Agent Lightning could fit in:**
+
 1. **Trace Collection**: We can integrate the Agent Lightning tracer or manual `agl.emit` calls within our node execution logic (e.g., inside `EmperorAgentNode.execute` or `ToolExecutorNode.execute`). This would capture the exact prompts we construct and the tool outputs we receive.
 2. **Reward Calculation**: We need to define explicit reward functions for our agent tasks. This could be tied to our existing test suites or the output of our `ExperimentTool` and `CodeRunnerTool`.
 3. **Prompt Optimization**: Agent Lightning could automatically tune our `SYSTEM_PROMPT_TEMPLATE` or specific tool descriptions based on execution traces and success rates.
