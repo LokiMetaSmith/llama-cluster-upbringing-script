@@ -10,22 +10,14 @@
     path: "{{ item }}"
     state: directory
     mode: '0755'
+    owner: "1883"
+    group: "1883"
   become: yes
   loop:
     - "{{ nomad_volumes_dir }}/mqtt-data"
     - "{{ nomad_volumes_dir }}/mqtt-data/data"
     - "{{ nomad_volumes_dir }}/mqtt-data/log"
     - "{{ nomad_volumes_dir }}/mqtt-data/config"
-
-
-- name: Set ownership for Mosquitto directories
-  ansible.builtin.file:
-    path: "{{ nomad_volumes_dir }}/mqtt-data"
-    state: directory
-    owner: "1883"
-    group: "1883"
-    recurse: yes
-  become: yes
 
 - name: Flush handlers to ensure nomad is restarted and ready
   ansible.builtin.meta: flush_handlers
@@ -163,6 +155,8 @@
     src: mosquitto.conf.j2
     dest: "{{ nomad_volumes_dir }}/mqtt-data/config/mosquitto.conf"
     mode: '0644'
+    owner: "1883"
+    group: "1883"
   become: yes
 
 - name: Template mqtt Nomad job file
