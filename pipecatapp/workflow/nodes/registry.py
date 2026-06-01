@@ -24,12 +24,31 @@ class NodeRegistry:
         metadata = []
         for name, cls in self._registry.items():
             doc = cls.__doc__ or ""
-            # Simple parsing of docstring if it follows a specific format, or just return basic info
+
+            # Extract inputs/outputs if defined on the class or via generic config
+            # (Fallback to empty arrays if not defined to prevent UI crashes)
+            inputs = []
+            outputs = []
+
+            # Temporary hack: Instantiate a dummy node to inspect its expected inputs/outputs.
+            # In a real system, these should be static class attributes or Pydantic models.
+            try:
+                dummy_instance = cls({"id": "dummy"})
+                if hasattr(dummy_instance, "expected_inputs"):
+                    inputs = [{"name": i, "type": "any"} for i in dummy_instance.expected_inputs]
+                if hasattr(dummy_instance, "expected_outputs"):
+                    outputs = [{"name": o, "type": "any"} for o in dummy_instance.expected_outputs]
+            except Exception:
+                pass # Ignore if dummy instantiation fails
+
             node_info = {
                 "name": name,
                 "description": doc.strip().split("\n")[0] if doc else "No description available.",
                 "category": getattr(cls, "category", "General"),
-                "icon": getattr(cls, "icon", "node.svg")
+                "icon": getattr(cls, "icon", "node.svg"),
+                "inputs": inputs,
+                "outputs": outputs,
+                "properties": {} # Placeholder for future dynamic properties schema
             }
             metadata.append(node_info)
         return metadata

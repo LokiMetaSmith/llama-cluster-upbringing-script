@@ -194,8 +194,8 @@
         // Initialize WorkflowEditor
         // We ensure WorkflowEditor is available. It is defined in editor.js.
         // Even if it's not on 'window' explicitly in some environments, checking typeof is safer.
-        if (typeof WorkflowEditor !== 'undefined') {
-            WorkflowEditor.init("mycanvas", { skipResize: true });
+        (async () => { if (typeof WorkflowEditor !== 'undefined') {
+            await WorkflowEditor.init("mycanvas", { skipResize: true });
 
             // Performance Optimization: Throttle draws to 30 FPS to save VR resources
             let lastDraw = 0;
@@ -212,7 +212,7 @@
             WorkflowEditor.graph.start();
         } else {
             console.error("WorkflowEditor not found! Is editor.js loaded?");
-        }
+        } })();
 
         // 2. WebSocket Connection
         const apiKey = localStorage.getItem('api_key') || '';
