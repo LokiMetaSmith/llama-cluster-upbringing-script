@@ -97,6 +97,7 @@
     </a-scene>
 
     <script>
+        (async function() {
         // --- 1. State & Config ---
         const SCENE_SCALE = 0.1; // Scale down d3 coordinates to VR space
         const GRAPH_CONTAINER = document.getElementById('graph-container');
@@ -227,7 +228,7 @@
             document.getElementById('vr-graph-container').appendChild(canvas);
 
             if (typeof WorkflowEditor !== 'undefined') {
-                WorkflowEditor.init("mycanvas", { skipResize: true });
+                await WorkflowEditor.init("mycanvas", { skipResize: true });
 
                 // Throttling for VR performance
                 let lastDraw = 0;
@@ -585,6 +586,7 @@
         // --- 6. Init ---
         // (Moved to top-level to handle loading async if needed, but D3 init is sync)
 
+        })();
     </script>
 </body>
 </html>

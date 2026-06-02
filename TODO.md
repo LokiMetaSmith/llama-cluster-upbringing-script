@@ -321,7 +321,7 @@ This section tracks actionable ideas derived from the `docs/analysis/FLOWISE_ANA
 - [x] **Expose UI Metadata from Backend:** Add a new REST API endpoint to the Python server that returns a JSON schema describing the available workflow nodes (including category, icon, accepted input types, and tooltips). Use this to dynamically construct the frontend node properties panel.
 - [x] **Introduce a `PostProcessorNode`:** Implement an execution hook or a dedicated node that allows arbitrary Javascript/Python manipulation of the final output dictionary (e.g., reformatting or filtering data) before it is sent back to the client.
 - [x] **Implement Auto-Layout:** Integrate a library like `dagre.js` to calculate node positions, then apply those `x,y` coordinates to our LiteGraph nodes.
-- [ ] **Enhance Node Metadata:** As noted in `FLOWISE_ANALYSIS.md`, we should build a strong separation between the visual card and the backend execution logic, allowing dynamic UI generation based on Python schema definitions.
+- [x] **Enhance Node Metadata:** As noted in `FLOWISE_ANALYSIS.md`, we should build a strong separation between the visual card and the backend execution logic, allowing dynamic UI generation based on Python schema definitions.
 - [x] **Group Support:** We need to explicitly build "Group" visual boundaries in LiteGraph to support the Obsidian Canvas grouping feature.
 
 ## Suggested New Items
