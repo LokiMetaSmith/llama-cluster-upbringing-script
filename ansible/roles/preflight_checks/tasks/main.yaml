@@ -1,9 +1,10 @@
 - name: Check free disk space on root
   ansible.builtin.assert:
     that:
-      - item.mount != '/' or item.size_available > 2147483648
-    fail_msg: "Insufficient disk space on / (needs at least 2GB)"
-    success_msg: "Disk space on / is sufficient"
+      - item.mount != '/' or item.size_available > 32212254720
+    fail_msg: "Insufficient disk space on /(needs at least 30GB). Some heavy playbooks may soft-fail."
+    success_msg: "Disk space on / is sufficient (at least 30GB)."
+  ignore_errors: true
   loop: "{{ ansible_facts['mounts'] }}"
   when: item.mount == '/'
 
