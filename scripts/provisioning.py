@@ -169,6 +169,15 @@ def wait_for_ports_freed(ports, timeout=10):
         else:
             print(f"{Colors.OKGREEN}✅ Port {port} is free.{Colors.ENDC}")
 
+def get_current_disk_usage():
+    """Returns a tuple of (used_mb, free_mb) for the root partition."""
+    try:
+        total, used, free = shutil.disk_usage("/")
+        return used // (1024 * 1024), free // (1024 * 1024)
+    except Exception:
+        pass
+    return None, None
+
 def get_current_ram_usage():
     """Returns the current memory usage in MB by parsing /proc/meminfo."""
     try:
@@ -812,19 +821,32 @@ def main():
         if "core_ai_services.yaml" in normalized_path:
             cleanup_memory_for_core_ai()
 
-        # --- RAM Profiling Before ---
+        # --- Profiling Before ---
         ram_before = get_current_ram_usage()
+        disk_used_before, _ = get_current_disk_usage()
 
         # --- Run ---
         run_playbook(pb_path, extra_vars, args.tags, verbose_level)
         executed_playbooks.append(pb_path)
 
-        # --- RAM Profiling After ---
+        # --- Profiling After ---
         ram_after = get_current_ram_usage()
+        disk_used_after, disk_free_after = get_current_disk_usage()
+
+        output_parts = []
         if ram_before is not None and ram_after is not None:
             ram_delta = ram_after - ram_before
-            delta_str = f"+{ram_delta} MB" if ram_delta >= 0 else f"{ram_delta} MB"
-            print(f"{Colors.OKCYAN}📊 RAM Usage: {ram_after} MB ({delta_str} after running {os.path.basename(pb_path)}){Colors.ENDC}")
+            ram_delta_str = f"+{ram_delta} MB" if ram_delta >= 0 else f"{ram_delta} MB"
+            output_parts.append(f"RAM: {ram_after} MB ({ram_delta_str})")
+
+        if disk_used_before is not None and disk_used_after is not None and disk_free_after is not None:
+            disk_delta = disk_used_after - disk_used_before
+            disk_delta_str = f"+{disk_delta} MB" if disk_delta >= 0 else f"{disk_delta} MB"
+            output_parts.append(f"Disk Used: {disk_used_after} MB ({disk_delta_str})")
+            output_parts.append(f"Disk Free: {disk_free_after} MB")
+
+        if output_parts:
+            print(f"{Colors.OKCYAN}📊 {' | '.join(output_parts)} after running {os.path.basename(pb_path)}{Colors.ENDC}")
 
         # Save State
         with open(STATE_FILE, 'w') as f:
