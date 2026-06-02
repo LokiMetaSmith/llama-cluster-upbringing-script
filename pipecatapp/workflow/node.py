@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Set, Optional
+from typing import Dict, Any, List, Set, Optional, Tuple
 
 class Node(ABC):
     """Abstract base class for a node in the workflow graph."""
@@ -11,8 +11,8 @@ class Node(ABC):
         # Explicit I/O Typing (Haystack Concept)
         # Nodes should explicitly define what inputs they expect and what outputs they produce.
         # This allows for pre-runtime graph validation.
-        self.expected_inputs: Set[str] = set()
-        self.expected_outputs: Set[str] = set()
+        self.expected_inputs: list[str] = []
+        self.expected_outputs: list[str] = []
 
         # Enhanced 3D Spatial Properties
         # These default values ensure backward compatibility with existing workflows

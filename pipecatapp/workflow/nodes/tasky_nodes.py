@@ -14,8 +14,8 @@ class TaskyAuditNode(Node):
     """
     def __init__(self, config):
         super().__init__(config)
-        self.expected_inputs = {"task_markdown", "execution_result"}
-        self.expected_outputs = {"updated_markdown", "all_completed", "audit_report"}
+        self.expected_inputs = ["task_markdown", "execution_result"]
+        self.expected_outputs = ["updated_markdown", "all_completed", "audit_report"]
 
     async def execute(self, context: WorkflowContext):
         task_markdown = self.get_input(context, "task_markdown")

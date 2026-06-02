@@ -15,8 +15,8 @@ class TextSplitterNode(Node):
     """
     def __init__(self, config):
         super().__init__(config)
-        self.expected_inputs = {"raw_text", "metadata"}
-        self.expected_outputs = {"documents"}
+        self.expected_inputs = ["raw_text", "metadata"]
+        self.expected_outputs = ["documents"]
         self.chunk_size = config.get("config", {}).get("chunk_size", 1000)
         self.chunk_overlap = config.get("config", {}).get("chunk_overlap", 100)
 
@@ -54,8 +54,8 @@ class DocumentWriterNode(Node):
     """
     def __init__(self, config):
         super().__init__(config)
-        self.expected_inputs = {"documents"}
-        self.expected_outputs = {"write_count"}
+        self.expected_inputs = ["documents"]
+        self.expected_outputs = ["write_count"]
 
     async def execute(self, context: WorkflowContext):
         documents = self.get_input(context, "documents")

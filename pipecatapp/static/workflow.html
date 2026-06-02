@@ -164,11 +164,12 @@
             <canvas id="editor-canvas"></canvas>
         </div>
     </div>
+
     <script src="/static/js/dagre.min.js"></script>
 
     <script src="/static/js/litegraph.js"></script>
     <script src="/static/js/editor.js"></script>
-    <script>
+    <script type="module">
         document.addEventListener('DOMContentLoaded', async () => {
             const statusText = document.getElementById('status-text');
 
@@ -190,7 +191,7 @@
             }
 
             // Initialize Editor with status callback
-            WorkflowEditor.init("editor-canvas", {
+            await WorkflowEditor.init("editor-canvas", {
                 onStatusUpdate: showStatus
             });
 
