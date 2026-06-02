@@ -227,7 +227,7 @@
             const canvas = document.getElementById("mycanvas");
             document.getElementById('vr-graph-container').appendChild(canvas);
 
-            if (typeof WorkflowEditor !== 'undefined') {
+            (async () => { if (typeof WorkflowEditor !== 'undefined') {
                 await WorkflowEditor.init("mycanvas", { skipResize: true });
 
                 // Throttling for VR performance
@@ -244,7 +244,7 @@
                 WorkflowEditor.graph.start();
             } else {
                 console.warn("WorkflowEditor not found");
-            }
+            } })();
         } catch(e) {
             console.error("Editor Init Error", e);
         }

@@ -351,6 +351,11 @@ class EmperorAgentNode(Node):
     A self-contained agent node that implements the 'Emperor Has No Clothes'
     loop: simple tools, direct file manipulation, and an inner REPL.
     """
+    def __init__(self, config):
+        super().__init__(config)
+        self.expected_inputs = ["task", "user_text"]
+        self.expected_outputs = ["response"]
+
     async def execute(self, context: WorkflowContext):
         task = self.get_input(context, "task") or self.get_input(context, "user_text")
         if not task:
