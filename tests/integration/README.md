@@ -9,7 +9,6 @@ This directory contains integration tests.
 ## Files
 
 - **test_consul_role.yaml**: An integration test for the Consul role.
-- **test_home_assistant.yaml**: An integration test for the Home Assistant role.
 - **test_nomad_role.yaml**: An integration test for the Nomad role.
 - **test_pipecat_app.py**: An integration test for the pipecat application.
 - **test_preemption.py**: An integration test for preemption.

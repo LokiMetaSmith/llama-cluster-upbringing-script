@@ -109,11 +109,6 @@ This document maps every file in the repository, their description, and utilizat
 | `ansible/roles/heretic_tool/defaults/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/heretic_tool/meta/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/heretic_tool/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
-| `ansible/roles/home_assistant/meta/main.yaml` | 🟢 Referenced | File: main.yaml |  |
-| `ansible/roles/home_assistant/meta/main.yml` | 🟢 Referenced | File: main.yml |  |
-| `ansible/roles/home_assistant/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
-| `ansible/roles/home_assistant/templates/configuration.yaml.j2` | 🟢 Referenced | Enables the default configuration for Home Assistant |  |
-| `ansible/roles/home_assistant/templates/home_assistant.nomad.j2` | 🟢 Referenced | File: home_assistant.nomad.j2 |  |
 | `ansible/roles/kittentts/tasks/main.yaml` | 🟢 Referenced | This role is deprecated and will be replaced by a Piper TTS implementation. |  |
 | `ansible/roles/librarian/defaults/main.yml` | 🟢 Referenced | File: main.yml |  |
 | `ansible/roles/librarian/handlers/main.yml` | 🟢 Referenced | File: main.yml |  |
@@ -142,7 +137,7 @@ This document maps every file in the repository, their description, and utilizat
 | `ansible/roles/memory_graph/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/memory_graph/templates/memory-graph.nomad.j2` | 🟢 Referenced | File: memory-graph.nomad.j2 |  |
 | `ansible/roles/memory_service/files/app.py` | 🟢 Referenced | File: app.py | **Classes:** Event, WorkItemCreate, WorkItemUpdate, DLQItemCreate, DLQClaimRequest, DLQItemUpdate<br>**Functions:** add_event, get_events, create_work_item, list_work_items, get_work_item... |
-| `ansible/roles/memory_service/files/pmm_memory.py` | 🟢 Referenced | File: pmm_memory.py | **Classes:** PMMMemory<br>**Functions:** __init__, _init_db, _get_last_hash, _calculate_hash, add_event_sync... |
+| `ansible/roles/memory_service/files/pmm_memory.py` | 🟢 Referenced | File: pmm_memory.py | **Classes:** PMMMemory<br>**Functions:** **init**, _init_db, _get_last_hash,_calculate_hash, add_event_sync... |
 | `ansible/roles/memory_service/handlers/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/memory_service/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/memory_service/templates/memory_service.nomad.j2` | 🟢 Referenced | File: memory_service.nomad.j2 |  |
@@ -161,7 +156,7 @@ This document maps every file in the repository, their description, and utilizat
 | `ansible/roles/miniray/files/Dockerfile` | 🟢 Referenced | File: Dockerfile |  |
 | `ansible/roles/miniray/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/miniray/templates/miniray.nomad.j2` | 🟢 Referenced | File: miniray.nomad.j2 |  |
-| `ansible/roles/moe_gateway/files/gateway.py` | 🟢 Referenced | File: gateway.py | **Classes:** ServiceNotFound<br>**Functions:** init_db, _log_request_sync, log_request, _get_recent_requests_sync, get_recent_requests... |
+| `ansible/roles/moe_gateway/files/gateway.py` | 🟢 Referenced | File: gateway.py | **Classes:** ServiceNotFound<br>**Functions:** init_db,_log_request_sync, log_request,_get_recent_requests_sync, get_recent_requests... |
 | `ansible/roles/moe_gateway/files/static/index.html` | 🟢 Referenced | File: index.html |  |
 | `ansible/roles/moe_gateway/handlers/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/moe_gateway/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
@@ -285,40 +280,40 @@ This document maps every file in the repository, their description, and utilizat
 | `ansible/roles/tool_server/Dockerfile` | 🟢 Referenced | File: Dockerfile |  |
 | `ansible/roles/tool_server/app.py` | 🟢 Referenced | File: app.py | **Classes:** ToolRequest<br>**Functions:** read_health, run_tool, list_tools |
 | `ansible/roles/tool_server/entrypoint.sh` | 🟢 Referenced | bin/bash |  |
-| `ansible/roles/tool_server/pmm_memory.py` | 🟢 Referenced | File: pmm_memory.py | **Classes:** PMMMemory<br>**Functions:** __init__, _init_db, _get_last_hash, _calculate_hash, add_event... |
+| `ansible/roles/tool_server/pmm_memory.py` | 🟢 Referenced | File: pmm_memory.py | **Classes:** PMMMemory<br>**Functions:** **init**, _init_db, _get_last_hash,_calculate_hash, add_event... |
 | `ansible/roles/tool_server/preload_models.py` | 🟢 Referenced | Preload models to ensure they are cached in the Docker image |  |
 | `ansible/roles/tool_server/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/tool_server/templates/tool_server.nomad.j2` | 🟢 Referenced | File: tool_server.nomad.j2 |  |
-| `ansible/roles/tool_server/tools/ansible_tool.py` | 🟢 Referenced | File: ansible_tool.py | **Classes:** Ansible_Tool<br>**Functions:** __init__, run_playbook |
-| `ansible/roles/tool_server/tools/archivist_tool.py` | 🟢 Referenced | File: archivist_tool.py | **Classes:** ArchivistTool<br>**Functions:** __init__, run, __call__ |
-| `ansible/roles/tool_server/tools/claude_clone_tool.py` | 🟢 Referenced | File: claude_clone_tool.py | **Classes:** ClaudeCloneTool<br>**Functions:** __init__, _run_command, explain, report, generate... |
-| `ansible/roles/tool_server/tools/code_runner_tool.py` | 🟢 Referenced | File: code_runner_tool.py | **Classes:** CodeRunnerTool<br>**Functions:** __init__, run_python_code, run_code_in_sandbox |
-| `ansible/roles/tool_server/tools/council_tool.py` | 🟢 Referenced | File: council_tool.py | **Classes:** CouncilTool<br>**Functions:** __init__, _discover_local_experts, _query_model, convene |
-| `ansible/roles/tool_server/tools/desktop_control_tool.py` | 🟢 Referenced | File: desktop_control_tool.py | **Classes:** DesktopControlTool<br>**Functions:** __init__, get_desktop_screenshot, click_at, type_text |
-| `ansible/roles/tool_server/tools/file_editor_tool.py` | 🟢 Referenced | File: file_editor_tool.py | **Classes:** FileEditorTool<br>**Functions:** __init__, _validate_path, read_file, write_file, apply_patch... |
-| `ansible/roles/tool_server/tools/final_answer_tool.py` | 🟢 Referenced | File: final_answer_tool.py | **Classes:** FinalAnswerTool<br>**Functions:** __init__, submit_task |
+| `ansible/roles/tool_server/tools/ansible_tool.py` | 🟢 Referenced | File: ansible_tool.py | **Classes:** Ansible_Tool<br>**Functions:** **init**, run_playbook |
+| `ansible/roles/tool_server/tools/archivist_tool.py` | 🟢 Referenced | File: archivist_tool.py | **Classes:** ArchivistTool<br>**Functions:** **init**, run, **call** |
+| `ansible/roles/tool_server/tools/claude_clone_tool.py` | 🟢 Referenced | File: claude_clone_tool.py | **Classes:** ClaudeCloneTool<br>**Functions:** **init**, _run_command, explain, report, generate... |
+| `ansible/roles/tool_server/tools/code_runner_tool.py` | 🟢 Referenced | File: code_runner_tool.py | **Classes:** CodeRunnerTool<br>**Functions:** **init**, run_python_code, run_code_in_sandbox |
+| `ansible/roles/tool_server/tools/council_tool.py` | 🟢 Referenced | File: council_tool.py | **Classes:** CouncilTool<br>**Functions:** **init**, _discover_local_experts,_query_model, convene |
+| `ansible/roles/tool_server/tools/desktop_control_tool.py` | 🟢 Referenced | File: desktop_control_tool.py | **Classes:** DesktopControlTool<br>**Functions:** **init**, get_desktop_screenshot, click_at, type_text |
+| `ansible/roles/tool_server/tools/file_editor_tool.py` | 🟢 Referenced | File: file_editor_tool.py | **Classes:** FileEditorTool<br>**Functions:** **init**, _validate_path, read_file, write_file, apply_patch... |
+| `ansible/roles/tool_server/tools/final_answer_tool.py` | 🟢 Referenced | File: final_answer_tool.py | **Classes:** FinalAnswerTool<br>**Functions:** **init**, submit_task |
 | `ansible/roles/tool_server/tools/gemini_cli.py` | 🟢 Referenced | File: gemini_cli.py | **Functions:** send_message |
 | `ansible/roles/tool_server/tools/get_nomad_job.py` | 🟢 Referenced | File: get_nomad_job.py | **Functions:** get_nomad_job_definition, main |
-| `ansible/roles/tool_server/tools/git_tool.py` | 🟢 Referenced | File: git_tool.py | **Classes:** Git_Tool<br>**Functions:** __init__, _run_git_command, clone, pull, push... |
-| `ansible/roles/tool_server/tools/ha_tool.py` | 🟢 Referenced | File: ha_tool.py | **Classes:** HA_Tool<br>**Functions:** __init__, call_ai_task |
-| `ansible/roles/tool_server/tools/llxprt_code_tool.py` | 🟢 Referenced | File: llxprt_code_tool.py | **Classes:** LLxprt_Code_Tool<br>**Functions:** __init__, run |
-| `ansible/roles/tool_server/tools/mcp_tool.py` | 🟢 Referenced | File: mcp_tool.py | **Classes:** MCP_Tool<br>**Functions:** __init__, get_status, get_memory_summary, clear_short_term_memory |
-| `ansible/roles/tool_server/tools/opencode_tool.py` | 🟢 Referenced | File: opencode_tool.py | **Classes:** OpencodeTool<br>**Functions:** __init__, run |
-| `ansible/roles/tool_server/tools/orchestrator_tool.py` | 🟢 Referenced | File: orchestrator_tool.py | **Classes:** OrchestratorTool<br>**Functions:** __init__, dispatch_job |
-| `ansible/roles/tool_server/tools/planner_tool.py` | 🟢 Referenced | File: planner_tool.py | **Classes:** PlannerTool<br>**Functions:** __init__, _discover_llm_url, _call_llm, plan_and_execute |
-| `ansible/roles/tool_server/tools/power_tool.py` | 🟢 Referenced | File: power_tool.py | **Classes:** Power_Tool<br>**Functions:** __init__, set_idle_threshold |
-| `ansible/roles/tool_server/tools/project_mapper_tool.py` | 🟢 Referenced | File: project_mapper_tool.py | **Classes:** ProjectMapperTool<br>**Functions:** __init__, _is_ignored, scan, _guess_type, _extract_imports |
-| `ansible/roles/tool_server/tools/prompt_improver_tool.py` | 🟢 Referenced | File: prompt_improver_tool.py | **Classes:** PromptImproverTool<br>**Functions:** __init__, _discover_llm, _call_llm, create_prompt_plan |
-| `ansible/roles/tool_server/tools/rag_tool.py` | 🟢 Referenced | File: rag_tool.py | **Classes:** RAG_Tool<br>**Functions:** __init__, _build_knowledge_base, search_knowledge_base |
+| `ansible/roles/tool_server/tools/git_tool.py` | 🟢 Referenced | File: git_tool.py | **Classes:** Git_Tool<br>**Functions:** **init**,_run_git_command, clone, pull, push... |
+| `ansible/roles/tool_server/tools/ha_tool.py` | 🟢 Referenced | File: ha_tool.py | **Classes:** HA_Tool<br>**Functions:** **init**, call_ai_task |
+| `ansible/roles/tool_server/tools/llxprt_code_tool.py` | 🟢 Referenced | File: llxprt_code_tool.py | **Classes:** LLxprt_Code_Tool<br>**Functions:** **init**, run |
+| `ansible/roles/tool_server/tools/mcp_tool.py` | 🟢 Referenced | File: mcp_tool.py | **Classes:** MCP_Tool<br>**Functions:** **init**, get_status, get_memory_summary, clear_short_term_memory |
+| `ansible/roles/tool_server/tools/opencode_tool.py` | 🟢 Referenced | File: opencode_tool.py | **Classes:** OpencodeTool<br>**Functions:** **init**, run |
+| `ansible/roles/tool_server/tools/orchestrator_tool.py` | 🟢 Referenced | File: orchestrator_tool.py | **Classes:** OrchestratorTool<br>**Functions:** **init**, dispatch_job |
+| `ansible/roles/tool_server/tools/planner_tool.py` | 🟢 Referenced | File: planner_tool.py | **Classes:** PlannerTool<br>**Functions:** **init**, _discover_llm_url,_call_llm, plan_and_execute |
+| `ansible/roles/tool_server/tools/power_tool.py` | 🟢 Referenced | File: power_tool.py | **Classes:** Power_Tool<br>**Functions:** **init**, set_idle_threshold |
+| `ansible/roles/tool_server/tools/project_mapper_tool.py` | 🟢 Referenced | File: project_mapper_tool.py | **Classes:** ProjectMapperTool<br>**Functions:** **init**, _is_ignored, scan, _guess_type, _extract_imports |
+| `ansible/roles/tool_server/tools/prompt_improver_tool.py` | 🟢 Referenced | File: prompt_improver_tool.py | **Classes:** PromptImproverTool<br>**Functions:** **init**, _discover_llm, _call_llm, create_prompt_plan |
+| `ansible/roles/tool_server/tools/rag_tool.py` | 🟢 Referenced | File: rag_tool.py | **Classes:** RAG_Tool<br>**Functions:** **init**,_build_knowledge_base, search_knowledge_base |
 | `ansible/roles/tool_server/tools/sandbox.ts` | 🟢 Referenced | sandbox.ts |  |
-| `ansible/roles/tool_server/tools/shell_tool.py` | 🟢 Referenced | File: shell_tool.py | **Classes:** ShellTool<br>**Functions:** __init__, _ensure_session, execute_command |
-| `ansible/roles/tool_server/tools/smol_agent_tool.py` | 🟢 Referenced | File: smol_agent_tool.py | **Classes:** SmolAgentTool, CodeAgent, LiteLLMModel<br>**Functions:** __init__, _initialize, _execute_in_sandbox, run, __init__... |
-| `ansible/roles/tool_server/tools/ssh_tool.py` | 🟢 Referenced | File: ssh_tool.py | **Classes:** SSH_Tool<br>**Functions:** __init__, run_command |
-| `ansible/roles/tool_server/tools/summarizer_tool.py` | 🟢 Referenced | File: summarizer_tool.py | **Classes:** SummarizerTool<br>**Functions:** __init__, get_summary |
-| `ansible/roles/tool_server/tools/swarm_tool.py` | 🟢 Referenced | File: swarm_tool.py | **Classes:** SwarmTool<br>**Functions:** __init__, spawn_workers, kill_worker |
-| `ansible/roles/tool_server/tools/tap_service.py` | 🟢 Referenced | File: tap_service.py | **Classes:** TapService<br>**Functions:** __init__, process_frame |
-| `ansible/roles/tool_server/tools/term_everything_tool.py` | 🟢 Referenced | File: term_everything_tool.py | **Classes:** TermEverythingTool<br>**Functions:** __init__, execute |
-| `ansible/roles/tool_server/tools/web_browser_tool.py` | 🟢 Referenced | Mock playwright if it's not available | **Classes:** WebBrowserTool<br>**Functions:** __init__, goto, get_page_content, get_screenshot, click... |
+| `ansible/roles/tool_server/tools/shell_tool.py` | 🟢 Referenced | File: shell_tool.py | **Classes:** ShellTool<br>**Functions:** **init**, _ensure_session, execute_command |
+| `ansible/roles/tool_server/tools/smol_agent_tool.py` | 🟢 Referenced | File: smol_agent_tool.py | **Classes:** SmolAgentTool, CodeAgent, LiteLLMModel<br>**Functions:** **init**, _initialize,_execute_in_sandbox, run, **init**... |
+| `ansible/roles/tool_server/tools/ssh_tool.py` | 🟢 Referenced | File: ssh_tool.py | **Classes:** SSH_Tool<br>**Functions:** **init**, run_command |
+| `ansible/roles/tool_server/tools/summarizer_tool.py` | 🟢 Referenced | File: summarizer_tool.py | **Classes:** SummarizerTool<br>**Functions:** **init**, get_summary |
+| `ansible/roles/tool_server/tools/swarm_tool.py` | 🟢 Referenced | File: swarm_tool.py | **Classes:** SwarmTool<br>**Functions:** **init**, spawn_workers, kill_worker |
+| `ansible/roles/tool_server/tools/tap_service.py` | 🟢 Referenced | File: tap_service.py | **Classes:** TapService<br>**Functions:** **init**, process_frame |
+| `ansible/roles/tool_server/tools/term_everything_tool.py` | 🟢 Referenced | File: term_everything_tool.py | **Classes:** TermEverythingTool<br>**Functions:** **init**, execute |
+| `ansible/roles/tool_server/tools/web_browser_tool.py` | 🟢 Referenced | Mock playwright if it's not available | **Classes:** WebBrowserTool<br>**Functions:** **init**, goto, get_page_content, get_screenshot, click... |
 | `ansible/roles/tpm_ssh/handlers/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/tpm_ssh/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
 | `ansible/roles/tpm_ssh/templates/tpm-ssh-agent.service.j2` | 🟢 Referenced | File: tpm-ssh-agent.service.j2 |  |
@@ -328,7 +323,7 @@ This document maps every file in the repository, their description, and utilizat
 | `ansible/roles/traefik/tasks/main.yml` | 🟢 Referenced | File: main.yml |  |
 | `ansible/roles/traefik/templates/traefik.nomad.j2` | 🟢 Referenced | File: traefik.nomad.j2 |  |
 | `ansible/roles/unified_fs/defaults/main.yml` | 🟢 Referenced | File: main.yml |  |
-| `ansible/roles/unified_fs/files/unified_fs_agent.py` | 🟢 Referenced | usr/bin/env python3 | **Classes:** DataCache, Backend, ConsulBackend, MemoryBackend, UnifiedFS<br>**Functions:** __init__, get, set, getattr, readdir... |
+| `ansible/roles/unified_fs/files/unified_fs_agent.py` | 🟢 Referenced | usr/bin/env python3 | **Classes:** DataCache, Backend, ConsulBackend, MemoryBackend, UnifiedFS<br>**Functions:** **init**, get, set, getattr, readdir... |
 | `ansible/roles/unified_fs/handlers/main.yml` | 🟢 Referenced | File: main.yml |  |
 | `ansible/roles/unified_fs/tasks/main.yml` | 🟢 Referenced | File: main.yml |  |
 | `ansible/roles/unified_fs/templates/unified_fs.service.j2` | 🟢 Referenced | File: unified_fs.service.j2 |  |
@@ -485,7 +480,7 @@ This document maps every file in the repository, their description, and utilizat
 | `modules/keystone-polyphony/scripts/inject-secrets.sh` | 🟢 Referenced | scripts/inject-secrets.sh |  |
 | `modules/keystone-polyphony/scripts/install-hooks.sh` | 🟢 Referenced | usr/bin/env bash |  |
 | `modules/keystone-polyphony/scripts/lint.sh` | 🟢 Referenced | usr/bin/env bash |  |
-| `modules/keystone-polyphony/scripts/load_test.py` | 🟢 Referenced | File: load_test.py | **Classes:** LoadTestAgent<br>**Functions:** main, __init__, start, stop, run |
+| `modules/keystone-polyphony/scripts/load_test.py` | 🟢 Referenced | File: load_test.py | **Classes:** LoadTestAgent<br>**Functions:** main, **init**, start, stop, run |
 | `modules/keystone-polyphony/scripts/package.json` | 🟢 Referenced | File: package.json |  |
 | `modules/keystone-polyphony/scripts/ping.py` | 🟢 Referenced | usr/bin/env python3 | **Functions:** main |
 | `modules/keystone-polyphony/scripts/refine_issue.py` | 🟢 Referenced | File: refine_issue.py | **Functions:** main |
@@ -502,10 +497,10 @@ This document maps every file in the repository, their description, and utilizat
 | `modules/keystone-polyphony/scripts/worker_loop.py` | 🔴 Orphan | File: worker_loop.py | **Functions:** main, on_command |
 | `modules/keystone-polyphony/simulate_swarm.py` | 🟢 Referenced | Ensure we can import local modules | **Functions:** run_sim_agent, main |
 | `modules/keystone-polyphony/simulation.log` | 🟢 Referenced | File: simulation.log |  |
-| `modules/keystone-polyphony/src/liminal_bridge/__init__.py` | 🟢 Referenced | File: __init__.py |  |
-| `modules/keystone-polyphony/src/liminal_bridge/architect.py` | 🟢 Referenced | File: architect.py | **Classes:** Architect<br>**Functions:** __init__, consult, deduplicate_backlog, refine_issue, is_configured... |
+| `modules/keystone-polyphony/src/liminal_bridge/__init__.py` | 🟢 Referenced | File: **init**.py |  |
+| `modules/keystone-polyphony/src/liminal_bridge/architect.py` | 🟢 Referenced | File: architect.py | **Classes:** Architect<br>**Functions:** **init**, consult, deduplicate_backlog, refine_issue, is_configured... |
 | `modules/keystone-polyphony/src/liminal_bridge/crdt.py` | 🟢 Referenced | File: crdt.py | **Classes:** CRDT, LWWRegister, PNCounter, GSet, ORSet<br>**Functions:** compare_vcs, merge, value, to_dict, from_dict... |
-| `modules/keystone-polyphony/src/liminal_bridge/dashboard.py` | 🟢 Referenced | File: dashboard.py | **Classes:** DashboardServer<br>**Functions:** __init__, _init_auth_db, _generate_invite_code, _setup_routes, add_cors_headers... |
+| `modules/keystone-polyphony/src/liminal_bridge/dashboard.py` | 🟢 Referenced | File: dashboard.py | **Classes:** DashboardServer<br>**Functions:** **init**, _init_auth_db,_generate_invite_code, _setup_routes, add_cors_headers... |
 | `modules/keystone-polyphony/src/liminal_bridge/dashboard_ui/index.html` | 🟢 Referenced | File: index.html |  |
 | `modules/keystone-polyphony/src/liminal_bridge/dashboard_ui/package.json` | 🟢 Referenced | File: package.json |  |
 | `modules/keystone-polyphony/src/liminal_bridge/dashboard_ui/src/App.css` | 🟢 Referenced | root { |  |
@@ -522,10 +517,10 @@ This document maps every file in the repository, their description, and utilizat
 | `modules/keystone-polyphony/src/liminal_bridge/dashboard_ui/src/crypto.js` | 🔴 Orphan | File: crypto.js |  |
 | `modules/keystone-polyphony/src/liminal_bridge/dashboard_ui/src/index.css` | 🟢 Referenced | File: index.css |  |
 | `modules/keystone-polyphony/src/liminal_bridge/dashboard_ui/src/main.jsx` | 🟢 Referenced | File: main.jsx |  |
-| `modules/keystone-polyphony/src/liminal_bridge/dashboard_ui/vite.config.js` | 🔴 Orphan | https://vitejs.dev/config/ |  |
-| `modules/keystone-polyphony/src/liminal_bridge/mesh.py` | 🟢 Referenced | File: mesh.py | **Classes:** LiminalMesh<br>**Functions:** __init__, _periodic_snapshot, _periodic_gossip, is_warming_up, get_warmup_status... |
-| `modules/keystone-polyphony/src/liminal_bridge/observability.py` | 🟢 Referenced | File: observability.py | **Classes:** LogAggregator<br>**Functions:** __init__, add_log, get_logs |
-| `modules/keystone-polyphony/src/liminal_bridge/pulse.py` | 🟢 Referenced | File: pulse.py | **Classes:** Pulse<br>**Functions:** _serialize_for_json, __init__, trigger, on_baton_release |
+| `modules/keystone-polyphony/src/liminal_bridge/dashboard_ui/vite.config.js` | 🔴 Orphan | <https://vitejs.dev/config/> |  |
+| `modules/keystone-polyphony/src/liminal_bridge/mesh.py` | 🟢 Referenced | File: mesh.py | **Classes:** LiminalMesh<br>**Functions:** **init**, _periodic_snapshot, _periodic_gossip, is_warming_up, get_warmup_status... |
+| `modules/keystone-polyphony/src/liminal_bridge/observability.py` | 🟢 Referenced | File: observability.py | **Classes:** LogAggregator<br>**Functions:** **init**, add_log, get_logs |
+| `modules/keystone-polyphony/src/liminal_bridge/pulse.py` | 🟢 Referenced | File: pulse.py | **Classes:** Pulse<br>**Functions:** _serialize_for_json, **init**, trigger, on_baton_release |
 | `modules/keystone-polyphony/src/liminal_bridge/server.py` | 🟢 Referenced | File: server.py | **Functions:** handle_command_request, ensure_mesh, check_warmup, set_status, broadcast_command... |
 | `modules/keystone-polyphony/src/liminal_bridge/sidecar/bridge.js` | 🟢 Referenced | File: bridge.js |  |
 | `modules/keystone-polyphony/src/liminal_bridge/sidecar/package.json` | 🟢 Referenced | File: package.json |  |
@@ -575,51 +570,51 @@ This document maps every file in the repository, their description, and utilizat
 | `pipecatapp/Dockerfile` | 🟢 Referenced | Use an official Python runtime as a parent image |  |
 | `pipecatapp/README.md` | 🟢 Referenced | Docker Pipecat App |  |
 | `pipecatapp/TODO.md` | 🟢 Referenced | VR Mission Control TODO |  |
-| `pipecatapp/__init__.py` | 🟢 Referenced | File: __init__.py |  |
+| `pipecatapp/__init__.py` | 🟢 Referenced | File: **init**.py |  |
 | `pipecatapp/agent_factory.py` | 🟢 Referenced | File: agent_factory.py | **Functions:** create_tools |
 | `pipecatapp/api_keys.py` | 🟢 Referenced | File: api_keys.py | **Functions:** generate_api_key, get_api_key_hash, initialize_api_keys, get_api_key |
 | `pipecatapp/app.py` | 🟢 Referenced | Set config dir before importing ultralytics to avoid permission errors | **Classes:** AudioFileFrame, WebSocketLogHandler, UILogger, BenchmarkCollector, WyomingSTTService, FasterWhisperSTTService, GroqSTTService, KokoroTTSService, PiperTTSService, WebsocketAudioStreamer, YOLOv8Detector, TextMessageInjector, TwinService, VisionUnavailable<br>**Functions:** suppress_stderr, find_workable_audio_input_device, discover_services, discover_main_llm_service, initialize_vision_detector... |
-| `pipecatapp/archivist_service.py` | 🟢 Referenced | File: archivist_service.py | **Classes:** Page, DeepResearchRequest, LLMClient, Memorizer, Researcher<br>**Functions:** lifespan, research_endpoint, health_check, __init__, close... |
+| `pipecatapp/archivist_service.py` | 🟢 Referenced | File: archivist_service.py | **Classes:** Page, DeepResearchRequest, LLMClient, Memorizer, Researcher<br>**Functions:** lifespan, research_endpoint, health_check, **init**, close... |
 | `pipecatapp/datasets/sycophancy_prompts.json` | 🟢 Referenced | File: sycophancy_prompts.json |  |
-| `pipecatapp/durable_execution.py` | 🟢 Referenced | File: durable_execution.py | **Classes:** InvocationStatus, DurableExecutionEngine<br>**Functions:** _pre_execution, _post_execution, durable_step, __init__, _ensure_db_dir... |
-| `pipecatapp/expert_tracker.py` | 🟢 Referenced | File: expert_tracker.py | **Classes:** ExpertTracker<br>**Functions:** __init__, register_expert, record_success, record_failure, get_metrics_for_prompt... |
+| `pipecatapp/durable_execution.py` | 🟢 Referenced | File: durable_execution.py | **Classes:** InvocationStatus, DurableExecutionEngine<br>**Functions:** _pre_execution, _post_execution, durable_step, **init**,_ensure_db_dir... |
+| `pipecatapp/expert_tracker.py` | 🟢 Referenced | File: expert_tracker.py | **Classes:** ExpertTracker<br>**Functions:** **init**, register_expert, record_success, record_failure, get_metrics_for_prompt... |
 | `pipecatapp/generate_real_embeddings.py` | 🔴 Orphan | File: generate_real_embeddings.py | **Functions:** get_longformer_embedding |
 | `pipecatapp/integrations/__init__.py` | 🟢 Referenced | This package contains integration modules for external services (e.g., OpenClaw). |  |
-| `pipecatapp/integrations/openclaw.py` | 🟢 Referenced | File: openclaw.py | **Classes:** OpenClawClient<br>**Functions:** __init__, connect, disconnect, _listen, _handle_message... |
-| `pipecatapp/janitor_agent.py` | 🟢 Referenced | File: janitor_agent.py | **Classes:** JanitorAgent<br>**Functions:** __init__, discover_services, process_item, run, stop |
-| `pipecatapp/judge_agent.py` | 🟢 Referenced | File: judge_agent.py | **Classes:** JudgeAgent<br>**Functions:** __init__, discover_services, initialize_tools, report_event, call_llm... |
-| `pipecatapp/langchain_memory_wrappers.py` | 🔴 Orphan | File: langchain_memory_wrappers.py | **Classes:** PMMChatMessageHistory, PipecatVectorStore<br>**Functions:** __init__, messages, add_message, clear, __init__... |
-| `pipecatapp/llm_clients.py` | 🟢 Referenced | File: llm_clients.py | **Classes:** ExternalLLMClient<br>**Functions:** __init__, process_text |
-| `pipecatapp/manager_agent.py` | 🟢 Referenced | File: manager_agent.py | **Classes:** ManagerAgent<br>**Functions:** __init__, discover_services, call_llm, get_agent_suitability, map_phase... |
-| `pipecatapp/memory.py` | 🟢 Referenced | File: memory.py | **Classes:** MemoryStore<br>**Functions:** __init__, _load_index, _load_store, _save, _init_sqlite... |
+| `pipecatapp/integrations/openclaw.py` | 🟢 Referenced | File: openclaw.py | **Classes:** OpenClawClient<br>**Functions:** **init**, connect, disconnect, _listen,_handle_message... |
+| `pipecatapp/janitor_agent.py` | 🟢 Referenced | File: janitor_agent.py | **Classes:** JanitorAgent<br>**Functions:** **init**, discover_services, process_item, run, stop |
+| `pipecatapp/judge_agent.py` | 🟢 Referenced | File: judge_agent.py | **Classes:** JudgeAgent<br>**Functions:** **init**, discover_services, initialize_tools, report_event, call_llm... |
+| `pipecatapp/langchain_memory_wrappers.py` | 🔴 Orphan | File: langchain_memory_wrappers.py | **Classes:** PMMChatMessageHistory, PipecatVectorStore<br>**Functions:** **init**, messages, add_message, clear, **init**... |
+| `pipecatapp/llm_clients.py` | 🟢 Referenced | File: llm_clients.py | **Classes:** ExternalLLMClient<br>**Functions:** **init**, process_text |
+| `pipecatapp/manager_agent.py` | 🟢 Referenced | File: manager_agent.py | **Classes:** ManagerAgent<br>**Functions:** **init**, discover_services, call_llm, get_agent_suitability, map_phase... |
+| `pipecatapp/memory.py` | 🟢 Referenced | File: memory.py | **Classes:** MemoryStore<br>**Functions:** **init**, _load_index, _load_store, _save,_init_sqlite... |
 | `pipecatapp/memory_graph_service/Dockerfile` | 🟢 Referenced | Install dependencies |  |
 | `pipecatapp/memory_graph_service/server.py` | 🟢 Referenced | File: server.py | **Functions:** lifespan, store_memory, create_relationship, recall_memories, search_memories |
 | `pipecatapp/models.py` | 🟢 Referenced | File: models.py | **Classes:** InternalChatRequest, SystemMessageRequest<br>**Functions:** check_content_present |
-| `pipecatapp/moondream_detector.py` | 🟢 Referenced | File: moondream_detector.py | **Classes:** MoondreamDetector<br>**Functions:** __init__, process_frame, get_observation |
-| `pipecatapp/net_utils.py` | 🟢 Referenced | File: net_utils.py | **Functions:** ensure_ipv6_brackets, format_url, _validate_url_logic, validate_url, resolve_and_validate_url... |
+| `pipecatapp/moondream_detector.py` | 🟢 Referenced | File: moondream_detector.py | **Classes:** MoondreamDetector<br>**Functions:** **init**, process_frame, get_observation |
+| `pipecatapp/net_utils.py` | 🟢 Referenced | File: net_utils.py | **Functions:** ensure_ipv6_brackets, format_url,_validate_url_logic, validate_url, resolve_and_validate_url... |
 | `pipecatapp/nomad_templates/immich.nomad.hcl` | 🔵 Entry Point | File: immich.nomad.hcl |  |
 | `pipecatapp/nomad_templates/readeck.nomad.hcl` | 🔵 Entry Point | File: readeck.nomad.hcl |  |
 | `pipecatapp/nomad_templates/uptime-kuma.nomad.hcl` | 🔵 Entry Point | File: uptime-kuma.nomad.hcl |  |
 | `pipecatapp/nomad_templates/vaultwarden.nomad.hcl` | 🔵 Entry Point | File: vaultwarden.nomad.hcl |  |
-| `pipecatapp/pmm_memory.py` | 🟢 Referenced | File: pmm_memory.py | **Classes:** PMMMemory<br>**Functions:** __init__, _init_db, _get_last_hash, _calculate_hash, add_event_sync... |
-| `pipecatapp/pmm_memory_client.py` | 🟢 Referenced | File: pmm_memory_client.py | **Classes:** PMMMemoryClient<br>**Functions:** __init__, add_event_sync, add_event, get_events_sync, get_events... |
+| `pipecatapp/pmm_memory.py` | 🟢 Referenced | File: pmm_memory.py | **Classes:** PMMMemory<br>**Functions:** **init**, _init_db, _get_last_hash,_calculate_hash, add_event_sync... |
+| `pipecatapp/pmm_memory_client.py` | 🟢 Referenced | File: pmm_memory_client.py | **Classes:** PMMMemoryClient<br>**Functions:** **init**, add_event_sync, add_event, get_events_sync, get_events... |
 | `pipecatapp/prompts/coding_expert.txt` | 🟢 Referenced | File: coding_expert.txt |  |
 | `pipecatapp/prompts/creative_expert.txt` | 🟢 Referenced | File: creative_expert.txt |  |
 | `pipecatapp/prompts/router.txt` | 🟢 Referenced | File: router.txt |  |
 | `pipecatapp/prompts/tron_agent.txt` | 🟢 Referenced | File: tron_agent.txt |  |
-| `pipecatapp/quality_control.py` | 🟢 Referenced | File: quality_control.py | **Classes:** ExpectimaxAgent, CodeQualityAnalyzer<br>**Functions:** __init__, decide, __init__, analyze |
-| `pipecatapp/rate_limiter.py` | 🟢 Referenced | File: rate_limiter.py | **Classes:** RateLimiter<br>**Functions:** __init__, __call__, _cleanup |
+| `pipecatapp/quality_control.py` | 🟢 Referenced | File: quality_control.py | **Classes:** ExpectimaxAgent, CodeQualityAnalyzer<br>**Functions:** **init**, decide, **init**, analyze |
+| `pipecatapp/rate_limiter.py` | 🟢 Referenced | File: rate_limiter.py | **Classes:** RateLimiter<br>**Functions:** **init**, **call**, _cleanup |
 | `pipecatapp/requirements.txt` | 🟢 Referenced | File: requirements.txt |  |
 | `pipecatapp/router_config.yaml` | 🟢 Referenced | File: router_config.yaml |  |
 | `pipecatapp/router_train_embeddings.pt` | 🟢 Referenced | File: router_train_embeddings.pt |  |
 | `pipecatapp/router_trained_model.pkl` | 🟢 Referenced | File: router_trained_model.pkl |  |
 | `pipecatapp/router_training_data.csv` | 🔴 Orphan | File: router_training_data.csv |  |
 | `pipecatapp/router_training_data.jsonl` | 🟢 Referenced | File: router_training_data.jsonl |  |
-| `pipecatapp/secret_manager.py` | 🟢 Referenced | File: secret_manager.py | **Classes:** SecretManager<br>**Functions:** __new__, initialize_from_env, get_secret, set_secret, get_all_secrets |
+| `pipecatapp/secret_manager.py` | 🟢 Referenced | File: secret_manager.py | **Classes:** SecretManager<br>**Functions:** **new**, initialize_from_env, get_secret, set_secret, get_all_secrets |
 | `pipecatapp/security.py` | 🟢 Referenced | File: security.py | **Functions:** redact_sensitive_data, escape_html_content, sanitize_data |
-| `pipecatapp/services/__init__.py` | 🟢 Referenced | File: __init__.py |  |
-| `pipecatapp/services/gemma_e2b_service.py` | 🟢 Referenced | File: gemma_e2b_service.py | **Classes:** GemmaE2BService<br>**Functions:** _resolve_model_path, __init__, _load_model, process_frame, _generate_response... |
-| `pipecatapp/skill_library.py` | 🟢 Referenced | File: skill_library.py | **Classes:** SkillLibrary<br>**Functions:** __init__, _init_sqlite, save_skill, search_skills, get_skill |
+| `pipecatapp/services/__init__.py` | 🟢 Referenced | File: **init**.py |  |
+| `pipecatapp/services/gemma_e2b_service.py` | 🟢 Referenced | File: gemma_e2b_service.py | **Classes:** GemmaE2BService<br>**Functions:** _resolve_model_path, **init**,_load_model, process_frame, _generate_response... |
+| `pipecatapp/skill_library.py` | 🟢 Referenced | File: skill_library.py | **Classes:** SkillLibrary<br>**Functions:** **init**, _init_sqlite, save_skill, search_skills, get_skill |
 | `pipecatapp/start_archivist.sh` | 🟢 Referenced | bin/bash |  |
 | `pipecatapp/static/cluster.html` | 🟢 Referenced | File: cluster.html |  |
 | `pipecatapp/static/cluster_viz.html` | 🟢 Referenced | A-Frame |  |
@@ -634,8 +629,8 @@ This document maps every file in the repository, their description, and utilizat
 | `pipecatapp/static/vr_index.html` | 🟢 Referenced | A-Frame |  |
 | `pipecatapp/static/workflow.html` | 🟢 Referenced | File: workflow.html |  |
 | `pipecatapp/static/workflow_3d.html` | 🟢 Referenced | File: workflow_3d.html |  |
-| `pipecatapp/task_supervisor.py` | 🟢 Referenced | File: task_supervisor.py | **Classes:** TaskSupervisor<br>**Functions:** __init__, start, _check_tasks |
-| `pipecatapp/technician_agent.py` | 🟢 Referenced | File: technician_agent.py | **Classes:** TechnicianAgent<br>**Functions:** __init__, rehydrate_and_resume, discover_services, initialize_tools, report_event... |
+| `pipecatapp/task_supervisor.py` | 🟢 Referenced | File: task_supervisor.py | **Classes:** TaskSupervisor<br>**Functions:** **init**, start, _check_tasks |
+| `pipecatapp/technician_agent.py` | 🟢 Referenced | File: technician_agent.py | **Classes:** TechnicianAgent<br>**Functions:** **init**, rehydrate_and_resume, discover_services, initialize_tools, report_event... |
 | `pipecatapp/test_moondream_detector.py` | 🟢 Referenced | File: test_moondream_detector.py | **Functions:** mock_torch, mock_auto_model, test_initialization, test_process_frame, test_process_frame_error... |
 | `pipecatapp/test_pmm_memory.py` | 🧪 Test | File: test_pmm_memory.py | **Functions:** memory, test_dlq_lifecycle, test_dlq_filtering, test_dlq_retry_mechanics |
 | `pipecatapp/test_server.py` | 🟢 Referenced | File: test_server.py |  |
@@ -649,104 +644,104 @@ This document maps every file in the repository, their description, and utilizat
 | `pipecatapp/tests/test_metrics_cache.py` | 🧪 Test | File: test_metrics_cache.py | **Functions:** test_metrics_caching_behavior |
 | `pipecatapp/tests/test_net_utils.py` | 🧪 Test | File: test_net_utils.py | **Classes:** TestNetUtils, TestValidateUrl<br>**Functions:** test_ensure_ipv6_brackets, test_format_url, test_validate_url_public, test_validate_url_private, test_validate_url_localhost... |
 | `pipecatapp/tests/test_openclaw.py` | 🧪 Test | File: test_openclaw.py | **Functions:** test_openclaw_client_handshake_and_send, test_openclaw_tool, mock_iter, mock_send |
-| `pipecatapp/tests/test_piper_async.py` | 🧪 Test | File: test_piper_async.py | **Classes:** MockFrameProcessor, MockTextFrame<br>**Functions:** test_piper_tts_async_execution, side_effect_synthesize, __init__, push_frame, __init__ |
+| `pipecatapp/tests/test_piper_async.py` | 🧪 Test | File: test_piper_async.py | **Classes:** MockFrameProcessor, MockTextFrame<br>**Functions:** test_piper_tts_async_execution, side_effect_synthesize, **init**, push_frame, **init** |
 | `pipecatapp/tests/test_proxy_security.py` | 🧪 Test | File: test_proxy_security.py | **Functions:** test_proxy_headers_respected_when_configured, test_proxy_headers_ignored_when_disabled, get_ip, get_ip |
 | `pipecatapp/tests/test_rag_tool.py` | 🟢 Referenced | File: test_rag_tool.py | **Classes:** MockPMMMemory<br>**Functions:** rag_tool_class, mock_memory, test_dirs, test_rag_scope_security, test_rag_filtering... |
 | `pipecatapp/tests/test_rate_limiter.py` | 🟢 Referenced | File: test_rate_limiter.py | **Classes:** MockClient, MockRequest<br>**Functions:** test_rate_limiter, test_rate_limiter_cleanup, sample_endpoint |
 | `pipecatapp/tests/test_security.py` | 🟢 Referenced | Ensure pipecatapp is in path | **Functions:** test_redact_openai_key, test_redact_github_key, test_redact_bearer_token, test_redact_gitlab_key, test_redact_url_credentials |
 | `pipecatapp/tests/test_spec_loader_security.py` | 🧪 Test | File: test_spec_loader_security.py | **Classes:** TestSpecLoaderSecurity<br>**Functions:** setUp, test_dangerous_protocol, test_argument_injection, test_path_traversal, test_symlink_path_traversal... |
-| `pipecatapp/tests/test_stt_optimization.py` | 🧪 Test | File: test_stt_optimization.py | **Classes:** MockFrameProcessor, TestFasterWhisperSTTService<br>**Functions:** __init__, push_frame, test_convert_audio_bytes_to_float_array, test_transcribe_sync_refactoring, original_logic |
+| `pipecatapp/tests/test_stt_optimization.py` | 🧪 Test | File: test_stt_optimization.py | **Classes:** MockFrameProcessor, TestFasterWhisperSTTService<br>**Functions:** **init**, push_frame, test_convert_audio_bytes_to_float_array, test_transcribe_sync_refactoring, original_logic |
 | `pipecatapp/tests/test_tool_server.py` | 🧪 Test | File: test_tool_server.py | **Classes:** TestToolServer<br>**Functions:** test_run_tool_valid_auth, test_run_tool_invalid_auth, test_run_tool_missing_auth |
-| `pipecatapp/tests/test_uilogger_redaction.py` | 🟢 Referenced | File: test_uilogger_redaction.py | **Classes:** MockTextFrame, MockFrameProcessor<br>**Functions:** test_uilogger_redaction_verification, __init__, __init__, push_frame, run_test |
+| `pipecatapp/tests/test_uilogger_redaction.py` | 🟢 Referenced | File: test_uilogger_redaction.py | **Classes:** MockTextFrame, MockFrameProcessor<br>**Functions:** test_uilogger_redaction_verification, **init**, **init**, push_frame, run_test |
 | `pipecatapp/tests/test_web_server_unit.py` | 🧪 Test | File: test_web_server_unit.py | **Functions:** test_health_check_init, test_health_check_ready, test_web_ui_routes, test_cluster_metrics, test_active_workflows_sanitization... |
 | `pipecatapp/tests/test_websocket_security.py` | 🟢 Referenced | Mock out heavy dependencies that cause timeouts during import | **Functions:** test_websocket_accepts_trusted_origin, test_websocket_rejects_untrusted_origin, test_websocket_allows_wildcard, test_websocket_default_secure_same_origin_success, test_websocket_default_secure_same_origin_failure... |
 | `pipecatapp/tests/test_xss_prevention.py` | 🧪 Test | File: test_xss_prevention.py | **Functions:** test_workflow_history_xss |
-| `pipecatapp/tests/test_yolo_optimization.py` | 🧪 Test | File: test_yolo_optimization.py | **Classes:** MockFrameProcessor, MockVisionImageRawFrame<br>**Functions:** test_yolo_inference_optimization, __init__, push_frame, __init__ |
+| `pipecatapp/tests/test_yolo_optimization.py` | 🧪 Test | File: test_yolo_optimization.py | **Classes:** MockFrameProcessor, MockVisionImageRawFrame<br>**Functions:** test_yolo_inference_optimization, **init**, push_frame, **init** |
 | `pipecatapp/tests/workflow/test_history.py` | 🧪 Test | File: test_history.py | **Functions:** temp_db_path, test_workflow_history_init, test_workflow_history_singleton_init |
 | `pipecatapp/tests/workflow/test_serialization_perf.py` | 🧪 Test | File: test_serialization_perf.py | **Classes:** NonSerializable<br>**Functions:** test_make_serializable_primitives, test_make_serializable_dict, test_make_serializable_list, test_make_serializable_nested, test_make_serializable_non_serializable... |
 | `pipecatapp/tool_server.py` | 🟢 Referenced | File: tool_server.py | **Classes:** ToolRequest<br>**Functions:** validation_exception_handler, run_tool, list_tools |
-| `pipecatapp/tools/__init__.py` | 🟢 Referenced | File: __init__.py |  |
-| `pipecatapp/tools/ansible_tool.py` | 🟢 Referenced | File: ansible_tool.py | **Classes:** Ansible_Tool<br>**Functions:** __init__, run_playbook |
-| `pipecatapp/tools/archivist_tool.py` | 🟢 Referenced | File: archivist_tool.py | **Classes:** ArchivistTool<br>**Functions:** __init__, run, __call__ |
-| `pipecatapp/tools/atproto_tool.py` | 🟢 Referenced | File: atproto_tool.py | **Classes:** ATProtoTool<br>**Functions:** __init__, _get_client, send_post, get_timeline |
-| `pipecatapp/tools/autoloop_tool.py` | 🔴 Orphan | File: autoloop_tool.py | **Classes:** AutoloopTool<br>**Functions:** __init__, run, main, local_metric |
-| `pipecatapp/tools/autoresearch_tool.py` | 🟢 Referenced | File: autoresearch_tool.py | **Classes:** AutoresearchTool, MockLLM<br>**Functions:** __init__, run, _run_autoloop_backend, _call_llm, _extract_code... |
-| `pipecatapp/tools/claude_clone_tool.py` | 🟢 Referenced | File: claude_clone_tool.py | **Classes:** ClaudeCloneTool<br>**Functions:** __init__, _run_command, explain, report, generate... |
-| `pipecatapp/tools/cluster_status_tool.py` | 🟢 Referenced | File: cluster_status_tool.py | **Classes:** ClusterStatusTool<br>**Functions:** __init__, get_status, execute |
-| `pipecatapp/tools/code_runner_tool.py` | 🟢 Referenced | File: code_runner_tool.py | **Classes:** SandboxExecutor, DockerSandboxExecutor, NomadSandboxExecutor, CodeRunnerTool, TimeoutException<br>**Functions:** execute, __init__, execute, execute_simple_python, __init__... |
-| `pipecatapp/tools/container_registry_tool.py` | 🟢 Referenced | File: container_registry_tool.py | **Classes:** ContainerRegistryTool<br>**Functions:** __init__, _validate_repository, _discover_registry, list_repositories, list_tags... |
-| `pipecatapp/tools/context_upload_tool.py` | 🟢 Referenced | File: context_upload_tool.py | **Classes:** ContextUploadTool<br>**Functions:** __init__, execute, get_definition |
-| `pipecatapp/tools/council_tool.py` | 🟢 Referenced | File: council_tool.py | **Classes:** CouncilTool<br>**Functions:** __init__, _discover_local_experts, _query_model, convene |
-| `pipecatapp/tools/cq_tool.py` | 🟢 Referenced | File: cq_tool.py | **Classes:** CQ_Tool<br>**Functions:** __init__, cq_query, cq_propose, cq_confirm, cq_flag... |
-| `pipecatapp/tools/dependency_scanner_tool.py` | 🟢 Referenced | File: dependency_scanner_tool.py | **Classes:** DependencyScannerTool<br>**Functions:** __init__, _get_latest_version, scan_package |
-| `pipecatapp/tools/desktop_control_tool.py` | 🟢 Referenced | File: desktop_control_tool.py | **Classes:** DesktopControlTool<br>**Functions:** __init__, get_desktop_screenshot, click_at, type_text |
-| `pipecatapp/tools/document_tool.py` | 🟢 Referenced | File: document_tool.py | **Classes:** DocumentBackend, PaperlessBackend, LocalDirectoryBackend, DocumentTool<br>**Functions:** search, get_text, __init__, search, get_text... |
-| `pipecatapp/tools/dynamic_skill_tool.py` | 🟢 Referenced | File: dynamic_skill_tool.py | **Classes:** DynamicSkillTool<br>**Functions:** __init__, execute |
-| `pipecatapp/tools/experiment_tool.py` | 🟢 Referenced | File: experiment_tool.py | **Classes:** ExperimentTool<br>**Functions:** __init__, run, _validate_path, _create_snapshot, _extract_artifact... |
-| `pipecatapp/tools/file_editor_tool.py` | 🟢 Referenced | File: file_editor_tool.py | **Classes:** FileEditorTool<br>**Functions:** __init__, _validate_path, _calculate_line_hash, _save_for_undo, undo_edit... |
-| `pipecatapp/tools/final_answer_tool.py` | 🟢 Referenced | File: final_answer_tool.py | **Classes:** FinalAnswerTool<br>**Functions:** __init__, submit_task |
+| `pipecatapp/tools/__init__.py` | 🟢 Referenced | File: **init**.py |  |
+| `pipecatapp/tools/ansible_tool.py` | 🟢 Referenced | File: ansible_tool.py | **Classes:** Ansible_Tool<br>**Functions:** **init**, run_playbook |
+| `pipecatapp/tools/archivist_tool.py` | 🟢 Referenced | File: archivist_tool.py | **Classes:** ArchivistTool<br>**Functions:** **init**, run, **call** |
+| `pipecatapp/tools/atproto_tool.py` | 🟢 Referenced | File: atproto_tool.py | **Classes:** ATProtoTool<br>**Functions:** **init**, _get_client, send_post, get_timeline |
+| `pipecatapp/tools/autoloop_tool.py` | 🔴 Orphan | File: autoloop_tool.py | **Classes:** AutoloopTool<br>**Functions:** **init**, run, main, local_metric |
+| `pipecatapp/tools/autoresearch_tool.py` | 🟢 Referenced | File: autoresearch_tool.py | **Classes:** AutoresearchTool, MockLLM<br>**Functions:** **init**, run, _run_autoloop_backend,_call_llm,_extract_code... |
+| `pipecatapp/tools/claude_clone_tool.py` | 🟢 Referenced | File: claude_clone_tool.py | **Classes:** ClaudeCloneTool<br>**Functions:** **init**, _run_command, explain, report, generate... |
+| `pipecatapp/tools/cluster_status_tool.py` | 🟢 Referenced | File: cluster_status_tool.py | **Classes:** ClusterStatusTool<br>**Functions:** **init**, get_status, execute |
+| `pipecatapp/tools/code_runner_tool.py` | 🟢 Referenced | File: code_runner_tool.py | **Classes:** SandboxExecutor, DockerSandboxExecutor, NomadSandboxExecutor, CodeRunnerTool, TimeoutException<br>**Functions:** execute, **init**, execute, execute_simple_python, **init**... |
+| `pipecatapp/tools/container_registry_tool.py` | 🟢 Referenced | File: container_registry_tool.py | **Classes:** ContainerRegistryTool<br>**Functions:** **init**, _validate_repository, _discover_registry, list_repositories, list_tags... |
+| `pipecatapp/tools/context_upload_tool.py` | 🟢 Referenced | File: context_upload_tool.py | **Classes:** ContextUploadTool<br>**Functions:** **init**, execute, get_definition |
+| `pipecatapp/tools/council_tool.py` | 🟢 Referenced | File: council_tool.py | **Classes:** CouncilTool<br>**Functions:** **init**, _discover_local_experts,_query_model, convene |
+| `pipecatapp/tools/cq_tool.py` | 🟢 Referenced | File: cq_tool.py | **Classes:** CQ_Tool<br>**Functions:** **init**, cq_query, cq_propose, cq_confirm, cq_flag... |
+| `pipecatapp/tools/dependency_scanner_tool.py` | 🟢 Referenced | File: dependency_scanner_tool.py | **Classes:** DependencyScannerTool<br>**Functions:** **init**, _get_latest_version, scan_package |
+| `pipecatapp/tools/desktop_control_tool.py` | 🟢 Referenced | File: desktop_control_tool.py | **Classes:** DesktopControlTool<br>**Functions:** **init**, get_desktop_screenshot, click_at, type_text |
+| `pipecatapp/tools/document_tool.py` | 🟢 Referenced | File: document_tool.py | **Classes:** DocumentBackend, PaperlessBackend, LocalDirectoryBackend, DocumentTool<br>**Functions:** search, get_text, **init**, search, get_text... |
+| `pipecatapp/tools/dynamic_skill_tool.py` | 🟢 Referenced | File: dynamic_skill_tool.py | **Classes:** DynamicSkillTool<br>**Functions:** **init**, execute |
+| `pipecatapp/tools/experiment_tool.py` | 🟢 Referenced | File: experiment_tool.py | **Classes:** ExperimentTool<br>**Functions:** **init**, run, _validate_path, _create_snapshot, _extract_artifact... |
+| `pipecatapp/tools/file_editor_tool.py` | 🟢 Referenced | File: file_editor_tool.py | **Classes:** FileEditorTool<br>**Functions:** **init**, _validate_path, _calculate_line_hash,_save_for_undo, undo_edit... |
+| `pipecatapp/tools/final_answer_tool.py` | 🟢 Referenced | File: final_answer_tool.py | **Classes:** FinalAnswerTool<br>**Functions:** **init**, submit_task |
 | `pipecatapp/tools/gemini_cli.py` | 🟢 Referenced | File: gemini_cli.py | **Functions:** send_message |
 | `pipecatapp/tools/get_nomad_job.py` | 🟢 Referenced | File: get_nomad_job.py | **Functions:** get_nomad_job_definition, main |
-| `pipecatapp/tools/git_tool.py` | 🟢 Referenced | File: git_tool.py | **Classes:** Git_Tool<br>**Functions:** __init__, _validate_path, _validate_arg, _validate_protocol, _run_git_command... |
-| `pipecatapp/tools/ha_tool.py` | 🟢 Referenced | File: ha_tool.py | **Classes:** HA_Tool<br>**Functions:** __init__, call_ai_task |
-| `pipecatapp/tools/heretic_tool.py` | 🟢 Referenced | File: heretic_tool.py | **Classes:** HereticTool<br>**Functions:** __init__, align_model |
-| `pipecatapp/tools/langchain_adapter.py` | 🔴 Orphan | File: langchain_adapter.py | **Classes:** LangChainToolAdapter<br>**Functions:** __init__, _create_execution_method, wrapped_execute |
-| `pipecatapp/tools/llxprt_code_tool.py` | 🟢 Referenced | File: llxprt_code_tool.py | **Classes:** LLxprt_Code_Tool<br>**Functions:** __init__, run |
-| `pipecatapp/tools/mcp_tool.py` | 🟢 Referenced | File: mcp_tool.py | **Classes:** MCP_Tool<br>**Functions:** __init__, get_status, get_memory_summary, clear_short_term_memory |
-| `pipecatapp/tools/open_workers_tool.py` | 🟢 Referenced | File: open_workers_tool.py | **Classes:** OpenWorkersTool<br>**Functions:** __init__, _get_service_url, _get_api_url, run_javascript |
-| `pipecatapp/tools/openclaw_tool.py` | 🟢 Referenced | File: openclaw_tool.py | **Classes:** OpenClawTool<br>**Functions:** __init__, send_message |
-| `pipecatapp/tools/opencode_provider_tool.py` | 🟢 Referenced | File: opencode_provider_tool.py | **Classes:** OpenCodeProviderTool<br>**Functions:** __init__, _parse_opencode_output, run |
-| `pipecatapp/tools/opencode_tool.py` | 🟢 Referenced | File: opencode_tool.py | **Classes:** OpencodeTool<br>**Functions:** __init__, run |
-| `pipecatapp/tools/orchestrator_tool.py` | 🟢 Referenced | File: orchestrator_tool.py | **Classes:** OrchestratorTool<br>**Functions:** __init__, dispatch_job |
-| `pipecatapp/tools/personality_tool.py` | 🟢 Referenced | File: personality_tool.py | **Classes:** PersonalityTool<br>**Functions:** __init__, set_personality, reset_personality, get_current_personality |
-| `pipecatapp/tools/planner_tool.py` | 🟢 Referenced | File: planner_tool.py | **Classes:** PlannerTool<br>**Functions:** __init__, _discover_llm_url, _call_llm, plan_and_execute |
-| `pipecatapp/tools/polyphony_tool.py` | 🟢 Referenced | File: polyphony_tool.py | **Classes:** PolyphonyTool<br>**Functions:** __init__, execute, _run_cmd, get_info |
-| `pipecatapp/tools/power_tool.py` | 🟢 Referenced | File: power_tool.py | **Classes:** Power_Tool<br>**Functions:** __init__, set_idle_threshold |
-| `pipecatapp/tools/project_mapper_tool.py` | 🟢 Referenced | File: project_mapper_tool.py | **Classes:** ProjectMapperTool<br>**Functions:** __init__, _is_ignored, scan, _list_files_git, _guess_type... |
-| `pipecatapp/tools/prompt_improver_tool.py` | 🟢 Referenced | File: prompt_improver_tool.py | **Classes:** PromptImproverTool<br>**Functions:** __init__, _discover_llm, _call_llm, create_prompt_plan |
-| `pipecatapp/tools/rag_tool.py` | 🟢 Referenced | File: rag_tool.py | **Classes:** RAG_Tool<br>**Functions:** __init__, set_scope, _build_knowledge_base, _list_files_git, search_knowledge_base |
-| `pipecatapp/tools/remote_tool_proxy.py` | 🟢 Referenced | File: remote_tool_proxy.py | **Classes:** RemoteToolProxy<br>**Functions:** __init__, __getattr__, method |
+| `pipecatapp/tools/git_tool.py` | 🟢 Referenced | File: git_tool.py | **Classes:** Git_Tool<br>**Functions:** **init**,_validate_path,_validate_arg,_validate_protocol,_run_git_command... |
+| `pipecatapp/tools/ha_tool.py` | 🟢 Referenced | File: ha_tool.py | **Classes:** HA_Tool<br>**Functions:** **init**, call_ai_task |
+| `pipecatapp/tools/heretic_tool.py` | 🟢 Referenced | File: heretic_tool.py | **Classes:** HereticTool<br>**Functions:** **init**, align_model |
+| `pipecatapp/tools/langchain_adapter.py` | 🔴 Orphan | File: langchain_adapter.py | **Classes:** LangChainToolAdapter<br>**Functions:** **init**, _create_execution_method, wrapped_execute |
+| `pipecatapp/tools/llxprt_code_tool.py` | 🟢 Referenced | File: llxprt_code_tool.py | **Classes:** LLxprt_Code_Tool<br>**Functions:** **init**, run |
+| `pipecatapp/tools/mcp_tool.py` | 🟢 Referenced | File: mcp_tool.py | **Classes:** MCP_Tool<br>**Functions:** **init**, get_status, get_memory_summary, clear_short_term_memory |
+| `pipecatapp/tools/open_workers_tool.py` | 🟢 Referenced | File: open_workers_tool.py | **Classes:** OpenWorkersTool<br>**Functions:** **init**, _get_service_url,_get_api_url, run_javascript |
+| `pipecatapp/tools/openclaw_tool.py` | 🟢 Referenced | File: openclaw_tool.py | **Classes:** OpenClawTool<br>**Functions:** **init**, send_message |
+| `pipecatapp/tools/opencode_provider_tool.py` | 🟢 Referenced | File: opencode_provider_tool.py | **Classes:** OpenCodeProviderTool<br>**Functions:** **init**, _parse_opencode_output, run |
+| `pipecatapp/tools/opencode_tool.py` | 🟢 Referenced | File: opencode_tool.py | **Classes:** OpencodeTool<br>**Functions:** **init**, run |
+| `pipecatapp/tools/orchestrator_tool.py` | 🟢 Referenced | File: orchestrator_tool.py | **Classes:** OrchestratorTool<br>**Functions:** **init**, dispatch_job |
+| `pipecatapp/tools/personality_tool.py` | 🟢 Referenced | File: personality_tool.py | **Classes:** PersonalityTool<br>**Functions:** **init**, set_personality, reset_personality, get_current_personality |
+| `pipecatapp/tools/planner_tool.py` | 🟢 Referenced | File: planner_tool.py | **Classes:** PlannerTool<br>**Functions:** **init**, _discover_llm_url,_call_llm, plan_and_execute |
+| `pipecatapp/tools/polyphony_tool.py` | 🟢 Referenced | File: polyphony_tool.py | **Classes:** PolyphonyTool<br>**Functions:** **init**, execute, _run_cmd, get_info |
+| `pipecatapp/tools/power_tool.py` | 🟢 Referenced | File: power_tool.py | **Classes:** Power_Tool<br>**Functions:** **init**, set_idle_threshold |
+| `pipecatapp/tools/project_mapper_tool.py` | 🟢 Referenced | File: project_mapper_tool.py | **Classes:** ProjectMapperTool<br>**Functions:** **init**, _is_ignored, scan, _list_files_git,_guess_type... |
+| `pipecatapp/tools/prompt_improver_tool.py` | 🟢 Referenced | File: prompt_improver_tool.py | **Classes:** PromptImproverTool<br>**Functions:** **init**, _discover_llm, _call_llm, create_prompt_plan |
+| `pipecatapp/tools/rag_tool.py` | 🟢 Referenced | File: rag_tool.py | **Classes:** RAG_Tool<br>**Functions:** **init**, set_scope, _build_knowledge_base,_list_files_git, search_knowledge_base |
+| `pipecatapp/tools/remote_tool_proxy.py` | 🟢 Referenced | File: remote_tool_proxy.py | **Classes:** RemoteToolProxy<br>**Functions:** **init**, **getattr**, method |
 | `pipecatapp/tools/sandbox.ts` | 🟢 Referenced | sandbox.ts |  |
-| `pipecatapp/tools/save_skill_tool.py` | 🟢 Referenced | File: save_skill_tool.py | **Classes:** SaveSkillTool<br>**Functions:** __init__, run |
-| `pipecatapp/tools/scale_compute_tool.py` | 🟢 Referenced | File: scale_compute_tool.py | **Classes:** ScaleComputeTool<br>**Functions:** __init__, scale, execute |
-| `pipecatapp/tools/scheduler_tool.py` | 🟢 Referenced | File: scheduler_tool.py | **Classes:** SchedulerTool<br>**Functions:** __init__, _inject_message, add_cron_job, add_interval_job, list_jobs... |
-| `pipecatapp/tools/search_skills_tool.py` | 🟢 Referenced | File: search_skills_tool.py | **Classes:** SearchSkillsTool<br>**Functions:** __init__, run |
-| `pipecatapp/tools/search_tool.py` | 🟢 Referenced | File: search_tool.py | **Classes:** SearchTool<br>**Functions:** __init__, _validate_path, grep, find_file |
-| `pipecatapp/tools/shell_tool.py` | 🟢 Referenced | File: shell_tool.py | **Classes:** ShellTool<br>**Functions:** __init__, load_approvals, save_approval, check_command_safety, _ensure_session... |
-| `pipecatapp/tools/skill_builder_tool.py` | 🟢 Referenced | File: skill_builder_tool.py | **Classes:** SkillBuilderTool<br>**Functions:** __init__, execute |
-| `pipecatapp/tools/smol_agent_tool.py` | 🟢 Referenced | File: smol_agent_tool.py | **Classes:** SmolAgentTool, CodeAgent, LiteLLMModel<br>**Functions:** __init__, _initialize, _execute_in_sandbox, run, __init__... |
-| `pipecatapp/tools/spec_loader_tool.py` | 🟢 Referenced | File: spec_loader_tool.py | **Classes:** SpecLoaderTool<br>**Functions:** __init__, _validate_protocol, _validate_arg, _validate_path, _validate_repo_name... |
-| `pipecatapp/tools/ssh_tool.py` | 🟢 Referenced | File: ssh_tool.py | **Classes:** SSH_Tool<br>**Functions:** __init__, run_command |
-| `pipecatapp/tools/submit_solution_tool.py` | 🟢 Referenced | File: submit_solution_tool.py | **Classes:** SubmitSolutionTool<br>**Functions:** __init__, run |
-| `pipecatapp/tools/summarizer_tool.py` | 🟢 Referenced | File: summarizer_tool.py | **Classes:** SummarizerTool<br>**Functions:** __init__, get_summary |
-| `pipecatapp/tools/swarm_tool.py` | 🟢 Referenced | File: swarm_tool.py | **Classes:** SwarmTool<br>**Functions:** __init__, spawn_workers, wait_for_results, kill_worker |
-| `pipecatapp/tools/tap_service.py` | 🟢 Referenced | File: tap_service.py | **Classes:** TapService<br>**Functions:** __init__, process_frame |
-| `pipecatapp/tools/term_everything_tool.py` | 🟢 Referenced | File: term_everything_tool.py | **Classes:** TermEverythingTool<br>**Functions:** __init__, execute |
+| `pipecatapp/tools/save_skill_tool.py` | 🟢 Referenced | File: save_skill_tool.py | **Classes:** SaveSkillTool<br>**Functions:** **init**, run |
+| `pipecatapp/tools/scale_compute_tool.py` | 🟢 Referenced | File: scale_compute_tool.py | **Classes:** ScaleComputeTool<br>**Functions:** **init**, scale, execute |
+| `pipecatapp/tools/scheduler_tool.py` | 🟢 Referenced | File: scheduler_tool.py | **Classes:** SchedulerTool<br>**Functions:** **init**, _inject_message, add_cron_job, add_interval_job, list_jobs... |
+| `pipecatapp/tools/search_skills_tool.py` | 🟢 Referenced | File: search_skills_tool.py | **Classes:** SearchSkillsTool<br>**Functions:** **init**, run |
+| `pipecatapp/tools/search_tool.py` | 🟢 Referenced | File: search_tool.py | **Classes:** SearchTool<br>**Functions:** **init**, _validate_path, grep, find_file |
+| `pipecatapp/tools/shell_tool.py` | 🟢 Referenced | File: shell_tool.py | **Classes:** ShellTool<br>**Functions:** **init**, load_approvals, save_approval, check_command_safety, _ensure_session... |
+| `pipecatapp/tools/skill_builder_tool.py` | 🟢 Referenced | File: skill_builder_tool.py | **Classes:** SkillBuilderTool<br>**Functions:** **init**, execute |
+| `pipecatapp/tools/smol_agent_tool.py` | 🟢 Referenced | File: smol_agent_tool.py | **Classes:** SmolAgentTool, CodeAgent, LiteLLMModel<br>**Functions:** **init**, _initialize,_execute_in_sandbox, run, **init**... |
+| `pipecatapp/tools/spec_loader_tool.py` | 🟢 Referenced | File: spec_loader_tool.py | **Classes:** SpecLoaderTool<br>**Functions:** **init**, _validate_protocol, _validate_arg, _validate_path, _validate_repo_name... |
+| `pipecatapp/tools/ssh_tool.py` | 🟢 Referenced | File: ssh_tool.py | **Classes:** SSH_Tool<br>**Functions:** **init**, run_command |
+| `pipecatapp/tools/submit_solution_tool.py` | 🟢 Referenced | File: submit_solution_tool.py | **Classes:** SubmitSolutionTool<br>**Functions:** **init**, run |
+| `pipecatapp/tools/summarizer_tool.py` | 🟢 Referenced | File: summarizer_tool.py | **Classes:** SummarizerTool<br>**Functions:** **init**, get_summary |
+| `pipecatapp/tools/swarm_tool.py` | 🟢 Referenced | File: swarm_tool.py | **Classes:** SwarmTool<br>**Functions:** **init**, spawn_workers, wait_for_results, kill_worker |
+| `pipecatapp/tools/tap_service.py` | 🟢 Referenced | File: tap_service.py | **Classes:** TapService<br>**Functions:** **init**, process_frame |
+| `pipecatapp/tools/term_everything_tool.py` | 🟢 Referenced | File: term_everything_tool.py | **Classes:** TermEverythingTool<br>**Functions:** **init**, execute |
 | `pipecatapp/tools/test_git_tool.py` | 🟢 Referenced | File: test_git_tool.py | **Classes:** TestGitTool<br>**Functions:** setUp, test_ls_files, test_ls_files_integration |
 | `pipecatapp/tools/test_ssh_tool.py` | 🟢 Referenced | File: test_ssh_tool.py | **Functions:** ssh_tool, test_run_command_success, test_run_command_error |
-| `pipecatapp/tools/update_litellm_tool.py` | 🔴 Orphan | File: update_litellm_tool.py | **Classes:** UpdateLitellmTool<br>**Functions:** __init__, schema, fetch_releases, update_nomad_file, execute |
-| `pipecatapp/tools/vr_tool.py` | 🟢 Referenced | File: vr_tool.py | **Classes:** VRTool<br>**Functions:** __init__, get_tool_def, execute |
-| `pipecatapp/tools/web_browser_tool.py` | 🟢 Referenced | File: web_browser_tool.py | **Classes:** WebBrowserTool<br>**Functions:** __init__, ensure_initialized, goto, get_page_content, get_screenshot... |
-| `pipecatapp/tools/wol_tool.py` | 🟢 Referenced | File: wol_tool.py | **Classes:** WOLTool<br>**Functions:** __init__, _validate_mac, wake, execute |
+| `pipecatapp/tools/update_litellm_tool.py` | 🔴 Orphan | File: update_litellm_tool.py | **Classes:** UpdateLitellmTool<br>**Functions:** **init**, schema, fetch_releases, update_nomad_file, execute |
+| `pipecatapp/tools/vr_tool.py` | 🟢 Referenced | File: vr_tool.py | **Classes:** VRTool<br>**Functions:** **init**, get_tool_def, execute |
+| `pipecatapp/tools/web_browser_tool.py` | 🟢 Referenced | File: web_browser_tool.py | **Classes:** WebBrowserTool<br>**Functions:** **init**, ensure_initialized, goto, get_page_content, get_screenshot... |
+| `pipecatapp/tools/wol_tool.py` | 🟢 Referenced | File: wol_tool.py | **Classes:** WOLTool<br>**Functions:** **init**, _validate_mac, wake, execute |
 | `pipecatapp/train_router.py` | 🔴 Orphan | Change working directory so that llmrouter loads relative to pipecatapp |  |
 | `pipecatapp/web_server.py` | 🟢 Referenced | File: web_server.py | **Classes:** SecurityHeadersMiddleware, AsyncCache, WebSocketManager<br>**Functions:** is_origin_allowed, websocket_endpoint, internal_chat, internal_chat_sync, internal_system_message... |
 | `pipecatapp/worker_agent.py` | 🟢 Referenced | File: worker_agent.py | **Functions:** main_async |
-| `pipecatapp/workflow/__init__.py` | 🟢 Referenced | File: __init__.py |  |
-| `pipecatapp/workflow/canvas_converter.py` | 🟢 Referenced | File: canvas_converter.py | **Classes:** CanvasConverter<br>**Functions:** canvas_to_workflow, _infer_node_type, _extract_config, workflow_to_canvas |
-| `pipecatapp/workflow/context.py` | 🟢 Referenced | File: context.py | **Classes:** WorkflowContext<br>**Functions:** __init__, set_global_input, get_input, set_output, _resolve_value... |
-| `pipecatapp/workflow/crypto_receipts.py` | 🟢 Referenced | File: crypto_receipts.py | **Classes:** ToolExecutionSigner<br>**Functions:** __init__, _normalize_payload, sign, verify |
-| `pipecatapp/workflow/history.py` | 🟢 Referenced | File: history.py | **Classes:** WorkflowHistory<br>**Functions:** __new__, __init__, _init_db, save_run, get_all_runs... |
-| `pipecatapp/workflow/node.py` | 🟢 Referenced | File: node.py | **Classes:** Node<br>**Functions:** __init__, execute, get_input, set_output, get_spatial_data |
-| `pipecatapp/workflow/nodes/__init__.py` | 🟢 Referenced | File: __init__.py |  |
+| `pipecatapp/workflow/__init__.py` | 🟢 Referenced | File: **init**.py |  |
+| `pipecatapp/workflow/canvas_converter.py` | 🟢 Referenced | File: canvas_converter.py | **Classes:** CanvasConverter<br>**Functions:** canvas_to_workflow, _infer_node_type,_extract_config, workflow_to_canvas |
+| `pipecatapp/workflow/context.py` | 🟢 Referenced | File: context.py | **Classes:** WorkflowContext<br>**Functions:** **init**, set_global_input, get_input, set_output, _resolve_value... |
+| `pipecatapp/workflow/crypto_receipts.py` | 🟢 Referenced | File: crypto_receipts.py | **Classes:** ToolExecutionSigner<br>**Functions:** **init**, _normalize_payload, sign, verify |
+| `pipecatapp/workflow/history.py` | 🟢 Referenced | File: history.py | **Classes:** WorkflowHistory<br>**Functions:** **new**, **init**, _init_db, save_run, get_all_runs... |
+| `pipecatapp/workflow/node.py` | 🟢 Referenced | File: node.py | **Classes:** Node<br>**Functions:** **init**, execute, get_input, set_output, get_spatial_data |
+| `pipecatapp/workflow/nodes/__init__.py` | 🟢 Referenced | File: **init**.py |  |
 | `pipecatapp/workflow/nodes/base_nodes.py` | 🟢 Referenced | File: base_nodes.py | **Classes:** InputNode, OutputNode, MergeNode, ConditionalBranchNode, GateNode, PostProcessorNode<br>**Functions:** execute, execute, execute, execute, execute... |
 | `pipecatapp/workflow/nodes/emperor_nodes.py` | 🟢 Referenced | File: emperor_nodes.py | **Classes:** EmperorAgentNode<br>**Functions:** resolve_abs_path, read_file_tool, list_files_tool, edit_file_tool, shell_tool... |
 | `pipecatapp/workflow/nodes/langchain_nodes.py` | 🔴 Orphan | File: langchain_nodes.py | **Classes:** LangGraphNode<br>**Functions:** execute |
 | `pipecatapp/workflow/nodes/llm_nodes.py` | 🟢 Referenced | File: llm_nodes.py | **Classes:** VisionLLMNode, PromptBuilderNode, SimpleLLMNode, ExpertRouterNode, ExternalLLMNode, LLMRouterNode, LoopedReasoningNode<br>**Functions:** discover_main_llm_service, execute, execute, execute, execute... |
 | `pipecatapp/workflow/nodes/ralph_nodes.py` | 🟢 Referenced | File: ralph_nodes.py | **Classes:** RalphLoopNode<br>**Functions:** execute |
-| `pipecatapp/workflow/nodes/registry.py` | 🟢 Referenced | File: registry.py | **Classes:** NodeRegistry<br>**Functions:** __init__, register, get_node_class, get_all_nodes_metadata |
+| `pipecatapp/workflow/nodes/registry.py` | 🟢 Referenced | File: registry.py | **Classes:** NodeRegistry<br>**Functions:** **init**, register, get_node_class, get_all_nodes_metadata |
 | `pipecatapp/workflow/nodes/system_nodes.py` | 🟢 Referenced | File: system_nodes.py | **Classes:** ConsulServiceDiscoveryNode, FileReadNode<br>**Functions:** execute, execute |
 | `pipecatapp/workflow/nodes/tool_nodes.py` | 🟢 Referenced | File: tool_nodes.py | **Classes:** SystemPromptNode, ScreenshotNode, ToolParserNode, ToolExecutorNode<br>**Functions:** execute, execute, execute, execute |
-| `pipecatapp/workflow/runner.py` | 🟢 Referenced | File: runner.py | **Classes:** ActiveWorkflows, OpenGates, WorkflowRunner<br>**Functions:** make_serializable, _safe_context_to_dict, _save_run_background, __new__, add_runner... |
+| `pipecatapp/workflow/runner.py` | 🟢 Referenced | File: runner.py | **Classes:** ActiveWorkflows, OpenGates, WorkflowRunner<br>**Functions:** make_serializable,_safe_context_to_dict,_save_run_background, **new**, add_runner... |
 | `pipecatapp/workflows/adversarial_simulation.yaml` | 🟢 Referenced | File: adversarial_simulation.yaml |  |
 | `pipecatapp/workflows/deep_context.yaml` | 🟢 Referenced | File: deep_context.yaml |  |
 | `pipecatapp/workflows/default_agent_loop.yaml` | 🟢 Referenced | File: default_agent_loop.yaml |  |
@@ -769,9 +764,7 @@ This document maps every file in the repository, their description, and utilizat
 | `playbooks/deploy_pds.yaml` | 🔴 Orphan | File: deploy_pds.yaml |  |
 | `playbooks/deploy_prompt_evolution.yaml` | 🟢 Referenced | File: deploy_prompt_evolution.yaml |  |
 | `playbooks/developer_tools.yaml` | 🟢 Referenced | File: developer_tools.yaml |  |
-| `playbooks/diagnose_and_log_home_assistant.yaml` | 🟢 Referenced | File: diagnose_and_log_home_assistant.yaml |  |
 | `playbooks/diagnose_failure.yaml` | 🟢 Referenced | File: diagnose_failure.yaml |  |
-| `playbooks/diagnose_home_assistant.yaml` | 🟢 Referenced | File: diagnose_home_assistant.yaml |  |
 | `playbooks/fix_cluster.yaml` | 🟢 Referenced | File: fix_cluster.yaml |  |
 | `playbooks/heal_cluster.yaml` | 🟢 Referenced | File: heal_cluster.yaml |  |
 | `playbooks/heal_job.yaml` | 🟢 Referenced | This variable would be passed in from the orchestrator script |  |
@@ -803,7 +796,6 @@ This document maps every file in the repository, their description, and utilizat
 | `playbooks/services/nomad_client.yaml` | 🟢 Referenced | File: nomad_client.yaml |  |
 | `playbooks/services/registry.yaml` | 🟢 Referenced | File: registry.yaml |  |
 | `playbooks/services/streaming_services.yaml` | 🟢 Referenced | File: streaming_services.yaml |  |
-| `playbooks/services/tasks/diagnose_home_assistant.yaml` | 🟢 Referenced | File: diagnose_home_assistant.yaml |  |
 | `playbooks/services/training_services.yaml` | 🟢 Referenced | File: training_services.yaml |  |
 | `playbooks/status-check.yaml` | 🟢 Referenced | File: status-check.yaml |  |
 | `playbooks/wake.yaml` | 🟢 Referenced | File: wake.yaml |  |
@@ -828,7 +820,7 @@ This document maps every file in the repository, their description, and utilizat
 | `prompt_engineering/archive/agent_3.py` | 📄 Documentation/Asset | File: agent_3.py |  |
 | `prompt_engineering/archive_server.py` | 🟢 Referenced | File: archive_server.py | **Functions:** get_tree |
 | `prompt_engineering/autoloop_evolve.py` | 📄 Documentation/Asset | File: autoloop_evolve.py | **Functions:** run_pytest_metric, main |
-| `prompt_engineering/challenger.py` | 🟢 Referenced | File: challenger.py | **Classes:** Challenger<br>**Functions:** __init__, generate_challenge |
+| `prompt_engineering/challenger.py` | 🟢 Referenced | File: challenger.py | **Classes:** Challenger<br>**Functions:** **init**, generate_challenge |
 | `prompt_engineering/create_evaluator.py` | 🟢 Referenced | The template is based on the one defined in prompt_engineering/agents/EVALUATOR_GENERATOR.md | **Functions:** main |
 | `prompt_engineering/evaluation_lib.py` | 🟢 Referenced | This file will contain the reusable functions for evaluating code. | **Functions:** render_nomad_job, wait_for_service_healthy, get_test_results, cleanup |
 | `prompt_engineering/evaluation_suite/README.md` | 🟢 Referenced | Evaluation Suite |  |
@@ -840,7 +832,7 @@ This document maps every file in the repository, their description, and utilizat
 | `prompt_engineering/frontend/server.py` | 🟢 Referenced | File: server.py | **Functions:** serve_index, get_evolutionary_tree |
 | `prompt_engineering/frontend/style.css` | 🟢 Referenced | File: style.css |  |
 | `prompt_engineering/generated_evaluators/.gitignore` | 🟢 Referenced | Ignore all files in this directory |  |
-| `prompt_engineering/promote_agent.py` | 🟢 Referenced | File: promote_agent.py | **Functions:** find_best_agent, promote_agent, _perform_promotion |
+| `prompt_engineering/promote_agent.py` | 🟢 Referenced | File: promote_agent.py | **Functions:** find_best_agent, promote_agent,_perform_promotion |
 | `prompt_engineering/requirements-dev.txt` | 🟢 Referenced | File: requirements-dev.txt |  |
 | `prompt_engineering/run_campaign.py` | 🟢 Referenced | File: run_campaign.py | **Functions:** run_campaign, analyze_archive, _generate_report |
 | `prompt_engineering/visualize_archive.py` | 🟢 Referenced | File: visualize_archive.py | **Functions:** visualize_archive, get_color_for_fitness, _save_graph |
@@ -881,7 +873,7 @@ This document maps every file in the repository, their description, and utilizat
 | `scripts/generate_issue_script.py` | 🟢 Referenced | File: generate_issue_script.py | **Functions:** parse_todo_file, create_issue_script |
 | `scripts/generate_signatures.py` | 🔵 Entry Point | File: generate_signatures.py | **Functions:** to_hex, create_ldb_sig |
 | `scripts/heal_cluster.sh` | 🟢 Referenced | Wrapper script to run the cluster healing playbook. This ensures core infrastructure (LlamaRPC, Pip |  |
-| `scripts/healer.py` | 🟢 Referenced | File: healer.py | **Classes:** NomadWatcher, HealerAgent<br>**Functions:** run_local_mode, main, __init__, get_failed_allocs, get_logs... |
+| `scripts/healer.py` | 🟢 Referenced | File: healer.py | **Classes:** NomadWatcher, HealerAgent<br>**Functions:** run_local_mode, main, **init**, get_failed_allocs, get_logs... |
 | `scripts/lint.sh` | 🟢 Referenced | Unified Linting Script  This script runs a series of linters to ensure code quality and consistency |  |
 | `scripts/lint_exclude.txt` | 🟢 Referenced | Exclude problematic files from the linting process. |  |
 | `scripts/memory_audit.py` | 🟢 Referenced | File: memory_audit.py | **Functions:** get_prometheus_metrics, get_job_spec, update_job_memory, main |
@@ -897,7 +889,7 @@ This document maps every file in the repository, their description, and utilizat
 | `scripts/supervisor.py` | 🟢 Referenced | File: supervisor.py | **Functions:** load_llm_config, run_playbook, run_script, cleanup_files, main |
 | `scripts/test_playbooks_dry_run.sh` | 🟢 Referenced | bin/bash |  |
 | `scripts/test_playbooks_live_run.sh` | 🟢 Referenced | bin/bash |  |
-| `scripts/test_swarm_map_reduce.py` | 🔵 Entry Point | File: test_swarm_map_reduce.py | **Classes:** MockMemoryClient<br>**Functions:** test_swarm_map_reduce, __init__, get_events, add_event, get_agent_stats... |
+| `scripts/test_swarm_map_reduce.py` | 🔵 Entry Point | File: test_swarm_map_reduce.py | **Classes:** MockMemoryClient<br>**Functions:** test_swarm_map_reduce, **init**, get_events, add_event, get_agent_stats... |
 | `scripts/troubleshoot.py` | 🟢 Referenced | usr/bin/env python3 | **Functions:** get_consul_token, run_command, get_nomad_allocations, section, main |
 | `scripts/uninstall.sh` | 🟢 Referenced | This script uninstalls all software and reverts all changes made by the playbook. |  |
 | `scripts/update_cluster.sh` | 🔵 Entry Point | update_cluster.sh  This script updates the pipecat-cluster base image from the git repository witho |  |
@@ -911,22 +903,20 @@ This document maps every file in the repository, their description, and utilizat
 | `test_playbook.yml` | 🧪 Test | File: test_playbook.yml |  |
 | `test_script.py` | 🧪 Test | File: test_script.py |  |
 | `tests/README.md` | 🟢 Referenced | Testing |  |
-| `tests/__init__.py` | 🟢 Referenced | File: __init__.py |  |
+| `tests/__init__.py` | 🟢 Referenced | File: **init**.py |  |
 | `tests/e2e/README.md` | 🟢 Referenced | End-to-End Tests |  |
-| `tests/e2e/__init__.py` | 🟢 Referenced | File: __init__.py |  |
+| `tests/e2e/__init__.py` | 🟢 Referenced | File: **init**.py |  |
 | `tests/e2e/test_api.py` | 🟢 Referenced | File: test_api.py | **Functions:** get_api_key_hash, api_key_and_hash, start_service, test_status_publicly_accessible, test_protected_endpoint_unauthorized_no_key... |
-| `tests/e2e/test_intelligent_routing.py` | 🟢 Referenced | File: test_intelligent_routing.py | **Classes:** MockLLM<br>**Functions:** twin_service_fixture, test_discovers_all_experts, test_routing_to_external_expert_and_tracking, test_system_prompt_includes_metrics, __init__... |
+| `tests/e2e/test_intelligent_routing.py` | 🟢 Referenced | File: test_intelligent_routing.py | **Classes:** MockLLM<br>**Functions:** twin_service_fixture, test_discovers_all_experts, test_routing_to_external_expert_and_tracking, test_system_prompt_includes_metrics, **init**... |
 | `tests/e2e/test_mission_control.py` | 🟢 Referenced | File: test_mission_control.py | **Functions:** test_mission_control_ui_loads, test_health_check_endpoint |
 | `tests/e2e/test_palette_command_history.py` | 🧪 Test | File: test_palette_command_history.py | **Functions:** web_server, test_command_history |
 | `tests/e2e/test_palette_ux.py` | 🧪 Test | File: test_palette_ux.py | **Functions:** web_server, test_save_load_buttons_state |
 | `tests/e2e/test_regression.py` | 🟢 Referenced | File: test_regression.py | **Functions:** test_code_runner_tool |
 | `tests/integration/README.md` | 🟢 Referenced | Integration Tests |  |
-| `tests/integration/__init__.py` | 🟢 Referenced | File: __init__.py |  |
-| `tests/integration/roles/test_home_assistant/tasks/main.yaml` | 🟢 Referenced | File: main.yaml |  |
-| `tests/integration/stub_services.py` | 🟢 Referenced | File: stub_services.py | **Classes:** StubOutputService<br>**Functions:** __init__, process_frame, wait_for_frame |
+| `tests/integration/__init__.py` | 🟢 Referenced | File: **init**.py |  |
+| `tests/integration/stub_services.py` | 🟢 Referenced | File: stub_services.py | **Classes:** StubOutputService<br>**Functions:** **init**, process_frame, wait_for_frame |
 | `tests/integration/test_consul_role.yaml` | 🟢 Referenced | File: test_consul_role.yaml |  |
-| `tests/integration/test_home_assistant.yaml` | 🟢 Referenced | File: test_home_assistant.yaml |  |
-| `tests/integration/test_mini_pipeline.py` | 🧪 Test | File: test_mini_pipeline.py | **Classes:** MockListAudioSource<br>**Functions:** test_stt_mini_pipeline, __init__, start |
+| `tests/integration/test_mini_pipeline.py` | 🧪 Test | File: test_mini_pipeline.py | **Classes:** MockListAudioSource<br>**Functions:** test_stt_mini_pipeline, **init**, start |
 | `tests/integration/test_mqtt_exporter.py` | 🧪 Test | File: test_mqtt_exporter.py | **Classes:** TestMqttExporter<br>**Functions:** setUpClass, setUp, tearDown, cleanup, test_metrics_collection |
 | `tests/integration/test_nomad_role.yaml` | 🟢 Referenced | File: test_nomad_role.yaml |  |
 | `tests/integration/test_pipecat_app.py` | 🟢 Referenced | File: test_pipecat_app.py | **Classes:** TestPipecatApp<br>**Functions:** setUp, test_health_check_eventually_healthy, test_main_page_loads |
@@ -957,7 +947,7 @@ This document maps every file in the repository, their description, and utilizat
 | `tests/test_ssrf_validation.py` | 🟢 Referenced | File: test_ssrf_validation.py | **Functions:** test_validate_url_safe, test_validate_url_unsafe_ip, test_validate_url_unsafe_scheme, test_allowlist |
 | `tests/test_websocket_security.py` | 🟢 Referenced | File: test_websocket_security.py | **Functions:** test_websocket_ssrf_vulnerability |
 | `tests/unit/README.md` | 🟢 Referenced | Unit Tests |  |
-| `tests/unit/__init__.py` | 🟢 Referenced | File: __init__.py |  |
+| `tests/unit/__init__.py` | 🟢 Referenced | File: **init**.py |  |
 | `tests/unit/conftest.py` | 🟢 Referenced | List of modules to mock if they are missing in the test environment | **Functions:** mock_module_if_missing |
 | `tests/unit/test_adaptation_manager.py` | 🟢 Referenced | File: test_adaptation_manager.py | **Classes:** TestAdaptationManager<br>**Functions:** test_import, test_main_flow |
 | `tests/unit/test_agent_definitions.py` | 🟢 Referenced | Define the path to the agent definitions directory | **Functions:** parse_and_validate_agent_def, test_agent_definition_schema |
@@ -986,11 +976,10 @@ This document maps every file in the repository, their description, and utilizat
 | `tests/unit/test_ha_tool.py` | 🧪 Test | File: test_ha_tool.py | **Functions:** test_init_success, test_init_failure, test_call_ai_task_success, test_call_ai_task_failure |
 | `tests/unit/test_hashline_editor.py` | 🧪 Test | File: test_hashline_editor.py | **Classes:** TestHashlineEditor<br>**Functions:** setUp, tearDown, get_hash, test_read_with_hashlines, test_apply_hash_edits_replace... |
 | `tests/unit/test_heretic_tool.py` | 🧪 Test | File: test_heretic_tool.py | **Functions:** test_heretic_tool_align_model |
-| `tests/unit/test_home_assistant_template.py` | 🟢 Referenced | File: test_home_assistant_template.py | **Functions:** test_home_assistant_template |
 | `tests/unit/test_infrastructure.py` | 🧪 Test | File: test_infrastructure.py | **Classes:** TestInfrastructure<br>**Functions:** test_consul_running, test_nomad_running |
 | `tests/unit/test_lint_script.py` | 🟢 Referenced | File: test_lint_script.py | **Classes:** TestLintScript<br>**Functions:** setUp, tearDown, test_lint_script |
 | `tests/unit/test_llxprt_code_tool.py` | 🟢 Referenced | File: test_llxprt_code_tool.py | **Functions:** llxprt_tool, test_run_success, test_run_with_args_success, test_run_failure, test_run_timeout... |
-| `tests/unit/test_looped_reasoning_node.py` | 🧪 Test | File: test_looped_reasoning_node.py | **Classes:** MockWorkflowContext<br>**Functions:** test_looped_reasoning_execution, __init__, get_input, set_output |
+| `tests/unit/test_looped_reasoning_node.py` | 🧪 Test | File: test_looped_reasoning_node.py | **Classes:** MockWorkflowContext<br>**Functions:** test_looped_reasoning_execution, **init**, get_input, set_output |
 | `tests/unit/test_mcp_tool.py` | 🟢 Referenced | File: test_mcp_tool.py | **Functions:** mcp_tool, test_get_status_with_running_pipelines, test_get_status_with_no_pipelines, test_get_status_with_no_runner, test_get_memory_summary... |
 | `tests/unit/test_memory.py` | 🟢 Referenced | File: test_memory.py | **Functions:** temp_store_file, temp_index_file, mock_embedding_model, mock_faiss_index, test_unencrypted_memory_store... |
 | `tests/unit/test_mqtt_template.py` | 🧪 Test | File: test_mqtt_template.py | **Functions:** test_mqtt_template |
@@ -1024,7 +1013,7 @@ This document maps every file in the repository, their description, and utilizat
 | `tests/unit/test_summarizer_tool.py` | 🟢 Referenced | File: test_summarizer_tool.py | **Functions:** mock_sentence_transformer_module, summarizer_tool, test_get_summary_with_history, test_get_summary_no_history, test_get_summary_less_than_k_history... |
 | `tests/unit/test_supervisor.py` | 🟢 Referenced | File: test_supervisor.py | **Classes:** TestSupervisor<br>**Functions:** test_run_playbook_success, test_run_playbook_failure, test_run_playbook_with_extra_vars, test_run_script_success, test_run_script_failure... |
 | `tests/unit/test_swarm_tool.py` | 🧪 Test | File: test_swarm_tool.py | **Functions:** test_swarm_tool_initialization, test_spawn_workers_success, test_spawn_workers_partial_failure, test_kill_worker_success, test_kill_worker_failure... |
-| `tests/unit/test_tap_service.py` | 🧪 Test | File: test_tap_service.py | **Classes:** MockFrameProcessor<br>**Functions:** test_process_frame, __init__, push_frame |
+| `tests/unit/test_tap_service.py` | 🧪 Test | File: test_tap_service.py | **Classes:** MockFrameProcessor<br>**Functions:** test_process_frame, **init**, push_frame |
 | `tests/unit/test_term_everything_tool.py` | 🟢 Referenced | File: test_term_everything_tool.py | **Functions:** tool, test_execute_command_success, test_execute_command_failure, test_execute_exception |
 | `tests/unit/test_vision_failover.py` | 🟢 Referenced | File: test_vision_failover.py | **Classes:** MockFrameProcessor, MockVisionImageRawFrame<br>**Functions:** test_vision_selection_primary_succeeds, test_vision_selection_fallback_succeeds, test_vision_selection_both_fail, test_yolo_internal_initialization_failover, test_yolo_internal_process_frame_failover... |
 | `tests/unit/test_web_browser_tool.py` | 🟢 Referenced | File: test_web_browser_tool.py | **Classes:** TestWebBrowserTool<br>**Functions:** asyncSetUp, asyncTearDown, test_goto_success, test_goto_failure, test_get_page_content_success... |
@@ -1331,19 +1320,15 @@ graph LR
         direction TB
         node_873["main.yaml"]
     end
-    subgraph dir_ansible_roles_home_assistant_meta [ansible/roles/home_assistant/meta]
         direction TB
         node_899["main.yaml"]
         node_900["main.yml"]
     end
-    subgraph dir_ansible_roles_home_assistant_tasks [ansible/roles/home_assistant/tasks]
         direction TB
         node_898["main.yaml"]
     end
-    subgraph dir_ansible_roles_home_assistant_templates [ansible/roles/home_assistant/templates]
         direction TB
         node_896["configuration.yaml.j2"]
-        node_897["home_assistant.nomad.j2"]
     end
     subgraph dir_ansible_roles_kittentts_tasks [ansible/roles/kittentts/tasks]
         direction TB
@@ -2619,9 +2604,7 @@ graph LR
         node_455["deploy_pds.yaml"]
         node_457["deploy_prompt_evolution.yaml"]
         node_446["developer_tools.yaml"]
-        node_453["diagnose_and_log_home_assistant.yaml"]
         node_458["diagnose_failure.yaml"]
-        node_456["diagnose_home_assistant.yaml"]
         node_452["fix_cluster.yaml"]
         node_451["heal_cluster.yaml"]
         node_470["heal_job.yaml"]
@@ -2672,7 +2655,6 @@ graph LR
     end
     subgraph dir_playbooks_services_tasks [playbooks/services/tasks]
         direction TB
-        node_489["diagnose_home_assistant.yaml"]
     end
     subgraph dir_prompt_engineering [prompt_engineering]
         direction TB
@@ -2832,14 +2814,12 @@ graph LR
         node_585["__init__.py"]
         node_591["stub_services.py"]
         node_584["test_consul_role.yaml"]
-        node_586["test_home_assistant.yaml"]
         node_587["test_mini_pipeline.py"]
         node_588["test_mqtt_exporter.py"]
         node_583["test_nomad_role.yaml"]
         node_589["test_pipecat_app.py"]
         node_590["test_preemption.py"]
     end
-    subgraph dir_tests_integration_roles_test_home_assistant_tasks [tests/integration/roles/test_home_assistant/tasks]
         direction TB
         node_593["main.yaml"]
     end
@@ -2891,7 +2871,6 @@ graph LR
         node_624["test_ha_tool.py"]
         node_645["test_hashline_editor.py"]
         node_617["test_heretic_tool.py"]
-        node_653["test_home_assistant_template.py"]
         node_664["test_infrastructure.py"]
         node_628["test_lint_script.py"]
         node_603["test_llxprt_code_tool.py"]

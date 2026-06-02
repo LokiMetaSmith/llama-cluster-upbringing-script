@@ -8,5 +8,5 @@
     "localhost:{{ docker_registry_port | default(5001) }}",
     "{{ docker_registry_host }}:{{ docker_registry_port | default(5001) }}"
   ],
-  "storage-driver": "vfs"
+  "storage-driver": "overlay2"
 }

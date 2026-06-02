@@ -169,7 +169,6 @@ Agent memories related to the project.
 * Nomad HTTP health checks consider only 2xx status codes as "healthy"; application endpoints must return non-2xx codes (like 503) to signal failure.
 * The Consul management token (SecretID) required for UI access is stored in `/etc/consul.d/management_token` on the controller node.
 * Stale Nomad service registrations in Consul, often caused by wiping Nomad's data directory without clearing Consul's state, result in 'All service checks failing' for the old Node ID; these can be removed using `scripts/prune_consul_services.py`.
-* Use `default('')` for `home_assistant_token` in Nomad template to handle circular dependency.
 * LLM service uses `expert.nomad.j2` orchestrator and `llamacpp-rpc.nomad.j2` workers.
 * The cluster uses a "Dual Network" architecture: `advertise_ip` (DHCP) for external management/UI ("Front of House") and `cluster_ip` (Static 10.0.0.x) for internal cluster communication ("Backstage").
 * Define Nomad `volume_mount` inside the `group` block, not `task` block.
@@ -246,7 +245,6 @@ Agent memories related to the project.
 * `bootstrap.sh --debug` saves full Ansible output to `playbook_output.log`.
 * Markdown documentation must use asterisks `*` for unordered lists, blank lines around headings and lists (MD022, MD032), and correct table spacing (MD060) to pass linting.
 * `scripts/ci_ansible_check.sh` wrappers `ansible_diff.sh` for CI workflows.
-* `tests/unit/test_home_assistant_template.py` requires `hostvars` to be mocked.
 * `requirements-dev.txt` contains redundant entries (e.g., `yaml`) that can break installation.
 * `pytest-mock` is required for tests using the `mocker` fixture.
 * `openevolve` evaluates code performance by deploying to Nomad and running integration tests.
@@ -303,7 +301,6 @@ Agent memories related to the project.
 * Shell debug scripts (e.g., `debug_world_model.sh`) should use `hostname -I` to determine the host IP for network bindings when emulating Nomad host networking.
 * `REMOTE_WORKFLOW.md` suggests `helix`, `yazi`, and `lazygit`.
 * `openevolve` dependency is in `prompt_engineering/requirements-dev.txt`.
-* `test_home_assistant_template.py` requires `pyyaml`, `pytest`, `jinja2`.
 * `TODO.md` tracks project status and user alignment.
 * Stay focused on the user's immediate request.
 * User wants a discrepancy report before code changes.
@@ -346,7 +343,6 @@ Agent memories related to the project.
 * The `llama-server` application's `/health` endpoint requires a model to be successfully loaded to return healthy.
 * The PXE boot process uses `pxe_os` in `group_vars/all.yaml` to select between Debian and NixOS.
 * The `tool_server` role relies on `ansible/roles/tool_server/app.py` as the single source of truth, which is copied into the Docker image via the `Dockerfile`.
-* Home Assistant's auth token is stored at `/opt/nomad/volumes/ha-config/.storage/auth_provider.homeassistant`.
 * Expert agents are defined by prompts in `ansible/roles/pipecatapp/files/prompts/`.
 * The `tool_server` role Docker image build process is updated to copy the source files (`app.py`, `Dockerfile`, `tools/`, etc.) into a dedicated build directory `/opt/tool_server` before building to ensure a clean build context.
 * The `tool_server` serves as a Model Context Protocol (MCP) server, exposing functionality via the `/run_tool/` endpoint.

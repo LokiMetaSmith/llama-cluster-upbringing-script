@@ -3,6 +3,7 @@
 ## Verification of Initial Analysis
 
 The initial analysis posited a "Docker Daemon Bug Hypothesis" due to the following symptoms:
+
 1. Port Binding Appears Successful but Connection Refused (via `curl`).
 2. Docker Containers Start but Have No Network (`NetworkSettings.Networks` is empty).
 3. Host Networking Works, but Bridge Networking DNS Not Working.
@@ -14,7 +15,9 @@ When Nomad deploys jobs using `network { mode = "bridge" }`, it heavily relies o
 Without these settings, Nomad sets up the container in a bridge network namespace, but since the bridged packets are dropped by iptables or ignored by netfilter, the container essentially hangs without a functioning network connection.
 
 ### Root Cause
+
 The host is missing the necessary `br_netfilter` module and the sysctl properties required for bridged IPv4/IPv6 traffic to be processed by iptables:
+
 * `net.bridge.bridge-nf-call-arptables = 1`
 * `net.bridge.bridge-nf-call-ip6tables = 1`
 * `net.bridge.bridge-nf-call-iptables = 1`
@@ -24,6 +27,7 @@ The host is missing the necessary `br_netfilter` module and the sysctl propertie
 To fix this natively and restore full CNI bridge capabilities (including Consul DNS resolution and external Tailscale access without port conflicts), the underlying provisioning must be corrected.
 
 The `nomad` Ansible role has been updated (`ansible/roles/nomad/tasks/main.yaml`) to:
+
 1. Load the `br_netfilter` module via `modprobe` and ensure it is loaded on boot.
 2. Apply the required sysctl configurations persistently to enable `bridge-nf-call-*` properties.
 

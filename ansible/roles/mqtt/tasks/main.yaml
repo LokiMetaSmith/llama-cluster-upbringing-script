@@ -10,37 +10,14 @@
     path: "{{ item }}"
     state: directory
     mode: '0755'
+    owner: "1883"
+    group: "1883"
   become: yes
   loop:
     - "{{ nomad_volumes_dir }}/mqtt-data"
     - "{{ nomad_volumes_dir }}/mqtt-data/data"
     - "{{ nomad_volumes_dir }}/mqtt-data/log"
     - "{{ nomad_volumes_dir }}/mqtt-data/config"
-
-- name: Create Mosquitto config file
-  ansible.builtin.copy:
-    dest: "{{ nomad_volumes_dir }}/mqtt-data/config/mosquitto.conf"
-    content: |
-      persistence true
-      persistence_location /mosquitto/data/
-      log_dest stdout
-      log_dest stderr
-      log_type all
-      listener {{ mqtt_port }} 0.0.0.0
-      allow_anonymous true
-      listener {{ mqtt_websocket_port }} 0.0.0.0
-      protocol websockets
-    mode: '0644'
-  become: yes
-
-- name: Set ownership for Mosquitto directories
-  ansible.builtin.file:
-    path: "{{ nomad_volumes_dir }}/mqtt-data"
-    state: directory
-    owner: "1883"
-    group: "1883"
-    recurse: yes
-  become: yes
 
 - name: Flush handlers to ensure nomad is restarted and ready
   ansible.builtin.meta: flush_handlers
@@ -173,6 +150,15 @@
   when: mqtt_job_check.rc == 0
   changed_when: true
 
+- name: Template mosquitto.conf
+  ansible.builtin.template:
+    src: mosquitto.conf.j2
+    dest: "{{ nomad_volumes_dir }}/mqtt-data/config/mosquitto.conf"
+    mode: '0644'
+    owner: "1883"
+    group: "1883"
+  become: yes
+
 - name: Template mqtt Nomad job file
   ansible.builtin.template:
     src: mqtt.nomad.j2
@@ -230,7 +216,6 @@
         NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
       changed_when: true
       register: mqtt_job_run
-      notify: Restart Home Assistant
 
     - name: Wait for MQTT service to be healthy in Consul
       ansible.builtin.uri:

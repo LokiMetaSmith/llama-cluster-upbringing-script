@@ -13,7 +13,6 @@ This directory contains individual, reusable components for managing specific pa
 - **desktop_extras**: A role for installing desktop extras.
 - **docker**: A role for managing Docker.
 - **download_models**: A role for downloading models.
-- **home_assistant**: A role for managing Home Assistant.
 - **kittentts**: A role for managing KittenTTS.
 - **llama_cpp**: A role for managing llama.cpp.
 - **mqtt**: A role for managing MQTT.

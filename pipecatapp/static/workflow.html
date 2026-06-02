@@ -158,6 +158,7 @@
             <div id="toolbar">
                 <button id="save-btn">Save / Deploy</button>
                 <button id="arrange-btn">Auto Arrange</button>
+                <button id="add-group-btn">Add Group</button>
                 <button id="vr-btn" onclick="window.location.href='/static/vr_index.html'" style="background-color: #800080;">Enter VR</button>
                 <span id="status-text" role="status" aria-live="polite">Ready</span>
             </div>
@@ -320,6 +321,27 @@
 
             document.getElementById('arrange-btn').addEventListener('click', () => {
                 WorkflowEditor.autoLayout();
+            });
+
+            document.getElementById('add-group-btn').addEventListener('click', () => {
+                if (!WorkflowEditor.graph || !WorkflowEditor.canvas) return;
+
+                const group = new LiteGraph.LGraphGroup();
+                const canvas = WorkflowEditor.canvas;
+                let x = 400;
+                let y = 300;
+
+                if (canvas.ds) {
+                    const w = canvas.bgcanvas ? canvas.bgcanvas.width : 800;
+                    const h = canvas.bgcanvas ? canvas.bgcanvas.height : 600;
+
+                    x = (-canvas.ds.offset[0] + w / 2) / canvas.ds.scale;
+                    y = (-canvas.ds.offset[1] + h / 2) / canvas.ds.scale;
+                }
+
+                group.pos = [x, y];
+                WorkflowEditor.graph.add(group);
+                showStatus('Added group', 'success');
             });
 
             // Live Polling Logic

@@ -1,0 +1,62 @@
+job "influxdb" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "service"
+
+  group "influxdb" {
+    count = 1
+
+    network {
+      port "http" {
+        static = {{ influxdb_port | default(8086) }}
+      }
+    }
+
+    volume "influxdb-data" {
+      type      = "host"
+      source    = "influxdb-data"
+      read_only = false
+    }
+
+    service {
+      name     = "influxdb"
+      port     = "http"
+      provider = "consul"
+
+      check {
+        type     = "http"
+        path     = "/ping"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "influxdb" {
+      driver = "docker"
+
+      config {
+        image = "influxdb:2"
+        ports = ["http"]
+      }
+
+      env {
+        DOCKER_INFLUXDB_INIT_MODE = "setup"
+        DOCKER_INFLUXDB_INIT_USERNAME = "{{ influxdb_username | default('admin') }}"
+        DOCKER_INFLUXDB_INIT_PASSWORD = "{{ influxdb_password | default('admin1234') }}"
+        DOCKER_INFLUXDB_INIT_ORG = "{{ influxdb_org | default('pipecat') }}"
+        DOCKER_INFLUXDB_INIT_BUCKET = "{{ influxdb_bucket | default('telemetry') }}"
+        DOCKER_INFLUXDB_INIT_ADMIN_TOKEN = "{{ influxdb_token | default('my-super-secret-auth-token') }}"
+      }
+
+      volume_mount {
+        volume      = "influxdb-data"
+        destination = "/var/lib/influxdb2"
+        read_only   = false
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+  }
+}

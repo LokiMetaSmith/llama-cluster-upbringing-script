@@ -11,14 +11,14 @@ const WorkflowEditor = {
         return Object.keys(this.nodeTypes).map(type => "agent/" + type);
     },
 
-    init: function(containerId, options = {}) {
+    init: async function(containerId, options = {}) {
         this.options = options;
         this.graph = new LGraph();
         this.canvas = new LGraphCanvas(containerId, this.graph);
         this.canvas.allow_searchbox = true; // enable search box with double click
 
         // Register custom nodes
-        this.registerNodeTypes();
+        await this.registerNodeTypes();
 
         // Strict Visual Edge Validation
         const originalIsValidConnection = LiteGraph.isValidConnection;
@@ -87,9 +87,31 @@ const WorkflowEditor = {
         });
     },
 
-    registerNodeTypes: function() {
+    registerNodeTypes: async function() {
+        // Fetch node metadata from backend
+        let backendMetadata = [];
+        try {
+            const headers = {};
+            const apiKey = localStorage.getItem('api_key');
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+
+            const response = await fetch('/api/workflows/nodes/metadata', { headers });
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.nodes) {
+                    backendMetadata = data.nodes;
+                } else if (Array.isArray(data)) {
+                    backendMetadata = data;
+                }
+            } else {
+                console.error("Failed to fetch node metadata:", response.status, response.statusText);
+            }
+        } catch (error) {
+            console.error("Error fetching node metadata:", error);
+        }
+
         // Generic function to create node classes based on our YAML types
-        const createGenericNode = (type, title, inputs, outputs, properties) => {
+        const createGenericNode = (type, title, inputs, outputs, properties, desc) => {
             function GenericNode() {
                 if (inputs) {
                     inputs.forEach(i => this.addInput(i.name, i.type));
@@ -117,7 +139,7 @@ const WorkflowEditor = {
             }
 
             GenericNode.title = title;
-            GenericNode.desc = type;
+            GenericNode.desc = desc || type;
 
             // Custom serialize to ensure agentNodeType is preserved
             GenericNode.prototype.onSerialize = function(o) {
@@ -353,22 +375,36 @@ const WorkflowEditor = {
             this.nodeTypes[type] = GenericNode;
         };
 
-        // Define known node types from the backend
-        createGenericNode("InputNode", "Input", [], [{name: "user_text", type: "string"}, {name: "tools_dict", type: "object"}, {name: "tool_result", type: "object"}, {name: "consul_http_addr", type: "string"}]);
-        createGenericNode("ConsulServiceDiscoveryNode", "Service Discovery", [{name: "consul_http_addr", type: "string"}], [{name: "available_services", type: "object"}]);
-        createGenericNode("SystemPromptNode", "System Prompt", [{name: "tools", type: "object"}, {name: "available_services", type: "object"}], [{name: "system_prompt", type: "string"}]);
-        createGenericNode("ScreenshotNode", "Screenshot", [{name: "tools", type: "object"}], [{name: "screenshot_base64", type: "string"}]);
-        createGenericNode("PromptBuilderNode", "Prompt Builder", [{name: "system_prompt", type: "string"}, {name: "user_text", type: "string"}, {name: "screenshot", type: "string"}, {name: "tool_result", type: "object"}], [{name: "messages", type: "array"}]);
-        createGenericNode("SimpleLLMNode", "Simple LLM", [{name: "messages", type: "array"}, {name: "user_text", type: "string"}], [{name: "response", type: "string"}], {model_tier: "balanced", system_prompt: "You are a helpful assistant."});
-        createGenericNode("VisionLLMNode", "Vision LLM", [{name: "messages", type: "array"}], [{name: "response_text", type: "string"}]);
-        createGenericNode("ToolParserNode", "Tool Parser", [{name: "llm_response", type: "string"}], [{name: "tool_call_data", type: "object"}, {name: "final_response", type: "string"}]);
-        createGenericNode("ConditionalBranchNode", "Branch", [{name: "input_value", type: "object"}], [{name: "output_true", type: "object"}, {name: "output_false", type: "object"}], {check_if_tool_is: ""});
-        createGenericNode("GateNode", "Gate", [{name: "input_value", type: "object"}], [{name: "output", type: "object"}]);
-        createGenericNode("ExpertRouterNode", "Expert Router", [{name: "expert_name", type: "string"}, {name: "query", type: "string"}], [{name: "expert_response", type: "string"}]);
-        createGenericNode("ToolExecutorNode", "Tool Executor", [{name: "tool_call_data", type: "object"}], [{name: "tool_result", type: "object"}]);
-        createGenericNode("MergeNode", "Merge", [{name: "in1", type: "object"}, {name: "in2", type: "object"}], [{name: "merged_output", type: "object"}]);
-        createGenericNode("OutputNode", "Output", [{name: "final_output", type: "object"}], []);
-        createGenericNode("PostProcessorNode", "Post Processor", [{name: "data", type: "object"}, {name: "expression", type: "string"}], [{name: "processed_data", type: "object"}], {expression: "data"});
+        if (backendMetadata && backendMetadata.length > 0) {
+            // Use dynamic metadata from backend
+            backendMetadata.forEach(meta => {
+                createGenericNode(
+                    meta.name,
+                    meta.name.replace(/Node$/, '').replace(/([A-Z])/g, ' $1').trim(), // Friendly title
+                    meta.inputs,
+                    meta.outputs,
+                    meta.properties,
+                    meta.description
+                );
+            });
+        } else {
+            // Fallback to static definitions if backend fetch fails
+            createGenericNode("InputNode", "Input", [], [{name: "user_text", type: "string"}, {name: "tools_dict", type: "object"}, {name: "tool_result", type: "object"}, {name: "consul_http_addr", type: "string"}]);
+            createGenericNode("ConsulServiceDiscoveryNode", "Service Discovery", [{name: "consul_http_addr", type: "string"}], [{name: "available_services", type: "object"}]);
+            createGenericNode("SystemPromptNode", "System Prompt", [{name: "tools", type: "object"}, {name: "available_services", type: "object"}], [{name: "system_prompt", type: "string"}]);
+            createGenericNode("ScreenshotNode", "Screenshot", [{name: "tools", type: "object"}], [{name: "screenshot_base64", type: "string"}]);
+            createGenericNode("PromptBuilderNode", "Prompt Builder", [{name: "system_prompt", type: "string"}, {name: "user_text", type: "string"}, {name: "screenshot", type: "string"}, {name: "tool_result", type: "object"}], [{name: "messages", type: "array"}]);
+            createGenericNode("SimpleLLMNode", "Simple LLM", [{name: "messages", type: "array"}, {name: "user_text", type: "string"}], [{name: "response", type: "string"}], {model_tier: "balanced", system_prompt: "You are a helpful assistant."});
+            createGenericNode("VisionLLMNode", "Vision LLM", [{name: "messages", type: "array"}], [{name: "response_text", type: "string"}]);
+            createGenericNode("ToolParserNode", "Tool Parser", [{name: "llm_response", type: "string"}], [{name: "tool_call_data", type: "object"}, {name: "final_response", type: "string"}]);
+            createGenericNode("ConditionalBranchNode", "Branch", [{name: "input_value", type: "object"}], [{name: "output_true", type: "object"}, {name: "output_false", type: "object"}], {check_if_tool_is: ""});
+            createGenericNode("GateNode", "Gate", [{name: "input_value", type: "object"}], [{name: "output", type: "object"}]);
+            createGenericNode("ExpertRouterNode", "Expert Router", [{name: "expert_name", type: "string"}, {name: "query", type: "string"}], [{name: "expert_response", type: "string"}]);
+            createGenericNode("ToolExecutorNode", "Tool Executor", [{name: "tool_call_data", type: "object"}], [{name: "tool_result", type: "object"}]);
+            createGenericNode("MergeNode", "Merge", [{name: "in1", type: "object"}, {name: "in2", type: "object"}], [{name: "merged_output", type: "object"}]);
+            createGenericNode("OutputNode", "Output", [{name: "final_output", type: "object"}], []);
+            createGenericNode("PostProcessorNode", "Post Processor", [{name: "data", type: "object"}, {name: "expression", type: "string"}], [{name: "processed_data", type: "object"}], {expression: "data"});
+        }
 
     },
 
@@ -380,6 +416,28 @@ const WorkflowEditor = {
 
         // 1. Create Nodes
         yamlNodes.forEach(n => {
+            if (n.type === "scope" || n.type === "group") {
+                const group = new LiteGraph.LGraphGroup();
+                group.title = n.id || n.name || "Group";
+
+                if (n.position) {
+                    group.pos = [n.position.x || 0, n.position.y || 0];
+                } else {
+                    group.pos = [Math.random() * 800 + 100, Math.random() * 600 + 100];
+                }
+
+                if (n.dimensions) {
+                    group.size = [n.dimensions.width || 400, n.dimensions.height || 200];
+                }
+
+                if (n.style && n.style.color) {
+                    group.color = n.style.color;
+                }
+
+                this.graph.add(group);
+                return;
+            }
+
             const nodeTypeString = "agent/" + n.type;
             const node = LiteGraph.createNode(nodeTypeString);
 
@@ -405,9 +463,21 @@ const WorkflowEditor = {
                 }
             }
 
-            // Attempt to layout nodes roughly (Auto-layout would be better)
-            // For now, place them randomly or in a grid
-            node.pos = [Math.random() * 800 + 100, Math.random() * 600 + 100];
+            if (n.position) {
+                node.pos = [n.position.x || 0, n.position.y || 0];
+            } else {
+                // Attempt to layout nodes roughly (Auto-layout would be better)
+                // For now, place them randomly or in a grid
+                node.pos = [Math.random() * 800 + 100, Math.random() * 600 + 100];
+            }
+
+            if (n.dimensions) {
+                node.size = [n.dimensions.width || LiteGraph.NODE_WIDTH, n.dimensions.height || LiteGraph.NODE_SLOT_HEIGHT];
+            }
+
+            if (n.style && n.style.color) {
+                node.color = n.style.color;
+            }
 
             this.graph.add(node);
             nodesMap[n.id] = node;
@@ -577,13 +647,51 @@ const WorkflowEditor = {
 
     exportWorkflow: function() {
         const nodes = this.graph._nodes;
+        const groups = this.graph._groups || [];
         const yamlNodes = [];
+
+        // Export groups (scopes)
+        groups.forEach(group => {
+            const yamlNode = {
+                id: group.title || "Group",
+                type: "scope",
+                position: {
+                    x: group._pos[0],
+                    y: group._pos[1],
+                    z: 0
+                },
+                dimensions: {
+                    width: group._size[0],
+                    height: group._size[1],
+                    depth: 0
+                },
+                style: {
+                    color: group.color || "#cccccc",
+                    shape: "box"
+                }
+            };
+            yamlNodes.push(yamlNode);
+        });
 
         nodes.forEach(node => {
             const yamlNode = {
                 id: node.title, // Assuming title is kept as ID
-                type: node.agentNodeType.replace("agent/", "") // Strip prefix
+                type: node.agentNodeType.replace("agent/", ""), // Strip prefix
+                position: {
+                    x: node.pos[0],
+                    y: node.pos[1],
+                    z: 0
+                },
+                dimensions: {
+                    width: node.size[0],
+                    height: node.size[1],
+                    depth: 0
+                }
             };
+
+            if (node.color) {
+                yamlNode.style = { color: node.color };
+            }
 
             // Properties
             for (const key in node.properties) {
