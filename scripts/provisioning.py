@@ -237,6 +237,34 @@ def kill_if_running(pattern):
     except Exception as e:
         print_warning(f"Failed to kill process matching '{pattern}': {e}")
 
+def purge_app_jobs_for_test_mode():
+    """Stops and purges non-critical Nomad jobs during test mode."""
+    if not shutil.which("nomad"):
+        print_warning("'nomad' command not found. Cannot purge jobs. Skipping.")
+        return
+
+    try:
+        env = get_nomad_env()
+        cmd = "nomad job status | awk 'NR>1 {print $1}'"
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, env=env)
+        job_ids = result.stdout.strip().split('\n')
+
+        found_jobs = False
+        # Do not purge core infra jobs that subsequent tests might rely on
+        excluded_jobs = ["traefik", "docker-registry", "authentik"]
+
+        for job_id in job_ids:
+            if job_id and job_id != "No" and job_id not in excluded_jobs:
+                found_jobs = True
+                print(f"Stopping and purging app job: {job_id}")
+                subprocess.run(["nomad", "job", "stop", "-purge", job_id],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+
+        if not found_jobs:
+            print("No running app jobs found to purge.")
+    except Exception as e:
+        print_error(f"Error purging app jobs: {e}")
+
 def purge_nomad_jobs():
     """Stops and purges all Nomad jobs."""
     if not shutil.which("nomad"):
@@ -634,6 +662,7 @@ def main():
     parser.add_argument("--leave-services-running", action="store_true", help="Don't cleanup Nomad/Consul")
     parser.add_argument("--purge-jobs", action="store_true", help="Purge Nomad jobs (handled by wrapper mostly, but var passed)")
     parser.add_argument("--only-purge", action="store_true", help="Only purge jobs and exit (requires --purge-jobs)")
+    parser.add_argument("--test-mode", action="store_true", help="Test mode: Purges application jobs after they are deployed to save memory during testing.")
     parser.add_argument("--only-status", action="store_true", help="Only print status and exit")
     parser.add_argument("--deploy-docker", action="store_true", help="Deploy via Docker")
     parser.add_argument("--run-local", action="store_true", help="Deploy via raw_exec")
@@ -828,6 +857,20 @@ def main():
         # --- Run ---
         run_playbook(pb_path, extra_vars, args.tags, verbose_level)
         executed_playbooks.append(pb_path)
+
+        # --- Test Mode Purge ---
+        if args.test_mode and os.path.basename(pb_path) in [
+            "monitoring.yaml",
+            "model_services.yaml",
+            "core_ai_services.yaml",
+            "ai_experts.yaml",
+            "training_services.yaml",
+            "distributed_compute.yaml",
+            "streaming_services.yaml",
+            "app_services.yaml"
+        ]:
+            print(f"{Colors.WARNING}🧪 Test Mode: Purging jobs after {os.path.basename(pb_path)} to save memory...{Colors.ENDC}")
+            purge_app_jobs_for_test_mode()
 
         # --- Profiling After ---
         ram_after = get_current_ram_usage()
