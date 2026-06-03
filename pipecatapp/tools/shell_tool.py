@@ -65,12 +65,55 @@ class ShellTool:
             output = stdout.decode('utf-8', errors='replace')
 
             if sentinel in output:
-                # Determine success/failure could be hard from just text,
-                # but the agent can read the output.
-                # We return the output up to the sentinel to keep it clean-ish?
-                # Or just return the whole buffer. The agent is smart.
-                # Let's strip the sentinel line to be nice.
-                return output.replace(f"echo '{sentinel}'", "").replace(sentinel, "").strip()
+                result = output.replace(f"echo '{sentinel}'", "").replace(sentinel, "").strip()
+
+                # EAGAIN Handling for ripgrep
+                if ("os error 11" in result.lower() or "resource temporarily unavailable" in result.lower()) and \
+                   (command.strip().startswith("rg ") or command.strip().startswith("ripgrep ")):
+
+                    logging.warning("EAGAIN encountered during ripgrep in shell_tool. Retrying with -j 1...")
+
+                    # Ensure -j 1 is added
+                    if "-j 1" not in command and "-j1" not in command:
+                        retry_command = command.replace("rg ", "rg -j 1 ", 1).replace("ripgrep ", "ripgrep -j 1 ", 1)
+                        return await self.execute_command(retry_command, timeout)
+
+
+                try:
+                    import web_server
+                    import json
+                    # Redact output if security module is present
+                    redacted_output = result
+                    try:
+                        from pipecatapp.security import redact_sensitive_data_stream
+                        import inspect
+                        res = redact_sensitive_data_stream(result)
+                        if inspect.isasyncgen(res):
+                            # It's an async generator, we need to collect it
+                            async def collect_gen(gen):
+                                parts = []
+                                async for part in gen:
+                                    parts.append(part)
+                                return "".join(parts)
+                            redacted_output = await collect_gen(res)
+                        else:
+                            redacted_output = res
+                    except ImportError:
+                        pass
+                    except Exception:
+                        pass
+
+                    asyncio.create_task(web_server.manager.broadcast(json.dumps({
+                        "type": "shell_output",
+                        "data": redacted_output
+                    })))
+                except ImportError:
+                    pass
+
+                return result
+
+
+
 
             await asyncio.sleep(0.5)
 
