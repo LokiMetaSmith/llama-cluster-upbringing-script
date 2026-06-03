@@ -107,3 +107,13 @@ def test_retry_job(mock_run_command, capsys):
 
     captured = capsys.readouterr()
     assert "Successfully triggered restart for job job2" in captured.out
+
+@patch('troubleshoot.run_legacy_command')
+def test_report_job(mock_run_legacy_command, capsys):
+    mock_run_legacy_command.return_value = "Mocked legacy output\n"
+
+    args = DummyArgs(json=False)
+    troubleshoot.cmd_report(args)
+
+    captured = capsys.readouterr()
+    assert "Report generation complete" in captured.out
