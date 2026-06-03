@@ -38,6 +38,7 @@ show_help() {
     echo "  --deploy-full-stack          Deploy the full application stack (AI agents, models) instead of just infrastructure."
     echo "  --deploy-partial-stack       Deploy a partial application stack (e.g. 4-8B models) for mid-tier worker nodes."
     echo "  --deploy-minimal-stack       Deploy a minimal application stack (e.g. audio, kiosk, status) for low resource nodes."
+    echo "  --test-mode                  Test mode: Purges application jobs after they are deployed to save memory during testing."
     echo "  --continue                   Resume from the last successfully completed playbook."
     echo "  --benchmark                  Run benchmark tests."
     echo "  --deploy-docker              Deploy the pipecat application using Docker (Default)."
@@ -289,6 +290,9 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             ;;
         --deploy-minimal-stack)
             PROCESSED_ARGS+=("--deploy-minimal-stack")
+            ;;
+        --test-mode)
+            PROCESSED_ARGS+=("--test-mode")
             ;;
         --clean-git|--clean) # Support legacy --clean just in case, but map to clean-git
             DO_CLEAN_GIT=true
