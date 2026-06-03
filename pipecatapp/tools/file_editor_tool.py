@@ -223,14 +223,12 @@ class FileEditorTool:
         try:
             path = self._validate_path(filepath)
             with open(path, 'rb') as f_bin:
-                sample = f_bin.read(4096)
-                if b'\r\n' in sample:
+                raw_content = f_bin.read()
+                if b'\r\n' in raw_content:
                     self._file_metadata[path] = {'newline': '\r\n'}
                 else:
                     self._file_metadata[path] = {'newline': '\n'}
-
-            with open(path, 'r', encoding='utf-8') as f:
-                content = f.read()
+                content = raw_content.decode('utf-8')
 
             lines = content.splitlines()
 

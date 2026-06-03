@@ -13,6 +13,19 @@ import json
 import subprocess
 import shutil
 from pipecatapp.utils.command_runner import CommandRunner
+import functools
+
+import os
+
+@functools.lru_cache(maxsize=100)
+def _load_document_cached_internal(file_path, mtime, encoding='utf-8'):
+    from langchain_community.document_loaders import TextLoader
+    loader = TextLoader(file_path, encoding=encoding)
+    return loader.load()
+
+def load_document_cached(file_path, encoding='utf-8'):
+    mtime = os.path.getmtime(file_path)
+    return _load_document_cached_internal(file_path, mtime, encoding=encoding)
 
 class RAG_Tool:
     """A tool to retrieve information from a project-specific knowledge base.
@@ -244,8 +257,7 @@ class RAG_Tool:
 
         for i, file_path in enumerate(files_to_process):
             try:
-                loader = TextLoader(file_path, encoding='utf-8')
-                docs = loader.load()
+                docs = load_document_cached(file_path, encoding='utf-8')
                 split_docs = text_splitter.split_documents(docs)
 
                 for chunk_idx, doc in enumerate(split_docs):
