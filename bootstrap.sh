@@ -623,6 +623,7 @@ setup_venv() {
 
 ensure_python_environment() {
     echo -e "\n${BOLD}=== Environment Setup ===${NC}"
+    chmod o-w . ansible.cfg
 
     run_step "Creating Python virtual environment" "setup_venv"
 

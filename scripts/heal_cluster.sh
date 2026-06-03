@@ -64,6 +64,7 @@ if ! command -v ansible-playbook &> /dev/null; then
 fi
 
 # Run the playbook
+export ANSIBLE_CONFIG="$REPO_ROOT/ansible.cfg"
 ansible-playbook -i "$REPO_ROOT/inventory.yaml" "$PLAYBOOK" \
     -e "target_user=$TARGET_USER" \
     -e "ansible_python_interpreter=$(which python3)"
