@@ -52,3 +52,6 @@ test_env/
 poc/wasm_tool_bridge/text_processor/target/
 poc/p2p_sync/syncthing
 collections/
+
+# Ignore temporary certificates
+.tmp_certs_nomad/
