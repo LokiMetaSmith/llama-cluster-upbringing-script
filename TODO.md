@@ -165,7 +165,7 @@ These structural suggestions are targeted for a future major release to signific
   - [x] Add transparent pagination feedback (e.g. `[Showing results with pagination...]`).
   - [x] Implement single-pass read with metadata extraction (encoding, line endings) for file editors.
   - [x] Implement `LRUCache` for file state to optimize `RAG_Tool` and `DocumentTool`.
-  - [ ] Evaluate and create a unit test to enforce strict caching across the board to save on disk reads during RAG operations.
+  - [x] Evaluate and create a unit test to enforce strict caching across the board to save on disk reads during RAG operations.
   - [x] Integrate dynamic "thinking" feature support detection based on model string.
 - [x] **Expand the Model Collection:** Systematically test and add the remaining LiquidAI nano models to `group_vars/models.yaml`.
 - [x] **Security Hardening:**
