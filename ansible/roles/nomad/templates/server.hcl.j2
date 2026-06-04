@@ -18,13 +18,6 @@ advertise {
 {% if is_controller is defined and is_controller %}
 server {
   enabled = true
-
-  autopilot {
-    cleanup_dead_servers = true
-    last_contact_threshold = "20s"
-    max_trailing_logs    = 250
-    server_stabilization_time = "10s"
-  }
 }
 {% endif %}
 

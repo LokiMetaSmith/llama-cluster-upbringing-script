@@ -21,13 +21,6 @@ server {
   server_join {
     retry_join = ["{{ cluster_ip }}"]
   }
-
-  autopilot {
-    cleanup_dead_servers = true
-    last_contact_threshold = "20s"
-    max_trailing_logs    = 250
-    server_stabilization_time = "10s"
-  }
 }
 
 client {
