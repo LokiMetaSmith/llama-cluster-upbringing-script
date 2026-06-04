@@ -123,9 +123,6 @@ find_controller() {
     local OVERLAY_FAST_PATH="100.64.0.0/24"
     # Only add OVERLAY_FAST_PATH to array if it is different from OVERLAY_SUBNET to avoid scanning same thing twice
     local SUBNETS_TO_SCAN=("$PXE_SUBNET" "$LOCAL_SUBNET" "$OVERLAY_FAST_PATH")
-    if [ "$OVERLAY_SUBNET" != "$OVERLAY_FAST_PATH" ]; then
-        SUBNETS_TO_SCAN+=("$OVERLAY_SUBNET")
-    fi
 
     spinner() {
         local pid=$1
