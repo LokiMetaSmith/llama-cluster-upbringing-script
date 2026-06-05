@@ -1,0 +1,39 @@
+job "ipfs" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "system"
+
+  group "ipfs" {
+    network {
+      port "swarm" {
+        static = 4001
+      }
+      port "api" {
+        static = 5001
+      }
+      port "gateway" {
+        static = 8080
+      }
+    }
+
+    task "kubo" {
+      driver = "docker"
+
+      config {
+        image = "ipfs/kubo:latest"
+        network_mode = "host"
+        volumes = [
+          "{{ nomad_volumes_dir }}/ipfs:/data/ipfs"
+        ]
+      }
+
+      env {
+        IPFS_PROFILE = "server"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+  }
+}

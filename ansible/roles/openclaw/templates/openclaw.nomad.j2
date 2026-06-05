@@ -11,6 +11,24 @@ job "openclaw" {
       }
     }
 
+    task "load-image" {
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
+
+      artifact {
+        source      = "http://127.0.0.1:8080/ipfs/{{ openclaw_ipfs_cid }}"
+        destination = "local/image.tar"
+        mode        = "file"
+      }
+
+      config {
+        command = "docker"
+        args    = ["load", "-i", "local/image.tar"]
+      }
+    }
+
     task "openclaw" {
       driver = "docker"
 

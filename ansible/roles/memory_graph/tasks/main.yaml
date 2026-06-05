@@ -15,33 +15,30 @@
     source: build
     force_source: true
 
-- name: Check if local registry is reachable
-  ansible.builtin.wait_for:
-    host: "{{ docker_registry_host }}"
-    port: "{{ docker_registry_port }}"
-    state: started
-    timeout: 1
-  register: registry_check
-  failed_when: false
-  ignore_errors: true
+- name: Export memory-graph-service image to tarball
+  ansible.builtin.command: docker save -o /tmp/memory-graph-service.tar memory-graph-service:local
+  become: yes
 
-- name: Tag and push memory-graph service image to local registry
-  community.docker.docker_image:
-    name: "memory-graph-service:local"
-    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/memory-graph-service:latest"
-    push: true
-    source: local
-  when: registry_check.state | default('stopped') == 'started'
+- name: Pin memory-graph-service tarball to IPFS
+  ansible.builtin.command: ipfs add -Q /tmp/memory-graph-service.tar
+  become: yes
+  register: ipfs_add_result_memory_graph
+  environment:
+    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
 
-- name: Set memory_graph_image (Registry)
+- name: Clean up temporary memory-graph-service tarball
+  ansible.builtin.file:
+    path: /tmp/memory-graph-service.tar
+    state: absent
+  become: yes
+
+- name: Set memory_graph_ipfs_cid fact
   ansible.builtin.set_fact:
-    memory_graph_image: "{{ docker_registry_host }}:{{ docker_registry_port }}/memory-graph-service:latest"
-  when: registry_check.state | default('stopped') == 'started'
+    memory_graph_ipfs_cid: "{{ ipfs_add_result_memory_graph.stdout }}"
 
-- name: Set memory_graph_image (Local Fallback)
+- name: Set memory_graph_image
   ansible.builtin.set_fact:
     memory_graph_image: "memory-graph-service:local"
-  when: registry_check.state | default('stopped') != 'started'
 
 - name: Ensure memory-graph.nomad job file exists
   ansible.builtin.template:

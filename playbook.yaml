@@ -8,7 +8,7 @@
 - import_playbook: playbooks/services/consul.yaml
 - import_playbook: playbooks/services/docker.yaml
 - import_playbook: playbooks/services/nomad.yaml
-- import_playbook: playbooks/services/registry.yaml
+- import_playbook: playbooks/services/ipfs.yaml
 - import_playbook: playbooks/app_jobs.yaml
 - import_playbook: playbooks/services/app_services.yaml
 - import_playbook: playbooks/services/monitoring.yaml

@@ -251,7 +251,7 @@ def purge_app_jobs_for_test_mode():
 
         found_jobs = False
         # Do not purge core infra jobs that subsequent tests might rely on
-        excluded_jobs = ["traefik", "docker-registry", "authentik"]
+        excluded_jobs = ["traefik", "authentik"]
 
         for job_id in job_ids:
             if job_id and job_id != "No" and job_id not in excluded_jobs:
