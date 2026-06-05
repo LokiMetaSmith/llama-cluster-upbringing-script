@@ -86,25 +86,26 @@
   become: yes
   changed_when: false
 
-- name: Check if local registry is reachable
-  ansible.builtin.wait_for:
-    host: "{{ docker_registry_host }}"
-    port: "{{ docker_registry_port }}"
-    state: started
-    timeout: 1
-  register: registry_check
-  ignore_errors: true
-  failed_when: false
-
-- name: "Tool Server : Tag and push tool-server image to local registry"
-  community.docker.docker_image:
-    name: tool-server
-    tag: local
-    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/tool-server"
-    push: true
-    source: local
+- name: Export tool-server image to tarball
+  ansible.builtin.command: docker save -o /tmp/tool-server.tar tool-server:local
   become: yes
-  when: registry_check.state | default('stopped') == 'started'
+
+- name: Pin tool-server tarball to IPFS
+  ansible.builtin.command: ipfs add -Q /tmp/tool-server.tar
+  become: yes
+  register: ipfs_add_result_tool
+  environment:
+    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+
+- name: Clean up temporary tool-server tarball
+  ansible.builtin.file:
+    path: /tmp/tool-server.tar
+    state: absent
+  become: yes
+
+- name: Set tool_server_ipfs_cid fact
+  ansible.builtin.set_fact:
+    tool_server_ipfs_cid: "{{ ipfs_add_result_tool.stdout }}"
 
 - name: "Tool Server : Verify Docker image exists"
   ansible.builtin.command:

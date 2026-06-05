@@ -104,6 +104,24 @@ job "{{ job_name | default('pipecat-app') }}" {
     }
 
     {% if pipecat_deployment_style == 'docker' %}
+    task "load-image" {
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
+
+      artifact {
+        source      = "http://127.0.0.1:8080/ipfs/{{ pipecatapp_ipfs_cid }}"
+        destination = "local/image.tar"
+        mode        = "file"
+      }
+
+      config {
+        command = "docker"
+        args    = ["load", "-i", "local/image.tar"]
+      }
+    }
+
     task "pipecat-task" {
       driver = "docker"
       {{ env_vars }}
@@ -114,7 +132,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       }
 
       config {
-        image = "{{ pipecatapp_image_ref | default('pipecatapp:local') }}"
+        image = "{{ pipecatapp_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag | default('local') }}"
         force_pull = false
         ports = ["http"]
         # Mount volumes for models and config. Models are read-only.

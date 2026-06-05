@@ -51,6 +51,24 @@ job "seed-agent" {
       tags     = ["seed", "infrastructure-manager"]
     }
 
+    task "load-image" {
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
+
+      artifact {
+        source      = "http://127.0.0.1:8080/ipfs/{{ pipecatapp_ipfs_cid }}"
+        destination = "local/image.tar"
+        mode        = "file"
+      }
+
+      config {
+        command = "docker"
+        args    = ["load", "-i", "local/image.tar"]
+      }
+    }
+
     task "seed-agent-task" {
       driver = "docker"
       {{ env_vars }}
@@ -61,7 +79,7 @@ job "seed-agent" {
       }
 
       config {
-        image = "{{ pipecatapp_image_ref | default('pipecatapp:local') }}"
+        image = "{{ pipecatapp_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag | default('local') }}"
         force_pull = false
 
         # Granting elevated privileges since it's the infrastructure manager

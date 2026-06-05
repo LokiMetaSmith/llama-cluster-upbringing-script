@@ -7,6 +7,24 @@ job "memory-graph" {
       port "http" { to = 8000 }
     }
 
+    task "load-image" {
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
+
+      artifact {
+        source      = "http://127.0.0.1:8080/ipfs/{{ memory_graph_ipfs_cid }}"
+        destination = "local/image.tar"
+        mode        = "file"
+      }
+
+      config {
+        command = "docker"
+        args    = ["load", "-i", "local/image.tar"]
+      }
+    }
+
     task "server" {
       driver = "docker"
       config {

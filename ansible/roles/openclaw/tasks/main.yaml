@@ -30,24 +30,26 @@
       pull: true
     force_source: true
 
-- name: Check if local registry is reachable
-  ansible.builtin.wait_for:
-    host: "{{ docker_registry_host }}"
-    port: "{{ docker_registry_port }}"
-    state: started
-    timeout: 1
-  register: registry_check
-  failed_when: false
-  ignore_errors: true
+- name: Export openclaw image to tarball
+  ansible.builtin.command: docker save -o /tmp/openclaw.tar openclaw:latest
+  become: yes
 
-- name: Tag and push openclaw image to local registry
-  community.docker.docker_image:
-    name: openclaw
-    tag: latest
-    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/openclaw"
-    push: true
-    source: local
-  when: registry_check.state | default('stopped') == 'started'
+- name: Pin openclaw tarball to IPFS
+  ansible.builtin.command: ipfs add -Q /tmp/openclaw.tar
+  become: yes
+  register: ipfs_add_result_openclaw
+  environment:
+    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+
+- name: Clean up temporary openclaw tarball
+  ansible.builtin.file:
+    path: /tmp/openclaw.tar
+    state: absent
+  become: yes
+
+- name: Set openclaw_ipfs_cid fact
+  ansible.builtin.set_fact:
+    openclaw_ipfs_cid: "{{ ipfs_add_result_openclaw.stdout }}"
 
 - name: Copy Pipecat Skill
   ansible.builtin.copy:

@@ -1,0 +1,46 @@
+- name: Ensure IPFS data directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/ipfs"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Template ipfs job
+  ansible.builtin.template:
+    src: ipfs.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/ipfs.nomad"
+  become: yes
+
+- name: Ensure ipfs kubo image is pulled
+  ansible.builtin.command: docker pull ipfs/kubo:latest
+  become: yes
+  register: docker_pull
+  changed_when: "'Downloaded newer image' in docker_pull.stdout"
+
+- name: Run ipfs job
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/ipfs.nomad
+  environment:
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+  register: nomad_job_run
+
+- name: Allow IPFS ports in UFW
+  ansible.builtin.command: ufw allow {{ item }}/tcp
+  loop:
+    - 4001
+    - 5001
+    - 8080
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+
+- name: Wait for IPFS API to be ready
+  ansible.builtin.wait_for:
+    host: "127.0.0.1"
+    port: 5001
+    delay: 5
+    timeout: 300
+    state: started

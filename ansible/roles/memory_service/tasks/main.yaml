@@ -29,24 +29,26 @@
     source: build
     force_source: true
 
-- name: Check if local registry is reachable
-  ansible.builtin.wait_for:
-    host: "{{ docker_registry_host }}"
-    port: "{{ docker_registry_port }}"
-    state: started
-    timeout: 1
-  register: registry_check
-  failed_when: false
-  ignore_errors: true
+- name: Export memory_service image to tarball
+  ansible.builtin.command: docker save -o /tmp/memory_service.tar memory_service:local
+  become: yes
 
-- name: Tag and push memory_service image to local registry
-  community.docker.docker_image:
-    name: memory_service
-    tag: local
-    repository: "{{ docker_registry_host }}:{{ docker_registry_port }}/memory_service"
-    push: true
-    source: local
-  when: registry_check.state | default('stopped') == 'started'
+- name: Pin memory_service tarball to IPFS
+  ansible.builtin.command: ipfs add -Q /tmp/memory_service.tar
+  become: yes
+  register: ipfs_add_result_memory
+  environment:
+    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+
+- name: Clean up temporary memory_service tarball
+  ansible.builtin.file:
+    path: /tmp/memory_service.tar
+    state: absent
+  become: yes
+
+- name: Set memory_service_ipfs_cid fact
+  ansible.builtin.set_fact:
+    memory_service_ipfs_cid: "{{ ipfs_add_result_memory.stdout }}"
 
 - name: Template memory service Nomad job
   ansible.builtin.template:
