@@ -1,0 +1,16 @@
+- name: Seed Models to IPFS
+  hosts: controller_nodes[0]
+  connection: local
+  gather_facts: yes
+  vars_files:
+    - "../../group_vars/models.yaml"
+    - "../../group_vars/external_experts.yaml"
+  remote_user: "{{ target_user }}"
+  become: yes
+
+  tags:
+    - seed-models
+    - ipfs
+
+  roles:
+    - role: seed_models

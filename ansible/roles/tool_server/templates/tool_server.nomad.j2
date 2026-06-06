@@ -18,14 +18,14 @@ job "tool-server" {
       }
 
       artifact {
-        source      = "http://127.0.0.1:8080/ipfs/{{ tool_server_ipfs_cid }}"
-        destination = "local/image.tar"
+        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ tool_server_ipfs_cid }}"
+        destination = "local/tool_server.tar"
         mode        = "file"
       }
 
       config {
         command = "docker"
-        args    = ["load", "-i", "local/image.tar"]
+        args    = ["load", "-i", "local/tool_server.tar"]
       }
     }
 

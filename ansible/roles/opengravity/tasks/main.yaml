@@ -37,6 +37,27 @@
   ansible.builtin.include_tasks:
     file: "../../tasks/build_cached_image.yaml"
 
+- name: Export opengravity image to tarball
+  ansible.builtin.command: docker save -o /tmp/opengravity.tar opengravity:local
+  become: yes
+
+- name: Pin opengravity tarball to IPFS
+  ansible.builtin.command: ipfs add -Q /tmp/opengravity.tar
+  become: yes
+  register: ipfs_add_result_opengravity
+  environment:
+    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+
+- name: Clean up temporary opengravity tarball
+  ansible.builtin.file:
+    path: /tmp/opengravity.tar
+    state: absent
+  become: yes
+
+- name: Set opengravity_ipfs_cid fact
+  ansible.builtin.set_fact:
+    opengravity_ipfs_cid: "{{ ipfs_add_result_opengravity.stdout }}"
+
 - name: Create OpenGravity job file
   ansible.builtin.template:
     src: opengravity.nomad.j2

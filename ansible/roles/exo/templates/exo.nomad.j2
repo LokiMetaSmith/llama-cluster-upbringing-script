@@ -19,14 +19,14 @@ job "exo" {
       }
 
       artifact {
-        source      = "http://127.0.0.1:8080/ipfs/{{ exo_ipfs_cid }}"
-        destination = "local/image.tar"
+        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ exo_ipfs_cid }}"
+        destination = "local/exo.tar"
         mode        = "file"
       }
 
       config {
         command = "docker"
-        args    = ["load", "-i", "local/image.tar"]
+        args    = ["load", "-i", "local/exo.tar"]
       }
     }
 

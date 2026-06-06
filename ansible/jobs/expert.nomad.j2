@@ -159,6 +159,24 @@ EOH
     }
 
     {% if pipecat_deployment_style | default('docker') == 'docker' %}
+    task "load-image" {
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
+
+      artifact {
+        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ pipecatapp_ipfs_cid }}"
+        destination = "local/pipecatapp.tar"
+        mode        = "file"
+      }
+
+      config {
+        command = "docker"
+        args    = ["load", "-i", "local/pipecatapp.tar"]
+      }
+    }
+
     task "{{ job_name }}" {
       driver = "docker"
 
@@ -168,7 +186,7 @@ EOH
       }
 
       config {
-        image = "{{ pipecat_image_id | default('pipecatapp:' ~ (pipecat_image_tag | default('local'))) }}"
+        image = "{{ pipecatapp_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag | default('local') }}"
         force_pull = false
         ports = ["http"]
         command = "/bin/bash"

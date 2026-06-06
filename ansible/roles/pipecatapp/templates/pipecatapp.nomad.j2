@@ -111,14 +111,14 @@ job "{{ job_name | default('pipecat-app') }}" {
       }
 
       artifact {
-        source      = "http://127.0.0.1:8080/ipfs/{{ pipecatapp_ipfs_cid }}"
-        destination = "local/image.tar"
+        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ pipecatapp_ipfs_cid }}"
+        destination = "local/pipecatapp.tar"
         mode        = "file"
       }
 
       config {
         command = "docker"
-        args    = ["load", "-i", "local/image.tar"]
+        args    = ["load", "-i", "local/pipecatapp.tar"]
       }
     }
 

@@ -793,6 +793,7 @@ def main():
         app_services_playbooks = [
             "playbooks/services/app_services.yaml",
             "playbooks/services/monitoring.yaml",
+            "playbooks/services/seed_models_to_ipfs.yaml",
             "playbooks/services/model_services.yaml",
             "playbooks/services/core_ai_services.yaml",
             "playbooks/services/ai_experts.yaml",
@@ -806,6 +807,7 @@ def main():
         partial_stack_playbooks = [
             "playbooks/services/app_services.yaml",
             "playbooks/services/monitoring.yaml",
+            "playbooks/services/seed_models_to_ipfs.yaml",
             "playbooks/services/model_services.yaml",
             "playbooks/services/core_ai_services.yaml",
             "playbooks/services/ai_experts.yaml",
