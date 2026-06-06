@@ -116,4 +116,4 @@ This framework addresses the operational and security lifecycle of autonomous ag
 2. [x] **Audit Logging:** Upgrade `TwinService` to output tamper-evident JSON logs for every tool invocation, including the exact prompt, response, and action taken.
 3. [ ] **Identity PoC:** Research integrating SPIFFE/SPIRE with our existing Nomad/Consul cluster to provide cryptographic identities to individual agent allocations.
 4. [x] **MCP Migration:** Review our current `pipecatapp/tools/` directory and draft a plan to refactor them to comply with the open Model Context Protocol.
-5. [ ] **Review Layer 7 Risks:** Conduct a dedicated security review of the `prompt_engineering/evolve.py` self-adaptation loop to ensure mutated code cannot bypass security sandboxes.
+5. [x] **Review Layer 7 Risks:** Conduct a dedicated security review of the `prompt_engineering/evolve.py` self-adaptation loop to ensure mutated code cannot bypass security sandboxes.
