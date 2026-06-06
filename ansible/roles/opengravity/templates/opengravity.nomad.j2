@@ -30,11 +30,29 @@ job "opengravity" {
       }
     }
 
+    task "load-image" {
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
+
+      artifact {
+        source      = "http://127.0.0.1:8080/ipfs/{{ opengravity_ipfs_cid }}"
+        destination = "local/image.tar"
+        mode        = "file"
+      }
+
+      config {
+        command = "docker"
+        args    = ["load", "-i", "local/image.tar"]
+      }
+    }
+
     task "nginx" {
       driver = "docker"
 
       config {
-        image = "opengravity:{{ image_tag | default('latest') }}"
+        image = "opengravity:local"
         ports = ["http"]
       }
 

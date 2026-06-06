@@ -1,20 +1,38 @@
-# tasks file for download_models
+---
+# tasks file for download_models (acts as IPFS Consumer on all nodes)
 
-- name: Read Consul management token
+- name: Get Consul token from file
   ansible.builtin.slurp:
-    src: "{{ consul_config_dir | default('/etc/consul.d') }}/management_token"
-  register: consul_token_file
-  become: yes
-  ignore_errors: yes
+    src: /etc/consul.d/management_token
+  register: consul_token_slurp
+  failed_when: false
 
-- name: Set consul_token fact
+- name: Set Consul token fact
   ansible.builtin.set_fact:
-    consul_token: "{{ consul_token_file.content | b64decode | trim }}"
-  when: consul_token_file.content is defined
+    consul_token: "{{ consul_token_slurp.content | b64decode | trim }}"
+  when: consul_token_slurp.content is defined
 
-- name: Query Consul for all model configurations
+- name: Ensure all model directories exist
+  ansible.builtin.file:
+    path: "{{ nomad_models_dir }}/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - llm
+    - vllm
+    - stt
+    - stt/whisper-cpp
+    - stt/faster-whisper
+    - stt/wyoming
+    - tts
+    - vision
+    - embedding
+    - reference_data
+  become: yes
+
+- name: Fetch all IPFS CIDs from Consul KV
   ansible.builtin.uri:
-    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port }}/v1/kv/config/models/{{ item }}?raw=true"
+    url: "http://127.0.0.1:8500/v1/kv/models/ipfs?keys"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
     validate_certs: false
@@ -24,253 +42,36 @@
     status_code: [200, 404]
     return_content: true
   check_mode: no
-  loop:
-    - main
-    - coding
-    - math
-    - extract
-    - rag
-    - tool
-    - thinking
-    - instruct
-    - router
-    - qwen
-    - cynic
-    - gpt-oss
-    - qwen3-5
-    - orthrus
-    - vllm_expert_models
-    - piper_voice_files
-    - embedding_models
-    - stt_models
-    - vision_models
-  register: consul_models
-  until: consul_models.status in [200, 404]
+  register: consul_ipfs_keys
+  until: consul_ipfs_keys.status in [200, 404]
   retries: 5
   delay: 2
   failed_when: false
 
-- name: Set model facts from Consul KV
-  ansible.builtin.set_fact:
-    llm_models_to_download: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'in', ['main', 'coding', 'math', 'extract', 'rag', 'tool', 'thinking', 'instruct', 'router', 'qwen', 'cynic', 'gpt-oss', 'qwen3-5', 'orthrus']) | map(attribute='content') | map('from_json') | sum(start=[]) }}"
-    vllm_expert_models: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'vllm_expert_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
-    piper_voice_files: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'piper_voice_files') | map(attribute='content') | map('from_json') | first | default([]) }}"
-    embedding_models: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'embedding_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
-    stt_models: "{{ ((consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'stt_models') | first).content | default('{}')) | from_json }}"
-    vision_models: "{{ consul_models.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | selectattr('item', 'equalto', 'vision_models') | map(attribute='content') | map('from_json') | first | default([]) }}"
+- name: Process and fetch each model from IPFS if keys exist
+  block:
+    - name: Fetch CID values for all model keys
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8500/v1/kv/{{ item }}?raw=true"
+        client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+        client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+        validate_certs: false
+        method: GET
+        headers:
+          X-Consul-Token: "{{ consul_token }}"
+        return_content: true
+      loop: "{{ consul_ipfs_keys.json | default([]) }}"
+      register: cid_values
+      when: consul_ipfs_keys.status == 200
 
-
-# ---------------------------------------------------------------------------- #
-#                                  LLM Models                                  #
-# ---------------------------------------------------------------------------- #
-- name: Ensure LLM model directory exists
-  ansible.builtin.file:
-    path: "{{ nomad_models_dir }}/llm"
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Check for existing LLM models
-  ansible.builtin.stat:
-    path: "{{ nomad_models_dir }}/llm/{{ item.filename }}"
-  loop: "{{ llm_models_to_download | selectattr('filename', 'defined') | list | unique(attribute='filename') }}"
-  register: llm_model_files
-  become: yes
-
-- name: Download all LLM models if they do not exist
-  ansible.builtin.get_url:
-    url: "{{ item.item.url }}"
-    dest: "{{ nomad_models_dir }}/llm/{{ item.item.filename }}"
-    mode: '0644'
-    timeout: 3600
-  loop: "{{ llm_model_files.results }}"
-  when: not (item.stat.exists | default(false))
-  become: yes
-  loop_control:
-    loop_var: item
-
-- name: Ensure vLLM model directory exists
-  ansible.builtin.file:
-    path: "{{ nomad_models_dir }}/vllm"
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Check for existing vLLM models (Hub-based)
-  ansible.builtin.stat:
-    path: "{{ nomad_models_dir }}/vllm/{{ item.repo_id.split('/')[-1] }}" # Basic assumption for folder name
-  loop: "{{ vllm_expert_models | selectattr('repo_id', 'defined') | list }}"
-  register: vllm_model_files_hub
-  become: yes
-
-- name: Download all vLLM models (Hub-based) if they do not exist
-  ansible.builtin.command:
-    cmd: >
-      /opt/pipecatapp/venv/bin/python3
-      {{ role_path }}/files/download_hf_repo.py
-      "{{ item.item.repo_id }}"
-      "{{ nomad_models_dir }}/vllm/{{ item.item.repo_id.split('/')[-1] }}"
-  environment:
-    HF_TOKEN: "{{ hf_token }}"
-  loop: "{{ vllm_model_files_hub.results }}"
-  when: not item.stat.exists
-  become: yes
-  loop_control:
-    loop_var: item
-
-# ---------------------------------------------------------------------------- #
-#                                  STT Models                                  #
-# ---------------------------------------------------------------------------- #
-- name: Create provider-specific STT model directories
-  ansible.builtin.file:
-    path: "{{ nomad_models_dir }}/stt/{{ item.key }}"
-    state: directory
-    mode: '0755'
-  loop: "{{ stt_models | dict2items }}"
-  become: yes
-
-- name: Check for existing STT models (URL-based)
-  ansible.builtin.stat:
-    path: "{{ nomad_models_dir }}/stt/{{ item[0].key }}/{{ item[1].filename }}"
-  loop: "{{ stt_models | dict2items | subelements('value') | selectattr(1, 'match', 'url') | list }}"
-  register: stt_model_files_url
-  become: yes
-
-- name: Check for existing STT models (Hub-based)
-  ansible.builtin.stat:
-    path: "{{ nomad_models_dir }}/stt/{{ item[0].key }}/{{ item[1].name }}"
-  loop: "{{ stt_models | dict2items | subelements('value') | selectattr(1, 'match', 'repo_id') | list }}"
-  register: stt_model_files_hub
-  become: yes
-
-- name: Download all STT models (URL-based) if they do not exist
-  ansible.builtin.get_url:
-    url: "{{ item.item[1].url }}"
-    dest: "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}/{{ item.item[1].filename }}"
-    mode: '0644'
-  loop: "{{ stt_model_files_url.results }}"
-  when: not item.stat.exists
-  become: yes
-  loop_control:
-    loop_var: item
-
-- name: Download all STT models (Hub-based) if they do not exist
-  ansible.builtin.command:
-    cmd: >
-      /opt/pipecatapp/venv/bin/python3
-      {{ role_path }}/files/download_hf_repo.py
-      "{{ item.item[1].repo_id }}"
-      "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
-  environment:
-    HF_TOKEN: "{{ hf_token }}"
-  loop: "{{ stt_model_files_hub.results }}"
-  when: not item.stat.exists
-  become: yes
-  loop_control:
-    loop_var: item
-# ---------------------------------------------------------------------------- #
-#                                  TTS Models                                  #
-# ---------------------------------------------------------------------------- #
-- name: Ensure TTS model directory exists
-  ansible.builtin.file:
-    path: "{{ nomad_models_dir }}/tts"
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Check for existing TTS model files
-  ansible.builtin.stat:
-    path: "{{ nomad_models_dir }}/tts/{{ item.filename }}"
-  loop: "{{ piper_voice_files }}"
-  register: tts_model_files
-  become: yes
-
-- name: Download all Text-to-Speech model files if they do not exist
-  ansible.builtin.get_url:
-    url: "{{ item.item.url }}"
-    dest: "{{ nomad_models_dir }}/tts/{{ item.item.filename }}"
-    mode: '0644'
-  loop: "{{ tts_model_files.results }}"
-  when: not item.stat.exists
-  become: yes
-  loop_control:
-    loop_var: item
-# ---------------------------------------------------------------------------- #
-#                                 Vision Models                                #
-# ---------------------------------------------------------------------------- #
-- name: Ensure Vision model directory exists
-  ansible.builtin.file:
-    path: "{{ nomad_models_dir }}/vision"
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Check for existing Vision models (URL-based)
-  ansible.builtin.stat:
-    path: "{{ nomad_models_dir }}/vision/{{ item.filename }}"
-  loop: "{{ vision_models | selectattr('filename', 'defined') | list }}"
-  register: vision_model_files_url
-  become: yes
-
-- name: Check for existing Vision models (Hub-based)
-  ansible.builtin.stat:
-    path: "{{ nomad_models_dir }}/vision/{{ item.name }}"
-  loop: "{{ vision_models | selectattr('repo_id', 'defined') | list }}"
-  register: vision_model_files_hub
-  become: yes
-
-- name: Download all Vision models (URL-based) if they do not exist
-  ansible.builtin.get_url:
-    url: "{{ item.item.url }}"
-    dest: "{{ nomad_models_dir }}/vision/{{ item.item.filename }}"
-    mode: '0644'
-  loop: "{{ vision_model_files_url.results }}"
-  when: not item.stat.exists
-  become: yes
-  loop_control:
-    loop_var: item
-- name: Download all Vision models (Hub-based) if they do not exist
-  ansible.builtin.command:
-    cmd: >
-      /opt/pipecatapp/venv/bin/python3
-      {{ role_path }}/files/download_hf_repo.py
-      "{{ item.item.repo_id }}"
-      "{{ nomad_models_dir }}/vision/{{ item.item.name }}"
-  environment:
-    HF_TOKEN: "{{ hf_token }}"
-  loop: "{{ vision_model_files_hub.results }}"
-  when: not item.stat.exists
-  become: yes
-  loop_control:
-    loop_var: item
-# ---------------------------------------------------------------------------- #
-#                               Embedding Models                               #
-# ---------------------------------------------------------------------------- #
-- name: Ensure Embedding model directory exists
-  ansible.builtin.file:
-    path: "{{ nomad_models_dir }}/embedding"
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Check for existing Embedding models (Hub-based)
-  ansible.builtin.stat:
-    path: "{{ nomad_models_dir }}/embedding/{{ item.name }}"
-  loop: "{{ embedding_models | selectattr('repo_id', 'defined') | list }}"
-  register: embedding_model_files_hub
-  become: yes
-
-- name: Download all Embedding models (Hub-based) if they do not exist
-  ansible.builtin.command:
-    cmd: >
-      /opt/pipecatapp/venv/bin/python3
-      {{ role_path }}/files/download_hf_repo.py
-      "{{ item.item.repo_id }}"
-      "{{ nomad_models_dir }}/embedding/{{ item.item.name }}"
-  environment:
-    HF_TOKEN: "{{ hf_token }}"
-  loop: "{{ embedding_model_files_hub.results }}"
-  when: not item.stat.exists
-  become: yes
-  loop_control:
-    loop_var: item
+    - name: Get model from IPFS
+      ansible.builtin.command:
+        cmd: "ipfs get {{ item.content }} -o {{ nomad_models_dir }}/{{ item.item | replace('models/ipfs/', '') }}"
+      environment:
+        IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+      args:
+        creates: "{{ nomad_models_dir }}/{{ item.item | replace('models/ipfs/', '') }}"
+      loop: "{{ cid_values.results }}"
+      when: item.content is defined
+      become: yes
+  when: consul_ipfs_keys.status == 200
