@@ -83,8 +83,9 @@
     dest: "{{ nomad_models_dir }}/llm/{{ item.item.filename }}"
     mode: '0644'
     timeout: 3600
-  loop: "{{ llm_model_files.results }}"
-  when: not (item.stat.exists | default(false))
+    headers: "{{ {'Authorization': 'Bearer ' ~ hf_token} if hf_token | default('') != '' else omit }}"
+  loop: "{{ llm_model_files.results | default([]) }}"
+  when: not (item.stat.exists | default(false) | bool)
   become: yes
   loop_control:
     loop_var: item
@@ -113,7 +114,7 @@
   environment:
     HF_TOKEN: "{{ hf_token }}"
   loop: "{{ vllm_model_files_hub.results }}"
-  when: not item.stat.exists
+  when: not (item.stat.exists | default(false) | bool)
   become: yes
   loop_control:
     loop_var: item
@@ -148,8 +149,9 @@
     url: "{{ item.item[1].url }}"
     dest: "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}/{{ item.item[1].filename }}"
     mode: '0644'
-  loop: "{{ stt_model_files_url.results }}"
-  when: not item.stat.exists
+    headers: "{{ {'Authorization': 'Bearer ' ~ hf_token} if hf_token | default('') != '' else omit }}"
+  loop: "{{ stt_model_files_url.results | default([]) }}"
+  when: not (item.stat.exists | default(false) | bool)
   become: yes
   loop_control:
     loop_var: item
@@ -164,7 +166,7 @@
   environment:
     HF_TOKEN: "{{ hf_token }}"
   loop: "{{ stt_model_files_hub.results }}"
-  when: not item.stat.exists
+  when: not (item.stat.exists | default(false) | bool)
   become: yes
   loop_control:
     loop_var: item
@@ -190,8 +192,9 @@
     url: "{{ item.item.url }}"
     dest: "{{ nomad_models_dir }}/tts/{{ item.item.filename }}"
     mode: '0644'
-  loop: "{{ tts_model_files.results }}"
-  when: not item.stat.exists
+    headers: "{{ {'Authorization': 'Bearer ' ~ hf_token} if hf_token | default('') != '' else omit }}"
+  loop: "{{ tts_model_files.results | default([]) }}"
+  when: not (item.stat.exists | default(false) | bool)
   become: yes
   loop_control:
     loop_var: item
@@ -224,8 +227,9 @@
     url: "{{ item.item.url }}"
     dest: "{{ nomad_models_dir }}/vision/{{ item.item.filename }}"
     mode: '0644'
-  loop: "{{ vision_model_files_url.results }}"
-  when: not item.stat.exists
+    headers: "{{ {'Authorization': 'Bearer ' ~ hf_token} if hf_token | default('') != '' else omit }}"
+  loop: "{{ vision_model_files_url.results | default([]) }}"
+  when: not (item.stat.exists | default(false) | bool)
   become: yes
   loop_control:
     loop_var: item
@@ -239,7 +243,7 @@
   environment:
     HF_TOKEN: "{{ hf_token }}"
   loop: "{{ vision_model_files_hub.results }}"
-  when: not item.stat.exists
+  when: not (item.stat.exists | default(false) | bool)
   become: yes
   loop_control:
     loop_var: item
@@ -270,7 +274,7 @@
   environment:
     HF_TOKEN: "{{ hf_token }}"
   loop: "{{ embedding_model_files_hub.results }}"
-  when: not item.stat.exists
+  when: not (item.stat.exists | default(false) | bool)
   become: yes
   loop_control:
     loop_var: item
