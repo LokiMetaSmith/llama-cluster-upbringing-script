@@ -28,14 +28,14 @@ job "memory-service" {
       }
 
       artifact {
-        source      = "http://127.0.0.1:8080/ipfs/{{ memory_service_ipfs_cid }}"
-        destination = "local/image.tar"
+        source      = "http://${attr.unique.network.ip-address}:8080/ipfs/{{ memory_service_ipfs_cid }}"
+        destination = "local/memory_service.tar"
         mode        = "file"
       }
 
       config {
         command = "docker"
-        args    = ["load", "-i", "local/image.tar"]
+        args    = ["load", "-i", "local/memory_service.tar"]
       }
     }
 

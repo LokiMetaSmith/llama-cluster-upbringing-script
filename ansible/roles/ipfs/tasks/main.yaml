@@ -39,7 +39,7 @@
 
 - name: Wait for IPFS API to be ready
   ansible.builtin.wait_for:
-    host: "127.0.0.1"
+    host: "{{ cluster_ip | default('127.0.0.1') }}"
     port: 5001
     delay: 5
     timeout: 300

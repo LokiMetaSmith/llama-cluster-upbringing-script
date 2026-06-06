@@ -37,14 +37,14 @@ job "opengravity" {
       }
 
       artifact {
-        source      = "http://127.0.0.1:8080/ipfs/{{ opengravity_ipfs_cid }}"
-        destination = "local/image.tar"
+        source      = "http://${attr.unique.network.ip-address}:8080/ipfs/{{ opengravity_ipfs_cid }}"
+        destination = "local/opengravity.tar"
         mode        = "file"
       }
 
       config {
         command = "docker"
-        args    = ["load", "-i", "local/image.tar"]
+        args    = ["load", "-i", "local/opengravity.tar"]
       }
     }
 

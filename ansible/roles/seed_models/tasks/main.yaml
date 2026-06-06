@@ -14,7 +14,7 @@
 
 - name: Fetch ALL models configuration from Consul KV
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/models/{{ item }}?raw=true"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/{{ item }}?raw=true"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
     validate_certs: false
@@ -97,7 +97,7 @@
 
 - name: Store LLM model CIDs in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/models/ipfs/llm/{{ item.item.filename }}"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/llm/{{ item.item.filename }}"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -146,7 +146,7 @@
 
 - name: Store vLLM model CIDs in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/models/ipfs/vllm/{{ item.item.repo_id.split('/')[-1] }}"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/vllm/{{ item.item.repo_id.split('/')[-1] }}"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -214,7 +214,7 @@
 
 - name: Store STT (URL) CIDs in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/models/ipfs/stt/{{ item.item[0].key }}/{{ item.item[1].filename }}"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/stt/{{ item.item[0].key }}/{{ item.item[1].filename }}"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -233,7 +233,7 @@
 
 - name: Store STT (Hub) CIDs in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/models/ipfs/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -278,7 +278,7 @@
 
 - name: Store TTS model CIDs in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/models/ipfs/tts/{{ item.item.filename }}"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/tts/{{ item.item.filename }}"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -345,7 +345,7 @@
 
 - name: Store Vision (URL) CIDs in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/models/ipfs/vision/{{ item.item.filename }}"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/vision/{{ item.item.filename }}"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -364,7 +364,7 @@
 
 - name: Store Vision (Hub) CIDs in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/models/ipfs/vision/{{ item.item.name }}"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/vision/{{ item.item.name }}"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -413,7 +413,7 @@
 
 - name: Store Embedding model CIDs in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/models/ipfs/embedding/{{ item.item.name }}"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/embedding/{{ item.item.name }}"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -432,7 +432,7 @@
 
 - name: Store Reference Data CID in Consul
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8500/v1/kv/models/ipfs/reference_data/main"
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/reference_data/main"
     method: PUT
     body: "{{ reference_data_ipfs_cid.stdout }}"
     headers:
