@@ -1,3 +1,4 @@
+import ast
 import os
 import sys
 import json
@@ -23,6 +24,28 @@ HEALTH_CHECK_DELAY = 5
 # --- Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+
+
+def is_safe_code(code: str) -> bool:
+    """Validates that the code does not contain dangerous function calls."""
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return False
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                if node.func.id in ('eval', 'exec', '__import__'):
+                    return False
+            elif isinstance(node.func, ast.Attribute):
+                # Only block if it's explicitly os.system, subprocess.run, etc.
+                if isinstance(node.func.value, ast.Name):
+                    if node.func.value.id == 'os' and node.func.attr == 'system':
+                        return False
+                    if node.func.value.id == 'subprocess' and node.func.attr in ('Popen', 'run', 'call', 'check_call', 'check_output'):
+                        return False
+    return True
 
 async def evaluate_code(candidate_code: str) -> dict:
     """Evaluates candidate code by deploying it and running integration tests.
@@ -64,6 +87,19 @@ async def evaluate_code(candidate_code: str) -> dict:
         logging.warning("Could not parse LLM output as JSON. Treating the entire response as code.")
         actual_code = candidate_code
         rationale = "N/A - Invalid JSON response from LLM."
+
+
+    # Layer 7 Security Sandbox: AST validation
+    if not is_safe_code(actual_code):
+        logging.error("Security violation: LLM generated code contains dangerous calls.")
+        return {
+            "fitness": 0.0,
+            "passed": False,
+            "details": "Security violation: Blocked dangerous function call in mutated code.",
+            "log": "Blocked by AST validation.",
+            "agent_id": eval_id,
+            "rationale": rationale
+        }
 
     # Save the candidate's code (only the code part) to the archive
     with open(agent_code_path, "w") as f:
