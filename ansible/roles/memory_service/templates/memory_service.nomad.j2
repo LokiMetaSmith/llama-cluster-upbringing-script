@@ -28,7 +28,7 @@ job "memory-service" {
       }
 
       artifact {
-        source      = "http://${attr.unique.network.ip-address}:8080/ipfs/{{ memory_service_ipfs_cid }}"
+        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ memory_service_ipfs_cid }}"
         destination = "local/memory_service.tar"
         mode        = "file"
       }

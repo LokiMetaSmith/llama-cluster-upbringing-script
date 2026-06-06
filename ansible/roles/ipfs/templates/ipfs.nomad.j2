@@ -5,13 +5,13 @@ job "ipfs" {
   group "ipfs" {
     network {
       port "swarm" {
-        static = 4001
+        static = {{ ipfs_swarm_port | default(4001) }}
       }
       port "api" {
-        static = 5001
+        static = {{ ipfs_api_port | default(5001) }}
       }
       port "gateway" {
-        static = 8080
+        static = {{ ipfs_gateway_port | default(8080) }}
       }
     }
 
@@ -29,8 +29,8 @@ job "ipfs" {
       env {
         IPFS_PROFILE = "server"
         # Bind to 0.0.0.0 so that Nomad prestart tasks using cluster_ip or 127.0.0.1 can reach it
-        IPFS_CONFIG_Addresses_Gateway = "/ip4/0.0.0.0/tcp/8080"
-        IPFS_CONFIG_Addresses_API = "/ip4/0.0.0.0/tcp/5001"
+        IPFS_CONFIG_Addresses_Gateway = "/ip4/0.0.0.0/tcp/{{ ipfs_gateway_port | default(8080) }}"
+        IPFS_CONFIG_Addresses_API = "/ip4/0.0.0.0/tcp/{{ ipfs_api_port | default(5001) }}"
       }
 
       resources {

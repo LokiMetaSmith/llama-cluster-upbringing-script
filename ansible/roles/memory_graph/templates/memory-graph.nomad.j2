@@ -14,7 +14,7 @@ job "memory-graph" {
       }
 
       artifact {
-        source      = "http://${attr.unique.network.ip-address}:8080/ipfs/{{ memory_graph_ipfs_cid }}"
+        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ memory_graph_ipfs_cid }}"
         destination = "local/memory_graph.tar"
         mode        = "file"
       }

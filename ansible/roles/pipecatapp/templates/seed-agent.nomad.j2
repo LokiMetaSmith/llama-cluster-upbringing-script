@@ -58,7 +58,7 @@ job "seed-agent" {
       }
 
       artifact {
-        source      = "http://${attr.unique.network.ip-address}:8080/ipfs/{{ pipecatapp_ipfs_cid }}"
+        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ pipecatapp_ipfs_cid }}"
         destination = "local/pipecatapp.tar"
         mode        = "file"
       }

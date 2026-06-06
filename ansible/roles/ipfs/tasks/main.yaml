@@ -30,9 +30,9 @@
 - name: Allow IPFS ports in UFW
   ansible.builtin.command: ufw allow {{ item }}/tcp
   loop:
-    - 4001
-    - 5001
-    - 8080
+    - "{{ ipfs_swarm_port | default(4001) }}"
+    - "{{ ipfs_api_port | default(5001) }}"
+    - "{{ ipfs_gateway_port | default(8080) }}"
   become: yes
   changed_when: false
   ignore_errors: yes
@@ -40,7 +40,7 @@
 - name: Wait for IPFS API to be ready
   ansible.builtin.wait_for:
     host: "{{ cluster_ip | default('127.0.0.1') }}"
-    port: 5001
+    port: "{{ ipfs_api_port | default(5001) }}"
     delay: 5
     timeout: 300
     state: started

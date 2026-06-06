@@ -18,7 +18,7 @@ job "tool-server" {
       }
 
       artifact {
-        source      = "http://${attr.unique.network.ip-address}:8080/ipfs/{{ tool_server_ipfs_cid }}"
+        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ tool_server_ipfs_cid }}"
         destination = "local/tool_server.tar"
         mode        = "file"
       }
