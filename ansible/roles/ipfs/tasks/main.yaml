@@ -15,7 +15,7 @@
   block:
     - name: Download kubo (IPFS CLI)
       ansible.builtin.get_url:
-        url: "https://dist.ipfs.tech/kubo/v0.33.2/kubo_v0.33.2_linux-amd64.tar.gz"
+        url: "https://dist.ipfs.tech/kubo/v0.41.0/kubo_v0.41.0_linux-amd64.tar.gz"
         dest: "/tmp/kubo.tar.gz"
         mode: '0644'
 
@@ -40,7 +40,7 @@
         - "/tmp/kubo.tar.gz"
         - "/tmp/kubo"
   become: yes
-  when: not ipfs_binary.stat.exists or (ipfs_version is defined and ipfs_version.stdout is defined and '0.33.2' not in ipfs_version.stdout)
+  when: not ipfs_binary.stat.exists or (ipfs_version is defined and ipfs_version.stdout is defined and '0.41.0' not in ipfs_version.stdout)
 
 - name: Ensure IPFS data directory exists
   ansible.builtin.file:
