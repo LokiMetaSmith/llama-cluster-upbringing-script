@@ -1,3 +1,4 @@
+from .retry_utils import retry
 import abc
 import docker
 import logging
@@ -11,6 +12,7 @@ import multiprocessing
 from llm_sandbox import SandboxSession
 from typing import List, Optional
 from .dependency_scanner_tool import DependencyScannerTool
+from .execution_history import ExecutionHistory
 
 # Security: Limit the maximum size of the code payload to prevent DoS attacks
 # especially against Nomad templates which might expand significantly or cause OOM.
@@ -35,6 +37,7 @@ class DockerSandboxExecutor(SandboxExecutor):
             logging.warning(f"Failed to initialize Docker client for CodeRunnerTool: {e}")
             self.client = None
 
+    @retry()
     def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
         """Executes code using llm-sandbox for robust multi-language support."""
         if libraries is None:
@@ -106,8 +109,12 @@ class DockerSandboxExecutor(SandboxExecutor):
             else:
                 return "Error: Sandbox execution failed to return a result."
         except Exception as e:
+            from .retry_utils import is_transient_error
+            if is_transient_error(e):
+                raise e
             return f"An unexpected error occurred: {e}"
 
+    @retry()
     def execute_simple_python(self, code: str, timeout: Optional[int] = None) -> str:
         """Runs simple Python code using raw docker-py for speed/legacy support."""
         if not self.client:
@@ -138,7 +145,11 @@ class DockerSandboxExecutor(SandboxExecutor):
                     pids_limit=20,        # Security: Limit processes
                     detach=True,          # Security: Run in background to support timeout
                     stderr=True,
-                    stdout=True
+                    stdout=True,
+                    cap_drop=["ALL"],     # Security: Drop all capabilities
+                    read_only=True,       # Security: Read-only root filesystem
+                    init=True,            # Security: Use tini as init process to handle signals
+                    tmpfs={"/tmp": "rw,size=100m,exec,nosuid"} # Security: ephemeral tmpfs
                 )
 
                 job_timeout = timeout if timeout is not None else 30
@@ -160,6 +171,9 @@ class DockerSandboxExecutor(SandboxExecutor):
         except docker.errors.ImageNotFound:
             return f"Error: The Docker image '{self.image}' was not found. Please pull it first."
         except Exception as e:
+            from .retry_utils import is_transient_error
+            if is_transient_error(e):
+                raise e
             return f"An error occurred: {e}"
         finally:
             if container:
@@ -177,6 +191,7 @@ class NomadSandboxExecutor(SandboxExecutor):
         self.default_timeout = 300 # 5 minutes default timeout for job execution
         self.headers = {"X-Nomad-Token": self.token} if self.token else {}
 
+    @retry()
     def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
         if language != "python":
             return "Error: Nomad executor currently only supports Python."
@@ -216,7 +231,19 @@ class NomadSandboxExecutor(SandboxExecutor):
                                         "-c",
                                         "python3 -c 'import base64; open(\"/local/script.py\", \"wb\").write(base64.b64decode(open(\"/local/script.b64\", \"rb\").read()))' && python3 /local/script.py"
                                     ],
-                                    "network_mode": "none"
+                                    "network_mode": "none",
+                                    "cap_drop": ["ALL"],
+                                    "readonly_rootfs": True,
+                                    "init": True,
+                                    "mounts": [
+                                        {
+                                            "type": "tmpfs",
+                                            "target": "/tmp",
+                                            "tmpfs_options": {
+                                                "size": 104857600  # 100MB
+                                            }
+                                        }
+                                    ]
                                 },
                                 "Resources": {
                                     "CPU": 100,
@@ -298,6 +325,9 @@ class NomadSandboxExecutor(SandboxExecutor):
                 return f"Error retrieving logs for job {job_id}: {e}"
 
         except Exception as e:
+            from .retry_utils import is_transient_error
+            if is_transient_error(e):
+                raise e
             return f"Nomad execution error: {e}"
         finally:
             # 4. Cleanup
@@ -328,6 +358,8 @@ class CodeRunnerTool:
         # Can be overridden by env var SANDBOX_EXECUTOR
         self.mode = os.environ.get("SANDBOX_EXECUTOR", "docker").lower()
 
+        self.history = ExecutionHistory()
+
         if self.mode == "nomad":
             self.executor = NomadSandboxExecutor()
             logging.info("CodeRunnerTool initialized in NOMAD mode.")
@@ -338,6 +370,55 @@ class CodeRunnerTool:
         else:
             self.executor = DockerSandboxExecutor()
             logging.info("CodeRunnerTool initialized in DOCKER mode.")
+
+    def _execute_with_history(self, code: str, language: str, libraries: Optional[List[str]], timeout: Optional[int], execute_func) -> str:
+        # Check idempotency / history
+        cached = self.history.get_cached_result(code, language, libraries)
+        if cached:
+            logging.info("Returning cached execution result.")
+            return cached.get("stdout", "")
+
+        execution_id = f"exec-{uuid.uuid4()}"
+        start_time = time.time()
+
+        status = "failed"
+        stdout = ""
+        error_msg = None
+        exit_code = -1
+
+        try:
+            stdout = execute_func(code=code, timeout=timeout)
+            status = "success"
+            exit_code = 0
+
+            # Simple heuristic for timeout in the current return format
+            if stdout.startswith("Error: Execution timed out"):
+                status = "timeout"
+                exit_code = 124
+            elif stdout.startswith("Error:") or stdout.startswith("An error occurred:") or stdout.startswith("An unexpected error occurred:") or stdout.startswith("Nomad execution error:"):
+                status = "failed"
+                exit_code = 1
+
+        except Exception as e:
+            error_msg = str(e)
+            stdout = f"Error: {e}"
+            status = "failed"
+            exit_code = 1
+        finally:
+            duration_ms = int((time.time() - start_time) * 1000)
+            self.history.record_execution(
+                execution_id=execution_id,
+                code=code,
+                language=language,
+                libraries=libraries,
+                status=status,
+                stdout=stdout,
+                exit_code=exit_code,
+                duration_ms=duration_ms,
+                error=error_msg
+            )
+
+        return stdout
 
     def run_python_code(self, code: str, timeout: Optional[int] = None) -> str:
         """Runs a string of Python code and returns the output.
@@ -351,16 +432,19 @@ class CodeRunnerTool:
         if len(code) > MAX_CODE_LENGTH:
             return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
 
-        if self.mode == "hybrid" and hasattr(self, 'fast_executor'):
-            if self.fast_executor.client:
-                 return self.fast_executor.execute_simple_python(code, timeout=timeout)
-            logging.warning("Local Docker client unavailable in hybrid mode. Falling back to Nomad.")
+        def _exec(code: str, timeout: Optional[int]) -> str:
+            if self.mode == "hybrid" and hasattr(self, 'fast_executor'):
+                if self.fast_executor.client:
+                    return self.fast_executor.execute_simple_python(code, timeout=timeout)
+                logging.warning("Local Docker client unavailable in hybrid mode. Falling back to Nomad.")
+                return self.executor.execute(code, language="python", timeout=timeout)
+
+            if isinstance(self.executor, DockerSandboxExecutor):
+                return self.executor.execute_simple_python(code, timeout=timeout)
+
             return self.executor.execute(code, language="python", timeout=timeout)
 
-        if isinstance(self.executor, DockerSandboxExecutor):
-            return self.executor.execute_simple_python(code, timeout=timeout)
-
-        return self.executor.execute(code, language="python", timeout=timeout)
+        return self._execute_with_history(code, "python", None, timeout, _exec)
 
     def run_code_in_sandbox(
         self,
@@ -380,4 +464,7 @@ class CodeRunnerTool:
         if len(code) > MAX_CODE_LENGTH:
             return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
 
-        return self.executor.execute(code, language, libraries, timeout)
+        def _exec(code: str, timeout: Optional[int]) -> str:
+            return self.executor.execute(code, language, libraries, timeout)
+
+        return self._execute_with_history(code, language, libraries, timeout, _exec)

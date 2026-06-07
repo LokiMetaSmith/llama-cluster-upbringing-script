@@ -1,7 +1,7 @@
 import pytest
 import sys
 import os
-import docker
+
 import tempfile
 from unittest.mock import MagicMock, patch
 
@@ -12,9 +12,12 @@ from pipecatapp.tools.code_runner_tool import CodeRunnerTool, DockerSandboxExecu
 
 @pytest.fixture
 def code_runner():
-    with patch('docker.from_env') as mock_from_env:
+    with patch('pipecatapp.tools.code_runner_tool.docker') as mock_docker:
+        mock_from_env = mock_docker.from_env
         # Create a fresh tool instance for each test to ensure clean state
         runner = CodeRunnerTool()
+        runner.history.db_path = ':memory:'
+        runner.history._init_db()
         # Mock the client on the executor
         if isinstance(runner.executor, DockerSandboxExecutor):
             # Use the mock from from_env
