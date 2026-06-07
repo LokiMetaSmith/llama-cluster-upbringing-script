@@ -14,7 +14,7 @@
 
 - name: Copy PyPI Proxy source files to target
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../pipecatapp/services/ipfs_pypi_proxy/"
+    src: "{{ playbook_dir }}/../../pipecatapp/services/ipfs_pypi_proxy/"
     dest: "{{ pypi_proxy_src_dir.path }}/"
     mode: '0644'
 
