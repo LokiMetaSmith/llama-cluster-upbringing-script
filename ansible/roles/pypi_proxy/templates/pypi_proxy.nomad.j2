@@ -5,7 +5,7 @@ job "pypi-proxy" {
   group "proxy" {
     network {
       port "http" {
-        static = 3141
+        static = {{ pypi_proxy_port | default(3141) }}
       }
     }
 
@@ -25,9 +25,10 @@ job "pypi-proxy" {
 
       env {
         DB_PATH = "/data/cache.db"
-        PROXY_BASE_URL = "http://127.0.0.1:3141"
-        IPFS_API_URL = "http://127.0.0.1:5001"
-        IPFS_GATEWAY_URL = "http://127.0.0.1:8080"
+        PORT = "{{ pypi_proxy_port | default(3141) }}"
+        PROXY_BASE_URL = "http://127.0.0.1:{{ pypi_proxy_port | default(3141) }}"
+        IPFS_API_URL = "http://127.0.0.1:{{ ipfs_api_port | default(5001) }}"
+        IPFS_GATEWAY_URL = "http://127.0.0.1:{{ ipfs_gateway_port | default(8080) }}"
       }
 
       resources {

@@ -55,7 +55,7 @@ client {
   servers = ["{{ hostvars[groups['controller_nodes'][0]]['cluster_ip'] }}"]
   
   env {
-    PIP_INDEX_URL = "http://127.0.0.1:3141/simple/"
+    PIP_INDEX_URL = "http://127.0.0.1:{{ pypi_proxy_port | default(3141) }}/simple/"
     PIP_TRUSTED_HOST = "127.0.0.1"
   }
 
