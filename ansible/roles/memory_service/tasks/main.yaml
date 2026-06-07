@@ -30,11 +30,11 @@
     force_source: true
 
 - name: Export memory_service image to tarball
-  ansible.builtin.command: docker save -o /tmp/memory_service.tar memory_service:local
+  ansible.builtin.command: docker save -o /opt/memory_service.tar memory_service:local
   become: yes
 
 - name: Pin memory_service tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /tmp/memory_service.tar
+  ansible.builtin.command: ipfs add -Q /opt/memory_service.tar
   become: yes
   register: ipfs_add_result_memory
   environment:
@@ -42,7 +42,7 @@
 
 - name: Clean up temporary memory_service tarball
   ansible.builtin.file:
-    path: /tmp/memory_service.tar
+    path: /opt/memory_service.tar
     state: absent
   become: yes
 

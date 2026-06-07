@@ -16,11 +16,11 @@
     force_source: true
 
 - name: Export memory-graph-service image to tarball
-  ansible.builtin.command: docker save -o /tmp/memory-graph-service.tar memory-graph-service:local
+  ansible.builtin.command: docker save -o /opt/memory-graph-service.tar memory-graph-service:local
   become: yes
 
 - name: Pin memory-graph-service tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /tmp/memory-graph-service.tar
+  ansible.builtin.command: ipfs add -Q /opt/memory-graph-service.tar
   become: yes
   register: ipfs_add_result_memory_graph
   environment:
@@ -28,7 +28,7 @@
 
 - name: Clean up temporary memory-graph-service tarball
   ansible.builtin.file:
-    path: /tmp/memory-graph-service.tar
+    path: /opt/memory-graph-service.tar
     state: absent
   become: yes
 

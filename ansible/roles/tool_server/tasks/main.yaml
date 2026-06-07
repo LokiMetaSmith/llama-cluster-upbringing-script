@@ -87,11 +87,11 @@
   changed_when: false
 
 - name: Export tool-server image to tarball
-  ansible.builtin.command: docker save -o /tmp/tool-server.tar tool-server:local
+  ansible.builtin.command: docker save -o /opt/tool-server.tar tool-server:local
   become: yes
 
 - name: Pin tool-server tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /tmp/tool-server.tar
+  ansible.builtin.command: ipfs add -Q /opt/tool-server.tar
   become: yes
   register: ipfs_add_result_tool
   environment:
@@ -99,7 +99,7 @@
 
 - name: Clean up temporary tool-server tarball
   ansible.builtin.file:
-    path: /tmp/tool-server.tar
+    path: /opt/tool-server.tar
     state: absent
   become: yes
 
@@ -183,10 +183,10 @@
     - name: "Tool Server : Save Tool Server allocations to temp file"
       ansible.builtin.copy:
         content: "{{ ts_allocs.stdout | default('[]') }}"
-        dest: "/tmp/ts_allocs.json"
+        dest: "/opt/ts_allocs.json"
 
     - name: "Tool Server : Extract Allocation ID"
-      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/ts_allocs.json
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/ts_allocs.json
       register: ts_alloc_id
       ignore_errors: yes
 
@@ -249,7 +249,7 @@
 
     - name: "Tool Server : Clean up temp file"
       ansible.builtin.file:
-        path: "/tmp/ts_allocs.json"
+        path: "/opt/ts_allocs.json"
         state: absent
 
     - name: "Tool Server : Fail after debugging"

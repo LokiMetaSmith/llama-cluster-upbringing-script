@@ -628,10 +628,10 @@
     - name: "Archivist : Save Archivist allocations to temp file"
       ansible.builtin.copy:
         content: "{{ arch_allocs.stdout }}"
-        dest: "/tmp/arch_allocs.json"
+        dest: "/opt/arch_allocs.json"
 
     - name: "Archivist : Extract Allocation ID"
-      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/arch_allocs.json
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/arch_allocs.json
       register: arch_alloc_id
       failed_when: false
 
@@ -673,7 +673,7 @@
 
     - name: "Archivist : Clean up temp file"
       ansible.builtin.file:
-        path: "/tmp/arch_allocs.json"
+        path: "/opt/arch_allocs.json"
         state: absent
 
     - name: "Archivist : Fail after debugging"
@@ -743,10 +743,10 @@
     - name: "Router : Save Router allocations to temp file"
       ansible.builtin.copy:
         content: "{{ router_allocs.stdout }}"
-        dest: "/tmp/router_allocs.json"
+        dest: "/opt/router_allocs.json"
 
     - name: "Router : Extract Allocation ID"
-      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/router_allocs.json
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/router_allocs.json
       register: router_alloc_id
       failed_when: false
 
@@ -824,7 +824,7 @@
 
     - name: "Router : Clean up temp file"
       ansible.builtin.file:
-        path: "/tmp/router_allocs.json"
+        path: "/opt/router_allocs.json"
         state: absent
 
     - name: "Router : Fail after debugging"
@@ -948,10 +948,10 @@
     - name: "Pipecat App : Save Pipecat App allocations to temp file"
       ansible.builtin.copy:
         content: "{{ pipecat_allocs.stdout }}"
-        dest: "/tmp/pipecat_allocs.json"
+        dest: "/opt/pipecat_allocs.json"
 
     - name: "Pipecat App : Extract Allocation ID"
-      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/pipecat_allocs.json
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/pipecat_allocs.json
       register: pipecat_alloc_id
       failed_when: false
 
@@ -993,7 +993,7 @@
 
     - name: "Pipecat App : Clean up temp file"
       ansible.builtin.file:
-        path: "/tmp/pipecat_allocs.json"
+        path: "/opt/pipecat_allocs.json"
         state: absent
 
     - name: "Pipecat App : Fail after debugging"

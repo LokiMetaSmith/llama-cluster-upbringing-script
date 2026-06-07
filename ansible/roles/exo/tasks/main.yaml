@@ -13,7 +13,7 @@
 
 - name: Create build directory for Exo
   ansible.builtin.file:
-    path: /tmp/exo_build
+    path: /opt/exo_build
     state: directory
     mode: '0755'
   become: yes
@@ -22,7 +22,7 @@
 - name: Copy Dockerfile to build directory
   ansible.builtin.copy:
     src: "{{ role_path }}/files/Dockerfile"
-    dest: /tmp/exo_build/Dockerfile
+    dest: /opt/exo_build/Dockerfile
     mode: '0644'
   become: yes
   when: exo_enable
@@ -32,7 +32,7 @@
   community.docker.docker_image:
     name: "{{ exo_docker_image_name }}"
     build:
-      path: /tmp/exo_build
+      path: /opt/exo_build
       args:
         EXO_REPO_URL: "{{ exo_repo_url }}"
         EXO_VERSION: "{{ exo_version }}"
@@ -41,12 +41,12 @@
   when: exo_enable
 
 - name: Export Exo image to tarball
-  ansible.builtin.command: docker save -o /tmp/{{ exo_docker_image_name }}.tar {{ exo_docker_image_name }}:latest
+  ansible.builtin.command: docker save -o /opt/{{ exo_docker_image_name }}.tar {{ exo_docker_image_name }}:latest
   become: yes
   when: exo_enable
 
 - name: Pin Exo tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /tmp/{{ exo_docker_image_name }}.tar
+  ansible.builtin.command: ipfs add -Q /opt/{{ exo_docker_image_name }}.tar
   become: yes
   register: ipfs_add_result_exo
   environment:
@@ -55,7 +55,7 @@
 
 - name: Clean up temporary Exo tarball
   ansible.builtin.file:
-    path: /tmp/{{ exo_docker_image_name }}.tar
+    path: /opt/{{ exo_docker_image_name }}.tar
     state: absent
   become: yes
   when: exo_enable
@@ -67,7 +67,7 @@
 
 - name: Cleanup build directory
   ansible.builtin.file:
-    path: /tmp/exo_build
+    path: /opt/exo_build
     state: absent
   become: yes
   when: exo_enable
