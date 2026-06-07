@@ -1,0 +1,38 @@
+- name: Ensure PyPI Proxy volume directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/pypi_proxy"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+
+- name: Create temporary directory for PyPI Proxy source
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: _pypi_proxy
+  register: pypi_proxy_src_dir
+
+- name: Copy PyPI Proxy source files to target
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../pipecatapp/services/ipfs_pypi_proxy/"
+    dest: "{{ pypi_proxy_src_dir.path }}/"
+    mode: '0644'
+
+- name: Build PyPI Proxy Docker image locally
+  ansible.builtin.command:
+    cmd: docker build -t pypi_proxy:latest .
+    chdir: "{{ pypi_proxy_src_dir.path }}"
+  changed_when: true
+
+- name: Remove temporary source directory
+  ansible.builtin.file:
+    path: "{{ pypi_proxy_src_dir.path }}"
+    state: absent
+
+- name: Template PyPI Proxy Nomad job
+  ansible.builtin.template:
+    src: pypi_proxy.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/pypi_proxy.nomad"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'

@@ -54,8 +54,18 @@ client {
   enabled = true
   servers = ["{{ hostvars[groups['controller_nodes'][0]]['cluster_ip'] }}"]
   
+  env {
+    PIP_INDEX_URL = "http://127.0.0.1:3141/simple/"
+    PIP_TRUSTED_HOST = "127.0.0.1"
+  }
+
   meta {
     node_type = "worker"
+  }
+
+  host_volume "pypi_proxy" {
+    path      = "{{ nomad_volumes_dir }}/pypi_proxy"
+    read_only = false
   }
 
   host_volume "pipecatapp" {

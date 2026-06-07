@@ -1,0 +1,12 @@
+- name: Deploy PyPI Proxy over IPFS
+  hosts: all
+  remote_user: "{{ target_user }}"
+  become: yes
+
+  tags:
+    - pypi_proxy
+
+  roles:
+    - role: pypi_proxy
+      tags:
+        - pypi_proxy

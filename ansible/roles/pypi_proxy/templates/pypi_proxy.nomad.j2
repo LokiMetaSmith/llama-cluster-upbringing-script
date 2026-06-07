@@ -1,0 +1,39 @@
+job "pypi-proxy" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "system"
+
+  group "proxy" {
+    network {
+      port "http" {
+        static = 3141
+      }
+    }
+
+    task "fastapi" {
+      driver = "docker"
+
+      config {
+        # Using a pre-built image or build block if possible.
+        # To avoid adding a whole CI/CD build step here for now, we'll build it locally on the nodes
+        # or assume an image name like "pypi_proxy:latest" that we can build in the Ansible tasks.
+        image = "pypi_proxy:latest"
+        network_mode = "host"
+        volumes = [
+          "{{ nomad_volumes_dir }}/pypi_proxy:/data"
+        ]
+      }
+
+      env {
+        DB_PATH = "/data/cache.db"
+        PROXY_BASE_URL = "http://127.0.0.1:3141"
+        IPFS_API_URL = "http://127.0.0.1:5001"
+        IPFS_GATEWAY_URL = "http://127.0.0.1:8080"
+      }
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+    }
+  }
+}
