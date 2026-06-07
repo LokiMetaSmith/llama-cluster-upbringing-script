@@ -277,10 +277,10 @@
     - name: Save MQTT allocations to temp file
       ansible.builtin.copy:
         content: "{{ mqtt_allocs.stdout }}"
-        dest: "/tmp/mqtt_allocs.json"
+        dest: "/opt/mqtt_allocs.json"
 
     - name: Extract Allocation ID
-      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/mqtt_allocs.json
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/mqtt_allocs.json
       register: mqtt_alloc_id
       ignore_errors: yes
 
@@ -320,7 +320,7 @@
 
     - name: Clean up temp file
       ansible.builtin.file:
-        path: "/tmp/mqtt_allocs.json"
+        path: "/opt/mqtt_allocs.json"
         state: absent
 
     - name: Fail after debugging

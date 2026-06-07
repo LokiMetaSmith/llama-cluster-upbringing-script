@@ -185,10 +185,10 @@
     - name: "World Model Service : Save World Model allocations to temp file"
       ansible.builtin.copy:
         content: "{{ wm_allocs.stdout }}"
-        dest: "/tmp/wm_allocs.json"
+        dest: "/opt/wm_allocs.json"
 
     - name: "World Model Service : Extract Allocation ID"
-      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /tmp/wm_allocs.json
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/wm_allocs.json
       register: wm_alloc_id
       ignore_errors: yes
 
@@ -232,7 +232,7 @@
 
     - name: "World Model Service : Clean up temp file"
       ansible.builtin.file:
-        path: "/tmp/wm_allocs.json"
+        path: "/opt/wm_allocs.json"
         state: absent
 
     - name: "World Model Service : Fail after debugging"

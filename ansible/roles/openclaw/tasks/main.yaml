@@ -31,11 +31,11 @@
     force_source: true
 
 - name: Export openclaw image to tarball
-  ansible.builtin.command: docker save -o /tmp/openclaw.tar openclaw:latest
+  ansible.builtin.command: docker save -o /opt/openclaw.tar openclaw:latest
   become: yes
 
 - name: Pin openclaw tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /tmp/openclaw.tar
+  ansible.builtin.command: ipfs add -Q /opt/openclaw.tar
   become: yes
   register: ipfs_add_result_openclaw
   environment:
@@ -43,7 +43,7 @@
 
 - name: Clean up temporary openclaw tarball
   ansible.builtin.file:
-    path: /tmp/openclaw.tar
+    path: /opt/openclaw.tar
     state: absent
   become: yes
 
