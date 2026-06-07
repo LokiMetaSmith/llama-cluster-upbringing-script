@@ -8,7 +8,7 @@
   block:
     - name: Download kubo (IPFS CLI)
       ansible.builtin.get_url:
-        url: "https://dist.ipfs.tech/kubo/v0.32.1/kubo_v0.32.1_linux-amd64.tar.gz"
+        url: "https://dist.ipfs.tech/kubo/v0.33.2/kubo_v0.33.2_linux-amd64.tar.gz"
         dest: "/tmp/kubo.tar.gz"
         mode: '0644'
 
