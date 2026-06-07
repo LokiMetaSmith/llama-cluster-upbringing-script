@@ -1,0 +1,36 @@
+job "apt-proxy" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "system"
+
+  group "proxy" {
+    network {
+      port "http" {
+        static = {{ apt_proxy_port | default(3142) }}
+      }
+    }
+
+    task "fastapi" {
+      driver = "docker"
+
+      config {
+        image = "apt_proxy:latest"
+        network_mode = "host"
+        volumes = [
+          "{{ nomad_volumes_dir }}/apt_proxy:/data"
+        ]
+      }
+
+      env {
+        DB_PATH = "/data/cache.db"
+        PORT = "{{ apt_proxy_port | default(3142) }}"
+        IPFS_API_URL = "http://127.0.0.1:{{ ipfs_api_port | default(5001) }}"
+        IPFS_GATEWAY_URL = "http://127.0.0.1:{{ ipfs_gateway_port | default(8080) }}"
+      }
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 # TODO
 
 ## Next
-- [ ] Implement `apt` package caching proxy via IPFS.
+- [x] Implement `apt` package caching proxy via IPFS.
 
 ## Immediate Actions
 
