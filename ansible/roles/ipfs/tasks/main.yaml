@@ -4,6 +4,13 @@
     path: /usr/local/bin/ipfs
   register: ipfs_binary
 
+- name: Check IPFS version if installed
+  ansible.builtin.command: /usr/local/bin/ipfs --version
+  register: ipfs_version
+  changed_when: false
+  failed_when: false
+  when: ipfs_binary.stat.exists
+
 - name: Install IPFS CLI
   block:
     - name: Download kubo (IPFS CLI)
@@ -33,7 +40,7 @@
         - "/tmp/kubo.tar.gz"
         - "/tmp/kubo"
   become: yes
-  when: not ipfs_binary.stat.exists
+  when: not ipfs_binary.stat.exists or (ipfs_version is defined and ipfs_version.stdout is defined and '0.33.2' not in ipfs_version.stdout)
 
 - name: Ensure IPFS data directory exists
   ansible.builtin.file:
