@@ -32,7 +32,7 @@
 
 - name: Extract job status
   ansible.builtin.set_fact:
-    telegraf_job_state: "{{ (telegraf_job_status.stdout | from_json).Status | default('missing') }}"
+    telegraf_job_state: "{{ (telegraf_job_status.stdout | default('{\"Status\": \"missing\"}', true) | from_json).get('Status', 'missing') }}"
 
 - name: Purge telegraf job if in failed state
   ansible.builtin.command:
