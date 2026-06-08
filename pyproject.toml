@@ -1,0 +1,5 @@
+[tool.vulture]
+exclude = ["venv", ".venv", "node_modules", "tests"]
+ignore_decorators = ["@app.route", "@pytest.fixture"]
+ignore_names = ["args", "kwargs"]
+paths = ["pipecatapp", "scripts"]

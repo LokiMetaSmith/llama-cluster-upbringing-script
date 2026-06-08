@@ -102,6 +102,22 @@ if [ -n "$JINJA_FILES_TO_LINT" ]; then
 fi
 
 
+# mypy
+if command -v mypy &> /dev/null; then
+    run_linter "mypy" mypy pipecatapp scripts
+else
+    echo "⚠️  Warning: mypy not found. Skipping static analysis."
+    echo
+fi
+
+# vulture
+if command -v vulture &> /dev/null; then
+    run_linter "vulture" vulture
+else
+    echo "⚠️  Warning: vulture not found. Skipping dead code detection."
+    echo
+fi
+
 # --- Final Exit Status ---
 if [ "$EXIT_CODE" -ne 0 ]; then
     echo "❌ One or more linters failed."

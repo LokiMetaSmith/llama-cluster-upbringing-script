@@ -8,10 +8,12 @@ As per the philosophy of "Zero-Degree-of-Freedom LLM Coding using Executable Ora
 
 You are provided with several executable oracles to verify your work. You must use these tools to test your code before considering a task complete.
 
+* **Pre-flight Checks:** You must run the `scripts/agent_preflight.sh` script prior to submitting any code. This wrapper runs tests, linters, and static analysis tools.
+  * *Oracle Rule:* You must include the output (or a statement of its success) when you submit a task. All checks within it must pass.
 * **Tests:** Run unit and integration tests using `pytest` (Python) or `npm run test` (JavaScript/TypeScript).
-  * *Oracle Rule:* A failing test is a showstopper. You must fix the code until the test passes.
-* **Linters:** Run `npm run lint` or `scripts/lint.sh` to check for formatting and syntax errors.
-  * *Oracle Rule:* All code must pass linting without errors or warnings.
+  * *Oracle Rule:* A failing test is a showstopper. You must fix the code until the test passes. Every new feature or bug fix MUST include a corresponding automated test.
+* **Linters & Static Analysis:** Run `npm run lint` or `scripts/lint.sh` to check for formatting and syntax errors. Static analysis (`mypy`) and dead-code detection (`vulture`) are included.
+  * *Oracle Rule:* All code must pass linting without errors or warnings. You MUST remove any orphaned code identified by `vulture`.
 * **Code Runner Sandbox:** Use the `code_runner` tool to execute Python code in an isolated Docker/Nomad container.
   * *Oracle Rule:* Validate your logic in the sandbox before modifying host files.
 * **Autoresearch Iteration:** Use the `autoresearch` tool for automated hypothesize-edit-evaluate loops.
@@ -52,7 +54,7 @@ Be aware that executable oracles cannot easily measure everything. You must exer
 
 * **Software Architecture:** Ensure your code is modular, readable, and follows the existing design patterns. Do not paint yourself into a corner with poor architecture.
 * **Duplication:** Do not write nearly-duplicate functions or excessive defensive code. Abstract properly.
-* **Dead Code:** Remove code that becomes dead or unreachable as you work. Do not leave it behind.
+* **Dead Code:** Remove code that becomes dead or unreachable as you work. Do not leave it behind. You must actively look for and delete orphaned functions and classes that you replace. Use `vulture` to assist in finding dead code.
 
 ## 5. Handling Failures
 
