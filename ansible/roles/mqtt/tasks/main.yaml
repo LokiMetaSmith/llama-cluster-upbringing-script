@@ -55,7 +55,7 @@
   when: >
     nomad_status_json.stdout is defined and
     (nomad_status_json.stdout | trim | length > 0) and
-    'consul.version' not in (nomad_status_json.stdout | from_json).get('Attributes', {})
+    'consul.version' not in (nomad_status_json.stdout | default('{}', true) | from_json).get('Attributes', {})
   block:
     - name: Debug Consul Token
       ansible.builtin.debug:
