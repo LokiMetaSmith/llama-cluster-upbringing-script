@@ -1,6 +1,6 @@
 # Project Summary: Architecting a Responsive, Distributed Conversational AI Pipeline
 
-Last updated: 2025-11-06
+Last updated: 2026-06-08
 
 This document summarizes the final architecture and key features of the project.
 
@@ -34,6 +34,8 @@ The project has evolved from a single setup script into a sophisticated, multi-l
   - Implemented a `CodeRunnerTool` that allows the agent to write and execute Python code in a secure, sandboxed Docker container.
 - **Phase 12: Web Browsing:**
   - Implemented a `WebBrowserTool` using Playwright that allows the agent to browse the web to answer questions.
+- **Phase 13: IPFS & Package Caching:**
+  - Implemented an internal package cache system for the swarm using IPFS. This includes an apt package caching proxy and PyPI proxy to optimize distributed service deployments across the cluster.
 
 ---
 
