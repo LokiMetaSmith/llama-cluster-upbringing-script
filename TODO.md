@@ -1,5 +1,8 @@
 # TODO
 
+## Next
+- [x] Implement `apt` package caching proxy via IPFS.
+
 ## Immediate Actions
 
 - [x] **Fix Authentik Nomad Job:**

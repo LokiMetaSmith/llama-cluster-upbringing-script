@@ -42,6 +42,7 @@ show_help() {
     echo "  --continue                   Resume from the last successfully completed playbook."
     echo "  --benchmark                  Run benchmark tests."
     echo "  --deploy-docker              Deploy the pipecat application using Docker (Default)."
+    echo "  --dry-run                    Perform a dry run to validate playbooks without applying changes."
     echo "  --run-local                  Deploy the pipecat application using local raw_exec (for debugging)."
     echo "  --home-assistant-debug       Enable debug mode for Home Assistant."
     echo "  --container                  Run the entire infrastructure inside a single large container."
@@ -71,6 +72,7 @@ DO_CLEAN_GIT=false
 DO_SYSTEM_CLEANUP=false
 DO_PURGE_JOBS=false
 DO_STATUS=false
+DO_DRY_RUN=false
 DO_HEAL_CLUSTER=false
 DO_RECOVER_NODE=false
 VERBOSE_LEVEL=0
@@ -108,6 +110,10 @@ find_controller() {
 
     # Install nmap if missing
     if ! command -v nmap >/dev/null 2>&1; then
+        if [ "$DO_DRY_RUN" = true ]; then
+            echo -e "${RED}❌ Dry run failed: nmap is missing. Please install it manually before running a dry run.${NC}"
+            exit 1
+        fi
         echo -e "⏳ Installing nmap for network scanning..."
         if sudo -n true 2>/dev/null; then
             sudo apt-get update -qq && sudo apt-get install -y nmap -qq >/dev/null 2>&1
@@ -290,6 +296,10 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             ;;
         --test-mode)
             PROCESSED_ARGS+=("--test-mode")
+            ;;
+        --dry-run)
+            DO_DRY_RUN=true
+            PROCESSED_ARGS+=("--dry-run")
             ;;
         --clean-git|--clean) # Support legacy --clean just in case, but map to clean-git
             DO_CLEAN_GIT=true
@@ -636,7 +646,9 @@ ensure_python_environment() {
         echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
     fi
 
-    run_step "Installing OpenCode AI Agent" "npm ci"
+    if [ "$DO_DRY_RUN" != true ]; then
+        run_step "Installing OpenCode AI Agent" "npm ci"
+    fi
 
     run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
 
@@ -857,7 +869,9 @@ fi
 # --- Run Initial Machine Setup ---
 echo -e "${BOLD}=== System Bootstrap ===${NC}"
 if [ -f "initial-setup/setup.sh" ]; then
-    if [ -f "/.dockerenv" ] && [ "$(hostname)" = "pipecat-dev-runner" ]; then
+    if [ "$DO_DRY_RUN" = true ]; then
+        echo -e "⏭️  Skipping initial machine setup script due to --dry-run."
+    elif [ -f "/.dockerenv" ] && [ "$(hostname)" = "pipecat-dev-runner" ]; then
          echo "🐳 Container environment detected. Skipping initial machine setup (setup.sh)."
     else
         # We need to ensure sudo doesn't hang on prompt hidden by redirection

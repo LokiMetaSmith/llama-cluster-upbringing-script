@@ -30,23 +30,11 @@ job "opengravity" {
       }
     }
 
-    task "load-image" {
-      lifecycle {
-        hook    = "prestart"
-        sidecar = false
-      }
+    {% set image_cid = opengravity_ipfs_cid %}
 
-      artifact {
-        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ opengravity_ipfs_cid }}"
-        destination = "local/opengravity.tar"
-        mode        = "file"
-      }
+    {% set image_tar_name = 'opengravity' %}
 
-      config {
-        command = "docker"
-        args    = ["load", "-i", "local/opengravity.tar"]
-      }
-    }
+    {% include 'shared/load_image_task.nomad.j2' %}
 
     task "nginx" {
       driver = "docker"

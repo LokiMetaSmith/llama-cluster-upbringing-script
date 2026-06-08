@@ -317,9 +317,12 @@ def purge_nomad_jobs():
     print("Process cleanup complete.")
 
 
-def run_playbook(playbook_path, extra_vars, tags, verbose_level):
+def run_playbook(playbook_path, extra_vars, tags, verbose_level, dry_run=False):
     """Runs a single ansible playbook."""
     cmd = [".venv/bin/ansible-playbook", "-i", INVENTORY_FILE, playbook_path]
+
+    if dry_run:
+        cmd.extend(["--check", "--diff"])
 
     for key, value in extra_vars.items():
         cmd.extend(["--extra-vars", f"{key}={value}"])
@@ -663,6 +666,7 @@ def main():
     parser.add_argument("--purge-jobs", action="store_true", help="Purge Nomad jobs (handled by wrapper mostly, but var passed)")
     parser.add_argument("--only-purge", action="store_true", help="Only purge jobs and exit (requires --purge-jobs)")
     parser.add_argument("--test-mode", action="store_true", help="Test mode: Purges application jobs after they are deployed to save memory during testing.")
+    parser.add_argument("--dry-run", action="store_true", help="Perform a dry run to validate playbooks without applying changes.")
     parser.add_argument("--only-status", action="store_true", help="Only print status and exit")
     parser.add_argument("--deploy-docker", action="store_true", help="Deploy via Docker")
     parser.add_argument("--run-local", action="store_true", help="Deploy via raw_exec")
@@ -857,7 +861,7 @@ def main():
         disk_used_before, _ = get_current_disk_usage()
 
         # --- Run ---
-        run_playbook(pb_path, extra_vars, args.tags, verbose_level)
+        run_playbook(pb_path, extra_vars, args.tags, verbose_level, dry_run=args.dry_run)
         executed_playbooks.append(pb_path)
 
         # --- Test Mode Purge ---

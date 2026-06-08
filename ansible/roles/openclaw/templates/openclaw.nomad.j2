@@ -11,23 +11,11 @@ job "openclaw" {
       }
     }
 
-    task "load-image" {
-      lifecycle {
-        hook    = "prestart"
-        sidecar = false
-      }
+    {% set image_cid = openclaw_ipfs_cid %}
 
-      artifact {
-        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ openclaw_ipfs_cid }}"
-        destination = "local/openclaw.tar"
-        mode        = "file"
-      }
+    {% set image_tar_name = 'openclaw' %}
 
-      config {
-        command = "docker"
-        args    = ["load", "-i", "local/openclaw.tar"]
-      }
-    }
+    {% include 'shared/load_image_task.nomad.j2' %}
 
     task "openclaw" {
       driver = "docker"

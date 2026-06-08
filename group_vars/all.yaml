@@ -86,6 +86,8 @@ traceway_port: 8089
 ipfs_swarm_port: 4001
 ipfs_api_port: 5001
 ipfs_gateway_port: 8080
+pypi_proxy_port: 3141
+apt_proxy_port: 3142
 
 # Standard Paths
 consul_data_dir: "/opt/consul"

@@ -1,0 +1,47 @@
+- name: Ensure APT Proxy volume directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/apt_proxy"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+
+- name: Create temporary directory for APT Proxy source
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: _apt_proxy
+  register: apt_proxy_src_dir
+
+- name: Copy APT Proxy source files to target
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../pipecatapp/services/ipfs_apt_proxy/"
+    dest: "{{ apt_proxy_src_dir.path }}/"
+    mode: '0644'
+
+- name: Build APT Proxy Docker image locally
+  ansible.builtin.command:
+    cmd: docker build -t apt_proxy:latest .
+    chdir: "{{ apt_proxy_src_dir.path }}"
+  changed_when: true
+
+- name: Remove temporary source directory
+  ansible.builtin.file:
+    path: "{{ apt_proxy_src_dir.path }}"
+    state: absent
+
+- name: Template APT Proxy Nomad job
+  ansible.builtin.template:
+    src: apt_proxy.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/apt_proxy.nomad"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'
+
+- name: Configure apt proxy configuration file
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/01proxy
+    content: |
+      Acquire::http::Proxy "http://127.0.0.1:{{ apt_proxy_port | default(3142) }}";
+      Acquire::https::Proxy "false";
+    mode: '0644'
+  become: true

@@ -21,14 +21,10 @@
     group: "{{ target_user | default('root') }}"
 
 - name: Build OpenClaw Docker image
-  community.docker.docker_image:
-    name: openclaw
-    tag: latest
-    source: build
-    build:
-      path: /opt/openclaw/docker
-      pull: true
-    force_source: true
+  ansible.builtin.command: docker build -t openclaw:latest .
+  args:
+    chdir: /opt/openclaw/docker
+  changed_when: true
 
 - name: Export openclaw image to tarball
   ansible.builtin.command: docker save -o /opt/openclaw.tar openclaw:latest
