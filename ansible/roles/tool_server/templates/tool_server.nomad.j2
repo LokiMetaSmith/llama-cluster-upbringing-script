@@ -11,23 +11,11 @@ job "tool-server" {
       }
     }
 
-    task "load-image" {
-      lifecycle {
-        hook    = "prestart"
-        sidecar = false
-      }
+    {% set image_cid = tool_server_ipfs_cid %}
 
-      artifact {
-        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ tool_server_ipfs_cid }}"
-        destination = "local/tool_server.tar"
-        mode        = "file"
-      }
+    {% set image_tar_name = 'tool_server' %}
 
-      config {
-        command = "docker"
-        args    = ["load", "-i", "local/tool_server.tar"]
-      }
-    }
+    {% include 'shared/load_image_task.nomad.j2' %}
 
     task "tool-server-task" {
       driver = "docker"

@@ -45,15 +45,14 @@
     force: yes
 
 - name: Install llxprt-code dependencies
-  ansible.builtin.npm:
-    path: "{{ llxprt_code_dir }}"
-    state: present
+  ansible.builtin.command: npm install
+  args:
+    chdir: "{{ llxprt_code_dir }}"
 
 - name: Install llxprt-code globally
-  ansible.builtin.npm:
-    path: "{{ llxprt_code_dir }}"
-    state: present
-    global: yes
+  ansible.builtin.command: npm install -g .
+  args:
+    chdir: "{{ llxprt_code_dir }}"
 
 - name: Configure llxprt-code
   ansible.builtin.template:

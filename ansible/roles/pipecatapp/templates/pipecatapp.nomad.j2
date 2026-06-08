@@ -104,23 +104,9 @@ job "{{ job_name | default('pipecat-app') }}" {
     }
 
     {% if pipecat_deployment_style == 'docker' %}
-    task "load-image" {
-      lifecycle {
-        hook    = "prestart"
-        sidecar = false
-      }
-
-      artifact {
-        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ pipecatapp_ipfs_cid }}"
-        destination = "local/pipecatapp.tar"
-        mode        = "file"
-      }
-
-      config {
-        command = "docker"
-        args    = ["load", "-i", "local/pipecatapp.tar"]
-      }
-    }
+    {% set image_cid = pipecatapp_ipfs_cid %}
+    {% set image_tar_name = 'pipecatapp' %}
+    {% include 'shared/load_image_task.nomad.j2' %}
 
     task "pipecat-task" {
       driver = "docker"

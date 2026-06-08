@@ -7,23 +7,11 @@ job "memory-graph" {
       port "http" { to = 8000 }
     }
 
-    task "load-image" {
-      lifecycle {
-        hook    = "prestart"
-        sidecar = false
-      }
+    {% set image_cid = memory_graph_ipfs_cid %}
 
-      artifact {
-        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ memory_graph_ipfs_cid }}"
-        destination = "local/memory_graph.tar"
-        mode        = "file"
-      }
+    {% set image_tar_name = 'memory_graph' %}
 
-      config {
-        command = "docker"
-        args    = ["load", "-i", "local/memory_graph.tar"]
-      }
-    }
+    {% include 'shared/load_image_task.nomad.j2' %}
 
     task "server" {
       driver = "docker"

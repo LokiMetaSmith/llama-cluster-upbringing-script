@@ -21,23 +21,11 @@ job "memory-service" {
       read_only = false
     }
 
-    task "load-image" {
-      lifecycle {
-        hook    = "prestart"
-        sidecar = false
-      }
+    {% set image_cid = memory_service_ipfs_cid %}
 
-      artifact {
-        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ memory_service_ipfs_cid }}"
-        destination = "local/memory_service.tar"
-        mode        = "file"
-      }
+    {% set image_tar_name = 'memory_service' %}
 
-      config {
-        command = "docker"
-        args    = ["load", "-i", "local/memory_service.tar"]
-      }
-    }
+    {% include 'shared/load_image_task.nomad.j2' %}
 
     task "api" {
       driver = "docker"
