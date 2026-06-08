@@ -280,7 +280,7 @@
 
 - name: Set benchmark_results fact from parsed content
   ansible.builtin.set_fact:
-    benchmark_results: "{{ benchmark_parser_result.stdout | from_json }}"
+    benchmark_results: "{{ benchmark_parser_result.stdout | default('{}', true) | from_json }}"
 
 - name: Create control vectors directory
   ansible.builtin.file:

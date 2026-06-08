@@ -25,7 +25,7 @@
 
     - name: Set benchmark_results fact from parsed content
       ansible.builtin.set_fact:
-        benchmark_results: "{{ (parsed_json.stdout | from_json) if (parsed_json.stdout is defined and parsed_json.stdout) else [] }}"
+        benchmark_results: "{{ parsed_json.stdout | default('[]', true) | from_json }}"
       when: benchmark_log_raw.content is defined
   rescue:
     - name: Set empty benchmark results on failure

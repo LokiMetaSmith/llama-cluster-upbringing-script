@@ -15,6 +15,7 @@ def test_mqtt_template():
     assert os.path.exists(template_dir), f"Template directory not found: {template_dir}"
 
     j2_env = Environment(loader=FileSystemLoader(template_dir), trim_blocks=True)
+    j2_env.filters['to_json'] = lambda x: '"[\'dc1\']"'
     template = j2_env.get_template('mqtt.nomad.j2')
 
     # Render the template

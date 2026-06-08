@@ -25,7 +25,7 @@
 
 - name: Extract job status
   ansible.builtin.set_fact:
-    zigbee2mqtt_job_state: "{{ (zigbee2mqtt_job_status.stdout | from_json).Status | default('missing') }}"
+    zigbee2mqtt_job_state: "{{ (zigbee2mqtt_job_status.stdout | default('{\"Status\": \"missing\"}', true) | from_json).get('Status', 'missing') }}"
 
 - name: Purge zigbee2mqtt job if in failed state
   ansible.builtin.command:

@@ -28,7 +28,7 @@
     NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
     NOMAD_TLS_SKIP_VERIFY: "1"
   register: benchmark_models_job_status_result
-  until: "((benchmark_models_job_status_result.stdout | from_json).Status == 'dead') and ((benchmark_models_job_status_result.stdout | from_json).JobSummary.Summary.Complete == 1)"
+  until: "(benchmark_models_job_status_result.stdout | default('{}', true) | from_json).get('Status') == 'dead' and (benchmark_models_job_status_result.stdout | default('{}', true) | from_json).get('JobSummary', {}).get('Summary', {}).get('Complete') == 1"
   retries: 60 # 5 minutes (60 * 5s)
   delay: 5
   changed_when: false
@@ -47,7 +47,7 @@
 
 - name: "Capture benchmark logs for model {{ model.name }}"
   ansible.builtin.command:
-    cmd: "nomad alloc logs {{ (benchmark_models_job_allocs_result.stdout | from_json)[0].ID }} benchmark-task"
+    cmd: "nomad alloc logs {{ (benchmark_models_job_allocs_result.stdout | default('[{}]', true) | from_json)[0].get('ID', '') }} benchmark-task"
   environment:
     NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
