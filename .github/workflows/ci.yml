@@ -52,8 +52,8 @@ jobs:
       - name: "Install Ansible collections"
         run: ansible-galaxy collection install community.general ansible.posix community.docker
 
-      - name: "Run unit tests"
-        run: python -m pytest tests/unit/
+      - name: "Run unit tests with coverage"
+        run: python -m pytest --cov=pipecatapp --cov-report=xml tests/unit/
 
   ansible-check:
     name: "Ansible Change Detection"

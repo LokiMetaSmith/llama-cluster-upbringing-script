@@ -32,3 +32,6 @@ llm-sandbox[docker,podman]
 kubernetes
 paho-mqtt
 cryptography
+vulture
+mypy
+pytest-cov
