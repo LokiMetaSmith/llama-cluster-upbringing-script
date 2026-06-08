@@ -145,10 +145,21 @@ async def run_tool(request: ToolRequest, authorization: Optional[str] = Header(N
         raise HTTPException(status_code=500, detail=f"Error executing tool: {str(e)}")
 
 @app.get("/tools/")
-async def list_tools():
+async def list_tools(authorization: Optional[str] = Header(None)):
     """
     Returns a list of available tools and their methods.
     """
+    if not API_KEY:
+        raise HTTPException(status_code=500, detail="API key not configured on server.")
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header is missing.")
+    try:
+        auth_type, token = authorization.split()
+        if auth_type.lower() != "bearer" or not secrets.compare_digest(token, API_KEY):
+            raise HTTPException(status_code=403, detail="Invalid credentials.")
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid authorization header format.")
+
     available_tools = {}
     for tool_name, tool_instance in tools.items():
         methods = {}

@@ -246,8 +246,8 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - Audit frontend code (`pipecatapp/static/js`), workflows (`workflows/`), and tools (`pipecatapp/tools/`) for hardcoded secrets, API keys, or tokens.
   - Remove any found secrets and replace them with secure environment variable loading.
 - [x] **Audit unauthenticated API endpoints:**
-  - Review `pipecatapp/web_server.py` and other API definitions to ensure sensitive data endpoints are authenticated.
-  - Specifically check endpoints returning user data or configuration.
+  - [x] Review `pipecatapp/web_server.py` and other API definitions to ensure sensitive data endpoints are authenticated.
+  - [x] Specifically check endpoints returning user data or configuration.
 - [x] **Audit WebSocket security:**
   - Verify that WebSocket connections enforce strict Origin checks to prevent Cross-Site WebSocket Hijacking (CSWSH).
   - Consider implementing authentication for WebSocket connections.
