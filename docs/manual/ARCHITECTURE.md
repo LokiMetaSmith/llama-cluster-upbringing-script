@@ -1,6 +1,6 @@
 # Holistic Project Architecture
 
-Last updated: 2026-01-23
+Last updated: 2026-06-08
 
 This document provides a detailed overview of the system architecture, from the hardware provisioning layer to the application logic and user interface. The system is designed as a multi-layered stack to deploy a responsive, distributed, and embodied conversational AI agent on a cluster of legacy machines.
 
@@ -51,6 +51,18 @@ This layer is responsible for deploying, managing, and scaling the various servi
   3. Nomad schedules all jobs on available worker nodes based on their resource requirements.
   4. **Service Discovery:** As jobs start, they automatically register with Consul. For example, the `TwinService` can dynamically discover all available "expert" LLM backends by querying Consul for services tagged with a specific pattern.
 - **Outcome:** All microservices are running, monitored, and can find each other dynamically on the network.
+
+## Layer 3.5: Decentralized Storage & Caching (IPFS)
+
+This layer provides an internal, decentralized storage layer across the cluster, specifically optimizing the deployment of packages and large assets across the swarm.
+
+- **Technology:** [IPFS (InterPlanetary File System)](https://ipfs.tech/)
+- **Implementation:** An IPFS daemon runs on the cluster nodes, forming a private swarming network.
+- **Workflow:**
+  1. Core application artifacts, Docker images, and model weights are seeded into IPFS, making them addressable by Content ID (CID).
+  2. Internal caching proxies (e.g., an apt package proxy and PyPI proxy) route requests to IPFS, ensuring that large file downloads are cached and distributed locally.
+  3. Worker nodes downloading dependencies pull them directly from neighboring nodes via IPFS instead of saturating the external internet connection.
+- **Outcome:** Significantly faster and more reliable deployments across the swarm, reducing external bandwidth usage by utilizing the cluster's internal network for package caching.
 
 ## Layer 4: The AI Application Stack
 
