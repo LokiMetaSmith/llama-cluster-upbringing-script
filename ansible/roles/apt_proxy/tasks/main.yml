@@ -41,7 +41,7 @@
   ansible.builtin.copy:
     dest: /etc/apt/apt.conf.d/01proxy
     content: |
-      Acquire::http::Proxy "http://127.0.0.1:{{ apt_proxy_port | default(3142) }}";
+      Acquire::http::Proxy "http://{{ apt_proxy_host }}:{{ apt_proxy_port | default(3142) }}";
       Acquire::https::Proxy "false";
     mode: '0644'
   become: true
