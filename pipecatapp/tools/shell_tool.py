@@ -2,6 +2,7 @@ import asyncio
 import subprocess
 import uuid
 import logging
+from pipecatapp.utils.terminal_cleanup import clean_terminal_output
 
 class ShellTool:
     """A tool for running shell commands in a persistent tmux session.
@@ -95,9 +96,9 @@ class ShellTool:
                                 async for part in gen:
                                     parts.append(part)
                                 return "".join(parts)
-                            redacted_output = await collect_gen(res)
+                            redacted_output = str(await collect_gen(res))
                         else:
-                            redacted_output = res
+                            redacted_output = str(res)
                     except ImportError:
                         pass
                     except Exception:

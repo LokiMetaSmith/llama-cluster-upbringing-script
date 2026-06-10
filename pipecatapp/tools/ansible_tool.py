@@ -2,10 +2,11 @@ import subprocess
 import os
 from pipecatapp.utils.command_runner import CommandRunner
 from pipecatapp.utils.ssh_utils import ensure_ssh_keys_initialized
+from pipecatapp.utils.terminal_cleanup import clean_terminal_output
 try:
     from ..secret_manager import secret_manager
 except ImportError:
-    from secret_manager import secret_manager
+    from secret_manager import secret_manager  # type: ignore
 
 class Ansible_Tool:
     """A tool for running Ansible playbooks to configure and manage the cluster.
@@ -27,7 +28,7 @@ class Ansible_Tool:
         self.project_root = "/opt/cluster-infra"
         ensure_ssh_keys_initialized()
 
-    def run_playbook(self, playbook: str = 'playbook.yaml', limit: str = None, tags: str = None, extra_vars: dict = None) -> str:
+    def run_playbook(self, playbook: str = 'playbook.yaml', limit: str | None = None, tags: str | None = None, extra_vars: dict | None = None) -> str:
         """Runs an Ansible playbook to provision or manage nodes in the cluster.
 
         Args:
@@ -89,9 +90,9 @@ class Ansible_Tool:
             )
 
             if process.returncode == 0:
-                return f"Playbook run completed successfully.\nOutput:\n{process.stdout}"
+                return f"Playbook run completed successfully.\nOutput:\n{clean_terminal_output(process.stdout)}"
             else:
-                error_msg = f"Playbook run failed with return code {process.returncode}.\nSTDOUT:\n{process.stdout}\nSTDERR:\n{process.stderr}"
+                error_msg = f"Playbook run failed with return code {process.returncode}.\nSTDOUT:\n{clean_terminal_output(process.stdout)}\nSTDERR:\n{clean_terminal_output(process.stderr)}"
 
                 # Reinforcement: Add hints based on common errors
                 hints = []
@@ -114,6 +115,6 @@ class Ansible_Tool:
                 return error_msg
 
         except subprocess.TimeoutExpired as e:
-            return f"Error: Ansible playbook run timed out after 15 minutes.\nSTDOUT:\n{e.stdout}\nSTDERR:\n{e.stderr}"
+            return f"Error: Ansible playbook run timed out after 15 minutes.\nSTDOUT:\n{e.stdout.decode('utf-8') if isinstance(e.stdout, bytes) else e.stdout}\nSTDERR:\n{e.stderr.decode('utf-8') if isinstance(e.stderr, bytes) else e.stderr}"
         except Exception as e:
             return f"An unexpected error occurred while trying to run Ansible: {e}"
