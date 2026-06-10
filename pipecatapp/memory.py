@@ -319,6 +319,9 @@ class MemoryStore:
             topics_str = self._decrypt(memory['topics'])
             memory['topics'] = json.loads(topics_str) if topics_str else None
 
+            metadata_str = self._decrypt(memory['metadata'])
+            memory['metadata'] = json.loads(metadata_str) if metadata_str else None
+
             memory['consolidated'] = bool(memory['consolidated'])
             return memory
         return None
