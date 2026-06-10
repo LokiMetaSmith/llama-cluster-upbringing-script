@@ -34,7 +34,7 @@ job "opengravity" {
 
     {% set image_tar_name = 'opengravity' %}
 
-    {% include 'shared/load_image_task.nomad.j2' %}
+    {{ lookup('template', (inventory_dir | default(playbook_dir)) + '/ansible/templates/shared/load_image_task.nomad.j2') }}
 
     task "nginx" {
       driver = "docker"
