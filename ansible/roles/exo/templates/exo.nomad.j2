@@ -16,7 +16,7 @@ job "exo" {
 
     {% set image_tar_name = 'exo' %}
 
-    {% include 'shared/load_image_task.nomad.j2' %}
+    {{ lookup('template', (inventory_dir | default(playbook_dir)) + '/ansible/templates/shared/load_image_task.nomad.j2') }}
 
     task "exo" {
       driver = "docker"
