@@ -64,12 +64,14 @@ show_help() {
     echo "  --agent-api-base <url>       URL for a custom LLM provider, like a local Ollama instance (e.g. http://192.168.1.100:11434/v1)."
     echo "  --agent-model <model>        The LLM model to use for debugging (e.g. qwen3:14b, llama3.2:3b, mistral, qwen2.5:1.5b)."
     echo "  --agent-api-key <key>        API key for the model provider (a dummy key like 'sk-dummy' can be used for Ollama)."
+    echo "  -y, --yes                    Automatically answer 'yes' to all interactive prompts (useful for --system-cleanup)."
 }
 
 # --- Initialize flags ---
 USE_CONTAINER=false
 DO_CLEAN_GIT=false
 DO_SYSTEM_CLEANUP=false
+AUTO_YES=false
 DO_PURGE_JOBS=false
 DO_STATUS=false
 DO_DRY_RUN=false
@@ -398,6 +400,9 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             show_help
             exit 0
             ;;
+        -y|--yes)
+            AUTO_YES=true
+            ;;
         --agent-api-base)
             NEXT_ARG="${ARGS[$((i+1))]}"
             if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
@@ -601,6 +606,10 @@ run_step() {
 
 ask_confirm() {
     local prompt="$1"
+    if [ "$AUTO_YES" = true ]; then
+        echo -e "${prompt} [y/N] ${GREEN}y (auto-yes)${NC}"
+        return 0
+    fi
     read -p "$prompt [y/N] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
