@@ -378,18 +378,29 @@ def run_playbook(playbook_path, extra_vars, tags, verbose_level, dry_run=False):
             captured_lines = []
 
             for line in process.stdout:
+                # Clean the line for logging/display
+                # Basic carriage return handling for stream
+                if "\r" in line:
+                    parts = line.split("\r")
+                    line = parts[-1] if parts[-1] != "\n" and parts[-1] != "" else (parts[-2] + "\n" if len(parts) > 1 else line)
+
+                # Strip ANSI sequences
+                import re
+                ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+                clean_line = ansi_escape.sub('', line)
+
                 # Write to log
-                log_file.write(line)
+                log_file.write(clean_line)
 
                 # If verbose, write to stdout
                 if verbose_level >= 2:
-                    sys.stdout.write(line)
+                    sys.stdout.write(clean_line)
                 elif verbose_level < 2:
                     # Keep a small buffer in case of error?
                     # If error happens, we might want to dump the last N lines or point to the log.
                     # The user said "highlight when errors occur... running list of warnings and errors".
                     # We can store everything in memory if it's not too huge, or just rely on the file.
-                    captured_lines.append(line)
+                    captured_lines.append(clean_line)
 
             process.wait()
             return_code = process.returncode
