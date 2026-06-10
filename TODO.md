@@ -184,6 +184,12 @@ These structural suggestions are targeted for a future major release to signific
 - [x] **Investigate RPC Provider Monitoring:** Added documentation to `llamacpp-rpc.nomad.j2` explaining how to configure Prometheus scraping for rpc-server providers. Note: rpc-server doesn't expose native metrics - requires wrapper script or external monitoring.
 - [x] **Evaluate Ouro/LoopLM Support in llama.cpp:** In 3 months, check if the upstream `llama.cpp` project has added support for the Ouro LoopLM architecture. If so, create a plan to integrate it as a native model option. (Note: Ouro works in `llama.cpp` using the standard Llama GGUF format, but custom architectural features are skipped as they are not yet supported. Full native support for the LoopLM architecture is still lacking in llama.cpp, so no integration plan is needed at this time.)
 
+## Gnutella Analysis Integration Ideas
+
+This section tracks actionable ideas derived from the `docs/analysis/GNUTELLA_ANALYSIS.md` document.
+
+- [x] **Stateless Bootstrapping (GWebCache-style):** Implement a lightweight, stateless HTTP cache to serve active Nomad/Consul server IPs dynamically to new legacy nodes without relying on hardcoded variables in `inventory.yaml`. (Implemented in `cluster_cache/`)
+
 ## 4. Maintenance & Clean Up
 
 This section tracks identified placeholder files, corrupted binaries, and code that needs to be fixed or removed.
