@@ -33,6 +33,7 @@
 - name: Build OpenGravity custom Docker image
   vars:
     image_name: opengravity
+    image_tag: "local"
     build_dir: "/opt/opengravity-build"
   ansible.builtin.include_tasks:
     file: "../../tasks/build_cached_image.yaml"
