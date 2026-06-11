@@ -378,8 +378,19 @@ def run_playbook(playbook_path, extra_vars, tags, verbose_level, dry_run=False):
             captured_lines = []
 
             for line in process.stdout:
+                # Clean the line for logging/display
+                # Basic carriage return handling for stream
+                if "\r" in line:
+                    parts = line.split("\r")
+                    line = parts[-1] if parts[-1] != "\n" and parts[-1] != "" else (parts[-2] + "\n" if len(parts) > 1 else line)
+
+                # Strip ANSI sequences
+                import re
+                ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+                clean_line = ansi_escape.sub('', line)
+
                 # Write to log
-                log_file.write(line)
+                log_file.write(clean_line)
 
                 # If verbose, write to stdout
                 if verbose_level >= 2:

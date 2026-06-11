@@ -40,6 +40,12 @@ if command -v apt-get &> /dev/null; then
     echo -e "\n${BOLD}📦 Cleaning Apt Cache...${NC}"
     sudo apt-get clean
     sudo apt-get autoremove -y
+
+    # Remove proxy config if it exists so next apt-get runs without hanging on a dead proxy container
+    if [ -f "/etc/apt/apt.conf.d/01proxy" ]; then
+        echo "Removing stale apt proxy configuration..."
+        sudo rm -f /etc/apt/apt.conf.d/01proxy
+    fi
 else
     echo "Apt not found, skipping Apt cleanup."
 fi
