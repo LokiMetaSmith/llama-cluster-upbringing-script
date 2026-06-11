@@ -1,11 +1,36 @@
-# Distributed Conversational AI Pipeline for Legacy CPU Clusters
+<div align="center">
 
-Last updated: 2026-02-01
+<img src="./assets/llama_icon.png" width="128" height="128" alt="Llama Cluster Logo">
+
+<h1>Distributed Conversational AI Pipeline</h1>
+
+<p>
+  <b>A stateful, embodied AI agent pipeline on a cluster of legacy computers, powered by Ansible, Nomad, Consul, and Pipecat.</b>
+</p>
+
+<p>
+  <a href="#1-system-requirements">Requirements</a> •
+  <a href="#2-project-structure">Structure</a> •
+  <a href="#3-initial-machine-setup">Setup</a> •
+  <a href="#4-easy-bootstrap-single-server-setup">Bootstrap</a> •
+  <a href="#5-expanding-the-control-plane-adding-controllers">Expanding</a> •
+  <a href="#6-agent-architecture-the-twinservice--workflow-engine">Agent Arch</a> •
+  <a href="#8-ai-service-deployment">Deployment</a>
+</p>
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Ansible](https://img.shields.io/badge/ansible-%231A1918.svg?style=flat&logo=ansible&logoColor=white)](https://www.ansible.com/)
+[![Nomad](https://img.shields.io/badge/nomad-%23000000.svg?style=flat&logo=hashicorp&logoColor=white)](https://www.nomadproject.io/)
+
+</div>
+
+<hr>
 
 It uses Ansible for automated provisioning, Nomad for cluster orchestration, and
 a state-of-the-art AI stack to create a responsive, streaming, and embodied
 voice agent. For a detailed technical description of the system's layers, see
 the [Holistic Project Architecture](docs/manual/ARCHITECTURE.md) document.
+
 
 ## 1. System Requirements
 
