@@ -56,3 +56,4 @@ collections/
 # Ignore temporary certificates
 .tmp_certs_nomad/
 execution_history.db
+venv/

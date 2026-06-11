@@ -8,6 +8,11 @@
         - common
 
   tasks:
+    - name: Ensure leftover APT proxy configuration is removed before bootstrap
+      ansible.builtin.file:
+        path: /etc/apt/apt.conf.d/01proxy
+        state: absent
+
     - name: Ensure Debian repositories are configured (needed for minimal/live ISOs)
       raw: |
         cat <<EOF > /etc/apt/sources.list

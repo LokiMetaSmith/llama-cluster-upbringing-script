@@ -4,6 +4,7 @@ import subprocess
 import uuid
 import logging
 import os
+from pipecatapp.utils.terminal_cleanup import clean_terminal_output
 
 mcp = FastMCP("shell_server")
 
@@ -72,7 +73,7 @@ async def execute_command(command: str, timeout: int = 30) -> str:
 
         if sentinel in output:
             clean_output = output.replace(f"echo '{sentinel}'", "").replace(sentinel, "").strip()
-            return clean_output
+            return clean_terminal_output(clean_output)
 
         await asyncio.sleep(0.5)
 

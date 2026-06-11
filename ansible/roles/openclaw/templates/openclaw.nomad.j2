@@ -15,7 +15,7 @@ job "openclaw" {
 
     {% set image_tar_name = 'openclaw' %}
 
-    {% include 'shared/load_image_task.nomad.j2' %}
+    {% include 'load_image_task.nomad.j2' %}
 
     task "openclaw" {
       driver = "docker"

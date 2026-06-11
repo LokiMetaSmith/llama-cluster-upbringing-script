@@ -11,7 +11,7 @@ job "memory-graph" {
 
     {% set image_tar_name = 'memory_graph' %}
 
-    {% include 'shared/load_image_task.nomad.j2' %}
+    {% include 'load_image_task.nomad.j2' %}
 
     task "server" {
       driver = "docker"

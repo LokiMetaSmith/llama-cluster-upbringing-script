@@ -30,7 +30,7 @@ class CommandRunner:
             cls._instance = cls()
         return cls._instance
 
-    def __init__(self, mode: str = None):
+    def __init__(self, mode: str | None = None):
         self.mode = mode or os.getenv("COMMAND_RUNNER_MODE", self.MODE_LOCAL)
         self._nomad_client = None
         if self.mode == self.MODE_NOMAD:
@@ -87,7 +87,7 @@ class CommandRunner:
         text: bool = True,
         check: bool = False,
         shell: bool = False,
-        job_name: str = None,
+        job_name: str | None = None,
         namespace: str = "default"
     ) -> subprocess.CompletedProcess:
         """

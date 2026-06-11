@@ -15,7 +15,7 @@ job "tool-server" {
 
     {% set image_tar_name = 'tool_server' %}
 
-    {% include 'shared/load_image_task.nomad.j2' %}
+    {% include 'load_image_task.nomad.j2' %}
 
     task "tool-server-task" {
       driver = "docker"

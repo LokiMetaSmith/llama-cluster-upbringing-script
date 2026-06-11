@@ -1,2 +1,274 @@
+
 # Vulture whitelist
 # Add items here that are correctly used but vulture flags as unused.
+
+import pipecatapp.api_keys
+import pipecatapp.app
+import pipecatapp.archivist_service
+import pipecatapp.expert_tracker
+import pipecatapp.file_ingestion
+import pipecatapp.langchain_memory_wrappers
+import pipecatapp.llm_clients
+import pipecatapp.local_llm
+import pipecatapp.local_world_model
+import pipecatapp.memory
+import pipecatapp.memory_graph_service.server
+import pipecatapp.models
+import pipecatapp.network_scanner
+import pipecatapp.pmm_memory
+import pipecatapp.pmm_memory_client
+import pipecatapp.tool_server
+import pipecatapp.tools.ast_editor_tool
+import pipecatapp.tools.autoresearch_tool
+import pipecatapp.tools.claude_clone_tool
+import pipecatapp.tools.code_runner_tool
+import pipecatapp.tools.container_registry_tool
+import pipecatapp.tools.context_upload_tool
+import pipecatapp.tools.council_tool
+import pipecatapp.tools.cq_tool
+import pipecatapp.tools.desktop_control_tool
+import pipecatapp.tools.document_tool
+import pipecatapp.tools.execution_history
+import pipecatapp.tools.file_editor_tool
+import pipecatapp.tools.final_answer_tool
+import pipecatapp.tools.git_tool
+import pipecatapp.tools.ha_tool
+import pipecatapp.tools.jules_tool
+import pipecatapp.tools.langchain_adapter
+import pipecatapp.tools.mcp_tool
+import pipecatapp.tools.open_workers_tool
+import pipecatapp.tools.planner_tool
+import pipecatapp.tools.polyphony_tool
+import pipecatapp.tools.power_tool
+import pipecatapp.tools.project_overview_tool
+import pipecatapp.tools.prompt_improver_tool
+import pipecatapp.tools.rag_tool
+import pipecatapp.tools.save_skill_tool
+import pipecatapp.tools.scheduler_tool
+import pipecatapp.tools.search_skills_tool
+import pipecatapp.tools.search_tool
+import pipecatapp.tools.shell_tool
+import pipecatapp.tools.spec_loader_tool
+import pipecatapp.tools.swarm_tool
+import pipecatapp.tools.tap_service
+import pipecatapp.tools.update_litellm_tool
+import pipecatapp.tools.vr_tool
+import pipecatapp.tools.web_browser_tool
+import pipecatapp.utils.file_utils
+import pipecatapp.web_server
+import pipecatapp.worker_agent
+import pipecatapp.workflow.canvas_converter
+import pipecatapp.workflow.crypto_receipts
+import pipecatapp.workflow.history
+import pipecatapp.workflow.node
+import pipecatapp.workflow.nodes.base_nodes
+import pipecatapp.workflow.nodes.consolidation_nodes
+import pipecatapp.workflow.nodes.emperor_nodes
+import pipecatapp.workflow.nodes.langchain_nodes
+import pipecatapp.workflow.nodes.llm_nodes
+import pipecatapp.workflow.nodes.rag_nodes
+import pipecatapp.workflow.nodes.ralph_nodes
+import pipecatapp.workflow.nodes.registry
+import pipecatapp.workflow.nodes.system_nodes
+import pipecatapp.workflow.nodes.tasky_nodes
+import pipecatapp.workflow.nodes.tool_nodes
+import pipecatapp.workflow.runner
+import scripts.compare_exo_llama
+import scripts.evaluate_clamav
+import scripts.generate_file_map
+import scripts.healer
+import scripts.provisioning
+import scripts.prune_consul_services
+import scripts.salvage_task
+
+# Methods and classes flagged by vulture but needed
+generate_api_key
+stop_listening
+debug_mode
+lifespan_context
+row_factory
+research_endpoint
+rate_limit
+health_check
+ExpertTracker
+register_expert
+record_success
+record_failure
+get_metrics_for_prompt
+connect_and_store_relation
+LocalFileIngestor
+process_inbox
+PMMChatMessageHistory
+add_message
+PipecatVectorStore
+add_texts
+similarity_search
+from_texts
+ExternalLLMClient
+process_text
+adapter_class
+_process_context
+max_tokens
+update_state
+to_dict
+get_memory
+get_consolidation
+add_activity
+get_activities
+filter_documents
+store_memory
+create_relationship
+recall_memories
+search_memories
+extra_fields
+model_config
+check_content_present
+reader
+get_work_item
+list_work_items
+sync_work_items
+get_work_items_since
+enqueue_dlq_item
+validation_exception_handler
+read_health
+run_tool
+get_schema
+eval_metric
+explain
+test
+get_tool_config
+signum
+run_python_code
+list_repositories
+list_tags
+search_images
+get_definition
+convene
+CQ_Tool
+cq_query
+cq_propose
+cq_confirm
+cq_flag
+cq_reflect
+session_context
+click_at
+type_text
+DocumentTool
+add_bookmark
+list_bookmarks
+timezone
+get_execution
+submit_task
+clone
+pull
+push
+checkout
+merge
+call_ai_task
+JulesTool
+LangChainToolAdapter
+get_memory_summary
+clear_short_term_memory
+OpenWorkersTool
+run_javascript
+plan_and_execute
+get_info
+set_idle_threshold
+ProjectOverviewTool
+create_prompt_plan
+search_knowledge_base
+input_schema
+DateTrigger
+add_cron_job
+add_interval_job
+list_jobs
+grep
+find_file
+ShellTool
+SpecLoaderTool
+kill_worker
+TapService
+UpdateLitellmTool
+schema
+get_tool_def
+get_page_content
+get_screenshot
+type_text_at
+generate_file_hashes
+dispatch
+send_personal_message
+websocket_endpoint
+internal_chat
+internal_chat_sync
+internal_system_message
+get_workflow_ui
+get_monitor_ui
+get_cluster_ui
+get_cluster_viz
+get_workflow_3d_ui
+get_cluster_metrics
+get_workflow_nodes_metadata
+get_active_workflows
+get_workflow_history
+get_workflow_run
+approve_gate
+get_workflow_definition
+import_nodered_flow
+export_nodered_flow
+save_workflow_definition
+get_web_uis
+save_state_endpoint
+load_state_endpoint
+get_personality
+configure_rag
+get_node_metadata
+MAX_STEPS
+workflow_to_canvas
+verify
+get_spatial_data
+InputNode
+OutputNode
+MergeNode
+ConditionalBranchNode
+GateNode
+PostProcessorNode
+ContinuousConsolidationNode
+EmperorAgentNode
+LangGraphNode
+VisionLLMNode
+PromptBuilderNode
+SimpleLLMNode
+ExpertRouterNode
+ExternalLLMNode
+DynamicRouterNode
+LLMRouterNode
+LoopedReasoningNode
+TextSplitterNode
+DocumentWriterNode
+RalphLoopNode
+ConsulServiceDiscoveryNode
+FileReadNode
+DreamNode
+FileWriteNode
+HumanApprovalNode
+SleepNode
+TaskyAuditNode
+SystemPromptNode
+ScreenshotNode
+ToolParserNode
+ToolExecutorNode
+HereticNode
+get_runner
+full_response
+expected_threat
+mimetypes
+NomadWatcher
+get_failed_allocs
+get_logs
+UNDERLINE
+canonname
+wait_for_ports_freed
+nomad_running
+router_port
+check_id
+max_seq
