@@ -6,7 +6,7 @@ import os
 import sys
 
 # Calculate path to gemini_cli.py
-TOOL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools'))
+TOOL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'tools'))
 SCRIPT_PATH = os.path.join(TOOL_DIR, 'gemini_cli.py')
 
 @pytest.mark.asyncio

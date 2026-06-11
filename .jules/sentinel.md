@@ -33,6 +33,11 @@
 **Learning:** Default configurations for tools should obey the Principle of Least Privilege. Never default to the filesystem root (`/`) when a specific application directory (`/opt/pipecatapp`) is sufficient.
 **Prevention:** Explicitly restrict file scanning tools to the application's root directory during initialization in the factory method.
 
+## 2026-01-24 - Rate Limiting Behind Proxies
+**Vulnerability:** The `RateLimiter` relied on `request.client.host` which, without `ProxyHeadersMiddleware`, reflects the proxy IP rather than the client IP. This causes all users to share the same rate limit bucket when deployed behind a proxy.
+**Learning:** In containerized/Nomad environments, applications are almost always behind a load balancer or ingress. Defaulting to direct connection assumptions creates DoS risks.
+**Prevention:** Always configure `ProxyHeadersMiddleware` in FastAPI/Uvicorn applications with a mechanism to specify trusted proxies (e.g., `TRUSTED_PROXIES` env var).
+
 ## 2026-02-01 - Cross-Site WebSocket Hijacking
 **Vulnerability:** Default configuration allowed all origins (*), enabling CSWSH.
 **Learning:** "Secure by default" is critical. Convenience defaults (* for dev) often end up in production, leaving apps vulnerable.
