@@ -23,10 +23,13 @@ def council_tool():
 async def test_discover_local_experts(council_tool):
     with patch('aiohttp.ClientSession.get') as mock_get:
         # Mock successful Consul response
-        mock_resp = AsyncMock()
+        mock_resp = MagicMock()
         mock_resp.status = 200
-        mock_resp.json.return_value = [{'Service': {'Address': '127.0.0.1', 'Port': 8000}}]
-        mock_get.return_value.__aenter__.return_value = mock_resp
+        mock_resp.json = AsyncMock(return_value=[{'Service': {'Address': '127.0.0.1', 'Port': 8000}}])
+
+        mock_context = AsyncMock()
+        mock_context.__aenter__.return_value = mock_resp
+        mock_get.return_value = mock_context
 
         experts = await council_tool._discover_local_experts()
 
@@ -51,10 +54,13 @@ async def test_query_model_success(council_tool):
     expected_response = "I am a model"
 
     with patch('aiohttp.ClientSession.post') as mock_post:
-        mock_resp = AsyncMock()
+        mock_resp = MagicMock()
         mock_resp.status = 200
-        mock_resp.json.return_value = {'choices': [{'message': {'content': expected_response}}]}
-        mock_post.return_value.__aenter__.return_value = mock_resp
+        mock_resp.json = AsyncMock(return_value={'choices': [{'message': {'content': expected_response}}]})
+
+        mock_context = AsyncMock()
+        mock_context.__aenter__.return_value = mock_resp
+        mock_post.return_value = mock_context
 
         result = await council_tool._query_model(model_info, "hello")
         assert result == expected_response

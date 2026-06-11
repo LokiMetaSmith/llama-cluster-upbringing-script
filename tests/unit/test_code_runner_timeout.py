@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from pipecatapp.tools.code_runner_tool import CodeRunnerTool
 
-@patch('pipecatapp.tools.code_runner_tool.docker.from_env')
+@patch('docker.from_env')
 @patch('pipecatapp.tools.code_runner_tool.time.sleep') # Mock sleep to speed up
 def test_execution_timeout_logic(mock_sleep, mock_docker_from_env):
     """
@@ -49,11 +49,13 @@ def test_execution_timeout_logic(mock_sleep, mock_docker_from_env):
         # 3. inside while: time.time() again?
 
         # We want:
-        # Call 1: 0 (start)
-        # Call 2: 0 (check) -> 0 < 30 -> enter loop
-        # Call 3: 31 (check) -> 31 > 30 -> exit loop
+        # Call 1: 0 (start_time = time.time() in _execute_with_history)
+        # Call 2: 0 (start_time = time.time() in execute_simple_python)
+        # Call 3: 0 (while check in execute_simple_python) -> 0 < 30 -> enter loop
+        # Call 4: 31 (while check in execute_simple_python) -> 31 > 30 -> exit loop
+        # Call 5: 31 (time.time() in _execute_with_history to compute duration)
 
-        mock_time.side_effect = [0, 0, 31, 31, 31]
+        mock_time.side_effect = [0, 0, 0, 31, 31, 31, 31, 31]
 
         tool.run_python_code("import time; time.sleep(10)")
 

@@ -35,6 +35,10 @@ def parse_and_validate_agent_def(content, filename):
             if not found_role_heading:
                 errors.append("'## Backing LLM Model' section appears before '## Role' section.")
             found_llm_heading = True
+        elif line.startswith("-") and "**Model:**" in line:
+            if not found_llm_heading:
+                errors.append("'Model' specification appears before '## Backing LLM Model' section.")
+            found_model_spec = True
         elif line.startswith("*") and "**Model:**" in line:
             if not found_llm_heading:
                 errors.append("'Model' specification appears before '## Backing LLM Model' section.")
@@ -45,7 +49,7 @@ def parse_and_validate_agent_def(content, filename):
     if not found_llm_heading:
         errors.append("Missing '## Backing LLM Model' section.")
     if not found_model_spec:
-        errors.append("Missing 'Model' specification (e.g., '* **Model:** ...').")
+        errors.append("Missing 'Model' specification (e.g., '- **Model:** ...' or '* **Model:** ...').")
 
     return errors
 
