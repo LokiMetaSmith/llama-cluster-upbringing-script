@@ -394,13 +394,13 @@ def run_playbook(playbook_path, extra_vars, tags, verbose_level, dry_run=False):
 
                 # If verbose, write to stdout
                 if verbose_level >= 2:
-                    sys.stdout.write(clean_line)
+                    sys.stdout.write(line)
                 elif verbose_level < 2:
                     # Keep a small buffer in case of error?
                     # If error happens, we might want to dump the last N lines or point to the log.
                     # The user said "highlight when errors occur... running list of warnings and errors".
                     # We can store everything in memory if it's not too huge, or just rely on the file.
-                    captured_lines.append(clean_line)
+                    captured_lines.append(line)
 
             process.wait()
             return_code = process.returncode
