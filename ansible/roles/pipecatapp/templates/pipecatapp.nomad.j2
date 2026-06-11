@@ -106,7 +106,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     {% if pipecat_deployment_style == 'docker' %}
     {% set image_cid = pipecatapp_ipfs_cid %}
     {% set image_tar_name = 'pipecatapp' %}
-    {{ lookup('template', (inventory_dir | default(playbook_dir)) + '/ansible/templates/shared/load_image_task.nomad.j2') }}
+    {% include 'load_image_task.nomad.j2' %}
 
     task "pipecat-task" {
       driver = "docker"
