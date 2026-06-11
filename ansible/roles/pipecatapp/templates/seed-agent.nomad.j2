@@ -55,7 +55,7 @@ job "seed-agent" {
 
     {% set image_tar_name = 'pipecatapp' %}
 
-    {{ lookup('template', (inventory_dir | default(playbook_dir)) + '/ansible/templates/shared/load_image_task.nomad.j2') }}
+    {% include 'load_image_task.nomad.j2' %}
 
     task "seed-agent-task" {
       driver = "docker"

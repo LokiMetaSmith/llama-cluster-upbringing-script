@@ -15,7 +15,7 @@ job "tool-server" {
 
     {% set image_tar_name = 'tool_server' %}
 
-    {{ lookup('template', (inventory_dir | default(playbook_dir)) + '/ansible/templates/shared/load_image_task.nomad.j2') }}
+    {% include 'load_image_task.nomad.j2' %}
 
     task "tool-server-task" {
       driver = "docker"
