@@ -137,10 +137,10 @@ These structural suggestions are targeted for a future major release to signific
 
 - [x] **Native Ansible Hardware Profiling:** Move the machine resource detection logic (RAM, CPU, Disk) out of `bootstrap.sh` and into a native Ansible `preflight` playbook using `setup` facts. Ansible should dynamically group hosts (e.g., using `group_by`) and execute roles conditionally based on the detected hardware tier, reducing reliance on Bash wrapper scripts.
 - [x] **Strict Infrastructure vs. Payload Separation:** Created `scripts/run_nomad.sh` - a dedicated script to deploy Nomad job files without Ansible. Ansible now only provisions infrastructure (OS, Docker, Consul, Nomad, network overlay). Application payloads (pipecatapp, llamacpp, AI experts) deployed via `./run_nomad.sh run ansible/jobs/<job>.nomad`.
-- [ ] **Microservice De-monolithization of `TwinService`:** To improve robustness on legacy hardware, the main `pipecatapp` (router/workflow engine) should be made as lightweight as possible. Extract heavy, blocking tools (e.g., RAG document embedding, isolated Python code execution sandboxes) into independent microservices running as separate Nomad jobs. The core agent should interact with these tools exclusively via the Consul Service Mesh.
+- [x] **Microservice De-monolithization of `TwinService`:** To improve robustness on legacy hardware, the main `pipecatapp` (router/workflow engine) should be made as lightweight as possible. Extract heavy, blocking tools (e.g., RAG document embedding, isolated Python code execution sandboxes) into independent microservices running as separate Nomad jobs. The core agent should interact with these tools exclusively via the Consul Service Mesh.
   - [x] Phase 1: Architectural Design (Created `TWINSERVICE_DEMONOLITHIZATION_DESIGN.md`)
   - [x] Phase 2: RAG Microservice Extraction
-  - [ ] Phase 3: Code Runner Sandbox Extraction
+  - [x] Phase 3: Code Runner Sandbox Extraction
 
 ## Future Enhancements and Backlog
 
