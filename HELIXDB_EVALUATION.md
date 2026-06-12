@@ -54,24 +54,24 @@ Based on this evaluation, it is recommended to proceed with a Proof-of-Concept (
 
 To validate HelixDB in our environment without disrupting the existing system, the following steps outline a localized PoC integration:
 
-- [ ] **1. Containerize HelixDB for Nomad**
+- [x] **1. Containerize HelixDB for Nomad**
   - Create a new Dockerfile or identify the official HelixDB image tag.
   - Write an Ansible task or Nomad job file (`helixdb.nomad`) to deploy a local instance using `helix start dev --disk` to ensure data persistence across container restarts.
   - Expose the default HelixDB port (`6969`) to the cluster network.
 
-- [ ] **2. Develop HelixDB Python Client Adapter**
+- [x] **2. Develop HelixDB Python Client Adapter**
   - Since HelixDB provides Rust and TypeScript SDKs, build a lightweight Python HTTP client that constructs JSON AST payloads and sends them to the `POST /v1/query` REST endpoint.
   - Implement basic CRUD operations for Graph nodes and Vector embeddings using the client.
 
-- [ ] **3. Implement an Abstract Memory Backend Interface**
+- [x] **3. Implement an Abstract Memory Backend Interface**
   - Refactor `pipecatapp/memory.py` to extract the `FAISS` and `SQLite` logic into a backend interface (e.g., `BaseMemoryBackend`).
   - Create a new `HelixMemoryBackend` that implements the interface using the Python client.
 
-- [ ] **4. Integrate MCP Tooling**
+- [x] **4. Integrate MCP Tooling**
   - Review the existing `pipecatapp/memory_graph_service/server.py` implementation.
   - Write an alternative `HelixMCPService` that registers tools (`store_memory`, `create_relationship`, `search_memories`) but routes execution to HelixDB instead of the `SQLiteFallbackBackend`.
 
-- [ ] **5. Testing and Benchmarking**
+- [x] **5. Testing and Benchmarking**
   - Write integration tests inside `tests/` to verify semantic search and graph traversal accuracy on the `HelixMemoryBackend`.
   - Use `llama-bench` or custom latency metrics to compare the inference-to-retrieval latency between the legacy FAISS/SQLite setup and the new HelixDB setup.
 
