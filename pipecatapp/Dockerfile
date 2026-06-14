@@ -71,9 +71,9 @@ RUN rm -rf /tmp/faster-whisper-tiny.en
 COPY . .
 
 # Move the startup script to /opt/ to avoid being masked by bind mounts
-RUN mv /opt/pipecatapp/start_pipecat.sh /opt/start_pipecat.sh && chmod +x /opt/start_pipecat.sh
+# RUN mv /opt/pipecatapp/start_pipecat.sh /opt/start_pipecat.sh && chmod +x /opt/start_pipecat.sh
 
 # Set the entrypoint for the container
-RUN useradd -m -s /bin/bash pipecatapp && chown -R pipecatapp:pipecatapp /opt/pipecatapp /opt/pipecat_venv /opt/start_pipecat.sh
+RUN useradd -m -s /bin/bash pipecatapp && chown -R pipecatapp:pipecatapp /opt/pipecatapp /opt/pipecat_venv
 USER pipecatapp
-ENTRYPOINT ["/opt/start_pipecat.sh"]
+ENTRYPOINT ["/opt/pipecatapp/start_pipecat.sh"]

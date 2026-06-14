@@ -11,7 +11,7 @@ from pipecatapp.memory_backends_impl.helix_backend import HelixMemoryBackend
 
 @pytest.mark.asyncio
 @patch('pipecatapp.memory_graph_service.helix_server.httpx.AsyncClient.post')
-@patch('pipecatapp.memory_backends_impl.helix_client.requests.post')
+@patch('pipecatapp.memory_backends_impl.helix_client.httpx.post')
 async def test_helixdb_e2e_insert_and_retrieve(mock_sync_post, mock_async_post):
     # Setup mock for MCP insert
     mock_async_resp = MagicMock()
@@ -32,7 +32,7 @@ async def test_helixdb_e2e_insert_and_retrieve(mock_sync_post, mock_async_post):
     mock_async_post.assert_called_once()
 
     # Extract the payload that was sent
-    mcp_payload = mock_async_post.call_args.kwargs['json']
+    mcp_payload = mock_async_post.call_args[1]['json']
     assert mcp_payload["request_type"] == "write"
     add_node = mcp_payload["query"]["queries"][0]["Query"]["steps"][0]["AddN"]
     assert add_node["label"] == "MemoryGraphNode"
@@ -52,5 +52,5 @@ async def test_helixdb_e2e_insert_and_retrieve(mock_sync_post, mock_async_post):
     assert results[0] == "This is a test node"
     mock_sync_post.assert_called_once()
 
-    backend_payload = mock_sync_post.call_args.kwargs['json']
+    backend_payload = mock_sync_post.call_args[1]['json']
     assert backend_payload["request_type"] == "read"

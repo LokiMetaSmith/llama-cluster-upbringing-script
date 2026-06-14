@@ -1,4 +1,4 @@
-import requests
+import httpx
 import json
 import logging
 import os
@@ -12,7 +12,7 @@ class HelixClient:
 
     def _post(self, payload: dict) -> dict:
         try:
-            resp = requests.post(self.url, json=payload)
+            resp = httpx.post(self.url, json=payload)
             resp.raise_for_status()
             return resp.json()
         except requests.exceptions.RequestException as e:

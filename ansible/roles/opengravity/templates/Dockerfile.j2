@@ -1,4 +1,4 @@
-FROM nginx:alpine
+FROM public.ecr.aws/docker/library/nginx:alpine
 
 # Copy the static website files specifically to avoid copying Dockerfile and conf
 COPY index.html /usr/share/nginx/html/
