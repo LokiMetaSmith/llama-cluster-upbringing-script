@@ -2,11 +2,17 @@ import pytest
 import os
 import sys
 import httpx
+from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, AsyncMock, patch
 import asyncio
 
 # Add the parent directory of 'testing' to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files')))
+
+
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
+
 
 # Mock problematic modules before importing app
 sys.modules["pyaudio"] = MagicMock()
@@ -50,7 +56,6 @@ sys.modules["pipecat.services.openai.llm"] = mock_pipecat.services.openai.llm
 # Now we can import from the files in ansible/roles/pipecatapp/files
 from pipecatapp.app import TwinService
 from pipecatapp.web_server import app
-from fastapi.testclient import TestClient
 
 # Since we mocked pipecat, TranscriptionFrame is now a Mock class
 # But we might need a consistent class for testing if isinstance is used
@@ -59,8 +64,7 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture
 def client():
-    client = TestClient(app)
-    return client
+    return TestClient(app)
 
 # Basic testing of the web server endpoints
 def test_read_main(client):
@@ -92,7 +96,7 @@ async def test_workflow_runner_loads_definition(mocker):
     mocker.patch('yaml.safe_load', return_value={"id": "test_workflow", "nodes": []})
 
     # This will raise an error if the file is not found or is invalid YAML
-    from workflow.runner import WorkflowRunner
+    from pipecatapp.workflow.runner import WorkflowRunner
     runner = WorkflowRunner(workflow_path)
 
     assert runner is not None

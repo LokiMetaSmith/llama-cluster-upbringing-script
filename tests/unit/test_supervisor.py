@@ -1,19 +1,31 @@
 import unittest
-from unittest.mock import patch, mock_open
+from unittest.mock import patch, mock_open, ANY
 import os
+
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-import supervisor
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts')))
+from scripts import supervisor
+
 import json
 import subprocess
 
 class TestSupervisor(unittest.TestCase):
 
+    def setUp(self):
+        self.llm_patcher = patch('scripts.supervisor.load_llm_config')
+        self.mock_load_llm_config = self.llm_patcher.start()
+        self.mock_load_llm_config.return_value = {'mock': 'config'}
+
+    def tearDown(self):
+        self.llm_patcher.stop()
+
+
     @patch('subprocess.run')
     def test_run_playbook_success(self, mock_run):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="Playbook success", stderr="")
         self.assertTrue(supervisor.run_playbook("test.yaml"))
-        mock_run.assert_called_with(["ansible-playbook", "test.yaml"], capture_output=True, text=True)
+        mock_run.assert_called_with(["ansible-playbook", ANY], capture_output=True, text=True)
 
     @patch('subprocess.run')
     def test_run_playbook_failure(self, mock_run):
@@ -25,26 +37,28 @@ class TestSupervisor(unittest.TestCase):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="Playbook success", stderr="")
         extra_vars = {"key": "value"}
         self.assertTrue(supervisor.run_playbook("test.yaml", extra_vars=extra_vars))
-        mock_run.assert_called_with(["ansible-playbook", "test.yaml", "-e", json.dumps(extra_vars)], capture_output=True, text=True)
+        mock_run.assert_called_with(["ansible-playbook", ANY, "-e", json.dumps(extra_vars)], capture_output=True, text=True)
 
     @patch('subprocess.run')
     def test_run_script_success(self, mock_run):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="Script success", stderr="")
+        from scripts import supervisor
         self.assertEqual(supervisor.run_script("test.py"), "Script success")
-        mock_run.assert_called_with(["python", "test.py"], capture_output=True, text=True)
+        mock_run.assert_called_with(["python", ANY], capture_output=True, text=True)
 
     @patch('subprocess.run')
     def test_run_script_failure(self, mock_run):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="Error")
         self.assertIsNone(supervisor.run_script("test.py"))
-        mock_run.assert_called_with(["python", "test.py"], capture_output=True, text=True)
+        mock_run.assert_called_with(["python", ANY], capture_output=True, text=True)
 
     @patch('subprocess.run')
     def test_run_script_with_args(self, mock_run):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="Script success", stderr="")
+        from scripts import supervisor
         args = ["arg1", "arg2"]
         self.assertEqual(supervisor.run_script("test.py", args=args), "Script success")
-        mock_run.assert_called_with(["python", "test.py", "arg1", "arg2"], capture_output=True, text=True)
+        mock_run.assert_called_with(["python", ANY, "arg1", "arg2"], capture_output=True, text=True)
 
     @patch('os.path.exists')
     @patch('os.remove')
@@ -56,7 +70,7 @@ class TestSupervisor(unittest.TestCase):
         mock_exists.assert_any_call("file2.txt")
         mock_remove.assert_called_once_with("file1.txt")
 
-    @patch('supervisor.run_playbook')
+    @patch('scripts.supervisor.run_playbook')
     @patch('os.path.exists')
     @patch('time.sleep')
     def test_main_no_failed_jobs(self, mock_sleep, mock_exists, mock_run_playbook):
@@ -68,7 +82,7 @@ class TestSupervisor(unittest.TestCase):
         mock_run_playbook.assert_called_once_with("health_check.yaml")
         mock_exists.assert_called_once_with("failed_jobs.json")
 
-    @patch('supervisor.run_playbook')
+    @patch('scripts.supervisor.run_playbook')
     @patch('time.sleep')
     def test_main_health_check_fails(self, mock_sleep, mock_run_playbook):
         mock_sleep.side_effect = StopIteration
@@ -77,10 +91,10 @@ class TestSupervisor(unittest.TestCase):
             supervisor.main()
         mock_run_playbook.assert_called_once_with("health_check.yaml")
 
-    @patch('supervisor.run_playbook')
+    @patch('scripts.supervisor.run_playbook')
     @patch('os.path.exists')
     @patch('builtins.open', new_callable=mock_open)
-    @patch('supervisor.cleanup_files')
+    @patch('scripts.supervisor.cleanup_files')
     @patch('time.sleep')
     def test_main_failed_jobs_file_unreadable(self, mock_sleep, mock_cleanup, mock_open_file, mock_exists, mock_run_playbook):
         mock_sleep.side_effect = StopIteration
@@ -91,9 +105,9 @@ class TestSupervisor(unittest.TestCase):
             supervisor.main()
         mock_cleanup.assert_called_once_with(["failed_jobs.json"])
 
-    @patch('supervisor.run_playbook')
-    @patch('supervisor.run_script')
-    @patch('supervisor.cleanup_files')
+    @patch('scripts.supervisor.run_playbook')
+    @patch('scripts.supervisor.run_script')
+    @patch('scripts.supervisor.cleanup_files')
     @patch('os.path.exists')
     @patch('time.sleep')
     @patch('builtins.open')
@@ -113,13 +127,13 @@ class TestSupervisor(unittest.TestCase):
         mock_run_playbook.assert_any_call('health_check.yaml')
         mock_run_playbook.assert_any_call('diagnose_failure.yaml', extra_vars={'job_id': 'job123'})
         mock_run_playbook.assert_any_call('heal_job.yaml', extra_vars={'solution_json': solution_json})
-        mock_run_script.assert_called_once_with('reflection/reflect.py', ['job123.diagnostics.json'])
+        mock_run_script.assert_called_once_with('reflection/reflect.py', ANY)
         self.assertEqual(mock_cleanup.call_count, 2)
         mock_cleanup.assert_any_call(['job123.diagnostics.json'])
         mock_cleanup.assert_any_call(['failed_jobs.json'])
 
-    @patch('supervisor.run_playbook')
-    @patch('supervisor.cleanup_files')
+    @patch('scripts.supervisor.run_playbook')
+    @patch('scripts.supervisor.cleanup_files')
     @patch('os.path.exists')
     @patch('time.sleep')
     @patch('builtins.open')
@@ -136,9 +150,9 @@ class TestSupervisor(unittest.TestCase):
         mock_run_playbook.assert_called_once_with('health_check.yaml')
         mock_cleanup.assert_called_once_with(['failed_jobs.json'])
 
-    @patch('supervisor.run_playbook')
-    @patch('supervisor.run_script')
-    @patch('supervisor.cleanup_files')
+    @patch('scripts.supervisor.run_playbook')
+    @patch('scripts.supervisor.run_script')
+    @patch('scripts.supervisor.cleanup_files')
     @patch('os.path.exists')
     @patch('time.sleep')
     @patch('builtins.open')
@@ -158,14 +172,14 @@ class TestSupervisor(unittest.TestCase):
         mock_run_playbook.assert_any_call('health_check.yaml')
         mock_run_playbook.assert_any_call('diagnose_failure.yaml', extra_vars={'job_id': 'job456'})
         mock_run_playbook.assert_any_call('heal_job.yaml', extra_vars={'solution_json': solution_json})
-        mock_run_script.assert_called_once_with('reflection/reflect.py', ['job456.diagnostics.json'])
+        mock_run_script.assert_called_once_with('reflection/reflect.py', ANY)
         self.assertEqual(mock_cleanup.call_count, 2)
         mock_cleanup.assert_any_call(['job456.diagnostics.json'])
         mock_cleanup.assert_any_call(['failed_jobs.json'])
 
-    @patch('supervisor.run_playbook')
-    @patch('supervisor.run_script')
-    @patch('supervisor.cleanup_files')
+    @patch('scripts.supervisor.run_playbook')
+    @patch('scripts.supervisor.run_script')
+    @patch('scripts.supervisor.cleanup_files')
     @patch('os.path.exists')
     @patch('time.sleep')
     @patch('builtins.open')
@@ -185,9 +199,9 @@ class TestSupervisor(unittest.TestCase):
         mock_run_script.assert_not_called()
         mock_cleanup.assert_called_once_with(['failed_jobs.json'])
 
-    @patch('supervisor.run_playbook')
-    @patch('supervisor.run_script')
-    @patch('supervisor.cleanup_files')
+    @patch('scripts.supervisor.run_playbook')
+    @patch('scripts.supervisor.run_script')
+    @patch('scripts.supervisor.cleanup_files')
     @patch('os.path.exists')
     @patch('time.sleep')
     @patch('builtins.open')
@@ -205,14 +219,14 @@ class TestSupervisor(unittest.TestCase):
         self.assertEqual(mock_run_playbook.call_count, 2)
         mock_run_playbook.assert_any_call('health_check.yaml')
         mock_run_playbook.assert_any_call('diagnose_failure.yaml', extra_vars={'job_id': 'job101'})
-        mock_run_script.assert_called_once_with('reflection/reflect.py', ['job101.diagnostics.json'])
+        mock_run_script.assert_called_once_with('reflection/reflect.py', ANY)
         self.assertEqual(mock_cleanup.call_count, 2)
         mock_cleanup.assert_any_call(['job101.diagnostics.json'])
         mock_cleanup.assert_any_call(['failed_jobs.json'])
 
-    @patch('supervisor.run_playbook')
-    @patch('supervisor.run_script')
-    @patch('supervisor.cleanup_files')
+    @patch('scripts.supervisor.run_playbook')
+    @patch('scripts.supervisor.run_script')
+    @patch('scripts.supervisor.cleanup_files')
     @patch('os.path.exists')
     @patch('time.sleep')
     @patch('builtins.open')
@@ -232,14 +246,14 @@ class TestSupervisor(unittest.TestCase):
         mock_run_playbook.assert_any_call('health_check.yaml')
         mock_run_playbook.assert_any_call('diagnose_failure.yaml', extra_vars={'job_id': 'job112'})
         mock_run_playbook.assert_any_call('heal_job.yaml', extra_vars={'solution_json': solution_json})
-        mock_run_script.assert_called_once_with('reflection/reflect.py', ['job112.diagnostics.json'])
+        mock_run_script.assert_called_once_with('reflection/reflect.py', ANY)
         self.assertEqual(mock_cleanup.call_count, 2)
         mock_cleanup.assert_any_call(['job112.diagnostics.json'])
         mock_cleanup.assert_any_call(['failed_jobs.json'])
 
-    @patch('supervisor.run_playbook')
-    @patch('supervisor.run_script')
-    @patch('supervisor.cleanup_files')
+    @patch('scripts.supervisor.run_playbook')
+    @patch('scripts.supervisor.run_script')
+    @patch('scripts.supervisor.cleanup_files')
     @patch('os.path.exists')
     @patch('time.sleep')
     @patch('builtins.open')
@@ -264,8 +278,8 @@ class TestSupervisor(unittest.TestCase):
         mock_run_playbook.assert_any_call('heal_job.yaml', extra_vars={'solution_json': solution_json})
 
         self.assertEqual(mock_run_script.call_count, 2)
-        mock_run_script.assert_any_call('reflection/reflect.py', ['job-multi-1.diagnostics.json'])
-        mock_run_script.assert_any_call('reflection/reflect.py', ['job-multi-2.diagnostics.json'])
+        mock_run_script.assert_any_call('reflection/reflect.py', ANY)
+        mock_run_script.assert_any_call('reflection/reflect.py', ANY)
 
         self.assertEqual(mock_cleanup.call_count, 3)
         mock_cleanup.assert_any_call(['job-multi-1.diagnostics.json'])

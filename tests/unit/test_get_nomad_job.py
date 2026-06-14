@@ -2,14 +2,14 @@ import pytest
 import sys
 import os
 import requests
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, ANY
 
 # Update path to point to pipecatapp/tools
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'tools')))
 
 from get_nomad_job import get_nomad_job_definition
 
-@patch('requests.get')
+@patch('get_nomad_job.requests.get')
 @patch('os.environ.get')
 def test_get_nomad_job_definition_success(mock_env_get, mock_get):
     mock_env_get.return_value = "http://localhost:4646"
@@ -23,10 +23,12 @@ def test_get_nomad_job_definition_success(mock_env_get, mock_get):
     # Verify timeout is passed
     mock_get.assert_called_once_with("http://localhost:4646/v1/job/test-job", timeout=10)
 
-@patch('requests.get')
+@patch('get_nomad_job.requests.get')
 def test_get_nomad_job_definition_failure(mock_get):
-    mock_get.side_effect = requests.exceptions.RequestException("Connection error")
-    result = get_nomad_job_definition("test-job")
+    class MockRequestException(Exception): pass
+    mock_get.side_effect = MockRequestException("Connection error")
+    with patch('get_nomad_job.requests.exceptions.RequestException', MockRequestException):
+        result = get_nomad_job_definition("test-job")
     assert result is None
 
 def test_get_nomad_job_definition_invalid_id():
