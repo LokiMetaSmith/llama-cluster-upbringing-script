@@ -48,15 +48,15 @@ class TestDependencyScanner(unittest.TestCase):
 
     @patch('pipecatapp.tools.code_runner_tool.DependencyScannerTool')
     @patch('pipecatapp.tools.code_runner_tool.SandboxSession')
-    @patch('pipecatapp.tools.code_runner_tool.docker.from_env')
-    def test_code_runner_blocks_unsafe_lib(self, mock_docker_env, MockSandbox, MockScanner):
+    @patch('pipecatapp.tools.code_runner_tool.docker')
+    def test_code_runner_blocks_unsafe_lib(self, mock_docker, MockSandbox, MockScanner):
         # Setup Mock Scanner
         mock_scanner_instance = MockScanner.return_value
         mock_scanner_instance.scan_package.return_value = "⚠️ UNSAFE: Found 1 vulnerabilities..."
 
         runner = CodeRunnerTool()
 
-        result = runner.run_code_in_sandbox("print('hello')", libraries=["vulnerable-lib"])
+        result = runner.executor.execute("print('hello')", libraries=["vulnerable-lib"])
 
         # Debugging output if assertion fails
         if "Operation blocked by security policy" not in result:
@@ -69,8 +69,8 @@ class TestDependencyScanner(unittest.TestCase):
 
     @patch('pipecatapp.tools.code_runner_tool.DependencyScannerTool')
     @patch('pipecatapp.tools.code_runner_tool.SandboxSession')
-    @patch('pipecatapp.tools.code_runner_tool.docker.from_env')
-    def test_code_runner_allows_safe_lib(self, mock_docker_env, MockSandbox, MockScanner):
+    @patch('pipecatapp.tools.code_runner_tool.docker')
+    def test_code_runner_allows_safe_lib(self, mock_docker, MockSandbox, MockScanner):
          # Setup Mock Scanner
         mock_scanner_instance = MockScanner.return_value
         mock_scanner_instance.scan_package.return_value = "Safe: No known vulnerabilities."
@@ -86,7 +86,7 @@ class TestDependencyScanner(unittest.TestCase):
         mock_session.run.return_value = mock_result
 
         runner = CodeRunnerTool()
-        result = runner.run_code_in_sandbox("print('hello')", libraries=["safe-lib"])
+        result = runner.executor.execute("print('hello')", libraries=["safe-lib"])
 
         self.assertEqual(result, "Success")
         mock_scanner_instance.scan_package.assert_called_with("safe-lib", None)

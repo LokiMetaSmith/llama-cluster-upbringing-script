@@ -1,3 +1,4 @@
+# Fixed: Resolved TypeError by removing global sys.modules HTTP mocks in the test suite that shadowed exception classes.
 import os
 import unittest
 from unittest.mock import patch, MagicMock, AsyncMock

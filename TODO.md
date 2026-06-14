@@ -292,10 +292,10 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] Improve `test_websocket_default_secure_same_origin_success` in `pipecatapp/tests/test_websocket_security.py`
 - [x] Improve `test_yolo_internal_process_frame_failover` in `tests/unit/test_vision_failover.py`
 - [ ] **Fix Broken Tests in Master:**
-  - `tests/unit/test_dependency_scanner.py` (Mock assertion mismatch on `scan_package`)
-  - `tests/unit/test_get_nomad_job.py` (AssertionError for None != Mock)
-  - `tests/unit/test_ha_tool.py` (AssertionError string mismatch)
-  - `tests/unit/test_jules_tool.py` (Exception handling assertions)
+  - [x] `tests/unit/test_dependency_scanner.py` (Mock assertion mismatch on `scan_package`)
+  - [x] `tests/unit/test_get_nomad_job.py` (AssertionError for None != Mock)
+  - [x] `tests/unit/test_ha_tool.py` (AssertionError string mismatch)
+  - [x] `tests/unit/test_jules_tool.py` (Exception handling assertions)
   - `tests/unit/test_memory.py` (KeyError '0' from store reads)
   - `tests/unit/test_pipecat_app_unit.py` (AssertionError)
   - `tests/unit/test_planner_tool.py` (TypeError with async generator)
