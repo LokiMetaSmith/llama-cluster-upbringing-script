@@ -7,12 +7,13 @@ import base64
 # Add tools directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
 
-from web_browser_tool import WebBrowserTool
+from pipecatapp.tools.web_browser_tool import WebBrowserTool
 
 class TestWebBrowserTool(unittest.IsolatedAsyncioTestCase):
 
+
     async def asyncSetUp(self):
-        self.patcher = patch('web_browser_tool.async_playwright')
+        self.patcher = patch('pipecatapp.tools.web_browser_tool.async_playwright')
         self.mock_async_playwright = self.patcher.start()
 
         # Configure mocks
@@ -49,8 +50,8 @@ class TestWebBrowserTool(unittest.IsolatedAsyncioTestCase):
 
     async def test_goto_failure(self):
         self.mock_page.goto.side_effect = Exception("Page not found")
-        result = await self.tool.goto("https://invalid-url.com")
-        self.assertIn("Error navigating to https://invalid-url.com: Page not found", result)
+        result = await self.tool.goto("https://example.com")
+        self.assertIn("Error navigating to https://example.com: Page not found", result)
 
     async def test_get_page_content_success(self):
         self.mock_page.content.return_value = "<html><body><h1>Hello</h1></body></html>"

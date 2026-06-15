@@ -85,12 +85,14 @@ def test_no_auth_method_provided(ssh_tool):
     result = ssh_tool.run_command(host='testhost', username='testuser', command='ls')
     assert result == "Error: No authentication method provided. Use key_filename or password."
 
-@patch('ssh_tool.paramiko.SSHClient')
-def test_connection_exception(mock_ssh_client, ssh_tool):
+@patch('ssh_tool.paramiko')
+def test_connection_exception(mock_paramiko, ssh_tool):
     """Test that an exception during connection is handled gracefully."""
-    mock_client_instance = mock_ssh_client.return_value
-    mock_client_instance.connect.side_effect = Exception("Connection refused")
+    mock_ssh_client = MagicMock()
+    mock_paramiko.SSHClient.return_value = mock_ssh_client
+    mock_paramiko.SSHException = Exception
+    mock_ssh_client.connect.side_effect = mock_paramiko.SSHException("Connection refused")
 
     result = ssh_tool.run_command(host='testhost', username='testuser', command='ls', password='p')
-    assert result == "An error occurred: Connection refused"
-    mock_client_instance.close.assert_called_once()
+    assert result == "SSH Error: Connection refused. If 'Server not found in known_hosts', please add the server's public key to your local known_hosts file."
+    mock_ssh_client.close.assert_called_once()

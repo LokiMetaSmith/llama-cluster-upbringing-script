@@ -137,7 +137,10 @@ These structural suggestions are targeted for a future major release to signific
 
 - [x] **Native Ansible Hardware Profiling:** Move the machine resource detection logic (RAM, CPU, Disk) out of `bootstrap.sh` and into a native Ansible `preflight` playbook using `setup` facts. Ansible should dynamically group hosts (e.g., using `group_by`) and execute roles conditionally based on the detected hardware tier, reducing reliance on Bash wrapper scripts.
 - [x] **Strict Infrastructure vs. Payload Separation:** Created `scripts/run_nomad.sh` - a dedicated script to deploy Nomad job files without Ansible. Ansible now only provisions infrastructure (OS, Docker, Consul, Nomad, network overlay). Application payloads (pipecatapp, llamacpp, AI experts) deployed via `./run_nomad.sh run ansible/jobs/<job>.nomad`.
-- [x] **Microservice De-monolithization of `TwinService`:** To improve robustness on legacy hardware, the main `pipecatapp` (router/workflow engine) should be made as lightweight as possible. Extract heavy, blocking tools (e.g., RAG document embedding, isolated Python code execution sandboxes) into independent microservices running as separate Nomad jobs. The core agent should interact with these tools exclusively via the Consul Service Mesh. (Note: Large task - requires architectural design first)
+- [x] **Microservice De-monolithization of `TwinService`:** To improve robustness on legacy hardware, the main `pipecatapp` (router/workflow engine) should be made as lightweight as possible. Extract heavy, blocking tools (e.g., RAG document embedding, isolated Python code execution sandboxes) into independent microservices running as separate Nomad jobs. The core agent should interact with these tools exclusively via the Consul Service Mesh.
+  - [x] Phase 1: Architectural Design (Created `TWINSERVICE_DEMONOLITHIZATION_DESIGN.md`)
+  - [x] Phase 2: RAG Microservice Extraction
+  - [x] Phase 3: Code Runner Sandbox Extraction
 
 ## Future Enhancements and Backlog
 
@@ -288,23 +291,23 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] Improve `test_websocket_allows_wildcard` in `pipecatapp/tests/test_websocket_security.py`
 - [x] Improve `test_websocket_default_secure_same_origin_success` in `pipecatapp/tests/test_websocket_security.py`
 - [x] Improve `test_yolo_internal_process_frame_failover` in `tests/unit/test_vision_failover.py`
-- [ ] **Fix Broken Tests in Master:**
-  - `tests/unit/test_dependency_scanner.py` (Mock assertion mismatch on `scan_package`)
-  - `tests/unit/test_get_nomad_job.py` (AssertionError for None != Mock)
-  - `tests/unit/test_ha_tool.py` (AssertionError string mismatch)
-  - `tests/unit/test_jules_tool.py` (Exception handling assertions)
-  - `tests/unit/test_memory.py` (KeyError '0' from store reads)
-  - `tests/unit/test_pipecat_app_unit.py` (AssertionError)
-  - `tests/unit/test_planner_tool.py` (TypeError with async generator)
-  - `tests/unit/test_ralph_nodes.py` (AssertionError on looped execution loop count)
-  - `tests/unit/test_shell_tool_security.py`
-  - `tests/unit/test_simple_llm_node.py`
-  - `tests/unit/test_ssh_tool.py`
-  - `tests/unit/test_supervisor.py` (AssertionErrors)
-  - `tests/unit/test_web_browser_tool.py`
-  - `tests/unit/test_web_server_personality.py`
-  - `tests/unit/test_web_server_sync.py`
-  - `tests/unit/test_world_model_service.py`
+- [x] **Fix Broken Tests in Master:**
+  - [x] `tests/unit/test_dependency_scanner.py` (Mock assertion mismatch on `scan_package`)
+  - [x] `tests/unit/test_get_nomad_job.py` (AssertionError for None != Mock)
+  - [x] `tests/unit/test_ha_tool.py` (AssertionError string mismatch)
+  - [x] `tests/unit/test_jules_tool.py` (Exception handling assertions)
+  - [x] `tests/unit/test_memory.py` (KeyError '0' from store reads)
+  - [x] `tests/unit/test_pipecat_app_unit.py` (AssertionError)
+  - [x] `tests/unit/test_planner_tool.py` (TypeError with async generator)
+  - [x] `tests/unit/test_ralph_nodes.py` (AssertionError on looped execution loop count)
+  - [x] `tests/unit/test_shell_tool_security.py`
+  - [x] `tests/unit/test_simple_llm_node.py`
+  - [x] `tests/unit/test_ssh_tool.py`
+  - [x] `tests/unit/test_supervisor.py` (AssertionErrors)
+  - [x] `tests/unit/test_web_browser_tool.py`
+  - [x] `tests/unit/test_web_server_personality.py`
+  - [x] `tests/unit/test_web_server_sync.py`
+  - [x] `tests/unit/test_world_model_service.py`
 - [x] **Fix Lazy Tests:**
   - [x] `tests/test_emperor_node.py:test_emperor_node` (dry run with simple pass instead of validation)
   - [x] `tests/unit/test_vision_failover.py:test_yolo_internal_process_frame_failover` (relies on mock failure passing without asserts)

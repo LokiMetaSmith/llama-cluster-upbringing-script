@@ -37,7 +37,7 @@ class MemoryStore:
         return self.backend.search(query_text, k)
 
     def add_memory(self, source: str, raw_text: str, summary: str = None, entities: list = None, topics: list = None, importance: int = None, consolidated: bool = False, metadata: dict = None, doc_id: str = None):
-        self.backend.add_memory(source, raw_text, summary, entities, topics, importance, consolidated, metadata, doc_id)
+        return self.backend.add_memory(source, raw_text, summary, entities, topics, importance, consolidated, metadata, doc_id)
 
     def get_memory(self, memory_id: int) -> Optional[dict]:
         return self.backend.get_memory(memory_id)
