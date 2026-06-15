@@ -8,6 +8,7 @@ Includes a legacy report generator.
 import os
 import sys
 import json
+import ssl
 import argparse
 import urllib.request
 import urllib.error
@@ -18,6 +19,26 @@ import tempfile
 from datetime import datetime
 
 NOMAD_URL = os.environ.get("NOMAD_ADDR", "http://localhost:4646")
+
+def get_ssl_context():
+    if NOMAD_URL.startswith("https"):
+        context = ssl.create_default_context()
+        if os.environ.get("NOMAD_TLS_SKIP_VERIFY") in ["1", "true", "True"]:
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+        else:
+            cacert = os.environ.get("NOMAD_CACERT")
+            if cacert and os.path.exists(cacert):
+                context.load_verify_locations(cafile=cacert)
+
+        client_cert = os.environ.get("NOMAD_CLIENT_CERT")
+        client_key = os.environ.get("NOMAD_CLIENT_KEY")
+        if client_cert and client_key and os.path.exists(client_cert) and os.path.exists(client_key):
+            context.load_cert_chain(certfile=client_cert, keyfile=client_key)
+
+        return context
+    return None
+
 
 # --- Legacy Report Helpers ---
 def get_consul_token():
@@ -62,7 +83,7 @@ def get_nomad_allocations(quiet=False):
     """Fetch allocations from Nomad API."""
     url = f"{NOMAD_URL}/v1/allocations"
     try:
-        with urllib.request.urlopen(url) as response:
+        with urllib.request.urlopen(url, context=get_ssl_context()) as response:
             if response.status == 200:
                 return json.loads(response.read().decode('utf-8'))
     except Exception as e:
@@ -183,7 +204,7 @@ def api_get(endpoint):
     url = f"{NOMAD_URL}{endpoint}"
     try:
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, context=get_ssl_context()) as response:
             if response.status == 200:
                 return json.loads(response.read().decode('utf-8'))
     except Exception as e:
