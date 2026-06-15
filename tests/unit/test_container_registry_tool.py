@@ -2,7 +2,6 @@ import pytest
 import sys
 from unittest.mock import patch, MagicMock
 
-sys.modules['requests'] = MagicMock()
 
 from pipecatapp.tools.container_registry_tool import ContainerRegistryTool
 
