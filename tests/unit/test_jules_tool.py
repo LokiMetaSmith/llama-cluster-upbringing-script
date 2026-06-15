@@ -33,10 +33,11 @@ class TestJulesTool(unittest.IsolatedAsyncioTestCase):
         # We need to mock the context manager of AsyncClient
         mock_client = MagicMock()
         mock_client.post = mock_post
-        mock_client.__aenter__.return_value = mock_client
-        mock_client.__aexit__.return_value = None
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch('httpx.AsyncClient', return_value=mock_client):
+
+        with patch('pipecatapp.tools.jules_tool.httpx.AsyncClient', return_value=mock_client):
             result = await self.tool.run(self.prompt, self.source, self.title)
 
         self.assertIn("Jules session created successfully", result)
@@ -78,10 +79,11 @@ class TestJulesTool(unittest.IsolatedAsyncioTestCase):
 
         mock_client = MagicMock()
         mock_client.post = mock_post
-        mock_client.__aenter__.return_value = mock_client
-        mock_client.__aexit__.return_value = None
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch('httpx.AsyncClient', return_value=mock_client):
+
+        with patch('pipecatapp.tools.jules_tool.httpx.AsyncClient', return_value=mock_client):
             result = await self.tool.run(self.prompt, self.source)
 
         self.assertIn("Error creating Jules session: HTTP 401", result)
@@ -92,10 +94,11 @@ class TestJulesTool(unittest.IsolatedAsyncioTestCase):
 
         mock_client = MagicMock()
         mock_client.post = mock_post
-        mock_client.__aenter__.return_value = mock_client
-        mock_client.__aexit__.return_value = None
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch('httpx.AsyncClient', return_value=mock_client):
+
+        with patch('pipecatapp.tools.jules_tool.httpx.AsyncClient', return_value=mock_client):
             result = await self.tool.run(self.prompt, self.source)
 
         self.assertEqual(result, "Error executing Jules task: Network failure")

@@ -30,10 +30,11 @@ def test_call_ai_task_success(mock_post):
     assert "Successfully sent command" in result
     mock_post.assert_called_once()
 
-@patch('requests.post')
+@patch('pipecatapp.tools.ha_tool.requests.post')
 def test_call_ai_task_failure(mock_post):
     tool = HA_Tool("http://ha", "token")
-    mock_post.side_effect = requests.exceptions.RequestException("Error")
-
-    result = tool.call_ai_task("turn on lights")
+    class MockRequestException(Exception): pass
+    mock_post.side_effect = MockRequestException("Error")
+    with patch('pipecatapp.tools.ha_tool.requests.exceptions.RequestException', MockRequestException):
+        result = tool.call_ai_task("turn on lights")
     assert "Error calling Home Assistant API: Error" in result
