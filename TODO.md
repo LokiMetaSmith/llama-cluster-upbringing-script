@@ -1,7 +1,7 @@
 # TODO
 
 ## Next
-- [x] Evaluate and execute the Proof-of-Concept for integrating HelixDB as a unified graph-vector memory backend (see `HELIXDB_EVALUATION.md` for the PoC TODO list).
+- [x] Evaluate and execute the Proof-of-Concept for integrating HelixDB as a unified graph-vector memory backend (see `docs/analysis/HELIXDB_EVALUATION.md` for the PoC TODO list).
 - [x] Implement `apt` package caching proxy via IPFS.
 
 ## Immediate Actions
