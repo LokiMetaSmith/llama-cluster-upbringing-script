@@ -160,6 +160,7 @@ EOH
 
     {% if pipecat_deployment_style | default('docker') == 'docker' %}
     task "load-image" {
+      driver = "raw_exec"
       lifecycle {
         hook    = "prestart"
         sidecar = false
