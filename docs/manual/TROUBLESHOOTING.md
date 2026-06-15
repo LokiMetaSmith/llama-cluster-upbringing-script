@@ -76,22 +76,70 @@ This means another process (usually `unattended-upgrades` or a manual `apt` comm
 **Solution:**
 Wait for the background process to finish, or if you are sure no other process should be running, reboot the node.
 
-### 3. Nomad Jobs Stuck in "Pending"
+### 3. Nomad Jobs Stuck in "Pending" or "Dead" State
 
 **Symptom:**
-Jobs submitted to Nomad stay in the "Pending" state and are not placed on any nodes.
+Jobs submitted to Nomad stay in the "Pending" state and are not placed on any nodes, or they repeatedly fail and end up in the "Dead" state. This can be seen at the end of the `bootstrap.sh` output under the "Running Nomad Jobs" section.
 
 **Cause:**
 
-* Lack of resources (CPU/Memory).
-* Constraint mismatches (e.g., job requires a specific device or kernel capability).
-* Nodes are down or ineligible.
+*   **Pending:**
+    *   Lack of resources (CPU/Memory).
+    *   Constraint mismatches (e.g., job requires a specific device, network interface, or kernel capability).
+    *   Nodes are down, partitioned, or ineligible.
+*   **Dead:**
+    *   The container or task crashed immediately on startup (e.g., missing dependencies, configuration error, segmentation fault).
+    *   The task failed its health checks too many times.
+    *   Docker image pull failures (e.g., network issues, authentication problems).
 
-**Solution:**
+**Solution (Using Built-in Troubleshooting Tools):**
 
-* Run `nomad job allocs <job_name>` to see allocation status.
-* Check `nomad node status` to ensure workers are ready.
-* Check `nomad alloc status <alloc_id>` for placement failure reasons.
+The repository provides several scripts to help diagnose these issues systematically. Since the cluster uses Nomad and Consul, you must ensure your environment variables are configured to talk to the controller (usually `100.64.0.1` on the Tailscale mesh).
+
+1.  **List Problematic Jobs:**
+    Use `scripts/troubleshoot.py` to get a consolidated list of jobs that are currently failing.
+    ```bash
+    python3 scripts/troubleshoot.py list
+    ```
+
+2.  **Inspect a Specific Failing Job:**
+    Once you have identified a dead or pending job ID (e.g., `pipecat-app`), inspect it directly. This script will pull recent events and stderr logs from the failed allocations.
+    ```bash
+    python3 scripts/troubleshoot.py inspect <job_id>
+    # Example: python3 scripts/troubleshoot.py inspect pipecat-app
+    ```
+
+3.  **Analyze All Allocations:**
+    For a deeper dive into why placement failed or why tasks crashed, you can dump all allocations and analyze them.
+    ```bash
+    nomad alloc status -json > allocs.json
+    python3 scripts/analyze_nomad_allocs.py allocs.json
+    ```
+    *Note: This parses placement errors and shows the last 5 events for failed tasks, making it easy to spot constraint issues or `OOMKilled` errors.*
+
+4.  **Check the Mesh Network:**
+    If jobs are pending because nodes cannot connect to Consul or Nomad, verify the network layer (Tailscale/Headscale).
+    ```bash
+    ./scripts/debug_mesh.sh
+    ```
+    This script outputs the status of the network interfaces, Tailscale, Headscale, and cluster membership for Consul and Nomad.
+
+5.  **Restart the Job:**
+    After identifying and fixing the underlying issue (e.g., freeing up disk space, fixing a configuration typo), you can trigger a restart.
+    ```bash
+    python3 scripts/troubleshoot.py retry <job_id>
+    ```
+    Alternatively, use the Nomad CLI script directly:
+    ```bash
+    ./scripts/run_nomad.sh run ansible/jobs/<job_name>.nomad
+    ```
+
+**Manual Nomad CLI Steps (If scripts are unavailable):**
+
+*   Run `nomad job allocs <job_name>` to see the allocation status.
+*   Check `nomad node status` to ensure workers are ready.
+*   Check `nomad alloc status <alloc_id>` for detailed placement failure reasons.
+*   Check `nomad alloc logs -stderr <alloc_id> <task_name>` for crash logs.
 
 ### 4. Autonomous Recovery Configuration (OpenCode)
 
