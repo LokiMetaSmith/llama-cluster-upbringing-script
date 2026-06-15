@@ -68,7 +68,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # --- MQTT Client ---
-def on_connect(client, userdata, flags, rc, properties=None):
+def on_connect(client, _userdata, _flags, rc, _properties=None):
     """Callback for when the client connects to the MQTT broker."""
     global mqtt_connected
     if rc == 0:
@@ -79,7 +79,7 @@ def on_connect(client, userdata, flags, rc, properties=None):
         logger.error(f"Failed to connect, return code {rc}")
         mqtt_connected = False
 
-def on_disconnect(client, userdata, *args):
+def on_disconnect(client, _userdata, *args):
     global mqtt_connected
     rc = "unknown"
 
@@ -93,7 +93,7 @@ def on_disconnect(client, userdata, *args):
     logger.warning(f"Disconnected from MQTT Broker with return code {rc}")
     mqtt_connected = False
 
-def on_message(client, userdata, msg):
+def on_message(client, _userdata, msg):
     """Callback for when a PUBLISH message is received from the server."""
     global world_state
     # logger.debug(f"Received message on topic {msg.topic}")

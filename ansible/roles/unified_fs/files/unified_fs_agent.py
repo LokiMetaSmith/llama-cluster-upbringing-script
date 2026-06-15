@@ -287,9 +287,9 @@ class UnifiedFS(LoggingMixIn, Operations):
         self.root_storage = root_storage
         self.consul = ConsulBackend()
         self.memory = MemoryBackend()
-        self.mutex = Lock()
 
-    def getattr(self, path, fh=None):
+
+    def getattr(self, path, _=None):
         if path == '/':
             now = time.time()
             return dict(st_mode=(stat.S_IFDIR | 0o755), st_nlink=2, st_ctime=now, st_mtime=now, st_atime=now)
@@ -313,7 +313,7 @@ class UnifiedFS(LoggingMixIn, Operations):
 
         raise FuseOSError(errno.ENOENT)
 
-    def readdir(self, path, fh):
+    def readdir(self, path, _):
         dirents = ['.', '..']
         if path == '/':
             dirents.extend(['consul', 'memory', 'fs'])
@@ -334,7 +334,7 @@ class UnifiedFS(LoggingMixIn, Operations):
 
         return dirents
 
-    def read(self, path, size, offset, fh):
+    def read(self, path, size, offset, _):
         parts = [p for p in path.split('/') if p]
         first = parts[0]
         subpath = '/' + '/'.join(parts[1:])
@@ -364,4 +364,4 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # Enable default_permissions to enforce kernel-level permission checks for the underlying FS
-    fuse = FUSE(UnifiedFS(root_storage), mountpoint, foreground=True, allow_other=True, default_permissions=True)
+    FUSE(UnifiedFS(root_storage), mountpoint, foreground=True, allow_other=True, default_permissions=True)

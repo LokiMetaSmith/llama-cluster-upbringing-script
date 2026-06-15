@@ -28,7 +28,7 @@ def find_stalled_tasks(db_path):
 
     tasks = []
     for row in cursor.fetchall():
-        flow_id, max_seq, status = row
+        flow_id, _, status = row
         # Consider tasks with PENDING status as stalled
         if status == "PENDING":
             tasks.append(flow_id)
