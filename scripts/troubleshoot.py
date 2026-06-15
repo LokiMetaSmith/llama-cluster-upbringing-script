@@ -23,6 +23,9 @@ NOMAD_URL = os.environ.get("NOMAD_ADDR", "http://localhost:4646")
 def get_ssl_context():
     if NOMAD_URL.startswith("https"):
         context = ssl.create_default_context()
+        if hasattr(ssl, 'VERIFY_X509_STRICT'):
+            context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+
         if os.environ.get("NOMAD_TLS_SKIP_VERIFY") in ["1", "true", "True"]:
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
