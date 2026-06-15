@@ -7,7 +7,6 @@ from unittest.mock import patch, MagicMock
 # mock fitz before import
 import sys
 sys.modules['fitz'] = MagicMock()
-sys.modules['requests'] = MagicMock()
 
 from pipecatapp.tools.document_tool import DocumentTool, LocalDirectoryBackend, PaperlessBackend
 

@@ -61,7 +61,7 @@ class TestDependencyScanner(unittest.TestCase):
         runner = CodeRunnerTool()
         runner.executor.scanner = mock_scanner_instance
 
-        result = runner.run_code_in_sandbox("print('hello')", libraries=["vulnerable-lib"])
+        result = runner.executor.execute("print('hello')", libraries=["vulnerable-lib"])
 
         # Debugging output if assertion fails
         if "Operation blocked by security policy" not in result:

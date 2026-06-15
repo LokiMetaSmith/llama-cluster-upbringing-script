@@ -2,7 +2,6 @@ import pytest
 import sys
 from unittest.mock import patch, MagicMock
 
-sys.modules['httpx'] = MagicMock()
 
 from pipecatapp.tools.dependency_scanner_tool import DependencyScannerTool
 
