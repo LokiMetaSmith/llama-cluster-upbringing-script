@@ -18,7 +18,7 @@ import getpass
 import tempfile
 from datetime import datetime
 
-NOMAD_URL = os.environ.get("NOMAD_ADDR", "http://localhost:4646")
+NOMAD_URL = os.environ.get("NOMAD_ADDR", "https://127.0.0.1:4646")
 
 def get_ssl_context():
     if NOMAD_URL.startswith("https"):
