@@ -57,3 +57,6 @@ collections/
 .tmp_certs_nomad/
 execution_history.db
 venv/
+
+# Dynamically generated parameter files
+group_vars/all/resource_tuning.yaml

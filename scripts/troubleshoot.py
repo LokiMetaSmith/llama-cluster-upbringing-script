@@ -276,12 +276,32 @@ def cmd_inspect(args):
         print(f"Error: Job {job_id} not found or accessible.")
         sys.exit(1)
 
+    evaluations = api_get(f"/v1/job/{job_id}/evaluations")
+
     inspect_data = {
         "job_id": job_id,
         "job_status": job_info.get("Status"),
         "submit_time": format_time(job_info.get("SubmitTime")),
-        "allocations": []
+        "allocations": [],
+        "placement_failures": []
     }
+
+    if evaluations:
+        evaluations.sort(key=lambda x: x.get('CreateIndex', 0), reverse=True)
+        for ev in evaluations[:1]:
+            failed_allocs = ev.get("FailedTGAllocs")
+            if failed_allocs:
+                for tg, metrics in failed_allocs.items():
+                    fail_info = {
+                        "task_group": tg,
+                        "dimension_exhausted": metrics.get("DimensionExhausted", {}),
+                        "class_exhausted": metrics.get("ClassExhausted", {}),
+                        "constraint_filtered": metrics.get("ConstraintFiltered", {}),
+                        "nodes_evaluated": metrics.get("NodesEvaluated", 0),
+                        "nodes_filtered": metrics.get("NodesFiltered", 0),
+                        "nodes_exhausted": metrics.get("NodesExhausted", 0)
+                    }
+                    inspect_data["placement_failures"].append(fail_info)
 
     if allocs:
         allocs.sort(key=lambda x: x.get('ModifyTime', 0), reverse=True)
@@ -321,8 +341,29 @@ def cmd_inspect(args):
 
     print(f"=== Inspecting Job: {job_id} ===")
     print(f"Status: {inspect_data['job_status']} | Submitted: {inspect_data['submit_time']}")
+
+    if inspect_data["placement_failures"]:
+        print("\n=== Placement Failures ===")
+        for failure in inspect_data["placement_failures"]:
+            print(f"Task Group: {failure['task_group']}")
+            print(f"  Nodes Evaluated: {failure['nodes_evaluated']}")
+            print(f"  Nodes Filtered: {failure['nodes_filtered']}")
+            print(f"  Nodes Exhausted: {failure['nodes_exhausted']}")
+            if failure['dimension_exhausted']:
+                print("  Dimension Exhausted:")
+                for dim, count in failure['dimension_exhausted'].items():
+                    print(f"    - {dim}: {count}")
+            if failure['class_exhausted']:
+                print("  Class Exhausted:")
+                for cls, count in failure['class_exhausted'].items():
+                    print(f"    - {cls}: {count}")
+            if failure['constraint_filtered']:
+                print("  Constraint Filtered:")
+                for constraint, count in failure['constraint_filtered'].items():
+                    print(f"    - {constraint}: {count}")
+
     if not inspect_data["allocations"]:
-        print("No allocations found for this job.")
+        print("\nNo allocations found for this job.")
         return
     for alloc in inspect_data["allocations"]:
         print(f"\n--- Allocation: {alloc['alloc_id'][:8]} (Status: {alloc['client_status']}) ---")
