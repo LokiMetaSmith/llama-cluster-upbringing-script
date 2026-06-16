@@ -304,6 +304,7 @@ def purge_nomad_jobs():
     try:
         env = get_nomad_env()
         if subprocess.run(["nomad", "node", "status"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env).returncode == 0:
+            pass
 
     except:
         pass
