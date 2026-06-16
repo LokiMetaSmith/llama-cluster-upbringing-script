@@ -5,6 +5,14 @@ import argparse
 import requests
 import time
 
+
+try:
+    from sudo_env import load_sudo_env
+    load_sudo_env()
+except ImportError:
+    pass
+
+
 def get_prometheus_metrics(prom_url, window):
     # Query: max by (exported_job, task_group, task) (max_over_time(nomad_client_allocs_memory_usage[24h]))
     # Note: exported_job usually corresponds to the Job ID.

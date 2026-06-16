@@ -4,6 +4,14 @@ import sys
 import os
 from datetime import datetime
 
+
+try:
+    from sudo_env import load_sudo_env
+    load_sudo_env()
+except ImportError:
+    pass
+
+
 def format_timestamp(ns_timestamp):
     if not ns_timestamp:
         return ""

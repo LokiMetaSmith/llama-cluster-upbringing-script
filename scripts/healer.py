@@ -9,6 +9,14 @@ import subprocess
 import requests
 from typing import List, Optional, Dict
 
+
+try:
+    from sudo_env import load_sudo_env
+    load_sudo_env()
+except ImportError:
+    pass
+
+
 # --- Configuration ---
 NOMAD_ADDR = os.environ.get("NOMAD_ADDR", "http://localhost:4646")
 CONSUL_HTTP_ADDR = os.environ.get("CONSUL_HTTP_ADDR", "http://localhost:8500")
