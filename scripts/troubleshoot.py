@@ -18,6 +18,14 @@ import getpass
 import tempfile
 from datetime import datetime
 
+
+try:
+    from sudo_env import load_sudo_env
+    load_sudo_env()
+except ImportError:
+    pass
+
+
 NOMAD_URL = os.environ.get("NOMAD_ADDR", "http://localhost:4646")
 
 def get_ssl_context():

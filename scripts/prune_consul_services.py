@@ -16,6 +16,14 @@ import argparse
 import sys
 import os
 
+
+try:
+    from sudo_env import load_sudo_env
+    load_sudo_env()
+except ImportError:
+    pass
+
+
 DEFAULT_CONSUL_URL = "http://localhost:8500"
 
 def get_consul_token():
