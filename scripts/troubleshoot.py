@@ -344,7 +344,7 @@ def cmd_retry(args):
     job_id = args.job_id
     if not args.json:
         print(f"Attempting to restart job {job_id}...")
-    res = run_command(["nomad", "job", "restart", job_id])
+    res = run_command(["nomad", "job", "restart", "-yes", job_id])
     if args.json:
         print(json.dumps({
             "job_id": job_id,
