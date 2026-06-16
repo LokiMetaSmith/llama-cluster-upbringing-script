@@ -77,7 +77,7 @@ def analyze_results(output):
     }
 
     passed = True
-    for filename, expected_threat in expected.items():
+    for filename, _ in expected.items():
         if filename in detected:
             print(f"[PASS] {filename} detected as {detected[filename]}")
         else:

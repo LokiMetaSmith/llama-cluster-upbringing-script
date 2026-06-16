@@ -3,7 +3,7 @@ import os
 import re
 import ast
 import json
-import mimetypes
+
 from collections import defaultdict
 from pathlib import Path
 

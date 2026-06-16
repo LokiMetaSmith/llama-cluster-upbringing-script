@@ -36,7 +36,7 @@ class Colors:
     FAIL = '\033[91m'
     ENDC = '\033[0m'
     BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+
 
 WARNINGS = []
 ERRORS = []
@@ -133,7 +133,7 @@ def check_port_open(host, port, timeout=2):
         # Hostname could not be resolved
         return False
 
-    for family, socktype, proto, canonname, sockaddr in addr_info:
+    for family, socktype, proto, _, sockaddr in addr_info:
         try:
             sock = socket.socket(family, socktype, proto)
             sock.settimeout(timeout)
@@ -300,11 +300,11 @@ def purge_nomad_jobs():
 
     # Check if Nomad is running (if we purged, we assume it might still be running the agent,
     # but we killed the jobs. If nomad is NOT running, we definitely want to kill orphans.)
-    nomad_running = False
+
     try:
         env = get_nomad_env()
         if subprocess.run(["nomad", "node", "status"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env).returncode == 0:
-            nomad_running = True
+
     except:
         pass
 
@@ -859,7 +859,7 @@ def main():
         if "app_services.yaml" in normalized_path:
             global_vars = load_global_vars()
             pipecat_port = global_vars.get("nanochat_port", 8005)
-            router_port = global_vars.get("router_port", 8081)
+            # router_port = global_vars.get("router_port", 8081)
             mqtt_port = global_vars.get("mqtt_port", 1883)
             # wait_for_ports_freed([pipecat_port, router_port, mqtt_port])  # Disabled as these are Nomad-managed
 
