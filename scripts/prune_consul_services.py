@@ -88,7 +88,7 @@ def main():
     # Structure: ServiceID -> {'name': ServiceName, 'checks': [status1, status2, ...]}
     service_health = {}
 
-    for check_id, check in checks.items():
+    for _, check in checks.items():
         service_id = check.get("ServiceID")
         service_name = check.get("ServiceName")
         if not service_id:

@@ -46,7 +46,7 @@ def run_inference(url, model, prompt, name):
     start_time = time.time()
     first_token_time = None
     token_count = 0
-    full_response = ""
+
 
     try:
         response = requests.post(f"{url}/v1/chat/completions", json=payload, stream=True, timeout=120)
@@ -71,7 +71,7 @@ def run_inference(url, model, prompt, name):
                             if content:
                                 if first_token_time is None:
                                     first_token_time = time.time()
-                                full_response += content
+
                                 token_count += 1
                                 sys.stdout.write(content)
                                 sys.stdout.flush()

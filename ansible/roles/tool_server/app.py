@@ -99,7 +99,7 @@ def read_health():
     return {"status": "ok"}
 
 @app.post("/run_tool/")
-async def run_tool(request: ToolRequest, authorization: Optional[str] = Header(None), rate_limit: None = Depends(strict_limiter)):
+async def run_tool(request: ToolRequest, authorization: Optional[str] = Header(None), _: None = Depends(strict_limiter)):
     """
     Executes a method on a specified tool with the given arguments.
     """
