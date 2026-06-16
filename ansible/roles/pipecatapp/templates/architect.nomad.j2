@@ -31,7 +31,7 @@ job "architect" {
       USE_SUMMARIZER         = "{{ use_summarizer | default('false') }}"
       STT_SERVICE            = "{{ stt_service | default('faster-whisper') }}"
       SANDBOX_EXECUTOR       = "{{ sandbox_executor | default('docker') }}"
-      NOMAD_ADDR             = "http://{{ cluster_ip }}:4646"
+      NOMAD_ADDR             = "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
       PIPECAT_API_KEYS        = "{{ pipecat_api_keys }}"
       EXTERNAL_EXPERTS_CONFIG = "{{ external_experts_config | to_json | replace('\"', '\\\"') }}"
       OPENAI_API_KEY         = "{{ openai_api_key }}"
