@@ -66,8 +66,8 @@ class GossipDiscovery:
             s.close()
         return ip
 
-    def register_service(self, service_name: str, port: int, capabilities: Optional[List[str]] = None):
-        """Registers a local service to be broadcasted, optionally with capabilities."""
+    def register_service(self, service_name: str, port: int, capabilities: Optional[List[str]] = None, extensions: Optional[Dict[str, Any]] = None):
+        """Registers a local service to be broadcasted, optionally with capabilities and extensible metadata payloads (GGEP-style)."""
         bloom_hex = None
         if capabilities:
             bf = SimpleBloomFilter()
@@ -80,7 +80,8 @@ class GossipDiscovery:
             "port": port,
             "last_seen": time.time(),
             "local": True,
-            "bloom_filter": bloom_hex
+            "bloom_filter": bloom_hex,
+            "extensions": extensions or {}
         }
 
     def get_service(self, service_name: str) -> Optional[Tuple[str, int]]:
@@ -133,6 +134,7 @@ class GossipDiscovery:
             port = message.get("port")
             ip = message.get("ip", addr[0])  # Trust payload IP, or fallback to packet source
             bloom_filter = message.get("bloom_filter")
+            extensions = message.get("extensions", {})
 
             if service_name and port:
                 # Update our registry
@@ -141,7 +143,8 @@ class GossipDiscovery:
                     "port": port,
                     "last_seen": time.time(),
                     "local": False,
-                    "bloom_filter": bloom_filter
+                    "bloom_filter": bloom_filter,
+                    "extensions": extensions
                 }
 
     async def _broadcast_loop(self):
@@ -165,6 +168,8 @@ class GossipDiscovery:
                         }
                         if data.get("bloom_filter"):
                             msg["bloom_filter"] = data["bloom_filter"]
+                        if data.get("extensions"):
+                            msg["extensions"] = data["extensions"]
                         payload = json.dumps(msg).encode('utf-8')
                         try:
                             self.transport.sendto(payload, (broadcast_ip, self.port))
