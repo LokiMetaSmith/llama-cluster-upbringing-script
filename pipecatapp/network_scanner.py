@@ -2,6 +2,7 @@ import socket
 import asyncio
 import logging
 import httpx
+from pipecatapp.gossip_discovery import gossip_registry
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,16 @@ async def scan_network_for_llms(timeout: float = 0.5) -> str | None:
     Returns the first found base_url (e.g., http://192.168.1.100:11434/v1).
     """
     logger.info("Starting local network scan for LLM services...")
+
+    # Fast path: Check Gossip Registry First
+    # Assuming the services register themselves as "rpc-main", "rpc-coding", or "ollama"
+    for svc_name in ["rpc-main", "rpc-coding", "ollama", "llama.cpp"]:
+        addr = gossip_registry.get_service(svc_name)
+        if addr:
+            ip, port = addr
+            logger.info(f"Discovered LLM via Gossip at {ip}:{port} ({svc_name})")
+            return f"http://{ip}:{port}/v1"
+
     local_ip = get_local_ip()
     ports = [11434, 8080] # Ollama, Llama.cpp/OpenAI
 
