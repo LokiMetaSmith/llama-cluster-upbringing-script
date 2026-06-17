@@ -192,7 +192,7 @@ These structural suggestions are targeted for a future major release to signific
 
 This section tracks actionable ideas derived from the `docs/analysis/GNUTELLA_ANALYSIS.md` document.
 - [x] **Option 1: Gossip-Based Service Fallback**
-- [ ] **Option 3: Bloom Filter Capability Routing**
+- [x] **Option 3: Bloom Filter Capability Routing**
 - [ ] **Option 4: PUSH-style Reverse Proxies for NAT Traversal**
 - [ ] **Option 5: Extensible Job Payloads (Inspired by GGEP)**
 

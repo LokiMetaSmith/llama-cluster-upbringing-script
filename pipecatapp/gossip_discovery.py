@@ -3,9 +3,42 @@ import json
 import logging
 import socket
 import time
+import hashlib
 from typing import Dict, Optional, List, Tuple, Any
 
 logger = logging.getLogger(__name__)
+
+class SimpleBloomFilter:
+    """A lightweight, dependency-free Bloom filter implementation."""
+    def __init__(self, size: int = 256, hash_count: int = 3, bit_array: int = 0):
+        self.size = size
+        self.hash_count = hash_count
+        self.bit_array = bit_array
+
+    def add(self, item: str):
+        for i in range(self.hash_count):
+            digest = hashlib.sha256(f"{item}{i}".encode('utf-8')).hexdigest()
+            index = int(digest, 16) % self.size
+            self.bit_array |= (1 << index)
+
+    def check(self, item: str) -> bool:
+        for i in range(self.hash_count):
+            digest = hashlib.sha256(f"{item}{i}".encode('utf-8')).hexdigest()
+            index = int(digest, 16) % self.size
+            if (self.bit_array & (1 << index)) == 0:
+                return False
+        return True
+
+    def to_hex(self) -> str:
+        return hex(self.bit_array)[2:]
+
+    @classmethod
+    def from_hex(cls, hex_str: str, size: int = 256, hash_count: int = 3):
+        try:
+            return cls(size=size, hash_count=hash_count, bit_array=int(hex_str, 16))
+        except ValueError:
+            return cls(size=size, hash_count=hash_count)
+
 
 class GossipDiscovery:
     """
@@ -33,13 +66,21 @@ class GossipDiscovery:
             s.close()
         return ip
 
-    def register_service(self, service_name: str, port: int):
-        """Registers a local service to be broadcasted."""
+    def register_service(self, service_name: str, port: int, capabilities: Optional[List[str]] = None):
+        """Registers a local service to be broadcasted, optionally with capabilities."""
+        bloom_hex = None
+        if capabilities:
+            bf = SimpleBloomFilter()
+            for cap in capabilities:
+                bf.add(cap)
+            bloom_hex = bf.to_hex()
+
         self.services[service_name] = {
             "ip": self.local_ip,
             "port": port,
             "last_seen": time.time(),
-            "local": True
+            "local": True,
+            "bloom_filter": bloom_hex
         }
 
     def get_service(self, service_name: str) -> Optional[Tuple[str, int]]:
@@ -48,6 +89,17 @@ class GossipDiscovery:
         svc = self.services.get(service_name)
         if svc:
             return svc["ip"], svc["port"]
+        return None
+
+    def find_capable_service(self, capability: str) -> Optional[Tuple[str, int]]:
+        """Finds the first service that advertises support for the given capability via its Bloom filter."""
+        self._cleanup_stale_services()
+        for name, data in self.services.items():
+            bloom_hex = data.get("bloom_filter")
+            if bloom_hex:
+                bf = SimpleBloomFilter.from_hex(bloom_hex)
+                if bf.check(capability):
+                    return data["ip"], data["port"]
         return None
 
     def _cleanup_stale_services(self):
@@ -80,6 +132,7 @@ class GossipDiscovery:
             service_name = message.get("service")
             port = message.get("port")
             ip = message.get("ip", addr[0])  # Trust payload IP, or fallback to packet source
+            bloom_filter = message.get("bloom_filter")
 
             if service_name and port:
                 # Update our registry
@@ -87,7 +140,8 @@ class GossipDiscovery:
                     "ip": ip,
                     "port": port,
                     "last_seen": time.time(),
-                    "local": False
+                    "local": False,
+                    "bloom_filter": bloom_filter
                 }
 
     async def _broadcast_loop(self):
@@ -109,6 +163,8 @@ class GossipDiscovery:
                             "ip": self.local_ip,
                             "port": data["port"]
                         }
+                        if data.get("bloom_filter"):
+                            msg["bloom_filter"] = data["bloom_filter"]
                         payload = json.dumps(msg).encode('utf-8')
                         try:
                             self.transport.sendto(payload, (broadcast_ip, self.port))
