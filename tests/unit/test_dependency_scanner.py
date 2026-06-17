@@ -54,14 +54,16 @@ class TestDependencyScanner(unittest.TestCase):
         mock_scanner_instance = MockScanner.return_value
         mock_scanner_instance.scan_package.return_value = "⚠️ UNSAFE: Found 1 vulnerabilities..."
 
-        import os
-        os.environ['COMMAND_RUNNER_MODE'] = 'local'
-        import os
-        os.environ['COMMAND_RUNNER_MODE'] = 'local'
         runner = CodeRunnerTool()
-        runner.executor.scanner = mock_scanner_instance
+        runner.history = MagicMock()
+        runner.history.get_cached_result.return_value = None
+        
+        if hasattr(runner, "executor"):
+            runner.executor.scanner = mock_scanner_instance
+        if hasattr(runner, "fast_executor"):
+            runner.fast_executor.scanner = mock_scanner_instance
 
-        result = runner.executor.execute("print('hello')", libraries=["vulnerable-lib"])
+        result = runner.run_code_in_sandbox("print('hello')", libraries=["vulnerable-lib"])
 
         # Debugging output if assertion fails
         if "Operation blocked by security policy" not in result:
@@ -70,7 +72,7 @@ class TestDependencyScanner(unittest.TestCase):
         self.assertIn("Operation blocked by security policy", result)
         self.assertIn("vulnerable-lib", result)
         # Ensure scan was called
-        MockScanner.assert_called()
+        mock_scanner_instance.scan_package.assert_called_once_with("vulnerable-lib", None)
 
     @patch('pipecatapp.tools.code_runner_tool.DependencyScannerTool')
     @patch('pipecatapp.tools.code_runner_tool.SandboxSession')
@@ -90,16 +92,18 @@ class TestDependencyScanner(unittest.TestCase):
         mock_session = MockSandbox.return_value.__enter__.return_value
         mock_session.run.return_value = mock_result
 
-        import os
-        os.environ['COMMAND_RUNNER_MODE'] = 'local'
-        import os
-        os.environ['COMMAND_RUNNER_MODE'] = 'local'
         runner = CodeRunnerTool()
-        runner.executor.scanner = mock_scanner_instance
+        runner.history = MagicMock()
+        runner.history.get_cached_result.return_value = None
+        
+        if hasattr(runner, "executor"):
+            runner.executor.scanner = mock_scanner_instance
+        if hasattr(runner, "fast_executor"):
+            runner.fast_executor.scanner = mock_scanner_instance
         result = runner.run_code_in_sandbox("print('hello')", libraries=["safe-lib"])
 
         self.assertEqual(result, "Success")
-        MockScanner.assert_called()
+        mock_scanner_instance.scan_package.assert_called_once_with("safe-lib", None)
 
 if __name__ == '__main__':
     unittest.main()

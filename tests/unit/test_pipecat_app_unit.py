@@ -2,17 +2,11 @@ import pytest
 import os
 import sys
 import httpx
-from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, AsyncMock, patch
 import asyncio
 
 # Add the parent directory of 'testing' to the Python path
-
-
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
-
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files')))
 
 # Mock problematic modules before importing app
 sys.modules["pyaudio"] = MagicMock()
@@ -56,6 +50,7 @@ sys.modules["pipecat.services.openai.llm"] = mock_pipecat.services.openai.llm
 # Now we can import from the files in ansible/roles/pipecatapp/files
 from pipecatapp.app import TwinService
 from pipecatapp.web_server import app
+from fastapi.testclient import TestClient
 
 # Since we mocked pipecat, TranscriptionFrame is now a Mock class
 # But we might need a consistent class for testing if isinstance is used
@@ -64,7 +59,8 @@ from pipecatapp.web_server import app
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    client_instance = TestClient(app)
+    return client_instance
 
 # Basic testing of the web server endpoints
 def test_read_main(client):
@@ -72,9 +68,9 @@ def test_read_main(client):
     assert response.status_code == 200
     assert "Mission Control" in response.text
 
-def test_health_check(client, mocker):
+def test_health_check(client):
     # Mock the twin_service_instance to simulate a healthy state
-    mock_twin_service = mocker.Mock()
+    mock_twin_service = MagicMock()
     mock_twin_service.router_llm = True
     client.app.state.twin_service_instance = mock_twin_service
     client.app.state.is_ready = True
@@ -84,19 +80,19 @@ def test_health_check(client, mocker):
     assert response.json() == {"status": "ok"}
 
 @pytest.mark.asyncio
-async def test_workflow_runner_loads_definition(mocker):
+async def test_workflow_runner_loads_definition():
     """Tests that the WorkflowRunner can successfully load and parse the default workflow."""
     # We need to mock the nodes and other dependencies to isolate the runner
-    mocker.patch('workflow.runner.registry.get_node_class', return_value=MagicMock())
+    patch('workflow.runner.registry.get_node_class', return_value=MagicMock())
 
     # The path is relative to the `app.py` file's location
     workflow_path = os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'workflows', 'default_agent_loop.yaml')
 
     # Mock yaml loading to avoid relying on actual file contents which may change or be mocked out globally
-    mocker.patch('yaml.safe_load', return_value={"id": "test_workflow", "nodes": []})
+    patch('yaml.safe_load', return_value={"id": "test_workflow", "nodes": []})
 
     # This will raise an error if the file is not found or is invalid YAML
-    from pipecatapp.workflow.runner import WorkflowRunner
+    from workflow.runner import WorkflowRunner
     runner = WorkflowRunner(workflow_path)
 
     assert runner is not None
@@ -105,16 +101,16 @@ async def test_workflow_runner_loads_definition(mocker):
     assert isinstance(runner.workflow_definition["nodes"], list)
 
 @pytest.mark.asyncio
-async def test_health_check_is_healthy(mocker):
+async def test_health_check_is_healthy():
     """Tests that the /health endpoint returns a 200 OK status."""
-    mock_response = mocker.Mock()
+    mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"status": "ok"}
 
     async def get_mock_response(*args, **kwargs):
         return mock_response
 
-    mocker.patch("httpx.AsyncClient.get", new=get_mock_response)
+    patch("httpx.AsyncClient.get", new=get_mock_response).start()
 
     host = os.environ.get("PIPECAT_HOST", "127.0.0.1")
     base_url = f"http://{host}:8000"
@@ -124,16 +120,16 @@ async def test_health_check_is_healthy(mocker):
         assert response.json() == {"status": "ok"}
 
 @pytest.mark.asyncio
-async def test_main_page_loads(mocker):
+async def test_main_page_loads():
     """Tests that the main page ('/') loads correctly."""
-    mock_response = mocker.Mock()
+    mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.text = "Mission Control"
 
     async def get_mock_response(*args, **kwargs):
         return mock_response
 
-    mocker.patch("httpx.AsyncClient.get", new=get_mock_response)
+    patch("httpx.AsyncClient.get", new=get_mock_response).start()
 
     host = os.environ.get("PIPECAT_HOST", "127.0.0.1")
     base_url = f"http://{host}:8000"
@@ -143,7 +139,7 @@ async def test_main_page_loads(mocker):
         assert "Mission Control" in response.text
 
 @pytest.mark.asyncio
-async def test_loop_detection_mechanism(mocker):
+async def test_loop_detection_mechanism():
     """
     Tests that the TwinService.process_frame method correctly detects repetitive tool calls
     and injects a system alert.

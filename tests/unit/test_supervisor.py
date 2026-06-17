@@ -1,14 +1,21 @@
 import unittest
 from unittest.mock import patch, mock_open, ANY
 import os
-
 import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts')))
 from scripts import supervisor
-
 import json
 import subprocess
+
+
+class StringEndsWith:
+    def __init__(self, suffix):
+        self.suffix = suffix
+        
+    def __eq__(self, other):
+        return isinstance(other, str) and other.endswith(self.suffix)
+    
+    def __repr__(self):
+        return f"<StringEndsWith '{self.suffix}'>"
 
 class TestSupervisor(unittest.TestCase):
 
@@ -21,47 +28,45 @@ class TestSupervisor(unittest.TestCase):
         self.llm_patcher.stop()
 
 
-    @patch('subprocess.run')
+    @patch('scripts.supervisor.subprocess.run')
     def test_run_playbook_success(self, mock_run):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="Playbook success", stderr="")
         self.assertTrue(supervisor.run_playbook("test.yaml"))
         mock_run.assert_called_with(["ansible-playbook", ANY], capture_output=True, text=True)
 
-    @patch('subprocess.run')
+    @patch('scripts.supervisor.subprocess.run')
     def test_run_playbook_failure(self, mock_run):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=1, stdout="Playbook failure", stderr="Error")
         self.assertFalse(supervisor.run_playbook("test.yaml"))
 
-    @patch('subprocess.run')
+    @patch('scripts.supervisor.subprocess.run')
     def test_run_playbook_with_extra_vars(self, mock_run):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="Playbook success", stderr="")
         extra_vars = {"key": "value"}
         self.assertTrue(supervisor.run_playbook("test.yaml", extra_vars=extra_vars))
         mock_run.assert_called_with(["ansible-playbook", ANY, "-e", json.dumps(extra_vars)], capture_output=True, text=True)
 
-    @patch('subprocess.run')
+    @patch('scripts.supervisor.subprocess.run')
     def test_run_script_success(self, mock_run):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="Script success", stderr="")
-        from scripts import supervisor
         self.assertEqual(supervisor.run_script("test.py"), "Script success")
         mock_run.assert_called_with(["python", ANY], capture_output=True, text=True)
 
-    @patch('subprocess.run')
+    @patch('scripts.supervisor.subprocess.run')
     def test_run_script_failure(self, mock_run):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="Error")
         self.assertIsNone(supervisor.run_script("test.py"))
         mock_run.assert_called_with(["python", ANY], capture_output=True, text=True)
 
-    @patch('subprocess.run')
+    @patch('scripts.supervisor.subprocess.run')
     def test_run_script_with_args(self, mock_run):
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="Script success", stderr="")
-        from scripts import supervisor
         args = ["arg1", "arg2"]
         self.assertEqual(supervisor.run_script("test.py", args=args), "Script success")
         mock_run.assert_called_with(["python", ANY, "arg1", "arg2"], capture_output=True, text=True)
 
-    @patch('os.path.exists')
-    @patch('os.remove')
+    @patch('scripts.supervisor.os.path.exists')
+    @patch('scripts.supervisor.os.remove')
     def test_cleanup_files(self, mock_remove, mock_exists):
         files_to_clean = ["file1.txt", "file2.txt"]
         mock_exists.side_effect = [True, False]
@@ -71,8 +76,8 @@ class TestSupervisor(unittest.TestCase):
         mock_remove.assert_called_once_with("file1.txt")
 
     @patch('scripts.supervisor.run_playbook')
-    @patch('os.path.exists')
-    @patch('time.sleep')
+    @patch('scripts.supervisor.os.path.exists')
+    @patch('scripts.supervisor.time.sleep')
     def test_main_no_failed_jobs(self, mock_sleep, mock_exists, mock_run_playbook):
         mock_sleep.side_effect = StopIteration
         mock_run_playbook.return_value = True
@@ -83,7 +88,7 @@ class TestSupervisor(unittest.TestCase):
         mock_exists.assert_called_once_with("failed_jobs.json")
 
     @patch('scripts.supervisor.run_playbook')
-    @patch('time.sleep')
+    @patch('scripts.supervisor.time.sleep')
     def test_main_health_check_fails(self, mock_sleep, mock_run_playbook):
         mock_sleep.side_effect = StopIteration
         mock_run_playbook.return_value = False
@@ -92,10 +97,10 @@ class TestSupervisor(unittest.TestCase):
         mock_run_playbook.assert_called_once_with("health_check.yaml")
 
     @patch('scripts.supervisor.run_playbook')
-    @patch('os.path.exists')
+    @patch('scripts.supervisor.os.path.exists')
     @patch('builtins.open', new_callable=mock_open)
     @patch('scripts.supervisor.cleanup_files')
-    @patch('time.sleep')
+    @patch('scripts.supervisor.time.sleep')
     def test_main_failed_jobs_file_unreadable(self, mock_sleep, mock_cleanup, mock_open_file, mock_exists, mock_run_playbook):
         mock_sleep.side_effect = StopIteration
         mock_run_playbook.return_value = True
@@ -108,8 +113,8 @@ class TestSupervisor(unittest.TestCase):
     @patch('scripts.supervisor.run_playbook')
     @patch('scripts.supervisor.run_script')
     @patch('scripts.supervisor.cleanup_files')
-    @patch('os.path.exists')
-    @patch('time.sleep')
+    @patch('scripts.supervisor.os.path.exists')
+    @patch('scripts.supervisor.time.sleep')
     @patch('builtins.open')
     def test_main_full_successful_cycle(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_script, mock_run_playbook):
         mock_sleep.side_effect = StopIteration
@@ -134,8 +139,8 @@ class TestSupervisor(unittest.TestCase):
 
     @patch('scripts.supervisor.run_playbook')
     @patch('scripts.supervisor.cleanup_files')
-    @patch('os.path.exists')
-    @patch('time.sleep')
+    @patch('scripts.supervisor.os.path.exists')
+    @patch('scripts.supervisor.time.sleep')
     @patch('builtins.open')
     def test_main_empty_unhealthy_jobs_list(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_playbook):
         mock_sleep.side_effect = StopIteration
@@ -153,8 +158,8 @@ class TestSupervisor(unittest.TestCase):
     @patch('scripts.supervisor.run_playbook')
     @patch('scripts.supervisor.run_script')
     @patch('scripts.supervisor.cleanup_files')
-    @patch('os.path.exists')
-    @patch('time.sleep')
+    @patch('scripts.supervisor.os.path.exists')
+    @patch('scripts.supervisor.time.sleep')
     @patch('builtins.open')
     def test_main_job_missing_id(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_script, mock_run_playbook):
         mock_sleep.side_effect = StopIteration
@@ -180,8 +185,8 @@ class TestSupervisor(unittest.TestCase):
     @patch('scripts.supervisor.run_playbook')
     @patch('scripts.supervisor.run_script')
     @patch('scripts.supervisor.cleanup_files')
-    @patch('os.path.exists')
-    @patch('time.sleep')
+    @patch('scripts.supervisor.os.path.exists')
+    @patch('scripts.supervisor.time.sleep')
     @patch('builtins.open')
     def test_main_diagnose_failure_playbook_fails(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_script, mock_run_playbook):
         mock_sleep.side_effect = StopIteration
@@ -202,8 +207,8 @@ class TestSupervisor(unittest.TestCase):
     @patch('scripts.supervisor.run_playbook')
     @patch('scripts.supervisor.run_script')
     @patch('scripts.supervisor.cleanup_files')
-    @patch('os.path.exists')
-    @patch('time.sleep')
+    @patch('scripts.supervisor.os.path.exists')
+    @patch('scripts.supervisor.time.sleep')
     @patch('builtins.open')
     def test_main_reflection_script_fails(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_script, mock_run_playbook):
         mock_sleep.side_effect = StopIteration
@@ -227,8 +232,8 @@ class TestSupervisor(unittest.TestCase):
     @patch('scripts.supervisor.run_playbook')
     @patch('scripts.supervisor.run_script')
     @patch('scripts.supervisor.cleanup_files')
-    @patch('os.path.exists')
-    @patch('time.sleep')
+    @patch('scripts.supervisor.os.path.exists')
+    @patch('scripts.supervisor.time.sleep')
     @patch('builtins.open')
     def test_main_heal_job_playbook_fails(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_script, mock_run_playbook):
         mock_sleep.side_effect = StopIteration
@@ -254,8 +259,8 @@ class TestSupervisor(unittest.TestCase):
     @patch('scripts.supervisor.run_playbook')
     @patch('scripts.supervisor.run_script')
     @patch('scripts.supervisor.cleanup_files')
-    @patch('os.path.exists')
-    @patch('time.sleep')
+    @patch('scripts.supervisor.os.path.exists')
+    @patch('scripts.supervisor.time.sleep')
     @patch('builtins.open')
     def test_main_multiple_failed_jobs(self, mock_open, mock_sleep, mock_exists, mock_cleanup, mock_run_script, mock_run_playbook):
         mock_sleep.side_effect = StopIteration

@@ -28,8 +28,8 @@ def mock_faiss_index():
     mock.ntotal = 0
     return mock
 
-@patch('pipecatapp.memory.SentenceTransformer')
-@patch('pipecatapp.memory.faiss')
+@patch('pipecatapp.memory_legacy.SentenceTransformer')
+@patch('pipecatapp.memory_legacy.faiss')
 def test_unencrypted_memory_store(mock_faiss, mock_st, mock_embedding_model, mock_faiss_index, temp_index_file, temp_store_file, monkeypatch):
     """Test MemoryStore with no encryption key set."""
     monkeypatch.delenv("MEMORY_ENCRYPTION_KEY", raising=False)
@@ -40,21 +40,21 @@ def test_unencrypted_memory_store(mock_faiss, mock_st, mock_embedding_model, moc
 
     store = MemoryStore(index_file=temp_index_file, store_file=temp_store_file)
 
-    assert store.fernet is None
+    assert store.backend.fernet is None
 
     # Add a memory
     store.add("This is a test memory.")
     store.force_save()
 
-    assert store.store["0"] == "This is a test memory."
+    assert store.backend.store["0"] == "This is a test memory."
 
     # Check the actual file contents to ensure it is unencrypted
     with open(temp_store_file, 'r') as f:
         data = json.load(f)
     assert data["0"] == "This is a test memory."
 
-@patch('pipecatapp.memory.SentenceTransformer')
-@patch('pipecatapp.memory.faiss')
+@patch('pipecatapp.memory_legacy.SentenceTransformer')
+@patch('pipecatapp.memory_legacy.faiss')
 def test_encrypted_memory_store(mock_faiss, mock_st, mock_embedding_model, mock_faiss_index, temp_index_file, temp_store_file, monkeypatch):
     """Test MemoryStore with encryption key set."""
     key = Fernet.generate_key()
@@ -66,13 +66,13 @@ def test_encrypted_memory_store(mock_faiss, mock_st, mock_embedding_model, mock_
 
     store = MemoryStore(index_file=temp_index_file, store_file=temp_store_file)
 
-    assert store.fernet is not None
+    assert store.backend.fernet is not None
 
     # Add a memory
     store.add("This is a secret test memory.")
     store.force_save()
 
-    assert store.store["0"] == "This is a secret test memory."
+    assert store.backend.store["0"] == "This is a secret test memory."
 
     # Check the actual file contents to ensure it is encrypted
     with open(temp_store_file, 'r') as f:
@@ -86,8 +86,8 @@ def test_encrypted_memory_store(mock_faiss, mock_st, mock_embedding_model, mock_
     decrypted_value = fernet.decrypt(encrypted_value.encode()).decode()
     assert decrypted_value == "This is a secret test memory."
 
-@patch('pipecatapp.memory.SentenceTransformer')
-@patch('pipecatapp.memory.faiss')
+@patch('pipecatapp.memory_legacy.SentenceTransformer')
+@patch('pipecatapp.memory_legacy.faiss')
 def test_encrypted_store_loads_legacy_unencrypted_data(mock_faiss, mock_st, mock_embedding_model, mock_faiss_index, temp_index_file, temp_store_file, monkeypatch):
     """Test MemoryStore gracefully handles plain text data when encryption is enabled."""
     key = Fernet.generate_key()
@@ -105,8 +105,8 @@ def test_encrypted_store_loads_legacy_unencrypted_data(mock_faiss, mock_st, mock
     store = MemoryStore(index_file=temp_index_file, store_file=temp_store_file)
 
     # Verify legacy data loaded successfully
-    assert "0" in store.store
-    assert store.store["0"] == "Legacy plaintext memory."
+    assert "0" in store.backend.store
+    assert store.backend.store["0"] == "Legacy plaintext memory."
 
     # Mock index so the next ID is 1 to preserve legacy data at '0'
     mock_faiss_index.ntotal = 1
@@ -122,8 +122,8 @@ def test_encrypted_store_loads_legacy_unencrypted_data(mock_faiss, mock_st, mock
     assert fernet.decrypt(saved_data["0"].encode()).decode() == "Legacy plaintext memory."
     assert fernet.decrypt(saved_data["1"].encode()).decode() == "New memory."
 
-@patch('pipecatapp.memory.SentenceTransformer')
-@patch('pipecatapp.memory.faiss')
+@patch('pipecatapp.memory_legacy.SentenceTransformer')
+@patch('pipecatapp.memory_legacy.faiss')
 def test_unencrypted_store_loads_encrypted_data_as_is(mock_faiss, mock_st, mock_embedding_model, mock_faiss_index, temp_index_file, temp_store_file, monkeypatch):
     """Test MemoryStore handles encrypted data as string if encryption key is removed."""
     monkeypatch.delenv("MEMORY_ENCRYPTION_KEY", raising=False)
@@ -144,11 +144,11 @@ def test_unencrypted_store_loads_encrypted_data_as_is(mock_faiss, mock_st, mock_
     store = MemoryStore(index_file=temp_index_file, store_file=temp_store_file)
 
     # Verify it loaded the raw encrypted string since it doesn't have the key to decrypt
-    assert "0" in store.store
-    assert store.store["0"] == encrypted_memory
+    assert "0" in store.backend.store
+    assert store.backend.store["0"] == encrypted_memory
 
-@patch('pipecatapp.memory.SentenceTransformer')
-@patch('pipecatapp.memory.faiss')
+@patch('pipecatapp.memory_legacy.SentenceTransformer')
+@patch('pipecatapp.memory_legacy.faiss')
 def test_activity_timeline(mock_faiss, mock_st, mock_embedding_model, mock_faiss_index, temp_index_file, temp_store_file, monkeypatch):
     """Test MemoryStore activity timeline methods."""
     monkeypatch.delenv("MEMORY_ENCRYPTION_KEY", raising=False)

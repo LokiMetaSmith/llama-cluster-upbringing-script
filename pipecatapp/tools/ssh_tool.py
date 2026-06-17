@@ -1,4 +1,6 @@
 import paramiko
+
+import socket
 import os
 import logging
 from pipecatapp.utils.ssh_utils import ensure_ssh_keys_initialized
@@ -66,7 +68,7 @@ class SSH_Tool:
                 return f"Error executing command: {error}"
             return output
 
-        except paramiko.SSHException as e:
+        except (paramiko.SSHException, socket.error) as e:
             return f"SSH Error: {e}. If 'Server not found in known_hosts', please add the server's public key to your local known_hosts file."
         except Exception as e:
             return f"An error occurred: {e}"
