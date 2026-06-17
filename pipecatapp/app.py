@@ -22,6 +22,7 @@ from contextlib import asynccontextmanager
 from collections import defaultdict
 from pipecatapp.network_scanner import scan_network_for_llms
 
+from pipecatapp.gossip_discovery import gossip_registry
 from pipecatapp.services.obsidian_gardener import ObsidianGardener
 from pipecatapp.workflow.runner import WorkflowRunner
 
@@ -1775,6 +1776,9 @@ async def lifespan(app: FastAPI):
     """Manages the lifecycle of the agent background task."""
     global agent_task
 
+    # Start gossip registry
+    await gossip_registry.start()
+
     # Initialize Obsidian Gardener if Vault path is provided
     vault_path = os.getenv("OBSIDIAN_VAULT_PATH")
     gardener = None
@@ -1787,6 +1791,8 @@ async def lifespan(app: FastAPI):
     agent_task = asyncio.create_task(run_agent(), name="pipecat_agent_loop")
     yield
     # Cleanup on shutdown
+    await gossip_registry.stop()
+
     if gardener:
         gardener.stop()
 
@@ -1808,6 +1814,8 @@ if __name__ == "__main__":
         web_port = 8000
     else:
         web_port = int(web_port_str)
+
+    gossip_registry.register_service("pipecatapp", web_port)
 
     # Attach the lifespan context manager to the FastAPI app defined in web_server.py
     # This allows us to start the background tasks when Uvicorn starts the app
