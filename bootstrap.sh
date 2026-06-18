@@ -43,6 +43,7 @@ show_help() {
     echo "  --benchmark                  Run benchmark tests."
     echo "  --deploy-docker              Deploy the pipecat application using Docker (Default)."
     echo "  --dry-run                    Perform a dry run to validate playbooks without applying changes."
+    echo "  --skip-setup                 Skip running the initial machine setup script (initial-setup/setup.sh)."
     echo "  --run-local                  Deploy the pipecat application using local raw_exec (for debugging)."
     echo "  --home-assistant-debug       Enable debug mode for Home Assistant."
     echo "  --container                  Run the entire infrastructure inside a single large container."
@@ -75,6 +76,7 @@ AUTO_YES=false
 DO_PURGE_JOBS=false
 DO_STATUS=false
 DO_DRY_RUN=false
+DO_SKIP_SETUP=false
 DO_HEAL_CLUSTER=false
 DO_RECOVER_NODE=false
 VERBOSE_LEVEL=0
@@ -302,6 +304,19 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
         --dry-run)
             DO_DRY_RUN=true
             PROCESSED_ARGS+=("--dry-run")
+            ;;
+        --skip-setup)
+            DO_SKIP_SETUP=true
+            ;;
+        --tags)
+            NEXT_ARG="${ARGS[$((i+1))]}"
+            if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
+                PROCESSED_ARGS+=("--tags" "$NEXT_ARG")
+                ((i++))
+            else
+                echo -e "${RED}❌ Error: --tags requires an argument.${NC}"
+                exit 1
+            fi
             ;;
         --clean-git|--clean) # Support legacy --clean just in case, but map to clean-git
             DO_CLEAN_GIT=true
@@ -877,7 +892,9 @@ fi
 
 # --- Run Initial Machine Setup ---
 echo -e "${BOLD}=== System Bootstrap ===${NC}"
-if [ -f "initial-setup/setup.sh" ]; then
+if [ "$DO_SKIP_SETUP" = true ]; then
+    echo -e "⏭️  Skipping initial machine setup script due to --skip-setup flag."
+elif [ -f "initial-setup/setup.sh" ]; then
     if [ "$DO_DRY_RUN" = true ]; then
         echo -e "⏭️  Skipping initial machine setup script due to --dry-run."
     elif [ -f "/.dockerenv" ] && [ "$(hostname)" = "pipecat-dev-runner" ]; then
