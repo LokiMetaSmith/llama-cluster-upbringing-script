@@ -59,8 +59,8 @@ show_help() {
     echo "  --force-pxe                  Force the node to boot into PXE on reset during recovery."
     echo "  --pxe-server-ip <ip>         IP address of the PXE server to check before forcing PXE."
     echo ""
-    echo "OpenCode Autonomous Recovery Options:"
-    echo "  If the script crashes, it will attempt to use an OpenCode AI agent to diagnose and fix the error."
+    echo "SmolAgent Autonomous Recovery Options:"
+    echo "  If the script crashes, it will attempt to use the SmolAgent to diagnose and fix the error."
     echo "  These can also be set via environment variables (AGENT_API_BASE, AGENT_MODEL, AGENT_API_KEY)."
     echo "  --agent-api-base <url>       URL for a custom LLM provider, like a local Ollama instance (e.g. http://192.168.1.100:11434/v1)."
     echo "  --agent-model <model>        The LLM model to use for debugging (e.g. qwen3:14b, llama3.2:3b, mistral, qwen2.5:1.5b)."
@@ -483,16 +483,7 @@ handle_error() {
     local IN_ERROR_HANDLER=1
 
     echo -e "\n${BOLD}${RED}⚠️  Bootstrap failed at line ${error_line}!${NC}"
-    echo -e "${YELLOW}Initiating autonomous recovery via OpenCode...${NC}"
-
-    # Determine OpenCode command path
-    local opencode_bin="opencode"
-    if [ -x "$SCRIPT_DIR/node_modules/.bin/opencode" ]; then
-        opencode_bin="$SCRIPT_DIR/node_modules/.bin/opencode"
-    elif ! command -v opencode >/dev/null 2>&1; then
-        echo -e "${RED}❌ OpenCode not found in environment. Cannot attempt recovery.${NC}"
-        exit 1
-    fi
+    echo -e "${YELLOW}Initiating autonomous recovery via smol_agent...${NC}"
 
     # Extract log context
     local log_snippet
