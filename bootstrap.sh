@@ -59,8 +59,8 @@ show_help() {
     echo "  --force-pxe                  Force the node to boot into PXE on reset during recovery."
     echo "  --pxe-server-ip <ip>         IP address of the PXE server to check before forcing PXE."
     echo ""
-    echo "OpenCode Autonomous Recovery Options:"
-    echo "  If the script crashes, it will attempt to use an OpenCode AI agent to diagnose and fix the error."
+    echo "SmolAgent Autonomous Recovery Options:"
+    echo "  If the script crashes, it will attempt to use the SmolAgent to diagnose and fix the error."
     echo "  These can also be set via environment variables (AGENT_API_BASE, AGENT_MODEL, AGENT_API_KEY)."
     echo "  --agent-api-base <url>       URL for a custom LLM provider, like a local Ollama instance (e.g. http://192.168.1.100:11434/v1)."
     echo "  --agent-model <model>        The LLM model to use for debugging (e.g. qwen3:14b, llama3.2:3b, mistral, qwen2.5:1.5b)."
@@ -484,16 +484,7 @@ handle_error() {
     local IN_ERROR_HANDLER=1
 
     echo -e "\n${BOLD}${RED}⚠️  Bootstrap failed at line ${error_line}!${NC}"
-    echo -e "${YELLOW}Initiating autonomous recovery via OpenCode...${NC}"
-
-    # Determine OpenCode command path
-    local opencode_bin="opencode"
-    if [ -x "$SCRIPT_DIR/node_modules/.bin/opencode" ]; then
-        opencode_bin="$SCRIPT_DIR/node_modules/.bin/opencode"
-    elif ! command -v opencode >/dev/null 2>&1; then
-        echo -e "${RED}❌ OpenCode not found in environment. Cannot attempt recovery.${NC}"
-        exit 1
-    fi
+    echo -e "${YELLOW}Initiating autonomous recovery via smol_agent...${NC}"
 
     # Extract log context
     local log_snippet
@@ -516,51 +507,9 @@ Your task is to:
     echo -e "Agent thought process and actions will be logged to: ${CYAN}${AGENT_LOG}${NC}"
     echo -e "⏳ Please wait while the agent attempts to fix the issue..."
 
-    # Configure API endpoint for Local/Network LLMs
-    local opencode_cmd=("$opencode_bin" run)
-
-    # Determine the model and provider settings with a local-first priority
-    if [ -n "${AGENT_API_BASE:-}" ]; then
-        # 1. User explicitly provided an API base via CLI or ENV
-        export OPENCODE_API_BASE="$AGENT_API_BASE"
-        export OPENCODE_API_KEY="${AGENT_API_KEY:-sk-dummy}"
-        opencode_cmd+=(--model "${AGENT_MODEL:-openai/qwen2.5-coder}")
-    elif [ -f ~/.config/opencode/opencode.json ] && grep -q '"provider"' ~/.config/opencode/opencode.json; then
-        # 2. Check for an existing, working local OpenCode configuration (e.g. Ollama)
-        local configured_provider
-        local configured_model
-        # Use python to safely parse the JSON if possible, otherwise rely on fallback
-        configured_provider=$(python3 -c "import json, sys; config=json.load(sys.stdin); provider_keys=list(config.get('provider', {}).keys()); print(provider_keys[0] if provider_keys else '')" < ~/.config/opencode/opencode.json 2>/dev/null)
-        if [ -n "$configured_provider" ]; then
-            configured_model=$(python3 -c "import json, sys; provider='$configured_provider'; config=json.load(sys.stdin); model_keys=list(config.get('provider', {}).get(provider, {}).get('models', {}).keys()); print(model_keys[0] if model_keys else '')" < ~/.config/opencode/opencode.json 2>/dev/null)
-            if [ -n "$configured_model" ]; then
-                opencode_cmd+=(--model "${AGENT_MODEL:-${configured_provider}/${configured_model}}")
-            else
-                # Fallback if parsing failed
-                opencode_cmd+=(--model "${AGENT_MODEL:-openai/gpt-4o-mini}")
-                export OPENAI_API_KEY="${AGENT_API_KEY:-${OPENAI_API_KEY:-sk-dummy}}"
-            fi
-        else
-            opencode_cmd+=(--model "${AGENT_MODEL:-openai/gpt-4o-mini}")
-            export OPENAI_API_KEY="${AGENT_API_KEY:-${OPENAI_API_KEY:-sk-dummy}}"
-        fi
-    elif curl -s http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-api?passing | grep -qi '"Status":\s*"passing"' 2>/dev/null; then
-        # 3. Check for a local llamacpp-rpc cluster instance via Consul
-        # Currently, if this matches, OpenCode still needs a compatible openai wrapper.
-        # We assume the default wrapper is accessible locally.
-        export OPENCODE_API_BASE="http://127.0.0.1:8000/v1" # Adjust if your local cluster exposes OpenAI compat on a different port
-        export OPENCODE_API_KEY="${AGENT_API_KEY:-sk-dummy}"
-        opencode_cmd+=(--model "${AGENT_MODEL:-openai/local-model}")
-    else
-        # 4. Fallback to remote provider
-        opencode_cmd+=(--model "${AGENT_MODEL:-openai/gpt-4o-mini}")
-        # Explicitly export OPENAI_API_KEY so the OpenAI provider doesn't fail
-        export OPENAI_API_KEY="${AGENT_API_KEY:-${OPENAI_API_KEY:-sk-dummy}}"
-    fi
-
-    # Run OpenCode headlessly. Catch error explicitly in case set -e is active elsewhere
     local agent_status=0
-    "${opencode_cmd[@]}" "$prompt" > "$AGENT_LOG" 2>&1 || agent_status=$?
+    # Run SmolAgentTool headlessly via the wrapper script.
+    python3 "$SCRIPT_DIR/scripts/run_smol_recovery.py" "$prompt" > "$AGENT_LOG" 2>&1 || agent_status=$?
 
     if [ "$agent_status" -eq 0 ]; then
         echo -e "${GREEN}✅ Autonomous recovery successful!${NC}"
