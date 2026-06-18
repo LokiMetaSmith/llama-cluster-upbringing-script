@@ -307,6 +307,7 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             ;;
         --skip-setup)
             DO_SKIP_SETUP=true
+            PROCESSED_ARGS+=("--skip-setup")
             ;;
         --tags)
             NEXT_ARG="${ARGS[$((i+1))]}"
