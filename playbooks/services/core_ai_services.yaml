@@ -19,6 +19,10 @@
       when: node_tier in ['mid', 'core', 'high']
       tags:
         - term_everything
+    - role: smol_agent_server
+      when: node_tier in ['mid', 'core', 'high']
+      tags:
+        - smol_agent_server
     - role: opencode
       when: node_tier in ['mid', 'core', 'high']
       tags:

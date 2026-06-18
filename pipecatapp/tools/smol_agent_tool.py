@@ -50,8 +50,12 @@ class SmolAgentTool:
             if not shutil.which("deno"):
                 raise FileNotFoundError("The 'deno' runtime is not installed or not in the system's PATH.")
 
-            # This model will use the environment's LLM provider configuration (e.g., OPENAI_API_KEY).
-            model = LiteLLMModel(model_id="gpt-4o")
+            # Configure LiteLLMModel to use our local llama.cpp endpoint hosting LFM2.5-1.2B
+            model = LiteLLMModel(
+                model_id="openai/LFM2.5-1.2B",
+                api_base="http://127.0.0.1:8089/v1",
+                api_key="sk-no-key-required"
+            )
             self.agent = CodeAgent(model=model, stream_outputs=False)
             self._initialized = True
 

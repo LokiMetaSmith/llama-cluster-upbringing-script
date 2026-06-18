@@ -1,0 +1,47 @@
+job "smol-agent-server" {
+  datacenters = ["dc1"]
+  type = "service"
+
+  group "server" {
+    count = 1
+
+    network {
+      port "http" {
+        static = 8089
+      }
+    }
+
+    service {
+      name = "smol-agent-server"
+      port = "http"
+      tags = ["llm", "smolagents", "llama-cpp"]
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "llama-server" {
+      driver = "raw_exec"
+
+      config {
+        command = "/usr/local/bin/llama-server"
+        args = [
+          "-m", "{{ nomad_models_dir }}/LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
+          "--host", "0.0.0.0",
+          "--port", "${NOMAD_PORT_http}",
+          "-c", "4096",
+          "--alias", "LFM2.5-1.2B"
+        ]
+      }
+
+      resources {
+        cpu    = 2000
+        memory = 4096
+      }
+    }
+  }
+}
