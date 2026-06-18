@@ -18,7 +18,7 @@
     cmd: cargo install --path llmfit-tui --root /usr/local
     chdir: /opt/llmfit/src
   environment:
-    PATH: "/usr/local/bin:/usr/bin:/bin:/root/.cargo/bin"
+    PATH: "/root/.cargo/bin:/usr/local/bin:/usr/bin:/bin"
   register: build_result
   changed_when: "'Compiling' in build_result.stderr or 'Installed' in build_result.stderr"
 
