@@ -13,6 +13,10 @@
     version: main
     update: yes
 
+- name: Update Rust via rustup to ensure compatibility with latest crates
+  ansible.builtin.shell: /root/.cargo/bin/rustup update || ~/.cargo/bin/rustup update || rustup update
+  become: yes
+
 - name: Install llmfit binary globally using Cargo
   ansible.builtin.command:
     cmd: cargo install --path llmfit-tui --root /usr/local
