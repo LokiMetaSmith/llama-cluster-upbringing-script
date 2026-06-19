@@ -13,6 +13,25 @@ try:
 except ImportError:
     from secret_manager import secret_manager
 
+def build_extensible_payload(base_payload: dict, context: WorkflowContext, node_config: dict = None) -> dict:
+    """
+    Extends a standard LLM RPC payload with a GGEP-inspired 'pipecat_extensions'
+    block. This ensures forward compatibility and allows passing rich routing,
+    tracing, or experimental metadata down to the expert nodes without breaking
+    standard OpenAI-compatible API schemas.
+    """
+    extensions = {
+        "flow_id": getattr(context, "flow_id", "unknown"),
+        "timestamp": context.global_inputs.get("timestamp", "unknown"),
+        "routing_tier": node_config.get("model_tier", "unknown") if node_config else "unknown",
+        "client_version": "pipecat-legacy-1.0"
+    }
+
+    # Only add to a copy to prevent mutating the original reference
+    payload = base_payload.copy()
+    payload["pipecat_extensions"] = extensions
+    return payload
+
 # This is a simplified version for now. We will need to make this more robust.
 async def discover_main_llm_service():
     # In a real scenario, this would involve Consul discovery.
@@ -163,6 +182,8 @@ class SimpleLLMNode(Node):
                         if reasoning_config:
                             payload["reasoning"] = reasoning_config
 
+                        payload = build_extensible_payload(payload, context, self.config)
+
                         if ensemble_size <= 1:
                             # Standard Single Execution
                             llm_res = await client.post(chat_url, json=payload, timeout=120)
@@ -209,6 +230,7 @@ class SimpleLLMNode(Node):
                                     "messages": [{"role": "user", "content": selection_prompt}],
                                     "temperature": 0.0
                                 }
+                                sel_payload = build_extensible_payload(sel_payload, context, self.config)
                                 sel_res = await client.post(chat_url, json=sel_payload, timeout=60)
                                 if sel_res.status_code == 200:
                                     sel_text = sel_res.json()["choices"][0]["message"]["content"]
@@ -276,6 +298,8 @@ class ExpertRouterNode(Node):
                     if reasoning_config:
                         payload["reasoning"] = reasoning_config
 
+                    payload = build_extensible_payload(payload, context, self.config)
+
                     chat_url = f"{base_url}/chat/completions"
 
                     expert_res = await client.post(chat_url, json=payload, timeout=120)
@@ -322,6 +346,8 @@ class ExpertRouterNode(Node):
                         reasoning_config = self.get_input(context, "reasoning") or self.config.get("reasoning")
                         if reasoning_config:
                             payload["reasoning"] = reasoning_config
+
+                        payload = build_extensible_payload(payload, context, self.config)
 
                         chat_url = f"{base_url}/chat/completions"
 
@@ -507,6 +533,8 @@ class DynamicRouterNode(Node):
                             "temperature": 0.0 # Deterministic routing
                         }
 
+                        payload = build_extensible_payload(payload, context, self.config)
+
                         res = await client.post(chat_url, json=payload, timeout=30)
                         res.raise_for_status()
                         decision = res.json()["choices"][0]["message"]["content"].strip().lower()
@@ -622,6 +650,8 @@ class LLMRouterNode(Node):
                         if caps.get("supports_reasoning_effort"):
                             payload["reasoning_effort"] = "medium"
 
+                        payload = build_extensible_payload(payload, context, self.config)
+
                         chat_url = f"{base_url}/chat/completions"
                         llm_res = await client.post(chat_url, json=payload, timeout=120)
                         llm_res.raise_for_status()
@@ -702,6 +732,8 @@ class LoopedReasoningNode(Node):
                         "temperature": 0.7
                     }
 
+                    payload = build_extensible_payload(payload, context, self.config)
+
                     logging.debug(f"LoopedReasoning - Initial Pass")
                     res = await client.post(chat_url, json=payload, timeout=120)
                     res.raise_for_status()
@@ -726,6 +758,8 @@ class LoopedReasoningNode(Node):
                         ]
 
                         payload["messages"] = messages
+
+                        payload = build_extensible_payload(payload, context, self.config)
 
                         res = await client.post(chat_url, json=payload, timeout=120)
                         res.raise_for_status()

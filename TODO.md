@@ -194,7 +194,7 @@ This section tracks actionable ideas derived from the `docs/analysis/GNUTELLA_AN
 - [x] **Option 1: Gossip-Based Service Fallback**
 - [x] **Option 3: Bloom Filter Capability Routing**
 - [ ] **Option 4: PUSH-style Reverse Proxies for NAT Traversal**
-- [ ] **Option 5: Extensible Job Payloads (Inspired by GGEP)**
+- [x] **Option 5: Extensible Job Payloads (Inspired by GGEP)**
 
 - [x] **Stateless Bootstrapping (GWebCache-style):** Implement a lightweight, stateless HTTP cache to serve active Nomad/Consul server IPs dynamically to new legacy nodes without relying on hardcoded variables in `inventory.yaml`. (Implemented in `cluster_cache/`)
 
