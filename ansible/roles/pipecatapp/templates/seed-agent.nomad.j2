@@ -51,10 +51,10 @@ job "seed-agent" {
       tags     = ["seed", "infrastructure-manager"]
     }
 
+
+    {% if pipecat_deployment_style == 'docker' %}
     {% set image_cid = pipecatapp_ipfs_cid %}
-
     {% set image_tar_name = 'pipecatapp' %}
-
     {% include 'load_image_task.nomad.j2' %}
 
     task "seed-agent-task" {
@@ -86,5 +86,28 @@ job "seed-agent" {
         memory = 1024 # 1 GB
       }
     }
+    {% else %}
+    task "seed-agent-task" {
+      driver = "raw_exec"
+      {{ env_vars }}
+
+      user = "root" # Needs root privileges for infrastructure management
+
+      constraint {
+        attribute = "${meta.node_type}"
+        value     = "controller"
+      }
+
+      config {
+        command = "/bin/bash"
+        args = ["-c", "cd /opt/pipecatapp && source venv/bin/activate && python3 worker_agent.py"]
+      }
+
+      resources {
+        cpu    = 1000 # 1 GHz
+        memory = 1024 # 1 GB
+      }
+    }
+    {% endif %}
   }
 }

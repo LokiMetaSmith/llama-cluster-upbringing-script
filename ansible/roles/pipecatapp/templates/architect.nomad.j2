@@ -60,10 +60,10 @@ job "architect" {
       tags     = ["architect", "ai-agent"]
     }
 
+
+    {% if pipecat_deployment_style == 'docker' %}
     {% set image_cid = pipecatapp_ipfs_cid %}
-
     {% set image_tar_name = 'pipecatapp' %}
-
     {% include 'load_image_task.nomad.j2' %}
 
     task "architect-task" {
@@ -92,5 +92,28 @@ job "architect" {
         memory = 2048 # 2 GB
       }
     }
+    {% else %}
+    task "architect-task" {
+      driver = "raw_exec"
+      {{ env_vars }}
+
+      user = "{{ target_user | default('pipecatapp') }}"
+
+      constraint {
+        attribute = "${meta.node_type}"
+        value     = "controller"
+      }
+
+      config {
+        command = "/bin/bash"
+        args = ["-c", "cd /opt/pipecatapp && source venv/bin/activate && python3 task_supervisor.py"]
+      }
+
+      resources {
+        cpu    = 2000 # 2 GHz
+        memory = 2048 # 2 GB
+      }
+    }
+    {% endif %}
   }
 }
