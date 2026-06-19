@@ -77,6 +77,6 @@ Based on the Gnutella lessons, here are actionable implementation options to exp
   - **Idea:** For nodes deployed at the "edge" (e.g., external residential networks), implement a "connect-back" PUSH model. If a controller cannot reach a worker via direct IP (due to NAT), the worker initiates the connection to a known jump-server to receive Nomad allocations.
   - **Justification:** Eliminates the need to configure VPNs or Tailscale on heavily constrained legacy nodes, mirroring Gnutella's firewall bypass.
 
-- [ ] **Option 5: Extensible Job Payloads (Inspired by GGEP)**
+- [x] **Option 5: Extensible Job Payloads (Inspired by GGEP)**
   - **Idea:** Utilize a flexible, extensible header format (like Gnutella's GGEP) within our internal RPC messaging between AI expert nodes, ensuring forward compatibility when introducing new routing parameters or AI features.
   - **Justification:** Prevents cluster partition issues when rolling out updates to a subset of legacy nodes.
