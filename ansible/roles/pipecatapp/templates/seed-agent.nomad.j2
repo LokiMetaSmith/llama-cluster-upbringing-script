@@ -51,11 +51,11 @@ job "seed-agent" {
       tags     = ["seed", "infrastructure-manager"]
     }
 
+    {% if pipecat_deployment_style | default('docker') == 'docker' %}
     {% set image_cid = pipecatapp_ipfs_cid %}
-
     {% set image_tar_name = 'pipecatapp' %}
-
     {% include 'load_image_task.nomad.j2' %}
+    {% endif %}
 
     task "seed-agent-task" {
       driver = "docker"
