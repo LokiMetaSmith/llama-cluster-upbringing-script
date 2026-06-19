@@ -32,7 +32,7 @@
 - name: Clone no-more-secrets repository
   ansible.builtin.git:
     repo: 'https://github.com/bartobri/no-more-secrets.git'
-    dest: "{{ nms_build_dir.path }}"
+    dest: "{{ nms_build_dir.get('path', '/tmp/nms-build-check') }}"
     version: master
     update: yes
   register: clone_nms
@@ -44,19 +44,19 @@
   ansible.builtin.command:
     cmd: make nms
   args:
-    chdir: "{{ nms_build_dir.path }}"
-    creates: "{{ nms_build_dir.path }}/nms"
+    chdir: "{{ nms_build_dir.get('path', '/tmp/nms-build-check') }}"
+    creates: "{{ nms_build_dir.get('path', '/tmp/nms-build-check') }}/nms"
 
 - name: Install no-more-secrets
   ansible.builtin.command:
     cmd: make install
   args:
-    chdir: "{{ nms_build_dir.path }}"
+    chdir: "{{ nms_build_dir.get('path', '/tmp/nms-build-check') }}"
     creates: /usr/local/bin/nms
   become: yes
 
 - name: Clean up no-more-secrets build directory
   ansible.builtin.file:
-    path: "{{ nms_build_dir.path }}"
+    path: "{{ nms_build_dir.get('path', '/tmp/nms-build-check') }}"
     state: absent
-  when: nms_build_dir.path is defined
+  when: "'path' in nms_build_dir"
