@@ -1,5 +1,34 @@
+- name: Default experts variable if undefined
+  ansible.builtin.set_fact:
+    experts: ['main', 'coding', 'math', 'extract', 'vllm']
+  when: experts is not defined
+
+- name: Ensure target user exists
+  ansible.builtin.user:
+    name: "{{ target_user | default('pipecatapp') }}"
+    state: present
+    create_home: yes
+    shell: /bin/bash
+  become: yes
+
 - name: Read and parse benchmark results
   block:
+    - name: Check if benchmark log file exists
+      ansible.builtin.stat:
+        path: /var/log/llama_benchmarks.jsonl
+      register: benchmark_log_stat
+
+    - name: Run benchmark script if log file does not exist
+      ansible.builtin.command:
+        cmd: "/home/{{ target_user | default('pipecatapp') }}/llama-cluster-upbringing-script/.venv/bin/python3 {{ playbook_dir }}/../../scripts/benchmark_resources.py"
+      become: yes
+      when: not benchmark_log_stat.stat.exists
+
+    - name: Re-check if benchmark log file exists
+      ansible.builtin.stat:
+        path: /var/log/llama_benchmarks.jsonl
+      register: benchmark_log_stat
+
     - name: Read benchmark log file
       ansible.builtin.slurp:
         src: /var/log/llama_benchmarks.jsonl
@@ -462,7 +491,10 @@
   changed_when: "'Running' in expert_job_stop_status.stdout"
   failed_when: false
   environment:
-    NOMAD_ADDR: "https://{{ advertise_ip }}:{{ nomad_http_port }}"
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
 
 - name: Debug Nomad namespace
   debug:
