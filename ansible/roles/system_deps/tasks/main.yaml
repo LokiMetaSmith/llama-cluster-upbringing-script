@@ -15,6 +15,10 @@
       - avahi-daemon
       - build-essential
       - chrony
+      - libatk1.0-0t64
+      - libgtk-3-0t64
+      - libxdamage1
+      - libxcomposite1
       - cmake
       - cmatrix
       - curl
@@ -62,6 +66,7 @@
       - python3
       - python3-dev
       - python3-full
+      - python3.12-dev
       - python3-pip
       - python3-venv
       - python3-virtualenv
