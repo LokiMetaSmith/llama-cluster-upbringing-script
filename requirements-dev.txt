@@ -36,3 +36,4 @@ cryptography
 vulture
 mypy
 pytest-cov
+mcp
