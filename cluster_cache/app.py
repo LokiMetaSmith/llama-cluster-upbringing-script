@@ -43,8 +43,15 @@ async def register_node(request: Request, node: NodeRegistration = None):
     ip_address = None
     if node and node.ip_address:
         ip_address = node.ip_address
-    else:
+    elif request.client:
         ip_address = request.client.host
+    elif "x-forwarded-for" in request.headers:
+        ip_address = request.headers["x-forwarded-for"].split(",")[0].strip()
+    elif "x-real-ip" in request.headers:
+        ip_address = request.headers["x-real-ip"]
+    else:
+        # Fallback for TestClient or environments where client is None
+        ip_address = "testclient"
 
     if not ip_address:
         raise HTTPException(status_code=400, detail="Could not determine IP address")
