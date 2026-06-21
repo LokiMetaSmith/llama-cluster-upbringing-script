@@ -53,7 +53,7 @@
                         echo "$line"
                       fi
                     fi
-                  done | jq -s .
+                  done | jq -s -c .
               register: parsed_json
               changed_when: false
               when: benchmark_log_raw.content is defined
