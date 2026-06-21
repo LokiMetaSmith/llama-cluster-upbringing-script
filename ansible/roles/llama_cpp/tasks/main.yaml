@@ -266,7 +266,7 @@
             output="$output,$line"
           fi
         fi
-      done < /var/log/llama_benchmarks.jsonl
+      done < <(cat /var/log/llama_benchmarks.jsonl | iconv -c -f utf-8 -t utf-8)
       if [ -n "$output" ]; then
         output="$output]"
       else

@@ -37,3 +37,4 @@ vulture
 mypy
 pytest-cov
 mcp
+opencv-python-headless
