@@ -1,3 +1,52 @@
+- name: "Check if model {{ model_item.filename }} exists"
+  ansible.builtin.stat:
+    path: "/opt/nomad/models/llm/{{ model_item.filename }}"
+  register: benchmark_model_stat
+  become: yes
+
+- name: "Get Consul token to fetch model {{ model_item.filename }}"
+  ansible.builtin.slurp:
+    src: /etc/consul.d/management_token
+  register: benchmark_consul_token_slurp
+  failed_when: false
+  become: yes
+  when: not benchmark_model_stat.stat.exists
+
+- name: "Fetch IPFS CID for model {{ model_item.filename }} from Consul KV"
+  ansible.builtin.uri:
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/llm/{{ model_item.filename }}?raw=true"
+    client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+    client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+    validate_certs: false
+    method: GET
+    headers:
+      X-Consul-Token: "{{ (benchmark_consul_token_slurp.content | b64decode | trim) if (benchmark_consul_token_slurp.content is defined) else '' }}"
+    return_content: true
+    status_code: [200, 404]
+  register: benchmark_model_cid
+  become: yes
+  when: not benchmark_model_stat.stat.exists
+  failed_when: false
+
+- name: "Ensure models directory exists"
+  ansible.builtin.file:
+    path: "/opt/nomad/models/llm"
+    state: directory
+    mode: '0755'
+  become: yes
+  when: not benchmark_model_stat.stat.exists
+
+- name: "Download model {{ model_item.filename }} from IPFS"
+  ansible.builtin.command:
+    cmd: "ipfs get {{ benchmark_model_cid.content }} -o /opt/nomad/models/llm/{{ model_item.filename }}"
+  environment:
+    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+  become: yes
+  when:
+    - not benchmark_model_stat.stat.exists
+    - benchmark_model_cid.status == 200
+    - benchmark_model_cid.content is defined
+
 - name: "Run llama-bench for {{ model_item.filename }}"
   ansible.builtin.command:
     cmd: "llama-bench -m /opt/nomad/models/llm/{{ model_item.filename }} -p 32 -n 32"
