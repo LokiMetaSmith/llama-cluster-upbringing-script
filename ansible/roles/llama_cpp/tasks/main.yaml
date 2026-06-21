@@ -257,22 +257,11 @@
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      output=""
-      while IFS= read -r line; do
-        if echo "$line" | jq -e . > /dev/null; then
-          if [ -z "$output" ]; then
-            output="[$line"
-          else
-            output="$output,$line"
-          fi
+      cat /var/log/llama_benchmarks.jsonl | iconv -c -f utf-8 -t utf-8 | while IFS= read -r line; do
+        if echo "$line" | jq -e . > /dev/null 2>&1; then
+          echo "$line"
         fi
-      done < <(cat /var/log/llama_benchmarks.jsonl | iconv -c -f utf-8 -t utf-8)
-      if [ -n "$output" ]; then
-        output="$output]"
-      else
-        output="[]"
-      fi
-      echo "$output"
+      done | jq -s -c .
     executable: /bin/bash
   register: benchmark_parser_result
   changed_when: false
