@@ -58,6 +58,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install Playwright browsers
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
 RUN playwright install
 
 # Download required AI models
@@ -74,6 +75,6 @@ COPY . .
 RUN mv /opt/pipecatapp/start_pipecat.sh /opt/start_pipecat.sh && chmod +x /opt/start_pipecat.sh
 
 # Set the entrypoint for the container
-RUN useradd -m -s /bin/bash pipecatapp && chown -R pipecatapp:pipecatapp /opt/pipecatapp /opt/pipecat_venv /opt/start_pipecat.sh
+RUN useradd -m -s /bin/bash pipecatapp && chown -R pipecatapp:pipecatapp /opt/pipecatapp /opt/pipecat_venv /opt/start_pipecat.sh /opt/pw-browsers
 USER pipecatapp
 ENTRYPOINT ["/opt/start_pipecat.sh"]

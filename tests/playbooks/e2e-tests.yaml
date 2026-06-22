@@ -63,6 +63,8 @@
   tasks:
     - name: Install Playwright browser dependencies
       ansible.builtin.command: python -m playwright install
+      environment:
+        PLAYWRIGHT_BROWSERS_PATH: "/tmp/pw-browsers"
       register: playwright_install
       changed_when: "'Browsers installed' in playwright_install.stdout"
 
