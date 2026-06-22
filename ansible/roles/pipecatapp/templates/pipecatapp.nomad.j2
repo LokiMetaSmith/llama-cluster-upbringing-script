@@ -45,6 +45,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       WEB_PORT               = "${NOMAD_PORT_http}"
       YOLO_MODEL_PATH        = "{{ nomad_models_dir }}/vision/yolov8n.pt"
       MAIN_API_SERVICE_NAME = "llama-api-main"
+      PLAYWRIGHT_BROWSERS_PATH = "{{ pipecat_app_dir | default('/opt/pipecatapp') }}/.cache/ms-playwright"
     }
     {% endset %}
 

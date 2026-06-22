@@ -175,6 +175,7 @@ else
     pip install -r requirements.txt 2>&1 | tee -a "$LOG_FILE"
 
     log_msg "Installing Playwright browsers..."
+    export PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/.cache/ms-playwright"
     playwright install 2>&1 | tee -a "$LOG_FILE"
 fi
 
