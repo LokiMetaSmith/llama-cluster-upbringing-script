@@ -20,6 +20,22 @@ else
     IS_DOCKER=0
 fi
 
+
+# Fix HOME variable if it is incorrectly set to /root for non-root users
+if [ "$(id -u)" -ne 0 ]; then
+    if [ "$HOME" = "/root" ] || [ -z "$HOME" ]; then
+        USER_HOME=$(getent passwd "$(id -un)" | cut -d: -f6 || true)
+        if [ -n "$USER_HOME" ] && [ "$USER_HOME" != "/nonexistent" ]; then
+            export HOME="$USER_HOME"
+        else
+            export HOME="$APP_DIR"
+        fi
+        # Also ensure we don't pollute /root/.cache
+        export PIP_CACHE_DIR="$HOME/.cache/pip"
+        export XDG_CONFIG_HOME="$HOME/.config"
+    fi
+fi
+
 # Define log file path logic
 # We attempt to write to APP_DIR, then /tmp, then /dev/null
 # This prevents 'permission denied' errors from crashing the script when set -o pipefail is on.
