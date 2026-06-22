@@ -146,12 +146,14 @@ if [ "$IS_DOCKER" -eq 1 ] && check_venv_valid "$CONTAINER_VENV_DIR"; then
     ACTIVATE="$CONTAINER_VENV_DIR/bin/activate"
     source "$ACTIVATE"
     USING_CONTAINER_VENV=1
+    export PLAYWRIGHT_BROWSERS_PATH="/opt/pw-browsers"
 
 # 2. Try local/development venv (bind mount location)
 elif check_venv_valid "$VENV_DIR"; then
     log_msg "Found existing valid venv at $VENV_DIR"
     ACTIVATE="$VENV_DIR/bin/activate"
     source "$ACTIVATE"
+    export PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/pw-browsers"
 
 # 3. Last resort: Create a new venv in the local directory
 else
@@ -165,6 +167,7 @@ else
     fi
 
     source "$ACTIVATE"
+    export PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/pw-browsers"
 fi
 
 if [ "$USING_CONTAINER_VENV" -eq 1 ]; then
@@ -175,7 +178,7 @@ else
     pip install -r requirements.txt 2>&1 | tee -a "$LOG_FILE"
 
     log_msg "Installing Playwright browsers..."
-    export PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/.cache/ms-playwright"
+    export PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/pw-browsers"
     playwright install 2>&1 | tee -a "$LOG_FILE"
 fi
 

@@ -562,11 +562,22 @@
     dest: "{{ nomad_jobs_dir }}/test-runner.nomad.j2"
   become: yes
 
-- name: Install Playwright browsers using the virtual environment's python
+- name: Ensure global Playwright browsers directory exists
+  ansible.builtin.file:
+    path: /opt/ms-playwright
+    state: directory
+    mode: '0777'
+  become: yes
+
+- name: Install Playwright browsers globally as root
   ansible.builtin.command:
     cmd: "{{ pipecat_app_dir }}/venv/bin/python -m playwright install"
+  environment:
+    PLAYWRIGHT_BROWSERS_PATH: "/opt/ms-playwright"
   become: yes
   become_user: "{{ target_user }}"
+  environment:
+    PLAYWRIGHT_BROWSERS_PATH: "{{ pipecat_app_dir }}/pw-browsers"
   async: 900 # Set timeout to 15 minutes
   poll: 10   # Check status every 10 seconds
 

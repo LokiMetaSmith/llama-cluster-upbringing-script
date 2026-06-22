@@ -45,7 +45,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       WEB_PORT               = "${NOMAD_PORT_http}"
       YOLO_MODEL_PATH        = "{{ nomad_models_dir }}/vision/yolov8n.pt"
       MAIN_API_SERVICE_NAME = "llama-api-main"
-      PLAYWRIGHT_BROWSERS_PATH = "{{ pipecat_app_dir | default('/opt/pipecatapp') }}/.cache/ms-playwright"
+      PLAYWRIGHT_BROWSERS_PATH = "{{ pipecat_app_dir | default('/opt/pipecatapp') }}/pw-browsers"
     }
     {% endset %}
 
@@ -109,7 +109,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     {% set image_tar_name = 'pipecatapp' %}
     {% include 'load_image_task.nomad.j2' %}
 
-    task "pipecat-task" {
+    task "pipecat-app" {
       driver = "docker"
       {{ env_vars }}
 
@@ -146,7 +146,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       }
     }
     {% else %}
-    task "pipecat-task" {
+    task "pipecat-app" {
       driver = "raw_exec"
       {{ env_vars }}
 

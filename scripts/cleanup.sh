@@ -99,5 +99,54 @@ if [ -f "playbook_output.log" ]; then
     rm -f playbook_output.log
 fi
 
+# 7. Application State and Config Cleanup
+echo -e "\n${BOLD}🧹 Cleaning Application State in /opt...${NC}"
+
+# Define directories that should be completely wiped to ensure a pristine state
+APP_DIRS=(
+    "/opt/pipecatapp"
+    "/opt/tool_server"
+    "/opt/paperless"
+    "/opt/claude_clone"
+    "/opt/llmfit"
+    "/opt/llxprt-code"
+    "/opt/opengravity-build"
+    "/opt/exo"
+    "/opt/exo_build"
+    "/opt/mcp"
+    "/opt/cni"
+    "/opt/cluster-infra"
+    "/opt/openclaw"
+    "/opt/power_manager"
+    "/opt/provisioning_api"
+    "/opt/world_model_service"
+    "/opt/heretic_tool"
+)
+
+for dir in "${APP_DIRS[@]}"; do
+    if [ -d "$dir" ]; then
+        echo "Removing $dir..."
+        sudo rm -rf "$dir"
+    fi
+done
+
+# Clean up Consul state
+if [ -d "/opt/consul/data" ]; then
+    echo "Removing /opt/consul/data..."
+    sudo rm -rf "/opt/consul/data"
+fi
+
+# Clean up Nomad state safely (preserve /opt/nomad/models)
+if [ -d "/opt/nomad" ]; then
+    echo "Cleaning /opt/nomad state (preserving models)..."
+    # Find and delete everything in /opt/nomad EXCEPT the models directory
+    # -mindepth 1 prevents matching /opt/nomad itself
+    # -maxdepth 1 prevents diving into subdirectories for matching
+    # ! -name "models" excludes the models folder
+    # -exec rm -rf {} + executes rm -rf on the matched items
+    sudo find /opt/nomad -mindepth 1 -maxdepth 1 ! -name "models" -exec rm -rf {} +
+fi
+
+
 echo -e "\n${GREEN}✨ Cleanup Complete!${NC}"
 df -h /
