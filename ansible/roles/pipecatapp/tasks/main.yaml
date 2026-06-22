@@ -375,6 +375,158 @@
   tags:
     - deploy_app
 
+- name: Copy gossip_discovery module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/gossip_discovery.py"
+    dest: "{{ pipecat_app_dir }}/gossip_discovery.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy __init__ module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/__init__.py"
+    dest: "{{ pipecat_app_dir }}/__init__.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy expert_tracker module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/expert_tracker.py"
+    dest: "{{ pipecat_app_dir }}/expert_tracker.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy file_ingestion module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/file_ingestion.py"
+    dest: "{{ pipecat_app_dir }}/file_ingestion.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy generate_real_embeddings module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/generate_real_embeddings.py"
+    dest: "{{ pipecat_app_dir }}/generate_real_embeddings.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy janitor_agent module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/janitor_agent.py"
+    dest: "{{ pipecat_app_dir }}/janitor_agent.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy judge_agent module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/judge_agent.py"
+    dest: "{{ pipecat_app_dir }}/judge_agent.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy langchain_memory_wrappers module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/langchain_memory_wrappers.py"
+    dest: "{{ pipecat_app_dir }}/langchain_memory_wrappers.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy local_llm module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/local_llm.py"
+    dest: "{{ pipecat_app_dir }}/local_llm.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy local_world_model module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/local_world_model.py"
+    dest: "{{ pipecat_app_dir }}/local_world_model.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy manager_agent module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/manager_agent.py"
+    dest: "{{ pipecat_app_dir }}/manager_agent.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy memory_backends module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/memory_backends.py"
+    dest: "{{ pipecat_app_dir }}/memory_backends.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy memory_legacy module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/memory_legacy.py"
+    dest: "{{ pipecat_app_dir }}/memory_legacy.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy mqtt_world_model_client module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/mqtt_world_model_client.py"
+    dest: "{{ pipecat_app_dir }}/mqtt_world_model_client.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy secret_manager module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/secret_manager.py"
+    dest: "{{ pipecat_app_dir }}/secret_manager.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy skill_library module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/skill_library.py"
+    dest: "{{ pipecat_app_dir }}/skill_library.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy technician_agent module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/technician_agent.py"
+    dest: "{{ pipecat_app_dir }}/technician_agent.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy tool_server module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/tool_server.py"
+    dest: "{{ pipecat_app_dir }}/tool_server.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy train_router module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/train_router.py"
+    dest: "{{ pipecat_app_dir }}/train_router.py"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy network_scanner module
   ansible.builtin.copy:
     mode: '0644'
