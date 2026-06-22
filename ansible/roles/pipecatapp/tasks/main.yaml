@@ -344,6 +344,14 @@
   tags:
     - deploy_app
 
+- name: Copy gossip_discovery module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/gossip_discovery.py"
+    dest: "{{ pipecat_app_dir }}/gossip_discovery.py"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy network_scanner module
   ansible.builtin.copy:
     src: "{{ inventory_dir }}/pipecatapp/network_scanner.py"
