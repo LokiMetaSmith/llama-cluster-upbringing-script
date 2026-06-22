@@ -344,6 +344,14 @@
   tags:
     - deploy_app
 
+- name: Copy network_scanner module
+  ansible.builtin.copy:
+    src: "{{ inventory_dir }}/pipecatapp/network_scanner.py"
+    dest: "{{ pipecat_app_dir }}/network_scanner.py"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy moondream_detector module
   ansible.builtin.copy:
     src: "{{ inventory_dir }}/pipecatapp/moondream_detector.py"
