@@ -575,6 +575,9 @@
   environment:
     PLAYWRIGHT_BROWSERS_PATH: "/opt/ms-playwright"
   become: yes
+  become_user: "{{ target_user }}"
+  environment:
+    PLAYWRIGHT_BROWSERS_PATH: "{{ pipecat_app_dir }}/pw-browsers"
   async: 900 # Set timeout to 15 minutes
   poll: 10   # Check status every 10 seconds
 
