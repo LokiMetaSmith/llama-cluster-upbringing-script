@@ -196,16 +196,62 @@ profile_system() {
 
     local CPU_CORES
     CPU_CORES=$(nproc 2>/dev/null || echo 1)
-    local RAM_KB
-    RAM_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
-    local RAM_GB=$(( RAM_KB / 1024 / 1024 ))
-    local DISK_KB
-    DISK_KB=$(df -k / | awk 'NR==2 {print $4}' 2>/dev/null || echo 0)
-    local DISK_GB=$(( DISK_KB / 1024 / 1024 ))
+
+    # 1. RAM Calculation
+    local TOTAL_RAM_KB
+    TOTAL_RAM_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
+    local RAW_AVAILABLE_RAM_KB
+    RAW_AVAILABLE_RAM_KB=$(awk '/MemAvailable/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
+
+    local PRE_ALLOCATED_RAM_KB=0
+    local CLUSTER_SERVICES=("nomad" "consul" "dockerd" "docker" "containerd" "pipecatapp")
+    for svc in "${CLUSTER_SERVICES[@]}"; do
+        # sum of rss for processes matching name
+        local svc_ram
+        svc_ram=$(ps -C "$svc" -o rss= 2>/dev/null | awk '{sum+=$1} END {print sum}')
+        if [[ -n "$svc_ram" && "$svc_ram" =~ ^[0-9]+$ ]]; then
+            PRE_ALLOCATED_RAM_KB=$((PRE_ALLOCATED_RAM_KB + svc_ram))
+        fi
+    done
+
+    # Add KBs together first to avoid rounding to 0 GB
+    local TOTAL_RAM_GB=$(( TOTAL_RAM_KB / 1024 / 1024 ))
+    local PRE_ALLOCATED_RAM_GB=$(( PRE_ALLOCATED_RAM_KB / 1024 / 1024 ))
+    local EFFECTIVE_AVAILABLE_RAM_KB=$(( RAW_AVAILABLE_RAM_KB + PRE_ALLOCATED_RAM_KB ))
+    local EFFECTIVE_AVAILABLE_RAM_GB=$(( EFFECTIVE_AVAILABLE_RAM_KB / 1024 / 1024 ))
+
+    # 2. Disk Calculation
+    local RAW_DISK_KB
+    RAW_DISK_KB=$(df -k / | awk 'NR==2 {print $4}' 2>/dev/null || echo 0)
+
+    local PRE_ALLOCATED_DISK_KB=0
+    local CLUSTER_DIRS=("/opt/nomad" "/var/lib/docker" "/opt/pipecatapp")
+    for dir in "${CLUSTER_DIRS[@]}"; do
+        if [ -d "$dir" ]; then
+            local dir_size
+            dir_size=$(sudo -n du -sk "$dir" 2>/dev/null | awk '{print $1}')
+            if [[ -n "$dir_size" && "$dir_size" =~ ^[0-9]+$ ]]; then
+                PRE_ALLOCATED_DISK_KB=$((PRE_ALLOCATED_DISK_KB + dir_size))
+            fi
+        fi
+    done
+
+    local RAW_DISK_GB=$(( RAW_DISK_KB / 1024 / 1024 ))
+    local PRE_ALLOCATED_DISK_GB=$(( PRE_ALLOCATED_DISK_KB / 1024 / 1024 ))
+    local EFFECTIVE_DISK_KB=$(( RAW_DISK_KB + PRE_ALLOCATED_DISK_KB ))
+    local EFFECTIVE_DISK_GB=$(( EFFECTIVE_DISK_KB / 1024 / 1024 ))
 
     echo -e "Detected CPU Cores: ${CYAN}${CPU_CORES}${NC}"
-    echo -e "Detected Total RAM: ${CYAN}${RAM_GB} GB${NC}"
-    echo -e "Detected Available Disk: ${CYAN}${DISK_GB} GB${NC}"
+    echo -e "Total Physical RAM: ${CYAN}${TOTAL_RAM_GB} GB${NC}"
+    echo -e "Pre-allocated Cluster RAM: ${CYAN}${PRE_ALLOCATED_RAM_GB} GB${NC}"
+    echo -e "Effective Available RAM: ${CYAN}${EFFECTIVE_AVAILABLE_RAM_GB} GB${NC}"
+    echo -e "Raw Free OS Disk: ${CYAN}${RAW_DISK_GB} GB${NC}"
+    echo -e "Pre-allocated Cluster Disk: ${CYAN}${PRE_ALLOCATED_DISK_GB} GB${NC}"
+    echo -e "Effective Available Disk: ${CYAN}${EFFECTIVE_DISK_GB} GB${NC}"
+
+    # Auto-detect role uses effective available resources, but for backwards compat, use DISK_GB and RAM_GB mapping
+    local RAM_GB=$TOTAL_RAM_GB
+    local DISK_GB=$EFFECTIVE_DISK_GB
 
     # Auto-detect role if not explicitly set
     if [ -z "$ROLE" ]; then

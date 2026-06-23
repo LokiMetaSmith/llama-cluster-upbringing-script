@@ -82,7 +82,6 @@ modules_to_mock = [
     'paramiko',
     'requests',
     'apscheduler.triggers.interval',
-    'jinja2',
     'openai',
     'supervisor',
     'starlette',

@@ -20,6 +20,22 @@ else
     IS_DOCKER=0
 fi
 
+
+# Fix HOME variable if it is incorrectly set to /root for non-root users
+if [ "$(id -u)" -ne 0 ]; then
+    if [ "$HOME" = "/root" ] || [ -z "$HOME" ]; then
+        USER_HOME=$(getent passwd "$(id -un)" | cut -d: -f6 || true)
+        if [ -n "$USER_HOME" ] && [ "$USER_HOME" != "/nonexistent" ]; then
+            export HOME="$USER_HOME"
+        else
+            export HOME="$APP_DIR"
+        fi
+        # Also ensure we don't pollute /root/.cache
+        export PIP_CACHE_DIR="$HOME/.cache/pip"
+        export XDG_CONFIG_HOME="$HOME/.config"
+    fi
+fi
+
 # Define log file path logic
 # We attempt to write to APP_DIR, then /tmp, then /dev/null
 # This prevents 'permission denied' errors from crashing the script when set -o pipefail is on.
@@ -146,12 +162,14 @@ if [ "$IS_DOCKER" -eq 1 ] && check_venv_valid "$CONTAINER_VENV_DIR"; then
     ACTIVATE="$CONTAINER_VENV_DIR/bin/activate"
     source "$ACTIVATE"
     USING_CONTAINER_VENV=1
+    export PLAYWRIGHT_BROWSERS_PATH="/opt/pw-browsers"
 
 # 2. Try local/development venv (bind mount location)
 elif check_venv_valid "$VENV_DIR"; then
     log_msg "Found existing valid venv at $VENV_DIR"
     ACTIVATE="$VENV_DIR/bin/activate"
     source "$ACTIVATE"
+    export PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/pw-browsers"
 
 # 3. Last resort: Create a new venv in the local directory
 else
@@ -165,6 +183,7 @@ else
     fi
 
     source "$ACTIVATE"
+    export PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/pw-browsers"
 fi
 
 if [ "$USING_CONTAINER_VENV" -eq 1 ]; then
@@ -175,6 +194,7 @@ else
     pip install -r requirements.txt 2>&1 | tee -a "$LOG_FILE"
 
     log_msg "Installing Playwright browsers..."
+    export PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/pw-browsers"
     playwright install 2>&1 | tee -a "$LOG_FILE"
 fi
 
