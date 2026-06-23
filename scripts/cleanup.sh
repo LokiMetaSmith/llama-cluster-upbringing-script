@@ -132,12 +132,23 @@ done
 
 # Clean up Consul state
 if [ -d "/opt/consul/data" ]; then
+    echo "Stopping Consul service (if running)..."
+    sudo systemctl stop consul 2>/dev/null || true
     echo "Removing /opt/consul/data..."
     sudo rm -rf "/opt/consul/data"
 fi
 
 # Clean up Nomad state safely (preserve /opt/nomad/models)
 if [ -d "/opt/nomad" ]; then
+    echo "Stopping Nomad service (if running)..."
+    sudo systemctl stop nomad 2>/dev/null || true
+
+    echo "Unmounting any active allocations in /opt/nomad..."
+    for mount in $(mount | awk '{print $3}' | grep '^/opt/nomad/' | sort -r); do
+        echo "Unmounting $mount"
+        sudo umount "$mount" || true
+    done
+
     echo "Cleaning /opt/nomad state (preserving models)..."
     # Find and delete everything in /opt/nomad EXCEPT the models directory
     # -mindepth 1 prevents matching /opt/nomad itself
