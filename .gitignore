@@ -60,3 +60,4 @@ venv/
 
 # Dynamically generated parameter files
 group_vars/all/resource_tuning.yaml
+.ansible_venv

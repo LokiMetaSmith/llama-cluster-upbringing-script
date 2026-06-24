@@ -1,6 +1,6 @@
 - name: Create a virtual environment for the application
   ansible.builtin.command:
-    cmd: "python3.12 -m venv /opt/pipecatapp/venv"
+    cmd: "/usr/bin/python3.12 -m venv /opt/pipecatapp/venv"
     creates: "/opt/pipecatapp/venv/bin/pip"
   become: yes
   tags:

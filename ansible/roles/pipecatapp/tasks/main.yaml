@@ -127,7 +127,7 @@
   ansible.builtin.pip:
     requirements: "{{ pipecat_app_dir }}/requirements.txt"
     virtualenv: "{{ pipecat_app_dir }}/venv"
-    virtualenv_command: python3.12 -m venv
+    virtualenv_command: /usr/bin/python3.12 -m venv
   become: yes
   tags:
     - deploy_app
