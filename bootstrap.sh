@@ -661,7 +661,7 @@ ensure_python_environment() {
     run_step "Upgrading pip" "pip install --upgrade pip"
 
     if [ -f "requirements-dev.txt" ]; then
-        run_step "Installing Python dependencies" "pip install --no-cache-dir -r requirements-dev.txt"
+        run_step "Installing Python dependencies" "pip install -r requirements-dev.txt --verbose"
     else
         echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
     fi
@@ -670,7 +670,7 @@ ensure_python_environment() {
         run_step "Installing OpenCode AI Agent" "npm ci"
     fi
 
-    run_step "Installing Ansible Core" "pip install ansible-core pyyaml"
+    run_step "Installing Ansible Core" "pip install ansible-core pyyaml resolvelib"
 
     # --- Find Ansible Playbook executable ---
     ANSIBLE_GALAXY_EXEC="$VENV_DIR/bin/ansible-galaxy"
