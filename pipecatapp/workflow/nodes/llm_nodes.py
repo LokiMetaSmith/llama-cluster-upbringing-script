@@ -676,12 +676,11 @@ class LoopedReasoningNode(Node):
     async def execute(self, context: WorkflowContext):
         user_text = self.get_input(context, "user_text")
 
-        # Get configuration from "config" block or top-level
         node_config = self.config.get("config", {})
         iterations = node_config.get("iterations", self.config.get("iterations", 3))
         target_service = node_config.get("model_service", self.config.get("model_service", "rpc-main"))
+        judge_service = node_config.get("judge_service", self.config.get("judge_service", target_service))
 
-        # Allow overriding iterations from input
         input_iterations = self.get_input(context, "iterations")
         if input_iterations:
             try:
@@ -693,9 +692,7 @@ class LoopedReasoningNode(Node):
              self.set_output(context, "response", "Error: No user_text provided.")
              return
 
-        # Use the main expert for reasoning (rpc-main or rpc-coding depending on config, default to main)
         consul_http_addr = context.global_inputs.get("consul_http_addr")
-
         current_answer = None
         history = []
 
@@ -704,22 +701,28 @@ class LoopedReasoningNode(Node):
                 token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
                 headers = {"X-Consul-Token": token} if token else {}
 
-                async with httpx.AsyncClient(headers=headers) as client:
-                    # Discovery
-                    response = await client.get(f"{consul_http_addr}/v1/health/service/{target_service}?passing")
-                    response.raise_for_status()
-                    services = response.json()
+                async def get_chat_url(service_name):
+                    async with httpx.AsyncClient(headers=headers) as discovery_client:
+                        resp = await discovery_client.get(f"{consul_http_addr}/v1/health/service/{service_name}?passing")
+                        resp.raise_for_status()
+                        services = resp.json()
+                        if not services:
+                            return None
+                        address = services[0]['Service']['Address']
+                        port = services[0]['Service']['Port']
+                        return f"http://{address}:{port}/v1/chat/completions"
 
-                    if not services:
+                async with httpx.AsyncClient(headers=headers) as client:
+                    chat_url = await get_chat_url(target_service)
+                    judge_chat_url = await get_chat_url(judge_service)
+
+                    if not chat_url:
                         self.set_output(context, "response", f"Error: Service {target_service} not found.")
                         return
+                    if not judge_chat_url:
+                        self.set_output(context, "response", f"Error: Judge service {judge_service} not found.")
+                        return
 
-                    address = services[0]['Service']['Address']
-                    port = services[0]['Service']['Port']
-                    base_url = f"http://{address}:{port}/v1"
-                    chat_url = f"{base_url}/chat/completions"
-
-                    # --- Initial Pass ---
                     initial_system_prompt = "You are a helpful AI assistant. Provide a comprehensive answer to the user's request."
                     messages = [
                         {"role": "system", "content": initial_system_prompt},
@@ -740,25 +743,88 @@ class LoopedReasoningNode(Node):
                     current_answer = res.json()["choices"][0]["message"]["content"]
                     history.append(f"Iteration 0: {current_answer}")
 
-                    # --- Iterative Refinement ---
+                    passed = False
                     for i in range(1, iterations + 1):
+                        logging.debug(f"LoopedReasoning - Judge Evaluation Iteration {i}")
+
+                        jp_parts = [
+                            "You are an expert evaluator. Your task is to review the worker's answer to the user's original request.",
+                            "Evaluate the answer based on:",
+                            "1. Accuracy and correctness.",
+                            "2. Completeness (did it answer the whole prompt?).",
+                            "3. Clarity and lack of reasoning flaws.",
+                            "",
+                            f"User Request: '{user_text}'",
+                            f"Worker Answer: '{current_answer}'",
+                            "",
+                            'If the answer completely and correctly addresses the request with high quality, output a status of "PASS" and leave the critique empty.',
+                            'If the answer is flawed, incomplete, or needs improvement, output a status of "FAIL" and provide a specific, actionable critique for the worker to improve upon.',
+                            "",
+                            'You MUST respond ONLY with a valid JSON object in the following format, with no other text or markdown:',
+                            '{"status": "PASS" or "FAIL", "critique": "your feedback here"}'
+                        ]
+                        judge_prompt = "\n".join(jp_parts)
+
+                        judge_messages = [
+                            {"role": "system", "content": "You are a strict and meticulous evaluator."},
+                            {"role": "user", "content": judge_prompt}
+                        ]
+
+                        judge_payload = {
+                            "model": judge_service,
+                            "messages": judge_messages,
+                            "temperature": 0.1
+                        }
+                        judge_payload = build_extensible_payload(judge_payload, context, self.config)
+
+                        judge_res = await client.post(judge_chat_url, json=judge_payload, timeout=120)
+                        judge_res.raise_for_status()
+                        judge_response_text = judge_res.json()["choices"][0]["message"]["content"]
+
+                        import json
+                        try:
+                            start_idx_json = judge_response_text.find('{')
+                            end_idx_json = judge_response_text.rfind('}')
+                            if start_idx_json != -1 and end_idx_json != -1 and end_idx_json > start_idx_json:
+                                json_str = judge_response_text[start_idx_json:end_idx_json+1]
+                                judge_data = json.loads(json_str)
+                            else:
+                                judge_data = {"status": "FAIL", "critique": f"Failed to parse judge output: {judge_response_text}"}
+                        except json.JSONDecodeError:
+                            judge_data = {"status": "FAIL", "critique": f"Invalid JSON from judge: {judge_response_text}"}
+
+                        status = judge_data.get("status", "FAIL")
+                        critique = judge_data.get("critique", "")
+
+                        history.append(f"Judge Evaluation {i}: Status={status}, Critique={critique}")
+
+                        if status == "PASS":
+                            passed = True
+                            break
+
                         logging.debug(f"LoopedReasoning - Iteration {i}")
-                        refine_prompt = (
-                            f"Here is the user's original request:\n'{user_text}'\n\n"
-                            f"Here is your previous answer:\n'{current_answer}'\n\n"
-                            "Critique this answer for accuracy, reasoning flaws, missing information, and clarity. "
-                            "Then, provide a refined and improved answer. "
-                            "Do not mention the critique process in the final output unless necessary for clarity. "
+                        rp_parts = [
+                            f"Here is the user's original request:",
+                            f"'{user_text}'",
+                            "",
+                            f"Here is your previous answer:",
+                            f"'{current_answer}'",
+                            "",
+                            f"The judge has provided the following critique that you MUST address:",
+                            f"'{critique}'",
+                            "",
+                            "Provide a refined and improved answer that fixes the issues mentioned in the critique. ",
+                            "Do not mention the critique process in the final output unless necessary for clarity. ",
                             "Just provide the best possible answer."
-                        )
+                        ]
+                        refine_prompt = "\n".join(rp_parts)
 
                         messages = [
-                            {"role": "system", "content": "You are a meticulous editor and expert. Improve the previous answer."},
+                            {"role": "system", "content": "You are a meticulous editor and expert. Improve the previous answer based on the critique."},
                             {"role": "user", "content": refine_prompt}
                         ]
 
                         payload["messages"] = messages
-
                         payload = build_extensible_payload(payload, context, self.config)
 
                         res = await client.post(chat_url, json=payload, timeout=120)
@@ -766,10 +832,14 @@ class LoopedReasoningNode(Node):
                         current_answer = res.json()["choices"][0]["message"]["content"]
                         history.append(f"Iteration {i}: {current_answer}")
 
+                    if not passed:
+                        current_answer += "\n\n*[Warning: Result returned after hitting max iterations without passing judge validation]*"
+
             except Exception as e:
                 logging.error(f"Error in LoopedReasoningNode: {e}")
                 self.set_output(context, "response", f"Error: {e}")
                 return
 
         self.set_output(context, "response", current_answer)
-        self.set_output(context, "trace", "\n\n---\n\n".join(history))
+        trace_sep = "\n\n---\n\n"
+        self.set_output(context, "trace", trace_sep.join(history))
