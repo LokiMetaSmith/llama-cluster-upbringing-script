@@ -46,7 +46,7 @@
   when: exo_enable
 
 - name: Pin Exo tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /opt/{{ exo_docker_image_name }}.tar
+  ansible.builtin.command: ipfs add --nocopy -Q /opt/{{ exo_docker_image_name }}.tar
   become: yes
   register: ipfs_add_result_exo
   environment:

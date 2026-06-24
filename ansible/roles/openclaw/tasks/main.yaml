@@ -31,7 +31,7 @@
   become: yes
 
 - name: Pin openclaw tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /opt/openclaw.tar
+  ansible.builtin.command: ipfs add --nocopy -Q /opt/openclaw.tar
   become: yes
   register: ipfs_add_result_openclaw
   environment:

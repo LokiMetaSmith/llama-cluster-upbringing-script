@@ -42,6 +42,39 @@
   become: yes
   when: not ipfs_binary.stat.exists or (ipfs_version is defined and ipfs_version.stdout is defined and '0.41.0' not in ipfs_version.stdout)
 
+
+- name: Ensure mdadm is installed for RAID support
+  ansible.builtin.apt:
+    name: mdadm
+    state: present
+  become: yes
+  when: ipfs_raid_devices is defined and ipfs_raid_devices | length >= 3
+
+- name: Create RAID 5 array for IPFS storage
+  community.general.mdadm:
+    name: /dev/md0
+    devices: "{{ ipfs_raid_devices }}"
+    level: 5
+    state: present
+  become: yes
+  when: ipfs_raid_devices is defined and ipfs_raid_devices | length >= 3
+
+- name: Format RAID 5 array
+  ansible.builtin.filesystem:
+    fstype: ext4
+    dev: /dev/md0
+  become: yes
+  when: ipfs_raid_devices is defined and ipfs_raid_devices | length >= 3
+
+- name: Mount RAID 5 array to IPFS volume directory
+  ansible.posix.mount:
+    path: "{{ nomad_volumes_dir }}/ipfs"
+    src: /dev/md0
+    fstype: ext4
+    state: mounted
+  become: yes
+  when: ipfs_raid_devices is defined and ipfs_raid_devices | length >= 3
+
 - name: Ensure IPFS data directory exists
   ansible.builtin.file:
     path: "{{ nomad_volumes_dir }}/ipfs"

@@ -34,7 +34,7 @@
   become: yes
 
 - name: Pin memory_service tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /opt/memory_service.tar
+  ansible.builtin.command: ipfs add --nocopy -Q /opt/memory_service.tar
   become: yes
   register: ipfs_add_result_memory
   environment:

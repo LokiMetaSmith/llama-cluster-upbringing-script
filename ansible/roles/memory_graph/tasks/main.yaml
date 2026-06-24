@@ -20,7 +20,7 @@
   become: yes
 
 - name: Pin memory-graph-service tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /opt/memory-graph-service.tar
+  ansible.builtin.command: ipfs add --nocopy -Q /opt/memory-graph-service.tar
   become: yes
   register: ipfs_add_result_memory_graph
   environment:

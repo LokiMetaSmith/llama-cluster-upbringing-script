@@ -91,7 +91,7 @@
   become: yes
 
 - name: Pin tool-server tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /opt/tool-server.tar
+  ansible.builtin.command: ipfs add --nocopy -Q /opt/tool-server.tar
   become: yes
   register: ipfs_add_result_tool
   environment:

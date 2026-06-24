@@ -82,7 +82,7 @@
   when: pipecat_deployment_style == 'docker'
 
 - name: Pin pipecatapp tarball to IPFS
-  ansible.builtin.command: "ipfs add -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}.tar"
+  ansible.builtin.command: "ipfs add --nocopy -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}.tar"
   become: yes
   register: ipfs_add_result
   environment:

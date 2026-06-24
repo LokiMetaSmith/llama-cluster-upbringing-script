@@ -43,7 +43,7 @@
   become: yes
 
 - name: Pin opengravity tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /opt/opengravity.tar
+  ansible.builtin.command: ipfs add --nocopy -Q /opt/opengravity.tar
   become: yes
   register: ipfs_add_result_opengravity
   environment:
