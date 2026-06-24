@@ -22,7 +22,7 @@ https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-
 langchain
 langchain-community
 langchain-core
-misaki[en]>=0.9.4
+misaki[en]
 python-nomad
 num2words
 numpy

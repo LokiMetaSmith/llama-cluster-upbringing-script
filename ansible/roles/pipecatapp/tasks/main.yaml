@@ -129,6 +129,7 @@
     virtualenv: "{{ pipecat_app_dir }}/venv"
     virtualenv_command: python3 -m venv
   become: yes
+  become_user: "{{ target_user }}"
   tags:
     - deploy_app
 
