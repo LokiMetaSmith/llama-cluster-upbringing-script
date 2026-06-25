@@ -14,14 +14,20 @@ LOCAL_EMBED_URL = os.environ.get("LOCAL_EMBED_URL", "http://localhost:11434/api/
 EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "nomic-embed-text")
 DATABASE_FILE = os.environ.get("DATABASE_FILE", "/tmp/log_vectors.jsonl")
 
-# Common timestamp patterns: ISO8601, Apache, Syslog, Python logging default
+# Common timestamp patterns: ISO8601, Apache, Syslog, Python logging default, and Ansible task headers
 TIMESTAMP_PATTERN = re.compile(
     r"^(?:"
     r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}"  # e.g. 2023-10-25 12:30:45 or 2023-10-25T12:30:45
     r"|\[\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}" # e.g. [25/Oct/2023:12:30:45
     r"|[A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}" # e.g. Oct 25 12:30:45
+    r"|TASK \[" # Ansible task header
+    r"|PLAY \[" # Ansible play header
+    r"|RUNNING HANDLER \[" # Ansible handler header
     r")"
 )
+
+# Maximum lines allowed in a single chunk before forcing a split to avoid massive embeddings
+MAX_LINES_PER_CHUNK = 200
 
 def get_local_embedding(text: str) -> List[float]:
     """Generates embeddings using a local HTTP endpoint."""
@@ -55,8 +61,11 @@ async def ingest_log_file(filepath: str) -> str:
     try:
         with open(filepath, 'r', encoding='utf-8', errors='replace') as file, open(DATABASE_FILE, 'a', encoding='utf-8') as db:
             for line in file:
-                # If we hit a new timestamp and the buffer is not empty, process the buffer
-                if TIMESTAMP_PATTERN.match(line) and buffer:
+                # If we hit a new timestamp or the buffer exceeds the maximum allowed lines
+                hit_boundary = TIMESTAMP_PATTERN.match(line) is not None
+                hit_max_lines = len(buffer) >= MAX_LINES_PER_CHUNK
+
+                if (hit_boundary or hit_max_lines) and buffer:
                     chunk_text = "".join(buffer).strip()
                     if chunk_text:
                         vector = get_local_embedding(chunk_text)
@@ -69,7 +78,7 @@ async def ingest_log_file(filepath: str) -> str:
                         db.write(json.dumps(db_entry) + "\n")
                         chunk_count += 1
 
-                    # Reset buffer for the new log entry
+                    # Reset buffer
                     buffer = [line]
                 else:
                     # Either it's the first line, or it's a continuation (like a stack trace)
