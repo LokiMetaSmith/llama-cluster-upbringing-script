@@ -2,7 +2,7 @@
 
 Welcome, Agent. This file contains the mandatory operating procedures and playbooks for working within this repository.
 
-As per the philosophy of "Zero-Degree-of-Freedom LLM Coding using Executable Oracles," you must strictly adhere to the following rules, tools, and workflows. Do not deviate, shortcut, or attempt to bypass these instructions.
+You must strictly adhere to the following rules, tools, and workflows. Do not deviate, shortcut, or attempt to bypass these instructions.
 
 ## 1. Executable Oracles
 
@@ -73,8 +73,6 @@ When updating the `bootstrap.sh` script (the primary upbringing script that mana
 * If the simulation fails with a 'VGPR Mismatch' or 'KFD Error', or other container crash, roll back the changes and search for recent amdgpu firmware patches or logic errors in the code. Do not bypass these local tests under any circumstances.
 
 ## 7. Five Principles of Agent Skills
-
-Lifted from Addy Osmani's Agent Skills, these are the core principles for agent behavior:
 
 1. **Process over prose:** Workflows are actionable; essays are not. Use defined sequences of steps with checkpoints.
 2. **Anti-rationalization tables:** Anticipate and rebut excuses for skipping workflows (e.g., "This is too simple to need a test").
