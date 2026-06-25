@@ -4,11 +4,10 @@ import os
 import re
 import httpx
 from typing import List
-from mcp.server import Server
-import mcp.types as types
+from mcp.server.fastmcp import FastMCP
 
-# Initialize the MCP Server
-app = Server("log-vectorizer-mcp")
+# Initialize the MCP Server using FastMCP
+app = FastMCP("log-vectorizer-mcp")
 
 # Configuration via environment variables with defaults
 LOCAL_EMBED_URL = os.environ.get("LOCAL_EMBED_URL", "http://localhost:11434/api/embeddings")
