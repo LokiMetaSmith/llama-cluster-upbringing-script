@@ -597,3 +597,13 @@ Alternatively, if you're using `bootstrap.sh`, you can specify the tier via the 
 ```bash
 ./bootstrap.sh --tier [edge|mid|core]
 ```
+
+## Storage Architecture & Hardware Agnosticism
+The cluster maintains hardware agnosticism by utilizing a distributed file system (`unified_fs_mount_point`) as the primary shared volume across all nodes, rather than relying on host-specific local storage configurations like RAID-5.
+This guarantees seamless high availability (HA) for persistent state.
+
+### IPFS and the Filestore Optimization
+To optimize SSD usage and prevent unnecessary duplication of multi-gigabyte machine learning models, the IPFS daemon (`kubo`) is configured with the experimental `FilestoreEnabled` setting.
+- Large static assets (LLMs, TTS/STT models, etc.) are seeded into the cluster using the `ipfs add --nocopy` flag.
+- This instructs IPFS to store only the cryptographic hashes and metadata, while referencing the raw byte data directly from the distributed mount.
+- **Note on Ephemeral Files:** Ephemeral items, such as temporary Docker `.tar` images that are immediately deleted post-load, **must not** use `--nocopy`. Using `--nocopy` on files that will be deleted corrupts the IPFS datastore by breaking the underlying file references.

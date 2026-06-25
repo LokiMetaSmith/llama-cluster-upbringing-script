@@ -42,9 +42,10 @@
   become: yes
   when: not ipfs_binary.stat.exists or (ipfs_version is defined and ipfs_version.stdout is defined and '0.41.0' not in ipfs_version.stdout)
 
+
 - name: Ensure IPFS data directory exists
   ansible.builtin.file:
-    path: "{{ nomad_volumes_dir }}/ipfs"
+    path: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
     state: directory
     mode: '0755'
   become: yes

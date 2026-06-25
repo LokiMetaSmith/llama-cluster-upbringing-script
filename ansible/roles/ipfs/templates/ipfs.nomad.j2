@@ -22,12 +22,16 @@ job "ipfs" {
         image = "ipfs/kubo:latest"
         network_mode = "host"
         volumes = [
-          "{{ nomad_volumes_dir }}/ipfs:/data/ipfs"
+          "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs:/data/ipfs",
+          "{{ nomad_models_dir }}:{{ nomad_models_dir }}:ro"
         ]
+
       }
 
       env {
         IPFS_PROFILE = "server"
+        IPFS_CONFIG_Datastore_StorageMax = "100GB"
+        IPFS_CONFIG_Experimental_FilestoreEnabled = "true"
         # Bind to 0.0.0.0 so that Nomad prestart tasks using cluster_ip or 127.0.0.1 can reach it
         IPFS_CONFIG_Addresses_Gateway = "/ip4/0.0.0.0/tcp/{{ ipfs_gateway_port | default(8080) }}"
         IPFS_CONFIG_Addresses_API = "/ip4/0.0.0.0/tcp/{{ ipfs_api_port | default(5001) }}"

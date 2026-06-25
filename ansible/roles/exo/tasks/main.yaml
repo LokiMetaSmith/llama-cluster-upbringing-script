@@ -50,7 +50,7 @@
   become: yes
   register: ipfs_add_result_exo
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   when: exo_enable
 
 - name: Clean up temporary Exo tarball

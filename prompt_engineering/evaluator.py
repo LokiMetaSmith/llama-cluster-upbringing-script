@@ -30,7 +30,8 @@ def is_safe_code(code: str) -> bool:
     """Validates that the code does not contain dangerous function calls."""
     try:
         tree = ast.parse(code)
-    except SyntaxError:
+    except Exception as e:
+        logging.debug(f"Failed to parse AST for write operation penalty: {e}")
         return False
 
     for node in ast.walk(tree):
@@ -100,6 +101,26 @@ async def evaluate_code(candidate_code: str) -> dict:
             "agent_id": eval_id,
             "rationale": rationale
         }
+
+    # Count write operations to penalize
+    write_count = 0
+    try:
+        tree = ast.parse(actual_code)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Attribute) and node.func.attr == 'write':
+                    write_count += 1
+                elif isinstance(node.func, ast.Name) and node.func.id == 'open':
+                    # Sometimes open is used for writes
+                    if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant) and any(m in node.args[1].value for m in ('w', 'a', '+', 'x')):
+                        write_count += 1
+                    else:
+                        for kw in node.keywords:
+                            if kw.arg == 'mode' and isinstance(kw.value, ast.Constant) and any(m in kw.value.value for m in ('w', 'a', '+', 'x')):
+                                write_count += 1
+    except Exception as e:
+        logging.debug(f"Failed to parse AST for write operation penalty: {e}")
+        pass
 
     # Save the candidate's code (only the code part) to the archive
     with open(agent_code_path, "w") as f:
@@ -181,6 +202,12 @@ async def evaluate_code(candidate_code: str) -> dict:
             fitness = passed_count / total_tests
         else:
             fitness = 0.0
+
+        # Penalize excessive writes
+        if write_count > 0:
+            penalty = min(0.5, write_count * 0.1) # Max penalty 0.5, 0.1 per write
+            fitness = max(0.0, fitness - penalty)
+            logging.info(f"Applied fitness penalty of {penalty:.4f} due to {write_count} write operations.")
 
         logging.info(f"Evaluation finished. Fitness: {fitness:.4f}. Details: {results.get('details')}")
 
