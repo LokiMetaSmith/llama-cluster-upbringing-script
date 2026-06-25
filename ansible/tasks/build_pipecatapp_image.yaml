@@ -82,11 +82,11 @@
   when: pipecat_deployment_style == 'docker'
 
 - name: Pin pipecatapp tarball to IPFS
-  ansible.builtin.command: "ipfs add --nocopy -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}.tar"
+  ansible.builtin.command: "ipfs add -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}.tar"
   become: yes
   register: ipfs_add_result
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   when: pipecat_deployment_style == 'docker'
 
 - name: Clean up temporary tarball

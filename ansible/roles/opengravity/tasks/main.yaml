@@ -43,11 +43,11 @@
   become: yes
 
 - name: Pin opengravity tarball to IPFS
-  ansible.builtin.command: ipfs add --nocopy -Q /opt/opengravity.tar
+  ansible.builtin.command: ipfs add -Q /opt/opengravity.tar
   become: yes
   register: ipfs_add_result_opengravity
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
 
 - name: Clean up temporary opengravity tarball
   ansible.builtin.file:

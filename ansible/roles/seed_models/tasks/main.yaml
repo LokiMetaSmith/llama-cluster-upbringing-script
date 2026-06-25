@@ -90,7 +90,7 @@
   ansible.builtin.command:
     cmd: ipfs add --nocopy -Q "{{ nomad_models_dir }}/llm/{{ item.filename }}"
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   register: llm_ipfs_cids
   loop: "{{ llm_models_to_download | selectattr('filename', 'defined') | list | unique(attribute='filename') }}"
   become: yes
@@ -139,7 +139,7 @@
   ansible.builtin.command:
     cmd: ipfs add --nocopy -Q -r "{{ nomad_models_dir }}/vllm/{{ item.repo_id.split('/')[-1] }}"
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   register: vllm_ipfs_cids
   loop: "{{ vllm_expert_models | selectattr('repo_id', 'defined') | list }}"
   become: yes
@@ -207,7 +207,7 @@
   ansible.builtin.command:
     cmd: ipfs add --nocopy -Q "{{ nomad_models_dir }}/stt/{{ item[0].key }}/{{ item[1].filename }}"
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   register: stt_url_ipfs_cids
   loop: "{{ stt_models | dict2items | subelements('value') | selectattr(1, 'match', 'url') | list }}"
   become: yes
@@ -226,7 +226,7 @@
   ansible.builtin.command:
     cmd: ipfs add --nocopy -Q -r "{{ nomad_models_dir }}/stt/{{ item[0].key }}/{{ item[1].name }}"
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   register: stt_hub_ipfs_cids
   loop: "{{ stt_models | dict2items | subelements('value') | selectattr(1, 'match', 'repo_id') | list }}"
   become: yes
@@ -271,7 +271,7 @@
   ansible.builtin.command:
     cmd: ipfs add --nocopy -Q "{{ nomad_models_dir }}/tts/{{ item.filename }}"
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   register: tts_ipfs_cids
   loop: "{{ piper_voice_files }}"
   become: yes
@@ -338,7 +338,7 @@
   ansible.builtin.command:
     cmd: ipfs add --nocopy -Q "{{ nomad_models_dir }}/vision/{{ item.filename }}"
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   register: vision_url_ipfs_cids
   loop: "{{ vision_models | selectattr('filename', 'defined') | list }}"
   become: yes
@@ -357,7 +357,7 @@
   ansible.builtin.command:
     cmd: ipfs add --nocopy -Q -r "{{ nomad_models_dir }}/vision/{{ item.name }}"
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   register: vision_hub_ipfs_cids
   loop: "{{ vision_models | selectattr('repo_id', 'defined') | list }}"
   become: yes
@@ -406,7 +406,7 @@
   ansible.builtin.command:
     cmd: ipfs add --nocopy -Q -r "{{ nomad_models_dir }}/embedding/{{ item.name }}"
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   register: embedding_ipfs_cids
   loop: "{{ embedding_models | selectattr('repo_id', 'defined') | list }}"
   become: yes
@@ -424,9 +424,9 @@
 # --- Reference Data ---
 - name: Pin reference data directory to IPFS
   ansible.builtin.command:
-    cmd: ipfs add --nocopy -Q -r "{{ role_path }}/files/reference_data"
+    cmd: ipfs add -Q -r "{{ role_path }}/files/reference_data"
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   register: reference_data_ipfs_cid
   become: yes
 

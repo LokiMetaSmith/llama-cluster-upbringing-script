@@ -46,11 +46,11 @@
   when: exo_enable
 
 - name: Pin Exo tarball to IPFS
-  ansible.builtin.command: ipfs add --nocopy -Q /opt/{{ exo_docker_image_name }}.tar
+  ansible.builtin.command: ipfs add -Q /opt/{{ exo_docker_image_name }}.tar
   become: yes
   register: ipfs_add_result_exo
   environment:
-    IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
   when: exo_enable
 
 - name: Clean up temporary Exo tarball

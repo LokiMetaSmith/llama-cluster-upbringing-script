@@ -68,7 +68,7 @@
       ansible.builtin.command:
         cmd: "ipfs get {{ item.content }} -o {{ nomad_models_dir }}/{{ item.item | replace('models/ipfs/', '') }}"
       environment:
-        IPFS_PATH: "{{ nomad_volumes_dir | default('/opt/cluster-infra/data') }}/ipfs"
+        IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
       args:
         creates: "{{ nomad_models_dir }}/{{ item.item | replace('models/ipfs/', '') }}"
       loop: "{{ cid_values.results }}"
