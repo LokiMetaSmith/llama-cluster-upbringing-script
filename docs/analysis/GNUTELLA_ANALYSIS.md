@@ -61,19 +61,19 @@ Our current architecture relies on **Nomad (Orchestration)**, **Consul (Service 
 
 Based on the Gnutella lessons, here are actionable implementation options to explore for our legacy cluster:
 
-- [ ] **Option 1: Gossip-Based Service Fallback**
+- [x] **Option 1: Gossip-Based Service Fallback**
   - **Idea:** If Consul fails (loss of Raft quorum), implement a lightweight UDP/TCP gossip protocol (like Serf or a custom PING/PONG mechanism) as a fallback so nodes can still discover LLM experts locally.
   - **Justification:** Improves cluster survivability on unstable hardware.
 
-- [ ] **Option 2: Stateless Bootstrapping (GWebCache-style)**
+- [x] **Option 2: Stateless Bootstrapping (GWebCache-style)**
   - **Idea:** Instead of relying entirely on static IP definitions in Ansible (`inventory.yaml`) or a strictly defined Nomad control node, deploy a lightweight, stateless "Cluster Cache" API.
   - **Justification:** New legacy nodes could simply hit an HTTP endpoint to fetch the IPs of current active Nomad/Consul servers and auto-join the mesh, easing dynamic scaling.
 
-- [ ] **Option 3: Bloom Filter Capability Routing**
+- [x] **Option 3: Bloom Filter Capability Routing**
   - **Idea:** Instead of registering every individual AI capability in a centralized Consul KV, nodes could advertise a Bloom filter representing their supported AI models/tools during routine gossip.
   - **Justification:** Reduces memory overhead and Raft write-amplification on older hardware when nodes frequently join or leave.
 
-- [ ] **Option 4: PUSH-style Reverse Proxies for NAT Traversal**
+- [x] **Option 4: PUSH-style Reverse Proxies for NAT Traversal**
   - **Idea:** For nodes deployed at the "edge" (e.g., external residential networks), implement a "connect-back" PUSH model. If a controller cannot reach a worker via direct IP (due to NAT), the worker initiates the connection to a known jump-server to receive Nomad allocations.
   - **Justification:** Eliminates the need to configure VPNs or Tailscale on heavily constrained legacy nodes, mirroring Gnutella's firewall bypass.
 
