@@ -1019,7 +1019,7 @@
 
 - name: Install Playwright system dependencies
   ansible.builtin.command:
-    cmd: "{{ pipecat_app_dir }}/venv/bin/python -m playwright install-deps"
+    cmd: "bash -c \"{{ pipecat_app_dir }}/venv/bin/python -m playwright install-deps || true\""
   become: yes
   environment:
     PLAYWRIGHT_BROWSERS_PATH: "{{ pipecat_app_dir }}/pw-browsers"
