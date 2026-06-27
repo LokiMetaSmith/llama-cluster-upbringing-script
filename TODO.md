@@ -206,7 +206,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - `ansible/roles/bootstrap_agent/handlers/main.yaml` is currently empty.
 
 - [x] **Reconcile Stale Artifacts:**
-  - `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
+  - [x] `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
 - [x] **Vision Model Failover**: Implement failover or selection logic for vision models (see `pipecatapp/app.py`).
 - [x] **Refactor Vision Role**: The `vision` role is currently minimal (only installs `libgl1`) and does not deploy Frigate as implied by the `frigate_port` variable. It needs to be refactored to actually deploy the service.
 - [x] **Review Hardcoded Network References:**
