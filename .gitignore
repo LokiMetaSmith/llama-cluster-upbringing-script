@@ -65,3 +65,4 @@ group_vars/all/resource_tuning.yaml
 # P2P Sync Tool Artifacts
 poc/p2p_sync/node_*/
 poc/p2p_sync/syncthing_bin*
+test_venv/
