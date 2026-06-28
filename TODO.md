@@ -49,8 +49,8 @@
 ## Agentic Patterns Implementation
 
 - [x] **Implement Technician Agent:**
-  - [ ] Create a 3-phase agent (Plan, Execute, Reflect) in `pipecatapp/technician_agent.py`.
-  - [ ] Update `SwarmTool` to support spawning technician agents.
+  - [x] Create a 3-phase agent (Plan, Execute, Reflect) in `pipecatapp/technician_agent.py`.
+  - [x] Update `SwarmTool` to support spawning technician agents.
 - [x] **Swarm Orchestration (Map-Reduce):**
   - **Goal:** Implement the "Swarm Migration" pattern where a manager agent splits a large task into chunks and dispatches them to multiple Technician Agents.
   - **Tasks:**
