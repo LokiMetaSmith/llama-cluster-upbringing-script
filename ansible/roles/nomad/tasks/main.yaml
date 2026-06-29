@@ -340,7 +340,7 @@
     state: present
   become: yes
   check_mode: no
-  ignore_errors: "{{ ansible_virtualization_type | default(\'\') in [\'docker\', \'containerd\'] }}"
+  ignore_errors: "{{ ansible_virtualization_type | default('') in ['docker', 'containerd'] }}"
 
 - name: Ensure br_netfilter module is loaded on boot
   ansible.builtin.copy:
