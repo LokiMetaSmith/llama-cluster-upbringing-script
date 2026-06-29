@@ -380,6 +380,34 @@ This section tracks actionable ideas derived from the `docs/analysis/POLLEN_COMP
 
 - [x] Investigate and fix `test_load_playbooks_from_manifest` failure in `tests/unit/test_provisioning.py` caused by `yaml` mocking issues.
 
+## Model Training as Code (MTaC) Integration
+
+
+
+This section tracks the integration of Aleph Alpha's "Model Training as Code" (MTaC) concepts into our workflow.
+
+- [x] **Pipeline Orchestrator Framework:**
+
+  - [x] Created `pipecatapp/mtac_pipeline.py` to programmatically generate Nomad job definitions for ML training stages (e.g., `sft`, `rl`, `eval`).
+
+  - [x] Implemented asynchronous dispatch and monitoring of these jobs against the Nomad API.
+
+  - [x] Integrated mock/dummy training stages to simulate execution and state tracking.
+
+- [x] **Agent Tool Integration:**
+
+  - [x] Created `pipecatapp/tools/mtac_tool.py` exposing the orchestrator as a tool.
+
+  - [x] Added `MTACTool` to the `agent_factory.py` so agents can autonomously launch training stages or full pipelines.
+
+- [ ] **Real ML Backends (Next Steps):**
+
+  - [ ] Replace mock batch jobs with actual containerized ML workloads (e.g., Unsloth or Torchtune).
+
+  - [ ] Integrate ML result metrics and telemetry streaming into the cluster dashboard.
+
+
+
 ## Future Model Integrations
 
 - [x] **Orthrus Integration:** Track upstream support in `llama.cpp` or native `vLLM` for "Orthrus" (dual-view diffusion decoding model, e.g., `chiennv/Orthrus-Qwen3-8B`). Once supported by our core inference engines, integrate it into `group_vars/models.yaml` to take advantage of its memory-efficient parallel token generation for complex reasoning tasks.

@@ -34,6 +34,7 @@ from tools.autoresearch_tool import AutoresearchTool
 from tools.submit_solution_tool import SubmitSolutionTool
 from tools.container_registry_tool import ContainerRegistryTool
 from tools.search_tool import SearchTool
+from tools.mtac_tool import MTACTool
 from tools.openclaw_tool import OpenClawTool
 from tools.atproto_tool import ATProtoTool
 from tools.scheduler_tool import SchedulerTool
@@ -114,6 +115,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "submit_solution": SubmitSolutionTool(),
         "container_registry": ContainerRegistryTool(),
         "search": SearchTool(root_dir="/opt/pipecatapp"),
+        "mtac": MTACTool(),
         "openclaw": OpenClawTool(
             gateway_url=config.get("openclaw_gateway_url", "ws://openclaw.service.consul:18789")
         ),
