@@ -19,7 +19,8 @@ class MTACTool:
             "Launch Model Training as Code (MTaC) jobs on the cluster. "
             "Allows you to run specific model training stages like 'sft' (Supervised Fine Tuning), "
             "'rl' (Reinforcement Learning), 'eval' (Evaluation), or a 'full_pipeline'. "
-            "Pass a JSON configuration string for the given stage."
+            "Pass a JSON configuration string for the given stage. You can specify 'backend': 'unsloth', 'torchtune', or 'mock'. "
+            "Additional config keys include 'image', 'command', 'args', 'cpu', 'memory_mb', and 'use_gpu'."
         )
         self.input_schema = {
             "type": "object",
@@ -30,7 +31,7 @@ class MTACTool:
                 },
                 "config": {
                     "type": "string",
-                    "description": "A JSON string representing the configuration for the chosen stage. Example: '{\"learning_rate\": 1e-4}'."
+                    "description": "A JSON string representing the configuration for the chosen stage. Example: '{\"backend\": \"unsloth\", \"use_gpu\": true}'."
                 }
             },
             "required": ["stage"]

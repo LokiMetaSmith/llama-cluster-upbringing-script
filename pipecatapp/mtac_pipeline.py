@@ -19,14 +19,57 @@ class MTACPipelineOrchestrator:
         cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
         self.nomad_addr = os.getenv("NOMAD_ADDR", f"http://{cluster_ip}:4646")
 
-    def _generate_mock_job_def(self, stage: str, job_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    def _generate_job_def(self, stage: str, job_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Generates a mock Nomad job definition for a given stage.
+        Generates a Nomad job definition for a given stage, supporting both mock and real ML container backends.
         """
+        backend = config.get("backend", "mock").lower()
+        shared_mount_point = "/opt/nomad/data/mtac"
+
+        if backend == "mock":
+            driver = "docker"
+            driver_config = {
+                "image": "alpine:latest",
+                "command": "/bin/sh",
+                "args": [
+                    "-c",
+                    f"echo \"Starting mock {stage} with config:\"; printenv CONFIG_JSON; sleep 5; echo \"Finished mock {stage}\""
+                ]
+            }
+        else:
+            driver = "docker"
+            # Default images for the backends, can be overridden by config
+            image = config.get("image")
+            if not image:
+                if backend == "unsloth":
+                    image = "unsloth/unsloth:latest"
+                elif backend == "torchtune":
+                    image = "pytorch/torchtune:latest"
+                else:
+                    # Fallback generic python ML container
+                    image = "pytorch/pytorch:latest"
+
+            driver_config = {
+                "image": image,
+                "command": config.get("command", "python3"),
+                "args": config.get("args", ["-c", f"print('Running {stage} with {backend} backend')"]),
+                "volumes": [
+                    f"{shared_mount_point}:/workspace"
+                ],
+                "work_dir": "/workspace"
+            }
+
+            # Optional GPU support
+            if config.get("use_gpu", False):
+                # Request a generic GPU device mapping in Docker driver config
+                # In modern Nomad/Docker, we map devices or use nvidia runtime.
+                # Adding standard device mapping config to expose GPUs:
+                driver_config["gpus"] = "all" # Note: requires nomad nvidia plugin or docker runtime config
+
         job = {
             "Job": {
                 "ID": job_id,
-                "Name": f"mtac-{stage}-{job_id.split(\"-\")[2][:8]}",
+                "Name": f"mtac-{stage}-{job_id.split('-')[2][:8]}",
                 "Type": "batch",
                 "Datacenters": ["dc1"],
                 "TaskGroups": [
@@ -35,22 +78,19 @@ class MTACPipelineOrchestrator:
                         "Tasks": [
                             {
                                 "Name": f"{stage}-task",
-                                "Driver": "raw_exec",
-                                "Config": {
-                                    "command": "/bin/sh",
-                                    "args": [
-                                        "-c",
-                                        f"echo 'Starting mock {stage} with config: {json.dumps(config)}'; sleep 5; echo 'Finished mock {stage}'"
-                                    ]
+                                "Driver": driver,
+                                "Config": driver_config,
+                                "Env": {
+                                    "CONFIG_JSON": json.dumps(config)
                                 },
                                 "Resources": {
-                                    "CPU": 100,
-                                    "MemoryMB": 64
+                                    "CPU": config.get("cpu", 1000),
+                                    "MemoryMB": config.get("memory_mb", 4096)
                                 }
                             }
                         ],
                         "RestartPolicy": {
-                            "Attempts": 0,
+                            "Attempts": config.get("restart_attempts", 0),
                             "Mode": "fail"
                         }
                     }
@@ -110,7 +150,7 @@ class MTACPipelineOrchestrator:
         Runs a specific training pipeline stage.
         """
         job_id = f"mtac-{stage}-{str(uuid.uuid4())}"
-        job_def = self._generate_mock_job_def(stage, job_id, config)
+        job_def = self._generate_job_def(stage, job_id, config)
 
         logger.info(f"Dispatching MTaC stage: {stage} with Job ID: {job_id}")
 
