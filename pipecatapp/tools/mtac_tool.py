@@ -3,7 +3,7 @@ import json
 import asyncio
 
 # Dynamically import the pipeline orchestrator to prevent circular imports if it gets complex later
-from pipecatapp.mtac_pipeline import MTACPipelineOrchestrator
+from mtac_pipeline import MTACPipelineOrchestrator
 
 logger = logging.getLogger(__name__)
 
