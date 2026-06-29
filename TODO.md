@@ -404,7 +404,7 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 
   - [x] Replaced mock batch jobs with actual containerized ML workloads, supporting Unsloth and Torchtune via Docker drivers and cluster volumes.
 
-  - [x] Implemented python training scripts (Unsloth LoRA fine-tuning loop) injected directly into jobs.
+  - [x] Implemented python training scripts (Unsloth and Torchtune LoRA fine-tuning loops) injected directly into jobs.
 
   - [x] Implemented ML result telemetry streaming by exposing training metrics through Nomad volumes back to the orchestrator tool.
 
