@@ -400,9 +400,9 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 
   - [x] Added `MTACTool` to the `agent_factory.py` so agents can autonomously launch training stages or full pipelines.
 
-- [ ] **Real ML Backends (Next Steps):**
+- [x] **Real ML Backends:**
 
-  - [ ] Replace mock batch jobs with actual containerized ML workloads (e.g., Unsloth or Torchtune).
+  - [x] Replaced mock batch jobs with actual containerized ML workloads, supporting Unsloth and Torchtune via Docker drivers and cluster volumes.
 
   - [ ] Integrate ML result metrics and telemetry streaming into the cluster dashboard.
 
