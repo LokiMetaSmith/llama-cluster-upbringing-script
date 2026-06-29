@@ -203,7 +203,7 @@ This section tracks actionable ideas derived from the `docs/analysis/GNUTELLA_AN
 This section tracks identified placeholder files, corrupted binaries, and code that needs to be fixed or removed.
 
 - [x] **Remove or Implement Empty Handler:**
-  - [ ] `ansible/roles/bootstrap_agent/handlers/main.yaml` is currently empty.
+  - [x] `ansible/roles/bootstrap_agent/handlers/main.yaml` is currently empty.
 
 - [x] **Reconcile Stale Artifacts:**
   - [ ] `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
