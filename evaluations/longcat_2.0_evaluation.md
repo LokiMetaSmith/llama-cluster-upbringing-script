@@ -6,13 +6,13 @@ This report evaluates the architecture and integration viability of LongCat 2.0 
 
 ### LongCat 2.0
 * **Architecture:** Employs a Sparse Mixture of Experts (ScMoE) architecture with approximately 1.6 Trillion total parameters (dynamically activating between 33B and 56B parameters during inference).
-* **Attention Mechanism:** Uses sparse attention (reducing computation from quadratic to linear complexity), natively supporting a **1-million-token context window**.
-* **Deployment:** Hosted remotely as an off-premise API model (LongCat API Platform), meaning data must be transmitted over the internet, and throughput is subject to API limits.
+* **Attention Mechanism:** Uses sparse attention (reducing computation from quadratic to linear complexity), natively supporting a **1-million-token context window**. [Learn more about LongCat Technology](https://www.longcatai.org/technology/)
+* **Deployment:** Hosted remotely as an off-premise API model ([LongCat API Platform Docs](https://longcat.chat/platform/docs/ChangeLog.html)), meaning data must be transmitted over the internet, and throughput is subject to API limits. [KuCoin Article on LongCat-2.0-Preview Throughput](https://www.kucoin.com/news/flash/owl-alpha-on-openrouter-revealed-as-meituan-s-longcat-2-0-preview-with-11t-monthly-token-throughput)
 
 ### Our Local System
-* **Architecture:** A self-hosted, distributed hybrid inference setup (Tiered: Core, Mid, Edge nodes). We utilize engines like `vLLM` and `llama.cpp` to run much smaller, quantized models locally (e.g., Llama 3 8B, Qwen, Mistral).
+* **Architecture:** A self-hosted, distributed hybrid inference setup (Tiered: Core, Mid, Edge nodes). We utilize engines like [`vLLM`](https://github.com/vllm-project/vllm) and [`llama.cpp`](https://github.com/ggerganov/llama.cpp) to run much smaller, quantized models locally (e.g., Llama 3 8B, Qwen, Mistral).
 * **Context:** Typical local models are constrained by VRAM, usually offering a much smaller context window (8K to 128K) compared to LongCat 2.0's 1M tokens.
-* **Deployment:** Runs via Nomad and Consul, maintaining full data privacy and hardware agnosticism. It keeps all operations on-premise without depending on external API rate limits or internet latency.
+* **Deployment:** Runs via [Nomad](https://github.com/hashicorp/nomad) and [Consul](https://github.com/hashicorp/consul), maintaining full data privacy and hardware agnosticism. It keeps all operations on-premise without depending on external API rate limits or internet latency.
 
 ## 2. Agent Integration: Output Formatting and OpenClaw
 
