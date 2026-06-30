@@ -149,6 +149,8 @@ vision_models:
   - name: "moondream2"
     repo_id: "vikhyatk/moondream2"
     # This model will be downloaded using the huggingface_hub module.
+  - name: "Unlimited-OCR"
+    repo_id: "baidu/Unlimited-OCR"
 
 # Interaction Models (Research Preview Placeholder)
 # Specialized models handling continuous audio/video micro-turns directly.
