@@ -1,5 +1,7 @@
 # DSpark Speculative Decoding Architecture Report
 
+**Reference Repository:** [deepseek-ai/DeepSpec](https://github.com/deepseek-ai/DeepSpec)
+
 ## Overview
 DSpark is a specialized speculative decoding framework built to optimize the inference speed of Large Language Models (LLMs). Speculative decoding traditionally uses a smaller "draft" model to guess upcoming tokens rapidly, which the large "target" model then verifies in a single batch step. DSpark addresses two major bottlenecks in existing architectures: drafting speed vs. accuracy (suffix decay), and system-level verification efficiency (wasted compute under high load).
 
