@@ -715,6 +715,29 @@ async def save_workflow_definition(payload: Dict = Body(...), api_key: str = Sec
         # Security fix: Do not expose internal exception details
         raise HTTPException(status_code=500, detail="An error occurred while saving the workflow.")
 
+@app.get("/api/mtac/telemetry/{job_id}", summary="Get MTaC Telemetry", description="Retrieves telemetry data (metrics.jsonl) for a specific MTaC Nomad job.", tags=["MTaC"])
+async def get_mtac_telemetry(job_id: str, api_key: str = Security(get_api_key)):
+    import os
+    import json
+
+    # Sanitize job_id to prevent path traversal
+    if not job_id.replace('-', '').isalnum():
+        raise HTTPException(status_code=400, detail="Invalid job ID")
+
+    metrics_file = f"/opt/nomad/data/mtac/{job_id}/metrics.jsonl"
+    if not os.path.exists(metrics_file):
+        raise HTTPException(status_code=404, detail="Telemetry not found")
+
+    telemetry = []
+    try:
+        with open(metrics_file, "r") as f:
+            for line in f:
+                if line.strip():
+                    telemetry.append(json.loads(line))
+        return {"job_id": job_id, "telemetry": telemetry}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read telemetry: {str(e)}")
+
 @app.get("/api/web_uis")
 async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """

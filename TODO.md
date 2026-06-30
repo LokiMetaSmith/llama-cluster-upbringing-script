@@ -408,6 +408,10 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 
   - [x] Implemented ML result telemetry streaming by exposing training metrics through Nomad volumes back to the orchestrator tool.
 
+  - [x] Implemented Evaluation Stage (`eval_sft.py`) using EleutherAI's `lm-eval-harness` to evaluate post-training models.
+
+  - [x] Created the MTaC Telemetry UI dashboard inside `monitor.html` to plot loss curves and display eval results.
+
 
 
 ## Future Model Integrations

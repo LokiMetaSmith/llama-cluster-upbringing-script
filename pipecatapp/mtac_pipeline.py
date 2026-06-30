@@ -57,6 +57,8 @@ class MTACPipelineOrchestrator:
                 script_path = os.path.join(os.path.dirname(__file__), "mtac", "unsloth_sft.py")
             elif backend == "torchtune" and stage == "sft":
                 script_path = os.path.join(os.path.dirname(__file__), "mtac", "torchtune_sft.py")
+            elif stage == "eval":
+                script_path = os.path.join(os.path.dirname(__file__), "mtac", "eval_sft.py")
 
             if script_path and os.path.exists(script_path):
                 with open(script_path, "r") as f:
@@ -238,6 +240,12 @@ class MTACPipelineOrchestrator:
 
         # Eval Stage
         eval_config = pipeline_config.get("eval", {})
+        # If we just trained a model in the SFT stage, pass that path to eval
+        if sft_result["status"] == "success":
+            sft_job_id = sft_result["job_id"]
+            if "model" not in eval_config:
+                eval_config["model"] = f"/workspace/{sft_job_id}/outputs"
+
         eval_result = await self.run_stage("eval", eval_config)
         results["eval"] = eval_result
 
