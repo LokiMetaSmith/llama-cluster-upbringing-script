@@ -6,6 +6,9 @@
       - clamav-freshclam
     state: present
     update_cache: yes
+    update_cache_retries: 10
+    update_cache_retry_max_delay: 15
+    cache_valid_time: 3600
   become: yes
 
 - name: Ensure freshclam is running and enabled

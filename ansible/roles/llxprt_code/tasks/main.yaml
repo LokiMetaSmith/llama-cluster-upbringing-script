@@ -33,6 +33,9 @@
 - name: Update apt cache and install Node.js
   ansible.builtin.apt:
     update_cache: yes
+    update_cache_retries: 10
+    update_cache_retry_max_delay: 15
+    cache_valid_time: 3600
     name: nodejs
     state: latest
   become: yes
