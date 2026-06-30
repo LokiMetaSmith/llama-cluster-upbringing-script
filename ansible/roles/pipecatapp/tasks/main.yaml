@@ -718,6 +718,24 @@
   tags:
     - deploy_app
 
+- name: Copy mtac pipeline directory
+  ansible.builtin.copy:
+    mode: '0755'
+    src: "{{ inventory_dir }}/pipecatapp/mtac"
+    dest: "{{ pipecat_app_dir }}/"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy mtac pipeline module
+  ansible.builtin.copy:
+    mode: '0755'
+    src: "{{ inventory_dir }}/pipecatapp/mtac_pipeline.py"
+    dest: "{{ pipecat_app_dir }}/mtac_pipeline.py"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy memory_backends_impl directory
   ansible.builtin.copy:
     mode: '0755'
