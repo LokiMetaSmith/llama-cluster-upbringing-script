@@ -1,7 +1,7 @@
 # Ornith-1 Evaluation for Local LLM Provider (llama-cluster-upbringing-script)
 
 ## Overview
-This document evaluates the `Ornith-1` repository (specifically the `Ornith-1.0` model series) for inclusion as a core coding model backend within the `llama-cluster-upbringing-script` cluster, acting as the local LLM provider for OpenClaw.
+This document evaluates the [`Ornith-1` repository](https://github.com/deepreinforce-ai/Ornith-1) (specifically the `Ornith-1.0` model series) for inclusion as a core coding model backend within the `llama-cluster-upbringing-script` cluster, acting as the local LLM provider for OpenClaw.
 
 ## Hardware Footprint & Local Deployment Viability
 The `Ornith-1.0` series provides checkpoints in multiple sizes and formats. The evaluation focuses on the smaller checkpoints: 9B Dense and 35B MoE, particularly in GGUF formats.
