@@ -242,7 +242,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Optimize Fast Path Security Redaction:** Enhanced `security.py` with LRU caching (`@lru_cache`), streaming redaction for large texts (`redact_sensitive_data_stream`), and optional cache disable for unique/large inputs. Maintains original fast-path regex optimization.
 
 - [x] **Optimize ExperimentTool Sandbox Creation:**
-  - [ ] Replaced `shutil.copytree` with `tar` snapshotting to reduce syscall overhead.
+  - [x] Replaced `shutil.copytree` with `tar` snapshotting to reduce syscall overhead.
 - [x] **Optimize ProjectMapperTool Scanning:**
   - [ ] Implemented `git ls-files` strategy for faster file listing in git repositories.
 - [x] **Review Codebase for I/O Inefficiencies:**

@@ -56,7 +56,9 @@ async def evaluate_code(candidate_code: str) -> dict:
     try:
         # 1. Setup temporary directory
         logging.info(f"Creating temporary directory: {{temp_dir}}")
-        shutil.copytree(APP_SOURCE_DIR, temp_dir)
+        os.makedirs(temp_dir, exist_ok=True)
+        import subprocess
+        subprocess.run(["sh", "-c", "tar -cf - -C \"$1\" . | tar -xf - -C \"$2\"", "--", APP_SOURCE_DIR, temp_dir], check=True)
         with open(os.path.join(temp_dir, TARGET_CODE_FILE), "w") as f:
             f.write(candidate_code)
 
