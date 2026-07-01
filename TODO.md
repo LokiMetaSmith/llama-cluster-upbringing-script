@@ -155,7 +155,7 @@ These structural suggestions are targeted for a future major release to signific
 - [x] **Phase 1: Build a `LangChainToolAdapter`:**
   - [x] Create a wrapper class in `pipecatapp/tools/` capable of ingesting any LangChain `BaseTool` and exposing it through the standard methods expected by our `ToolExecutorNode` and UI approval queue (`TwinService._request_approval`).
 - [x] **Phase 2: RAG Internals Enhancement:**
-  - [ ] Update `RAG_Tool.add_document()` to utilize LangChain's `DocumentLoaders` (e.g., `DirectoryLoader`, `PyMuPDFLoader`) and `RecursiveCharacterTextSplitter` internally, maintaining the tool's external API.
+  - [x] Update `RAG_Tool.add_document()` to utilize LangChain's `DocumentLoaders` (e.g., `DirectoryLoader`, `PyMuPDFLoader`) and `RecursiveCharacterTextSplitter` internally, maintaining the tool's external API.
 - [x] **Phase 3: Create LangChain Memory Wrappers:**
   - [ ] Implement `PMMChatMessageHistory` (inheriting from `BaseChatMessageHistory`) that reads/writes to our deterministic `pmm_memory.db` ledger.
   - [ ] Implement `PipecatVectorStore` (inheriting from `VectorStore`) wrapping our custom `memory.py` FAISS/SQLite setup.
