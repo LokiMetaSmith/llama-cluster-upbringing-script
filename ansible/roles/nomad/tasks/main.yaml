@@ -42,7 +42,7 @@
     name: nomad
     state: stopped
   become: yes
-  ignore_errors: yes
+  ignore_errors: false
   when: cleanup_services | default(false) | bool
 
 - name: Clear Nomad server state if cleanup requested
@@ -207,7 +207,7 @@
   register: consul_token_file
   delegate_to: "{{ (groups['controller_nodes'] | first) if ('controller_nodes' in groups and groups['controller_nodes']) else inventory_hostname }}"
   become: yes
-  ignore_errors: yes
+  ignore_errors: false
   until: consul_token_file is success
   retries: 12
   delay: 5
@@ -357,7 +357,7 @@
     state: present
     reload: yes
   become: yes
-  ignore_errors: yes
+  ignore_errors: false
 
 - name: Enable bridge-nf-call-ip6tables for CNI
   ansible.posix.sysctl:
@@ -366,7 +366,7 @@
     state: present
     reload: yes
   become: yes
-  ignore_errors: yes
+  ignore_errors: false
 
 - name: Enable bridge-nf-call-iptables for CNI
   ansible.posix.sysctl:
@@ -375,7 +375,7 @@
     state: present
     reload: yes
   become: yes
-  ignore_errors: yes
+  ignore_errors: false
 
 - name: Ensure CNI plugin directory exists
   ansible.builtin.file:
@@ -441,7 +441,7 @@
     - "{{ nomad_http_port }}"
     - 4647
   changed_when: false
-  ignore_errors: yes
+  ignore_errors: false
 
 - name: Allow Nomad Mixed (TCP/UDP) ports in UFW
   ansible.builtin.command: ufw allow {{ item }}
@@ -449,20 +449,25 @@
   loop:
     - 4648
   changed_when: false
-  ignore_errors: yes
+  ignore_errors: false
+
+- name: Check if Nomad CLI cert exists
+  ansible.builtin.stat:
+    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
+  register: nomad_cli_cert_stat
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "https://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
-    validate_certs: no
+    url: "{{ 'https' if nomad_cli_cert_stat.stat.exists else 'http' }}://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
+    validate_certs: "{{ 'yes' if nomad_cli_cert_stat.stat.exists else 'no' }}"
     status_code: 200
-    client_cert: "{{ nomad_tls_dir }}/cli.cert.pem"
-    client_key: "{{ nomad_tls_dir }}/cli.key.pem"
+    client_cert: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    client_key: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
   register: nomad_api_status
   until: nomad_api_status.status == 200
   retries: 12
   delay: 5
-  ignore_errors: yes
+  ignore_errors: false
   when: not ansible_check_mode
 
 - name: Check Nomad service status if start task failed
