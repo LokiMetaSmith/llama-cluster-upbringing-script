@@ -1,4 +1,6 @@
-import threading
+import base64
+
+content = """import threading
 import json
 import logging
 import os
@@ -16,14 +18,14 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class LocalWorldModel:
-    """
+    \"\"\"
     A singleton class representing the local world model state.
     It provides methods to get the state and dispatch jobs, matching
     the API of the MQTT-based world model service.
     When WORLD_MODEL_MODE is local, this class is used to store state
     in-memory and optionally fire-and-forget MQTT updates to keep
     external observers (like Home Assistant) in sync.
-    """
+    \"\"\"
     _instance = None
     _lock = threading.Lock()
 
@@ -65,7 +67,7 @@ class LocalWorldModel:
         self._initialized = True
 
     def load_static_definitions(self):
-        """Loads static definitions from ontology.yaml if it exists."""
+        \"\"\"Loads static definitions from ontology.yaml if it exists.\"\"\"
         ontology_path = os.getenv("ONTOLOGY_PATH", "ontology.yaml")
         if os.path.exists(ontology_path):
             try:
@@ -86,7 +88,7 @@ class LocalWorldModel:
             logger.info(f"No static ontology definitions found at {ontology_path}")
 
     def refresh_state(self):
-        """Pulls state from Nomad API for cluster and node info, and Consul API for agents."""
+        \"\"\"Pulls state from Nomad API for cluster and node info, and Consul API for agents.\"\"\"
         nomad_addr = os.getenv("NOMAD_ADDR", "http://localhost:4646")
         consul_addr = os.getenv("CONSUL_ADDR", "http://localhost:8500")
 
@@ -141,12 +143,12 @@ class LocalWorldModel:
             logger.error(f"Error in refresh_state: {e}")
 
     def get_state(self) -> Dict[str, Any]:
-        """Returns the current world state as a dictionary."""
+        \"\"\"Returns the current world state as a dictionary.\"\"\"
         with self.state_lock:
             return self.ontology.model_dump()
 
     def get_device(self, device_id: str) -> Optional[Device]:
-        """Retrieves a device from the ontology by ID."""
+        \"\"\"Retrieves a device from the ontology by ID.\"\"\"
         with self.state_lock:
             for device in self.ontology.devices:
                 if device.id == device_id:
@@ -154,14 +156,14 @@ class LocalWorldModel:
         return None
 
     def get_available_compute(self) -> List[Node]:
-        """Returns a list of nodes that are ready."""
+        \"\"\"Returns a list of nodes that are ready.\"\"\"
         with self.state_lock:
             if not self.ontology.cluster:
                 return []
             return [node for node in self.ontology.cluster.nodes if node.status == "ready"]
 
     def get_contextual_relationships(self, device_id: str) -> Dict[str, Any]:
-        """Returns contextual relationship data for a specific device."""
+        \"\"\"Returns contextual relationship data for a specific device.\"\"\"
         with self.state_lock:
             device = next((d for d in self.ontology.devices if d.id == device_id), None)
             if not device:
@@ -180,10 +182,10 @@ class LocalWorldModel:
             }
 
     def update_state(self, topic: str, payload: Any):
-        """
+        \"\"\"
         Updates the local state via topic routing and fires an MQTT message.
         Topic examples: telemetry/biochar/temp -> updates device 'biochar' with {'temp': payload}
-        """
+        \"\"\"
         with self.state_lock:
             # Topic routing
             match = re.match(r"^telemetry/([^/]+)/(.*)$", topic)
@@ -213,9 +215,9 @@ class LocalWorldModel:
                 logger.error(f"Failed to publish MQTT message on topic {topic}: {e}")
 
     async def dispatch_job(self, model_name: str, prompt: str, cpu: int = 1000, memory: int = 4096, gpu_count: int = 1, context: str = "") -> Any:
-        """
+        \"\"\"
         Dispatches a Nomad batch job directly.
-        """
+        \"\"\"
         nomad_addr = os.getenv("NOMAD_ADDR", "http://localhost:4646")
         job_id = "llamacpp-batch"
         url = f"{nomad_addr}/v1/job/{job_id}/dispatch"
@@ -235,3 +237,7 @@ class LocalWorldModel:
             response = await client.post(url, json=payload)
             response.raise_for_status()
             return response.json()
+"""
+
+with open("pipecatapp/local_world_model.py", "w") as f:
+    f.write(content)

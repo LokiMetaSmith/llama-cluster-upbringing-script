@@ -1,0 +1,20 @@
+locations:
+  - id: "primary_site"
+    name: "Primary Footprint"
+    infrastructure:
+      - type: "storage_container"
+        id: "container_40ft_alpha"
+        location_id: "primary_site"
+    occupants:
+      - type: "pet"
+        name: "Betty"
+      - type: "pet"
+        name: "Jerry"
+      - type: "pet"
+        name: "BugCat"
+      - type: "pet"
+        name: "CatBug"
+      - type: "pet"
+        name: "Poodly"
+      - type: "pet"
+        name: "Shady"
