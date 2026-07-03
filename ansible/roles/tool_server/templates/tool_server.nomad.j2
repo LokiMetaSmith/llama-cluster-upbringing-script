@@ -11,23 +11,23 @@ job "tool-server" {
       }
     }
 
-    volume "cluster-infra" {
-      type      = "host"
-      source    = "pipecatapp"
-      read_only = true
-    }
-
-    volume "mcp-config" {
-      type      = "host"
-      source    = "pipecatapp"
-      read_only = false
-    }
-
     {% set image_cid = tool_server_ipfs_cid %}
 
     {% set image_tar_name = 'tool_server' %}
 
     {% include 'load_image_task.nomad.j2' %}
+
+    volume "cluster-infra" {
+      type      = "host"
+      source    = "cluster-infra"
+      read_only = true
+    }
+
+    volume "mcp-config" {
+      type      = "host"
+      source    = "mcp-config"
+      read_only = false
+    }
 
     task "tool-server-task" {
       driver = "docker"
@@ -46,6 +46,11 @@ job "tool-server" {
               size = 1073741824 # 1GB
             }
           }
+        ]
+
+        volumes = [
+          # Docker socket for CodeRunnerTool
+          "/var/run/docker.sock:/var/run/docker.sock"
         ]
 
         command = "uvicorn"

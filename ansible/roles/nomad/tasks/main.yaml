@@ -37,13 +37,18 @@
   register: new_nomad_version
   changed_when: false
 
+- name: Check if Nomad service exists
+  ansible.builtin.stat:
+    path: /etc/systemd/system/nomad.service
+  register: nomad_service_file
+
 - name: Stop Nomad service if cleanup requested
   ansible.builtin.systemd:
     name: nomad
     state: stopped
   become: yes
   ignore_errors: false
-  when: cleanup_services | default(false) | bool
+  when: cleanup_services | default(false) | bool and nomad_service_file.stat.exists
 
 - name: Clear Nomad server state if cleanup requested
   ansible.builtin.file:
