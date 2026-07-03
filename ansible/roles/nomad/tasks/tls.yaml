@@ -15,6 +15,38 @@
   delegate_to: localhost
   run_once: true
 
+- name: Check if existing CA certificate has required extensions
+  become: false
+  ansible.builtin.shell: |
+    set -e
+    if [ ! -f "{{ nomad_temp_cert_dir }}/ca.pem" ]; then
+      exit 0
+    fi
+    openssl x509 -in "{{ nomad_temp_cert_dir }}/ca.pem" -text -noout | grep -q "X509v3 Key Usage"
+    openssl x509 -in "{{ nomad_temp_cert_dir }}/ca.pem" -text -noout | grep -q "CA:TRUE"
+  register: ca_cert_validity
+  failed_when: false
+  changed_when: false
+  delegate_to: localhost
+  run_once: true
+
+- name: Force regeneration of certificates if CA is invalid or missing extensions
+  become: false
+  ansible.builtin.file:
+    path: "{{ nomad_temp_cert_dir }}/{{ item }}"
+    state: absent
+  loop:
+    - ca.pem
+    - ca.key
+    - cli.pem
+    - cli.key
+    - cli.csr
+    - cli.cnf
+    - ca.cnf
+  when: ca_cert_validity is defined and ca_cert_validity.rc != 0
+  delegate_to: localhost
+  run_once: true
+
 - name: Generate Nomad CA key
   become: false
   ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/ca.key 2048"
@@ -72,6 +104,7 @@
     dest: "{{ nomad_temp_cert_dir }}/cli.cnf"
     content: |
       [v3_cli]
+      basicConstraints = CA:FALSE
       keyUsage = critical, digitalSignature, keyEncipherment
       extendedKeyUsage = clientAuth
       subjectKeyIdentifier = hash
@@ -100,7 +133,8 @@
       [req_distinguished_name]
       CN = server.global.nomad
       [v3_req]
-      keyUsage = keyEncipherment, dataEncipherment
+      basicConstraints = CA:FALSE
+      keyUsage = critical, digitalSignature, keyEncipherment
       extendedKeyUsage = serverAuth, clientAuth
       subjectAltName = @alt_names
       [alt_names]
@@ -128,7 +162,8 @@
       [req_distinguished_name]
       CN = server.global.nomad
       [v3_req]
-      keyUsage = keyEncipherment, dataEncipherment
+      basicConstraints = CA:FALSE
+      keyUsage = critical, digitalSignature, keyEncipherment
       extendedKeyUsage = serverAuth, clientAuth
       subjectAltName = @alt_names
       [alt_names]
@@ -212,7 +247,8 @@
       [req_distinguished_name]
       CN = client.global.nomad
       [v3_req]
-      keyUsage = keyEncipherment, dataEncipherment
+      basicConstraints = CA:FALSE
+      keyUsage = critical, digitalSignature, keyEncipherment
       extendedKeyUsage = clientAuth, serverAuth
       subjectAltName = @alt_names
       [alt_names]
