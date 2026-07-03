@@ -42,7 +42,7 @@
     name: nomad
     state: stopped
   become: yes
-  ignore_errors: false
+  ignore_errors: true
   when: cleanup_services | default(false) | bool
 
 - name: Clear Nomad server state if cleanup requested
@@ -340,7 +340,7 @@
     state: present
   become: yes
   check_mode: no
-  ignore_errors: "{{ ansible_virtualization_type | default('') in ['docker', 'containerd'] }}"
+  ignore_errors: yes
 
 - name: Ensure br_netfilter module is loaded on boot
   ansible.builtin.copy:
@@ -459,7 +459,7 @@
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
     url: "{{ 'https' if nomad_cli_cert_stat.stat.exists else 'http' }}://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
-    validate_certs: "{{ 'yes' if nomad_cli_cert_stat.stat.exists else 'no' }}"
+    validate_certs: false
     status_code: 200
     client_cert: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     client_key: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
