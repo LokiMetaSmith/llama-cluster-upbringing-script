@@ -21,6 +21,7 @@
   ansible.builtin.uri:
     url: "{{ 'https' if nomad_cli_cert_stat_handler.stat.exists else 'http' }}://{{ advertise_ip }}:4646/v1/agent/self"
     validate_certs: "{{ 'yes' if nomad_cli_cert_stat_handler.stat.exists else 'no' }}"
+    ca_path: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat_handler.stat.exists else omit }}"
     client_cert: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat_handler.stat.exists else omit }}"
     client_key: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat_handler.stat.exists else omit }}"
     status_code: 200
