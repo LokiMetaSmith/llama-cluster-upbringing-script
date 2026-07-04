@@ -1054,6 +1054,7 @@
   ansible.builtin.uri:
     url: "{{ 'https' if nomad_cli_cert_stat.stat.exists else 'http' }}://{{ cluster_ip }}:{{ nomad_http_port }}/v1/status/leader"
     validate_certs: "{{ 'yes' if nomad_cli_cert_stat.stat.exists else 'no' }}"
+    ca_path: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     method: GET
     status_code: 200
     client_cert: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -1350,7 +1351,8 @@
         url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/catalog/service/router-api"
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-        validate_certs: false
+        ca_path: "{{ consul_ca_path | default('/etc/consul.d/ca.pem') }}"
+        validate_certs: yes
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
         return_content: yes
@@ -1362,7 +1364,8 @@
         url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/agent/service/register"
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-        validate_certs: false
+        ca_path: "{{ consul_ca_path | default('/etc/consul.d/ca.pem') }}"
+        validate_certs: yes
         method: PUT
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
@@ -1386,7 +1389,8 @@
     url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/health/service/router-api"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "{{ consul_ca_path | default('/etc/consul.d/ca.pem') }}"
+    validate_certs: yes
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     return_content: yes
@@ -1417,7 +1421,8 @@
         url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/health/service/pipecat-app"
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-        validate_certs: false
+        ca_path: "{{ consul_ca_path | default('/etc/consul.d/ca.pem') }}"
+        validate_certs: yes
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
         return_content: yes
