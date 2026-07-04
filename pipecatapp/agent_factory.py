@@ -49,6 +49,7 @@ from tools.polyphony_tool import PolyphonyTool
 from tools.skill_builder_tool import SkillBuilderTool
 from tools.dynamic_skill_tool import DynamicSkillTool
 from tools.ast_editor_tool import ASTEditorTool
+from tools.set_operational_mode_tool import SetOperationalModeTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -135,6 +136,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "polyphony": PolyphonyTool(),
         "skill_builder": SkillBuilderTool(),
         "ast_editor": ASTEditorTool(root_dir="/opt/pipecatapp"),
+        "set_operational_mode": SetOperationalModeTool(),
     }
 
     # Inject memory client into SwarmTool if available (for Map-Reduce)
