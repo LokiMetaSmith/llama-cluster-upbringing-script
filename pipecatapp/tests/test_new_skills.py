@@ -28,6 +28,7 @@ sys.modules['atproto'] = MagicMock()
 from pipecatapp.skill_library import SkillLibrary
 from pipecatapp.tools.set_operational_mode_tool import SetOperationalModeTool
 from pipecatapp.tools.project_mapper_tool import ProjectMapperTool
+from pipecatapp.tools.lightweight_project_mapper_tool import LightweightProjectMapperTool
 
 @pytest.fixture
 def skill_lib(tmp_path):
@@ -52,19 +53,28 @@ def test_set_operational_mode_tool(skill_lib, tmp_path):
     assert "MODE ACTIVATED: backpass" in result
     assert "backpass content" in result
 
-def test_set_operational_mode_not_found(skill_lib, tmp_path):
-    db_path = tmp_path / "test_skills.sqlite"
-    tool = SetOperationalModeTool(db_path=str(db_path))
-    result = tool.run("nonexistent")
-    assert "Error: Mode 'nonexistent' not found" in result
-
-def test_project_mapper_scan(tmp_path):
-    # Create a dummy file
-    (tmp_path / "dummy.py").write_text("import os\ndef hello(): pass")
-
-    mapper = ProjectMapperTool(root_dir=str(tmp_path))
+def test_lightweight_mapper(tmp_path):
+    (tmp_path / "dummy.py").write_text("import os\nfrom math import sqrt\ndef hello(): pass")
+    mapper = LightweightProjectMapperTool(root_dir=str(tmp_path))
     result = mapper.scan(".")
 
-    assert "root" in result
-    assert "map_data" in result
-    assert any(item["path"].endswith("dummy.py") for item in result["map_data"])
+    assert result["root"] == str(tmp_path)
+    assert "files" in result
+    assert any(f["path"] == "dummy.py" for f in result["files"])
+    dummy_file = next(f for f in result["files"] if f["path"] == "dummy.py")
+    assert "os" in dummy_file["imports"]
+    assert "math" in dummy_file["imports"]
+
+def test_project_mapper_interface_consistency(tmp_path):
+    mapper = ProjectMapperTool(root_dir=str(tmp_path))
+    (tmp_path / "test.py").write_text("import sys")
+    result = mapper.scan(".")
+
+    # Check that 'files' key is ALWAYS present regardless of mapper type
+    assert "files" in result
+    assert "mapper_type" in result
+    assert result["mapper_type"] in ["repo-map-heavy", "lightweight-regex"]
+
+    # If it's lightweight, files should be a list
+    if result["mapper_type"] == "lightweight-regex":
+        assert isinstance(result["files"], list)

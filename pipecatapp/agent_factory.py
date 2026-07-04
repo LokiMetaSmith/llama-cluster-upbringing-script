@@ -49,6 +49,7 @@ from tools.polyphony_tool import PolyphonyTool
 from tools.skill_builder_tool import SkillBuilderTool
 from tools.dynamic_skill_tool import DynamicSkillTool
 from tools.ast_editor_tool import ASTEditorTool
+from tools.lightweight_project_mapper_tool import LightweightProjectMapperTool
 from tools.set_operational_mode_tool import SetOperationalModeTool
 
 # Tools that are supported by the Tool Server and can be proxied
@@ -100,6 +101,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "council": CouncilTool(twin_service) if twin_service else None,
         "swarm": SwarmTool(),
         "project_mapper": ProjectMapperTool(),
+        "lightweight_project_mapper": LightweightProjectMapperTool(),
         "planner": PlannerTool(twin_service) if twin_service else None,
         "file_editor": FileEditorTool(root_dir="/opt/pipecatapp"),
         "archivist": ArchivistTool(),
