@@ -1,0 +1,4 @@
+---
+ds4_repo_url: "https://github.com/antirez/ds4.git"
+ds4_install_dir: "/opt/ds4"
+ds4_build_type: "cpu" # Default to cpu as requested for lightweight evaluation, can be 'cuda-generic', 'cuda-spark', 'rocm'

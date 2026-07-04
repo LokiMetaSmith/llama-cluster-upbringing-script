@@ -1,6 +1,7 @@
 import logging
 import aiohttp
 import asyncio
+import re
 
 class ExternalLLMClient:
     """A generic client for interacting with OpenAI-compatible LLM APIs.
@@ -77,6 +78,11 @@ class ExternalLLMClient:
                 response_json = await response.json()
 
             content = response_json.get("choices", [{}])[0].get("message", {}).get("content", "")
+            # DwarfStar (ds4) might include <think> blocks in the content depending on the model/mode.
+            # We strip them for standard process_text if they are present.
+            if "<think>" in content and "</think>" in content:
+                content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
+
             return content.strip()
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logging.error(f"Error calling external LLM API for model {self.model}: {e}")

@@ -960,6 +960,19 @@
     dest: "{{ nomad_jobs_dir }}/router.nomad"
   become: yes
 
+- name: Create ds4 expert job files from template
+  ansible.builtin.template:
+    mode: '0644'
+    src: ../../jobs/ds4-server.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/ds4-server-{{ item.name | lower | replace(' ', '-') }}.nomad"
+  loop: "{{ expert_models.ds4 | default([]) }}"
+  when: >
+    deploy_topology != 'monolith' and
+    expert_models.ds4 is defined
+  vars:
+    model: "{{ item }}"
+    ds4_gpu_type: "cpu" # Force CPU for evaluation as requested
+
 - name: Create expert job files from template for verified models
   ansible.builtin.template:
     mode: '0644'

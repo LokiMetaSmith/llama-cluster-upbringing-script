@@ -1,0 +1,68 @@
+---
+- name: Install build dependencies for ds4
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - git
+      - curl
+      - pkg-config
+    state: present
+    update_cache: yes
+    update_cache_retries: 10
+    update_cache_retry_max_delay: 15
+    cache_valid_time: 3600
+  become: yes
+
+- name: Create ds4 installation directory
+  ansible.builtin.file:
+    path: "{{ ds4_install_dir }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user | default(ansible_user) }}"
+    group: "{{ target_user | default(ansible_user) }}"
+  become: yes
+
+- name: Clone ds4 repository
+  ansible.builtin.git:
+    repo: "{{ ds4_repo_url }}"
+    dest: "{{ ds4_install_dir }}"
+    version: main
+    force: yes
+  become: yes
+  become_user: "{{ target_user | default(ansible_user) }}"
+
+- name: Determine build target
+  ansible.builtin.set_fact:
+    ds4_make_target: >-
+      {{
+        'cuda-generic' if (nvidia_smi_result is defined and nvidia_smi_result.rc == 0)
+        else ('rocm' if (rocm_smi_result is defined and rocm_smi_result.rc == 0)
+        else 'cpu')
+      }}
+  when: ds4_build_type == 'auto'
+
+- name: Set ds4_make_target from ds4_build_type if not auto
+  ansible.builtin.set_fact:
+    ds4_make_target: "{{ ds4_build_type }}"
+  when: ds4_build_type != 'auto'
+
+- name: Build ds4
+  ansible.builtin.command:
+    cmd: "make {{ ds4_make_target }}"
+    chdir: "{{ ds4_install_dir }}"
+  become: yes
+  become_user: "{{ target_user | default(ansible_user) }}"
+
+- name: Install ds4 binaries to /usr/local/bin
+  ansible.builtin.copy:
+    src: "{{ ds4_install_dir }}/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: '0755'
+    remote_src: yes
+  loop:
+    - ds4
+    - ds4-server
+    - ds4-agent
+    - ds4-bench
+    - ds4-eval
+  become: yes
