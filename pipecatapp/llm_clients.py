@@ -29,6 +29,12 @@ class ExternalLLMClient:
         self.model = model
         self._session = None
 
+    async def close(self):
+        """Closes the underlying aiohttp session."""
+        if self._session:
+            await self._session.close()
+            self._session = None
+
     async def process_text(self, prompt: str) -> str:
         """Sends a prompt to the external LLM and returns the response.
 
@@ -57,9 +63,16 @@ class ExternalLLMClient:
 
         try:
             if not self._session:
+                # Note: Using aiohttp.ClientSession for asynchronous I/O.
+                # This prevents blocking the event loop during network requests.
                 self._session = aiohttp.ClientSession()
 
-            async with self._session.post(f"{self.base_url}/chat/completions", headers=headers, json=data) as response:
+            async with self._session.post(
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=data,
+                timeout=aiohttp.ClientTimeout(total=60)
+            ) as response:
                 response.raise_for_status()
                 response_json = await response.json()
 

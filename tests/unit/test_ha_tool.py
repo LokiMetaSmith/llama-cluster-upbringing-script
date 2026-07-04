@@ -2,12 +2,12 @@ import pytest
 import sys
 import os
 from unittest.mock import patch, MagicMock
-import requests
+import aiohttp
 
-# Add tools directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'tools')))
+# Add repo root to sys.path to allow importing pipecatapp
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from ha_tool import HA_Tool
+from pipecatapp.tools.ha_tool import HA_Tool
 
 def test_init_success():
     with patch.dict(os.environ, {'HA_URL': 'http://ha', 'HA_TOKEN': 'token'}):
@@ -19,22 +19,28 @@ def test_init_failure():
         with pytest.raises(ValueError):
             HA_Tool()
 
-@patch('requests.post')
-def test_call_ai_task_success(mock_post):
+@pytest.mark.asyncio
+async def test_call_ai_task_success():
     tool = HA_Tool("http://ha", "token")
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_post.return_value = mock_response
 
-    result = tool.call_ai_task("turn on lights")
-    assert "Successfully sent command" in result
-    mock_post.assert_called_once()
+    class MockAsyncResponse:
+        def __init__(self):
+            self.status = 200
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+        def raise_for_status(self):
+            pass
 
-@patch('pipecatapp.tools.ha_tool.requests.post')
-def test_call_ai_task_failure(mock_post):
+    with patch('aiohttp.ClientSession.post', return_value=MockAsyncResponse()):
+        result = await tool.call_ai_task("turn on lights")
+        assert "Successfully sent command" in result
+
+@pytest.mark.asyncio
+async def test_call_ai_task_failure():
     tool = HA_Tool("http://ha", "token")
-    class MockRequestException(Exception): pass
-    mock_post.side_effect = MockRequestException("Error")
-    with patch('pipecatapp.tools.ha_tool.requests.exceptions.RequestException', MockRequestException):
-        result = tool.call_ai_task("turn on lights")
+
+    with patch('aiohttp.ClientSession.post', side_effect=aiohttp.ClientError("Error")):
+        result = await tool.call_ai_task("turn on lights")
     assert "Error calling Home Assistant API: Error" in result
