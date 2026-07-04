@@ -34,6 +34,7 @@ from tools.autoresearch_tool import AutoresearchTool
 from tools.submit_solution_tool import SubmitSolutionTool
 from tools.container_registry_tool import ContainerRegistryTool
 from tools.search_tool import SearchTool
+from tools.mtac_tool import MTACTool
 from tools.openclaw_tool import OpenClawTool
 from tools.atproto_tool import ATProtoTool
 from tools.scheduler_tool import SchedulerTool
@@ -48,6 +49,7 @@ from tools.polyphony_tool import PolyphonyTool
 from tools.skill_builder_tool import SkillBuilderTool
 from tools.dynamic_skill_tool import DynamicSkillTool
 from tools.ast_editor_tool import ASTEditorTool
+from tools.set_operational_mode_tool import SetOperationalModeTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -114,6 +116,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "submit_solution": SubmitSolutionTool(),
         "container_registry": ContainerRegistryTool(),
         "search": SearchTool(root_dir="/opt/pipecatapp"),
+        "mtac": MTACTool(),
         "openclaw": OpenClawTool(
             gateway_url=config.get("openclaw_gateway_url", "ws://openclaw.service.consul:18789")
         ),
@@ -133,6 +136,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "polyphony": PolyphonyTool(),
         "skill_builder": SkillBuilderTool(),
         "ast_editor": ASTEditorTool(root_dir="/opt/pipecatapp"),
+        "set_operational_mode": SetOperationalModeTool(),
     }
 
     # Inject memory client into SwarmTool if available (for Map-Reduce)

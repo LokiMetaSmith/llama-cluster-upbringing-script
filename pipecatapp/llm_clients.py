@@ -1,5 +1,6 @@
 import logging
-import requests
+import aiohttp
+import asyncio
 
 class ExternalLLMClient:
     """A generic client for interacting with OpenAI-compatible LLM APIs.
@@ -26,6 +27,13 @@ class ExternalLLMClient:
         self.base_url = base_url
         self.api_key = api_key
         self.model = model
+        self._session = None
+
+    async def close(self):
+        """Closes the underlying aiohttp session."""
+        if self._session:
+            await self._session.close()
+            self._session = None
 
     async def process_text(self, prompt: str) -> str:
         """Sends a prompt to the external LLM and returns the response.
@@ -54,18 +62,23 @@ class ExternalLLMClient:
         }
 
         try:
-            # Note: The 'requests' library is synchronous.
-            # For a fully async application, 'aiohttp' would be a better choice,
-            # but for simplicity and compatibility with the existing codebase,
-            # we will use 'requests' here. Pipecat can handle running this
-            # synchronous code in a separate thread.
-            response = requests.post(f"{self.base_url}/chat/completions", headers=headers, json=data)
-            response.raise_for_status()
+            if not self._session:
+                # Note: Using aiohttp.ClientSession for asynchronous I/O.
+                # This prevents blocking the event loop during network requests.
+                self._session = aiohttp.ClientSession()
 
-            response_json = response.json()
+            async with self._session.post(
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=data,
+                timeout=aiohttp.ClientTimeout(total=60)
+            ) as response:
+                response.raise_for_status()
+                response_json = await response.json()
+
             content = response_json.get("choices", [{}])[0].get("message", {}).get("content", "")
             return content.strip()
-        except requests.exceptions.RequestException as e:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logging.error(f"Error calling external LLM API for model {self.model}: {e}")
             return f"Error: Could not connect to the external model {self.model}."
         except (KeyError, IndexError) as e:

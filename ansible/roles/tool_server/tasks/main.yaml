@@ -24,6 +24,15 @@
     - "preload_models.py"
   become: true
 
+- name: "Tool Server : Copy start_pipecat.sh"
+  ansible.builtin.template:
+    src: "{{ role_path }}/../../../pipecatapp/start_pipecatapp.sh.j2"
+    dest: "/opt/tool_server/start_pipecat.sh"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0755"
+  become: true
+
 - name: "Tool Server : Copy entrypoint.sh"
   ansible.builtin.copy:
     src: "entrypoint.sh"

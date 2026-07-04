@@ -15,6 +15,40 @@
   delegate_to: localhost
   run_once: true
 
+- name: Check if existing CA certificate has required extensions
+  become: false
+  ansible.builtin.shell: |
+    set -e
+    if [ ! -f "{{ nomad_temp_cert_dir }}/ca.pem" ]; then
+      exit 0
+    fi
+    openssl x509 -in "{{ nomad_temp_cert_dir }}/ca.pem" -text -noout | grep -q "X509v3 Key Usage"
+    openssl x509 -in "{{ nomad_temp_cert_dir }}/ca.pem" -text -noout | grep -q "CA:TRUE"
+  register: ca_cert_validity
+  failed_when: false
+  changed_when: false
+  delegate_to: localhost
+  run_once: true
+
+- name: Force regeneration of certificates if CA is invalid or missing extensions
+  become: false
+  ansible.builtin.file:
+    path: "{{ nomad_temp_cert_dir }}"
+    state: absent
+  when: ca_cert_validity is defined and ca_cert_validity.rc != 0
+  delegate_to: localhost
+  run_once: true
+
+- name: Ensure local certs directory exists after force purge
+  become: false
+  ansible.builtin.file:
+    path: "{{ nomad_temp_cert_dir }}"
+    state: directory
+    mode: '0755'
+  when: ca_cert_validity is defined and ca_cert_validity.rc != 0
+  delegate_to: localhost
+  run_once: true
+
 - name: Generate Nomad CA key
   become: false
   ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/ca.key 2048"
@@ -23,9 +57,28 @@
   delegate_to: localhost
   run_once: true
 
+- name: Generate OpenSSL config for Nomad CA
+  become: false
+  ansible.builtin.copy:
+    dest: "{{ nomad_temp_cert_dir }}/ca.cnf"
+    content: |
+      [req]
+      distinguished_name = req_distinguished_name
+      x509_extensions = v3_ca
+      prompt = no
+      [req_distinguished_name]
+      CN = Nomad CA
+      [v3_ca]
+      keyUsage = critical, keyCertSign, cRLSign
+      basicConstraints = critical, CA:TRUE
+      subjectKeyIdentifier = hash
+      authorityKeyIdentifier = keyid:always,issuer
+  delegate_to: localhost
+  run_once: true
+
 - name: Generate Nomad CA certificate
   become: false
-  ansible.builtin.command: "openssl req -new -x509 -days 3650 -key {{ nomad_temp_cert_dir }}/ca.key -out {{ nomad_temp_cert_dir }}/ca.pem -subj '/CN=Nomad CA'"
+  ansible.builtin.command: "openssl req -new -x509 -days 3650 -key {{ nomad_temp_cert_dir }}/ca.key -out {{ nomad_temp_cert_dir }}/ca.pem -config {{ nomad_temp_cert_dir }}/ca.cnf"
   args:
     creates: "{{ nomad_temp_cert_dir }}/ca.pem"
   delegate_to: localhost
@@ -47,9 +100,23 @@
   delegate_to: localhost
   run_once: true
 
+- name: Generate OpenSSL config for Nomad CLI
+  become: false
+  ansible.builtin.copy:
+    dest: "{{ nomad_temp_cert_dir }}/cli.cnf"
+    content: |
+      [v3_cli]
+      basicConstraints = CA:FALSE
+      keyUsage = critical, digitalSignature, keyEncipherment
+      extendedKeyUsage = clientAuth
+      subjectKeyIdentifier = hash
+      authorityKeyIdentifier = keyid,issuer
+  delegate_to: localhost
+  run_once: true
+
 - name: Sign CLI certificates for Nomad nodes
   become: false
-  ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/cli.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/cli.pem -days 365"
+  ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/cli.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/cli.pem -days 365 -extfile {{ nomad_temp_cert_dir }}/cli.cnf -extensions v3_cli"
   args:
     creates: "{{ nomad_temp_cert_dir }}/cli.pem"
   delegate_to: localhost
@@ -68,7 +135,8 @@
       [req_distinguished_name]
       CN = server.global.nomad
       [v3_req]
-      keyUsage = keyEncipherment, dataEncipherment
+      basicConstraints = CA:FALSE
+      keyUsage = critical, digitalSignature, keyEncipherment
       extendedKeyUsage = serverAuth, clientAuth
       subjectAltName = @alt_names
       [alt_names]
@@ -96,7 +164,8 @@
       [req_distinguished_name]
       CN = server.global.nomad
       [v3_req]
-      keyUsage = keyEncipherment, dataEncipherment
+      basicConstraints = CA:FALSE
+      keyUsage = critical, digitalSignature, keyEncipherment
       extendedKeyUsage = serverAuth, clientAuth
       subjectAltName = @alt_names
       [alt_names]
@@ -180,7 +249,8 @@
       [req_distinguished_name]
       CN = client.global.nomad
       [v3_req]
-      keyUsage = keyEncipherment, dataEncipherment
+      basicConstraints = CA:FALSE
+      keyUsage = critical, digitalSignature, keyEncipherment
       extendedKeyUsage = clientAuth, serverAuth
       subjectAltName = @alt_names
       [alt_names]

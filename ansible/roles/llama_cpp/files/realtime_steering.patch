@@ -151,17 +151,17 @@ diff --git a/tools/server/server-context.h b/tools/server/server-context.h
 index 58dda8914..98fe0935c 100644
 --- a/tools/server/server-context.h
 +++ b/tools/server/server-context.h
-@@ -78,6 +78,9 @@ struct server_context {
+@@ -104,6 +104,9 @@ struct server_context {
+     // get server metadata (read-only), can only be called after load_model()
      // not thread-safe, should only be used from the main thread
      server_context_meta get_meta() const;
 
 +    // update control vectors
 +    void update_control_vectors(const std::vector<common_control_vector_load_info> & vectors);
 +
-     // register a callback to be called when sleeping state changes
-     // must be set before load_model() is called
-     void on_sleeping_changed(std::function<void(bool)> callback);
-@@ -122,6 +125,8 @@ struct server_routes {
+     // note: must be set before load_model() is called
+     void set_state_callback(server_state_callback_t callback);
+@@ -151,6 +154,8 @@ struct server_routes {
      server_http_context::handler_t post_rerank;
      server_http_context::handler_t get_lora_adapters;
      server_http_context::handler_t post_lora_adapters;

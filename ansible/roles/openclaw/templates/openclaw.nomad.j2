@@ -11,6 +11,18 @@ job "openclaw" {
       }
     }
 
+    volume "openclaw-config" {
+      type      = "host"
+      source    = "openclaw-config"
+      read_only = false
+    }
+
+    volume "openclaw-data" {
+      type      = "host"
+      source    = "openclaw-data"
+      read_only = false
+    }
+
     {% set image_cid = openclaw_ipfs_cid %}
 
     {% set image_tar_name = 'openclaw' %}
@@ -25,34 +37,18 @@ job "openclaw" {
         image_pull_timeout = "15m"
         ports = ["gateway"]
 
-        # Mount config and workspace
-        mounts = [
-          {
-            type   = "bind"
-            source = "/opt/openclaw/config"
-            target = "/root/.openclaw"
-          },
-          {
-            type   = "bind"
-            source = "/opt/openclaw/data"
-            target = "/root/.openclaw/workspace"
-          },
-          {
-            type   = "bind"
-            source = "/opt/openclaw/skills/pipecat"
-            target = "/root/.openclaw/workspace/skills/pipecat"
-          },
-          {
-            type   = "bind"
-            source = "/opt/openclaw/skills/llmfit-advisor"
-            target = "/root/.openclaw/workspace/skills/llmfit-advisor"
-          },
-          {
-            type   = "bind"
-            source = "/usr/local/bin/llmfit"
-            target = "/usr/local/bin/llmfit"
-          }
-        ]
+      }
+
+      volume_mount {
+        volume      = "openclaw-config"
+        destination = "/root/.openclaw"
+        read_only   = false
+      }
+      
+      volume_mount {
+        volume      = "openclaw-data"
+        destination = "/root/.openclaw/workspace"
+        read_only   = false
       }
 
       env {

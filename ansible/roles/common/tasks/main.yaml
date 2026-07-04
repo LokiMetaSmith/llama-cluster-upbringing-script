@@ -21,6 +21,8 @@
 - name: Update apt cache
   apt:
     update_cache: yes
+    update_cache_retries: 10
+    update_cache_retry_max_delay: 15
     cache_valid_time: 3600
 
 - name: Upgrade all packages to the latest version
@@ -36,6 +38,9 @@
       - cmake
       - curl
       - python3-full
+      - python3-dev
+      - build-essential
+      - portaudio19-dev
       - python3-pip
       - libcurl4-openssl-dev
       - rsync

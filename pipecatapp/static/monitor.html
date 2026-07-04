@@ -7,6 +7,7 @@
     <title>Workflow Monitor</title>
     <link rel="stylesheet" href="/static/css/styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -47,7 +48,33 @@
                 <div id="approval-container"></div>
                 <a href="/" class="nav-link">Back to Mission Control</a>
             </div>
-            <div id="cy"></div>
+
+            <div id="tabs" style="display: flex; gap: 10px; padding: 10px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color);">
+                <button onclick="switchTab('graph')" class="refresh-btn" style="flex: 1;">Execution Graph</button>
+                <button onclick="switchTab('mtac')" class="refresh-btn" style="flex: 1;">MTaC Telemetry</button>
+            </div>
+
+            <div id="tab-graph" style="height: calc(100vh - 120px);">
+                <div id="cy"></div>
+            </div>
+
+            <div id="tab-mtac" style="display: none; padding: 20px; height: calc(100vh - 120px); overflow-y: auto;">
+                <h2>Model Training as Code</h2>
+                <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                    <input type="text" id="mtac-job-id" placeholder="Enter Job ID (e.g., mtac-sft-...)" style="padding: 10px; flex: 1; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px;">
+                    <button onclick="fetchMTaCTelemetry()" class="refresh-btn" style="padding: 10px 20px;">Load Telemetry</button>
+                </div>
+
+                <div style="display: flex; gap: 20px;">
+                    <div style="flex: 2; height: 400px; background: var(--panel-bg); padding: 15px; border: 1px solid var(--border-color); border-radius: 4px;">
+                        <canvas id="mtacChart"></canvas>
+                    </div>
+                    <div style="flex: 1; background: var(--panel-bg); padding: 15px; border: 1px solid var(--border-color); border-radius: 4px; overflow-y: auto; max-height: 400px;">
+                        <h3 style="margin-top: 0; color: #58a6ff;">Evaluation Results</h3>
+                        <pre id="mtac-eval-results" style="font-size: 0.85em; white-space: pre-wrap; margin: 0; color: #c9d1d9;">No data loaded.</pre>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -71,5 +98,95 @@
     </div>
 
     <script src="/static/js/workflow.js"></script>
+    <script>
+        let mtacChartInstance = null;
+
+        function switchTab(tab) {
+            document.getElementById('tab-graph').style.display = tab === 'graph' ? 'block' : 'none';
+            document.getElementById('tab-mtac').style.display = tab === 'mtac' ? 'block' : 'none';
+            if(tab === 'graph' && typeof window.cy !== 'undefined') {
+                window.cy.resize();
+            }
+        }
+
+        async function fetchMTaCTelemetry() {
+            const jobId = document.getElementById('mtac-job-id').value.trim();
+            if (!jobId) return;
+
+            try {
+                const response = await fetch(`/api/mtac/telemetry/${jobId}`);
+                if (!response.ok) {
+                    const errTxt = await response.text();
+                    throw new Error(`Telemetry not found or error loading: ${errTxt}`);
+                }
+
+                const data = await response.json();
+                const telemetry = data.telemetry;
+
+                const lossData = [];
+                const evalData = [];
+
+                telemetry.forEach(entry => {
+                    if (entry.stage === 'eval') {
+                        evalData.push(entry);
+                    } else if (entry.loss !== undefined) {
+                        lossData.push({x: entry.step, y: entry.loss});
+                    }
+                });
+
+                // Update Eval Results
+                const evalPre = document.getElementById('mtac-eval-results');
+                if (evalData.length > 0) {
+                    evalPre.textContent = JSON.stringify(evalData, null, 2);
+                } else {
+                    evalPre.textContent = 'No evaluation data found in telemetry.';
+                }
+
+                // Update Chart
+                const ctx = document.getElementById('mtacChart').getContext('2d');
+                if (mtacChartInstance) {
+                    mtacChartInstance.destroy();
+                }
+
+                mtacChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Training Loss',
+                            data: lossData,
+                            borderColor: '#58a6ff',
+                            backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                title: { display: true, text: 'Step', color: '#c9d1d9' },
+                                ticks: { color: '#8b949e' },
+                                grid: { color: '#30363d' }
+                            },
+                            y: {
+                                title: { display: true, text: 'Loss', color: '#c9d1d9' },
+                                ticks: { color: '#8b949e' },
+                                grid: { color: '#30363d' }
+                            }
+                        },
+                        plugins: {
+                            legend: { labels: { color: '#c9d1d9' } }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+    </script>
 </body>
 </html>

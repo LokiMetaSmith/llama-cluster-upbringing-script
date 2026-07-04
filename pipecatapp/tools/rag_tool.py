@@ -308,6 +308,86 @@ class RAG_Tool:
         doc_count = collection.count()
         logging.info(f"RAG knowledge base built/loaded successfully. Total documents in ChromaDB: {doc_count}.")
 
+
+    def scan_directory(self, directory: str) -> str:
+        """Scans a new directory and adds documents to the index."""
+        if self.set_scope(directory):
+            self._build_knowledge_base()
+            return f"Successfully scanned and indexed directory: {directory}"
+        return f"Failed to scan directory: {directory}"
+
+    def search(self, query: str, k: int = 5) -> str:
+        """Searches the knowledge base for text relevant to the query."""
+        return self.search_knowledge_base(query)
+
+    def add_document(self, filepath: str) -> str:
+        """Adds a single document to the index using LangChain Loaders and Splitters."""
+        if not os.path.exists(filepath):
+            return f"Error: File '{filepath}' does not exist."
+
+        try:
+            from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, DirectoryLoader
+            from langchain_text_splitters import RecursiveCharacterTextSplitter
+        except ImportError:
+            logging.error("LangChain libraries not installed.")
+            return "Error: LangChain libraries not installed."
+
+        try:
+            if filepath.lower().endswith('.pdf'):
+                loader = PyMuPDFLoader(filepath)
+            elif os.path.isdir(filepath):
+                loader = DirectoryLoader(filepath, glob="**/*.txt", loader_cls=TextLoader)
+            else:
+                loader = TextLoader(filepath, encoding='utf-8')
+
+            docs = loader.load()
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=200,
+                length_function=len,
+            )
+            split_docs = text_splitter.split_documents(docs)
+
+            if not split_docs:
+                return f"No text found in document: {filepath}"
+
+            current_batch_docs = []
+            current_batch_ids = []
+            current_batch_metadatas = []
+
+            for chunk_idx, doc in enumerate(split_docs):
+                if doc.page_content.strip():
+                    doc_id = f"{filepath}_{chunk_idx}"
+                    current_batch_docs.append(doc.page_content)
+                    current_batch_ids.append(doc_id)
+                    current_batch_metadatas.append({"source": filepath})
+
+            if current_batch_docs:
+                embeddings = self.model.encode(current_batch_docs, show_progress_bar=False)
+                collection = self.chroma_client.get_collection(name=self.collection_name)
+                collection.add(
+                    documents=current_batch_docs,
+                    embeddings=embeddings.tolist(),
+                    metadatas=current_batch_metadatas,
+                    ids=current_batch_ids
+                )
+
+                # Update FAISS cache if applicable
+                if self.index is not None:
+                    for i, (doc_text, metadata, doc_id) in enumerate(zip(current_batch_docs, current_batch_metadatas, current_batch_ids)):
+                        self.documents.append({
+                            "id": doc_id,
+                            "source": metadata['source'],
+                            "content": doc_text
+                        })
+                        self.index.add(np.array([embeddings[i]], dtype=np.float32))
+
+                return f"Successfully added document: {filepath} ({len(current_batch_docs)} chunks)"
+            return f"No valid chunks extracted from document: {filepath}"
+        except Exception as e:
+            logging.error(f"Failed to add document {filepath}: {e}")
+            return f"Error adding document: {e}"
+
     def _list_files_git(self) -> Optional[list[str]]:
         """Lists files using git ls-files if possible. Returns None if not a git repo."""
         if not shutil.which("git"):

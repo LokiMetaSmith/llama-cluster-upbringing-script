@@ -1,6 +1,6 @@
 - name: Force kill stuck nomad processes
   ansible.builtin.shell: "pkill -9 nomad || true"
-  ignore_errors: true
+  ignore_errors: false
   become: yes
   when: not ansible_check_mode
 
@@ -12,19 +12,25 @@
     daemon_reload: true
   when: not ansible_check_mode
 
+- name: Check if Nomad CLI cert exists for handler
+  ansible.builtin.stat:
+    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
+  register: nomad_cli_cert_stat_handler
+
 - name: Wait for Nomad API to be ready after restart
   ansible.builtin.uri:
-    url: "https://{{ advertise_ip }}:4646/v1/agent/self"
-    validate_certs: false
-    client_cert: "{{ nomad_tls_dir }}/cli.cert.pem"
-    client_key: "{{ nomad_tls_dir }}/cli.key.pem"
+    url: "{{ 'https' if nomad_cli_cert_stat_handler.stat.exists else 'http' }}://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
+    validate_certs: "{{ 'yes' if nomad_cli_cert_stat_handler.stat.exists else 'no' }}"
+    ca_path: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat_handler.stat.exists else omit }}"
+    client_cert: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat_handler.stat.exists else omit }}"
+    client_key: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat_handler.stat.exists else omit }}"
     status_code: 200
   register: nomad_api_status
   until: nomad_api_status.status == 200
   retries: 30
   delay: 15
   when: not ansible_check_mode
-  ignore_errors: true
+  ignore_errors: false
 
 - name: Debug Nomad failure
   when: not ansible_check_mode and nomad_api_status.failed

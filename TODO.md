@@ -49,8 +49,8 @@
 ## Agentic Patterns Implementation
 
 - [x] **Implement Technician Agent:**
-  - Create a 3-phase agent (Plan, Execute, Reflect) in `pipecatapp/technician_agent.py`.
-  - Update `SwarmTool` to support spawning technician agents.
+  - [ ] Create a 3-phase agent (Plan, Execute, Reflect) in `pipecatapp/technician_agent.py`.
+  - [ ] Update `SwarmTool` to support spawning technician agents.
 - [x] **Swarm Orchestration (Map-Reduce):**
   - **Goal:** Implement the "Swarm Migration" pattern where a manager agent splits a large task into chunks and dispatches them to multiple Technician Agents.
   - **Tasks:**
@@ -75,19 +75,19 @@
 ## Prompt Engineering Enhancements
 
 - [x] **Implement Automated Testing for `prompt_engineering`:**
-  - Create a new test suite (e.g., `tests/unit/test_prompt_engineering.py`).
-  - Add unit tests for the core logic in `run_campaign.py`, `visualize_archive.py`, and `promote_agent.py`.
-  - Mock the `subprocess` calls to `evolve.py` to test the campaign loop without running the full, slow evolution process.
-  - Create a small, temporary mock archive to test the analysis, visualization, and promotion scripts against a known, controlled dataset.
+  - [x] Create a new test suite (e.g., `tests/unit/test_prompt_engineering.py`).
+  - [x] Add unit tests for the core logic in `run_campaign.py`, `visualize_archive.py`, and `promote_agent.py`.
+  - [x] Mock the `subprocess` calls to `evolve.py` to test the campaign loop without running the full, slow evolution process.
+  - [x] Create a small, temporary mock archive to test the analysis, visualization, and promotion scripts against a known, controlled dataset.
 - [x] **Improve Parent Selection Algorithm:**
-  - Research alternative selection strategies from evolutionary computation (e.g., tournament selection, novelty search).
-  - Add a new command-line argument to `evolve.py` to allow the user to choose the selection strategy (e.g., `--selection-method tournament`).
-  - Implement the new selection logic in the `select_parent_from_archive` function.
+  - [ ] Research alternative selection strategies from evolutionary computation (e.g., tournament selection, novelty search).
+  - [ ] Add a new command-line argument to `evolve.py` to allow the user to choose the selection strategy (e.g., `--selection-method tournament`).
+  - [ ] Implement the new selection logic in the `select_parent_from_archive` function.
 - [x] **Web-Based UI for Campaign Analysis:**
-  - Create a new script `archive_server.py` using a lightweight web framework like Flask or FastAPI.
-  - The server should have an endpoint that reads the entire `archive/` directory and constructs a JSON representation of the evolutionary tree.
-  - Create a simple, single-page HTML/JavaScript frontend that fetches this JSON and uses a library (like D3.js or vis.js) to render an interactive evolutionary tree.
-  - The UI should allow clicking on a node to display the agent's full details (code, rationale, fitness, parent) in a side panel.
+  - [x] Create a new script `archive_server.py` using a lightweight web framework like Flask or FastAPI.
+  - [x] The server should have an endpoint that reads the entire `archive/` directory and constructs a JSON representation of the evolutionary tree.
+  - [x] Create a simple, single-page HTML/JavaScript frontend that fetches this JSON and uses a library (like D3.js or vis.js) to render an interactive evolutionary tree.
+  - [x] The UI should allow clicking on a node to display the agent's full details (code, rationale, fitness, parent) in a side panel.
 
 ## Harden the Core System
 
@@ -153,14 +153,14 @@ These structural suggestions are targeted for a future major release to signific
 ### Integrate LangChain (Tandem/Hybrid Approach)
 
 - [x] **Phase 1: Build a `LangChainToolAdapter`:**
-  - Create a wrapper class in `pipecatapp/tools/` capable of ingesting any LangChain `BaseTool` and exposing it through the standard methods expected by our `ToolExecutorNode` and UI approval queue (`TwinService._request_approval`).
+  - [x] Create a wrapper class in `pipecatapp/tools/` capable of ingesting any LangChain `BaseTool` and exposing it through the standard methods expected by our `ToolExecutorNode` and UI approval queue (`TwinService._request_approval`).
 - [x] **Phase 2: RAG Internals Enhancement:**
-  - Update `RAG_Tool.add_document()` to utilize LangChain's `DocumentLoaders` (e.g., `DirectoryLoader`, `PyMuPDFLoader`) and `RecursiveCharacterTextSplitter` internally, maintaining the tool's external API.
+  - [x] Update `RAG_Tool.add_document()` to utilize LangChain's `DocumentLoaders` (e.g., `DirectoryLoader`, `PyMuPDFLoader`) and `RecursiveCharacterTextSplitter` internally, maintaining the tool's external API.
 - [x] **Phase 3: Create LangChain Memory Wrappers:**
-  - Implement `PMMChatMessageHistory` (inheriting from `BaseChatMessageHistory`) that reads/writes to our deterministic `pmm_memory.db` ledger.
-  - Implement `PipecatVectorStore` (inheriting from `VectorStore`) wrapping our custom `memory.py` FAISS/SQLite setup.
+  - [x] Implement `PMMChatMessageHistory` (inheriting from `BaseChatMessageHistory`) that reads/writes to our deterministic `pmm_memory.db` ledger.
+  - [x] Implement `PipecatVectorStore` (inheriting from `VectorStore`) wrapping our custom `memory.py` FAISS/SQLite setup.
 - [x] **Phase 4: Build a `LangGraphNode` for the Workflow Engine:**
-  - Create a custom node for `pipecatapp/workflow/nodes/` that compiles and executes a specialized LangGraph (e.g., a complex agentic research loop) as a single step within our hardware-aware, orchestrator-driven DAG.
+  - [x] Create a custom node for `pipecatapp/workflow/nodes/` that compiles and executes a specialized LangGraph (e.g., a complex agentic research loop) as a single step within our hardware-aware, orchestrator-driven DAG.
 
 - [x] **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model.
 - [x] **Re-evaluate Consul Connect Service Mesh:** Added `connect { sidecar_service {} }` blocks to redis.nomad and postgres.nomad jobs to enable Consul Connect sidecar for service mesh. Created feature documentation in job files. Full testing requires a feature branch with proper ACL tokens.
@@ -203,7 +203,7 @@ This section tracks actionable ideas derived from the `docs/analysis/GNUTELLA_AN
 This section tracks identified placeholder files, corrupted binaries, and code that needs to be fixed or removed.
 
 - [x] **Remove or Implement Empty Handler:**
-  - `ansible/roles/bootstrap_agent/handlers/main.yaml` is currently empty.
+  - [x] `ansible/roles/bootstrap_agent/handlers/main.yaml` is currently empty.
 
 - [x] **Reconcile Stale Artifacts:**
   - [x] `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
@@ -233,18 +233,18 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] Refactor for Strict Idempotency in Ansible.
 - [x] Maintenance & Clean Up (Empty Handler, Corrupted Files, etc.).
 - [x] **Real-time Steering for llama.cpp:**
-  - Implemented `POST /control-vectors` endpoint in `llama.cpp`.
-  - Added `PersonalityTool` for dynamic steering.
-  - Included automation scripts for vector generation.
+  - [ ] Implemented `POST /control-vectors` endpoint in `llama.cpp`.
+  - [ ] Added `PersonalityTool` for dynamic steering.
+  - [ ] Included automation scripts for vector generation.
 
 ## Performance & I/O Optimization
 
 - [x] **Optimize Fast Path Security Redaction:** Enhanced `security.py` with LRU caching (`@lru_cache`), streaming redaction for large texts (`redact_sensitive_data_stream`), and optional cache disable for unique/large inputs. Maintains original fast-path regex optimization.
 
 - [x] **Optimize ExperimentTool Sandbox Creation:**
-  - Replaced `shutil.copytree` with `tar` snapshotting to reduce syscall overhead.
+  - [x] Replaced `shutil.copytree` with `tar` snapshotting to reduce syscall overhead.
 - [x] **Optimize ProjectMapperTool Scanning:**
-  - Implemented `git ls-files` strategy for faster file listing in git repositories.
+  - [ ] Implemented `git ls-files` strategy for faster file listing in git repositories.
 - [x] **Review Codebase for I/O Inefficiencies:**
   - **Goal:** Identify and optimize other areas with heavy syscall usage (e.g., logging, data processing).
   - **Strategy:** Look for repeated file opens/closes in loops, inefficient directory traversals, and opportunities to batch I/O or use `tar`/`sqlite` strategies.
@@ -257,23 +257,23 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Review Autoloop Tool Security:** The `autoloop_tool.py` executes code locally without a sandbox. Sandbox this tool or restrict its usage strictly to trusted, airgapped environments.
 
 - [x] **Audit and remove hardcoded secrets:**
-  - Audit frontend code (`pipecatapp/static/js`), workflows (`workflows/`), and tools (`pipecatapp/tools/`) for hardcoded secrets, API keys, or tokens.
-  - Remove any found secrets and replace them with secure environment variable loading.
+  - [ ] Audit frontend code (`pipecatapp/static/js`), workflows (`workflows/`), and tools (`pipecatapp/tools/`) for hardcoded secrets, API keys, or tokens.
+  - [ ] Remove any found secrets and replace them with secure environment variable loading.
 - [x] **Audit unauthenticated API endpoints:**
   - [x] Review `pipecatapp/web_server.py` and other API definitions to ensure sensitive data endpoints are authenticated.
   - [x] Specifically check endpoints returning user data or configuration.
 - [x] **Audit WebSocket security:**
-  - Verify that WebSocket connections enforce strict Origin checks to prevent Cross-Site WebSocket Hijacking (CSWSH).
-  - Consider implementing authentication for WebSocket connections.
+  - [ ] Verify that WebSocket connections enforce strict Origin checks to prevent Cross-Site WebSocket Hijacking (CSWSH).
+  - [ ] Consider implementing authentication for WebSocket connections.
 - [x] **Audit write access controls:**
-  - Ensure that all state-changing endpoints (POST, PUT, PATCH) require authentication and authorization.
-  - Verify that unauthenticated users cannot modify workflows or agent state.
+  - [ ] Ensure that all state-changing endpoints (POST, PUT, PATCH) require authentication and authorization.
+  - [ ] Verify that unauthenticated users cannot modify workflows or agent state.
 - [x] **Audit rate limiting configuration:**
-  - Review rate limiting settings in `pipecatapp/rate_limiter.py` and `pipecatapp/web_server.py`.
-  - Ensure critical endpoints have stricter limits to prevent abuse.
+  - [ ] Review rate limiting settings in `pipecatapp/rate_limiter.py` and `pipecatapp/web_server.py`.
+  - [ ] Ensure critical endpoints have stricter limits to prevent abuse.
 - [x] **Audit data storage security:**
-  - Check how sensitive data (e.g., in `pipecatapp/memory.py` or database integrations) is stored.
-  - Ensure encryption at rest is considered or implemented for sensitive fields.
+  - [ ] Check how sensitive data (e.g., in `pipecatapp/memory.py` or database integrations) is stored.
+  - [ ] Ensure encryption at rest is considered or implemented for sensitive fields.
 
 ## Technical Debt & Lazy Code
 
@@ -379,6 +379,40 @@ This section tracks actionable ideas derived from the `docs/analysis/POLLEN_COMP
 ## Test failures
 
 - [x] Investigate and fix `test_load_playbooks_from_manifest` failure in `tests/unit/test_provisioning.py` caused by `yaml` mocking issues.
+
+## Model Training as Code (MTaC) Integration
+
+
+
+This section tracks the integration of Aleph Alpha's "Model Training as Code" (MTaC) concepts into our workflow.
+
+- [x] **Pipeline Orchestrator Framework:**
+
+  - [x] Created `pipecatapp/mtac_pipeline.py` to programmatically generate Nomad job definitions for ML training stages (e.g., `sft`, `rl`, `eval`).
+
+  - [x] Implemented asynchronous dispatch and monitoring of these jobs against the Nomad API.
+
+  - [x] Integrated mock/dummy training stages to simulate execution and state tracking.
+
+- [x] **Agent Tool Integration:**
+
+  - [x] Created `pipecatapp/tools/mtac_tool.py` exposing the orchestrator as a tool.
+
+  - [x] Added `MTACTool` to the `agent_factory.py` so agents can autonomously launch training stages or full pipelines.
+
+- [x] **Real ML Backends:**
+
+  - [x] Replaced mock batch jobs with actual containerized ML workloads, supporting Unsloth and Torchtune via Docker drivers and cluster volumes.
+
+  - [x] Implemented python training scripts (Unsloth and Torchtune LoRA fine-tuning loops) injected directly into jobs.
+
+  - [x] Implemented ML result telemetry streaming by exposing training metrics through Nomad volumes back to the orchestrator tool.
+
+  - [x] Implemented Evaluation Stage (`eval_sft.py`) using EleutherAI's `lm-eval-harness` to evaluate post-training models.
+
+  - [x] Created the MTaC Telemetry UI dashboard inside `monitor.html` to plot loss curves and display eval results.
+
+
 
 ## Future Model Integrations
 

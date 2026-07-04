@@ -3,10 +3,11 @@ import abc
 import docker
 import logging
 import os
+import asyncio
 import tempfile
 import time
 import uuid
-import requests
+import aiohttp
 import base64
 import multiprocessing
 from llm_sandbox import SandboxSession
@@ -190,9 +191,21 @@ class NomadSandboxExecutor(SandboxExecutor):
         self.token = os.environ.get("NOMAD_TOKEN")
         self.default_timeout = 300 # 5 minutes default timeout for job execution
         self.headers = {"X-Nomad-Token": self.token} if self.token else {}
+        self._session = None
+
+    async def close(self):
+        """Closes the underlying aiohttp session."""
+        if self._session:
+            await self._session.close()
+            self._session = None
+
+    def _get_session(self) -> aiohttp.ClientSession:
+        if not self._session:
+            self._session = aiohttp.ClientSession()
+        return self._session
 
     @retry()
-    def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+    async def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
         if language != "python":
             return "Error: Nomad executor currently only supports Python."
         if libraries:
@@ -266,33 +279,34 @@ class NomadSandboxExecutor(SandboxExecutor):
 
         job_timeout = timeout if timeout is not None else self.default_timeout
 
+        session = self._get_session()
         try:
             # 1. Register Job
-            reg_resp = requests.post(f"{self.nomad_url}/v1/jobs", json=job_payload, headers=self.headers, timeout=10)
-            reg_resp.raise_for_status()
+            async with session.post(f"{self.nomad_url}/v1/jobs", json=job_payload, headers=self.headers, timeout=10) as reg_resp:
+                reg_resp.raise_for_status()
 
             # 2. Wait for Allocation
             alloc_id = None
             start_time = time.time()
             while time.time() - start_time < job_timeout:
                 try:
-                    allocs_resp = requests.get(f"{self.nomad_url}/v1/job/{job_id}/allocations", headers=self.headers, timeout=10)
-                    allocs_resp.raise_for_status()
-                    allocs = allocs_resp.json()
+                    async with session.get(f"{self.nomad_url}/v1/job/{job_id}/allocations", headers=self.headers, timeout=10) as allocs_resp:
+                        allocs_resp.raise_for_status()
+                        allocs = await allocs_resp.json()
 
-                    if allocs:
-                        # Sort by CreateTime desc to get latest
-                        allocs.sort(key=lambda x: x.get('CreateTime', 0), reverse=True)
-                        latest_alloc = allocs[0]
-                        alloc_id = latest_alloc['ID']
-                        client_status = latest_alloc.get('ClientStatus')
+                        if allocs:
+                            # Sort by CreateTime desc to get latest
+                            allocs.sort(key=lambda x: x.get('CreateTime', 0), reverse=True)
+                            latest_alloc = allocs[0]
+                            alloc_id = latest_alloc['ID']
+                            client_status = latest_alloc.get('ClientStatus')
 
-                        if client_status in ['complete', 'failed']:
-                            break
+                            if client_status in ['complete', 'failed']:
+                                break
                 except Exception as e:
                     logging.warning(f"Error polling allocations for job {job_id}: {e}")
 
-                time.sleep(1)
+                await asyncio.sleep(1)
 
             if not alloc_id:
                 return "Error: Nomad job timed out waiting for allocation."
@@ -300,10 +314,12 @@ class NomadSandboxExecutor(SandboxExecutor):
             # 3. Retrieve Logs
             try:
                 # Re-fetch alloc to get NodeID/Address
-                alloc_detail = requests.get(f"{self.nomad_url}/v1/allocation/{alloc_id}", headers=self.headers, timeout=10).json()
+                async with session.get(f"{self.nomad_url}/v1/allocation/{alloc_id}", headers=self.headers, timeout=10) as alloc_detail_resp:
+                    alloc_detail = await alloc_detail_resp.json()
                 node_id = alloc_detail.get("NodeID")
                 # We can find the Node address from /v1/node/:node_id
-                node_detail = requests.get(f"{self.nomad_url}/v1/node/{node_id}", headers=self.headers, timeout=10).json()
+                async with session.get(f"{self.nomad_url}/v1/node/{node_id}", headers=self.headers, timeout=10) as node_detail_resp:
+                    node_detail = await node_detail_resp.json()
                 node_addr = node_detail.get("HTTPAddr")
                 # This is likely the internal IP.
 
@@ -312,11 +328,11 @@ class NomadSandboxExecutor(SandboxExecutor):
                     # Using the node address directly
                     try:
                         log_url = f"http://{node_addr}/v1/client/fs/logs/{alloc_id}?task=execution&type={log_type}&plain=true"
-                        log_resp = requests.get(log_url, headers=self.headers, timeout=10)
-                        if log_resp.status_code == 200:
-                            content = log_resp.text
-                            if content:
-                                logs += f"---{log_type.upper()}---\n{content}\n"
+                        async with session.get(log_url, headers=self.headers, timeout=10) as log_resp:
+                            if log_resp.status == 200:
+                                content = await log_resp.text()
+                                if content:
+                                    logs += f"---{log_type.upper()}---\n{content}\n"
                     except Exception as e:
                         logs += f"Error fetching {log_type}: {e}\n"
 
@@ -332,7 +348,8 @@ class NomadSandboxExecutor(SandboxExecutor):
         finally:
             # 4. Cleanup
             try:
-                requests.delete(f"{self.nomad_url}/v1/job/{job_id}?purge=true", headers=self.headers, timeout=10)
+                async with session.delete(f"{self.nomad_url}/v1/job/{job_id}?purge=true", headers=self.headers, timeout=10) as cleanup_resp:
+                    pass
             except:
                 pass
 
@@ -371,7 +388,7 @@ class CodeRunnerTool:
             self.executor = DockerSandboxExecutor()
             logging.info("CodeRunnerTool initialized in DOCKER mode.")
 
-    def _execute_with_history(self, code: str, language: str, libraries: Optional[List[str]], timeout: Optional[int], execute_func) -> str:
+    async def _execute_with_history(self, code: str, language: str, libraries: Optional[List[str]], timeout: Optional[int], execute_func) -> str:
         # Check idempotency / history
         cached = self.history.get_cached_result(code, language, libraries)
         if cached:
@@ -387,7 +404,10 @@ class CodeRunnerTool:
         exit_code = -1
 
         try:
-            stdout = execute_func(code=code, timeout=timeout)
+            if asyncio.iscoroutinefunction(execute_func):
+                stdout = await execute_func(code=code, timeout=timeout)
+            else:
+                stdout = execute_func(code=code, timeout=timeout)
             status = "success"
             exit_code = 0
 
@@ -420,7 +440,7 @@ class CodeRunnerTool:
 
         return stdout
 
-    def run_python_code(self, code: str, timeout: Optional[int] = None) -> str:
+    async def run_python_code(self, code: str, timeout: Optional[int] = None) -> str:
         """Runs a string of Python code and returns the output.
 
         Args:
@@ -432,21 +452,24 @@ class CodeRunnerTool:
         if len(code) > MAX_CODE_LENGTH:
             return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
 
-        def _exec(code: str, timeout: Optional[int]) -> str:
+        async def _exec(code: str, timeout: Optional[int]) -> str:
             if self.mode == "hybrid" and hasattr(self, 'fast_executor'):
                 if self.fast_executor.client:
                     return self.fast_executor.execute_simple_python(code, timeout=timeout)
                 logging.warning("Local Docker client unavailable in hybrid mode. Falling back to Nomad.")
-                return self.executor.execute(code, language="python", timeout=timeout)
+                return await self.executor.execute(code, language="python", timeout=timeout)
 
             if isinstance(self.executor, DockerSandboxExecutor):
                 return self.executor.execute_simple_python(code, timeout=timeout)
 
+            if isinstance(self.executor, NomadSandboxExecutor):
+                return await self.executor.execute(code, language="python", timeout=timeout)
+
             return self.executor.execute(code, language="python", timeout=timeout)
 
-        return self._execute_with_history(code, "python", None, timeout, _exec)
+        return await self._execute_with_history(code, "python", None, timeout, _exec)
 
-    def run_code_in_sandbox(
+    async def run_code_in_sandbox(
         self,
         code: str,
         language: str = "python",
@@ -464,7 +487,9 @@ class CodeRunnerTool:
         if len(code) > MAX_CODE_LENGTH:
             return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
 
-        def _exec(code: str, timeout: Optional[int]) -> str:
+        async def _exec(code: str, timeout: Optional[int]) -> str:
+            if isinstance(self.executor, NomadSandboxExecutor):
+                return await self.executor.execute(code, language, libraries, timeout)
             return self.executor.execute(code, language, libraries, timeout)
 
-        return self._execute_with_history(code, language, libraries, timeout, _exec)
+        return await self._execute_with_history(code, language, libraries, timeout, _exec)

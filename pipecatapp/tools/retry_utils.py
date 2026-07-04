@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import logging
 import random
@@ -39,7 +40,7 @@ def is_transient_error(error: Exception) -> bool:
             return True
 
     error_type = type(error).__name__.lower()
-    transient_types = {"timeouterror", "connectionerror", "oserror"}
+    transient_types = {"timeouterror", "connectionerror", "oserror", "clienterror"}
     if any(t in error_type for t in transient_types):
         return True
 
@@ -60,7 +61,9 @@ def retry(
     config: Optional[RetryConfig] = None,
     retryable_exceptions: Optional[Tuple[Type[Exception], ...]] = None,
 ):
-    """Decorator for retrying a function with exponential backoff."""
+    """Decorator for retrying a function with exponential backoff.
+    Supports both synchronous and asynchronous functions.
+    """
     if config is None:
         config = RetryConfig()
 
@@ -68,30 +71,58 @@ def retry(
         retryable_exceptions = (Exception,)
 
     def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            last_exception = None
+        if asyncio.iscoroutinefunction(func):
+            @functools.wraps(func)
+            async def wrapper(*args, **kwargs):
+                last_exception = None
 
-            for attempt in range(config.max_attempts):
-                try:
-                    return func(*args, **kwargs)
-                except retryable_exceptions as e:
-                    last_exception = e
+                for attempt in range(config.max_attempts):
+                    try:
+                        return await func(*args, **kwargs)
+                    except retryable_exceptions as e:
+                        last_exception = e
 
-                    if attempt == config.max_attempts - 1:
-                        logger.warning(f"Retry exhausted for {func.__name__} after {config.max_attempts} attempts: {e}")
-                        raise
+                        if attempt == config.max_attempts - 1:
+                            logger.warning(f"Retry exhausted for {func.__name__} after {config.max_attempts} attempts: {e}")
+                            raise
 
-                    if not is_transient_error(e):
-                        logger.debug(f"Non-transient error in {func.__name__}, not retrying: {e}")
-                        raise
+                        if not is_transient_error(e):
+                            logger.debug(f"Non-transient error in {func.__name__}, not retrying: {e}")
+                            raise
 
-                    delay = calculate_delay(attempt, config)
-                    logger.info(f"Retry {attempt + 1}/{config.max_attempts} for {func.__name__} after {delay:.2f}s: {e}")
-                    time.sleep(delay)
+                        delay = calculate_delay(attempt, config)
+                        logger.info(f"Retry {attempt + 1}/{config.max_attempts} for {func.__name__} after {delay:.2f}s: {e}")
+                        await asyncio.sleep(delay)
 
-            if last_exception:
-                raise last_exception
+                if last_exception:
+                    raise last_exception
 
-        return wrapper
+            return wrapper
+        else:
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs):
+                last_exception = None
+
+                for attempt in range(config.max_attempts):
+                    try:
+                        return func(*args, **kwargs)
+                    except retryable_exceptions as e:
+                        last_exception = e
+
+                        if attempt == config.max_attempts - 1:
+                            logger.warning(f"Retry exhausted for {func.__name__} after {config.max_attempts} attempts: {e}")
+                            raise
+
+                        if not is_transient_error(e):
+                            logger.debug(f"Non-transient error in {func.__name__}, not retrying: {e}")
+                            raise
+
+                        delay = calculate_delay(attempt, config)
+                        logger.info(f"Retry {attempt + 1}/{config.max_attempts} for {func.__name__} after {delay:.2f}s: {e}")
+                        time.sleep(delay)
+
+                if last_exception:
+                    raise last_exception
+
+            return wrapper
     return decorator

@@ -7,6 +7,12 @@ job "memory-graph" {
       port "http" { to = 8000 }
     }
 
+    volume "memory-data" {
+      type      = "host"
+      source    = "memory-data"
+      read_only = false
+    }
+
     {% set image_cid = memory_graph_ipfs_cid %}
 
     {% set image_tar_name = 'memory_graph' %}
@@ -19,8 +25,12 @@ job "memory-graph" {
         image = "{{ memory_graph_image }}"
         force_pull = false
         ports = ["http"]
-        # Mount volume for SQLite persistence
-        volumes = ["/opt/pipecat/data/memory:/data"]
+      }
+
+      volume_mount {
+        volume      = "memory-data"
+        destination = "/data"
+        read_only   = false
       }
 
       env {
