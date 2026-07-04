@@ -1,0 +1,128 @@
+import os
+import re
+import fnmatch
+import subprocess
+import shutil
+from typing import Optional, List, Dict, Any
+from pipecatapp.utils.command_runner import CommandRunner
+
+class LightweightProjectMapperTool:
+    """
+    A lightweight, zero-dependency tool to scan the codebase and generate a high-level map
+    of the project structure, including file paths and rough dependency inferences using regex.
+    """
+    name = "lightweight_project_mapper"
+    description = "A fast, regex-based tool to scan a repository and map its structure and basic dependencies without heavy external libraries."
+
+    def __init__(self, root_dir: str = "/app"):
+        self.root_dir = os.path.realpath(root_dir)
+        self.ignore_patterns = [
+            ".git", "__pycache__", "node_modules", "venv", ".idea", ".vscode",
+            "dist", "build", "*.egg-info", "htmlcov", ".coverage", ".pytest_cache"
+        ]
+
+    def _is_ignored(self, path: str) -> bool:
+        for pattern in self.ignore_patterns:
+            if fnmatch.fnmatch(os.path.basename(path), pattern):
+                return True
+        return False
+
+    def scan(self, sub_path: str = ".") -> Dict[str, Any]:
+        """
+        Scans the codebase starting from root_dir/sub_path.
+        Returns a dictionary representing the file structure and imports.
+        """
+        # Resolve absolute paths to prevent traversal
+        start_dir = os.path.realpath(os.path.join(self.root_dir, sub_path))
+
+        # Security check: Ensure we don't break out of the allowed root
+        try:
+            common = os.path.commonpath([self.root_dir, start_dir])
+        except ValueError:
+            common = ""
+
+        if common != self.root_dir:
+            raise ValueError(f"Access denied: {sub_path} is outside the allowed root {self.root_dir}")
+
+        project_map = {
+            "root": start_dir,
+            "files": [],
+            "structure": {}
+        }
+
+        # Optimization: Use git ls-files if available
+        git_files = self._list_files_git(start_dir)
+        if git_files is not None:
+            for rel_path in git_files:
+                full_path = os.path.join(start_dir, rel_path)
+                if self._is_ignored(full_path):
+                    continue
+
+                file_info = {
+                    "path": rel_path,
+                    "type": self._guess_type(rel_path),
+                    "imports": self._extract_imports(full_path)
+                }
+                project_map["files"].append(file_info)
+            return project_map
+
+        # Fallback to os.walk
+        for root, dirs, files in os.walk(start_dir):
+            dirs[:] = [d for d in dirs if not self._is_ignored(os.path.join(root, d))]
+
+            for file in files:
+                if self._is_ignored(file):
+                    continue
+
+                full_path = os.path.join(root, file)
+                rel_path = os.path.relpath(full_path, start_dir)
+
+                file_info = {
+                    "path": rel_path,
+                    "type": self._guess_type(file),
+                    "imports": self._extract_imports(full_path)
+                }
+                project_map["files"].append(file_info)
+
+        return project_map
+
+    def _list_files_git(self, start_dir: str) -> Optional[List[str]]:
+        if not shutil.which("git"):
+            return None
+
+        try:
+            # Check if inside git repo
+            CommandRunner.run(["git", "rev-parse", "--is-inside-work-tree"],
+                           cwd=start_dir, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            res = CommandRunner.run(["git", "ls-files"], cwd=start_dir, check=True, capture_output=True, text=True)
+            files = res.stdout.splitlines()
+            return files
+        except Exception:
+            return None
+
+    def _guess_type(self, filename: str) -> str:
+        if filename.endswith(".py"): return "python"
+        if filename.endswith(".js") or filename.endswith(".ts"): return "javascript"
+        if filename.endswith(".yaml") or filename.endswith(".yml"): return "yaml"
+        if filename.endswith(".md"): return "markdown"
+        return "unknown"
+
+    def _extract_imports(self, filepath: str) -> list:
+        imports = []
+        try:
+            with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+
+            if filepath.endswith(".py"):
+                imports.extend(re.findall(r'^import\s+(\w+)', content, re.MULTILINE))
+                imports.extend(re.findall(r'^from\s+(\w+)', content, re.MULTILINE))
+            elif filepath.endswith(".js") or filepath.endswith(".ts"):
+                imports.extend(re.findall(r'import\s+.*\s+from\s+[\'"](.+)[\'"]', content))
+                imports.extend(re.findall(r'require\s*\(\s*[\'"](.+)[\'"]\s*\)', content))
+        except Exception:
+            pass
+        return list(set(imports))
+
+    def run(self, sub_path: str = ".") -> Dict[str, Any]:
+        return self.scan(sub_path)
