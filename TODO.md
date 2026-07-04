@@ -160,7 +160,7 @@ These structural suggestions are targeted for a future major release to signific
   - [x] Implement `PMMChatMessageHistory` (inheriting from `BaseChatMessageHistory`) that reads/writes to our deterministic `pmm_memory.db` ledger.
   - [x] Implement `PipecatVectorStore` (inheriting from `VectorStore`) wrapping our custom `memory.py` FAISS/SQLite setup.
 - [x] **Phase 4: Build a `LangGraphNode` for the Workflow Engine:**
-  - [ ] Create a custom node for `pipecatapp/workflow/nodes/` that compiles and executes a specialized LangGraph (e.g., a complex agentic research loop) as a single step within our hardware-aware, orchestrator-driven DAG.
+  - [x] Create a custom node for `pipecatapp/workflow/nodes/` that compiles and executes a specialized LangGraph (e.g., a complex agentic research loop) as a single step within our hardware-aware, orchestrator-driven DAG.
 
 - [x] **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model.
 - [x] **Re-evaluate Consul Connect Service Mesh:** Added `connect { sidecar_service {} }` blocks to redis.nomad and postgres.nomad jobs to enable Consul Connect sidecar for service mesh. Created feature documentation in job files. Full testing requires a feature branch with proper ACL tokens.
