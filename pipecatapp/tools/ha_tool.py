@@ -1,5 +1,5 @@
 import os
-import requests
+import aiohttp
 import logging
 
 class HA_Tool:
@@ -34,8 +34,20 @@ class HA_Tool:
             "Authorization": f"Bearer {self.ha_token}",
             "Content-Type": "application/json",
         }
+        self._session = None
 
-    def call_ai_task(self, instructions: str) -> str:
+    async def close(self):
+        """Closes the underlying aiohttp session."""
+        if self._session:
+            await self._session.close()
+            self._session = None
+
+    def _get_session(self) -> aiohttp.ClientSession:
+        if not self._session:
+            self._session = aiohttp.ClientSession()
+        return self._session
+
+    async def call_ai_task(self, instructions: str) -> str:
         """Calls the Home Assistant 'ai_task.generate_data' service.
 
         This method sends natural language instructions to Home Assistant,
@@ -60,15 +72,16 @@ class HA_Tool:
             "instructions": instructions,
         }
 
+        session = self._get_session()
         try:
-            response = requests.post(api_url, headers=self.headers, json=payload, timeout=10)
-            response.raise_for_status()
-            # The actual response from the service call is not the primary result.
-            # The result is the state change in Home Assistant.
-            # We will return a confirmation message.
-            logging.info(f"Home Assistant API call successful. Status code: {response.status_code}")
-            return f"Successfully sent command to Home Assistant: '{instructions}'"
-        except requests.exceptions.RequestException as e:
+            async with session.post(api_url, headers=self.headers, json=payload, timeout=10) as response:
+                response.raise_for_status()
+                # The actual response from the service call is not the primary result.
+                # The result is the state change in Home Assistant.
+                # We will return a confirmation message.
+                logging.info(f"Home Assistant API call successful. Status code: {response.status}")
+                return f"Successfully sent command to Home Assistant: '{instructions}'"
+        except aiohttp.ClientError as e:
             logging.error(f"Error calling Home Assistant API: {e}")
             return f"Error calling Home Assistant API: {e}"
         except Exception as e:

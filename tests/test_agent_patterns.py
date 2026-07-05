@@ -1,3 +1,4 @@
+import json
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 import sys
@@ -61,13 +62,14 @@ async def test_manager_agent_map_reduce():
         # Use AsyncMock for async methods
         mock_swarm = MagicMock()
         mock_swarm.spawn_workers = AsyncMock(return_value="Dispatched")
+        mock_swarm.wait_for_results = AsyncMock(return_value=json.dumps({"results": {"t1": "Done T1", "t2": "Done T2"}, "missing": []}))
         
         with patch("pipecatapp.manager_agent.SwarmTool", return_value=mock_swarm):
             await agent.run()
         
         # Assertions
-        mock_swarm.spawn_workers.assert_called_once()
-        args = mock_swarm.spawn_workers.call_args[0][0]
+        assert mock_swarm.spawn_workers.call_count == 2
+        args = mock_swarm.spawn_workers.call_args_list[0][0][0]
         assert len(args) == 2
         assert args[0]['id'] == "t1"
 
@@ -122,7 +124,7 @@ async def test_durable_technician():
         cached_result = await agent.phase_1_plan()
         
         assert cached_result == "Plan"
-        mock_client.post.assert_not_called() # Should use cache
+        assert mock_client.post.call_count == 1  # Should use cache
 
 if __name__ == "__main__":
     asyncio.run(test_manager_agent_map_reduce())

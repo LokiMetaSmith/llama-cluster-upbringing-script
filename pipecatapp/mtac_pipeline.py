@@ -1,5 +1,5 @@
 import os
-import requests
+import aiohttp
 
 import json
 import asyncio
@@ -18,6 +18,18 @@ class MTACPipelineOrchestrator:
     def __init__(self):
         cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
         self.nomad_addr = os.getenv("NOMAD_ADDR", f"http://{cluster_ip}:4646")
+        self._session = None
+
+    async def close(self):
+        """Closes the underlying aiohttp session."""
+        if self._session:
+            await self._session.close()
+            self._session = None
+
+    def _get_session(self) -> aiohttp.ClientSession:
+        if not self._session:
+            self._session = aiohttp.ClientSession()
+        return self._session
 
     def _generate_job_def(self, stage: str, job_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -133,13 +145,13 @@ class MTACPipelineOrchestrator:
         Submits the job definition to Nomad and returns the eval ID.
         """
         url = f"{self.nomad_addr}/v1/jobs"
+        session = self._get_session()
         try:
-            # Run requests in thread to avoid blocking asyncio loop
-            response = await asyncio.to_thread(requests.post, url, json=job_def, timeout=10.0)
-            response.raise_for_status()
-            data = response.json()
-            return data.get("EvalID", "")
-        except requests.exceptions.RequestException as e:
+            async with session.post(url, json=job_def, timeout=10.0) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return data.get("EvalID", "")
+        except aiohttp.ClientError as e:
             logger.error(f"Request failed: {e}")
             raise
 
@@ -150,22 +162,23 @@ class MTACPipelineOrchestrator:
         """
         url = f"{self.nomad_addr}/v1/job/{job_id}/allocations"
         start_time = time.time()
+        session = self._get_session()
 
         while time.time() - start_time < timeout:
             try:
-                response = await asyncio.to_thread(requests.get, url, timeout=5.0)
-                if response.status_code == 200:
-                    allocs = response.json()
-                    if not allocs:
-                        await asyncio.sleep(2)
-                        continue
+                async with session.get(url, timeout=5.0) as response:
+                    if response.status == 200:
+                        allocs = await response.json()
+                        if not allocs:
+                            await asyncio.sleep(2)
+                            continue
 
-                    # Check the latest allocation
-                    alloc = allocs[0]
-                    client_status = alloc.get("ClientStatus")
-                    if client_status in ["complete", "failed", "lost"]:
-                        logger.info(f"Job {job_id} reached terminal state: {client_status}")
-                        return client_status == "complete"
+                        # Check the latest allocation
+                        alloc = allocs[0]
+                        client_status = alloc.get("ClientStatus")
+                        if client_status in ["complete", "failed", "lost"]:
+                            logger.info(f"Job {job_id} reached terminal state: {client_status}")
+                            return client_status == "complete"
             except Exception as e:
                 logger.warning(f"Error polling Nomad API for job {job_id}: {e}")
 

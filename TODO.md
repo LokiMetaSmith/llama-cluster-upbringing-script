@@ -49,7 +49,7 @@
 ## Agentic Patterns Implementation
 
 - [x] **Implement Technician Agent:**
-  - [ ] Create a 3-phase agent (Plan, Execute, Reflect) in `pipecatapp/technician_agent.py`.
+  - [x] Create a 3-phase agent (Plan, Execute, Reflect) in `pipecatapp/technician_agent.py`.
   - [ ] Update `SwarmTool` to support spawning technician agents.
 - [x] **Swarm Orchestration (Map-Reduce):**
   - **Goal:** Implement the "Swarm Migration" pattern where a manager agent splits a large task into chunks and dispatches them to multiple Technician Agents.
@@ -160,7 +160,7 @@ These structural suggestions are targeted for a future major release to signific
   - [x] Implement `PMMChatMessageHistory` (inheriting from `BaseChatMessageHistory`) that reads/writes to our deterministic `pmm_memory.db` ledger.
   - [x] Implement `PipecatVectorStore` (inheriting from `VectorStore`) wrapping our custom `memory.py` FAISS/SQLite setup.
 - [x] **Phase 4: Build a `LangGraphNode` for the Workflow Engine:**
-  - [ ] Create a custom node for `pipecatapp/workflow/nodes/` that compiles and executes a specialized LangGraph (e.g., a complex agentic research loop) as a single step within our hardware-aware, orchestrator-driven DAG.
+  - [x] Create a custom node for `pipecatapp/workflow/nodes/` that compiles and executes a specialized LangGraph (e.g., a complex agentic research loop) as a single step within our hardware-aware, orchestrator-driven DAG.
 
 - [x] **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model.
 - [x] **Re-evaluate Consul Connect Service Mesh:** Added `connect { sidecar_service {} }` blocks to redis.nomad and postgres.nomad jobs to enable Consul Connect sidecar for service mesh. Created feature documentation in job files. Full testing requires a feature branch with proper ACL tokens.
@@ -206,7 +206,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - [x] `ansible/roles/bootstrap_agent/handlers/main.yaml` is currently empty.
 
 - [x] **Reconcile Stale Artifacts:**
-  - [ ] `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
+  - [x] `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
 - [x] **Vision Model Failover**: Implement failover or selection logic for vision models (see `pipecatapp/app.py`).
 - [x] **Refactor Vision Role**: The `vision` role is currently minimal (only installs `libgl1`) and does not deploy Frigate as implied by the `frigate_port` variable. It needs to be refactored to actually deploy the service.
 - [x] **Review Hardcoded Network References:**

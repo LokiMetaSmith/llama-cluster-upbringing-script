@@ -1,0 +1,66 @@
+job "ds4-server-{{ model.name | lower | replace(' ', '-') }}" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  namespace   = "{{ nomad_namespace | default('default') }}"
+  type        = "service"
+
+  group "ds4-server-group" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" {
+        to = 8000
+      }
+    }
+
+    service {
+      name = "ds4-server-{{ model.name | lower | replace(' ', '-') }}"
+      port = "http"
+      provider = "consul"
+      tags = [
+        "llm",
+        "ds4",
+        "model={{ model.name }}",
+        "filename={{ model.filename }}"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/v1/models"
+        interval = "20s"
+        timeout  = "5s"
+      }
+    }
+
+    task "ds4-server-task" {
+      driver = "raw_exec"
+
+      config {
+        command = "/usr/local/bin/ds4-server"
+        args = [
+          "-m", "{{ nomad_models_dir }}/llm/{{ model.filename }}",
+          "--host", "0.0.0.0",
+          "--port", "${NOMAD_PORT_http}",
+          "--ctx", "{{ model.context_window | default(32768) }}",
+          {% if ds4_gpu_type | default('cpu') == 'cuda' %}
+          "--cuda"
+          {% elif ds4_gpu_type | default('cpu') == 'rocm' %}
+          "--rocm"
+          {% else %}
+          "--cpu"
+          {% endif %}
+        ]
+      }
+
+      resources {
+        cpu    = {{ model.cpu | default(4000) }}
+        memory = {{ model.memory_mb | default(16384) }}
+        {% if ds4_gpu_type | default('cpu') != 'cpu' %}
+        device "gpu" {
+          count = 1
+        }
+        {% endif %}
+      }
+    }
+  }
+}

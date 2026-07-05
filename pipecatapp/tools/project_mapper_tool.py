@@ -1,132 +1,73 @@
 import os
-import re
-import fnmatch
-import subprocess
-import shutil
-from typing import Optional, List
-from pipecatapp.utils.command_runner import CommandRunner
+import json
+import logging
+from pathlib import Path
+from typing import Optional, Dict, Any
+
+logger = logging.getLogger("ProjectMapperTool")
+
+try:
+    from pipecatapp.tools.repo_map_impl.pipeline import extract_all
+    from pipecatapp.tools.repo_map_impl.config import load_config
+    from pipecatapp.tools.repo_map_impl.discover import discover_files
+    from pipecatapp.tools.repo_map_impl.render.json_out import render_json
+    HAS_REPO_MAP = True
+except ImportError:
+    HAS_REPO_MAP = False
+
+from pipecatapp.tools.lightweight_project_mapper_tool import LightweightProjectMapperTool
 
 class ProjectMapperTool:
     """
-    A tool to scan the codebase and generate a high-level map of the project structure,
-    including file paths and rough dependency inferences.
+    A tool to scan the codebase and generate a high-level map of the project structure.
+    It uses the sophisticated repo-map implementation (tree-sitter based) when available,
+    and falls back to a lightweight regex-based mapper in constrained environments.
     """
     def __init__(self, root_dir: str = "/app"):
-        self.root_dir = root_dir
-        self.ignore_patterns = [
-            ".git", "__pycache__", "node_modules", "venv", ".idea", ".vscode",
-            "dist", "build", "*.egg-info", "htmlcov", ".coverage", ".pytest_cache"
-        ]
+        self.root_dir = os.path.realpath(root_dir)
+        self.lightweight_mapper = LightweightProjectMapperTool(root_dir=root_dir)
 
-    def _is_ignored(self, path: str) -> bool:
-        for pattern in self.ignore_patterns:
-            if fnmatch.fnmatch(os.path.basename(path), pattern):
-                return True
-        return False
-
-    def scan(self, sub_path: str = ".") -> dict:
+    def scan(self, sub_path: str = ".") -> Dict[str, Any]:
         """
         Scans the codebase starting from root_dir/sub_path.
-        Returns a dictionary representing the file structure and imports.
+        Attempts to use the heavy repo-map first, falls back to lightweight if it fails or is unavailable.
+        Maintains a consistent interface by returning results in the 'files' key.
         """
-        # Resolve absolute paths to prevent traversal
-        root_abs = os.path.realpath(self.root_dir)
-        start_dir = os.path.realpath(os.path.join(root_abs, sub_path))
+        target_dir = os.path.realpath(os.path.join(self.root_dir, sub_path))
 
         # Security check: Ensure we don't break out of the allowed root
         try:
-            common = os.path.commonpath([root_abs, start_dir])
+            common = os.path.commonpath([self.root_dir, target_dir])
         except ValueError:
-            # Can happen on Windows if paths are on different drives
             common = ""
 
-        if common != root_abs:
+        if common != self.root_dir:
             raise ValueError(f"Access denied: {sub_path} is outside the allowed root {self.root_dir}")
 
-        project_map = {
-            "root": start_dir,
-            "files": [],
-            "structure": {}
-        }
+        if HAS_REPO_MAP:
+            try:
+                target_path = Path(target_dir)
+                config = load_config(target_path)
+                paths = discover_files(target_path, extra_exclude_globs=config.exclude_globs)
+                files_metadata = extract_all(target_path, paths, enrich_python_files=True)
 
-        # Optimization: Use git ls-files if available to avoid slow os.walk
-        git_files = self._list_files_git(start_dir)
-        if git_files is not None:
-            for rel_path in git_files:
-                full_path = os.path.join(start_dir, rel_path)
-                # Still check ignores in case git tracks files we want to skip
-                if self._is_ignored(full_path):
-                    continue
+                json_str = render_json(files_metadata)
+                files_data = json.loads(json_str)
 
-                file_info = {
-                    "path": rel_path,
-                    "type": self._guess_type(rel_path),
-                    "imports": self._extract_imports(full_path)
+                return {
+                    "root": target_dir,
+                    "files": files_data,
+                    "mapper_type": "repo-map-heavy"
                 }
-                project_map["files"].append(file_info)
-            return project_map
+            except Exception as e:
+                logger.warning(f"Heavy repo-map failed, falling back to lightweight: {e}")
 
-        # Fallback to os.walk
-        for root, dirs, files in os.walk(start_dir):
-            # Modify dirs in-place to skip ignored directories
-            dirs[:] = [d for d in dirs if not self._is_ignored(os.path.join(root, d))]
+        # Fallback
+        res = self.lightweight_mapper.scan(sub_path)
+        # LightweightProjectMapperTool already returns {root, files}
+        res["mapper_type"] = "lightweight-regex"
+        return res
 
-            for file in files:
-                if self._is_ignored(file):
-                    continue
-
-                full_path = os.path.join(root, file)
-                rel_path = os.path.relpath(full_path, start_dir)
-
-                file_info = {
-                    "path": rel_path,
-                    "type": self._guess_type(file),
-                    "imports": self._extract_imports(full_path)
-                }
-                project_map["files"].append(file_info)
-
-        return project_map
-
-    def _list_files_git(self, start_dir: str) -> Optional[List[str]]:
-        """Lists files using git ls-files if possible. Returns None if not a git repo."""
-        if not shutil.which("git"):
-            return None
-
-        try:
-            # Check if inside git repo
-            CommandRunner.run(["git", "rev-parse", "--is-inside-work-tree"],
-                           cwd=start_dir, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-            # git ls-files returns paths relative to cwd
-            res = CommandRunner.run(["git", "ls-files"], cwd=start_dir, check=True, capture_output=True, text=True)
-            files = res.stdout.splitlines()
-            return files
-        except Exception:
-            return None
-
-    def _guess_type(self, filename: str) -> str:
-        if filename.endswith(".py"): return "python"
-        if filename.endswith(".js") or filename.endswith(".ts"): return "javascript"
-        if filename.endswith(".yaml") or filename.endswith(".yml"): return "yaml"
-        if filename.endswith(".md"): return "markdown"
-        return "unknown"
-
-    def _extract_imports(self, filepath: str) -> list:
-        imports = []
-        try:
-            with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-                content = f.read()
-
-            if filepath.endswith(".py"):
-                # Simple regex for python imports
-                imports.extend(re.findall(r'^import\s+(\w+)', content, re.MULTILINE))
-                imports.extend(re.findall(r'^from\s+(\w+)', content, re.MULTILINE))
-            elif filepath.endswith(".js") or filepath.endswith(".ts"):
-                # Simple regex for JS imports
-                imports.extend(re.findall(r'import\s+.*\s+from\s+[\'"](.+)[\'"]', content))
-                imports.extend(re.findall(r'require\s*\(\s*[\'"](.+)[\'"]\s*\)', content))
-
-        except Exception:
-            pass # Ignore read errors
-
-        return list(set(imports))
+    def run(self, sub_path: str = ".") -> Dict[str, Any]:
+        """Standard tool execution method."""
+        return self.scan(sub_path)

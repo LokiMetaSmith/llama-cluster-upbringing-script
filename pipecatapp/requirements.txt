@@ -64,6 +64,8 @@ llmrouter-lib
 rank_bm25
 podman
 tenacity
+backon
+prometheus_client
 # Unlimited-OCR dependencies
 addict
 easydict
@@ -87,3 +89,12 @@ atproto
 heretic-llm @ git+https://github.com/LokiMetaSmith/heretic.git@refactor-mode-to-reverse
 autoloop-ai
 watchdog
+tree-sitter>=0.24.0,<0.26.0
+pathspec>=0.12.1
+pyyaml>=6.0
+tree-sitter-python>=0.23.0
+tree-sitter-go>=0.23.0
+tree-sitter-javascript>=0.23.0
+tree-sitter-rust>=0.23.0
+tree-sitter-typescript>=0.23.0
+tree-sitter-swift>=0.7.0

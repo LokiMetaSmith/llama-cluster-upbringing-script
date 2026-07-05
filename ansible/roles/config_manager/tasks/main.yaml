@@ -32,7 +32,8 @@
         { 'key': 'piper_voice_files', 'value': piper_voice_files },
         { 'key': 'embedding_models', 'value': embedding_models },
         { 'key': 'stt_models', 'value': stt_models },
-        { 'key': 'vision_models', 'value': vision_models }
+        { 'key': 'vision_models', 'value': vision_models },
+        { 'key': 'ds4_expert_models', 'value': expert_models.ds4 | default([]) }
       ]
     }}
   loop_control:
