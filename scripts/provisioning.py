@@ -91,7 +91,6 @@ def get_nomad_env(ip=None):
         ip = get_primary_ip()
 
     env["NOMAD_ADDR"] = f"https://{ip}:{nomad_port}"
-    env["NOMAD_TLS_SKIP_VERIFY"] = "1"
     env["NOMAD_CACERT"] = f"{nomad_tls_dir}/ca.pem"
     env["NOMAD_CLIENT_CERT"] = f"{nomad_tls_dir}/cli.cert.pem"
     env["NOMAD_CLIENT_KEY"] = f"{nomad_tls_dir}/cli.key.pem"

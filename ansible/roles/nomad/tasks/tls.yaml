@@ -78,7 +78,7 @@
 
 - name: Generate Nomad CA certificate
   become: false
-  ansible.builtin.command: "openssl req -new -x509 -days 3650 -key {{ nomad_temp_cert_dir }}/ca.key -out {{ nomad_temp_cert_dir }}/ca.pem -config {{ nomad_temp_cert_dir }}/ca.cnf"
+  ansible.builtin.command: "openssl req -new -x509 -days 3650 -key {{ nomad_temp_cert_dir }}/ca.key -out {{ nomad_temp_cert_dir }}/ca.pem -config {{ nomad_temp_cert_dir }}/ca.cnf -extensions v3_ca"
   args:
     creates: "{{ nomad_temp_cert_dir }}/ca.pem"
   delegate_to: localhost
