@@ -64,6 +64,8 @@ llmrouter-lib
 rank_bm25
 podman
 tenacity
+backon
+prometheus_client
 # Unlimited-OCR dependencies
 addict
 easydict
