@@ -17,9 +17,13 @@
     path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
   register: nomad_cli_cert_stat_handler
 
+- name: Set nomad_protocol fact for handler
+  ansible.builtin.set_fact:
+    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat_handler.stat.exists else \"http\" }}"
+
 - name: Wait for Nomad API to be ready after restart
   ansible.builtin.uri:
-    url: "{{ 'https' if nomad_cli_cert_stat_handler.stat.exists else 'http' }}://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
+    url: "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
     validate_certs: "{{ 'yes' if nomad_cli_cert_stat_handler.stat.exists else 'no' }}"
     ca_path: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat_handler.stat.exists else omit }}"
     client_cert: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat_handler.stat.exists else omit }}"

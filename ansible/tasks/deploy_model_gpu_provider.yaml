@@ -55,7 +55,6 @@
     NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
     NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cert.pem"
     NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/key.pem"
-    NOMAD_TLS_SKIP_VERIFY: "1"
   changed_when: true
 
 - name: Set expected_worker_count
