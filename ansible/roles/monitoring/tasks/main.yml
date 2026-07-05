@@ -1,3 +1,12 @@
+- name: Check if Nomad CLI cert exists
+  ansible.builtin.stat:
+    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
+  register: nomad_cli_cert_stat
+
+- name: Set nomad_protocol fact
+  ansible.builtin.set_fact:
+    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
+
 - name: Ensure Grafana dashboard directory exists
   ansible.builtin.file:
     path: "{{ nomad_volumes_dir }}/grafana/dashboards"
@@ -47,7 +56,8 @@
     - "{{ grafana_port }}"
     - "{{ node_exporter_port }}"
     - "{{ mqtt_exporter_metrics_port }}"
-  changed_when: false
+  changed_
+      when: false
   ignore_errors: yes
 
 - name: Deploy Node Exporter
@@ -62,11 +72,12 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/node-exporter.nomad
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-      changed_when: true
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      changed_
+      when: true
 
 - name: Deploy Beszel
   block:
@@ -87,11 +98,12 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/beszel-agent.nomad
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-      changed_when: true
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      changed_
+      when: true
 
     - name: Template beszel-hub job
       ansible.builtin.template:
@@ -103,11 +115,12 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/beszel-hub.nomad
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-      changed_when: true
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      changed_
+      when: true
 
 - name: Deploy Statsping
   block:
@@ -128,11 +141,12 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/statsping.nomad
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-      changed_when: true
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      changed_
+      when: true
 
 - name: Deploy Memory Audit
   block:
@@ -146,20 +160,21 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/memory-audit.nomad
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-      changed_when: true
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      changed_
+      when: true
   rescue:
     - name: Get MQTT Exporter job status
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose mqtt-exporter
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: mqtt_exporter_job_status
       ignore_errors: yes
 
@@ -171,10 +186,10 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json mqtt-exporter
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: mqtt_exporter_allocs
       ignore_errors: yes
 
@@ -192,10 +207,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ mqtt_exporter_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: mqtt_exporter_logs_stdout
       ignore_errors: yes
       when: (mqtt_exporter_alloc_id.stdout | trim | length > 0) and (mqtt_exporter_alloc_id.stdout | trim != 'null')
@@ -209,10 +224,10 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ mqtt_exporter_alloc_id.stdout }}"
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: mqtt_exporter_logs_stderr
       ignore_errors: yes
       when: (mqtt_exporter_alloc_id.stdout | trim | length > 0) and (mqtt_exporter_alloc_id.stdout | trim != 'null')
@@ -238,23 +253,23 @@
         cmd: /usr/local/bin/nomad job status mqtt-exporter
       register: pre_mqtt_exporter_job_status
       ignore_errors: yes
-      failed_when: false
-      changed_when: false
+      failed_
+      when: false
+      changed_
+      when: false
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     - name: Purge failing MQTT Exporter deployment
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job stop -purge mqtt-exporter
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
-        NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cert.pem"
-        NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/key.pem"
-        NOMAD_TLS_SKIP_VERIFY: "1"
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       when: pre_mqtt_exporter_job_status.rc == 0 and ('dead' in pre_mqtt_exporter_job_status.stdout or 'failed' in pre_mqtt_exporter_job_status.stdout or 'progress deadline' in pre_mqtt_exporter_job_status.stdout)
 
     - name: Template mqtt-exporter job
@@ -267,11 +282,12 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/mqtt-exporter.nomad
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-      changed_when: true
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      changed_
+      when: true
 
 - name: Deploy Prometheus
   block:
@@ -285,11 +301,12 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/prometheus.nomad
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-      changed_when: true
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      changed_
+      when: true
 
 - name: Deploy Grafana
   block:
@@ -303,8 +320,9 @@
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/grafana.nomad
       environment:
-        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-      changed_when: true
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      changed_
+      when: true

@@ -1,3 +1,12 @@
+- name: Check if Nomad CLI cert exists
+  ansible.builtin.stat:
+    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
+  register: nomad_cli_cert_stat
+
+- name: Set nomad_protocol fact
+  ansible.builtin.set_fact:
+    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
+
 - name: Ensure Exo directories exist
   ansible.builtin.file:
     path: "{{ item }}"
@@ -50,8 +59,7 @@
   become: yes
   register: ipfs_add_result_exo
   environment:
-    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
-  when: exo_enable
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"  when: exo_enable
 
 - name: Clean up temporary Exo tarball
   ansible.builtin.file:
@@ -93,10 +101,8 @@
     cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/exo.nomad"
   environment:
     NOMAD_ADDR: "https://{{ advertise_ip }}:{{ nomad_http_port }}"
-    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-    NOMAD_TLS_SKIP_VERIFY: "1"
-  register: exo_job_run
+    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  register: exo_job_run
   changed_when: "'Eval ID' in exo_job_run.stdout"
   when: exo_enable

@@ -1,4 +1,13 @@
 ---
+- name: Check if Nomad CLI cert exists
+  ansible.builtin.stat:
+    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
+  register: nomad_cli_cert_stat
+
+- name: Set nomad_protocol fact
+  ansible.builtin.set_fact:
+    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
+
 - name: Ensure zigbee2mqtt data directory exists
   ansible.builtin.file:
     path: "{{ nomad_volumes_dir }}/zigbee2mqtt-data"
@@ -13,12 +22,10 @@
   args:
     executable: /bin/bash
   environment:
-    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-    NOMAD_TLS_SKIP_VERIFY: "1"
-  register: zigbee2mqtt_job_status
+    NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  register: zigbee2mqtt_job_status
   failed_when: false
   changed_when: false
   become: no
@@ -31,12 +38,10 @@
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job stop -purge zigbee2mqtt
   environment:
-    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-    NOMAD_TLS_SKIP_VERIFY: "1"
-  when: zigbee2mqtt_job_state in ['dead', 'failed', 'progress_deadline']
+    NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  when: zigbee2mqtt_job_state in ['dead', 'failed', 'progress_deadline']
   changed_when: true
   become: no
 
@@ -57,10 +62,8 @@
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/zigbee2mqtt.nomad
   environment:
-    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
-    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
-    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
-    NOMAD_TLS_SKIP_VERIFY: "1"
-  changed_when: true
+    NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  changed_when: true
   become: no

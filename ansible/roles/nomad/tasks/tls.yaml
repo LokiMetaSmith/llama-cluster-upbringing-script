@@ -33,16 +33,18 @@
 - name: Force regeneration of certificates if CA is invalid or missing extensions
   become: false
   ansible.builtin.file:
-    path: "{{ nomad_temp_cert_dir }}/{{ item }}"
+    path: "{{ nomad_temp_cert_dir }}"
     state: absent
-  loop:
-    - ca.pem
-    - ca.key
-    - cli.pem
-    - cli.key
-    - cli.csr
-    - cli.cnf
-    - ca.cnf
+  when: ca_cert_validity is defined and ca_cert_validity.rc != 0
+  delegate_to: localhost
+  run_once: true
+
+- name: Ensure local certs directory exists after force purge
+  become: false
+  ansible.builtin.file:
+    path: "{{ nomad_temp_cert_dir }}"
+    state: directory
+    mode: '0755'
   when: ca_cert_validity is defined and ca_cert_validity.rc != 0
   delegate_to: localhost
   run_once: true
@@ -76,7 +78,7 @@
 
 - name: Generate Nomad CA certificate
   become: false
-  ansible.builtin.command: "openssl req -new -x509 -days 3650 -key {{ nomad_temp_cert_dir }}/ca.key -out {{ nomad_temp_cert_dir }}/ca.pem -config {{ nomad_temp_cert_dir }}/ca.cnf"
+  ansible.builtin.command: "openssl req -new -x509 -days 3650 -key {{ nomad_temp_cert_dir }}/ca.key -out {{ nomad_temp_cert_dir }}/ca.pem -config {{ nomad_temp_cert_dir }}/ca.cnf -extensions v3_ca"
   args:
     creates: "{{ nomad_temp_cert_dir }}/ca.pem"
   delegate_to: localhost
