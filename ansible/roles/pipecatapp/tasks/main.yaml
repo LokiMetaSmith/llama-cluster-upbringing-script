@@ -891,9 +891,8 @@
 
 - name: Handle docker specific tasks for pipecatapp
   block:
-    - name: Inspect pipecatapp:{{ pipecat_image_tag | default('local') }}
-      image
-      ansible.builtin.command: docker image inspect pipecatapp:{{ pipecat_image_tag | default('local') }}
+    - name: "Inspect pipecatapp:{{ pipecat_image_tag | default('local') }}"
+      ansible.builtin.command: "docker image inspect pipecatapp:{{ pipecat_image_tag | default('local') }}"
       register: pipecatapp_local_image_info
       changed_when: false
       failed_when: false
@@ -1054,7 +1053,8 @@
   become: yes
   become_user: "{{ target_user }}"
   environment:
-    PLAYWRIGHT_BROWSERS_PATH: "{{ pipecat_app_dir }}/pw-browsers"  async: 900 # Set timeout to 15 minutes
+    PLAYWRIGHT_BROWSERS_PATH: "{{ pipecat_app_dir }}/pw-browsers"
+  async: 900 # Set timeout to 15 minutes
   poll: 10   # Check status every 10 seconds
 
 - name: Install Playwright system dependencies
