@@ -37,7 +37,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      register: rpc_job_run
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: rpc_job_run
       changed_when: "'Eval ID' in rpc_job_run.stdout"
   rescue:
     - name: Fetch Nomad allocations for debugging
@@ -48,7 +49,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      ignore_errors: yes
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      ignore_errors: yes
 
     - name: Fetch Nomad allocation logs
       ansible.builtin.command:
@@ -58,7 +60,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      when: alloc_id.stdout != ""
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      when: alloc_id.stdout != ""
       ignore_errors: yes
 
     - name: Display allocation logs

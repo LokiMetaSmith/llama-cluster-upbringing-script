@@ -95,7 +95,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      changed_when: true
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      changed_when: true
       become: no
       register: moe_gateway_job_run
 
@@ -125,7 +126,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      register: moe_job_status
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: moe_job_status
       ignore_errors: yes
       become: no
 
@@ -140,7 +142,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      register: moe_allocs
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: moe_allocs
       ignore_errors: yes
       become: no
 
@@ -161,7 +164,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      register: moe_logs_stdout
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: moe_logs_stdout
       ignore_errors: yes
       become: no
       when: moe_alloc_id.stdout | length > 0
@@ -178,7 +182,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      register: moe_logs_stderr
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: moe_logs_stderr
       ignore_errors: yes
       become: no
       when: moe_alloc_id.stdout | length > 0

@@ -958,7 +958,8 @@
     NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"- name: Debug Nomad namespace
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+- name: Debug Nomad namespace
   debug:
     var: nomad_namespace
 
@@ -1090,7 +1091,8 @@
     NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"- name: Flush handlers to ensure service is enabled and started
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+- name: Flush handlers to ensure service is enabled and started
   ansible.builtin.meta: flush_handlers
 
 - name: "Archivist : Deploy Archivist Job"

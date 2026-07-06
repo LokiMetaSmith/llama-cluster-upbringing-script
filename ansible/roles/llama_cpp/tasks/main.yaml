@@ -198,7 +198,8 @@
     NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  when: build_llama_cpp
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+  when: build_llama_cpp
 
 - name: Stop and purge any existing expert jobs if llama.cpp was rebuilt
   ansible.builtin.command:
@@ -207,7 +208,8 @@
     NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  loop: "{{ experts }}"
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+  loop: "{{ experts }}"
   register: expert_job_stop_status
   changed_when: "'Running' in expert_job_stop_status.stdout"
   failed_when: false # Don't fail if the job doesn't exist

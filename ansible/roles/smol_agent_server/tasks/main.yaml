@@ -20,7 +20,8 @@
     NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  register: smol_job_run
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+  register: smol_job_run
   changed_when: "'Eval ID' in smol_job_run.stdout"
 
 - name: Clean up temporary job file
