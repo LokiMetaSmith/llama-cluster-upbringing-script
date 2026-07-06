@@ -82,7 +82,7 @@
       {{
         verified_experts | default([]) + [item]
       }}
-      loop: "{{ experts }}"
+  loop: "{{ experts }}"
   vars:
     # Get the list of model filenames for the current expert
     expert_model_files: "{{ (expert_models[item] | default([])) | map(attribute='filename') | list }}"
