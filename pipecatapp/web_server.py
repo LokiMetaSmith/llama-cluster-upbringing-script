@@ -5,15 +5,16 @@ import asyncio
 import logging
 import requests
 import httpx
+import base64
 import yaml
 import time  # Added back for the backup timestamp
 from fastapi import FastAPI, WebSocket, Body, Request, HTTPException, Depends, Security, status
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from typing import List, Dict
+from typing import List, Dict, Optional
 from workflow.runner import ActiveWorkflows, OpenGates
 from workflow.history import WorkflowHistory
 from api_keys import get_api_key
@@ -737,6 +738,136 @@ async def get_mtac_telemetry(job_id: str, api_key: str = Security(get_api_key)):
         return {"job_id": job_id, "telemetry": telemetry}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read telemetry: {str(e)}")
+
+async def get_ouroboros_members():
+    """Helper to fetch webring members from Consul KV."""
+    consul_url = format_url("http", os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1")), 8500)
+    key = "pipecatapp/webring/members"
+    try:
+        response = await service_discovery_client.get(f"{consul_url}/v1/kv/{key}")
+        if response.status_code == 200:
+            data = response.json()
+            if data and "Value" in data[0] and data[0]["Value"]:
+                decoded_value = base64.b64decode(data[0]["Value"]).decode("utf-8")
+                return json.loads(decoded_value)
+    except Exception as e:
+        logging.error(f"Error fetching Ouroboros members: {e}")
+    return []
+
+async def save_ouroboros_members(members: List[Dict]):
+    """Helper to save webring members to Consul KV."""
+    consul_url = format_url("http", os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1")), 8500)
+    key = "pipecatapp/webring/members"
+    try:
+        value = json.dumps(members)
+        response = await service_discovery_client.put(f"{consul_url}/v1/kv/{key}", content=value)
+        return response.status_code == 200
+    except Exception as e:
+        logging.error(f"Error saving Ouroboros members: {e}")
+    return False
+
+async def discover_ouroboros_members():
+    """Background task to discover web UIs and update the Ouroboros ring."""
+    while True:
+        try:
+            # 1. Discover existing UIs (similar to get_web_uis)
+            web_uis_response = await get_web_uis()
+            web_uis = json.loads(web_uis_response.body)
+
+            if not isinstance(web_uis, list):
+                await asyncio.sleep(60)
+                continue
+
+            # 2. Get current curated members
+            current_members = await get_ouroboros_members()
+            curated_urls = {m["url"] for m in current_members}
+
+            # 3. Add discovered UIs that aren't already there
+            new_members = list(current_members)
+            added = False
+            for ui in web_uis:
+                if ui["url"] != "#" and ui["url"] not in curated_urls:
+                    new_members.append({
+                        "name": ui["name"],
+                        "url": ui["url"],
+                        "source": "auto-discovery"
+                    })
+                    curated_urls.add(ui["url"])
+                    added = True
+
+            if added:
+                await save_ouroboros_members(new_members)
+                logging.info("Ouroboros webring updated with discovered members.")
+
+        except Exception as e:
+            logging.error(f"Error in discover_ouroboros_members task: {e}")
+
+        await asyncio.sleep(300) # Run every 5 minutes
+
+@app.get("/api/webring/members", summary="Get Ouroboros Members", description="Retrieves the list of members in the Ouroboros webring.", tags=["Webring"])
+async def get_webring_members(api_key: Optional[str] = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    members = await get_ouroboros_members()
+    return JSONResponse(content=members)
+
+@app.post("/api/webring/members", summary="Update Ouroboros Members", description="Updates the list of members in the Ouroboros webring.", tags=["Webring"])
+async def update_webring_members(members: List[Dict] = Body(...), api_key: Optional[str] = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    if await save_ouroboros_members(members):
+        return {"message": "Webring members updated."}
+    raise HTTPException(status_code=500, detail="Failed to save webring members.")
+
+@app.get("/webring/next", summary="Next Member", description="Redirects to the next member in the webring.", tags=["Webring"])
+async def webring_next(request: Request):
+    members = await get_ouroboros_members()
+    if not members:
+        return HTMLResponse("Webring is empty.", status_code=404)
+
+    referrer = request.query_params.get("from") or request.headers.get("referer") or ""
+    # Try to match the referrer with the member URLs
+    current_index = -1
+    if referrer:
+        for i, member in enumerate(members):
+            if member.get("url") in referrer or referrer in member.get("url"):
+                current_index = i
+                break
+
+    if current_index == -1:
+        # If not found, just go to the first one or a random one?
+        # Blog post returns 404. Let's be nicer and go to random if not found?
+        # Actually, let's stick to 404 or a message for now.
+        return HTMLResponse("Current member not found in webring.", status_code=404)
+
+    next_member = members[(current_index + 1) % len(members)]
+    return RedirectResponse(url=next_member["url"])
+
+@app.get("/webring/prev", summary="Previous Member", description="Redirects to the previous member in the webring.", tags=["Webring"])
+async def webring_prev(request: Request):
+    members = await get_ouroboros_members()
+    if not members:
+        return HTMLResponse("Webring is empty.", status_code=404)
+
+    referrer = request.query_params.get("from") or request.headers.get("referer") or ""
+    current_index = -1
+    if referrer:
+        for i, member in enumerate(members):
+            if member.get("url") in referrer or referrer in member.get("url"):
+                current_index = i
+                break
+
+    if current_index == -1:
+        return HTMLResponse("Current member not found in webring.", status_code=404)
+
+    prev_member = members[(current_index - 1 + len(members)) % len(members)]
+    return RedirectResponse(url=prev_member["url"])
+
+@app.get("/webring/random", summary="Random Member", description="Redirects to a random member in the webring.", tags=["Webring"])
+async def webring_random():
+    members = await get_ouroboros_members()
+    if not members:
+        return HTMLResponse("Webring is empty.", status_code=404)
+
+    import random
+    random_member = random.choice(members)
+    return RedirectResponse(url=random_member["url"])
 
 @app.get("/api/web_uis")
 async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):

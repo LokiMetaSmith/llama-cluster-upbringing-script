@@ -1789,6 +1789,9 @@ async def lifespan(app: FastAPI):
     # Start the agent loop in the background
     # We use a task name to easily identify it in debug tools
     agent_task = asyncio.create_task(run_agent(), name="pipecat_agent_loop")
+
+    # Start Ouroboros Webring Discovery Task
+    asyncio.create_task(web_server.discover_ouroboros_members(), name="ouroboros_discovery")
     yield
     # Cleanup on shutdown
     await gossip_registry.stop()

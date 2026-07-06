@@ -51,6 +51,7 @@ from tools.dynamic_skill_tool import DynamicSkillTool
 from tools.ast_editor_tool import ASTEditorTool
 from tools.lightweight_project_mapper_tool import LightweightProjectMapperTool
 from tools.set_operational_mode_tool import SetOperationalModeTool
+from tools.ouroboros_tool import OuroborosTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -139,6 +140,10 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "skill_builder": SkillBuilderTool(),
         "ast_editor": ASTEditorTool(root_dir="/opt/pipecatapp"),
         "set_operational_mode": SetOperationalModeTool(),
+        "ouroboros": OuroborosTool(
+            consul_host=config.get('consul_host'),
+            consul_port=config.get('consul_port', 8500)
+        ),
     }
 
     # Inject memory client into SwarmTool if available (for Map-Reduce)
