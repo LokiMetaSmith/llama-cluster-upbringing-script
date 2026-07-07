@@ -12,6 +12,7 @@
       - figlet
       - lolcat
       - age
+      - magic-wormhole
     state: present
   become: yes
 

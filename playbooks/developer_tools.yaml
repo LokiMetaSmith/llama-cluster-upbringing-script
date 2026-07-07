@@ -7,3 +7,4 @@
 
   roles:
     - role: heretic_tool
+    - role: hermes_agent

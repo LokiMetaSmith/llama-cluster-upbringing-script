@@ -1,0 +1,22 @@
+- name: Check if hermes command is already installed
+  ansible.builtin.shell: command -v hermes
+  register: hermes_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Install Hermes Agent
+  ansible.builtin.shell:
+    cmd: "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --non-interactive --skip-setup"
+  when: hermes_check.rc != 0
+  become: yes
+  become_user: "{{ target_user | default('pipecatapp') }}"
+  register: hermes_install
+  changed_when: "'Installation Complete' in hermes_install.stdout"
+
+- name: Ensure ~/.local/bin is on PATH for target user
+  ansible.builtin.lineinfile:
+    path: "/home/{{ target_user | default('pipecatapp') }}/.bashrc"
+    line: 'export PATH="$HOME/.local/bin:$PATH"'
+    state: present
+  become: yes
+  become_user: "{{ target_user | default('pipecatapp') }}"
