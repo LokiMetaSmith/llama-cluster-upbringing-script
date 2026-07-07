@@ -66,39 +66,40 @@ class TestProjectMapperTool:
         shutil.rmtree(temp_dir)
 
     def test_is_ignored(self, tool):
-        assert tool._is_ignored(".git")
-        assert tool._is_ignored("node_modules")
-        assert tool._is_ignored("__pycache__")
-        assert tool._is_ignored("venv")
-        assert tool._is_ignored("test.egg-info")
-        assert tool._is_ignored(".coverage")
+        assert tool.lightweight_mapper._is_ignored(".git")
+        assert tool.lightweight_mapper._is_ignored("node_modules")
+        assert tool.lightweight_mapper._is_ignored("__pycache__")
+        assert tool.lightweight_mapper._is_ignored("venv")
+        assert tool.lightweight_mapper._is_ignored("test.egg-info")
+        assert tool.lightweight_mapper._is_ignored(".coverage")
 
-        assert not tool._is_ignored("main.py")
-        assert not tool._is_ignored("src")
+        assert not tool.lightweight_mapper._is_ignored("main.py")
+        assert not tool.lightweight_mapper._is_ignored("src")
 
     def test_guess_type(self, tool):
-        assert tool._guess_type("script.py") == "python"
-        assert tool._guess_type("app.js") == "javascript"
-        assert tool._guess_type("app.ts") == "javascript"
-        assert tool._guess_type("config.yaml") == "yaml"
-        assert tool._guess_type("config.yml") == "yaml"
-        assert tool._guess_type("README.md") == "markdown"
-        assert tool._guess_type("unknown.txt") == "unknown"
+        assert tool.lightweight_mapper._guess_type("script.py") == "python"
+        assert tool.lightweight_mapper._guess_type("app.js") == "javascript"
+        assert tool.lightweight_mapper._guess_type("app.ts") == "javascript"
+        assert tool.lightweight_mapper._guess_type("config.yaml") == "yaml"
+        assert tool.lightweight_mapper._guess_type("config.yml") == "yaml"
+        assert tool.lightweight_mapper._guess_type("README.md") == "markdown"
+        assert tool.lightweight_mapper._guess_type("unknown.txt") == "unknown"
 
     def test_extract_imports_python(self, tool, temp_project):
         main_py = os.path.join(temp_project, "main.py")
-        imports = tool._extract_imports(main_py)
+        imports = tool.lightweight_mapper._extract_imports(main_py)
         assert "os" in imports
         assert "sys" in imports # from sys import ... matches "sys" with the regex `from (\w+)`
 
     def test_extract_imports_js(self, tool, temp_project):
         utils_js = os.path.join(temp_project, "utils.js")
-        imports = tool._extract_imports(utils_js)
+        imports = tool.lightweight_mapper._extract_imports(utils_js)
         assert "bar" in imports
         assert "baz" in imports
 
     def test_scan(self, tool, temp_project):
         tool.root_dir = temp_project
+        tool.lightweight_mapper.root_dir = temp_project
         result = tool.scan()
 
         assert result["root"] == temp_project
@@ -124,6 +125,7 @@ class TestProjectMapperTool:
 
     def test_scan_path_traversal(self, tool, temp_project):
         tool.root_dir = temp_project
+        tool.lightweight_mapper.root_dir = temp_project
 
         # Try to scan parent directory
         with pytest.raises(ValueError, match="Access denied"):
