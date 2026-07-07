@@ -37,7 +37,7 @@ job "world-model-service" {
       #  CONSUL_HOST = "{{ cluster_ip }}"
         CONSUL_HOST = "{{ advertise_ip }}"
         CONSUL_PORT = "{{ consul_http_port }}"
-      #  NOMAD_ADDR = "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port }}"
+      #  NOMAD_ADDR = "https://{{ cluster_ip }}:{{ nomad_http_port }}"
         NOMAD_ADDR = "https://{{ advertise_ip }}:{{ nomad_http_port }}"
       }
 

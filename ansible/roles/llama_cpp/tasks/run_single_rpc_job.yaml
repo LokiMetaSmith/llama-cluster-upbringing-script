@@ -1,12 +1,3 @@
-- name: Check if Nomad CLI cert exists
-  ansible.builtin.stat:
-    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
-  register: nomad_cli_cert_stat
-
-- name: Set nomad_protocol fact
-  ansible.builtin.set_fact:
-    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
-
 - name: Find benchmark result for {{ model_item.filename }}
   ansible.builtin.set_fact:
     model_benchmark: "{{ benchmark_results | selectattr('model', 'equalto', model_item.filename) | first | default({}) }}"
@@ -34,10 +25,11 @@
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad job run -detach /tmp/rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
       environment:
-        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      register: rpc_job_run
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+        NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cert.pem"
+        NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/key.pem"
+      register: rpc_job_run
       changed_when: "'Eval ID' in rpc_job_run.stdout"
   rescue:
     - name: Fetch Nomad allocations for debugging
@@ -45,20 +37,22 @@
         /usr/local/bin/nomad job allocs -json rpc-{{ ((model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-'))[:40]) | regex_replace('-$', '') }} | jq -r 'sort_by(.CreateTime) | reverse | .[0].ID'
       register: alloc_id
       environment:
-        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      ignore_errors: yes
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+      ignore_errors: yes
 
     - name: Fetch Nomad allocation logs
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ alloc_id.stdout }}"
       register: alloc_logs
       environment:
-        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      when: alloc_id.stdout != ""
+        NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+        NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+      when: alloc_id.stdout != ""
       ignore_errors: yes
 
     - name: Display allocation logs

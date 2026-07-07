@@ -1,0 +1,8 @@
+- name: Check if Nomad CLI cert exists
+  ansible.builtin.stat:
+    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
+  register: nomad_cli_cert_stat
+
+- name: Set nomad_protocol fact
+  ansible.builtin.set_fact:
+    nomad_protocol: "{{ 'https' if nomad_cli_cert_stat.stat.exists else 'http' }}"

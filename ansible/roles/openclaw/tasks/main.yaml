@@ -1,12 +1,3 @@
-- name: Check if Nomad CLI cert exists
-  ansible.builtin.stat:
-    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
-  register: nomad_cli_cert_stat
-
-- name: Set nomad_protocol fact
-  ansible.builtin.set_fact:
-    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
-
 - name: Create OpenClaw directories
   ansible.builtin.file:
     path: "{{ item }}"
@@ -45,6 +36,7 @@
   register: ipfs_add_result_openclaw
   environment:
     IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
+
 - name: Clean up temporary openclaw tarball
   ansible.builtin.file:
     path: /opt/openclaw.tar
@@ -73,8 +65,9 @@
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/openclaw.nomad"
   environment:
-    NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  register: openclaw_job_run
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "/etc/nomad.d/tls/ca.pem"
+    NOMAD_CLIENT_CERT: "/etc/nomad.d/tls/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "/etc/nomad.d/tls/cli.key.pem"
+  register: openclaw_job_run
   changed_when: true

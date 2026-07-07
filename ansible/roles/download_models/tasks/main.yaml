@@ -35,7 +35,8 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs?keys"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    validate_certs: yes
+    ca_path: "{{ consul_config_dir | default('/etc/consul.d') }}/ca.pem"
     method: GET
     headers:
       X-Consul-Token: "{{ consul_token }}"
@@ -55,7 +56,8 @@
         url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/{{ item }}?raw=true"
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-        validate_certs: false
+        validate_certs: yes
+        ca_path: "{{ consul_config_dir | default('/etc/consul.d') }}/ca.pem"
         method: GET
         headers:
           X-Consul-Token: "{{ consul_token }}"

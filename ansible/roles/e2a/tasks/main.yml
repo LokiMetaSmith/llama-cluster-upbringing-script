@@ -1,12 +1,3 @@
-- name: Check if Nomad CLI cert exists
-  ansible.builtin.stat:
-    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
-  register: nomad_cli_cert_stat
-
-- name: Set nomad_protocol fact
-  ansible.builtin.set_fact:
-    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
-
 - name: Create e2a data directory
   ansible.builtin.file:
     path: "{{ nomad_volumes_dir }}/e2a/data"
@@ -23,9 +14,10 @@
 - name: Run e2a Nomad job
   ansible.builtin.command: nomad job run -detach {{ nomad_jobs_dir }}/e2a.nomad
   environment:
-    NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
-    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  register: e2a_deploy
+    NOMAD_ADDR: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ nomad_tls_dir }}/ca.pem"
+    NOMAD_CLIENT_CERT: "{{ nomad_tls_dir }}/cli.cert.pem"
+    NOMAD_CLIENT_KEY: "{{ nomad_tls_dir }}/cli.key.pem"
+  register: e2a_deploy
   changed_when: "'modified' in e2a_deploy.stdout or 'created' in e2a_deploy.stdout"
   become: yes

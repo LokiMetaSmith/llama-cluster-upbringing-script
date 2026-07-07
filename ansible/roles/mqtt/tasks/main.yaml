@@ -1,11 +1,5 @@
-- name: Check if Nomad CLI cert exists
-  ansible.builtin.stat:
-    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
-  register: nomad_cli_cert_stat
-
-- name: Set nomad_protocol fact
-  ansible.builtin.set_fact:
-    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
+- name: Set Nomad protocol fact
+  include_tasks: "{{ inventory_dir }}/ansible/tasks/set_nomad_protocol.yml"
 
 - name: Ensure Nomad volumes directory exists
   ansible.builtin.file:
@@ -55,7 +49,8 @@
     NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  register: nomad_status_json
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+  register: nomad_status_json
   changed_when: false
   ignore_errors: yes
 
@@ -85,7 +80,8 @@
         url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/status/leader"
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-        validate_certs: false
+        validate_certs: yes
+    ca_path: "/etc/nomad.d/tls/ca.pem"
         return_content: yes
       register: consul_leader_check
       ignore_errors: yes
@@ -99,7 +95,8 @@
         url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/agent/self"
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-        validate_certs: false
+        validate_certs: yes
+    ca_path: "/etc/nomad.d/tls/ca.pem"
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default('') }}"
         return_content: yes
@@ -129,7 +126,8 @@
     - name: Wait for Nomad API to be ready after restart
       ansible.builtin.uri:
         url: "https://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
-        validate_certs: no
+        validate_certs: yes
+    ca_path: "/etc/nomad.d/tls/ca.pem"
         status_code: 200
         client_cert: "{{ nomad_tls_dir }}/cli.cert.pem"
         client_key: "{{ nomad_tls_dir }}/cli.key.pem"
@@ -145,7 +143,8 @@
     NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  register: mqtt_job_check
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+  register: mqtt_job_check
   failed_when: false
   changed_when: false
 
@@ -156,7 +155,8 @@
     NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"  when: mqtt_job_check.rc == 0
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+  when: mqtt_job_check.rc == 0
   changed_when: true
 
 - name: Template mosquitto.conf
@@ -222,7 +222,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      changed_when: true
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      changed_when: true
       register: mqtt_job_run
 
     - name: Wait for MQTT service to be healthy in Consul
@@ -230,7 +231,8 @@
         url: "https://{{ advertise_ip }}:{{ consul_https_port }}/v1/health/service/mqtt?passing"
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-        validate_certs: false
+        validate_certs: yes
+    ca_path: "/etc/nomad.d/tls/ca.pem"
         method: GET
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default('') }}"
@@ -248,7 +250,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      register: mqtt_job_status
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: mqtt_job_status
       ignore_errors: yes
 
     - name: Display MQTT job status
@@ -262,7 +265,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      register: nomad_node_status
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: nomad_node_status
       ignore_errors: yes
 
     - name: Display Nomad Node Status
@@ -276,7 +280,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      register: mqtt_allocs
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: mqtt_allocs
       ignore_errors: yes
 
     - name: Save MQTT allocations to temp file
@@ -296,7 +301,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      register: mqtt_logs_stdout
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: mqtt_logs_stdout
       ignore_errors: yes
       when: (mqtt_alloc_id.stdout | trim | length > 0) and (mqtt_alloc_id.stdout | trim != 'null')
 
@@ -312,7 +318,8 @@
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"      register: mqtt_logs_stderr
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: mqtt_logs_stderr
       ignore_errors: yes
       when: (mqtt_alloc_id.stdout | trim | length > 0) and (mqtt_alloc_id.stdout | trim != 'null')
 

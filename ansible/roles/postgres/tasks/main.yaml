@@ -1,3 +1,6 @@
+- name: Set Nomad protocol fact
+  include_tasks: "{{ inventory_dir }}/ansible/tasks/set_nomad_protocol.yml"
+
 - name: Create Postgres data directory
   file:
     path: "{{ nomad_volumes_dir }}/postgres_data"
