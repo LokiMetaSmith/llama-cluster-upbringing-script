@@ -24,7 +24,7 @@ https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-
 langchain
 langchain-community
 langchain-core
-misaki[en]
+misaki[en] @ git+https://github.com/hexgrad/misaki.git@fba1236595f2d2bf21d414ba6e57d25256afada3
 python-nomad
 num2words
 numpy
