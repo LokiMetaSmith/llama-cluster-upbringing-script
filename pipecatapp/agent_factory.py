@@ -9,6 +9,8 @@ from tools.power_tool import Power_Tool
 from tools.summarizer_tool import SummarizerTool
 from tools.term_everything_tool import TermEverythingTool
 from tools.rag_tool import RAG_Tool
+from utils.rag_pruner import RAGPruner
+from llm_clients import ExternalLLMClient
 from tools.ha_tool import HA_Tool
 from tools.git_tool import Git_Tool
 from tools.orchestrator_tool import OrchestratorTool
@@ -187,10 +189,35 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
                     # Allow configurability for base_dir, but default to secure app dir
                     rag_base_dir = config.get("rag_base_dir", "/opt/pipecatapp")
                     rag_allowed_root = config.get("rag_allowed_root", rag_base_dir)
+
+                    # Optional RAG Pruning
+                    pruner = None
+                    pruner_model = config.get("rag_pruner_model")
+                    if pruner_model:
+                        # Use the same base URL as the router if not specified
+                        # We try to find a sensible base_url for the pruner
+                        pruner_base_url = config.get("rag_pruner_base_url")
+                        if not pruner_base_url:
+                            # Attempt to infer from other config or env
+                            pruner_base_url = os.getenv("LLAMA_API_BASE_URL") or config.get("llama_api_url")
+
+                        pruner_api_key = config.get("rag_pruner_api_key") or os.getenv("GROQ_API_KEY") or os.getenv("OPENAI_API_KEY") or "dummy"
+
+                        if pruner_base_url and pruner_model:
+                            llm_client = ExternalLLMClient(
+                                base_url=pruner_base_url,
+                                api_key=pruner_api_key,
+                                model=pruner_model
+                            )
+                            pruner = RAGPruner(llm_client=llm_client)
+
                     tools["rag"] = RAG_Tool(
                         pmm_memory=twin_service.long_term_memory if twin_service else None,
                         base_dir=rag_base_dir,
-                        allowed_root=rag_allowed_root
+                        allowed_root=rag_allowed_root,
+                        pruner=pruner,
+                        pruning_threshold=config.get("rag_pruning_threshold", 4),
+                        keep_top_k=config.get("rag_keep_top_k", 3)
                     )
                 elif name == "ha":
                     tools["ha"] = HA_Tool(

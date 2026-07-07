@@ -40,6 +40,11 @@ def mock_memory():
             self.events.append({"kind": kind, "content": content, "meta": meta or {}})
     return MockPMMMemory()
 
+@pytest.fixture(autouse=True)
+def mock_thread():
+    with patch("threading.Thread") as mock:
+        yield mock
+
 @pytest.fixture
 def test_dirs(tmp_path):
     root = tmp_path / "root"
@@ -52,7 +57,8 @@ def test_dirs(tmp_path):
     forbidden.mkdir()
     return root, subdir, forbidden
 
-def test_rag_scope_security(rag_tool_class, mock_memory, test_dirs):
+@pytest.mark.asyncio
+async def test_rag_scope_security(rag_tool_class, mock_memory, test_dirs):
     root, subdir, forbidden = test_dirs
 
     # Setup mock return for encode
@@ -64,13 +70,14 @@ def test_rag_scope_security(rag_tool_class, mock_memory, test_dirs):
     tool = rag_tool_class(pmm_memory=mock_memory, base_dir=str(root), allowed_root=str(root))
 
     assert tool.base_dir == str(root)
-    assert tool.set_scope(str(subdir)) is True
+    assert await tool.set_scope(str(subdir)) is True
     assert tool.base_dir == str(subdir)
-    assert tool.set_scope(str(forbidden)) is False
+    assert await tool.set_scope(str(forbidden)) is False
     assert tool.base_dir == str(subdir)
-    assert tool.set_scope(str(root)) is True
+    assert await tool.set_scope(str(root)) is True
 
-def test_rag_filtering(rag_tool_class, mock_memory, test_dirs):
+@pytest.mark.asyncio
+async def test_rag_filtering(rag_tool_class, mock_memory, test_dirs):
     root, subdir, forbidden = test_dirs
 
     mock_model_instance = mock_st.SentenceTransformer.return_value
@@ -131,7 +138,7 @@ def test_rag_filtering(rag_tool_class, mock_memory, test_dirs):
     tool.index.ntotal = 0
 
     # We are scoped to root, should find doc1
-    results = tool.search_knowledge_base("content 1")
+    results = await tool.search_knowledge_base("content 1")
     assert "doc1.txt" in results
     assert "doc2.txt" in results # since it's under root
 
@@ -141,7 +148,7 @@ def test_rag_filtering(rag_tool_class, mock_memory, test_dirs):
         os.remove(tool.checkpoint_file)
 
     added_docs.clear()
-    tool.set_scope(str(subdir))
+    await tool.set_scope(str(subdir))
     tool._build_knowledge_base()
 
     sources = [s for s, _ in added_docs]
@@ -150,11 +157,12 @@ def test_rag_filtering(rag_tool_class, mock_memory, test_dirs):
 
     # Query should now be scoped to subdir
     tool.index.ntotal = 0
-    results = tool.search_knowledge_base("content")
+    results = await tool.search_knowledge_base("content")
     assert "doc1.txt" not in results
     assert "doc2.txt" in results
 
-def test_rag_sibling_directory_isolation(rag_tool_class, mock_memory, test_dirs):
+@pytest.mark.asyncio
+async def test_rag_sibling_directory_isolation(rag_tool_class, mock_memory, test_dirs):
     root, subdir, forbidden = test_dirs
 
     # Create a sibling directory that shares prefix with 'subdir'
@@ -242,7 +250,7 @@ def test_rag_sibling_directory_isolation(rag_tool_class, mock_memory, test_dirs)
     # The where clause will use $contains which would match /root/subdir and not /root/subdir-secret
     # Since we simulate the actual behavior in mock_query using startswith, we test the intent
     tool.index.ntotal = 0
-    results = tool.search_knowledge_base("secret")
+    results = await tool.search_knowledge_base("secret")
     assert "secret.txt" not in results
     assert "doc2.txt" in results # doc2 will be returned by our mock because it is in the allowed scope.
 

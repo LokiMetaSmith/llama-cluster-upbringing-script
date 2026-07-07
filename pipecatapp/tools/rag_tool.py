@@ -35,7 +35,7 @@ class RAG_Tool:
     the agent to find relevant information to answer user queries about the
     project.
     """
-    def __init__(self, pmm_memory: Optional[PMMMemory] = None, base_dir=None, allowed_root: Optional[str] = None, model_name="all-MiniLM-L6-v2", allow_root_scan: bool = False):
+    def __init__(self, pmm_memory: Optional[PMMMemory] = None, base_dir=None, allowed_root: Optional[str] = None, model_name="all-MiniLM-L6-v2", allow_root_scan: bool = False, pruner=None, pruning_threshold: int = 4, keep_top_k: int = 3):
         """Initializes the RAG_Tool.
 
         Args:
@@ -46,6 +46,9 @@ class RAG_Tool:
                 Defaults to base_dir if not provided.
             model_name (str): The name of the SentenceTransformer model to use.
             allow_root_scan (bool): Explicitly allow scanning the filesystem root (/). Defaults to False.
+            pruner (Optional[RAGPruner]): An instance of RAGPruner to prune retrieved context.
+            pruning_threshold (int): The minimum grade (1-5) for a chunk to be kept.
+            keep_top_k (int): Number of top reranked chunks to keep regardless of pruning grade.
         """
         self.name = "rag"
         self.description = (
@@ -100,13 +103,17 @@ class RAG_Tool:
         # Checkpoint file for tracking processed files
         self.checkpoint_file = os.path.join(self.chromadb_dir, "rag_checkpoint.json")
 
+        self.pruner = pruner
+        self.pruning_threshold = pruning_threshold
+        self.keep_top_k = keep_top_k
+
         if self.pmm_memory:
             # Run knowledge base build in a separate thread
             threading.Thread(target=self._build_knowledge_base, daemon=True).start()
         else:
              logging.warning("RAG Tool disabled: PMMMemory unavailable.")
 
-    def set_scope(self, path: str) -> bool:
+    async def set_scope(self, path: str) -> bool:
         """Updates the search scope to a new directory.
 
         Args:
@@ -309,18 +316,18 @@ class RAG_Tool:
         logging.info(f"RAG knowledge base built/loaded successfully. Total documents in ChromaDB: {doc_count}.")
 
 
-    def scan_directory(self, directory: str) -> str:
+    async def scan_directory(self, directory: str) -> str:
         """Scans a new directory and adds documents to the index."""
-        if self.set_scope(directory):
+        if await self.set_scope(directory):
             self._build_knowledge_base()
             return f"Successfully scanned and indexed directory: {directory}"
         return f"Failed to scan directory: {directory}"
 
-    def search(self, query: str, k: int = 5) -> str:
+    async def search(self, query: str, k: int = 5) -> str:
         """Searches the knowledge base for text relevant to the query."""
-        return self.search_knowledge_base(query)
+        return await self.search_knowledge_base(query, k=k)
 
-    def add_document(self, filepath: str) -> str:
+    async def add_document(self, filepath: str) -> str:
         """Adds a single document to the index using LangChain Loaders and Splitters."""
         if not os.path.exists(filepath):
             return f"Error: File '{filepath}' does not exist."
@@ -405,11 +412,12 @@ class RAG_Tool:
         except Exception:
             return None
 
-    def search_knowledge_base(self, query: str) -> str:
+    async def search_knowledge_base(self, query: str, k: int = 5) -> str:
         """Searches the knowledge base for text relevant to the query.
 
         Args:
             query (str): The user's question or topic to search for.
+            k (int): Number of relevant chunks to retrieve.
 
         Returns:
             str: A formatted string containing the most relevant document
@@ -431,12 +439,14 @@ class RAG_Tool:
         results = []
         found_in_cache = False
 
+        # If pruning is enabled, we fetch more candidates than requested to allow for discarding.
+        k_retrieval = max(k, 15) if self.pruner else k
+
         # 1. Search FAISS Cache first
-        k = 3
         if self.index is not None and self.index.ntotal > 0:
             # We want to use FAISS if the results are very close
             # We will fetch top k and check distances
-            distances, indices = self.index.search(query_embedding_np, k)
+            distances, indices = self.index.search(query_embedding_np, k_retrieval)
 
             # Simple threshold for FAISS L2 distance to consider it a "cache hit"
             # SentenceTransformers often output normalized embeddings where max distance is ~2.0
@@ -446,7 +456,13 @@ class RAG_Tool:
                 if indices[0][i] != -1 and distances[0][i] < 1.0:
                     doc_index = indices[0][i]
                     doc = self.documents[doc_index]
-                    valid_cache_results.append(f"From {doc['source']} (Cached):\n---\n{doc['content']}\n---")
+                    # We store structured results for pruning
+                    valid_cache_results.append({
+                        "content": doc['content'],
+                        "source": doc['source'],
+                        "id": doc['id'],
+                        "is_cached": True
+                    })
 
             if valid_cache_results:
                 logging.info("RAG FAISS Cache HIT.")
@@ -464,7 +480,7 @@ class RAG_Tool:
                 base_dir_prefix = os.path.join(self.base_dir, "")
                 chroma_results = collection.query(
                     query_embeddings=query_embedding.tolist(),
-                    n_results=k,
+                    n_results=k_retrieval,
                     where={"source": {"$contains": base_dir_prefix}}
                 )
 
@@ -475,18 +491,24 @@ class RAG_Tool:
                     # distances in chroma might be available depending on metric, usually in chroma_results['distances'][0]
 
                     for doc_text, metadata, doc_id in zip(docs, metadatas, ids):
-                        results.append(f"From {metadata['source']}:\n---\n{doc_text}\n---")
+                        results.append({
+                            "content": doc_text,
+                            "source": metadata['source'],
+                            "id": doc_id,
+                            "is_cached": False
+                        })
 
                         # Add to FAISS cache
-                        # Check if it's already in the cache first (naive check by ID could be added, but appending is fine for now)
-                        # We append the document to our list and add the embedding to FAISS
-                        doc_embedding = self.model.encode([doc_text], show_progress_bar=False)
-                        self.documents.append({
-                            "id": doc_id,
-                            "source": metadata['source'],
-                            "content": doc_text
-                        })
-                        self.index.add(np.array(doc_embedding, dtype=np.float32))
+                        if self.index is not None:
+                            # Check if it's already in the cache first (naive check by ID could be added, but appending is fine for now)
+                            # We append the document to our list and add the embedding to FAISS
+                            doc_embedding = self.model.encode([doc_text], show_progress_bar=False)
+                            self.documents.append({
+                                "id": doc_id,
+                                "source": metadata['source'],
+                                "content": doc_text
+                            })
+                            self.index.add(np.array(doc_embedding, dtype=np.float32))
 
             except Exception as e:
                 logging.error(f"Error querying ChromaDB: {e}")
@@ -495,4 +517,34 @@ class RAG_Tool:
         if not results:
             return "I could not find any relevant information in the knowledge base to answer your question."
 
-        return "\n\n".join(results)
+        # 3. Pruning logic
+        if self.pruner:
+            logging.info(f"Pruning {len(results)} RAG candidates...")
+            # Prepare chunks for pruner
+            chunks_to_grade = [{"id": res["id"], "content": res["content"]} for res in results]
+            grades = await self.pruner.prune_chunks(query, chunks_to_grade)
+
+            pruned_results = []
+            for i, res in enumerate(results):
+                # Always keep top K reranked chunks, or chunks above the pruning threshold
+                grade_raw = grades.get(str(res["id"]), 1)
+                try:
+                    grade = int(grade_raw)
+                except (ValueError, TypeError):
+                    grade = 1
+
+                if i < self.keep_top_k or grade >= self.pruning_threshold:
+                    pruned_results.append(res)
+                else:
+                    logging.debug(f"Pruned chunk {res['id']} with grade {grade}")
+
+            logging.info(f"RAG Pruning complete: {len(results)} -> {len(pruned_results)} chunks.")
+            results = pruned_results
+
+        # 4. Format final results
+        formatted_results = []
+        for res in results:
+            cached_str = " (Cached)" if res.get("is_cached") else ""
+            formatted_results.append(f"From {res['source']}{cached_str}:\n---\n{res['content']}\n---")
+
+        return "\n\n".join(formatted_results[:k])

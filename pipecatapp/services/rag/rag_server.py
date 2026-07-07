@@ -49,25 +49,25 @@ class ScanDirectoryRequest(BaseModel):
     directory: str
 
 @app.post("/add_document", dependencies=[Depends(verify_token)])
-def add_document(req: AddDocumentRequest):
+async def add_document(req: AddDocumentRequest):
     try:
-        result = rag_tool_instance.add_document(req.filepath)
+        result = await rag_tool_instance.add_document(req.filepath)
         return {"status": "success", "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/search", dependencies=[Depends(verify_token)])
-def search(req: SearchRequest):
+async def search(req: SearchRequest):
     try:
-        result = rag_tool_instance.search(req.query, k=req.k)
+        result = await rag_tool_instance.search(req.query, k=req.k)
         return {"status": "success", "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/scan_directory", dependencies=[Depends(verify_token)])
-def scan_directory(req: ScanDirectoryRequest):
+async def scan_directory(req: ScanDirectoryRequest):
     try:
-        result = rag_tool_instance.scan_directory(req.directory)
+        result = await rag_tool_instance.scan_directory(req.directory)
         return {"status": "success", "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
