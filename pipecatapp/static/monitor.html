@@ -52,6 +52,7 @@
             <div id="tabs" style="display: flex; gap: 10px; padding: 10px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color);">
                 <button onclick="switchTab('graph')" class="refresh-btn" style="flex: 1;">Execution Graph</button>
                 <button onclick="switchTab('mtac')" class="refresh-btn" style="flex: 1;">MTaC Telemetry</button>
+                <button onclick="switchTab('ternlight')" class="refresh-btn" style="flex: 1;">Instant Docs</button>
             </div>
 
             <div id="tab-graph" style="height: calc(100vh - 120px);">
@@ -73,6 +74,20 @@
                         <h3 style="margin-top: 0; color: #58a6ff;">Evaluation Results</h3>
                         <pre id="mtac-eval-results" style="font-size: 0.85em; white-space: pre-wrap; margin: 0; color: #c9d1d9;">No data loaded.</pre>
                     </div>
+                </div>
+            </div>
+
+            <div id="tab-ternlight" style="display: none; padding: 20px; height: calc(100vh - 120px); overflow-y: auto;">
+                <h2>Instant Documentation Search</h2>
+                <p style="color: #8b949e; margin-bottom: 20px;">Powered by <strong>Ternlight</strong> (7MB Ternary Embedding Model)</p>
+
+                <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                    <input type="text" id="ternlight-query" placeholder="Ask a question about the cluster docs..." style="padding: 10px; flex: 1; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px;">
+                    <button onclick="runTernlightSearch()" class="refresh-btn" style="padding: 10px 20px;">Ask Ternlight</button>
+                </div>
+
+                <div id="ternlight-results" style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="color: #8b949e; text-align: center; padding: 40px;">Results will appear here...</div>
                 </div>
             </div>
         </div>
@@ -98,12 +113,14 @@
     </div>
 
     <script src="/static/js/workflow.js"></script>
+    <script src="/static/js/ternlight_client.js"></script>
     <script>
         let mtacChartInstance = null;
 
         function switchTab(tab) {
             document.getElementById('tab-graph').style.display = tab === 'graph' ? 'block' : 'none';
             document.getElementById('tab-mtac').style.display = tab === 'mtac' ? 'block' : 'none';
+            document.getElementById('tab-ternlight').style.display = tab === 'ternlight' ? 'block' : 'none';
             if(tab === 'graph' && typeof window.cy !== 'undefined') {
                 window.cy.resize();
             }
@@ -185,6 +202,58 @@
 
             } catch (err) {
                 alert(err.message);
+            }
+        }
+
+        const ternlight = new TernlightClient();
+        ternlight.init();
+
+        async function runTernlightSearch() {
+            const query = document.getElementById('ternlight-query').value.trim();
+            if (!query) return;
+
+            const resultsContainer = document.getElementById('ternlight-results');
+            resultsContainer.innerHTML = '<div style="color: #8b949e; text-align: center; padding: 40px;">Searching...</div>';
+
+            try {
+                // For the demo, we'll fetch some sample docs from the server
+                // In a production scenario, these might be pre-indexed or cached in the browser
+                const docsResp = await fetch('/api/docs/samples');
+                let docs = [];
+                if (docsResp.ok) {
+                    docs = await docsResp.json();
+                } else {
+                    // Fallback sample docs
+                    docs = [
+                        "Nomad is used for cluster orchestration.",
+                        "Consul handles service discovery and health checks.",
+                        "Ansible is the primary tool for provisioning and configuration.",
+                        "Pipecat provides the conversational AI framework.",
+                        "Ternlight is a 7MB ternary embedding model."
+                    ];
+                }
+
+                const results = await ternlight.search(query, docs);
+
+                resultsContainer.innerHTML = '';
+                if (results && results.length > 0) {
+                    results.forEach(res => {
+                        const div = document.createElement('div');
+                        div.className = 'history-item';
+                        div.style.padding = '15px';
+                        div.style.background = 'var(--panel-bg)';
+                        div.style.border = '1px solid var(--border-color)';
+                        div.style.borderRadius = '4px';
+
+                        const content = typeof res === 'string' ? res : (res.content || JSON.stringify(res));
+                        div.textContent = content;
+                        resultsContainer.appendChild(div);
+                    });
+                } else {
+                    resultsContainer.innerHTML = '<div style="color: #8b949e; text-align: center; padding: 40px;">No results found.</div>';
+                }
+            } catch (err) {
+                resultsContainer.innerHTML = `<div style="color: #f85149; text-align: center; padding: 40px;">Error: ${err.message}</div>`;
             }
         }
     </script>
