@@ -21,7 +21,6 @@ fugashi-plus
 huggingface-hub
 httpx
 kittentts
-misaki[en]>=0.9.4
 num2words
 numpy
 onnxruntime

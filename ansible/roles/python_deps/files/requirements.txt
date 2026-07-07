@@ -22,7 +22,6 @@ https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-
 langchain
 langchain-community
 langchain-core
-misaki[en]>=0.9.4
 python-nomad
 num2words
 numpy
@@ -49,7 +48,7 @@ requests
 sentence-transformers
 soundfile
 spacy>=3.8.0,<4.0.0
-thinc>=8.3.0
+thinc>=8.3.13,<8.4.0
 transformers
 ultralytics
 uvicorn

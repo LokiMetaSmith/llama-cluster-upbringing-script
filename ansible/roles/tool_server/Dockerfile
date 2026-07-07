@@ -46,7 +46,6 @@ RUN pip install --no-cache-dir \
     faster-whisper==1.2.1 \
     fugashi-plus \
     kittentts \
-    "misaki[en]>=0.9.4" \
     num2words \
     onnxruntime \
     opencv-python-headless \
