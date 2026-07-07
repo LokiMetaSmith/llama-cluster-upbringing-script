@@ -15,6 +15,41 @@ async def test_swarm_tool_initialization():
     assert tool.nomad_url == "http://nomad.test:4646"
 
 @pytest.mark.asyncio
+async def test_spawn_workers_technician():
+    tool = SwarmTool()
+    tasks = [{"id": "tech_1", "prompt": "plan something"}]
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status.return_value = None
+
+    with patch('httpx.AsyncClient') as MockClient:
+        mock_client_instance = MockClient.return_value
+        mock_client_instance.__aenter__.return_value = mock_client_instance
+        mock_client_instance.__aexit__.return_value = None
+
+        mock_client_instance.post = AsyncMock(return_value=mock_response)
+
+        result_json = await tool.spawn_workers(tasks, agent_type="technician")
+        result = json.loads(result_json)
+
+        assert "Successfully dispatched 1 workers" in result["message"]
+        assert mock_client_instance.post.call_count == 1
+
+        # Verify the payload structure
+        call_args = mock_client_instance.post.call_args
+        payload = call_args.kwargs.get("json", {})
+
+        # Check job_id starts with swarm-technician
+        job_id = payload.get("Job", {}).get("ID", "")
+        assert job_id.startswith("swarm-technician-tech_1-")
+
+        # Check the script path used in args
+        args = payload.get("Job", {}).get("TaskGroups", [])[0].get("Tasks", [])[0].get("Config", {}).get("args", [])
+        assert "/opt/pipecatapp/technician_agent.py" in args
+
+
+@pytest.mark.asyncio
 async def test_spawn_workers_success():
     tool = SwarmTool()
     tasks = [{"id": "1", "prompt": "do something"}, {"id": "2", "prompt": "do something else"}]
