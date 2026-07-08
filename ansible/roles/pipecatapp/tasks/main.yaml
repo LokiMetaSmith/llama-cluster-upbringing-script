@@ -12,6 +12,27 @@
   ansible.builtin.set_fact:
     nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
 
+- name: Wait for Nomad TCP port to be open
+  ansible.builtin.wait_for:
+    host: "{{ cluster_ip | default('127.0.0.1') }}"
+    port: "{{ nomad_http_port | default(4646) }}"
+    timeout: 300 # Wait up to 5 minutes for Nomad on the mesh network
+    state: started
+
+- name: Wait for Nomad API to be ready
+  ansible.builtin.uri:
+    url: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}/v1/agent/self"
+    validate_certs: "{{ 'yes' if nomad_cli_cert_stat.stat.exists else 'no' }}"
+    ca_path: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    method: GET
+    status_code: 200
+    client_cert: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    client_key: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+  register: nomad_api_status
+  until: nomad_api_status.status == 200
+  retries: 30
+  delay: 10
+  ignore_errors: false
 
 - name: Ensure target user exists
   ansible.builtin.user:

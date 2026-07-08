@@ -465,6 +465,9 @@
   ansible.builtin.set_fact:
     nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
 
+- name: Ensure handlers are flushed before API check
+  meta: flush_handlers
+
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
     url: "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
@@ -516,5 +519,3 @@
   notify:
     - Restart nomad
 
-- name: Ensure handlers are flushed
-  meta: flush_handlers
