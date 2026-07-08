@@ -1048,7 +1048,7 @@
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}/v1/agent/self"
+    url: "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}/v1/agent/self"
     validate_certs: "{{ 'yes' if nomad_cli_cert_stat.stat.exists else 'no' }}"
     ca_path: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     method: GET
@@ -1057,8 +1057,8 @@
     client_key: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
   register: nomad_api_status
   until: nomad_api_status.status == 200
-  retries: 24 # Total wait time = retries * delay = 120 seconds
-  delay: 5   # Wait 5 seconds between retries
+  retries: 30 # Total wait time = retries * delay = 300 seconds (5 minutes)
+  delay: 10  # Wait 10 seconds between retries
   ignore_errors: false
 
 - name: Stop and purge any existing pipecat-app job to ensure idempotency
