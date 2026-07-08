@@ -1,5 +1,8 @@
 --index-url https://download.pytorch.org/whl/cpu
 --extra-index-url https://pypi.org/simple
+setuptools
+wheel
+Cython>=3.0.0
 torch
 torchvision
 torchaudio
@@ -49,7 +52,7 @@ requests
 sentence-transformers
 soundfile
 spacy>=3.8.0,<4.0.0
-thinc>=8.3.0
+thinc>=8.3.13,<8.4.0
 transformers
 ultralytics
 uvicorn

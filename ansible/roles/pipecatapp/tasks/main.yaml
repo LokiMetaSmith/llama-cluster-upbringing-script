@@ -125,11 +125,23 @@
   tags:
     - deploy_app
 
+- name: Ensure setuptools, wheel, and Cython are pre-installed
+  ansible.builtin.pip:
+    name:
+      - setuptools
+      - wheel
+      - "Cython>=3.0.0"
+    virtualenv: "{{ pipecat_app_dir }}/venv"
+    virtualenv_command: "{{ ansible_playbook_python }} -m venv"
+  become: yes
+  become_user: "{{ target_user }}"
+  tags:
+    - deploy_app
+
 - name: Install python dependencies
   ansible.builtin.pip:
     requirements: "{{ pipecat_app_dir }}/requirements.txt"
     virtualenv: "{{ pipecat_app_dir }}/venv"
-    virtualenv_command: "{{ ansible_playbook_python }} -m venv"
   become: yes
   become_user: "{{ target_user }}"
   tags:
@@ -1057,8 +1069,8 @@
     client_key: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
   register: nomad_api_status
   until: nomad_api_status.status == 200
-  retries: 30 # Total wait time = retries * delay = 300 seconds (5 minutes)
-  delay: 10  # Wait 10 seconds between retries
+  retries: 30
+  delay: 10
   ignore_errors: false
 
 - name: Stop and purge any existing pipecat-app job to ensure idempotency

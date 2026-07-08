@@ -475,8 +475,8 @@
     client_key: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
   register: nomad_api_status
   until: nomad_api_status.status == 200
-  retries: 12
-  delay: 5
+  retries: 30
+  delay: 10
   ignore_errors: false
   when: not ansible_check_mode
 
