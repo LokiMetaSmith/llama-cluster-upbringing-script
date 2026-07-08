@@ -1048,7 +1048,7 @@
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}/v1/agent/self"
+    url: "{{ nomad_protocol | default('https') }}://127.0.0.1:{{ nomad_http_port | default(4646) }}/v1/agent/self"
     validate_certs: "{{ 'yes' if nomad_cli_cert_stat.stat.exists else 'no' }}"
     ca_path: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     method: GET
