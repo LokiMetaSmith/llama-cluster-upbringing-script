@@ -12,27 +12,26 @@
   ansible.builtin.set_fact:
     nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
 
+- name: Check Tailscale connectivity if using mesh IP
+  ansible.builtin.command: tailscale status
+  register: tailscale_status_check
+  changed_when: false
+  failed_when: false
+  when: (cluster_ip | default('')) is search('^100\.')
+
+- name: Fail if Tailscale is not connected when mesh IP is required
+  ansible.builtin.fail:
+    msg: "Tailscale is not connected (100.x.x.x IP requested), but required for cluster communication. Check 'tailscale status'."
+  when:
+    - (cluster_ip | default('')) is search('^100\.')
+    - tailscale_status_check.rc | default(0) != 0
+
 - name: Wait for Nomad TCP port to be open
   ansible.builtin.wait_for:
     host: "{{ cluster_ip | default('127.0.0.1') }}"
     port: "{{ nomad_http_port | default(4646) }}"
-    timeout: 300 # Wait up to 5 minutes for Nomad on the mesh network
+    timeout: 600 # Increased timeout to 10 minutes for mesh network stabilization
     state: started
-  register: nomad_wait_result
-  ignore_errors: yes
-
-- name: Fallback to localhost if cluster_ip is unreachable
-  ansible.builtin.wait_for:
-    host: "127.0.0.1"
-    port: "{{ nomad_http_port | default(4646) }}"
-    timeout: 60
-    state: started
-  when: nomad_wait_result is failed
-
-- name: Update cluster_ip if fallback to localhost was necessary
-  ansible.builtin.set_fact:
-    cluster_ip: "127.0.0.1"
-  when: nomad_wait_result is failed
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
