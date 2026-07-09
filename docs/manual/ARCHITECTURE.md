@@ -52,6 +52,14 @@ This layer is responsible for deploying, managing, and scaling the various servi
   4. **Service Discovery:** As jobs start, they automatically register with Consul. For example, the `TwinService` can dynamically discover all available "expert" LLM backends by querying Consul for services tagged with a specific pattern.
 - **Outcome:** All microservices are running, monitored, and can find each other dynamically on the network.
 
+### Architectural Non-Negotiables (Guardrails)
+
+To maintain the integrity of the distributed system, the following rules are strictly enforced for both human and AI agents:
+
+1.  **Mesh-First Communication:** All cluster-internal traffic (Nomad, Consul, RPC, API) must travel over the Tailscale `tailscale0` overlay network.
+2.  **No Localhost Fallbacks:** Hardcoded fallbacks to `127.0.0.1` or `localhost` for cross-node services are prohibited. If the mesh is down, the system should fail and trigger a recovery, not bypass the architecture.
+3.  **Explicit Dependency Ordering:** Services must wait for their network transport (Tailscale) to be fully initialized before attempting to bind to or reach cluster IPs.
+
 ## Layer 3.5: Decentralized Storage & Caching (IPFS)
 
 This layer provides an internal, decentralized storage layer across the cluster, specifically optimizing the deployment of packages and large assets across the swarm.

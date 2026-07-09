@@ -21,9 +21,11 @@
         - name: "Check 3: Validate cluster_ip resolution"
           assert:
             that:
+              - "cluster_ip is defined"
+              - "cluster_ip | length > 0"
               - "cluster_ip == ansible_facts['tailscale0'].ipv4.address"
               - "cluster_ip.startswith(expected_subnet_prefix)"
-            fail_msg: "cluster_ip ({{ cluster_ip }}) does not match tailscale0 IP ({{ ansible_facts['tailscale0'].ipv4.address | default('N/A') }}) or is not in the expected subnet."
+            fail_msg: "CRITICAL ARCHITECTURAL FAILURE: cluster_ip ({{ cluster_ip | default('UNDEFINED') }}) does not match tailscale0 IP ({{ ansible_facts['tailscale0'].ipv4.address | default('N/A') }}) or is not in the expected subnet ({{ expected_subnet_prefix }}). Fallbacks to localhost are forbidden."
 
         - name: "Check 4: Verify connectivity to Headscale Controller"
           uri:
