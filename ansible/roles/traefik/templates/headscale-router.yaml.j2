@@ -5,7 +5,10 @@ http:
       service: headscale
       entryPoints:
         - websecure
-      tls: {}
+      tls:
+        {% if traefik_acme_enabled | bool %}
+        certResolver: dnsresolver
+        {% endif %}
 
   services:
     headscale:

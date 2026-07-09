@@ -34,6 +34,8 @@ unix_socket_permission: "0770"
 
 dns_config:
   magic_dns: true
-  base_domain: example.com
+  base_domain: {{ cluster_domain | default('local.mesh') }}
   nameservers:
-    - 1.1.1.1
+    {% for ns in headscale_nameservers | default(['1.1.1.1']) %}
+    - {{ ns }}
+    {% endfor %}

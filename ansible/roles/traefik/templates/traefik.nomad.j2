@@ -31,6 +31,14 @@ job "traefik" {
     task "traefik" {
       driver = "docker"
 
+      {% if traefik_acme_enabled | bool and traefik_acme_dns_credentials is defined and traefik_acme_dns_credentials | length > 0 %}
+      env {
+        {% for key, val in traefik_acme_dns_credentials.items() %}
+        {{ key }} = {{ val | to_json }}
+        {% endfor %}
+      }
+      {% endif %}
+
       config {
         image        = "traefik:v3.0"
         network_mode = "host"
@@ -38,6 +46,9 @@ job "traefik" {
           "local/traefik.yml:/etc/traefik/traefik.yml",
           "local/dynamic:/etc/traefik/dynamic",
           "local/certs:/etc/traefik/certs",
+          {% if traefik_acme_enabled | bool %}
+          "{{ nomad_volumes_dir | default('/opt/nomad/volumes') }}/traefik:/etc/traefik/acme",
+          {% endif %}
         ]
       }
 
@@ -45,11 +56,16 @@ job "traefik" {
         data = <<-EOF
 entryPoints:
   web:
-    address: ":{{ traefik_http_port | default(80) }}"
+    address: "{{ traefik_bind_address | default('0.0.0.0') }}:{{ traefik_http_port | default(80) }}"
   websecure:
-    address: ":{{ traefik_https_port | default(443) }}"
+    address: "{{ traefik_bind_address | default('0.0.0.0') }}:{{ traefik_https_port | default(443) }}"
+    {% if traefik_acme_enabled | bool %}
+    http:
+      tls:
+        certResolver: dnsresolver
+    {% endif %}
   traefik:
-    address: ":{{ traefik_api_port | default(8080) }}"
+    address: "{{ traefik_bind_address | default('0.0.0.0') }}:{{ traefik_api_port | default(8080) }}"
 
 api:
   dashboard: true
@@ -65,6 +81,16 @@ providers:
   file:
     directory: "/etc/traefik/dynamic"
     watch: true
+
+{% if traefik_acme_enabled | bool %}
+certificatesResolvers:
+  dnsresolver:
+    acme:
+      email: "{{ traefik_acme_email }}"
+      storage: "/etc/traefik/acme/acme.json"
+      dnsChallenge:
+        provider: "{{ traefik_acme_dns_provider }}"
+{% endif %}
 EOF
 
         destination = "local/traefik.yml"
