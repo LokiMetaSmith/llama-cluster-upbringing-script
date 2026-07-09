@@ -20,7 +20,21 @@
   delay: 10
   changed_when: false
 
-- name: Wait for Nomad TCP port to be open on mesh network
+- name: Check Tailscale connectivity if using mesh IP
+  ansible.builtin.command: tailscale status
+  register: tailscale_status_check
+  changed_when: false
+  failed_when: false
+  when: (cluster_ip | default('')) is search('^100\.')
+
+- name: Fail if Tailscale is not connected when mesh IP is required
+  ansible.builtin.fail:
+    msg: "Tailscale is not connected (100.x.x.x IP requested), but required for cluster communication. Check 'tailscale status'."
+  when:
+    - (cluster_ip | default('')) is search('^100\.')
+    - tailscale_status_check.rc | default(0) != 0
+
+- name: Wait for Nomad TCP port to be open
   ansible.builtin.wait_for:
     host: "{{ cluster_ip }}"
     port: "{{ nomad_http_port | default(4646) }}"
