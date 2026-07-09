@@ -322,7 +322,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--selection-method",
-        choices=["weighted", "tournament", "random", "power_law", "novelty"],
+        choices=["weighted", "tournament", "random", "power_law", "score_child_prop", "novelty"],
         default="weighted",
         help="Strategy for selecting the parent from the archive."
     )

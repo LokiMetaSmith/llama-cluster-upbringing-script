@@ -80,9 +80,9 @@
   - [x] Mock the `subprocess` calls to `evolve.py` to test the campaign loop without running the full, slow evolution process.
   - [x] Create a small, temporary mock archive to test the analysis, visualization, and promotion scripts against a known, controlled dataset.
 - [x] **Improve Parent Selection Algorithm:**
-  - [ ] Research alternative selection strategies from evolutionary computation (e.g., tournament selection, novelty search).
-  - [ ] Add a new command-line argument to `evolve.py` to allow the user to choose the selection strategy (e.g., `--selection-method tournament`).
-  - [ ] Implement the new selection logic in the `select_parent_from_archive` function.
+  - [x] Research alternative selection strategies from evolutionary computation (e.g., tournament selection, novelty search).
+  - [x] Add a new command-line argument to `evolve.py` to allow the user to choose the selection strategy (e.g., `--selection-method tournament`).
+  - [x] Implement the new selection logic in the `select_parent_from_archive` function.
 - [x] **Web-Based UI for Campaign Analysis:**
   - [x] Create a new script `archive_server.py` using a lightweight web framework like Flask or FastAPI.
   - [x] The server should have an endpoint that reads the entire `archive/` directory and constructs a JSON representation of the evolutionary tree.
