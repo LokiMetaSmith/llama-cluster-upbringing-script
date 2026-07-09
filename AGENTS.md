@@ -10,6 +10,8 @@ You are provided with several executable oracles to verify your work. You must u
 
 * **Pre-flight Checks:** You must run the `scripts/agent_preflight.sh` script prior to submitting any code. This wrapper runs tests, linters, and static analysis tools.
   * *Oracle Rule:* You must include the output (or a statement of its success) when you submit a task. All checks within it must pass.
+* **Rapid Local Verification (Fast-Check Loop):** During rapid local development and iteration, you can run `scripts/agent_fast_check.sh` to quickly check code formatting, dry-run Ansible playbooks, and run Python unit tests without the full preflight or bootstrap overhead.
+  * *Usage:* Run `./scripts/agent_fast_check.sh` for all fast checks, or pass filters/targets directly (e.g., `./scripts/agent_fast_check.sh --tests-only tests/unit/test_safe_flatten.py`).
 * **Tests:** Run unit and integration tests using `pytest` (Python) or `npm run test` (JavaScript/TypeScript).
   * *Oracle Rule:* A failing test is a showstopper. You must fix the code until the test passes. Every new feature or bug fix MUST include a corresponding automated test.
 * **Linters & Static Analysis:** Run `npm run lint` or `scripts/lint.sh` to check for formatting and syntax errors. Static analysis (`mypy`) and dead-code detection (`vulture`) are included.
