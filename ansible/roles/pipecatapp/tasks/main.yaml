@@ -18,6 +18,21 @@
     port: "{{ nomad_http_port | default(4646) }}"
     timeout: 300 # Wait up to 5 minutes for Nomad on the mesh network
     state: started
+  register: nomad_wait_result
+  ignore_errors: yes
+
+- name: Fallback to localhost if cluster_ip is unreachable
+  ansible.builtin.wait_for:
+    host: "127.0.0.1"
+    port: "{{ nomad_http_port | default(4646) }}"
+    timeout: 60
+    state: started
+  when: nomad_wait_result is failed
+
+- name: Update cluster_ip if fallback to localhost was necessary
+  ansible.builtin.set_fact:
+    cluster_ip: "127.0.0.1"
+  when: nomad_wait_result is failed
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
