@@ -15,9 +15,16 @@
   #   ./bootstrap.sh --role controller
 
   pre_tasks:
+    - name: Ensure tailscale0 is available
+      ansible.builtin.assert:
+        that:
+          - "'tailscale0' in ansible_facts['interfaces']"
+          - "ansible_facts['tailscale0'].ipv4.address.startswith('100.')"
+        fail_msg: "CRITICAL: tailscale0 interface is missing or has no 100.x.x.x IP. Cluster communication requires the mesh network."
+
     - name: Wait for Nomad to be ready
       ansible.builtin.wait_for:
-        host: "{{ cluster_ip | default('127.0.0.1') }}"
+        host: "{{ cluster_ip }}"
         port: "{{ nomad_http_port | default(4646) }}"
         timeout: 30
       tags:
@@ -25,7 +32,7 @@
 
     - name: Wait for Consul to be ready
       ansible.builtin.wait_for:
-        host: "{{ cluster_ip | default('127.0.0.1') }}"
+        host: "{{ cluster_ip }}"
         port: "{{ consul_http_port | default(8500) }}"
         timeout: 30
       tags:

@@ -27,6 +27,16 @@
   register: tailscale_up
   changed_when: "'Success' in tailscale_up.stdout"
 
+- name: Wait for tailscale0 interface to have an IP
+  ansible.builtin.shell: |
+    set -o pipefail
+    tailscale ip -4 | grep "^100\."
+  register: tailscale_ip_check
+  until: tailscale_ip_check.rc == 0
+  retries: 24
+  delay: 5
+  changed_when: false
+
 - name: Refresh network facts
   setup:
     gather_subset:
