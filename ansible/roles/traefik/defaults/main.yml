@@ -1,2 +1,8 @@
 nomad_volumes_dir: /opt/nomad/volumes
 nomad_jobs_dir: /opt/nomad/jobs
+
+traefik_bind_address: "{{ cluster_ip }}"
+traefik_acme_enabled: false
+traefik_acme_email: "admin@{{ cluster_domain | default('local.mesh') }}"
+traefik_acme_dns_provider: "cloudflare"
+traefik_acme_dns_credentials: {}

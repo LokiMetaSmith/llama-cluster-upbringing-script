@@ -16,6 +16,16 @@
   loop:
     - "{{ nomad_jobs_dir }}"
 
+- name: Create Traefik ACME directory
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir | default('/opt/nomad/volumes') }}/traefik"
+    state: directory
+    owner: "{{ target_user | default('pipecatapp') }}"
+    group: "{{ target_user | default('pipecatapp') }}"
+    mode: '0700'
+  become: yes
+  when: traefik_acme_enabled | bool
+
 - name: Template Traefik Nomad job
   ansible.builtin.template:
     src: traefik.nomad.j2
