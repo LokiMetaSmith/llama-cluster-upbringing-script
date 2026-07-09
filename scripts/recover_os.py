@@ -21,6 +21,22 @@ def check_btrfs():
         return False
     return True
 
+def check_btrfs_mount():
+    """Checks if the BTRFS_SUBVOLUME_PATH is a valid Btrfs mount point."""
+    try:
+        output = subprocess.check_output(
+            ["findmnt", "-n", "-o", "FSTYPE", BTRFS_SUBVOLUME_PATH],
+            text=True,
+            stderr=subprocess.DEVNULL
+        ).strip()
+        if output == "btrfs":
+            return True
+    except Exception:
+        pass
+    print(f"Error: {BTRFS_SUBVOLUME_PATH} is not mounted as a Btrfs filesystem.")
+    print("Pre-deployment OS recovery/snapshotting is not available on this node.")
+    return False
+
 def get_protected_dirs():
     """Loads configuration detailing which directories are protected."""
     if os.path.exists(CONFIG_FILE):
@@ -35,7 +51,7 @@ def get_protected_dirs():
 
 def create_snapshot():
     """Syncs protected directories to active subvolume, then creates a snapshot."""
-    if not check_btrfs():
+    if not check_btrfs() or not check_btrfs_mount():
         return False
 
     protected_dirs = get_protected_dirs()
@@ -75,7 +91,7 @@ def create_snapshot():
 
 def list_snapshots():
     """Lists existing Btrfs snapshots."""
-    if not check_btrfs():
+    if not check_btrfs() or not check_btrfs_mount():
         return False
 
     print("\nAvailable Pre-deployment Snapshots:")
@@ -96,12 +112,12 @@ def list_snapshots():
 
 def rollback_snapshot(target=None):
     """Rolls back the active subvolume and restores the protected folders."""
-    if not check_btrfs():
+    if not check_btrfs() or not check_btrfs_mount():
         return False
 
     if not target:
         snapshots = list_snapshots()
-        if not snapshots:
+        if not snapshots or not isinstance(snapshots, list):
             print("No snapshots available to rollback.")
             return False
 
@@ -194,13 +210,18 @@ def main():
             print("\nExiting.")
             sys.exit(0)
     else:
+        success = False
         if args.create:
-            create_snapshot()
+            success = create_snapshot()
         elif args.list:
-            list_snapshots()
+            res = list_snapshots()
+            success = isinstance(res, list)
         elif args.rollback:
             target = "pre-deploy-latest" if args.rollback == "latest" else args.rollback
-            rollback_snapshot(target)
+            success = rollback_snapshot(target)
+
+        if not success:
+            sys.exit(1)
 
 if __name__ == "__main__":
     if os.getuid() != 0:

@@ -4,6 +4,24 @@
     name: btrfs-progs
     state: present
   become: yes
+  failed_when: false
+
+- name: Check if btrfs command is available
+  ansible.builtin.command: which btrfs
+  register: btrfs_cmd_check
+  failed_when: false
+  changed_when: false
+
+- name: Check if Btrfs is supported by the kernel
+  ansible.builtin.shell: "grep -q btrfs /proc/filesystems"
+  register: btrfs_kernel_support
+  failed_when: false
+  changed_when: false
+  become: yes
+
+- name: Set btrfs_supported fact
+  ansible.builtin.set_fact:
+    btrfs_supported: "{{ btrfs_cmd_check.rc == 0 and btrfs_kernel_support.rc == 0 }}"
 
 - name: Check if btrfs mount point directory exists
   ansible.builtin.file:
@@ -20,21 +38,135 @@
   changed_when: false
   become: yes
 
-- name: Create Btrfs filesystem on device if requested
+- name: Set initial btrfs_enabled fact
+  ansible.builtin.set_fact:
+    btrfs_enabled: "{{ findmnt_result.rc == 0 and findmnt_result.stdout == 'btrfs' }}"
+
+- name: Check if btrfs device exists and is a block device
+  ansible.builtin.stat:
+    path: "{{ btrfs_device }}"
+  register: btrfs_device_stat
+  become: yes
+  when: not btrfs_enabled
+
+- name: Check physical device filesystem type
+  ansible.builtin.command: "blkid -o value -s TYPE {{ btrfs_device }}"
+  register: physical_device_fs_type
+  failed_when: false
+  changed_when: false
+  become: yes
+  when:
+    - not btrfs_enabled
+    - btrfs_supported
+    - btrfs_device_stat.stat.exists | default(false)
+    - btrfs_device_stat.stat.isblk | default(false)
+
+- name: Create Btrfs filesystem on physical device if requested and suitable
   ansible.builtin.command:
     cmd: "mkfs.btrfs -f {{ btrfs_device }}"
-  when:
-    - findmnt_result.rc != 0
-    - btrfs_format_device | default(false) | bool
   become: yes
+  when:
+    - not btrfs_enabled
+    - btrfs_supported
+    - btrfs_device_stat.stat.exists | default(false)
+    - btrfs_device_stat.stat.isblk | default(false)
+    - physical_device_fs_type.stdout != 'btrfs'
+    - btrfs_format_device | default(false) | bool
 
-- name: Mount Btrfs device
-  ansible.builtin.mount:
+- name: Attempt to mount physical Btrfs device
+  ansible.posix.mount:
     path: "{{ btrfs_subvolume_path }}"
     src: "{{ btrfs_device }}"
     fstype: btrfs
     state: mounted
+  register: mount_physical_result
+  failed_when: false
   become: yes
+  when:
+    - not btrfs_enabled
+    - btrfs_supported
+    - btrfs_device_stat.stat.exists | default(false)
+    - btrfs_device_stat.stat.isblk | default(false)
+    - (physical_device_fs_type.stdout == 'btrfs' or btrfs_format_device | default(false) | bool)
+
+- name: Update btrfs_enabled fact if physical mount succeeded
+  ansible.builtin.set_fact:
+    btrfs_enabled: true
+  when:
+    - not btrfs_enabled
+    - mount_physical_result is succeeded
+    - mount_physical_result is not skipped
+
+- name: Ensure loop fallback file directory exists
+  ansible.builtin.file:
+    path: "{{ btrfs_loop_file | dirname }}"
+    state: directory
+    mode: '0755'
+  become: yes
+  when:
+    - not btrfs_enabled
+    - btrfs_supported
+
+- name: Create sparse fallback file
+  ansible.builtin.command:
+    cmd: "truncate -s {{ btrfs_loop_file_size | default('5G') }} {{ btrfs_loop_file }}"
+    creates: "{{ btrfs_loop_file }}"
+  become: yes
+  when:
+    - not btrfs_enabled
+    - btrfs_supported
+
+- name: Check loop file filesystem type
+  ansible.builtin.command: "blkid -o value -s TYPE {{ btrfs_loop_file }}"
+  register: loop_file_fs_type
+  failed_when: false
+  changed_when: false
+  become: yes
+  when:
+    - not btrfs_enabled
+    - btrfs_supported
+
+- name: Format loop file as Btrfs if unformatted
+  ansible.builtin.command:
+    cmd: "mkfs.btrfs -f {{ btrfs_loop_file }}"
+  become: yes
+  when:
+    - not btrfs_enabled
+    - btrfs_supported
+    - loop_file_fs_type.stdout | default('') != 'btrfs'
+
+- name: Mount loop Btrfs device
+  ansible.posix.mount:
+    path: "{{ btrfs_subvolume_path }}"
+    src: "{{ btrfs_loop_file }}"
+    fstype: btrfs
+    opts: loop
+    state: mounted
+  register: mount_loop_result
+  failed_when: false
+  become: yes
+  when:
+    - not btrfs_enabled
+    - btrfs_supported
+
+- name: Update btrfs_enabled fact if loop mount succeeded
+  ansible.builtin.set_fact:
+    btrfs_enabled: true
+  when:
+    - not btrfs_enabled
+    - mount_loop_result is succeeded
+    - mount_loop_result is not skipped
+
+- name: Warn operator if Btrfs recovery snapshotting is unavailable
+  ansible.builtin.debug:
+    msg:
+      - "****************************************************************"
+      - "WARNING: Btrfs recovery snapshotting is unavailable on this node!"
+      - "Reason: Btrfs kernel/tool support is missing, or formatting/mounting"
+      - "failed for both physical device and fallback loop device."
+      - "Pre-deployment snapshots and OS recovery will be skipped."
+      - "****************************************************************"
+  when: not btrfs_enabled
 
 - name: Ensure active subvolume exists
   ansible.builtin.command:
@@ -43,6 +175,7 @@
   failed_when: false
   changed_when: "'Created subvolume' in subvol_create_result.stdout"
   become: yes
+  when: btrfs_enabled
 
 - name: Ensure snapshots directory exists
   ansible.builtin.file:
@@ -50,6 +183,7 @@
     state: directory
     mode: '0755'
   become: yes
+  when: btrfs_enabled
 
 - name: Ensure target scripts directory exists
   ansible.builtin.file:
@@ -81,12 +215,14 @@
   loop: "{{ btrfs_protected_dirs }}"
   become: yes
   changed_when: true
+  when: btrfs_enabled
 
 - name: Create pre-deployment snapshot
   ansible.builtin.command:
     cmd: "btrfs subvolume snapshot {{ btrfs_active_subvolume }} {{ btrfs_snapshot_dir }}/pre-deploy-{{ ansible_date_time.iso8601_basic_short | default('latest') }}"
   become: yes
   register: snapshot_result
+  when: btrfs_enabled
 
 - name: Symlink current snapshot as pre-deploy-latest
   ansible.builtin.file:
@@ -94,5 +230,9 @@
     dest: "{{ btrfs_snapshot_dir }}/pre-deploy-latest"
     state: link
     force: yes
-  when: snapshot_result.rc == 0
+  when:
+    - btrfs_enabled
+    - snapshot_result is defined
+    - snapshot_result.rc is defined
+    - snapshot_result.rc == 0
   become: yes
