@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="nerv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CommandDeck // NERV Setup Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Share+Tech+Mono&family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Scanline overlay to emulate sci-fi CRT screens -->
+    <div class="nerv-scanlines"></div>
+
+    <div class="deck-container">
+        <!-- HEADER -->
+        <header class="deck-header">
+            <div class="header-left">
+                <div class="logo-text">COMMANDDECK</div>
+                <div class="sub-logo-row">
+                    <span class="jp-accent">設計戦術構築システム</span>
+                    <span class="tick-orange"></span>
+                    <span class="header-tag">CODENAME: NERV</span>
+                    <span class="tick-cyan"></span>
+                    <span class="header-tag">APPLIANCE v1.0.0</span>
+                </div>
+            </div>
+
+            <div class="header-center">
+                <!-- Mini Waveform Visualizer -->
+                <div class="mini-viz">
+                    <svg viewBox="0 0 400 40" class="waveform-svg">
+                        <path d="M 0,20 Q 20,5 40,20 T 80,20 T 120,20 T 160,20 T 200,20 T 240,20 T 280,20 T 320,20 T 360,20 T 400,20" fill="none" stroke="var(--nerv-primary)" stroke-width="1.5" opacity="0.8"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="clock-display" id="deck-clock">00:00:00</div>
+                <div class="date-display" id="deck-date">0000.00.00</div>
+                <div class="system-status-indicator">
+                    <span class="pulsing-dot ok-dot"></span>
+                    <span class="status-label" id="system-status-text">SYSTEM NOMINAL</span>
+                </div>
+                <button class="btn-desktop" id="exit-deck-btn" title="Exit CommandDeck Wayland Session to Plasma Desktop">
+                    <span class="btn-desktop-inner">SWITCH TO DESKTOP</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN TACTICAL GRID -->
+        <div class="deck-grid">
+            <!-- LEFT PANEL: CONTROLS & WIZARD -->
+            <div class="deck-panel controls-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <span class="crosshair">+</span>
+                        <span class="panel-title">SYSTEM PROVISIONING & SETUP</span>
+                        <span class="panel-subtitle">システム構築</span>
+                    </div>
+                    <span class="panel-id">CTRL-01</span>
+                </div>
+
+                <div class="panel-content nerv-grid">
+                    <!-- Tab buttons inside panel -->
+                    <div class="tab-menu">
+                        <button class="tab-btn active" data-target="bootstrap-tab">
+                            <span class="tab-num">01</span> BOOTSTRAP WIZARD
+                        </button>
+                        <button class="tab-btn" data-target="models-tab">
+                            <span class="tab-num">02</span> MODEL DEPLOYER
+                        </button>
+                        <button class="tab-btn" data-target="diagnostics-tab">
+                            <span class="tab-num">03</span> CLUSTER DIAGS
+                        </button>
+                    </div>
+
+                    <!-- TAB 1: BOOTSTRAP WIZARD -->
+                    <div class="tab-content active" id="bootstrap-tab">
+                        <p class="tab-description">
+                            Configure the role and identity of this node to join or initialize the cluster mesh network.
+                        </p>
+
+                        <div class="form-group">
+                            <label for="node-role">NODE ROLE <span class="label-jp">ノード役割</span></label>
+                            <select id="node-role" class="deck-select">
+                                <option value="all">Standalone / All-in-One Controller (Default)</option>
+                                <option value="controller">Dedicated Controller Node</option>
+                                <option value="worker">Dedicated Worker Node</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group hidden" id="controller-ip-group">
+                            <label for="controller-ip">CONTROLLER IP <span class="label-jp">コントローラーIP</span></label>
+                            <input type="text" id="controller-ip" class="deck-input" placeholder="e.g. 100.64.0.1 or 192.168.1.100" autocomplete="off">
+                            <span class="input-hint">Required for worker nodes. Must be a reachable cluster or Tailscale IP.</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ssh-user">TARGET USER <span class="label-jp">ターゲットユーザー</span></label>
+                            <input type="text" id="ssh-user" class="deck-input" value="pipecatapp">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ansible-tags">ANSIBLE TAGS (OPTIONAL) <span class="label-jp">特定のタグのみ実行</span></label>
+                            <input type="text" id="ansible-tags" class="deck-input" placeholder="e.g. consul,nomad,docker">
+                        </div>
+
+                        <div class="hazard-stripe green-stripe" style="margin-top: 15px; height: 8px; opacity: 0.5;"></div>
+
+                        <div class="wizard-actions">
+                            <button class="btn-primary" id="start-bootstrap-btn">
+                                <span class="btn-text">INITIALIZE SYSTEM BOOTSTRAP</span>
+                                <span class="btn-sub">システム起動・プロビジョニングを実行</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: MODEL DEPLOYER -->
+                    <div class="tab-content" id="models-tab">
+                        <p class="tab-description">
+                            Deploy fine-tuned large language expert models directly to the cluster. Classification depends on memory requirement.
+                        </p>
+
+                        <div class="model-filter-row">
+                            <span class="filter-title">FILTER BY RESOURCES:</span>
+                            <button class="filter-btn active" data-filter="all">ALL MODELS</button>
+                            <button class="filter-btn" data-filter="edge_mid">EDGE/MID-TIER (&lt;8GB)</button>
+                            <button class="filter-btn" data-filter="core">CORE-TIER (&ge;8GB)</button>
+                        </div>
+
+                        <!-- Models Lists -->
+                        <div class="models-container">
+                            <div class="tier-section" data-tier="edge_mid">
+                                <div class="tier-header">
+                                    <span class="tier-badge-green">EDGE / MID-TIER</span>
+                                    <span class="tier-desc">Suitable for low-resource worker nodes</span>
+                                </div>
+                                <div class="models-grid" id="edge-mid-models-list">
+                                    <!-- Populated by JS -->
+                                    <div class="loading-placeholder">Loading model list from models.yaml...</div>
+                                </div>
+                            </div>
+
+                            <div class="tier-section" data-tier="core" style="margin-top: 20px;">
+                                <div class="tier-header">
+                                    <span class="tier-badge-red">CORE-TIER RESOURCE</span>
+                                    <span class="tier-desc">Requires powerful dedicated hosting nodes</span>
+                                </div>
+                                <div class="models-grid" id="core-models-list">
+                                    <!-- Populated by JS -->
+                                    <div class="loading-placeholder">Loading model list from models.yaml...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: DIAGNOSTICS & SYSTEM STATUS -->
+                    <div class="tab-content" id="diagnostics-tab">
+                        <p class="tab-description">
+                            Execute network assertions, validate status of orchestrator jobs, or self-heal service connections.
+                        </p>
+
+                        <div class="diag-action-card">
+                            <div class="diag-info">
+                                <div class="diag-title">RUN CLUSTER VALIDATION (検証)</div>
+                                <div class="diag-desc">Triggers playbooks to inspect leader consensus, local API interfaces and overall health.</div>
+                            </div>
+                            <button class="btn-diag-action" id="run-validate-btn">RUN HEALTH CHECK</button>
+                        </div>
+
+                        <div class="diag-action-card" style="margin-top: 15px;">
+                            <div class="diag-info">
+                                <div class="diag-title">RUN CLUSTER HEALING (自己修復)</div>
+                                <div class="diag-desc">Triggers heal_cluster scripts to reboot stalled expert containers and flush service queues.</div>
+                            </div>
+                            <button class="btn-diag-action" id="run-heal-btn">RUN HEALER</button>
+                        </div>
+
+                        <div class="axis-ruler" style="margin-top: 20px;">
+                            <!-- Accent ruler decoration -->
+                            <div class="ruler-ticks"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: ACTIVE CONSOLE LOGS -->
+            <div class="deck-panel console-panel">
+                <div class="panel-header alert-themed" id="console-header">
+                    <div class="panel-title-group">
+                        <span class="crosshair">+</span>
+                        <span class="panel-title">ACTIVE CONSOLE LOGS</span>
+                        <span class="panel-subtitle">リアルタイムログ出力</span>
+                    </div>
+                    <span class="panel-id" id="task-status-badge">CONSOLE IDLE</span>
+                </div>
+
+                <div class="panel-content console-content-area">
+                    <div class="console-controls-bar">
+                        <div class="active-task-display">
+                            <span class="bilingual-label">ACTIVE TASK:</span>
+                            <span class="active-task-name" id="active-task-name">NONE</span>
+                        </div>
+                        <button class="btn-danger-kiosk hidden" id="stop-task-btn">
+                            <span class="btn-inner">HALT EXECUTION (強制停止)</span>
+                        </button>
+                    </div>
+
+                    <!-- Terminal Output Window -->
+                    <div class="terminal-widget" id="terminal-screen">
+                        <div class="terminal-welcome">
+========================================================================
+             COMMANDDECK OPERATIONAL INTERFACE // TYPE NERV
+========================================================================
+* SYSTEM READY. ALL CONTROL CIRCUITS BOUND.
+* STANDING BY FOR PILOT PROVISIONING COMMANDS...
+                        </div>
+                    </div>
+
+                    <!-- Hazard stripes footer decoration for critical vibe -->
+                    <div class="hazard-stripe red-stripe" style="height: 10px; opacity: 0.4; margin-top: 10px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="deck-footer">
+            <div class="footer-left">
+                <span class="crosshair">+</span>
+                <span class="footer-pynch">PYNCH LABS LLC // MULTI-AGENT CLUSTER ENVIRONMENT</span>
+            </div>
+            <div class="footer-right">
+                <span class="footer-nerv">NERV SYSTEM DESIGN v1.0 // ALL SYSTEMS OPERATIONAL</span>
+                <span class="pulsing-dot ok-dot" style="margin-left: 6px;"></span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

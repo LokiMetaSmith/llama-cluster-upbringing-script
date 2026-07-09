@@ -18,3 +18,13 @@ grub-pc
 grub-efi-amd64-bin
 mtools
 xorriso
+
+# --- CommandDeck GUI Kiosk and Fallback Desktop Dependencies ---
+sddm
+kde-plasma-desktop
+plasma-workspace-wayland
+cage
+python3-webview
+gir1.2-webkit2-4.1
+python3-gi
+python3-gi-cairo

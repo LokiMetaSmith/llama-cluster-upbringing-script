@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=CommandDeck
+Comment=CommandDeck Wayland Kiosk Session
+Exec=/usr/local/bin/command-deck-session
+Type=Application
