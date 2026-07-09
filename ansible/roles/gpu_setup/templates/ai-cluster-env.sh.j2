@@ -1,0 +1,21 @@
+#!/bin/sh
+# AI Cluster Native Environment Variables
+export NOMAD_ADDR="https://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+export NOMAD_CACERT="{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+export NOMAD_CLIENT_CERT="{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
+export NOMAD_CLIENT_KEY="{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.key.pem"
+
+export CONSUL_HTTP_ADDR="https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}"
+export CONSUL_CACERT="{{ consul_config_dir | default('/etc/consul.d') }}/ca.pem"
+export CONSUL_CLIENT_CERT="{{ consul_config_dir | default('/etc/consul.d') }}/cert.pem"
+export CONSUL_CLIENT_KEY="{{ consul_config_dir | default('/etc/consul.d') }}/key.pem"
+
+# Standard API endpoints for local models
+export LOCAL_LLAMA_API_URL="http://127.0.0.1:8000/v1"
+export LOCAL_VLLM_API_URL="http://127.0.0.1:8000/v1"
+
+# Helpful CLI aliases for immediate readiness
+alias cluster-status="nomad node status"
+alias cluster-jobs="nomad job status"
+alias cluster-logs="nomad alloc logs"
+alias cluster-rollback="sudo python3 /opt/cluster-infra/scripts/recover_os.py"

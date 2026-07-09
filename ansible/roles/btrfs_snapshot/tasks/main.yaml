@@ -1,0 +1,98 @@
+---
+- name: Ensure btrfs-progs is installed
+  ansible.builtin.apt:
+    name: btrfs-progs
+    state: present
+  become: yes
+
+- name: Check if btrfs mount point directory exists
+  ansible.builtin.file:
+    path: "{{ btrfs_subvolume_path }}"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Detect if mount point is already btrfs
+  ansible.builtin.command:
+    cmd: "findmnt -n -o FSTYPE {{ btrfs_subvolume_path }}"
+  register: findmnt_result
+  failed_when: false
+  changed_when: false
+  become: yes
+
+- name: Create Btrfs filesystem on device if requested
+  ansible.builtin.command:
+    cmd: "mkfs.btrfs -f {{ btrfs_device }}"
+  when:
+    - findmnt_result.rc != 0
+    - btrfs_format_device | default(false) | bool
+  become: yes
+
+- name: Mount Btrfs device
+  ansible.builtin.mount:
+    path: "{{ btrfs_subvolume_path }}"
+    src: "{{ btrfs_device }}"
+    fstype: btrfs
+    state: mounted
+  become: yes
+
+- name: Ensure active subvolume exists
+  ansible.builtin.command:
+    cmd: "btrfs subvolume create {{ btrfs_active_subvolume }}"
+  register: subvol_create_result
+  failed_when: false
+  changed_when: "'Created subvolume' in subvol_create_result.stdout"
+  become: yes
+
+- name: Ensure snapshots directory exists
+  ansible.builtin.file:
+    path: "{{ btrfs_snapshot_dir }}"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Ensure target scripts directory exists
+  ansible.builtin.file:
+    path: "/opt/cluster-infra/scripts"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Deploy OS Recovery tool to target host
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../scripts/recover_os.py"
+    dest: "/opt/cluster-infra/scripts/recover_os.py"
+    mode: '0755'
+  become: yes
+
+- name: Deploy Snapshot Configuration to target host
+  ansible.builtin.copy:
+    content: "{{ {'protected_dirs': btrfs_protected_dirs} | to_json }}"
+    dest: "/etc/btrfs-snapshot-config.json"
+    mode: '0644'
+  become: yes
+
+- name: Synchronize current state of protected directories to active subvolume
+  ansible.builtin.shell: |
+    mkdir -p "{{ btrfs_active_subvolume }}{{ item }}"
+    if [ -d "{{ item }}" ]; then
+      rsync -a --delete "{{ item }}/" "{{ btrfs_active_subvolume }}{{ item }}/"
+    fi
+  loop: "{{ btrfs_protected_dirs }}"
+  become: yes
+  changed_when: true
+
+- name: Create pre-deployment snapshot
+  ansible.builtin.command:
+    cmd: "btrfs subvolume snapshot {{ btrfs_active_subvolume }} {{ btrfs_snapshot_dir }}/pre-deploy-{{ ansible_date_time.iso8601_basic_short | default('latest') }}"
+  become: yes
+  register: snapshot_result
+
+- name: Symlink current snapshot as pre-deploy-latest
+  ansible.builtin.file:
+    src: "{{ btrfs_snapshot_dir }}/pre-deploy-{{ ansible_date_time.iso8601_basic_short | default('latest') }}"
+    dest: "{{ btrfs_snapshot_dir }}/pre-deploy-latest"
+    state: link
+    force: yes
+  when: snapshot_result.rc == 0
+  become: yes

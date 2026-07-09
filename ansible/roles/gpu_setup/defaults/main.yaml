@@ -1,0 +1,7 @@
+# defaults file for gpu_setup
+nvidia_driver_package: "nvidia-driver"
+cuda_toolkit_package: "nvidia-cuda-toolkit"
+nvidia_container_toolkit_package: "nvidia-container-toolkit"
+
+rocm_release: "6.1.1" # Example ROCm version to target
+amdgpu_install_url: "https://repo.radeon.com/amdgpu-install/6.1.1/ubuntu/noble/amdgpu-install_6.1.60101-1_all.deb"

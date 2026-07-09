@@ -50,6 +50,11 @@ show_help() {
     echo "  --watch <target>             Pause for inspection after the specified target (task/role) completes."
     echo "  -h, --help                   Display this help message and exit."
     echo ""
+    echo "OS Recovery Snapshot Options:"
+    echo "  --create-snapshot            Create a Btrfs pre-deployment snapshot of the environment."
+    echo "  --list-snapshots             List existing Btrfs pre-deployment snapshots."
+    echo "  --rollback-snapshot [snap]   Rollback to a specified pre-deployment snapshot (or latest)."
+    echo ""
     echo "Cluster and Node Recovery Options:"
     echo "  --heal-cluster               Run the cluster healing playbook to restore core services."
     echo "  --recover-node <ip>          Attempt to recover a remote node by its IP address."
@@ -83,6 +88,10 @@ VERBOSE_LEVEL=0
 ROLE=""
 CONTROLLER_IP=""
 RECOVER_NODE_IP=""
+DO_CREATE_SNAPSHOT=false
+DO_LIST_SNAPSHOTS=false
+DO_ROLLBACK_SNAPSHOT=false
+ROLLBACK_SNAPSHOT_TARGET=""
 IPMI_HOST=""
 IPMI_USER=""
 IPMI_PASSWORD=""
@@ -398,6 +407,20 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
                 ROLE="$NEXT_ARG"
                 PROCESSED_ARGS+=("--role" "$ROLE")
+                SKIP_NEXT=true
+            fi
+            ;;
+        --create-snapshot)
+            DO_CREATE_SNAPSHOT=true
+            ;;
+        --list-snapshots)
+            DO_LIST_SNAPSHOTS=true
+            ;;
+        --rollback-snapshot)
+            DO_ROLLBACK_SNAPSHOT=true
+            NEXT_ARG="${ARGS[$((i+1))]}"
+            if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
+                ROLLBACK_SNAPSHOT_TARGET="$NEXT_ARG"
                 SKIP_NEXT=true
             fi
             ;;
@@ -756,6 +779,29 @@ if [ "$DO_STATUS" = true ]; then
     echo -e "${BOLD}=== Cluster Status ===${NC}"
     ensure_python_environment
     python3 scripts/provisioning.py --only-status "${PROCESSED_ARGS[@]}"
+    exit $?
+fi
+
+# --- OS Recovery Snapshot Actions ---
+if [ "$DO_CREATE_SNAPSHOT" = true ]; then
+    echo -e "${BOLD}=== Creating Pre-deployment Snapshot ===${NC}"
+    sudo python3 scripts/recover_os.py --create
+    exit $?
+fi
+
+if [ "$DO_LIST_SNAPSHOTS" = true ]; then
+    echo -e "${BOLD}=== Listing Snapshots ===${NC}"
+    sudo python3 scripts/recover_os.py --list
+    exit $?
+fi
+
+if [ "$DO_ROLLBACK_SNAPSHOT" = true ]; then
+    echo -e "${BOLD}=== Rolling back OS Snapshot ===${NC}"
+    if [ -n "$ROLLBACK_SNAPSHOT_TARGET" ]; then
+        sudo python3 scripts/recover_os.py --rollback "$ROLLBACK_SNAPSHOT_TARGET"
+    else
+        sudo python3 scripts/recover_os.py --rollback latest
+    fi
     exit $?
 fi
 

@@ -11,8 +11,10 @@ ExecStart=/usr/local/bin/consul agent -config-dir={{ consul_config_dir }}
 StandardOutput=append:/var/log/consul.log
 StandardError=append:/var/log/consul.log
 KillMode=process
-Restart=on-failure
-RestartSec=2
+Restart=always
+RestartSec=5s
+StartLimitBurst=5
+StartLimitInterval=10s
 
 [Install]
 WantedBy=multi-user.target
