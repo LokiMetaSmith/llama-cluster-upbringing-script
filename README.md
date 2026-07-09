@@ -239,16 +239,19 @@ The following tools are available in the codebase (`pipecatapp/tools/`):
 - **Home Assistant (`ha`)**: Controls smart home devices via Home Assistant.
 - **LLxprt Code (`llxprt_code`)**: A specialized tool for code-related tasks.
 - **Master Control Program (`mcp`)**: Provides agent introspection and self-control.
+- **Model Training as Code (`mtac`)**: Programmatically triggers and monitors containerized ML model fine-tuning loops.
 - **Open Workers (`open_workers`)**: Manages and interacts with open worker agents.
 - **OpenClaw (`openclaw`)**: Send messages via OpenClaw Gateway to various channels (WhatsApp, Telegram, etc.).
 - **OpenCode (`opencode`)**: Interface for the OpenCode tool.
 - **Orchestrator (`orchestrator`)**: Dispatches high-priority, complex jobs to the cluster.
+- **Ouroboros (`ouroboros`)**: Manages and navigates the circular Ouroboros webring.
 - **Planner (`planner`)**: Plans complex tasks and executes them.
 - **Power (`power`)**: Controls the cluster's power management policies.
 - **Project Mapper (`project_mapper`)**: Scans the codebase to generate a project structure map.
 - **Prompt Improver (`prompt_improver`)**: A tool for improving prompts.
 - **RAG (`rag`)**: Searches the project's documentation to answer questions.
 - **Search (`search`)**: Search the codebase for text patterns or file names.
+- **Set Operational Mode (`set_operational_mode`)**: Dynamic operational mode selector and behavioral guideline loader (via `SkillLibrary`).
 - **Shell (`shell`)**: Executes shell commands (uses a persistent tmux session).
 - **Smol Agent (`smol_agent_computer`)**: A tool for creating small, specialized agents.
 - **Spec Loader (`spec_loader`)**: Clones external Git repositories (docs, specs) and ingests them into the agent's context.
@@ -257,6 +260,7 @@ The following tools are available in the codebase (`pipecatapp/tools/`):
 - **Summarizer (`summarizer`)**: Summarizes conversation history.
 - **Swarm (`swarm`)**: Spawns multiple worker agents to perform tasks in parallel.
 - **Term Everything (`term_everything`)**: Provides a terminal interface for interacting with the system.
+- **Ternlight (`ternlight`)**: Executes high-speed ternary embedding semantic lookups on documentation.
 - **VR (`vr`)**: Tools for Virtual Reality interactions.
 - **Web Browser (`web_browser`)**: Enables web navigation and content interaction.
 
@@ -410,6 +414,12 @@ To support running large models on legacy hardware with limited RAM, the system 
 - **How it Works:** The `expert` job can be configured to offload computation to `rpc-server` providers running on worker nodes.
 - **Configuration:** When deploying an expert, the system automatically discovers available `rpc-provider` services via Consul and passes them to the `llama-server` using the `--rpc` argument. This allows the model's layers to be split across multiple machines, aggregating their memory and compute power.
 
+### 8.4. DwarfStar (ds4) Native Inference Engine
+
+For high-throughput, low-latency execution of DeepSeek V4 models (Flash and PRO) on legacy CPU and GPU hardware, the cluster deploys the DwarfStar (`ds4`) inference engine natively.
+
+- **How it Works:** Managed via a dedicated `ds4` Ansible role and Nomad templates (`ds4-server.nomad.j2`), it enables distributed GGUF model serving integrated into the Mixture of Experts namespace-isolated mesh.
+
 ## 9. Advanced System Features
 
 ### 9.1. Power Management
@@ -427,6 +437,15 @@ This project includes a web-based dashboard for real-time display and debugging.
 - Real-time conversation logs.
 - A request-approval interface for sensitive tool actions.
 - The ability to save and load the agent's memory state.
+- **Instant Docs Tab:** Real-time semantic searching over project manuals powered by Node.js-based Ternlight microservice.
+- **Ouroboros Webring Widget:** Visual navigation between peer cluster interfaces.
+
+### 9.3. Btrfs Snapshot & OS Recovery
+
+To protect node environments from deployment corruptions and accidental modifications, the cluster integrates Btrfs-level snapshot backups.
+
+- **How it Works:** The `btrfs_snapshot` role takes automated snapshots of critical folders (such as `/opt/pipecatapp`, `/etc/consul.d`, `/etc/nomad.d`) prior to running major playbooks.
+- **Recovery:** In case of emergency or system failure, the `recover_os.py` script executes rsync/rollback routines from the read-only pre-deployment snapshots to restore system state instantly.
 
 ## 10. Security & Authentication
 
