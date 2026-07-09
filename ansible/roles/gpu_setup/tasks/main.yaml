@@ -1,0 +1,113 @@
+---
+- name: Check for GPU hardware using lspci or PCI devices
+  ansible.builtin.shell: |
+    set -o pipefail
+    lspci 2>/dev/null | grep -i 'vga\|3d' || grep -i 'pci' /proc/bus/pci/devices 2>/dev/null || true
+  args:
+    executable: /bin/bash
+  register: gpu_pci_info
+  changed_when: false
+  failed_when: false
+
+- name: Detect if AMD GPU is present
+  ansible.builtin.set_fact:
+    gpu_vendor: "amd"
+  when: >
+    ('amd' in gpu_pci_info.stdout | lower) or
+    ('radeon' in gpu_pci_info.stdout | lower) or
+    ('advanced micro devices' in gpu_pci_info.stdout | lower) or
+    ('ati' in gpu_pci_info.stdout | lower)
+
+- name: Detect if NVIDIA GPU is present
+  ansible.builtin.set_fact:
+    gpu_vendor: "nvidia"
+  when: >
+    ('nvidia' in gpu_pci_info.stdout | lower) or
+    ('geforce' in gpu_pci_info.stdout | lower) or
+    ('quadro' in gpu_pci_info.stdout | lower) or
+    ('tesla' in gpu_pci_info.stdout | lower)
+
+- name: Default to none if no GPU vendor matched
+  ansible.builtin.set_fact:
+    gpu_vendor: "none"
+  when: gpu_vendor is not defined
+
+- name: Log detected GPU Vendor
+  ansible.builtin.debug:
+    msg: "Detected GPU Vendor: {{ gpu_vendor }}"
+
+# --- NVIDIA Setup ---
+- name: NVIDIA Setup Block
+  block:
+    - name: Ensure non-free component is in apt sources (for NVIDIA drivers on Debian)
+      ansible.builtin.apt_repository:
+        repo: "deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware"
+        state: present
+      become: yes
+
+    - name: Install NVIDIA drivers and CUDA toolkit
+      ansible.builtin.apt:
+        name:
+          - "{{ nvidia_driver_package }}"
+          - "{{ cuda_toolkit_package }}"
+        state: present
+        update_cache: yes
+      become: yes
+
+    - name: Add NVIDIA Container Toolkit GPG Key
+      ansible.builtin.apt_key:
+        url: https://nvidia.github.io/libnvidia-container/gpgkey
+        state: present
+      become: yes
+
+    - name: Add NVIDIA Container Toolkit Repository
+      ansible.builtin.apt_repository:
+        repo: "deb https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /"
+        state: present
+      become: yes
+
+    - name: Install NVIDIA Container Toolkit
+      ansible.builtin.apt:
+        name: "{{ nvidia_container_toolkit_package }}"
+        state: present
+        update_cache: yes
+      become: yes
+
+    - name: Configure Docker to use NVIDIA container runtime
+      ansible.builtin.command:
+        cmd: nvidia-container-toolkit xconfig --active
+      become: yes
+      changed_when: true
+      failed_when: false
+  when: gpu_vendor == "nvidia"
+
+# --- AMD ROCm Setup ---
+- name: AMD ROCm Setup Block
+  block:
+    - name: Download AMDgpu installer package
+      ansible.builtin.get_url:
+        url: "{{ amdgpu_install_url }}"
+        dest: "/tmp/amdgpu-install.deb"
+        mode: '0644'
+      failed_when: false
+
+    - name: Install AMDgpu installer package
+      ansible.builtin.apt:
+        deb: "/tmp/amdgpu-install.deb"
+      become: yes
+      failed_when: false
+
+    - name: Run amdgpu-install to deploy ROCm and driver packages
+      ansible.builtin.command:
+        cmd: amdgpu-install -y --usecase=rocm,graphics
+      become: yes
+      failed_when: false
+      changed_when: true
+  when: gpu_vendor == "amd"
+
+- name: Deploy Global AI Cluster Environment Script to /etc/profile.d/
+  ansible.builtin.template:
+    src: ai-cluster-env.sh.j2
+    dest: /etc/profile.d/ai-cluster-env.sh
+    mode: '0755'
+  become: yes

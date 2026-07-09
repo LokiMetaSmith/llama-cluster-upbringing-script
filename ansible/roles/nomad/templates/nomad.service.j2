@@ -16,9 +16,9 @@ KillSignal=SIGINT
 TimeoutStopSec=30s
 LimitNOFILE=65536
 LimitNPROC=infinity
-Restart=on-failure
-RestartSec=2
-StartLimitBurst=3
+Restart=always
+RestartSec=5s
+StartLimitBurst=5
 StartLimitInterval=10s
 TasksMax=infinity
 

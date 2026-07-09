@@ -1,0 +1,13 @@
+# defaults file for btrfs_snapshot
+btrfs_subvolume_path: "/btrfs_root"
+btrfs_snapshot_dir: "/btrfs_root/snapshots"
+btrfs_active_subvolume: "/btrfs_root/active"
+btrfs_device: "/dev/vdb"  # can be overridden in inventory/host_vars/group_vars
+btrfs_format_device: false
+
+# Directories to back up/protect and sync to the Btrfs active subvolume
+btrfs_protected_dirs:
+  - "/etc/nomad.d"
+  - "/etc/consul.d"
+  - "/opt/cluster-infra"
+  - "/opt/pipecatapp"

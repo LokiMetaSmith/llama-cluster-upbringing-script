@@ -39,9 +39,17 @@
           - "--exclude=.git"
       when: inventory_hostname == 'localhost'
   roles:
+    - role: btrfs_snapshot
+      tags:
+        - btrfs_snapshot
+        - common
     - role: system_deps
       tags:
         - system_deps
+    - role: gpu_setup
+      tags:
+        - gpu_setup
+        - common
     - role: common
       tags:
         - common
