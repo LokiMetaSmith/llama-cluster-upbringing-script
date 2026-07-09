@@ -1,0 +1,13 @@
+#!/bin/bash
+#
+# command-deck-session
+# Launces the CommandDeck Setup Platform within the Cage Wayland kiosk compositor.
+
+set -euo pipefail
+
+# Make sure we are starting from the cluster repo location
+cd /opt/pipecat-cluster
+
+# Run CommandDeck within the cage kiosk compositor
+# The python backend handles pywebview window initialization
+exec cage -s -- python3 /opt/pipecat-cluster/command_deck/backend/app.py

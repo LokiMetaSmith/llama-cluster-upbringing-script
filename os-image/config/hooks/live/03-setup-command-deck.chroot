@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# Make CommandDeck session wrapper script executable inside the chroot
+chmod +x /usr/local/bin/command-deck-session
+
+# Ensure command_deck files have the correct ownership for pipecatapp user
+if [ -d "/opt/pipecat-cluster/command_deck" ]; then
+    chown -R pipecatapp:pipecatapp /opt/pipecat-cluster/command_deck
+fi

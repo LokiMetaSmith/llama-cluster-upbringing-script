@@ -1,0 +1,922 @@
+/*
+========================================================================
+   COMMANDDECK FRONTEND STYLE — CODENAME: NERV
+   Sci-Fi / Evangelion Tactical Interface Style Sheet
+========================================================================
+*/
+
+:root {
+    --nerv-primary: #ff8800;
+    --nerv-primary-muted: #cc6600;
+    --nerv-primary-glow: rgba(255, 136, 0, 0.15);
+
+    --nerv-secondary: #00ddaa;
+    --nerv-secondary-muted: #009977;
+    --nerv-secondary-glow: rgba(0, 221, 170, 0.12);
+
+    --nerv-tertiary: #ff3366;
+    --nerv-tertiary-muted: #cc2255;
+
+    --nerv-bg-void: #000000;
+    --nerv-bg-base: #06060a;
+    --nerv-bg-surface: #101017;
+    --nerv-bg-elevated: #161622;
+
+    --nerv-text-primary: #e8e8f0;
+    --nerv-text-secondary: #8a8aa3;
+    --nerv-text-muted: #55556b;
+    --nerv-text-inverse: #06060a;
+
+    --nerv-ok: #00cc66;
+    --nerv-caution: #ffaa00;
+    --nerv-danger: #ff1a1a;
+
+    --nerv-grid-line: rgba(255, 255, 255, 0.04);
+    --nerv-grid-strong: rgba(255, 255, 255, 0.08);
+}
+
+/* BASE RESET */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--nerv-bg-base);
+    color: var(--nerv-text-primary);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    letter-spacing: 0.03em;
+    overflow: hidden;
+    height: 100vh;
+    user-select: none;
+}
+
+/* SCANLINES CRT OVERLAY */
+.nerv-scanlines {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.15) 2px,
+        rgba(0, 0, 0, 0.15) 4px
+    );
+    opacity: 0.85;
+}
+
+/* CONTAINER */
+.deck-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 15px;
+    gap: 15px;
+}
+
+/* HEADER */
+.deck-header {
+    display: grid;
+    grid-template-columns: 280px 1fr auto;
+    align-items: center;
+    border-bottom: 2px solid var(--nerv-primary);
+    padding-bottom: 12px;
+}
+
+.header-left .logo-text {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--nerv-primary);
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px var(--nerv-primary-glow);
+}
+
+.header-left .sub-logo-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+}
+
+.header-left .jp-accent {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: var(--nerv-primary-muted);
+}
+
+.tick-orange {
+    width: 6px;
+    height: 6px;
+    background-color: var(--nerv-primary);
+}
+
+.tick-cyan {
+    width: 6px;
+    height: 6px;
+    background-color: var(--nerv-secondary);
+}
+
+.header-tag {
+    font-size: 9px;
+    color: var(--nerv-text-secondary);
+    letter-spacing: 0.05em;
+}
+
+.header-center {
+    display: flex;
+    justify-content: center;
+    padding: 0 20px;
+}
+
+.mini-viz {
+    width: 100%;
+    max-width: 320px;
+    height: 35px;
+    opacity: 0.7;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.clock-display {
+    font-family: 'Share Tech Mono', 'Orbitron', monospace;
+    font-size: 22px;
+    color: var(--nerv-primary);
+    letter-spacing: 0.05em;
+    min-width: 90px;
+}
+
+.date-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--nerv-text-secondary);
+    text-align: right;
+}
+
+.system-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--nerv-grid-strong);
+    padding: 4px 10px;
+    background-color: var(--nerv-bg-surface);
+}
+
+.pulsing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    box-shadow: 0 0 8px currentColor;
+    display: inline-block;
+}
+
+.pulsing-dot.ok-dot {
+    background-color: var(--nerv-ok);
+    color: var(--nerv-ok);
+    animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+.pulsing-dot.active-dot {
+    background-color: var(--nerv-primary);
+    color: var(--nerv-primary);
+    animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+.pulsing-dot.error-dot {
+    background-color: var(--nerv-danger);
+    color: var(--nerv-danger);
+    animation: pulse-dot 0.8s ease-in-out infinite;
+}
+
+.status-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--nerv-text-secondary);
+}
+
+/* SWITCH TO DESKTOP BUTTON */
+.btn-desktop {
+    background-color: transparent;
+    border: 2px solid var(--nerv-secondary);
+    border-radius: 2px;
+    color: var(--nerv-secondary);
+    font-family: 'Space Mono', monospace;
+    font-weight: bold;
+    font-size: 11px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    padding: 1px;
+}
+
+.btn-desktop-inner {
+    display: block;
+    padding: 6px 14px;
+    background-color: var(--nerv-bg-surface);
+    transition: all 0.2s ease;
+}
+
+.btn-desktop:hover {
+    box-shadow: 0 0 12px var(--nerv-secondary-glow);
+    color: var(--nerv-bg-void);
+}
+
+.btn-desktop:hover .btn-desktop-inner {
+    background-color: var(--nerv-secondary);
+}
+
+.btn-desktop:active {
+    transform: scale(0.97);
+}
+
+/* MAIN GRID LAYOUT */
+.deck-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    flex: 1;
+    gap: 15px;
+    overflow: hidden;
+}
+
+/* PANEL DESIGNS */
+.deck-panel {
+    background-color: var(--nerv-bg-surface);
+    border: 1px solid var(--nerv-grid-strong);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--nerv-primary-glow);
+    border-bottom: 1px solid rgba(255, 136, 0, 0.25);
+    padding: 8px 16px;
+}
+
+.panel-header.alert-themed {
+    background-color: rgba(255, 26, 26, 0.08);
+    border-bottom: 1px solid rgba(255, 26, 26, 0.25);
+}
+
+.panel-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.crosshair {
+    font-weight: bold;
+    color: var(--nerv-primary);
+    font-size: 14px;
+}
+
+.alert-themed .crosshair {
+    color: var(--nerv-danger);
+}
+
+.panel-title {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--nerv-primary);
+}
+
+.alert-themed .panel-title {
+    color: var(--nerv-danger);
+}
+
+.panel-subtitle {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: var(--nerv-text-secondary);
+    margin-left: 6px;
+}
+
+.panel-id {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--nerv-text-muted);
+}
+
+.panel-content {
+    padding: 15px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+/* TACTICAL GRID DECORATION (Nerv Grid Background) */
+.nerv-grid {
+    background-image:
+        linear-gradient(var(--nerv-grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--nerv-grid-line) 1px, transparent 1px);
+    background-size: 25px 25px;
+}
+
+/* TABS MENU */
+.tab-menu {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--nerv-grid-strong);
+    padding-bottom: 10px;
+}
+
+.tab-btn {
+    background-color: var(--nerv-bg-elevated);
+    border: 1px solid var(--nerv-grid-strong);
+    color: var(--nerv-text-secondary);
+    font-family: 'Space Mono', monospace;
+    font-weight: bold;
+    font-size: 10px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab-btn .tab-num {
+    color: var(--nerv-primary-muted);
+    margin-right: 4px;
+}
+
+.tab-btn:hover {
+    border-color: var(--nerv-primary-muted);
+    color: var(--nerv-text-primary);
+}
+
+.tab-btn.active {
+    background-color: var(--nerv-primary-glow);
+    border-color: var(--nerv-primary);
+    color: var(--nerv-primary);
+}
+
+/* TAB CONTENTS */
+.tab-content {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+.tab-description {
+    color: var(--nerv-text-secondary);
+    margin-bottom: 15px;
+    font-size: 11px;
+}
+
+/* FORM FIELDS */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: bold;
+    font-size: 11px;
+    color: var(--nerv-primary);
+    margin-bottom: 5px;
+    letter-spacing: 0.05em;
+}
+
+.form-group label .label-jp {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 9px;
+    color: var(--nerv-text-secondary);
+    font-weight: normal;
+    margin-left: 4px;
+}
+
+.deck-select, .deck-input {
+    width: 100%;
+    background-color: var(--nerv-bg-elevated);
+    border: 1px solid var(--nerv-grid-strong);
+    color: var(--nerv-text-primary);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 2px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.deck-select:focus, .deck-input:focus {
+    border-color: var(--nerv-primary);
+    box-shadow: 0 0 6px var(--nerv-primary-glow);
+}
+
+.input-hint {
+    display: block;
+    font-size: 10px;
+    color: var(--nerv-text-muted);
+    margin-top: 4px;
+}
+
+/* HAZARD STRIPES */
+.hazard-stripe {
+    background-size: 20px 20px;
+    width: 100%;
+}
+
+.green-stripe {
+    background-image: linear-gradient(
+        45deg,
+        #000 25%,
+        var(--nerv-secondary-muted) 25%,
+        var(--nerv-secondary-muted) 50%,
+        #000 50%,
+        #000 75%,
+        var(--nerv-secondary-muted) 75%,
+        var(--nerv-secondary-muted) 100%
+    );
+}
+
+.red-stripe {
+    background-image: linear-gradient(
+        45deg,
+        #000 25%,
+        var(--nerv-tertiary-muted) 25%,
+        var(--nerv-tertiary-muted) 50%,
+        #000 50%,
+        #000 75%,
+        var(--nerv-tertiary-muted) 75%,
+        var(--nerv-tertiary-muted) 100%
+    );
+}
+
+/* BUTTONS */
+.wizard-actions {
+    margin-top: auto;
+    padding-top: 15px;
+}
+
+.btn-primary {
+    width: 100%;
+    background-color: var(--nerv-primary);
+    border: none;
+    color: var(--nerv-bg-void);
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 12px;
+    cursor: pointer;
+    border-radius: 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 4px 15px var(--nerv-primary-glow);
+    transition: all 0.2s ease;
+    border: 2px solid var(--nerv-primary);
+}
+
+.btn-primary .btn-sub {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 9px;
+    font-weight: normal;
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
+.btn-primary:hover {
+    background-color: var(--nerv-bg-void);
+    color: var(--nerv-primary);
+    box-shadow: 0 0 20px var(--nerv-primary-glow);
+}
+
+.btn-primary:active {
+    transform: scale(0.99);
+}
+
+.btn-primary:disabled {
+    background-color: var(--nerv-bg-elevated);
+    border-color: var(--nerv-grid-strong);
+    color: var(--nerv-text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* TAB 2: MODELS CATALOG */
+.model-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.filter-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--nerv-text-secondary);
+}
+
+.filter-btn {
+    background-color: transparent;
+    border: 1px solid var(--nerv-grid-strong);
+    color: var(--nerv-text-secondary);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 4px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+    border-color: var(--nerv-secondary);
+    color: var(--nerv-secondary);
+}
+
+.filter-btn.active {
+    background-color: var(--nerv-secondary-glow);
+    border-color: var(--nerv-secondary);
+    color: var(--nerv-secondary);
+}
+
+.models-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.tier-section {
+    border-left: 2px solid var(--nerv-grid-strong);
+    padding-left: 10px;
+    transition: all 0.3s ease;
+}
+
+.tier-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.tier-badge-green {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    font-weight: bold;
+    background-color: rgba(0, 204, 102, 0.12);
+    border: 1px solid var(--nerv-ok);
+    color: var(--nerv-ok);
+    padding: 2px 6px;
+    border-radius: 2px;
+}
+
+.tier-badge-red {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    font-weight: bold;
+    background-color: rgba(255, 26, 26, 0.12);
+    border: 1px solid var(--nerv-danger);
+    color: var(--nerv-danger);
+    padding: 2px 6px;
+    border-radius: 2px;
+}
+
+.tier-desc {
+    font-size: 9px;
+    color: var(--nerv-text-muted);
+}
+
+.models-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+/* MODEL CARD */
+.model-card {
+    background-color: var(--nerv-bg-elevated);
+    border: 1px solid var(--nerv-grid-strong);
+    padding: 10px;
+    border-radius: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.model-card:hover {
+    border-color: var(--nerv-secondary-muted);
+    box-shadow: 0 0 10px var(--nerv-secondary-glow);
+}
+
+.model-name {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--nerv-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.model-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--nerv-text-secondary);
+}
+
+.model-ram {
+    font-weight: bold;
+    color: var(--nerv-caution);
+}
+
+.model-ram.heavy-ram {
+    color: var(--nerv-danger);
+}
+
+.btn-deploy-model {
+    width: 100%;
+    background-color: transparent;
+    border: 1px solid var(--nerv-secondary);
+    color: var(--nerv-secondary);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 6px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    margin-top: auto;
+}
+
+.btn-deploy-model:hover {
+    background-color: var(--nerv-secondary);
+    color: var(--nerv-bg-void);
+    box-shadow: 0 0 8px var(--nerv-secondary-glow);
+}
+
+.btn-deploy-model:active {
+    transform: scale(0.98);
+}
+
+.btn-deploy-model:disabled {
+    border-color: var(--nerv-grid-strong);
+    color: var(--nerv-text-muted);
+    background: transparent;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.loading-placeholder {
+    color: var(--nerv-text-muted);
+    font-size: 11px;
+    padding: 10px;
+    grid-column: 1 / -1;
+    text-align: center;
+}
+
+/* TAB 3: DIAGNOSTICS */
+.diag-action-card {
+    background-color: var(--nerv-bg-elevated);
+    border: 1px solid var(--nerv-grid-strong);
+    padding: 12px;
+    border-radius: 2px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.diag-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--nerv-primary);
+}
+
+.diag-desc {
+    font-size: 10px;
+    color: var(--nerv-text-secondary);
+    margin-top: 3px;
+}
+
+.btn-diag-action {
+    background-color: transparent;
+    border: 1px solid var(--nerv-primary);
+    color: var(--nerv-primary);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-diag-action:hover {
+    background-color: var(--nerv-primary);
+    color: var(--nerv-bg-void);
+    box-shadow: 0 0 8px var(--nerv-primary-glow);
+}
+
+.btn-diag-action:active {
+    transform: scale(0.97);
+}
+
+.btn-diag-action:disabled {
+    border-color: var(--nerv-grid-strong);
+    color: var(--nerv-text-muted);
+    background: transparent;
+    cursor: not-allowed;
+}
+
+/* AXIS RULER DECORATION */
+.axis-ruler {
+    height: 20px;
+    border-top: 1px solid var(--nerv-primary-muted);
+    position: relative;
+    opacity: 0.5;
+}
+
+.ruler-ticks {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background-image: repeating-linear-gradient(90deg, var(--nerv-primary-muted) 0px, var(--nerv-primary-muted) 1px, transparent 1px, transparent 12px);
+}
+
+/* RIGHT PANEL: CONSOLE */
+.console-panel {
+    background-color: var(--nerv-bg-void);
+}
+
+.console-content-area {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    height: 100%;
+    overflow: hidden;
+}
+
+.console-controls-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--nerv-bg-surface);
+    border: 1px solid var(--nerv-grid-strong);
+    padding: 8px 12px;
+    border-radius: 2px;
+    margin-bottom: 10px;
+}
+
+.active-task-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bilingual-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--nerv-text-muted);
+}
+
+.active-task-name {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--nerv-caution);
+    letter-spacing: 0.05em;
+}
+
+.btn-danger-kiosk {
+    background-color: var(--nerv-danger);
+    border: none;
+    border-radius: 2px;
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 1px;
+}
+
+.btn-danger-kiosk .btn-inner {
+    display: block;
+    background-color: var(--nerv-bg-void);
+    color: var(--nerv-danger);
+    padding: 4px 10px;
+    transition: all 0.2s ease;
+}
+
+.btn-danger-kiosk:hover .btn-inner {
+    background-color: var(--nerv-danger);
+    color: #fff;
+}
+
+/* TERMINAL SCREEN */
+.terminal-widget {
+    flex: 1;
+    background-color: #020204;
+    border: 1px solid var(--nerv-grid-strong);
+    border-radius: 2px;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--nerv-ok);
+    padding: 12px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9);
+}
+
+.terminal-line {
+    margin-bottom: 3px;
+}
+
+.terminal-welcome {
+    color: var(--nerv-text-secondary);
+    margin-bottom: 12px;
+    opacity: 0.8;
+}
+
+/* FOOTER */
+.deck-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--nerv-grid-strong);
+    padding-top: 10px;
+    font-size: 10px;
+    color: var(--nerv-text-muted);
+}
+
+.footer-left, .footer-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-pynch, .footer-nerv {
+    letter-spacing: 0.05em;
+}
+
+/* ANIMATIONS */
+@keyframes pulse-dot {
+    0% {
+        opacity: 0.4;
+        box-shadow: 0 0 2px currentColor;
+    }
+    50% {
+        opacity: 1;
+        box-shadow: 0 0 10px currentColor;
+    }
+    100% {
+        opacity: 0.4;
+        box-shadow: 0 0 2px currentColor;
+    }
+}
+
+/* UTILITY CLASSES */
+.hidden {
+    display: none !important;
+}
+
+/* CUSTOM SCROLLBARS */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--nerv-bg-void);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--nerv-grid-strong);
+    border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--nerv-primary-muted);
+}
