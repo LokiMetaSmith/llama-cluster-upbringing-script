@@ -12,27 +12,27 @@
   ansible.builtin.set_fact:
     nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
 
-- name: Ensure Tailscale is connected before waiting for Nomad
-  ansible.builtin.command: tailscale status
-  register: pipecatapp_tailscale_status
-  until: "'tailscale0' in pipecatapp_tailscale_status.stdout"
-  retries: 30
+- name: Ensure Tailscale is connected and has a mesh IP
+  ansible.builtin.shell: |
+    set -o pipefail
+    tailscale ip -4 | grep "^100\."
+  args:
+    executable: /bin/bash
+  register: tailscale_connectivity
+  until: tailscale_connectivity.rc == 0
+  retries: 60
   delay: 10
   changed_when: false
 
-- name: Check Tailscale connectivity if using mesh IP
-  ansible.builtin.command: tailscale status
-  register: tailscale_status_check
-  changed_when: false
-  failed_when: false
-  when: (cluster_ip | default('')) is search('^100\.')
+- name: Refresh Ansible facts after Tailscale connection
+  ansible.builtin.setup:
+    gather_subset:
+      - network
 
-- name: Fail if Tailscale is not connected when mesh IP is required
+- name: Verify cluster_ip is correctly populated
   ansible.builtin.fail:
-    msg: "Tailscale is not connected (100.x.x.x IP requested), but required for cluster communication. Check 'tailscale status'."
-  when:
-    - (cluster_ip | default('')) is search('^100\.')
-    - tailscale_status_check.rc | default(0) != 0
+    msg: "CRITICAL: cluster_ip is not defined after Tailscale verification. Expected a 100.x.x.x IP."
+  when: (cluster_ip | default('')) is not search('^100\.')
 
 - name: Wait for Nomad TCP port to be open
   ansible.builtin.wait_for:
