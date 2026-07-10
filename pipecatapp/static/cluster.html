@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Llama Cluster: The Upbringing</title>
     <style>
+        /* Accessibility: High contrast focus indicator */
+        a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid #00ff00; /* Terminal Green */
+            outline-offset: 2px;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
@@ -131,7 +138,17 @@
     <div id="overlay">
         <h1>Llama Cluster Upbringing</h1>
         <div id="subtitle">Initializing visualization...</div>
-        <div id="terminal"></div>
+        <div id="terminal" style="margin-bottom: 15px;"></div>
+
+        <!-- Ouroboros Webring Navigation -->
+        <div id="webring-nav" style="background: rgba(0, 0, 0, 0.75); border: 1px solid #30363d; border-radius: 6px; padding: 10px; width: 400px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; pointer-events: auto;">
+            <span style="color: #777; font-size: 11px; text-transform: uppercase; font-family: monospace;">Ouroboros</span>
+            <div>
+                <a href="/webring/prev" style="padding: 4px 10px; margin-right: 5px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; text-decoration: none; font-size: 11px; border-radius: 4px; cursor: pointer; display: inline-block; font-family: monospace;" title="Previous member in the webring">« Prev</a>
+                <a href="/webring/random" style="padding: 4px 10px; margin-right: 5px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; text-decoration: none; font-size: 11px; border-radius: 4px; cursor: pointer; display: inline-block; font-family: monospace;" title="Random member in the webring">Random</a>
+                <a href="/webring/next" style="padding: 4px 10px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; text-decoration: none; font-size: 11px; border-radius: 4px; cursor: pointer; display: inline-block; font-family: monospace;" title="Next member in the webring">Next »</a>
+            </div>
+        </div>
     </div>
 
     <div id="tooltip"></div>

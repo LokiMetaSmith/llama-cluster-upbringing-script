@@ -6,6 +6,29 @@
     <title>CommandDeck // NERV Setup Platform</title>
     <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Share+Tech+Mono&family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Tactical NERV Webring styling */
+        .btn-nerv-webring:hover {
+            background-color: var(--nerv-primary) !important;
+            color: var(--nerv-bg-void) !important;
+            box-shadow: 0 0 8px var(--nerv-primary-glow);
+            border-color: var(--nerv-primary) !important;
+        }
+        /* Accessibility: High contrast focus indicator matching NERV theme */
+        .btn-nerv-webring:focus-visible,
+        .tab-btn:focus-visible,
+        .deck-select:focus-visible,
+        .deck-input:focus-visible,
+        .btn-desktop:focus-visible,
+        .btn-primary:focus-visible,
+        .filter-btn:focus-visible,
+        .btn-deploy-model:focus-visible,
+        .btn-diag-action:focus-visible {
+            outline: 2px solid var(--nerv-primary) !important;
+            outline-offset: 2px !important;
+            box-shadow: 0 0 8px var(--nerv-primary-glow) !important;
+        }
+    </style>
 </head>
 <body>
     <!-- Scanline overlay to emulate sci-fi CRT screens -->
@@ -25,12 +48,20 @@
                 </div>
             </div>
 
-            <div class="header-center">
+            <div class="header-center" style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                 <!-- Mini Waveform Visualizer -->
-                <div class="mini-viz">
+                <div class="mini-viz" style="margin-bottom: 2px;">
                     <svg viewBox="0 0 400 40" class="waveform-svg">
                         <path d="M 0,20 Q 20,5 40,20 T 80,20 T 120,20 T 160,20 T 200,20 T 240,20 T 280,20 T 320,20 T 360,20 T 400,20" fill="none" stroke="var(--nerv-primary)" stroke-width="1.5" opacity="0.8"></path>
                     </svg>
+                </div>
+                <!-- Ouroboros Webring Navigation (Tactical NERV style) -->
+                <div class="webring-container" style="display: flex; align-items: center; gap: 8px; border: 1px solid var(--nerv-grid-strong); padding: 4px 10px; background-color: var(--nerv-bg-surface);">
+                    <span style="font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--nerv-primary); letter-spacing: 0.05em; font-weight: bold;">OUROBOROS MESH</span>
+                    <span style="width: 4px; height: 4px; background-color: var(--nerv-primary);"></span>
+                    <a id="webring-prev-btn" href="#" class="btn-nerv-webring" style="text-decoration: none; font-family: 'Space Mono', monospace; font-size: 10px; font-weight: bold; color: var(--nerv-primary-muted); padding: 2px 6px; border: 1px solid var(--nerv-primary-muted); border-radius: 2px; transition: all 0.2s ease;" title="Previous member in the webring">« PREV</a>
+                    <a id="webring-random-btn" href="#" class="btn-nerv-webring" style="text-decoration: none; font-family: 'Space Mono', monospace; font-size: 10px; font-weight: bold; color: var(--nerv-primary-muted); padding: 2px 6px; border: 1px solid var(--nerv-primary-muted); border-radius: 2px; transition: all 0.2s ease;" title="Random member in the webring">RANDOM</a>
+                    <a id="webring-next-btn" href="#" class="btn-nerv-webring" style="text-decoration: none; font-family: 'Space Mono', monospace; font-size: 10px; font-weight: bold; color: var(--nerv-primary-muted); padding: 2px 6px; border: 1px solid var(--nerv-primary-muted); border-radius: 2px; transition: all 0.2s ease;" title="Next member in the webring">NEXT »</a>
                 </div>
             </div>
 

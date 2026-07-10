@@ -16,6 +16,13 @@
     <script src="/static/js/editor.js"></script>
 
     <style>
+        /* Accessibility: High contrast focus indicator */
+        a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid #00ff00; /* Terminal Green */
+            outline-offset: 2px;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
         body { margin: 0; background-color: #000; overflow: hidden; }
         #loading {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -40,6 +47,16 @@
 <body>
 
     <div id="loading">Connecting to Cluster...</div>
+
+    <!-- Ouroboros Webring Navigation Overlay -->
+    <div id="webring-nav" style="position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: rgba(0, 0, 0, 0.85); border: 1px solid #30363d; border-radius: 6px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 15px; pointer-events: auto; font-family: monospace;">
+        <span style="color: #888; font-size: 11px; text-transform: uppercase;">Ouroboros</span>
+        <div>
+            <a href="/webring/prev" style="padding: 6px 12px; margin-right: 5px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; text-decoration: none; font-size: 12px; border-radius: 4px; cursor: pointer; display: inline-block;" title="Previous member in the webring">« Prev</a>
+            <a href="/webring/random" style="padding: 6px 12px; margin-right: 5px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; text-decoration: none; font-size: 12px; border-radius: 4px; cursor: pointer; display: inline-block;" title="Random member in the webring">Random</a>
+            <a href="/webring/next" style="padding: 6px 12px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; text-decoration: none; font-size: 12px; border-radius: 4px; cursor: pointer; display: inline-block;" title="Next member in the webring">Next »</a>
+        </div>
+    </div>
 
     <!-- Hidden Container for LiteGraph Canvas -->
     <div id="main-canvas-container">

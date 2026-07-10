@@ -362,4 +362,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         })
         .catch(console.error);
+
+    // --- 12. Dynamic Ouroboros Webring Resolution (Cross-Port) ---
+    try {
+        const host = window.location.hostname || '127.0.0.1';
+        const base8000 = `http://${host}:8000`;
+        const fromParam = encodeURIComponent(`http://${host}:8085/`);
+
+        const prevBtn = document.getElementById('webring-prev-btn');
+        const randomBtn = document.getElementById('webring-random-btn');
+        const nextBtn = document.getElementById('webring-next-btn');
+
+        if (prevBtn) prevBtn.href = `${base8000}/webring/prev?from=${fromParam}`;
+        if (randomBtn) randomBtn.href = `${base8000}/webring/random`;
+        if (nextBtn) nextBtn.href = `${base8000}/webring/next?from=${fromParam}`;
+    } catch (e) {
+        console.error("Error setting webring dynamic URLs:", e);
+    }
 });

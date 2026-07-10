@@ -165,10 +165,11 @@ button.close {
     background-color: #34cf5b;
 }
 
-/* Accessibility: Ensure focus visibility for toolbar buttons */
-#toolbar button:focus-visible {
-    outline: 2px solid #fff;
+/* Accessibility: Ensure focus visibility for toolbar buttons, links, inputs */
+a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid #00ff00;
     outline-offset: 2px;
+    box-shadow: 0 0 5px #00ff00;
 }
 
 /* Palette UX: Status Colors */
