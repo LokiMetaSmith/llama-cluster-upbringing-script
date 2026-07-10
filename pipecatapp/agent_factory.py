@@ -55,6 +55,7 @@ from tools.lightweight_project_mapper_tool import LightweightProjectMapperTool
 from tools.set_operational_mode_tool import SetOperationalModeTool
 from tools.ouroboros_tool import OuroborosTool
 from tools.ternlight_tool import TernlightTool
+from tools.external_app_manager_tool import ExternalAppManagerTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -149,6 +150,10 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         ),
         "ternlight": TernlightTool(
             base_url=config.get("ternlight_service_url")
+        ),
+        "external_app_manager": ExternalAppManagerTool(
+            consul_url=config.get('consul_url'),
+            nomad_url=config.get('nomad_url')
         ),
     }
 
