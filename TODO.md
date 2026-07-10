@@ -6,6 +6,13 @@
 
 ## Immediate Actions
 
+- [ ] **Recommendation A: Automated Triggering of Jules Coding Sessions on DLQ Faults**
+  - **Goal:** Bridge `JanitorAgent` directly with the `JulesTool` to automatically spawn autonomous bug fixes when crashes are detected.
+- [ ] **Recommendation B: Deepen Screenshot & UI Verification**
+  - **Goal:** Integrate Playwright or WebKit screenshots into the self-critique/testing loops to visually critique UI components.
+- [ ] **Recommendation C: Generalize `TaskSupervisor` Retries**
+  - **Goal:** Update the supervisor to track exact Nomad Job UUIDs and execute automated retries when tasks stall.
+
 - [x] **Fix Authentik Nomad Job:**
   - [x] **Re-enable Authentik Nomad Job:** The job was temporarily disabled during cluster upbringing. Re-enable it and investigate the 'progress deadline' issue once the rest of the cluster is running.
   - **Goal:** Resolve issues preventing the Authentik Nomad job from deploying successfully.

@@ -6,6 +6,14 @@ import asyncio
 import requests
 from pmm_memory_client import PMMMemoryClient
 
+try:
+    from tools.jules_tool import JulesTool
+except ImportError:
+    try:
+        from pipecatapp.tools.jules_tool import JulesTool
+    except ImportError:
+        JulesTool = None
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -59,6 +67,46 @@ class JanitorAgent:
                 result="Max retries exceeded"
             )
             return
+
+        # If this is a critical crash or test failure, proactively trigger JulesTool session
+        event_type = item.get("event_type")
+        if event_type in ["app_crash", "test_failure"] and JulesTool is not None:
+            logger.info(f"Critical DLQ event '{event_type}' detected. Triggering Jules Coding Session...")
+            try:
+                jules = JulesTool()
+                prompt = (
+                    f"Crash/Fault Detected!\n"
+                    f"Event Type: {event_type}\n"
+                    f"Error Reason: {item.get('error_reason', 'No specific reason provided.')}\n"
+                    f"Payload Context: {item.get('payload', {})}\n"
+                    f"Please investigate the codebase and autonomously implement a fix."
+                )
+                source_path = item.get("payload", {}).get("source_path", "pipecatapp/app.py")
+                title = f"Fix DLQ Event {item['id']}: {event_type}"
+
+                # Check if API Key is configured before running to keep it elegant
+                if jules.api_key:
+                    res = await jules.run(
+                        prompt=prompt,
+                        source=source_path,
+                        title=title,
+                        automation_mode="AUTO_CREATE_PR"
+                    )
+                    logger.info(f"Jules session invocation result: {res}")
+                    result_msg = f"Triggered autonomous Jules session: {res}"
+                else:
+                    logger.warning("JULES_API_KEY not configured. Simulating/logging Jules trigger.")
+                    result_msg = "Simulated Jules trigger (JULES_API_KEY not configured)."
+
+                await self.memory_client.update_dlq_item(
+                    item_id=item['id'],
+                    status="SUCCEEDED",
+                    result=result_msg
+                )
+                return
+            except Exception as e:
+                logger.error(f"Failed to trigger Jules session: {e}")
+                # Fall back to standard processing below if triggering fails
 
         # Simulate work
         await asyncio.sleep(1)
