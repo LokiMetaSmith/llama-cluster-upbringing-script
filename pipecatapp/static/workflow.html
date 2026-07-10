@@ -8,6 +8,13 @@
     <link rel="stylesheet" href="/static/css/litegraph.css">
     <link rel="stylesheet" href="/static/css/styles.css">
     <style>
+        /* Accessibility: High contrast focus indicator */
+        a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid #00ff00; /* Terminal Green */
+            outline-offset: 2px;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
         body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .container { display: flex; flex: 1; overflow: hidden; height: 100%; }
         #sidebar {
@@ -159,7 +166,14 @@
                 <button id="save-btn">Save / Deploy</button>
                 <button id="arrange-btn">Auto Arrange</button>
                 <button id="add-group-btn">Add Group</button>
-                <button id="vr-btn" onclick="window.location.href='/static/vr_index.html'" style="background-color: #800080;">Enter VR</button>
+                <button id="vr-btn" onclick="window.location.href='/vr_index'" style="background-color: #800080;">Enter VR</button>
+
+                <!-- Ouroboros Webring Navigation -->
+                <span style="border-left: 1px solid #555; padding-left: 10px; margin-left: 10px; margin-right: 10px; color: #777; font-size: 12px; text-transform: uppercase;">Ouroboros</span>
+                <a href="/webring/prev" class="nav-btn" style="padding: 6px 12px; margin-right: 5px; background: #333; border: 1px solid #555; color: #fff; text-decoration: none; font-size: 12px; border-radius: 2px; cursor: pointer; display: inline-block;" title="Previous member in the webring">« Prev</a>
+                <a href="/webring/random" class="nav-btn" style="padding: 6px 12px; margin-right: 5px; background: #333; border: 1px solid #555; color: #fff; text-decoration: none; font-size: 12px; border-radius: 2px; cursor: pointer; display: inline-block;" title="Random member in the webring">Random</a>
+                <a href="/webring/next" class="nav-btn" style="padding: 6px 12px; margin-right: 10px; background: #333; border: 1px solid #555; color: #fff; text-decoration: none; font-size: 12px; border-radius: 2px; cursor: pointer; display: inline-block;" title="Next member in the webring">Next »</a>
+
                 <span id="status-text" role="status" aria-live="polite">Ready</span>
             </div>
             <canvas id="editor-canvas"></canvas>
