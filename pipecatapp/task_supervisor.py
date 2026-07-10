@@ -56,7 +56,8 @@ class TaskSupervisor:
                     self.active_tasks[task_id] = {
                         "start_time": event.get("timestamp"),
                         "meta": meta,
-                        "status": "running"
+                        "status": "running",
+                        "nomad_job_id": meta.get("nomad_job_id")
                     }
             elif kind == "worker_result":
                 if task_id in self.active_tasks:
@@ -75,18 +76,33 @@ class TaskSupervisor:
                 self.logger.warning(f"Task {task_id} timed out after {duration:.0f}s. Taking corrective action.")
 
                 # Corrective Action: Kill the worker
-                # We need to know the Nomad Job ID.
-                # The SwarmTool generates IDs like `swarm-worker-{task_id}-{uuid}`.
-                # We don't have the exact UUID here unless we stored it in the `worker_started` event or returned it from spawn.
-                # Current `worker_agent.py` logs `worker_started` but doesn't explicitly know its own Nomad Job ID (unless passed in env).
-                # However, SwarmTool.spawn_workers uses task_id in the job name prefix.
-                # We can try to kill by prefix or list jobs.
-                # For now, let's assume we can't easily kill without the exact ID, so we'll just log and maybe "retry" by spawning a new one.
-                # Ideally, `worker_started` event should include `job_id`.
+                nomad_job_id = info.get("nomad_job_id")
+                if nomad_job_id:
+                    self.logger.info(f"Terminating stalled Nomad job {nomad_job_id} via SwarmTool...")
+                    try:
+                        kill_res = await self.swarm_tool.kill_worker(nomad_job_id)
+                        self.logger.info(f"Kill result: {kill_res}")
+                    except Exception as ke:
+                        self.logger.error(f"Failed to kill stalled worker {nomad_job_id}: {ke}")
+                else:
+                    self.logger.warning(f"No nomad_job_id found for task {task_id}; unable to kill job directly.")
 
-                # Let's just log for now to demonstrate the detection.
-                # To implement retry:
-                # self.swarm_tool.spawn_workers([{"id": task_id, "prompt": info["meta"].get("prompt"), "context": info["meta"].get("context")}])
+                # Trigger automated retry
+                prompt = info["meta"].get("prompt")
+                context = info["meta"].get("context") or ""
+                if prompt:
+                    self.logger.info(f"Triggering automated retry for task {task_id}...")
+                    try:
+                        agent_type = info["meta"].get("agent_type", "worker")
+                        spawn_res = await self.swarm_tool.spawn_workers(
+                            tasks=[{"id": task_id, "prompt": prompt, "context": context}],
+                            agent_type=agent_type
+                        )
+                        self.logger.info(f"Retry spawn result: {spawn_res}")
+                    except Exception as se:
+                        self.logger.error(f"Failed to retry spawn for task {task_id}: {se}")
+                else:
+                    self.logger.warning(f"No original prompt context found for task {task_id}; skipping automated retry.")
 
                 self.logger.info(f"Marking task {task_id} as failed/timed-out in monitoring.")
                 tasks_to_remove.append(task_id)

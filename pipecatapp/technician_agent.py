@@ -132,6 +132,7 @@ class TechnicianAgent:
         meta.update({
             "task_id": self.task_id,
             "agent_type": "technician",
+            "nomad_job_id": os.getenv("NOMAD_JOB_ID"),
             "work_item_id": self.work_item_id
         })
 
@@ -380,7 +381,7 @@ Focus on one step at a time.
         self.discover_services()
         self.initialize_tools()
 
-        await self.report_event("worker_started", f"Technician started task {self.task_id}")
+        await self.report_event("worker_started", f"Technician started task {self.task_id}", meta={"prompt": self.prompt, "context": self.context})
 
         try:
             # Rehydrate if restarting after a crash

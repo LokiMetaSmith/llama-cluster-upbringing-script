@@ -28,7 +28,11 @@ if os.path.exists(DB_PATH):
 
 # Set env before importing app to avoid PermissionError on /data
 os.environ["MEMORY_DB_PATH"] = DB_PATH
-from ansible.roles.memory_service.files.app import app
+try:
+    from app import app
+except ImportError:
+    sys.path.insert(0, os.path.join(REPO_ROOT, "ansible/roles"))
+    from memory_service.files.app import app
 
 def run_server():
     # Disable access logs to keep output clean

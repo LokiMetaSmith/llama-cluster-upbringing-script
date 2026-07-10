@@ -240,6 +240,23 @@ class WorkerAgent:
         if self.memory_url:
             self.memory_client = PMMMemoryClient(self.memory_url)
 
+        if self.memory_client:
+            try:
+                await self.memory_client.add_event(
+                    kind="worker_started",
+                    content=f"Worker started task {self.task_id}",
+                    meta={
+                        "task_id": self.task_id,
+                        "agent_type": "worker",
+                        "nomad_job_id": os.getenv("NOMAD_JOB_ID"),
+                        "work_item_id": self.work_item_id,
+                        "prompt": self.prompt,
+                        "context": self.context
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Failed to report worker_started event: {e}")
+
         self.tools = create_tools()
         self.tools["submit_solution"] = SubmitSolutionTool()
         logger.info(f"Initialized tools: {list(self.tools.keys())}")
