@@ -72,6 +72,18 @@ This layer provides an internal, decentralized storage layer across the cluster,
   3. Worker nodes downloading dependencies pull them directly from neighboring nodes via IPFS instead of saturating the external internet connection.
 - **Outcome:** Significantly faster and more reliable deployments across the swarm, reducing external bandwidth usage by utilizing the cluster's internal network for package caching.
 
+## Layer 3.6: System Recovery & Snapshots (Btrfs)
+
+This layer provides OS-level protection and pre-deployment disaster recovery for all cluster nodes.
+
+- **Technology:** [Btrfs (B-tree File System)](https://btrfs.readthedocs.io/).
+- **Implementation:** The `btrfs_snapshot` Ansible role is applied before deployments. Critical cluster configuration and operational directories (such as `/etc/consul.d`, `/etc/nomad.d`, `/opt/cluster-infra`, `/opt/pipecatapp`) are securely backed up.
+- **Workflow:**
+  1. Before any new software or role deployment, the system syncs target folders using `rsync` to an active Btrfs subvolume.
+  2. A read-only Btrfs snapshot (e.g., `pre-deploy-latest`) is instantly created with near-zero overhead.
+  3. In case of deployment failures or corrupted states, the `recover_os.py` utility can rapidly roll back the OS configuration to the snapshot.
+- **Outcome:** Bulletproof, hardware-agnostic disaster recovery at the file system level, guarding against corrupted orchestrator states or misconfigured system daemons.
+
 ## Layer 4: The AI Application Stack
 
 This layer contains the core Python application that constitutes the agent itself. It runs as the `pipecatapp` Nomad job.
@@ -82,8 +94,9 @@ This layer contains the core Python application that constitutes the agent itsel
   - **`TwinService`:** The agent's "brain," implemented as a `pipecat` `FrameProcessor`. It handles conversation, memory, and tool use.
   - **Workflow Engine:** A new, flexible engine that defines the agent's thought process using declarative YAML workflows (e.g., `default_agent_loop.yaml`).
   - **Memory:** A dual-component memory system with short-term conversational history and a long-term FAISS vector store for semantic search.
-  - **Tools:** The `TwinService` can access a comprehensive library of over 25 tools, including `ansible` for cluster management, `code_runner` for secure Python execution, `vision` for seeing the world, and specialized tools like `orchestrator`, `planner`, and `swarm` for complex tasks.
-  - **Mixture of Experts (MoE) Routing:** The system uses the workflow to route queries to specialized LLM backends (e.g., Coding, Math, Vision) discovered via Consul.
+  - **Tools:** The `TwinService` can access a comprehensive library of over 30 tools, including `ansible` for cluster management, `code_runner` for secure Python execution, `vision` for seeing the world, `ouroboros` for webring navigation, `ternlight` for ternary document embeddings, `mtac` for programmatic model training pipelines, and specialized tools like `orchestrator`, `planner`, and `swarm` for complex tasks.
+  - **Skill Library and Operational Modes:** Integrates with the `SkillLibrary` database to persist and discover behavioral skills. Agents can dynamically activate these skills (e.g., 'backpass') using the `SetOperationalModeTool` which appends specialized procedural instructions directly to the agent's system prompt.
+  - **Mixture of Experts (MoE) Routing:** The system uses the workflow to route queries to specialized LLM backends (e.g., Coding, Math, Vision, DeepSeek-ds4) discovered via Consul. High-throughput GGUF DeepSeek V4 models run efficiently on legacy CPUs and GPUs via the lightweight DwarfStar (`ds4`) inference engine, configured natively as Nomad jobs.
 
 ## Layer 5: Web UI & Control Plane
 
@@ -111,6 +124,19 @@ To expose the cluster's capabilities to the outside world, a dedicated gateway s
   5. A new mechanism captures the final text response and sends it back to the gateway.
   6. The gateway formats the text into a valid OpenAI API JSON response and returns it to the external client.
 - **Outcome:** Any application capable of communicating with the OpenAI API can now leverage the power of the distributed, self-hosted Mixture of Experts.
+
+## Layer 6.5: Model Training as Code (MTaC) Pipeline
+
+To enable the system to programmatically improve its backend models, a decentralized Model Training as Code pipeline allows agents to launch and track training workloads.
+
+- **Technology:** Python, Nomad Jobs, and containerized ML backends (Unsloth, Torchtune).
+- **Implementation:** Orchestrated by `mtac_pipeline.py` and exposed to agents via `MTACTool`.
+- **Workflow:**
+  1. An agent triggers training via `MTACTool`, which dynamically compiles a Nomad job spec for SFT, RL, or evaluation.
+  2. The jobs execute on nodes with GPU acceleration (auto-detected via the hardware-agnostic `gpu_setup` role).
+  3. Real-time telemetry, including loss curves and model weights, are synced back using shared Nomad volumes.
+  4. The model is evaluated using the `eval_sft.py` pipeline (wrapping `lm-eval-harness`), and results are displayed in the Mission Control telemetry dashboard.
+- **Outcome:** Fully autonomous, model fine-tuning loops scheduled across the cluster, keeping our open-weight model backends up-to-date.
 
 ---
 

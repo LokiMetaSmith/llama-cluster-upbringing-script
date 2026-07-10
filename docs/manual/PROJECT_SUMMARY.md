@@ -36,6 +36,18 @@ The project has evolved from a single setup script into a sophisticated, multi-l
   - Implemented a `WebBrowserTool` using Playwright that allows the agent to browse the web to answer questions.
 - **Phase 13: IPFS & Package Caching:**
   - Implemented an internal package cache system for the swarm using IPFS. This includes an apt package caching proxy and PyPI proxy to optimize distributed service deployments across the cluster.
+- **Phase 14: DwarfStar (ds4) Inference Engine:**
+  - Integrated the DwarfStar (ds4) native inference engine for DeepSeek V4 models (Flash/PRO), deployed via a dedicated Ansible role and Nomad templates for accelerated distributed CPU/GPU inference.
+- **Phase 15: Btrfs Snapshots & OS Recovery:**
+  - Standardized on Btrfs filesystem snapshots for pre-deployment OS recovery, managed via the `btrfs_snapshot` Ansible role and the `recover_os.py` recovery tool, protecting critical cluster directories via automatic rsync synchronizations.
+- **Phase 16: Ternlight Ternary Embedding Search:**
+  - Integrated the ultra-lightweight 7MB ternary embedding model service, accessible via `TernlightTool`, deployed as a Node.js microservice via Nomad, featuring browser-side search in the 'Instant Docs' tab of the Mission Control UI.
+- **Phase 17: Ouroboros Webring & Circular Navigation:**
+  - Enabled circular navigation between cluster services and friend agents via the Ouroboros webring, persisting member data in Consul KV and running a background discovery task to update the webring periodically.
+- **Phase 18: Model Training as Code (MTaC):**
+  - Integrated Aleph Alpha's "Model Training as Code" framework, allowing agents to programmatically generate and launch containerized ML training pipelines (Unsloth, Torchtune) as Nomad jobs with telemetry streaming and loss tracking.
+- **Phase 19: SkillLibrary & SetOperationalModeTool:**
+  - Implemented the `SkillLibrary` database for persistent behavioral skill retention (e.g., 'backpass') along with the `SetOperationalModeTool` to allow agents to dynamically activate procedural guidelines into their system prompts.
 
 ---
 
