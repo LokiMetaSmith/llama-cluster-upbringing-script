@@ -8,9 +8,9 @@
 
 - [x] **Recommendation A: Automated Triggering of Jules Coding Sessions on DLQ Faults**
   - **Goal:** Bridge `JanitorAgent` directly with the `JulesTool` to automatically spawn autonomous bug fixes when crashes are detected.
-- [ ] **Recommendation B: Deepen Screenshot & UI Verification**
+- [x] **Recommendation B: Deepen Screenshot & UI Verification**
   - **Goal:** Integrate Playwright or WebKit screenshots into the self-critique/testing loops to visually critique UI components.
-- [ ] **Recommendation C: Generalize `TaskSupervisor` Retries**
+- [x] **Recommendation C: Generalize `TaskSupervisor` Retries**
   - **Goal:** Update the supervisor to track exact Nomad Job UUIDs and execute automated retries when tasks stall.
 
 - [x] **Fix Authentik Nomad Job:**

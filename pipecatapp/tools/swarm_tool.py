@@ -80,6 +80,7 @@ class SwarmTool:
                                             "WORKER_PROMPT": task.get("prompt"),
                                             "WORKER_CONTEXT": task.get("context", ""),
                                             "WORKER_TASK_ID": t_id,
+                                            "NOMAD_JOB_ID": job_id,
                                             "CONSUL_HTTP_ADDR": os.getenv("CONSUL_HTTP_ADDR", "http://10.0.0.1:8500")
                                         },
                                         "Resources": {
