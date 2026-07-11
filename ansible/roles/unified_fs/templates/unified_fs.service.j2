@@ -1,6 +1,6 @@
 [Unit]
 Description=Unified Agent Filesystem (FUSE)
-After=network.target consul.service
+After=network.target consul.service opt-unified_fs_backend.mount
 Requires=network.target
 
 [Service]

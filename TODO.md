@@ -195,6 +195,14 @@ These structural suggestions are targeted for a future major release to signific
 - [x] **Investigate RPC Provider Monitoring:** Added documentation to `llamacpp-rpc.nomad.j2` explaining how to configure Prometheus scraping for rpc-server providers. Note: rpc-server doesn't expose native metrics - requires wrapper script or external monitoring.
 - [x] **Evaluate Ouro/LoopLM Support in llama.cpp:** In 3 months, check if the upstream `llama.cpp` project has added support for the Ouro LoopLM architecture. If so, create a plan to integrate it as a native model option. (Note: Ouro works in `llama.cpp` using the standard Llama GGUF format, but custom architectural features are skipped as they are not yet supported. Full native support for the LoopLM architecture is still lacking in llama.cpp, so no integration plan is needed at this time.)
 
+## Ceph Storage Evaluation & Alternatives
+
+- [ ] **Address Ceph Storage Cluster Alternatives:**
+  - **Goal:** Implement the alternative actions identified in `docs/analysis/CEPH_EVALUATION.md` to enhance our storage layer without the overhead of Ceph.
+  - **Tasks:**
+    1. [ ] **Strengthen Shared Filesystem:** Refactor the `unified_fs_mount_point` deployment to utilize GlusterFS replica-2 or optimized, thin-provisioned NFS with automated backup scripts to prevent a single point of failure (SPOF).
+    2. [ ] **Automate P2P Model Pinning:** Implement an autonomous service to automatically manage IPFS pinning and peer-to-peer weight sharing for `.gguf` files to guarantee model availability on active nodes without over-allocating storage.
+
 ## Gnutella Analysis Integration Ideas
 
 This section tracks actionable ideas derived from the `docs/analysis/GNUTELLA_ANALYSIS.md` document.

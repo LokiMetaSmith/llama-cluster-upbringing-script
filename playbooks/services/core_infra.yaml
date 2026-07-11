@@ -43,6 +43,10 @@
       tags:
         - btrfs_snapshot
         - common
+    - role: nfs
+      tags:
+        - nfs
+        - common
     - role: system_deps
       tags:
         - system_deps
