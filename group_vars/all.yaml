@@ -44,7 +44,8 @@ nomad_namespace: "default"
 nomad_jobs_dir: "/opt/nomad/jobs"
 nomad_volumes_dir: "/opt/nomad/volumes"
 nomad_tls_dir: "/etc/nomad.d/tls"
-nomad_models_dir: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/models"
+nomad_models_dir: "/opt/unified_fs_backend/models"
+ipfs_path: "/opt/unified_fs_backend/ipfs/{{ inventory_hostname }}"
 
 # Standard Ports
 consul_http_port: 8500

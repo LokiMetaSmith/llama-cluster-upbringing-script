@@ -197,11 +197,11 @@ These structural suggestions are targeted for a future major release to signific
 
 ## Ceph Storage Evaluation & Alternatives
 
-- [ ] **Address Ceph Storage Cluster Alternatives:**
+- [x] **Address Ceph Storage Cluster Alternatives:**
   - **Goal:** Implement the alternative actions identified in `docs/analysis/CEPH_EVALUATION.md` to enhance our storage layer without the overhead of Ceph.
   - **Tasks:**
-    1. [ ] **Strengthen Shared Filesystem:** Refactor the `unified_fs_mount_point` deployment to utilize GlusterFS replica-2 or optimized, thin-provisioned NFS with automated backup scripts to prevent a single point of failure (SPOF).
-    2. [ ] **Automate P2P Model Pinning:** Implement an autonomous service to automatically manage IPFS pinning and peer-to-peer weight sharing for `.gguf` files to guarantee model availability on active nodes without over-allocating storage.
+    1. [x] **Strengthen Shared Filesystem:** Refactor the `unified_fs_mount_point` deployment to utilize GlusterFS replica-2 or optimized, thin-provisioned NFS with automated backup scripts to prevent a single point of failure (SPOF).
+    2. [x] **Automate P2P Model Pinning:** Implement an autonomous service to automatically manage IPFS pinning and peer-to-peer weight sharing for `.gguf` files to guarantee model availability on active nodes without over-allocating storage.
 
 ## Gnutella Analysis Integration Ideas
 
