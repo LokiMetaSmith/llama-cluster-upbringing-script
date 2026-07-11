@@ -270,11 +270,11 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - [x] Review `pipecatapp/web_server.py` and other API definitions to ensure sensitive data endpoints are authenticated.
   - [x] Specifically check endpoints returning user data or configuration.
 - [x] **Audit WebSocket security:**
-  - [ ] Verify that WebSocket connections enforce strict Origin checks to prevent Cross-Site WebSocket Hijacking (CSWSH).
-  - [ ] Consider implementing authentication for WebSocket connections.
+  - [x] Verify that WebSocket connections enforce strict Origin checks to prevent Cross-Site WebSocket Hijacking (CSWSH).
+  - [x] Consider implementing authentication for WebSocket connections.
 - [x] **Audit write access controls:**
-  - [ ] Ensure that all state-changing endpoints (POST, PUT, PATCH) require authentication and authorization.
-  - [ ] Verify that unauthenticated users cannot modify workflows or agent state.
+  - [x] Ensure that all state-changing endpoints (POST, PUT, PATCH) require authentication and authorization.
+  - [x] Verify that unauthenticated users cannot modify workflows or agent state.
 - [x] **Audit rate limiting configuration:**
   - [ ] Review rate limiting settings in `pipecatapp/rate_limiter.py` and `pipecatapp/web_server.py`.
   - [ ] Ensure critical endpoints have stricter limits to prevent abuse.

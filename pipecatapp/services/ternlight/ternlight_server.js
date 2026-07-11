@@ -13,12 +13,28 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', engine: 'ternlight' });
 });
 
+// Authentication middleware
+const authenticate = (req, res, next) => {
+  const expectedToken = process.env.TERNLIGHT_API_KEY;
+  if (expectedToken) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+    }
+    const token = authHeader.split(' ')[1];
+    if (token !== expectedToken) {
+      return res.status(403).json({ error: 'Invalid API Key' });
+    }
+  }
+  next();
+};
+
 /**
  * Embed text
  * POST /embed
  * Body: { text: string }
  */
-app.post('/embed', async (req, res) => {
+app.post('/embed', authenticate, async (req, res) => {
   try {
     const { text } = req.body;
     if (!text) {
@@ -37,7 +53,7 @@ app.post('/embed', async (req, res) => {
  * POST /similar
  * Body: { query: string, documents: string[] | {content: string}[], topK: number }
  */
-app.post('/similar', async (req, res) => {
+app.post('/similar', authenticate, async (req, res) => {
   try {
     const { query, documents, topK = 5 } = req.body;
     if (!query || !documents) {
