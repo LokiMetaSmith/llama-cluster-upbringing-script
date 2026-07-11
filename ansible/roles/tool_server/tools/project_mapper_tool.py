@@ -1,6 +1,9 @@
 import os
 import re
 import fnmatch
+import subprocess
+import shutil
+from typing import Optional, List
 
 class ProjectMapperTool:
     """
@@ -20,6 +23,14 @@ class ProjectMapperTool:
                 return True
         return False
 
+    def _build_structure(self, structure: dict, parts: List[str]):
+        curr = structure
+        for part in parts[:-1]:
+            if part not in curr:
+                curr[part] = {}
+            curr = curr[part]
+        curr[parts[-1]] = None
+
     def scan(self, sub_path: str = ".") -> dict:
         """
         Scans the codebase starting from root_dir/sub_path.
@@ -32,6 +43,26 @@ class ProjectMapperTool:
             "structure": {}
         }
 
+        git_files = self._list_files_git(start_dir)
+        if git_files is not None:
+            for rel_path in git_files:
+                if not rel_path:
+                    continue
+                full_path = os.path.join(start_dir, rel_path)
+                if not os.path.exists(full_path) or self._is_ignored(full_path):
+                    continue
+
+                rel_path_to_root = os.path.relpath(full_path, self.root_dir)
+
+                file_info = {
+                    "path": rel_path_to_root,
+                    "type": self._guess_type(rel_path),
+                    "imports": self._extract_imports(full_path)
+                }
+                project_map["files"].append(file_info)
+                self._build_structure(project_map["structure"], rel_path_to_root.split(os.sep))
+            return project_map
+
         for root, dirs, files in os.walk(start_dir):
             # Modify dirs in-place to skip ignored directories
             dirs[:] = [d for d in dirs if not self._is_ignored(os.path.join(root, d))]
@@ -41,16 +72,32 @@ class ProjectMapperTool:
                     continue
 
                 full_path = os.path.join(root, file)
-                rel_path = os.path.relpath(full_path, start_dir)
+                rel_path_to_root = os.path.relpath(full_path, self.root_dir)
 
                 file_info = {
-                    "path": rel_path,
+                    "path": rel_path_to_root,
                     "type": self._guess_type(file),
                     "imports": self._extract_imports(full_path)
                 }
                 project_map["files"].append(file_info)
+                self._build_structure(project_map["structure"], rel_path_to_root.split(os.sep))
 
         return project_map
+
+    def _list_files_git(self, start_dir: str) -> Optional[List[str]]:
+        if not shutil.which("git"):
+            return None
+
+        try:
+            # Check if inside git repo
+            subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+                           cwd=start_dir, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            res = subprocess.run(["git", "ls-files", "-c", "-o", "--exclude-standard", "-z"], cwd=start_dir, check=True, capture_output=True, text=True)
+            files = res.stdout.split('\0')
+            return files
+        except Exception:
+            return None
 
     def _guess_type(self, filename: str) -> str:
         if filename.endswith(".py"): return "python"

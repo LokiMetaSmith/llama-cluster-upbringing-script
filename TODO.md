@@ -259,7 +259,7 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Optimize ExperimentTool Sandbox Creation:**
   - [x] Replaced `shutil.copytree` with `tar` snapshotting to reduce syscall overhead.
 - [x] **Optimize ProjectMapperTool Scanning:**
-  - [ ] Implemented `git ls-files` strategy for faster file listing in git repositories.
+  - [x] Implemented `git ls-files` strategy for faster file listing in git repositories.
 - [x] **Review Codebase for I/O Inefficiencies:**
   - **Goal:** Identify and optimize other areas with heavy syscall usage (e.g., logging, data processing).
   - **Strategy:** Look for repeated file opens/closes in loops, inefficient directory traversals, and opportunities to batch I/O or use `tar`/`sqlite` strategies.
