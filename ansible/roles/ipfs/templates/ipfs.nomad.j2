@@ -22,7 +22,7 @@ job "ipfs" {
         image = "ipfs/kubo:latest"
         network_mode = "host"
         volumes = [
-          "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs:/data/ipfs",
+          "/opt/unified_fs_backend/ipfs/${attr.unique.hostname}:/data/ipfs",
           "{{ nomad_models_dir }}:{{ nomad_models_dir }}:ro"
         ]
 

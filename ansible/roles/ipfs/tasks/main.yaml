@@ -52,9 +52,20 @@
   when: not ipfs_binary.stat.exists or (ipfs_version is defined and ipfs_version.stdout is defined and '0.41.0' not in ipfs_version.stdout)
 
 
-- name: Ensure IPFS data directory exists
+- name: Ensure IPFS node-specific data directories exist
   ansible.builtin.file:
-    path: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
+    path: "/opt/unified_fs_backend/ipfs/{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  loop: "{{ groups['all'] | default([inventory_hostname]) }}"
+  become: yes
+  when: inventory_hostname in groups['controller_nodes']
+
+- name: Ensure local IPFS data directory exists
+  ansible.builtin.file:
+    path: "{{ ipfs_path }}"
     state: directory
     mode: '0755'
   become: yes
@@ -98,3 +109,48 @@
     delay: 5
     timeout: 300
     state: started
+
+- name: Deploy automated IPFS P2P model pinning script
+  ansible.builtin.copy:
+    content: |
+      #!/bin/bash
+      # IPFS Automated P2P Model Pinning Script
+      # Scans our shared NFS models directory and pins all model files locally via --nocopy.
+
+      MODELS_DIR="{{ nomad_models_dir }}"
+      IPFS_PATH="{{ ipfs_path }}"
+      export IPFS_PATH
+      export PATH=$PATH:/usr/local/bin
+
+      if [ ! -d "$MODELS_DIR" ]; then
+          echo "Models directory $MODELS_DIR does not exist. Skipping."
+          exit 0
+      fi
+
+      echo "Starting automated IPFS model pinning..."
+      find "$MODELS_DIR" -type f | while IFS= read -r filepath; do
+          # Skip temporary or hidden files
+          if [[ "$(basename "$filepath")" =~ ^\. ]] || [[ "$filepath" == *"/tmp/"* ]]; then
+              continue
+          fi
+
+          echo "Pinning $filepath..."
+          # Pin via --nocopy so IPFS doesn't duplicate the bytes
+          ipfs add --nocopy -Q "$filepath"
+      done
+
+      echo "Automated IPFS model pinning complete."
+    dest: /usr/local/bin/ipfs_p2p_pin_models.sh
+    mode: '0755'
+    owner: root
+    group: root
+  become: yes
+
+- name: Configure daily 3:00 AM automated IPFS P2P pinning cron job
+  ansible.builtin.cron:
+    name: "Daily IPFS P2P model pinning"
+    minute: "0"
+    hour: "3"
+    job: "/bin/bash /usr/local/bin/ipfs_p2p_pin_models.sh >/dev/null 2>&1"
+    user: "root"
+  become: yes
