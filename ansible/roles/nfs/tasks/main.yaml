@@ -1,55 +1,72 @@
-- name: Install NFS Server packages
-  apt:
+---
+- name: Install NFS Server packages on controllers
+  ansible.builtin.apt:
     name:
       - nfs-kernel-server
       - nfs-common
     state: present
   when: inventory_hostname in groups['controller_nodes']
+  become: yes
 
-- name: Install NFS Client packages
-  apt:
+- name: Install NFS Client packages on workers
+  ansible.builtin.apt:
     name: nfs-common
     state: present
   when: inventory_hostname not in groups['controller_nodes']
+  become: yes
 
-- name: Create NFS export directory
-  file:
-    path: /srv/nfs/share
+- name: Create NFS backend directory on controllers
+  ansible.builtin.file:
+    path: /opt/unified_fs_backend
     state: directory
     mode: '0777'
-    owner: nobody
-    group: nogroup
+    owner: root
+    group: root
   when: inventory_hostname in groups['controller_nodes']
+  become: yes
 
 - name: Configure /etc/exports
-  template:
+  ansible.builtin.template:
     src: exports.j2
     dest: /etc/exports
+    mode: '0644'
   notify: restart nfs
   when: inventory_hostname in groups['controller_nodes']
+  become: yes
 
-- name: Start NFS Service
-  systemd:
+- name: Start NFS Service on controllers
+  ansible.builtin.systemd:
     name: nfs-kernel-server
     state: started
     enabled: yes
-  when: inventory_hostname in groups['controller_nodes'] and not ansible_check_mode
+  when:
+    - inventory_hostname in groups['controller_nodes']
+    - not ansible_check_mode
+  become: yes
 
-- name: Create mount point
-  file:
-    path: /mnt/cluster_share
+- name: Create client mount point directory
+  ansible.builtin.file:
+    path: /opt/unified_fs_backend
     state: directory
     mode: '0777'
+  become: yes
 
-- name: Mount NFS Share
-  mount:
-    path: /mnt/cluster_share
-    src: "{{ hostvars[groups['controller_nodes'][0]]['ansible_host'] | default(hostvars[groups['controller_nodes'][0]]['ansible_ssh_host']) | default('127.0.0.1') }}:/srv/nfs/share"
+- name: Mount NFS Share on all hosts
+  ansible.posix.mount:
+    path: /opt/unified_fs_backend
+    src: "{{ hostvars[groups['controller_nodes'][0]]['cluster_ip'] | default('127.0.0.1') }}:/opt/unified_fs_backend"
     fstype: nfs
-    opts: defaults
+    opts: "noatime,nodiratime,rsize=32768,wsize=32768,tcp,timeo=15,retrans=2,async,_netdev,bg"
     state: mounted
-  # Skip mounting on the controller itself to avoid circular dependency/locking issues?
-  # Actually, mounting NFS on the server itself is fine but efficientcy-wise simple bind mount is better.
-  # For simplicity of "distributed code", let's mount it everywhere.
-  # However, if IP is 127.0.0.1, it works.
+  become: yes
   when: not ansible_check_mode
+
+- name: Configure daily 2:00 AM automated backup cron job on controllers
+  ansible.builtin.cron:
+    name: "Daily Btrfs unified storage backup"
+    minute: "0"
+    hour: "2"
+    job: "/usr/bin/python3 /opt/cluster-infra/scripts/recover_os.py --create >/dev/null 2>&1"
+    user: "root"
+  when: inventory_hostname in groups['controller_nodes']
+  become: yes
