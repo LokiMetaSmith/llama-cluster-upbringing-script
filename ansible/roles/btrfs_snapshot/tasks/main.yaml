@@ -221,6 +221,8 @@
           --exclude=".pytest_cache/" \
           --exclude=".mypy_cache/" \
           --exclude="target/" \
+          --exclude="*.log" \
+          --exclude=".git/" \
           "{{ item }}/" "{{ btrfs_active_subvolume }}{{ item }}/"
       fi
     fi

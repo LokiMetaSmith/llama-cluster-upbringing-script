@@ -35,6 +35,8 @@ def test_recover_os_excludes_in_rsync():
                 assert "--exclude=.pytest_cache/" in args
                 assert "--exclude=.mypy_cache/" in args
                 assert "--exclude=target/" in args
+                assert "--exclude=*.log" in args
+                assert "--exclude=.git/" in args
                 assert "--delete" in args
         assert called, "rsync was not called during snapshot creation"
         assert mock_remove.called
@@ -68,6 +70,8 @@ def test_recover_os_excludes_in_rollback():
                 assert "--exclude=.pytest_cache/" in args
                 assert "--exclude=.mypy_cache/" in args
                 assert "--exclude=target/" in args
+                assert "--exclude=*.log" in args
+                assert "--exclude=.git/" in args
                 assert "--delete" in args
         assert called, "rsync was not called during rollback restoration"
 

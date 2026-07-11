@@ -63,7 +63,9 @@ def create_snapshot():
         "--exclude=__pycache__/",
         "--exclude=.pytest_cache/",
         "--exclude=.mypy_cache/",
-        "--exclude=target/"
+        "--exclude=target/",
+        "--exclude=*.log",
+        "--exclude=.git/"
     ]
     for p_dir in protected_dirs:
         if os.path.exists(p_dir):
@@ -185,7 +187,9 @@ def rollback_snapshot(target=None):
             "--exclude=__pycache__/",
             "--exclude=.pytest_cache/",
             "--exclude=.mypy_cache/",
-            "--exclude=target/"
+            "--exclude=target/",
+            "--exclude=*.log",
+            "--exclude=.git/"
         ]
         print("Restoring protected directories from snapshot back to system...")
         for p_dir in protected_dirs:
