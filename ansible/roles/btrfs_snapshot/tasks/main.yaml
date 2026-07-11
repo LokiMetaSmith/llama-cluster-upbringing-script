@@ -229,16 +229,32 @@
   changed_when: true
   when: btrfs_enabled
 
+- name: Get current timestamp from system
+  ansible.builtin.command: date +%Y%m%d%H%M%S
+  register: system_timestamp
+  changed_when: false
+  failed_when: false
+  when: btrfs_enabled
+
 - name: Create pre-deployment snapshot
   ansible.builtin.command:
-    cmd: "btrfs subvolume snapshot {{ btrfs_active_subvolume }} {{ btrfs_snapshot_dir }}/pre-deploy-{{ ansible_date_time.iso8601_basic_short | default('latest') }}"
+    cmd: "btrfs subvolume snapshot {{ btrfs_active_subvolume }} {{ btrfs_snapshot_dir }}/pre-deploy-{{ ansible_date_time.iso8601_basic_short | default(system_timestamp.stdout | default('latest')) }}"
   become: yes
   register: snapshot_result
   when: btrfs_enabled
 
+- name: Remove existing pre-deploy-latest directory/subvolume/link if exists
+  ansible.builtin.shell: |
+    if [ -e "{{ btrfs_snapshot_dir }}/pre-deploy-latest" ] || [ -L "{{ btrfs_snapshot_dir }}/pre-deploy-latest" ]; then
+      btrfs subvolume delete "{{ btrfs_snapshot_dir }}/pre-deploy-latest" 2>/dev/null || rm -rf "{{ btrfs_snapshot_dir }}/pre-deploy-latest"
+    fi
+  become: yes
+  failed_when: false
+  when: btrfs_enabled
+
 - name: Symlink current snapshot as pre-deploy-latest
   ansible.builtin.file:
-    src: "{{ btrfs_snapshot_dir }}/pre-deploy-{{ ansible_date_time.iso8601_basic_short | default('latest') }}"
+    src: "{{ btrfs_snapshot_dir }}/pre-deploy-{{ ansible_date_time.iso8601_basic_short | default(system_timestamp.stdout | default('latest')) }}"
     dest: "{{ btrfs_snapshot_dir }}/pre-deploy-latest"
     state: link
     force: yes
