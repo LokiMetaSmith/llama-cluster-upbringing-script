@@ -56,13 +56,22 @@ def create_snapshot():
 
     protected_dirs = get_protected_dirs()
     print("Synchronizing protected directories to Btrfs active subvolume...")
+    exclude_args = [
+        "--exclude=.venv/",
+        "--exclude=venv/",
+        "--exclude=node_modules/",
+        "--exclude=__pycache__/",
+        "--exclude=.pytest_cache/",
+        "--exclude=.mypy_cache/",
+        "--exclude=target/"
+    ]
     for p_dir in protected_dirs:
         if os.path.exists(p_dir):
             target_sub_dir = f"{BTRFS_ACTIVE_SUBVOLUME}{p_dir}"
             os.makedirs(target_sub_dir, exist_ok=True)
             print(f"  Syncing {p_dir} -> {target_sub_dir}")
             try:
-                subprocess.check_call(["rsync", "-a", "--delete", f"{p_dir}/", f"{target_sub_dir}/"])
+                subprocess.check_call(["rsync", "-a", "--delete"] + exclude_args + [f"{p_dir}/", f"{target_sub_dir}/"])
             except subprocess.CalledProcessError as e:
                 print(f"Warning: Failed to sync {p_dir}: {e}")
 
@@ -157,6 +166,15 @@ def rollback_snapshot(target=None):
 
         # Restore from active subvolume back to the system locations
         protected_dirs = get_protected_dirs()
+        exclude_args = [
+            "--exclude=.venv/",
+            "--exclude=venv/",
+            "--exclude=node_modules/",
+            "--exclude=__pycache__/",
+            "--exclude=.pytest_cache/",
+            "--exclude=.mypy_cache/",
+            "--exclude=target/"
+        ]
         print("Restoring protected directories from snapshot back to system...")
         for p_dir in protected_dirs:
             snapshot_source_dir = f"{BTRFS_ACTIVE_SUBVOLUME}{p_dir}"
@@ -164,7 +182,7 @@ def rollback_snapshot(target=None):
                 print(f"  Restoring {snapshot_source_dir} -> {p_dir}")
                 os.makedirs(p_dir, exist_ok=True)
                 try:
-                    subprocess.check_call(["rsync", "-a", "--delete", f"{snapshot_source_dir}/", f"{p_dir}/"])
+                    subprocess.check_call(["rsync", "-a", "--delete"] + exclude_args + [f"{snapshot_source_dir}/", f"{p_dir}/"])
                 except subprocess.CalledProcessError as e:
                     print(f"Warning: Failed to restore {p_dir}: {e}")
 
