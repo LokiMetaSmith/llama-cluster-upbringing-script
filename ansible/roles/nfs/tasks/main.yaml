@@ -44,6 +44,9 @@
     - not ansible_check_mode
   become: yes
 
+- name: Flush handlers to apply NFS export settings immediately
+  ansible.builtin.meta: flush_handlers
+
 - name: Create client mount point directory
   ansible.builtin.file:
     path: /opt/unified_fs_backend
