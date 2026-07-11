@@ -208,21 +208,20 @@
 
 - name: Synchronize current state of protected directories to active subvolume
   ansible.builtin.shell: |
-    mkdir -p "{{ btrfs_active_subvolume }}{{ item }}"
     if [ -d "{{ item }}" ]; then
-      rsync -a --delete \
-        --exclude=".venv/" \
-        --exclude="venv/" \
-        --exclude="node_modules/" \
-        --exclude="__pycache__/" \
-        --exclude=".pytest_cache/" \
-        --exclude=".mypy_cache/" \
-        --exclude="target/" \
-        "{{ item }}/" "{{ btrfs_active_subvolume }}{{ item }}/"
       if findmnt -n -o FSTYPE "{{ item }}" 2>/dev/null | grep -q 'nfs'; then
         echo "Skipping NFS mount {{ item }} on client node"
       else
-        rsync -a --delete "{{ item }}/" "{{ btrfs_active_subvolume }}{{ item }}/"
+        mkdir -p "{{ btrfs_active_subvolume }}{{ item }}"
+        rsync -a --delete \
+          --exclude=".venv/" \
+          --exclude="venv/" \
+          --exclude="node_modules/" \
+          --exclude="__pycache__/" \
+          --exclude=".pytest_cache/" \
+          --exclude=".mypy_cache/" \
+          --exclude="target/" \
+          "{{ item }}/" "{{ btrfs_active_subvolume }}{{ item }}/"
       fi
     fi
   loop: "{{ btrfs_protected_dirs }}"

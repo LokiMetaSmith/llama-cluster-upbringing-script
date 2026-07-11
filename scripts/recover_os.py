@@ -67,6 +67,18 @@ def create_snapshot():
     ]
     for p_dir in protected_dirs:
         if os.path.exists(p_dir):
+            try:
+                fstype = subprocess.check_output(
+                    ["findmnt", "-n", "-o", "FSTYPE", p_dir],
+                    text=True,
+                    stderr=subprocess.DEVNULL
+                ).strip()
+                if "nfs" in fstype:
+                    print(f"  Skipping NFS mount {p_dir} on client node")
+                    continue
+            except Exception:
+                pass
+
             target_sub_dir = f"{BTRFS_ACTIVE_SUBVOLUME}{p_dir}"
             os.makedirs(target_sub_dir, exist_ok=True)
             print(f"  Syncing {p_dir} -> {target_sub_dir}")
@@ -177,6 +189,18 @@ def rollback_snapshot(target=None):
         ]
         print("Restoring protected directories from snapshot back to system...")
         for p_dir in protected_dirs:
+            try:
+                fstype = subprocess.check_output(
+                    ["findmnt", "-n", "-o", "FSTYPE", p_dir],
+                    text=True,
+                    stderr=subprocess.DEVNULL
+                ).strip()
+                if "nfs" in fstype:
+                    print(f"  Skipping restore for NFS mount {p_dir} on client node")
+                    continue
+            except Exception:
+                pass
+
             snapshot_source_dir = f"{BTRFS_ACTIVE_SUBVOLUME}{p_dir}"
             if os.path.exists(snapshot_source_dir):
                 print(f"  Restoring {snapshot_source_dir} -> {p_dir}")
