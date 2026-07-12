@@ -53,6 +53,7 @@
     state: directory
     mode: '0777'
   become: yes
+  when: inventory_hostname not in groups['controller_nodes']
 
 - name: Mount NFS Share on all hosts
   ansible.posix.mount:
@@ -62,7 +63,9 @@
     opts: "noatime,nodiratime,rsize=32768,wsize=32768,tcp,timeo=15,retrans=2,async,_netdev,bg"
     state: mounted
   become: yes
-  when: not ansible_check_mode
+  when:
+    - inventory_hostname not in groups['controller_nodes']
+    - not ansible_check_mode
 
 - name: Configure daily 2:00 AM automated backup cron job on controllers
   ansible.builtin.cron:
