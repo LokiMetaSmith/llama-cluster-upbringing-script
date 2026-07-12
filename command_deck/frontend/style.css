@@ -920,3 +920,61 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--nerv-primary-muted);
 }
+
+/* TACTICAL TIMELINE REPLAY TICKER STYLES */
+.timeline-tick {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 0 0 4px currentColor;
+}
+
+.timeline-tick:hover {
+    transform: scale(1.3);
+    filter: brightness(1.3);
+    box-shadow: 0 0 8px currentColor;
+}
+
+.timeline-tick.tick-cool {
+    background-color: var(--nerv-secondary);
+    color: var(--nerv-secondary);
+}
+
+.timeline-tick.tick-warm {
+    background-color: var(--nerv-primary);
+    color: var(--nerv-primary);
+}
+
+.timeline-tick.tick-error {
+    background-color: var(--nerv-danger);
+    color: var(--nerv-danger);
+    animation: pulse-dot 1s ease-in-out infinite;
+}
+
+.timeline-tick-tooltip {
+    visibility: hidden;
+    background-color: var(--nerv-bg-elevated);
+    color: var(--nerv-text-primary);
+    text-align: center;
+    border: 1px solid var(--nerv-primary);
+    padding: 4px 8px;
+    position: absolute;
+    z-index: 100;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.timeline-tick:hover .timeline-tick-tooltip {
+    visibility: visible;
+    opacity: 1;
+}

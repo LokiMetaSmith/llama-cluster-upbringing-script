@@ -248,6 +248,37 @@
                         </div>
                     </div>
 
+                    <!-- Mindwalk-Inspired Tactical Playback Deck -->
+                    <div class="timeline-widget" id="playback-deck" style="margin-top: 10px; border: 1px solid var(--nerv-grid-strong); background-color: var(--nerv-bg-surface); padding: 8px; border-radius: 2px;">
+                        <div class="timeline-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-family: 'Share Tech Mono', monospace; font-size: 10px;">
+                            <span style="color: var(--nerv-primary); font-weight: bold; letter-spacing: 0.05em;">TACTICAL SESSION REPLAY // MINDWALK FEATURE INGESTION</span>
+                            <div class="timeline-hud-stats" style="display: flex; gap: 12px; color: var(--nerv-text-secondary);">
+                                <span>ACTIONS: <span id="hud-actions-count" style="color: var(--nerv-text-primary);">0</span></span>
+                                <span>EDITS: <span id="hud-edits-count" style="color: var(--nerv-caution);">0</span></span>
+                                <span>ERRORS: <span id="hud-errors-count" style="color: var(--nerv-danger);">0</span></span>
+                                <span>CHURN: <span id="hud-churn-count" style="color: var(--nerv-danger);">0</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Visual Rail Track -->
+                        <div class="timeline-track-container" style="position: relative; height: 18px; background-color: var(--nerv-bg-void); border: 1px solid var(--nerv-grid-strong); border-radius: 1px; display: flex; align-items: center; overflow: hidden; padding: 0 4px;">
+                            <div class="timeline-rail" id="timeline-rail" style="display: flex; gap: 3px; width: 100%; height: 10px; align-items: center;">
+                                <!-- Micro step indicators will be dynamically injected here -->
+                                <span class="timeline-empty-hint" style="color: var(--nerv-text-muted); font-size: 8px; font-family: 'Share Tech Mono', monospace; text-transform: uppercase;">Awaiting operational telemetry...</span>
+                            </div>
+                        </div>
+
+                        <!-- Legend and Scrub info -->
+                        <div class="timeline-footer" style="display: flex; justify-content: space-between; font-size: 9px; margin-top: 4px; color: var(--nerv-text-muted); font-family: 'Share Tech Mono', monospace;">
+                            <div class="legend" style="display: flex; gap: 8px;">
+                                <span style="display: flex; align-items: center; gap: 3px;"><span style="width: 5px; height: 5px; background-color: var(--nerv-secondary); border-radius: 50%;"></span> SEARCH / EXEC (COOL)</span>
+                                <span style="display: flex; align-items: center; gap: 3px;"><span style="width: 5px; height: 5px; background-color: var(--nerv-caution); border-radius: 50%;"></span> MUTATION (WARM)</span>
+                                <span style="display: flex; align-items: center; gap: 3px;"><span style="width: 5px; height: 5px; background-color: var(--nerv-danger); border-radius: 50%;"></span> SYSTEM ERROR</span>
+                            </div>
+                            <span id="timeline-playback-status">PLAYHEAD: READY</span>
+                        </div>
+                    </div>
+
                     <!-- Hazard stripes footer decoration for critical vibe -->
                     <div class="hazard-stripe red-stripe" style="height: 10px; opacity: 0.4; margin-top: 10px;"></div>
                 </div>
