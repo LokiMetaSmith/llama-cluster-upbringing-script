@@ -1,0 +1,30 @@
+{
+  "name": "mesh-llm",
+  "version": "1.0.0",
+  "image": "meshllm/mesh-llm:latest",
+  "ui": {
+    "title": "Mesh-LLM",
+    "description": "Decentralized peer-to-peer LLM inference mesh utilizing Skippy splits and Iroh QUIC networking.",
+    "icon": "🌐"
+  },
+  "resources": {
+    "cpu_mhz": 1500,
+    "memory_mb": 4096
+  },
+  "env": {
+    "MESH_DISCOVERY_MODE": "mdns",
+    "MESH_HEADLESS": "true",
+    "MESH_BIND_PORT": "47916",
+    "MESH_LISTEN_ALL": "true"
+  },
+  "network": {
+    "internal_port": 9337,
+    "route_public": true,
+    "domain": "local.mesh"
+  },
+  "storage": {
+    "enabled": true,
+    "size_gb": 10,
+    "mount_path": "/root/.mesh-llm"
+  }
+}
