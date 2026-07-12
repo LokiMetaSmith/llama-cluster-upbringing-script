@@ -11,6 +11,77 @@ const WorkflowEditor = {
         return Object.keys(this.nodeTypes).map(type => "agent/" + type);
     },
 
+    _validationTimeout: null,
+    validateGraph: function() {
+        if (this._validationTimeout) clearTimeout(this._validationTimeout);
+        this._validationTimeout = setTimeout(() => {
+            this._runValidation();
+        }, 500);
+    },
+
+    _runValidation: function() {
+        if (!this.graph) return;
+        const nodes = this.graph._nodes;
+        let errors = [];
+        let warnings = [];
+
+        if (!nodes || nodes.length === 0) {
+            this.showStatus("Empty canvas", "info");
+            return;
+        }
+
+        nodes.forEach(node => {
+            // 1. Check if node is missing required inputs
+            if (node.inputs) {
+                node.inputs.forEach(input => {
+                    if (input.link === null || input.link === undefined) {
+                        warnings.push(`'${node.title}' is missing input connection: '${input.name}'`);
+                    }
+                });
+            }
+
+            // 2. Check if properties are empty
+            if (node.properties) {
+                for (const [key, val] of Object.entries(node.properties)) {
+                    if (val === "" || val === null || val === undefined) {
+                        if (key !== '_last_output' && key !== 'id') {
+                            warnings.push(`Node '${node.title}' has empty property: '${key}'`);
+                        }
+                    }
+                }
+            }
+        });
+
+        const statusEl = document.getElementById('status-text');
+        if (!statusEl) return;
+
+        if (errors.length > 0) {
+            statusEl.textContent = "✗ Error: " + errors[0];
+            statusEl.className = "status-error";
+            statusEl.style.color = "#dc3545";
+        } else if (warnings.length > 0) {
+            statusEl.textContent = "⚠ Warning: " + warnings[0];
+            statusEl.className = "status-info";
+            statusEl.style.color = "#ff9900";
+        } else {
+            statusEl.textContent = "✓ Graph Valid";
+            statusEl.className = "status-success";
+            statusEl.style.color = "#28a745";
+        }
+    },
+
+    showStatus: function(msg, type) {
+        if (this.options && this.options.onStatusUpdate) {
+            this.options.onStatusUpdate(msg, type);
+        } else {
+            const statusEl = document.getElementById('status-text');
+            if (statusEl) {
+                statusEl.textContent = msg;
+                statusEl.className = "status-" + type;
+            }
+        }
+    },
+
     init: async function(containerId, options = {}) {
         this.options = options;
         this.graph = new LGraph();
@@ -57,6 +128,11 @@ const WorkflowEditor = {
                  this.canvas.resize(parent.clientWidth, parent.clientHeight);
             }, 100);
         }
+
+        // Setup validation triggers on graph changes
+        this.graph.onNodeAdded = () => { this.validateGraph(); };
+        this.graph.onNodeRemoved = () => { this.validateGraph(); };
+        this.graph.onConnectionChange = () => { this.validateGraph(); };
 
         // Setup Drag and Drop
         this.setupDragAndDrop(containerId);
@@ -124,9 +200,15 @@ const WorkflowEditor = {
                         this.addProperty(key, value);
                         // Add widgets for properties for easier editing
                         if (typeof value === 'boolean') {
-                            this.addWidget("toggle", key, value, (v) => { this.properties[key] = v; });
+                            this.addWidget("toggle", key, value, (v) => {
+                                this.properties[key] = v;
+                                WorkflowEditor.validateGraph();
+                            });
                         } else {
-                            this.addWidget("text", key, String(value), (v) => { this.properties[key] = v; });
+                            this.addWidget("text", key, String(value), (v) => {
+                                this.properties[key] = v;
+                                WorkflowEditor.validateGraph();
+                            });
                         }
                     }
                 }

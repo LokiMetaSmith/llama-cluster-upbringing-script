@@ -70,6 +70,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Left Panel Tab Switching via Alt+1..3
+    document.addEventListener('keydown', (e) => {
+        if (e.altKey && !e.ctrlKey && !e.shiftKey && e.key >= '1' && e.key <= '3') {
+            e.preventDefault();
+            const tabIndex = parseInt(e.key) - 1;
+            const targetBtn = tabBtns[tabIndex];
+            if (targetBtn) {
+                targetBtn.click();
+                targetBtn.focus();
+            }
+        }
+    });
+
     // --- 3. Dynamic Node Role Inputs ---
     nodeRoleSelect.addEventListener('change', () => {
         if (nodeRoleSelect.value === 'worker') {
@@ -491,4 +504,21 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
         console.error("Error setting webring dynamic URLs:", e);
     }
+
+    // Global Context Switching via Ctrl+1..5
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key >= '1' && e.key <= '5') {
+            e.preventDefault();
+            const host = window.location.hostname || '127.0.0.1';
+            const base8000 = `http://${host}:8000`;
+            const targets = {
+                '1': `${base8000}/`,
+                '2': `${base8000}/workflow`,
+                '3': `${base8000}/monitor`,
+                '4': `${base8000}/cluster`,
+                '5': `${base8000}/cluster_viz`
+            };
+            window.location.href = targets[e.key];
+        }
+    });
 });

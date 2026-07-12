@@ -864,4 +864,19 @@ document.addEventListener("DOMContentLoaded", function() {
             logToTerminal(escapeHtml(text));
         }
     }
+
+    // Global Context Switching via Ctrl+1..5
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key >= '1' && e.key <= '5') {
+            e.preventDefault();
+            const targets = {
+                '1': '/',
+                '2': '/workflow',
+                '3': '/monitor',
+                '4': '/cluster',
+                '5': '/cluster_viz'
+            };
+            window.location.href = targets[e.key];
+        }
+    });
 });
