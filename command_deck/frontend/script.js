@@ -226,10 +226,121 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- Mindwalk-Inspired Real-Time Telemetry Tracking ---
+    let sessionTelemetry = [];
+    const timelineRail = document.getElementById('timeline-rail');
+    const hudActionsCount = document.getElementById('hud-actions-count');
+    const hudEditsCount = document.getElementById('hud-edits-count');
+    const hudErrorsCount = document.getElementById('hud-errors-count');
+    const hudChurnCount = document.getElementById('hud-churn-count');
+    const playheadStatus = document.getElementById('timeline-playback-status');
+
+    function resetTelemetry() {
+        sessionTelemetry = [];
+        if (timelineRail) {
+            timelineRail.innerHTML = '<span class="timeline-empty-hint" style="color: var(--nerv-text-muted); font-size: 8px; font-family: \'Share Tech Mono\', monospace; text-transform: uppercase;">Awaiting operational telemetry...</span>';
+        }
+        if (hudActionsCount) hudActionsCount.textContent = '0';
+        if (hudEditsCount) hudEditsCount.textContent = '0';
+        if (hudErrorsCount) hudErrorsCount.textContent = '0';
+        if (hudChurnCount) hudChurnCount.textContent = '0';
+        if (playheadStatus) playheadStatus.textContent = 'PLAYHEAD: READY';
+    }
+
+    function addTelemetryTick(action, isError, summary) {
+        if (!timelineRail) return;
+
+        // Clear the placeholder hint on first event
+        const hint = timelineRail.querySelector('.timeline-empty-hint');
+        if (hint) {
+            timelineRail.innerHTML = '';
+        }
+
+        const seq = sessionTelemetry.length;
+        sessionTelemetry.push({ seq, action, isError, summary });
+
+        // Create Tick Element
+        const tick = document.createElement('div');
+        tick.className = 'timeline-tick';
+
+        // Color coding based on Mindwalk cool/warm observation/mutation model
+        if (isError) {
+            tick.classList.add('tick-error');
+        } else if (action === 'edit' || action === 'verify') {
+            tick.classList.add('tick-warm');
+        } else {
+            tick.classList.add('tick-cool');
+        }
+
+        // Tooltip for inspection
+        const tooltip = document.createElement('div');
+        tooltip.className = 'timeline-tick-tooltip';
+        tooltip.innerHTML = `STEP #${seq} [${action.toUpperCase()}]<br>${summary}`;
+        tick.appendChild(tooltip);
+
+        timelineRail.appendChild(tick);
+
+        // Scroll rail to show latest ticks if overflowed
+        timelineRail.scrollLeft = timelineRail.scrollWidth;
+
+        // Update HUD metrics
+        const totalActions = sessionTelemetry.length;
+        const editsCount = sessionTelemetry.filter(e => e.action === 'edit').length;
+        const errorsCount = sessionTelemetry.filter(e => e.isError).length;
+        const churnCount = editsCount >= 3 ? Math.floor(editsCount / 3) : 0;
+
+        if (hudActionsCount) hudActionsCount.textContent = totalActions;
+        if (hudEditsCount) hudEditsCount.textContent = editsCount;
+        if (hudErrorsCount) hudErrorsCount.textContent = errorsCount;
+        if (hudChurnCount) hudChurnCount.textContent = churnCount;
+
+        if (playheadStatus) {
+            playheadStatus.textContent = `PLAYHEAD: STEP #${seq} - ${action.toUpperCase()} (${summary})`;
+        }
+    }
+
+    function parseTelemetryFromLog(cleanText) {
+        // Simple heuristic search on logs to detect agent actions
+        const lowerText = cleanText.toLowerCase();
+
+        let action = null;
+        let isError = false;
+        let summary = "";
+
+        if (lowerText.includes('error') || lowerText.includes('failed') || lowerText.includes('exception') || lowerText.includes('fatal')) {
+            isError = true;
+        }
+
+        if (lowerText.includes('edit') || lowerText.includes('write') || lowerText.includes('modifying') || lowerText.includes('patch')) {
+            action = 'edit';
+            summary = 'Modifying codebase source files';
+        } else if (lowerText.includes('search') || lowerText.includes('find') || lowerText.includes('grep') || lowerText.includes('query')) {
+            action = 'search';
+            summary = 'Scanning repository structure';
+        } else if (lowerText.includes('verify') || lowerText.includes('validate') || lowerText.includes('checking') || lowerText.includes('playbook')) {
+            action = 'verify';
+            summary = 'Executing verification checks';
+        } else if (lowerText.includes('running') || lowerText.includes('executing') || lowerText.includes('command') || lowerText.includes('bash')) {
+            action = 'exec';
+            summary = 'Running system processes';
+        }
+
+        if (action) {
+            // Trim summary to fit nicely in tooltip
+            if (cleanText.trim().length > 0) {
+                const lines = cleanText.split('\n');
+                const firstLine = lines[0].substring(0, 40);
+                summary = firstLine.replace(/[>[✓✗!\]*]/g, '').trim() || summary;
+            }
+            addTelemetryTick(action, isError, summary);
+        }
+    }
+
     function writeToTerminal(text) {
         // Simple ANSI terminal clean handler (remove color markers if simple pre-wrap)
         // Basic clean for cleaner reading:
         let cleanText = text.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+        parseTelemetryFromLog(cleanText);
 
         // Append text node
         const lineEl = document.createElement('span');
@@ -244,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 8. UI State Modifiers ---
     function setSystemStatusActive(taskName) {
         isRunning = true;
+        resetTelemetry();
         sysStatusText.textContent = "ACTIVE OPERATION RUNNING";
         statusDot.className = 'pulsing-dot active-dot';
 
