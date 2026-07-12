@@ -159,6 +159,15 @@
   tags:
     - deploy_app
 
+- name: Copy resources directory
+  ansible.builtin.copy:
+    mode: '0755'
+    src: "{{ inventory_dir }}/pipecatapp/resources"
+    dest: "{{ pipecat_app_dir }}/"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy gossip_discovery module
   ansible.builtin.copy:
     mode: '0644'
