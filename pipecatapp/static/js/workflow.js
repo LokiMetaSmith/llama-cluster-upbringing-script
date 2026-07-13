@@ -408,10 +408,38 @@ document.addEventListener('DOMContentLoaded', async function () {
             const activeWorkflows = await activeResponse.json();
             const workflowIds = Object.keys(activeWorkflows);
 
+            const expertRouteEl = document.getElementById('hud-expert-route');
+            const agentStateEl = document.getElementById('hud-agent-state');
+            const powerStateEl = document.getElementById('hud-power-state');
+
             if (workflowIds.length > 0) {
                 // Focus on the first active workflow
                 const requestId = workflowIds[0];
                 const activeState = activeWorkflows[requestId];
+
+                // Extract active expert route from outputs
+                let activeRoute = "BALANCED_LLM";
+                if (activeState.node_outputs) {
+                    for (const [nodeId, output] of Object.entries(activeState.node_outputs)) {
+                        if (nodeId.toLowerCase().includes('router') || nodeId.toLowerCase().includes('expert')) {
+                            activeRoute = output.expert_name || output.model || nodeId;
+                            break;
+                        }
+                    }
+                }
+
+                if (expertRouteEl) {
+                    expertRouteEl.textContent = activeRoute.replace("Node", "").toUpperCase();
+                    expertRouteEl.style.color = "#ff9900";
+                }
+                if (agentStateEl) {
+                    agentStateEl.textContent = "ONLINE (ACTIVE)";
+                    agentStateEl.style.color = "#00ff00";
+                }
+                if (powerStateEl) {
+                    powerStateEl.textContent = "ONLINE (100%)";
+                    powerStateEl.style.color = "#00ff00";
+                }
 
                 // Assuming default workflow for active ones for now, or fetch if state has name
                 // Ideally activeState should include workflow_name
@@ -469,7 +497,18 @@ document.addEventListener('DOMContentLoaded', async function () {
 
             } else {
                  // No active workflow
-                 // Optionally clear graph or show empty state
+                 if (expertRouteEl) {
+                    expertRouteEl.textContent = "NONE";
+                    expertRouteEl.style.color = "#8b949e";
+                 }
+                 if (agentStateEl) {
+                    agentStateEl.textContent = "STANDBY";
+                    agentStateEl.style.color = "#ffaa00";
+                 }
+                 if (powerStateEl) {
+                    powerStateEl.textContent = "SLEEP (IDLE)";
+                    powerStateEl.style.color = "#ffaa00";
+                 }
             }
         } catch (error) {
             console.error('Error polling active workflows:', error);
@@ -648,4 +687,19 @@ document.addEventListener('DOMContentLoaded', async function () {
     startPolling();
     fetchHistory();
     if (assistantSlider) fetchPersonality();
+
+    // Global Context Switching via Ctrl+1..5
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key >= '1' && e.key <= '5') {
+            e.preventDefault();
+            const targets = {
+                '1': '/',
+                '2': '/workflow',
+                '3': '/monitor',
+                '4': '/cluster',
+                '5': '/cluster_viz'
+            };
+            window.location.href = targets[e.key];
+        }
+    });
 });

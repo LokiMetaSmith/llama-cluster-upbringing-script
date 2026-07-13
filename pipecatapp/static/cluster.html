@@ -135,10 +135,32 @@
 
     <canvas id="canvas"></canvas>
 
+    <!-- Accessible shadow container for keyboard-only users to discover and navigate nodes -->
+    <div id="accessible-nodes-list" role="listbox" aria-label="Active Cluster Nodes list" style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden;"></div>
+
     <div id="overlay">
         <h1>Llama Cluster Upbringing</h1>
         <div id="subtitle">Initializing visualization...</div>
         <div id="terminal" style="margin-bottom: 15px;"></div>
+
+        <!-- Live Orchestration HUD -->
+        <div id="live-hud" style="background: rgba(0, 0, 0, 0.75); border: 1px solid #30363d; border-radius: 6px; padding: 12px; width: 400px; box-sizing: border-box; margin-bottom: 15px; font-family: monospace; pointer-events: auto;">
+            <div style="color: #58a6ff; font-size: 12px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">⚡ LIVE ORCHESTRATION HUD</div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                    <span>ACTIVE EXPERT ROUTE:</span>
+                    <span id="hud-expert-route" style="color: #ff9900; font-weight: bold;">NONE</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                    <span>TWINSERVICE STATE:</span>
+                    <span id="hud-agent-state" style="color: #ffaa00;">STANDBY</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                    <span>POWER STATUS:</span>
+                    <span id="hud-power-state" style="color: #ffaa00;">SLEEP (IDLE)</span>
+                </div>
+            </div>
+        </div>
 
         <!-- Ouroboros Webring Navigation -->
         <div id="webring-nav" style="background: rgba(0, 0, 0, 0.75); border: 1px solid #30363d; border-radius: 6px; padding: 10px; width: 400px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; pointer-events: auto;">
@@ -293,6 +315,66 @@
                         }
                     }
                 });
+
+                // Fetch active workflows to update HUD
+                try {
+                    const activeRes = await fetch('/api/workflows/active', { headers: { 'Authorization': `Bearer ${localStorage.getItem('api_key') || ''}` } });
+                    if (activeRes.ok) {
+                        const activeWorkflows = await activeRes.json();
+                        const workflowIds = Object.keys(activeWorkflows);
+
+                        const expertRouteEl = document.getElementById('hud-expert-route');
+                        const agentStateEl = document.getElementById('hud-agent-state');
+                        const powerStateEl = document.getElementById('hud-power-state');
+
+                        if (workflowIds.length > 0) {
+                            const requestId = workflowIds[0];
+                            const activeState = activeWorkflows[requestId];
+
+                            let activeRoute = "BALANCED_LLM";
+                            if (activeState.node_outputs) {
+                                for (const [nodeId, output] of Object.entries(activeState.node_outputs)) {
+                                    if (nodeId.toLowerCase().includes('router') || nodeId.toLowerCase().includes('expert')) {
+                                        activeRoute = output.expert_name || output.model || nodeId;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (expertRouteEl) {
+                                expertRouteEl.textContent = activeRoute.replace("Node", "").toUpperCase();
+                                expertRouteEl.style.color = "#ff9900";
+                            }
+                            if (agentStateEl) {
+                                agentStateEl.textContent = "ONLINE (ACTIVE)";
+                                agentStateEl.style.color = "#00ff00";
+                            }
+                            if (powerStateEl) {
+                                powerStateEl.textContent = "ONLINE (100%)";
+                                powerStateEl.style.color = "#00ff00";
+                            }
+                        } else {
+                            if (expertRouteEl) {
+                                expertRouteEl.textContent = "NONE";
+                                expertRouteEl.style.color = "#8b949e";
+                            }
+                            if (agentStateEl) {
+                                agentStateEl.textContent = "STANDBY";
+                                agentStateEl.style.color = "#ffaa00";
+                            }
+                            if (powerStateEl) {
+                                powerStateEl.textContent = "SLEEP (IDLE)";
+                                powerStateEl.style.color = "#ffaa00";
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.warn("Failed to fetch active workflows inside cluster viz", err);
+                }
+
+                // Update accessible shadow list for screen readers / keyboard users
+                updateAccessibleList();
+
             } catch (e) {
                 console.warn("Failed to fetch metrics", e);
             }
@@ -482,6 +564,7 @@
             if (!data) return;
             const p = new Particle(width/2 + (Math.random()-0.5)*50, height/2 + (Math.random()-0.5)*50, data);
             particles.push(p);
+            updateAccessibleList();
             return p;
         }
 
@@ -846,9 +929,68 @@
             requestAnimationFrame(animate);
         }
 
+        function updateAccessibleList() {
+            const container = document.getElementById('accessible-nodes-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            particles.forEach(p => {
+                if (!p.visible) return;
+                const btn = document.createElement('button');
+                btn.textContent = p.data.label || p.data.id;
+                btn.setAttribute('aria-label', `${p.data.label || p.data.id}, type ${p.data.type}, status ${p.data.status || 'unknown'}`);
+
+                // Highlight on focus
+                btn.onfocus = () => {
+                    draggedParticle = p; // visually highlights the node
+                    // Draw tooltip
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = p.x + 'px';
+                    tooltip.style.top = p.y + 'px';
+
+                    let content = `<strong>${p.data.label || p.data.id}</strong>\n`;
+                    content += `Type: ${p.data.type}\n`;
+                    if (p.data.cpu !== undefined) content += `CPU: ${(p.data.cpu * 100).toFixed(1)}%\n`;
+                    if (p.data.status) content += `Status: ${p.data.status}\n`;
+                    tooltip.innerHTML = content;
+                };
+
+                btn.onblur = () => {
+                    if (draggedParticle === p) draggedParticle = null;
+                    tooltip.style.display = 'none';
+                };
+
+                // Trigger URL navigation on click
+                btn.onclick = () => {
+                    if (p.data.url && p.data.url !== '#') {
+                        let url = p.data.url;
+                        url = url.replace('localhost', window.location.hostname).replace('127.0.0.1', window.location.hostname);
+                        window.open(url, '_blank');
+                    }
+                };
+
+                container.appendChild(btn);
+            });
+        }
+
         window.addEventListener('resize', resize);
         resize();
         animate();
+
+        // Global Context Switching via Ctrl+1..5
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key >= '1' && e.key <= '5') {
+                e.preventDefault();
+                const targets = {
+                    '1': '/',
+                    '2': '/workflow',
+                    '3': '/monitor',
+                    '4': '/cluster',
+                    '5': '/cluster_viz'
+                };
+                window.location.href = targets[e.key];
+            }
+        });
 
     </script>
 </body>

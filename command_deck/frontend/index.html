@@ -14,16 +14,13 @@
             box-shadow: 0 0 8px var(--nerv-primary-glow);
             border-color: var(--nerv-primary) !important;
         }
-        /* Accessibility: High contrast focus indicator matching NERV theme */
-        .btn-nerv-webring:focus-visible,
-        .tab-btn:focus-visible,
-        .deck-select:focus-visible,
-        .deck-input:focus-visible,
-        .btn-desktop:focus-visible,
-        .btn-primary:focus-visible,
-        .filter-btn:focus-visible,
-        .btn-deploy-model:focus-visible,
-        .btn-diag-action:focus-visible {
+        /* Accessibility: Universal High contrast focus indicator matching NERV theme */
+        a:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible,
+        [tabindex]:focus-visible {
             outline: 2px solid var(--nerv-primary) !important;
             outline-offset: 2px !important;
             box-shadow: 0 0 8px var(--nerv-primary-glow) !important;

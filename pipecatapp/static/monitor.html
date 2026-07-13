@@ -30,6 +30,24 @@
                 <div id="personality-status" style="margin-top: 10px; font-size: 0.8em; color: #8b949e;"></div>
             </div>
 
+            <div id="live-hud-panel" style="margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #30363d; font-family: monospace;">
+                <h2 style="color: #58a6ff; font-size: 14px; margin: 0 0 10px 0; text-transform: uppercase;">⚡ Live Orchestration HUD</h2>
+                <div style="background: #000; border: 1px solid #30363d; padding: 10px; border-radius: 4px; font-size: 11px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>ACTIVE EXPERT ROUTE:</span>
+                        <span id="hud-expert-route" style="color: #ff9900; font-weight: bold;">NONE</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>TWINSERVICE STATE:</span>
+                        <span id="hud-agent-state" style="color: #ffaa00;">STANDBY</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>POWER STATE:</span>
+                        <span id="hud-power-state" style="color: #ffaa00;">SLEEP (IDLE)</span>
+                    </div>
+                </div>
+            </div>
+
             <h2>Workflow Runs</h2>
             <div style="padding: 5px;">
                 <button id="refresh-history-btn" class="refresh-btn" aria-label="Refresh workflow history">
