@@ -162,12 +162,12 @@ These structural suggestions are targeted for a future major release to signific
   - **Tasks:**
     1. [x] Introduce `OUTPUT_RESERVE_CAP = 2000` inside `pipecatapp/llm_clients.py` and `expert_tracker.py`.
     2. [x] Clamp pre-flight reservation checks while passing the original limit to selected providers.
-- [ ] **Phase 3: Integrating Failover with Swarm Auto-Scaling**
+- [x] **Phase 3: Integrating Failover with Swarm Auto-Scaling**
   - **Goal:** Connect failover signals directly with the Nomad Task Supervisor and SwarmTool.
   - **Tasks:**
-    1. Catch hard cooldown/exhaustion exceptions from the gateway in the `TaskSupervisor`.
-    2. Dynamically trigger `SwarmTool.spawn_workers` to spin up a fresh GGUF/vLLM instance when all active local keys/providers are exhausted.
-    3. Implement lightweight, non-blocking queueing for requests while the new container boots and pre-warms.
+    1. [x] Catch hard cooldown/exhaustion exceptions from the gateway in the `TaskSupervisor`.
+    2. [x] Dynamically trigger `SwarmTool.spawn_workers` to spin up a fresh GGUF/vLLM instance when all active local keys/providers are exhausted.
+    3. [x] Implement lightweight, non-blocking queueing for requests while the new container boots and pre-warm.
 - [ ] **Phase 4: Context Handoff for Swarm Nodes**
   - **Goal:** Smooth multi-turn transitions when rate limits or node restarts force a switch.
   - **Tasks:**
