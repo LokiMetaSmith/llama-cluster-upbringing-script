@@ -19,6 +19,40 @@ class AutoloopTool:
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.name = "autoloop"
+        self.description = (
+            "A tool providing direct, lightweight access to the `autoloop-ai` library. "
+            "It allows iterative, hill-climbing optimization on any target file "
+            "using a custom metric command."
+        )
+        self.input_schema = {
+            "type": "object",
+            "properties": {
+                "target_file": {
+                    "type": "string",
+                    "description": "The specific file to mutate in each iteration."
+                },
+                "metric_command": {
+                    "type": "string",
+                    "description": "Shell command to run. Its exit code determines success (0 = pass)."
+                },
+                "directives": {
+                    "type": "string",
+                    "description": "Plain text research goals / instructions for optimization."
+                },
+                "experiments": {
+                    "type": "integer",
+                    "default": 5,
+                    "description": "Number of hypothesize -> edit -> eval loops to run."
+                },
+                "agent": {
+                    "type": "string",
+                    "default": "claude",
+                    "description": "The LLM backend to use (e.g., 'claude', 'openai')."
+                }
+            },
+            "required": ["target_file", "metric_command", "directives"]
+        }
 
     async def run(self,
                   target_file: str,

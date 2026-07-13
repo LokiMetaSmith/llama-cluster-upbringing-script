@@ -11,7 +11,21 @@ class OCRTool:
     """A tool to extract text from an image or PDF using the baidu/Unlimited-OCR model."""
     name = "ocr_tool"
     description = "Use this tool to extract text, tables, and parse contents from an image or PDF file using a powerful OCR model. Provide the absolute file_path."
-    input_schema = OCRToolInput.schema()
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "file_path": {
+                "type": "string",
+                "description": "The path to the image (.jpg, .png) or PDF (.pdf) file to process with OCR."
+            },
+            "prompt": {
+                "type": "string",
+                "default": "<image>document parsing.",
+                "description": "The prompt to guide the OCR extraction. Defaults to generic document parsing."
+            }
+        },
+        "required": ["file_path"]
+    }
 
     def __init__(self):
         # We don't initialize the model here to save memory.

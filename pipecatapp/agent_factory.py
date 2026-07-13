@@ -58,16 +58,30 @@ from tools.ouroboros_tool import OuroborosTool
 from tools.ternlight_tool import TernlightTool
 from tools.external_app_manager_tool import ExternalAppManagerTool
 from tools.jacobian_lens_tool import JacobianLensTool
+from tools.wasm_tool import WasmTool
+from tools.autoloop_tool import AutoloopTool
+from tools.cq_tool import CQ_Tool
+from tools.document_tool import DocumentTool
+from tools.heretic_tool import HereticTool
+from tools.jules_tool import JulesTool
+from tools.ocr_tool import OCRTool
+from tools.open_workers_tool import OpenWorkersTool
+from tools.p2p_sync_tool import P2PSyncTool
+from tools.project_overview_tool import ProjectOverviewTool
+from tools.spec_loader_tool import SpecLoaderTool
+from tools.update_litellm_tool import UpdateLitellmTool
+from tools.get_nomad_job import GetNomadJobTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
     "ssh", "desktop_control", "code_runner", "web_browser",
     "ansible", "power", "term_everything", "rag", "ha",
-    "git", "orchestrator", "opencode_provider"
+    "git", "orchestrator", "opencode_provider",
+    "ocr", "wasm", "heretic"
 ]
 
 # Heavy tools that should ideally be offloaded to the Tool Server for microservice de-monolithization
-HEAVY_TOOLS = ["rag", "code_runner", "ansible"]
+HEAVY_TOOLS = ["rag", "code_runner", "ansible", "ocr", "wasm", "heretic"]
 
 def create_tools(config: dict, twin_service=None, runner=None) -> dict:
     """
@@ -159,6 +173,30 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
             nomad_url=config.get('nomad_url')
         ),
         "jacobian_lens": JacobianLensTool(),
+        "wasm": WasmTool(wasm_path=config.get("wasm_path")),
+        "autoloop": AutoloopTool(),
+        "cq": CQ_Tool(),
+        "document": DocumentTool(
+            backend_config=config.get("document_backend", {"type": "local", "directory": "/opt/pipecatapp"})
+        ),
+        "heretic": HereticTool(root_dir=config.get("heretic_root_dir")),
+        "jules": JulesTool(api_key=config.get("jules_api_key")),
+        "ocr": OCRTool(),
+        "openworkers": OpenWorkersTool(
+            api_url=config.get("openworkers_api_url"),
+            token=config.get("openworkers_token")
+        ),
+        "p2p_sync": P2PSyncTool(
+            base_dir=config.get("p2p_sync_base_dir"),
+            gui_port=config.get("p2p_sync_gui_port", 8384),
+            listen_port=config.get("p2p_sync_listen_port", 22000)
+        ),
+        "project_overview": ProjectOverviewTool(),
+        "spec_loader": SpecLoaderTool(
+            work_dir=config.get("spec_loader_work_dir", "/opt/pipecatapp/specs")
+        ),
+        "update_litellm": UpdateLitellmTool(),
+        "get_nomad_job": GetNomadJobTool(),
     }
 
     # Inject memory client into SwarmTool if available (for Map-Reduce)

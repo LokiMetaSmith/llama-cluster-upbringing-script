@@ -11,6 +11,15 @@ class ProjectOverviewTool:
     def __init__(self):
         self.name = "project_overview"
         self.description = "Provides a high-level project overview by returning the contents of key documentation files (like README.md, AGENTS.md, and docs/README.md) along with the root directory structure. Takes no arguments."
+        self.input_schema = {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+
+    def run(self, **kwargs) -> str:
+        """Runs the project overview tool."""
+        return self.execute()
 
     def execute(self, arguments: dict = None) -> str:
         """

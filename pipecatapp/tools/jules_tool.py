@@ -22,6 +22,28 @@ class JulesTool:
         self.name = "jules"
         self.api_key = api_key or os.getenv("JULES_API_KEY")
         self.base_url = "https://jules.googleapis.com/v1alpha"
+        self.input_schema = {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "The task description or crash logs to delegate to Jules."
+                },
+                "source": {
+                    "type": "string",
+                    "description": "The source repository context (e.g., 'sources/github/bobalover/boba')."
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Optional title for the autonomous coding session."
+                },
+                "automation_mode": {
+                    "type": "string",
+                    "description": "Optional automation mode (e.g., 'AUTO_CREATE_PR')."
+                }
+            },
+            "required": ["prompt", "source"]
+        }
 
     async def run(self, prompt: str, source: str, title: str = None, automation_mode: str = None) -> str:
         """Runs a task using the Jules agent by creating a new session.

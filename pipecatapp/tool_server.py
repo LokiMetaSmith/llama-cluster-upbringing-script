@@ -25,6 +25,9 @@ from tools.rag_tool import RAG_Tool
 from tools.ha_tool import HA_Tool
 from tools.git_tool import Git_Tool
 from tools.orchestrator_tool import OrchestratorTool
+from tools.ocr_tool import OCRTool
+from tools.wasm_tool import WasmTool
+from tools.heretic_tool import HereticTool
 from pmm_memory import PMMMemory
 
 app = FastAPI()
@@ -48,6 +51,9 @@ tools = {
     "rag": RAG_Tool(pmm_memory=None, base_dir="/mnt/host_repo"),
     "git": Git_Tool(),
     "orchestrator": OrchestratorTool(),
+    "ocr": OCRTool(),
+    "wasm": WasmTool(),
+    "heretic": HereticTool(),
 }
 
 if os.getenv("HA_URL") and os.getenv("HA_TOKEN"):

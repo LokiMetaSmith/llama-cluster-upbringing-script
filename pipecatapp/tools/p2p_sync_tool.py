@@ -14,6 +14,42 @@ class P2PSyncTool:
     """A tool to manage P2P file synchronization (like .gguf models) using Syncthing."""
 
     def __init__(self, base_dir: Optional[str] = None, name: str = "agent_node", gui_port: int = 8384, listen_port: int = 22000):
+        self.name = "p2p_sync"
+        self.description = "A tool to manage P2P file synchronization (like .gguf models) using Syncthing."
+        self.input_schema = {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["start", "stop", "add_peer", "share_folder", "status"],
+                    "description": "The P2P sync action to perform."
+                },
+                "peer_device_id": {
+                    "type": "string",
+                    "description": "The device ID of the peer Syncthing node."
+                },
+                "address": {
+                    "type": "string",
+                    "description": "IP/host and port of the peer node (required for 'add_peer')."
+                },
+                "folder_id": {
+                    "type": "string",
+                    "description": "The ID of the synchronized folder."
+                },
+                "path": {
+                    "type": "string",
+                    "description": "The local path for the folder (required for 'share_folder')."
+                },
+                "folder_type": {
+                    "type": "string",
+                    "enum": ["sendreceive", "sendonly", "receiveonly"],
+                    "default": "sendreceive",
+                    "description": "Type of synchronization for the folder."
+                }
+            },
+            "required": ["action"]
+        }
+
         self.name_tool = "p2p_sync_tool"
 
         if base_dir is None:
@@ -279,3 +315,26 @@ class P2PSyncTool:
             return f"Error: Could not retrieve status (Status Code: {res.status_code})"
         except Exception as e:
             return f"Error checking sync status: {e}"
+
+    def run(self, action: str, **kwargs) -> str:
+        """Runs the specified Syncthing action."""
+        if action == "start":
+            return self.initialize_and_start()
+        elif action == "stop":
+            return self.stop()
+        elif action == "add_peer":
+            peer_device_id = kwargs.get("peer_device_id", "")
+            address = kwargs.get("address", "")
+            return self.add_peer(peer_device_id, address)
+        elif action == "share_folder":
+            folder_id = kwargs.get("folder_id", "")
+            path = kwargs.get("path", "")
+            peer_device_id = kwargs.get("peer_device_id", "")
+            folder_type = kwargs.get("folder_type", "sendreceive")
+            return self.share_folder(folder_id, path, peer_device_id, folder_type)
+        elif action == "status":
+            peer_device_id = kwargs.get("peer_device_id", "")
+            folder_id = kwargs.get("folder_id", "")
+            return self.check_sync_status(peer_device_id, folder_id)
+        else:
+            return f"Error: Unknown action '{action}'"
