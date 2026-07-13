@@ -93,6 +93,7 @@ class RAG_Tool:
         self.initialization_error = None
 
         # Initialize ChromaDB persistent client
+        import chromadb
         self.chromadb_dir = os.path.join(os.getcwd(), "chromadb_storage")
         os.makedirs(self.chromadb_dir, exist_ok=True)
         import chromadb

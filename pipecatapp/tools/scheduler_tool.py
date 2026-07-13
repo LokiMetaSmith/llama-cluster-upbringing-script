@@ -42,6 +42,7 @@ class SchedulerTool:
                                    e.g., "0 9 * * *" for daily at 9 AM.
                                    "*/15 * * * *" for every 15 minutes.
         """
+        from apscheduler.triggers.cron import CronTrigger
         try:
             parts = cron_expression.strip().split()
             if len(parts) != 5:
@@ -65,6 +66,7 @@ class SchedulerTool:
         """
         Schedules a task to run repeatedly at a fixed interval.
         """
+        from apscheduler.triggers.interval import IntervalTrigger
         if minutes == 0 and seconds == 0 and hours == 0:
             return "Error: Interval must be greater than 0."
 

@@ -19,6 +19,24 @@ class TaskSupervisor:
         self.check_interval = 30  # seconds
         self.task_timeout = 300   # seconds (5 minutes)
 
+    async def handle_gateway_exhaustion(self, expert_name: str) -> bool:
+        """
+        Intercepts failover/exhaustion signals from the gateway.
+        Triggers SwarmTool.spawn_workers to dynamically provision a fresh expert model.
+        """
+        self.logger.warning(f"Gateway reported critical exhaustion for expert '{expert_name}'. Spawning fallback worker...")
+        try:
+            # Dynamically spawn a new worker to handle the load/failover
+            spawn_res = await self.swarm_tool.spawn_workers(
+                tasks=[{"id": f"failover-{expert_name}-{int(time.time())}", "prompt": f"Handle overflow requests for expert {expert_name}", "context": ""}],
+                agent_type="worker"
+            )
+            self.logger.info(f"Dynamic failover worker spawn result: {spawn_res}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to spawn dynamic failover worker for '{expert_name}': {e}")
+            return False
+
     async def start(self):
         """Starts the background monitoring loop."""
         self.logger.info("TaskSupervisor monitoring loop started.")
