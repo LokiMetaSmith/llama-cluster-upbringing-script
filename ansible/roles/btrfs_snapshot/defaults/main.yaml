@@ -7,7 +7,7 @@ btrfs_format_device: false
 
 # Fallback sparse file details if physical device is unavailable
 btrfs_loop_file: "/opt/btrfs_root.img"
-btrfs_loop_file_size: "5G"
+btrfs_loop_file_size: "15G"
 
 # Directories to back up/protect and sync to the Btrfs active subvolume
 btrfs_protected_dirs:
