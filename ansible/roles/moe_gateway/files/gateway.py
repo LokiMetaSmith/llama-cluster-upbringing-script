@@ -26,6 +26,9 @@ CONSUL_HTTP_ADDR = os.getenv("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
 DB_DIR = os.getenv("GATEWAY_DB_DIR", "/tmp/gateway_data")
 DB_PATH = os.path.join(DB_DIR, "gateway_metrics.db")
 
+import math
+import random
+
 # --- Database Setup ---
 def init_db():
     try:
@@ -43,6 +46,11 @@ def init_db():
                 latency REAL
             )
         ''')
+        # Idempotent migration to add expert_name column
+        c.execute("PRAGMA table_info(requests)")
+        columns = [row[1] for row in c.fetchall()]
+        if "expert_name" not in columns:
+            c.execute("ALTER TABLE requests ADD COLUMN expert_name TEXT DEFAULT 'default'")
         conn.commit()
         conn.close()
     except Exception as e:
@@ -51,23 +59,155 @@ def init_db():
 # Initialize DB synchronously on startup (safe as it's once)
 init_db()
 
-def _log_request_sync(request_id: str, timestamp: float, user_input: str, response: str, status_code: int, latency: float):
+def _log_request_sync(request_id: str, timestamp: float, user_input: str, response: str, status_code: int, latency: float, expert_name: str = 'default'):
     """Synchronous DB write."""
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute('''
-            INSERT OR REPLACE INTO requests (request_id, timestamp, user_input, response, status_code, latency)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (request_id, timestamp, user_input, response, status_code, latency))
+            INSERT OR REPLACE INTO requests (request_id, timestamp, user_input, response, status_code, latency, expert_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (request_id, timestamp, user_input, response, status_code, latency, expert_name))
         conn.commit()
         conn.close()
     except Exception as e:
         logger.error(f"Failed to log request to DB: {e}")
 
-async def log_request(request_id: str, timestamp: float, user_input: str, response: str, status_code: int, latency: float):
+async def log_request(request_id: str, timestamp: float, user_input: str, response: str, status_code: int, latency: float, expert_name: str = 'default'):
     """Async wrapper for DB write."""
-    await asyncio.to_thread(_log_request_sync, request_id, timestamp, user_input, response, status_code, latency)
+    await asyncio.to_thread(_log_request_sync, request_id, timestamp, user_input, response, status_code, latency, expert_name)
+
+# --- Thompson Sampling Scorer (Marsaglia-Tsang) ---
+def random_normal() -> float:
+    u1 = random.random() or 1e-15
+    return math.sqrt(-2.0 * math.log(u1)) * math.cos(2.0 * math.pi * random.random())
+
+def sample_gamma(shape: float) -> float:
+    if shape < 1.0:
+        return sample_gamma(shape + 1.0) * math.pow(random.random() or 1e-15, 1.0 / shape)
+    d = shape - 1.0 / 3.0
+    c = 1.0 / math.sqrt(9.0 * d)
+    while True:
+        x = random_normal()
+        v = 1.0 + c * x
+        while v <= 0.0:
+            x = random_normal()
+            v = 1.0 + c * x
+        v = v ** 3
+        u = random.random()
+        if u < 1.0 - 0.0331 * x ** 4:
+            return d * v
+        if math.log(u) < 0.5 * x * x + d * (1.0 - v + math.log(v)):
+            return d * v
+
+def sample_beta(alpha: float, beta: float) -> float:
+    x = sample_gamma(alpha)
+    y = sample_gamma(beta)
+    sum_xy = x + y
+    return x / sum_xy if sum_xy > 0.0 else 0.5
+
+# --- External Experts Configuration ---
+EXTERNAL_EXPERTS_CONFIG_STR = os.getenv("EXTERNAL_EXPERTS_CONFIG", "{}")
+try:
+    EXTERNAL_EXPERTS = json.loads(EXTERNAL_EXPERTS_CONFIG_STR)
+except Exception:
+    EXTERNAL_EXPERTS = {}
+
+if not EXTERNAL_EXPERTS:
+    EXTERNAL_EXPERTS = {
+        "openai_gpt4": {"model": "gpt-4-turbo"},
+        "openrouter_claude_sonnet": {"model": "anthropic/claude-3.5-sonnet"},
+        "openrouter_gemini_flash": {"model": "google/gemini-2.0-flash-001"}
+    }
+
+def get_expert_scores(db_path: str, external_experts: dict) -> dict:
+    """
+    Calculates decay-weighted successes and failures for each expert,
+    and draws a Thompson Sample for reliability.
+    """
+    now = time.time()
+    # Decay parameters: half-life of 2 days (172800 seconds)
+    HALF_LIFE = 2.0 * 24.0 * 60.0 * 60.0
+
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    try:
+        c.execute('''
+            SELECT expert_name, status_code, timestamp, latency
+            FROM requests
+            WHERE timestamp >= ?
+        ''', (now - 7 * 24 * 3600,))
+        rows = c.fetchall()
+    except Exception as e:
+        logger.error(f"Failed to query requests history: {e}")
+        rows = []
+    finally:
+        conn.close()
+
+    counts = {name: {"successes": 0.0, "failures": 0.0, "latencies": []} for name in external_experts}
+    if 'default' not in counts:
+        counts['default'] = {"successes": 0.0, "failures": 0.0, "latencies": []}
+
+    for row in rows:
+        expert_name = row[0]
+        status = row[1]
+        ts = row[2]
+        lat = row[3] or 0.0
+
+        if expert_name not in counts:
+            counts[expert_name] = {"successes": 0.0, "failures": 0.0, "latencies": []}
+
+        age = max(0, now - ts)
+        weight = 0.5 ** (age / HALF_LIFE)
+
+        if status == 200:
+            counts[expert_name]["successes"] += weight
+            counts[expert_name]["latencies"].append(lat)
+        else:
+            counts[expert_name]["failures"] += weight
+
+    scores = {}
+    for name, metric in counts.items():
+        alpha = metric["successes"] + 1.0 # PRIOR_SUCCESS
+        beta = metric["failures"] + 1.0 # PRIOR_FAILURE
+
+        # Thompson Sample Reliability
+        reliability = sample_beta(alpha, beta)
+
+        # Speed score from average latency
+        avg_lat = sum(metric["latencies"]) / len(metric["latencies"]) if metric["latencies"] else 1.0
+        speed = 1.0 - min(1.0, max(0.0, (avg_lat - 0.1) / (5.0 - 0.1)))
+
+        # Intelligence score normalized
+        intel = 0.5
+        if name == "openai_gpt4":
+            intel = 0.9
+        elif "claude" in name or "r1" in name or "o1" in name or "gpt-5" in name:
+            intel = 0.95
+        elif "qwen_72b" in name:
+            intel = 0.8
+        elif "flash" in name or "mini" in name:
+            intel = 0.4
+
+        score = 0.5 * reliability + 0.25 * speed + 0.25 * intel
+        scores[name] = score
+
+    return scores
+
+def select_best_expert() -> str:
+    """Selects the highest scoring expert based on Thompson Sampling scores."""
+    try:
+        scores = get_expert_scores(DB_PATH, EXTERNAL_EXPERTS)
+        # Exclude 'default' from dynamic selection unless it is the only one
+        candidate_scores = {k: v for k, v in scores.items() if k != 'default'}
+        if not candidate_scores:
+            candidate_scores = scores
+        best_expert = max(candidate_scores, key=candidate_scores.get)
+        logger.info(f"Thompson-sampling bandit chose expert: {best_expert} (score={candidate_scores[best_expert]:.4f})")
+        return best_expert
+    except Exception as e:
+        logger.error(f"Error selecting best expert: {e}")
+        return "default"
 
 def _get_recent_requests_sync(limit: int) -> List[Dict]:
     """Synchronous DB read."""
@@ -231,6 +371,9 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
         if not PIPECAT_SERVICE_URL:
             return JSONResponse(status_code=503, content={"error": "pipecat-app service not available"})
 
+    # Dynamic expert selection using Thompson-sampling convex combination
+    selected_expert = select_best_expert()
+
     request_id = str(uuid.uuid4())
     event = asyncio.Event()
     pending_requests[request_id] = {"event": event, "response": None}
@@ -240,7 +383,7 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
     last_user_message = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
 
     # Store initial log entry (status 0 = pending)
-    await log_request(request_id, start_time, last_user_message, "", 0, 0)
+    await log_request(request_id, start_time, last_user_message, "", 0, 0, selected_expert)
 
     try:
         if not last_user_message:
@@ -250,7 +393,8 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
             "type": "user_message",
             "text": last_user_message,
             "request_id": request_id,
-            "response_url": f"{GATEWAY_URL}/internal/response"
+            "response_url": f"{GATEWAY_URL}/internal/response",
+            "expert_name": selected_expert
         }
 
         async with httpx.AsyncClient() as client:
@@ -260,14 +404,14 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
     except Exception as e:
         del pending_requests[request_id]
         error_msg = f"Failed to forward request to pipecat-app: {e}"
-        await log_request(request_id, start_time, last_user_message, error_msg, 500, time.time() - start_time)
+        await log_request(request_id, start_time, last_user_message, error_msg, 500, time.time() - start_time, selected_expert)
         return JSONResponse(status_code=500, content={"error": error_msg})
 
     # Wait for the response to come back
     try:
         await asyncio.wait_for(event.wait(), timeout=60.0)
     except asyncio.TimeoutError:
-        await log_request(request_id, start_time, last_user_message, "Timeout", 504, time.time() - start_time)
+        await log_request(request_id, start_time, last_user_message, "Timeout", 504, time.time() - start_time, selected_expert)
         return JSONResponse(status_code=504, content={"error": "Request timed out"})
     finally:
         response_data = pending_requests.pop(request_id, None)
@@ -275,7 +419,7 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
     if response_data and response_data["response"]:
         # Log success
         latency = time.time() - start_time
-        await log_request(request_id, start_time, last_user_message, response_data["response"], 200, latency)
+        await log_request(request_id, start_time, last_user_message, response_data["response"], 200, latency, selected_expert)
 
         # Format the response to be OpenAI-compatible
         final_response = {
@@ -301,7 +445,7 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
         }
         return JSONResponse(content=final_response)
     else:
-        await log_request(request_id, start_time, last_user_message, "No response content", 500, time.time() - start_time)
+        await log_request(request_id, start_time, last_user_message, "No response content", 500, time.time() - start_time, selected_expert)
         return JSONResponse(status_code=500, content={"error": "Failed to get a response from the agent"})
 
 if __name__ == "__main__":
