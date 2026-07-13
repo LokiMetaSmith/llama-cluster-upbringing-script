@@ -168,11 +168,11 @@ These structural suggestions are targeted for a future major release to signific
     1. [x] Catch hard cooldown/exhaustion exceptions from the gateway in the `TaskSupervisor`.
     2. [x] Dynamically trigger `SwarmTool.spawn_workers` to spin up a fresh GGUF/vLLM instance when all active local keys/providers are exhausted.
     3. [x] Implement lightweight, non-blocking queueing for requests while the new container boots and pre-warm.
-- [ ] **Phase 4: Context Handoff for Swarm Nodes**
+- [x] **Phase 4: Context Handoff for Swarm Nodes**
   - **Goal:** Smooth multi-turn transitions when rate limits or node restarts force a switch.
   - **Tasks:**
-    1. Inject a compact Context Handoff system prompt summarizing conversation status when forced to switch model targets.
-    2. Broadcast transition state to Keystone Polyphony's shared scratchpad via `PolyphonyTool` so sibling agents can audit the new expert's context.
+    1. [x] Inject a compact Context Handoff system prompt summarizing conversation status when forced to switch model targets.
+    2. [x] Broadcast transition state to Keystone Polyphony's shared scratchpad via `PolyphonyTool` so sibling agents can audit the new expert's context.
 
 ## Future Enhancements and Backlog
 
