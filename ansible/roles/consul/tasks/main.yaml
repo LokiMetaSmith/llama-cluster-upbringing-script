@@ -164,25 +164,35 @@
         state: directory
         mode: '0755'
 
-    - name: Check if existing Consul CA certificate has required extensions
+    - name: Check if existing Consul certificates are fully valid and compliant
       become: false
       ansible.builtin.shell: |
         set -e
         if [ ! -f "{{ consul_temp_cert_dir }}/ca.pem" ]; then
-          exit 0
+          exit 1
         fi
+        # Verify Root CA has CA:TRUE and Key Usage extensions
         openssl x509 -in "{{ consul_temp_cert_dir }}/ca.pem" -text -noout | grep -q "X509v3 Key Usage"
         openssl x509 -in "{{ consul_temp_cert_dir }}/ca.pem" -text -noout | grep -q "CA:TRUE"
-      register: consul_ca_cert_validity
+        # Check server node certificates if they exist
+        for host in {{ groups['controller_nodes'] | join(' ') }}; do
+          if [ ! -f "{{ consul_temp_cert_dir }}/${host}.pem" ]; then
+            exit 1
+          fi
+          openssl x509 -in "{{ consul_temp_cert_dir }}/${host}.pem" -text -noout | grep -q "DNS:server.consul"
+          openssl x509 -in "{{ consul_temp_cert_dir }}/${host}.pem" -text -noout | grep -q "DNS:localhost"
+          openssl x509 -in "{{ consul_temp_cert_dir }}/${host}.pem" -text -noout | grep -q "DNS:consul.service.consul"
+        done
+      register: consul_certs_validity
       failed_when: false
       changed_when: false
 
-    - name: Force regeneration of certificates if Consul CA is invalid or missing extensions
+    - name: Force regeneration of Consul certificates if any are invalid or missing SANs
       become: false
       ansible.builtin.file:
         path: "{{ consul_temp_cert_dir }}"
         state: absent
-      when: consul_ca_cert_validity is defined and consul_ca_cert_validity.rc != 0
+      when: consul_certs_validity is defined and consul_certs_validity.rc != 0
 
     - name: Ensure local certs directory exists after force purge
       become: false
@@ -190,7 +200,7 @@
         path: "{{ consul_temp_cert_dir }}"
         state: directory
         mode: '0755'
-      when: consul_ca_cert_validity is defined and consul_ca_cert_validity.rc != 0
+      when: consul_certs_validity is defined and consul_certs_validity.rc != 0
 
     - name: Generate CA key
       become: false
@@ -234,12 +244,15 @@
           [req_distinguished_name]
           CN = server.consul
           [v3_req]
-          keyUsage = keyEncipherment, dataEncipherment
+          basicConstraints = CA:FALSE
+          keyUsage = critical, digitalSignature, keyEncipherment
           extendedKeyUsage = serverAuth, clientAuth
           subjectAltName = @alt_names
           [alt_names]
           DNS.1 = server.consul
           DNS.2 = localhost
+          DNS.3 = server.dc1.consul
+          DNS.4 = consul.service.consul
           IP.1 = 127.0.0.1
           IP.2 = {{ hostvars[item]['cluster_ip'] }}
       loop: "{{ groups['controller_nodes'] }}"
@@ -278,12 +291,15 @@
           [req_distinguished_name]
           CN = client.consul
           [v3_req]
-          keyUsage = keyEncipherment, dataEncipherment
+          basicConstraints = CA:FALSE
+          keyUsage = critical, digitalSignature, keyEncipherment
           extendedKeyUsage = clientAuth, serverAuth
           subjectAltName = @alt_names
           [alt_names]
           DNS.1 = client.consul
           DNS.2 = localhost
+          DNS.3 = client.dc1.consul
+          DNS.4 = consul.service.consul
           IP.1 = 127.0.0.1
           IP.2 = {{ hostvars[item]['cluster_ip'] }}
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"

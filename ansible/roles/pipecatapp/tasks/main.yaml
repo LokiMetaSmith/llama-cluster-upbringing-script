@@ -1397,7 +1397,7 @@
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
         ca_path: "{{ consul_ca_path | default('/etc/consul.d/ca.pem') }}"
-        validate_certs: no
+        validate_certs: yes
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
         return_content: yes
@@ -1410,7 +1410,7 @@
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
         ca_path: "{{ consul_ca_path | default('/etc/consul.d/ca.pem') }}"
-        validate_certs: no
+        validate_certs: yes
         method: PUT
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
@@ -1435,7 +1435,7 @@
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
     ca_path: "{{ consul_ca_path | default('/etc/consul.d/ca.pem') }}"
-    validate_certs: no
+    validate_certs: yes
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     return_content: yes
@@ -1466,7 +1466,7 @@
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
         ca_path: "{{ consul_ca_path | default('/etc/consul.d/ca.pem') }}"
-        validate_certs: no
+        validate_certs: yes
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
         return_content: yes

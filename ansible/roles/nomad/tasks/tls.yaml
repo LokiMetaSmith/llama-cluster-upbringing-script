@@ -15,27 +15,36 @@
   delegate_to: localhost
   run_once: true
 
-- name: Check if existing CA certificate has required extensions
+- name: Check if existing Nomad certificates are fully valid and compliant
   become: false
   ansible.builtin.shell: |
     set -e
     if [ ! -f "{{ nomad_temp_cert_dir }}/ca.pem" ]; then
-      exit 0
+      exit 1
     fi
+    # Verify Root CA has CA:TRUE and Key Usage extensions
     openssl x509 -in "{{ nomad_temp_cert_dir }}/ca.pem" -text -noout | grep -q "X509v3 Key Usage"
     openssl x509 -in "{{ nomad_temp_cert_dir }}/ca.pem" -text -noout | grep -q "CA:TRUE"
-  register: ca_cert_validity
+    # Check server node certificates
+    for host in {{ groups['controller_nodes'] | default([]) | join(' ') }}; do
+      if [ ! -f "{{ nomad_temp_cert_dir }}/${host}.pem" ]; then
+        exit 1
+      fi
+      openssl x509 -in "{{ nomad_temp_cert_dir }}/${host}.pem" -text -noout | grep -q "DNS:server.global.nomad"
+      openssl x509 -in "{{ nomad_temp_cert_dir }}/${host}.pem" -text -noout | grep -q "DNS:consul.service.consul"
+    done
+  register: nomad_certs_validity
   failed_when: false
   changed_when: false
   delegate_to: localhost
   run_once: true
 
-- name: Force regeneration of certificates if CA is invalid or missing extensions
+- name: Force regeneration of Nomad certificates if any are invalid or missing SANs
   become: false
   ansible.builtin.file:
     path: "{{ nomad_temp_cert_dir }}"
     state: absent
-  when: ca_cert_validity is defined and ca_cert_validity.rc != 0
+  when: nomad_certs_validity is defined and nomad_certs_validity.rc != 0
   delegate_to: localhost
   run_once: true
 
@@ -45,7 +54,7 @@
     path: "{{ nomad_temp_cert_dir }}"
     state: directory
     mode: '0755'
-  when: ca_cert_validity is defined and ca_cert_validity.rc != 0
+  when: nomad_certs_validity is defined and nomad_certs_validity.rc != 0
   delegate_to: localhost
   run_once: true
 
@@ -145,6 +154,7 @@
       DNS.3 = server.dc1.consul
       DNS.4 = server.global.nomad
       DNS.5 = client.global.nomad
+      DNS.6 = consul.service.consul
       IP.1 = 127.0.0.1
       IP.2 = {{ hostvars[item]['cluster_ip'] }}
   loop: "{{ groups['controller_nodes'] | default([]) }}"
@@ -174,6 +184,7 @@
       DNS.3 = server.dc1.consul
       DNS.4 = server.global.nomad
       DNS.5 = client.global.nomad
+      DNS.6 = consul.service.consul
       IP.1 = 127.0.0.1
   when: "groups['controller_nodes'] is not defined or groups['controller_nodes'] | length == 0"
   delegate_to: localhost
@@ -256,6 +267,7 @@
       [alt_names]
       DNS.1 = client.global.nomad
       DNS.2 = localhost
+      DNS.3 = consul.service.consul
       IP.1 = 127.0.0.1
       IP.2 = {{ hostvars[item]['cluster_ip'] }}
   loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
@@ -319,6 +331,27 @@
     nomad_temp_cert_dir: "/etc/nomad.d/tls"
   when: not ca_cert_stat.stat.exists
 
+- name: Force clear existing Nomad certificates on target nodes to trigger rotation
+  become: yes
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ nomad_tls_dir }}/ca.pem"
+    - "{{ nomad_tls_dir }}/cert.pem"
+    - "{{ nomad_tls_dir }}/key.pem"
+    - "{{ nomad_tls_dir }}/cli.cert.pem"
+    - "{{ nomad_tls_dir }}/cli.key.pem"
+    - "/usr/local/share/ca-certificates/nomad-ca.crt"
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
+
+- name: Update system trust store after clearing Nomad CA
+  become: yes
+  ansible.builtin.command: /usr/sbin/update-ca-certificates --force
+  changed_when: true
+  failed_when: false
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
+
 - name: Create Nomad TLS directory
   become: yes
   ansible.builtin.file:
@@ -338,6 +371,25 @@
     remote_src: no
   become: yes
   when: not ansible_check_mode or ca_cert_stat.stat.exists
+  notify: Restart nomad
+
+- name: Copy Nomad CA certificate to system-wide trusted CA location
+  become: yes
+  ansible.builtin.copy:
+    src: "{{ nomad_temp_cert_dir }}/ca.pem"
+    dest: "/usr/local/share/ca-certificates/nomad-ca.crt"
+    mode: '0644'
+    owner: root
+    group: root
+    remote_src: no
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
+
+- name: Rebuild system trust store with newly minted Nomad CA
+  become: yes
+  ansible.builtin.command: /usr/sbin/update-ca-certificates --force
+  changed_when: true
+  failed_when: false
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
 
 - name: Copy CLI certificate and key to each node
   copy:
@@ -352,6 +404,7 @@
     - { src: 'key', dest: 'key.pem' }
   become: yes
   when: not ansible_check_mode or ca_cert_stat.stat.exists
+  notify: Restart nomad
 
 - name: Copy node certificate and key to each node
   copy:
@@ -366,3 +419,4 @@
     - { src: 'key', dest: 'key.pem' }
   become: yes
   when: not ansible_check_mode or ca_cert_stat.stat.exists
+  notify: Restart nomad

@@ -5,6 +5,25 @@
   delegate_to: localhost
   check_mode: false
 
+- name: Force clear existing certificates on target nodes to trigger rotation
+  become: yes
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ consul_config_dir }}/ca.pem"
+    - "{{ consul_config_dir }}/cert.pem"
+    - "{{ consul_config_dir }}/key.pem"
+    - "/usr/local/share/ca-certificates/consul-ca.crt"
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
+
+- name: Update system trust store after clearing
+  become: yes
+  ansible.builtin.command: /usr/sbin/update-ca-certificates --force
+  changed_when: true
+  failed_when: false
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
+
 - name: Copy CA certificate to all nodes
   copy:
     src: "{{ consul_temp_cert_dir }}/ca.pem"
@@ -12,8 +31,27 @@
     mode: '0644'
     owner: consul
     group: consul
-    remote_src: yes
+    remote_src: no
   become: yes
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
+  notify: Restart Consul
+
+- name: Copy Consul CA certificate to system-wide trusted CA location
+  become: yes
+  ansible.builtin.copy:
+    src: "{{ consul_temp_cert_dir }}/ca.pem"
+    dest: "/usr/local/share/ca-certificates/consul-ca.crt"
+    mode: '0644'
+    owner: root
+    group: root
+    remote_src: no
+  when: not ansible_check_mode or ca_cert_stat.stat.exists
+
+- name: Rebuild system trust store with newly minted CA
+  become: yes
+  ansible.builtin.command: /usr/sbin/update-ca-certificates --force
+  changed_when: true
+  failed_when: false
   when: not ansible_check_mode or ca_cert_stat.stat.exists
 
 - name: Copy node certificate and key to each node
@@ -23,9 +61,10 @@
     mode: '0600'
     owner: consul
     group: consul
-    remote_src: yes
+    remote_src: no
   loop:
     - { src: 'pem', dest: 'cert.pem' }
     - { src: 'key', dest: 'key.pem' }
   become: yes
   when: not ansible_check_mode or ca_cert_stat.stat.exists
+  notify: Restart Consul
