@@ -5,7 +5,8 @@ import subprocess
 from unittest.mock import patch, AsyncMock
 
 # Ensure the tool's path is in the system path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../ansible/roles/pipecatapp/files/tools')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'tools')))
 
 from term_everything_tool import TermEverythingTool
 

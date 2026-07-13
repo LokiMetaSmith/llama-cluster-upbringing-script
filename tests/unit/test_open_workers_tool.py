@@ -6,7 +6,8 @@ import requests
 import re
 
 # Add the tools directory to sys.path so we can import the tool
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../ansible/roles/pipecatapp/files/tools'))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'tools')))
 
 from open_workers_tool import OpenWorkersTool
 

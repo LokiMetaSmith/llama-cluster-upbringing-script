@@ -6,9 +6,8 @@ from unittest.mock import MagicMock, patch, AsyncMock
 # To handle relative imports (from .mcp_tool import MCP_Tool), we need to import
 # archivist_tool as part of a package.
 # We add the parent directory of 'tools' to sys.path.
-tools_parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files'))
-if tools_parent_dir not in sys.path:
-    sys.path.insert(0, tools_parent_dir)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
 
 # Now we can import from tools.archivist_tool
 from tools.archivist_tool import ArchivistTool
