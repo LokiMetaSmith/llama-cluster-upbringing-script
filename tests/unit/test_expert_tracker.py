@@ -147,3 +147,13 @@ async def test_connect_and_store_relation_exception(caplog):
         await tracker.connect_and_store_relation("source", "rel", "target")
 
         assert "Failed to store relation in memory graph" in caplog.text
+
+def test_tracker_token_clamping():
+    from pipecatapp.expert_tracker import clamp_output_tokens, OUTPUT_RESERVE_CAP
+
+    # Under the cap
+    assert clamp_output_tokens(500) == 500
+    # Over the cap
+    assert clamp_output_tokens(4500) == OUTPUT_RESERVE_CAP
+    # Fallback
+    assert clamp_output_tokens(None) == 1000

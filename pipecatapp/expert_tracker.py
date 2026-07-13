@@ -12,6 +12,13 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+OUTPUT_RESERVE_CAP = 2000
+
+def clamp_output_tokens(requested_max_tokens: int | None) -> int:
+    """Clamps pre-flight output token estimation to prevent bogus rate limit exclusions."""
+    requested = requested_max_tokens if (requested_max_tokens is not None and requested_max_tokens > 0) else 1000
+    return min(requested, OUTPUT_RESERVE_CAP)
+
 class ExpertTracker:
     """A thread-safe class to track performance and health metrics for LLM experts.
 

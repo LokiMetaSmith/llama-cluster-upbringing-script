@@ -3,6 +3,13 @@ import aiohttp
 import asyncio
 import re
 
+OUTPUT_RESERVE_CAP = 2000
+
+def clamp_output_tokens(requested_max_tokens: int | None) -> int:
+    """Clamps pre-flight output token estimation to prevent bogus rate limit exclusions."""
+    requested = requested_max_tokens if (requested_max_tokens is not None and requested_max_tokens > 0) else 1000
+    return min(requested, OUTPUT_RESERVE_CAP)
+
 class ExternalLLMClient:
     """A generic client for interacting with OpenAI-compatible LLM APIs.
 
@@ -29,6 +36,13 @@ class ExternalLLMClient:
         self.api_key = api_key
         self.model = model
         self._session = None
+
+    def estimate_request_tokens(self, prompt: str, requested_max_tokens: int | None = None) -> int:
+        """Estimates total request tokens (input + clamped output reserve) for pre-flight routing validation."""
+        # Simple heuristic: 4 characters per token
+        input_tokens = len(prompt) // 4
+        clamped_output = clamp_output_tokens(requested_max_tokens)
+        return input_tokens + clamped_output
 
     async def close(self):
         """Closes the underlying aiohttp session."""
