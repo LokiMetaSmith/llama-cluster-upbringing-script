@@ -26,7 +26,7 @@
 
 - name: Add NodeSource repository
   ansible.builtin.copy:
-    content: "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main"
+    content: "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main"
     dest: /etc/apt/sources.list.d/nodesource.list
   become: yes
 
@@ -63,7 +63,7 @@
     dest: "{{ llxprt_code_dir }}/.env"
 
 - name: Remove existing MCP server from llxprt-code
-  ansible.builtin.command: node bundle/llxprt.js mcp remove tool-server
+  ansible.builtin.command: npx llxprt mcp remove tool-server
   args:
     chdir: "{{ llxprt_code_dir }}"
   ignore_errors: true
@@ -72,8 +72,8 @@
 - name: Add MCP server to llxprt-code
   ansible.builtin.command:
     argv:
-      - node
-      - bundle/llxprt.js
+      - npx
+      - llxprt
       - mcp
       - add
       - tool-server
