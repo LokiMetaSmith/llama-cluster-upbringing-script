@@ -149,6 +149,31 @@ These structural suggestions are targeted for a future major release to signific
   - [x] Phase 2: RAG Microservice Extraction
   - [x] Phase 3: Code Runner Sandbox Extraction
 
+## FreeLLMAPI-Inspired Smart Routing & Swarm Failover Integration
+
+- [ ] **Phase 1: Upgrading the Gateway with Thompson-Sampling Scoring**
+  - **Goal:** Implement Feedback-driven Convex Bandit Scoring to optimize load and latency distributions.
+  - **Tasks:**
+    1. Refactor `moe_gateway`'s routing logic to implement a Beta-binomial posterior sampler.
+    2. Maintain decay-weighted success/failure pseudo-counts inside the local database with a 2-day half-life decay.
+    3. Implement Marsaglia-Tsang Gamma draws for high-performance Beta sampling on Core 2 Duo CPUs.
+- [ ] **Phase 2: Implementing Output Token Reserve Capping**
+  - **Goal:** Prevent bogus 429 rate limit exclusions from large requested `max_tokens`.
+  - **Tasks:**
+    1. Introduce `OUTPUT_RESERVE_CAP = 2000` inside `pipecatapp/llm_clients.py` and `expert_tracker.py`.
+    2. Clamp pre-flight reservation checks while passing the original limit to selected providers.
+- [ ] **Phase 3: Integrating Failover with Swarm Auto-Scaling**
+  - **Goal:** Connect failover signals directly with the Nomad Task Supervisor and SwarmTool.
+  - **Tasks:**
+    1. Catch hard cooldown/exhaustion exceptions from the gateway in the `TaskSupervisor`.
+    2. Dynamically trigger `SwarmTool.spawn_workers` to spin up a fresh GGUF/vLLM instance when all active local keys/providers are exhausted.
+    3. Implement lightweight, non-blocking queueing for requests while the new container boots and pre-warms.
+- [ ] **Phase 4: Context Handoff for Swarm Nodes**
+  - **Goal:** Smooth multi-turn transitions when rate limits or node restarts force a switch.
+  - **Tasks:**
+    1. Inject a compact Context Handoff system prompt summarizing conversation status when forced to switch model targets.
+    2. Broadcast transition state to Keystone Polyphony's shared scratchpad via `PolyphonyTool` so sibling agents can audit the new expert's context.
+
 ## Future Enhancements and Backlog
 
 ### Dirac Token-Efficient Agent Integration
