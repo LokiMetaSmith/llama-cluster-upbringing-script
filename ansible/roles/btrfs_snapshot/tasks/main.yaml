@@ -109,7 +109,7 @@
 
 - name: Create sparse fallback file
   ansible.builtin.command:
-    cmd: "truncate -s {{ btrfs_loop_file_size | default('5G') }} {{ btrfs_loop_file }}"
+    cmd: "truncate -s {{ btrfs_loop_file_size | default('15G') }} {{ btrfs_loop_file }}"
     creates: "{{ btrfs_loop_file }}"
   become: yes
   when:
@@ -168,6 +168,44 @@
       - "****************************************************************"
   when: not btrfs_enabled
 
+- name: Expand existing loop fallback file if it is smaller than configured size
+  block:
+    - name: Get current size of loop file
+      ansible.builtin.stat:
+        path: "{{ btrfs_loop_file }}"
+      register: loop_file_stat
+      become: yes
+
+    - name: Expand loop file and resize Btrfs filesystem
+      block:
+        - name: Expand loop file
+          ansible.builtin.command:
+            cmd: "truncate -s {{ btrfs_loop_file_size | default('15G') }} {{ btrfs_loop_file }}"
+          become: yes
+
+        - name: Find loop device associated with loop file
+          ansible.builtin.shell: |
+            set -o pipefail
+            losetup -j "{{ btrfs_loop_file }}" | cut -d: -f1
+          register: losetup_device
+          become: yes
+          changed_when: false
+
+        - name: Refresh loop device size
+          ansible.builtin.command:
+            cmd: "losetup -c {{ losetup_device.stdout }}"
+          become: yes
+          when: losetup_device.stdout | trim | length > 0
+
+        - name: Resize Btrfs filesystem to maximum size
+          ansible.builtin.command:
+            cmd: "btrfs filesystem resize max {{ btrfs_subvolume_path }}"
+          become: yes
+      when:
+        - loop_file_stat.stat.exists
+        - loop_file_stat.stat.size < (15 * 1024 * 1024 * 1024) # 15GB
+  when: btrfs_enabled and btrfs_supported
+
 - name: Ensure active subvolume exists
   ansible.builtin.command:
     cmd: "btrfs subvolume create {{ btrfs_active_subvolume }}"
@@ -213,7 +251,7 @@
         echo "Skipping NFS mount {{ item }} on client node"
       else
         mkdir -p "{{ btrfs_active_subvolume }}{{ item }}"
-        rsync -a --delete \
+        rsync -a --delete --delete-excluded \
           --exclude=".venv/" \
           --exclude="venv/" \
           --exclude="node_modules/" \
@@ -226,6 +264,7 @@
           --exclude="pw-browsers/" \
           --exclude="datasets/" \
           --exclude="chromadb/" \
+          --exclude="ipfs/" \
           "{{ item }}/" "{{ btrfs_active_subvolume }}{{ item }}/"
       fi
     fi

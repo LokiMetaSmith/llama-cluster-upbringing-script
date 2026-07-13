@@ -68,7 +68,8 @@ def create_snapshot():
         "--exclude=.git/",
         "--exclude=pw-browsers/",
         "--exclude=datasets/",
-        "--exclude=chromadb/"
+        "--exclude=chromadb/",
+        "--exclude=ipfs/"
     ]
     for p_dir in protected_dirs:
         if os.path.exists(p_dir):
@@ -88,7 +89,7 @@ def create_snapshot():
             os.makedirs(target_sub_dir, exist_ok=True)
             print(f"  Syncing {p_dir} -> {target_sub_dir}")
             try:
-                subprocess.check_call(["rsync", "-a", "--delete"] + exclude_args + [f"{p_dir}/", f"{target_sub_dir}/"])
+                subprocess.check_call(["rsync", "-a", "--delete", "--delete-excluded"] + exclude_args + [f"{p_dir}/", f"{target_sub_dir}/"])
             except subprocess.CalledProcessError as e:
                 print(f"Warning: Failed to sync {p_dir}: {e}")
 
@@ -195,7 +196,8 @@ def rollback_snapshot(target=None):
             "--exclude=.git/",
             "--exclude=pw-browsers/",
             "--exclude=datasets/",
-            "--exclude=chromadb/"
+            "--exclude=chromadb/",
+            "--exclude=ipfs/"
         ]
         print("Restoring protected directories from snapshot back to system...")
         for p_dir in protected_dirs:
@@ -216,7 +218,7 @@ def rollback_snapshot(target=None):
                 print(f"  Restoring {snapshot_source_dir} -> {p_dir}")
                 os.makedirs(p_dir, exist_ok=True)
                 try:
-                    subprocess.check_call(["rsync", "-a", "--delete"] + exclude_args + [f"{snapshot_source_dir}/", f"{p_dir}/"])
+                    subprocess.check_call(["rsync", "-a", "--delete", "--delete-excluded"] + exclude_args + [f"{snapshot_source_dir}/", f"{p_dir}/"])
                 except subprocess.CalledProcessError as e:
                     print(f"Warning: Failed to restore {p_dir}: {e}")
 
