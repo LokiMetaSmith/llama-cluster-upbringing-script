@@ -13,6 +13,43 @@ class HereticTool:
     """
     def __init__(self, root_dir: Optional[str] = None):
         self.root_dir = root_dir or os.getenv("EMPEROR_ROOT_DIR", os.getcwd())
+        self.name = "heretic"
+        self.description = (
+            "A tool to modify the alignment (inhibit or disinhibit/abliterate) of a language model using Heretic. "
+            "Runs heretic locally on the designated model path using a dataset of harmful prompts (refusals) and harmless prompts."
+        )
+        self.input_schema = {
+            "type": "object",
+            "properties": {
+                "model": {
+                    "type": "string",
+                    "description": "The Hugging Face model ID or path to the model on disk."
+                },
+                "harmful_dataset": {
+                    "type": "string",
+                    "description": "Path to a dataset of prompts that tend to result in refusals."
+                },
+                "harmless_dataset": {
+                    "type": "string",
+                    "description": "Path to a dataset of prompts that tend to not result in refusals."
+                },
+                "reverse": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "If True, increases inhibitions. If False, removes inhibitions (abliteration)."
+                },
+                "output_dir": {
+                    "type": "string",
+                    "description": "Optional directory to save the modified model."
+                }
+            },
+            "required": ["model", "harmful_dataset", "harmless_dataset"]
+        }
+
+    def run(self, model: str, harmful_dataset: str, harmless_dataset: str, reverse: bool = False, output_dir: Optional[str] = None) -> str:
+        """Executes the alignment adjustment."""
+        res = self.align_model(model, harmful_dataset, harmless_dataset, reverse, output_dir)
+        return json.dumps(res, indent=2)
 
     def align_model(self, model: str, harmful_dataset: str, harmless_dataset: str, reverse: bool = False, output_dir: Optional[str] = None) -> Dict[str, Any]:
         """

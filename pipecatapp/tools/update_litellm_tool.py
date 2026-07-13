@@ -13,32 +13,39 @@ class UpdateLitellmTool:
     def __init__(self):
         self.github_api_url = "https://api.github.com/repos/BerriAI/litellm/releases"
         self.file_to_update = "ansible/jobs/router.nomad.j2"
+        self.name = "update_litellm"
+        self.description = "Tool to fetch litellm GitHub releases or update the ansible/jobs/router.nomad.j2 file with a chosen safe tag."
+        self.input_schema = {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["fetch_releases", "update_nomad_file"],
+                    "description": "Action to perform. 'fetch_releases' gets recent tags, 'update_nomad_file' applies the chosen tag."
+                },
+                "chosen_tag": {
+                    "type": "string",
+                    "description": "The specific tag to update to (e.g. 'v1.82.3-stable'). Required if action is 'update_nomad_file'."
+                }
+            },
+            "required": ["action"]
+        }
         self._schema = {
             "type": "function",
             "function": {
-                "name": "update_litellm_tool",
-                "description": "Tool to fetch litellm GitHub releases or update the ansible/jobs/router.nomad.j2 file with a chosen safe tag.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "action": {
-                            "type": "string",
-                            "enum": ["fetch_releases", "update_nomad_file"],
-                            "description": "Action to perform. 'fetch_releases' gets recent tags, 'update_nomad_file' applies the chosen tag."
-                        },
-                        "chosen_tag": {
-                            "type": "string",
-                            "description": "The specific tag to update to (e.g. 'v1.82.3-stable'). Required if action is 'update_nomad_file'."
-                        }
-                    },
-                    "required": ["action"]
-                }
+                "name": "update_litellm",
+                "description": self.description,
+                "parameters": self.input_schema
             }
         }
 
     @property
     def schema(self):
         return self._schema
+
+    def run(self, action: str, chosen_tag: str = None, **kwargs) -> str:
+        """Runs the LiteLLM update action."""
+        return self.execute(action, chosen_tag, **kwargs)
 
     def fetch_releases(self):
         req = urllib.request.Request(self.github_api_url, headers={'User-Agent': 'Mozilla/5.0'})

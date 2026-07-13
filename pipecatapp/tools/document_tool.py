@@ -176,6 +176,37 @@ class DocumentTool:
     def __init__(self, backend_config: Dict[str, Any], db_path: str = "document_bookmarks.sqlite"):
         self.name = "document_tool"
         self.description = "Search, retrieve, and bookmark text documents and PDFs for research."
+        self.input_schema = {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["search", "get_text", "add_bookmark", "list_bookmarks"],
+                    "description": "The action to perform (e.g., search, retrieve full text, add bookmark, or list bookmarks)."
+                },
+                "query": {
+                    "type": "string",
+                    "description": "The search query (required for 'search')."
+                },
+                "document_id": {
+                    "type": "string",
+                    "description": "The document identifier/path (required for 'get_text' and 'add_bookmark')."
+                },
+                "document_title": {
+                    "type": "string",
+                    "description": "The document title (required for 'add_bookmark')."
+                },
+                "text_block": {
+                    "type": "string",
+                    "description": "The snippet of text to bookmark (optional for 'add_bookmark')."
+                },
+                "note": {
+                    "type": "string",
+                    "description": "Note associated with the bookmark (optional for 'add_bookmark')."
+                }
+            },
+            "required": ["action"]
+        }
 
         self.backend_type = backend_config.get("type")
         if self.backend_type == "paperless":
@@ -272,3 +303,22 @@ class DocumentTool:
             return json.dumps(bookmarks, indent=2)
         except Exception as e:
             return f"Error listing bookmarks: {str(e)}"
+
+    def run(self, action: str, **kwargs) -> str:
+        """Executes the specified document tool action."""
+        if action == "search":
+            query = kwargs.get("query", "")
+            return self.search(query)
+        elif action == "get_text":
+            document_id = kwargs.get("document_id", "")
+            return self.get_text(document_id)
+        elif action == "add_bookmark":
+            document_id = kwargs.get("document_id", "")
+            document_title = kwargs.get("document_title", "")
+            text_block = kwargs.get("text_block", "")
+            note = kwargs.get("note", "")
+            return self.add_bookmark(document_id, document_title, text_block, note)
+        elif action == "list_bookmarks":
+            return self.list_bookmarks()
+        else:
+            return f"Error: Unknown action '{action}'"

@@ -4,6 +4,32 @@ import sys
 import json
 import re
 
+class GetNomadJobTool:
+    """A tool to retrieve a Nomad job definition by its job ID."""
+
+    def __init__(self):
+        self.name = "get_nomad_job"
+        self.description = "Retrieves the JSON definition of a Nomad job on the cluster by its exact job ID."
+        self.input_schema = {
+            "type": "object",
+            "properties": {
+                "job_id": {
+                    "type": "string",
+                    "description": "The exact job ID of the Nomad job to retrieve."
+                }
+            },
+            "required": ["job_id"]
+        }
+
+    def run(self, job_id: str, **kwargs) -> str:
+        """Retrieves and returns the job definition as a JSON string."""
+        job_def = get_nomad_job_definition(job_id)
+        if job_def:
+            return json.dumps(job_def, indent=2)
+        else:
+            return f"Error: Could not retrieve Nomad job definition for ID: '{job_id}'."
+
+
 def get_nomad_job_definition(job_id):
     """
     Retrieves the JSON definition of a Nomad job.

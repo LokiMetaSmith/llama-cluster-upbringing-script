@@ -22,9 +22,23 @@ class OpenWorkersTool:
         """Initializes the OpenWorkersTool."""
         self.description = "Execute JavaScript code in a secure V8 isolate."
         self.name = "openworkers"
+        self.input_schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "description": "The JavaScript/TypeScript code to execute in a secure V8 isolate."
+                }
+            },
+            "required": ["code"]
+        }
 
         self.api_url = api_url or os.getenv("OPENWORKERS_API_URL")
         self.token = token or os.getenv("OPENWORKERS_TOKEN", "")
+
+    def run(self, code: str) -> str:
+        """Runs the JavaScript code using the OpenWorkers API."""
+        return self.run_javascript(code)
 
     def _get_service_url(self, service_name: str, fallback_url: str) -> str:
         """Discovers a service via Consul."""

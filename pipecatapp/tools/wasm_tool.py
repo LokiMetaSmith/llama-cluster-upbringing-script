@@ -8,7 +8,34 @@ class WasmTool:
     """A tool to execute lightweight WASM plugins using Extism."""
 
     def __init__(self, wasm_path: Optional[str] = None):
-        self.name = "wasm_tool"
+        self.name = "wasm"
+        self.description = (
+            "A tool to execute lightweight WASM plugins using Extism. "
+            "Allows processing text using built-in actions like 'uppercase', 'lowercase', 'reverse', or calling custom WASM functions."
+        )
+        self.input_schema = {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["uppercase", "lowercase", "reverse", "custom"],
+                    "description": "The action or function to call on the WASM plugin."
+                },
+                "text": {
+                    "type": "string",
+                    "description": "The input text to process (required for standard actions)."
+                },
+                "custom_function": {
+                    "type": "string",
+                    "description": "The name of the custom WASM function to call (required if action is 'custom')."
+                },
+                "input_payload": {
+                    "type": "object",
+                    "description": "A JSON object dictionary representing the payload for the custom function."
+                }
+            },
+            "required": ["action"]
+        }
 
         # Default to the text processor if no path is provided
         if wasm_path is None:
@@ -86,3 +113,15 @@ class WasmTool:
         except Exception as e:
             logging.error(f"Failed to execute custom WASM function '{function_name}': {e}")
             return f"Error executing custom WASM function '{function_name}': {e}"
+
+    def run(self, action: str, text: str = "", custom_function: str = None, input_payload: dict = None, **kwargs) -> str:
+        """Runs the WASM tool action."""
+        if action in ["uppercase", "lowercase", "reverse"]:
+            return self.process_text(action, text)
+        elif action == "custom":
+            if not custom_function:
+                return "Error: custom_function is required when action is 'custom'."
+            payload = input_payload or {}
+            return self.execute_custom(custom_function, payload)
+        else:
+            return f"Error: Unsupported action '{action}'"

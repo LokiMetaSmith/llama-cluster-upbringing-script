@@ -14,6 +14,71 @@ class CQ_Tool:
     def __init__(self):
         self.name = "cq"
         self.description = "A shared commons where agents can query past learnings, contribute new knowledge, and avoid repeating the same mistakes."
+        self.input_schema = {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["query", "propose", "confirm", "flag", "reflect"],
+                    "description": "The action to perform on the CQ knowledge commons."
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Domain tags for querying (required for 'query')."
+                },
+                "language": {
+                    "type": "string",
+                    "description": "Language context for querying or proposing (e.g., 'python')."
+                },
+                "domain": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Domain tags classifying the proposed knowledge (required for 'propose')."
+                },
+                "summary": {
+                    "type": "string",
+                    "description": "Short summary of the proposed insight (required for 'propose')."
+                },
+                "detail": {
+                    "type": "string",
+                    "description": "Full explanation of proposed problem/solution (required for 'propose')."
+                },
+                "action_guidance": {
+                    "type": "string",
+                    "description": "Guidance on what agents should do (required for 'propose')."
+                },
+                "languages": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Languages proposed knowledge applies to."
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": ["pitfall", "workaround", "tool-recommendation"],
+                    "default": "pitfall",
+                    "description": "Kind of knowledge being proposed."
+                },
+                "ku_id": {
+                    "type": "string",
+                    "description": "The ID of the knowledge unit (required for 'confirm' and 'flag')."
+                },
+                "reason": {
+                    "type": "string",
+                    "enum": ["stale", "incorrect", "graduation_candidate"],
+                    "description": "Reason for flagging (required for 'flag')."
+                },
+                "details": {
+                    "type": "string",
+                    "description": "Additional context for flagging."
+                },
+                "session_context": {
+                    "type": "string",
+                    "description": "Summary of recent agent actions, errors, and fixes (required for 'reflect')."
+                }
+            },
+            "required": ["action"]
+        }
 
         # Mock database for knowledge units
         self._mock_db: Dict[str, Dict[str, Any]] = {
@@ -233,3 +298,31 @@ class CQ_Tool:
                 }
             ]
         }, indent=2)
+
+    def run(self, action: str, **kwargs) -> str:
+        """Runs the specified CQ action."""
+        if action == "query":
+            tags = kwargs.get("tags", [])
+            language = kwargs.get("language")
+            return self.cq_query(tags, language)
+        elif action == "propose":
+            domain = kwargs.get("domain", [])
+            summary = kwargs.get("summary", "")
+            detail = kwargs.get("detail", "")
+            action_guidance = kwargs.get("action_guidance", "")
+            languages = kwargs.get("languages", [])
+            kind = kwargs.get("kind", "pitfall")
+            return self.cq_propose(domain, summary, detail, action_guidance, languages, kind)
+        elif action == "confirm":
+            ku_id = kwargs.get("ku_id", "")
+            return self.cq_confirm(ku_id)
+        elif action == "flag":
+            ku_id = kwargs.get("ku_id", "")
+            reason = kwargs.get("reason", "")
+            details = kwargs.get("details", "")
+            return self.cq_flag(ku_id, reason, details)
+        elif action == "reflect":
+            session_context = kwargs.get("session_context", "")
+            return self.cq_reflect(session_context)
+        else:
+            return f"Error: Unknown action '{action}'"

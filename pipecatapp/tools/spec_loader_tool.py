@@ -17,6 +17,30 @@ class SpecLoaderTool:
         self.work_dir = work_dir
         self.memory_interface = memory_interface
         self.logger = logging.getLogger(__name__)
+        self.name = "spec_loader"
+        self.description = (
+            "A tool for cloning external Git repositories (e.g., documentation, specifications) "
+            "and ingesting them into the agent's context or memory."
+        )
+        self.input_schema = {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["clone", "list"],
+                    "description": "Action to perform: 'clone' to download a repository, 'list' to see current specs."
+                },
+                "repo_url": {
+                    "type": "string",
+                    "description": "URL of the git repository to clone (required for 'clone')."
+                },
+                "repo_name": {
+                    "type": "string",
+                    "description": "Optional name for the local folder in which to save the repository."
+                }
+            },
+            "required": ["action"]
+        }
 
         if not os.path.exists(self.work_dir):
             try:
