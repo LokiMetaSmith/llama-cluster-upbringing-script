@@ -223,6 +223,9 @@
           --exclude="target/" \
           --exclude="*.log" \
           --exclude=".git/" \
+          --exclude="pw-browsers/" \
+          --exclude="datasets/" \
+          --exclude="chromadb/" \
           "{{ item }}/" "{{ btrfs_active_subvolume }}{{ item }}/"
       fi
     fi
