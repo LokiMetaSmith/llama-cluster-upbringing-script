@@ -5,8 +5,6 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 import threading
 from typing import Optional
-import chromadb
-from chromadb.config import Settings
 from pmm_memory import PMMMemory
 import gc
 import json
@@ -97,6 +95,7 @@ class RAG_Tool:
         # Initialize ChromaDB persistent client
         self.chromadb_dir = os.path.join(os.getcwd(), "chromadb_storage")
         os.makedirs(self.chromadb_dir, exist_ok=True)
+        import chromadb
         self.chroma_client = chromadb.PersistentClient(path=self.chromadb_dir)
         self.collection_name = "project_documents"
 

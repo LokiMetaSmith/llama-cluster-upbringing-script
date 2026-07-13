@@ -1,7 +1,6 @@
 import os
 import asyncio
 import logging
-from opencode_ai import AsyncOpencode
 
 class OpencodeTool:
     """A tool for using the OpenCode coding agent.
@@ -39,6 +38,7 @@ class OpencodeTool:
              return "Error: OpenCode server URL not configured."
 
         try:
+            from opencode_ai import AsyncOpencode
             client = AsyncOpencode(base_url=self.base_url)
 
             # Create a session
