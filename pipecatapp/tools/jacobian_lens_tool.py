@@ -5,9 +5,9 @@ class JacobianLensTool:
     """
     A tool implementing the Jacobian Lens (J-Lens) interpretability technique.
     Provides methods for reading J-space contents (vocabulary projections)
-    and writing interventions (Coordinate Swaps and Logit-Weighted Ablations)
-    as detailed in the publication 'Verbalizable Representations Form a Global
-    Workspace in Language Models' (2026).
+    and writing interventions (Coordinate Swaps, Logit-Weighted Ablations,
+    and Logit-Weighted Enhancements) as detailed in the publication
+    'Verbalizable Representations Form a Global Workspace in Language Models' (2026).
     """
 
     def __init__(self):
@@ -122,7 +122,36 @@ class JacobianLensTool:
 
         return activation - projection_scalar * v_ablate_norm
 
-# Top-level functional interface requested in instructions
+    def enhance_top_k_tokens(self, model: Any, layer_idx: int, activation: torch.Tensor, k: int, scale_factor: float) -> torch.Tensor:
+        """
+        Performs Logit-Weighted Enhancement (Steering Addition).
+        Calculates the weighted direction vector v_enhance using the exact same logit-weighted
+        linear combination as the ablation method, and applies the steering vector additively,
+        controlled by the scale_factor (alpha).
+
+        Formulation:
+            v_enhance = sum_{i in TopK} logit_i * v_i
+            v_enhance_norm = v_enhance / ||v_enhance||_2
+            x_prime = activation + alpha * v_enhance_norm
+        """
+        jlens_vectors = self.get_jlens_vectors(model, layer_idx)  # [vocab_size, d_model]
+        logits = torch.matmul(jlens_vectors, activation)  # [vocab_size]
+
+        values, indices = torch.topk(logits, k)
+
+        v_enhance = torch.zeros_like(jlens_vectors[0])
+        for weight, idx in zip(values, indices):
+            v_enhance += weight * jlens_vectors[idx]
+
+        norm_v = torch.norm(v_enhance, p=2)
+        if norm_v == 0:
+            return activation.clone()
+
+        v_enhance_norm = v_enhance / norm_v
+
+        return activation + scale_factor * v_enhance_norm
+
+# Top-level functional interfaces requested in instructions
 def swap_token_coordinate(model: Any, layer_idx: int, activation_1: torch.Tensor, activation_2: torch.Tensor, token_id: int) -> torch.Tensor:
     tool = JacobianLensTool()
     return tool.swap_token_coordinate(model, layer_idx, activation_1, activation_2, token_id)
@@ -130,3 +159,7 @@ def swap_token_coordinate(model: Any, layer_idx: int, activation_1: torch.Tensor
 def ablate_top_k_tokens(model: Any, layer_idx: int, activation: torch.Tensor, k: int) -> torch.Tensor:
     tool = JacobianLensTool()
     return tool.ablate_top_k_tokens(model, layer_idx, activation, k)
+
+def enhance_top_k_tokens(model: Any, layer_idx: int, activation: torch.Tensor, k: int, scale_factor: float) -> torch.Tensor:
+    tool = JacobianLensTool()
+    return tool.enhance_top_k_tokens(model, layer_idx, activation, k, scale_factor)

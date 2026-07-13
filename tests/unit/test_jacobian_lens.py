@@ -1,6 +1,11 @@
 import torch
 import pytest
-from pipecatapp.tools.jacobian_lens_tool import JacobianLensTool, swap_token_coordinate, ablate_top_k_tokens
+from pipecatapp.tools.jacobian_lens_tool import (
+    JacobianLensTool,
+    swap_token_coordinate,
+    ablate_top_k_tokens,
+    enhance_top_k_tokens
+)
 
 class MockModel:
     """A mock transformer model supplying a custom W_U (unembedding) and J_layers."""
@@ -112,6 +117,38 @@ def test_ablate_top_k_tokens():
     expected_x_prime = activation - torch.dot(activation, v_ablate_norm) * v_ablate_norm
     assert torch.allclose(x_prime_tool, expected_x_prime, atol=1e-5)
 
+def test_enhance_top_k_tokens():
+    vocab_size = 15
+    d_model = 12
+    model = MockModel(vocab_size, d_model)
+    tool = JacobianLensTool()
+
+    activation = torch.randn(d_model)
+    k = 5
+    scale_factor = 2.5
+
+    # Perform logit-weighted enhancement using tool and functional wrapper
+    x_prime_tool = tool.enhance_top_k_tokens(model, 1, activation, k=k, scale_factor=scale_factor)
+    x_prime_func = enhance_top_k_tokens(model, 1, activation, k=k, scale_factor=scale_factor)
+
+    # Verify both methods match
+    assert torch.allclose(x_prime_tool, x_prime_func)
+
+    # Math verification:
+    jlens_vectors = tool.get_jlens_vectors(model, 1)
+    logits = torch.matmul(jlens_vectors, activation)
+    values, indices = torch.topk(logits, k)
+
+    v_enhance = torch.zeros_like(jlens_vectors[0])
+    for weight, idx in zip(values, indices):
+        v_enhance += weight * jlens_vectors[idx]
+
+    v_enhance_norm = v_enhance / torch.norm(v_enhance, p=2)
+
+    # The output x_prime should equal the input plus scale_factor * v_enhance_norm
+    expected_x_prime = activation + scale_factor * v_enhance_norm
+    assert torch.allclose(x_prime_tool, expected_x_prime, atol=1e-5)
+
 def test_edge_cases():
     vocab_size = 5
     d_model = 4
@@ -130,3 +167,6 @@ def test_edge_cases():
 
     x_prime_ablate = tool.ablate_top_k_tokens(model, 1, activation_1, k=2)
     assert torch.allclose(x_prime_ablate, activation_1)
+
+    x_prime_enhance = tool.enhance_top_k_tokens(model, 1, activation_1, k=2, scale_factor=1.5)
+    assert torch.allclose(x_prime_enhance, activation_1)
