@@ -6,7 +6,8 @@ from unittest.mock import MagicMock, AsyncMock, patch
 import logging
 
 # Add the ansible/roles/pipecatapp/files directory to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../ansible/roles/pipecatapp/files')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
 
 from workflow.runner import WorkflowRunner
 from workflow.context import WorkflowContext
@@ -42,7 +43,7 @@ class TestPoCEnsemble(unittest.TestCase):
         # Set dummy env vars for keys
         os.environ["OPENAI_API_KEY"] = "sk-dummy"
         os.environ["OPENROUTER_API_KEY"] = "sk-or-dummy"
-        self.workflow_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../ansible/roles/pipecatapp/files/workflows/poc_ensemble.yaml'))
+        self.workflow_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'workflows', 'poc_ensemble.yaml'))
 
     @patch('httpx.AsyncClient')
     def test_workflow_execution(self, mock_client_cls):

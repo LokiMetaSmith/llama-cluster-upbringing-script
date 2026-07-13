@@ -5,7 +5,8 @@ import os
 import asyncio
 
 # Add the path to the app files directory
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../ansible/roles/pipecatapp/files')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
 
 from tools.prompt_improver_tool import PromptImproverTool
 

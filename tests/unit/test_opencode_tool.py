@@ -4,7 +4,8 @@ import sys
 import os
 
 # Ensure the tool module can be imported
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../ansible/roles/pipecatapp/files')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
 
 from tools.opencode_tool import OpencodeTool
 

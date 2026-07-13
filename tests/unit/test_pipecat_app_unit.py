@@ -6,7 +6,8 @@ from unittest.mock import MagicMock, AsyncMock, patch
 import asyncio
 
 # Add the parent directory of 'testing' to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
 
 # Mock problematic modules before importing app
 sys.modules["pyaudio"] = MagicMock()
