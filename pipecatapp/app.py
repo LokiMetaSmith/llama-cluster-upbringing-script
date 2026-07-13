@@ -881,6 +881,22 @@ class TextMessageInjector(FrameProcessor):
                         if is_system_alert:
                             prefix = "SYSTEM ALERT: "
                             logging.warning(f"Injecting system alert: {text}")
+
+                            # Check if this is a gateway exhaustion trigger for auto-scaling
+                            if "Gateway reported critical exhaustion for expert" in text:
+                                try:
+                                    # Extract expert name from the message
+                                    parts = text.split("expert:")
+                                    if len(parts) > 1:
+                                        expert_name = parts[1].split(".")[0].strip()
+                                        import web_server
+                                        twin_service = getattr(web_server.app.state, "twin_service_instance", None)
+                                        if twin_service and hasattr(twin_service, "task_supervisor"):
+                                            # Trigger dynamic auto-scaling in the supervisor
+                                            asyncio.create_task(twin_service.task_supervisor.handle_gateway_exhaustion(expert_name))
+                                except Exception as ex_fail:
+                                    logging.error(f"Failed to trigger auto-scaling from system alert: {ex_fail}")
+
                             # Prepend alert tag to text to ensure the agent takes it seriously
                             text = f"{prefix}{text}"
 
@@ -1678,6 +1694,7 @@ async def run_agent():
 
     # Start Task Supervisor
     task_supervisor = TaskSupervisor(twin)
+    twin.task_supervisor = task_supervisor
     asyncio.create_task(task_supervisor.start())
 
     # Now that the twin service is initialized, mark the application as ready.

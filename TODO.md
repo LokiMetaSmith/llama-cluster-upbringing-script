@@ -151,17 +151,17 @@ These structural suggestions are targeted for a future major release to signific
 
 ## FreeLLMAPI-Inspired Smart Routing & Swarm Failover Integration
 
-- [ ] **Phase 1: Upgrading the Gateway with Thompson-Sampling Scoring**
+- [x] **Phase 1: Upgrading the Gateway with Thompson-Sampling Scoring**
   - **Goal:** Implement Feedback-driven Convex Bandit Scoring to optimize load and latency distributions.
   - **Tasks:**
-    1. Refactor `moe_gateway`'s routing logic to implement a Beta-binomial posterior sampler.
-    2. Maintain decay-weighted success/failure pseudo-counts inside the local database with a 2-day half-life decay.
-    3. Implement Marsaglia-Tsang Gamma draws for high-performance Beta sampling on Core 2 Duo CPUs.
-- [ ] **Phase 2: Implementing Output Token Reserve Capping**
+    1. [x] Refactor `moe_gateway`'s routing logic to implement a Beta-binomial posterior sampler.
+    2. [x] Maintain decay-weighted success/failure pseudo-counts inside the local database with a 2-day half-life decay.
+    3. [x] Implement Marsaglia-Tsang Gamma draws for high-performance Beta sampling on Core 2 Duo CPUs.
+- [x] **Phase 2: Implementing Output Token Reserve Capping**
   - **Goal:** Prevent bogus 429 rate limit exclusions from large requested `max_tokens`.
   - **Tasks:**
-    1. Introduce `OUTPUT_RESERVE_CAP = 2000` inside `pipecatapp/llm_clients.py` and `expert_tracker.py`.
-    2. Clamp pre-flight reservation checks while passing the original limit to selected providers.
+    1. [x] Introduce `OUTPUT_RESERVE_CAP = 2000` inside `pipecatapp/llm_clients.py` and `expert_tracker.py`.
+    2. [x] Clamp pre-flight reservation checks while passing the original limit to selected providers.
 - [ ] **Phase 3: Integrating Failover with Swarm Auto-Scaling**
   - **Goal:** Connect failover signals directly with the Nomad Task Supervisor and SwarmTool.
   - **Tasks:**
