@@ -57,6 +57,7 @@ from tools.set_operational_mode_tool import SetOperationalModeTool
 from tools.ouroboros_tool import OuroborosTool
 from tools.ternlight_tool import TernlightTool
 from tools.external_app_manager_tool import ExternalAppManagerTool
+from tools.jacobian_lens_tool import JacobianLensTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -157,6 +158,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
             consul_url=config.get('consul_url'),
             nomad_url=config.get('nomad_url')
         ),
+        "jacobian_lens": JacobianLensTool(),
     }
 
     # Inject memory client into SwarmTool if available (for Map-Reduce)

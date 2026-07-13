@@ -110,7 +110,8 @@ modules_to_mock = [
     'starlette.requests',
     'starlette.responses',
     'starlette.types',
-    'claude_clone_tool'
+    'claude_clone_tool',
+    'extism'
 ]
 
 def mock_module_if_missing(module_name):
