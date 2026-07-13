@@ -13,7 +13,7 @@ class TestOpencodeTool(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.tool = OpencodeTool(base_url="http://test-url", provider_id="test-provider", model_id="test-model")
 
-    @patch('tools.opencode_tool.AsyncOpencode')
+    @patch('opencode_ai.AsyncOpencode')
     async def test_run_success(self, mock_async_opencode):
         # Mock the client and session
         mock_client = AsyncMock()
@@ -40,7 +40,7 @@ class TestOpencodeTool(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args.kwargs['provider_id'], "test-provider")
         self.assertEqual(call_args.kwargs['model_id'], "test-model")
 
-    @patch('tools.opencode_tool.AsyncOpencode')
+    @patch('opencode_ai.AsyncOpencode')
     async def test_run_error(self, mock_async_opencode):
         mock_client = AsyncMock()
         mock_client.session.create.side_effect = Exception("Connection error")

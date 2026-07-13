@@ -1,4 +1,3 @@
-import extism
 import json
 import os
 import logging
@@ -58,6 +57,7 @@ class WasmTool:
             return f"Error: WASM module not found at {self.wasm_path}. Please ensure it is compiled."
 
         try:
+            import extism
             manifest = {"wasm": [{"path": self.wasm_path}]}
             plugin = extism.Plugin(manifest, wasi=True)
 
@@ -93,6 +93,7 @@ class WasmTool:
             return f"Error: WASM module not found at {self.wasm_path}."
 
         try:
+            import extism
             manifest = {"wasm": [{"path": self.wasm_path}]}
             plugin = extism.Plugin(manifest, wasi=True)
 

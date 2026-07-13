@@ -2,7 +2,6 @@ import os
 import json
 import sqlite3
 import requests
-import fitz  # PyMuPDF
 import subprocess
 import shutil
 from abc import ABC, abstractmethod
@@ -157,6 +156,10 @@ class LocalDirectoryBackend(DocumentBackend):
     def _extract_text(self, filepath: str) -> str:
         ext = os.path.splitext(filepath)[1].lower()
         if ext == '.pdf':
+            try:
+                import fitz  # PyMuPDF
+            except ImportError:
+                raise ImportError("The 'PyMuPDF' (fitz) library is not installed. Please install it to parse PDF files.")
             text = ""
             with fitz.open(filepath) as doc:
                 for page in doc:
