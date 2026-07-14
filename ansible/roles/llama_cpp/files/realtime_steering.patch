@@ -171,10 +171,10 @@ index 58dda8914..98fe0935c 100644
      // to be used in router mode
      json get_model_info() const;
 diff --git a/tools/server/server-task.h b/tools/server/server-task.h
-index 64bdecd79..1c9efe1b0 100644
+index c3eea2ecb..2e9f32842 100644
 --- a/tools/server/server-task.h
 +++ b/tools/server/server-task.h
-@@ -26,6 +26,7 @@ enum server_task_type {
+@@ -27,6 +27,7 @@ enum server_task_type {
      SERVER_TASK_TYPE_SLOT_ERASE,
      SERVER_TASK_TYPE_GET_LORA,
      SERVER_TASK_TYPE_SET_LORA,
@@ -182,7 +182,7 @@ index 64bdecd79..1c9efe1b0 100644
  };
 
  // TODO: change this to more generic "response_format" to replace the "format_response_*" in server-common
-@@ -168,6 +169,9 @@ struct server_task {
+@@ -175,6 +176,9 @@ struct server_task {
      // used by SERVER_TASK_TYPE_SET_LORA
      std::map<int, float> set_lora; // mapping adapter ID -> scale
 
@@ -192,7 +192,7 @@ index 64bdecd79..1c9efe1b0 100644
      server_task() = default;
 
      server_task(server_task_type type) : type(type) {}
-@@ -565,6 +569,14 @@ struct server_task_result_apply_lora : server_task_result {
+@@ -584,6 +588,14 @@ struct server_task_result_apply_lora : server_task_result {
      virtual json to_json() override;
  };
 
@@ -204,9 +204,9 @@ index 64bdecd79..1c9efe1b0 100644
 +    }
 +};
 +
- struct server_prompt_data {
-     std::vector<uint8_t> main;
-     std::vector<uint8_t> drft;
+ struct server_prompt {
+     server_tokens tokens;
+
 diff --git a/tools/server/server.cpp b/tools/server/server.cpp
 index 371b13c44..463db80dd 100644
 --- a/tools/server/server.cpp
