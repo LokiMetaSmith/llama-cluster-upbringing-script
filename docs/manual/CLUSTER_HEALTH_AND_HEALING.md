@@ -35,7 +35,13 @@ The health subsystem runs independently of `pipecatapp` and other user space web
 
 ## Command Reference
 
-Run the tool using Python 3:
+Run the tool using either Python 3 directly, or via the `bootstrap.sh` entry point (which automatically sets up the Python virtual environment and dependencies if needed):
+
+```bash
+./bootstrap.sh --troubleshoot <command> [options]
+```
+
+Or directly using Python 3:
 
 ```bash
 python3 scripts/troubleshoot.py <command> [options]
