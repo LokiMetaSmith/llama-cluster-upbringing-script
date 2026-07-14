@@ -151,6 +151,12 @@ def test_probe_health(mock_api_get, mock_run_command, capsys):
                 "stdout": "cid1|test-container|running|Up 2 hours\n",
                 "stderr": ""
             }
+        elif "git" in command and "rev-parse" in command:
+            return {
+                "exit_code": 0,
+                "stdout": "abc123commitgit\n",
+                "stderr": ""
+            }
         return {"exit_code": 0, "stdout": "", "stderr": ""}
 
     mock_run_command.side_effect = run_cmd_side_effect
@@ -163,6 +169,7 @@ def test_probe_health(mock_api_get, mock_run_command, capsys):
     assert len(report["nomad_jobs"]) == 2
     assert report["nomad_jobs"][0]["id"] == "pipecat-app"
     assert report["nomad_jobs"][1]["healthy"] is False
+    assert report["system"]["git_commit_hash"] == "abc123commitgit"
 
     # Test text print mode
     args_txt = DummyArgs(json=False)
@@ -171,6 +178,7 @@ def test_probe_health(mock_api_get, mock_run_command, capsys):
     assert "System Health Probe: DEGRADED" in captured.out
     assert "pipecat-app" in captured.out
     assert "dead-expert" in captured.out
+    assert "Git Hash: abc123commitgit" in captured.out
 
 
 def test_heal_services(mock_api_get, mock_run_command, capsys):

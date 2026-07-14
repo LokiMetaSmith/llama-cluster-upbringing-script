@@ -104,6 +104,14 @@ def get_consul_token():
     return None
 
 
+def get_git_commit_hash():
+    """Queries git for the current repository commit hash."""
+    res = run_command(["git", "rev-parse", "HEAD"])
+    if res["exit_code"] == 0:
+        return res["stdout"].strip()
+    return "unknown (not a git repo or git not installed)"
+
+
 def run_legacy_command(command, shell=False, env=None, quiet=False):
     """Run a shell command and return its output for reports."""
     try:
@@ -484,6 +492,7 @@ def cmd_report(args):
         f.write(section("TROUBLESHOOTING REPORT"))
         f.write(f"Date: {datetime.now()}\n")
         f.write(f"Hostname: {os.uname().nodename}\n")
+        f.write(f"Git Commit Hash: {get_git_commit_hash()}\n")
         try:
             user = getpass.getuser()
         except Exception:
@@ -555,7 +564,8 @@ def cmd_probe(args):
         "timestamp": timestamp,
         "system": {
             "hostname": os.uname().nodename,
-            "user": getpass.getuser()
+            "user": getpass.getuser(),
+            "git_commit_hash": get_git_commit_hash()
         },
         "nomad_jobs": [],
         "systemd_services": [],
@@ -619,7 +629,7 @@ def cmd_probe(args):
         return report
 
     print(f"=== System Health Probe: {report['summary']['status'].upper()} ===")
-    print(f"Time: {timestamp} | Host: {report['system']['hostname']}")
+    print(f"Time: {timestamp} | Host: {report['system']['hostname']} | Git Hash: {report['system']['git_commit_hash']}")
     print("-" * 60)
 
     print("\n--- Nomad Jobs ---")

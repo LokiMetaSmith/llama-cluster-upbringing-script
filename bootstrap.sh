@@ -57,6 +57,7 @@ show_help() {
     echo ""
     echo "Cluster and Node Recovery Options:"
     echo "  --heal-cluster               Run the cluster healing playbook to restore core services."
+    echo "  --troubleshoot [args]        Run the unified system-wide troubleshoot/healing utility."
     echo "  --recover-node <ip>          Attempt to recover a remote node by its IP address."
     echo "  --ipmi-host <host>           IPMI network address (BMC IP) for remote node recovery."
     echo "  --ipmi-user <user>           IPMI username for remote node recovery."
@@ -100,6 +101,8 @@ PXE_SERVER_IP=""
 CLI_AGENT_API_BASE=""
 CLI_AGENT_MODEL=""
 CLI_AGENT_API_KEY=""
+DO_TROUBLESHOOT=false
+declare -a TROUBLESHOOT_ARGS
 
 # --- Network Discovery ---
 find_controller() {
@@ -441,6 +444,13 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             ;;
         --heal-cluster)
             DO_HEAL_CLUSTER=true
+            ;;
+        --troubleshoot)
+            DO_TROUBLESHOOT=true
+            for ((k=i+1; k<${#ARGS[@]}; k++)); do
+                TROUBLESHOOT_ARGS+=("${ARGS[$k]}")
+            done
+            break
             ;;
         --recover-node)
             DO_RECOVER_NODE=true
@@ -809,6 +819,13 @@ fi
 if [ "$DO_HEAL_CLUSTER" = true ]; then
     echo -e "${BOLD}=== Cluster Healing ===${NC}"
     ./scripts/heal_cluster.sh
+    exit $?
+fi
+
+if [ "$DO_TROUBLESHOOT" = true ]; then
+    echo -e "${BOLD}=== Cluster Troubleshooting & Healing Utility ===${NC}"
+    ensure_python_environment
+    python3 scripts/troubleshoot.py "${TROUBLESHOOT_ARGS[@]}"
     exit $?
 fi
 
