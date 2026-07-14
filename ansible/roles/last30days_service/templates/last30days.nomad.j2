@@ -1,0 +1,56 @@
+job "last30days-service" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "service"
+
+  group "last30days-group" {
+    count = 1
+
+    network {
+      port "http" {
+        static = 8008
+      }
+    }
+
+    {% set image_cid = last30days_service_ipfs_cid %}
+    {% set image_tar_name = 'last30days-service' %}
+    {% include 'load_image_task.nomad.j2' %}
+
+    task "last30days-task" {
+      driver = "docker"
+
+      config {
+        image = "last30days-service:local"
+        force_pull = false
+        ports = ["http"]
+      }
+
+      env {
+        TOOL_SERVER_API_KEY = "{{ openai_api_key }}"
+        SCRAPECREATORS_API_KEY = "{{ scrapecreators_api_key | default('') }}"
+        XAI_API_KEY = "{{ xai_api_key | default('') }}"
+        OPENAI_API_KEY = "{{ openai_api_key | default('') }}"
+        BRAVE_API_KEY = "{{ brave_api_key | default('') }}"
+        EXA_API_KEY = "{{ exa_api_key | default('') }}"
+        PORT = "8008"
+      }
+
+      resources {
+        cpu    = 1000
+        memory = 2048
+      }
+
+      service {
+        name = "last30days-service"
+        port = "http"
+        tags = ["last30days-service", "http"]
+
+        check {
+          type     = "http"
+          path     = "/health"
+          interval = "15s"
+          timeout  = "5s"
+        }
+      }
+    }
+  }
+}

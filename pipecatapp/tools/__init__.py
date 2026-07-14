@@ -25,6 +25,7 @@ from .ha_tool import HA_Tool
 from .heretic_tool import HereticTool
 from .jacobian_lens_tool import JacobianLensTool
 from .jules_tool import JulesTool
+from .last30days_tool import Last30DaysTool
 from .langchain_adapter_tool import LangChainToolAdapter
 from .lightweight_project_mapper_tool import LightweightProjectMapperTool
 from .llxprt_code_tool import LLxprt_Code_Tool
@@ -98,6 +99,7 @@ __all__ = [
     "HereticTool",
     "JacobianLensTool",
     "JulesTool",
+    "Last30DaysTool",
     "LangChainToolAdapter",
     "LightweightProjectMapperTool",
     "LLxprt_Code_Tool",
