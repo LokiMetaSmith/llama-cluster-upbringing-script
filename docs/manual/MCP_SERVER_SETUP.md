@@ -6,6 +6,15 @@ The category of software you're looking for is generally called service discover
 
 Here are a few popular open-source options that would be well-suited for your needs:
 
+## Table of Contents
+
+- [Consul](#consul)
+- [etcd](#etcd)
+- [Kubernetes Service Discovery](#kubernetes-service-discovery)
+- [How this would work with your LLM Agents](#how-this-would-work-with-your-llm-agents)
+
+---
+
 ## Consul
 
 Consul is a comprehensive service mesh solution that includes a service discovery and registry. It is feature-rich and widely used in microservices architectures.

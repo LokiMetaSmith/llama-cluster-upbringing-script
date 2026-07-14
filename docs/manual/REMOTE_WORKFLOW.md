@@ -4,6 +4,20 @@ Last updated: 2025-11-06
 
 Managing a remote cluster involves spending a lot of time in a terminal. Mosh and tmux are two essential tools that make this experience faster, more reliable, and more efficient.
 
+## Table of Contents
+
+- [Mosh: The Mobile Shell 🚀](#mosh-the-mobile-shell)
+- [Tmux: The Terminal Multiplexer 🖥️](#tmux-the-terminal-multiplexer)
+- [The Ultimate Combination: Mosh + Tmux ✨](#the-ultimate-combination-mosh-tmux)
+  - [Your New Workflow](#your-new-workflow)
+- [Beyond the Basics: Advanced Tools for Power Users 🚀](#beyond-the-basics-advanced-tools-for-power-users)
+  - [Helix: A Modern, Post-Modern Text Editor](#helix-a-modern-post-modern-text-editor)
+  - [Tmux Popups: Integrating Tools Seamlessly](#tmux-popups-integrating-tools-seamlessly)
+  - [Yazi: A Blazing Fast Terminal File Manager](#yazi-a-blazing-fast-terminal-file-manager)
+  - [Lazygit: A TUI for Git](#lazygit-a-tui-for-git)
+
+---
+
 ## Mosh: The Mobile Shell 🚀
 
 Mosh is a replacement for SSH that is built for modern, unreliable network connections.

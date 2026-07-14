@@ -2,6 +2,14 @@
 
 This document tracks optimizations applied to the codebase to reduce syscall overhead and improve I/O performance, inspired by insights on [syscall overhead](https://modulovalue.com/blog/syscall-overhead-tar-gz-io-performance/).
 
+## Table of Contents
+
+- [Syscall Reduction in ExperimentTool](#syscall-reduction-in-experimenttool)
+- [Git Integration in ProjectMapperTool](#git-integration-in-projectmappertool)
+- [Future Opportunities](#future-opportunities)
+
+---
+
 ## Syscall Reduction in ExperimentTool
 
 **Problem:** The `ExperimentTool` creates a fresh sandbox for every agent evaluation. Previously, this used `shutil.copytree`, which performs thousands of `open`, `read`, `write`, `close` syscalls (one set per file) to copy the application code to a temporary directory.

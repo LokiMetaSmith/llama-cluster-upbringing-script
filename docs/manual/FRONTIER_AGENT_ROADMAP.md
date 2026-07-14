@@ -2,6 +2,19 @@
 
 This document outlines the architectural roadmap to evolve the current Pipecat-based agent system into a "Frontier Agent" system, characterized by persistent memory, multi-repo autonomy, and scalable agent swarms.
 
+## Table of Contents
+
+- [1. Vision](#1-vision)
+- [2. Gap Analysis](#2-gap-analysis)
+- [3. Implementation Plan](#3-implementation-plan)
+  - [Phase 1: Foundation (Immediate)](#phase-1-foundation-immediate)
+  - [Phase 2: The "Shared Brain" (Memory Service)](#phase-2-the-shared-brain-memory-service)
+  - [Phase 3: The "Planner" & Knowledge Graph](#phase-3-the-planner-knowledge-graph)
+  - [Phase 4: Continuous Evolution](#phase-4-continuous-evolution)
+- [4. Architecture Diagram (Target)](#4-architecture-diagram-target)
+
+---
+
 ## 1. Vision
 
 The goal is to transition from a single-session, user-driven assistant to an autonomous, multi-agent system capable of:

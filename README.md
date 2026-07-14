@@ -29,7 +29,8 @@
 It uses Ansible for automated provisioning, Nomad for cluster orchestration, and
 a state-of-the-art AI stack to create a responsive, streaming, and embodied
 voice agent. For a detailed technical description of the system's layers, see
-the [Holistic Project Architecture](docs/manual/ARCHITECTURE.md) document.
+the [Holistic Project Architecture](docs/manual/ARCHITECTURE.md) document or explore
+the comprehensive [Thematic Manuals Index](docs/manual/README.md).
 
 
 ## 1. System Requirements

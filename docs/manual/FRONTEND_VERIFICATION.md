@@ -2,6 +2,20 @@
 
 After you make any frontend change, you **must** attempt to visually verify it by following this workflow. The goal is to start the application, write a temporary Playwright script to demonstrate your change, take a screenshot, and confirm it looks correct before finalizing.
 
+## Table of Contents
+
+- [Step-by-Step Verification Workflow](#step-by-step-verification-workflow)
+  - [1. Start the Application 🚀](#1-start-the-application)
+  - [2. Create a Verification Script ✍️ and Screenshot 📸](#2-create-a-verification-script-and-screenshot)
+  - [3. Visually Inspect Your Work 👀](#3-visually-inspect-your-work)
+  - [4. Confirm Completion ✅](#4-confirm-completion)
+- [Debugging Failed Scripts 🐛](#debugging-failed-scripts)
+- [Playwright Best Practices](#playwright-best-practices)
+- [Important: Playwright Verification Scripts vs. Repository Tests](#important-playwright-verification-scripts-vs-repository-tests)
+- [Example Playwright Script](#example-playwright-script)
+
+---
+
 ## Step-by-Step Verification Workflow
 
 Follow these steps in order to test and verify your frontend changes.

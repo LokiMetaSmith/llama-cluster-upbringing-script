@@ -1,5 +1,18 @@
 # GEMINI.md
 
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Building and Running](#building-and-running)
+  - [Single-Node Setup (Bootstrap)](#single-node-setup-bootstrap)
+  - [Multi-Node Cluster Provisioning](#multi-node-cluster-provisioning)
+  - [Testing and Verification](#testing-and-verification)
+- [Development Conventions](#development-conventions)
+  - [Code Quality and Linting](#code-quality-and-linting)
+  - [Prompt Engineering](#prompt-engineering)
+
+---
+
 ## Project Overview
 
 This project provides a complete solution for deploying a high-performance, low-latency conversational AI pipeline on a cluster of legacy, resource-constrained desktop computers. It uses Ansible for automated provisioning, Nomad for cluster orchestration, and a state-of-the-art AI stack to create a responsive, streaming, and embodied voice agent.

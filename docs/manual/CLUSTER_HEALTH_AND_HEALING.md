@@ -6,6 +6,18 @@ The primary tool is `scripts/troubleshoot.py`, which integrates diagnostics, hea
 
 ---
 
+## Table of Contents
+
+- [Architecture Overview](#architecture-overview)
+- [Command Reference](#command-reference)
+  - [1. `probe` (System-Wide Health Probe)](#1-probe-system-wide-health-probe)
+  - [2. `heal` (Force-Run & Self-Healing Sequence)](#2-heal-force-run-self-healing-sequence)
+  - [3. `daemon` (Autonomous Self-Healing Loop)](#3-daemon-autonomous-self-healing-loop)
+  - [4. `report` (Comprehensive Diagnostics Report)](#4-report-comprehensive-diagnostics-report)
+- [Log Instrument Design & 404 Fallback](#log-instrument-design-404-fallback)
+
+---
+
 ## Architecture Overview
 
 The health subsystem runs independently of `pipecatapp` and other user space web server processes, allowing operators and autonomous agents to diagnose, inspect, and recover cluster services even when the primary applications are offline or degraded.

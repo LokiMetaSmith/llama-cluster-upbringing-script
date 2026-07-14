@@ -1,5 +1,20 @@
 # Architectural Design: Microservice De-monolithization of TwinService
 
+## Table of Contents
+
+- [1. Objective](#1-objective)
+- [2. Current State & Problem Statement](#2-current-state-problem-statement)
+- [3. Proposed Architecture](#3-proposed-architecture)
+  - [3.1. Target Services](#31-target-services)
+  - [3.2. Orchestration via Consul Service Mesh](#32-orchestration-via-consul-service-mesh)
+- [4. Phased Implementation Plan](#4-phased-implementation-plan)
+  - [Phase 1: Architectural Design](#phase-1-architectural-design)
+  - [Phase 2: RAG Microservice Extraction](#phase-2-rag-microservice-extraction)
+  - [Phase 3: Code Runner Sandbox Extraction](#phase-3-code-runner-sandbox-extraction)
+- [5. Expected Outcomes](#5-expected-outcomes)
+
+---
+
 ## 1. Objective
 To improve the robustness, scalability, and security of the AI agent on legacy hardware by breaking down the `TwinService` monolith. Heavy, blocking, or security-sensitive tools (e.g., RAG document embedding, isolated Python code execution) will be extracted into independent microservices running as separate Nomad jobs.
 

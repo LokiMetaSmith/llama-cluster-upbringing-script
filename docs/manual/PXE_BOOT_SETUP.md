@@ -4,6 +4,17 @@ Last updated: 2025-11-06
 
 This document explains how to set up an advanced PXE boot server that uses iPXE to automate the installation of Debian 12 on new cluster nodes. This method is faster and more reliable than traditional PXE by leveraging HTTP instead of TFTP for the bulk of the file transfers.
 
+## Table of Contents
+
+- [1. Overview](#1-overview)
+- [2. Setup](#2-setup)
+  - [2.1. Designate a PXE Server](#21-designate-a-pxe-server)
+  - [2.2. Apply the `pxe_server` Role](#22-apply-the-pxe_server-role)
+  - [2.3. DHCP Configuration](#23-dhcp-configuration)
+  - [2.4. Prepare Client Machines](#24-prepare-client-machines)
+
+---
+
 ## 1. Overview
 
 The `pxe_server` Ansible role automates the setup of all necessary services for a modern, iPXE-based workflow:

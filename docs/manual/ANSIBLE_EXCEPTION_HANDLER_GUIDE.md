@@ -4,6 +4,25 @@ The **Automated Ansible Exception Handler & Git PR Loop** (referred to as **Jule
 
 ---
 
+## Table of Contents
+
+- [🛠️ Architecture Overview](#architecture-overview)
+- [📂 Context Directory Structure](#context-directory-structure)
+- [🚀 Standalone CLI Usage](#standalone-cli-usage)
+  - [Prerequisites](#prerequisites)
+  - [Basic Command](#basic-command)
+  - [Return Codes](#return-codes)
+- [💬 Online Agent Tool Usage](#online-agent-tool-usage)
+- [🔧 LLM Provider Resolution & Configuration](#llm-provider-resolution-configuration)
+- [🧪 Iterative Linting & Sandbox Checks](#iterative-linting-sandbox-checks)
+- [📦 Git Automation & Local Fallback (Opengist)](#git-automation-local-fallback-opengist)
+  - [1. Git Branch Isolation](#1-git-branch-isolation)
+  - [2. Opengist Remote Push](#2-opengist-remote-push)
+  - [3. Local Offline Fallback](#3-local-offline-fallback)
+- [🔬 Running Tests](#running-tests)
+
+---
+
 ## 🛠️ Architecture Overview
 
 The system consists of three decoupled components:

@@ -4,6 +4,18 @@ Last updated: 2026-01-18
 
 Agent memories related to the project.
 
+## Table of Contents
+
+- [Ansible Patterns & Best Practices](#ansible-patterns-best-practices)
+- [Nomad & Consul Configuration](#nomad-consul-configuration)
+- [Development Workflow & Testing](#development-workflow-testing)
+- [Project Architecture & Components](#project-architecture-components)
+- [Troubleshooting & Gotchas](#troubleshooting-gotchas)
+- [Frontend, VR & UI](#frontend-vr-ui)
+- [Security & Privacy](#security-privacy)
+
+---
+
 ## Ansible Patterns & Best Practices
 
 * When an Ansible task using the `slurp` module is skipped due to a `when` condition, the registered variable is still created but will lack the `content` key. Conditional logic should check for the key's existence (e.g., `'content' in my_variable`) rather than just if the variable is defined (`my_variable is defined`) to avoid errors.

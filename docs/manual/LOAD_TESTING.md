@@ -4,6 +4,18 @@ As the cluster scales to a multi-node Swarm architecture (combining core control
 
 This repository includes a suite of tools to test Traditional Container Load Balancing (managed by Nomad and routed by Traefik) and internal Service Mesh connectivity (managed by Consul).
 
+## Table of Contents
+
+- [1. Network Validation Playbook](#1-network-validation-playbook)
+  - [Running the Checks](#running-the-checks)
+  - [What It Tests](#what-it-tests)
+- [2. Testing Traefik L7 Load Balancing](#2-testing-traefik-l7-load-balancing)
+  - [Step 2.1: Deploy the Dummy Service](#step-21-deploy-the-dummy-service)
+  - [Step 2.2: Run the Stress Test](#step-22-run-the-stress-test)
+  - [Step 2.3: Analyze the Results](#step-23-analyze-the-results)
+
+---
+
 ## 1. Network Validation Playbook
 
 Before attempting to deploy distributed workloads, you must verify that the underlying Tailscale mesh, Consul DNS, and Nomad APIs are communicating properly across all nodes.

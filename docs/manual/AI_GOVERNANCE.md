@@ -6,6 +6,26 @@ This document outlines the current state and future roadmap for the Agentic Gove
 
 ---
 
+## Table of Contents
+
+- [1. KPMG TACO Agent Taxonomy](#1-kpmg-taco-agent-taxonomy)
+  - [Current State Mapping](#current-state-mapping)
+  - [Future Recommendations](#future-recommendations)
+- [2. The Five Pillars of Agentic Governance](#2-the-five-pillars-of-agentic-governance)
+  - [1. Inventory](#1-inventory)
+  - [2. Identity](#2-identity)
+  - [3. Least Privilege](#3-least-privilege)
+  - [4. Observ-ability](#4-observ-ability)
+  - [5. Continuous Compliance](#5-continuous-compliance)
+- [3. Protocols & Standards](#3-protocols-standards)
+  - [1. Model Context Protocol (MCP)](#1-model-context-protocol-mcp)
+  - [2. Agent-to-Agent Protocol (A2A)](#2-agent-to-agent-protocol-a2a)
+  - [3. Agent Name Service (ANS)](#3-agent-name-service-ans)
+  - [4. Zero Trust Agent Task Framework (ATF)](#4-zero-trust-agent-task-framework-atf)
+- [4. Immediate TODO List for Review](#4-immediate-todo-list-for-review)
+
+---
+
 ## 1. KPMG TACO Agent Taxonomy
 
 To effectively govern our multi-agent system, we classify our existing AI services and tools according to the KPMG TACO (Taskers, Automators, Collaborators, Orchestrators) taxonomy.

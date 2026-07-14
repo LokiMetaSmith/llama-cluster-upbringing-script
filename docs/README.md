@@ -1,47 +1,45 @@
 # Project Documentation
 
-This directory contains detailed documentation for the Distributed Conversational AI Pipeline.
+This directory contains detailed documentation and design analysis for the Distributed Conversational AI Pipeline and Cluster.
 
-## Contents
+## User Manuals & Design Documents
 
-- **[Agents Architecture](manual/AGENTS.md)**: Describes the Mixture of Experts (MoE) and Ensemble of Agents architectures.
-- **[System Architecture](manual/ARCHITECTURE.md)**: A holistic view of the system's layers and components.
-- **[Deployment & Profiling](manual/DEPLOYMENT_AND_PROFILING.md)**: Guides for deploying and profiling the application.
-- **[Frontend Verification](manual/FRONTEND_VERIFICATION.md)**: Instructions for verifying UI changes with Playwright.
-- **[Gemini CLI](manual/GEMINI.md)**: Setup and usage of the Gemini CLI extension.
-- **[MCP Server](manual/MCP_SERVER_SETUP.md)**: Setup guide for the Model Context Protocol server.
-- **[Memories](manual/MEMORIES.md)**: Details on the short-term and long-term memory systems.
-- **[PXE Boot Setup](manual/PXE_BOOT_SETUP.md)**: Guide for setting up the iPXE boot server for Debian.
-- **[NixOS PXE Boot](manual/NIXOS_PXE_BOOT_SETUP.md)**: Experimental guide for NixOS PXE boot.
-- **[Project Summary](manual/PROJECT_SUMMARY.md)**: High-level summary of the project.
-- **[Remote Workflow](manual/REMOTE_WORKFLOW.md)**: Recommended workflow for remote development.
-- **[Network Configuration](manual/NETWORK.md)**: Network setup and requirements.
-- **[Troubleshooting](manual/TROUBLESHOOTING.md)**: Solutions to common issues.
-- **[TODO](manual/TODO.md)**: Project roadmap and task list.
+All user-facing manuals, deployment playbooks, and architectural blueprints are maintained in the `manual/` subdirectory.
 
-### Analysis Documents
+*   **[Thematic Manuals Index](manual/README.md)**: Explore the complete, curated index of our 26 user manuals and system designs, categorized by theme:
+    *   *Core Architecture & Summaries*
+    *   *AI Agents & Cognitive Systems*
+    *   *Tool Integrations & Declarative Workflows*
+    *   *Network Architecture & Security*
+    *   *Bare-Metal Provisioning & Deployment*
+    *   *Operations, Self-Healing & Diagnostics*
 
-- **[LiteGraph vs ReactFlow Analysis](analysis/LITEGRAPH_VS_REACTFLOW.md)**: Implemented (Analysis completed)
+---
 
-- **[Agent Lightning Analysis](analysis/AGENT_LIGHTNING_ANALYSIS.md)**: Implemented (Investigated as agent improvement method)
-- **[Ceph Evaluation](analysis/CEPH_EVALUATION.md)**: Completed (Evaluated for potential cluster inclusion)
-- **[Benchmarking](analysis/BENCHMARKING.MD)**: Implemented (Benchmarking suite exists)
-- **[Clamav Evaluation](analysis/CLAMAV_EVALUATION.md)**: Yet to be implemented
-- **[Claude Code Analysis](analysis/CLAUDE_CODE_ANALYSIS.md)**: Implemented (CLI techniques implemented)
-- **[Dirac Evaluation](analysis/DIRAC_EVALUATION.md)**: Discarded (Dirac toolset deprecated)
-- **[LLMRouter Evaluation](analysis/EVALUATION_LLMROUTER.md)**: Implemented (Integration completed)
-- **[Flowise Analysis](analysis/FLOWISE_ANALYSIS.md)**: Implemented (UI integration completed)
-- **[GCP Generative AI Review](analysis/GCP_GENERATIVE_AI_REVIEW.md)**: Yet to be implemented
-- **[Haystack Analysis](analysis/HAYSTACK_ANALYSIS.md)**: Implemented (Pipeline/component concepts integrated)
-- **[IPv6 Audit](analysis/IPV6_AUDIT.md)**: Yet to be implemented
-- **[Langchain Analysis](analysis/LANGCHAIN_ANALYSIS.md)**: Implemented (LangChain Hybrid Approach completed)
-- **[Memento Skills Analysis](analysis/MEMENTO_SKILLS_ANALYSIS.md)**: Yet to be implemented
-- **[Paseo Analysis](analysis/PASEO_ANALYSIS.md)**: Implemented (Orchestration concepts integrated)
-- **[Pollen Comparison](analysis/POLLEN_COMPARISON.md)**: Implemented (WASM mesh efficiencies integrated)
-- **[Refactor Proposal Hybrid Architecture](analysis/REFACTOR_PROPOSAL_hybrid_architecture.md)**: Implemented (Migrate to Hybrid Architecture - Phase 1)
-- **[Security Audit](analysis/SECURITY_AUDIT.md)**: Implemented (Security Audit completed)
-- **[Tool Evaluation](analysis/TOOL_EVALUATION.md)**: Implemented (Tools evaluated and updated)
-- **[vLLM Project Evaluation](analysis/VLLM_PROJECT_EVALUATION.md)**: Implemented (Evaluated findings)
-- **[YAML Files Report](analysis/YAML_FILES_REPORT.md)**: Yet to be implemented
-- **[Heretic Evaluation](analysis/heretic_evaluation.md)**: Implemented (Heretic tool exists)
-- **[Review Report](analysis/review_report.md)**: Yet to be implemented
+## Technical & Architecture Analysis Documents
+
+The `analysis/` directory contains strategic technical reviews, system comparisons, and capability evaluation reports compiled during development.
+
+*   **[LiteGraph vs ReactFlow Analysis](analysis/LITEGRAPH_VS_REACTFLOW.md)**: Completed comparison of front-end graph UI frameworks.
+*   **[Agent Lightning Analysis](analysis/AGENT_LIGHTNING_ANALYSIS.md)**: Investigation into agentic latency optimizations.
+*   **[Ceph Storage Cluster Evaluation](analysis/CEPH_EVALUATION.md)**: Assessment of Ceph for block/file storage cluster inclusion.
+*   **[A Guide to Benchmarking](analysis/BENCHMARKING.MD)**: Standard benchmarking procedures and performance suites.
+*   **[Clamav Evaluation](analysis/CLAMAV_EVALUATION.md)**: Analysis of real-time antivirus scans for agentic code.
+*   **[Claude Code CLI Analysis](analysis/CLAUDE_CODE_ANALYSIS.md)**: Insights on terminal-based autonomous coding.
+*   **[Dirac Evaluation](analysis/DIRAC_EVALUATION.md)**: Deprecation review of the Dirac toolset.
+*   **[LLMRouter Evaluation Report](analysis/EVALUATION_LLMROUTER.md)**: Multi-model routing strategies and benchmark findings.
+*   **[Flowise UI Analysis](analysis/FLOWISE_ANALYSIS.md)**: Web interface and node integration analysis.
+*   **[GCP Generative AI Review](analysis/GCP_GENERATIVE_AI_REVIEW.md)**: Integration analysis of GCP vertex endpoints.
+*   **[Haystack Analysis and Integration](analysis/HAYSTACK_ANALYSIS.md)**: Utilizing Haystack pipeline patterns inside the agent loop.
+*   **[IPv6 Audit Report](analysis/IPV6_AUDIT.md)**: Audit of address mapping and dual-stack requirements.
+*   **[LangChain Hybrid Integration](analysis/LANGCHAIN_ANALYSIS.md)**: Analysis of LangChain components for memory persistence.
+*   **[Memento Skills Analysis](analysis/MEMENTO_SKILLS_ANALYSIS.md)**: Investigating procedural skills databases.
+*   **[Paseo Orchestration Analysis](analysis/PASEO_ANALYSIS.md)**: Multi-agent message routing concepts.
+*   **[Pollen WASM Comparison](analysis/POLLEN_COMPARISON.md)**: Utilizing WebAssembly for lightweight edge tasks.
+*   **[Refactoring Proposal: Hybrid Architecture](analysis/REFACTOR_PROPOSAL_hybrid_architecture.md)**: Proposal for cluster-native de-monolithization.
+*   **[Security Audit Log](analysis/SECURITY_AUDIT.md)**: Central record of vulnerability checks and mitigations.
+*   **[Tool Evaluation & Strategic Direction](analysis/TOOL_EVALUATION.md)**: Evaluating security sandboxing for agent tools.
+*   **[vLLM Project Evaluation](analysis/VLLM_PROJECT_EVALUATION.md)**: Highly-parallelized vLLM deployment analysis.
+*   **[YAML Files Report](analysis/YAML_FILES_REPORT.md)**: Review of root-level YAML playbooks and configs.
+*   **[Heretic Repository Evaluation](analysis/heretic_evaluation.md)**: Aligning open-weight LLMs via supervised fine-tuning.
+*   **[Project Review Report](analysis/review_report.md)**: Consolidated review of overall code structure and future direction.

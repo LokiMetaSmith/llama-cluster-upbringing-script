@@ -1,5 +1,23 @@
 # Obsidian Workflow Design: The "Active Vault" Architecture
 
+## Table of Contents
+
+- [Overview](#overview)
+- [1. The "Active Document" Concept](#1-the-active-document-concept)
+  - [The "Gardener" Metaphor](#the-gardener-metaphor)
+- [2. Feature Comparison: Obsidian Canvas vs. Pipecat Workflow](#2-feature-comparison-obsidian-canvas-vs-pipecat-workflow)
+  - [Missing Features in Pipecat Workflow (to be added)](#missing-features-in-pipecat-workflow-to-be-added)
+  - [Missing Features in Obsidian Canvas (to be inferred)](#missing-features-in-obsidian-canvas-to-be-inferred)
+- [3. The Hybrid Workflow Schema (3D Extension)](#3-the-hybrid-workflow-schema-3d-extension)
+  - [Enhanced Node Schema](#enhanced-node-schema)
+  - [The "Zoom" Metaphor](#the-zoom-metaphor)
+- [4. Implementation Strategy](#4-implementation-strategy)
+  - [Phase 1: Schema & Converter (This Task)](#phase-1-schema-converter-this-task)
+  - [Phase 2: The 3D Visualizer (Future)](#phase-2-the-3d-visualizer-future)
+  - [Phase 3: The Gardener Service (Future)](#phase-3-the-gardener-service-future)
+
+---
+
 ## Overview
 
 This document outlines the architectural vision for integrating **Obsidian** (a local Markdown/Canvas knowledge base) with **Pipecat** (our agentic workflow engine). The goal is to transform static notes into "Active Documents"—files that are both human-readable interfaces and executable agent environments.

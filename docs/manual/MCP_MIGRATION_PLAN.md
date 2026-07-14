@@ -2,6 +2,17 @@
 
 This document outlines the strategy for migrating the current custom tool interface in `pipecatapp/tools/` to the open Model Context Protocol (MCP).
 
+## Table of Contents
+
+- [Current State](#current-state)
+- [Migration Strategy](#migration-strategy)
+  - [Phase 1: Core MCP Infrastructure](#phase-1-core-mcp-infrastructure)
+  - [Phase 2: Refactoring Existing Tools](#phase-2-refactoring-existing-tools)
+  - [Phase 3: Deprecation and Cleanup](#phase-3-deprecation-and-cleanup)
+- [Security Considerations](#security-considerations)
+
+---
+
 ## Current State
 
 The `pipecatapp/tools/` directory contains numerous custom tools (e.g., `shell_tool.py`, `file_editor_tool.py`, `rag_tool.py`, `mcp_tool.py`). These tools currently rely on tight coupling with internal services, such as:
