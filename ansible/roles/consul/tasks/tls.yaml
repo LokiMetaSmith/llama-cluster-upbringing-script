@@ -5,6 +5,20 @@
   delegate_to: localhost
   check_mode: false
 
+- name: Check if existing Consul CA certificate on target node is compliant
+  become: yes
+  ansible.builtin.shell: |
+    set -e
+    if [ ! -f "{{ consul_config_dir }}/ca.pem" ]; then
+      exit 1
+    fi
+    openssl x509 -in "{{ consul_config_dir }}/ca.pem" -text -noout | grep -q "CA:TRUE"
+    openssl x509 -in "{{ consul_config_dir }}/ca.pem" -text -noout | grep -E -q "X509v3 Key Usage|keyUsage"
+    openssl x509 -in "{{ consul_config_dir }}/ca.pem" -text -noout | grep -E -q "Certificate Sign|keyCertSign"
+  register: target_consul_ca_validity
+  failed_when: false
+  changed_when: false
+
 - name: Force clear existing certificates on target nodes to trigger rotation
   become: yes
   ansible.builtin.file:
@@ -15,7 +29,7 @@
     - "{{ consul_config_dir }}/cert.pem"
     - "{{ consul_config_dir }}/key.pem"
     - "/usr/local/share/ca-certificates/consul-ca.crt"
-  when: not ansible_check_mode or ca_cert_stat.stat.exists
+  when: not ansible_check_mode or ca_cert_stat.stat.exists or (target_consul_ca_validity is defined and target_consul_ca_validity.rc != 0)
 
 - name: Update system trust store after clearing
   become: yes
