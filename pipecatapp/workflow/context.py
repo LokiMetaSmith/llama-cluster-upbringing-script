@@ -9,6 +9,7 @@ class WorkflowContext:
         self.node_outputs: Dict[str, Dict[str, Any]] = {}
         self.global_inputs: Dict[str, Any] = {}
         self.final_output: Any = None
+        self.global_mission = self.workflow_definition.get("global_mission") or self.workflow_definition.get("workflow_goal")
 
     def set_global_input(self, name: str, value: Any):
         """Set a global input value available to all nodes."""
