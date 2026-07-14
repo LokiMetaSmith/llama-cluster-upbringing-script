@@ -36,6 +36,7 @@ job "moe-gateway" {
 
       env {
         CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token }}"
+        CONSUL_HTTP_ADDR  = "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}"
       }
 
       config {
