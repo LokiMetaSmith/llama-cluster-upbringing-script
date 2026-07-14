@@ -158,6 +158,10 @@ if [ -d "/opt/nomad" ]; then
     sudo find /opt/nomad -mindepth 1 -maxdepth 1 ! -name "models" -exec rm -rf {} +
 fi
 
+# 8. Force kill orphaned and running opencode processes
+echo -e "\n${BOLD}🔪 Terminating all running and orphaned opencode processes...${NC}"
+sudo pkill -9 -x "opencode" || sudo pkill -9 -f "bin/opencode" || true
+
 
 echo -e "\n${GREEN}✨ Cleanup Complete!${NC}"
 df -h /

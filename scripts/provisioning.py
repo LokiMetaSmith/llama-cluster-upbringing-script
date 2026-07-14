@@ -314,6 +314,7 @@ def purge_nomad_jobs():
 
     kill_if_running("dllama-api")
     kill_if_running("/opt/pipecatapp/venv/bin/python3 /opt/pipecatapp/app.py")
+    kill_if_running("bin/opencode")
     print("Process cleanup complete.")
 
 

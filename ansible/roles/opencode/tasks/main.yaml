@@ -15,6 +15,12 @@
   ansible.builtin.set_fact:
     opencode_bin_path: "{{ opencode_npm_prefix_path.stdout }}/bin/opencode"
 
+- name: Proactively terminate any existing opencode processes
+  ansible.builtin.shell: pkill -9 -x "opencode" || pkill -9 -f "bin/opencode"
+  failed_when: false
+  changed_when: true
+  become: yes
+
 - name: Create Opencode Nomad job file
   ansible.builtin.template:
     src: opencode.nomad.j2

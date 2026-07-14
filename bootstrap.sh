@@ -789,7 +789,10 @@ if [ "$DO_STATUS" = true ]; then
     echo -e "${BOLD}=== Cluster Status ===${NC}"
     ensure_python_environment
     python3 scripts/provisioning.py --only-status "${PROCESSED_ARGS[@]}"
-    exit $?
+
+    echo -e "\n${BOLD}=== Opencode Status ===${NC}"
+    python3 scripts/troubleshoot.py opencode-status
+    exit 0
 fi
 
 # --- OS Recovery Snapshot Actions ---

@@ -791,10 +791,120 @@ def cmd_daemon(args):
         time.sleep(interval)
 
 
+def cmd_opencode_status(args):
+    """Checks the status of Opencode cross-referencing Nomad, Consul, and system processes."""
+    if not args.json:
+        print("=== Opencode Unified Diagnostic Report ===")
+
+    # 1. Query Nomad Allocations
+    allocations = get_nomad_allocations(quiet=True)
+    opencode_allocs = []
+    if allocations:
+        for alloc in allocations:
+            job_id = alloc.get("JobID", "")
+            if "opencode" in job_id.lower():
+                opencode_allocs.append({
+                    "id": alloc.get("ID"),
+                    "job_id": job_id,
+                    "node_name": alloc.get("NodeName", "N/A"),
+                    "client_status": alloc.get("ClientStatus", "N/A"),
+                    "desired_status": alloc.get("DesiredStatus", "N/A"),
+                    "create_time": format_time(alloc.get("CreateTime", 0))
+                })
+
+    # 2. Query Consul Health Checks
+    consul_url = "http://127.0.0.1:8500/v1/health/service/opencode-api"
+    consul_checks = []
+    try:
+        req = urllib.request.Request(consul_url)
+        consul_token = get_consul_token()
+        if consul_token:
+            req.add_header("X-Consul-Token", consul_token)
+        with urllib.request.urlopen(req, timeout=3) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode('utf-8'))
+                for node_svc in data:
+                    node_name = node_svc.get("Node", {}).get("Node", "N/A")
+                    address = node_svc.get("Service", {}).get("Address", "N/A")
+                    port = node_svc.get("Service", {}).get("Port", "N/A")
+                    checks = node_svc.get("Checks", [])
+                    status = "passing"
+                    for chk in checks:
+                        if chk.get("ServiceName") == "opencode-api" and chk.get("Status") != "passing":
+                            status = chk.get("Status")
+                    consul_checks.append({
+                        "node": node_name,
+                        "address": address,
+                        "port": port,
+                        "status": status
+                    })
+    except Exception:
+        pass
+
+    # 3. Query System-level Processes
+    system_processes = []
+    res = run_command(["ps", "-eo", "pid,ppid,%cpu,%mem,etime,cmd"])
+    if res["exit_code"] == 0:
+        for line in res["stdout"].splitlines():
+            if "opencode" in line and "grep" not in line and "troubleshoot.py" not in line:
+                parts = line.strip().split(None, 5)
+                if len(parts) >= 6:
+                    pid, ppid, cpu, mem, etime, cmd = parts
+                    system_processes.append({
+                        "pid": pid,
+                        "ppid": ppid,
+                        "cpu": cpu,
+                        "mem": mem,
+                        "etime": etime,
+                        "cmd": cmd
+                    })
+
+    if args.json:
+        report = {
+            "nomad_allocations": opencode_allocs,
+            "consul_health_checks": consul_checks,
+            "system_processes": system_processes
+        }
+        print(json.dumps(report, indent=2))
+        return
+
+    print("\n--- Nomad Allocations ---")
+    if opencode_allocs:
+        print(f"{'Alloc ID':<10} | {'Job ID':<30} | {'Node':<15} | {'ClientStatus':<12} | {'Desired':<10}")
+        print("-" * 85)
+        for alloc in opencode_allocs:
+            print(f"{alloc['id'][:8]:<10} | {alloc['job_id']:<30} | {alloc['node_name']:<15} | {alloc['client_status']:<12} | {alloc['desired_status']:<10}")
+    else:
+        print("No opencode allocations found in Nomad.")
+
+    print("\n--- Consul Service Status ---")
+    if consul_checks:
+        print(f"{'Node':<20} | {'Address':<20} | {'Port':<8} | {'Status':<10}")
+        print("-" * 64)
+        for chk in consul_checks:
+            print(f"{chk['node']:<20} | {chk['address']:<20} | {chk['port']:<8} | {chk['status']:<10}")
+    else:
+        print("No opencode-api services registered in Consul.")
+
+    print("\n--- System-level Processes ---")
+    if system_processes:
+        print(f"{'PID':<8} | {'PPID':<8} | {'%CPU':<5} | {'%MEM':<5} | {'Running Time':<12} | {'Command'}")
+        print("-" * 100)
+        for proc in system_processes:
+            print(f"{proc['pid']:<8} | {proc['ppid']:<8} | {proc['cpu']:<5} | {proc['mem']:<5} | {proc['etime']:<12} | {proc['cmd'][:60]}")
+        print(f"\nTotal system processes found: {len(system_processes)}")
+    else:
+        print("No opencode processes found running on this host.")
+
+
 def main():
     """Main CLI execution entry point."""
     parser = argparse.ArgumentParser(description="Troubleshoot Nomad & Systemd services.")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    opencode_status_parser = subparsers.add_parser("opencode-status", help="Unified Opencode status diagnostics")
+    opencode_status_parser.add_argument("--json", action="store_true", help="Output in JSON format")
+    opencode_status_parser.set_defaults(func=cmd_opencode_status)
 
     list_parser = subparsers.add_parser("list", help="List Nomad jobs in dead or pending state")
     list_parser.add_argument("--json", action="store_true", help="Output in JSON format")
