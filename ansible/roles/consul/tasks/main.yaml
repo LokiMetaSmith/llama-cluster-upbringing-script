@@ -171,9 +171,10 @@
         if [ ! -f "{{ consul_temp_cert_dir }}/ca.pem" ]; then
           exit 1
         fi
-        # Verify Root CA has CA:TRUE and Key Usage extensions
-        openssl x509 -in "{{ consul_temp_cert_dir }}/ca.pem" -text -noout | grep -q "X509v3 Key Usage"
+        # Verify Root CA has CA:TRUE and Key Usage extensions with Certificate Sign / keyCertSign
         openssl x509 -in "{{ consul_temp_cert_dir }}/ca.pem" -text -noout | grep -q "CA:TRUE"
+        openssl x509 -in "{{ consul_temp_cert_dir }}/ca.pem" -text -noout | grep -E -q "X509v3 Key Usage|keyUsage"
+        openssl x509 -in "{{ consul_temp_cert_dir }}/ca.pem" -text -noout | grep -E -q "Certificate Sign|keyCertSign"
         # Check server node certificates if they exist
         for host in {{ groups['controller_nodes'] | join(' ') }}; do
           if [ ! -f "{{ consul_temp_cert_dir }}/${host}.pem" ]; then
