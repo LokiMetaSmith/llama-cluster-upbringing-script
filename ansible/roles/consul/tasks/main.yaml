@@ -390,6 +390,17 @@
   tags:
     - consul_configure
 
+- name: Deploy Consul logrotate configuration
+  become: true
+  ansible.builtin.template:
+    src: consul.logrotate.j2
+    dest: /etc/logrotate.d/consul
+    owner: root
+    group: root
+    mode: '0644'
+  tags:
+    - consul_configure
+
 - name: Validate Consul configuration
   become: true
   ansible.builtin.command: consul validate {{ consul_config_dir }}

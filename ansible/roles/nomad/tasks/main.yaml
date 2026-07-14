@@ -293,6 +293,15 @@
     mode: '0640'
   become: yes
 
+- name: Deploy Nomad logrotate configuration
+  ansible.builtin.template:
+    src: nomad.logrotate.j2
+    dest: /etc/logrotate.d/nomad
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
 - name: Deploy Nomad startup wrapper script
   ansible.builtin.template:
     src: start_nomad.sh.j2
