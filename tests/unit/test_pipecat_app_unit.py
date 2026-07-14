@@ -149,7 +149,7 @@ async def test_loop_detection_mechanism():
     mock_llm = AsyncMock()
     mock_vision = AsyncMock()
     mock_runner = AsyncMock()
-    mock_config = {"debug_mode": True}
+    mock_config = {"debug_mode": True, "document_backend": {"type": "local", "directory": "/tmp"}}
     mock_approval_queue = asyncio.Queue()
 
     with patch('app.PMMMemoryClient'), patch('app.PMMMemory'), patch('tools.code_runner_tool.docker.from_env', create=True), patch('tools.skill_builder_tool.MemoryStore'):

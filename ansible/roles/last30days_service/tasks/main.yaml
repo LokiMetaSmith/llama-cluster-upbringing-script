@@ -1,0 +1,43 @@
+- name: Prune Docker system to free space
+  ansible.builtin.command: docker system prune --force
+  become: yes
+  ignore_errors: yes
+
+- name: Build last30days_service Docker image
+  community.docker.docker_image:
+    name: last30days-service
+    tag: local
+    build:
+      path: "{{ role_path }}/../../../last30days_service"
+      nocache: true
+    source: build
+    force_source: true
+  become: yes
+
+- name: Export last30days_service image to tarball
+  ansible.builtin.command: docker save -o /opt/last30days-service.tar last30days-service:local
+  become: yes
+
+- name: Pin last30days_service tarball to IPFS
+  ansible.builtin.command: "ipfs add -Q /opt/last30days-service.tar"
+  become: yes
+  register: ipfs_add_result
+  environment:
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
+
+- name: Clean up temporary last30days_service tarball
+  ansible.builtin.file:
+    path: "/opt/last30days-service.tar"
+    state: absent
+  become: yes
+
+- name: Set last30days_service_ipfs_cid fact
+  ansible.builtin.set_fact:
+    last30days_service_ipfs_cid: "{{ ipfs_add_result.stdout }}"
+
+- name: Run last30days_service job
+  ansible.builtin.template:
+    src: last30days.nomad.j2
+    dest: "{{ nomad_jobs_dir }}/last30days.nomad"
+  notify:
+    - Run last30days job

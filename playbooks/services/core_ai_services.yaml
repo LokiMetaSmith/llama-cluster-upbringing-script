@@ -47,6 +47,10 @@
       when: node_tier in ['mid', 'core', 'high']
       tags:
         - pipecatapp
+    - role: last30days_service
+      when: node_tier in ['mid', 'core', 'high']
+      tags:
+        - last30days_service
     - role: opengravity
       when: node_tier in ['mid', 'core', 'high']
       tags:

@@ -1,0 +1,79 @@
+name: "Last30Days Research Workflow"
+description: "An isolated sandbox workflow to execute the last30days tool on any given topic and return the compact text brief."
+nodes:
+  - id: "Input"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "topic"
+        - name: "query_type"
+        - name: "days"
+        - name: "depth"
+        - name: "tools_dict"
+    inputs: []
+
+  - id: "SystemPrompt"
+    type: "SystemPromptNode"
+    inputs:
+      - name: "custom_prompt"
+        value: |
+          You are a Last30Days Research Assistant.
+          Your ONLY job is to take the user's requested topic and run the 'last30days.run' tool.
+
+          INSTRUCTIONS:
+          1. Extract the topic and framing parameters from the user's message.
+          2. Call `last30days.run(topic=...)`. Pass optional parameters like query_type, days, and depth if provided.
+          3. Return the compact synthesis of what people are actually saying as the final response.
+
+          Do not explain how the tool works. Just invoke it and return the result.
+
+  - id: "ResearchReasoning"
+    type: "SimpleLLMNode"
+    config:
+      stream: false
+    model_tier: "fast"
+    inputs:
+      - name: "user_text"
+        connection:
+          from_node: "Input"
+          from_output: "topic"
+      - name: "system_prompt"
+        connection:
+          from_node: "SystemPrompt"
+          from_output: "system_prompt"
+
+  - id: "ToolParser"
+    type: "ToolParserNode"
+    inputs:
+      - name: "llm_response"
+        connection:
+          from_node: "ResearchReasoning"
+          from_output: "response"
+
+  - id: "ToolExecutor"
+    type: "ToolExecutorNode"
+    inputs:
+      - name: "tool_call_data"
+        connection:
+          from_node: "ToolParser"
+          from_output: "tool_call_data"
+      - name: "tools_dict"
+        connection:
+          from_node: "Input"
+          from_output: "tools_dict"
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_response"
+        connection:
+          from_node: "ToolParser"
+          from_output: "final_response"
+      - name: "tool_call"
+        connection:
+          from_node: "ToolParser"
+          from_output: "tool_call_data"
+      - name: "tool_result"
+        connection:
+          from_node: "ToolExecutor"
+          from_output: "tool_result"

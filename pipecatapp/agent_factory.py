@@ -44,6 +44,7 @@ from tools.context_upload_tool import ContextUploadTool
 from tools.personality_tool import PersonalityTool
 from tools.save_skill_tool import SaveSkillTool
 from tools.search_skills_tool import SearchSkillsTool
+from tools.last30days_tool import Last30DaysTool
 from tools.wol_tool import WOLTool
 from tools.scale_compute_tool import ScaleComputeTool
 from tools.cluster_status_tool import ClusterStatusTool
@@ -154,6 +155,10 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "personality": PersonalityTool(api_url=config.get("llama_api_url")),
         "save_skill": SaveSkillTool(),
         "search_skills": SearchSkillsTool(),
+        "last30days": Last30DaysTool(
+            service_url=config.get("last30days_service_url", "http://last30days-service.service.consul:8008"),
+            api_key=config.get("tool_server_api_key") or os.getenv("TOOL_SERVER_API_KEY")
+        ),
         "wol": WOLTool(),
         "scale_compute": ScaleComputeTool(),
         "cluster_status": ClusterStatusTool(),
