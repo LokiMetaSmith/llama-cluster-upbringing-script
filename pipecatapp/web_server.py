@@ -387,7 +387,7 @@ async def internal_chat_sync(payload: InternalChatRequest, api_key: str = Securi
 
 
 @app.post("/internal/system_message", summary="Process System Alert", description="Receives a system alert (e.g., from Supervisor), injecting it into the agent's workflow.", tags=["Internal"])
-async def internal_system_message(payload: SystemMessageRequest, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+async def internal_system_message(payload: SystemMessageRequest, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """
     Handles a system alert. These are treated as high-priority inputs from the infrastructure.
     """
@@ -399,55 +399,55 @@ async def internal_system_message(payload: SystemMessageRequest, api_key: str = 
 
 
 @app.get("/", summary="Serve Web UI", description="Serves the main `index.html` file for the web user interface.", tags=["UI"])
-async def get():
+async def get(rate_limit: None = Depends(standard_limiter)):
     """Serves the main `index.html` file for the web UI."""
     with open(index_html_path) as f:
         return HTMLResponse(f.read())
 
 @app.get("/workflow", summary="Serve Workflow UI", description="Serves the `workflow.html` file for the workflow visualization UI.", tags=["UI"])
-async def get_workflow_ui():
+async def get_workflow_ui(rate_limit: None = Depends(standard_limiter)):
     """Serves the workflow visualization UI."""
     workflow_html_path = os.path.join(static_dir, "workflow.html")
     with open(workflow_html_path) as f:
         return HTMLResponse(f.read())
 
 @app.get("/monitor", summary="Serve Workflow Monitor", description="Serves the `monitor.html` file for the workflow monitor UI.", tags=["UI"])
-async def get_monitor_ui():
+async def get_monitor_ui(rate_limit: None = Depends(standard_limiter)):
     """Serves the workflow monitor UI."""
     monitor_html_path = os.path.join(static_dir, "monitor.html")
     with open(monitor_html_path) as f:
         return HTMLResponse(f.read())
 
 @app.get("/cluster", summary="Serve Cluster UI", description="Serves the `cluster.html` file for the cluster visualization UI.", tags=["UI"])
-async def get_cluster_ui():
+async def get_cluster_ui(rate_limit: None = Depends(standard_limiter)):
     """Serves the cluster visualization UI."""
     cluster_html_path = os.path.join(static_dir, "cluster.html")
     with open(cluster_html_path) as f:
         return HTMLResponse(f.read())
 
 @app.get("/cluster_viz", summary="Serve Cluster VR Viz", description="Serves the `cluster_viz.html` file for the 3D cluster visualization UI.", tags=["UI"])
-async def get_cluster_viz():
+async def get_cluster_viz(rate_limit: None = Depends(standard_limiter)):
     """Serves the 3D cluster visualization UI."""
     viz_html_path = os.path.join(static_dir, "cluster_viz.html")
     with open(viz_html_path) as f:
         return HTMLResponse(f.read())
 
 @app.get("/workflow_3d", summary="Serve 3D Workflow UI", description="Serves the `workflow_3d.html` file for the 3D workflow visualization UI.", tags=["UI"])
-async def get_workflow_3d_ui():
+async def get_workflow_3d_ui(rate_limit: None = Depends(standard_limiter)):
     """Serves the 3D workflow visualization UI."""
     workflow_3d_html_path = os.path.join(static_dir, "workflow_3d.html")
     with open(workflow_3d_html_path) as f:
         return HTMLResponse(f.read())
 
 @app.get("/vr_index", summary="Serve VR Index", description="Serves the `vr_index.html` file for the VR user interface.", tags=["UI"])
-async def get_vr_index_ui():
+async def get_vr_index_ui(rate_limit: None = Depends(standard_limiter)):
     """Serves the VR index UI."""
     vr_index_html_path = os.path.join(static_dir, "vr_index.html")
     with open(vr_index_html_path) as f:
         return HTMLResponse(f.read())
 
 @app.get("/api/cluster/metrics", summary="Get Cluster Metrics", description="Retrieves CPU and Memory metrics for services from Prometheus.", tags=["System"])
-async def get_cluster_metrics(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+async def get_cluster_metrics(api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """Retrieves cluster metrics from Prometheus."""
     # Bolt ⚡ Optimization: Return cached metrics if available
     cached_metrics = await metrics_cache.get()
@@ -724,7 +724,7 @@ async def save_workflow_definition(payload: Dict = Body(...), api_key: str = Sec
         raise HTTPException(status_code=500, detail="An error occurred while saving the workflow.")
 
 @app.get("/api/mtac/telemetry/{job_id}", summary="Get MTaC Telemetry", description="Retrieves telemetry data (metrics.jsonl) for a specific MTaC Nomad job.", tags=["MTaC"])
-async def get_mtac_telemetry(job_id: str, api_key: str = Security(get_api_key)):
+async def get_mtac_telemetry(job_id: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     import os
     import json
 
@@ -879,7 +879,7 @@ async def update_webring_members(members: List[Dict] = Body(...), api_key: Optio
     raise HTTPException(status_code=500, detail="Failed to save webring members.")
 
 @app.get("/webring/next", summary="Next Member", description="Redirects to the next member in the webring.", tags=["Webring"])
-async def webring_next(request: Request):
+async def webring_next(request: Request, rate_limit: None = Depends(standard_limiter)):
     members = await get_ouroboros_members()
     if not members:
         return HTMLResponse("Webring is empty.", status_code=404)
@@ -906,7 +906,7 @@ async def webring_next(request: Request):
     return RedirectResponse(url=redirect_url)
 
 @app.get("/webring/prev", summary="Previous Member", description="Redirects to the previous member in the webring.", tags=["Webring"])
-async def webring_prev(request: Request):
+async def webring_prev(request: Request, rate_limit: None = Depends(standard_limiter)):
     members = await get_ouroboros_members()
     if not members:
         return HTMLResponse("Webring is empty.", status_code=404)
@@ -929,7 +929,7 @@ async def webring_prev(request: Request):
     return RedirectResponse(url=redirect_url)
 
 @app.get("/webring/random", summary="Random Member", description="Redirects to a random member in the webring.", tags=["Webring"])
-async def webring_random():
+async def webring_random(rate_limit: None = Depends(standard_limiter)):
     members = await get_ouroboros_members()
     if not members:
         return HTMLResponse("Webring is empty.", status_code=404)
