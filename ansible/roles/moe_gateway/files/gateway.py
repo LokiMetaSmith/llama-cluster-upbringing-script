@@ -22,6 +22,15 @@ logger = logging.getLogger(__name__)
 PIPECAT_SERVICE_URL = ""
 GATEWAY_URL = f"http://{os.getenv('NOMAD_IP_http')}:{os.getenv('NOMAD_PORT_http')}" if os.getenv('NOMAD_IP_http') and os.getenv('NOMAD_PORT_http') else "http://127.0.0.1:8001"
 CONSUL_HTTP_ADDR = os.getenv("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
+
+# Enforce strict SSL/TLS verification using system CA or Consul CA
+verify_param = True
+if CONSUL_HTTP_ADDR.startswith("https://"):
+    for ca_path in ["/etc/consul.d/ca.pem", "/etc/ssl/certs/ca-certificates.crt"]:
+        if os.path.exists(ca_path):
+            verify_param = ca_path
+            break
+
 # Use a writable directory for the DB, defaulting to /tmp/gateway_data
 DB_DIR = os.getenv("GATEWAY_DB_DIR", "/tmp/gateway_data")
 DB_PATH = os.path.join(DB_DIR, "gateway_metrics.db")
@@ -247,11 +256,20 @@ async def get_metrics() -> Dict:
     """Async wrapper for fetching metrics."""
     return await asyncio.to_thread(_get_metrics_sync)
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # On startup, discover the pipecat service in the background so it doesn't block startup
+    asyncio.create_task(discover_pipecat_service())
+    yield
+
 # --- FastAPI App ---
 app = FastAPI(
     title="Mixture of Experts (MoE) Gateway",
     description="An OpenAI-compatible API gateway for the distributed agent cluster.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Serve Static Files (Dashboard)
@@ -304,7 +322,7 @@ async def discover_pipecat_service():
         headers["X-Consul-Token"] = token
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=verify_param) as client:
             response = await client.get(consul_url, headers=headers, timeout=5.0)
             response.raise_for_status()
             services = response.json()
@@ -325,14 +343,6 @@ async def discover_pipecat_service():
     except Exception as e:
         logger.exception(f"An unexpected error occurred during service discovery: {e}")
         raise
-
-@app.on_event("startup")
-async def startup_event():
-    """On startup, discover the pipecat service."""
-    try:
-        await discover_pipecat_service()
-    except Exception as e:
-        logger.warning(f"Startup service discovery failed: {e}. Continuing to allow health checks.")
 
 # --- Health Check Endpoint ---
 @app.get("/health", status_code=200)
@@ -397,7 +407,7 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
             "expert_name": selected_expert
         }
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=verify_param) as client:
             response = await client.post(f"{PIPECAT_SERVICE_URL}/internal/chat", json=forward_payload, timeout=5.0)
             response.raise_for_status()
 
