@@ -19,6 +19,10 @@ class TaskSupervisor:
         self.check_interval = 30  # seconds
         self.task_timeout = 300   # seconds (5 minutes)
 
+        # Heartbeat loop configuration
+        self.heartbeat_queue = [] # Queue of pending tasks waiting for heartbeat wakeups
+        self.heartbeat_interval = 60 # Scheduled heartbeat interval in seconds
+
     async def handle_gateway_exhaustion(self, expert_name: str) -> bool:
         """
         Intercepts failover/exhaustion signals from the gateway.
@@ -38,14 +42,77 @@ class TaskSupervisor:
             return False
 
     async def start(self):
-        """Starts the background monitoring loop."""
+        """Starts the background monitoring loop and the scheduled Heartbeat loop."""
         self.logger.info("TaskSupervisor monitoring loop started.")
+        # Start both the task checker and the heartbeat loop concurrently
+        await asyncio.gather(
+            self._monitoring_loop(),
+            self._heartbeat_loop()
+        )
+
+    async def _monitoring_loop(self):
         while True:
             try:
                 await self._check_tasks()
             except Exception as e:
-                self.logger.error(f"TaskSupervisor error: {e}")
+                self.logger.error(f"TaskSupervisor monitoring error: {e}")
             await asyncio.sleep(self.check_interval)
+
+    async def _heartbeat_loop(self):
+        self.logger.info("TaskSupervisor Heartbeat loop started.")
+        while True:
+            try:
+                await self.run_heartbeat()
+            except Exception as e:
+                self.logger.error(f"TaskSupervisor heartbeat error: {e}")
+            await asyncio.sleep(self.heartbeat_interval)
+
+    async def add_heartbeat_task(self, task_id: str, prompt: str, context: str = "", agent_type: str = "worker") -> str:
+        """Enqueues a task to be processed at the next scheduled heartbeat wakeup."""
+        task = {
+            "id": task_id,
+            "prompt": prompt,
+            "context": context,
+            "agent_type": agent_type,
+            "status": "queued"
+        }
+        self.heartbeat_queue.append(task)
+        self.logger.info(f"Task {task_id} enqueued for the next scheduled heartbeat.")
+        return f"Successfully enqueued task {task_id} in the heartbeat queue."
+
+    async def run_heartbeat(self):
+        """Executes a single heartbeat wakeup sequence over all queued tasks."""
+        if not self.heartbeat_queue:
+            self.logger.debug("Heartbeat Loop: No queued tasks. Workers remaining in low-power sleep state.")
+            return
+
+        self.logger.info(f"Heartbeat Loop triggered. Processing {len(self.heartbeat_queue)} queued tasks...")
+
+        # Copy and clear the queue
+        tasks_to_process = list(self.heartbeat_queue)
+        self.heartbeat_queue.clear()
+
+        for task in tasks_to_process:
+            task_id = task["id"]
+            self.logger.info(f"Heartbeat: Waking up technician/worker node for task '{task_id}'...")
+
+            try:
+                # 1. Wake up / Spawn the worker via SwarmTool
+                spawn_res = await self.swarm_tool.spawn_workers(
+                    tasks=[{"id": task_id, "prompt": task["prompt"], "context": task["context"]}],
+                    agent_type=task["agent_type"]
+                )
+                self.logger.info(f"Heartbeat: Worker spawned for task '{task_id}'. Result: {spawn_res}")
+
+                # 2. Complete and immediately put worker back to sleep to conserve resource
+                nomad_job_id = f"worker-{task_id}" # Standard job id naming convention
+                self.logger.info(f"Heartbeat task completed. Putting worker node '{nomad_job_id}' back to sleep (purging Nomad job)...")
+
+                await self.swarm_tool.kill_worker(nomad_job_id)
+                self.logger.info(f"Heartbeat: Worker '{nomad_job_id}' successfully suspended and put to sleep.")
+
+            except Exception as e:
+                self.logger.error(f"Heartbeat failed to execute task '{task_id}': {e}")
 
     async def _check_tasks(self):
         """Polls memory for task events and manages task lifecycle."""

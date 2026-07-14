@@ -157,3 +157,51 @@ def test_tracker_token_clamping():
     assert clamp_output_tokens(4500) == OUTPUT_RESERVE_CAP
     # Fallback
     assert clamp_output_tokens(None) == 1000
+
+
+def test_utilization_caps_and_usage(tracker):
+    task_id = "test-runaway-task"
+    tracker.set_task_utilization_cap(task_id, 10)
+
+    # 1. Check early usage (under 80%)
+    res = tracker.record_and_check_usage(task_id, increment=5)
+    assert res["status"] == "OK"
+    assert res["usage"] == 5
+    assert res["usage_pct"] == 50.0
+
+    # 2. Check warning boundary (at 80%)
+    res = tracker.record_and_check_usage(task_id, increment=3)
+    assert res["status"] == "WARNING"
+    assert res["usage"] == 8
+    assert res["usage_pct"] == 80.0
+    assert "Governance Warning" in res["msg"]
+
+    # 3. Check hard-stop boundary (at 100%)
+    res = tracker.record_and_check_usage(task_id, increment=2)
+    assert res["status"] == "HARD_STOP"
+    assert res["usage"] == 10
+    assert res["usage_pct"] == 100.0
+    assert "Governance Hard-Stop triggered" in res["msg"]
+
+
+@pytest.mark.asyncio
+async def test_enforce_governance_cap_runaway(tracker):
+    task_id = "runaway-agent"
+    nomad_job_id = "worker-runaway-agent"
+    tracker.set_task_utilization_cap(task_id, 5)
+
+    # Create mock swarm tool
+    mock_swarm_tool = AsyncMock()
+    mock_swarm_tool.kill_worker.return_value = "Successfully killed job"
+
+    # Increment up to the 100% hard-stop threshold
+    res = await tracker.enforce_governance_cap(
+        task_id=task_id,
+        nomad_job_id=nomad_job_id,
+        swarm_tool=mock_swarm_tool,
+        increment=5
+    )
+
+    assert res["status"] == "HARD_STOP"
+    assert res["kill_result"] == "Successfully killed job"
+    mock_swarm_tool.kill_worker.assert_called_once_with(nomad_job_id)

@@ -2,6 +2,7 @@ import time
 import threading
 import asyncio
 import logging
+from typing import Any
 
 try:
     from mcp import ClientSession
@@ -39,6 +40,78 @@ class ExpertTracker:
         self.experts = {}
         self.lock = threading.Lock()
         self.memory_url = memory_url
+
+        # Governance and utilization caps
+        self.utilization_caps = {} # Stores task_id -> hard cap value
+        self.active_usage = {}     # Stores task_id -> active consumed amount
+
+    def set_task_utilization_cap(self, task_id: str, cap_limit: int):
+        """Sets a strict utilization quota/cap (e.g. invocation count or token limit) for a task."""
+        with self.lock:
+            self.utilization_caps[task_id] = cap_limit
+            if task_id not in self.active_usage:
+                self.active_usage[task_id] = 0
+
+    def record_and_check_usage(self, task_id: str, increment: int = 1) -> dict:
+        """
+        Increments usage for a specific task and checks against the registered cap limit.
+        Returns a dict indicating governance status (OK, WARNING, HARD_STOP).
+        """
+        with self.lock:
+            if task_id not in self.utilization_caps:
+                return {"status": "OK", "usage": 0, "cap": None}
+
+            cap_limit = self.utilization_caps[task_id]
+            self.active_usage[task_id] = self.active_usage.get(task_id, 0) + increment
+            current_usage = self.active_usage[task_id]
+
+            if cap_limit <= 0:
+                return {"status": "OK", "usage": current_usage, "cap": cap_limit}
+
+            pct = (current_usage / cap_limit) * 100.0
+
+            if pct >= 100.0:
+                msg = f"Governance Hard-Stop triggered: Task '{task_id}' has exceeded 100% of its resource cap limit ({current_usage}/{cap_limit})."
+                return {
+                    "status": "HARD_STOP",
+                    "usage": current_usage,
+                    "cap": cap_limit,
+                    "usage_pct": pct,
+                    "msg": msg
+                }
+            elif pct >= 80.0:
+                msg = f"Governance Warning: Task '{task_id}' has reached {pct:.1f}% of its utilization cap ({current_usage}/{cap_limit})."
+                return {
+                    "status": "WARNING",
+                    "usage": current_usage,
+                    "cap": cap_limit,
+                    "usage_pct": pct,
+                    "msg": msg
+                }
+            else:
+                return {
+                    "status": "OK",
+                    "usage": current_usage,
+                    "cap": cap_limit,
+                    "usage_pct": pct
+                }
+
+    async def enforce_governance_cap(self, task_id: str, nomad_job_id: str, swarm_tool: Any, increment: int = 1) -> dict:
+        """
+        Performs the utilization check and immediately halts/suspends the Nomad job
+        if the hard-stop limit has been reached or exceeded.
+        """
+        res = self.record_and_check_usage(task_id, increment)
+        if res["status"] == "HARD_STOP":
+            logger.warning(f"Runaway agent detected on task '{task_id}'. Halting execution and stopping Nomad job '{nomad_job_id}'...")
+            try:
+                kill_res = await swarm_tool.kill_worker(nomad_job_id)
+                res["kill_result"] = kill_res
+                logger.info(f"Successfully suspended runaway worker job: {kill_res}")
+            except Exception as e:
+                logger.error(f"Failed to cleanly suspend runaway worker job '{nomad_job_id}': {e}")
+                res["kill_error"] = str(e)
+        return res
 
     def register_expert(self, name: str, expert_type: str):
         """Registers a new expert to be tracked.
