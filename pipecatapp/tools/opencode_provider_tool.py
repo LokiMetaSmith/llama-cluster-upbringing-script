@@ -80,8 +80,8 @@ class OpenCodeProviderTool:
                                 "Driver": "raw_exec",
                                 "Config": {
                                     # We use raw_exec assuming opencode is installed on the node (via the Ansible role)
-                                    "command": "/usr/local/bin/npm",
-                                    "args": ["exec", "--", "opencode", task]
+                                    "command": "timeout",
+                                    "args": [str(self.default_timeout), "/usr/local/bin/npm", "exec", "--", "opencode", task]
                                 },
                                 "Resources": {
                                     "CPU": 500,
