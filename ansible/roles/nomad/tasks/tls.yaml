@@ -187,6 +187,11 @@
       DNS.5 = client.global.nomad
       DNS.6 = consul.service.consul
       IP.1 = 127.0.0.1
+      {% if cluster_ip is defined %}
+      IP.2 = {{ cluster_ip }}
+      {% elif advertise_ip is defined %}
+      IP.2 = {{ advertise_ip }}
+      {% endif %}
   when: "groups['controller_nodes'] is not defined or groups['controller_nodes'] | length == 0"
   delegate_to: localhost
   run_once: true
@@ -332,6 +337,20 @@
     nomad_temp_cert_dir: "/etc/nomad.d/tls"
   when: not ca_cert_stat.stat.exists
 
+- name: Check if existing Nomad CA certificate on target node is compliant
+  become: yes
+  ansible.builtin.shell: |
+    set -e
+    if [ ! -f "{{ nomad_tls_dir }}/ca.pem" ]; then
+      exit 1
+    fi
+    openssl x509 -in "{{ nomad_tls_dir }}/ca.pem" -text -noout | grep -q "CA:TRUE"
+    openssl x509 -in "{{ nomad_tls_dir }}/ca.pem" -text -noout | grep -E -q "X509v3 Key Usage|keyUsage"
+    openssl x509 -in "{{ nomad_tls_dir }}/ca.pem" -text -noout | grep -E -q "Certificate Sign|keyCertSign"
+  register: target_nomad_ca_validity
+  failed_when: false
+  changed_when: false
+
 - name: Force clear existing Nomad certificates on target nodes to trigger rotation
   become: yes
   ansible.builtin.file:
@@ -344,7 +363,7 @@
     - "{{ nomad_tls_dir }}/cli.cert.pem"
     - "{{ nomad_tls_dir }}/cli.key.pem"
     - "/usr/local/share/ca-certificates/nomad-ca.crt"
-  when: not ansible_check_mode or ca_cert_stat.stat.exists
+  when: not ansible_check_mode or ca_cert_stat.stat.exists or (target_nomad_ca_validity is defined and target_nomad_ca_validity.rc != 0)
 
 - name: Update system trust store after clearing Nomad CA
   become: yes
