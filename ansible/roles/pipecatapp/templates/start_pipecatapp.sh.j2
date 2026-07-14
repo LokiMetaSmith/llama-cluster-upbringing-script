@@ -20,6 +20,15 @@ else
     IS_DOCKER=0
 fi
 
+# Dynamically detect python command to avoid host/container path/command name mismatch
+if command -v python3.12 &>/dev/null; then
+    PYTHON_CMD="python3.12"
+elif command -v python3 &>/dev/null; then
+    PYTHON_CMD="python3"
+else
+    PYTHON_CMD="python"
+fi
+
 
 # Fix HOME variable if it is incorrectly set to /root for non-root users
 if [ "$(id -u)" -ne 0 ]; then
@@ -122,7 +131,7 @@ try_create_venv() {
     fi
 
     set +e
-    python3.12 -m venv "$venv_path" 2>&1 | tee -a "$LOG_FILE"
+    "$PYTHON_CMD" -m venv "$venv_path" 2>&1 | tee -a "$LOG_FILE"
     local ret=$?
     set -e
 
@@ -142,10 +151,22 @@ USING_CONTAINER_VENV=0
 
 check_venv_valid() {
     local venv_path=$1
-    if [ -d "$venv_path" ] && [ -f "$venv_path/bin/python3.12" ] && [ -f "$venv_path/bin/activate" ]; then
-        # Check mismatch
-        local current_ver=$(python3.12 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-        local venv_ver=$("$venv_path/bin/python3.12" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "invalid")
+    if [ -d "$venv_path" ] && { [ -f "$venv_path/bin/python3.12" ] || [ -f "$venv_path/bin/python3" ] || [ -f "$venv_path/bin/python" ]; } && [ -f "$venv_path/bin/activate" ]; then
+        # Dynamically find the python executable in the venv
+        local venv_python=""
+        if [ -f "$venv_path/bin/python3.12" ]; then
+            venv_python="$venv_path/bin/python3.12"
+        elif [ -f "$venv_path/bin/python3" ]; then
+            venv_python="$venv_path/bin/python3"
+        else
+            venv_python="$venv_path/bin/python"
+        fi
+
+        # Check mismatch without failing under set -e
+        local current_ver
+        current_ver=$("$PYTHON_CMD" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "host-invalid")
+        local venv_ver
+        venv_ver=$("$venv_python" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "invalid")
 
         if [ "$current_ver" != "$venv_ver" ]; then
             log_msg "Virtual environment at $venv_path version mismatch (System: $current_ver, Venv: $venv_ver)."
@@ -239,18 +260,18 @@ fi
 
 # Pre-flight import check to catch missing dependencies early
 log_msg "Running pre-flight import check..."
-# We use the python from the active venv
-if ! python3.12 -c "import sys; sys.path.append('$(dirname "$APP_DIR")'); import pipecatapp.app; print('Pre-flight import check passed.')" 2>&1 | tee -a "$LOG_FILE" >&2; then
+# We use the python from the active venv (which is on PATH now after sourcing activate)
+if ! python -c "import sys; sys.path.append('$(dirname "$APP_DIR")'); import pipecatapp.app; print('Pre-flight import check passed.')" 2>&1 | tee -a "$LOG_FILE" >&2; then
     log_msg "CRITICAL: Pre-flight import check failed. This usually indicates missing dependencies or syntax errors."
 fi
 
 {% if pipecat_deployment_style == 'raw_exec' %}
 # For raw_exec, we explicitly manage our own log file via redirection.
-PYTHON_EXEC="$(dirname "$ACTIVATE")/python3.12"
+PYTHON_EXEC="$(dirname "$ACTIVATE")/python"
 exec "$PYTHON_EXEC" -u "$APP_DIR/app.py" >> "$LOG_FILE" 2>&1
 {% else %}
 # For Docker, we want logs to stdout/stderr (for `docker logs`) AND to the file (for debugging).
 # We use process substitution to pipe to tee.
 # Note: We rely on the active venv here.
-exec python3.12 -u "$APP_DIR/app.py" 2>&1 | tee -a "$LOG_FILE"
+exec python -u "$APP_DIR/app.py" 2>&1 | tee -a "$LOG_FILE"
 {% endif %}
