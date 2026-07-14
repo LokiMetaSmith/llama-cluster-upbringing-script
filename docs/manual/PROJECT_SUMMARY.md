@@ -4,6 +4,14 @@ Last updated: 2026-06-08
 
 This document summarizes the final architecture and key features of the project.
 
+## Table of Contents
+
+- [Final Architecture](#final-architecture)
+- [Key Implemented Features](#key-implemented-features)
+- [References](#references)
+
+---
+
 ## Final Architecture
 
 The project has evolved from a single setup script into a sophisticated, multi-layered system for deploying a stateful, embodied AI agent on a cluster of legacy computers.

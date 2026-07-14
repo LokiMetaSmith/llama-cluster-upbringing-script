@@ -6,17 +6,35 @@ This document provides a detailed overview of the system architecture, from the 
 
 ---
 
+## Table of Contents
+
+- [Layer 1: Bare-Metal & OS Provisioning](#layer-1-bare-metal-os-provisioning)
+- [Layer 2: System Configuration (Ansible)](#layer-2-system-configuration-ansible)
+- [Layer 3: Application Orchestration (Nomad & Consul)](#layer-3-application-orchestration-nomad-consul)
+  - [Architectural Non-Negotiables (Guardrails)](#architectural-non-negotiables-guardrails)
+- [Layer 3.5: Decentralized Storage & Caching (IPFS)](#layer-35-decentralized-storage-caching-ipfs)
+- [Layer 3.6: System Recovery & Snapshots (Btrfs)](#layer-36-system-recovery-snapshots-btrfs)
+- [Layer 4: The AI Application Stack](#layer-4-the-ai-application-stack)
+- [Layer 5: Web UI & Control Plane](#layer-5-web-ui-control-plane)
+- [Layer 6: External API Gateway](#layer-6-external-api-gateway)
+- [Layer 6.5: Model Training as Code (MTaC) Pipeline](#layer-65-model-training-as-code-mtac-pipeline)
+- [Layer 7: Self-Adaptation Loop (SEAL-Inspired)](#layer-7-self-adaptation-loop-seal-inspired)
+  - [API Key Authentication](#api-key-authentication)
+- [Future Architecture](#future-architecture)
+
+---
+
 ## Layer 1: Bare-Metal & OS Provisioning
 
 This layer is responsible for taking bare-metal machines and installing a fully configured operating system.
 
 - **Technology:** [PXE (Preboot Execution Environment)](https://en.wikipedia.org/wiki/Preboot_Execution_Environment) and [iPXE](https://ipxe.org/), leveraging HTTP for speed and reliability.
-- **Implementation:** The `pxe_server` Ansible role configures a dedicated node to act as an iPXE server. This server provides DHCP, TFTP (for chainloading), and Nginx (for HTTP) services.
+- **Implementation:** The `pxe_server` Ansible role configures a dedicated node to act as an iPXE server. This server provides DHCP, TFTP (for chainloading), and Nginx (for HTTP) services. For setup instructions, see [iPXE Boot Server Setup for Automated Debian Installation](PXE_BOOT_SETUP.md).
 - **Workflow:**
   1. A new, bare-metal machine is configured in its BIOS to boot from the network.
   2. The DHCP server answers and provides the iPXE bootloader (`.kpxe` or `.efi`) from the TFTP server.
   3. iPXE loads, then makes a new DHCP request. This time, it's served a URL to an iPXE script from the Nginx web server.
-  4. The iPXE script instructs the client to download the Debian kernel, initrd, and a preseed file over fast HTTP, beginning a fully automated installation.
+  4. The iPXE script instructs the client to download the Debian kernel, initrd, and a preseed file over fast HTTP, beginning a fully automated installation. For an alternative NixOS approach, see [NixOS-based PXE Boot Server Setup](NIXOS_PXE_BOOT_SETUP.md).
 - **Outcome:** A new machine is automatically installed with Debian 13 and is ready for the next layer of configuration.
 
 ## Layer 2: System Configuration (Ansible)
@@ -77,7 +95,7 @@ This layer provides an internal, decentralized storage layer across the cluster,
 This layer provides OS-level protection and pre-deployment disaster recovery for all cluster nodes.
 
 - **Technology:** [Btrfs (B-tree File System)](https://btrfs.readthedocs.io/).
-- **Implementation:** The `btrfs_snapshot` Ansible role is applied before deployments. Critical cluster configuration and operational directories (such as `/etc/consul.d`, `/etc/nomad.d`, `/opt/cluster-infra`, `/opt/pipecatapp`) are securely backed up.
+- **Implementation:** The `btrfs_snapshot` Ansible role is applied before deployments. Critical cluster configuration and operational directories (such as `/etc/consul.d`, `/etc/nomad.d`, `/opt/cluster-infra`, `/opt/pipecatapp`) are securely backed up. See [Performance & I/O Optimization](PERFORMANCE_OPTIMIZATION.md) for related filesystem optimizations.
 - **Workflow:**
   1. Before any new software or role deployment, the system syncs target folders using `rsync` to an active Btrfs subvolume.
   2. A read-only Btrfs snapshot (e.g., `pre-deploy-latest`) is instantly created with near-zero overhead.
@@ -88,11 +106,11 @@ This layer provides OS-level protection and pre-deployment disaster recovery for
 
 This layer contains the core Python application that constitutes the agent itself. It runs as the `pipecatapp` Nomad job.
 
-- **Framework:** [pipecat](https://github.com/pipecat-ai/pipecatapp), a real-time streaming media framework.
+- **Framework:** [pipecat](https://github.com/pipecat-ai/pipecatapp), a real-time streaming media framework. See [AI Agent Architectures](AGENTS.md) for detailed runtime configurations.
 - **Entrypoint:** `app.py`.
 - **Core Components:**
   - **`TwinService`:** The agent's "brain," implemented as a `pipecat` `FrameProcessor`. It handles conversation, memory, and tool use.
-  - **Workflow Engine:** A new, flexible engine that defines the agent's thought process using declarative YAML workflows (e.g., `default_agent_loop.yaml`).
+  - **Workflow Engine:** A new, flexible engine that defines the agent's thought process using declarative YAML workflows (e.g., `default_agent_loop.yaml`). For Obsidian Canvas connections, see [Obsidian Workflow Design: The "Active Vault" Architecture](OBSIDIAN_WORKFLOW_DESIGN.md).
   - **Memory:** A dual-component memory system with short-term conversational history and a long-term FAISS vector store for semantic search.
   - **Tools:** The `TwinService` can access a comprehensive library of over 30 tools, including `ansible` for cluster management, `code_runner` for secure Python execution, `vision` for seeing the world, `ouroboros` for webring navigation, `ternlight` for ternary document embeddings, `mtac` for programmatic model training pipelines, and specialized tools like `orchestrator`, `planner`, and `swarm` for complex tasks.
   - **Skill Library and Operational Modes:** Integrates with the `SkillLibrary` database to persist and discover behavioral skills. Agents can dynamically activate these skills (e.g., 'backpass') using the `SetOperationalModeTool` which appends specialized procedural instructions directly to the agent's system prompt.
@@ -147,11 +165,11 @@ This layer represents the highest level of system autonomy. Inspired by the prin
 - **Technology:** Python, Ansible, Nomad, and the `openevolve` library.
 - **Implementation:** This loop connects the `supervisor.py` script with the `reflection` and `prompt_engineering` workflows.
 - **Workflow:**
-  1. **Detection:** The `supervisor.py` script continuously monitors the health of all Nomad jobs using the `health_check.yaml` playbook.
-  2. **Diagnosis:** If a failure is detected, the `diagnose_failure.yaml` playbook is run to gather detailed logs and status information.
+  1. **Detection:** The `supervisor.py` script continuously monitors the health of all Nomad jobs using the `health_check.yaml` playbook. For probing details, see [Cluster Health Probing and Self-Healing Guide](CLUSTER_HEALTH_AND_HEALING.md).
+  2. **Diagnosis:** If a failure is detected, the `diagnose_failure.yaml` playbook is run to gather detailed logs and status information. For Ansible errors, see [Automated Ansible Exception Handler & Git PR Loop](ANSIBLE_EXCEPTION_HANDLER_GUIDE.md).
   3. **Reflection:** The supervisor then triggers the `reflection/reflect.py` script. This script uses an LLM to analyze the failure's diagnostic data.
   4. **Triage & Healing:**
-      - If the failure is simple and understood (e.g., an Out-of-Memory error), the reflection script returns a structured solution (e.g., `{"action": "increase_memory", ...}`), and the `heal_job.yaml` playbook is run to fix it directly.
+      - If the failure is simple and understood (e.g., an Out-of-Memory error), the reflection script returns a structured solution (e.g., `{"action": "increase_memory", ...}`), and the `heal_job.yaml` playbook is run to fix it directly. Common solutions are recorded in [Troubleshooting Guide](TROUBLESHOOTING.md).
       - If the failure is complex or novel and cannot be diagnosed as a simple issue, the reflection script returns `{"action": "error", ...}`.
   5. **Adaptation:** This "error" action is the trigger for the self-adaptation loop. The supervisor calls the `reflection/adaptation_manager.py` script, which acts as the **Adaptation Agent**.
   6. **Test Case Generation:** The Adaptation Manager takes the raw diagnostic data and generates a new, specific YAML test case that programmatically encapsulates the failure.

@@ -4,6 +4,20 @@ Last updated: 2025-11-06
 
 This guide provides step-by-step instructions for deploying the various AI services on your cluster and for using the built-in benchmarking tools to profile system performance.
 
+## Table of Contents
+
+- [1. Deploying Core Services](#1-deploying-core-services)
+  - [Step 1.1: Verify Service Deployment](#step-11-verify-service-deployment)
+- [2. Profiling and Benchmarking](#2-profiling-and-benchmarking)
+  - [2.1: Raw Inference Speed Benchmark (`llama-bench`)](#21-raw-inference-speed-benchmark-llama-bench)
+  - [2.2: Real-Time Latency Benchmark](#22-real-time-latency-benchmark)
+- [3. How to Evaluate System Load](#3-how-to-evaluate-system-load)
+- [4. Verifying Cluster Health](#4-verifying-cluster-health)
+  - [Check Consul Status](#check-consul-status)
+  - [Check Nomad Status](#check-nomad-status)
+
+---
+
 ## 1. Deploying Core Services
 
 After the Ansible provisioning is complete (`bootstrap.sh` or the main playbook), your cluster is ready. The core services are deployed automatically by the `bootstrap_agent` role.

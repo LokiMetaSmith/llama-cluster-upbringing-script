@@ -1,5 +1,19 @@
 # SPIFFE/SPIRE Integration PoC
 
+## Table of Contents
+
+- [1. Overview](#1-overview)
+- [2. SPIRE Architecture on Nomad](#2-spire-architecture-on-nomad)
+- [3. Integrating SPIRE with Consul Service Mesh](#3-integrating-spire-with-consul-service-mesh)
+- [4. Providing SVIDs to Agent Allocations](#4-providing-svids-to-agent-allocations)
+- [5. Pros and Cons of SPIFFE/SPIRE Integration](#5-pros-and-cons-of-spiffespire-integration)
+  - [Pros (Why we should implement it)](#pros-why-we-should-implement-it)
+  - [Cons (Challenges and Costs)](#cons-challenges-and-costs)
+- [6. Recommendation (Verdict)](#6-recommendation-verdict)
+- [7. Next Steps for Implementation (When Phase 2 Begins)](#7-next-steps-for-implementation-when-phase-2-begins)
+
+---
+
 ## 1. Overview
 SPIFFE (Secure Production Identity Framework for Everyone) provides a secure identity, in the form of a specially crafted X.509 certificate (or JWT), to every workload in a modern production environment. SPIRE (the SPIFFE Runtime Environment) is a toolchain of APIs for establishing trust between software systems across a wide variety of hosting platforms. It implements the SPIFFE specification and issues short-lived cryptographic identities (SVIDs) to workloads.
 

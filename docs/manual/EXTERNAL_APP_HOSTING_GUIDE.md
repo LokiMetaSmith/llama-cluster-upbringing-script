@@ -6,6 +6,25 @@ The integration system consists of a Python-based utility, an Autonomous Agentic
 
 ---
 
+## Table of Contents
+
+- [1. Architecture Overview](#1-architecture-overview)
+  - [System Integration Layers](#system-integration-layers)
+- [2. Standardized Manifest Specification](#2-standardized-manifest-specification)
+  - [Example Manifest: Uptime Kuma](#example-manifest-uptime-kuma)
+- [3. Sandboxing & Security Safeguards](#3-sandboxing-security-safeguards)
+- [4. Human Operator Guide (CLI Tool)](#4-human-operator-guide-cli-tool)
+  - [Subcommand References](#subcommand-references)
+    - [1. Install / Update an Application](#1-install-update-an-application)
+    - [2. Uninstall & Purge](#2-uninstall-purge)
+    - [3. List Configured Apps](#3-list-configured-apps)
+    - [4. Real-time Status Inspect](#4-real-time-status-inspect)
+- [5. Agent Integration (Autonomous Operations)](#5-agent-integration-autonomous-operations)
+  - [Tool Methods Available](#tool-methods-available)
+  - [Expected Agent Behavior Pattern](#expected-agent-behavior-pattern)
+
+---
+
 ## 1. Architecture Overview
 
 The External Application Package Management system allows the cluster to securely provision and host third-party services (e.g., databases, analytics, administrative web UIs) in parallel with the primary AI pipeline.

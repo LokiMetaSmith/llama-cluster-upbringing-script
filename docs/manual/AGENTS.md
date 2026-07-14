@@ -2,7 +2,33 @@
 
 Last updated: 2026-01-23
 
-This project utilizes two distinct AI agent architectures: a "Mixture of Experts" for the runtime application and an "Ensemble of Agents" for the development workflow.
+This project utilizes two distinct AI agent architectures: a "Mixture of Experts" for the runtime application and an "Ensemble of Agents" for the development workflow. For high-level governance rules and operational taxonomy, see the [AI Governance & Architecture Plan](AI_GOVERNANCE.md).
+
+## Table of Contents
+
+- [1. Runtime Architecture: A Mixture of Experts (MoE)](#1-runtime-architecture-a-mixture-of-experts-moe)
+  - [The Workflow Engine](#the-workflow-engine)
+  - [The Agent Hierarchy](#the-agent-hierarchy)
+    - [a. The Router / Main Agent](#a-the-router-main-agent)
+    - [b. The Expert Agents (The Specialists)](#b-the-expert-agents-the-specialists)
+  - [Tool-Using Capabilities](#tool-using-capabilities)
+    - [Built-in Capabilities](#built-in-capabilities)
+    - [Available Tools](#available-tools)
+  - [Configuration and Customization](#configuration-and-customization)
+- [2. Development Workflow: An Ensemble of Agents](#2-development-workflow-an-ensemble-of-agents)
+  - [The Agent Roles](#the-agent-roles)
+    - [a. Problem Scope Framing](#a-problem-scope-framing)
+    - [b. Architecture Review](#b-architecture-review)
+    - [c. New Task Review](#c-new-task-review)
+    - [d. Debug and Analysis](#d-debug-and-analysis)
+    - [e. Code Clean Up](#e-code-clean-up)
+  - [Automated Code Review with Quibbler](#automated-code-review-with-quibbler)
+- [Local Development and Testing](#local-development-and-testing)
+  - [Python Dependency Management](#python-dependency-management)
+  - [Recommended Setup Procedure](#recommended-setup-procedure)
+  - [Bootstrapping the Environment](#bootstrapping-the-environment)
+
+---
 
 ## 1. Runtime Architecture: A Mixture of Experts (MoE)
 
@@ -62,7 +88,7 @@ The following tools are available in `pipecatapp/tools/`:
 - **`git`**: Interacts with Git repositories.
 - **`ha`**: Controls smart home devices via Home Assistant.
 - **`llxprt_code`**: A specialized tool for code-related tasks.
-- **`mcp`**: Provides agent introspection and self-control (e.g., status checks, memory management).
+- **`mcp`**: Provides agent introspection and self-control (e.g., status checks, memory management). See [MCP Migration Plan](MCP_MIGRATION_PLAN.md) and [Building an MCP Server with Service Discovery](MCP_SERVER_SETUP.md) for details on the Model Context Protocol.
 - **`open_workers`**: Manages and interacts with open worker agents.
 - **`opencode`**: Interface for the OpenCode tool.
 - **`orchestrator`**: Dispatches high-priority, complex jobs to the cluster.
@@ -96,7 +122,7 @@ You can easily create new experts by following these steps:
 
 ## 2. Development Workflow: An Ensemble of Agents
 
-For code development, the project uses a workflow inspired by an "Ensemble of Agents," where each agent has a specific, well-defined role in the software development lifecycle. This structured approach ensures a thorough and methodical process, from understanding the initial request to delivering clean, functional code. Agent definitions are located in the `prompt_engineering/agents/` directory.
+For code development, the project uses a workflow inspired by an "Ensemble of Agents," where each agent has a specific, well-defined role in the software development lifecycle. This structured approach ensures a thorough and methodical process, from understanding the initial request to delivering clean, functional code. Agent definitions are located in the `prompt_engineering/agents/` directory. The operational best practices and troubleshooting lessons accumulated by these agents during development are archived in the [Agent Memories](MEMORIES.md) manual.
 
 ### The Agent Roles
 

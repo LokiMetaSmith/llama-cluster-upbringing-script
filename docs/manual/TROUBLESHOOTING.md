@@ -2,6 +2,17 @@
 
 This document provides solutions to common issues encountered when operating the Distributed Conversational AI Pipeline.
 
+## Table of Contents
+
+- [Automated Troubleshooting Report](#automated-troubleshooting-report)
+- [Common Issues](#common-issues)
+  - [1. Nomad Server Checks Failing ("All service checks failing")](#1-nomad-server-checks-failing-all-service-checks-failing)
+  - [2. "Waiting for cache lock" Error](#2-waiting-for-cache-lock-error)
+  - [3. Nomad Jobs Stuck in "Pending" or "Dead" State](#3-nomad-jobs-stuck-in-pending-or-dead-state)
+  - [4. Autonomous Recovery Configuration (OpenCode)](#4-autonomous-recovery-configuration-opencode)
+
+---
+
 ## Automated Troubleshooting Report
 
 If you are experiencing issues with the system, especially with failed jobs, you can generate a comprehensive troubleshooting report using the provided script. This script captures the current state of the system, including resources, Docker/Consul/Nomad status, and logs from recently failed allocations.

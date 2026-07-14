@@ -4,15 +4,35 @@ This handbook is designed specifically for autonomous and human agents to unders
 
 ---
 
+## Table of Contents
+
+- [1. Mixture of Experts (MoE) API Gateway & Router Architecture](#1-mixture-of-experts-moe-api-gateway-router-architecture)
+  - [Key Components & Directories:](#key-components-directories)
+  - [Operational Workflow for the Router API:](#operational-workflow-for-the-router-api)
+- [2. Model Context Protocol (MCP) Integration](#2-model-context-protocol-mcp-integration)
+  - [Key Components & Directories:](#key-components-directories)
+  - [Creating a New MCP Server (FastMCP Template):](#creating-a-new-mcp-server-fastmcp-template)
+- [3. Package & Plugin Management System (External Apps)](#3-package-plugin-management-system-external-apps)
+  - [Key Components & Directories:](#key-components-directories)
+  - [The Manifest Schema (`manifest.json`):](#the-manifest-schema-manifestjson)
+  - [Storage Provisioning Lifecycle:](#storage-provisioning-lifecycle)
+- [4. Making Installations Optional (Ansible Toggles)](#4-making-installations-optional-ansible-toggles)
+  - [1. Declaring Enablement Variables:](#1-declaring-enablement-variables)
+  - [2. Guarding Playbook Roles:](#2-guarding-playbook-roles)
+  - [3. Dynamic Host-by-Host Customization:](#3-dynamic-host-by-host-customization)
+- [5. Summary Map of Crucial Documentation](#5-summary-map-of-crucial-documentation)
+
+---
+
 ## 1. Mixture of Experts (MoE) API Gateway & Router Architecture
 
 The cluster exposes its capabilities using an OpenAI-compatible API Gateway. This architecture allows external clients to interact with a dynamic Mixture of Experts (MoE) backend.
 
 ### Key Components & Directories:
-- **LiteLLM Proxy Router:** Managed via `ansible/jobs/router.nomad.j2` (runs `litellm` inside Docker).
+- **LiteLLM Proxy Router:** Managed via `ansible/jobs/router.nomad.j2` (runs `litellm` inside Docker). For more details, see [Holistic Project Architecture](ARCHITECTURE.md).
 - **API Gateway Service:** Located in `ansible/roles/moe_gateway/` and `pipecatapp/moe_gateway/gateway.py`.
 - **System Service Registry:** Consul manages service discovery for expert routes.
-- **TwinService Dispatcher:** `pipecatapp/app.py` registers and invokes local or remote expert clients.
+- **TwinService Dispatcher:** `pipecatapp/app.py` registers and invokes local or remote expert clients. See also [Project Summary](PROJECT_SUMMARY.md).
 
 ### Operational Workflow for the Router API:
 1. **Client Call:** The external caller requests `/v1/chat/completions` from the `moe-gateway` service.
@@ -60,7 +80,7 @@ if __name__ == "__main__":
 The cluster hosts containerized third-party services and extensions alongside the conversational pipeline using a secure Package Manager.
 
 ### Key Components & Directories:
-- **Core Utility:** `pipecatapp/utils/app_manager.py` (handles manifest validation, HCL generation, storage, and webring sync).
+- **Core Utility:** `pipecatapp/utils/app_manager.py` (handles manifest validation, HCL generation, storage, and webring sync). See [External Application Hosting & Package Management Guide](EXTERNAL_APP_HOSTING_GUIDE.md) for more comprehensive steps.
 - **CLI Utility:** `scripts/app-manager.py` exposes subcommands (`install`, `uninstall`, `list`, `status`) to humans and automation.
 - **Agent Tool:** `pipecatapp/tools/external_app_manager_tool.py` exposes the packaging manager directly to the LLM agent.
 - **Nomad Templates:** Located in `pipecatapp/nomad_templates/` (e.g., `uptime-kuma.nomad.hcl`, `readeck.nomad.hcl`).

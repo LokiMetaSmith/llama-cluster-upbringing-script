@@ -4,6 +4,18 @@ When an autonomous AI agent is capable of writing and executing infrastructure s
 
 This guide outlines how to establish a "DMZ" (Demilitarized Zone) for your AI cluster, ensuring the agent has necessary outbound access without exposing your personal home network to automated scans or unintended intrusion.
 
+## Table of Contents
+
+- [The Topology Trap: Avoid "Double NAT"](#the-topology-trap-avoid-double-nat)
+- [Ideal Architectures](#ideal-architectures)
+  - [1. The Dedicated Router Interface (Recommended)](#1-the-dedicated-router-interface-recommended)
+  - [2. The VLAN Approach (Layer 2 Isolation)](#2-the-vlan-approach-layer-2-isolation)
+    - [Switch Configuration (Example: UniFi EdgeSwitch CLI)](#switch-configuration-example-unifi-edgeswitch-cli)
+    - [Router Configuration (Example: Ubiquiti EdgeRouter CLI)](#router-configuration-example-ubiquiti-edgerouter-cli)
+- [The Management "Pinhole"](#the-management-pinhole)
+
+---
+
 ## The Topology Trap: Avoid "Double NAT"
 
 If you simply plug the WAN port of a *new* cluster router into a LAN port on your *existing* home router, you **do not** achieve isolation. In that setup, the cluster router treats your home network as "the internet." An autonomous agent would still be able to scan your subnet, reach your personal devices, and attempt connections.
