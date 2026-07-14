@@ -19,6 +19,45 @@
   failed_when: false
   changed_when: false
 
+- name: Automate Consul Purge Sequence if CA is flawed
+  block:
+    - name: Stop Consul and Nomad services
+      become: yes
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: stopped
+      loop:
+        - consul
+        - nomad
+      failed_when: false
+
+    - name: Force kill Consul and Nomad processes
+      become: yes
+      ansible.builtin.command: pkill -9 -f "consul|nomad"
+      ignore_errors: yes
+      failed_when: false
+
+    - name: Wipe all certificates and trust store entries
+      become: yes
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ consul_config_dir }}/ca.pem"
+        - "{{ consul_config_dir }}/cert.pem"
+        - "{{ consul_config_dir }}/key.pem"
+        - "/etc/consul.d/tls/ca.pem"
+        - "/etc/consul.d/tls/cert.pem"
+        - "/etc/consul.d/tls/key.pem"
+        - "/usr/local/share/ca-certificates/consul-ca.crt"
+
+    - name: Rebuild system trust store cleanly (fresh)
+      become: yes
+      ansible.builtin.command: /usr/sbin/update-ca-certificates --fresh
+      changed_when: true
+      failed_when: false
+  when: target_consul_ca_validity is defined and target_consul_ca_validity.rc != 0
+
 - name: Force clear existing certificates on target nodes to trigger rotation
   become: yes
   ansible.builtin.file:
