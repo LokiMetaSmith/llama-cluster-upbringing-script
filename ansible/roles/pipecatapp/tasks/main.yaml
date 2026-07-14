@@ -1389,6 +1389,78 @@
       ansible.builtin.fail:
         msg: "Router job failed to start. See logs above."
 
+- name: Check if existing Consul CA certificate is compliant
+  become: yes
+  ansible.builtin.shell: |
+    set -e
+    if [ ! -f "/etc/consul.d/ca.pem" ]; then
+      exit 1
+    fi
+    openssl x509 -in "/etc/consul.d/ca.pem" -text -noout | grep -q "CA:TRUE"
+    openssl x509 -in "/etc/consul.d/ca.pem" -text -noout | grep -E -q "X509v3 Key Usage|keyUsage"
+    openssl x509 -in "/etc/consul.d/ca.pem" -text -noout | grep -E -q "Certificate Sign|keyCertSign"
+  register: pipecat_consul_ca_validity
+  failed_when: false
+  changed_when: false
+
+- name: Force rotate and regenerate Consul/Nomad certs if CA is flawed
+  block:
+    - name: Run automated purge sequence on target node
+      block:
+        - name: Stop Consul and Nomad services
+          become: yes
+          ansible.builtin.systemd:
+            name: "{{ item }}"
+            state: stopped
+          loop:
+            - consul
+            - nomad
+          failed_when: false
+
+        - name: Force kill Consul and Nomad processes
+          become: yes
+          ansible.builtin.command: pkill -9 -f "consul|nomad"
+          ignore_errors: yes
+          failed_when: false
+
+        - name: Wipe all certificates and trust store entries
+          become: yes
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - "/etc/consul.d/ca.pem"
+            - "/etc/consul.d/cert.pem"
+            - "/etc/consul.d/key.pem"
+            - "/etc/consul.d/tls/ca.pem"
+            - "/etc/consul.d/tls/cert.pem"
+            - "/etc/consul.d/tls/key.pem"
+            - "/usr/local/share/ca-certificates/consul-ca.crt"
+            - "/usr/local/share/ca-certificates/nomad-ca.crt"
+            - "/etc/nomad.d/tls/ca.pem"
+            - "/etc/nomad.d/tls/cert.pem"
+            - "/etc/nomad.d/tls/key.pem"
+            - "/etc/nomad.d/tls/cli.cert.pem"
+            - "/etc/nomad.d/tls/cli.key.pem"
+
+        - name: Rebuild system trust store cleanly (fresh)
+          become: yes
+          ansible.builtin.command: /usr/sbin/update-ca-certificates --fresh
+          changed_when: true
+          failed_when: false
+
+    - name: Dynamically include and run Consul role to generate compliant certificates
+      ansible.builtin.include_role:
+        name: consul
+      vars:
+        cleanup_services: yes # Force cleanup to ensure we start fresh
+
+    - name: Dynamically include and run Nomad role to generate compliant certificates
+      ansible.builtin.include_role:
+        name: nomad
+
+  when: pipecat_consul_ca_validity is defined and pipecat_consul_ca_validity.rc != 0
+
 - name: Ensure Nomad service registration (Fallback)
   block:
     - name: Check if router service is registered in Consul
