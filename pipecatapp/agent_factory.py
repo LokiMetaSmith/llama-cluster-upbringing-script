@@ -5,6 +5,7 @@ from tools.desktop_control_tool import DesktopControlTool
 from tools.code_runner_tool import CodeRunnerTool
 from tools.web_browser_tool import WebBrowserTool
 from tools.ansible_tool import Ansible_Tool
+from tools.ansible_exception_handler_tool import AnsibleExceptionHandlerTool
 from tools.power_tool import Power_Tool
 from tools.summarizer_tool import SummarizerTool
 from tools.term_everything_tool import TermEverythingTool
@@ -186,6 +187,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         ),
         "heretic": HereticTool(root_dir=config.get("heretic_root_dir")),
         "jules": JulesTool(api_key=config.get("jules_api_key")),
+        "ansible_exception_handler": AnsibleExceptionHandlerTool(),
         "ocr": OCRTool(),
         "openworkers": OpenWorkersTool(
             api_url=config.get("openworkers_api_url"),
