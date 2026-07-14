@@ -145,6 +145,7 @@ class WorkflowRunner:
         self.nodes = {}
         self.workflow_name = os.path.basename(workflow_path)
         self.runner_id = runner_id if runner_id else str(uuid.uuid4())
+        self.global_mission = self.workflow_definition.get("global_mission") or self.workflow_definition.get("workflow_goal")
 
     def _load_workflow_definition(self, path: str) -> Dict[str, Any]:
         """Loads workflow definition from cache or file if updated."""
