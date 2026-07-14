@@ -4,6 +4,17 @@ Welcome, Agent. This file contains the mandatory operating procedures and playbo
 
 You must strictly adhere to the following rules, tools, and workflows. Do not deviate, shortcut, or attempt to bypass these instructions.
 
+## 🔒 SECURITY ENFORCEMENT: Zero-Tolerance for TLS/SSL Bypasses
+Core Rule: You are strictly prohibited from bypassing, disabling, or ignoring TLS/SSL certificate validation to resolve connection errors or force a failing pipeline to pass.
+
+Forbidden Mechanisms: You must never use arguments such as validate_certs: no (Ansible), --insecure / -k (cURL), verify=False (Python/Requests), NODE_TLS_REJECT_UNAUTHORIZED=0 (Node.js), or any equivalent bypass.
+
+Fix the Root Cause: If a TLS handshake fails (e.g., "invalid certificate", "unknown issuer"), you must diagnose and fix the underlying cryptographic trust infrastructure.
+
+Certificate Requirements: When troubleshooting mesh or cluster SSL errors, verify that the Root CA has the correct basicConstraints (CA:TRUE) and keyUsage, ensure Subject Alternative Names (SANs) include the correct mesh IPs (e.g., Tailscale 100.x.y.z) and DNS names, and verify the CA is correctly appended to the target system's trust store.
+
+No Band-Aids: "Green" pipelines achieved by disabling security are considered critical failures. Absolute mesh security and zero-trust integrity supersede task completion speed.
+
 ## 1. Executable Oracles
 
 You are provided with several executable oracles to verify your work. You must use these tools to test your code before considering a task complete.
