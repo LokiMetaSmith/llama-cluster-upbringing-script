@@ -87,3 +87,121 @@ def test_dlq_retry_mechanics(memory):
     item_retry = memory.claim_dlq_item_sync("w2")
     assert item_retry is not None
     assert item_retry['id'] == item_id
+
+def test_sync_work_items_sync(memory):
+    # Setup initial remote items
+    now = time.time()
+    remote_items = [
+        {
+            'id': 'item_1',
+            'title': 'Task 1',
+            'status': 'open',
+            'assignee_id': 'agent_1',
+            'created_by': 'user_1',
+            'created_at': now,
+            'updated_at': now,
+            'parent_id': None,
+            'meta': {},
+            'validation_results': {}
+        },
+        {
+            'id': 'item_2',
+            'title': 'Task 2',
+            'status': 'open',
+            'assignee_id': 'agent_2',
+            'created_by': 'user_2',
+            'created_at': now,
+            'updated_at': now,
+            'parent_id': None,
+            'meta': {},
+            'validation_results': {}
+        }
+    ]
+
+    # First sync (inserts)
+    merged = memory.sync_work_items_sync(remote_items)
+    assert len(merged) == 2
+    assert {m['id'] for m in merged} == {'item_1', 'item_2'}
+
+    # Verify database contents
+    item1 = memory.get_work_item_sync('item_1')
+    assert item1 is not None
+    assert item1['title'] == 'Task 1'
+
+    # Second sync with older update (no-op) and newer update
+    remote_updates = [
+        {
+            'id': 'item_1',
+            'title': 'Task 1 Older',
+            'status': 'open',
+            'assignee_id': 'agent_1',
+            'created_by': 'user_1',
+            'created_at': now,
+            'updated_at': now - 10.0, # older, should not update
+            'parent_id': None,
+            'meta': {},
+            'validation_results': {}
+        },
+        {
+            'id': 'item_2',
+            'title': 'Task 2 Newer',
+            'status': 'completed',
+            'assignee_id': 'agent_2',
+            'created_by': 'user_2',
+            'created_at': now,
+            'updated_at': now + 10.0, # newer, should update
+            'parent_id': None,
+            'meta': {},
+            'validation_results': {}
+        }
+    ]
+
+    merged2 = memory.sync_work_items_sync(remote_updates)
+    assert len(merged2) == 1
+    assert merged2[0]['id'] == 'item_2'
+    assert merged2[0]['title'] == 'Task 2 Newer'
+
+    # Verify db state
+    item1_after = memory.get_work_item_sync('item_1')
+    assert item1_after['title'] == 'Task 1' # remained unchanged
+
+    item2_after = memory.get_work_item_sync('item_2')
+    assert item2_after['title'] == 'Task 2 Newer'
+    assert item2_after['status'] == 'completed'
+
+    # Sync with duplicate item IDs in the list
+    duplicate_items = [
+        {
+            'id': 'item_3',
+            'title': 'Task 3 Initial',
+            'status': 'open',
+            'assignee_id': 'agent_3',
+            'created_by': 'user_3',
+            'created_at': now,
+            'updated_at': now,
+            'parent_id': None,
+            'meta': {},
+            'validation_results': {}
+        },
+        {
+            'id': 'item_3',
+            'title': 'Task 3 Updated',
+            'status': 'in_progress',
+            'assignee_id': 'agent_3',
+            'created_by': 'user_3',
+            'created_at': now,
+            'updated_at': now + 5.0,
+            'parent_id': None,
+            'meta': {},
+            'validation_results': {}
+        }
+    ]
+
+    merged3 = memory.sync_work_items_sync(duplicate_items)
+    assert len(merged3) == 2
+    assert merged3[0]['title'] == 'Task 3 Initial'
+    assert merged3[1]['title'] == 'Task 3 Updated'
+
+    item3_after = memory.get_work_item_sync('item_3')
+    assert item3_after['title'] == 'Task 3 Updated'
+    assert item3_after['status'] == 'in_progress'
