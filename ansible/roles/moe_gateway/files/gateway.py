@@ -126,7 +126,9 @@ if not EXTERNAL_EXPERTS:
     EXTERNAL_EXPERTS = {
         "openai_gpt4": {"model": "gpt-4-turbo"},
         "openrouter_claude_sonnet": {"model": "anthropic/claude-3.5-sonnet"},
-        "openrouter_gemini_flash": {"model": "google/gemini-2.0-flash-001"}
+        "openrouter_gemini_flash": {"model": "google/gemini-2.0-flash-001"},
+        "together_ternary_bonsai_27b": {"model": "prism-ml/ternary-bonsai-27b"},
+        "together_1bit_bonsai_27b": {"model": "prism-ml/1bit-bonsai-27b"}
     }
 
 def get_expert_scores(db_path: str, external_experts: dict) -> dict:
@@ -195,6 +197,10 @@ def get_expert_scores(db_path: str, external_experts: dict) -> dict:
             intel = 0.95
         elif "qwen_72b" in name:
             intel = 0.8
+        elif "ternary_bonsai_27b" in name:
+            intel = 0.8
+        elif "1bit_bonsai_27b" in name:
+            intel = 0.75
         elif "flash" in name or "mini" in name:
             intel = 0.4
 
