@@ -1,5 +1,5 @@
 - name: Run last30days job
-  ansible.builtin.command: "nomad job run {{ nomad_jobs_dir }}/last30days.nomad"
+  ansible.builtin.command: "nomad job run -detach {{ nomad_jobs_dir }}/last30days.nomad"
   become: yes
   environment:
     NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
