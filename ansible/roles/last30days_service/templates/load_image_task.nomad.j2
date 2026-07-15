@@ -1,0 +1,18 @@
+    task "load-image" {
+      driver = "raw_exec"
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
+
+      artifact {
+        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ image_cid }}"
+        destination = "local/{{ image_tar_name }}.tar"
+        mode        = "file"
+      }
+
+      config {
+        command = "docker"
+        args    = ["load", "-i", "local/{{ image_tar_name }}.tar"]
+      }
+    }
