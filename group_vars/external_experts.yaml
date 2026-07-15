@@ -37,3 +37,11 @@ external_experts_config:
     base_url: "https://openrouter.ai/api/v1"
     api_key_env: "OPENROUTER_API_KEY"
     model: "qwen/qwen-2.5-72b-instruct"
+  together_ternary_bonsai_27b:
+    base_url: "https://api.together.xyz/v1"
+    api_key_env: "TOGETHER_API_KEY"
+    model: "prism-ml/ternary-bonsai-27b"
+  together_1bit_bonsai_27b:
+    base_url: "https://api.together.xyz/v1"
+    api_key_env: "TOGETHER_API_KEY"
+    model: "prism-ml/1bit-bonsai-27b"
