@@ -51,6 +51,7 @@ from .rag_tool import RAG_Tool
 from .save_skill_tool import SaveSkillTool
 from .scale_compute_tool import ScaleComputeTool
 from .scheduler_tool import SchedulerTool
+from .schema_harness_tool import SchemaHarnessTool
 from .schema_mapper_tool import SchemaMapperTool
 from .search_skills_tool import SearchSkillsTool
 from .search_tool import SearchTool
@@ -125,6 +126,7 @@ __all__ = [
     "SaveSkillTool",
     "ScaleComputeTool",
     "SchedulerTool",
+    "SchemaHarnessTool",
     "SchemaMapperTool",
     "SearchSkillsTool",
     "SearchTool",

@@ -1,7 +1,6 @@
 from .registry import registry
 from ..node import Node
 from ..context import WorkflowContext
-from pipecat.services.openai.llm import OpenAILLMService
 import logging
 import os
 import httpx

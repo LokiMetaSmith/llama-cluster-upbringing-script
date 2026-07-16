@@ -1,0 +1,91 @@
+name: "Schema Harness Workflow"
+cyclic: true
+nodes:
+  - id: "Input"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "timeline"
+        - name: "current_state"
+        - name: "session_dir"
+    inputs: []
+
+  - id: "Hypothesizer"
+    type: "HypothesizeNode"
+    inputs:
+      - name: "timeline"
+        connection:
+          from_node: "Input"
+          from_output: "timeline"
+      - name: "current_state"
+        connection:
+          from_node: "Input"
+          from_output: "current_state"
+      - name: "session_dir"
+        connection:
+          from_node: "Input"
+          from_output: "session_dir"
+      - name: "mismatch_info"
+        connection:
+          from_node: "Certifier"
+          from_output: "mismatch_info"
+
+  - id: "Certifier"
+    type: "CertifyNode"
+    inputs:
+      - name: "timeline"
+        connection:
+          from_node: "Input"
+          from_output: "timeline"
+      - name: "world_model_code"
+        connection:
+          from_node: "Hypothesizer"
+          from_output: "world_model_code"
+      - name: "session_dir"
+        connection:
+          from_node: "Input"
+          from_output: "session_dir"
+
+  - id: "Decider"
+    type: "ConditionalBranchNode"
+    inputs:
+      - name: "input_value"
+        connection:
+          from_node: "Certifier"
+          from_output: "is_certified"
+
+  - id: "Planner"
+    type: "PlanNode"
+    inputs:
+      - name: "world_model_code"
+        connection:
+          from_node: "Hypothesizer"
+          from_output: "world_model_code"
+      - name: "current_state"
+        connection:
+          from_node: "Input"
+          from_output: "current_state"
+      - name: "session_dir"
+        connection:
+          from_node: "Input"
+          from_output: "session_dir"
+      - name: "trigger"
+        connection:
+          from_node: "Decider"
+          from_output: "output_true"
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "plan"
+        connection:
+          from_node: "Planner"
+          from_output: "plan"
+      - name: "world_model_code"
+        connection:
+          from_node: "Hypothesizer"
+          from_output: "world_model_code"
+      - name: "notes"
+        connection:
+          from_node: "Hypothesizer"
+          from_output: "notes"

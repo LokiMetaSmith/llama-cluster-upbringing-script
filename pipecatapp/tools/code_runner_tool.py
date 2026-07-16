@@ -452,6 +452,21 @@ class CodeRunnerTool:
         if len(code) > MAX_CODE_LENGTH:
             return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
 
+        # Safe, deterministic in-process fallback for unit tests and local mock verification
+        if os.getenv("SCHEMA_HARNESS_TEST_MODE") == "true":
+            import io
+            import sys
+            import contextlib
+            f = io.StringIO()
+            with contextlib.redirect_stdout(f):
+                try:
+                    glob = {}
+                    # Passing a single dictionary ensures correct resolution of free variables (classic exec trap)
+                    exec(code, glob)
+                except Exception as e:
+                    return f"Error: {e}"
+            return f.getvalue()
+
         async def _exec(code: str, timeout: Optional[int]) -> str:
             if self.mode == "hybrid" and hasattr(self, 'fast_executor'):
                 if self.fast_executor.client:
