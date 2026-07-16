@@ -267,7 +267,11 @@ profile_system() {
 
     # Auto-detect role if not explicitly set
     if [ -z "$ROLE" ]; then
-        if [ "$RAM_GB" -le 4 ] || [ "$DISK_GB" -le 20 ]; then
+        if [[ "$(hostname)" == *controller* ]]; then
+            echo -e "${GREEN}✅ Hostname contains 'controller'. Defaulting role to 'all' and enabling full stack deployment.${NC}"
+            ROLE="all"
+            PROCESSED_ARGS+=("--role" "all" "--deploy-full-stack")
+        elif [ "$RAM_GB" -le 4 ] || [ "$DISK_GB" -le 20 ]; then
             echo -e "${YELLOW}⚠️  Low resource machine detected ($RAM_GB GB RAM, $DISK_GB GB Disk). Defaulting role to 'worker', enabling external models and minimal stack.${NC}"
             ROLE="worker"
             PROCESSED_ARGS+=("--role" "worker" "--external-model-server" "--deploy-minimal-stack")

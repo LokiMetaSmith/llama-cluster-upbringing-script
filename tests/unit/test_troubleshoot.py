@@ -123,6 +123,84 @@ def test_report_job(mock_run_legacy_command, capsys):
     assert "Report generation complete" in captured.out
 
 
+def test_report_job_with_dead_pending(mock_api_get, capsys):
+    # Mock api_get inside cmd_report
+    def api_get_side_effect(endpoint):
+        if endpoint == "/v1/jobs":
+            return [
+                {"ID": "dead-expert", "Status": "dead", "SubmitTime": 1700000000000000000}
+            ]
+        elif endpoint == "/v1/job/dead-expert/evaluations":
+            return [
+                {
+                    "CreateIndex": 100,
+                    "FailedTGAllocs": {
+                        "expert-group": {
+                            "NodesEvaluated": 3,
+                            "NodesFiltered": 2,
+                            "NodesExhausted": 1,
+                            "DimensionExhausted": {"cpu": 1}
+                        }
+                    }
+                }
+            ]
+        elif endpoint == "/v1/job/dead-expert/allocations":
+            return [
+                {
+                    "ID": "alloc999",
+                    "ClientStatus": "failed",
+                    "DesiredStatus": "run",
+                    "ModifyTime": 1700000000000000000,
+                    "TaskStates": {
+                        "expert": {
+                            "State": "dead",
+                            "Failed": True,
+                            "Events": [
+                                {"Type": "Terminated", "Time": 1700000000000000000, "Message": "Out of memory"}
+                            ]
+                        }
+                    }
+                }
+            ]
+        return None
+
+    mock_api_get.side_effect = api_get_side_effect
+
+    # Mock get_nomad_allocations and run_legacy_command
+    with patch('troubleshoot.get_nomad_allocations', return_value=[]), \
+         patch('troubleshoot.run_legacy_command', return_value="Mocked legacy output\n"):
+
+        args = DummyArgs(json=False)
+        troubleshoot.cmd_report(args)
+
+        captured = capsys.readouterr()
+        assert "Report generation complete" in captured.out
+
+        # Find the generated report file and read it to verify content
+        import glob
+        report_files = glob.glob("troubleshoot_report_*.txt")
+        assert len(report_files) > 0
+        latest_report = max(report_files, key=os.path.getmtime)
+        try:
+            with open(latest_report, 'r') as f:
+                content = f.read()
+                assert "Analysis of Dead/Pending Jobs" in content
+                assert "Job: dead-expert" in content
+                assert "Placement Failures" in content
+                assert "expert-group" in content
+                assert "Nodes Evaluated: 3" in content
+                assert "Dimension Exhausted: {'cpu': 1}" in content
+                assert "Latest Allocation: alloc999" in content
+                assert "Out of memory" in content
+        finally:
+            # Clean up the report file
+            for rf in report_files:
+                try:
+                    os.remove(rf)
+                except OSError:
+                    pass
+
+
 def test_probe_health(mock_api_get, mock_run_command, capsys):
     """Verifies that the system-wide health probe returns correct JSON and prints formatted text."""
     # Mock Nomad API

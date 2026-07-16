@@ -522,8 +522,8 @@ def cmd_report(args):
 
         f.write(section("NOMAD JOB ANALYSIS"))
         allocs = get_nomad_allocations(quiet=args.json)
+        failed_allocs = []
         if allocs:
-            failed_allocs = []
             for a in allocs:
                 if a.get('ClientStatus') == 'failed':
                     failed_allocs.append(a)
@@ -549,6 +549,71 @@ def cmd_report(args):
                         f.write(fetch_alloc_logs_with_fallback(alloc_id, task_name, "stderr") + "\n")
         else:
             f.write("Could not retrieve allocations for analysis.\n")
+
+        # Additionally analyze dead or pending jobs
+        jobs = api_get("/v1/jobs")
+        problematic_jobs = []
+        if jobs:
+            problematic_jobs = [j for j in jobs if j.get("Status", "").lower() in ["dead", "pending"]]
+            if problematic_jobs:
+                f.write(f"\n--- Analysis of Dead/Pending Jobs ({len(problematic_jobs)} found) ---\n")
+                for j in problematic_jobs:
+                    job_id = j.get("ID")
+                    status = j.get("Status", "N/A")
+                    submit_date = format_time(j.get("SubmitTime"))
+                    f.write(f"\nJob: {job_id} | Status: {status} | Submitted: {submit_date}\n")
+
+                    # Query latest evaluations for placement failures
+                    evaluations = api_get(f"/v1/job/{job_id}/evaluations")
+                    if evaluations:
+                        evaluations.sort(key=lambda x: x.get('CreateIndex', 0), reverse=True)
+                        for ev in evaluations[:1]:
+                            failed_tg_allocs = ev.get("FailedTGAllocs")
+                            if failed_tg_allocs:
+                                f.write("  Placement Failures:\n")
+                                for tg, metrics in failed_tg_allocs.items():
+                                    f.write(f"    Task Group: {tg}\n")
+                                    f.write(f"      Nodes Evaluated: {metrics.get('NodesEvaluated', 0)}\n")
+                                    f.write(f"      Nodes Filtered: {metrics.get('NodesFiltered', 0)}\n")
+                                    f.write(f"      Nodes Exhausted: {metrics.get('NodesExhausted', 0)}\n")
+                                    if metrics.get("DimensionExhausted"):
+                                        f.write(f"      Dimension Exhausted: {metrics.get('DimensionExhausted')}\n")
+                                    if metrics.get("ClassExhausted"):
+                                        f.write(f"      Class Exhausted: {metrics.get('ClassExhausted')}\n")
+                                    if metrics.get("ConstraintFiltered"):
+                                        f.write(f"      Constraint Filtered: {metrics.get('ConstraintFiltered')}\n")
+
+                    # Query allocations for recent state events or errors
+                    job_allocs = api_get(f"/v1/job/{job_id}/allocations")
+                    if job_allocs:
+                        job_allocs.sort(key=lambda x: x.get('ModifyTime', 0), reverse=True)
+                        for alloc in job_allocs[:1]:
+                            alloc_id = alloc.get("ID")
+                            f.write(f"  Latest Allocation: {alloc_id[:8]} (ClientStatus: {alloc.get('ClientStatus')}, DesiredStatus: {alloc.get('DesiredStatus')})\n")
+                            task_states = alloc.get("TaskStates", {})
+                            for task_name, state_info in task_states.items():
+                                f.write(f"    Task: {task_name} (State: {state_info.get('State')}, Failed: {state_info.get('Failed')})\n")
+                                events = state_info.get("Events", [])
+                                if events:
+                                    f.write("      Recent Events:\n")
+                                    for evt in events[-3:]:
+                                        evt_time = format_time(evt.get("Time"))
+                                        f.write(f"        - [{evt_time}] {evt.get('Type')}: {evt.get('Message', '')}\n")
+                                # If dead/failed, fetch some logs
+                                if state_info.get('Failed') or state_info.get('State') == 'dead':
+                                    err_logs = fetch_alloc_logs_with_fallback(alloc_id, task_name, "stderr")
+                                    if err_logs.strip():
+                                        f.write("      Stderr Logs (Truncated):\n")
+                                        lines = err_logs.strip().splitlines()
+                                        for line in lines[-10:]:
+                                            f.write(f"        {line}\n")
+            else:
+                f.write("\nNo dead or pending jobs detected in the cluster.\n")
+        else:
+            f.write("\nCould not retrieve jobs from Nomad API.\n")
+
+        if not failed_allocs and not problematic_jobs:
+            f.write("\nAll Nomad allocations and jobs are healthy and running nominal.\n")
 
     if args.json:
         print(json.dumps({"status": "success", "report_file": report_file}, indent=2))
