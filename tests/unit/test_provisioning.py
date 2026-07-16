@@ -169,5 +169,105 @@ class TestProvisioning(unittest.TestCase):
 
             mock_print_final_status.assert_called_once()
 
+    def test_evaluate_condition(self):
+        # 1. Test tier check
+        self.assertTrue(provisioning.evaluate_condition("node_tier in ['mid', 'core']", {"node_tier": "mid"}))
+        self.assertTrue(provisioning.evaluate_condition("node_tier in ['mid', 'core']", {"node_tier": "core"}))
+        self.assertFalse(provisioning.evaluate_condition("node_tier in ['mid', 'core']", {"node_tier": "edge"}))
+
+        # 2. Test enable_XXX | default(true/false)
+        self.assertTrue(provisioning.evaluate_condition("enable_mqtt | default(true)", {}))
+        self.assertTrue(provisioning.evaluate_condition("enable_mqtt | default(true)", {"enable_mqtt": True}))
+        self.assertFalse(provisioning.evaluate_condition("enable_mqtt | default(true)", {"enable_mqtt": False}))
+        self.assertFalse(provisioning.evaluate_condition("enable_mqtt | default(true)", {"enable_mqtt": "false"}))
+
+        self.assertFalse(provisioning.evaluate_condition("enable_frigate | default(false)", {}))
+        self.assertTrue(provisioning.evaluate_condition("enable_frigate | default(false)", {"enable_frigate": True}))
+
+        # 3. Test simple variables
+        self.assertTrue(provisioning.evaluate_condition("deploy_full_stack", {"deploy_full_stack": True}))
+        self.assertTrue(provisioning.evaluate_condition("deploy_full_stack", {"deploy_full_stack": "true"}))
+        self.assertFalse(provisioning.evaluate_condition("deploy_full_stack", {"deploy_full_stack": False}))
+        self.assertTrue(provisioning.evaluate_condition("", {}))
+
+    def test_extract_executed_roles(self):
+        playbook_path = os.path.join(self.test_dir, "test_playbook.yaml")
+
+        # Test standard play-level roles list
+        playbook_data = [
+            {
+                "hosts": "all",
+                "roles": [
+                    "common_role",
+                    {"role": "pipecatapp", "when": "node_tier in ['mid', 'core']"},
+                    {"role": "edge_role", "when": "node_tier in ['edge']"}
+                ]
+            },
+            {
+                "hosts": "all",
+                "when": "deploy_full_stack",
+                "roles": [
+                    "full_stack_role"
+                ]
+            },
+            {
+                "hosts": "all",
+                "tasks": [
+                    {
+                        "name": "Include looped roles",
+                        "include_role": {
+                            "name": "{{ role_name }}"
+                        },
+                        "loop": ["loop_role_1", "loop_role_2"]
+                    },
+                    {
+                        "name": "Include direct role",
+                        "include_role": {
+                            "name": "direct_role_1"
+                        }
+                    },
+                    {
+                        "name": "Include direct role string",
+                        "include_role": "direct_role_2"
+                    },
+                    {
+                        "name": "Skipped task",
+                        "include_role": "skipped_role",
+                        "when": "enable_frigate | default(false)"
+                    },
+                    {
+                        "block": [
+                            {
+                                "name": "Include role in block",
+                                "include_role": "block_role"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+
+        with open(playbook_path, 'w') as f:
+            yaml.dump(playbook_data, f)
+
+        # 1. Variables for "mid" tier, no full stack
+        vars_mid = {"node_tier": "mid"}
+        roles = provisioning.extract_executed_roles(playbook_path, vars_mid)
+        self.assertIn("common_role", roles)
+        self.assertIn("pipecatapp", roles)
+        self.assertNotIn("edge_role", roles)
+        self.assertNotIn("full_stack_role", roles)
+        self.assertIn("loop_role_1", roles)
+        self.assertIn("loop_role_2", roles)
+        self.assertIn("direct_role_1", roles)
+        self.assertIn("direct_role_2", roles)
+        self.assertNotIn("skipped_role", roles)
+        self.assertIn("block_role", roles)
+
+        # 2. Variables with "deploy_full_stack"
+        vars_full = {"node_tier": "mid", "deploy_full_stack": True}
+        roles_full = provisioning.extract_executed_roles(playbook_path, vars_full)
+        self.assertIn("full_stack_role", roles_full)
+
 if __name__ == '__main__':
     unittest.main()
