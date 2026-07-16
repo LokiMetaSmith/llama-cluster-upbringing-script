@@ -1150,14 +1150,54 @@ class TwinService(FrameProcessor):
             self.external_experts_config = {}
             logging.warning("Failed to parse EXTERNAL_EXPERTS_CONFIG JSON.")
 
-        # Use Remote Memory if available (via Consul discovery or env var), otherwise fallback to local
-        memory_service_url = os.getenv("MEMORY_SERVICE_URL")
-        if memory_service_url:
-             logging.info(f"Using Remote Memory Service at {memory_service_url}")
-             self.long_term_memory = PMMMemoryClient(base_url=memory_service_url)
-        else:
-             logging.info("Using Local PMMMemory (SQLite)")
-             self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
+        # Check for sharded memory routing proxy
+        enable_sharded = os.getenv("ENABLE_SHARDED_MEMORY", "false").lower() in ("true", "yes", "1")
+        if enable_sharded:
+            logging.info("ENABLE_SHARDED_MEMORY is true. Initializing ShardedPMMMemoryRouter.")
+            try:
+                import yaml
+                try:
+                    import web_server
+                except ImportError:
+                    from pipecatapp import web_server
+                from pipecatapp.sharded_router import ShardedPMMMemoryRouter
+                config_path = os.getenv("SHARDING_CONFIG_PATH", "sharding_config.yaml")
+                if not os.path.exists(config_path):
+                    # Write a default mock sharding config for standalone/graceful fallback
+                    default_config = {
+                        "sharding": {
+                            "algorithm": "consistent_hash",
+                            "replica_count": 128,
+                            "coordinator_node": "node_0",
+                            "nodes": {
+                                "node_0": {
+                                    "sqlite_path": os.path.expanduser("~/.config/pipecat/pypicat_memory.db"),
+                                    "api_url": "http://localhost:8000"
+                                }
+                            }
+                        }
+                    }
+                    logging.warning(f"Sharding config {config_path} not found. Creating a default single-node sharding config.")
+                    with open(config_path, "w") as f:
+                        yaml.dump(default_config, f)
+
+                router = ShardedPMMMemoryRouter(config_path)
+                web_server.app.state.memory_router = router
+                self.long_term_memory = router
+                logging.info(f"ShardedPMMMemoryRouter successfully initialized using {config_path}")
+            except Exception as e:
+                logging.error(f"Failed to initialize ShardedPMMMemoryRouter: {e}. Falling back to standard memory.")
+                enable_sharded = False
+
+        if not enable_sharded:
+            # Use Remote Memory if available (via Consul discovery or env var), otherwise fallback to local
+            memory_service_url = os.getenv("MEMORY_SERVICE_URL")
+            if memory_service_url:
+                 logging.info(f"Using Remote Memory Service at {memory_service_url}")
+                 self.long_term_memory = PMMMemoryClient(base_url=memory_service_url)
+            else:
+                 logging.info("Using Local PMMMemory (SQLite)")
+                 self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
 
         self.quality_analyzer = CodeQualityAnalyzer()
 
