@@ -101,3 +101,6 @@ tree-sitter-javascript>=0.23.0
 tree-sitter-rust>=0.23.0
 tree-sitter-typescript>=0.23.0
 tree-sitter-swift>=0.7.0
+
+# Model Context Protocol support
+mcp
