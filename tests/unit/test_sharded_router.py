@@ -2,10 +2,20 @@ import pytest
 import os
 import asyncio
 import tempfile
+import httpx
 from typing import Dict, Any
+from unittest.mock import MagicMock
 
 from pipecatapp.sharded_router import HashRing, ShardedPMMMemoryRouter
 from pipecatapp.pmm_memory import PMMMemory
+
+# Standard imports for FastAPI Testing
+from fastapi.testclient import TestClient
+from pipecatapp.web_server import app
+try:
+    from api_keys import get_api_key
+except ImportError:
+    from pipecatapp.api_keys import get_api_key
 
 def test_hash_ring_consistent_mapping():
     """Tests basic HashRing addition, removal, and consistent lookup mapping."""
@@ -62,9 +72,9 @@ def temp_sharded_router_and_files():
             "replica_count": 64,
             "coordinator_node": "node_0",
             "nodes": {
-                "node_0": {"sqlite_path": db_path_0},
-                "node_1": {"sqlite_path": db_path_1},
-                "node_2": {"sqlite_path": db_path_2}
+                "node_0": {"sqlite_path": db_path_0, "api_url": "http://10.0.0.0:8000"},
+                "node_1": {"sqlite_path": db_path_1, "api_url": "http://10.0.0.1:8000"},
+                "node_2": {"sqlite_path": db_path_2, "api_url": "http://10.0.0.2:8000"}
             }
         }
     }
@@ -202,3 +212,196 @@ async def test_two_tier_ledger_consensus_async(temp_sharded_router_and_files):
 
     updated_dlq = await router.update_dlq_item(dlq_id, status="RESOLVED")
     assert updated_dlq is True
+
+
+# -------------------------------------------------------------------------
+# HTTP Mesh Integration & FastAPI Web Endpoint Tests
+# -------------------------------------------------------------------------
+
+@pytest.fixture
+def mock_httpx_mesh(monkeypatch):
+    """
+    Patches httpx.Client and httpx.AsyncClient to route remote shard requests
+    directly through FastAPI's TestClient, simulating a multi-node mesh network.
+    """
+    client = TestClient(app)
+
+    # Override FastAPI auth dependency
+    app.dependency_overrides[get_api_key] = lambda: "test-key"
+
+    original_post = httpx.Client.post
+    original_get = httpx.Client.get
+    original_post_async = httpx.AsyncClient.post
+    original_get_async = httpx.AsyncClient.get
+
+    def mock_post(self_client, url, *args, **kwargs):
+        url_str = str(url)
+        if "10.0." in url_str:
+            # Extract path: e.g. "http://10.0.0.1:8000/api/memory/sharded/events" -> "/api/memory/sharded/events"
+            path = "/" + url_str.split(":8000/")[-1]
+            json_data = kwargs.get("json")
+            headers = kwargs.get("headers", {})
+            resp = client.post(path, json=json_data, headers=headers)
+
+            mock_resp = MagicMock()
+            mock_resp.status_code = resp.status_code
+            mock_resp.json.return_value = resp.json() if resp.status_code != 204 else {}
+            mock_resp.content = resp.content
+            mock_resp.raise_for_status = MagicMock()
+            return mock_resp
+        else:
+            return original_post(self_client, url, *args, **kwargs)
+
+    def mock_get(self_client, url, *args, **kwargs):
+        url_str = str(url)
+        if "10.0." in url_str:
+            path = "/" + url_str.split(":8000/")[-1]
+            params = kwargs.get("params")
+            headers = kwargs.get("headers", {})
+            resp = client.get(path, params=params, headers=headers)
+
+            mock_resp = MagicMock()
+            mock_resp.status_code = resp.status_code
+            mock_resp.json.return_value = resp.json()
+            mock_resp.content = resp.content
+            mock_resp.raise_for_status = MagicMock()
+            return mock_resp
+        else:
+            return original_get(self_client, url, *args, **kwargs)
+
+    async def mock_post_async(self_client, url, *args, **kwargs):
+        url_str = str(url)
+        if "10.0." in url_str:
+            # Re-use sync helper for simple test execution
+            return mock_post(None, url, *args, **kwargs)
+        else:
+            return await original_post_async(self_client, url, *args, **kwargs)
+
+    async def mock_get_async(self_client, url, *args, **kwargs):
+        url_str = str(url)
+        if "10.0." in url_str:
+            return mock_get(None, url, *args, **kwargs)
+        else:
+            return await original_get_async(self_client, url, *args, **kwargs)
+
+    # Patch sync client methods
+    monkeypatch.setattr(httpx.Client, "post", mock_post)
+    monkeypatch.setattr(httpx.Client, "get", mock_get)
+    # Patch async client methods
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post_async)
+    monkeypatch.setattr(httpx.AsyncClient, "get", mock_get_async)
+
+    yield client
+
+    # Cleanup dependency override
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_http_mesh_routing_and_endpoints(mock_httpx_mesh, monkeypatch):
+    """
+    Tests actual async and sync HTTP mesh routing through FastAPI Web Server endpoints.
+    Configures node_0 as a direct local database, and node_1 as a remote HTTP node,
+    showing how writes are successfully proxied, dispatched, authenticated, and serialized.
+    """
+    temp_dir = tempfile.TemporaryDirectory()
+    db_path_0 = os.path.join(temp_dir.name, "node_0.db")
+
+    # node_0 is a local DB shard; node_1 is a remote HTTP API node (no local sqlite_path!)
+    config = {
+        "sharding": {
+            "algorithm": "consistent_hash",
+            "replica_count": 64,
+            "coordinator_node": "node_0",
+            "api_key": "test-key",
+            "nodes": {
+                "node_0": {"sqlite_path": db_path_0, "api_url": "http://10.0.0.0:8000"},
+                "node_1": {"api_url": "http://10.0.0.1:8000"}  # remote only!
+            }
+        }
+    }
+
+    router = ShardedPMMMemoryRouter(config=config, local_node_id="node_0")
+
+    # Store router in fastapi app state so endpoints can see it
+    app.state.memory_router = router
+
+    try:
+        # 1. Test GET /api/memory/sharded/status Endpoint (Category C)
+        client = mock_httpx_mesh
+        headers = {"Authorization": "Bearer test-key"}
+        status_resp = client.get("/api/memory/sharded/status", headers=headers)
+        assert status_resp.status_code == 200
+        assert status_resp.json()["enabled"] is True
+        assert status_resp.json()["local_node_id"] == "node_0"
+        assert "node_1" in status_resp.json()["shards"]
+        assert "node_1" not in status_resp.json()["local_databases"] # isolated database local db checks
+
+        # 2. Test GET /api/memory/sharded/lookup Endpoint (Category C)
+        lookup_resp = client.get("/api/memory/sharded/lookup?key=session_abc", headers=headers)
+        assert lookup_resp.status_code == 200
+        assert "target_node" in lookup_resp.json()
+
+        # 3. Test Routing conversational events to a REMOTE node over HTTP (Category A)
+        # Find a session ID that consistent-hashes to node_1 (the remote shard)
+        remote_sess = None
+        for i in range(100):
+            sess_candidate = f"sess_{i}"
+            if router.get_shard_for_session(sess_candidate) == "node_1":
+                remote_sess = sess_candidate
+                break
+
+        assert remote_sess is not None, "Failed to find session hashing to node_1"
+
+        # Write event asynchronously. Since node_1 is remote, router will issue an HTTP POST to node_1.
+        # This HTTP call is intercepted by our patched httpx, routed to FastAPI, which processes it
+        # on the "server" node (node_0, since the server has local_node_id='node_0' and is sharded).
+        # On the server side, it is written to the local node_0 database!
+        target_node = await router.add_event(session_id=remote_sess, kind="user_message", content="Hello remote!")
+        assert target_node == "node_1"
+
+        # Verify that node_0's local sqlite db indeed received the event from the API write call
+        local_db_events = router.local_memories["node_0"].get_events_sync()
+        assert len(local_db_events) == 1
+        assert local_db_events[0]["content"] == "Hello remote!"
+        assert local_db_events[0]["meta"]["session_id"] == remote_sess
+
+        # 4. Test Reading sharded events from a remote node over HTTP
+        # Let's perform a GET call through the router to node_1's API
+        retrieved = await router.get_events(session_id=remote_sess)
+        assert len(retrieved) == 1
+        assert retrieved[0]["content"] == "Hello remote!"
+
+        # 5. Test Coordinator work items API calls over HTTP (Category B)
+        # To simulate a worker node calling the coordinator node (node_0), we temporarily set local_node_id="node_1"
+        # (meaning we act as the worker, and coordinator is remote node_0)
+        worker_router = ShardedPMMMemoryRouter(config=config, local_node_id="node_1")
+        # Keep app state memory_router pointing to the server router (node_0)
+
+        # Write task from the worker. Since coord_node (node_0) is not in worker_router's local_memories,
+        # it will make an HTTP call to the coordinator node's endpoint.
+        task_id = await worker_router.create_work_item(title="Mesh Task", created_by="worker_node_1")
+        assert task_id is not None
+
+        # Verify coordinator actually stored it
+        task = await router.local_memories["node_0"].get_work_item(task_id)
+        assert task is not None
+        assert task["title"] == "Mesh Task"
+        assert task["created_by"] == "worker_node_1"
+
+        # Update task over HTTP
+        updated = await worker_router.update_work_item(task_id, status="completed")
+        assert updated is True
+
+        task_updated = await router.local_memories["node_0"].get_work_item(task_id)
+        assert task_updated["status"] == "completed"
+
+        # List tasks over HTTP
+        tasks_list = await worker_router.list_work_items()
+        assert len(tasks_list) == 1
+        assert tasks_list[0]["id"] == task_id
+
+    finally:
+        app.state.memory_router = None
+        router.close()
+        temp_dir.cleanup()
