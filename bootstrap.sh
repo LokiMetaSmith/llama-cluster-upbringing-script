@@ -48,6 +48,7 @@ show_help() {
     echo "  --home-assistant-debug       Enable debug mode for Home Assistant."
     echo "  --container                  Run the entire infrastructure inside a single large container."
     echo "  --watch <target>             Pause for inspection after the specified target (task/role) completes."
+    echo "  --status                     Show the current cluster and Opencode status and exit."
     echo "  -h, --help                   Display this help message and exit."
     echo ""
     echo "OS Recovery Snapshot Options:"
