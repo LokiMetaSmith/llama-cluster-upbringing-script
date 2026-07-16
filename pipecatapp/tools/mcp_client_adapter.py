@@ -5,8 +5,6 @@ import os
 import re
 from contextlib import AsyncExitStack
 from typing import Optional, Dict, Any, List
-from mcp.client.session import ClientSession
-from mcp.client.stdio import stdio_client, StdioServerParameters
 from pydantic import BaseModel
 
 try:
@@ -79,6 +77,13 @@ class MCPClientAdapter:
 
     async def _ensure_connected(self):
         if self._session is None:
+            try:
+                from mcp.client.stdio import stdio_client, StdioServerParameters
+                from mcp.client.session import ClientSession
+            except ImportError as e:
+                logging.error(f"Failed to import 'mcp' client SDK: {e}. Please ensure the 'mcp' package is installed.")
+                raise RuntimeError("MCP client SDK is missing. Required dependencies are not installed.") from e
+
             server_params = StdioServerParameters(
                 command=self.server_command,
                 args=self.server_args
@@ -139,7 +144,11 @@ class MCPClientAdapter:
                 logging.debug(f"Failed to broadcast command to UI: {e}")
 
         # Execute MCP Request
-        await self._ensure_connected()
+        try:
+            await self._ensure_connected()
+        except Exception as e:
+            logging.error(f"MCP execute failed to connect: {e}")
+            return f"Error: Failed to connect to MCP server or dependencies are missing: {e}"
 
         if method_name not in self._available_tools:
                 return f"Error: Tool '{method_name}' not found on MCP server. Available tools: {self._available_tools}"
