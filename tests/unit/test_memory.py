@@ -72,19 +72,21 @@ def test_encrypted_memory_store(mock_faiss, mock_st, mock_embedding_model, mock_
     store.add("This is a secret test memory.")
     store.force_save()
 
-    assert store.backend.store["0"] == "This is a secret test memory."
+    # Now `store.backend.store` holds the encrypted value directly
+    encrypted_value_in_mem = store.backend.store["0"]
+    assert encrypted_value_in_mem != "This is a secret test memory."
+
+    # Verify we can decrypt it from memory
+    fernet = Fernet(key)
+    decrypted_value_in_mem = fernet.decrypt(encrypted_value_in_mem.encode()).decode()
+    assert decrypted_value_in_mem == "This is a secret test memory."
 
     # Check the actual file contents to ensure it is encrypted
     with open(temp_store_file, 'r') as f:
         data = json.load(f)
 
     encrypted_value = data["0"]
-    assert encrypted_value != "This is a secret test memory."
-
-    # Verify we can decrypt it
-    fernet = Fernet(key)
-    decrypted_value = fernet.decrypt(encrypted_value.encode()).decode()
-    assert decrypted_value == "This is a secret test memory."
+    assert encrypted_value == encrypted_value_in_mem
 
 @patch('pipecatapp.memory_legacy.SentenceTransformer')
 @patch('pipecatapp.memory_legacy.faiss')
@@ -106,6 +108,8 @@ def test_encrypted_store_loads_legacy_unencrypted_data(mock_faiss, mock_st, mock
 
     # Verify legacy data loaded successfully
     assert "0" in store.backend.store
+    # With the new code, _decrypt() handles legacy unencrypted data transparently
+    # But because the store holds the raw string (plaintext here), `store.backend.store["0"]` will be plaintext
     assert store.backend.store["0"] == "Legacy plaintext memory."
 
     # Mock index so the next ID is 1 to preserve legacy data at '0'

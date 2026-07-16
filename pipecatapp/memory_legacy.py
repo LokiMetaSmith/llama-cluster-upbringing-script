@@ -116,11 +116,19 @@ class MemoryStore:
         store_to_save = {}
         for k, v in self.store.items():
             if self.fernet:
+                # v might already be encrypted by `self.add()`. If we can decrypt it, it is already encrypted!
                 try:
-                    store_to_save[k] = self.fernet.encrypt(v.encode()).decode()
-                except Exception as e:
-                    logging.error(f"Failed to encrypt memory entry {k}: {e}")
+                    self.fernet.decrypt(v.encode())
+                    # Already encrypted
                     store_to_save[k] = v
+                except Exception:
+                    # It's not encrypted (e.g. legacy loaded data), so encrypt it now
+                    try:
+                        store_to_save[k] = self.fernet.encrypt(v.encode()).decode()
+                        self.store[k] = store_to_save[k] # update in-memory store so it stays encrypted
+                    except Exception as e:
+                        logging.error(f"Failed to encrypt memory entry {k}: {e}")
+                        store_to_save[k] = v
             else:
                 store_to_save[k] = v
 
@@ -234,7 +242,7 @@ class MemoryStore:
             importance,
             1 if consolidated else 0,
             self._encrypt(metadata_str) if metadata_str else None,
-            doc_id
+            self._encrypt(doc_id) if doc_id else None
         ))
 
         self.conn.commit()
@@ -281,6 +289,7 @@ class MemoryStore:
         memories = []
         for row in rows:
             memory = dict(row)
+            memory['doc_id'] = self._decrypt(memory['doc_id']) if memory['doc_id'] else None
             memory['raw_text'] = self._decrypt(memory['raw_text'])
             memory['summary'] = self._decrypt(memory['summary'])
 
@@ -310,6 +319,7 @@ class MemoryStore:
 
         if row:
             memory = dict(row)
+            memory['doc_id'] = self._decrypt(memory['doc_id']) if memory['doc_id'] else None
             memory['raw_text'] = self._decrypt(memory['raw_text'])
             memory['summary'] = self._decrypt(memory['summary'])
 
@@ -375,7 +385,7 @@ class MemoryStore:
             INSERT INTO activity_timeline (activity_type, description, metadata)
             VALUES (?, ?, ?)
         ''', (
-            activity_type,
+            self._encrypt(activity_type),
             self._encrypt(description),
             self._encrypt(metadata_str)
         ))
@@ -398,6 +408,7 @@ class MemoryStore:
         activities = []
         for row in rows:
             activity = dict(row)
+            activity['activity_type'] = self._decrypt(activity['activity_type'])
             activity['description'] = self._decrypt(activity['description'])
 
             metadata_str = self._decrypt(activity['metadata'])
@@ -419,7 +430,7 @@ class MemoryStore:
         embedding = self.embedding_model.encode([text])
         new_id = self.index.ntotal
         self.index.add(embedding)
-        self.store[str(new_id)] = text
+        self.store[str(new_id)] = self._encrypt(text)
 
         # Debounce/batch saving to reduce I/O overhead
         self._add_count += 1
@@ -459,7 +470,9 @@ class MemoryStore:
         results = []
         for i in indices[0]:
             if i != -1:
-                results.append(self.store.get(str(i)))
+                val = self.store.get(str(i))
+                if val is not None:
+                    results.append(self._decrypt(val))
 
         return results
 
@@ -529,7 +542,7 @@ class MemoryStore:
                 text = self._decrypt(row["raw_text"]) if row["raw_text"] else ""
 
                 # Favor the explicit string doc_id if it exists, fallback to sqlite row id
-                doc_id = row["doc_id"] if "doc_id" in keys and row["doc_id"] else str(row["id"])
+                doc_id = self._decrypt(row["doc_id"]) if "doc_id" in keys and row["doc_id"] else str(row["id"])
 
                 docs.append(Document(id=doc_id, content=text, metadata=meta))
 
@@ -549,12 +562,12 @@ class MemoryStore:
                 UPDATE dynamic_skills
                 SET description = ?, content = ?, version = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE name = ?
-            ''', (description, content, new_version, name))
+            ''', (self._encrypt(description), self._encrypt(content), new_version, name))
         else:
             cursor.execute('''
                 INSERT INTO dynamic_skills (name, description, content)
                 VALUES (?, ?, ?)
-            ''', (name, description, content))
+            ''', (name, self._encrypt(description), self._encrypt(content)))
 
         self.conn.commit()
 
@@ -565,14 +578,22 @@ class MemoryStore:
         row = cursor.fetchone()
 
         if row:
-            return dict(row)
+            skill = dict(row)
+            skill['description'] = self._decrypt(skill['description'])
+            skill['content'] = self._decrypt(skill['content'])
+            return skill
         return None
 
     def list_skills(self) -> list[dict]:
         """Lists all dynamic skills."""
         cursor = self.conn.cursor()
         cursor.execute("SELECT name, description, version FROM dynamic_skills ORDER BY name ASC")
-        return [dict(row) for row in cursor.fetchall()]
+        skills = []
+        for row in cursor.fetchall():
+            skill = dict(row)
+            skill['description'] = self._decrypt(skill['description'])
+            skills.append(skill)
+        return skills
 
     def delete_skill(self, name: str) -> bool:
         """Deletes a dynamic skill by name. Returns True if deleted, False if not found."""
