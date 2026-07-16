@@ -548,6 +548,139 @@ def get_primary_ip():
         s.close()
     return IP
 
+def evaluate_condition(cond, variables):
+    """
+    Evaluates basic Ansible/Jinja2 `when` condition strings against current variables.
+    Supports list structures, 'node_tier in ...', and 'variable | default(val)' checks.
+    """
+    if not cond:
+        return True
+    if isinstance(cond, list):
+        return all(evaluate_condition(c, variables) for c in cond)
+    if not isinstance(cond, str):
+        return bool(cond)
+
+    cond = cond.strip()
+
+    # 1. Handle node_tier in [...]
+    node_tier_match = re.search(r"node_tier\s+in\s+\[([^\]]+)\]", cond)
+    if node_tier_match:
+        tier_list_str = node_tier_match.group(1)
+        tiers = [t.strip().strip("'\"") for t in tier_list_str.split(",")]
+        current_tier = variables.get("node_tier", "mid")
+        return current_tier in tiers
+
+    # 2. Handle enable_XXX | default(true) or enable_XXX | default(false)
+    default_match = re.search(r"(\w+)\s*\|\s*default\((true|false)\)", cond, re.IGNORECASE)
+    if default_match:
+        var_name = default_match.group(1)
+        default_val = default_match.group(2).lower() == "true"
+        val = variables.get(var_name, default_val)
+        if isinstance(val, str):
+            return val.lower() in ("true", "1", "yes")
+        return bool(val)
+
+    # 3. Handle simple variables (e.g. "deploy_full_stack")
+    if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", cond):
+        if cond in variables:
+            val = variables[cond]
+            if isinstance(val, str):
+                return val.lower() in ("true", "1", "yes")
+            return bool(val)
+        return False
+
+    return True
+
+
+def extract_executed_roles(playbook_path, variables):
+    """
+    Parses a playbook YAML file and extracts roles/services that are executed.
+    """
+    if not os.path.exists(playbook_path):
+        return []
+
+    try:
+        with open(playbook_path, 'r') as f:
+            plays = yaml.safe_load(f)
+    except Exception as e:
+        print_warning(f"Failed to parse playbook {playbook_path} for roles: {e}")
+        return []
+
+    if not isinstance(plays, list):
+        return []
+
+    roles_found = []
+
+    for play in plays:
+        if not isinstance(play, dict):
+            continue
+
+        # Check play-level when condition if any
+        play_when = play.get("when")
+        if play_when and not evaluate_condition(play_when, variables):
+            continue
+
+        # 1. Parse play-level roles list
+        roles_list = play.get("roles")
+        if roles_list and isinstance(roles_list, list):
+            for r in roles_list:
+                role_name = None
+                role_cond = None
+                if isinstance(r, str):
+                    role_name = r
+                elif isinstance(r, dict):
+                    role_name = r.get("role")
+                    role_cond = r.get("when")
+
+                if role_name:
+                    if not role_cond or evaluate_condition(role_cond, variables):
+                        if role_name not in roles_found:
+                            roles_found.append(role_name)
+
+        # 2. Parse tasks list for include_role or import_role
+        def recurse_tasks(tasks):
+            if not isinstance(tasks, list):
+                return
+            for t in tasks:
+                if not isinstance(t, dict):
+                    continue
+
+                # Check task-level when condition
+                task_when = t.get("when")
+                if task_when and not evaluate_condition(task_when, variables):
+                    continue
+
+                # Check include_role / import_role
+                for ir_key in ("ansible.builtin.include_role", "include_role", "ansible.builtin.import_role", "import_role"):
+                    if ir_key in t:
+                        ir_val = t[ir_key]
+                        if isinstance(ir_val, dict):
+                            role_name = ir_val.get("name")
+                            if role_name == "{{ role_name }}" and "loop" in t:
+                                loop_list = t["loop"]
+                                if isinstance(loop_list, list):
+                                    for item in loop_list:
+                                        if isinstance(item, str) and item not in roles_found:
+                                            roles_found.append(item)
+                            elif isinstance(role_name, str) and not role_name.startswith("{"):
+                                if role_name not in roles_found:
+                                    roles_found.append(role_name)
+                        elif isinstance(ir_val, str) and not ir_val.startswith("{"):
+                            if ir_val not in roles_found:
+                                roles_found.append(ir_val)
+
+                # Recurse into blocks
+                if "block" in t:
+                    recurse_tasks(t["block"])
+
+        for task_key in ("tasks", "pre_tasks", "post_tasks"):
+            tasks_list = play.get(task_key)
+            if tasks_list:
+                recurse_tasks(tasks_list)
+
+    return roles_found
+
+
 def print_final_status(args, executed_playbooks):
     print_header("Final Status Report")
 
@@ -598,9 +731,40 @@ def print_final_status(args, executed_playbooks):
         print(f"  • {Colors.OKCYAN}{name:<15}:{Colors.ENDC} {url:<25} {status}")
 
     # 3. Intended Services
+    # Build variables to evaluate conditions during role extraction
+    variables = load_global_vars()
+    if hasattr(args, "tier") and args.tier:
+        variables["node_tier"] = args.tier
+    else:
+        variables["node_tier"] = "mid"
+
+    if hasattr(args, "deploy_full_stack") and args.deploy_full_stack:
+        variables["deploy_full_stack"] = "true"
+    if hasattr(args, "deploy_partial_stack") and args.deploy_partial_stack:
+        variables["deploy_partial_stack"] = "true"
+    if hasattr(args, "deploy_minimal_stack") and args.deploy_minimal_stack:
+        variables["deploy_minimal_stack"] = "true"
+
+    # Default flags from app_services.yaml
+    for key, val in [
+        ("enable_mqtt", True),
+        ("enable_zigbee2mqtt", True),
+        ("enable_provisioning_api", True),
+        ("enable_frigate", False),
+        ("enable_influxdb", True),
+        ("enable_telegraf", True),
+        ("enable_paddler", False)
+    ]:
+        if key not in variables:
+            variables[key] = val
+
     print(f"\n{Colors.BOLD}Executed Playbooks (Intended Configuration):{Colors.ENDC}")
     for pb in executed_playbooks:
         print(f"  • {os.path.basename(pb)}")
+        # Dynamically extract and list executed roles/services (like pipecatapp) under each playbook
+        roles = extract_executed_roles(pb, variables)
+        for role in roles:
+            print(f"    - {role}")
 
     # 4. Running System Services
     print(f"\n{Colors.BOLD}System Services Status:{Colors.ENDC}")
