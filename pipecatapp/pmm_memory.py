@@ -335,40 +335,69 @@ class PMMMemory:
 
     def sync_work_items_sync(self, remote_items: List[Dict]) -> List[Dict]:
         """Merges remote work items into the local ledger, resolving conflicts by updated_at."""
+        if not remote_items:
+            return []
+
         cursor = self.conn.cursor()
         merged_items = []
 
+        # Extract all remote item IDs to fetch existing ones in batches
+        r_ids = [r_item['id'] for r_item in remote_items]
+        existing_map = {}
+        batch_size = 999
+        for i in range(0, len(r_ids), batch_size):
+            batch_ids = r_ids[i:i + batch_size]
+            placeholders = ",".join("?" * len(batch_ids))
+            cursor.execute(f"SELECT id, updated_at FROM work_items WHERE id IN ({placeholders})", batch_ids)
+            for row in cursor.fetchall():
+                existing_map[row[0]] = row[1]
+
+        to_insert = []
+        to_update = []
+
         for r_item in remote_items:
-            cursor.execute("SELECT updated_at FROM work_items WHERE id = ?", (r_item['id'],))
-            l_row = cursor.fetchone()
-
-            should_update = False
-            if not l_row:
-                # Insert
-                should_update = True
-                cursor.execute("""
-                    INSERT INTO work_items (id, title, status, assignee_id, created_by, created_at, updated_at, parent_id, meta, validation_results)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    r_item['id'], r_item['title'], r_item['status'], r_item.get('assignee_id'), r_item['created_by'],
-                    r_item['created_at'], r_item['updated_at'], r_item.get('parent_id'),
-                    json.dumps(r_item.get('meta', {})), json.dumps(r_item.get('validation_results', {}))
+            r_id = r_item['id']
+            if r_id not in existing_map:
+                to_insert.append((
+                    r_item['id'],
+                    r_item['title'],
+                    r_item['status'],
+                    r_item.get('assignee_id'),
+                    r_item['created_by'],
+                    r_item['created_at'],
+                    r_item['updated_at'],
+                    r_item.get('parent_id'),
+                    json.dumps(r_item.get('meta', {})),
+                    json.dumps(r_item.get('validation_results', {}))
                 ))
-            elif r_item['updated_at'] > l_row[0]:
-                # Update
-                should_update = True
-                cursor.execute("""
-                    UPDATE work_items
-                    SET title = ?, status = ?, assignee_id = ?, updated_at = ?, parent_id = ?, meta = ?, validation_results = ?
-                    WHERE id = ?
-                """, (
-                    r_item['title'], r_item['status'], r_item.get('assignee_id'), r_item['updated_at'],
-                    r_item.get('parent_id'), json.dumps(r_item.get('meta', {})),
-                    json.dumps(r_item.get('validation_results', {})), r_item['id']
-                ))
-
-            if should_update:
+                existing_map[r_id] = r_item['updated_at']
                 merged_items.append(r_item)
+            elif r_item['updated_at'] > existing_map[r_id]:
+                to_update.append((
+                    r_item['title'],
+                    r_item['status'],
+                    r_item.get('assignee_id'),
+                    r_item['updated_at'],
+                    r_item.get('parent_id'),
+                    json.dumps(r_item.get('meta', {})),
+                    json.dumps(r_item.get('validation_results', {})),
+                    r_id
+                ))
+                existing_map[r_id] = r_item['updated_at']
+                merged_items.append(r_item)
+
+        if to_insert:
+            cursor.executemany("""
+                INSERT INTO work_items (id, title, status, assignee_id, created_by, created_at, updated_at, parent_id, meta, validation_results)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, to_insert)
+
+        if to_update:
+            cursor.executemany("""
+                UPDATE work_items
+                SET title = ?, status = ?, assignee_id = ?, updated_at = ?, parent_id = ?, meta = ?, validation_results = ?
+                WHERE id = ?
+            """, to_update)
 
         self.conn.commit()
         return merged_items
