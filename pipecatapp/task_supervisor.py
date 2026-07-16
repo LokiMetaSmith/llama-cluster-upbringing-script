@@ -1,14 +1,16 @@
 import asyncio
 import logging
 import time
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from tools.swarm_tool import SwarmTool
 from pmm_memory_client import PMMMemoryClient
+from pipecatapp.concurrency.queue_manager import ConcurrencyQueueManager, ConcurrencyPolicy, JobQueuePolicy
 
 class TaskSupervisor:
     """
     Monitors the progress of spawned worker tasks by polling the Shared Memory.
     If a task takes too long without a result, it intervenes (kills and optionally retries).
+    Also manages job/task concurrency policies (PARALLEL, PREFER_NEW, WAIT, PREFER_OLD).
     """
     def __init__(self, twin_service):
         self.twin_service = twin_service
@@ -22,6 +24,58 @@ class TaskSupervisor:
         # Heartbeat loop configuration
         self.heartbeat_queue = [] # Queue of pending tasks waiting for heartbeat wakeups
         self.heartbeat_interval = 60 # Scheduled heartbeat interval in seconds
+
+        # Concurrency Policy Gatekeeper
+        self.concurrency_manager = ConcurrencyQueueManager()
+
+    def set_job_policy(self, job_key: str, policy: JobQueuePolicy):
+        """Sets the policy for a specific category of jobs (identified by job_key)."""
+        self.concurrency_manager.set_policy(job_key, policy)
+
+    async def spawn_task_with_policy(
+        self,
+        job_key: str,
+        task_id: str,
+        prompt: str,
+        context: str = "",
+        agent_type: str = "worker"
+    ) -> Optional[asyncio.Future]:
+        """
+        Spawns a worker/technician task using the ConcurrencyQueueManager
+        to guarantee concurrency policies are obeyed.
+        """
+        async def _executor(tid, payload):
+            self.logger.info(f"Executing task '{tid}' under job key '{job_key}' using policy limits.")
+            spawn_res = await self.swarm_tool.spawn_workers(
+                tasks=[{"id": tid, "prompt": payload["prompt"], "context": payload["context"]}],
+                agent_type=payload["agent_type"]
+            )
+            return spawn_res
+
+        async def _on_cancel(tid, payload):
+            # Terminate running Nomad/Swarm job
+            nomad_job_id = f"worker-{tid}"
+            self.logger.warning(f"Cancelling task '{tid}' under job key '{job_key}' because of PREFER_NEW policy.")
+            try:
+                await self.swarm_tool.kill_worker(nomad_job_id)
+            except Exception as e:
+                self.logger.error(f"Failed to kill cancelled worker {nomad_job_id}: {e}")
+
+        payload = {
+            "prompt": prompt,
+            "context": context,
+            "agent_type": agent_type
+        }
+
+        # Submit task to the manager
+        fut = await self.concurrency_manager.submit(
+            job_key=job_key,
+            task_id=task_id,
+            payload=payload,
+            executor=_executor,
+            on_cancel=_on_cancel
+        )
+        return fut
 
     async def handle_gateway_exhaustion(self, expert_name: str) -> bool:
         """
