@@ -278,3 +278,14 @@ def test_fetch_alloc_logs_with_fallback(mock_api_get, mock_run_command):
     assert "DriverError" in logs
     assert "Docker container died on startup" in logs
     assert "Actual docker stderr fallback log line!" in logs
+
+
+@patch('troubleshoot.cmd_report')
+def test_main_default_command(mock_cmd_report):
+    """Verifies that calling main with no command arguments defaults to cmd_report."""
+    with patch('sys.argv', ['troubleshoot.py']):
+        troubleshoot.main()
+        mock_cmd_report.assert_called_once()
+        args_passed = mock_cmd_report.call_args[0][0]
+        assert args_passed.command is None
+        assert args_passed.json is False

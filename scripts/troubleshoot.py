@@ -900,7 +900,7 @@ def cmd_opencode_status(args):
 def main():
     """Main CLI execution entry point."""
     parser = argparse.ArgumentParser(description="Troubleshoot Nomad & Systemd services.")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command")
 
     opencode_status_parser = subparsers.add_parser("opencode-status", help="Unified Opencode status diagnostics")
     opencode_status_parser.add_argument("--json", action="store_true", help="Output in JSON format")
@@ -938,7 +938,12 @@ def main():
     daemon_parser.set_defaults(func=cmd_daemon)
 
     args = parser.parse_args()
-    args.func(args)
+    if args.command is None:
+        # Default to comprehensive troubleshooting report
+        args.json = False
+        cmd_report(args)
+    else:
+        args.func(args)
 
 
 if __name__ == "__main__":
