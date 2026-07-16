@@ -312,8 +312,8 @@ This section tracks identified placeholder files, corrupted binaries, and code t
   - [x] Review rate limiting settings in `pipecatapp/rate_limiter.py` and `pipecatapp/web_server.py`.
   - [x] Ensure critical endpoints have stricter limits to prevent abuse.
 - [x] **Audit data storage security:**
-  - [ ] Check how sensitive data (e.g., in `pipecatapp/memory.py` or database integrations) is stored.
-  - [ ] Ensure encryption at rest is considered or implemented for sensitive fields.
+  - [x] Check how sensitive data (e.g., in `pipecatapp/memory.py` or database integrations) is stored.
+  - [x] Ensure encryption at rest is considered or implemented for sensitive fields.
 
 ## Technical Debt & Lazy Code
 

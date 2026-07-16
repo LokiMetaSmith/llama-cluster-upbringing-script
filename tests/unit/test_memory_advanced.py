@@ -8,8 +8,8 @@ from pipecatapp.memory import MemoryStore
 def memory_instance_advanced(tmp_path):
     mem_dir = tmp_path / "memory_advanced"
     mem_dir.mkdir()
-    with patch("pipecatapp.memory.faiss") as mock_faiss, \
-         patch("pipecatapp.memory.SentenceTransformer"):
+    with patch("pipecatapp.memory_legacy.faiss") as mock_faiss, \
+         patch("pipecatapp.memory_legacy.SentenceTransformer"):
         mock_faiss.IndexFlatL2.return_value = MagicMock()
         mock_faiss.read_index.return_value = MagicMock()
         memory = MemoryStore(
@@ -36,16 +36,16 @@ def test_get_memory_not_found_adv(memory_instance_advanced):
     assert retrieved is None
 
 def test_get_consolidation_adv(memory_instance_advanced):
-    cursor = memory_instance_advanced.conn.cursor()
+    cursor = memory_instance_advanced.backend.conn.cursor()
     cursor.execute('''
         INSERT INTO consolidations (source_ids, summary, insight)
         VALUES (?, ?, ?)
     ''', (
         json.dumps([1, 2]),
-        memory_instance_advanced._encrypt("Test summary"),
-        memory_instance_advanced._encrypt("Test insight")
+        memory_instance_advanced.backend._encrypt("Test summary"),
+        memory_instance_advanced.backend._encrypt("Test insight")
     ))
-    memory_instance_advanced.conn.commit()
+    memory_instance_advanced.backend.conn.commit()
     consolidation_id = cursor.lastrowid
     retrieved = memory_instance_advanced.get_consolidation(consolidation_id)
     assert retrieved is not None
