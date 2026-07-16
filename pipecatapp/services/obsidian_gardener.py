@@ -5,6 +5,7 @@ import asyncio
 import re
 import json
 import uuid
+import aiofiles
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -70,8 +71,8 @@ class ObsidianGardener(FileSystemEventHandler):
     async def _process_markdown(self, filepath: str):
         """Process markdown file for seeds and directives."""
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                content = f.read()
+            async with aiofiles.open(filepath, 'r', encoding='utf-8') as f:
+                content = await f.read()
         except Exception as e:
             logger.error(f"Could not read {filepath}: {e}")
             return
@@ -116,10 +117,10 @@ class ObsidianGardener(FileSystemEventHandler):
     async def _append_result_to_markdown(self, filepath: str, workflow_name: str, result: dict):
         """Appends the workflow execution result back to the markdown file."""
         try:
-             with open(filepath, 'a', encoding='utf-8') as f:
-                 f.write(f"\n\n<!-- done: {workflow_name} -->\n")
-                 f.write(f"### Result from {workflow_name}\n")
-                 f.write(f"```json\n{result}\n```\n")
+             async with aiofiles.open(filepath, 'a', encoding='utf-8') as f:
+                 await f.write(f"\n\n<!-- done: {workflow_name} -->\n")
+                 await f.write(f"### Result from {workflow_name}\n")
+                 await f.write(f"```json\n{result}\n```\n")
              logger.info(f"Appended results to {filepath}")
         except Exception as e:
              logger.error(f"Failed to write results to {filepath}: {e}")
@@ -127,8 +128,9 @@ class ObsidianGardener(FileSystemEventHandler):
     async def _process_canvas(self, filepath: str):
         """Process canvas file using CanvasConverter logic to execute active nodes."""
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                canvas_data = json.load(f)
+            async with aiofiles.open(filepath, 'r', encoding='utf-8') as f:
+                content = await f.read()
+                canvas_data = json.loads(content)
         except Exception as e:
             logger.error(f"Could not read canvas {filepath}: {e}")
             return
@@ -202,8 +204,9 @@ class ObsidianGardener(FileSystemEventHandler):
     async def _append_result_to_canvas(self, filepath: str, workflow_name: str, result: dict):
         """Appends the workflow execution result back to the canvas file as a new node."""
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                canvas_data = json.load(f)
+            async with aiofiles.open(filepath, 'r', encoding='utf-8') as f:
+                content = await f.read()
+                canvas_data = json.loads(content)
 
             # Create a new text node with the result
             new_node = {
@@ -229,8 +232,8 @@ class ObsidianGardener(FileSystemEventHandler):
 
             canvas_data.setdefault("nodes", []).append(new_node)
 
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(canvas_data, f, indent=2)
+            async with aiofiles.open(filepath, 'w', encoding='utf-8') as f:
+                await f.write(json.dumps(canvas_data, indent=2))
 
             logger.info(f"Appended results to canvas {filepath}")
         except Exception as e:
