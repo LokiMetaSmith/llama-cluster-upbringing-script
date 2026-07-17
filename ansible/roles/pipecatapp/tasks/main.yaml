@@ -766,6 +766,42 @@
   tags:
     - deploy_app
 
+- name: Copy ontology module
+  ansible.builtin.copy:
+    mode: '0644'
+    src: "{{ inventory_dir }}/pipecatapp/ontology.py"
+    dest: "{{ pipecat_app_dir }}/ontology.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy context_handoff module
+  ansible.builtin.copy:
+    mode: '0644'
+    src: "{{ inventory_dir }}/pipecatapp/context_handoff.py"
+    dest: "{{ pipecat_app_dir }}/context_handoff.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy sharded_pmm_memory module
+  ansible.builtin.copy:
+    mode: '0644'
+    src: "{{ inventory_dir }}/pipecatapp/sharded_pmm_memory.py"
+    dest: "{{ pipecat_app_dir }}/sharded_pmm_memory.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy sharded_router module
+  ansible.builtin.copy:
+    mode: '0644'
+    src: "{{ inventory_dir }}/pipecatapp/sharded_router.py"
+    dest: "{{ pipecat_app_dir }}/sharded_router.py"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Copy datasets directory
   ansible.builtin.copy:
     mode: '0755'
