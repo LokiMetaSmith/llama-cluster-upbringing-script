@@ -3,7 +3,6 @@ import json
 import uuid
 import logging
 from typing import Dict, Any, List, Optional
-from pipecatapp.workflow.runner import WorkflowRunner
 from pipecatapp.tools.code_runner_tool import CodeRunnerTool
 
 logger = logging.getLogger(__name__)
@@ -100,6 +99,7 @@ class SchemaHarnessTool:
             logger.info(f"SchemaHarness: Iteration {iteration}. Current state: {state}")
 
             # Deliberate & Plan: run the specialized schema harness workflow
+            from pipecatapp.workflow.runner import WorkflowRunner
             workflow_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "workflows", "schema_harness_workflow.yaml")
             runner = WorkflowRunner(workflow_path)
 
