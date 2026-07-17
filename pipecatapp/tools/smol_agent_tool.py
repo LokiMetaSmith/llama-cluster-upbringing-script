@@ -54,7 +54,7 @@ class SmolAgentTool:
             model = LiteLLMModel(
                 model_id="openai/LFM2.5-1.2B",
                 api_base="http://127.0.0.1:8089/v1",
-                api_key="sk-no-key-required"
+                api_key=os.getenv("SMOLAGENT_API_KEY", "sk-no-key-required")
             )
             self.agent = CodeAgent(model=model, stream_outputs=False)
             self._initialized = True
