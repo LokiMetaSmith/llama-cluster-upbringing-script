@@ -297,8 +297,8 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Review Autoloop Tool Security:** The `autoloop_tool.py` executes code locally without a sandbox. Sandbox this tool or restrict its usage strictly to trusted, airgapped environments.
 
 - [x] **Audit and remove hardcoded secrets:**
-  - [ ] Audit frontend code (`pipecatapp/static/js`), workflows (`workflows/`), and tools (`pipecatapp/tools/`) for hardcoded secrets, API keys, or tokens.
-  - [ ] Remove any found secrets and replace them with secure environment variable loading.
+  - [x] Audit frontend code (`pipecatapp/static/js`), workflows (`workflows/`), and tools (`pipecatapp/tools/`) for hardcoded secrets, API keys, or tokens.
+  - [x] Remove any found secrets and replace them with secure environment variable loading.
 - [x] **Audit unauthenticated API endpoints:**
   - [x] Review `pipecatapp/web_server.py` and other API definitions to ensure sensitive data endpoints are authenticated.
   - [x] Specifically check endpoints returning user data or configuration.
