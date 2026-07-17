@@ -6,7 +6,19 @@ import httpx
 import yaml
 import re
 from typing import Dict, Any, List, Optional
-from pipecatapp.ontology import WorldOntology, Device, Agent, Node, Cluster
+try:
+    from pipecatapp.ontology import WorldOntology, Device, Agent, Node, Cluster
+except ImportError:
+    try:
+        from ontology import WorldOntology, Device, Agent, Node, Cluster
+    except ImportError:
+        import sys
+        import os
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(current_dir)
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+        from pipecatapp.ontology import WorldOntology, Device, Agent, Node, Cluster
 
 try:
     import paho.mqtt.client as mqtt

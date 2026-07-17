@@ -103,7 +103,7 @@ async def test_monolith_mode_answers_hello(mocker):
     }
     mock_workflow_runner.run = AsyncMock(return_value=final_response_payload)
 
-    with patch('app.PMMMemoryClient'), patch('app.PMMMemory'), patch('tools.code_runner_tool.docker.from_env', create=True), patch('tools.skill_builder_tool.MemoryStore'):
+    with patch('app.PMMMemoryClient'), patch('app.PMMMemory'), patch('tools.code_runner_tool.docker.from_env', create=True), patch('tools.skill_builder_tool.MemoryStore'), patch('pipecatapp.tools.document_tool.os.path.exists', return_value=True), patch('pipecatapp.tools.p2p_sync_tool.os.makedirs'):
         with patch.dict(os.environ, {"HA_URL": "http://mock-ha", "HA_TOKEN": "mock-token", "LLAMA_API_URL_OVERRIDE": "http://localhost:8080"}):
             service = TwinService(mock_llm, mock_vision, mock_runner, mock_config, asyncio.Queue())
 
