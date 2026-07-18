@@ -76,11 +76,32 @@
     dest: "{{ nomad_jobs_dir }}/ipfs.nomad"
   become: yes
 
-- name: Ensure ipfs kubo image is pulled
+- name: Check if IPFS kubo image is cached locally
+  ansible.builtin.stat:
+    path: /opt/ipfs_kubo.tar
+  register: ipfs_kubo_cache_stat
+
+- name: Load IPFS kubo image from local cache if available
+  ansible.builtin.command: docker load -i /opt/ipfs_kubo.tar
+  become: yes
+  when: ipfs_kubo_cache_stat.stat.exists
+  register: load_kubo_cache
+  ignore_errors: yes
+
+- name: Ensure ipfs kubo image is pulled if not loaded from cache
   ansible.builtin.command: docker pull ipfs/kubo:latest
   become: yes
   register: docker_pull
+  until: docker_pull is success
+  retries: 5
+  delay: 10
+  when: not ipfs_kubo_cache_stat.stat.exists or (load_kubo_cache is defined and load_kubo_cache is failed)
   changed_when: "'Downloaded newer image' in docker_pull.stdout"
+
+- name: Cache IPFS kubo image to local tarball if not already cached
+  ansible.builtin.command: docker save -o /opt/ipfs_kubo.tar ipfs/kubo:latest
+  become: yes
+  when: not ipfs_kubo_cache_stat.stat.exists or (load_kubo_cache is defined and load_kubo_cache is failed)
 
 - name: Run ipfs job
   ansible.builtin.command:

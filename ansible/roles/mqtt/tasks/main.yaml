@@ -171,6 +171,70 @@
     group: "1883"
   become: yes
 
+- name: Determine Controller Host
+  ansible.builtin.set_fact:
+    controller_host: "{{ (groups['controller_nodes'] | first) if ('controller_nodes' in groups and groups['controller_nodes']) else (groups['all'] | first) if ('all' in groups and groups['all']) else inventory_hostname }}"
+
+- name: Check if Mosquitto image is cached on controller
+  ansible.builtin.stat:
+    path: /opt/mosquitto.tar
+  register: mosquitto_cache_stat
+  delegate_to: "{{ controller_host }}"
+  run_once: true
+
+- name: Load Mosquitto image from local cache on controller if available
+  ansible.builtin.command:
+    cmd: docker load -i /opt/mosquitto.tar
+  become: yes
+  when: mosquitto_cache_stat.stat.exists
+  register: load_mosquitto_cache
+  ignore_errors: yes
+  delegate_to: "{{ controller_host }}"
+  run_once: true
+
+- name: Ensure Mosquitto image is pulled on controller
+  ansible.builtin.command:
+    cmd: "docker pull eclipse-mosquitto:2"
+  become: yes
+  register: docker_pull_mosquitto
+  until: docker_pull_mosquitto is success
+  retries: 5
+  delay: 10
+  when: not mosquitto_cache_stat.stat.exists or (load_mosquitto_cache is defined and load_mosquitto_cache is failed)
+  changed_when: false
+  delegate_to: "{{ controller_host }}"
+  run_once: true
+
+- name: Cache Mosquitto image to controller local tarball
+  ansible.builtin.command:
+    cmd: "docker save -o /opt/mosquitto.tar eclipse-mosquitto:2"
+  become: yes
+  when: not mosquitto_cache_stat.stat.exists or (load_mosquitto_cache is defined and load_mosquitto_cache is failed)
+  delegate_to: "{{ controller_host }}"
+  run_once: true
+
+- name: Pin Mosquitto tarball to IPFS
+  ansible.builtin.command:
+    cmd: "ipfs add -Q /opt/mosquitto.tar"
+  become: yes
+  register: ipfs_add_result_mosquitto
+  environment:
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
+  changed_when: false
+  delegate_to: "{{ controller_host }}"
+  run_once: true
+
+- name: Set mosquitto_ipfs_cid fact on controller
+  ansible.builtin.set_fact:
+    mosquitto_ipfs_cid: "{{ ipfs_add_result_mosquitto.stdout }}"
+  delegate_to: "{{ controller_host }}"
+  delegate_facts: yes
+  run_once: true
+
+- name: Set mosquitto_ipfs_cid fact on all hosts
+  ansible.builtin.set_fact:
+    mosquitto_ipfs_cid: "{{ hostvars[controller_host]['mosquitto_ipfs_cid'] }}"
+
 - name: Template mqtt Nomad job file
   ansible.builtin.template:
     src: mqtt.nomad.j2
@@ -183,11 +247,22 @@
     port: "{{ nomad_http_port }}"
     timeout: 60
 
-- name: Ensure Mosquitto image is pulled
-  ansible.builtin.command:
-    cmd: "docker pull eclipse-mosquitto:2"
+- name: Ensure Mosquitto image is pulled/loaded locally
+  ansible.builtin.shell: |
+    if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "eclipse-mosquitto:2"; then
+      echo "Image already present"
+    elif [ -f /opt/mosquitto.tar ]; then
+      docker load -i /opt/mosquitto.tar
+    else
+      docker pull eclipse-mosquitto:2
+    fi
   become: yes
   changed_when: false
+  register: ensure_mosquitto_local
+  until: ensure_mosquitto_local is success
+  retries: 3
+  delay: 5
+  ignore_errors: yes
 
 - name: Kill any process using MQTT ports (cleanup zombies)
   ansible.builtin.shell: "fuser -k {{ item }}/tcp || true"

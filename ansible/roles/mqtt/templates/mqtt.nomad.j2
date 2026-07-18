@@ -47,6 +47,10 @@ job "mqtt" {
       mode     = "delay"
     }
 
+    {% set image_cid = mosquitto_ipfs_cid %}
+    {% set image_tar_name = 'mosquitto' %}
+    {% include 'load_image_task.nomad.j2' %}
+
     task "mosquitto" {
       driver = "docker"
 
