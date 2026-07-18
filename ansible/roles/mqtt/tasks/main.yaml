@@ -373,6 +373,11 @@
       register: mqtt_alloc_id
       ignore_errors: yes
 
+    - name: Check mosquitto task state
+      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].TaskStates.mosquitto.State' /opt/mqtt_allocs.json
+      register: mosquitto_task_state
+      ignore_errors: yes
+
     - name: Fetch MQTT logs (stdout)
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -task mosquitto {{ mqtt_alloc_id.stdout }}"
@@ -383,7 +388,7 @@
         NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: mqtt_logs_stdout
       ignore_errors: yes
-      when: (mqtt_alloc_id.stdout | trim | length > 0) and (mqtt_alloc_id.stdout | trim != 'null')
+      when: (mqtt_alloc_id.stdout | trim | length > 0) and (mqtt_alloc_id.stdout | trim != 'null') and (mosquitto_task_state.stdout | trim != 'pending')
 
     - name: Display MQTT logs (stdout)
       ansible.builtin.debug:
@@ -400,7 +405,7 @@
         NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: mqtt_logs_stderr
       ignore_errors: yes
-      when: (mqtt_alloc_id.stdout | trim | length > 0) and (mqtt_alloc_id.stdout | trim != 'null')
+      when: (mqtt_alloc_id.stdout | trim | length > 0) and (mqtt_alloc_id.stdout | trim != 'null') and (mosquitto_task_state.stdout | trim != 'pending')
 
     - name: Display MQTT logs (stderr)
       ansible.builtin.debug:
