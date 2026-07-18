@@ -249,6 +249,7 @@
 
 - name: Ensure Mosquitto image is pulled/loaded locally
   ansible.builtin.shell: |
+    {% raw %}
     if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "eclipse-mosquitto:2"; then
       echo "Image already present"
     elif [ -f /opt/mosquitto.tar ]; then
@@ -256,6 +257,7 @@
     else
       docker pull eclipse-mosquitto:2
     fi
+    {% endraw %}
   become: yes
   changed_when: false
   register: ensure_mosquitto_local
