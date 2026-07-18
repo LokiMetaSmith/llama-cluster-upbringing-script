@@ -4,26 +4,6 @@ import shutil
 import re
 from pipecatapp.utils.command_runner import CommandRunner
 
-# This is a placeholder for the actual smolagents library.
-# We will assume it's available in the environment. In a real scenario,
-# this would be a dependency managed by our project's requirements.
-try:
-    from smolagents import CodeAgent, LiteLLMModel
-except ImportError:
-    # If smolagents is not installed, we create mock classes to allow
-    # the application to load without crashing. The tool will return an
-    # error message if it's actually used.
-    class CodeAgent:
-        def __init__(self, *args, **kwargs):
-            raise ImportError("The 'smolagents' library is not installed.")
-        def run(self, *args, **kwargs):
-            pass
-
-    class LiteLLMModel:
-        def __init__(self, *args, **kwargs):
-            pass
-
-
 class SmolAgentTool:
     """
     A tool that uses a smolagents.CodeAgent to solve complex tasks
@@ -49,6 +29,13 @@ class SmolAgentTool:
             # This check ensures that 'deno' is available before trying to use the tool.
             if not shutil.which("deno"):
                 raise FileNotFoundError("The 'deno' runtime is not installed or not in the system's PATH.")
+
+            try:
+                from smolagents import CodeAgent, LiteLLMModel
+            except ImportError as e:
+                import logging
+                logging.error(f"Failed to import 'smolagents': {e}. Please ensure the package is installed.")
+                raise ImportError("The 'smolagents' library is not installed.") from e
 
             # Configure LiteLLMModel to use our local llama.cpp endpoint hosting LFM2.5-1.2B
             model = LiteLLMModel(
