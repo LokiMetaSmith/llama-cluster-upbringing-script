@@ -373,7 +373,7 @@
 
     - name: Fetch MQTT logs (stdout)
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs {{ mqtt_alloc_id.stdout }}"
+        cmd: "/usr/local/bin/nomad alloc logs -task mosquitto {{ mqtt_alloc_id.stdout }}"
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -390,7 +390,7 @@
 
     - name: Fetch MQTT logs (stderr)
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ mqtt_alloc_id.stdout }}"
+        cmd: "/usr/local/bin/nomad alloc logs -stderr -task mosquitto {{ mqtt_alloc_id.stdout }}"
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
