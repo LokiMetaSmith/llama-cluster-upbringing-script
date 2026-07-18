@@ -48,6 +48,13 @@ index ce743e665..30dbfa942 100644
                      res->id = task.id;
                      queue_results.send(std::move(res));
                  } break;
++            case SERVER_TASK_TYPE_GET_CONTROL_VECTORS:
++                {
++                    auto res = std::make_unique<server_task_result_get_control_vectors>();
++                    res->id = task.id;
++                    res->vectors = params_base.control_vectors;
++                    queue_results.send(std::move(res));
++                } break;
 +            case SERVER_TASK_TYPE_SET_CONTROL_VECTORS:
 +                {
 +                    auto & cv_infos = task.set_control_vectors;
@@ -109,8 +116,26 @@ index ce743e665..30dbfa942 100644
 +
 +    this->get_control_vectors = [this](const server_http_req & req) {
 +        auto res = create_response();
-+        // TODO: implement getting current control vectors state
-+        res->ok(json::array());
++        auto & rd = res->rd;
++
++        {
++            server_task task(SERVER_TASK_TYPE_GET_CONTROL_VECTORS);
++            task.id = rd.get_new_id();
++            rd.post_task(std::move(task));
++        }
++
++        auto result = rd.next(req.should_stop);
++        if (!result) {
++            GGML_ASSERT(req.should_stop());
++            return res;
++        }
++
++        if (result->is_error()) {
++            res->error(result->to_json());
++            return res;
++        }
++
++        res->ok(result->to_json());
 +        return res;
 +    };
 +
@@ -178,6 +203,7 @@ index c3eea2ecb..2e9f32842 100644
      SERVER_TASK_TYPE_SLOT_ERASE,
      SERVER_TASK_TYPE_GET_LORA,
      SERVER_TASK_TYPE_SET_LORA,
++    SERVER_TASK_TYPE_GET_CONTROL_VECTORS,
 +    SERVER_TASK_TYPE_SET_CONTROL_VECTORS,
  };
 
@@ -201,6 +227,21 @@ index c3eea2ecb..2e9f32842 100644
 +        return {
 +            {"success", true}
 +        };
++    }
++};
++
++struct server_task_result_get_control_vectors : server_task_result {
++    std::vector<common_control_vector_load_info> vectors;
++
++    virtual json to_json() override {
++        json result = json::array();
++        for (const auto & v : vectors) {
++            result.push_back({
++                {"fname", v.fname},
++                {"strength", v.strength}
++            });
++        }
++        return result;
 +    }
 +};
 +
