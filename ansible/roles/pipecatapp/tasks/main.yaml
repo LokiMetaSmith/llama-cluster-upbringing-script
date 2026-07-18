@@ -1240,7 +1240,7 @@
 
     - name: "Archivist : Fetch Archivist logs (stdout)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs {{ arch_alloc_id.stdout }}"
+        cmd: "/usr/local/bin/nomad alloc logs -task architect-task {{ arch_alloc_id.stdout }}"
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -1257,7 +1257,7 @@
 
     - name: "Archivist : Fetch Archivist logs (stderr)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ arch_alloc_id.stdout }}"
+        cmd: "/usr/local/bin/nomad alloc logs -stderr -task architect-task {{ arch_alloc_id.stdout }}"
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -1625,7 +1625,7 @@
 
     - name: "Pipecat App : Fetch Pipecat App logs (stdout)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs {{ pipecat_alloc_id.stdout }}"
+        cmd: "/usr/local/bin/nomad alloc logs -task pipecat-app {{ pipecat_alloc_id.stdout }}"
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -1642,7 +1642,7 @@
 
     - name: "Pipecat App : Fetch Pipecat App logs (stderr)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs -stderr {{ pipecat_alloc_id.stdout }}"
+        cmd: "/usr/local/bin/nomad alloc logs -stderr -task pipecat-app {{ pipecat_alloc_id.stdout }}"
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
