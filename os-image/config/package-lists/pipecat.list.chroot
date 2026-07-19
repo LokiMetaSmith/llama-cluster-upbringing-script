@@ -22,7 +22,7 @@ xorriso
 # --- CommandDeck GUI Kiosk and Fallback Desktop Dependencies ---
 sddm
 kde-plasma-desktop
-plasma-workspace-wayland
+plasma-workspace
 cage
 python3-webview
 gir1.2-webkit2-4.1
