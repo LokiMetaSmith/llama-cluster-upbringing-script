@@ -28,8 +28,9 @@
         rsync_opts:
           - "--exclude=.git"
           - "--exclude=os-image/chroot"
-          - "--exclude=os-image/binary"
+          - "--exclude=os-image/cache"
           - "--exclude=os-image/.build"
+          - "--exclude=os-image/binary"
       when: inventory_hostname != 'localhost'
 
     - name: Synchronize control repository for local bootstrap
@@ -41,8 +42,9 @@
         rsync_opts:
           - "--exclude=.git"
           - "--exclude=os-image/chroot"
-          - "--exclude=os-image/binary"
+          - "--exclude=os-image/cache"
           - "--exclude=os-image/.build"
+          - "--exclude=os-image/binary"
       when: inventory_hostname == 'localhost'
   roles:
     - role: btrfs_snapshot

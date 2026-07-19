@@ -11,6 +11,12 @@
     state: present
     reload: yes
 
+- name: Ensure tailscaled is started and enabled
+  ansible.builtin.systemd:
+    name: tailscaled
+    state: started
+    enabled: yes
+
 - name: Check Tailscale status
   command: tailscale status
   register: tailscale_status
@@ -28,9 +34,9 @@
   changed_when: "'Success' in tailscale_up.stdout"
 
 - name: Wait for tailscale0 interface to have an IP
-  ansible.builtin.shell: |
-    set -o pipefail
-    tailscale ip -4 | grep "^100\."
+  ansible.builtin.shell: 'tailscale ip -4 | grep "^100\."'
+  args:
+    executable: /bin/bash
   register: tailscale_ip_check
   until: tailscale_ip_check.rc == 0
   retries: 24

@@ -131,6 +131,16 @@
     timeout: 300
     state: started
 
+- name: Wait for IPFS Gateway to be fully ready
+  ansible.builtin.uri:
+    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ ipfs_gateway_port | default(8080) }}/"
+    return_content: yes
+    status_code: [200, 400, 403, 404]
+  register: ipfs_gateway_status
+  until: ipfs_gateway_status.status in [200, 400, 403, 404]
+  retries: 30
+  delay: 5
+
 - name: Deploy automated IPFS P2P model pinning script
   ansible.builtin.copy:
     content: |
