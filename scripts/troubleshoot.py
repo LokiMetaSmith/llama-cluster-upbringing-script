@@ -186,6 +186,8 @@ def get_failed_systemd_services():
             parts = line.split()
             if parts:
                 svc_name = parts[0]
+                if svc_name == "●" and len(parts) > 1:
+                    svc_name = parts[1]
                 failed_services.append(svc_name)
     return failed_services
 
