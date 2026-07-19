@@ -37,66 +37,6 @@ DB_PATH = os.path.join(DB_DIR, "gateway_metrics.db")
 
 import math
 import random
-import re
-
-# --- Prompt Compass Router ---
-class PromptCompassRouter:
-    """
-    A lightweight, content-aware pre-flight router to classify intent (trivial vs complex)
-    and detect PII or Jailbreaks natively in Python.
-    """
-    def __init__(self):
-        # Extremely lightweight heuristics for jailbreaks and complexity
-        self.jailbreak_patterns = [
-            re.compile(r"\bignore all previous instructions\b", re.IGNORECASE),
-            re.compile(r"\bact as\b", re.IGNORECASE),
-            re.compile(r"\bsystem prompt\b", re.IGNORECASE),
-            re.compile(r"\bbypass\b", re.IGNORECASE),
-            re.compile(r"\bdeveloper mode\b", re.IGNORECASE),
-            re.compile(r"\bdan\b.*\bdo anything now\b", re.IGNORECASE)
-        ]
-        self.pii_patterns = [
-            re.compile(r"\b\d{3}-\d{2}-\d{4}\b"), # SSN
-            re.compile(r"\b(?:\d[ -]*?){13,16}\b") # Credit Card roughly
-        ]
-        self.complex_patterns = [
-            re.compile(r"\bwrite.*code\b", re.IGNORECASE),
-            re.compile(r"\banalyze\b", re.IGNORECASE),
-            re.compile(r"\barchitect\b", re.IGNORECASE),
-            re.compile(r"\bpython\b", re.IGNORECASE),
-            re.compile(r"\bjavascript\b", re.IGNORECASE),
-            re.compile(r"\bexplain\b.*\btheorem\b", re.IGNORECASE),
-            re.compile(r"\boptimize\b", re.IGNORECASE)
-        ]
-
-    def analyze(self, text: str) -> dict:
-        result = {
-            "tier": "trivial",
-            "is_jailbreak": False,
-            "has_pii": False
-        }
-
-        for p in self.jailbreak_patterns:
-            if p.search(text):
-                result["is_jailbreak"] = True
-                break
-
-        for p in self.pii_patterns:
-            if p.search(text):
-                result["has_pii"] = True
-                break
-
-        if len(text) > 500: # Length heuristic
-            result["tier"] = "complex"
-        else:
-            for p in self.complex_patterns:
-                if p.search(text):
-                    result["tier"] = "complex"
-                    break
-
-        return result
-
-prompt_compass = PromptCompassRouter()
 
 # --- Database Setup ---
 def init_db():
@@ -184,11 +124,11 @@ except Exception:
 
 if not EXTERNAL_EXPERTS:
     EXTERNAL_EXPERTS = {
-        "openai_gpt4": {"model": "gpt-4-turbo", "tier": "complex"},
-        "openrouter_claude_sonnet": {"model": "anthropic/claude-3.5-sonnet", "tier": "complex"},
-        "openrouter_gemini_flash": {"model": "google/gemini-2.0-flash-001", "tier": "complex"},
-        "together_ternary_bonsai_27b": {"model": "prism-ml/ternary-bonsai-27b", "tier": "trivial"},
-        "together_1bit_bonsai_27b": {"model": "prism-ml/1bit-bonsai-27b", "tier": "trivial"}
+        "openai_gpt4": {"model": "gpt-4-turbo"},
+        "openrouter_claude_sonnet": {"model": "anthropic/claude-3.5-sonnet"},
+        "openrouter_gemini_flash": {"model": "google/gemini-2.0-flash-001"},
+        "together_ternary_bonsai_27b": {"model": "prism-ml/ternary-bonsai-27b"},
+        "together_1bit_bonsai_27b": {"model": "prism-ml/1bit-bonsai-27b"}
     }
 
 def get_expert_scores(db_path: str, external_experts: dict) -> dict:
@@ -269,29 +209,16 @@ def get_expert_scores(db_path: str, external_experts: dict) -> dict:
 
     return scores
 
-def select_best_expert(tier_filter: str = None) -> str:
-    """Selects the highest scoring expert based on Thompson Sampling scores, optionally filtered by tier."""
+def select_best_expert() -> str:
+    """Selects the highest scoring expert based on Thompson Sampling scores."""
     try:
         scores = get_expert_scores(DB_PATH, EXTERNAL_EXPERTS)
-
-        candidate_scores = {}
-        for k, v in scores.items():
-            if k == 'default':
-                continue
-
-            # If a tier filter is provided, skip experts that don't match
-            if tier_filter and k in EXTERNAL_EXPERTS:
-                expert_tier = EXTERNAL_EXPERTS[k].get("tier")
-                if expert_tier and expert_tier != tier_filter:
-                    continue
-
-            candidate_scores[k] = v
-
+        # Exclude 'default' from dynamic selection unless it is the only one
+        candidate_scores = {k: v for k, v in scores.items() if k != 'default'}
         if not candidate_scores:
             candidate_scores = scores
-
         best_expert = max(candidate_scores, key=candidate_scores.get)
-        logger.info(f"Thompson-sampling bandit chose expert: {best_expert} (score={candidate_scores[best_expert]:.4f}, tier_filter={tier_filter})")
+        logger.info(f"Thompson-sampling bandit chose expert: {best_expert} (score={candidate_scores[best_expert]:.4f})")
         return best_expert
     except Exception as e:
         logger.error(f"Error selecting best expert: {e}")
@@ -448,19 +375,6 @@ async def receive_response(payload: Dict = Body(...)):
 
 
 # --- OpenAI-Compatible Endpoint ---
-
-async def apply_personality_steering(name: str, strength: float):
-    """Dynamically steers the local model using the PersonalityTool mechanism."""
-    try:
-        api_url = f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8080"
-        payload = [{"fname": f"/opt/nomad/models/vectors/{name}.gguf", "strength": strength}]
-        # Fire and forget steering, timeouts short to avoid blocking
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            await client.post(f"{api_url}/control-vectors", json=payload)
-        logger.warning(f"Applied steering vector '{name}' (strength: {strength}) due to trigger.")
-    except Exception as e:
-        logger.error(f"Failed to apply personality steering: {e}")
-
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request, payload: Dict = Body(...)):
     """
@@ -473,28 +387,16 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
         if not PIPECAT_SERVICE_URL:
             return JSONResponse(status_code=503, content={"error": "pipecat-app service not available"})
 
-    # Extract user input for pre-flight routing and logging
-    messages = payload.get("messages", [])
-    last_user_message = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
-
-    # Pre-flight content-aware routing
-    analysis = prompt_compass.analyze(last_user_message)
-    tier = analysis.get("tier", "trivial")
-
-    if analysis.get("is_jailbreak") or analysis.get("has_pii"):
-        # Teachable Moment: Instead of blocking, engage the steering mechanism
-        logger.warning(f"PromptCompass detected flags (Jailbreak: {analysis.get('is_jailbreak')}, PII: {analysis.get('has_pii')}). Engaging steering mechanism.")
-        # Apply a strict or aligned vector to handle the request safely without blocking
-        asyncio.create_task(apply_personality_steering("system_alignment", 1.5))
-        # Force routing to a local/trivial model to prevent expensive frontier model jailbreaks
-        tier = "trivial"
-
-    # Dynamic expert selection using Thompson-sampling convex combination filtered by tier
-    selected_expert = select_best_expert(tier_filter=tier)
+    # Dynamic expert selection using Thompson-sampling convex combination
+    selected_expert = select_best_expert()
 
     request_id = str(uuid.uuid4())
     event = asyncio.Event()
     pending_requests[request_id] = {"event": event, "response": None}
+
+    # Extract user input for logging
+    messages = payload.get("messages", [])
+    last_user_message = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
 
     # Store initial log entry (status 0 = pending)
     await log_request(request_id, start_time, last_user_message, "", 0, 0, selected_expert)

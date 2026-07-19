@@ -67,3 +67,4 @@ group_vars/all/resource_tuning.yaml
 poc/p2p_sync/node_*/
 poc/p2p_sync/syncthing_bin*
 test_venv/
+.venv_new/

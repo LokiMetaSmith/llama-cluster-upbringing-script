@@ -81,56 +81,6 @@ class WorkerAgent:
             logger.error(f"Failed to rehydrate state: {e}")
             return False
 
-    async def evaluate_goal(self, client: httpx.AsyncClient, goal_objective: str) -> tuple[bool, str]:
-        """
-        Evaluates the current transcript against the active goal objective.
-        Returns (is_met: bool, reason: str)
-        """
-        if not self.llm_base_url:
-            self.llm_base_url = os.getenv("LLM_BASE_URL", "http://10.0.0.1:8000/v1")
-
-        system_prompt = """You are an independent evaluator (like Claude Code's Stop Hook).
-Your task is to review the session transcript and the active Goal Objective, and determine if the goal has been fully met by the agent's actions.
-Respond in exactly this JSON format:
-{
-  "goal_met": true/false,
-  "reason": "Brief explanation of why the goal is met or not."
-}"""
-
-        # Condense messages for the evaluator
-        transcript = "\n".join([f"{m['role'].upper()}: {m['content'][:500]}" for m in self.messages[-10:]])
-
-        user_prompt = f"Goal Objective:\n{goal_objective}\n\nTranscript:\n{transcript}"
-
-        try:
-            req_data = {
-                "model": "gpt-4o-mini", # Standard fallback for lightweight evaluation
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.1
-            }
-            response = await client.post(
-                f"{self.llm_base_url}/chat/completions",
-                json=req_data,
-                timeout=30.0
-            )
-
-            if response.status_code == 200:
-                result_json = response.json()
-                content = result_json['choices'][0]['message']['content']
-                eval_data = json.loads(content)
-                return eval_data.get("goal_met", False), eval_data.get("reason", "No reason provided")
-            else:
-                logger.error(f"Evaluator API returned status {response.status_code}: {response.text}")
-                return False, "Evaluator API failed"
-
-        except Exception as e:
-            logger.error(f"Error evaluating goal: {e}")
-            return False, f"Evaluation error: {e}"
-
     @durable_step
     async def perform_step(self, step_count: int, client: httpx.AsyncClient) -> tuple[str, str]:
         """Executes a single step of the reasoning loop."""
@@ -322,9 +272,6 @@ INSTRUCTIONS:
 2. If you need to use a tool, respond with a JSON object: {{ "tool": "tool_name", "args": {{ ... }} }}
 3. If you have a final answer (and have already submitted your solution if required), respond with just the text.
 4. IMPORTANT: When you have completed the coding task, you MUST use the `submit_solution` tool to return your work.
-
-Your Task ID is: {self.task_id}
-Use this Task ID when creating, updating, or getting goals with the goal tool.
 """
             self.messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": self.prompt}]
 
@@ -337,35 +284,7 @@ Use this Task ID when creating, updating, or getting goals with the goal tool.
                 while step_count < self.max_steps and status == "running":
                     step_count += 1
                     status, final_output = await self.perform_step(step_count, client)
-                    # Safety Net Evaluator Hook
-                    if status != "running" and "goal" in self.tools:
-                        active_goal_json = self.tools["goal"].get_goal(self.task_id)
-                        if active_goal_json != "No active goal found for this task.":
-                            try:
-                                active_goal = json.loads(active_goal_json)
-                                is_met, reason = await self.evaluate_goal(client, active_goal["objective"])
 
-                                if not is_met:
-                                    logger.info(f"Evaluator Hook: Goal '{active_goal['objective']}' not met. Reason: {reason}")
-                                    logger.warning("Agent attempted to exit but goal is not met. Injecting continuation.")
-                                    status = "running" # Force continuation
-
-                                    # Inject continuation prompt
-                                    self.messages.append({
-                                        "role": "user",
-                                        "content": f"Goal [ID: {active_goal['id']}] is still active:\nObjective: {active_goal['objective']}\nEvaluator feedback: {reason}\nPlease continue working to fulfill this goal."
-                                    })
-                                else:
-                                    logger.info(f"Evaluator Hook: Goal '{active_goal['objective']}' MET! Reason: {reason}")
-                                    # Update goal status to completed
-                                    self.tools["goal"].update_goal(self.task_id, "completed")
-                                    # Force success if we just met the goal and were lingering
-                                    if status == "running":
-                                        status = "success"
-                                        final_output = f"Goal met: {reason}"
-
-                            except json.JSONDecodeError:
-                                pass
             if status == "success":
                 logger.info("Task completed successfully.")
                 print(f"RESULT_JSON={{\"task_id\": \"{self.task_id}\", \"status\": \"success\", \"output\": \"{final_output}\"}}")
