@@ -75,6 +75,7 @@ from tools.spec_loader_tool import SpecLoaderTool
 from tools.update_litellm_tool import UpdateLitellmTool
 from tools.get_nomad_job import GetNomadJobTool
 from tools.frugal_sandbox_tool import FrugalSandboxTool
+from tools.goal_tool import GoalTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -106,6 +107,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
     # Start with tools that are ALWAYS local (complex deps or not on tool server)
     tools = {
         "frugal_sandbox": FrugalSandboxTool(),
+        "goal": GoalTool(),
         "mcp": MCP_Tool(twin_service, runner) if twin_service and runner else None,
         "smol_agent_computer": SmolAgentTool(),
         "llxprt_code": LLxprt_Code_Tool(),
