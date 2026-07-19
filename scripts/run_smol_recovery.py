@@ -6,9 +6,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'p
 
 try:
     from tools.smol_agent_tool import SmolAgentTool
-    # smolagents natively supports adding tools to the agent.
-    # In a real environment, we'd wrap our pipecatapp tools into smolagents.Tool subclass.
-    from smolagents import Tool
 except ImportError as e:
     print(f"Error importing dependencies: {e}")
     sys.exit(1)
