@@ -17,7 +17,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/{{ item }}?raw=true"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: GET
     headers:
       X-Consul-Token: "{{ consul_token }}"
@@ -101,7 +101,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/llm/{{ item.item.filename }}"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -153,7 +153,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/vllm/{{ item.item.repo_id.split('/')[-1] }}"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -224,7 +224,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/stt/{{ item.item[0].key }}/{{ item.item[1].filename }}"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -246,7 +246,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -294,7 +294,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/tts/{{ item.item.filename }}"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -364,7 +364,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/vision/{{ item.item.filename }}"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -386,7 +386,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/vision/{{ item.item.name }}"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -438,7 +438,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/embedding/{{ item.item.name }}"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: PUT
     body: "{{ item.stdout }}"
     headers:
@@ -460,7 +460,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/models/ipfs/reference_data/main"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: PUT
     body: "{{ reference_data_ipfs_cid.stdout }}"
     headers:

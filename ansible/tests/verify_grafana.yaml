@@ -24,7 +24,7 @@
         return_content: yes
         client_cert: "/etc/nomad.d/tls/cli.cert.pem"
         client_key: "/etc/nomad.d/tls/cli.key.pem"
-        validate_certs: no
+        validate_certs: yes
       register: grafana_job_status
       retries: 5
       delay: 5
