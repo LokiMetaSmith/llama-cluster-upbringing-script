@@ -22,6 +22,10 @@
           - "--exclude=__pycache__"
           - "--exclude=*.pyc"
           - "--exclude=start_pipecat.sh"
+          - "--exclude=os-image/chroot"
+          - "--exclude=os-image/cache"
+          - "--exclude=os-image/.build"
+          - "--exclude=os-image/binary"
         rsync_path: "sudo rsync"
 
     - name: "Expert {{ expert_name }} : Build pipecatapp image if missing"
