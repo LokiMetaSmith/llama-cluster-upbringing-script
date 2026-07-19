@@ -32,8 +32,10 @@ class SmolAgentTool:
 
             try:
                 from smolagents import CodeAgent, LiteLLMModel
-            except ImportError:
-                raise ImportError("The 'smolagents' library is not installed.")
+            except ImportError as e:
+                import logging
+                logging.error(f"Failed to import 'smolagents': {e}. Please ensure the package is installed.")
+                raise ImportError("The 'smolagents' library is not installed.") from e
 
             # Configure LiteLLMModel to use our local llama.cpp endpoint hosting LFM2.5-1.2B
             model = LiteLLMModel(

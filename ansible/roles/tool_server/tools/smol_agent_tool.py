@@ -31,8 +31,10 @@ class SmolAgentTool:
 
             try:
                 from smolagents import CodeAgent, LiteLLMModel
-            except ImportError:
-                raise ImportError("The 'smolagents' library is not installed.")
+            except ImportError as e:
+                import logging
+                logging.error(f"Failed to import 'smolagents': {e}. Please ensure the package is installed.")
+                raise ImportError("The 'smolagents' library is not installed.") from e
 
             # This model will use the environment's LLM provider configuration (e.g., OPENAI_API_KEY).
             model = LiteLLMModel(model_id="gpt-4o")
