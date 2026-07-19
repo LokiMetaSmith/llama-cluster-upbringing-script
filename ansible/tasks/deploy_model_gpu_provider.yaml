@@ -68,7 +68,7 @@
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     return_content: yes
   register: consul_health
   until: "consul_health.json is defined and consul_health.json | length >= expected_worker_count | int"

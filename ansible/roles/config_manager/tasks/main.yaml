@@ -17,7 +17,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port }}/v1/kv/config/models/{{ item.key }}"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: PUT
     body: "{{ item.value | to_json }}"
     status_code: 200
@@ -44,7 +44,7 @@
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port }}/v1/kv/config/app/settings"
     client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
     client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-    validate_certs: false
+    ca_path: "/etc/consul.d/ca.pem"
     method: PUT
     body: >
       {{

@@ -251,7 +251,7 @@ if [ "$MODE" = "distributed" ]; then
 
     # Wait for Nomad cluster network to be ready
     log_msg "Waiting for Nomad cluster to become accessible..."
-    while ! curl -k -s "${NOMAD_ADDR}/v1/agent/self" > /dev/null; do
+    while ! curl --cacert "${NOMAD_CACERT}" -s "${NOMAD_ADDR}/v1/agent/self" > /dev/null; do
         log_msg "Nomad API at ${NOMAD_ADDR} not yet available. Retrying in 5 seconds..."
         sleep 5
     done

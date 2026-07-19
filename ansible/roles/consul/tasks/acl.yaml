@@ -82,7 +82,7 @@
             url: "https://{{ advertise_ip }}:{{ consul_https_port }}/v1/status/leader"
             client_cert: "{{ consul_config_dir | default('/etc/consul.d') }}/cert.pem"
             client_key: "{{ consul_config_dir | default('/etc/consul.d') }}/key.pem"
-            validate_certs: false
+            ca_path: "/etc/consul.d/ca.pem"
           register: consul_status_recovery
           until: consul_status_recovery.status is defined and consul_status_recovery.status == 200
           retries: 30

@@ -86,7 +86,7 @@
         url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/status/leader"
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-        validate_certs: false
+        ca_path: "/etc/consul.d/ca.pem"
         return_content: yes
       register: consul_leader_check
       ignore_errors: yes
@@ -100,7 +100,7 @@
         url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/agent/self"
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-        validate_certs: false
+        ca_path: "/etc/consul.d/ca.pem"
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default('') }}"
         return_content: yes
@@ -130,7 +130,7 @@
     - name: Wait for Nomad API to be ready after restart
       ansible.builtin.uri:
         url: "https://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
-        validate_certs: no
+        ca_path: "{{ nomad_tls_dir }}/ca.pem"
         status_code: 200
         client_cert: "{{ nomad_tls_dir }}/cli.cert.pem"
         client_key: "{{ nomad_tls_dir }}/cli.key.pem"
@@ -311,7 +311,7 @@
         url: "https://{{ advertise_ip }}:{{ consul_https_port }}/v1/health/service/mqtt?passing"
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
-        validate_certs: false
+        ca_path: "/etc/consul.d/ca.pem"
         method: GET
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default('') }}"
