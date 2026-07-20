@@ -46,3 +46,12 @@
   when: github_ssh_users | length > 0
   become: yes
   become_user: user
+
+- name: Add FIDO/FIDO2 SSH keys to authorized_keys
+  ansible.posix.authorized_key:
+    user: user
+    state: present
+    key: "{{ item }}"
+  loop: "{{ fido_ssh_keys | default([]) }}"
+  when: fido_ssh_keys is defined and fido_ssh_keys | length > 0
+  become: yes
