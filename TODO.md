@@ -1,6 +1,7 @@
 # TODO
 
 ## Next
+
 - [x] Evaluate and execute the Proof-of-Concept for integrating HelixDB as a unified graph-vector memory backend (see `docs/analysis/HELIXDB_EVALUATION.md` for the PoC TODO list).
 - [x] Implement `apt` package caching proxy via IPFS.
 
@@ -231,7 +232,9 @@ These structural suggestions are targeted for a future major release to signific
 ## Gnutella Analysis Integration Ideas
 
 This section tracks actionable ideas derived from the `docs/analysis/GNUTELLA_ANALYSIS.md` document.
+
 - [x] **Option 1: Gossip-Based Service Fallback**
+
 - [x] **Option 3: Bloom Filter Capability Routing**
 - [x] **Option 4: PUSH-style Reverse Proxies for NAT Traversal**
 - [x] **Option 5: Extensible Job Payloads (Inspired by GGEP)**
@@ -273,9 +276,9 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] Refactor for Strict Idempotency in Ansible.
 - [x] Maintenance & Clean Up (Empty Handler, Corrupted Files, etc.).
 - [x] **Real-time Steering for llama.cpp:**
-  - [ ] Implemented `POST /control-vectors` endpoint in `llama.cpp`.
-  - [ ] Added `PersonalityTool` for dynamic steering.
-  - [ ] Included automation scripts for vector generation.
+  - [x] Implemented `POST /control-vectors` endpoint in `llama.cpp`.
+  - [x] Added `PersonalityTool` for dynamic steering.
+  - [x] Included automation scripts for vector generation.
 
 ## Performance & I/O Optimization
 
@@ -422,8 +425,6 @@ This section tracks actionable ideas derived from the `docs/analysis/POLLEN_COMP
 
 ## Model Training as Code (MTaC) Integration
 
-
-
 This section tracks the integration of Aleph Alpha's "Model Training as Code" (MTaC) concepts into our workflow.
 
 - [x] **Pipeline Orchestrator Framework:**
@@ -451,8 +452,6 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
   - [x] Implemented Evaluation Stage (`eval_sft.py`) using EleutherAI's `lm-eval-harness` to evaluate post-training models.
 
   - [x] Created the MTaC Telemetry UI dashboard inside `monitor.html` to plot loss curves and display eval results.
-
-
 
 ## Future Model Integrations
 
