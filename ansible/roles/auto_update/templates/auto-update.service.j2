@@ -1,0 +1,17 @@
+[Unit]
+Description=Cluster Auto-Update Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/cluster-infra
+# We use a wrapper script or call the update script directly
+ExecStart=/opt/cluster-infra/scripts/update_cluster.sh -y
+# Optional: if you want output to go to a specific file or syslog
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

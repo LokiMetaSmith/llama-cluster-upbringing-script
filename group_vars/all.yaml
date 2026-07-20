@@ -153,6 +153,10 @@ jules_api_key: "your_jules_api_key_here"
 enable_nanochat: false
 nanochat_platform: "gpu"
 
+# Cluster Auto-Update
+# Enable gradual, automated in-place upgrades of the cluster via systemd timer
+auto_update_enabled: false
+
 # Service Enablement Flags
 enable_influxdb: true
 enable_telegraf: true

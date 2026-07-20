@@ -6,6 +6,10 @@
       tags:
         - tpm_ssh
         - common
+    - role: auto_update
+      tags:
+        - auto_update
+        - common
 
   tasks:
     - name: Ensure leftover APT proxy configuration is removed before bootstrap

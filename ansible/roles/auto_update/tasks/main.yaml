@@ -1,0 +1,40 @@
+---
+- name: Deploy auto-update systemd service
+  ansible.builtin.template:
+    src: auto-update.service.j2
+    dest: /etc/systemd/system/cluster-auto-update.service
+    mode: '0644'
+  when: auto_update_enabled | default(false)
+
+- name: Deploy auto-update systemd timer
+  ansible.builtin.template:
+    src: auto-update.timer.j2
+    dest: /etc/systemd/system/cluster-auto-update.timer
+    mode: '0644'
+  when: auto_update_enabled | default(false)
+
+- name: Enable and start auto-update timer
+  ansible.builtin.systemd:
+    name: cluster-auto-update.timer
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  when: auto_update_enabled | default(false)
+
+- name: Stop and disable auto-update timer if disabled
+  ansible.builtin.systemd:
+    name: cluster-auto-update.timer
+    state: stopped
+    enabled: no
+  when: not (auto_update_enabled | default(false))
+  ignore_errors: yes
+
+- name: Remove auto-update systemd units if disabled
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/systemd/system/cluster-auto-update.service
+    - /etc/systemd/system/cluster-auto-update.timer
+  when: not (auto_update_enabled | default(false))
+  notify: Reload systemd daemon

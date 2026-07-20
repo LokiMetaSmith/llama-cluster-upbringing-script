@@ -66,6 +66,15 @@ if [ $? -ne 0 ]; then
      exit 1
 fi
 
+# Compare local branch against remote before pulling/resetting
+LOCAL_HEAD=$(git rev-parse HEAD 2>/dev/null)
+REMOTE_HEAD=$(git rev-parse "origin/$CURRENT_BRANCH" 2>/dev/null)
+
+if [ -n "$LOCAL_HEAD" ] && [ -n "$REMOTE_HEAD" ] && [ "$LOCAL_HEAD" = "$REMOTE_HEAD" ]; then
+    echo -e "${GREEN}✅ No new updates found. The cluster is already up-to-date.${NC}"
+    exit 0
+fi
+
 echo "Resetting local state to match remote origin/$CURRENT_BRANCH..."
 # Explicitly force the local branch name to match what we pulled to prevent master/main drift
 git checkout -B "$CURRENT_BRANCH" "origin/$CURRENT_BRANCH"
