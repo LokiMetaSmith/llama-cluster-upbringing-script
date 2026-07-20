@@ -293,15 +293,19 @@
   changed_when: false
   ignore_errors: yes
 
+- name: Flush handlers to ensure ipfs service is started
+  ansible.builtin.meta: flush_handlers
+
 - name: Warm up IPFS gateway cache for Mosquitto tarball
   ansible.builtin.uri:
     url: "http://{{ cluster_ip }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ mosquitto_ipfs_cid }}"
     method: GET
-    status_code: 200
+    status_code: [200, 502, 504]
   register: ipfs_warmup
-  retries: 5
-  delay: 3
-  until: ipfs_warmup is success
+  until: ipfs_warmup.status == 200 or ipfs_warmup.status == -1
+  failed_when: ipfs_warmup.status == -1
+  retries: 6
+  delay: 10
 
 - name: Deploy MQTT Job
   block:

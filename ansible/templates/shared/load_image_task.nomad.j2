@@ -5,14 +5,47 @@
         sidecar = false
       }
 
-      artifact {
-        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ image_cid }}"
-        destination = "local/{{ image_tar_name }}.tar"
-        mode        = "file"
+      config {
+        command = "/bin/sh"
+        args = [
+          "-c",
+          <<EOF
+          set -e
+          TAR_PATH="/opt/{{ image_tar_name }}.tar"
+
+          # Check if already loaded in docker
+          if docker images --format "{% raw %}{{{% endraw %}.Repository{% raw %}}}{% endraw %}:{% raw %}{{{% endraw %}.Tag{% raw %}}}{% endraw %}" | grep -q "{{ image_tar_name }}"; then
+            echo "Image already present in Docker daemon."
+            exit 0
+          fi
+
+          # Try loading from local disk cache first if available
+          if [ -f "$TAR_PATH" ]; then
+            echo "Loading image from local path $TAR_PATH..."
+            docker load -i "$TAR_PATH"
+            exit 0
+          fi
+
+          # Pull resiliently from local IPFS gateway with retries (bypassing go-getter 504 limits)
+          echo "Fetching CID {{ image_cid }} from IPFS gateway..."
+          for i in 1 2 3 4 5; do
+            if curl -sSf --retry 3 --retry-delay 5 --max-time 120 "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ image_cid }}" -o "$TAR_PATH"; then
+              echo "Successfully downloaded tarball."
+              docker load -i "$TAR_PATH"
+              exit 0
+            fi
+            echo "Attempt $i failed. Retrying IPFS fetch in 10 seconds..."
+            sleep 10
+          done
+
+          echo "ERROR: Failed to fetch image from IPFS gateway after multiple retries."
+          exit 1
+          EOF
+        ]
       }
 
-      config {
-        command = "docker"
-        args    = ["load", "-i", "local/{{ image_tar_name }}.tar"]
+      resources {
+        cpu    = 200
+        memory = 128
       }
     }
