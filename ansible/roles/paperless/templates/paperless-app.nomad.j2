@@ -17,6 +17,14 @@ job "paperless-app" {
       name     = "paperless"
       port     = "http"
       provider = "consul"
+      tags     = [
+        "paperless",
+        "traefik.enable=true",
+        "traefik.http.routers.paperless.rule=Host(`paperless.{{ cluster_domain | default('local.mesh') }}`)",
+        "traefik.http.routers.paperless.entrypoints=websecure",
+        "traefik.http.routers.paperless.tls=true",
+        "traefik.http.routers.paperless.middlewares=authentik@file"
+      ]
 
       check {
         name     = "Paperless Web UI"

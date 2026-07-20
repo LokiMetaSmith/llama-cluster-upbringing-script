@@ -40,7 +40,16 @@ job "opengist" {
       service {
         name = "opengist-http"
         port = "http"
-        tags = ["opengist", "git", "web"]
+        tags = [
+          "opengist",
+          "git",
+          "web",
+          "traefik.enable=true",
+          "traefik.http.routers.opengist.rule=Host(`opengist.{{ cluster_domain | default('local.mesh') }}`)",
+          "traefik.http.routers.opengist.entrypoints=websecure",
+          "traefik.http.routers.opengist.tls=true",
+          "traefik.http.routers.opengist.middlewares=authentik@file"
+        ]
 
         check {
           type     = "http"

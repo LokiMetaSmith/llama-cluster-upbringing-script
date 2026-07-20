@@ -107,6 +107,15 @@ EOF
 
       template {
         data = <<-EOF
+{{ lookup('template', 'authentik-forwardauth.yaml.j2') }}
+
+EOF
+
+        destination = "local/dynamic/authentik-forwardauth.yaml"
+      }
+
+      template {
+        data = <<-EOF
 tls:
   certificates:
     - certFile: "/etc/traefik/certs/mesh/tls.crt"
