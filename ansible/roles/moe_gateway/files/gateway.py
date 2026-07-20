@@ -188,7 +188,10 @@ if not EXTERNAL_EXPERTS:
         "openrouter_claude_sonnet": {"model": "anthropic/claude-3.5-sonnet", "tier": "complex"},
         "openrouter_gemini_flash": {"model": "google/gemini-2.0-flash-001", "tier": "complex"},
         "together_ternary_bonsai_27b": {"model": "prism-ml/ternary-bonsai-27b", "tier": "trivial"},
-        "together_1bit_bonsai_27b": {"model": "prism-ml/1bit-bonsai-27b", "tier": "trivial"}
+        "together_1bit_bonsai_27b": {"model": "prism-ml/1bit-bonsai-27b", "tier": "trivial"},
+        "pipeline-finder": {"model": "anthropic/claude-3.5-sonnet", "tier": "complex"},
+        "pipeline-verifier": {"model": "openai/gpt-4o", "tier": "complex"},
+        "pipeline-judge": {"model": "openai/gpt-4-turbo", "tier": "complex"}
     }
 
 def get_expert_scores(db_path: str, external_experts: dict) -> dict:

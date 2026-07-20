@@ -29,6 +29,7 @@ class JudgeAgent:
         self.memory_url = None
         self.memory_client = None
         self.tools = {}
+        self._background_tasks = set()
 
     def discover_services(self):
         """Discovers LLM and Memory services via Consul."""
@@ -91,19 +92,44 @@ class JudgeAgent:
         if not self.llm_base_url:
             return "Mock LLM Response: Approved"
 
+        req_model = getattr(self, "model_override", None) or os.getenv("JUDGE_MODEL", "gpt-4")
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
                     f"{self.llm_base_url}/chat/completions",
                     json={
-                        "model": "gpt-4",
+                        "model": req_model,
                         "messages": messages,
                         "temperature": temperature
                     },
                     timeout=120.0
                 )
                 response.raise_for_status()
-                return response.json()['choices'][0]['message']['content']
+                data = response.json()
+
+                usage = data.get("usage", {})
+                if usage and self.memory_client:
+                    telemetry = {
+                        "model": req_model,
+                        "prompt_tokens": usage.get("prompt_tokens", 0),
+                        "completion_tokens": usage.get("completion_tokens", 0),
+                        "total_tokens": usage.get("total_tokens", 0),
+                        "task_id": self.task_id
+                    }
+                    try:
+                        task = asyncio.create_task(
+                            self.memory_client.add_event(
+                                kind="research_telemetry",
+                                content=f"Token usage for {req_model}",
+                                meta=telemetry
+                            )
+                        )
+                        self._background_tasks.add(task)
+                        task.add_done_callback(self._background_tasks.discard)
+                    except Exception as tele_err:
+                        logger.warning(f"Failed to record token telemetry: {tele_err}")
+
+                return data['choices'][0]['message']['content']
             except Exception as e:
                 logger.error(f"LLM call failed: {e}")
                 return f"Error: {str(e)}"

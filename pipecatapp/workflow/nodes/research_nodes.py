@@ -24,6 +24,7 @@ class BaseResearchNode(Node):
         self.llm_base_url = None
         self.memory_url = None
         self.memory_client = None
+        self._background_tasks = set()
 
     async def _discover_services(self):
         if not self.llm_base_url:
@@ -56,10 +57,70 @@ class BaseResearchNode(Node):
                     timeout=120.0
                 )
                 resp.raise_for_status()
-                return resp.json()['choices'][0]['message']['content']
+                data = resp.json()
+
+                # Tokenomics Tracking
+                usage = data.get("usage", {})
+                if usage and self.memory_client:
+                    telemetry = {
+                        "model": req_model,
+                        "prompt_tokens": usage.get("prompt_tokens", 0),
+                        "completion_tokens": usage.get("completion_tokens", 0),
+                        "total_tokens": usage.get("total_tokens", 0),
+                        "node_id": self.id
+                    }
+                    try:
+                        # Fire and forget telemetry recording using create_task to prevent blocking
+                        task = asyncio.create_task(
+                            self.memory_client.add_event(
+                                kind="research_telemetry",
+                                content=f"Token usage for {req_model}",
+                                meta=telemetry
+                            )
+                        )
+                        self._background_tasks.add(task)
+                        task.add_done_callback(self._background_tasks.discard)
+                    except Exception as tele_err:
+                        logger.warning(f"Failed to record token telemetry: {tele_err}")
+
+                return data['choices'][0]['message']['content']
             except Exception as e:
                 logger.error(f"LLM call failed: {e}")
                 return f"Error: {e}"
+
+@registry.register
+class WikiCheckNode(BaseResearchNode):
+    async def execute(self, context: WorkflowContext):
+        inputs = {}
+        for inp in self.config.get("inputs", []):
+            name = inp["name"]
+            inputs[name] = self.get_input(context, name)
+
+        topic = inputs.get("research_topic", "")
+
+        # Instantiate MemoryStore to check the RAG vector database
+        try:
+            from pipecatapp.memory import MemoryStore
+        except ImportError:
+            from memory import MemoryStore
+
+        memory_store = context.global_inputs.get("memory_store")
+        if not memory_store:
+            # We run initialization in an executor if it does heavy I/O
+            loop = asyncio.get_running_loop()
+            memory_store = await loop.run_in_executor(None, MemoryStore)
+
+        existing_knowledge = ""
+        # Search for top 3 matching chunks in the FAISS index/SQLite DB
+        try:
+            loop = asyncio.get_running_loop()
+            results = await loop.run_in_executor(None, memory_store.search, topic, 3)
+            if results:
+                existing_knowledge = "\n".join([f"- {res}" for res in results])
+        except Exception as e:
+            logger.warning(f"WikiCheckNode search failed: {e}")
+
+        self.set_output(context, "existing_knowledge", existing_knowledge)
 
 @registry.register
 class FindNode(BaseResearchNode):
@@ -72,8 +133,11 @@ class FindNode(BaseResearchNode):
         topic = inputs.get("research_topic", "")
         session_id = inputs.get("session_id", "unknown_session")
         feedback = inputs.get("feedback", None)
+        existing_knowledge = inputs.get("existing_knowledge", "")
 
         prompt = f"Find claims and information about: {topic}."
+        if existing_knowledge:
+            prompt += f"\n\nWe already know the following from our wiki. Do not repeat this information:\n{existing_knowledge}"
         if feedback:
             prompt += f"\nPrevious feedback to address: {feedback}"
 
@@ -85,6 +149,11 @@ class FindNode(BaseResearchNode):
         worker_agent.context = "You are a Finder agent. Your job is to search for information and propose claims with sources (URLs). Be concise and output a JSON list of claims, each with 'claim' and 'source_url' keys."
         worker_agent.llm_base_url = self.llm_base_url
         worker_agent.memory_client = self.memory_client
+
+        # Set the target model dynamically based on configuration
+        node_model = self.config.get("config", {}).get("model")
+        if node_model:
+            worker_agent.model_override = node_model
 
         # Set max steps very low so it just generates a plan/claims and exits
         worker_agent.max_steps = 1
@@ -133,12 +202,16 @@ class VerifyNode(BaseResearchNode):
             return
 
         # Use JudgeAgent to act as Verifier
+        node_model = self.config.get("config", {}).get("model")
+
         verified_claims = []
         for claim in claims:
             judge_agent = JudgeAgent()
             judge_agent.task_id = session_id
             judge_agent.criteria = "You are a Verifier agent. Check the given claim and source. Does the source actually support the claim? Reply in JSON: {'verified': true/false, 'reason': '...'}"
             judge_agent.llm_base_url = self.llm_base_url
+            if node_model:
+                judge_agent.model_override = node_model
 
             # Actually use judge_agent's internal execution path
             # Since JudgeAgent.discover_services is synchronous, we run it in a thread executor
@@ -184,6 +257,10 @@ class JudgeResearchNode(BaseResearchNode):
         judge_agent = JudgeAgent()
         judge_agent.criteria = f"Topic: {topic}. Are the following verified claims sufficient to answer the topic? Do we need to run tools to get more info? If sufficient, VERDICT: PASS. If not sufficient, provide feedback as VERDICT: FAIL - <feedback>. If tools are needed, output a JSON tool call first."
         judge_agent.task_id = session_id
+
+        node_model = self.config.get("config", {}).get("model")
+        if node_model:
+            judge_agent.model_override = node_model
 
         # JudgeAgent.discover_services and initialize_tools are synchronous
         loop = asyncio.get_running_loop()

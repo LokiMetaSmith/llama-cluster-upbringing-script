@@ -9,8 +9,18 @@ nodes:
         - name: "session_id"
     inputs: []
 
+  - id: "WikiCheck"
+    type: "WikiCheckNode"
+    inputs:
+      - name: "research_topic"
+        connection:
+          from_node: "Input"
+          from_output: "research_topic"
+
   - id: "Finder"
     type: "FindNode"
+    config:
+      model: "pipeline-finder"
     inputs:
       - name: "research_topic"
         connection:
@@ -24,9 +34,15 @@ nodes:
         connection:
           from_node: "Judge"
           from_output: "feedback"
+      - name: "existing_knowledge"
+        connection:
+          from_node: "WikiCheck"
+          from_output: "existing_knowledge"
 
   - id: "Verifier"
     type: "VerifyNode"
+    config:
+      model: "pipeline-verifier"
     inputs:
       - name: "claims"
         connection:
@@ -39,6 +55,8 @@ nodes:
 
   - id: "Judge"
     type: "JudgeResearchNode"
+    config:
+      model: "pipeline-judge"
     inputs:
       - name: "verified_claims"
         connection:

@@ -41,6 +41,7 @@ class WorkerAgent:
 
         self.tools = {}
         self.messages = []
+        self._background_tasks = set()
 
         # Durable Execution State
         self.durable_engine = DurableExecutionEngine()
@@ -104,7 +105,7 @@ Respond in exactly this JSON format:
 
         try:
             req_data = {
-                "model": "gpt-4o-mini", # Standard fallback for lightweight evaluation
+                "model": os.getenv("EVALUATOR_MODEL", "gpt-4o-mini"), # Standard fallback for lightweight evaluation
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
@@ -146,9 +147,10 @@ Respond in exactly this JSON format:
             check_messages = self.messages + [{"role": "user", "content": "You have been working for a while. Briefly summarize your progress and state if you are stuck or making good progress."}]
 
             try:
+                worker_model = getattr(self, "model_override", None) or os.getenv("FINDER_MODEL", "gpt-3.5-turbo")
                 resp = await client.post(
                     f"{self.llm_base_url}/chat/completions",
-                    json={"model": "gpt-3.5-turbo", "messages": check_messages, "temperature": 0.0},
+                    json={"model": worker_model, "messages": check_messages, "temperature": 0.0},
                     timeout=60.0
                 )
                 resp.raise_for_status()
@@ -158,7 +160,7 @@ Respond in exactly this JSON format:
                 judge_prompt = f"Analyze the following agent summary. Is the agent making progress or stuck/incoherent? Respond with 'CONTINUE' or 'TERMINATE'.\n\nSummary: {summary}"
                 judge_resp = await client.post(
                     f"{self.llm_base_url}/chat/completions",
-                    json={"model": "gpt-3.5-turbo", "messages": [{"role": "user", "content": judge_prompt}], "temperature": 0.0},
+                    json={"model": worker_model, "messages": [{"role": "user", "content": judge_prompt}], "temperature": 0.0},
                     timeout=30.0
                 )
                 judge_decision = judge_resp.json()['choices'][0]['message']['content']
@@ -173,11 +175,12 @@ Respond in exactly this JSON format:
         candidates = []
         logger.info(f"Generating {ENSEMBLE_SIZE} candidates...")
         tasks = []
+        worker_model = getattr(self, "model_override", None) or os.getenv("FINDER_MODEL", "gpt-3.5-turbo")
         for i in range(ENSEMBLE_SIZE):
             temp = 0.7 if i > 0 else 0.0
             tasks.append(client.post(
                 f"{self.llm_base_url}/chat/completions",
-                json={"model": "gpt-3.5-turbo", "messages": self.messages, "temperature": temp},
+                json={"model": worker_model, "messages": self.messages, "temperature": temp},
                 timeout=60.0
             ))
 
@@ -185,7 +188,32 @@ Respond in exactly this JSON format:
         valid_responses = []
         for r in responses:
             if isinstance(r, httpx.Response) and r.status_code == 200:
-                content = r.json()['choices'][0]['message']['content']
+                data = r.json()
+
+                # Tokenomics Tracking
+                usage = data.get("usage", {})
+                if usage and self.memory_client:
+                    telemetry = {
+                        "model": worker_model,
+                        "prompt_tokens": usage.get("prompt_tokens", 0),
+                        "completion_tokens": usage.get("completion_tokens", 0),
+                        "total_tokens": usage.get("total_tokens", 0),
+                        "task_id": self.task_id
+                    }
+                    try:
+                        task = asyncio.create_task(
+                            self.memory_client.add_event(
+                                kind="research_telemetry",
+                                content=f"Token usage for {worker_model}",
+                                meta=telemetry
+                            )
+                        )
+                        self._background_tasks.add(task)
+                        task.add_done_callback(self._background_tasks.discard)
+                    except Exception as tele_err:
+                        logger.warning(f"Failed to record token telemetry: {tele_err}")
+
+                content = data['choices'][0]['message']['content']
                 valid_responses.append(content)
 
         if not valid_responses:
@@ -202,7 +230,7 @@ Respond in exactly this JSON format:
             try:
                 sel_resp = await client.post(
                     f"{self.llm_base_url}/chat/completions",
-                    json={"model": "gpt-3.5-turbo", "messages": [{"role": "user", "content": selection_prompt}], "temperature": 0.0},
+                    json={"model": worker_model, "messages": [{"role": "user", "content": selection_prompt}], "temperature": 0.0},
                     timeout=30.0
                 )
                 sel_content = sel_resp.json()['choices'][0]['message']['content']

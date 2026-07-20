@@ -45,3 +45,15 @@ external_experts_config:
     base_url: "https://api.together.xyz/v1"
     api_key_env: "TOGETHER_API_KEY"
     model: "prism-ml/1bit-bonsai-27b"
+  pipeline-finder:
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: "OPENROUTER_API_KEY"
+    model: "anthropic/claude-3.5-sonnet"
+  pipeline-verifier:
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: "OPENROUTER_API_KEY"
+    model: "openai/o1"
+  pipeline-judge:
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: "OPENROUTER_API_KEY"
+    model: "openai/gpt-4-turbo"
