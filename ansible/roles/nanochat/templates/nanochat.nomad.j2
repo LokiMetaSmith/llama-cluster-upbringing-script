@@ -63,7 +63,16 @@ job "nanochat" {
       service {
         name = "nanochat"
         port = "http"
-        tags = ["ai", "nanochat", "training"]
+        tags = [
+          "ai",
+          "nanochat",
+          "training",
+          "traefik.enable=true",
+          "traefik.http.routers.nanochat.rule=Host(`nanochat.{{ cluster_domain | default('local.mesh') }}`)",
+          "traefik.http.routers.nanochat.entrypoints=websecure",
+          "traefik.http.routers.nanochat.tls=true",
+          "traefik.http.routers.nanochat.middlewares=authentik@file"
+        ]
 
         check {
           type     = "http"

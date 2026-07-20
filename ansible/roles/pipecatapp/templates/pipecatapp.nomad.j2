@@ -85,7 +85,8 @@ job "{{ job_name | default('pipecat-app') }}" {
         "traefik.enable=true",
         "traefik.http.routers.pipecatapp.rule=Host(`pipecatapp.{{ cluster_domain | default('local.mesh') }}`)",
         "traefik.http.routers.pipecatapp.entrypoints=websecure",
-        "traefik.http.routers.pipecatapp.tls=true"
+        "traefik.http.routers.pipecatapp.tls=true",
+        "traefik.http.routers.pipecatapp.middlewares=authentik@file"
       ]
 
       check {

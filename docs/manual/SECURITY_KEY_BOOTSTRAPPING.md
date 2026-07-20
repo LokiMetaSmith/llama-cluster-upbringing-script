@@ -28,6 +28,12 @@ The cluster utilizes two distinct authentication flows depending on the context:
 
 For administrators and developers, services are integrated with Authentik via OIDC. Authentik is configured to enforce multi-factor authentication (MFA) utilizing FIDO2/WebAuthn.
 
+This provides three layers of identity and access management for humans:
+
+1. **SSO and Authorization Injection:** Authentik seamlessly injects authorization headers, preventing the need to manually enter application API keys.
+2. **FIDO2 Hardware Key Registration:** Users can independently register and provision new FIDO2 security keys through the internal Authentik user portal.
+3. **Fallback Authentication:** In the event a hardware key is lost or unavailable, users can securely fall back to an Authentik-managed password paired with TOTP.
+
 ### 2.1. Headscale (Tailnet) Enrollment
 
 When a user attempts to join a new device to the cluster mesh network:
@@ -45,6 +51,15 @@ Consul's ACL system is configured with an OIDC Auth Method mapping back to Authe
 1. Accessing the Consul UI or requesting a CLI token using `consul login -type=oidc` triggers an OIDC flow.
 2. The user is redirected to Authentik, where they must authenticate and provide physical presence via their FIDO2 key.
 3. Consul grants a time-bound ACL token based on the user's mapped roles in Authentik.
+
+### 2.3. Internal Web Services (Traefik ForwardAuth)
+
+Internal application UIs (such as the Pipecat App, Nanochat, OpenGist, and Paperless) do not expose their own authentication barriers. Instead, they are protected at the mesh edge via a **Traefik ForwardAuth** middleware constraint.
+
+1. A user navigates to an internal service (e.g., `https://pipecatapp.local.mesh`).
+2. The Traefik reverse proxy intercepts the request and forwards it to the Authentik outpost.
+3. Authentik challenges the user (FIDO2 tap).
+4. Upon success, Authentik redirects the traffic back to the destination service, injecting identity headers (`X-authentik-username`, etc.) to facilitate zero-touch application access.
 
 ---
 
