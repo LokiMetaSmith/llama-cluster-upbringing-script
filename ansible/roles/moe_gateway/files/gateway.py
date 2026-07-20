@@ -496,6 +496,10 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
     event = asyncio.Event()
     pending_requests[request_id] = {"event": event, "response": None}
 
+    # Extract user input for logging
+    messages = payload.get("messages", [])
+    last_user_message = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+
     # Store initial log entry (status 0 = pending)
     await log_request(request_id, start_time, last_user_message, "", 0, 0, selected_expert)
 
