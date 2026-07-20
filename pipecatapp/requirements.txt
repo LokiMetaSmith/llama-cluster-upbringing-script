@@ -105,3 +105,4 @@ tree-sitter-swift>=0.7.0
 # Model Context Protocol support
 mcp
 smolagents
+aiofiles==23.2.1

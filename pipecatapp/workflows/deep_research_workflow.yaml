@@ -1,0 +1,118 @@
+name: "Deep Research Workflow"
+cyclic: true
+nodes:
+  - id: "Input"
+    type: "InputNode"
+    config:
+      outputs:
+        - name: "research_topic"
+        - name: "session_id"
+    inputs: []
+
+  - id: "Finder"
+    type: "FindNode"
+    inputs:
+      - name: "research_topic"
+        connection:
+          from_node: "Input"
+          from_output: "research_topic"
+      - name: "session_id"
+        connection:
+          from_node: "Input"
+          from_output: "session_id"
+      - name: "feedback"
+        connection:
+          from_node: "Judge"
+          from_output: "feedback"
+
+  - id: "Verifier"
+    type: "VerifyNode"
+    inputs:
+      - name: "claims"
+        connection:
+          from_node: "Finder"
+          from_output: "claims"
+      - name: "session_id"
+        connection:
+          from_node: "Input"
+          from_output: "session_id"
+
+  - id: "Judge"
+    type: "JudgeResearchNode"
+    inputs:
+      - name: "verified_claims"
+        connection:
+          from_node: "Verifier"
+          from_output: "verified_claims"
+      - name: "research_topic"
+        connection:
+          from_node: "Input"
+          from_output: "research_topic"
+      - name: "session_id"
+        connection:
+          from_node: "Input"
+          from_output: "session_id"
+
+  - id: "Decider_Loop"
+    type: "ConditionalBranchNode"
+    inputs:
+      - name: "input_value"
+        connection:
+          from_node: "Judge"
+          from_output: "needs_more_claims"
+
+  - id: "Decider_NeedsTools"
+    type: "ConditionalBranchNode"
+    inputs:
+      - name: "input_value"
+        connection:
+          from_node: "Judge"
+          from_output: "needs_tools"
+      - name: "trigger"
+        connection:
+          from_node: "Decider_Loop"
+          from_output: "output_false"
+
+  - id: "ToolRunner"
+    type: "RunToolsNode"
+    inputs:
+      - name: "tool_requests"
+        connection:
+          from_node: "Judge"
+          from_output: "tool_requests"
+      - name: "session_id"
+        connection:
+          from_node: "Input"
+          from_output: "session_id"
+      - name: "trigger"
+        connection:
+          from_node: "Decider_NeedsTools"
+          from_output: "output_true"
+
+  - id: "Validator"
+    type: "ValidateNode"
+    inputs:
+      - name: "judged_claims"
+        connection:
+          from_node: "Judge"
+          from_output: "approved_claims"
+      - name: "tool_results"
+        connection:
+          from_node: "ToolRunner"
+          from_output: "tool_results"
+      - name: "session_id"
+        connection:
+          from_node: "Input"
+          from_output: "session_id"
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_report"
+        connection:
+          from_node: "Validator"
+          from_output: "final_report"
+      - name: "saved_to_wiki"
+        connection:
+          from_node: "Validator"
+          from_output: "saved_to_wiki"

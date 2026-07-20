@@ -8,3 +8,4 @@ from . import ralph_nodes
 from . import tasky_nodes
 from . import consolidation_nodes
 from . import schema_nodes
+from . import research_nodes
