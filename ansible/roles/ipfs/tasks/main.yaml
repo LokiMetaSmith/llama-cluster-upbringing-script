@@ -123,6 +123,9 @@
   changed_when: false
   ignore_errors: yes
 
+- name: Flush handlers to ensure ipfs service is started
+  ansible.builtin.meta: flush_handlers
+
 - name: Wait for IPFS API to be ready
   ansible.builtin.wait_for:
     host: "{{ cluster_ip | default('127.0.0.1') }}"
@@ -135,11 +138,12 @@
   ansible.builtin.uri:
     url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ ipfs_gateway_port | default(8080) }}/"
     return_content: yes
-    status_code: [200, 400, 403, 404]
+    status_code: [200, 400, 403, 404, 502, 504]
   register: ipfs_gateway_status
-  until: ipfs_gateway_status.status in [200, 400, 403, 404]
-  retries: 30
-  delay: 5
+  until: ipfs_gateway_status.status in [200, 400, 403, 404] or ipfs_gateway_status.status == -1
+  failed_when: ipfs_gateway_status.status == -1
+  retries: 6
+  delay: 10
 
 - name: Deploy automated IPFS P2P model pinning script
   ansible.builtin.copy:
