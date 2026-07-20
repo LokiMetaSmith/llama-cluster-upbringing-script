@@ -1,0 +1,6 @@
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Syntax check
+      include_role:
+        name: ansible/roles/common-tools

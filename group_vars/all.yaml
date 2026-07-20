@@ -175,6 +175,10 @@ target_user_home: "/home/{{ target_user }}"
 # GitHub usernames to automatically import SSH keys for via ssh-import-id
 github_ssh_users: []
 
+# A list of declarative FIDO/FIDO2 OpenSSH public keys to be provisioned for target_user
+# Example: ["sk-ssh-ed25519@openssh.com AAAA..."]
+fido_ssh_keys: []
+
 # --- Exo Configuration ---
 # By default, Exo is disabled. To enable it, set this to true.
 exo_enable: false

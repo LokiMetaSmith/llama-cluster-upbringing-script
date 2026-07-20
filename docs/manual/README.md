@@ -99,3 +99,5 @@ These operational playbooks outline self-healing scripts, failure handling, trou
   * *Description:* Resolving common operational issues, including stale Consul service registries, locked cache issues, and failed network bindings.
 * **[Frontend Verification via Playwright](FRONTEND_VERIFICATION.md)**
   * *Description:* Detailed instructions on running headless accessibility audits, focusing interactive outlines, and capturing audit screenshots using Playwright.
+* **[Security Key Bootstrapping](SECURITY_KEY_BOOTSTRAPPING.md)**
+  * *Description:* Details the hybrid architecture for incorporating FIDO/FIDO2 hardware security keys into cluster provisioning, covering human OIDC access and automated machine bootstrapping.

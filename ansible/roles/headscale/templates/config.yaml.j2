@@ -32,6 +32,13 @@ db_path: /var/lib/headscale/db.sqlite
 unix_socket: /var/run/headscale/headscale.sock
 unix_socket_permission: "0770"
 
+{% if headscale_oidc_enabled %}
+oidc:
+  issuer: "{{ headscale_oidc_issuer }}"
+  client_id: "{{ headscale_oidc_client_id }}"
+  client_secret: "{{ headscale_oidc_client_secret }}"
+{% endif %}
+
 dns_config:
   magic_dns: true
   base_domain: {{ cluster_domain | default('local.mesh') }}
