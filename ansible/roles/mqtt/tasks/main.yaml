@@ -293,6 +293,16 @@
   changed_when: false
   ignore_errors: yes
 
+- name: Warm up IPFS gateway cache for Mosquitto tarball
+  ansible.builtin.uri:
+    url: "http://{{ cluster_ip }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ mosquitto_ipfs_cid }}"
+    method: GET
+    status_code: 200
+  register: ipfs_warmup
+  retries: 5
+  delay: 3
+  until: ipfs_warmup is success
+
 - name: Deploy MQTT Job
   block:
     - name: Run mqtt job
