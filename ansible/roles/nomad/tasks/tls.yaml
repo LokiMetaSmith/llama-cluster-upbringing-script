@@ -27,7 +27,7 @@
     openssl x509 -in "{{ nomad_temp_cert_dir }}/ca.pem" -text -noout | grep -E -q "X509v3 Key Usage|keyUsage"
     openssl x509 -in "{{ nomad_temp_cert_dir }}/ca.pem" -text -noout | grep -E -q "Certificate Sign|keyCertSign"
     # Check server node certificates
-    for host in {{ groups['controller_nodes'] | default([]) | join(' ') }}; do
+    for host in {{ groups['controller_nodes'] | default([inventory_hostname]) | join(' ') }}; do
       if [ ! -f "{{ nomad_temp_cert_dir }}/${host}.pem" ]; then
         exit 1
       fi
@@ -157,42 +157,14 @@
       DNS.5 = client.global.nomad
       DNS.6 = consul.service.consul
       IP.1 = 127.0.0.1
+      {% if hostvars[item] is defined and hostvars[item]['cluster_ip'] is defined %}
       IP.2 = {{ hostvars[item]['cluster_ip'] }}
-  loop: "{{ groups['controller_nodes'] | default([]) }}"
-  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
-  delegate_to: localhost
-  run_once: true
-
-- name: Generate OpenSSL config for localhost (local bootstrap mode)
-  become: false
-  ansible.builtin.copy:
-    dest: "{{ nomad_temp_cert_dir }}/localhost.cnf"
-    content: |
-      [req]
-      distinguished_name = req_distinguished_name
-      req_extensions = v3_req
-      prompt = no
-      [req_distinguished_name]
-      CN = server.global.nomad
-      [v3_req]
-      basicConstraints = CA:FALSE
-      keyUsage = critical, digitalSignature, keyEncipherment
-      extendedKeyUsage = serverAuth, clientAuth
-      subjectAltName = @alt_names
-      [alt_names]
-      DNS.1 = server.global.nomad
-      DNS.2 = localhost
-      DNS.3 = server.dc1.consul
-      DNS.4 = server.global.nomad
-      DNS.5 = client.global.nomad
-      DNS.6 = consul.service.consul
-      IP.1 = 127.0.0.1
-      {% if cluster_ip is defined %}
+      {% elif cluster_ip is defined %}
       IP.2 = {{ cluster_ip }}
       {% elif advertise_ip is defined %}
       IP.2 = {{ advertise_ip }}
       {% endif %}
-  when: "groups['controller_nodes'] is not defined or groups['controller_nodes'] | length == 0"
+  loop: "{{ groups['controller_nodes'] | default([inventory_hostname]) }}"
   delegate_to: localhost
   run_once: true
 
@@ -201,17 +173,7 @@
   ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/{{ item }}.key 2048"
   args:
     creates: "{{ nomad_temp_cert_dir }}/{{ item }}.key"
-  loop: "{{ groups['controller_nodes'] | default([]) }}"
-  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
-  delegate_to: localhost
-  run_once: true
-
-- name: Generate server keys for localhost (local bootstrap mode)
-  become: false
-  ansible.builtin.command: "openssl genrsa -out {{ nomad_temp_cert_dir }}/localhost.key 2048"
-  args:
-    creates: "{{ nomad_temp_cert_dir }}/localhost.key"
-  when: "groups['controller_nodes'] is not defined or groups['controller_nodes'] | length == 0"
+  loop: "{{ groups['controller_nodes'] | default([inventory_hostname]) }}"
   delegate_to: localhost
   run_once: true
 
@@ -220,17 +182,7 @@
   ansible.builtin.command: "openssl req -new -key {{ nomad_temp_cert_dir }}/{{ item }}.key -out {{ nomad_temp_cert_dir }}/{{ item }}.csr -config {{ nomad_temp_cert_dir }}/{{ item }}.cnf"
   args:
     creates: "{{ nomad_temp_cert_dir }}/{{ item }}.csr"
-  loop: "{{ groups['controller_nodes'] | default([]) }}"
-  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
-  delegate_to: localhost
-  run_once: true
-
-- name: Generate server CSRs for localhost (local bootstrap mode)
-  become: false
-  ansible.builtin.command: "openssl req -new -key {{ nomad_temp_cert_dir }}/localhost.key -out {{ nomad_temp_cert_dir }}/localhost.csr -config {{ nomad_temp_cert_dir }}/localhost.cnf"
-  args:
-    creates: "{{ nomad_temp_cert_dir }}/localhost.csr"
-  when: "groups['controller_nodes'] is not defined or groups['controller_nodes'] | length == 0"
+  loop: "{{ groups['controller_nodes'] | default([inventory_hostname]) }}"
   delegate_to: localhost
   run_once: true
 
@@ -239,17 +191,7 @@
   ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/{{ item }}.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/{{ item }}.pem -days 365 -extfile {{ nomad_temp_cert_dir }}/{{ item }}.cnf -extensions v3_req"
   args:
     creates: "{{ nomad_temp_cert_dir }}/{{ item }}.pem"
-  loop: "{{ groups['controller_nodes'] | default([]) }}"
-  when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
-  delegate_to: localhost
-  run_once: true
-
-- name: Sign server certificates for localhost (local bootstrap mode)
-  become: false
-  ansible.builtin.command: "openssl x509 -req -in {{ nomad_temp_cert_dir }}/localhost.csr -CA {{ nomad_temp_cert_dir }}/ca.pem -CAkey {{ nomad_temp_cert_dir }}/ca.key -CAcreateserial -out {{ nomad_temp_cert_dir }}/localhost.pem -days 365 -extfile {{ nomad_temp_cert_dir }}/localhost.cnf -extensions v3_req"
-  args:
-    creates: "{{ nomad_temp_cert_dir }}/localhost.pem"
-  when: "groups['controller_nodes'] is not defined or groups['controller_nodes'] | length == 0"
+  loop: "{{ groups['controller_nodes'] | default([inventory_hostname]) }}"
   delegate_to: localhost
   run_once: true
 
