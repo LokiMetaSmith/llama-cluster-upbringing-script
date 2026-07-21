@@ -70,6 +70,22 @@
     mode: '0755'
   become: yes
 
+- name: Initialize IPFS repository on host
+  ansible.builtin.command: /usr/local/bin/ipfs init --profile server,local-discovery
+  args:
+    creates: "{{ ipfs_path }}/config"
+  environment:
+    IPFS_PATH: "{{ ipfs_path }}"
+  become: yes
+
+- name: Set IPFS directory ownership for Kubo container
+  ansible.builtin.file:
+    path: "{{ ipfs_path }}"
+    owner: "1000"
+    group: "100"
+    recurse: yes
+  become: yes
+
 - name: Template ipfs job
   ansible.builtin.template:
     src: ipfs.nomad.j2
