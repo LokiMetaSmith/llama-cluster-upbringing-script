@@ -1,0 +1,13 @@
+[Unit]
+Description=Timer for Cluster Auto-Update
+After=network-online.target
+
+[Timer]
+# Run once a day. You can adjust this to e.g., OnUnitActiveSec=12h
+OnCalendar={{ auto_update_schedule | default('*-*-* 03:00:00') }}
+# Add random jitter up to 4 hours to avoid all nodes updating at once
+RandomizedDelaySec={{ auto_update_jitter_sec | default('14400') }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target
