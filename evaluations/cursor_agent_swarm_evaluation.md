@@ -23,8 +23,9 @@ Cursor observed that at 1,000 commits per second, traditional lock-based VCS (li
 
 **Our Architecture (Pipecat):**
 
-- **Major Gap:** While we use `FileEditorTool` and `ASTEditorTool`, we do not have a dedicated conflict resolution sub-agent. Our agents interact linearly with files.
-- **Concurrency Issue:** In our async workflow architecture, if two open workers (`open_workers_tool.py`) target the same file, they will overwrite each other or fail. We lack a robust, high-speed VCS buffer layer and a dedicated neutral merge resolver.
+- **Alternative Approach (Keystone Polyphony):** While Cursor opted for a custom post-hoc Git resolver agent, we utilize the **Keystone Polyphony Swarm** (an RTOS-inspired collaboration model for our agents).
+- **Mutex / Batons:** Polyphony prevents collisions at the source. It introduces a `Baton (Mutex)` concept where ownership of sensitive resources (like a file or task) is explicitly claimed (`polyphony task claim`). One agent changes critical state at a time.
+- **Liminal Space & Signals:** Agents broadcast state changes and signals before taking action, allowing other workers to halt or alter course, inherently bypassing the "1,000 commits per second" collision trap by managing traffic through explicit orchestration rather than git-level dispute resolution.
 
 ## 3. Megafile Decomposition
 
@@ -85,10 +86,9 @@ Based on the evaluation of Cursor's architecture against our codebase, here is t
    - Create a specific workflow node (`DecompositionNode`) that triggers when a file is flagged.
    - This node will lock the file, utilize `ASTEditorTool` and a frontier model to break the file into smaller modules, update imports across the `repo_map`, and unlock the modules.
 
-3. **Develop a Neutral Merge Resolver Agent / Git Buffer:**
-   - Enhance the async execution layer of `open_workers_tool.py` and `SwarmTool`.
-   - Instead of writing directly to disk, have workers submit diffs (via Git or virtual patches) to a central queue.
-   - Create a `MergeResolverAgent` that processes this queue. If conflicts arise, this impartial agent analyzes both intents and merges them cleanly before writing to the host filesystem.
+3. **Extend Keystone Polyphony with a File-Level Mutex Tooling:**
+   - While Polyphony handles macro-tasks, enhance the async execution layer of `FileEditorTool` and `SwarmTool` to explicitly check out file-level batons from Polyphony before writing.
+   - Investigate whether a fallback `MergeResolverAgent` is still needed for untracked rapid edits, or if strict Polyphony adoption is sufficient for swarm-level concurrency control.
 
 4. **Enhance Planner Contention Resolution:**
    - Implement a shared "Design Docs" concept (similar to the Field Guide but for architectural decisions).
