@@ -51,6 +51,14 @@
         - python_deps
         - deploy_app
 
+    - name: Deploy IPFS Storage Backend
+      tags:
+        - ipfs
+      block:
+        - name: Run ipfs role
+          ansible.builtin.include_role:
+            name: ipfs
+
     - name: Deploy MQTT
       tags:
         - mqtt
