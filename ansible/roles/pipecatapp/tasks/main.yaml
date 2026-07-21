@@ -1238,6 +1238,23 @@
       register: arch_alloc_id
       failed_when: false
 
+    - name: "Archivist : Fetch load-image logs (stdout)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -task load-image {{ arch_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: arch_load_logs_stdout
+      ignore_errors: yes
+      when: (arch_alloc_id.stdout | trim | length > 0) and (arch_alloc_id.stdout | trim != 'null')
+
+    - name: "Archivist : Display load-image logs (stdout)"
+      ansible.builtin.debug:
+        var: arch_load_logs_stdout.stdout
+      when: arch_load_logs_stdout.stdout is defined
+
     - name: "Archivist : Fetch Archivist logs (stdout)"
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -task architect-task {{ arch_alloc_id.stdout }}"
@@ -1347,6 +1364,23 @@
       ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/router_allocs.json
       register: router_alloc_id
       failed_when: false
+
+    - name: "Router : Fetch load-image logs (stdout)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -task load-image {{ router_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: router_load_logs_stdout
+      ignore_errors: yes
+      when: (router_alloc_id.stdout | trim | length > 0) and (router_alloc_id.stdout | trim != 'null')
+
+    - name: "Router : Display load-image logs (stdout)"
+      ansible.builtin.debug:
+        var: router_load_logs_stdout.stdout
+      when: router_load_logs_stdout.stdout is defined
 
     - name: "Router : Fetch litellm-proxy logs (stdout)"
       ansible.builtin.command:
@@ -1622,6 +1656,23 @@
       ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/pipecat_allocs.json
       register: pipecat_alloc_id
       failed_when: false
+
+    - name: "Pipecat App : Fetch load-image logs (stdout)"
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/nomad alloc logs -task load-image {{ pipecat_alloc_id.stdout }}"
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: pipecat_load_logs_stdout
+      ignore_errors: yes
+      when: (pipecat_alloc_id.stdout | trim | length > 0) and (pipecat_alloc_id.stdout | trim != 'null')
+
+    - name: "Pipecat App : Display load-image logs (stdout)"
+      ansible.builtin.debug:
+        var: pipecat_load_logs_stdout.stdout
+      when: pipecat_load_logs_stdout.stdout is defined
 
     - name: "Pipecat App : Fetch Pipecat App logs (stdout)"
       ansible.builtin.command:
