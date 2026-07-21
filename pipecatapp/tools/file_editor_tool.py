@@ -35,7 +35,7 @@ class FileEditorTool:
                     "properties": {
                         "action": {
                             "type": "string",
-                            "enum": ["read", "write", "patch", "hash_replace", "batch_hash_replace", "append", "undo"],
+                            "enum": ["read", "write", "patch", "hash_replace", "batch_hash_replace", "undo", "find", "get_metadata", "flag_megafile"],
                             "description": "The action to perform on the file."
                         },
                         "filepath": {
@@ -145,6 +145,9 @@ class FileEditorTool:
             if not filepath: return "Error: filepath is required for append action."
             content = kwargs.get("content", "")
             return self.append_to_file(filepath, content)
+        elif action == "flag_megafile":
+            if not filepath: return "Error: filepath is required for flag_megafile action."
+            return self.flag_megafile(filepath)
         elif action == "undo":
             if not filepath: return "Error: filepath is required for undo action."
             return self.undo_edit(filepath)
@@ -209,6 +212,32 @@ class FileEditorTool:
                 return f"Successfully reverted last edit to {filepath}."
         except Exception as e:
             return f"Error undoing edit to {filepath}: {e}"
+
+    def flag_megafile(self, filepath: str) -> str:
+        """Flags a file as bloated or highly contested by appending it to the Megafile queue."""
+        full_path = self._get_safe_path(filepath)
+        if "Error" in full_path:
+            return full_path
+
+        queue_path = os.path.join(self.root_dir, ".liminal", "megafiles_queue.json")
+        try:
+            import json
+            os.makedirs(os.path.dirname(queue_path), exist_ok=True)
+            queue = []
+            if os.path.exists(queue_path):
+                with open(queue_path, "r") as f:
+                    queue = json.load(f)
+
+            if filepath not in queue:
+                queue.append(filepath)
+                with open(queue_path, "w") as f:
+                    json.dump(queue, f)
+                return f"Successfully flagged '{filepath}' as a Megafile. It has been queued for decomposition."
+            else:
+                return f"'{filepath}' is already flagged in the Megafile queue."
+        except Exception as e:
+            self.logger.error(f"Failed to flag megafile: {e}")
+            return f"Error flagging megafile: {e}"
 
     def read_file(self, filepath: str, use_hashlines: bool = False, view_range: list = None) -> str:
         """Reads the content of a file and detects line endings metadata.

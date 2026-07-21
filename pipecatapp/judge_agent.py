@@ -135,8 +135,22 @@ class JudgeAgent:
         # (e.g., if we knew the repo path, we could run lint/test)
         # For now, we rely on LLM review of the result text + tools if needed
 
+        field_guide_content = ""
+        try:
+            import os
+            if os.path.exists(".liminal/field_guide.md"):
+                with open(".liminal/field_guide.md", "r") as f:
+                    field_guide_content = f.read()
+        except Exception:
+            pass
+
         system_prompt = f"""You are a strict QA Judge.
 Your goal is to verify if the following work meets the criteria: "{self.criteria}".
+You should strictly enforce all norms and patterns listed in the Field Guide.
+
+--- FIELD GUIDE (Institutional Knowledge) ---
+{field_guide_content}
+--- END FIELD GUIDE ---
 You have access to tools to inspect files or run commands if needed.
 
 Target Result:

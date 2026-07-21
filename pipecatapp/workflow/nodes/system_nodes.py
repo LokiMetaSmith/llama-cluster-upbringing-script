@@ -205,3 +205,151 @@ class SleepNode(Node):
 
         await asyncio.sleep(seconds)
         self.set_output(context, "status", f"Slept for {seconds} seconds")
+
+@registry.register
+class MegafileDecompositionNode(Node):
+    """A node that checks the megafile queue and refactors bloated files."""
+
+    async def execute(self, context: WorkflowContext):
+        import json
+        import os
+        from pipecatapp.tools.ast_editor_tool import ASTEditorTool
+        from pipecatapp.tools.file_editor_tool import FileEditorTool
+        from pipecatapp.llm_clients import get_llm_client
+        import fcntl
+
+        # Determine base directory; default to CWD if not specified in context
+        base_dir = context.global_inputs.get("root_dir", os.getcwd())
+        queue_path = os.path.join(base_dir, ".liminal", "megafiles_queue.json")
+
+        if not os.path.exists(queue_path):
+            context.set_output("status", "No megafiles queued")
+            return
+
+        # Open with file lock to prevent race conditions during pop
+        with open(queue_path, "r+") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                queue = json.load(f)
+            except json.JSONDecodeError:
+                queue = []
+
+            if not queue:
+                fcntl.flock(f, fcntl.LOCK_UN)
+                context.set_output("status", "No megafiles queued")
+                return
+
+            target_file = queue.pop(0)
+
+            # Immediately write the popped queue back to disk while locked
+            f.seek(0)
+            f.truncate()
+            json.dump(queue, f)
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+        # Lock the file logic could go here via Keystone Polyphony baton
+
+        file_editor = FileEditorTool()
+        ast_editor = ASTEditorTool()
+
+        # 1. Read the file
+        content = file_editor.read_file(target_file)
+        if "Error" in content:
+            context.set_output("status", f"Failed to read megafile: {content}")
+            return
+
+        # 2. Use a frontier model to plan the decomposition
+        system_prompt = (
+            "You are an expert code architect. The following file is a 'Megafile' that has become too bloated. "
+            "Your task is to plan how to decompose this file into smaller, logically separated modules. "
+            "Return a JSON object with 'strategy' (string) and 'new_modules' (list of strings representing new file paths)."
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Filepath: {target_file}\n\nContent:\n{content}"}
+        ]
+
+        # Assuming access to the workflow's configured LLM router
+        llm = get_llm_client(getattr(self, "model_override", "gpt-4o"))
+
+        try:
+            response = await llm.generate_chat_completion(messages, response_format={"type": "json_object"})
+            plan = json.loads(response)
+
+            # 3. Use ASTEditorTool to actually move the code chunks
+            success = True
+            error_msgs = []
+            if "strategy" in plan and "new_modules" in plan:
+                # We assume new_modules specifies the logic chunks to extract.
+                # In a robust implementation, the LLM would output AST query signatures.
+                # Here, we programmatically extract classes and functions and move them.
+
+                # Use AST tool to fetch top-level classes/functions
+                tree_info_raw = ast_editor.execute("list_functions", filepath=target_file)
+                if "Error" not in tree_info_raw:
+                    try:
+                        tree_info = json.loads(tree_info_raw)
+                        # Simple heuristic: move every other class to a new module
+                        for idx, module_path in enumerate(plan.get("new_modules", [])):
+                            if idx < len(tree_info):
+                                node_name = tree_info[idx].get("name")
+                                # Extract code
+                                extracted_code = ast_editor.execute("read_function", filepath=target_file, function_name=node_name)
+                                if "Error" not in extracted_code:
+                                    # Write to new file
+                                    file_editor.write_file(module_path, extracted_code)
+                                    # Delete from old file
+                                    ast_editor.execute("delete_function", filepath=target_file, function_name=node_name)
+                    except Exception as e:
+                        success = False
+                        error_msgs.append(f"AST extraction failed: {str(e)}")
+                else:
+                     success = False
+                     error_msgs.append(tree_info_raw)
+
+            if success:
+                # 4. Validation step: check that we didn't break imports
+                # In a robust system, we would run `pytest` or `python -m py_compile`.
+                # Here we attempt to compile the refactored files.
+                from pipecatapp.tools.code_runner_tool import CodeRunnerTool
+                runner = CodeRunnerTool()
+                for module_path in plan.get("new_modules", []):
+                    # Check syntax
+                    comp_res = runner.execute("run_bash", command=f"python3 -m py_compile {module_path}")
+                    if "SyntaxError" in comp_res or "Traceback" in comp_res:
+                        success = False
+                        error_msgs.append(f"Validation failed for {module_path}: {comp_res}")
+
+            if success:
+                context.set_output("status", f"Decomposed {target_file}")
+                context.set_output("decomposition_plan", plan)
+            else:
+                # Requeue if failed
+                with open(queue_path, "r+") as f:
+                    fcntl.flock(f, fcntl.LOCK_EX)
+                    try:
+                        q = json.load(f)
+                    except json.JSONDecodeError:
+                        q = []
+                    q.insert(0, target_file)
+                    f.seek(0)
+                    f.truncate()
+                    json.dump(q, f)
+                    fcntl.flock(f, fcntl.LOCK_UN)
+                context.set_output("status", f"Decomposition failed: {error_msgs}")
+
+        except Exception as e:
+            # Requeue on critical error
+            with open(queue_path, "r+") as f:
+                fcntl.flock(f, fcntl.LOCK_EX)
+                try:
+                    q = json.load(f)
+                except json.JSONDecodeError:
+                    q = []
+                q.insert(0, target_file)
+                f.seek(0)
+                f.truncate()
+                json.dump(q, f)
+                fcntl.flock(f, fcntl.LOCK_UN)
+            context.set_output("status", f"Decomposition failed: {str(e)}")
