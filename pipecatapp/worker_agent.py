@@ -312,10 +312,23 @@ Respond in exactly this JSON format:
         logger.info(f"Initialized tools: {list(self.tools.keys())}")
 
         if not self.rehydrate_and_resume():
+            field_guide_content = ""
+            try:
+                import os
+                if os.path.exists(".liminal/field_guide.md"):
+                    with open(".liminal/field_guide.md", "r") as f:
+                        field_guide_content = f.read()
+            except Exception:
+                pass
+
             system_prompt = f"""You are a helpful worker agent.
 You have access to the following tools: {list(self.tools.keys())}.
 Your task is: {self.prompt}
 Context: {self.context}
+
+--- FIELD GUIDE (Institutional Knowledge) ---
+{field_guide_content}
+--- END FIELD GUIDE ---
 
 INSTRUCTIONS:
 1. Think step-by-step.

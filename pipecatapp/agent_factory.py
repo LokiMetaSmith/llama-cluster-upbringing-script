@@ -76,6 +76,8 @@ from tools.update_litellm_tool import UpdateLitellmTool
 from tools.get_nomad_job import GetNomadJobTool
 from tools.frugal_sandbox_tool import FrugalSandboxTool
 from tools.goal_tool import GoalTool
+from tools.field_guide_tool import FieldGuideTool
+from tools.design_docs_tool import DesignDocsTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -131,6 +133,8 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "project_mapper": ProjectMapperTool(),
         "lightweight_project_mapper": LightweightProjectMapperTool(),
         "schema_harness": SchemaHarnessTool(),
+        "field_guide": FieldGuideTool(),
+        "design_docs": DesignDocsTool(),
         "schema_mapper": SchemaMapperTool(),
         "planner": PlannerTool(twin_service) if twin_service else None,
         "file_editor": FileEditorTool(root_dir="/opt/pipecatapp"),

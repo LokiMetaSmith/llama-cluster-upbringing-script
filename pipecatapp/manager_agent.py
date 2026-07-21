@@ -99,9 +99,19 @@ class ManagerAgent:
         """Analyzes the task and splits it into sub-tasks."""
         logger.info("PHASE 1: Map - Decomposing Task")
         
+        design_docs_content = ""
+        try:
+            import os
+            if os.path.exists(".liminal/design_docs.md"):
+                with open(".liminal/design_docs.md", "r") as f:
+                    design_docs_content = f.read()
+        except Exception:
+            pass
+
         system_prompt = (
             "You are a Project Manager. "
             "Break down the user's request into parallelizable sub-tasks for Technician Agents. "
+            f"Adhere to the current swarm architectural design:\n--- DESIGN DOCS ---\n{design_docs_content}\n--- END ---\n"
             "Return ONLY a JSON list of objects, each with 'id' (short string), 'prompt' (instruction), and 'context' (data). "
             "Example: [{\"id\": \"db-mig\", \"prompt\": \"Migrate DB\", \"context\": \"...\"}]"
         )

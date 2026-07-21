@@ -57,7 +57,11 @@ from pipecatapp.agent_factory import create_tools
 @patch('pipecatapp.agent_factory.SpecLoaderTool')
 @patch('pipecatapp.agent_factory.SkillBuilderTool')
 @patch('pipecatapp.agent_factory.FrugalSandboxTool')
+@patch('pipecatapp.agent_factory.SchedulerTool')
+@patch('pipecatapp.agent_factory.FieldGuideTool')
+@patch('pipecatapp.agent_factory.DesignDocsTool')
 def test_create_tools_instantiates_last30days(
+        mock_design_docs, mock_field_guide, mock_scheduler,
     mock_frugal_sandbox, mock_skill_builder, mock_spec, mock_sync, mock_openworkers,
     mock_ocr, mock_jules, mock_heretic, mock_wasm, mock_atproto, mock_openclaw,
     mock_orchestrator, mock_git, mock_ha, mock_rag, mock_term, mock_power, mock_ansible,
