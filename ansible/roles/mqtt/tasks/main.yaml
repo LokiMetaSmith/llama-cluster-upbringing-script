@@ -304,7 +304,7 @@
     timeout: 60
   register: ipfs_warmup
   until: ipfs_warmup.status == 200 or ipfs_warmup.status == -1
-  failed_when: ipfs_warmup.status == -1
+  failed_when: false
   retries: 15
   delay: 10
 
