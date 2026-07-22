@@ -5,19 +5,23 @@ set -euo pipefail
 
 # --- Arguments ---
 KEEP_CACHE=0
+FLASH=0
 
 for arg in "$@"; do
     if [ "$arg" = "-h" ] || [ "$arg" = "--help" ]; then
-        echo "Usage: ./build_iso.sh [--keep-cache]"
+        echo "Usage: ./build_iso.sh [--keep-cache] [--flash]"
         echo ""
         echo "Builds a custom, bootable, headless Debian ISO for the Pipecat agent cluster."
         echo "Automatically spins up a Debian Trixie Docker container to ensure native live-build compatibility."
         echo ""
         echo "Options:"
         echo "  --keep-cache  Preserve the package cache and build artifacts to speed up subsequent runs"
+        echo "  --flash       Interactively select a USB drive and flash the built ISO to it"
         exit 0
     elif [ "$arg" = "--keep-cache" ]; then
         KEEP_CACHE=1
+    elif [ "$arg" = "--flash" ]; then
+        FLASH=1
     fi
 done
 
@@ -56,6 +60,66 @@ if [ ! -f /.dockerenv ]; then
         bash -c "apt-get update && apt-get install -y live-build xorriso mtools dosfstools grub-pc-bin grub-efi-amd64-bin syslinux syslinux-utils isolinux rsync && ./build_iso.sh $DOCKER_ARGS"
 
     echo "=== Build Complete (Host Wrapper) ==="
+
+    if [ "$FLASH" -eq 1 ]; then
+        echo "=== USB Flashing Utility ==="
+        ISO_FILE="${BUILD_DIR}/${ISO_NAME}-${ARCHITECTURE}.iso"
+
+        if [ ! -f "$ISO_FILE" ]; then
+            echo "Error: ISO file not found at $ISO_FILE"
+            exit 1
+        fi
+
+        echo "Available removable drives:"
+        if command -v lsblk >/dev/null 2>&1; then
+            # Show disk path, size, model. Filter for typical USB properties if possible, but keep it broad enough.
+            lsblk -o NAME,SIZE,MODEL,TRAN,RM | grep -E "usb| 1 " | grep -v "loop" || echo "Could not auto-detect USB drives, or none found."
+            echo ""
+            lsblk -d -o NAME,SIZE,MODEL,RM
+        elif command -v diskutil >/dev/null 2>&1; then
+            diskutil list external
+        else
+            echo "Warning: Could not detect 'lsblk' or 'diskutil'. Please find your device path manually."
+        fi
+
+        echo ""
+        read -p "Enter the full path to the USB drive you want to flash (e.g., /dev/sdb or /dev/disk2): " USB_DRIVE
+
+        if [ -z "$USB_DRIVE" ]; then
+            echo "Error: No drive specified. Aborting."
+            exit 1
+        fi
+
+        if [ ! -b "$USB_DRIVE" ] && [ ! -c "$USB_DRIVE" ]; then
+            echo "Error: $USB_DRIVE is not a valid block or character device."
+            exit 1
+        fi
+
+        echo ""
+        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        echo "WARNING: ALL DATA ON $USB_DRIVE WILL BE PERMANENTLY DESTROYED."
+        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        read -p "Type 'yes' to proceed: " CONFIRM
+
+        if [ "$CONFIRM" != "yes" ]; then
+            echo "Aborting."
+            exit 1
+        fi
+
+        echo "Flashing $ISO_FILE to $USB_DRIVE..."
+
+        # Check if status=progress is supported (GNU dd vs BSD dd)
+        if dd --help 2>&1 | grep -q 'status=progress'; then
+            sudo dd if="$ISO_FILE" of="$USB_DRIVE" bs=4M status=progress oflag=sync
+        else
+            sudo dd if="$ISO_FILE" of="$USB_DRIVE" bs=4m
+        fi
+
+        echo "Syncing filesystem..."
+        sync
+        echo "=== Flashing Complete! ==="
+    fi
+
     exit 0
 fi
 
