@@ -1,6 +1,11 @@
-- hosts: controller_nodes
+- hosts: all
   gather_facts: yes
   become: yes
   roles:
     - vector
+
+- hosts: controller_nodes
+  gather_facts: yes
+  become: yes
+  roles:
     - security_agent
