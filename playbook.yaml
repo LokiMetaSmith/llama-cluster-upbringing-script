@@ -13,6 +13,7 @@
 - import_playbook: playbooks/app_jobs.yaml
 - import_playbook: playbooks/services/app_services.yaml
 - import_playbook: playbooks/services/monitoring.yaml
+- import_playbook: playbooks/services/security.yaml
 - import_playbook: playbooks/services/seed_models_to_ipfs.yaml
 - import_playbook: playbooks/services/model_services.yaml
 - import_playbook: playbooks/services/core_ai_services.yaml
