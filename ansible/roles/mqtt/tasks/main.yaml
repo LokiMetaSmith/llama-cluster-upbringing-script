@@ -300,11 +300,10 @@
   ansible.builtin.uri:
     url: "http://{{ cluster_ip }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ mosquitto_ipfs_cid }}"
     method: GET
-    status_code: [200, 502, 504]
     timeout: 60
   register: ipfs_warmup
-  until: ipfs_warmup.status == 200 or ipfs_warmup.status == -1
-  failed_when: ipfs_warmup.status == -1
+  until: ipfs_warmup.status is defined and ipfs_warmup.status == 200
+  ignore_errors: true
   retries: 15
   delay: 10
 
