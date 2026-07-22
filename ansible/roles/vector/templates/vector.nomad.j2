@@ -1,0 +1,86 @@
+job "vector" {
+  datacenters = ["dc1"]
+  type        = "system"
+
+  group "vector" {
+    network {
+      port "api" {
+        to = 8686
+      }
+    }
+
+    task "vector" {
+      driver = "docker"
+
+      config {
+        image = "vectordotdev/vector:0.38.0-alpine"
+        ports = ["api"]
+        args  = ["--config", "local/vector.yaml"]
+
+        # We need to mount the host's log directories so Vector can tail them
+        mount {
+          type     = "bind"
+          source   = "/var/log"
+          target   = "/var/log"
+          readonly = true
+        }
+        mount {
+          type     = "bind"
+          source   = "/opt/nomad/data/alloc"
+          target   = "/opt/nomad/data/alloc"
+          readonly = true
+        }
+      }
+
+      template {
+        data = <<EOH
+api:
+  enabled: true
+  address: "0.0.0.0:8686"
+
+sources:
+  syslog_files:
+    type: "file"
+    include:
+      - "/var/log/syslog"
+      - "/var/log/auth.log"
+
+  nomad_alloc_logs:
+    type: "file"
+    include:
+      - "/opt/nomad/data/alloc/*/alloc/logs/*"
+
+transforms:
+  # Filter only severe/auth events to keep it lightweight
+  filter_security_logs:
+    type: "filter"
+    inputs: ["syslog_files", "nomad_alloc_logs"]
+    condition: |
+      .message != null && (
+        includes(downcase(string!(.message)), "error") ||
+        includes(downcase(string!(.message)), "fail") ||
+        includes(downcase(string!(.message)), "unauthorized") ||
+        includes(downcase(string!(.message)), "denied")
+      )
+
+sinks:
+  # Forward to the local Security Agent via TCP
+  security_agent:
+    type: "socket"
+    inputs: ["filter_security_logs"]
+    encoding:
+      codec: "json"
+    mode: "tcp"
+    # We will use the Nomad service variable to resolve the host and port
+    address: "{% raw %}{{ range service \"security-agent\" }}{{ .Address }}:{{ .Port }}{{ end }}{% end raw %}"
+EOH
+        destination = "local/vector.yaml"
+      }
+
+      resources {
+        cpu    = 100
+        memory = 128
+      }
+    }
+  }
+}

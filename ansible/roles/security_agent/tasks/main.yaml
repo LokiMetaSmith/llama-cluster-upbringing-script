@@ -1,0 +1,47 @@
+- name: Check if Nomad CLI cert exists
+  ansible.builtin.stat:
+    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
+  register: nomad_cli_cert_stat
+
+- name: Set nomad_protocol fact
+  ansible.builtin.set_fact:
+    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
+
+- name: Ensure agent directory exists
+  ansible.builtin.file:
+    path: /opt/security-agent
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Copy security agent files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/opt/security-agent/{{ item }}"
+  become: yes
+  loop:
+    - Dockerfile
+    - requirements.txt
+    - security_agent.py
+
+- name: Build local security-agent Docker image
+  ansible.builtin.command:
+    cmd: docker build -t local/security-agent:latest /opt/security-agent
+  become: yes
+  changed_when: true
+
+- name: Template security_agent job
+  ansible.builtin.template:
+    src: security_agent.nomad.j2
+    dest: "{{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/security-agent.nomad"
+  become: yes
+
+- name: Run security-agent job
+  ansible.builtin.command:
+    cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/security-agent.nomad
+  environment:
+    NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+  changed_when: true
