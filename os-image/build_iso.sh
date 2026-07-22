@@ -145,12 +145,12 @@ lb config \
   --mirror-binary "http://deb.debian.org/debian/" \
   --parent-mirror-debian-installer "http://deb.debian.org/debian/" \
   --mirror-debian-installer "http://deb.debian.org/debian/" \
-  --archive-areas "main contrib non-free-firmware" \
+  --archive-areas "main contrib non-free non-free-firmware" \
   --apt-indices true \
   --apt-recommends false \
   --security false \
-  --firmware-chroot false \
-  --firmware-binary false \
+  --firmware-chroot true \
+  --firmware-binary true \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
   --bootloader "syslinux,grub-efi" \
@@ -160,7 +160,7 @@ lb config \
   --debian-installer live \
   --win32-loader false \
   --bootappend-live "boot=live components quiet splash nomodeset locales=en_US.UTF-8 keyboard-layouts=us live-config.username=pipecatapp live-config.user-fullname=PipecatApp" \
-  --bootappend-install "auto=true priority=critical file=/preseed.cfg nomodeset netcfg/choose_interface=auto"
+  --bootappend-install "auto=true priority=critical file=/preseed.cfg nomodeset netcfg/choose_interface=auto netcfg/link_wait_timeout=5 netcfg/dhcp_timeout=15 netcfg/prompt_for_interface=false"
 
 echo "=== Injecting project files ==="
 # Explicitly install live-config inside the chroot so autologin functions correctly
