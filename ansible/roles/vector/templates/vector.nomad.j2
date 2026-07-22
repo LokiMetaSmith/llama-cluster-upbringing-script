@@ -7,6 +7,21 @@ job "vector" {
       port "api" {
         to = 8686
       }
+      port "metrics" {
+        to = 9598
+      }
+    }
+
+    service {
+      name = "vector-metrics"
+      port = "metrics"
+      tags = ["metrics", "prometheus"]
+      check {
+        type     = "http"
+        path     = "/metrics"
+        interval = "10s"
+        timeout  = "2s"
+      }
     }
 
     task "vector" {
@@ -14,7 +29,7 @@ job "vector" {
 
       config {
         image = "vectordotdev/vector:0.38.0-alpine"
-        ports = ["api"]
+        ports = ["api", "metrics"]
         args  = ["--config", "local/vector.yaml"]
 
         # We need to mount the host's log directories so Vector can tail them
@@ -29,6 +44,12 @@ job "vector" {
           source   = "/opt/nomad/data/alloc"
           target   = "/opt/nomad/data/alloc"
           readonly = true
+        }
+        mount {
+          type     = "bind"
+          source   = "/opt/unified_fs_backend"
+          target   = "/opt/unified_fs_backend"
+          readonly = false
         }
       }
 
@@ -73,6 +94,20 @@ sinks:
     mode: "tcp"
     # We will use the Nomad service variable to resolve the host and port
     address: "{% raw %}{{ range service \"security-agent\" }}{{ .Address }}:{{ .Port }}{{ end }}{% end raw %}"
+
+  # Archive to decentralized cluster storage
+  fs_archive:
+    type: "file"
+    inputs: ["filter_security_logs"]
+    path: "/opt/unified_fs_backend/security_logs/archive-%Y-%m-%d.log"
+    encoding:
+      codec: "json"
+
+  # Expose internal metrics for Prometheus/Grafana
+  prometheus_exporter:
+    type: "prometheus_exporter"
+    inputs: ["filter_security_logs"]
+    address: "0.0.0.0:9598"
 EOH
         destination = "local/vector.yaml"
       }
