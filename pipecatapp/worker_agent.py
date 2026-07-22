@@ -108,7 +108,10 @@ class WorkerAgent:
         if not self.pending_alerts:
             return
 
-        for alert in self.pending_alerts:
+        alerts_to_process = self.pending_alerts[:]
+        self.pending_alerts.clear()
+
+        for alert in alerts_to_process:
             severity = alert["severity"]
             message = alert["message"]
 
@@ -120,8 +123,6 @@ class WorkerAgent:
                 alert_msg = f"System notice (Severity: {severity}): {message}"
                 logger.info(f"Injecting {severity} Alert: {alert_msg}")
                 self.messages.append({"role": "user", "content": alert_msg})
-
-        self.pending_alerts.clear()
 
     def rehydrate_and_resume(self) -> bool:
         """Checks for existing state and prepares to resume if a crash occurred."""

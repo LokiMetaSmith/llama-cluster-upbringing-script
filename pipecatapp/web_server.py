@@ -839,7 +839,8 @@ async def discover_ouroboros_members():
                 {"name": "Cluster VR", "url": "/cluster_viz"},
                 {"name": "3D Workflow", "url": "/workflow_3d"},
                 {"name": "VR Index", "url": "/vr_index"},
-                {"name": "CommandDeck", "url": "http://127.0.0.1:8085/"}
+                {"name": "CommandDeck", "url": "http://127.0.0.1:8085/"},
+                {"name": "Security Dashboard", "url": "http://127.0.0.1:3000/d/security-dashboard"}
             ]
 
             for m in default_members:
@@ -976,7 +977,28 @@ async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = D
             web_uis.append({"name": "Nomad", "url": "#", "status": "unhealthy"})
 
 
-        # 3. Discover other HTTP services
+        # 3. Add Grafana / Security Dashboard specifically
+        try:
+            grafana_service_response = await client.get(f"{consul_url}/v1/catalog/service/grafana")
+            grafana_service_response.raise_for_status()
+            grafana_services = grafana_service_response.json()
+            if grafana_services:
+                grafana_address = grafana_services[0].get("ServiceAddress") or grafana_services[0].get("Address")
+                grafana_port = grafana_services[0].get("ServicePort")
+                # Check Grafana health via Consul
+                grafana_health_resp = await client.get(f"{consul_url}/v1/health/service/grafana?passing")
+                grafana_status = "healthy" if grafana_health_resp.status_code == 200 and grafana_health_resp.json() else "unhealthy"
+
+                grafana_url = format_url("http", grafana_address, grafana_port)
+                # Add base Grafana
+                web_uis.append({"name": "Grafana", "url": grafana_url, "status": grafana_status})
+                # Add direct link to Security Dashboard
+                web_uis.append({"name": "Security Dashboard", "url": f"{grafana_url}/d/security-dashboard", "status": grafana_status})
+        except Exception as e:
+            web_uis.append({"name": "Grafana / Security", "url": "#", "status": "unhealthy"})
+
+
+        # 4. Discover other HTTP services
         services_response = await client.get(f"{consul_url}/v1/catalog/services")
         services_response.raise_for_status()
         all_services = services_response.json()
