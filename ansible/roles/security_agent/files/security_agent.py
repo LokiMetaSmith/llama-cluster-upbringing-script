@@ -154,6 +154,20 @@ async def handle_client(reader, writer, mqtt_client):
         writer.close()
         await writer.wait_closed()
 
+async def heartbeat_task(mqtt_client):
+    while True:
+        if mqtt_client:
+            topic = "cluster/security/heartbeat"
+            payload = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "status": "ok"
+            }
+            try:
+                mqtt_client.publish(topic, json.dumps(payload))
+            except Exception as e:
+                logger.error(f"Failed to publish heartbeat: {e}")
+        await asyncio.sleep(30)
+
 async def main():
     logger.info("Starting Lightweight Security Agent...")
 
@@ -161,6 +175,9 @@ async def main():
 
     # Start the statistical monitoring background task
     asyncio.create_task(statistical_monitoring_task(mqtt_client))
+
+    # Start heartbeat task
+    asyncio.create_task(heartbeat_task(mqtt_client))
 
     # Start TCP Server for incoming logs (from Vector)
     server = await asyncio.start_server(

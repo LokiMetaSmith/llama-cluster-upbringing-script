@@ -26,6 +26,7 @@ from tools.swarm_tool import SwarmTool
 from tools.project_mapper_tool import ProjectMapperTool
 from tools.planner_tool import PlannerTool
 from tools.file_editor_tool import FileEditorTool
+from tools.security_remediation_tool import SecurityRemediationTool
 from tools.archivist_tool import ArchivistTool
 from tools.opencode_tool import OpencodeTool
 from tools.opencode_provider_tool import OpenCodeProviderTool
@@ -138,6 +139,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "schema_mapper": SchemaMapperTool(),
         "planner": PlannerTool(twin_service) if twin_service else None,
         "file_editor": FileEditorTool(root_dir="/opt/pipecatapp"),
+        "security_remediation": SecurityRemediationTool(),
         "archivist": ArchivistTool(),
         "opencode": OpencodeTool(
             base_url=config.get("opencode_api_url"),
