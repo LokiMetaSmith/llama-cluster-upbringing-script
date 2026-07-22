@@ -72,10 +72,24 @@ sources:
       - "/opt/nomad/data/alloc/*/alloc/logs/*"
 
 transforms:
+  # Parse standard syslog formats into structured JSON
+  parse_syslog_logs:
+    type: "remap"
+    inputs: ["syslog_files"]
+    source: |
+      # Parse the syslog message
+      parsed, err = parse_syslog(.message)
+      if err == null {
+        . = merge(., parsed)
+      } else {
+        # Fallback if not standard syslog
+        .appname = "unknown"
+      }
+
   # Filter only severe/auth events to keep it lightweight
   filter_security_logs:
     type: "filter"
-    inputs: ["syslog_files", "nomad_alloc_logs"]
+    inputs: ["parse_syslog_logs", "nomad_alloc_logs"]
     condition: |
       .message != null && (
         includes(downcase(string!(.message)), "error") ||

@@ -116,7 +116,16 @@ class WorkerAgent:
             message = alert["message"]
 
             if severity == "high":
-                alert_msg = f"URGENT SYSTEM SECURITY ALERT: {message}. Immediate investigation required. You MUST use your security_remediation tool if necessary."
+                # Automatically track this high-priority alert via the GoalTool
+                if "goal" in self.tools:
+                    goal_objective = f"Investigate and remediate critical security alert: {message}"
+                    try:
+                        self.tools["goal"].create_goal(self.task_id, goal_objective)
+                        logger.info(f"Automatically created security goal for task {self.task_id}")
+                    except Exception as e:
+                        logger.error(f"Failed to create security goal: {e}")
+
+                alert_msg = f"URGENT SYSTEM SECURITY ALERT: {message}. A new high-priority Goal has been created. Immediate investigation required. You MUST use your security_remediation tool if necessary."
                 logger.warning(f"Injecting High Severity Alert: {alert_msg}")
                 self.messages.append({"role": "user", "content": alert_msg})
             else:
