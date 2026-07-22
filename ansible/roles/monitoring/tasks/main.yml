@@ -48,6 +48,13 @@
     mode: '0644'
   become: yes
 
+- name: Copy Security Dashboard
+  ansible.builtin.copy:
+    src: security_dashboard.json
+    dest: "{{ nomad_volumes_dir }}/grafana/dashboards/security_dashboard.json"
+    mode: '0644'
+  become: yes
+
 - name: Allow Monitoring ports in UFW
   ansible.builtin.command: ufw allow {{ item }}/tcp
   become: yes
