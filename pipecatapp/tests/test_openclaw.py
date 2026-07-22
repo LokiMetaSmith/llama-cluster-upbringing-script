@@ -3,13 +3,10 @@ import asyncio
 import json
 from unittest.mock import MagicMock, AsyncMock, patch
 from integrations.openclaw import OpenClawClient
-from tools.openclaw_tool import OpenClawTool
+from pipecatapp.tools.openclaw_tool import OpenClawTool
 
 @pytest.mark.asyncio
 async def test_openclaw_client_handshake_and_send():
-    # Mock WebSocket connection
-    mock_ws = MagicMock()
-
     # Setup messages
     challenge_msg = json.dumps({
         "type": "event",
@@ -30,42 +27,55 @@ async def test_openclaw_client_handshake_and_send():
         "payload": {"id": "msg_123"}
     }
 
-    incoming_queue = asyncio.Queue()
+    class MockWebSocket:
+        def __init__(self):
+            self.incoming = asyncio.Queue()
+            self.sent = []
 
-    async def mock_iter():
-        while True:
-            msg = await incoming_queue.get()
-            if msg is None: break
-            yield msg
+        async def close(self):
+            pass
 
-    mock_ws.__aiter__.side_effect = mock_iter
+        async def __aiter__(self):
+            while True:
+                msg = await self.incoming.get()
+                if msg is None:
+                    break
+                yield msg
 
-    # Intercept send to respond
-    async def mock_send(msg_str):
-        msg = json.loads(msg_str)
-        if msg['type'] == 'req':
-            if msg['method'] == 'connect':
-                # Respond with hello-ok
-                # Note: real server echoes ID, but our client logic for handshake just checks for payload type
-                await incoming_queue.put(hello_ok_msg)
-            elif msg['method'] == 'message.send':
-                # Respond with success and matching ID
-                resp = send_response_msg_template.copy()
-                resp['id'] = msg['id']
-                await incoming_queue.put(json.dumps(resp))
+        async def send(self, msg_str):
+            self.sent.append(msg_str)
+            msg = json.loads(msg_str)
+            if msg['type'] == 'req':
+                if msg['method'] == 'connect':
+                    await self.incoming.put(hello_ok_msg)
+                elif msg['method'] == 'message.send':
+                    resp = send_response_msg_template.copy()
+                    resp['id'] = msg['id']
+                    await self.incoming.put(json.dumps(resp))
 
-    mock_ws.send = AsyncMock(side_effect=mock_send)
-    mock_ws.close = AsyncMock()
+    mock_ws = MockWebSocket()
+    await mock_ws.incoming.put(challenge_msg)
 
-    # Initial challenge (pushed immediately upon connect)
-    await incoming_queue.put(challenge_msg)
 
-    with patch('websockets.connect', new_callable=AsyncMock) as mock_connect:
-        mock_connect.return_value = mock_ws
+    class AsyncContextManagerMock:
+        def __await__(self):
+            async def get_ws():
+                return mock_ws
+            return get_ws().__await__()
+
+        async def __aenter__(self):
+            return mock_ws
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_connect_sync(*args, **kwargs):
+        return AsyncContextManagerMock()
+
+    with patch('websockets.connect', side_effect=mock_connect_sync) as mock_connect:
         client = OpenClawClient("ws://test")
-
-        # Test Connect
         await client.connect()
+
         assert client._connected
         assert client._handshake_complete.is_set()
 
@@ -75,34 +85,28 @@ async def test_openclaw_client_handshake_and_send():
         assert res['payload']['id'] == "msg_123"
 
         # Verify connect request params
-        calls = mock_ws.send.call_args_list
-        # calls[0] should be connect request
-        connect_req = json.loads(calls[0][0][0])
+        connect_req = json.loads(mock_ws.sent[0])
         assert connect_req['method'] == 'connect'
         assert connect_req['params']['role'] == 'operator'
 
-        # calls[1] should be message.send
-        send_req = json.loads(calls[1][0][0])
+        send_req = json.loads(mock_ws.sent[1])
         assert send_req['method'] == 'message.send'
         assert send_req['params']['target'] == '123'
         assert send_req['params']['message'] == 'hello'
 
         # Clean up
-        await incoming_queue.put(None) # Stop iterator
+        await mock_ws.incoming.put(None)
         await client.disconnect()
 
 @pytest.mark.asyncio
 async def test_openclaw_tool():
-    # Similar setup but testing the tool wrapper
-    with patch('integrations.openclaw.OpenClawClient.connect', new_callable=AsyncMock) as mock_connect, \
-         patch('integrations.openclaw.OpenClawClient.send_message', new_callable=AsyncMock) as mock_send:
+    tool = OpenClawTool("ws://test")
+    tool.client = MagicMock()
+    tool.client.connect = AsyncMock()
+    tool.client.send_message = AsyncMock(return_value={"ok": True, "payload": {"id": "msg_123"}})
 
-        tool = OpenClawTool("ws://test")
+    result = await tool.send_message("123", "hi")
 
-        mock_send.return_value = {"ok": True, "payload": {"id": "msg_123"}}
-
-        result = await tool.send_message("123", "hi")
-
-        mock_connect.assert_called_once()
-        mock_send.assert_called_once_with("123", "hi", None)
-        assert "Message sent successfully" in result
+    tool.client.connect.assert_called_once()
+    tool.client.send_message.assert_called_once_with("123", "hi", None)
+    assert "Message sent successfully" in result

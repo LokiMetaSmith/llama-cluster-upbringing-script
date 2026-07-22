@@ -455,4 +455,6 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 
 ## Future Model Integrations
 
+- [x] **Ornith-1.0 Integration:** Add Ornith-1.0-9B and Ornith-1.0-35B GGUF models to `group_vars/models.yaml` as the core local coding model, taking advantage of its `<think>` reasoning block parsing compatibility.
+
 - [x] **Orthrus Integration:** Track upstream support in `llama.cpp` or native `vLLM` for "Orthrus" (dual-view diffusion decoding model, e.g., `chiennv/Orthrus-Qwen3-8B`). Once supported by our core inference engines, integrate it into `group_vars/models.yaml` to take advantage of its memory-efficient parallel token generation for complex reasoning tasks.

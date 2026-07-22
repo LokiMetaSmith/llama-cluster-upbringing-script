@@ -44,9 +44,9 @@ Integration with OpenClaw is straightforward and officially supported.
 `Ornith-1.0` is highly recommended for inclusion. The 9B/35B GGUF checkpoints provide excellent local deployment viability, the Unsloth compatibility aligns perfectly with our MTaC pipeline, and its native OpenAI tool-calling with reasoning blocks makes it an exceptionally strong engine for OpenClaw agents.
 
 ## Implementation Steps (TODO)
-- [ ] **Download GGUF Checkpoints:** Fetch the `Ornith-1.0-9B-GGUF` and `Ornith-1.0-35B-GGUF` model files onto the cluster.
-- [ ] **Configure Cluster Infrastructure:** Deploy the checkpoints to the shared `/opt/nomad/models` IPFS storage or cluster volume for high availability.
-- [ ] **Setup Local Inference Server:** Create and dispatch a Nomad job running `llama-server` (or `vLLM` if GPU memory allows) pointing to the Ornith-1 GGUF files.
-- [ ] **Configure OpenClaw:** Update the OpenClaw deployment configuration (e.g., environment variables `OPENAI_BASE_URL` and `OPENAI_MODEL`) to point to the newly established local endpoint.
-- [ ] **Verify Reasoning Parsing:** Ensure the server is correctly configured to parse `<think>` blocks (e.g., using `--reasoning-parser qwen3`) so agent workflows do not fail due to malformed tool calls.
-- [ ] **Test MTaC Pipeline:** Run a small Supervised Fine-Tuning job using the `Ornith-1.0-9B` model via Unsloth within the MTaC pipeline to verify compatibility.
+- [x] **Download GGUF Checkpoints:** Fetch the `Ornith-1.0-9B-GGUF` and `Ornith-1.0-35B-GGUF` model files onto the cluster.
+- [x] **Configure Cluster Infrastructure:** Deploy the checkpoints to the shared `/opt/nomad/models` IPFS storage or cluster volume for high availability.
+- [x] **Setup Local Inference Server:** Create and dispatch a Nomad job running `llama-server` (or `vLLM` if GPU memory allows) pointing to the Ornith-1 GGUF files.
+- [x] **Configure OpenClaw:** Update the OpenClaw deployment configuration (e.g., environment variables `OPENAI_BASE_URL` and `OPENAI_MODEL`) to point to the newly established local endpoint.
+- [x] **Verify Reasoning Parsing:** Ensure the server is correctly configured to parse `<think>` blocks (e.g., using `--reasoning-parser qwen3`) so agent workflows do not fail due to malformed tool calls.
+- [x] **Test MTaC Pipeline:** Run a small Supervised Fine-Tuning job using the `Ornith-1.0-9B` model via Unsloth within the MTaC pipeline to verify compatibility.

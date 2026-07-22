@@ -53,6 +53,9 @@ job "openclaw" {
 
       env {
         TERM = "xterm-256color"
+        OPENAI_BASE_URL = "http://{{ controller_host }}:8000/v1"
+        OPENAI_API_KEY = "EMPTY"
+        OPENAI_MODEL = "Ornith-1.0-9B-GGUF"
         # Enable Shell tool for integration
         # Note: You may need to explicitly allow the shell tool in ~/.openclaw/openclaw.json
         # or via OPENCLAW_TOOL_POLICIES env vars if supported.
