@@ -46,6 +46,82 @@ class WorkerAgent:
         self.durable_engine = DurableExecutionEngine()
         self.current_flow_id = self.task_id
         self.step_counter = 0
+        self.mqtt_client = None
+
+        # Buffer to hold alerts off the main thread so they can be injected safely
+        self.pending_alerts = []
+        self.last_heartbeat_time = time.time()
+
+    def setup_security_monitoring(self):
+        """Sets up MQTT client to listen for security alerts and heartbeats."""
+        mqtt_broker = os.getenv("MQTT_BROKER", "mqtt.service.consul")
+        mqtt_port = int(os.getenv("MQTT_PORT", "1883"))
+
+        try:
+            import paho.mqtt.client as mqtt
+            self.mqtt_client = mqtt.Client(client_id=f"worker_agent_{self.task_id}")
+
+            def on_connect(client, userdata, flags, rc):
+                if rc == 0:
+                    logger.info("Connected to MQTT broker for security monitoring.")
+                    client.subscribe("cluster/security/alerts/#")
+                    client.subscribe("cluster/security/heartbeat")
+                else:
+                    logger.warning(f"Failed to connect to MQTT broker, rc={rc}")
+
+            def on_message(client, userdata, msg):
+                try:
+                    payload = json.loads(msg.payload.decode('utf-8'))
+
+                    if msg.topic == "cluster/security/heartbeat":
+                        self.last_heartbeat_time = time.time()
+                        return
+
+                    severity = payload.get("severity", "low")
+                    message = payload.get("message", "Unknown alert")
+                    self.pending_alerts.append({"severity": severity, "message": message})
+
+                except Exception as e:
+                    logger.error(f"Error parsing MQTT message: {e}")
+
+            self.mqtt_client.on_connect = on_connect
+            self.mqtt_client.on_message = on_message
+
+            self.mqtt_client.connect(mqtt_broker, mqtt_port, 60)
+            self.mqtt_client.loop_start()
+        except ImportError:
+            logger.warning("paho-mqtt not installed. Security monitoring disabled.")
+        except Exception as e:
+            logger.warning(f"Could not setup security monitoring: {e}")
+
+    def inject_pending_alerts(self):
+        """Injects queued alerts into the message history synchronously before the next LLM call."""
+        if not self.mqtt_client:
+            return
+
+        if time.time() - self.last_heartbeat_time > 90: # 1.5 minutes without heartbeat
+            alert_msg = "URGENT: Security Agent heartbeat lost. The monitoring system may be compromised or down."
+            logger.warning(alert_msg)
+            self.messages.append({"role": "user", "content": alert_msg})
+            self.last_heartbeat_time = time.time() # Reset so we don't spam
+
+        if not self.pending_alerts:
+            return
+
+        for alert in self.pending_alerts:
+            severity = alert["severity"]
+            message = alert["message"]
+
+            if severity == "high":
+                alert_msg = f"URGENT SYSTEM SECURITY ALERT: {message}. Immediate investigation required. You MUST use your security_remediation tool if necessary."
+                logger.warning(f"Injecting High Severity Alert: {alert_msg}")
+                self.messages.append({"role": "user", "content": alert_msg})
+            else:
+                alert_msg = f"System notice (Severity: {severity}): {message}"
+                logger.info(f"Injecting {severity} Alert: {alert_msg}")
+                self.messages.append({"role": "user", "content": alert_msg})
+
+        self.pending_alerts.clear()
 
     def rehydrate_and_resume(self) -> bool:
         """Checks for existing state and prepares to resume if a crash occurred."""
@@ -290,6 +366,8 @@ Respond in exactly this JSON format:
         if self.memory_url:
             self.memory_client = PMMMemoryClient(self.memory_url)
 
+        self.setup_security_monitoring()
+
         if self.memory_client:
             try:
                 await self.memory_client.add_event(
@@ -348,6 +426,7 @@ Use this Task ID when creating, updating, or getting goals with the goal tool.
         try:
             async with httpx.AsyncClient() as client:
                 while step_count < self.max_steps and status == "running":
+                    self.inject_pending_alerts()
                     step_count += 1
                     status, final_output = await self.perform_step(step_count, client)
                     # Safety Net Evaluator Hook
@@ -409,6 +488,10 @@ Use this Task ID when creating, updating, or getting goals with the goal tool.
                 except:
                     pass
             sys.exit(1)
+        finally:
+            if self.mqtt_client:
+                self.mqtt_client.loop_stop()
+                self.mqtt_client.disconnect()
 
 
 if __name__ == "__main__":
