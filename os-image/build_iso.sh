@@ -109,10 +109,11 @@ if [ ! -f /.dockerenv ]; then
         echo "Flashing $ISO_FILE to $USB_DRIVE..."
 
         # Check if status=progress is supported (GNU dd vs BSD dd)
+        # Using raw bytes (4194304 = 4MB) to avoid BSD vs GNU suffix discrepancies (e.g., '4m' vs '4M')
         if dd --help 2>&1 | grep -q 'status=progress'; then
-            sudo dd if="$ISO_FILE" of="$USB_DRIVE" bs=4M status=progress oflag=sync
+            sudo dd if="$ISO_FILE" of="$USB_DRIVE" bs=4194304 status=progress oflag=sync
         else
-            sudo dd if="$ISO_FILE" of="$USB_DRIVE" bs=4m
+            sudo dd if="$ISO_FILE" of="$USB_DRIVE" bs=4194304
         fi
 
         echo "Syncing filesystem..."
