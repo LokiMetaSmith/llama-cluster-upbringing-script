@@ -100,3 +100,37 @@ async def test_worker_agent_heartbeat_timeout():
     assert "URGENT: Security Agent heartbeat lost" in agent.messages[0]["content"]
     # Check that time was reset to prevent spam
     assert time.time() - agent.last_heartbeat_time < 5
+
+from network_investigator_tool import NetworkInvestigatorTool
+from process_investigator_tool import ProcessInvestigatorTool
+
+@pytest.fixture
+def network_tool():
+    return NetworkInvestigatorTool()
+
+@pytest.fixture
+def process_tool():
+    return ProcessInvestigatorTool()
+
+def test_network_investigator_success(network_tool):
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(stdout="State Recv-Q Send-Q Local Address:Port Peer Address:PortProcess\nESTAB 0 0 127.0.0.1:80 127.0.0.1:54321 users:((\"nginx\",pid=123,fd=3))", returncode=0)
+
+        result = network_tool.run()
+
+        mock_run.assert_called_once_with(["ss", "-tupna"], capture_output=True, text=True, check=True)
+        assert "Active connections:" in result
+        assert "nginx" in result
+
+def test_process_investigator_truncation(process_tool):
+    with patch("subprocess.run") as mock_run:
+        # Create a fake output with 30 lines
+        fake_out = "HEADER\n" + "\n".join([f"line {i}" for i in range(30)])
+        mock_run.return_value = MagicMock(stdout=fake_out, returncode=0)
+
+        result = process_tool.run(sort_by="cpu")
+
+        mock_run.assert_called_once_with(["ps", "eo", "user,pid,%cpu,%mem,command", "--sort", "-pcpu"], capture_output=True, text=True, check=True)
+        assert "Top processes sorted by cpu:" in result
+        assert "line 19" in result
+        assert "line 21" not in result # Should be truncated at 20 + header = 21 lines total
