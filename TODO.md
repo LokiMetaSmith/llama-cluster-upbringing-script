@@ -248,6 +248,13 @@ This section tracks identified placeholder files, corrupted binaries, and code t
 - [x] **Remove or Implement Empty Handler:**
   - [x] `ansible/roles/bootstrap_agent/handlers/main.yaml` is currently empty.
 
+- [ ] **Enhance USB Flashing in `build_iso.sh`:**
+  - **Goal:** Improve the `--flash` utility to support cluster provisioning workflows.
+  - **Tasks:**
+    1. **Flashing Multiple Drives:** Allow the user to input multiple device paths separated by spaces to flash multiple USB sticks sequentially.
+    2. **Post-flash Verification:** Add checksum validation (e.g. `md5sum` or `sha256sum`) that reads back from the flashed USB stick to verify data integrity and throw an error if corrupted.
+    3. **Auto-mounting / File Injection:** Add an `--inject <folder_path>` flag to automatically create a new `CONFIGS` partition on the USB stick and copy configuration files into it.
+
 - [x] **Reconcile Stale Artifacts:**
   - [x] `pipecatapp/app.py` contains code and TODOs (e.g., vision model failover). Determine if these changes should be merged or if the artifact should be regenerated.
 - [x] **Vision Model Failover**: Implement failover or selection logic for vision models (see `pipecatapp/app.py`).
