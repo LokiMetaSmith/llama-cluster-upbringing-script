@@ -6,24 +6,50 @@ set -euo pipefail
 # --- Arguments ---
 KEEP_CACHE=0
 FLASH=0
+INJECT_DIR=""
 
-for arg in "$@"; do
-    if [ "$arg" = "-h" ] || [ "$arg" = "--help" ]; then
-        echo "Usage: ./build_iso.sh [--keep-cache] [--flash]"
-        echo ""
-        echo "Builds a custom, bootable, headless Debian ISO for the Pipecat agent cluster."
-        echo "Automatically spins up a Debian Trixie Docker container to ensure native live-build compatibility."
-        echo ""
-        echo "Options:"
-        echo "  --keep-cache  Preserve the package cache and build artifacts to speed up subsequent runs"
-        echo "  --flash       Interactively select a USB drive and flash the built ISO to it"
-        exit 0
-    elif [ "$arg" = "--keep-cache" ]; then
-        KEEP_CACHE=1
-    elif [ "$arg" = "--flash" ]; then
-        FLASH=1
-    fi
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            echo "Usage: ./build_iso.sh [--keep-cache] [--flash] [--inject <dir>]"
+            echo ""
+            echo "Builds a custom, bootable, headless Debian ISO for the Pipecat agent cluster."
+            echo "Automatically spins up a Debian Trixie Docker container to ensure native live-build compatibility."
+            echo ""
+            echo "Options:"
+            echo "  --keep-cache    Preserve the package cache and build artifacts to speed up subsequent runs"
+            echo "  --flash         Interactively select USB drives and flash the built ISO to them"
+            echo "  --inject <dir>  Inject the contents of a directory into a new FAT32 CONFIGS partition on the USB drive (Linux only, implies --flash)"
+            exit 0
+            ;;
+        --keep-cache)
+            KEEP_CACHE=1
+            shift
+            ;;
+        --flash)
+            FLASH=1
+            shift
+            ;;
+        --inject)
+            INJECT_DIR="$2"
+            FLASH=1
+            shift 2
+            ;;
+        *)
+            echo "Unknown option $1"
+            exit 1
+            ;;
+    esac
 done
+
+if [ -n "$INJECT_DIR" ]; then
+    if [ ! -d "$INJECT_DIR" ]; then
+        echo "Error: Inject directory '$INJECT_DIR' does not exist."
+        exit 1
+    fi
+    # Make INJECT_DIR absolute before we cd around
+    INJECT_DIR="$(cd "$INJECT_DIR" && pwd)"
+fi
 
 # --- Configuration ---
 DISTRIBUTION="trixie" # Recommended in README
@@ -51,6 +77,7 @@ if [ ! -f /.dockerenv ]; then
         DOCKER_ARGS="--keep-cache"
     fi
 
+    # Pass along DOCKER_ARGS ensuring we don't pass host-specific flashing args to the inner container build loop
     # Run this script inside a privileged container
     echo "Executing build inside debian:${DISTRIBUTION} container..."
     sudo docker run --rm -it --privileged \
@@ -83,21 +110,29 @@ if [ ! -f /.dockerenv ]; then
         fi
 
         echo ""
-        read -p "Enter the full path to the USB drive you want to flash (e.g., /dev/sdb or /dev/disk2): " USB_DRIVE
+        read -p "Enter the full paths to the USB drives you want to flash, separated by space (e.g., /dev/sdb /dev/sdc): " USB_DRIVES_INPUT
 
-        if [ -z "$USB_DRIVE" ]; then
-            echo "Error: No drive specified. Aborting."
+        if [ -z "$USB_DRIVES_INPUT" ]; then
+            echo "Error: No drives specified. Aborting."
             exit 1
         fi
 
-        if [ ! -b "$USB_DRIVE" ] && [ ! -c "$USB_DRIVE" ]; then
-            echo "Error: $USB_DRIVE is not a valid block or character device."
-            exit 1
-        fi
+        # Convert input into an array
+        read -ra USB_DRIVES <<< "$USB_DRIVES_INPUT"
+
+        for USB_DRIVE in "${USB_DRIVES[@]}"; do
+            if [ ! -b "$USB_DRIVE" ] && [ ! -c "$USB_DRIVE" ]; then
+                echo "Error: $USB_DRIVE is not a valid block or character device. Aborting."
+                exit 1
+            fi
+        done
 
         echo ""
         echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-        echo "WARNING: ALL DATA ON $USB_DRIVE WILL BE PERMANENTLY DESTROYED."
+        echo "WARNING: ALL DATA ON THE FOLLOWING DRIVES WILL BE PERMANENTLY DESTROYED:"
+        for USB_DRIVE in "${USB_DRIVES[@]}"; do
+            echo "  - $USB_DRIVE"
+        done
         echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
         read -p "Type 'yes' to proceed: " CONFIRM
 
@@ -106,19 +141,115 @@ if [ ! -f /.dockerenv ]; then
             exit 1
         fi
 
-        echo "Flashing $ISO_FILE to $USB_DRIVE..."
-
-        # Check if status=progress is supported (GNU dd vs BSD dd)
-        # Using raw bytes (4194304 = 4MB) to avoid BSD vs GNU suffix discrepancies (e.g., '4m' vs '4M')
-        if dd --help 2>&1 | grep -q 'status=progress'; then
-            sudo dd if="$ISO_FILE" of="$USB_DRIVE" bs=4194304 status=progress oflag=sync
+        echo "Calculating reference checksum for $ISO_FILE..."
+        if command -v md5sum >/dev/null 2>&1; then
+            REF_CHECKSUM=$(md5sum "$ISO_FILE" | awk '{print $1}')
+            ISO_SIZE=$(stat -c%s "$ISO_FILE")
+        elif command -v md5 >/dev/null 2>&1; then
+            # macOS fallback
+            REF_CHECKSUM=$(md5 -q "$ISO_FILE")
+            ISO_SIZE=$(stat -f%z "$ISO_FILE")
         else
-            sudo dd if="$ISO_FILE" of="$USB_DRIVE" bs=4194304
+            echo "Warning: md5sum or md5 not found. Verification will be skipped."
+            REF_CHECKSUM=""
         fi
 
-        echo "Syncing filesystem..."
-        sync
-        echo "=== Flashing Complete! ==="
+        for USB_DRIVE in "${USB_DRIVES[@]}"; do
+            echo ""
+            echo "--- Flashing $ISO_FILE to $USB_DRIVE ---"
+
+            # Check if status=progress is supported (GNU dd vs BSD dd)
+            # Using raw bytes (4194304 = 4MB) to avoid BSD vs GNU suffix discrepancies (e.g., '4m' vs '4M')
+            if dd --help 2>&1 | grep -q 'status=progress'; then
+                sudo dd if="$ISO_FILE" of="$USB_DRIVE" bs=4194304 status=progress oflag=sync
+            else
+                sudo dd if="$ISO_FILE" of="$USB_DRIVE" bs=4194304
+            fi
+
+            echo "Syncing filesystem..."
+            sync
+
+            if [ -n "$REF_CHECKSUM" ]; then
+                echo "Verifying $USB_DRIVE..."
+
+                # Calculate how many 1MB blocks to read to cover the ISO size (ceiling division)
+                DD_COUNT=$(( (ISO_SIZE + 1048575) / 1048576 ))
+
+                if command -v md5sum >/dev/null 2>&1; then
+                    DRIVE_CHECKSUM=$(sudo dd if="$USB_DRIVE" bs=1048576 count="$DD_COUNT" 2>/dev/null | head -c "$ISO_SIZE" | md5sum | awk '{print $1}')
+                else
+                    DRIVE_CHECKSUM=$(sudo dd if="$USB_DRIVE" bs=1048576 count="$DD_COUNT" 2>/dev/null | head -c "$ISO_SIZE" | md5 -q)
+                fi
+
+                if [ "$REF_CHECKSUM" != "$DRIVE_CHECKSUM" ]; then
+                    echo "ERROR: Checksum mismatch on $USB_DRIVE!"
+                    echo "  Expected: $REF_CHECKSUM"
+                    echo "  Got:      $DRIVE_CHECKSUM"
+                    echo "Aborting further operations."
+                    exit 1
+                else
+                    echo "Verification successful!"
+                fi
+            fi
+
+            if [ -n "$INJECT_DIR" ]; then
+                if [ "$(uname -s)" != "Linux" ]; then
+                    echo "Warning: Config injection is currently only supported on Linux. Skipping injection for $USB_DRIVE."
+                else
+                    echo "--- Injecting Configs into $USB_DRIVE ---"
+                    if ! command -v parted >/dev/null 2>&1 || ! command -v mkfs.vfat >/dev/null 2>&1 || ! command -v sgdisk >/dev/null 2>&1; then
+                        echo "Error: 'parted', 'sgdisk', and 'dosfstools' are required for injection. Skipping."
+                    else
+                        # 1. Create partition in remaining free space
+                        echo "Fixing GPT backup header to end of disk..."
+                        sudo sgdisk -e "$USB_DRIVE" || true
+
+                        echo "Creating CONFIGS partition..."
+                        sudo parted -s "$USB_DRIVE" mkpart primary fat32 "$ISO_SIZE"B 100%
+
+                        # Trigger kernel to re-read partition table
+                        sudo partprobe "$USB_DRIVE" || true
+                        sleep 3 # Give udev a moment to create the device node
+
+                        # Dynamically discover the newly created partition (highest partition number)
+                        # We cannot hardcode '2' because isohybrid images often already contain 2 partitions (ISO9660 and EFI)
+                        PART_NUM=$(lsblk -nl -o MIN,NAME "$USB_DRIVE" 2>/dev/null | grep -E "^[ ]*[0-9]+[ ]+.*[0-9]+$" | awk '{print $2}' | sed "s#.*${USB_DRIVE##*/}##" | sed 's/^p//' | sort -n | tail -1)
+
+                        if [ -z "$PART_NUM" ]; then
+                            echo "Error: Could not determine newly created partition number. Skipping injection."
+                        else
+                            if [[ "$USB_DRIVE" == *[0-9] ]]; then
+                                PART_DEV="${USB_DRIVE}p${PART_NUM}"
+                            else
+                                PART_DEV="${USB_DRIVE}${PART_NUM}"
+                            fi
+
+                            if [ ! -b "$PART_DEV" ]; then
+                                echo "Error: Could not find newly created partition $PART_DEV. Skipping injection."
+                            else
+                            # 2. Format as FAT32
+                            echo "Formatting $PART_DEV as FAT32..."
+                            sudo mkfs.vfat -n CONFIGS "$PART_DEV"
+
+                                # 3. Mount and Copy
+                                MNT_DIR=$(mktemp -d)
+                                sudo mount "$PART_DEV" "$MNT_DIR"
+                                echo "Copying files from $INJECT_DIR to $PART_DEV..."
+                                sudo cp -r "$INJECT_DIR"/* "$MNT_DIR"/
+
+                                sudo sync
+                                sudo umount "$MNT_DIR"
+                                rm -rf "$MNT_DIR"
+
+                                echo "Injection successful!"
+                            fi
+                        fi
+                    fi
+                fi
+            fi
+        done
+
+        echo "=== All Flashing Complete! ==="
     fi
 
     exit 0
