@@ -71,6 +71,9 @@ else:
     allowed_origins = []  # Secure default: Block all Cross-Origin requests
 
 if "*" in allowed_origins:
+    env_mode = os.getenv("ENV", "development").lower()
+    if env_mode == "production":
+        raise RuntimeError("Insecure CORS Configuration: Wildcard origin ('*') is not allowed in production mode. Set ALLOWED_ORIGINS to a specific list of trusted domains.")
     logging.warning("⚠️  Security Warning: CORS is configured to allow all origins ('*'). This is acceptable for development but insecure for production. Set 'ALLOWED_ORIGINS' environment variable to a comma-separated list of trusted domains.")
 
 app.add_middleware(
