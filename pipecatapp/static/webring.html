@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ouroboros Webring Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: monospace;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+        }
+        #nav-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.85);
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            z-index: 1000;
+        }
+        .nav-btn {
+            padding: 6px 12px;
+            background: #222;
+            border: 1px solid #444;
+            color: #fff;
+            text-decoration: none;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .nav-btn:hover {
+            background: #333;
+        }
+        #iframe-container {
+            position: absolute;
+            top: 40px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 40px);
+            background: #000;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        #error-overlay {
+            display: none;
+            position: absolute;
+            top: 40px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 40px);
+            background: #1a1a1a;
+            color: #f0f0f0;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 999;
+        }
+        #error-overlay h2 { color: #ff6347; }
+    </style>
+</head>
+<body>
+
+    <div id="nav-bar">
+        <span style="color: #777; font-size: 0.8em; text-transform: uppercase;">Ouroboros Webring</span>
+        <a href="#" id="prev-btn" class="nav-btn" title="Previous member (Left Arrow)">« Prev</a>
+        <a href="#" id="random-btn" class="nav-btn" title="Random member (R)">Random</a>
+        <a href="#" id="next-btn" class="nav-btn" title="Next member (Right Arrow)">Next »</a>
+        <a href="/" class="nav-btn" title="Return to Mission Control (Esc)">Home</a>
+    </div>
+
+    <div id="error-overlay">
+        <h2>Connection Error</h2>
+        <p>Could not load the destination URL.</p>
+        <p>Use the navigation bar above or press Left/Right arrow keys to continue traversing the webring.</p>
+    </div>
+
+    <div id="iframe-container">
+        <iframe id="content-frame" src=""></iframe>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let targetUrl = urlParams.get('target');
+        const frame = document.getElementById('content-frame');
+        const errorOverlay = document.getElementById('error-overlay');
+
+        // Build navigation URLs safely retaining current context
+        // If we don't know who we are (no target), /webring/next might fail, but random will work.
+        // We pass the current target as the referer equivalent 'from' parameter.
+        const navBaseQuery = targetUrl ? `?from=${encodeURIComponent(targetUrl)}` : '';
+
+        document.getElementById('prev-btn').href = `/webring/prev${navBaseQuery}`;
+        document.getElementById('next-btn').href = `/webring/next${navBaseQuery}`;
+        document.getElementById('random-btn').href = `/webring/random`;
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ignore if user is typing in an input inside the iframe (though cross-origin might block this anyway)
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.key === 'ArrowLeft') {
+                window.location.href = document.getElementById('prev-btn').href;
+            } else if (e.key === 'ArrowRight') {
+                window.location.href = document.getElementById('next-btn').href;
+            } else if (e.key.toLowerCase() === 'r') {
+                window.location.href = document.getElementById('random-btn').href;
+            } else if (e.key === 'Escape') {
+                window.location.href = '/';
+            }
+        });
+
+        // Basic error handling for iframe load failures (CSP/X-Frame-Options/Network)
+        frame.onerror = function() {
+            errorOverlay.style.display = 'flex';
+        };
+
+        if (targetUrl) {
+            if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+                frame.src = targetUrl;
+                setTimeout(() => {
+                    const toast = document.createElement('div');
+                    toast.innerHTML = `<div style="background: rgba(255, 0, 0, 0.8); color: white; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1001; font-family: monospace; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.5);">If this screen remains blank, the member site may be offline or blocking embed requests (X-Frame-Options: DENY).<br><br>Press Left/Right arrows or click navigation above to continue traversing.</div>`;
+                    document.body.appendChild(toast);
+                }, 5000);
+            } else {
+                errorOverlay.style.display = 'flex';
+                errorOverlay.innerHTML = `<h2>Invalid URL</h2><p>The destination URL is not a valid HTTP/HTTPS scheme.</p><p>Use the navigation bar above or press Left/Right arrow keys to continue traversing the webring.</p>`;
+            }
+        } else {
+            errorOverlay.style.display = 'flex';
+            errorOverlay.innerHTML = `<h2>No Target URL</h2><p>Please use the navigation bar to continue.</p>`;
+        }
+    </script>
+</body>
+</html>

@@ -710,6 +710,7 @@ ensure_python_environment() {
     fi
 
     if [ "$DO_DRY_RUN" != true ]; then
+        run_step "Installing Node.js Environment" "pip install nodeenv && nodeenv -p"
         run_step "Installing OpenCode AI Agent" "npm ci"
     fi
 
