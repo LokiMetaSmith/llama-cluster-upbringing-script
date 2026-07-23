@@ -41,7 +41,7 @@
   block:
     - name: Ensure non-free component is in apt sources (for NVIDIA drivers on Debian)
       ansible.builtin.apt_repository:
-        repo: "deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware"
+        repo: "deb https://deb.debian.org/debian trixie main contrib non-free non-free-firmware"
         state: present
       become: yes
 

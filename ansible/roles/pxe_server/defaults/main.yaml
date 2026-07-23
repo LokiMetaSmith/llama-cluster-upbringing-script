@@ -1,5 +1,5 @@
 debian_version: "12.5.0"
-debian_mirror: "http://deb.debian.org/debian"
+debian_mirror: "https://deb.debian.org/debian"
 netboot_url: "{{ debian_mirror }}/dists/bookworm/main/installer-amd64/current/images/netboot/netboot.tar.gz"
 tftp_root: "/srv/tftp"
 nfs_root: "/srv/nfs/debian"
