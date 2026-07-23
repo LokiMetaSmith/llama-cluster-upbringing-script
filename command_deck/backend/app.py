@@ -307,6 +307,15 @@ class CommandDeckAPIHandler(BaseHTTPRequestHandler):
                 # Terminate python process in a separate thread to allow response to client first
                 def terminate_app():
                     time.sleep(1)
+
+                    # Try to set SDDM autologin session to plasmawayland and restart SDDM
+                    if os.path.exists('/etc/sddm.conf.d/autologin.conf'):
+                        try:
+                            subprocess.run(['sudo', 'sed', '-i', 's/Session=command-deck/Session=plasmawayland/g', '/etc/sddm.conf.d/autologin.conf'], check=True)
+                            subprocess.run(['sudo', 'systemctl', 'restart', 'sddm'], check=True)
+                        except Exception as e:
+                            print(f"Failed to configure or restart SDDM: {e}", flush=True)
+
                     os.kill(os.getpid(), signal.SIGTERM)
                 threading.Thread(target=terminate_app).start()
                 return
