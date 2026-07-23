@@ -189,6 +189,7 @@
   when: mosquitto_cache_stat.stat.exists
   register: load_mosquitto_cache
   ignore_errors: yes
+  changed_when: false
   delegate_to: "{{ controller_host }}"
   run_once: true
 
