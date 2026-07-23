@@ -268,14 +268,14 @@ lb config \
   --distribution "$DISTRIBUTION" \
   --architecture "$ARCHITECTURE" \
   --mode debian \
-  --parent-mirror-bootstrap "http://deb.debian.org/debian/" \
-  --mirror-bootstrap "http://deb.debian.org/debian/" \
-  --parent-mirror-chroot "http://deb.debian.org/debian/" \
-  --mirror-chroot "http://deb.debian.org/debian/" \
-  --parent-mirror-binary "http://deb.debian.org/debian/" \
-  --mirror-binary "http://deb.debian.org/debian/" \
-  --parent-mirror-debian-installer "http://deb.debian.org/debian/" \
-  --mirror-debian-installer "http://deb.debian.org/debian/" \
+  --parent-mirror-bootstrap "https://deb.debian.org/debian/" \
+  --mirror-bootstrap "https://deb.debian.org/debian/" \
+  --parent-mirror-chroot "https://deb.debian.org/debian/" \
+  --mirror-chroot "https://deb.debian.org/debian/" \
+  --parent-mirror-binary "https://deb.debian.org/debian/" \
+  --mirror-binary "https://deb.debian.org/debian/" \
+  --parent-mirror-debian-installer "https://deb.debian.org/debian/" \
+  --mirror-debian-installer "https://deb.debian.org/debian/" \
   --archive-areas "main contrib non-free non-free-firmware" \
   --apt-indices true \
   --apt-recommends false \
