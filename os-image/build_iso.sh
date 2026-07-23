@@ -84,7 +84,7 @@ if [ ! -f /.dockerenv ]; then
         -v "$BUILD_DIR/..:/opt/pipecat-cluster" \
         -w "/opt/pipecat-cluster/os-image" \
         "debian:${DISTRIBUTION}" \
-        bash -c "apt-get update && apt-get install -y live-build xorriso mtools dosfstools grub-pc-bin grub-efi-amd64-bin syslinux syslinux-utils isolinux rsync && ./build_iso.sh $DOCKER_ARGS"
+        bash -c "apt-get update && apt-get install -y live-build xorriso mtools dosfstools grub-pc-bin grub-efi-amd64-bin grub-efi-amd64-signed shim-signed syslinux syslinux-utils isolinux rsync && ./build_iso.sh $DOCKER_ARGS"
 
     echo "=== Build Complete (Host Wrapper) ==="
 
