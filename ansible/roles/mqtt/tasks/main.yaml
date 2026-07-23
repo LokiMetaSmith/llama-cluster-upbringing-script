@@ -298,7 +298,7 @@
 
 - name: Warm up IPFS gateway cache for Mosquitto tarball
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ mosquitto_ipfs_cid }}"
+    url: "https://{{ cluster_ip }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ mosquitto_ipfs_cid }}"
     method: GET
     timeout: 60
     status_code: [200, 502, 504]
