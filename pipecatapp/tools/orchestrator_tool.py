@@ -13,6 +13,36 @@ class OrchestratorTool:
         if self.world_model is None:
             self.world_model_url = os.getenv("WORLD_MODEL_URL", f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8000")
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "orchestratortool"),
+                "description": getattr(self, "description", "Tool OrchestratorTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: dispatch_job"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "dispatch_job":
+            return getattr(self, "dispatch_job")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def dispatch_job(self, model_name: str, prompt: str, cpu: int = 1000, memory: int = 4096, gpu_count: int = 1, context: str = ""):
         """Dispatches a Nomad batch job to run a model with the given prompt, resources, and optional context."""
         if self.world_model is not None and hasattr(self.world_model, 'dispatch_job'):

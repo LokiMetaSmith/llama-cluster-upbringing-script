@@ -17,6 +17,38 @@ class SearchTool:
         self.description = "Search the codebase for text patterns or file names."
         self.root_dir = os.path.realpath(root_dir)
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "searchtool"),
+                "description": getattr(self, "description", "Tool SearchTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: grep, find_file"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "grep":
+            return getattr(self, "grep")(**kwargs.get("kwargs", kwargs))
+        if action == "find_file":
+            return getattr(self, "find_file")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def _validate_path(self, path: str) -> str:
         """Ensures the path is within the allowed root directory."""
         if not os.path.isabs(path):

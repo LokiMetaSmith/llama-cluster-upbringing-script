@@ -24,6 +24,36 @@ class CouncilTool:
             "google/gemma-4-31b-it"
         ] if self.openrouter_api_key else []
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "counciltool"),
+                "description": getattr(self, "description", "Tool CouncilTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: convene"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "convene":
+            return getattr(self, "convene")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def _discover_local_experts(self) -> Dict[str, str]:
         """Discovers available local expert services via Consul."""
         experts = {}

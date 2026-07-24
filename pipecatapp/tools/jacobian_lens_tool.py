@@ -13,6 +13,48 @@ class JacobianLensTool:
     def __init__(self):
         self.name = "jacobian_lens"
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "jacobianlenstool"),
+                "description": getattr(self, "description", "Tool JacobianLensTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: get_j_matrix, get_unembedding, get_jlens_vectors, read_top_tokens, swap_token_coordinate, ablate_top_k_tokens, enhance_top_k_tokens"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "get_j_matrix":
+            return getattr(self, "get_j_matrix")(**kwargs.get("kwargs", kwargs))
+        if action == "get_unembedding":
+            return getattr(self, "get_unembedding")(**kwargs.get("kwargs", kwargs))
+        if action == "get_jlens_vectors":
+            return getattr(self, "get_jlens_vectors")(**kwargs.get("kwargs", kwargs))
+        if action == "read_top_tokens":
+            return getattr(self, "read_top_tokens")(**kwargs.get("kwargs", kwargs))
+        if action == "swap_token_coordinate":
+            return getattr(self, "swap_token_coordinate")(**kwargs.get("kwargs", kwargs))
+        if action == "ablate_top_k_tokens":
+            return getattr(self, "ablate_top_k_tokens")(**kwargs.get("kwargs", kwargs))
+        if action == "enhance_top_k_tokens":
+            return getattr(self, "enhance_top_k_tokens")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def get_j_matrix(self, model: Any, layer_idx: int) -> torch.Tensor:
         """
         Retrieves the average Jacobian matrix J_l for the given layer.

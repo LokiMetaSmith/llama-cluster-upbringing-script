@@ -23,6 +23,36 @@ class TermEverythingTool(object):
         super().__init__(**kwargs)
         self.app_image_path = app_image_path
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "termeverythingtool"),
+                "description": getattr(self, "description", "Tool TermEverythingTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     async def execute(self, command: str) -> str:
         """Executes a command using the term.everything AppImage.
 

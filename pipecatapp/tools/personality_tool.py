@@ -14,6 +14,40 @@ class PersonalityTool:
         # Base directory where control vectors are stored on the server side
         self.vectors_dir = "/opt/nomad/models/vectors"
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "personalitytool"),
+                "description": getattr(self, "description", "Tool PersonalityTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: set_personality, reset_personality, get_current_personality"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "set_personality":
+            return getattr(self, "set_personality")(**kwargs.get("kwargs", kwargs))
+        if action == "reset_personality":
+            return getattr(self, "reset_personality")(**kwargs.get("kwargs", kwargs))
+        if action == "get_current_personality":
+            return getattr(self, "get_current_personality")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def set_personality(self, name: str, strength: float, fname: str = None) -> str:
         """
         Sets the current personality by applying a control vector.

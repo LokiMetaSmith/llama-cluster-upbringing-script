@@ -25,6 +25,36 @@ class OpenCodeProviderTool:
         self.default_timeout = 600  # 10 minutes default for coding agents
         self.headers = {"X-Nomad-Token": self.token} if self.token else {}
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "opencodeprovidertool"),
+                "description": getattr(self, "description", "Tool OpenCodeProviderTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     def _parse_opencode_output(self, logs: str) -> Dict[str, Any]:
         """Parses the raw stdout of the OpenCode CLI into structured events."""
         events = []

@@ -72,6 +72,46 @@ class ExternalAppManagerTool:
         self.manager = AppManager(consul_url=consul_url, nomad_url=nomad_url)
         self.logger = logging.getLogger(__name__)
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "externalappmanagertool"),
+                "description": getattr(self, "description", "Tool ExternalAppManagerTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: scaffold_manifest, validate_manifest, deploy_app, purge_app, list_apps, status_app"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "scaffold_manifest":
+            return getattr(self, "scaffold_manifest")(**kwargs.get("kwargs", kwargs))
+        if action == "validate_manifest":
+            return getattr(self, "validate_manifest")(**kwargs.get("kwargs", kwargs))
+        if action == "deploy_app":
+            return getattr(self, "deploy_app")(**kwargs.get("kwargs", kwargs))
+        if action == "purge_app":
+            return getattr(self, "purge_app")(**kwargs.get("kwargs", kwargs))
+        if action == "list_apps":
+            return getattr(self, "list_apps")(**kwargs.get("kwargs", kwargs))
+        if action == "status_app":
+            return getattr(self, "status_app")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def scaffold_manifest(self,
                           name: str,
                           image: str,

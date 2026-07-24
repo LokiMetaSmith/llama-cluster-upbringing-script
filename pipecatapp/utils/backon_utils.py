@@ -45,7 +45,8 @@ def is_transient_error(exc: Exception) -> bool:
 # Backon retry condition for transient errors
 retry_if_transient = backon.retry_if_exception(is_transient_error)
 
-class MultiMetricsCollector(backon.MetricsCollector):
+class MultiMetricsCollector:
+    # Modified to not inherit from backon.MetricsCollector as it doesn't exist in this version
     """Collector that dispatches to multiple backon metrics collectors."""
     def __init__(self, collectors):
         self.collectors = collectors

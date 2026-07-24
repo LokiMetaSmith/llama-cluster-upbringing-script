@@ -23,6 +23,36 @@ class ArchivistTool(MCP_Tool):
         )
         self.archivist_url = archivist_url
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "archivisttool"),
+                "description": getattr(self, "description", "Tool ArchivistTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     async def run(self, query: str) -> str:
         """
         Queries the Archivist service.

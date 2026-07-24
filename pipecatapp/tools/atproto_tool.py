@@ -16,6 +16,38 @@ class ATProtoTool:
         self.name = "atproto"
         self._client = None
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "atprototool"),
+                "description": getattr(self, "description", "Tool ATProtoTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: send_post, get_timeline"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "send_post":
+            return getattr(self, "send_post")(**kwargs.get("kwargs", kwargs))
+        if action == "get_timeline":
+            return getattr(self, "get_timeline")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def _get_client(self):
         try:
             from atproto import Client

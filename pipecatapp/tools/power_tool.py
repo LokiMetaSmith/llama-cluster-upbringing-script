@@ -19,6 +19,36 @@ class Power_Tool:
         self.name = "power_tool"
         self.config_path = "/opt/power_manager/config.json"
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "power_tool"),
+                "description": getattr(self, "description", "Tool Power_Tool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: set_idle_threshold"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "set_idle_threshold":
+            return getattr(self, "set_idle_threshold")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def set_idle_threshold(self, service_port: int, idle_seconds: int) -> str:
         """Sets the idle time in seconds before a service is put to sleep.
 

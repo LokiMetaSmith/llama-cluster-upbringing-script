@@ -28,6 +28,36 @@ class Ansible_Tool:
         self.project_root = "/opt/cluster-infra"
         ensure_ssh_keys_initialized()
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "ansible_tool"),
+                "description": getattr(self, "description", "Tool Ansible_Tool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: run_playbook"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "run_playbook":
+            return getattr(self, "run_playbook")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def run_playbook(self, playbook: str = 'playbook.yaml', limit: str | None = None, tags: str | None = None, extra_vars: dict | None = None) -> str:
         """Runs an Ansible playbook to provision or manage nodes in the cluster.
 

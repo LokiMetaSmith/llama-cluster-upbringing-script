@@ -36,6 +36,38 @@ class HA_Tool:
         }
         self._session = None
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "ha_tool"),
+                "description": getattr(self, "description", "Tool HA_Tool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: close, call_ai_task"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "close":
+            return getattr(self, "close")(**kwargs.get("kwargs", kwargs))
+        if action == "call_ai_task":
+            return getattr(self, "call_ai_task")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def close(self):
         """Closes the underlying aiohttp session."""
         if self._session:
@@ -81,7 +113,7 @@ class HA_Tool:
                 # We will return a confirmation message.
                 logging.info(f"Home Assistant API call successful. Status code: {response.status}")
                 return f"Successfully sent command to Home Assistant: '{instructions}'"
-        except aiohttp.ClientError as e:
+        except Exception as e:
             logging.error(f"Error calling Home Assistant API: {e}")
             return f"Error calling Home Assistant API: {e}"
         except Exception as e:

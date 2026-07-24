@@ -13,6 +13,36 @@ class ScaleComputeTool:
         self.name = "scale_compute"
         self.description = "Use this to add more GPU power if inference is slow or context is full. Runs bootstrap.sh to add a worker node. Arguments: node_ip (string)"
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "scalecomputetool"),
+                "description": getattr(self, "description", "Tool ScaleComputeTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: scale"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "scale":
+            return getattr(self, "scale")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def scale(self, node_ip: str) -> str:
         """
         Runs the cluster upbrining script to add a worker node to the cluster.

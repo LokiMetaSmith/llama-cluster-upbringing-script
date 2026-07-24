@@ -22,6 +22,40 @@ class MCP_Tool:
         self.description = "Master Control Program for agent introspection and self-control."
         self.name = "mcp_tool"
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "mcp_tool"),
+                "description": getattr(self, "description", "Tool MCP_Tool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: get_status, get_memory_summary, clear_short_term_memory"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "get_status":
+            return getattr(self, "get_status")(**kwargs.get("kwargs", kwargs))
+        if action == "get_memory_summary":
+            return getattr(self, "get_memory_summary")(**kwargs.get("kwargs", kwargs))
+        if action == "clear_short_term_memory":
+            return getattr(self, "clear_short_term_memory")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def get_status(self) -> str:
         """Returns the current status of the agent's running pipelines.
 

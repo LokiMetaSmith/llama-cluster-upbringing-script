@@ -9,6 +9,36 @@ class WOLTool:
         self.name = "wol"
         self.description = "Sends a Wake-on-LAN (WOL) magic packet to a specified MAC address to wake up a remote machine. Arguments: mac_address (string)"
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "woltool"),
+                "description": getattr(self, "description", "Tool WOLTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: wake"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "wake":
+            return getattr(self, "wake")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def _validate_mac(self, mac: str) -> bool:
         """Validates a MAC address format."""
         pattern = re.compile(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$')

@@ -15,6 +15,36 @@ class PlannerTool:
         self.twin_service = twin_service
         self.logger = logging.getLogger(__name__)
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "plannertool"),
+                "description": getattr(self, "description", "Tool PlannerTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: plan_and_execute"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "plan_and_execute":
+            return getattr(self, "plan_and_execute")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def _discover_llm_url(self):
         """Discovers the LLM service URL."""
         # Try to find base_url in existing router_llm if available

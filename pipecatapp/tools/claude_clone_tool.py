@@ -8,6 +8,44 @@ class ClaudeCloneTool:
         self.claude_clone_dir = "/opt/claude_clone"
         self.node_executable = "node"  # Assumes node is in the PATH
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "claudeclonetool"),
+                "description": getattr(self, "description", "Tool ClaudeCloneTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: explain, report, generate, test, get_tool_config"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "explain":
+            return getattr(self, "explain")(**kwargs.get("kwargs", kwargs))
+        if action == "report":
+            return getattr(self, "report")(**kwargs.get("kwargs", kwargs))
+        if action == "generate":
+            return getattr(self, "generate")(**kwargs.get("kwargs", kwargs))
+        if action == "test":
+            return getattr(self, "test")(**kwargs.get("kwargs", kwargs))
+        if action == "get_tool_config":
+            return getattr(self, "get_tool_config")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def _run_command(self, command: str, *args: str) -> str:
         if not os.path.isdir(self.claude_clone_dir):
             return f"Error: Claude_Clone directory not found at {self.claude_clone_dir}"

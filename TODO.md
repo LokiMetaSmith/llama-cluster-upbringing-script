@@ -466,6 +466,9 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 
 - [x] **Orthrus Integration:** Track upstream support in `llama.cpp` or native `vLLM` for "Orthrus" (dual-view diffusion decoding model, e.g., `chiennv/Orthrus-Qwen3-8B`). Once supported by our core inference engines, integrate it into `group_vars/models.yaml` to take advantage of its memory-efficient parallel token generation for complex reasoning tasks.
 
+## Code Cleanup & Standardization
+- [x] **Update Dead Code Review:** Run Vulture and update `docs/DEAD_CODE_REVIEW.md` to reflect the current state of unused code.
+- [x] **Standardize Tool Schemas:** Review all tools in `pipecatapp/tools/` and ensure they define an `input_schema` attribute or a `get_schema()` method for proper LLM integration.
 ## Security Hardening & Zero-Touch Provisioning
 
 - [ ] **FIDO Security Key Onboarding & USB Keychain Imprinting:** Implement an automated onboarding flow using FIDO/FIDO2 hardware security keys. The goal is to imprint keys securely onto the USB bootstrap OS image during generation, allowing any new node provisioned from that flash drive to seamlessly and securely auto-enroll into the swarm mesh network without manual credential intervention.

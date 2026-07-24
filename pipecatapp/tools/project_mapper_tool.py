@@ -27,6 +27,36 @@ class ProjectMapperTool:
         self.root_dir = os.path.realpath(root_dir)
         self.lightweight_mapper = LightweightProjectMapperTool(root_dir=root_dir)
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "projectmappertool"),
+                "description": getattr(self, "description", "Tool ProjectMapperTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: scan"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "scan":
+            return getattr(self, "scan")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def scan(self, sub_path: str = ".") -> Dict[str, Any]:
         """
         Scans the codebase starting from root_dir/sub_path.

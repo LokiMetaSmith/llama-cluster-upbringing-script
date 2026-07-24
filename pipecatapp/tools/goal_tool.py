@@ -20,6 +20,46 @@ class GoalTool:
         self.conn.execute("PRAGMA journal_mode=WAL;")
         self.create_table()
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "goaltool"),
+                "description": getattr(self, "description", "Tool GoalTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: create_table, get_active_goal, create_goal, get_goal, update_goal, schedule_wakeup"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "create_table":
+            return getattr(self, "create_table")(**kwargs.get("kwargs", kwargs))
+        if action == "get_active_goal":
+            return getattr(self, "get_active_goal")(**kwargs.get("kwargs", kwargs))
+        if action == "create_goal":
+            return getattr(self, "create_goal")(**kwargs.get("kwargs", kwargs))
+        if action == "get_goal":
+            return getattr(self, "get_goal")(**kwargs.get("kwargs", kwargs))
+        if action == "update_goal":
+            return getattr(self, "update_goal")(**kwargs.get("kwargs", kwargs))
+        if action == "schedule_wakeup":
+            return getattr(self, "schedule_wakeup")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def _ensure_db_dir(self):
         directory = os.path.dirname(self.db_path)
         if not os.path.exists(directory):

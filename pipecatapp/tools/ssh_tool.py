@@ -22,6 +22,36 @@ class SSH_Tool:
         self.name = "ssh_tool"
         ensure_ssh_keys_initialized()
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "ssh_tool"),
+                "description": getattr(self, "description", "Tool SSH_Tool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: run_command"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "run_command":
+            return getattr(self, "run_command")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def run_command(self, host: str, username: str, command: str, key_filename: str = None, password: str = None) -> str:
         """Executes a command on a remote machine via SSH.
 

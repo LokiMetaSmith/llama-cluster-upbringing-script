@@ -28,6 +28,36 @@ class AutoresearchTool:
             self.logger.warning(f"Could not initialize Docker client for AutoresearchTool: {e}")
             self.docker_client = None
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "autoresearchtool"),
+                "description": getattr(self, "description", "Tool AutoresearchTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     async def run(self,
                   target_file: str,
                   test_command: str,

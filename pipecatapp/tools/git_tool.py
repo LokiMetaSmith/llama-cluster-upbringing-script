@@ -24,6 +24,54 @@ class Git_Tool:
             self.root_dir = os.path.realpath(os.getcwd())
         ensure_ssh_keys_initialized()
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "git_tool"),
+                "description": getattr(self, "description", "Tool Git_Tool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: clone, pull, push, commit, branch, checkout, status, diff, merge, ls_files"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "clone":
+            return getattr(self, "clone")(**kwargs.get("kwargs", kwargs))
+        if action == "pull":
+            return getattr(self, "pull")(**kwargs.get("kwargs", kwargs))
+        if action == "push":
+            return getattr(self, "push")(**kwargs.get("kwargs", kwargs))
+        if action == "commit":
+            return getattr(self, "commit")(**kwargs.get("kwargs", kwargs))
+        if action == "branch":
+            return getattr(self, "branch")(**kwargs.get("kwargs", kwargs))
+        if action == "checkout":
+            return getattr(self, "checkout")(**kwargs.get("kwargs", kwargs))
+        if action == "status":
+            return getattr(self, "status")(**kwargs.get("kwargs", kwargs))
+        if action == "diff":
+            return getattr(self, "diff")(**kwargs.get("kwargs", kwargs))
+        if action == "merge":
+            return getattr(self, "merge")(**kwargs.get("kwargs", kwargs))
+        if action == "ls_files":
+            return getattr(self, "ls_files")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def _validate_path(self, path: str) -> str:
         """Ensures the path is within the root directory."""
         # Resolve real canonical path, following symlinks

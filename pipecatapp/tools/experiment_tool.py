@@ -32,6 +32,36 @@ class ExperimentTool:
 
         self.swarm_tool = SwarmTool()
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "experimenttool"),
+                "description": getattr(self, "description", "Tool ExperimentTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     async def run(self, task_description: str, test_command: str, variants: List[str] = [], num_workers: int = 5, timeout_seconds: int = 300) -> str:
         """
         Runs the experiment.
