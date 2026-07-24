@@ -69,3 +69,4 @@ tenacity
 redis
 cloudpickle
 tritonclient[http]
+datasets>=4.0.0

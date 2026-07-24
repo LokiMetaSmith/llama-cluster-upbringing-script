@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# reload-console
+# Switches the SDDM autologin session back to the CommandDeck kiosk and restarts SDDM.
+
+set -euo pipefail
+
+if [ -f "/etc/sddm.conf.d/autologin.conf" ]; then
+    pkexec sed -i 's/Session=plasmawayland/Session=command-deck/g' /etc/sddm.conf.d/autologin.conf
+    pkexec systemctl restart sddm
+else
+    echo "SDDM autologin configuration not found."
+    exit 1
+fi

@@ -3,6 +3,15 @@
 # Make CommandDeck session wrapper script executable inside the chroot
 chmod +x /usr/local/bin/command-deck-session
 
+# Make the reload-console script executable
+chmod +x /usr/local/bin/reload-console
+
+# Copy the desktop shortcut to the user's desktop
+mkdir -p /home/pipecatapp/Desktop
+cp "/etc/skel/Desktop/Reload Console.desktop" "/home/pipecatapp/Desktop/Reload Console.desktop"
+chmod +x "/home/pipecatapp/Desktop/Reload Console.desktop"
+chown -R pipecatapp:pipecatapp /home/pipecatapp/Desktop
+
 # Ensure command_deck files have the correct ownership for pipecatapp user
 if [ -d "/opt/pipecat-cluster/command_deck" ]; then
     chown -R pipecatapp:pipecatapp /opt/pipecat-cluster/command_deck

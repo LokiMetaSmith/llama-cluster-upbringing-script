@@ -100,6 +100,9 @@
                         <button class="tab-btn" data-target="diagnostics-tab">
                             <span class="tab-num">03</span> CLUSTER DIAGS
                         </button>
+                        <button class="tab-btn" data-target="info-tab">
+                            <span class="tab-num">04</span> INFO
+                        </button>
                     </div>
 
                     <!-- TAB 1: BOOTSTRAP WIZARD -->
@@ -207,6 +210,28 @@
                         <div class="axis-ruler" style="margin-top: 20px;">
                             <!-- Accent ruler decoration -->
                             <div class="ruler-ticks"></div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: INFO -->
+                    <div class="tab-content" id="info-tab">
+                        <p class="tab-description">
+                            Cluster and Node Information.
+                        </p>
+
+                        <div class="diag-action-card">
+                            <div class="diag-info">
+                                <div class="diag-title">NODE IP ADDRESS</div>
+                                <div class="diag-desc">Local IP Address of this Node on the Network</div>
+                            </div>
+                            <div style="font-size: 1.2em; font-weight: bold; color: var(--nerv-primary); padding: 5px 10px; background-color: rgba(255,102,0,0.1); border: 1px solid var(--nerv-primary);"><span id="ip-address">Loading...</span></div>
+                        </div>
+
+                        <div class="diag-action-card" style="margin-top: 15px;">
+                            <div class="diag-info">
+                                <div class="diag-title">SWARM INSTRUCTIONS</div>
+                                <div class="diag-desc" style="color: #bbb; line-height: 1.4;">Models loaded here will become available to the Swarm. Other nodes in the mesh network can be linked via Consul to utilize these distributed models for inference.</div>
+                            </div>
                         </div>
                     </div>
                 </div>

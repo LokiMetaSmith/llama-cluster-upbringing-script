@@ -8,6 +8,9 @@ useradd -m -s /bin/bash pipecatapp
 echo "pipecatapp:pipecat" | chpasswd
 usermod -aG sudo pipecatapp
 
+# Allow passwordless login for pipecatapp
+passwd -d pipecatapp
+
 # Give passwordless sudo to pipecatapp during bootstrap/live session
 echo "pipecatapp ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/pipecatapp
 

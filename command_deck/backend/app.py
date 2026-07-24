@@ -132,6 +132,22 @@ class CommandDeckAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(status_data).encode('utf-8'))
             return
 
+        elif url_path == "/api/info":
+            try:
+                # Try to get the IP address of the node
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(("8.8.8.8", 80))
+                ip_address = s.getsockname()[0]
+                s.close()
+            except Exception:
+                ip_address = "127.0.0.1"
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"ip_address": ip_address}).encode('utf-8'))
+            return
+
         elif url_path == "/api/logs":
             # Support logs offset for simple long-polling
             query = self.path.split('?')[-1] if '?' in self.path else ""
@@ -306,7 +322,22 @@ class CommandDeckAPIHandler(BaseHTTPRequestHandler):
 
                 # Terminate python process in a separate thread to allow response to client first
                 def terminate_app():
+                    try:
+                        # Directly execute bash command to avoid insecure temporary files
+                        subprocess.Popen(["sudo", "bash", "-c", "sed -i 's/Session=command-deck/Session=plasmawayland/' /etc/sddm.conf.d/autologin.conf && systemctl restart sddm"])
+                    except Exception as e:
+                        print(f"Error executing switch script: {e}")
+
                     time.sleep(1)
+
+                    # Try to set SDDM autologin session to plasmawayland and restart SDDM
+                    if os.path.exists('/etc/sddm.conf.d/autologin.conf'):
+                        try:
+                            subprocess.run(['sudo', 'sed', '-i', 's/Session=command-deck/Session=plasmawayland/g', '/etc/sddm.conf.d/autologin.conf'], check=True)
+                            subprocess.run(['sudo', 'systemctl', 'restart', 'sddm'], check=True)
+                        except Exception as e:
+                            print(f"Failed to configure or restart SDDM: {e}", flush=True)
+
                     os.kill(os.getpid(), signal.SIGTERM)
                 threading.Thread(target=terminate_app).start()
                 return

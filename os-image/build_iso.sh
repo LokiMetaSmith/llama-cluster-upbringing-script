@@ -84,7 +84,7 @@ if [ ! -f /.dockerenv ]; then
         -v "$BUILD_DIR/..:/opt/pipecat-cluster" \
         -w "/opt/pipecat-cluster/os-image" \
         "debian:${DISTRIBUTION}" \
-        bash -c "apt-get update && apt-get install -y live-build xorriso mtools dosfstools grub-pc-bin grub-efi-amd64-bin syslinux syslinux-utils isolinux rsync && ./build_iso.sh $DOCKER_ARGS"
+        bash -c "apt-get update && apt-get install -y live-build xorriso mtools dosfstools grub-pc-bin grub-efi-amd64-bin grub-efi-amd64-signed shim-signed syslinux syslinux-utils isolinux rsync && ./build_iso.sh $DOCKER_ARGS"
 
     echo "=== Build Complete (Host Wrapper) ==="
 
@@ -268,14 +268,14 @@ lb config \
   --distribution "$DISTRIBUTION" \
   --architecture "$ARCHITECTURE" \
   --mode debian \
-  --parent-mirror-bootstrap "http://deb.debian.org/debian/" \
-  --mirror-bootstrap "http://deb.debian.org/debian/" \
-  --parent-mirror-chroot "http://deb.debian.org/debian/" \
-  --mirror-chroot "http://deb.debian.org/debian/" \
-  --parent-mirror-binary "http://deb.debian.org/debian/" \
-  --mirror-binary "http://deb.debian.org/debian/" \
-  --parent-mirror-debian-installer "http://deb.debian.org/debian/" \
-  --mirror-debian-installer "http://deb.debian.org/debian/" \
+  --parent-mirror-bootstrap "https://deb.debian.org/debian/" \
+  --mirror-bootstrap "https://deb.debian.org/debian/" \
+  --parent-mirror-chroot "https://deb.debian.org/debian/" \
+  --mirror-chroot "https://deb.debian.org/debian/" \
+  --parent-mirror-binary "https://deb.debian.org/debian/" \
+  --mirror-binary "https://deb.debian.org/debian/" \
+  --parent-mirror-debian-installer "https://deb.debian.org/debian/" \
+  --mirror-debian-installer "https://deb.debian.org/debian/" \
   --archive-areas "main contrib non-free non-free-firmware" \
   --apt-indices true \
   --apt-recommends false \

@@ -16,7 +16,7 @@
 
 - name: Download and extract Debian netboot files
   unarchive:
-    src: "http://ftp.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/netboot.tar.gz"
+    src: "https://ftp.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/netboot.tar.gz"
     dest: /srv/tftp
     remote_src: yes
   become: yes
@@ -24,13 +24,13 @@
 
 - name: Download iPXE BIOS bootloader
   get_url:
-    url: http://boot.ipxe.org/undionly.kpxe
+    url: https://boot.ipxe.org/undionly.kpxe
     dest: "{{ tftp_root }}/undionly.kpxe"
   become: yes
 
 - name: Download iPXE UEFI bootloader
   get_url:
-    url: http://boot.ipxe.org/ipxe.efi
+    url: https://boot.ipxe.org/ipxe.efi
     dest: "{{ tftp_root }}/ipxe.efi"
   become: yes
 

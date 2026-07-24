@@ -20,9 +20,9 @@
     - name: Ensure Debian repositories are configured (needed for minimal/live ISOs)
       raw: |
         cat <<EOF > /etc/apt/sources.list
-        deb http://deb.debian.org/debian trixie main contrib non-free-firmware
-        deb http://security.debian.org/debian-security trixie-security main contrib non-free-firmware
-        deb http://deb.debian.org/debian trixie-updates main contrib non-free-firmware
+        deb https://deb.debian.org/debian trixie main contrib non-free-firmware
+        deb https://security.debian.org/debian-security trixie-security main contrib non-free-firmware
+        deb https://deb.debian.org/debian trixie-updates main contrib non-free-firmware
         EOF
       changed_when: false
 
@@ -31,11 +31,11 @@
         mkdir -p /etc/apt/trusted.gpg.d
         for key in 6ED0E7B82643E131 78DBA3BC47EF2265 762F67A0B2C39DE4 BDE6D2B9216EC7A8 8E9F831205B4BA95; do
           if command -v wget >/dev/null 2>&1; then
-            wget -qO- "http://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x$key" > "/etc/apt/trusted.gpg.d/$key.asc"
+            wget -qO- "https://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x$key" > "/etc/apt/trusted.gpg.d/$key.asc"
           elif command -v curl >/dev/null 2>&1; then
-            curl -sL "http://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x$key" > "/etc/apt/trusted.gpg.d/$key.asc"
+            curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x$key" > "/etc/apt/trusted.gpg.d/$key.asc"
           else
-            python3 -c "import urllib.request; urllib.request.urlretrieve('http://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x$key', '/etc/apt/trusted.gpg.d/' + '$key' + '.asc')"
+            python3 -c "import urllib.request; urllib.request.urlretrieve('https://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x$key', '/etc/apt/trusted.gpg.d/' + '$key' + '.asc')"
           fi
         done
       changed_when: false
