@@ -49,10 +49,9 @@ class OCRTool:
             device = "cuda" if torch.cuda.is_available() else "cpu"
             dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float32
 
-            self._tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True)
+            self._tokenizer = AutoTokenizer.from_pretrained(self.model_path)
             self._model = AutoModel.from_pretrained(
                 self.model_path,
-                trust_remote_code=True,
                 use_safetensors=True,
                 torch_dtype=dtype,
             )
