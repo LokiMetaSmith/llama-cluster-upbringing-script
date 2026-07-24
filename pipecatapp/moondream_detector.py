@@ -40,7 +40,6 @@ class MoondreamDetector(FrameProcessor):
 
         self.model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            trust_remote_code=True,
             torch_dtype=dtype,
             # Use CUDA if available, otherwise CPU
             device_map={"": "cuda"} if torch.cuda.is_available() else {"": "cpu"}

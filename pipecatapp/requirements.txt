@@ -106,3 +106,4 @@ tree-sitter-swift>=0.7.0
 mcp
 smolagents
 aiofiles==23.2.1
+datasets>=4.0.0
