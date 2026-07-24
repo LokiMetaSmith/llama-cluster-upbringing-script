@@ -14,6 +14,36 @@ class OpenClawTool:
         self.description = "Send messages via OpenClaw Gateway to various channels (WhatsApp, Telegram, etc.)."
         self.name = "openclaw"
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "openclawtool"),
+                "description": getattr(self, "description", "Tool OpenClawTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: send_message"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "send_message":
+            return getattr(self, "send_message")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def send_message(self, target: str, message: str, channel: Optional[str] = None) -> str:
         """
         Sends a message to a target via OpenClaw.

@@ -13,6 +13,36 @@ class ClusterStatusTool:
         self.name = "cluster_status"
         self.description = "Queries the live status of the local compute cluster (Consul/Nomad nodes and roles) to gain state awareness of hardware limitations. Takes no arguments."
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "clusterstatustool"),
+                "description": getattr(self, "description", "Tool ClusterStatusTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: get_status"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "get_status":
+            return getattr(self, "get_status")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def get_status(self) -> str:
         """
         Runs the cluster_status playbook to query cluster nodes.

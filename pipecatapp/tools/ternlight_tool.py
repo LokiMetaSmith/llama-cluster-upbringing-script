@@ -26,6 +26,38 @@ class TernlightTool:
         self.local_js_path = os.path.join(os.path.dirname(__file__), "../services/ternlight/ternlight_server.js")
         self._is_service_available = None
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "ternlighttool"),
+                "description": getattr(self, "description", "Tool TernlightTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: embed, similar"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "embed":
+            return getattr(self, "embed")(**kwargs.get("kwargs", kwargs))
+        if action == "similar":
+            return getattr(self, "similar")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def _check_service(self) -> bool:
         """Checks if the remote microservice is healthy."""
         try:

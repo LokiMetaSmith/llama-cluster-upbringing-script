@@ -8,6 +8,36 @@ class ProcessInvestigatorTool:
         self.name = "process_investigator"
         self.description = "Captures a snapshot of the top CPU/Memory consuming processes on the node to identify suspicious or runaway tasks."
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "processinvestigatortool"),
+                "description": getattr(self, "description", "Tool ProcessInvestigatorTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     def run(self, sort_by: str = "cpu") -> str:
         """
         Runs 'ps' to capture process information.

@@ -12,6 +12,40 @@ class RemoteRAGTool:
         self.base_url = (base_url or os.getenv("RAG_SERVICE_URL", "http://rag-service.service.consul:8000")).rstrip('/')
         self.api_key = api_key or os.getenv("RAG_SERVICE_API_KEY")
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "remoteragtool"),
+                "description": getattr(self, "description", "Tool RemoteRAGTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: add_document, search, scan_directory"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "add_document":
+            return getattr(self, "add_document")(**kwargs.get("kwargs", kwargs))
+        if action == "search":
+            return getattr(self, "search")(**kwargs.get("kwargs", kwargs))
+        if action == "scan_directory":
+            return getattr(self, "scan_directory")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def _make_request(self, endpoint: str, payload: dict):
         headers = {
             "Content-Type": "application/json"

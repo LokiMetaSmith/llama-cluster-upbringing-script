@@ -16,6 +16,46 @@ class OuroborosTool:
         self.consul_url = f"http://{self.consul_host}:{self.consul_port}"
         self.client = httpx.AsyncClient(timeout=5.0)
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "ouroborostool"),
+                "description": getattr(self, "description", "Tool OuroborosTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: get_members, save_members, add_member, remove_member, list_members, navigate"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "get_members":
+            return getattr(self, "get_members")(**kwargs.get("kwargs", kwargs))
+        if action == "save_members":
+            return getattr(self, "save_members")(**kwargs.get("kwargs", kwargs))
+        if action == "add_member":
+            return getattr(self, "add_member")(**kwargs.get("kwargs", kwargs))
+        if action == "remove_member":
+            return getattr(self, "remove_member")(**kwargs.get("kwargs", kwargs))
+        if action == "list_members":
+            return getattr(self, "list_members")(**kwargs.get("kwargs", kwargs))
+        if action == "navigate":
+            return getattr(self, "navigate")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def get_members(self) -> List[Dict]:
         """Returns the list of members in the Ouroboros webring."""
         # We can call the local web server or Consul directly.

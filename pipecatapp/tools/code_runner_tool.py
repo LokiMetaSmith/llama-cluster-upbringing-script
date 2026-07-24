@@ -388,6 +388,38 @@ class CodeRunnerTool:
             self.executor = DockerSandboxExecutor()
             logging.info("CodeRunnerTool initialized in DOCKER mode.")
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "coderunnertool"),
+                "description": getattr(self, "description", "Tool CodeRunnerTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: run_python_code, run_code_in_sandbox"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "run_python_code":
+            return getattr(self, "run_python_code")(**kwargs.get("kwargs", kwargs))
+        if action == "run_code_in_sandbox":
+            return getattr(self, "run_code_in_sandbox")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def _execute_with_history(self, code: str, language: str, libraries: Optional[List[str]], timeout: Optional[int], execute_func) -> str:
         # Check idempotency / history
         cached = self.history.get_cached_result(code, language, libraries)

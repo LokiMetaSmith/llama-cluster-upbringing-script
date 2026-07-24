@@ -27,6 +27,36 @@ class SummarizerTool:
         # Switched to all-MiniLM-L6-v2 to avoid Hugging Face gating/token requirements
         self.model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "summarizertool"),
+                "description": getattr(self, "description", "Tool SummarizerTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: get_summary"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "get_summary":
+            return getattr(self, "get_summary")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def get_summary(self, query: str, conversation_history: list = None) -> str:
         """Returns the most relevant parts of the conversation related to a query.
 

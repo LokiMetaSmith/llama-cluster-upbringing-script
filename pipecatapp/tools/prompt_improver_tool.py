@@ -42,6 +42,36 @@ Developer Spec:
 {dev_spec}
 """
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "promptimprovertool"),
+                "description": getattr(self, "description", "Tool PromptImproverTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: create_prompt_plan"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "create_prompt_plan":
+            return getattr(self, "create_prompt_plan")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def _discover_llm(self) -> str:
         """Asynchronously discovers the main LLM service via Consul."""
         service_name = os.getenv("MAIN_API_SERVICE_NAME", "llama-api-main")

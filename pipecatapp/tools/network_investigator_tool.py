@@ -8,6 +8,36 @@ class NetworkInvestigatorTool:
         self.name = "network_investigator"
         self.description = "Temporarily captures a brief snapshot of active network connections (using netstat/ss) on the current node to investigate suspicious traffic."
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "networkinvestigatortool"),
+                "description": getattr(self, "description", "Tool NetworkInvestigatorTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     def run(self, duration_seconds: int = 5) -> str:
         """
         Runs a quick network snapshot to identify active connections and listening ports.

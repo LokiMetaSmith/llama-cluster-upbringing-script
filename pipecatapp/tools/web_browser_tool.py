@@ -87,6 +87,52 @@ class WebBrowserTool:
         self.browser: Browser = None
         self.page: Page = None
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "webbrowsertool"),
+                "description": getattr(self, "description", "Tool WebBrowserTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: ensure_initialized, goto, get_page_content, get_screenshot, click, type, click_at, type_text_at, close"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "ensure_initialized":
+            return getattr(self, "ensure_initialized")(**kwargs.get("kwargs", kwargs))
+        if action == "goto":
+            return getattr(self, "goto")(**kwargs.get("kwargs", kwargs))
+        if action == "get_page_content":
+            return getattr(self, "get_page_content")(**kwargs.get("kwargs", kwargs))
+        if action == "get_screenshot":
+            return getattr(self, "get_screenshot")(**kwargs.get("kwargs", kwargs))
+        if action == "click":
+            return getattr(self, "click")(**kwargs.get("kwargs", kwargs))
+        if action == "type":
+            return getattr(self, "type")(**kwargs.get("kwargs", kwargs))
+        if action == "click_at":
+            return getattr(self, "click_at")(**kwargs.get("kwargs", kwargs))
+        if action == "type_text_at":
+            return getattr(self, "type_text_at")(**kwargs.get("kwargs", kwargs))
+        if action == "close":
+            return getattr(self, "close")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def ensure_initialized(self):
         """Ensures Playwright, Browser, and Page are initialized."""
         if not self.playwright:

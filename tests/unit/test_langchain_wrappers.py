@@ -2,6 +2,13 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from pipecatapp.langchain_memory_wrappers import PMMChatMessageHistory, PipecatVectorStore
+import sys
+from unittest.mock import MagicMock
+if "langchain_core" in sys.modules and isinstance(sys.modules["langchain_core"], MagicMock):
+    del sys.modules["langchain_core"]
+if "langchain_core.runnables" in sys.modules and isinstance(sys.modules["langchain_core.runnables"], MagicMock):
+    del sys.modules["langchain_core.runnables"]
+
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 @pytest.fixture

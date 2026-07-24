@@ -19,6 +19,36 @@ class LLxprt_Code_Tool:
         self.description = "Run a llxprt-code command."
         self.name = "llxprt_code_tool"
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "llxprt_code_tool"),
+                "description": getattr(self, "description", "Tool LLxprt_Code_Tool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     def run(self, command: str) -> str:
         """Runs a llxprt-code command.
 

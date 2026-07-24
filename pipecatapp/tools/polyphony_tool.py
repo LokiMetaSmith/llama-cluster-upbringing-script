@@ -14,6 +14,36 @@ class PolyphonyTool:
         self.cli_path = cli_path
         self.swarm_key = swarm_key or os.environ.get("SWARM_KEY", "KEYSTONE-POLYPHONY-LOCAL")
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "polyphonytool"),
+                "description": getattr(self, "description", "Tool PolyphonyTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: get_info"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "get_info":
+            return getattr(self, "get_info")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def execute(self, action: str, **kwargs: Any) -> str:
         """
         Executes a Polyphony CLI command.

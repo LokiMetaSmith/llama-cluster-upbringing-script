@@ -11,6 +11,36 @@ class RemoteCodeRunnerTool:
         self.base_url = (base_url or os.getenv("CODE_RUNNER_SERVICE_URL", "http://code-runner-service.service.consul:8000")).rstrip('/')
         self.api_key = api_key or os.getenv("CODE_RUNNER_API_KEY")
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "remotecoderunnertool"),
+                "description": getattr(self, "description", "Tool RemoteCodeRunnerTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     def _make_request(self, endpoint: str, payload: dict):
         headers = {
             "Content-Type": "application/json"

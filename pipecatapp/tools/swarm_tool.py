@@ -16,6 +16,40 @@ class SwarmTool:
         self.memory_client = memory_client
         self.logger = logging.getLogger(__name__)
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "swarmtool"),
+                "description": getattr(self, "description", "Tool SwarmTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: spawn_workers, wait_for_results, kill_worker"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "spawn_workers":
+            return getattr(self, "spawn_workers")(**kwargs.get("kwargs", kwargs))
+        if action == "wait_for_results":
+            return getattr(self, "wait_for_results")(**kwargs.get("kwargs", kwargs))
+        if action == "kill_worker":
+            return getattr(self, "kill_worker")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def spawn_workers(self, tasks: list[dict], image: str = "pipecatapp:latest", agent_type: str = "worker") -> str:
         """
         Spawns a worker agent for each task in the list.

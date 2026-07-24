@@ -16,6 +16,40 @@ class DesktopControlTool:
         self.description = "A tool for controlling the desktop GUI."
         self.name = "desktop_control"
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "desktopcontroltool"),
+                "description": getattr(self, "description", "Tool DesktopControlTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: get_desktop_screenshot, click_at, type_text"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "get_desktop_screenshot":
+            return getattr(self, "get_desktop_screenshot")(**kwargs.get("kwargs", kwargs))
+        if action == "click_at":
+            return getattr(self, "click_at")(**kwargs.get("kwargs", kwargs))
+        if action == "type_text":
+            return getattr(self, "type_text")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def get_desktop_screenshot(self) -> str:
         """Takes a screenshot of the entire desktop and returns it as a base64 string.
 

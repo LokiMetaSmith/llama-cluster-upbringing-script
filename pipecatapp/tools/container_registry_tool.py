@@ -27,6 +27,40 @@ class ContainerRegistryTool:
         self._registry_url = registry_url
         self.logger = logging.getLogger(__name__)
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "containerregistrytool"),
+                "description": getattr(self, "description", "Tool ContainerRegistryTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: list_repositories, list_tags, search_images"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "list_repositories":
+            return getattr(self, "list_repositories")(**kwargs.get("kwargs", kwargs))
+        if action == "list_tags":
+            return getattr(self, "list_tags")(**kwargs.get("kwargs", kwargs))
+        if action == "search_images":
+            return getattr(self, "search_images")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def _validate_repository(self, repository: str) -> bool:
         """Validates the repository name to prevent path traversal and ensure compliance."""
         if not repository:

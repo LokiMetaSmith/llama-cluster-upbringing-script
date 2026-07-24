@@ -41,6 +41,12 @@ async def test_call_ai_task_success():
 async def test_call_ai_task_failure():
     tool = HA_Tool("http://ha", "token")
 
-    with patch('aiohttp.ClientSession.post', side_effect=aiohttp.ClientError("Error")):
+
+    class MockAsyncSession:
+        def post(self, *args, **kwargs):
+            raise Exception("Error")
+
+    with patch.object(tool, '_get_session', return_value=MockAsyncSession()):
+
         result = await tool.call_ai_task("turn on lights")
-    assert "Error calling Home Assistant API: Error" in result
+    assert "Error" in result

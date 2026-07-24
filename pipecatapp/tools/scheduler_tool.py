@@ -17,6 +17,42 @@ class SchedulerTool:
         self.name = "scheduler"
         self.description = "Schedule recurring tasks or reminders using cron syntax or intervals."
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "schedulertool"),
+                "description": getattr(self, "description", "Tool SchedulerTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: add_cron_job, add_interval_job, list_jobs, remove_job"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "add_cron_job":
+            return getattr(self, "add_cron_job")(**kwargs.get("kwargs", kwargs))
+        if action == "add_interval_job":
+            return getattr(self, "add_interval_job")(**kwargs.get("kwargs", kwargs))
+        if action == "list_jobs":
+            return getattr(self, "list_jobs")(**kwargs.get("kwargs", kwargs))
+        if action == "remove_job":
+            return getattr(self, "remove_job")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def _inject_message(self, message: str):
         """Injects a message into the agent's input queue."""
         logger.info(f"Scheduler triggering message: {message}")

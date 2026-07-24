@@ -8,6 +8,36 @@ class SecurityRemediationTool:
         self.name = "security_remediation"
         self.description = "Takes restricted, safe remediation actions against security threats (e.g. stopping a Nomad allocation or cordoning a node)."
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "securityremediationtool"),
+                "description": getattr(self, "description", "Tool SecurityRemediationTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     def run(self, action: str, target: str) -> str:
         """
         Runs a predefined security action.

@@ -17,6 +17,36 @@ class DependencyScannerTool:
         self.description = "Scans Python packages for known security vulnerabilities using OSV.dev."
         self.name = "dependency_scanner"
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "dependencyscannertool"),
+                "description": getattr(self, "description", "Tool DependencyScannerTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: scan_package"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "scan_package":
+            return getattr(self, "scan_package")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def _get_latest_version(self, package_name: str) -> Optional[str]:
         """Fetches the latest version of a package from PyPI."""
         try:

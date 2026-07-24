@@ -15,6 +15,36 @@ class ShellTool:
         self.session_name = session_name
         self.name = "shell"
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "shelltool"),
+                "description": getattr(self, "description", "Tool ShellTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: execute_command"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "execute_command":
+            return getattr(self, "execute_command")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def _ensure_session(self):
         """Ensures the tmux session exists."""
         check = await asyncio.create_subprocess_exec(

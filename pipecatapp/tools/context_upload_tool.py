@@ -11,6 +11,36 @@ class ContextUploadTool:
         self.sandbox_dir = os.path.realpath("/tmp/pipecat_context")
         os.makedirs(self.sandbox_dir, exist_ok=True)
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "contextuploadtool"),
+                "description": getattr(self, "description", "Tool ContextUploadTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: get_definition"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "get_definition":
+            return getattr(self, "get_definition")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def execute(self, content: str, filename: str) -> str:
         """
         Saves the provided content to a file in the context sandbox.

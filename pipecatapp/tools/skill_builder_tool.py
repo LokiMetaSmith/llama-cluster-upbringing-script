@@ -14,6 +14,36 @@ class SkillBuilderTool:
         else:
             self.memory_store = MemoryStore()
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "skillbuildertool"),
+                "description": getattr(self, "description", "Tool SkillBuilderTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     def execute(self, action: str, **kwargs: Any) -> str:
         """
         Executes a skill building action.

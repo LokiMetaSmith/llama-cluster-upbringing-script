@@ -19,6 +19,36 @@ class SchemaMapperTool:
             "and detecting foreign keys and join relationships to provide data context."
         )
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "schemamappertool"),
+                "description": getattr(self, "description", "Tool SchemaMapperTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     def execute(self, arguments: Optional[Dict[str, Any]] = None) -> str:
         """
         Executes the schema mapping tool.

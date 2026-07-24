@@ -10,6 +10,36 @@ class SubmitSolutionTool:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "submitsolutiontool"),
+                "description": getattr(self, "description", "Tool SubmitSolutionTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     def run(self, content: str, file_path: str = "solution.py", description: str = "") -> str:
         """
         Submits a solution artifact.

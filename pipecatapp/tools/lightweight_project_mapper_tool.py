@@ -21,6 +21,36 @@ class LightweightProjectMapperTool:
             "dist", "build", "*.egg-info", "htmlcov", ".coverage", ".pytest_cache"
         ]
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "lightweightprojectmappertool"),
+                "description": getattr(self, "description", "Tool LightweightProjectMapperTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: scan"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "scan":
+            return getattr(self, "scan")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     def _is_ignored(self, path: str) -> bool:
         for pattern in self.ignore_patterns:
             if fnmatch.fnmatch(os.path.basename(path), pattern):

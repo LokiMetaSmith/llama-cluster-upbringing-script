@@ -113,6 +113,44 @@ class RAG_Tool:
         else:
              logging.warning("RAG Tool disabled: PMMMemory unavailable.")
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "rag_tool"),
+                "description": getattr(self, "description", "Tool RAG_Tool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: set_scope, scan_directory, search, add_document, search_knowledge_base"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "set_scope":
+            return getattr(self, "set_scope")(**kwargs.get("kwargs", kwargs))
+        if action == "scan_directory":
+            return getattr(self, "scan_directory")(**kwargs.get("kwargs", kwargs))
+        if action == "search":
+            return getattr(self, "search")(**kwargs.get("kwargs", kwargs))
+        if action == "add_document":
+            return getattr(self, "add_document")(**kwargs.get("kwargs", kwargs))
+        if action == "search_knowledge_base":
+            return getattr(self, "search_knowledge_base")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
     async def set_scope(self, path: str) -> bool:
         """Updates the search scope to a new directory.
 

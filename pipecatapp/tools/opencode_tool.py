@@ -25,6 +25,36 @@ class OpencodeTool:
         self.provider_id = provider_id
         self.model_id = model_id
 
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "opencodetool"),
+                "description": getattr(self, "description", "Tool OpencodeTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: "
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if False:
+            pass
+        else:
+            return f"Unknown action: {action}"
+
     async def run(self, task: str) -> str:
         """Runs a coding task using the OpenCode agent.
 
