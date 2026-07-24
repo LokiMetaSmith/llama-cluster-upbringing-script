@@ -273,6 +273,7 @@
   loop:
     - "{{ mqtt_port }}"
     - "{{ mqtt_websocket_port }}"
+    - "{{ mqtts_port | default(8883) }}"
   changed_when: false
   ignore_errors: yes
 
@@ -288,6 +289,12 @@
   changed_when: false
   ignore_errors: yes
 
+- name: Allow MQTTS port in UFW
+  ansible.builtin.command: ufw allow {{ mqtts_port | default(8883) }}/tcp
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+
 - name: Allow MQTT Websocket port in UFW
   ansible.builtin.command: ufw allow {{ mqtt_websocket_port }}/tcp
   become: yes
@@ -299,7 +306,7 @@
 
 - name: Warm up IPFS gateway cache for Mosquitto tarball
   ansible.builtin.uri:
-    url: "https://{{ cluster_ip }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ mosquitto_ipfs_cid }}"
+    url: "http://127.0.0.1:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ mosquitto_ipfs_cid }}"
     method: GET
     timeout: 60
     status_code: [200, 502, 504]

@@ -32,9 +32,9 @@ job "ipfs" {
         IPFS_PROFILE = "server"
         IPFS_CONFIG_Datastore_StorageMax = "100GB"
         IPFS_CONFIG_Experimental_FilestoreEnabled = "true"
-        # Bind to 0.0.0.0 so that Nomad prestart tasks using cluster_ip or 127.0.0.1 can reach it
-        IPFS_CONFIG_Addresses_Gateway = "/ip4/0.0.0.0/tcp/{{ ipfs_gateway_port | default(8080) }}"
-        IPFS_CONFIG_Addresses_API = "/ip4/0.0.0.0/tcp/{{ ipfs_api_port | default(5001) }}"
+        # Bind exclusively to 127.0.0.1 for security, internal artifacts pull from localhost
+        IPFS_CONFIG_Addresses_Gateway = "/ip4/127.0.0.1/tcp/{{ ipfs_gateway_port | default(8080) }}"
+        IPFS_CONFIG_Addresses_API = "/ip4/127.0.0.1/tcp/{{ ipfs_api_port | default(5001) }}"
       }
 
       resources {

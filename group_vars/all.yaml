@@ -71,6 +71,7 @@ consul_serf_wan_port: 8302
 nomad_http_port: 4646
 headscale_port: 8085
 mqtt_port: 1883
+mqtts_port: 8883
 mqtt_websocket_port: 9001
 provisioning_api_port: 8002
 router_port: 8081

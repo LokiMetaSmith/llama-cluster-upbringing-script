@@ -63,7 +63,7 @@ job "seed-agent" {
       }
 
       artifact {
-        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ image_cid }}"
+        source      = "http://127.0.0.1:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ image_cid }}"
         destination = "local/{{ image_tar_name }}.tar"
         mode        = "file"
       }
