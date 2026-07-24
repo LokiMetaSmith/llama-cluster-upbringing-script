@@ -62,7 +62,8 @@ async def test_webring_routes(mocker):
     # Test /webring/random
     response = client.get("/webring/random", follow_redirects=False)
     assert response.status_code in [302, 307]
-    assert response.headers["location"] in ["http://site-a.com", "http://site-b.com"]
+    import urllib.parse
+    assert response.headers["location"] in [f"/static/webring.html?target={urllib.parse.quote('http://site-a.com')}", f"/static/webring.html?target={urllib.parse.quote('http://site-b.com')}"]
 
 @pytest.mark.asyncio
 async def test_webring_navigation(mocker):
@@ -74,17 +75,19 @@ async def test_webring_navigation(mocker):
 
     mocker.patch("pipecatapp.web_server.get_ouroboros_members", return_value=members)
 
+    import urllib.parse
+
     # Next from A should be B
     response = client.get("/webring/next?from=http://a.com", follow_redirects=False)
     assert response.status_code in [302, 307]
-    assert response.headers["location"] == "http://b.com"
+    assert response.headers["location"] == f"/static/webring.html?target={urllib.parse.quote('http://b.com')}"
 
     # Next from C should be A (circular)
     response = client.get("/webring/next?from=http://c.com", follow_redirects=False)
     assert response.status_code in [302, 307]
-    assert response.headers["location"] == "http://a.com"
+    assert response.headers["location"] == f"/static/webring.html?target={urllib.parse.quote('http://a.com')}"
 
     # Prev from A should be C
     response = client.get("/webring/prev?from=http://a.com", follow_redirects=False)
     assert response.status_code in [302, 307]
-    assert response.headers["location"] == "http://c.com"
+    assert response.headers["location"] == f"/static/webring.html?target={urllib.parse.quote('http://c.com')}"

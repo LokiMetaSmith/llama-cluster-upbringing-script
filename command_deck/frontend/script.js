@@ -477,6 +477,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 11. Initial On-Load Sequence ---
     loadModels();
 
+    fetch('/api/info')
+        .then(res => res.json())
+        .then(infoData => {
+            if (infoData.ip_address) {
+                document.getElementById('ip-address').innerText = infoData.ip_address;
+            }
+        })
+        .catch(err => console.error("Failed to fetch IP info:", err));
+
     // Check initial status in case we page refreshed and something is running
     fetch('/api/status')
         .then(res => res.json())

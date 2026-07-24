@@ -886,7 +886,7 @@ async def update_webring_members(members: List[Dict] = Body(...), api_key: Optio
 async def webring_next(request: Request, rate_limit: None = Depends(standard_limiter)):
     members = await get_ouroboros_members()
     if not members:
-        return HTMLResponse("Webring is empty.", status_code=404)
+        return HTMLResponse("<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Webring is empty.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>", status_code=404)
 
     referrer = request.query_params.get("from") or request.headers.get("referer") or ""
     # Try to match the referrer with the member URLs
@@ -903,17 +903,18 @@ async def webring_next(request: Request, rate_limit: None = Depends(standard_lim
         # If not found, just go to the first one or a random one?
         # Blog post returns 404. Let's be nicer and go to random if not found?
         # Actually, let's stick to 404 or a message for now.
-        return HTMLResponse("Current member not found in webring.", status_code=404)
+        return HTMLResponse("<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Current member not found in webring.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>", status_code=404)
 
     next_member = members[(current_index + 1) % len(members)]
     redirect_url = rewrite_webring_redirect_url(next_member["url"], request)
-    return RedirectResponse(url=redirect_url)
+    import urllib.parse
+    return RedirectResponse(url=f"/static/webring.html?target={urllib.parse.quote(redirect_url)}")
 
 @app.get("/webring/prev", summary="Previous Member", description="Redirects to the previous member in the webring.", tags=["Webring"])
 async def webring_prev(request: Request, rate_limit: None = Depends(standard_limiter)):
     members = await get_ouroboros_members()
     if not members:
-        return HTMLResponse("Webring is empty.", status_code=404)
+        return HTMLResponse("<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Webring is empty.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>", status_code=404)
 
     referrer = request.query_params.get("from") or request.headers.get("referer") or ""
     current_index = -1
@@ -926,21 +927,23 @@ async def webring_prev(request: Request, rate_limit: None = Depends(standard_lim
                 break
 
     if current_index == -1:
-        return HTMLResponse("Current member not found in webring.", status_code=404)
+        return HTMLResponse("<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Current member not found in webring.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>", status_code=404)
 
     prev_member = members[(current_index - 1 + len(members)) % len(members)]
     redirect_url = rewrite_webring_redirect_url(prev_member["url"], request)
-    return RedirectResponse(url=redirect_url)
+    import urllib.parse
+    return RedirectResponse(url=f"/static/webring.html?target={urllib.parse.quote(redirect_url)}")
 
 @app.get("/webring/random", summary="Random Member", description="Redirects to a random member in the webring.", tags=["Webring"])
 async def webring_random(rate_limit: None = Depends(standard_limiter)):
     members = await get_ouroboros_members()
     if not members:
-        return HTMLResponse("Webring is empty.", status_code=404)
+        return HTMLResponse("<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Webring is empty.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>", status_code=404)
 
     import random
     random_member = random.choice(members)
-    return RedirectResponse(url=random_member["url"])
+    import urllib.parse
+    return RedirectResponse(url=f"/static/webring.html?target={urllib.parse.quote(random_member['url'])}")
 
 @app.get("/api/web_uis")
 async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):

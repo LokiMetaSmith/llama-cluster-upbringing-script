@@ -465,3 +465,7 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 - [x] **Ornith-1.0 Integration:** Add Ornith-1.0-9B and Ornith-1.0-35B GGUF models to `group_vars/models.yaml` as the core local coding model, taking advantage of its `<think>` reasoning block parsing compatibility.
 
 - [x] **Orthrus Integration:** Track upstream support in `llama.cpp` or native `vLLM` for "Orthrus" (dual-view diffusion decoding model, e.g., `chiennv/Orthrus-Qwen3-8B`). Once supported by our core inference engines, integrate it into `group_vars/models.yaml` to take advantage of its memory-efficient parallel token generation for complex reasoning tasks.
+
+## Security Hardening & Zero-Touch Provisioning
+
+- [ ] **FIDO Security Key Onboarding & USB Keychain Imprinting:** Implement an automated onboarding flow using FIDO/FIDO2 hardware security keys. The goal is to imprint keys securely onto the USB bootstrap OS image during generation, allowing any new node provisioned from that flash drive to seamlessly and securely auto-enroll into the swarm mesh network without manual credential intervention.
