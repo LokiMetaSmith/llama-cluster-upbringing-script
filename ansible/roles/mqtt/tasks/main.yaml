@@ -273,6 +273,7 @@
   loop:
     - "{{ mqtt_port }}"
     - "{{ mqtt_websocket_port }}"
+    - "{{ mqtts_port | default(8883) }}"
   changed_when: false
   ignore_errors: yes
 
@@ -284,6 +285,12 @@
 
 - name: Allow MQTT port in UFW
   ansible.builtin.command: ufw allow {{ mqtt_port }}/tcp
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+
+- name: Allow MQTTS port in UFW
+  ansible.builtin.command: ufw allow {{ mqtts_port | default(8883) }}/tcp
   become: yes
   changed_when: false
   ignore_errors: yes
