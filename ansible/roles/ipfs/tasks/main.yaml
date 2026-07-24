@@ -24,7 +24,7 @@
   block:
     - name: Download kubo (IPFS CLI)
       ansible.builtin.get_url:
-        url: "https://dist.ipfs.tech/kubo/v0.41.0/kubo_v0.41.0_linux-amd64.tar.gz"
+        url: "http://dist.ipfs.tech/kubo/v0.41.0/kubo_v0.41.0_linux-amd64.tar.gz"
         dest: "/tmp/kubo.tar.gz"
         mode: '0644'
 
@@ -152,7 +152,7 @@
 
 - name: Wait for IPFS Gateway to be fully ready
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ ipfs_gateway_port | default(8080) }}/"
+    url: "http://127.0.0.1:{{ ipfs_gateway_port | default(8080) }}/"
     return_content: yes
     status_code: [200, 400, 403, 404, 502, 504]
   register: ipfs_gateway_status
