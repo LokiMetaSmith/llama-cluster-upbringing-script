@@ -144,13 +144,18 @@ class JudgeAgent:
         except Exception:
             pass
 
+        atproto_handle = self.tools.get('atproto').username if 'atproto' in self.tools else 'None'
         system_prompt = f"""You are a strict QA Judge.
+AT Protocol Identity: {atproto_handle}
 Your goal is to verify if the following work meets the criteria: "{self.criteria}".
 You should strictly enforce all norms and patterns listed in the Field Guide.
 
 --- FIELD GUIDE (Institutional Knowledge) ---
 {field_guide_content}
 --- END FIELD GUIDE ---
+
+--- AT PROTOCOL & PUBLIC DATA ---
+If you use the 'atproto' tool, NEVER broadcast internal thought processes or cluster data to the public feed. Keep your internal cluster data completely separate.
 You have access to tools to inspect files or run commands if needed.
 
 Target Result:

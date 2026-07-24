@@ -41,6 +41,7 @@ from tools.submit_solution_tool import SubmitSolutionTool
 from tools.container_registry_tool import ContainerRegistryTool
 from tools.search_tool import SearchTool
 from tools.mtac_tool import MTACTool
+import yaml
 from tools.openclaw_tool import OpenClawTool
 from tools.atproto_tool import ATProtoTool
 from tools.scheduler_tool import SchedulerTool
@@ -109,6 +110,24 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
     mode = config.get("tool_execution_mode", "local")
     tool_server_url = config.get("tool_server_url")
 
+    # Load ATProto identities
+    agent_identities = {}
+    identities_path = os.path.join(os.path.dirname(__file__), "agent_identities.yaml")
+    if os.path.exists(identities_path):
+        try:
+            with open(identities_path, "r") as f:
+                agent_identities = yaml.safe_load(f) or {}
+        except Exception as e:
+            print(f"Warning: Failed to load agent_identities.yaml: {e}")
+
+    # Determine identity based on twin_service name or default
+    personality = getattr(twin_service, 'name', None) if twin_service else None
+    identity = agent_identities.get(personality) or agent_identities.get("default", {})
+
+    atproto_username = identity.get("handle", config.get("pds_username", ""))
+    atproto_password = identity.get("password", config.get("pds_password", ""))
+    atproto_pds_url = identity.get("pds_url", config.get("pds_url", "https://pds.local"))
+
     # Start with tools that are ALWAYS local (complex deps or not on tool server)
     tools = {
         "frugal_sandbox": FrugalSandboxTool(),
@@ -163,9 +182,9 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
             gateway_url=config.get("openclaw_gateway_url", "ws://openclaw.service.consul:18789")
         ),
         "atproto": ATProtoTool(
-            username=config.get("pds_username", ""),
-            password=config.get("pds_password", ""),
-            pds_url=config.get("pds_url", "https://pds.local")
+            username=atproto_username,
+            password=atproto_password,
+            pds_url=atproto_pds_url
         ),
         "scheduler": SchedulerTool(),
         "context_upload": ContextUploadTool(),

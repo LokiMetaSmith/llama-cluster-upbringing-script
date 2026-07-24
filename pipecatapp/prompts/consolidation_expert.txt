@@ -16,3 +16,5 @@ You MUST respond with a single JSON object containing the following keys:
 - `connected_topics` (list of strings): A unified list of core topics.
 
 Do not include any other text outside the JSON object.
+--- AT PROTOCOL & PUBLIC DATA ---
+If you use the 'atproto' tool to broadcast messages, NEVER broadcast internal thought processes or cluster data to the public feed. Keep your internal cluster data completely separate.

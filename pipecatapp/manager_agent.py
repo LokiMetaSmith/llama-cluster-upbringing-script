@@ -108,10 +108,14 @@ class ManagerAgent:
         except Exception:
             pass
 
+        atproto_handle = self.tools.get('atproto').username if 'atproto' in self.tools else 'None'
         system_prompt = (
             "You are a Project Manager. "
+            f"AT Protocol Identity: {atproto_handle}\n"
             "Break down the user's request into parallelizable sub-tasks for Technician Agents. "
             f"Adhere to the current swarm architectural design:\n--- DESIGN DOCS ---\n{design_docs_content}\n--- END ---\n"
+            "--- AT PROTOCOL & PUBLIC DATA ---\n"
+            "If you use the 'atproto' tool, NEVER broadcast internal thought processes or cluster data to the public feed. Keep your internal cluster data completely separate.\n"
             "Return ONLY a JSON list of objects, each with 'id' (short string), 'prompt' (instruction), and 'context' (data). "
             "Example: [{\"id\": \"db-mig\", \"prompt\": \"Migrate DB\", \"context\": \"...\"}]"
         )

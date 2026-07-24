@@ -175,7 +175,8 @@ class WorkerAgent:
         if not self.llm_base_url:
             self.llm_base_url = os.getenv("LLM_BASE_URL", "http://10.0.0.1:8000/v1")
 
-        system_prompt = """You are an independent evaluator (like Claude Code's Stop Hook).
+        system_prompt = f"""You are an independent evaluator (like Claude Code's Stop Hook).
+AT Protocol Identity: {self.tools.get('atproto').username if 'atproto' in self.tools else 'None'}
 Your task is to review the session transcript and the active Goal Objective, and determine if the goal has been fully met by the agent's actions.
 Respond in exactly this JSON format:
 {
@@ -410,12 +411,17 @@ Respond in exactly this JSON format:
                 pass
 
             system_prompt = f"""You are a helpful worker agent.
+AT Protocol Identity: {self.tools.get('atproto').username if 'atproto' in self.tools else 'None'}
 You have access to the following tools: {list(self.tools.keys())}.
 Your task is: {self.prompt}
 Context: {self.context}
 
 --- FIELD GUIDE (Institutional Knowledge) ---
 {field_guide_content}
+
+--- AT PROTOCOL & PUBLIC DATA ---
+If you are equipped with the 'atproto' tool, you may broadcast messages to the public AT Protocol network.
+CRITICAL BOUNDARY: You must NEVER broadcast your internal thought process, memory contents, or scratchpad notes to the public AT Protocol feed. Use the AT Protocol strictly for external, public-facing communication. Keep your internal cluster data completely separate.
 --- END FIELD GUIDE ---
 
 INSTRUCTIONS:

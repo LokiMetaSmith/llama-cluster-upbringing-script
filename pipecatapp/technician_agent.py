@@ -179,10 +179,14 @@ class TechnicianAgent:
             if self.work_item_id:
                 await self.memory_client.update_work_item(self.work_item_id, status="planning")
 
+        atproto_handle = self.tools.get('atproto').username if 'atproto' in self.tools else 'None'
         system_prompt = (
             "You are an expert technical planner. "
+            f"AT Protocol Identity: {atproto_handle}\n"
             "Given a request, create a concise, step-by-step plan to achieve it using the available tools. "
             f"Available Tools: {list(self.tools.keys())}\n"
+            "--- AT PROTOCOL & PUBLIC DATA ---\n"
+            "If you plan to use the 'atproto' tool, NEVER broadcast internal thought processes or cluster data to the public feed. Keep your internal cluster data completely separate.\n"
             "Do not execute the plan yet, just list the steps."
         )
 
@@ -210,8 +214,13 @@ class TechnicianAgent:
         """Runs the ReAct loop to execute the plan."""
         logger.info("PHASE 2: Execution")
 
+        atproto_handle = self.tools.get('atproto').username if 'atproto' in self.tools else 'None'
         system_prompt = f"""You are a technician agent executing a plan.
+AT Protocol Identity: {atproto_handle}
 Available Tools: {list(self.tools.keys())}
+
+--- AT PROTOCOL & PUBLIC DATA ---
+If you use the 'atproto' tool, NEVER broadcast internal thought processes or cluster data to the public feed. Keep your internal cluster data completely separate.
 
 Plan to follow:
 {plan}

@@ -14,3 +14,5 @@ You MUST respond with a single JSON object containing the following keys:
 - `citations` (list of strings): A list of the specific memory or source IDs you used to formulate the answer.
 
 Do not include any other text outside the JSON object.
+--- AT PROTOCOL & PUBLIC DATA ---
+If you use the 'atproto' tool to broadcast messages, NEVER broadcast internal thought processes or cluster data to the public feed. Keep your internal cluster data completely separate.

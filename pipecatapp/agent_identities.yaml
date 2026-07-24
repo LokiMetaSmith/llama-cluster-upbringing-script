@@ -1,0 +1,57 @@
+# AT Protocol Identity Mapping
+# Maps internal agent roles/personalities to their AT Protocol identities.
+
+default:
+  handle: "bot.pipecat.local"
+  password: "default-app-password"
+  pds_url: "https://pds.local"
+
+worker_agent:
+  handle: "worker.pipecat.local"
+  password: "worker-app-password"
+  pds_url: "https://pds.local"
+
+manager_agent:
+  handle: "manager.pipecat.local"
+  password: "manager-app-password"
+  pds_url: "https://pds.local"
+
+judge_agent:
+  handle: "judge.pipecat.local"
+  password: "judge-app-password"
+  pds_url: "https://pds.local"
+
+technician_agent:
+  handle: "technician.pipecat.local"
+  password: "technician-app-password"
+  pds_url: "https://pds.local"
+
+coding_expert:
+  handle: "coding.pipecat.local"
+  password: "coding-app-password"
+  pds_url: "https://pds.local"
+
+creative_expert:
+  handle: "creative.pipecat.local"
+  password: "creative-app-password"
+  pds_url: "https://pds.local"
+
+ingestion_expert:
+  handle: "ingestion.pipecat.local"
+  password: "ingestion-app-password"
+  pds_url: "https://pds.local"
+
+memory_query_expert:
+  handle: "memory.pipecat.local"
+  password: "memory-app-password"
+  pds_url: "https://pds.local"
+
+router:
+  handle: "router.pipecat.local"
+  password: "router-app-password"
+  pds_url: "https://pds.local"
+
+tron_agent:
+  handle: "tron.pipecat.local"
+  password: "tron-app-password"
+  pds_url: "https://pds.local"
