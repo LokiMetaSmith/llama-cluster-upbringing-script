@@ -82,8 +82,19 @@ class ExternalLLMClient:
                 # This prevents blocking the event loop during network requests.
                 self._session = aiohttp.ClientSession()
 
+            # Optional: integration with local OneCLI-like proxy
+            import os
+            proxy_url = os.environ.get("ONECLI_PROXY_URL")
+            target_endpoint = f"{self.base_url}/chat/completions"
+
+            if proxy_url:
+                headers["X-Target-Url"] = target_endpoint
+                request_url = proxy_url
+            else:
+                request_url = target_endpoint
+
             async with self._session.post(
-                f"{self.base_url}/chat/completions",
+                request_url,
                 headers=headers,
                 json=data,
                 timeout=aiohttp.ClientTimeout(total=60)
