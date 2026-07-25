@@ -49,7 +49,7 @@
     name: nomad
     state: stopped
   become: yes
-  ignore_errors: true
+  ignore_errors: false
   when: cleanup_services | default(false) | bool and nomad_service_file.stat.exists
 
 - name: Clear Nomad server state if cleanup requested
@@ -214,7 +214,7 @@
   register: consul_token_file
   delegate_to: "{{ (groups['controller_nodes'] | first) if ('controller_nodes' in groups and groups['controller_nodes']) else inventory_hostname }}"
   become: yes
-  ignore_errors: true
+  ignore_errors: false
   until: consul_token_file is success
   retries: 12
   delay: 5
@@ -356,7 +356,7 @@
     state: present
   become: yes
   check_mode: no
-  ignore_errors: true
+  ignore_errors: "{{ ansible_virtualization_type | default('') in ['docker', 'containerd'] }}"
 
 - name: Ensure br_netfilter module is loaded on boot
   ansible.builtin.copy:
@@ -373,7 +373,7 @@
     state: present
     reload: yes
   become: yes
-  ignore_errors: true
+  ignore_errors: false
 
 - name: Enable bridge-nf-call-ip6tables for CNI
   ansible.posix.sysctl:
@@ -382,7 +382,7 @@
     state: present
     reload: yes
   become: yes
-  ignore_errors: true
+  ignore_errors: false
 
 - name: Enable bridge-nf-call-iptables for CNI
   ansible.posix.sysctl:
@@ -391,7 +391,7 @@
     state: present
     reload: yes
   become: yes
-  ignore_errors: true
+  ignore_errors: false
 
 - name: Ensure CNI plugin directory exists
   ansible.builtin.file:
@@ -457,7 +457,7 @@
     - "{{ nomad_http_port }}"
     - 4647
   changed_when: false
-  ignore_errors: true
+  ignore_errors: false
 
 - name: Allow Nomad Mixed (TCP/UDP) ports in UFW
   ansible.builtin.command: ufw allow {{ item }}
@@ -465,7 +465,7 @@
   loop:
     - 4648
   changed_when: false
-  ignore_errors: true
+  ignore_errors: false
 
 - name: Check if Nomad CLI cert exists
   ansible.builtin.stat:
@@ -491,7 +491,7 @@
   until: nomad_api_status.status == 200
   retries: 60
   delay: 10
-  ignore_errors: true
+  ignore_errors: false
   when: not ansible_check_mode
 
 - name: Check Nomad service status if start task failed

@@ -271,7 +271,6 @@
   ansible.builtin.shell: "fuser -k {{ item }}/tcp || true"
   become: yes
   loop:
-    - "{{ mqtt_port }}"
     - "{{ mqtts_port | default(8883) }}"
     - "{{ mqtt_websocket_port }}"
   changed_when: false
@@ -279,12 +278,6 @@
 
 - name: Remove any zombie Mosquitto containers
   ansible.builtin.shell: "docker ps -q --filter 'ancestor=eclipse-mosquitto:2' | xargs -r docker rm -f"
-  become: yes
-  changed_when: false
-  ignore_errors: yes
-
-- name: Allow MQTT port in UFW
-  ansible.builtin.command: ufw allow {{ mqtt_port }}/tcp
   become: yes
   changed_when: false
   ignore_errors: yes
