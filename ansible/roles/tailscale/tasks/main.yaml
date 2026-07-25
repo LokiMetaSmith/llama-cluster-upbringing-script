@@ -23,11 +23,42 @@
   failed_when: false
   changed_when: false
 
+
+- name: Check for imprinted Headscale URL
+  ansible.builtin.stat:
+    path: /etc/pipecat_headscale_url
+  register: imprinted_headscale_url_file
+
+- name: Check for imprinted Headscale Auth Key
+  ansible.builtin.stat:
+    path: /etc/pipecat_mesh_auth_key
+  register: imprinted_headscale_auth_key_file
+
+- name: Read imprinted Headscale URL
+  ansible.builtin.command: cat /etc/pipecat_headscale_url
+  register: imprinted_headscale_url
+  when: imprinted_headscale_url_file.stat.exists
+  changed_when: false
+
+- name: Read imprinted Headscale Auth Key
+  ansible.builtin.command: cat /etc/pipecat_mesh_auth_key
+  register: imprinted_headscale_auth_key
+  when: imprinted_headscale_auth_key_file.stat.exists
+  changed_when: false
+
+- name: Set dynamic Tailscale login-server
+  set_fact:
+    resolved_login_server: "{{ imprinted_headscale_url.stdout if imprinted_headscale_url_file.stat.exists else hostvars[groups['controller_nodes'][0]]['headscale_server_url'] }}"
+
+- name: Set dynamic Tailscale authkey
+  set_fact:
+    resolved_authkey: "{{ imprinted_headscale_auth_key.stdout if imprinted_headscale_auth_key_file.stat.exists else hostvars[groups['controller_nodes'][0]]['headscale_auth_key'] }}"
+
 - name: Connect to Headscale
   command: >
     tailscale up
-    --login-server={{ hostvars[groups['controller_nodes'][0]]['headscale_server_url'] }}
-    --authkey={{ hostvars[groups['controller_nodes'][0]]['headscale_auth_key'] }}
+    --login-server={{ resolved_login_server }}
+    --authkey={{ resolved_authkey }}
     --accept-routes
   when: tailscale_status.rc != 0
   register: tailscale_up

@@ -92,3 +92,26 @@ While Tailscale provides the secure overlay, direct SSH access to nodes is gover
 1. Administrators generate a FIDO2 SSH key locally: `ssh-keygen -t ed25519-sk`.
 2. The resulting public key string (e.g., `sk-ssh-ed25519@openssh.com AAAA...`) is added to the `fido_ssh_keys` list in `group_vars/all.yaml`.
 3. The `common-tools` Ansible role ensures that any defined FIDO keys are appended to the `authorized_keys` file for the primary `target_user` on every node, allowing hardware-backed SSH authentication.
+
+## 5. Bootstrapping and Migration Tooling
+
+### 5.1. USB Keychain Imprinting
+
+When deploying new nodes, you can bypass the manual OIDC enrollment by securely imprinting credentials directly onto the OS installation media.
+
+Run `scripts/imprint_usb_keychain.sh` to:
+1. Trigger a FIDO physical touch challenge via SSH to the controller.
+2. Generate a long-lived, reusable Headscale pre-auth key.
+3. Collect your FIDO SSH public key and the controller's IP address.
+4. Stage these credentials and optionally run `os-image/build_iso.sh --flash --inject` to write them into a secure `CONFIGS` partition on the USB drive.
+
+During the initial boot of the live installer, the `00-usb-imprint.sh` module mounts this partition, injects the credentials into the local configuration, and automatically joins the cluster mesh network.
+
+### 5.2. Migrating FIDO Keys
+
+If you need to rotate or upgrade your hardware security key, you must update the cluster's declarative state and ensure you do not lose SSH access during the transition.
+
+Run `scripts/migrate_fido_keys.sh` to:
+1. Remove your old FIDO public key and append the new key to `group_vars/all.yaml`.
+2. Push the new key directly to the Consul KV store (e.g., `ssh-keys/admin-fido`).
+3. The cluster's built-in synchronization cron job will detect the new key in Consul and distribute it to all node `authorized_keys` files within 5 minutes, ensuring immediate access without requiring a full Ansible playbook run.
