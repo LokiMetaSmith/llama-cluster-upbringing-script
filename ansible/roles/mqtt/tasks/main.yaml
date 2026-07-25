@@ -305,7 +305,7 @@
 
 - name: Warm up IPFS gateway cache for Mosquitto tarball
   ansible.builtin.uri:
-    url: "https://{{ cluster_ip }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ mosquitto_ipfs_cid }}"
+    url: "http://{{ cluster_ip }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ mosquitto_ipfs_cid }}"
     method: GET
     timeout: 60
     status_code: [200, 502, 504]
@@ -314,6 +314,9 @@
   failed_when: false
   retries: 15
   delay: 10
+
+- name: Import mTLS certificate generation tasks
+  ansible.builtin.import_tasks: mtls.yaml
 
 - name: Deploy MQTT Job
   block:

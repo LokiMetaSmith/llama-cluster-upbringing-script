@@ -1,3 +1,10 @@
+[project]
+name = "pipecatapp"
+version = "0.1.0"
+dependencies = [
+    "cryptography>=41.0.0",
+]
+
 [tool.vulture]
 exclude = ["venv", ".venv", "node_modules", "tests"]
 ignore_decorators = ["@app.route", "@pytest.fixture"]
