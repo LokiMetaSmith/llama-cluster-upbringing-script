@@ -1,7 +1,3 @@
-listener {{ mqtt_port }}
-protocol mqtt
-allow_anonymous true
-
 listener {{ mqtt_websocket_port }}
 protocol websockets
 
@@ -26,3 +22,4 @@ keyfile /mosquitto/certs/key.pem
 # Require client certificate
 require_certificate true
 use_identity_as_username false
+allow_anonymous false

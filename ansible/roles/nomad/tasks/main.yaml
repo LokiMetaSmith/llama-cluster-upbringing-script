@@ -2,6 +2,8 @@
   ansible.builtin.pip:
     name: python-nomad
     state: present
+    executable: pip3
+    extra_args: "--break-system-packages"
   become: yes
 
 - name: Download Nomad
