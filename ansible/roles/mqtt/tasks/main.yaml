@@ -315,6 +315,9 @@
   retries: 15
   delay: 10
 
+- name: Import mTLS certificate generation tasks
+  ansible.builtin.import_tasks: mtls.yaml
+
 - name: Deploy MQTT Job
   block:
     - name: Run mqtt job
