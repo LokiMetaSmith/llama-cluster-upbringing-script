@@ -11,6 +11,7 @@ from agent_factory import create_tools
 from tools.submit_solution_tool import SubmitSolutionTool
 from pmm_memory_client import PMMMemoryClient
 from durable_execution import DurableExecutionEngine, durable_step
+from atproto_crypto import verify_payload
 
 # Configure logging
 logging.basicConfig(
@@ -61,6 +62,11 @@ class WorkerAgent:
             import paho.mqtt.client as mqtt
             self.mqtt_client = mqtt.Client(client_id=f"worker_agent_{self.task_id}")
 
+            try:
+                authorized_dids = json.loads(os.getenv("AUTHORIZED_DIDS", "{}"))
+            except json.JSONDecodeError:
+                authorized_dids = {}
+
             def on_connect(client, userdata, flags, rc):
                 if rc == 0:
                     logger.info("Connected to MQTT broker for security monitoring.")
@@ -72,6 +78,26 @@ class WorkerAgent:
             def on_message(client, userdata, msg):
                 try:
                     payload = json.loads(msg.payload.decode('utf-8'))
+
+                    signature = payload.pop("signature", None)
+                    did = payload.pop("did", None)
+
+                    if not authorized_dids:
+                        logger.warning(f"Dropping MQTT message: No AUTHORIZED_DIDS loaded (fail-close).")
+                        return
+
+                    if not signature or not did:
+                        logger.warning(f"Dropping unsigned MQTT message on {msg.topic}")
+                        return
+
+                    if did not in authorized_dids:
+                        logger.warning(f"Dropping MQTT message from unauthorized DID: {did}")
+                        return
+
+                    public_key_hex = authorized_dids[did]
+                    if not verify_payload(payload, signature, public_key_hex):
+                        logger.warning(f"Dropping MQTT message with invalid signature from DID: {did}")
+                        return
 
                     if msg.topic == "cluster/security/heartbeat":
                         self.last_heartbeat_time = time.time()
