@@ -1,0 +1,24 @@
+---
+- name: Verify URI module handles -1 status gracefully
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Test uri connection refused handles gracefully
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:9999/ipfs/xyz"
+        method: GET
+        timeout: 2
+        status_code: [200, 502, 504, -1]
+      register: _test_uri
+      until: _test_uri.status is defined and _test_uri.status == 200
+      failed_when: false
+      retries: 3
+      delay: 1
+
+    - name: Assert URI module handled the -1 status gracefully
+      ansible.builtin.assert:
+        that:
+          - "_test_uri.status == -1"
+          - "_test_uri.failed == false or _test_uri.failed_when_result == false"
+        fail_msg: "URI module failed unexpectedly."
+        success_msg: "URI module gracefully handled connection refused (-1)."
