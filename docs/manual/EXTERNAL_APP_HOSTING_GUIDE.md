@@ -2,6 +2,8 @@
 
 This document describes the design, schema, and operational workflows for hosting containerized external applications alongside the conversational AI cluster.
 
+The host conversational AI cluster is [llama-cluster-upbringing-script](https://github.com/LokiMetaSmith/llama-cluster-upbringing-script/), this guide is intended to help integrate external repo's and projects into the cluster via implementing this guide.
+
 The integration system consists of a Python-based utility, an Autonomous Agentic Tool (`external_app_manager`), and a CLI Management utility (`scripts/app-manager.py`).
 
 ---
@@ -35,6 +37,8 @@ The External Application Package Management system allows the cluster to securel
 3. **Enforced Mesh Networking (Rule 1.1):** All external applications are bound to the `tailscale0` network interface and mapped dynamically. Communication remains strictly on the internal Tailscale/Headscale mesh network.
 4. **Seamless Ingress (Traefik Host-based Routing):** If `route_public` is true, host-based routing (e.g., `http://<app_name>.local.mesh`) is automatically registered via Traefik.
 5. **Webring Auto-Registration:** Upon healthy deployment, the application is dynamically registered as a member in the circular **Ouroboros Webring** dashboard (`pipecatapp/webring/members` inside Consul KV).
+
+6. **ATProto Identity & Governance:** Autonomous agents utilizing external apps or communicating externally must establish cryptographically secure identities via the AT Protocol (Bluesky). Agents utilize predefined lexicons for DID (Decentralized Identifier) resolution to ensure cryptographic accountability across the cluster without relying on centralized PKI.
 
 ---
 

@@ -54,7 +54,8 @@ class TaskSupervisor:
 
         async def _on_cancel(tid, payload):
             # Terminate running Nomad/Swarm job
-            nomad_job_id = f"worker-{tid}"
+            # Attempt to retrieve tracked nomad_job_id, fallback to convention if not tracked yet
+            nomad_job_id = self.active_tasks.get(tid, {}).get("nomad_job_id") or f"worker-{tid}"
             self.logger.warning(f"Cancelling task '{tid}' under job key '{job_key}' because of PREFER_NEW policy.")
             try:
                 await self.swarm_tool.kill_worker(nomad_job_id)
@@ -159,7 +160,15 @@ class TaskSupervisor:
                 self.logger.info(f"Heartbeat: Worker spawned for task '{task_id}'. Result: {spawn_res}")
 
                 # 2. Complete and immediately put worker back to sleep to conserve resource
-                nomad_job_id = f"worker-{task_id}" # Standard job id naming convention
+                import json
+                nomad_job_id = f"worker-{task_id}" # Fallback
+                try:
+                    res_dict = json.loads(spawn_res)
+                    if res_dict.get("job_ids"):
+                        nomad_job_id = res_dict["job_ids"][0]
+                except Exception:
+                    pass
+
                 self.logger.info(f"Heartbeat task completed. Putting worker node '{nomad_job_id}' back to sleep (purging Nomad job)...")
 
                 await self.swarm_tool.kill_worker(nomad_job_id)

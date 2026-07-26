@@ -271,7 +271,7 @@
   ansible.builtin.shell: "fuser -k {{ item }}/tcp || true"
   become: yes
   loop:
-    - "{{ mqtt_port }}"
+    - "{{ mqtts_port | default(8883) }}"
     - "{{ mqtt_websocket_port }}"
   changed_when: false
   ignore_errors: yes
@@ -282,8 +282,8 @@
   changed_when: false
   ignore_errors: yes
 
-- name: Allow MQTT port in UFW
-  ansible.builtin.command: ufw allow {{ mqtt_port }}/tcp
+- name: Allow MQTTS port in UFW
+  ansible.builtin.command: ufw allow {{ mqtts_port | default(8883) }}/tcp
   become: yes
   changed_when: false
   ignore_errors: yes

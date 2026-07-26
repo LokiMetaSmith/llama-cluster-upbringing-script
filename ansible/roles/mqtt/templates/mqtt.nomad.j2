@@ -26,24 +26,6 @@ job "mqtt" {
 
     # Service Block at Group Level (Correct Placement)
     service {
-      name     = "mqtt"
-      port     = "mqtt"
-      provider = "consul"
-      check {
-        # Changed from script to tcp as group level script checks run on host without nc
-        type     = "tcp"
-        name     = "mqtt_health"
-        check_restart {
-          limit = 3
-          grace = "90s"
-          ignore_warnings = false
-        }
-        interval = "10s"
-        timeout  = "5s"
-      }
-    }
-    
-    service {
       name     = "mqtts"
       port     = "mqtts"
       provider = "consul"
