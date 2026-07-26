@@ -357,7 +357,7 @@
 
     - name: Wait for MQTT service to be healthy in Consul
       ansible.builtin.uri:
-        url: "https://{{ advertise_ip }}:{{ consul_https_port }}/v1/health/service/mqtt?passing"
+        url: "https://{{ advertise_ip }}:{{ consul_https_port }}/v1/health/service/mqtts?passing"
         client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
         client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
         ca_path: "/etc/consul.d/ca.pem"
