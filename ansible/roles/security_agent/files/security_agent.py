@@ -9,6 +9,10 @@ import paho.mqtt.client as mqtt
 from pyod.models.iforest import IForest
 import numpy as np
 
+import base64
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -17,6 +21,20 @@ logger = logging.getLogger(__name__)
 MQTT_BROKER = os.getenv("MQTT_BROKER", "mqtt.service.consul")
 MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
 TCP_LISTEN_PORT = int(os.getenv("TCP_LISTEN_PORT", "9000"))
+
+ATPROTO_PRIVATE_KEY_HEX = os.getenv("ATPROTO_PRIVATE_KEY_HEX")
+ATPROTO_DID = os.getenv("ATPROTO_DID", "did:plc:security_agent")
+
+def sign_payload(payload_dict: dict, private_key_hex: str) -> str:
+    """Signs a dictionary payload deterministically using an ECDSA SECP256R1 private key."""
+    if not private_key_hex:
+        return ""
+    payload_bytes = json.dumps(payload_dict, sort_keys=True, separators=(',', ':')).encode('utf-8')
+    private_key_bytes = bytes.fromhex(private_key_hex)
+    private_key_int = int.from_bytes(private_key_bytes, byteorder='big')
+    private_key = ec.derive_private_key(private_key_int, ec.SECP256R1())
+    signature = private_key.sign(payload_bytes, ec.ECDSA(hashes.SHA256()))
+    return base64.b64encode(signature).decode('utf-8')
 
 # State for PyOD anomaly detection (log volume over time windows)
 # This is a very lightweight statistical check.
@@ -68,8 +86,16 @@ def publish_alert(mqtt_client, severity, message, context=None):
         "context": context or {}
     }
 
+    if ATPROTO_PRIVATE_KEY_HEX:
+        try:
+            signature = sign_payload(payload, ATPROTO_PRIVATE_KEY_HEX)
+            payload["signature"] = signature
+            payload["did"] = ATPROTO_DID
+        except Exception as e:
+            logger.error(f"Failed to sign alert payload: {e}")
+
     try:
-        mqtt_client.publish(topic, json.dumps(payload))
+        mqtt_client.publish(topic, json.dumps(payload, sort_keys=True, separators=(',', ':')))
         logger.info(f"Published alert to {topic}: {message}")
     except Exception as e:
         logger.error(f"Failed to publish alert: {e}")
@@ -162,8 +188,17 @@ async def heartbeat_task(mqtt_client):
                 "timestamp": datetime.utcnow().isoformat(),
                 "status": "ok"
             }
+
+            if ATPROTO_PRIVATE_KEY_HEX:
+                try:
+                    signature = sign_payload(payload, ATPROTO_PRIVATE_KEY_HEX)
+                    payload["signature"] = signature
+                    payload["did"] = ATPROTO_DID
+                except Exception as e:
+                    logger.error(f"Failed to sign heartbeat payload: {e}")
+
             try:
-                mqtt_client.publish(topic, json.dumps(payload))
+                mqtt_client.publish(topic, json.dumps(payload, sort_keys=True, separators=(',', ':')))
             except Exception as e:
                 logger.error(f"Failed to publish heartbeat: {e}")
         await asyncio.sleep(30)
