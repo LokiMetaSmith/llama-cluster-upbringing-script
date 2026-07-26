@@ -38,6 +38,8 @@ The External Application Package Management system allows the cluster to securel
 4. **Seamless Ingress (Traefik Host-based Routing):** If `route_public` is true, host-based routing (e.g., `http://<app_name>.local.mesh`) is automatically registered via Traefik.
 5. **Webring Auto-Registration:** Upon healthy deployment, the application is dynamically registered as a member in the circular **Ouroboros Webring** dashboard (`pipecatapp/webring/members` inside Consul KV).
 
+6. **ATProto Identity & Governance:** Autonomous agents utilizing external apps or communicating externally must establish cryptographically secure identities via the AT Protocol (Bluesky). Agents utilize predefined lexicons for DID (Decentralized Identifier) resolution to ensure cryptographic accountability across the cluster without relying on centralized PKI.
+
 ---
 
 ## 2. Standardized Manifest Specification
