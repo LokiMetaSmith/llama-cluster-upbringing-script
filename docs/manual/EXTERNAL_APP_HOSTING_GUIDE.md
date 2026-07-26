@@ -2,6 +2,8 @@
 
 This document describes the design, schema, and operational workflows for hosting containerized external applications alongside the conversational AI cluster.
 
+The host conversational AI cluster is [llama-cluster-upbringing-script](https://github.com/LokiMetaSmith/llama-cluster-upbringing-script/), this guide is intended to help integrate external repo's and projects into the cluster via implementing this guide.
+
 The integration system consists of a Python-based utility, an Autonomous Agentic Tool (`external_app_manager`), and a CLI Management utility (`scripts/app-manager.py`).
 
 ---
