@@ -220,7 +220,7 @@
   become: yes
   register: ipfs_add_result_mosquitto
   environment:
-    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
+    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs/{{ controller_host }}"
   changed_when: false
   delegate_to: "{{ controller_host }}"
   run_once: true
@@ -308,7 +308,7 @@
     url: "http://{{ cluster_ip }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ mosquitto_ipfs_cid }}"
     method: GET
     timeout: 60
-    status_code: [200, 502, 504]
+    status_code: [200, 502, 504, -1]
   register: ipfs_warmup
   until: ipfs_warmup.status is defined and ipfs_warmup.status == 200
   failed_when: false
