@@ -5,6 +5,12 @@
     version: main
     force: yes
 
+- name: Fix tree-sitter-c-sharp version
+  ansible.builtin.replace:
+    path: /opt/claude_clone/package.json
+    regexp: '"tree-sitter-c-sharp": "\^0\.20\.0"'
+    replace: '"tree-sitter-c-sharp": "^0.23.5"'
+
 - name: Install Claude_Clone dependencies
   ansible.builtin.npm:
     path: /opt/claude_clone
