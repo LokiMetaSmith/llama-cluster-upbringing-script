@@ -107,7 +107,7 @@ sinks:
       codec: "json"
     mode: "tcp"
     # We will use the Nomad service variable to resolve the host and port
-    address: "{% raw %}{{ range service \"security-agent\" }}{{ .Address }}:{{ .Port }}{{ end }}{% end raw %}"
+    address: "{% raw %}{{ range service \"security-agent\" }}{{ .Address }}:{{ .Port }}{{ end }}{% endraw %}"
 
   # Archive to decentralized cluster storage
   fs_archive:

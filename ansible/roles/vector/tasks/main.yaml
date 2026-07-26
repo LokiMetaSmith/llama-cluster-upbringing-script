@@ -7,6 +7,14 @@
   ansible.builtin.set_fact:
     nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
 
+- name: Ensure nomad jobs directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_jobs_dir | default('/opt/nomad/jobs') }}"
+    state: directory
+    mode: '0755'
+  become: yes
+  run_once: true
+
 - name: Template vector job
   ansible.builtin.template:
     src: vector.nomad.j2
