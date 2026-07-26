@@ -318,6 +318,30 @@
 - name: Import mTLS certificate generation tasks
   ansible.builtin.import_tasks: mtls.yaml
 
+- name: Ensure Mosquitto certs directory exists on host
+  ansible.builtin.file:
+    path: /opt/mqtt/certs
+    state: directory
+    owner: "1883"
+    group: "1883"
+    mode: '0755'
+  become: yes
+
+- name: Copy TLS certificates for Mosquitto to accessible directory
+  ansible.builtin.copy:
+    src: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/{{ item }}"
+    dest: "/opt/mqtt/certs/{{ item }}"
+    owner: "1883"
+    group: "1883"
+    mode: '0600'
+    remote_src: yes
+  loop:
+    - ca.pem
+    - cert.pem
+    - key.pem
+  become: yes
+  ignore_errors: yes
+
 - name: Deploy MQTT Job
   block:
     - name: Run mqtt job
