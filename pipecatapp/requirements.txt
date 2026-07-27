@@ -33,7 +33,7 @@ onnxruntime
 opencv-python-headless
 pandas
 paramiko
-pillow
+pillow>=10.4.0
 pipecat-ai[openai,local]
 pipecat-ai-whisker
 piper-tts
