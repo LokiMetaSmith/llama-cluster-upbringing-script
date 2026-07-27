@@ -55,6 +55,16 @@ To make SSD streaming viable for real-time speech generation, we must combine Mo
 3. **Audio-Lookahead Pre-Fetching:** Full-duplex speech models receive continuous audio frames *ahead* of generation. Run the router head 1–2 audio frames (~40–80 ms) ahead on incoming user audio tokens to initiate async NVMe reads before the decoder layer execution reaches that step.
 4. **Multi-Token Speculative Decoding:** Apply a lightweight draft head to Moshi’s temporal stream to predict multiple audio tokens simultaneously, amortizing disk read latency across several audio frames.
 
+### Advanced Hardware & Algorithm Optimizations
+
+To push throughput limits even further for real-time edge streaming, the following advanced techniques can be integrated:
+
+1. **Direct NVMe-to-VRAM DMA via GPUDirect Storage (cuFile):** Bypass CPU host RAM entirely using NVIDIA GPUDirect Storage (GDS) via the cuFile C API. Direct Memory Access (DMA) transfers straight from the NVMe storage controller over the PCIe bus into GPU VRAM can deliver 7–14 GB/s while eliminating CPU cache pollution and thread context-switching overhead.
+2. **Early-Layer Predictive Router (Layer-Offset Gating):** Train a lightweight auxiliary router at layer `L-2` (or `L-3`) that takes intermediate hidden states and predicts the active expert indices for layer `L`. This gives the async I/O worker a 1-3 ms execution time window to complete the NVMe read before layer `L` begins execution, effectively hiding SSD read latency behind preceding layer matrix multiplications.
+3. **Feature-Level Speculative Drafting (EAGLE-Style):** Attach 1–2 lightweight single-layer prediction heads (similar to EAGLE or Medusa architectures) that extrapolate future Mimi codebook tokens from intermediate hidden states of the main backbone. Verifying 4 tokens in a single target model forward pass cuts effective SSD bandwidth requirements by up to 75%.
+4. **Non-Uniform Sub-Byte Quantization (IQ2_XXS / INT3 / FP4):** Apply non-uniform importance matrix quantization specifically to the sparse MoE expert weights, while leaving dense attention layers at FP16/BF16. Shrinking individual expert payloads down to 15–25 MB per layer ensures that loading 4 top-1 activated experts at INT3 takes less than 10 ms on a 7 GB/s NVMe drive, fitting comfortably within Moshi's 40–80 ms frame budget.
+5. **Tiered KV-Cache & Activation Offloading:** Implement a two-tier KV-cache manager where historical Key-Value tensors beyond the immediate attention window are moved to host RAM via pinned pinned-memory pages (`cudaHostAlloc`), keeping only active rolling window tokens in VRAM. This prevents VRAM fragmentation and out-of-memory errors during long conversational sessions, reserving maximum VRAM for incoming DMA expert buffers.
+
 ## 5. Low-Level Rust Extension Blueprint
 
 To maintain Moshi’s real-time 80ms audio frame processing budget without hitting the GIL or blocking Candle’s matrix multiplication kernels, the streaming reader runs as a dedicated background worker using Linux `io_uring`.
