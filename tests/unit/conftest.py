@@ -108,7 +108,6 @@ modules_to_mock = [
     'starlette.requests',
     'starlette.responses',
     'starlette.types',
-    'claude_clone_tool',
     'extism',
     'mcp',
     'mcp.client',

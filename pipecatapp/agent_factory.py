@@ -16,7 +16,6 @@ from tools.ha_tool import HA_Tool
 from tools.git_tool import Git_Tool
 from tools.orchestrator_tool import OrchestratorTool
 from tools.llxprt_code_tool import LLxprt_Code_Tool
-from tools.claude_clone_tool import ClaudeCloneTool
 from tools.smol_agent_tool import SmolAgentTool
 from tools.final_answer_tool import FinalAnswerTool
 from tools.mcp_client_adapter import MCPClientAdapter
@@ -116,7 +115,6 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "mcp": MCP_Tool(twin_service, runner) if twin_service and runner else None,
         "smol_agent_computer": SmolAgentTool(),
         "llxprt_code": LLxprt_Code_Tool(),
-        "claude_clone": ClaudeCloneTool(),
         "final_answer": FinalAnswerTool(),
         "shell": MCPClientAdapter(
             name="shell",

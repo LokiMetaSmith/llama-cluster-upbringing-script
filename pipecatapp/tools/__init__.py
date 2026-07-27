@@ -4,7 +4,6 @@ from .ast_editor_tool import ASTEditorTool
 from .atproto_tool import ATProtoTool
 from .autoloop_tool import AutoloopTool
 from .autoresearch_tool import AutoresearchTool
-from .claude_clone_tool import ClaudeCloneTool
 from .cluster_status_tool import ClusterStatusTool
 from .code_runner_tool import CodeRunnerTool
 from .container_registry_tool import ContainerRegistryTool
@@ -79,7 +78,6 @@ __all__ = [
     "ATProtoTool",
     "AutoloopTool",
     "AutoresearchTool",
-    "ClaudeCloneTool",
     "ClusterStatusTool",
     "CodeRunnerTool",
     "ContainerRegistryTool",

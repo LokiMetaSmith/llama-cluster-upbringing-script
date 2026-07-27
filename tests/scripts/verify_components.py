@@ -135,18 +135,6 @@ def verify_llxprt_code():
     ok, msg = verify_command_available("llxprt")
     print_result("Command: llxprt", ok, msg)
 
-def verify_claude_clone():
-    print("--- claude_clone ---")
-    # Check for build artifact or package.json
-    ok, msg = verify_file_exists("/opt/claude_clone/package.json")
-    print_result("Repo Clone", ok, msg)
-
-    ok, msg = verify_file_exists("/opt/claude_clone/dist") # Assuming 'npm run build' creates dist
-    if not ok:
-        # Maybe it creates 'build'?
-        ok, msg = verify_file_exists("/opt/claude_clone/build")
-    print_result("Build Artifacts", ok, msg)
-
 def verify_moe_gateway():
     print("--- moe_gateway ---")
     ok, msg = verify_nomad_job("moe-gateway")
@@ -171,7 +159,6 @@ if __name__ == "__main__":
     verify_world_model_service()
     verify_tool_server()
     verify_llxprt_code()
-    verify_claude_clone()
     verify_moe_gateway()
     verify_mcp_server()
     print("-------------------------------------")
