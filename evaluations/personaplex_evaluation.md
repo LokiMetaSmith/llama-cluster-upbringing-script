@@ -26,8 +26,11 @@ PersonaPlex represents a paradigm shift for **CommandDeck**, particularly for re
 The most significant hurdle for integrating PersonaPlex is its computational weight.
 
 * **GPU Requirements:** A 7B model requires significant VRAM (approximately 14-16GB for reasonable batching and context, or 4-8GB if heavily quantized, though real-time audio generation is extremely latency-sensitive).
-* **Low-Power Mesh Nodes:** Deploying this on our core 2 Duo or other low-power mesh nodes is **unfeasible** for real-time full-duplex operations. While CPU offloading is supported via `accelerate`, it will completely break the low-latency guarantees required for fluid conversation and live NPCs.
-* **Cluster Strategy:** PersonaPlex must be restricted to GPU-heavy orchestrator nodes (e.g., those with RTX 3090s/4090s or equivalent datacenter GPUs). Lower-tier nodes interacting with PersonaPlex will need to stream audio over the network to the centralized service rather than running inference locally.
+* **Cluster Strategy (Centralized GPU Orchestrators):** Currently, PersonaPlex must be restricted to GPU-heavy orchestrator nodes (e.g., those with RTX 3090s/4090s or equivalent datacenter GPUs). Lower-tier nodes interacting with PersonaPlex will need to stream audio over the network to the centralized service rather than running inference locally.
+* **Low-Power Mesh Nodes (Core 2 Duo / 4-8GB RAM):** Deploying the native 7B dense model on our mesh nodes is **unfeasible**. The memory bandwidth and compute required completely breaks the low-latency guarantees.
+* **Advanced Feasibility Strategy (SSD Streaming on Edge Nodes):** Given the limitations of the mesh nodes, a hybrid architecture leveraging **Colibri's SSD streaming techniques** (`io_uring` sparse MoE loading) could make local execution possible.
+    * By converting the dense Transformer backbone into a sparse MoE structure (or using dynamic MoE-LoRAs) and leveraging asynchronous NVMe read pipelines in C/Rust, we could stream only the activated experts directly from disk to pinned memory.
+    * Using audio-lookahead (running the router head slightly ahead on incoming audio frames), we can hide the disk latency. See the supplementary document [`colibri_moshi_ssd_streaming.md`](./colibri_moshi_ssd_streaming.md) for the complete Rust architectural blueprint outlining this path.
 
 ---
 
@@ -81,3 +84,5 @@ PersonaPlex's text prompts are not just static strings; they can act as dynamic 
    - Build a middleware layer in `pipecatapp` that translates live XML/JSON simulator state into PersonaPlex-formatted text prompts on-the-fly.
 4. **Latency Benchmarking:**
    - Measure the end-to-end latency from a remote mesh node capturing audio to receiving the first audio frame back from the GPU node.
+5. **SSD Streaming Prototype (Colibri + Moshi):**
+   - Review the [Colibri/Moshi SSD Streaming Blueprint](./colibri_moshi_ssd_streaming.md) for a long-term strategy to offload inference back onto local NVMe-equipped edge nodes. Begin prototyping the Rust `io_uring` module.
