@@ -186,9 +186,12 @@ class SchemaMapperTool:
 
     def _inspect_table(self, cursor: sqlite3.Cursor, table_name: str, sample_rows: int) -> Dict[str, Any]:
         """Gathers schema structure, count, and samples for a single table."""
+        # Secure table name by escaping double quotes
+        safe_table_name = table_name.replace('"', '""')
+
         # Get column info
         # PRAGMA table_info returns columns: cid, name, type, notnull, dflt_value, pk
-        cursor.execute(f"PRAGMA table_info(\"{table_name}\");")
+        cursor.execute(f"PRAGMA table_info(\"{safe_table_name}\");")
         columns = []
         for row in cursor.fetchall():
             columns.append({
@@ -201,7 +204,7 @@ class SchemaMapperTool:
 
         # Get declared foreign keys
         # PRAGMA foreign_key_list returns: id, seq, table, from, to, on_update, on_delete, match
-        cursor.execute(f"PRAGMA foreign_key_list(\"{table_name}\");")
+        cursor.execute(f"PRAGMA foreign_key_list(\"{safe_table_name}\");")
         declared_fks = []
         try:
             for row in cursor.fetchall():
@@ -214,13 +217,13 @@ class SchemaMapperTool:
             pass
 
         # Count records
-        cursor.execute(f"SELECT COUNT(*) as cnt FROM \"{table_name}\";")
+        cursor.execute(f"SELECT COUNT(*) as cnt FROM \"{safe_table_name}\";")
         row_count = cursor.fetchone()["cnt"]
 
         # Sample rows
         samples = []
         if row_count > 0:
-            cursor.execute(f"SELECT * FROM \"{table_name}\" LIMIT {sample_rows};")
+            cursor.execute(f"SELECT * FROM \"{safe_table_name}\" LIMIT ?;", (sample_rows,))
             for row in cursor.fetchall():
                 samples.append(dict(row))
 
