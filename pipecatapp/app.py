@@ -83,7 +83,6 @@ from mqtt_world_model_client import MQTTWorldModelClient
 
 from tools.orchestrator_tool import OrchestratorTool
 from tools.llxprt_code_tool import LLxprt_Code_Tool
-from tools.claude_clone_tool import ClaudeCloneTool
 from tools.smol_agent_tool import SmolAgentTool
 from tools.final_answer_tool import FinalAnswerTool
 from tools.prompt_improver_tool import PromptImproverTool

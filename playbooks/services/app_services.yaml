@@ -119,7 +119,6 @@
         - term_everything
         - tool_server
         - llxprt_code
-        - claude_clone
         - moe_gateway
         - mcp_server
         - llmfit

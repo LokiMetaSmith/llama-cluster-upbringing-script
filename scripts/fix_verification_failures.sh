@@ -17,19 +17,6 @@ else
     echo "llxprt is already installed."
 fi
 
-# 2. Fix claude_clone
-if [ ! -d "/opt/claude_clone" ]; then
-    echo "Cloning Claude_Clone..."
-    sudo git clone https://github.com/LokiMetaSmith/Claude_Clone.git /opt/claude_clone
-    cd /opt/claude_clone && sudo npm install && sudo npm run build
-elif [ ! -f "/opt/claude_clone/package.json" ]; then
-     echo "Repopulating Claude_Clone..."
-     sudo git clone https://github.com/LokiMetaSmith/Claude_Clone.git /tmp/cc_temp
-     sudo mv /tmp/cc_temp/* /opt/claude_clone/
-     sudo rm -rf /tmp/cc_temp
-     cd /opt/claude_clone && sudo npm install && sudo npm run build
-fi
-
 # 3. Fix moe_gateway
 if [ ! -f "/opt/pipecatapp/moe_gateway/gateway.py" ]; then
     echo "Restoring moe_gateway/gateway.py..."

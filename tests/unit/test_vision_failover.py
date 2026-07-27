@@ -21,7 +21,7 @@ mock_modules = [
     "tools.code_runner_tool", "tools.web_browser_tool", "tools.ansible_tool",
     "tools.power_tool", "tools.summarizer_tool", "tools.term_everything_tool",
     "tools.rag_tool", "tools.ha_tool", "tools.git_tool", "tools.orchestrator_tool",
-    "tools.llxprt_code_tool", "tools.claude_clone_tool", "tools.smol_agent_tool",
+    "tools.llxprt_code_tool", "tools.smol_agent_tool",
     "tools.final_answer_tool", "tools.shell_tool", "tools.prompt_improver_tool",
     "tools.council_tool", "tools.swarm_tool", "tools.project_mapper_tool",
     "tools.planner_tool", "agent_factory", "task_supervisor", "durable_execution",

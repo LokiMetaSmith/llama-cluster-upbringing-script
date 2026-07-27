@@ -107,7 +107,6 @@ APP_DIRS=(
     "/opt/pipecatapp"
     "/opt/tool_server"
     "/opt/paperless"
-    "/opt/claude_clone"
     "/opt/llmfit"
     "/opt/llxprt-code"
     "/opt/opengravity-build"
