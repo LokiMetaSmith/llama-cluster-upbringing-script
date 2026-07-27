@@ -6,7 +6,6 @@ import os
 import re
 import json
 import inspect
-import shlex
 
 signer = ToolExecutionSigner()
 import httpx
@@ -136,10 +135,9 @@ def shell_tool(command: str) -> Dict[str, Any]:
     try:
         # Security Note: This tool allows arbitrary command execution.
         # In this self-hosted context with the Emperor agent, this is intentional.
-        args = shlex.split(command)
         result = subprocess.run(
-            args,
-            shell=False,
+            command,
+            shell=True,
             text=True,
             capture_output=True,
             timeout=120
