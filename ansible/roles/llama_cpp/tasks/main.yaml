@@ -38,9 +38,9 @@
   register: version_file_stat
   become: yes
 
-- name: Check for existing rpc-server binary
+- name: Check for existing ggml-rpc-server binary
   ansible.builtin.stat:
-    path: /usr/local/bin/rpc-server
+    path: /usr/local/bin/ggml-rpc-server
   register: rpc_server_stat
   become: yes
 
@@ -146,9 +146,9 @@
         remote_src: yes
       loop: "{{ llama_artifacts.files | rejectattr('path', 'match', '.*\\.so(\\..+)?$') | list }}"
 
-    - name: Verify rpc-server binary integrity
+    - name: Verify ggml-rpc-server binary integrity
       ansible.builtin.stat:
-        path: "/usr/local/bin/rpc-server"
+        path: "/usr/local/bin/ggml-rpc-server"
       register: rpc_server_binary_stat
       failed_when: "rpc_server_binary_stat.stat.size == 0"
 
