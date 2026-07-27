@@ -44,7 +44,7 @@ diff --git a/tools/server/server-context.cpp b/tools/server/server-context.cpp
 index ce743e665..30dbfa942 100644
 --- a/tools/server/server-context.cpp
 +++ b/tools/server/server-context.cpp
-@@ -2088,6 +2088,43 @@ private:
+@@ -2663,6 +2663,50 @@ private:
                      res->id = task.id;
                      queue_results.send(std::move(res));
                  } break;
@@ -95,7 +95,7 @@ index ce743e665..30dbfa942 100644
          }
      }
 
-@@ -3240,6 +3277,13 @@ server_response_reader server_context::get_response_reader() {
+@@ -3958,6 +4002,13 @@ server_response_reader server_context::get_response_reader() {
      return impl->get_response_reader();
  }
 
@@ -109,7 +109,7 @@ index ce743e665..30dbfa942 100644
  server_context_meta server_context::get_meta() const {
      auto bos_id = llama_vocab_bos(impl->vocab);
      auto eos_id = llama_vocab_eos(impl->vocab);
-@@ -4264,6 +4308,44 @@ void server_routes::init_routes() {
+@@ -5071,6 +5122,62 @@ void server_routes::init_routes() {
          res->ok(result->to_json());
          return res;
      };
@@ -176,7 +176,7 @@ diff --git a/tools/server/server-context.h b/tools/server/server-context.h
 index 58dda8914..98fe0935c 100644
 --- a/tools/server/server-context.h
 +++ b/tools/server/server-context.h
-@@ -104,6 +104,9 @@ struct server_context {
+@@ -107,6 +107,9 @@ struct server_context {
      // get server metadata (read-only), can only be called after load_model()
      // not thread-safe, should only be used from the main thread
      server_context_meta get_meta() const;
@@ -186,7 +186,7 @@ index 58dda8914..98fe0935c 100644
 +
      // note: must be set before load_model() is called
      void set_state_callback(server_state_callback_t callback);
-@@ -151,6 +154,8 @@ struct server_routes {
+@@ -153,6 +156,8 @@ struct server_routes {
      server_http_context::handler_t post_rerank;
      server_http_context::handler_t get_lora_adapters;
      server_http_context::handler_t post_lora_adapters;
@@ -199,7 +199,7 @@ diff --git a/tools/server/server-task.h b/tools/server/server-task.h
 index c3eea2ecb..2e9f32842 100644
 --- a/tools/server/server-task.h
 +++ b/tools/server/server-task.h
-@@ -27,6 +27,7 @@ enum server_task_type {
+@@ -27,6 +27,8 @@ enum server_task_type {
      SERVER_TASK_TYPE_SLOT_ERASE,
      SERVER_TASK_TYPE_GET_LORA,
      SERVER_TASK_TYPE_SET_LORA,
@@ -208,7 +208,7 @@ index c3eea2ecb..2e9f32842 100644
  };
 
  // TODO: change this to more generic "response_format" to replace the "format_response_*" in server-common
-@@ -175,6 +176,9 @@ struct server_task {
+@@ -175,6 +177,9 @@ struct server_task {
      // used by SERVER_TASK_TYPE_SET_LORA
      std::map<int, float> set_lora; // mapping adapter ID -> scale
 
@@ -218,7 +218,7 @@ index c3eea2ecb..2e9f32842 100644
      server_task() = default;
 
      server_task(server_task_type type) : type(type) {}
-@@ -584,6 +588,14 @@ struct server_task_result_apply_lora : server_task_result {
+@@ -584,6 +589,29 @@ struct server_task_result_apply_lora : server_task_result {
      virtual json to_json() override;
  };
 
@@ -252,7 +252,7 @@ diff --git a/tools/server/server.cpp b/tools/server/server.cpp
 index 371b13c44..463db80dd 100644
 --- a/tools/server/server.cpp
 +++ b/tools/server/server.cpp
-@@ -201,6 +201,9 @@ int main(int argc, char ** argv) {
+@@ -268,6 +268,9 @@ int llama_server(common_params & params, int argc, char ** argv) {
      // LoRA adapters hotswap
      ctx_http.get ("/lora-adapters",            ex_wrapper(routes.get_lora_adapters));
      ctx_http.post("/lora-adapters",            ex_wrapper(routes.post_lora_adapters));
