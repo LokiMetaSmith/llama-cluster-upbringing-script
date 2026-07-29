@@ -70,9 +70,41 @@ if command -v snap &> /dev/null; then
         done
 fi
 
-# 5. Temporary Files and Bootstrap Artifacts Cleanup
-echo -e "\n${BOLD}🧹 Cleaning Temporary Files...${NC}"
-sudo rm -rf /tmp/* /var/tmp/* 2>/dev/null || true
+# 5. Dedicated Cache Scripts and Deduplication
+echo -e "\n${BOLD}🧹 Running Dedicated Cache and Deduplication Scripts...${NC}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+
+if [ -x "${SCRIPT_DIR}/clean_caches.sh" ]; then
+    echo "Executing clean_caches.sh..."
+    "${SCRIPT_DIR}/clean_caches.sh"
+else
+    echo "Warning: clean_caches.sh not found or not executable."
+fi
+
+if [ -x "${SCRIPT_DIR}/dedup_venvs.py" ]; then
+    echo "Executing dedup_venvs.py..."
+    python3 "${SCRIPT_DIR}/dedup_venvs.py"
+else
+    echo "Warning: dedup_venvs.py not found or not executable."
+fi
+
+# 6. Bootstrap Artifacts Cleanup
+echo -e "\n${BOLD}🧹 Cleaning Bootstrap Artifacts...${NC}"
+# Remove downloaded archives
+rm -f /tmp/consul.zip
+rm -f /tmp/nomad.zip
+rm -f /tmp/cni-plugins.tgz
+rm -f /tmp/get-docker.sh
+rm -f /tmp/pipecatapp.tar
+
+# Remove extracted directories
+rm -rf /tmp/consul
+rm -rf /tmp/nomad
+
+# 5b. General Temporary Files Cleanup
+echo -e "\n${BOLD}🧹 Cleaning Temporary Files (older than 3 days)...${NC}"
+sudo find /tmp -type f -atime +3 -delete 2>/dev/null || true
+sudo find /var/tmp -type f -atime +3 -delete 2>/dev/null || true
 
 echo -e "\n${BOLD}🧹 Cleaning UV Cache...${NC}"
 sudo rm -rf /var/tmp/ansible_pip_build/uv_cache 2>/dev/null || true
