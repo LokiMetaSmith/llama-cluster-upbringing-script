@@ -70,7 +70,25 @@ if command -v snap &> /dev/null; then
         done
 fi
 
-# 5. Bootstrap Artifacts Cleanup
+# 5. Dedicated Cache Scripts and Deduplication
+echo -e "\n${BOLD}🧹 Running Dedicated Cache and Deduplication Scripts...${NC}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+
+if [ -x "${SCRIPT_DIR}/clean_caches.sh" ]; then
+    echo "Executing clean_caches.sh..."
+    "${SCRIPT_DIR}/clean_caches.sh"
+else
+    echo "Warning: clean_caches.sh not found or not executable."
+fi
+
+if [ -x "${SCRIPT_DIR}/dedup_venvs.py" ]; then
+    echo "Executing dedup_venvs.py..."
+    python3 "${SCRIPT_DIR}/dedup_venvs.py"
+else
+    echo "Warning: dedup_venvs.py not found or not executable."
+fi
+
+# 6. Bootstrap Artifacts Cleanup
 echo -e "\n${BOLD}🧹 Cleaning Bootstrap Artifacts...${NC}"
 # Remove downloaded archives
 rm -f /tmp/consul.zip
