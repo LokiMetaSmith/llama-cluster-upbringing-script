@@ -24,10 +24,10 @@ echo -e "${BOLD}${YELLOW}⚠️  Starting Aggressive System Cleanup...${NC}"
 if command -v docker &> /dev/null; then
     echo -e "\n${BOLD}🐳 Cleaning Docker System...${NC}"
     echo "Pruning stopped containers, unused networks, and dangling images..."
-    docker system prune --force
+    docker system prune --all --force --volumes
 
     echo "Pruning build cache..."
-    docker builder prune --force
+    docker builder prune --all --force
 
     # Optional: Remove all unused images, not just dangling ones
     docker image prune --all --force
