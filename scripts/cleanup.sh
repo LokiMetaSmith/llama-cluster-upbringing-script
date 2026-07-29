@@ -24,10 +24,10 @@ echo -e "${BOLD}${YELLOW}⚠️  Starting Aggressive System Cleanup...${NC}"
 if command -v docker &> /dev/null; then
     echo -e "\n${BOLD}🐳 Cleaning Docker System...${NC}"
     echo "Pruning stopped containers, unused networks, and dangling images..."
-    docker system prune --all --force --volumes
+    docker system prune --force
 
     echo "Pruning build cache..."
-    docker builder prune --all --force
+    docker builder prune --force
 
     # Optional: Remove all unused images, not just dangling ones
     docker image prune --all --force
@@ -70,9 +70,23 @@ if command -v snap &> /dev/null; then
         done
 fi
 
-# 5. Temporary Files and Bootstrap Artifacts Cleanup
-echo -e "\n${BOLD}🧹 Cleaning Temporary Files...${NC}"
-sudo rm -rf /tmp/* /var/tmp/* 2>/dev/null || true
+# 5. Bootstrap Artifacts Cleanup
+echo -e "\n${BOLD}🧹 Cleaning Bootstrap Artifacts...${NC}"
+# Remove downloaded archives
+rm -f /tmp/consul.zip
+rm -f /tmp/nomad.zip
+rm -f /tmp/cni-plugins.tgz
+rm -f /tmp/get-docker.sh
+rm -f /tmp/pipecatapp.tar
+
+# Remove extracted directories
+rm -rf /tmp/consul
+rm -rf /tmp/nomad
+
+# 5b. General Temporary Files Cleanup
+echo -e "\n${BOLD}🧹 Cleaning Temporary Files (older than 3 days)...${NC}"
+sudo find /tmp -type f -atime +3 -delete 2>/dev/null || true
+sudo find /var/tmp -type f -atime +3 -delete 2>/dev/null || true
 
 echo -e "\n${BOLD}🧹 Cleaning UV Cache...${NC}"
 sudo rm -rf /var/tmp/ansible_pip_build/uv_cache 2>/dev/null || true
