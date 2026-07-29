@@ -5,3 +5,4 @@ pub mod vram_streamer;
 pub mod cufile_ffi;
 pub mod hip_ffi;
 pub mod intel_ffi;
+pub mod moe_layer;
