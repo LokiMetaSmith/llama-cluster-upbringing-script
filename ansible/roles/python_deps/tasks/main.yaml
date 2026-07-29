@@ -73,6 +73,7 @@
     cmd: "/opt/pipecatapp/venv/bin/uv pip install webrtcvad-wheels==2.0.14 --python /opt/pipecatapp/venv/bin/python"
   environment:
     TMPDIR: /var/tmp/ansible_pip_build
+    UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
   become: yes
   become_user: "{{ target_user }}"
   tags:
@@ -83,6 +84,7 @@
     cmd: "/opt/pipecatapp/venv/bin/uv pip install -r /opt/pipecatapp/requirements.txt --python /opt/pipecatapp/venv/bin/python"
   environment:
     TMPDIR: /var/tmp/ansible_pip_build
+    UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
     CFLAGS: "-I/usr/include/python3.12 -I/usr/include/python3.13"
     C_INCLUDE_PATH: "/usr/include/python3.12:/usr/include/python3.13"
     CPLUS_INCLUDE_PATH: "/usr/include/python3.12:/usr/include/python3.13"
@@ -104,6 +106,8 @@
 - name: Clean up uv cache
   ansible.builtin.command:
     cmd: "/opt/pipecatapp/venv/bin/uv cache clean"
+  environment:
+    UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
   become: yes
   become_user: "{{ target_user }}"
   tags:
