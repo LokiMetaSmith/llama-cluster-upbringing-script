@@ -11,8 +11,8 @@ struct Args {
     #[arg(short, long, default_value_t = 64)]
     num_experts: usize,
 
-    /// Size of each expert in bytes (default: 25MB to simulate INT3 7B MoE experts)
-    #[arg(short, long, default_value_t = 25 * 1024 * 1024)]
+    /// Size of each expert in bytes (default: 100MB to simulate 50MB-200MB chunks for baseline NVMe testing)
+    #[arg(short, long, default_value_t = 100 * 1024 * 1024)]
     expert_size: usize,
 
     /// Queue depth for io_uring (batch size for speculative pre-fetching)
