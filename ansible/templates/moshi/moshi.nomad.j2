@@ -1,0 +1,70 @@
+job "personaplex-server" {
+  datacenters = ["{{ nomad_datacenter | default('dc1') }}"]
+  type = "service"
+
+  # Optional constraint to enforce GPU nodes only, typically handled by node class or metadata
+  constraint {
+    attribute = "${meta.gpu_tier}"
+    operator  = "set"
+  }
+
+  group "moshi" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 8080
+      }
+    }
+
+    task "moshi-server" {
+      driver = "docker"
+
+      config {
+        image = "local/moshi-server:latest" # Built from docker/moshi/Dockerfile
+        ports = ["http"]
+
+        # Enable GPU support for the container
+        # Requires the docker driver to have nvidia-container-runtime enabled
+        # or the use of specific devices
+      }
+
+      # Use resources stanza to request a GPU
+      resources {
+        cpu    = 2000
+        memory = 16000 # 16GB RAM for the host process overhead
+
+        device "nvidia/gpu" {
+          count = 1
+        }
+      }
+
+      env {
+        # Environment variables needed for model loading
+        # Weights directory should be mounted or downloaded
+        HF_HUB_CACHE = "/cache/huggingface"
+      }
+
+      # Mount shared volumes for weights to avoid downloading each time
+      volume_mount {
+        volume      = "models_cache"
+        destination = "/cache/huggingface"
+        read_only   = false
+      }
+
+      service {
+        name = "personaplex-server"
+        port = "http"
+        tags = ["ai", "audio", "personaplex"]
+
+        check {
+          name     = "alive"
+          type     = "http"
+          path     = "/"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}

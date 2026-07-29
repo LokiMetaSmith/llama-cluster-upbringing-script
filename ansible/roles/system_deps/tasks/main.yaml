@@ -65,6 +65,7 @@
       - openssh-server
       - pkg-config
       - portaudio19-dev
+      - libopus0
       - psmisc
       - python3
       - python3-dev
