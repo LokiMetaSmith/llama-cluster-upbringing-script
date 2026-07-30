@@ -34,6 +34,10 @@ impl AsyncWeightStreamer {
             if ret != 0 {
                 return Err(std::io::Error::last_os_error());
             }
+            // Zero-initialize to prevent undefined behavior if an async read fails or is skipped
+            unsafe {
+                std::ptr::write_bytes(ptr, 0, buffer_size);
+            }
             buffer_pool.push(ptr);
         }
 
@@ -90,6 +94,20 @@ impl AsyncWeightStreamer {
             }
         }
         completed_slots
+    }
+
+    /// Provides safe access to the raw byte slice of a specific DMA buffer slot
+    /// so it can be transmutted into a Tensor.
+    pub fn get_buffer_slice<'a>(&'a self, slot_idx: usize, size: usize) -> Result<&'a [u8], &'static str> {
+        if slot_idx >= self.queue_depth as usize {
+            return Err("Slot index exceeds queue depth");
+        }
+        if size > self.buffer_size {
+            return Err("Requested size exceeds buffer size");
+        }
+        let ptr = self.buffer_pool[slot_idx] as *const u8;
+        let slice = unsafe { std::slice::from_raw_parts(ptr, size) };
+        Ok(slice)
     }
 }
 
