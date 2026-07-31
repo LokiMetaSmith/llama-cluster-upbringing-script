@@ -162,11 +162,20 @@ class ToolExecutorNode(Node):
             return
 
         # Re-implement approval logic
-        # Security: Enforce mandatory approval for high-risk tools
+        # Security: Enforce mandatory approval for high-risk tools unless explicitly overridden
         HIGH_RISK_TOOLS = {"shell", "ansible", "ssh", "code_runner"}
         twin_service = context.global_inputs.get("twin_service")
 
-        requires_approval = tool_name in HIGH_RISK_TOOLS or (twin_service and twin_service.approval_mode)
+        # Dynamic configuration from the workflow node config
+        autonomous_tools = self.config.get("autonomous_tools", [])
+        requires_approval_tools = self.config.get("requires_approval_tools", [])
+
+        if tool_name in autonomous_tools:
+            requires_approval = False
+        elif tool_name in requires_approval_tools:
+            requires_approval = True
+        else:
+            requires_approval = tool_name in HIGH_RISK_TOOLS or (twin_service and twin_service.approval_mode)
 
         if twin_service and requires_approval:
             if not await twin_service._request_approval({"tool": tool_string, "args": args}):
