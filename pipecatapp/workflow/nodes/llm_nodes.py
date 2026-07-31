@@ -388,6 +388,100 @@ class ExpertRouterNode(Node):
             logging.error(f"Error triggering wakeup for {service_name}: {e}")
 
 @registry.register
+class EvaluatorNode(Node):
+    """
+    Evaluates a sub-agent's trace and outcome to decide whether to pass it forward.
+    Input: 'objective', 'result', and optionally 'trace'.
+    Output: 'status' (PASS/FAIL) and 'feedback'.
+    """
+    async def execute(self, context: WorkflowContext):
+        objective = self.get_input(context, "objective")
+        result = self.get_input(context, "result")
+        trace = self.get_input(context, "trace")
+
+        if not objective or not result:
+            self.set_output(context, "status", "FAIL")
+            self.set_output(context, "feedback", "Error: 'objective' and 'result' are required for evaluation.")
+            return
+
+        consul_http_addr = context.global_inputs.get("consul_http_addr")
+        judge_service = self.config.get("judge_service", "rpc-main")
+
+        system_prompt = (
+            "You are an expert evaluator assessing the work of an AI sub-agent. "
+            "Your job is to determine if the agent successfully achieved the specified objective based on the final result and the execution trace (if provided). "
+            "Evaluate based on accuracy, completeness, and adherence to the objective.\n\n"
+            "If the objective is fully met, output 'PASS' as the status and leave the critique empty or state 'Good job'.\n"
+            "If the objective is not met, output 'FAIL' as the status and provide specific, actionable feedback on what went wrong and how to fix it.\n\n"
+            "You MUST respond ONLY with a valid JSON object in the following format, with no other text or markdown:\n"
+            '{"status": "PASS" or "FAIL", "feedback": "your feedback here"}'
+        )
+
+        user_content = f"Objective: {objective}\n\nFinal Result: {result}\n"
+        if trace:
+            user_content += f"\nExecution Trace:\n{trace}\n"
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content}
+        ]
+
+        payload = {
+            "model": judge_service,
+            "messages": messages,
+            "temperature": 0.1
+        }
+
+        payload = build_extensible_payload(payload, context, self.config)
+
+        status = "FAIL"
+        feedback = "Evaluation failed due to service error."
+
+        if consul_http_addr:
+            try:
+                token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
+                headers = {"X-Consul-Token": token} if token else {}
+
+                async with httpx.AsyncClient(headers=headers) as client:
+                    resp = await client.get(f"{consul_http_addr}/v1/health/service/{judge_service}?passing")
+                    resp.raise_for_status()
+                    services = resp.json()
+
+                    if services:
+                        address = services[0]['Service']['Address']
+                        port = services[0]['Service']['Port']
+                        base_url = f"http://{address}:{port}/v1"
+                        chat_url = f"{base_url}/chat/completions"
+
+                        judge_res = await client.post(chat_url, json=payload, timeout=120)
+                        judge_res.raise_for_status()
+                        judge_response_text = judge_res.json()["choices"][0]["message"]["content"]
+
+                        import json
+                        try:
+                            start_idx_json = judge_response_text.find('{')
+                            end_idx_json = judge_response_text.rfind('}')
+                            if start_idx_json != -1 and end_idx_json != -1 and end_idx_json > start_idx_json:
+                                json_str = judge_response_text[start_idx_json:end_idx_json+1]
+                                judge_data = json.loads(json_str)
+                            else:
+                                judge_data = {"status": "FAIL", "feedback": f"Failed to parse judge output: {judge_response_text}"}
+                        except json.JSONDecodeError:
+                            judge_data = {"status": "FAIL", "feedback": f"Invalid JSON from judge: {judge_response_text}"}
+
+                        status = judge_data.get("status", "FAIL")
+                        feedback = judge_data.get("feedback", "")
+                    else:
+                        feedback = f"Error: Judge service {judge_service} not found in Consul."
+
+            except Exception as e:
+                logging.error(f"Error in EvaluatorNode: {e}")
+                feedback = f"Error communicating with judge service: {e}"
+
+        self.set_output(context, "status", status)
+        self.set_output(context, "feedback", feedback)
+
+@registry.register
 class ExternalLLMNode(Node):
     """A node that calls an external LLM service directly (e.g., OpenRouter, OpenAI)."""
     async def execute(self, context: WorkflowContext):
