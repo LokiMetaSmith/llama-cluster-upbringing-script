@@ -221,7 +221,6 @@ save_state_endpoint
 load_state_endpoint
 get_personality
 configure_rag
-get_node_metadata
 MAX_STEPS
 workflow_to_canvas
 verify

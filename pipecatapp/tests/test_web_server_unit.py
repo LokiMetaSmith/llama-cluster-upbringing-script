@@ -5,6 +5,9 @@ from unittest.mock import patch, MagicMock
 
 client = TestClient(app)
 
+from pipecatapp.web_server import get_api_key
+app.dependency_overrides[get_api_key] = lambda: "dev_key_123"
+
 def test_health_check_init():
     """Test health check when not ready."""
     app.state.is_ready = False
@@ -74,7 +77,7 @@ def test_cluster_metrics(mock_get):
 
     mock_get.side_effect = side_effect
 
-    response = client.get("/api/cluster/metrics")
+    response = client.get("/api/cluster/metrics", headers={"Authorization": "Bearer dev_key_123"})
     assert response.status_code == 200
     data = response.json()
 
@@ -87,14 +90,19 @@ def test_cluster_metrics(mock_get):
 @patch("workflow.runner.ActiveWorkflows.get_all_states")
 def test_active_workflows_sanitization(mock_get_all_states):
     """Test that active workflows output is sanitized."""
-    mock_get_all_states.return_value = {
-        "runner1": {
-            "global_inputs": {"key": "sk-1234567890abcdef1234567890abcdef"},
-            "node_outputs": {}
+    def mock_get_all_states_func(sanitize=False):
+        state = {
+            "runner1": {
+                "global_inputs": {"key": "sk-1234567890abcdef1234567890abcdef"},
+                "node_outputs": {}
+            }
         }
-    }
+        if sanitize:
+            state["runner1"]["global_inputs"]["key"] = "sk-[REDACTED]"
+        return state
+    mock_get_all_states.side_effect = mock_get_all_states_func
 
-    response = client.get("/api/workflows/active")
+    response = client.get("/api/workflows/active", headers={"Authorization": "Bearer dev_key_123"})
     assert response.status_code == 200
     data = response.json()
 

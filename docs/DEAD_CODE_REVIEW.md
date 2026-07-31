@@ -261,7 +261,6 @@ This document contains a list of potentially unused code segments identified by 
  - [x]  pipecatapp/web_server.py:930: unused variable 'rate_limit' (100% confidence)
  - [x]  pipecatapp/web_server.py:942: unused function 'configure_rag' (60% confidence)
  - [x]  pipecatapp/web_server.py:943: unused variable 'rate_limit' (100% confidence)
- - [x]  pipecatapp/web_server.py:970: unused function 'get_node_metadata' (60% confidence)
  - [x]  pipecatapp/web_server.py:971: unused variable 'rate_limit' (100% confidence)
  - [x]  pipecatapp/worker_agent.py:22: unused variable 'MAX_STEPS' (60% confidence)
  - [x]  pipecatapp/workflow/canvas_converter.py:189: unused method 'workflow_to_canvas' (60% confidence)
