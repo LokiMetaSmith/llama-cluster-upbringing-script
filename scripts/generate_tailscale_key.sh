@@ -1,13 +1,13 @@
 #!/bin/bash
-# Generate a reusable Headscale pre-auth key valid for 24 hours
+# Generate a single-use Headscale pre-auth key valid for 24 hours
 
 if ! command -v headscale &> /dev/null; then
   echo "Headscale is not installed on this system."
   return 1 2>/dev/null || true
 fi
 
-echo "Generating a new reusable pre-auth key for user 'default'..."
-AUTH_KEY=$(headscale --user default preauthkeys create --reusable --expiration 24h 2>/dev/null | tail -n 1)
+echo "Generating a new single-use pre-auth key for user 'default'..."
+AUTH_KEY=$(headscale --user default preauthkeys create --expiration 24h 2>/dev/null | tail -n 1)
 
 if [ -z "$AUTH_KEY" ]; then
     echo "Failed to generate key. Ensure you are running this as root or the headscale service is running."

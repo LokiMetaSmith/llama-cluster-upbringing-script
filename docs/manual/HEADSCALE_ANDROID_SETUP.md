@@ -45,16 +45,12 @@ You can authenticate the Android client using either web authentication or a pre
 
 If you are an administrator, you need to provide users with a pre-authenticated key to use Option B.
 
-### During Ansible Provisioning
-
-The Ansible playbook automatically generates an initial 24-hour reusable pre-auth key for the default namespace during the cluster bootstrapping process. You can find this key by reviewing the output logs of the Ansible provisioning run, specifically during the `headscale` role execution under the task `Create pre-auth key` or `Set headscale auth key fact`.
-
 ### Generating Manually via CLI
 
-If the initial key has expired or you need to generate a new one, log in to the node running Headscale and execute the following command:
+You can generate a single-use pre-auth key by logging in to the node running Headscale (the controller) and executing the following command:
 
 ```bash
-headscale --user default preauthkeys create --reusable --expiration 24h
+headscale --user default preauthkeys create --expiration 24h
 ```
 
 *(Note: Replace `default` with your specific namespace if you have customized the `headscale_namespace` variable in the Ansible configuration).*

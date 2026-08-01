@@ -25,8 +25,8 @@ if [ -n "$CONTROLLER_SSH" ]; then
     fi
 
     # 3. Generate Pre-Auth Key
-    echo "Generating reusable Headscale pre-auth key (valid for 30 days)..."
-    AUTH_KEY=$(ssh -o "ControlMaster=no" "$CONTROLLER_SSH" "sudo headscale --user default preauthkeys create --reusable --expiration 720h 2>/dev/null | tail -n 1")
+    echo "Generating reusable Headscale pre-auth key (valid for 30 days) with tag 'usb-bootstrap'..."
+    AUTH_KEY=$(ssh -o "ControlMaster=no" "$CONTROLLER_SSH" "sudo headscale --user default preauthkeys create --reusable --tags tag:usb-bootstrap --expiration 720h 2>/dev/null | tail -n 1")
 
     if [ -n "$AUTH_KEY" ]; then
         # 4. Get FIDO SSH Public Key

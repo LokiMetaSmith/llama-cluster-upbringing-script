@@ -101,13 +101,22 @@ When deploying new nodes, you can bypass the manual OIDC enrollment by securely 
 
 Run `scripts/imprint_usb_keychain.sh` to:
 1. Trigger a FIDO physical touch challenge via SSH to the controller.
-2. Generate a long-lived, reusable Headscale pre-auth key.
+2. Generate a long-lived, reusable Headscale pre-auth key with the `usb-bootstrap` tag.
 3. Collect your FIDO SSH public key and the controller's IP address.
 4. Stage these credentials and optionally run `os-image/build_iso.sh --flash --inject` to write them into a secure `CONFIGS` partition on the USB drive.
 
 During the initial boot of the live installer, the `00-usb-imprint.sh` module mounts this partition, injects the credentials into the local configuration, and automatically joins the cluster mesh network.
 
-### 5.2. Migrating FIDO Keys
+### 5.2. USB Bootstrap Key Revocation
+
+Because the USB key is a physical fallback, it represents a risk if lost or stolen. You can instantly revoke the `tag:usb-bootstrap` key using the provided revocation script:
+
+Run `scripts/revoke_usb_key.sh` to:
+1. Connect to the controller node.
+2. Locate the specific pre-auth key with the `tag:usb-bootstrap` tag.
+3. Automatically expire it to instantly revoke access to any future nodes trying to use the physical backup.
+
+### 5.3. Migrating FIDO Keys
 
 If you need to rotate or upgrade your hardware security key, you must update the cluster's declarative state and ensure you do not lose SSH access during the transition.
 
