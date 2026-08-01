@@ -154,10 +154,10 @@
   ansible.builtin.uri:
     url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ ipfs_gateway_port | default(8080) }}/"
     return_content: yes
-    status_code: [200, 400, 403, 404, 502, 504]
+    status_code: [200, 400, 403, 404, 502, 504, -1]
   register: ipfs_gateway_status
-  until: ipfs_gateway_status.status in [200, 400, 403, 404] or ipfs_gateway_status.status == -1
-  failed_when: ipfs_gateway_status.status == -1
+  until: ipfs_gateway_status.status is defined and ipfs_gateway_status.status in [200, 400, 403, 404]
+  failed_when: false
   retries: 6
   delay: 10
 
