@@ -1,0 +1,24 @@
+name: Benchmark Single Model Baseline
+nodes:
+  - id: input_node
+    type: InputNode
+    config:
+      outputs:
+        - name: user_text
+
+  - id: single_worker
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: input_node.user_text
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: "You are a helpful software engineer AI. Answer the user's request comprehensively."
+      model_service: rpc-main
+
+  - id: output_node
+    type: OutputNode
+    inputs:
+      - name: final_output
+        source: single_worker.response

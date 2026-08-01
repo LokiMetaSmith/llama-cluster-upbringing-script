@@ -159,6 +159,10 @@ class PostProcessorNode(Node):
                     if isinstance(node.op, ast.Mult): return left * right
                     if isinstance(node.op, ast.Div): return left / right
                     raise ValueError(f"Unsupported binary operator: {type(node.op)}")
+                elif isinstance(node, ast.JoinedStr):
+                    return "".join(str(evaluate_ast(val, local_vars)) for val in node.values)
+                elif isinstance(node, ast.FormattedValue):
+                    return evaluate_ast(node.value, local_vars)
                 elif isinstance(node, ast.ListComp):
                     # Only support single comprehension with single target
                     if len(node.generators) != 1:
