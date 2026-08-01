@@ -1168,7 +1168,7 @@ This document maps every file in the repository, their description, and utilizat
 | `scripts/generate_file_map.py` | 🟢 Referenced | usr/bin/env python3 | **Functions:** get_rel_path, is_ignored, extract_python_info, extract_shell_info, extract_generic_desc... |
 | `scripts/generate_issue_script.py` | 🟢 Referenced | File: generate_issue_script.py | **Functions:** parse_todo_file, create_issue_script |
 | `scripts/generate_signatures.py` | 🔵 Entry Point | File: generate_signatures.py | **Functions:** to_hex, create_ldb_sig |
-| `scripts/generate_tailscale_key.sh` | 🔵 Entry Point | Generate a reusable Headscale pre-auth key valid for 24 hours |  |
+| `scripts/generate_tailscale_key.sh` | 🔵 Entry Point | Generate a single-use Headscale pre-auth key valid for 24 hours |  |
 | `scripts/git-cleanup.sh` | 🔵 Entry Point | Default to 'main', but allow the user to specify a target branch (e.g., ./git-cleanup.sh master) |  |
 | `scripts/heal_cluster.sh` | 🟢 Referenced | Wrapper script to run the cluster healing playbook. This ensures core infrastructure (LlamaRPC, Pip |  |
 | `scripts/healer.py` | 🟢 Referenced | File: healer.py | **Classes:** NomadWatcher, HealerAgent<br>**Functions:** run_local_mode, main, __init__, get_failed_allocs, get_logs... |

@@ -17087,7 +17087,7 @@
       ]
     },
     "scripts/generate_tailscale_key.sh": {
-      "description": "Generate a reusable Headscale pre-auth key valid for 24 hours",
+      "description": "Generate a single-use Headscale pre-auth key valid for 24 hours",
       "classes": [],
       "functions": [],
       "status": "Entry Point",

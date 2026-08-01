@@ -50,9 +50,24 @@
   set_fact:
     resolved_login_server: "{{ imprinted_headscale_url.stdout if imprinted_headscale_url_file.stat.exists else hostvars[groups['controller_nodes'][0]]['headscale_server_url'] }}"
 
+- name: Generate single-use Headscale auth key for this node
+  ansible.builtin.command: /usr/local/bin/headscale --user {{ headscale_namespace | default('default') }} preauthkeys create --expiration 10m
+  delegate_to: "{{ groups['controller_nodes'][0] }}"
+  register: dynamic_headscale_auth_key_output
+  changed_when: true
+  when: >
+    tailscale_status.rc != 0 and
+    not imprinted_headscale_auth_key_file.stat.exists
+
 - name: Set dynamic Tailscale authkey
   set_fact:
-    resolved_authkey: "{{ imprinted_headscale_auth_key.stdout if imprinted_headscale_auth_key_file.stat.exists else hostvars[groups['controller_nodes'][0]]['headscale_auth_key'] }}"
+    resolved_authkey: >-
+      {%- if imprinted_headscale_auth_key_file.stat.exists -%}
+      {{ imprinted_headscale_auth_key.stdout }}
+      {%- else -%}
+      {{ dynamic_headscale_auth_key_output.stdout_lines[-1] }}
+      {%- endif -%}
+  when: tailscale_status.rc != 0
 
 - name: Connect to Headscale
   command: >

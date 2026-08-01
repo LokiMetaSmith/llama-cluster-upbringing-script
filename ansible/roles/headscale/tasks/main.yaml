@@ -80,13 +80,6 @@
     - create_user_result.rc != 0
     - "'already exists' not in create_user_result.stderr"
 
-- name: Create pre-auth key
-  command: /usr/local/bin/headscale --user {{ headscale_namespace }} preauthkeys create --reusable --expiration 24h
-  register: headscale_auth_key_output
-  changed_when: true
-
-- name: Set headscale auth key fact
+- name: Set headscale server url fact
   set_fact:
-    headscale_auth_key: "{{ headscale_auth_key_output.stdout_lines[-1] }}"
     headscale_server_url: "http://{{ ansible_facts['default_ipv4'].address }}:{{ headscale_port }}"
-  when: headscale_auth_key_output.stdout_lines is defined and headscale_auth_key_output.stdout_lines | length > 0
