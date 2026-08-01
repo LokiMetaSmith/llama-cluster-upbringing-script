@@ -1,0 +1,58 @@
+name: Benchmark Static Router
+nodes:
+  - id: input_node
+    type: InputNode
+    config:
+      outputs:
+        - name: user_text
+
+  - id: static_router
+    type: DynamicRouterNode
+    inputs:
+      - name: user_text
+        source: input_node.user_text
+    config:
+      routes: ["standard", "complex"]
+      model_service: rpc-main
+      system_prompt: |
+        Analyze the user's request and determine which specialist handler should process it.
+        Available routes: standard, complex.
+        If the request involves basic coding, general logic, or simple Q&A, output 'standard'.
+        If the request involves specific complex technologies, asynchronous logic, or deep architecture, output 'complex'.
+        ONLY output one word from the available routes list.
+
+  - id: standard_worker
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: static_router.standard
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: "You are a helpful software engineer AI (Standard). Answer the user's request."
+      model_service: rpc-main
+
+  - id: expert_worker
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: static_router.complex
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: "You are an expert software engineer AI (Expert). Answer the user's request comprehensively, focusing on advanced concepts and edge cases."
+      model_service: rpc-expert
+
+  - id: merge_output
+    type: MergeNode
+    inputs:
+      - name: in1
+        source: standard_worker.response
+      - name: in2
+        source: expert_worker.response
+
+  - id: output_node
+    type: OutputNode
+    inputs:
+      - name: final_output
+        source: merge_output.merged_output

@@ -574,7 +574,10 @@ class DynamicRouterNode(Node):
     async def execute(self, context: WorkflowContext):
         query = self.get_input(context, "user_text")
 
-        node_config = self.config.get("config", {})
+        # `self.config` typically contains the config defined in yaml for the node.
+        # Fallback to direct lookup if "config" dictionary doesn't exist
+        node_config = self.config.get("config", self.config)
+
         target_service = node_config.get("model_service", "rpc-main")
         routes = node_config.get("routes", ["booker", "info", "unclear"])
 
@@ -588,14 +591,16 @@ class DynamicRouterNode(Node):
 
         consul_http_addr = context.global_inputs.get("consul_http_addr")
 
-        system_prompt = (
-            "Analyze the user's request and determine which specialist handler should process it.\n"
-            f"Available routes: {', '.join(routes)}.\n"
-            "If the request is related to booking flights or hotels, output 'booker'.\n"
-            "For all other general information questions, output 'info'.\n"
-            "If the request is unclear or doesn't fit either category, output 'unclear'.\n"
-            f"ONLY output one word from the available routes list."
-        )
+        system_prompt = node_config.get("system_prompt")
+        if not system_prompt:
+            system_prompt = (
+                "Analyze the user's request and determine which specialist handler should process it.\n"
+                f"Available routes: {', '.join(routes)}.\n"
+                "If the request is related to booking flights or hotels, output 'booker'.\n"
+                "For all other general information questions, output 'info'.\n"
+                "If the request is unclear or doesn't fit either category, output 'unclear'.\n"
+                f"ONLY output one word from the available routes list."
+            )
 
         decision = "unclear" # Default fallback
 
@@ -936,3 +941,124 @@ class LoopedReasoningNode(Node):
         self.set_output(context, "response", current_answer)
         trace_sep = "\n\n---\n\n"
         self.set_output(context, "trace", trace_sep.join(history))
+@registry.register
+class DynamicSupervisorNode(Node):
+    """
+    Evaluates the result of a worker node against the original prompt.
+    If the result meets the requirements, it routes to 'pass_route'.
+    If the result is incomplete or struggling, it routes to 'escalate_route' with feedback.
+    """
+    async def execute(self, context: WorkflowContext):
+        user_text = self.get_input(context, "user_text")
+        current_result = self.get_input(context, "current_result")
+
+        node_config = self.config.get("config", self.config)
+        judge_service = node_config.get("judge_service", "rpc-main")
+
+        # We'll always output to these ports. One will have data, the other None.
+        self.expected_outputs = ["pass_route", "escalate_route", "feedback"]
+
+        if not user_text or not current_result:
+            self.set_output(context, "escalate_route", current_result or "No result")
+            self.set_output(context, "pass_route", None)
+            self.set_output(context, "feedback", "Error: 'user_text' or 'current_result' missing.")
+            return
+
+        consul_http_addr = context.global_inputs.get("consul_http_addr")
+
+        system_prompt = (
+            "You are an expert supervisor evaluating an AI worker's response to a task.\n"
+            "Compare the User Request with the Worker Result.\n"
+            "Determine if the worker fully and correctly addressed the request, including any constraints or complex requirements.\n\n"
+            "If the result is complete, accurate, and follows all instructions, output 'PASS'.\n"
+            "If the worker struggled, dropped requirements, provided a partial answer, or got stuck, output 'FAIL' and provide actionable feedback on what is missing.\n\n"
+            "You MUST respond ONLY with a valid JSON object in this exact format:\n"
+            '{"status": "PASS" or "FAIL", "feedback": "your critique here"}'
+        )
+
+        user_content = f"User Request:\n{user_text}\n\nWorker Result:\n{current_result}"
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content}
+        ]
+
+        payload = {
+            "model": judge_service,
+            "messages": messages,
+            "temperature": 0.1
+        }
+
+        # Need to import build_extensible_payload or ensure it's available in context
+
+        status = "FAIL"
+        feedback = "Evaluation failed due to service error."
+
+        if consul_http_addr:
+            try:
+                # Use secret_manager if available, otherwise just no token
+                token = secret_manager.get_secret("CONSUL_HTTP_TOKEN") if 'secret_manager' in globals() else None
+                headers = {"X-Consul-Token": token} if token else {}
+
+                async with httpx.AsyncClient(headers=headers) as client:
+                    resp = await client.get(f"{consul_http_addr}/v1/health/service/{judge_service}?passing")
+                    resp.raise_for_status()
+                    services = resp.json()
+
+                    if services:
+                        address = services[0]['Service']['Address']
+                        port = services[0]['Service']['Port']
+                        base_url = f"http://{address}:{port}/v1"
+                        chat_url = f"{base_url}/chat/completions"
+
+                        if 'build_extensible_payload' in globals():
+                            payload = build_extensible_payload(payload, context, self.config)
+
+                        judge_res = await client.post(chat_url, json=payload, timeout=120)
+                        judge_res.raise_for_status()
+                        judge_response_text = judge_res.json()["choices"][0]["message"]["content"]
+
+                        import json
+                        try:
+                            start_idx = judge_response_text.find('{')
+                            end_idx = judge_response_text.rfind('}')
+                            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                                json_str = judge_response_text[start_idx:end_idx+1]
+                                judge_data = json.loads(json_str)
+                            else:
+                                judge_data = {"status": "FAIL", "feedback": f"Failed to parse judge output: {judge_response_text}"}
+                        except json.JSONDecodeError:
+                            judge_data = {"status": "FAIL", "feedback": f"Invalid JSON from judge: {judge_response_text}"}
+
+                        status = judge_data.get("status", "FAIL")
+                        feedback = judge_data.get("feedback", "")
+                    else:
+                        feedback = f"Error: Judge service {judge_service} not found."
+            except Exception as e:
+                import logging
+                logging.error(f"Error in DynamicSupervisorNode: {e}")
+                feedback = f"Error communicating with judge service: {e}"
+        else:
+             # For local testing without consul, just pass it through or mock it
+             # Wait, how does local testing work for other nodes? They check consul.
+             # We should probably support a direct URL fallback if needed, but let's stick to the pattern.
+             pass
+
+        self.set_output(context, "feedback", feedback)
+
+        if status == "PASS":
+            self.set_output(context, "pass_route", current_result)
+            self.set_output(context, "escalate_route", None)
+        else:
+            self.set_output(context, "pass_route", None)
+            # Pass the result AND the feedback to the next node?
+            # Usually we just pass the text. Let's pass a structured string or just the feedback.
+            # Actually, the escalated node needs the original user_text, the current_result, AND the feedback.
+            # The escalate route can just be a trigger, and the next node grabs inputs from context, or we can pass a dict.
+            # Let's pass a dict.
+            escalation_payload = {
+                "user_text": user_text,
+                "current_result": current_result,
+                "feedback": feedback
+            }
+            self.set_output(context, "escalate_route", escalation_payload)

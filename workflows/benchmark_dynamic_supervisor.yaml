@@ -1,0 +1,63 @@
+name: Benchmark Dynamic Supervisor
+nodes:
+  - id: input_node
+    type: InputNode
+    config:
+      outputs:
+        - name: user_text
+
+  - id: baseline_worker
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: input_node.user_text
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: "You are a helpful software engineer AI. Answer the user's request."
+      model_service: rpc-main
+
+  - id: supervisor
+    type: DynamicSupervisorNode
+    inputs:
+      - name: user_text
+        source: input_node.user_text
+      - name: current_result
+        source: baseline_worker.response
+    config:
+      judge_service: rpc-main
+
+  - id: post_processor
+    type: PostProcessorNode
+    inputs:
+      - name: data
+        source: supervisor.escalate_route
+      - name: expression
+        source: null
+    config:
+      expression: 'f"User originally requested: {data[\"user_text\"]}\n\nWorker produced: {data[\"current_result\"]}\n\nSupervisor feedback: {data[\"feedback\"]}\n\nPlease fix the issues and provide the correct result."'
+
+  - id: expert_worker
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: post_processor.processed_data
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: "You are an expert software engineer AI. Fix the provided incomplete work according to the feedback."
+      model_service: rpc-expert
+
+  - id: merge_output
+    type: MergeNode
+    inputs:
+      - name: in1
+        source: supervisor.pass_route
+      - name: in2
+        source: expert_worker.response
+
+  - id: output_node
+    type: OutputNode
+    inputs:
+      - name: final_output
+        source: merge_output.merged_output
