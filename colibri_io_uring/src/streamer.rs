@@ -4,6 +4,9 @@ use std::os::fd::{AsRawFd, RawFd};
 use std::os::unix::fs::OpenOptionsExt;
 use std::ptr;
 
+
+unsafe impl Send for AsyncWeightStreamer {}
+unsafe impl Sync for AsyncWeightStreamer {}
 pub struct AsyncWeightStreamer {
     ring: IoUring,
     file: File,

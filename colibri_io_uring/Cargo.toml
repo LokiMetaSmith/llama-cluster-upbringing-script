@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-candle-core = "0.11.0"
+candle-core = "0.9.1"
 clap = { version = "4.5", features = ["derive"] }
 io-uring = "0.6"
 libc = "0.2"

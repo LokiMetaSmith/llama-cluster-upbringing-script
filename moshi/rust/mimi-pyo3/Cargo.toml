@@ -1,0 +1,19 @@
+[package]
+name = "mimi-pyo3"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
+
+[lib]
+name = "rustymimi"
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = { workspace = true }
+numpy = { workspace = true }
+pyo3 = { workspace = true }
+moshi = { workspace = true }

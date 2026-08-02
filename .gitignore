@@ -69,3 +69,9 @@ poc/p2p_sync/syncthing_bin*
 test_venv/
 .venv_new/
 colibri_io_uring/target/
+
+# Ignore all files and folders inside moshi
+moshi/*
+
+# Explicitly un-ignore the rust directory and its contents
+!moshi/rust/
