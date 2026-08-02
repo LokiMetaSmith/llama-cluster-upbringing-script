@@ -1,0 +1,27 @@
+[package]
+name = "moshi"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
+readme = "../README.md"
+
+[dependencies]
+candle = { workspace = true }
+candle-nn = { workspace = true }
+candle-transformers = { workspace = true }
+candle-flash-attn = { workspace = true, optional = true }
+
+rayon = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }
+colibri_io_uring = { version = "0.1.0", path = "../../../colibri_io_uring" }
+
+[features]
+default = []
+cuda = ["candle/cuda", "candle-nn/cuda"]
+metal = ["candle/metal", "candle-nn/metal"]
+flash-attn = ["cuda", "dep:candle-flash-attn"]
