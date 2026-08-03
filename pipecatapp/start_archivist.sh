@@ -23,8 +23,8 @@ fi
 echo "Starting Archivist Service from $TARGET_SCRIPT"
 # Use uvicorn CLI to start the service to avoid port binding issues and ensure clean signal handling
 if [ -z "$ARCHIVIST_PORT" ]; then
-    echo "Error: ARCHIVIST_PORT is not set."
-    exit 1
+    echo "WARNING: ARCHIVIST_PORT is not set. Defaulting to 8008."
+    ARCHIVIST_PORT=8008
 fi
 
 echo "DEBUG: HOST_IP=${HOST_IP:-0.0.0.0}"
