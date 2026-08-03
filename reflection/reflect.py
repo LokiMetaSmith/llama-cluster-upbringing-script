@@ -13,8 +13,6 @@ def load_llm_config(config_dict=None):
     """Loads and caches the LLM configuration.
 
     If a configuration dictionary is provided, it is used directly.
-    Otherwise, it attempts to read `group_vars/external_experts.yaml` and `group_vars/all.yaml`
-    to find the configuration for the external expert (OpenAI GPT-4).
     It caches the result in a global variable.
 
     Args:
@@ -32,29 +30,7 @@ def load_llm_config(config_dict=None):
         LLM_CONFIG = config_dict
         return LLM_CONFIG
 
-    # Fallback to file reading if no config passed
-    # TODO: This fallback logic can be removed once all callers (e.g., adaptation_manager.py)
-    # are updated to pass the configuration via command line arguments.
-    base_dir = os.path.join(os.path.dirname(__file__), '..')
-    try:
-        # Load external experts config
-        experts_path = os.path.join(base_dir, 'group_vars/external_experts.yaml')
-        with open(experts_path, 'r') as f:
-            ext_experts = yaml.safe_load(f)
-            config = ext_experts['external_experts_config']['openai_gpt4']
-
-        # Load API key from all.yaml
-        all_vars_path = os.path.join(base_dir, 'group_vars/all.yaml')
-        with open(all_vars_path, 'r') as f:
-            all_vars = yaml.safe_load(f)
-            config['api_key_plaintext'] = all_vars.get('openai_api_key')
-
-        LLM_CONFIG = config
-        return LLM_CONFIG
-
-    except (IOError, yaml.YAMLError, KeyError) as e:
-        print(f"Error loading LLM config from files: {e}", file=sys.stderr)
-        return None
+    return None
 
 def call_openai_llm(messages, reasoning_config=None):
     """Sends a request to the OpenAI Chat Completions API.

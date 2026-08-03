@@ -190,7 +190,10 @@ def main():
             if action == "error":
                 # 5a. If reflection fails, trigger self-adaptation AND notify the agent
                 print(f"--- Reflection could not find a direct solution. Triggering self-adaptation for job {job_id}. ---")
-                run_script("reflection/adaptation_manager.py", [diagnostics_file])
+                adapt_script_args = [diagnostics_file]
+                if llm_config_json:
+                    adapt_script_args.extend(["--llm-config", llm_config_json])
+                run_script("reflection/adaptation_manager.py", adapt_script_args)
 
                 # Notify TwinService
                 try:

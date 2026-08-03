@@ -6,7 +6,7 @@ import sys
 import yaml
 from datetime import datetime
 
-def generate_test_case(diagnostic_data):
+def generate_test_case(diagnostic_data, llm_config=None):
     """Creates a structured YAML test case from diagnostic information.
 
     This function transforms the raw JSON output from a diagnostic run into a
@@ -16,12 +16,20 @@ def generate_test_case(diagnostic_data):
 
     Args:
         diagnostic_data (dict): The parsed JSON data from the diagnostic file.
+        llm_config (str, optional): JSON string containing LLM configuration to be passed to reflect.py.
 
     Returns:
         str: A string containing the formatted YAML test case.
     """
     job_id = diagnostic_data.get("job_id", "unknown_job")
     error_logs = diagnostic_data.get("logs", {}).get("stderr", "No stderr logs.")
+
+    parameters = {
+        # The parameter is the diagnostic data itself, representing the input
+        "diagnostic_data": diagnostic_data
+    }
+    if llm_config:
+        parameters["llm_config"] = llm_config
 
     test_case = {
         "test_name": f"test_failure_reproduction_{job_id}",
@@ -34,10 +42,7 @@ def generate_test_case(diagnostic_data):
             {
                 "type": "run_script",
                 "name": "reflection/reflect.py",
-                "parameters": {
-                    # The parameter is the diagnostic data itself, representing the input
-                    "diagnostic_data": diagnostic_data
-                },
+                "parameters": parameters,
                 "expected_outcome": {
                     "action_not_equals": "error"
                 },
@@ -63,6 +68,12 @@ def main():
         type=str,
         help="Path to the JSON diagnostic file for the failed job."
     )
+    parser.add_argument(
+        "--llm-config",
+        type=str,
+        default=None,
+        help="JSON string containing LLM configuration."
+    )
     args = parser.parse_args()
 
     # 1. Read and parse the diagnostic file
@@ -76,7 +87,7 @@ def main():
     # 2. Generate the YAML test case content
     job_id = diagnostic_data.get("job_id", "unknown")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    test_case_yaml = generate_test_case(diagnostic_data)
+    test_case_yaml = generate_test_case(diagnostic_data, llm_config=args.llm_config)
 
     # 3. Write the test case to a new file
     # Ensure the target directory exists
