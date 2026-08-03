@@ -75,6 +75,14 @@ class TestReflection(unittest.TestCase):
         self.assertEqual(solution["parameters"]["job_id"], "job1")
         self.assertEqual(solution["parameters"]["memory_mb"], 512)
 
+    @patch('reflection.reflect.load_llm_config', return_value=None)
+    def test_call_openai_llm_missing_config(self, mock_load_config):
+        messages = [{"role": "user", "content": "hello"}]
+        result_json = reflect.call_openai_llm(messages)
+        result = json.loads(result_json)
+        self.assertEqual(result["action"], "error")
+        self.assertEqual(result["analysis"], "LLM configuration is missing or invalid.")
+
     @patch('reflection.reflect.load_llm_config', return_value=MOCK_LLM_CONFIG)
     @patch('requests.post')
     def test_analyze_failure_simple_restart(self, mock_requests_post, mock_load_config):

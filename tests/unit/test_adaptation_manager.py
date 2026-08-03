@@ -23,7 +23,7 @@ class TestAdaptationManager(unittest.TestCase):
         from adaptation_manager import main
 
         # Mock the command-line arguments
-        with patch.object(sys, 'argv', ['adaptation_manager.py', 'dummy_diagnostics.json']):
+        with patch.object(sys, 'argv', ['adaptation_manager.py', 'dummy_diagnostics.json', '--llm-config', '{"model": "test-model"}']):
             main()
 
         # Verify that the test case file was written
@@ -36,6 +36,10 @@ class TestAdaptationManager(unittest.TestCase):
             if mode == 'w' and 'failure_test_job_' in os.path.basename(filepath):
                 self.assertIn('prompt_engineering/generated_evaluators', filepath)
                 written_filepath = filepath
+                # Verify that llm_config is in the written YAML
+                written_content = mock_file().write.call_args[0][0]
+                self.assertIn('llm_config', written_content)
+                self.assertIn('{"model": "test-model"}', written_content)
                 break
 
         self.assertIsNotNone(written_filepath, "Did not find the call to write the test case file.")
