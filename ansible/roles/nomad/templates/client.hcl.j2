@@ -52,7 +52,11 @@ telemetry {
 
 client {
   enabled = true
-  servers = ["{{ hostvars[groups['controller_nodes'][0]]['cluster_ip'] }}"]
+  servers = [
+    {% for host in groups['controller_nodes'] %}
+    "{{ hostvars[host]['cluster_ip'] }}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
   
   env {
     PIP_INDEX_URL = "http://127.0.0.1:{{ pypi_proxy_port | default(3141) }}/simple/"

@@ -18,6 +18,14 @@ advertise {
 {% if is_controller is defined and is_controller %}
 server {
   enabled = true
+  bootstrap_expect = {{ groups['controller_nodes'] | length }}
+  server_join {
+    retry_join = [
+      {% for host in groups['controller_nodes'] %}
+      "{{ hostvars[host]['cluster_ip'] }}"{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
 }
 {% endif %}
 
@@ -50,7 +58,11 @@ plugin "raw_exec" {
 
 client {
   enabled = true
-  servers = ["{{ cluster_ip }}"]
+  servers = [
+    {% for host in groups['controller_nodes'] %}
+    "{{ hostvars[host]['cluster_ip'] }}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
 
   meta {
     node_type = "controller"
