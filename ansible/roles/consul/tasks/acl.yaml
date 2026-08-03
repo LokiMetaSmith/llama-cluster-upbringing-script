@@ -41,34 +41,37 @@
   rescue:
     - name: Recover from failed ACL bootstrap
       block:
+        - name: Combine stdout and stderr from failed result
+          set_fact:
+            combined_acl_output: "{{ (ansible_failed_result.stdout | default('')) ~ ' ' ~ (ansible_failed_result.stderr | default('')) }}"
+
+        - name: Fail if recovery is not possible
+          fail:
+            msg: "ACL bootstrap failed with an unrecoverable error: {{ ansible_failed_result }}"
+          when: "'ACL bootstrap no longer allowed' not in combined_acl_output"
+
+        - name: Extract reset index
+          set_fact:
+            consul_acl_reset_index: "{{ (combined_acl_output | regex_search('reset index: (\\d+)', '\\1') or ['']) | first }}"
+
+        - name: Fail if reset index not found
+          fail:
+            msg: "Could not find reset index in the error message: {{ combined_acl_output }}"
+          when: consul_acl_reset_index is not defined or consul_acl_reset_index | length == 0
+
         - name: Stop Consul service
           systemd:
             name: consul
             state: stopped
           become: yes
 
-        - name: Wait for Consul port {{ consul_http_port }} to close (recovery)
-          wait_for:
-            port: "{{ consul_http_port }}"
-            state: stopped
-            delay: 0
-            timeout: 30
-            msg: "Timeout waiting for Consul port {{ consul_http_port }} to close during recovery."
-          ignore_errors: yes
-
-        - name: Delete Consul data directory
-          file:
-            path: "{{ consul_data_dir }}"
-            state: absent
-          become: yes
-
-        - name: Re-create Consul data directory
-          file:
-            path: "{{ consul_data_dir }}"
-            state: directory
+        - name: Write reset index to acl-bootstrap-reset file
+          copy:
+            content: "{{ consul_acl_reset_index }}\n"
+            dest: "{{ consul_data_dir }}/acl-bootstrap-reset"
             owner: consul
             group: consul
-            mode: '0755'
+            mode: '0644'
           become: yes
 
         - name: Restart Consul service
@@ -111,11 +114,5 @@
             mode: '0600'
           when: consul_recovery_secret_id is defined and consul_recovery_secret_id | length > 0
           become: yes
-      when: ansible_failed_result.stderr is defined and 'ACL bootstrap no longer allowed' in ansible_failed_result.stderr
       delegate_to: "{{ groups['controller_nodes'][0] }}"
       run_once: true
-
-    - name: Fail on unrecoverable ACL bootstrap error
-      fail:
-        msg: "ACL bootstrap failed with an unrecoverable error: {{ ansible_failed_result }}"
-      when: ansible_failed_result.stderr is not defined or 'ACL bootstrap no longer allowed' not in ansible_failed_result.stderr
