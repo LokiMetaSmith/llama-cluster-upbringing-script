@@ -24,6 +24,7 @@ server {
 }
 
 client {
+  node_class = "{{ nomad_node_class | default('controller') }}"
   enabled = true
   servers = ["{{ cluster_ip }}"]
 
@@ -96,7 +97,33 @@ client {
     path      = "{{ nomad_volumes_dir }}/authentik/certs"
     read_only = false
   }
+
+  host_volume "influxdb-data" {
+    path      = "{{ nomad_volumes_dir }}/influxdb-data"
+    read_only = false
+  }
+
+  host_volume "openclaw-config" {
+    path      = "{{ nomad_volumes_dir }}/openclaw-config"
+    read_only = false
+  }
+
+  host_volume "openclaw-data" {
+    path      = "{{ nomad_volumes_dir }}/openclaw-data"
+    read_only = false
+  }
+
+  host_volume "cluster-infra" {
+    path      = "{{ cluster_infra_dir }}"
+    read_only = true
+  }
+
+  host_volume "mcp-config" {
+    path      = "{{ mcp_dir }}"
+    read_only = false
+  }
 }
+
 
 plugin "docker" {
   config {
