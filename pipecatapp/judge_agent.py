@@ -7,8 +7,8 @@ import asyncio
 import httpx
 import json
 from typing import List, Dict, Any, Optional
-from agent_factory import create_tools
-from pmm_memory_client import PMMMemoryClient
+from pipecatapp.agent_factory import create_tools
+from pipecatapp.pmm_memory_client import PMMMemoryClient
 
 # Configure logging
 logging.basicConfig(

@@ -127,7 +127,7 @@ sys.modules["PIL.Image"] = MagicMock()
 # Import the class to test
 # We need to use 'from app import ...' but app.py is in pipecatapp/
 # sys.path is already set.
-from app import YOLOv8Detector
+from pipecatapp.app import YOLOv8Detector
 
 @pytest.mark.asyncio
 async def test_yolo_inference_optimization():

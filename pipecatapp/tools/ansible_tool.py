@@ -6,7 +6,7 @@ from pipecatapp.utils.terminal_cleanup import clean_terminal_output
 try:
     from ..secret_manager import secret_manager
 except ImportError:
-    from secret_manager import secret_manager  # type: ignore
+    from pipecatapp.secret_manager import secret_manager  # type: ignore
 
 class Ansible_Tool:
     """A tool for running Ansible playbooks to configure and manage the cluster.

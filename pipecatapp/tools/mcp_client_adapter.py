@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any, List
 from pydantic import BaseModel
 
 try:
-    from security import redact_sensitive_data
+    from pipecatapp.security import redact_sensitive_data
 except ImportError:
     try:
         from pipecatapp.security import redact_sensitive_data
@@ -133,10 +133,10 @@ class MCPClientAdapter:
             # 2. Pre-execution Telepresence Broadcast
             try:
                 # Import here to avoid circular dependencies if any
-                import web_server
+                import pipecatapp.web_server
                 safe_command = redact_sensitive_data(command)
-                if hasattr(web_server, 'manager') and hasattr(web_server.manager, 'broadcast'):
-                    await web_server.manager.broadcast(json.dumps({
+                if hasattr(web_server, 'manager') and hasattr(pipecatapp.web_server.manager, 'broadcast'):
+                    await pipecatapp.web_server.manager.broadcast(json.dumps({
                         "type": "shell_command",
                         "data": f"$ {safe_command}"
                     }))
@@ -167,10 +167,10 @@ class MCPClientAdapter:
         # 3. Post-execution Telepresence Broadcast
         if method_name == "execute_command":
             try:
-                import web_server
+                import pipecatapp.web_server
                 safe_output = redact_sensitive_data(output_str)
-                if hasattr(web_server, 'manager') and hasattr(web_server.manager, 'broadcast'):
-                    await web_server.manager.broadcast(json.dumps({
+                if hasattr(web_server, 'manager') and hasattr(pipecatapp.web_server.manager, 'broadcast'):
+                    await pipecatapp.web_server.manager.broadcast(json.dumps({
                         "type": "shell_output",
                         "data": safe_output
                     }))

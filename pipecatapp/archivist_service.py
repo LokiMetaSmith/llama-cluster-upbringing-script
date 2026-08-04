@@ -22,9 +22,9 @@ if __package__:
     from .rate_limiter import RateLimiter
     from .net_utils import format_url
 else:
-    from api_keys import get_api_key
-    from rate_limiter import RateLimiter
-    from net_utils import format_url
+    from pipecatapp.api_keys import get_api_key
+    from pipecatapp.rate_limiter import RateLimiter
+    from pipecatapp.net_utils import format_url
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

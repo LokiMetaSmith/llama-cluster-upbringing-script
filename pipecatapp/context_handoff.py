@@ -1,5 +1,5 @@
 import logging
-from tools.polyphony_tool import PolyphonyTool
+from pipecatapp.tools.polyphony_tool import PolyphonyTool
 
 # Context handoff system prompt template
 CONTEXT_HANDOFF_PROMPT = """

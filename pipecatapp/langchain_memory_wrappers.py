@@ -11,8 +11,8 @@ from langchain_core.messages import BaseMessage, AIMessage, HumanMessage, System
 from langchain_core.vectorstores import VectorStore
 from langchain_core.documents import Document
 
-from pmm_memory import PMMMemory
-from memory import MemoryStore
+from pipecatapp.pmm_memory import PMMMemory
+from pipecatapp.memory import MemoryStore
 
 
 class PMMChatMessageHistory(BaseChatMessageHistory):

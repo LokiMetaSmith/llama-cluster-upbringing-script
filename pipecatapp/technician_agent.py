@@ -7,9 +7,9 @@ import asyncio
 import httpx
 import json
 from typing import List, Dict, Any, Optional
-from agent_factory import create_tools
-from pmm_memory_client import PMMMemoryClient
-from durable_execution import DurableExecutionEngine, durable_step
+from pipecatapp.agent_factory import create_tools
+from pipecatapp.pmm_memory_client import PMMMemoryClient
+from pipecatapp.durable_execution import DurableExecutionEngine, durable_step
 
 # Configure logging
 logging.basicConfig(

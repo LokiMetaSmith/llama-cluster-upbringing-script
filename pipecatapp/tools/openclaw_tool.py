@@ -1,5 +1,5 @@
 import logging
-from integrations.openclaw import OpenClawClient
+from pipecatapp.integrations.openclaw import OpenClawClient
 import asyncio
 from typing import Optional
 

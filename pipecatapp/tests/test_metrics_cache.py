@@ -8,7 +8,7 @@ import os
 # Add pipecatapp to path so we can import web_server
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from web_server import app
+from pipecatapp.web_server import app
 
 client = TestClient(app)
 

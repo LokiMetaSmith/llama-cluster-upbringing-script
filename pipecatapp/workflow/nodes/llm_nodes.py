@@ -10,7 +10,7 @@ import re
 try:
     from ...secret_manager import secret_manager
 except ImportError:
-    from secret_manager import secret_manager
+    from pipecatapp.secret_manager import secret_manager
 
 def build_extensible_payload(base_payload: dict, context: WorkflowContext, node_config: dict = None) -> dict:
     """

@@ -102,7 +102,7 @@ async def test_piper_tts_async_execution():
         if 'app' in sys.modules:
             del sys.modules['app']
 
-        from app import PiperTTSService
+        from pipecatapp.app import PiperTTSService
 
         # Setup Test Mocks
         mock_voice = MagicMock()

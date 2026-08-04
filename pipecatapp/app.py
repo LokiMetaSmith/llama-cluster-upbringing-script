@@ -61,53 +61,53 @@ import requests
 import httpx
 import consul.aio
 import numpy as np
-from pmm_memory import PMMMemory
-from pmm_memory_client import PMMMemoryClient
-from quality_control import CodeQualityAnalyzer
-import web_server
-from web_server import approval_queue, text_message_queue
-from tools.ssh_tool import SSH_Tool
-from tools.mcp_tool import MCP_Tool
-from tools.desktop_control_tool import DesktopControlTool
-from tools.code_runner_tool import CodeRunnerTool
-from tools.web_browser_tool import WebBrowserTool
-from tools.ansible_tool import Ansible_Tool
-from tools.power_tool import Power_Tool
-from tools.summarizer_tool import SummarizerTool
-from tools.term_everything_tool import TermEverythingTool
-from tools.rag_tool import RAG_Tool
-from tools.ha_tool import HA_Tool
-from tools.git_tool import Git_Tool
-from local_world_model import LocalWorldModel
-from mqtt_world_model_client import MQTTWorldModelClient
+from pipecatapp.pmm_memory import PMMMemory
+from pipecatapp.pmm_memory_client import PMMMemoryClient
+from pipecatapp.quality_control import CodeQualityAnalyzer
+import pipecatapp.web_server
+from pipecatapp.web_server import approval_queue, text_message_queue
+from pipecatapp.tools.ssh_tool import SSH_Tool
+from pipecatapp.tools.mcp_tool import MCP_Tool
+from pipecatapp.tools.desktop_control_tool import DesktopControlTool
+from pipecatapp.tools.code_runner_tool import CodeRunnerTool
+from pipecatapp.tools.web_browser_tool import WebBrowserTool
+from pipecatapp.tools.ansible_tool import Ansible_Tool
+from pipecatapp.tools.power_tool import Power_Tool
+from pipecatapp.tools.summarizer_tool import SummarizerTool
+from pipecatapp.tools.term_everything_tool import TermEverythingTool
+from pipecatapp.tools.rag_tool import RAG_Tool
+from pipecatapp.tools.ha_tool import HA_Tool
+from pipecatapp.tools.git_tool import Git_Tool
+from pipecatapp.local_world_model import LocalWorldModel
+from pipecatapp.mqtt_world_model_client import MQTTWorldModelClient
 
-from tools.orchestrator_tool import OrchestratorTool
-from tools.llxprt_code_tool import LLxprt_Code_Tool
-from tools.smol_agent_tool import SmolAgentTool
-from tools.final_answer_tool import FinalAnswerTool
-from tools.prompt_improver_tool import PromptImproverTool
-from tools.council_tool import CouncilTool
-from tools.swarm_tool import SwarmTool
-from tools.project_mapper_tool import ProjectMapperTool
-from tools.planner_tool import PlannerTool
-from agent_factory import create_tools
-from task_supervisor import TaskSupervisor
-from durable_execution import DurableExecutionEngine, durable_step
-from moondream_detector import MoondreamDetector
-from workflow.runner import WorkflowRunner, ActiveWorkflows
+from pipecatapp.tools.orchestrator_tool import OrchestratorTool
+from pipecatapp.tools.llxprt_code_tool import LLxprt_Code_Tool
+from pipecatapp.tools.smol_agent_tool import SmolAgentTool
+from pipecatapp.tools.final_answer_tool import FinalAnswerTool
+from pipecatapp.tools.prompt_improver_tool import PromptImproverTool
+from pipecatapp.tools.council_tool import CouncilTool
+from pipecatapp.tools.swarm_tool import SwarmTool
+from pipecatapp.tools.project_mapper_tool import ProjectMapperTool
+from pipecatapp.tools.planner_tool import PlannerTool
+from pipecatapp.agent_factory import create_tools
+from pipecatapp.task_supervisor import TaskSupervisor
+from pipecatapp.durable_execution import DurableExecutionEngine, durable_step
+from pipecatapp.moondream_detector import MoondreamDetector
+from pipecatapp.workflow.runner import WorkflowRunner, ActiveWorkflows
 # Import all node classes to ensure they are registered
-from workflow.nodes.base_nodes import *
+from pipecatapp.workflow.nodes.base_nodes import *
 from opentelemetry import trace
-from workflow.nodes.llm_nodes import *
-from workflow.nodes.tool_nodes import *
-from workflow.nodes.system_nodes import *
-from api_keys import initialize_api_keys
-from security import redact_sensitive_data
-from secret_manager import secret_manager
+from pipecatapp.workflow.nodes.llm_nodes import *
+from pipecatapp.workflow.nodes.tool_nodes import *
+from pipecatapp.workflow.nodes.system_nodes import *
+from pipecatapp.api_keys import initialize_api_keys
+from pipecatapp.security import redact_sensitive_data
+from pipecatapp.secret_manager import secret_manager
 try:
     from .net_utils import format_url, validate_url, resolve_and_validate_url, get_safe_url_and_headers
 except ImportError:
-    from net_utils import format_url, validate_url, resolve_and_validate_url, get_safe_url_and_headers
+    from pipecatapp.net_utils import format_url, validate_url, resolve_and_validate_url, get_safe_url_and_headers
 
 
 import uvicorn
@@ -139,7 +139,7 @@ class WebSocketLogHandler(logging.Handler):
         try:
             # Get the running asyncio loop to safely schedule the broadcast.
             loop = asyncio.get_running_loop()
-            loop.create_task(web_server.manager.broadcast(json.dumps({"type": "log", "data": log_entry})))
+            loop.create_task(pipecatapp.web_server.manager.broadcast(json.dumps({"type": "log", "data": log_entry})))
         except RuntimeError:
             # If no event loop is running (e.g., during shutdown), do nothing.
             pass
@@ -182,7 +182,7 @@ class UILogger(FrameProcessor):
         if isinstance(frame, (TranscriptionFrame, TextFrame)):
             # Security Fix: Sentinel - Redact sensitive information
             redacted_text = redact_sensitive_data(frame.text)
-            await web_server.manager.broadcast(json.dumps({"type": self.sender, "data": redacted_text}))
+            await pipecatapp.web_server.manager.broadcast(json.dumps({"type": self.sender, "data": redacted_text}))
         await self.push_frame(frame, direction)
 
 class BenchmarkCollector(FrameProcessor):
@@ -637,8 +637,8 @@ class WebsocketAudioStreamer(FrameProcessor):
 
             # Fix: Import web_server locally
             try:
-                import web_server
-                await web_server.manager.broadcast(json.dumps({
+                import pipecatapp.web_server
+                await pipecatapp.web_server.manager.broadcast(json.dumps({
                     "type": "audio",
                     "data": b64_audio
                 }))
@@ -773,8 +773,8 @@ class YOLOv8Detector(FrameProcessor):
             if img_base64:
                 # Fix: Import web_server locally to avoid NameError and circular dependencies
                 try:
-                    import web_server
-                    await web_server.manager.broadcast(json.dumps({
+                    import pipecatapp.web_server
+                    await pipecatapp.web_server.manager.broadcast(json.dumps({
                         "type": "vision_debug",
                         "data": img_base64
                     }))
@@ -888,8 +888,8 @@ class TextMessageInjector(FrameProcessor):
                                     parts = text.split("expert:")
                                     if len(parts) > 1:
                                         expert_name = parts[1].split(".")[0].strip()
-                                        import web_server
-                                        twin_service = getattr(web_server.app.state, "twin_service_instance", None)
+                                        import pipecatapp.web_server
+                                        twin_service = getattr(pipecatapp.web_server.app.state, "twin_service_instance", None)
                                         if twin_service and hasattr(twin_service, "task_supervisor"):
                                             # Trigger dynamic auto-scaling in the supervisor
                                             asyncio.create_task(twin_service.task_supervisor.handle_gateway_exhaustion(expert_name))
@@ -1156,7 +1156,7 @@ class TwinService(FrameProcessor):
             try:
                 import yaml
                 try:
-                    import web_server
+                    import pipecatapp.web_server
                 except ImportError:
                     from pipecatapp import web_server
                 from pipecatapp.sharded_router import ShardedPMMMemoryRouter
@@ -1181,7 +1181,7 @@ class TwinService(FrameProcessor):
                         yaml.dump(default_config, f)
 
                 router = ShardedPMMMemoryRouter(config_path)
-                web_server.app.state.memory_router = router
+                pipecatapp.web_server.app.state.memory_router = router
                 self.long_term_memory = router
                 logging.info(f"ShardedPMMMemoryRouter successfully initialized using {config_path}")
             except Exception as e:
@@ -1404,7 +1404,7 @@ class TwinService(FrameProcessor):
 
         if self.current_request_meta and self.current_request_meta.get("is_sync"):
             request_id = self.current_request_meta.get("request_id")
-            if request_id and request_id in web_server.sync_response_store:
+            if request_id and request_id in pipecatapp.web_server.sync_response_store:
                 response_data = {"response": text}
 
                 # Generate TTS if available
@@ -1418,8 +1418,8 @@ class TwinService(FrameProcessor):
                     except Exception as e:
                          logging.error(f"TTS generation failed for sync response: {e}")
 
-                web_server.sync_response_store[request_id]["response"] = response_data
-                web_server.sync_response_store[request_id]["event"].set()
+                pipecatapp.web_server.sync_response_store[request_id]["response"] = response_data
+                pipecatapp.web_server.sync_response_store[request_id]["event"].set()
                 logging.info(f"Set synchronous response for request {request_id}")
             else:
                 logging.warning(f"Sync response request {request_id} not found in store.")
@@ -1467,7 +1467,7 @@ class TwinService(FrameProcessor):
             True if the user approved the action, False otherwise.
         """
         request_id = str(time.time())
-        await web_server.manager.broadcast(json.dumps({"type": "approval_request", "data": {"request_id": request_id, "tool_call": tool_call_info}}))
+        await pipecatapp.web_server.manager.broadcast(json.dumps({"type": "approval_request", "data": {"request_id": request_id, "tool_call": tool_call_info}}))
         while True:
             response = await self.approval_queue.get()
             if response.get("data", {}).get("request_id") == request_id:
@@ -1585,8 +1585,8 @@ async def run_agent():
         logging.warning("No API keys found in PIPECAT_API_KEYS. Sensitive endpoints will be insecure if not protected elsewhere.")
 
     # Set initial state for web server
-    web_server.app.state.is_ready = False
-    web_server.app.state.twin_service_instance = None
+    pipecatapp.web_server.app.state.is_ready = False
+    pipecatapp.web_server.app.state.twin_service_instance = None
 
     # Initialize World Model
     world_model_mode = os.getenv("WORLD_MODEL_MODE", "distributed")
@@ -1597,7 +1597,7 @@ async def run_agent():
         logging.info("Initializing MQTTWorldModelClient (Distributed mode)")
         world_model = MQTTWorldModelClient()
 
-    web_server.app.state.world_model = world_model
+    pipecatapp.web_server.app.state.world_model = world_model
 
 
     # Load configuration from Consul
@@ -1691,7 +1691,7 @@ async def run_agent():
     vision_detector = initialize_vision_detector(app_config)
     # Bolt ⚡ Optimization: Inject callback to check for active connections
     if isinstance(vision_detector, YOLOv8Detector):
-        vision_detector.set_connection_check_callback(lambda: len(web_server.manager.active_connections) > 0)
+        vision_detector.set_connection_check_callback(lambda: len(pipecatapp.web_server.manager.active_connections) > 0)
 
     if app_config.get("debug_mode", False):
         logging.getLogger().setLevel(logging.DEBUG)
@@ -1729,7 +1729,7 @@ async def run_agent():
         llm_base_url=llm_base_url,
         tts_service=tts
     )
-    web_server.app.state.twin_service_instance = twin
+    pipecatapp.web_server.app.state.twin_service_instance = twin
 
     # Start Task Supervisor
     task_supervisor = TaskSupervisor(twin)
@@ -1737,7 +1737,7 @@ async def run_agent():
     asyncio.create_task(task_supervisor.start())
 
     # Now that the twin service is initialized, mark the application as ready.
-    web_server.app.state.is_ready = True
+    pipecatapp.web_server.app.state.is_ready = True
     logging.info("Application is fully initialized and ready.")
 
     text_injector = TextMessageInjector(text_message_queue)
@@ -1847,7 +1847,7 @@ async def lifespan(app: FastAPI):
     agent_task = asyncio.create_task(run_agent(), name="pipecat_agent_loop")
 
     # Start Ouroboros Webring Discovery Task
-    asyncio.create_task(web_server.discover_ouroboros_members(), name="ouroboros_discovery")
+    asyncio.create_task(pipecatapp.web_server.discover_ouroboros_members(), name="ouroboros_discovery")
     yield
     # Cleanup on shutdown
     await gossip_registry.stop()
@@ -1876,11 +1876,11 @@ if __name__ == "__main__":
 
     gossip_registry.register_service("pipecatapp", web_port)
 
-    # Attach the lifespan context manager to the FastAPI app defined in web_server.py
+    # Attach the lifespan context manager to the FastAPI app defined in pipecatapp.web_server.py
     # This allows us to start the background tasks when Uvicorn starts the app
-    web_server.app.router.lifespan_context = lifespan
+    pipecatapp.web_server.app.router.lifespan_context = lifespan
 
     # Run Uvicorn in the main thread (blocking)
     # This ensures standard signal handling and socket management
     logging.info(f"Starting Uvicorn on 0.0.0.0:{web_port}")
-    uvicorn.run(web_server.app, host="0.0.0.0", port=web_port, log_level="info")
+    uvicorn.run(pipecatapp.web_server.app, host="0.0.0.0", port=web_port, log_level="info")

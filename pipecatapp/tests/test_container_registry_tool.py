@@ -6,7 +6,7 @@ import os
 # Ensure we can import from tools
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from tools.container_registry_tool import ContainerRegistryTool
+from pipecatapp.tools.container_registry_tool import ContainerRegistryTool
 
 class TestContainerRegistryTool(unittest.TestCase):
     def setUp(self):

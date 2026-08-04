@@ -64,8 +64,8 @@ class VRTool:
             return f"Error: Room '{destination}' not found. Available rooms: {', '.join(self.available_rooms.keys())}"
 
         try:
-            import web_server
-            await web_server.manager.broadcast(json.dumps({
+            import pipecatapp.web_server
+            await pipecatapp.web_server.manager.broadcast(json.dumps({
                 "type": "navigation",
                 "destination": destination,
                 "coordinates": self.available_rooms[destination]

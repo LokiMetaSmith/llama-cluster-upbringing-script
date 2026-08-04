@@ -5,7 +5,7 @@ from ..context import WorkflowContext
 try:
     from ...memory import Document, MemoryStore
 except ImportError:
-    from memory import Document, MemoryStore
+    from pipecatapp.memory import Document, MemoryStore
 
 @registry.register
 class TextSplitterNode(Node):

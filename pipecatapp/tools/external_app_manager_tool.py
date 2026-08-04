@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from typing import Optional, Dict, Union
-from utils.app_manager import AppManager
+from pipecatapp.utils.app_manager import AppManager
 
 class ExternalAppManagerTool:
     """

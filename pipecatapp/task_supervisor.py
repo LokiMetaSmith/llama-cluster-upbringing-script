@@ -2,8 +2,8 @@ import asyncio
 import logging
 import time
 from typing import Dict, Any, Optional
-from tools.swarm_tool import SwarmTool
-from pmm_memory_client import PMMMemoryClient
+from pipecatapp.tools.swarm_tool import SwarmTool
+from pipecatapp.pmm_memory_client import PMMMemoryClient
 from pipecatapp.concurrency.queue_manager import ConcurrencyQueueManager, ConcurrencyPolicy, JobQueuePolicy
 
 class TaskSupervisor:

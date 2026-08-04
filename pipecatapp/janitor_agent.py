@@ -4,10 +4,10 @@ import logging
 import time
 import asyncio
 import requests
-from pmm_memory_client import PMMMemoryClient
+from pipecatapp.pmm_memory_client import PMMMemoryClient
 
 try:
-    from tools.jules_tool import JulesTool
+    from pipecatapp.tools.jules_tool import JulesTool
 except ImportError:
     try:
         from pipecatapp.tools.jules_tool import JulesTool

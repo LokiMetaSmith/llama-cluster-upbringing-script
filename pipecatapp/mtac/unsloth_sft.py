@@ -1,7 +1,7 @@
 import os
 import json
 import torch
-from datasets import load_dataset
+from pipecatapp.datasets import load_dataset
 try:
     from unsloth import FastLanguageModel
     from trl import SFTTrainer

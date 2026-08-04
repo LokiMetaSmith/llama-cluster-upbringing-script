@@ -7,11 +7,11 @@ import asyncio
 import httpx
 import json
 import re
-from agent_factory import create_tools
-from tools.submit_solution_tool import SubmitSolutionTool
-from pmm_memory_client import PMMMemoryClient
-from durable_execution import DurableExecutionEngine, durable_step
-from atproto_crypto import verify_payload
+from pipecatapp.agent_factory import create_tools
+from pipecatapp.tools.submit_solution_tool import SubmitSolutionTool
+from pipecatapp.pmm_memory_client import PMMMemoryClient
+from pipecatapp.durable_execution import DurableExecutionEngine, durable_step
+from pipecatapp.atproto_crypto import verify_payload
 
 # Configure logging
 logging.basicConfig(
