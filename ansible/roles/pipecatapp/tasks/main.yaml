@@ -167,6 +167,33 @@
   become: yes
   tags:
     - deploy_app
+    
+- name: Copy concurrency directory
+  ansible.builtin.copy:
+    mode: '0755'
+    src: "{{ inventory_dir }}/pipecatapp/concurrency"
+    dest: "{{ pipecat_app_dir }}/"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy workflows directory
+  ansible.builtin.copy:
+    mode: '0755'
+    src: "{{ inventory_dir }}/pipecatapp/workflows"
+    dest: "{{ pipecat_app_dir }}/"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy persona_plex directory
+  ansible.builtin.copy:
+    mode: '0755'
+    src: "{{ inventory_dir }}/pipecatapp/persona_plex"
+    dest: "{{ pipecat_app_dir }}/"
+  become: yes
+  tags:
+    - deploy_app
 
 - name: Copy gossip_discovery module
   ansible.builtin.copy:
