@@ -312,7 +312,7 @@
   register: ipfs_warmup
   until: ipfs_warmup.status is defined and ipfs_warmup.status == 200
   failed_when: false
-  retries: 15
+  retries: 30
   delay: 10
 
 - name: Import mTLS certificate generation tasks
