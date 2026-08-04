@@ -30,6 +30,7 @@ class TestProvisioning(unittest.TestCase):
             'nomad_http_port': 4646,
             'consul_http_port': 8500,
             'nanochat_port': 8005,
+            'pipecat_port': 8007,
             'router_port': 8081,
             'mqtt_port': 1883
         }

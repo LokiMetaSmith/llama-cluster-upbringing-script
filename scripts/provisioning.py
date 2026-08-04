@@ -709,7 +709,7 @@ def print_final_status(args, executed_playbooks):
     global_vars = load_global_vars()
     nomad_port = global_vars.get("nomad_http_port", 4646)
     consul_port = global_vars.get("consul_http_port", 8500)
-    pipecat_port = global_vars.get("nanochat_port", 8005)
+    pipecat_port = global_vars.get("pipecat_port", 8007)
     print(f"\n{Colors.BOLD}Access Interfaces:{Colors.ENDC}")
     print(f"  • {Colors.OKCYAN}Node IP Address:{Colors.ENDC} {ip}")
 
@@ -1023,7 +1023,7 @@ def main():
         # Wait for ports before app services
         if "app_services.yaml" in normalized_path:
             global_vars = load_global_vars()
-            pipecat_port = global_vars.get("nanochat_port", 8005)
+            pipecat_port = global_vars.get("pipecat_port", 8007)
             # router_port = global_vars.get("router_port", 8081)
             mqtt_port = global_vars.get("mqtt_port", 1883)
             # wait_for_ports_freed([pipecat_port, router_port, mqtt_port])  # Disabled as these are Nomad-managed
