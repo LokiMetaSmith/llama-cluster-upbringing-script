@@ -106,6 +106,10 @@
     body: "{{ item.stdout }}"
     headers:
       X-Consul-Token: "{{ consul_token }}"
+  register: llm_cid_result
+  until: llm_cid_result.status is defined and llm_cid_result.status == 200
+  retries: 6
+  delay: 10
   loop: "{{ llm_ipfs_cids.results }}"
   when: item.stdout is defined
 
@@ -158,6 +162,10 @@
     body: "{{ item.stdout }}"
     headers:
       X-Consul-Token: "{{ consul_token }}"
+  register: vllm_cid_result
+  until: vllm_cid_result.status is defined and vllm_cid_result.status == 200
+  retries: 6
+  delay: 10
   loop: "{{ vllm_ipfs_cids.results }}"
   when: item.stdout is defined
 
@@ -229,6 +237,10 @@
     body: "{{ item.stdout }}"
     headers:
       X-Consul-Token: "{{ consul_token }}"
+  register: stt_url_cid_result
+  until: stt_url_cid_result.status is defined and stt_url_cid_result.status == 200
+  retries: 6
+  delay: 10
   loop: "{{ stt_url_ipfs_cids.results }}"
   when: item.stdout is defined
 
@@ -251,6 +263,10 @@
     body: "{{ item.stdout }}"
     headers:
       X-Consul-Token: "{{ consul_token }}"
+  register: stt_hub_cid_result
+  until: stt_hub_cid_result.status is defined and stt_hub_cid_result.status == 200
+  retries: 6
+  delay: 10
   loop: "{{ stt_hub_ipfs_cids.results }}"
   when: item.stdout is defined
 
@@ -299,6 +315,10 @@
     body: "{{ item.stdout }}"
     headers:
       X-Consul-Token: "{{ consul_token }}"
+  register: tts_cid_result
+  until: tts_cid_result.status is defined and tts_cid_result.status == 200
+  retries: 6
+  delay: 10
   loop: "{{ tts_ipfs_cids.results }}"
   when: item.stdout is defined
 
@@ -369,6 +389,10 @@
     body: "{{ item.stdout }}"
     headers:
       X-Consul-Token: "{{ consul_token }}"
+  register: vision_url_cid_result
+  until: vision_url_cid_result.status is defined and vision_url_cid_result.status == 200
+  retries: 6
+  delay: 10
   loop: "{{ vision_url_ipfs_cids.results }}"
   when: item.stdout is defined
 
@@ -391,6 +415,10 @@
     body: "{{ item.stdout }}"
     headers:
       X-Consul-Token: "{{ consul_token }}"
+  register: vision_hub_cid_result
+  until: vision_hub_cid_result.status is defined and vision_hub_cid_result.status == 200
+  retries: 6
+  delay: 10
   loop: "{{ vision_hub_ipfs_cids.results }}"
   when: item.stdout is defined
 
@@ -443,6 +471,10 @@
     body: "{{ item.stdout }}"
     headers:
       X-Consul-Token: "{{ consul_token }}"
+  register: embedding_cid_result
+  until: embedding_cid_result.status is defined and embedding_cid_result.status == 200
+  retries: 6
+  delay: 10
   loop: "{{ embedding_ipfs_cids.results }}"
   when: item.stdout is defined
 
@@ -465,4 +497,8 @@
     body: "{{ reference_data_ipfs_cid.stdout }}"
     headers:
       X-Consul-Token: "{{ consul_token }}"
+  register: reference_cid_result
+  until: reference_cid_result.status is defined and reference_cid_result.status == 200
+  retries: 6
+  delay: 10
   when: reference_data_ipfs_cid.stdout is defined
