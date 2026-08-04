@@ -7,7 +7,9 @@ job "moe-gateway" {
 
     network {
       mode = "host"
-      port "http" {}
+      port "http" {
+        static = {{ router_port | default(8081) }}
+      }
     }
 
     service {

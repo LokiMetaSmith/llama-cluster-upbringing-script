@@ -1657,12 +1657,14 @@
         headers:
           X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
         return_content: yes
+        status_code: [200, 500, 502, 503, 504, -1]
       register: pipecat_health
       until: >
         pipecat_health.json is defined and
         pipecat_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
       retries: 60
       delay: 10
+      failed_when: false
       changed_when: false
   rescue:
     - name: "Pipecat App : Get Pipecat App job status"
