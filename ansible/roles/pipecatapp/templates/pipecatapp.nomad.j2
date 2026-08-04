@@ -47,6 +47,8 @@ job "{{ job_name | default('pipecat-app') }}" {
       MAIN_API_SERVICE_NAME = "llama-api-main"
       PLAYWRIGHT_BROWSERS_PATH = "/opt/ms-playwright"
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
+      SSL_KEYFILE            = "/secrets/internal-key.pem"
+      SSL_CERTFILE           = "/secrets/internal-cert.pem"
     }
     {% endset %}
 
@@ -54,7 +56,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     network {
       mode = "host"
       port "http" {
-        static = {{ nanochat_port }}
+        static = {{ pipecat_port }}
       }
     }
 
@@ -68,7 +70,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     network {
       mode = "host"
       port "http" {
-        static = {{ nanochat_port }}
+        static = {{ pipecat_port }}
       }
     }
     {% endif %}
@@ -115,6 +117,18 @@ job "{{ job_name | default('pipecat-app') }}" {
       driver = "docker"
       {{ env_vars }}
 
+      template {
+        data        = "{{ lookup('file', '{{ internal_cert_path | default(\'/etc/ssl/certs/internal-cert.pem\') }}') | default('', true) }}"
+        destination = "/secrets/internal-cert.pem"
+        change_mode = "restart"
+      }
+
+      template {
+        data        = "{{ lookup('file', '{{ internal_key_path | default(\'/etc/ssl/private/internal-key.pem\') }}') | default('', true) }}"
+        destination = "/secrets/internal-key.pem"
+        change_mode = "restart"
+      }
+
       constraint {
         attribute = "${meta.node_type}"
         value     = "controller"
@@ -151,6 +165,18 @@ job "{{ job_name | default('pipecat-app') }}" {
     task "pipecat-app" {
       driver = "raw_exec"
       {{ env_vars }}
+
+      template {
+        data        = "{{ lookup('file', '{{ internal_cert_path | default(\'/etc/ssl/certs/internal-cert.pem\') }}') | default('', true) }}"
+        destination = "/secrets/internal-cert.pem"
+        change_mode = "restart"
+      }
+
+      template {
+        data        = "{{ lookup('file', '{{ internal_key_path | default(\'/etc/ssl/private/internal-key.pem\') }}') | default('', true) }}"
+        destination = "/secrets/internal-key.pem"
+        change_mode = "restart"
+      }
 
       user = "{{ target_user | default('pipecatapp') }}"
 

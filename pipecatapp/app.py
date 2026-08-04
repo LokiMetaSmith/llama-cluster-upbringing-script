@@ -1882,5 +1882,12 @@ if __name__ == "__main__":
 
     # Run Uvicorn in the main thread (blocking)
     # This ensures standard signal handling and socket management
-    logging.info(f"Starting Uvicorn on 0.0.0.0:{web_port}")
-    uvicorn.run(pipecatapp.web_server.app, host="0.0.0.0", port=web_port, log_level="info")
+    ssl_keyfile = os.getenv("SSL_KEYFILE")
+    ssl_certfile = os.getenv("SSL_CERTFILE")
+
+    if ssl_keyfile and ssl_certfile:
+        logging.info(f"Starting Uvicorn with SSL on 0.0.0.0:{web_port}")
+        uvicorn.run(pipecatapp.web_server.app, host="0.0.0.0", port=web_port, log_level="info", ssl_keyfile=ssl_keyfile, ssl_certfile=ssl_certfile)
+    else:
+        logging.info(f"Starting Uvicorn on 0.0.0.0:{web_port}")
+        uvicorn.run(pipecatapp.web_server.app, host="0.0.0.0", port=web_port, log_level="info")

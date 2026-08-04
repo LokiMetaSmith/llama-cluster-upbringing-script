@@ -208,6 +208,13 @@
     comment: "Allow Nanochat UI"
   when: enable_nanochat | default(false)
 
+- name: "Firewall : Allow Pipecat App"
+  community.general.ufw:
+    rule: allow
+    port: "{{ pipecat_port }}"
+    proto: tcp
+    comment: "Allow Pipecat App UI"
+
 - name: "Firewall : Allow Frigate (Vision)"
   community.general.ufw:
     rule: allow
