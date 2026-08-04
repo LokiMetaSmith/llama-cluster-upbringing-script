@@ -42,10 +42,11 @@
     - Run moe-gateway job
 
 - name: Allow Router/Gateway port in UFW
-  ansible.builtin.command: ufw allow {{ router_port }}/tcp
+  ansible.builtin.command:
+    cmd: ufw allow {{ router_port }}/tcp
   become: yes
   changed_when: false
-  ignore_errors: yes
+  failed_when: false
 
 - name: Debug Nomad Address
   ansible.builtin.debug:
@@ -124,13 +125,14 @@
     - name: Get moe-gateway job status
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job status -verbose moe-gateway
+        changed_when: false
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: moe_job_status
-      ignore_errors: yes
+      failed_when: false
       become: no
 
     - name: Display moe-gateway job status
@@ -140,13 +142,14 @@
     - name: Get moe-gateway allocations
       ansible.builtin.command:
         cmd: /usr/local/bin/nomad job allocs -json moe-gateway
+        changed_when: false
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: moe_allocs
-      ignore_errors: yes
+      failed_when: false
       become: no
 
     - name: Save moe-gateway allocations to temp file
@@ -155,20 +158,23 @@
         dest: "/opt/moe_allocs.json"
 
     - name: Extract Allocation ID
-      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/moe_allocs.json
+      ansible.builtin.command:
+        cmd: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/moe_allocs.json
+        changed_when: false
       register: moe_alloc_id
-      ignore_errors: yes
+      failed_when: false
 
     - name: Fetch moe-gateway logs (stdout)
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs {{ moe_alloc_id.stdout }}"
+        changed_when: false
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: moe_logs_stdout
-      ignore_errors: yes
+      failed_when: false
       become: no
       when: moe_alloc_id.stdout | length > 0
 
@@ -180,13 +186,14 @@
     - name: Fetch moe-gateway logs (stderr)
       ansible.builtin.command:
         cmd: "/usr/local/bin/nomad alloc logs -stderr {{ moe_alloc_id.stdout }}"
+        changed_when: false
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: moe_logs_stderr
-      ignore_errors: yes
+      failed_when: false
       become: no
       when: moe_alloc_id.stdout | length > 0
 

@@ -1252,7 +1252,8 @@
         dest: "/opt/arch_allocs.json"
 
     - name: "Archivist : Extract Allocation ID"
-      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/arch_allocs.json
+      ansible.builtin.command:
+        cmd: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/arch_allocs.json
       register: arch_alloc_id
       failed_when: false
 
@@ -1265,7 +1266,7 @@
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: arch_load_logs_stdout
-      ignore_errors: yes
+      failed_when: false
       when: (arch_alloc_id.stdout | trim | length > 0) and (arch_alloc_id.stdout | trim != 'null')
 
     - name: "Archivist : Display load-image logs (stdout)"
@@ -1379,7 +1380,8 @@
         dest: "/opt/router_allocs.json"
 
     - name: "Router : Extract Allocation ID"
-      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/router_allocs.json
+      ansible.builtin.command:
+        cmd: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/router_allocs.json
       register: router_alloc_id
       failed_when: false
 
@@ -1392,7 +1394,7 @@
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: router_load_logs_stdout
-      ignore_errors: yes
+      failed_when: false
       when: (router_alloc_id.stdout | trim | length > 0) and (router_alloc_id.stdout | trim != 'null')
 
     - name: "Router : Display load-image logs (stdout)"
@@ -1508,8 +1510,6 @@
         - name: Force kill Consul and Nomad processes
           become: yes
           ansible.builtin.command: pkill -9 -f "consul|nomad"
-          ignore_errors: yes
-          failed_when: false
 
         - name: Wipe all certificates and trust store entries
           become: yes
@@ -1673,7 +1673,8 @@
         dest: "/opt/pipecat_allocs.json"
 
     - name: "Pipecat App : Extract Allocation ID"
-      ansible.builtin.command: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/pipecat_allocs.json
+      ansible.builtin.command:
+        cmd: jq -r 'sort_by(.CreateTime) | reverse | .[0].ID' /opt/pipecat_allocs.json
       register: pipecat_alloc_id
       failed_when: false
 
@@ -1686,7 +1687,7 @@
         NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
         NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
       register: pipecat_load_logs_stdout
-      ignore_errors: yes
+      failed_when: false
       when: (pipecat_alloc_id.stdout | trim | length > 0) and (pipecat_alloc_id.stdout | trim != 'null')
 
     - name: "Pipecat App : Display load-image logs (stdout)"
