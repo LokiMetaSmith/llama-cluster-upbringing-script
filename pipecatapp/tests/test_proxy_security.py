@@ -16,17 +16,17 @@ def test_proxy_headers_respected_when_configured():
     # Set the env var BEFORE reloading
     os.environ["TRUSTED_PROXIES"] = "*"
 
-    import web_server
-    importlib.reload(web_server)
+    import pipecatapp.web_server
+    importlib.reload(pipecatapp.web_server)
 
     # Verify middleware is present (optional but good for debugging)
-    middleware_names = [m.cls.__name__ for m in web_server.app.user_middleware]
+    middleware_names = [m.cls.__name__ for m in pipecatapp.web_server.app.user_middleware]
     print(f"Middleware stack with TRUSTED_PROXIES=*: {middleware_names}")
     assert "ProxyHeadersMiddleware" in middleware_names
 
-    client = TestClient(web_server.app)
+    client = TestClient(pipecatapp.web_server.app)
 
-    @web_server.app.get("/debug_ip_test_secure")
+    @pipecatapp.web_server.app.get("/debug_ip_test_secure")
     def get_ip(request: Request):
         return {"ip": request.client.host if request.client else "unknown"}
 
@@ -47,17 +47,17 @@ def test_proxy_headers_ignored_when_disabled():
     if "TRUSTED_PROXIES" in os.environ:
         del os.environ["TRUSTED_PROXIES"]
 
-    import web_server
-    importlib.reload(web_server)
+    import pipecatapp.web_server
+    importlib.reload(pipecatapp.web_server)
 
     # Verify middleware is NOT present
-    middleware_names = [m.cls.__name__ for m in web_server.app.user_middleware]
+    middleware_names = [m.cls.__name__ for m in pipecatapp.web_server.app.user_middleware]
     print(f"Middleware stack without TRUSTED_PROXIES: {middleware_names}")
     assert "ProxyHeadersMiddleware" not in middleware_names
 
-    client = TestClient(web_server.app)
+    client = TestClient(pipecatapp.web_server.app)
 
-    @web_server.app.get("/debug_ip_test_insecure")
+    @pipecatapp.web_server.app.get("/debug_ip_test_insecure")
     def get_ip(request: Request):
         return {"ip": request.client.host if request.client else "unknown"}
 

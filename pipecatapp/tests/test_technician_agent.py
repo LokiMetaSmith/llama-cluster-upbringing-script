@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../p
 mock_agent_factory = MagicMock()
 sys.modules["agent_factory"] = mock_agent_factory
 
-from technician_agent import TechnicianAgent
+from pipecatapp.technician_agent import TechnicianAgent
 
 @pytest.fixture
 def mock_agent():

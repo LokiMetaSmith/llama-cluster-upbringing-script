@@ -5,7 +5,7 @@ from pipecat.frames.frames import UserImageRawFrame as VisionImageRawFrame
 from PIL import Image
 import numpy as np
 
-from moondream_detector import MoondreamDetector
+from pipecatapp.moondream_detector import MoondreamDetector
 
 @pytest.fixture
 def mock_torch():

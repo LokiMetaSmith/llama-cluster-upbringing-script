@@ -5,7 +5,7 @@ import pytest
 # Ensure pipecatapp is in path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from security import redact_sensitive_data
+from pipecatapp.security import redact_sensitive_data
 
 def test_redact_openai_key():
     text = "Here is my key sk-1234567890abcdef1234567890abcdef"

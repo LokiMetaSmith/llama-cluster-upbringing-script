@@ -5,7 +5,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 import threading
 from typing import Optional
-from pmm_memory import PMMMemory
+from pipecatapp.pmm_memory import PMMMemory
 import gc
 import json
 import subprocess
@@ -63,7 +63,7 @@ class RAG_Tool:
         else:
             # Import here to avoid circular dependencies if this is used elsewhere
             try:
-                from pmm_memory import PMMMemory as LocalPMMMemory
+                from pipecatapp.pmm_memory import PMMMemory as LocalPMMMemory
                 # Use a local database file for standalone operation
                 self.pmm_memory = LocalPMMMemory(db_path="rag_knowledge_base.db")
             except ImportError:

@@ -33,7 +33,7 @@ from fastapi.testclient import TestClient
 
 with patch.dict('os.environ', {'TOOL_SERVER_API_KEY': 'test-key'}):
     with patch.dict('sys.modules'):
-        import tool_server
+        import pipecatapp.tool_server
 
         # Manually reset the API_KEY as it was evaluated during module load
         # before the mock if not mocked properly

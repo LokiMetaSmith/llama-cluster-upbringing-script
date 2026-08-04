@@ -8,7 +8,7 @@ import httpx
 try:
     from ...memory import MemoryStore
 except ImportError:
-    from memory import MemoryStore
+    from pipecatapp.memory import MemoryStore
 
 @registry.register
 class ContinuousConsolidationNode(Node):

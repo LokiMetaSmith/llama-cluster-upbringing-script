@@ -15,18 +15,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from typing import List, Dict, Optional
-from workflow.runner import ActiveWorkflows, OpenGates
-from workflow.history import WorkflowHistory
-from api_keys import get_api_key
-from security import sanitize_data, escape_html_content
+from pipecatapp.workflow.runner import ActiveWorkflows, OpenGates
+from pipecatapp.workflow.history import WorkflowHistory
+from pipecatapp.api_keys import get_api_key
+from pipecatapp.security import sanitize_data, escape_html_content
 if __package__:
     from .models import InternalChatRequest, SystemMessageRequest
     from .rate_limiter import RateLimiter
     from .net_utils import format_url, validate_url
 else:
-    from models import InternalChatRequest, SystemMessageRequest
-    from rate_limiter import RateLimiter
-    from net_utils import format_url, validate_url
+    from pipecatapp.models import InternalChatRequest, SystemMessageRequest
+    from pipecatapp.rate_limiter import RateLimiter
+    from pipecatapp.net_utils import format_url, validate_url
 
 
 # OpenTelemetry Imports
@@ -239,19 +239,19 @@ async def websocket_endpoint(websocket: WebSocket):
     """
     # Security Fix: WebSocket authentication via query parameter "token"
     # We only enforce this if API keys are configured in the system.
-    import api_keys
+    import pipecatapp.api_keys
     import secrets
 
-    if api_keys.API_KEYS:
+    if pipecatapp.api_keys.API_KEYS:
         token = websocket.query_params.get("token")
         if not token:
             logging.warning("Rejected WebSocket connection: Missing 'token' query parameter.")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
-        hashed_provided_key = api_keys.get_api_key_hash(token)
+        hashed_provided_key = pipecatapp.api_keys.get_api_key_hash(token)
         is_valid = False
-        for valid_key_hash in api_keys.API_KEYS:
+        for valid_key_hash in pipecatapp.api_keys.API_KEYS:
             if secrets.compare_digest(hashed_provided_key, valid_key_hash):
                 is_valid = True
 
@@ -1147,7 +1147,7 @@ async def get_personality(api_key: str = Security(get_api_key), rate_limit: None
         if __package__:
             from .tools.personality_tool import PersonalityTool
         else:
-            from tools.personality_tool import PersonalityTool
+            from pipecatapp.tools.personality_tool import PersonalityTool
         app.state.personality_tool = PersonalityTool()
 
     status_str = app.state.personality_tool.get_current_personality()
@@ -1160,7 +1160,7 @@ async def set_personality(payload: Dict = Body(...), api_key: str = Security(get
         if __package__:
             from .tools.personality_tool import PersonalityTool
         else:
-            from tools.personality_tool import PersonalityTool
+            from pipecatapp.tools.personality_tool import PersonalityTool
         app.state.personality_tool = PersonalityTool()
 
     name = payload.get("name")
@@ -1184,7 +1184,7 @@ async def reset_personality(api_key: str = Security(get_api_key), rate_limit: No
         if __package__:
             from .tools.personality_tool import PersonalityTool
         else:
-            from tools.personality_tool import PersonalityTool
+            from pipecatapp.tools.personality_tool import PersonalityTool
         app.state.personality_tool = PersonalityTool()
 
     result = app.state.personality_tool.reset_personality()

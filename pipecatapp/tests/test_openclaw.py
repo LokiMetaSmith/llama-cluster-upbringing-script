@@ -2,7 +2,7 @@ import pytest
 import asyncio
 import json
 from unittest.mock import MagicMock, AsyncMock, patch
-from integrations.openclaw import OpenClawClient
+from pipecatapp.integrations.openclaw import OpenClawClient
 from pipecatapp.tools.openclaw_tool import OpenClawTool
 
 @pytest.mark.asyncio

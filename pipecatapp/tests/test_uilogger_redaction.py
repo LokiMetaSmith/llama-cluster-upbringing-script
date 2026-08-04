@@ -114,7 +114,7 @@ mock_web_server.manager.broadcast = AsyncMock()
 sys.modules["web_server"] = mock_web_server
 
 # Now import the class we want to test
-from app import UILogger
+from pipecatapp.app import UILogger
 
 def test_uilogger_redaction_verification():
     """

@@ -12,7 +12,7 @@ from .history import WorkflowHistory
 try:
     from ..security import redact_sensitive_data, SENSITIVE_KEYS
 except ImportError:
-    from security import redact_sensitive_data, SENSITIVE_KEYS
+    from pipecatapp.security import redact_sensitive_data, SENSITIVE_KEYS
 
 def make_serializable(obj, depth=0, max_depth=50, sanitize=False):
     """

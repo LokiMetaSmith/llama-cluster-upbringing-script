@@ -6,7 +6,7 @@ import os
 # Ensure we can import from pipecatapp
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from tools.web_browser_tool import WebBrowserTool
+from pipecatapp.tools.web_browser_tool import WebBrowserTool
 
 @pytest.mark.asyncio
 async def test_ssrf_protection():

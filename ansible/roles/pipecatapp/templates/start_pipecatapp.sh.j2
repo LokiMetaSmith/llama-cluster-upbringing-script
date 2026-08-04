@@ -268,10 +268,10 @@ fi
 {% if pipecat_deployment_style == 'raw_exec' %}
 # For raw_exec, we explicitly manage our own log file via redirection.
 PYTHON_EXEC="$(dirname "$ACTIVATE")/python"
-exec "$PYTHON_EXEC" -u "$APP_DIR/app.py" >> "$LOG_FILE" 2>&1
+exec "$PYTHON_EXEC" -u -m pipecatapp.app >> "$LOG_FILE" 2>&1
 {% else %}
 # For Docker, we want logs to stdout/stderr (for `docker logs`) AND to the file (for debugging).
 # We use process substitution to pipe to tee.
 # Note: We rely on the active venv here.
-exec python -u "$APP_DIR/app.py" 2>&1 | tee -a "$LOG_FILE"
+exec python -u -m pipecatapp.app 2>&1 | tee -a "$LOG_FILE"
 {% endif %}

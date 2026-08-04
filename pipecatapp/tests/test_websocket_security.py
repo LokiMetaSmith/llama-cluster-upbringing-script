@@ -16,7 +16,7 @@ sys.modules["consul.aio"] = MagicMock()
 
 from fastapi.testclient import TestClient
 from fastapi.websockets import WebSocketDisconnect
-from web_server import app
+from pipecatapp.web_server import app
 import pytest
 from unittest.mock import patch
 

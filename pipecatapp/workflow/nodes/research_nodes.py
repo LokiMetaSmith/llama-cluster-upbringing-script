@@ -4,14 +4,14 @@ import logging
 import httpx
 import asyncio
 from typing import Dict, Any, List, Optional
-from workflow.node import Node
-from workflow.context import WorkflowContext
+from pipecatapp.workflow.node import Node
+from pipecatapp.workflow.context import WorkflowContext
 from .registry import registry
-from pmm_memory_client import PMMMemoryClient
-from agent_factory import create_tools
+from pipecatapp.pmm_memory_client import PMMMemoryClient
+from pipecatapp.agent_factory import create_tools
 
-from judge_agent import JudgeAgent
-from worker_agent import WorkerAgent
+from pipecatapp.judge_agent import JudgeAgent
+from pipecatapp.worker_agent import WorkerAgent
 
 logger = logging.getLogger("ResearchNodes")
 

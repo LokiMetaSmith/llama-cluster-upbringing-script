@@ -10,7 +10,7 @@ try:
     from pipecatapp.ontology import WorldOntology, Device, Agent, Node, Cluster
 except ImportError:
     try:
-        from ontology import WorldOntology, Device, Agent, Node, Cluster
+        from pipecatapp.ontology import WorldOntology, Device, Agent, Node, Cluster
     except ImportError:
         import sys
         import os

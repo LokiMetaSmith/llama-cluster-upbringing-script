@@ -11,24 +11,24 @@ from typing import Optional
 if __package__:
     from .rate_limiter import RateLimiter
 else:
-    from rate_limiter import RateLimiter
+    from pipecatapp.rate_limiter import RateLimiter
 
-from tools.ssh_tool import SSH_Tool
-from tools.desktop_control_tool import DesktopControlTool
-from tools.code_runner_tool import CodeRunnerTool
-from tools.web_browser_tool import WebBrowserTool
-from tools.ansible_tool import Ansible_Tool
-from tools.power_tool import Power_Tool
-from tools.summarizer_tool import SummarizerTool
-from tools.term_everything_tool import TermEverythingTool
-from tools.rag_tool import RAG_Tool
-from tools.ha_tool import HA_Tool
-from tools.git_tool import Git_Tool
-from tools.orchestrator_tool import OrchestratorTool
-from tools.ocr_tool import OCRTool
-from tools.wasm_tool import WasmTool
-from tools.heretic_tool import HereticTool
-from pmm_memory import PMMMemory
+from pipecatapp.tools.ssh_tool import SSH_Tool
+from pipecatapp.tools.desktop_control_tool import DesktopControlTool
+from pipecatapp.tools.code_runner_tool import CodeRunnerTool
+from pipecatapp.tools.web_browser_tool import WebBrowserTool
+from pipecatapp.tools.ansible_tool import Ansible_Tool
+from pipecatapp.tools.power_tool import Power_Tool
+from pipecatapp.tools.summarizer_tool import SummarizerTool
+from pipecatapp.tools.term_everything_tool import TermEverythingTool
+from pipecatapp.tools.rag_tool import RAG_Tool
+from pipecatapp.tools.ha_tool import HA_Tool
+from pipecatapp.tools.git_tool import Git_Tool
+from pipecatapp.tools.orchestrator_tool import OrchestratorTool
+from pipecatapp.tools.ocr_tool import OCRTool
+from pipecatapp.tools.wasm_tool import WasmTool
+from pipecatapp.tools.heretic_tool import HereticTool
+from pipecatapp.pmm_memory import PMMMemory
 
 app = FastAPI()
 

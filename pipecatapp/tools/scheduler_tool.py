@@ -57,14 +57,14 @@ class SchedulerTool:
         """Injects a message into the agent's input queue."""
         logger.info(f"Scheduler triggering message: {message}")
         try:
-            import web_server
+            import pipecatapp.web_server
             if hasattr(web_server, 'text_message_queue'):
-                await web_server.text_message_queue.put({
+                await pipecatapp.web_server.text_message_queue.put({
                     "text": f"SCHEDULED TASK: {message}",
                     "is_system_alert": True
                 })
             else:
-                logger.error("web_server.text_message_queue is not available.")
+                logger.error("pipecatapp.web_server.text_message_queue is not available.")
         except ImportError:
             logger.error("Could not import web_server to inject scheduled message.")
 

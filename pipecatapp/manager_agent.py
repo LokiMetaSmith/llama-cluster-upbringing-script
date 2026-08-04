@@ -6,9 +6,9 @@ import httpx
 import json
 import time
 from typing import List, Dict, Any
-from tools.swarm_tool import SwarmTool
-from agent_factory import create_tools
-from pmm_memory_client import PMMMemoryClient
+from pipecatapp.tools.swarm_tool import SwarmTool
+from pipecatapp.agent_factory import create_tools
+from pipecatapp.pmm_memory_client import PMMMemoryClient
 
 # Configure logging
 logging.basicConfig(

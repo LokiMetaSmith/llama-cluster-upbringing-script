@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from web_server import app
+from pipecatapp.web_server import app
 from unittest.mock import patch, MagicMock
 
 client = TestClient(app)

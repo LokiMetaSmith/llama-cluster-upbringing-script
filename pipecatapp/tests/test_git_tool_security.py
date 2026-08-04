@@ -6,7 +6,7 @@ import os
 # Ensure we can import from pipecatapp
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from tools.git_tool import Git_Tool
+from pipecatapp.tools.git_tool import Git_Tool
 
 class TestGitToolSecurity:
 

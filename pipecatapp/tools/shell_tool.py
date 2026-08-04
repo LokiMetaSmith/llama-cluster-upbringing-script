@@ -111,7 +111,7 @@ class ShellTool:
 
 
                 try:
-                    import web_server
+                    import pipecatapp.web_server
                     import json
                     # Redact output if security module is present
                     redacted_output = result
@@ -134,7 +134,7 @@ class ShellTool:
                     except Exception:
                         pass
 
-                    asyncio.create_task(web_server.manager.broadcast(json.dumps({
+                    asyncio.create_task(pipecatapp.web_server.manager.broadcast(json.dumps({
                         "type": "shell_output",
                         "data": redacted_output
                     })))
