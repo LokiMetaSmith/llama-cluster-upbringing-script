@@ -1,7 +1,5 @@
 import asyncio
 import logging
-import subprocess
-import shlex
 import httpx
 from typing import Optional, Dict, Any
 from config import settings
@@ -58,28 +56,100 @@ class ClusterOrchestrator:
             return
 
         try:
-            # Example API call to Nomad to trigger a parameterized job or update an allocation
-            # For demonstration, we'll hit a dummy endpoint or use a dry-run log
-            async with httpx.AsyncClient() as client:
-                # url = f"{self.nomad_api_url}/v1/job/user-llm-{user.username}/dispatch"
-                # payload = {"Payload": b64encode(json.dumps({"vector_store": vector_store}).encode()).decode()}
-                # response = await client.post(url, json=payload)
-                logger.info(f"[Dry Run] Nomad dispatch for {user.username} to {target_node} with vector_store={vector_store}")
+            import json
+            import base64
 
+            # Dispatch a parameterized Nomad job specifically configured for user resource environments
+            # Passing vector_store and other attributes via Meta blocks allows the Nomad template to mount them
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                job_id = f"user-llm"
+                url = f"{self.nomad_api_url}/v1/job/{job_id}/dispatch"
+
+                dispatch_payload = {
+                    "Meta": {
+                        "user_id": user.username,
+                        "vector_store_path": vector_store or "",
+                        "target_gpu_node": target_node,
+                        "models": ",".join(resource_config.get("models", []))
+                    }
+                }
+
+                # In parameterized jobs, we can pass arbitrary opaque data in Payload, Base64 encoded
+                # We'll pass the full user attributes just in case the job needs them
+                payload_str = json.dumps(user.attributes)
+                payload_b64 = base64.b64encode(payload_str.encode()).decode()
+                dispatch_payload["Payload"] = payload_b64
+
+                response = await client.post(url, json=dispatch_payload)
+                response.raise_for_status()
+
+                res_data = response.json()
+                logger.info(f"Successfully dispatched Nomad job for {user.username}. DispatchedJobID: {res_data.get('DispatchedJobID')}")
+
+        except httpx.HTTPStatusError as e:
+            # Handle cases where the parameterized job doesn't exist yet
+            if e.response.status_code == 404:
+                logger.warning(f"Parameterized Nomad job '{job_id}' not found. Ensure the template is deployed.")
+            else:
+                logger.error(f"HTTP error communicating with Nomad API: {e} - {e.response.text}")
         except Exception as e:
             logger.error(f"Error communicating with Nomad API: {e}")
 
-    async def issue_ephemeral_credentials(self, user: AuthentikUser):
+    async def issue_ephemeral_credentials(self, user: AuthentikUser, public_key: str = ""):
         """
         Interacts with Vault or local CA to issue short-lived SSH credentials.
+        Since public keys are typically required for signing, this might be fetched from Authentik attributes or a local store.
         """
         logger.info(f"Issuing ephemeral credentials for {user.username}")
+
+        # If public key isn't provided, see if it exists in the user's Authentik attributes
+        pub_key_to_sign = public_key or user.attributes.get("ssh_public_key")
+
+        if not pub_key_to_sign:
+            logger.warning(f"No SSH public key available to sign for user {user.username}. Skipping Vault cert issuance.")
+            return
+
         try:
-            async with httpx.AsyncClient() as client:
-                # url = f"{self.vault_api_url}/v1/ssh/sign/local-user"
-                # data = {"public_key": "...", "valid_principals": user.username}
-                # response = await client.post(url, json=data)
-                logger.info(f"[Dry Run] Vault SSH cert request for {user.username}")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                # Typically, Vault SSH secrets engine is mounted at /v1/ssh
+                # and you sign client keys against a specific role (e.g. 'local-user')
+                vault_role = "local-user"
+                url = f"{self.vault_api_url}/v1/ssh/sign/{vault_role}"
+
+                # In a real environment, you'd also pass X-Vault-Token for auth
+                headers = {}
+                vault_token = user.attributes.get("vault_token") # Or perhaps a service token
+                if vault_token:
+                    headers["X-Vault-Token"] = vault_token
+                else:
+                    logger.warning("No Vault token provided. Request may fail if unauthenticated access is disabled.")
+
+                data = {
+                    "public_key": pub_key_to_sign,
+                    "valid_principals": user.username,
+                    # e.g. valid for 1 hour
+                    "ttl": "1h",
+                    "extensions": {
+                        "permit-pty": "",
+                        "permit-port-forwarding": ""
+                    }
+                }
+
+                response = await client.post(url, json=data, headers=headers)
+                response.raise_for_status()
+
+                res_data = response.json()
+                signed_cert = res_data.get("data", {}).get("signed_key")
+
+                if signed_cert:
+                    logger.info(f"Successfully generated signed SSH certificate for {user.username}")
+                    # In a fully integrated system, you might push this cert back to the user via an out-of-band channel
+                    # or drop it into a secure distributed store (like Consul KV under their namespace)
+                else:
+                    logger.warning(f"Vault responded successfully but no signed_key found in payload for {user.username}")
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error communicating with Vault API: {e} - {e.response.text}")
         except Exception as e:
             logger.error(f"Error communicating with Vault API: {e}")
 
