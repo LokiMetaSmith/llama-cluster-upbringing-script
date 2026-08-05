@@ -261,3 +261,6 @@ pxe_router: "10.0.0.1"
 
 # Cluster Overlay Network (Tailscale/Headscale)
 overlay_subnet: "100.64.0.0/10"
+
+# -- Tap Orchestrator Configuration --
+tap_orchestrator_port: 8011
