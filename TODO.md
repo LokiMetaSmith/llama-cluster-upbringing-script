@@ -478,5 +478,5 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 
 - [x] **Ansible Deployment Role:** Create an Ansible role (`ansible/roles/tap_orchestrator`) and a Nomad job template (`tap_orchestrator.nomad.j2`) so that the cluster's upbringing script automatically deploys this service to the controller node.
 - [x] **Automated Authentik Configuration:** Update the existing Authentik Ansible roles to automatically provision the M2M OAuth2 application, client ID, and service account required by the orchestrator during cluster bootstrap.
-- [ ] **Flesh out the Dry-Runs (Nomad/Vault):** Replace the dry-run HTTP stubs in `orchestrator.py` with actual API calls to the Vault PKI/SSH secrets engine (for short-lived certificates) and Nomad (for dispatching parameterized jobs with vector store mounts).
+- [x] **Flesh out the Dry-Runs (Nomad/Vault):** Replace the dry-run HTTP stubs in `orchestrator.py` with actual API calls to the Vault PKI/SSH secrets engine (for short-lived certificates) and Nomad (for dispatching parameterized jobs with vector store mounts).
 - [ ] **End-to-End Cluster Tests:** Write an integration test playbook that stands up the orchestrator, publishes a mock MQTT event, and verifies that the correct Nomad allocations are triggered.
