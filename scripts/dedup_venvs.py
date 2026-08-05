@@ -34,6 +34,8 @@ def find_duplicates(directories, min_size_mb=10):
     size_groups = defaultdict(list)
 
     for directory in directories:
+        # Expand ~ to actual home path if provided
+        directory = os.path.expanduser(directory)
         if not os.path.exists(directory):
             print(f"Warning: Directory {directory} does not exist, skipping.")
             continue
@@ -119,10 +121,15 @@ def deduplicate(duplicate_groups):
     return total_saved_bytes, files_linked
 
 if __name__ == "__main__":
-    # Directories to scan (running as sudo to access /opt)
+    # Get the directory where the script is located, and the root of the project
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(script_dir, ".."))
+
+    # Directories to scan (running as sudo to access /opt and project root)
     directories_to_scan = [
         "/opt",
-        "/home/pipecatapp"
+        "/home/pipecatapp",
+        project_root  # Explicitly include the repo root in case it's not in /home/pipecatapp
     ]
 
     # We only care about large files (e.g. PyTorch, CUDA libs), let's say > 5MB

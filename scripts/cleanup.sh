@@ -190,3 +190,10 @@ sudo pkill -9 -x "opencode" || sudo pkill -9 -f "bin/opencode" || true
 
 echo -e "\n${GREEN}✨ Cleanup Complete!${NC}"
 df -h /
+
+if [ -x "${SCRIPT_DIR}/ipfs_cleanup.sh" ]; then
+    echo "Executing ipfs_cleanup.sh..."
+    "${SCRIPT_DIR}/ipfs_cleanup.sh"
+else
+    echo "Warning: ipfs_cleanup.sh not found or not executable."
+fi
