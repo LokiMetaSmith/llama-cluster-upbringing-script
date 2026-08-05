@@ -31,37 +31,33 @@
     path: /var/tmp/ansible_pip_build
     state: directory
     mode: '0777'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
   become: yes
   tags:
     - deploy_app
 
-- name: Install/Upgrade base python packages in venv
+- name: Create a temporary cache directory for uv builds
+  ansible.builtin.file:
+    path: /var/tmp/ansible_pip_build/uv_cache
+    state: directory
+    mode: '0777'
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Install/Upgrade base python packages, Cython, and uv in venv
   ansible.builtin.pip:
     name:
       - pip
       - setuptools
       - wheel
+      - cython
+      - uv
     state: latest
-    executable: "/opt/pipecatapp/venv/bin/pip3"
-  become: yes
-  become_user: "{{ target_user }}"
-  tags:
-    - deploy_app
-
-- name: Install Cython separately to ensure it's available for other builds
-  ansible.builtin.pip:
-    name: cython
-    state: latest
-    executable: "/opt/pipecatapp/venv/bin/pip3"
-  become: yes
-  become_user: "{{ target_user }}"
-  tags:
-    - deploy_app
-
-- name: Install uv for faster dependency resolution
-  ansible.builtin.pip:
-    name: uv
-    state: latest
+    extra_args: "--no-cache-dir"
     executable: "/opt/pipecatapp/venv/bin/pip3"
   become: yes
   become_user: "{{ target_user }}"
@@ -73,6 +69,16 @@
     cmd: "/opt/pipecatapp/venv/bin/uv pip install webrtcvad-wheels==2.0.14 --python /opt/pipecatapp/venv/bin/python"
   environment:
     TMPDIR: /var/tmp/ansible_pip_build
+    UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
+  become: yes
+  become_user: "{{ target_user }}"
+  tags:
+    - deploy_app
+
+- name: Clean up uv cache after webrtcvad installation
+  ansible.builtin.command:
+    cmd: "/opt/pipecatapp/venv/bin/uv cache clean"
+  environment:
     UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
   become: yes
   become_user: "{{ target_user }}"
@@ -102,6 +108,8 @@
   become_user: "{{ target_user }}"
   tags:
     - deploy_app
+
+
 
 - name: Clean up uv cache
   ansible.builtin.command:
