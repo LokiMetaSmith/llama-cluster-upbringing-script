@@ -15,6 +15,9 @@ Certificate Requirements: When troubleshooting mesh or cluster SSL errors, verif
 
 No Band-Aids: "Green" pipelines achieved by disabling security are considered critical failures. Absolute mesh security and zero-trust integrity supersede task completion speed.
 
+## 📚 ARCHITECTURAL & CODING STANDARDS
+Core Rule: You must consult and strictly adhere to the `docs/BEST_PRACTICES.md` document. It contains the ground-truth reference for architectural boundaries, directory structures, testing requirements, and specific system memory rules (like zero-copy Rust DMA, ephemeral Tailscale keys, and `uv pip install` caching) that govern development in this repository.
+
 ## 1. Executable Oracles
 
 You are provided with several executable oracles to verify your work. You must use these tools to test your code before considering a task complete.
