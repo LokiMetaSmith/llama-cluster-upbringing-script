@@ -9,31 +9,31 @@ The `tap_orchestrator` service listens for authenticated tap events originating 
 2. Identifies the user via the Authentik core API to determine cluster access rights and attributes.
 3. Orchestrates cluster startup routines (Wake-on-LAN, Nomad mounts, and ephemeral Vault credentials) mapping to the user's requirements.
 
-## Environment Variables
+## Configuration
 
-The service relies on `.env` files for secrets and dynamic configuration. Copy `.env.example` to `.env` and populate the values:
+The service configuration is managed centrally by Ansible.
+The Webhook Secret is sourced from the `tap_orchestrator_secret` variable in `group_vars/all.yaml` (or vaulted files).
 
-```bash
-cp .env.example .env
-```
+### Environment Variables
+
+During Ansible deployment, the Nomad job (`tap_orchestrator.nomad.j2`) automatically passes the required environment variables to the python service:
 
 | Variable | Description | Default |
 | --- | --- | --- |
-| `MQTT_BROKER_HOST` | Local MQTT Broker address | 127.0.0.1 |
-| `MQTT_TOPIC_SUCCESS` | Topic for authenticated taps | tagreader/auth/success |
-| `AUTHENTIK_API_URL` | Authentik instance API URL | http://127.0.0.1:9000 |
-| `AUTHENTIK_CLIENT_ID` | OAuth2 Client ID | - |
-| `AUTHENTIK_CLIENT_SECRET` | OAuth2 Client Secret | - |
-| `AUTHENTIK_TOKEN` | (Optional) Static Bearer Token for dev | - |
-| `TAP_ORCHESTRATOR_SECRET` | Secret header for `/api/v1/tap-event` | change_me_secret |
+| `MQTT_BROKER_HOST` | Local MQTT Broker address | `{{ cluster_ip }}` |
+| `MQTT_TOPIC_SUCCESS` | Topic for authenticated taps | `tagreader/auth/success` |
+| `AUTHENTIK_API_URL` | Authentik instance API URL | `http://{{ cluster_ip }}:9000` |
+| `AUTHENTIK_CLIENT_ID` | OAuth2 Client ID | dynamically sourced from Consul KV |
+| `AUTHENTIK_CLIENT_SECRET` | OAuth2 Client Secret | dynamically sourced from Consul KV |
+| `TAP_ORCHESTRATOR_SECRET` | Secret header for `/api/v1/tap-event` | `{{ tap_orchestrator_secret }}` |
 
 ## Cluster Resource Mapping
 
-The service requires a `config.yaml` to map `user_id` values to their designated cluster resources.
+The mapping of `user_id` values to designated cluster resources is defined in `group_vars/all.yaml` under `tap_cluster_resource_map`. Ansible templates this into the `config.yaml` file used by the orchestrator.
 
-Example `config.yaml`:
+Example `group_vars/all.yaml`:
 ```yaml
-CLUSTER_RESOURCE_MAP:
+tap_cluster_resource_map:
   lawrence:
     gpu_node: "node-gpu-01"
     mac_address: "AA:BB:CC:DD:EE:FF"

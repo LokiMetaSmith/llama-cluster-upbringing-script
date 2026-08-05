@@ -46,9 +46,9 @@
     group: "{{ target_user }}"
     mode: '0644'
 
-- name: Copy config.yaml template
-  ansible.builtin.copy:
-    src: "{{ inventory_dir }}/../config.yaml"
+- name: Template config.yaml
+  ansible.builtin.template:
+    src: "config.yaml.j2"
     dest: "/opt/tap_orchestrator/config.yaml"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
@@ -66,4 +66,4 @@
   ansible.builtin.command:
     cmd: nomad job run {{ nomad_jobs_dir }}/tap_orchestrator.nomad
   environment:
-    NOMAD_ADDR: "http://127.0.0.1:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"

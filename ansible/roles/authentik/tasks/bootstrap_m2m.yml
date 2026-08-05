@@ -1,7 +1,7 @@
 ---
 - name: Wait for Authentik to become available
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ authentik_http_port | default(9000) }}/-/health/ready/"
+    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ authentik_http_port | default(9000) }}/-/health/ready/"
     method: GET
     status_code: 204
   register: authentik_ready
@@ -78,7 +78,7 @@
   ansible.builtin.command:
     cmd: nomad alloc exec -task authentik-server -job authentik python /media/bootstrap_m2m.py
   environment:
-    NOMAD_ADDR: "http://127.0.0.1:4646"
+    NOMAD_ADDR: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     TAP_CLIENT_ID: "{{ authentik_m2m_client_id.stdout }}"
     TAP_CLIENT_SECRET: "{{ authentik_m2m_client_secret.stdout }}"
   when: authentik_ready is success
