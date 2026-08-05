@@ -1,4 +1,35 @@
 ---
+- name: Fetch Authentik Tap Client ID from Consul
+  ansible.builtin.uri:
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/authentik/tap-client-id"
+    client_cert: "/etc/consul.d/cert.pem"
+    client_key: "/etc/consul.d/key.pem"
+    ca_path: "/etc/consul.d/ca.pem"
+    method: GET
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
+    status_code: [200, 404]
+  register: authentik_tap_client_id_res
+  ignore_errors: yes
+
+- name: Fetch Authentik Tap Client Secret from Consul
+  ansible.builtin.uri:
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/authentik/tap-client-secret"
+    client_cert: "/etc/consul.d/cert.pem"
+    client_key: "/etc/consul.d/key.pem"
+    ca_path: "/etc/consul.d/ca.pem"
+    method: GET
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
+    status_code: [200, 404]
+  register: authentik_tap_client_secret_res
+  ignore_errors: yes
+
+- name: Set Authentik credentials facts
+  ansible.builtin.set_fact:
+    tap_client_id: "{{ authentik_tap_client_id_res.json[0].Value | b64decode if (authentik_tap_client_id_res.status == 200) else '' }}"
+    tap_client_secret: "{{ authentik_tap_client_secret_res.json[0].Value | b64decode if (authentik_tap_client_secret_res.status == 200) else '' }}"
+
 - name: Create Tap Orchestrator directory
   ansible.builtin.file:
     path: "/opt/tap_orchestrator"
