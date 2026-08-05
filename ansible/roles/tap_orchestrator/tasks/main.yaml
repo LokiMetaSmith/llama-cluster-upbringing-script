@@ -40,7 +40,7 @@
 
 - name: Copy Tap Orchestrator python source files
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/services/tap_orchestrator/"
+    src: "{{ inventory_dir }}/../services/tap_orchestrator/"
     dest: "/opt/tap_orchestrator/"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
@@ -48,7 +48,7 @@
 
 - name: Copy config.yaml template
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/config.yaml"
+    src: "{{ inventory_dir }}/../config.yaml"
     dest: "/opt/tap_orchestrator/config.yaml"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"

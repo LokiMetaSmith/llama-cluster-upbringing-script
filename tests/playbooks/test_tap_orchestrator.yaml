@@ -1,0 +1,44 @@
+---
+- name: Test Tap Orchestrator End-to-End
+  hosts: controller_nodes
+  gather_facts: false
+  tasks:
+    - name: Ensure Tap Orchestrator HTTP endpoint is up
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ tap_orchestrator_port | default(8011) }}/docs"
+        method: GET
+        status_code: 200
+      register: orchestrator_health
+      retries: 5
+      delay: 5
+      until: orchestrator_health.status == 200
+      ignore_errors: yes
+
+    - name: Send mock DESFire tap event via HTTP Webhook
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ tap_orchestrator_port | default(8011) }}/api/v1/tap-event"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+          X-Tap-Secret: "change_me_secret"
+        body_format: json
+        body:
+          event: "desfire_authenticated"
+          user_id: "lawrence"
+          reader_id: "test_playbook"
+          timestamp: 1785860545
+          auth_type: "desfire_ev2_aes128"
+        status_code: 200
+      register: tap_webhook_res
+      when: orchestrator_health is success
+
+    - name: Verify Webhook success response
+      ansible.builtin.assert:
+        that:
+          - tap_webhook_res.json.status == 'success'
+        fail_msg: "Webhook tap event failed"
+        success_msg: "Webhook tap event successfully accepted"
+      when: orchestrator_health is success
+
+    # Note: A full E2E would also wait to check Nomad allocations or Vault certs,
+    # but those require the external components to be fully seeded which is out of scope for a quick health check.

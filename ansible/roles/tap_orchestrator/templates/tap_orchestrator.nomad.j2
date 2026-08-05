@@ -32,18 +32,18 @@ job "tap-orchestrator" {
 
       config {
         command = "/bin/bash"
-        args    = ["-c", <<EOT
+        args    = ["-c", <<-EOT
           cd /opt/tap_orchestrator
 
           # Initialize environment if needed
           if [ ! -d ".venv" ]; then
-            uv venv
+            python3 -m venv .venv
           fi
 
           source .venv/bin/activate
 
           # Install dependencies
-          uv pip install -r requirements.txt
+          pip install --no-cache-dir -r requirements.txt
 
           # Start the service
           exec python3 main.py
