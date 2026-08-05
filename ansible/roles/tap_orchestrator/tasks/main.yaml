@@ -1,0 +1,38 @@
+---
+- name: Create Tap Orchestrator directory
+  ansible.builtin.file:
+    path: "/opt/tap_orchestrator"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+
+- name: Copy Tap Orchestrator python source files
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/services/tap_orchestrator/"
+    dest: "/opt/tap_orchestrator/"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'
+
+- name: Copy config.yaml template
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/config.yaml"
+    dest: "/opt/tap_orchestrator/config.yaml"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'
+
+- name: Template Tap Orchestrator Nomad job
+  ansible.builtin.template:
+    src: "tap_orchestrator.nomad.j2"
+    dest: "{{ nomad_jobs_dir }}/tap_orchestrator.nomad"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0644'
+
+- name: Start Tap Orchestrator Nomad job
+  ansible.builtin.command:
+    cmd: nomad job run {{ nomad_jobs_dir }}/tap_orchestrator.nomad
+  environment:
+    NOMAD_ADDR: "http://127.0.0.1:4646"

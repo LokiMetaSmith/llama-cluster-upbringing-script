@@ -1,0 +1,5 @@
+- hosts: controller_nodes
+  gather_facts: yes
+  become: yes
+  roles:
+    - tap_orchestrator
