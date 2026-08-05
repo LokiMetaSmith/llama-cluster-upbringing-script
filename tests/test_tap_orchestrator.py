@@ -25,6 +25,13 @@ def sample_event():
     )
 
 @pytest.fixture(autouse=True)
+def set_env_vars():
+    os.environ["TAP_ORCHESTRATOR_SECRET"] = "test_secret"
+    yield
+    if "TAP_ORCHESTRATOR_SECRET" in os.environ:
+        del os.environ["TAP_ORCHESTRATOR_SECRET"]
+
+@pytest.fixture(autouse=True)
 def reset_deduplicator():
     deduplicator._last_tap = {}
     yield

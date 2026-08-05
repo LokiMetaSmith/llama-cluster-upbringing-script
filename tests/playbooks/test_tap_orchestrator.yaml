@@ -5,7 +5,7 @@
   tasks:
     - name: Ensure Tap Orchestrator HTTP endpoint is up
       ansible.builtin.uri:
-        url: "http://127.0.0.1:{{ tap_orchestrator_port | default(8011) }}/docs"
+        url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ tap_orchestrator_port | default(8011) }}/docs"
         method: GET
         status_code: 200
       register: orchestrator_health
@@ -16,11 +16,11 @@
 
     - name: Send mock DESFire tap event via HTTP Webhook
       ansible.builtin.uri:
-        url: "http://127.0.0.1:{{ tap_orchestrator_port | default(8011) }}/api/v1/tap-event"
+        url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ tap_orchestrator_port | default(8011) }}/api/v1/tap-event"
         method: POST
         headers:
           Content-Type: "application/json"
-          X-Tap-Secret: "change_me_secret"
+          X-Tap-Secret: "{{ tap_orchestrator_secret }}"
         body_format: json
         body:
           event: "desfire_authenticated"
