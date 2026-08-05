@@ -473,3 +473,10 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 ## Security Hardening & Zero-Touch Provisioning
 
 - [x] **FIDO Security Key Onboarding & USB Keychain Imprinting:** Implement an automated onboarding flow using FIDO/FIDO2 hardware security keys. The goal is to imprint keys securely onto the USB bootstrap OS image during generation, allowing any new node provisioned from that flash drive to seamlessly and securely auto-enroll into the swarm mesh network without manual credential intervention.
+
+## Tap Orchestrator Integration
+
+- [x] **Ansible Deployment Role:** Create an Ansible role (`ansible/roles/tap_orchestrator`) and a Nomad job template (`tap_orchestrator.nomad.j2`) so that the cluster's upbringing script automatically deploys this service to the controller node.
+- [ ] **Automated Authentik Configuration:** Update the existing Authentik Ansible roles to automatically provision the M2M OAuth2 application, client ID, and service account required by the orchestrator during cluster bootstrap.
+- [ ] **Flesh out the Dry-Runs (Nomad/Vault):** Replace the dry-run HTTP stubs in `orchestrator.py` with actual API calls to the Vault PKI/SSH secrets engine (for short-lived certificates) and Nomad (for dispatching parameterized jobs with vector store mounts).
+- [ ] **End-to-End Cluster Tests:** Write an integration test playbook that stands up the orchestrator, publishes a mock MQTT event, and verifies that the correct Nomad allocations are triggered.

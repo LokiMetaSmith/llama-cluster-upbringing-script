@@ -1,0 +1,68 @@
+job "tap-orchestrator" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "tap-orchestrator-group" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" {
+        static = {{ tap_orchestrator_port }}
+      }
+    }
+
+    task "tap-orchestrator-task" {
+      driver = "raw_exec"
+
+      env {
+        MQTT_BROKER_HOST        = "127.0.0.1"
+        MQTT_BROKER_PORT        = "{{ mqtt_port }}"
+        MQTT_TOPIC_SUCCESS      = "tagreader/auth/success"
+        MQTT_TOPIC_FAILURE      = "tagreader/auth/failure"
+        TAP_ORCHESTRATOR_PORT   = "{{ tap_orchestrator_port }}"
+        TAP_ORCHESTRATOR_SECRET = "change_me_secret"
+        AUTHENTIK_API_URL       = "http://127.0.0.1:{{ authentik_http_port }}"
+        AUTHENTIK_CLIENT_ID     = "{{ tap_client_id }}"
+        AUTHENTIK_CLIENT_SECRET = "{{ tap_client_secret }}"
+        NOMAD_API_URL           = "http://127.0.0.1:{{ nomad_http_port }}"
+        VAULT_API_URL           = "http://127.0.0.1:8200"
+        CLUSTER_RESOURCE_MAP_FILE = "/opt/tap_orchestrator/config.yaml"
+      }
+
+      config {
+        command = "/bin/bash"
+        args    = ["-c", <<EOT
+          cd /opt/tap_orchestrator
+
+          # Initialize environment if needed
+          if [ ! -d ".venv" ]; then
+            uv venv
+          fi
+
+          source .venv/bin/activate
+
+          # Install dependencies
+          uv pip install -r requirements.txt
+
+          # Start the service
+          exec python3 main.py
+        EOT
+        ]
+      }
+
+      service {
+        name = "tap-orchestrator"
+        port = "http"
+        tags = ["tap-orchestrator"]
+
+        check {
+          type     = "http"
+          path     = "/docs" # FastAPI auto-generated docs endpoint
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,112 @@
+---
+- name: Wait for Authentik to become available
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ authentik_http_port | default(9000) }}/-/health/ready/"
+    method: GET
+    status_code: 204
+  register: authentik_ready
+  until: authentik_ready.status == 204
+  retries: 30
+  delay: 10
+  ignore_errors: yes
+
+# Note: Authentik bootstrap involves using its internal python manage.py commands or terraform.
+# We will use the authentik command line inside the server container to create the app and token.
+
+- name: Generate random Authentik Client ID for Tap Orchestrator
+  ansible.builtin.command: openssl rand -hex 16
+  register: authentik_m2m_client_id
+  when: authentik_ready is success
+
+- name: Generate random Authentik Client Secret for Tap Orchestrator
+  ansible.builtin.command: openssl rand -hex 32
+  register: authentik_m2m_client_secret
+  when: authentik_ready is success
+
+- name: Create M2M bootstrap script
+  ansible.builtin.copy:
+    dest: "{{ nomad_volumes_dir }}/authentik/bootstrap_m2m.py"
+    mode: '0755'
+    content: |
+      import os
+      from django.contrib.auth import get_user_model
+      from authentik.core.models import User, Token, TokenIntents
+      from authentik.providers.oauth2.models import OAuth2Provider
+      from authentik.core.models import Application
+
+      # 1. Ensure a service account user exists
+      User = get_user_model()
+      sa_user, created = User.objects.get_or_create(
+          username="tap-orchestrator-sa",
+          defaults={
+              "name": "Tap Orchestrator Service Account",
+              "is_active": True,
+          }
+      )
+      # We would also give it admin privileges for the sake of querying all users' attributes
+      sa_user.is_superuser = True
+      sa_user.save()
+
+      # 2. Create the OAuth2 Provider for M2M (Client Credentials Grant)
+      provider, p_created = OAuth2Provider.objects.get_or_create(
+          name="Tap Orchestrator Provider",
+          defaults={
+              "client_id": os.environ.get("TAP_CLIENT_ID"),
+              "client_secret": os.environ.get("TAP_CLIENT_SECRET"),
+              "authorization_flow": None, # M2M doesn't use standard auth flows usually in this context
+              "client_type": "confidential",
+          }
+      )
+
+      # If the provider already existed, we still want to ensure credentials match our generated ones
+      if not p_created:
+          provider.client_id = os.environ.get("TAP_CLIENT_ID")
+          provider.client_secret = os.environ.get("TAP_CLIENT_SECRET")
+          provider.save()
+
+      # 3. Create the Application linking the provider
+      app, a_created = Application.objects.get_or_create(
+          name="Tap Orchestrator App",
+          defaults={
+              "slug": "tap-orchestrator",
+              "provider": provider,
+          }
+      )
+  when: authentik_ready is success
+
+- name: Execute Authentik bootstrap script in Nomad container
+  ansible.builtin.command:
+    cmd: nomad alloc exec -task authentik-server -job authentik python /media/bootstrap_m2m.py
+  environment:
+    NOMAD_ADDR: "http://127.0.0.1:4646"
+    TAP_CLIENT_ID: "{{ authentik_m2m_client_id.stdout }}"
+    TAP_CLIENT_SECRET: "{{ authentik_m2m_client_secret.stdout }}"
+  when: authentik_ready is success
+  register: bootstrap_exec
+  ignore_errors: yes
+
+- name: Publish Authentik Client ID to Consul for Tap Orchestrator
+  ansible.builtin.uri:
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/authentik/tap-client-id"
+    method: PUT
+    client_cert: "/etc/consul.d/cert.pem"
+    client_key: "/etc/consul.d/key.pem"
+    ca_path: "/etc/consul.d/ca.pem"
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token }}"
+    body: "{{ authentik_m2m_client_id.stdout }}"
+    status_code: 200
+  when: authentik_ready is success and bootstrap_exec.rc == 0
+
+- name: Publish Authentik Client Secret to Consul for Tap Orchestrator
+  ansible.builtin.uri:
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/authentik/tap-client-secret"
+    method: PUT
+    client_cert: "/etc/consul.d/cert.pem"
+    client_key: "/etc/consul.d/key.pem"
+    ca_path: "/etc/consul.d/ca.pem"
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token }}"
+    body: "{{ authentik_m2m_client_secret.stdout }}"
+    status_code: 200
+  when: authentik_ready is success and bootstrap_exec.rc == 0
