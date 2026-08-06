@@ -1,0 +1,33 @@
+- name: Deploy MinIO Nomad Job
+  template:
+    src: minio.nomad.j2
+    dest: /opt/nomad/jobs/minio.nomad
+    owner: nomad
+    group: nomad
+    mode: '0644'
+  when: celld_enabled | default(false)
+
+- name: Run MinIO Nomad Job
+  command: nomad job run /opt/nomad/jobs/minio.nomad
+  environment:
+    NOMAD_ADDR: "http://127.0.0.1:4646"
+  register: minio_nomad_output
+  changed_when: "'No changes detected' not in minio_nomad_output.stdout"
+  when: celld_enabled | default(false)
+
+- name: Deploy Celld Nomad Job
+  template:
+    src: celld.nomad.j2
+    dest: /opt/nomad/jobs/celld.nomad
+    owner: nomad
+    group: nomad
+    mode: '0644'
+  when: celld_enabled | default(false)
+
+- name: Run Celld Nomad Job
+  command: nomad job run /opt/nomad/jobs/celld.nomad
+  environment:
+    NOMAD_ADDR: "http://127.0.0.1:4646"
+  register: celld_nomad_output
+  changed_when: "'No changes detected' not in celld_nomad_output.stdout"
+  when: celld_enabled | default(false)

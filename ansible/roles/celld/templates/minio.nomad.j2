@@ -1,0 +1,98 @@
+job "minio" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "minio" {
+    count = 1
+
+    network {
+      port "api" {
+        static = {{ minio_api_port | default(9000) }}
+      }
+      port "console" {
+        static = {{ minio_console_port | default(9001) }}
+      }
+    }
+
+    volume "minio_data" {
+      type      = "host"
+      read_only = false
+      source    = "unified_fs"
+    }
+
+    task "minio" {
+      driver = "docker"
+
+      config {
+        image = "minio/minio:latest"
+        args  = ["server", "/data", "--console-address", ":{{ minio_console_port | default(9001) }}"]
+        ports = ["api", "console"]
+      }
+
+      env {
+        MINIO_ROOT_USER     = "{{ minio_root_user | default('minioadmin') }}"
+        MINIO_ROOT_PASSWORD = "{{ minio_root_password | default('minioadmin') }}"
+      }
+
+      volume_mount {
+        volume      = "minio_data"
+        destination = "/data"
+        read_only   = false
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+
+      service {
+        name = "minio"
+        port = "api"
+        check {
+          name     = "alive"
+          type     = "http"
+          path     = "/minio/health/live"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+
+      service {
+        name = "minio-console"
+        port = "console"
+        check {
+          name     = "alive"
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+
+    task "mc" {
+      driver = "docker"
+
+      lifecycle {
+        hook    = "poststart"
+        sidecar = false
+      }
+
+      config {
+        image = "minio/mc:latest"
+        command = "/bin/sh"
+        args = ["-c", "sleep 10 && mc alias set myminio http://${NOMAD_ADDR_api} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} && mc mb --ignore-existing myminio/${CELLD_BUCKET}"]
+      }
+
+      env {
+        MINIO_ROOT_USER     = "{{ minio_root_user | default('minioadmin') }}"
+        MINIO_ROOT_PASSWORD = "{{ minio_root_password | default('minioadmin') }}"
+        CELLD_BUCKET        = "{{ celld_bucket | default('celld-cells') }}"
+      }
+
+      resources {
+        cpu    = 100
+        memory = 128
+      }
+    }
+  }
+}

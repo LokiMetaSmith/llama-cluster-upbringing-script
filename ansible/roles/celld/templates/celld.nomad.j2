@@ -1,0 +1,56 @@
+job "celld" {
+  datacenters = ["dc1"]
+  type        = "system"
+
+  constraint {
+    attribute = "${meta.node_tier}"
+    operator  = "!="
+    value     = "core"
+  }
+
+  group "celld" {
+    network {
+      port "http" {
+        static = {{ celld_port | default(8080) }}
+      }
+    }
+
+    task "celld" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/denoland/celld:latest"
+
+        args = [
+          "--bucket", "s3://{{ celld_bucket | default('celld-cells') }}",
+          "--endpoint", "http://minio.service.consul:{{ minio_api_port | default(9000) }}",
+          "--listen", "0.0.0.0:{{ celld_port | default(8080) }}",
+          "--advertise", "${attr.unique.network.ip-address}:{{ celld_port | default(8080) }}"
+        ]
+        ports = ["http"]
+      }
+
+      env {
+        AWS_ACCESS_KEY_ID     = "{{ minio_root_user | default('minioadmin') }}"
+        AWS_SECRET_ACCESS_KEY = "{{ minio_root_password | default('minioadmin') }}"
+        AWS_REGION            = "auto"
+      }
+
+      resources {
+        cpu    = 250
+        memory = 256
+      }
+
+      service {
+        name = "celld"
+        port = "http"
+        check {
+          name     = "celld-alive"
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}

@@ -170,6 +170,9 @@ enable_opengist: true
 enable_traceway: true
 
 # Service Ports
+minio_api_port: 9000
+minio_console_port: 9001
+celld_port: 8084
 paperless_port: 8010
 opengist_http_port: 6157
 opengist_ssh_port: 2222
@@ -275,3 +278,9 @@ tap_cluster_resource_map:
     gpu_node: "node-gpu-02"
     mac_address: "11:22:33:44:55:66"
     models: ["mistral-7b"]
+
+# -- Celld Configuration --
+celld_enabled: true
+celld_bucket: "celld-cells"
+minio_root_user: "minioadmin"
+minio_root_password: "change_me_in_prod_minio"
