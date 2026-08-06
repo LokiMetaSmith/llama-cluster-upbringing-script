@@ -6,8 +6,9 @@
 #
 # Usage:
 #   sudo ./scripts/cleanup.sh
-#   OR via bootstrap:
-#   ./bootstrap.sh --system-cleanup
+#
+# Options:
+#   --scorched-earth    Aggressively wipe all caches, repo data, and infrastructure data
 
 set -e
 
@@ -18,7 +19,30 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
-echo -e "${BOLD}${YELLOW}⚠️  Starting Aggressive System Cleanup...${NC}"
+SCORCHED_EARTH=0
+
+for arg in "$@"; do
+    if [ "$arg" == "--scorched-earth" ]; then
+        SCORCHED_EARTH=1
+    fi
+done
+
+if [ "$SCORCHED_EARTH" -eq 1 ]; then
+    echo -e "${BOLD}${RED}⚠️  WARNING: SCORCHED EARTH MODE ACTIVATED ⚠️${NC}"
+    echo -e "${RED}This will completely wipe all local caches (pip, uv, npm, etc.),"
+    echo -e "reset the repository to a fresh git clone state (removing all untracked files),"
+    echo -e "and DESTROY ALL infrastructure data for Nomad, Consul, Vault, and IPFS.${NC}"
+    echo ""
+    read -p "Are you sure you want to scorch the earth? (y/N) " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Cleanup aborted."
+        exit 1
+    fi
+    echo -e "${BOLD}${RED}Executing Scorched Earth Protocol...${NC}"
+else
+    echo -e "${BOLD}${YELLOW}⚠️  Starting Aggressive System Cleanup...${NC}"
+fi
 
 # 1. Docker Cleanup
 if command -v docker &> /dev/null; then
@@ -156,15 +180,35 @@ for dir in "${APP_DIRS[@]}"; do
 done
 
 # Clean up Consul state
-if [ -d "/opt/consul/data" ]; then
+if [ -d "/opt/consul/data" ] || [ "$SCORCHED_EARTH" -eq 1 ]; then
     echo "Stopping Consul service (if running)..."
     sudo systemctl stop consul 2>/dev/null || true
     echo "Removing /opt/consul/data..."
     sudo rm -rf "/opt/consul/data"
 fi
 
-# Clean up Nomad state safely (preserve /opt/nomad/models)
-if [ -d "/opt/nomad" ]; then
+# Clean up Vault state (Scorched Earth)
+if [ "$SCORCHED_EARTH" -eq 1 ]; then
+    echo "Stopping Vault service (if running)..."
+    sudo systemctl stop vault 2>/dev/null || true
+    if [ -d "/opt/vault/data" ]; then
+        echo "Removing /opt/vault/data..."
+        sudo rm -rf "/opt/vault/data"
+    fi
+fi
+
+# Clean up IPFS state (Scorched Earth)
+if [ "$SCORCHED_EARTH" -eq 1 ]; then
+    echo "Stopping IPFS service (if running)..."
+    sudo systemctl stop ipfs 2>/dev/null || true
+    if [ -d "/opt/unified_fs/ipfs" ]; then
+        echo "Removing /opt/unified_fs/ipfs..."
+        sudo rm -rf "/opt/unified_fs/ipfs"
+    fi
+fi
+
+# Clean up Nomad state
+if [ -d "/opt/nomad" ] || [ "$SCORCHED_EARTH" -eq 1 ]; then
     echo "Stopping Nomad service (if running)..."
     sudo systemctl stop nomad 2>/dev/null || true
 
@@ -174,13 +218,18 @@ if [ -d "/opt/nomad" ]; then
         sudo umount "$mount" || true
     done
 
-    echo "Cleaning /opt/nomad state (preserving models)..."
-    # Find and delete everything in /opt/nomad EXCEPT the models directory
-    # -mindepth 1 prevents matching /opt/nomad itself
-    # -maxdepth 1 prevents diving into subdirectories for matching
-    # ! -name "models" excludes the models folder
-    # -exec rm -rf {} + executes rm -rf on the matched items
-    sudo find /opt/nomad -mindepth 1 -maxdepth 1 ! -name "models" -exec rm -rf {} +
+    if [ "$SCORCHED_EARTH" -eq 1 ]; then
+        echo "Cleaning ENTIRE /opt/nomad state (Scorched Earth)..."
+        sudo rm -rf /opt/nomad
+    else
+        echo "Cleaning /opt/nomad state (preserving models)..."
+        # Find and delete everything in /opt/nomad EXCEPT the models directory
+        # -mindepth 1 prevents matching /opt/nomad itself
+        # -maxdepth 1 prevents diving into subdirectories for matching
+        # ! -name "models" excludes the models folder
+        # -exec rm -rf {} + executes rm -rf on the matched items
+        sudo find /opt/nomad -mindepth 1 -maxdepth 1 ! -name "models" -exec rm -rf {} +
+    fi
 fi
 
 # 8. Force kill orphaned and running opencode processes
@@ -188,12 +237,40 @@ echo -e "\n${BOLD}🔪 Terminating all running and orphaned opencode processes..
 sudo pkill -9 -x "opencode" || sudo pkill -9 -f "bin/opencode" || true
 
 
+if [ "$SCORCHED_EARTH" -eq 1 ]; then
+    echo -e "\n${BOLD}🔥 Scorched Earth: Wiping Global Caches & Untracked Files...${NC}"
+
+    # Wipe user and root caches
+    echo "Wiping ~/.cache and /root/.cache for pip, uv, npm, playwright, etc..."
+    sudo rm -rf /root/.cache/pip /root/.cache/uv /root/.npm /root/.cache/ms-playwright 2>/dev/null || true
+
+    if [ -n "$SUDO_USER" ]; then
+        USER_HOME=$(eval echo "~$SUDO_USER")
+        sudo rm -rf "$USER_HOME/.cache/pip" "$USER_HOME/.cache/uv" "$USER_HOME/.npm" "$USER_HOME/.cache/ms-playwright" 2>/dev/null || true
+    else
+        sudo rm -rf ~/.cache/pip ~/.cache/uv ~/.npm ~/.cache/ms-playwright 2>/dev/null || true
+    fi
+
+    echo "Resetting git repository to a clean state (removing all untracked files)..."
+    # Ensure we are in the repo root
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    if [ -d "$REPO_ROOT/.git" ]; then
+        cd "$REPO_ROOT"
+        sudo git clean -fdx
+    else
+        echo -e "${YELLOW}Warning: Not inside a git repository, skipping git clean.${NC}"
+    fi
+fi
+
 echo -e "\n${GREEN}✨ Cleanup Complete!${NC}"
 df -h /
 
 if [ -x "${SCRIPT_DIR}/ipfs_cleanup.sh" ]; then
-    echo "Executing ipfs_cleanup.sh..."
-    "${SCRIPT_DIR}/ipfs_cleanup.sh"
+    # Don't run ipfs_cleanup if we already wiped the IPFS directory entirely
+    if [ "$SCORCHED_EARTH" -ne 1 ]; then
+        echo "Executing ipfs_cleanup.sh..."
+        "${SCRIPT_DIR}/ipfs_cleanup.sh"
+    fi
 else
     echo "Warning: ipfs_cleanup.sh not found or not executable."
 fi
