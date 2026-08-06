@@ -7,6 +7,9 @@ import asyncio
 import tempfile
 import time
 import uuid
+import jupyter_client
+import atexit
+import queue
 import aiohttp
 import base64
 import multiprocessing
@@ -25,6 +28,166 @@ class SandboxExecutor(abc.ABC):
     @abc.abstractmethod
     def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
         pass
+
+
+
+
+class JupyterSandboxExecutor(SandboxExecutor):
+    """Executes code using a persistent Jupyter/IPython kernel inside a Docker container."""
+
+    def __init__(self):
+        self._lock = asyncio.Lock()
+        self.container = None
+        self.client = None
+        self.connection_file = None
+        self.km = None
+        self.kc = None
+
+    async def _initialize(self):
+        if self.kc is not None:
+            return
+
+        import docker
+        import json
+        import tempfile
+        import jupyter_client
+
+        try:
+            self.client = docker.from_env()
+        except Exception as e:
+            logging.error(f"Failed to connect to Docker: {e}")
+            raise
+
+        # 1. Create a local connection file with open ports
+        import socket
+        def get_free_port():
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('', 0))
+                return s.getsockname()[1]
+
+        ip = "0.0.0.0"
+        ports = {
+            "shell_port": get_free_port(),
+            "iopub_port": get_free_port(),
+            "stdin_port": get_free_port(),
+            "control_port": get_free_port(),
+            "hb_port": get_free_port(),
+            "ip": ip,
+            "key": str(uuid.uuid4()),
+            "transport": "tcp",
+            "signature_scheme": "hmac-sha256",
+            "kernel_name": ""
+        }
+
+        self.conn_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(ports, self.conn_file)
+        self.conn_file.flush()
+
+        port_bindings = {
+            ports["shell_port"]: ports["shell_port"],
+            ports["iopub_port"]: ports["iopub_port"],
+            ports["stdin_port"]: ports["stdin_port"],
+            ports["control_port"]: ports["control_port"],
+            ports["hb_port"]: ports["hb_port"]
+        }
+
+        # 2. Start Docker container running ipykernel using the connection file
+        try:
+            self.container = self.client.containers.run(
+                "python:3.9-slim",
+                command=f"sh -c 'pip install ipykernel && python -m ipykernel_launcher -f /tmp/conn.json'",
+                detach=True,
+                network_mode="bridge",
+                ports=port_bindings,
+                volumes={self.conn_file.name: {'bind': '/tmp/conn.json', 'mode': 'ro'}},
+                cap_drop=["ALL"]
+            )
+
+            # Wait for kernel to start
+            await asyncio.sleep(5)
+
+            # Update IP for local client to connect to localhost
+            ports["ip"] = "127.0.0.1"
+            with open(self.conn_file.name, 'w') as f:
+                json.dump(ports, f)
+
+            self.km = jupyter_client.AsyncKernelManager(connection_file=self.conn_file.name)
+            self.km.load_connection_file()
+            self.kc = self.km.client()
+            self.kc.start_channels()
+            await self.kc.wait_for_ready(timeout=15)
+
+        except Exception as e:
+            logging.error(f"Failed to start Jupyter kernel in Docker: {e}")
+            self.close()
+            raise
+
+    async def execute_async(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+        if language != "python":
+            return "Error: Jupyter Sandbox currently only supports Python."
+
+        async with self._lock:
+            await self._initialize()
+
+            if libraries:
+                install_cmd = f"import subprocess; subprocess.run(['pip', 'install', '{' '.join(libraries)}'], capture_output=True)"
+                msg_id = self.kc.execute(install_cmd)
+                await self._wait_for_reply(msg_id, timeout=30)
+
+            msg_id = self.kc.execute(code)
+            job_timeout = timeout if timeout is not None else 30
+            return await self._wait_for_reply(msg_id, timeout=job_timeout)
+
+    async def _wait_for_reply(self, msg_id: str, timeout: int) -> str:
+        import queue
+        output = ""
+        start_time = time.time()
+        while True:
+            if time.time() - start_time > timeout:
+                return output + f"\nError: Execution timed out after {timeout} seconds."
+            try:
+                msg = await self.kc.get_iopub_msg(timeout=0.1)
+
+                # IMPORTANT: Match msg_id to prevent race conditions as requested in code review
+                if msg['parent_header'].get('msg_id') != msg_id:
+                    continue
+
+                msg_type = msg['header']['msg_type']
+                content = msg['content']
+
+                if msg_type == 'stream':
+                    output += content['text']
+                elif msg_type == 'execute_result':
+                    output += str(content['data'].get('text/plain', '')) + "\n"
+                elif msg_type == 'error':
+                    output += f"Error: {content['ename']}: {content['evalue']}\n"
+                    for trace in content['traceback']:
+                        output += trace + "\n"
+                elif msg_type == 'status' and content['execution_state'] == 'idle':
+                    break
+            except queue.Empty:
+                continue
+            except TimeoutError: # asyncio.TimeoutError
+                continue
+            except Exception as e:
+                output += f"\nInternal Error receiving message: {e}"
+                break
+        return output.strip()
+
+    def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+        pass
+
+    def close(self):
+        try:
+            if self.kc:
+                self.kc.stop_channels()
+            if self.container:
+                self.container.remove(force=True)
+            import os
+            if self.conn_file and os.path.exists(self.conn_file.name):
+                os.remove(self.conn_file.name)
+        except:
+            pass
 
 class DockerSandboxExecutor(SandboxExecutor):
     """Executes code using local Docker containers (via docker-py or llm-sandbox)."""
@@ -388,6 +551,10 @@ class CodeRunnerTool:
             self.executor = DockerSandboxExecutor()
             logging.info("CodeRunnerTool initialized in DOCKER mode.")
 
+        self.jupyter_executor = JupyterSandboxExecutor()
+        import atexit
+        atexit.register(self.jupyter_executor.close)
+
 
     def get_schema(self) -> dict:
         return {
@@ -400,7 +567,7 @@ class CodeRunnerTool:
                     "properties": {
                         "action": {
                             "type": "string",
-                            "description": "The action to perform. Available: run_python_code, run_code_in_sandbox"
+                            "description": "The action to perform. Available: run_python_code, run_code_in_sandbox, run_interactive_python"
                         },
                         "kwargs": {
                             "type": "object",
@@ -417,6 +584,8 @@ class CodeRunnerTool:
             return getattr(self, "run_python_code")(**kwargs.get("kwargs", kwargs))
         if action == "run_code_in_sandbox":
             return getattr(self, "run_code_in_sandbox")(**kwargs.get("kwargs", kwargs))
+        if action == "run_interactive_python":
+            return getattr(self, "run_interactive_python")(**kwargs.get("kwargs", kwargs))
         else:
             return f"Unknown action: {action}"
 
@@ -540,3 +709,20 @@ class CodeRunnerTool:
             return self.executor.execute(code, language, libraries, timeout)
 
         return await self._execute_with_history(code, language, libraries, timeout, _exec)
+
+    async def run_interactive_python(self, code: str, libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+        """Runs a string of Python code in a persistent interactive REPL and returns the output.
+        Variables and functions defined here will be available in subsequent calls to run_interactive_python.
+
+        Args:
+            code (str): The Python code to execute.
+            libraries (List[str], optional): Libraries to install before running.
+            timeout (int, optional): The maximum execution time in seconds. Defaults to 30.
+        """
+        if len(code) > MAX_CODE_LENGTH:
+            return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
+
+        async def _exec(code: str, timeout: Optional[int]) -> str:
+            return await self.jupyter_executor.execute_async(code, language="python", libraries=libraries, timeout=timeout)
+
+        return await self._execute_with_history(code, "python", libraries, timeout, _exec)

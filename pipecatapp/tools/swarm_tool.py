@@ -28,7 +28,7 @@ class SwarmTool:
                     "properties": {
                         "action": {
                             "type": "string",
-                            "description": "The action to perform. Available: spawn_workers, wait_for_results, kill_worker"
+                            "description": "The action to perform. Available: spawn_workers, wait_for_results, kill_worker, send_message, receive_messages"
                         },
                         "kwargs": {
                             "type": "object",
@@ -47,6 +47,10 @@ class SwarmTool:
             return getattr(self, "wait_for_results")(**kwargs.get("kwargs", kwargs))
         if action == "kill_worker":
             return getattr(self, "kill_worker")(**kwargs.get("kwargs", kwargs))
+        if action == "send_message":
+            return getattr(self, "send_message")(**kwargs.get("kwargs", kwargs))
+        if action == "receive_messages":
+            return getattr(self, "receive_messages")(**kwargs.get("kwargs", kwargs))
         else:
             return f"Unknown action: {action}"
 
@@ -212,3 +216,56 @@ class SwarmTool:
                 return f"Successfully killed worker: {job_id}"
             except Exception as e:
                 return f"Failed to kill worker {job_id}: {str(e)}"
+
+
+    async def send_message(self, target_task_id: str, message: str) -> str:
+        """Sends a message directly to another agent via Consul KV."""
+        import os
+        import httpx
+        import uuid
+        consul_url = os.getenv("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
+        msg_id = str(uuid.uuid4())
+        key = f"swarm/messages/{target_task_id}/{msg_id}"
+
+        async with httpx.AsyncClient() as client:
+            try:
+                resp = await client.put(f"{consul_url}/v1/kv/{key}", content=message)
+                resp.raise_for_status()
+                return f"Message sent to {target_task_id} successfully."
+            except Exception as e:
+                self.logger.error(f"Failed to send message via Consul: {e}")
+                return f"Error sending message: {e}"
+
+    async def receive_messages(self, my_task_id: str, consume: bool = True) -> str:
+        """Receives messages addressed to this agent from Consul KV."""
+        import os
+        import httpx
+        import base64
+        import json
+        consul_url = os.getenv("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
+        prefix = f"swarm/messages/{my_task_id}/"
+
+        async with httpx.AsyncClient() as client:
+            try:
+                resp = await client.get(f"{consul_url}/v1/kv/{prefix}?keys")
+                if resp.status_code == 404:
+                    return json.dumps([])
+                resp.raise_for_status()
+                keys = resp.json()
+
+                messages = []
+                for key in keys:
+                    msg_resp = await client.get(f"{consul_url}/v1/kv/{key}")
+                    if msg_resp.status_code == 200:
+                        data = msg_resp.json()[0]
+                        if "Value" in data and data["Value"]:
+                            msg_content = base64.b64decode(data["Value"]).decode("utf-8")
+                            messages.append(msg_content)
+
+                    if consume:
+                        await client.delete(f"{consul_url}/v1/kv/{key}")
+
+                return json.dumps(messages)
+            except Exception as e:
+                self.logger.error(f"Failed to receive messages via Consul: {e}")
+                return f"Error receiving messages: {e}"

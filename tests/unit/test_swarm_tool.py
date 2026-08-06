@@ -139,3 +139,42 @@ async def test_kill_worker_failure():
         result = await tool.kill_worker("job-123")
 
         assert "Failed to kill worker job-123" in result
+import pytest
+from unittest.mock import MagicMock, patch
+import asyncio
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+from pipecatapp.tools.swarm_tool import SwarmTool
+import json
+import base64
+
+@pytest.mark.asyncio
+@patch('pipecatapp.tools.swarm_tool.httpx.AsyncClient.put')
+async def test_swarm_send_message(mock_put):
+    mock_put.return_value.status_code = 200
+    tool = SwarmTool()
+    res = await tool.send_message("target-agent-1", "hello world")
+    assert "successfully" in res
+    mock_put.assert_called_once()
+    args, kwargs = mock_put.call_args
+    assert "swarm/messages/target-agent-1" in args[0]
+    assert kwargs["content"] == "hello world"
+
+@pytest.mark.asyncio
+@patch('pipecatapp.tools.swarm_tool.httpx.AsyncClient.get')
+@patch('pipecatapp.tools.swarm_tool.httpx.AsyncClient.delete')
+async def test_swarm_receive_messages(mock_delete, mock_get):
+    mock_get.side_effect = [
+        MagicMock(status_code=200, json=lambda: ["swarm/messages/my-agent-1/msg1", "swarm/messages/my-agent-1/msg2"]),
+        MagicMock(status_code=200, json=lambda: [{"Value": base64.b64encode(b"msg1 content").decode("utf-8")}]),
+        MagicMock(status_code=200, json=lambda: [{"Value": base64.b64encode(b"msg2 content").decode("utf-8")}]),
+    ]
+    tool = SwarmTool()
+    res = await tool.receive_messages("my-agent-1")
+    msgs = json.loads(res)
+    assert len(msgs) == 2
+    assert msgs[0] == "msg1 content"
+    assert msgs[1] == "msg2 content"
+    assert mock_delete.call_count == 2

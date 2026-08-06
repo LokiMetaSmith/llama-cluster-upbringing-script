@@ -1,12 +1,16 @@
 import pytest
-import sys
+from unittest.mock import MagicMock, patch
+import asyncio
 import os
+import sys
+import json
+import base64
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+from pipecatapp.tools.code_runner_tool import CodeRunnerTool, DockerSandboxExecutor
 
 import tempfile
-from unittest.mock import MagicMock, patch
 
 # Add repo root to path to allow importing pipecatapp as a package
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from pipecatapp.tools.code_runner_tool import CodeRunnerTool, DockerSandboxExecutor
 
@@ -29,7 +33,8 @@ def code_runner():
 @patch('pipecatapp.tools.code_runner_tool.multiprocessing.Process')
 @patch('pipecatapp.tools.code_runner_tool.multiprocessing.Queue')
 @patch('pipecatapp.tools.code_runner_tool.SandboxSession')
-def test_run_code_in_sandbox_success(mock_sandbox_session, mock_queue, mock_process, code_runner):
+@pytest.mark.asyncio
+async def test_run_code_in_sandbox_success(mock_sandbox_session, mock_queue, mock_process, code_runner):
     """
     Test that run_code_in_sandbox successfully executes Python code via llm-sandbox.
     """
@@ -46,13 +51,14 @@ def test_run_code_in_sandbox_success(mock_sandbox_session, mock_queue, mock_proc
     mock_p.is_alive.return_value = False
     mock_process.return_value = mock_p
 
-    result = code_runner.run_code_in_sandbox(code=code_to_run, language="python")
+    result = await code_runner.run_code_in_sandbox(code=code_to_run, language="python")
 
     assert result == expected_output
     mock_p.start.assert_called_once()
     mock_p.join.assert_called_with(30) # default timeout
 
-def test_run_python_code_success(code_runner):
+@pytest.mark.asyncio
+async def test_run_python_code_success(code_runner):
     """
     Test that run_python_code successfully executes code using TemporaryDirectory and docker-py.
     """
@@ -76,7 +82,7 @@ def test_run_python_code_success(code_runner):
             mock_file.__enter__.return_value = mock_file
             mock_open.return_value = mock_file
 
-            result = code_runner.run_python_code(code_to_run)
+            result = await code_runner.run_python_code(code_to_run)
 
             mock_file.write.assert_called_with(code_to_run)
 
@@ -89,7 +95,8 @@ def test_run_python_code_success(code_runner):
     # Fix: check for detach=True
     assert kwargs.get("detach") is True
 
-def test_run_python_code_no_docker_client(code_runner):
+@pytest.mark.asyncio
+async def test_run_python_code_no_docker_client(code_runner):
     """
     Test that run_python_code returns an error message when Docker client is not available.
     """
@@ -97,5 +104,65 @@ def test_run_python_code_no_docker_client(code_runner):
     code_runner.executor.client = None
     code_runner.client = None # Sync alias if used in test (though tool logic uses executor.client)
 
-    result = code_runner.run_python_code("print('hello')")
+    result = await code_runner.run_python_code("print('hello')")
     assert "Error: Docker execution is not available" in result
+
+
+
+@pytest.mark.asyncio
+@patch('pipecatapp.tools.code_runner_tool.jupyter_client')
+async def test_interactive_python_success(mock_jupyter_client):
+    runner = CodeRunnerTool()
+    runner.history.db_path = ':memory:'
+    runner.history._init_db()
+
+    mock_km = MagicMock()
+    mock_kc = MagicMock()
+    mock_jupyter_client.AsyncKernelManager.return_value = mock_km
+    mock_km.client.return_value = mock_kc
+
+    mock_kc.execute.return_value = 'test-msg-id'
+
+    async def mock_get_iopub_msg(*args, **kwargs):
+        if not hasattr(mock_get_iopub_msg, 'calls'):
+            mock_get_iopub_msg.calls = 0
+        mock_get_iopub_msg.calls += 1
+        if mock_get_iopub_msg.calls == 1:
+            return {'parent_header': {'msg_id': 'test-msg-id'}, 'header': {'msg_type': 'execute_result'}, 'content': {'data': {'text/plain': '42'}}}
+        return {'parent_header': {'msg_id': 'test-msg-id'}, 'header': {'msg_type': 'status'}, 'content': {'execution_state': 'idle'}}
+    mock_kc.get_iopub_msg.side_effect = mock_get_iopub_msg
+
+    # Patch Docker out
+    with patch('pipecatapp.tools.code_runner_tool.docker'):
+        # Mock initialize so it uses our mock kc
+        runner.jupyter_executor.kc = mock_kc
+        result = await runner.run_interactive_python(code="x=42")
+
+    assert "42" in result
+    mock_kc.execute.assert_called_with("x=42")
+
+
+
+@pytest.mark.asyncio
+@patch('pipecatapp.tools.code_runner_tool.jupyter_client')
+async def test_interactive_python_timeout(mock_jupyter_client):
+    runner = CodeRunnerTool()
+    runner.history.db_path = ':memory:'
+    runner.history._init_db()
+
+    mock_km = MagicMock()
+    mock_kc = MagicMock()
+    mock_jupyter_client.AsyncKernelManager.return_value = mock_km
+    mock_km.client.return_value = mock_kc
+
+    mock_kc.execute.return_value = 'test-msg-id'
+    import asyncio
+    async def mock_timeout(*args, **kwargs):
+        raise asyncio.TimeoutError()
+    mock_kc.get_iopub_msg.side_effect = mock_timeout
+
+    with patch('pipecatapp.tools.code_runner_tool.docker'):
+        runner.jupyter_executor.kc = mock_kc
+        result = await runner.run_interactive_python(code="while True: pass", timeout=1)
+
+    assert "Execution timed out" in result
