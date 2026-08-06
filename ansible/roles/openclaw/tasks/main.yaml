@@ -44,7 +44,7 @@
   become: yes
   register: ipfs_add_result_openclaw
   environment:
-    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
+    IPFS_PATH: "{{ ipfs_path }}"
 - name: Clean up temporary openclaw tarball
   ansible.builtin.file:
     path: /opt/openclaw.tar

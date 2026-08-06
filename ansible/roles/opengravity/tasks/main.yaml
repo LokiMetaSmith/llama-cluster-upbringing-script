@@ -56,7 +56,7 @@
   become: yes
   register: ipfs_add_result_opengravity
   environment:
-    IPFS_PATH: "{{ unified_fs_mount_point | default('/opt/unified_fs') }}/ipfs"
+    IPFS_PATH: "{{ ipfs_path }}"
 - name: Clean up temporary opengravity tarball
   ansible.builtin.file:
     path: /opt/opengravity.tar
