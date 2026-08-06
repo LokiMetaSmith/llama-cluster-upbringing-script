@@ -22,12 +22,58 @@ NC='\033[0m' # No Color
 BOLD='\033[1m'
 
 SCORCHED_EARTH=0
+POST_BOOTSTRAP=0
 
 for arg in "$@"; do
     if [ "$arg" == "--scorched-earth" ]; then
         SCORCHED_EARTH=1
+    elif [ "$arg" == "--post-bootstrap" ] || [ "$arg" == "--safe-mode" ]; then
+        POST_BOOTSTRAP=1
     fi
 done
+
+if [ "$POST_BOOTSTRAP" -eq 1 ]; then
+    echo -e "${BOLD}${CYAN}🧹 Running Post-Bootstrap Cleanup...${NC}"
+    echo "This will safely prune Docker build caches, package manager caches, and temp archives."
+
+    # Optional: Log size before cleanup
+    echo -e "\n${YELLOW}Current Cache Sizes:${NC}"
+    sudo du -sh /root/.cache/uv /root/.cache/pip /var/tmp/ansible_pip_build/uv_cache 2>/dev/null || echo "No UV/Pip caches found."
+    if command -v docker &> /dev/null; then
+        sudo docker system df | grep "Build Caches" || true
+    fi
+    sudo du -sh /tmp/*.zip /tmp/*.tgz /tmp/*.tar /tmp/*.sh 2>/dev/null || echo "No large temp archives found."
+
+    # 1. Safely Prune Docker Build Cache
+    if command -v docker &> /dev/null; then
+        echo -e "\n${BOLD}🐳 Pruning Docker Build Cache...${NC}"
+        docker builder prune --all --force
+    fi
+
+    # 2. Safely Clean UV / PIP Caches
+    echo -e "\n${BOLD}🧹 Cleaning UV / PIP Caches...${NC}"
+    sudo rm -rf /root/.cache/pip /root/.cache/uv /var/tmp/ansible_pip_build/uv_cache 2>/dev/null || true
+    if [ -n "$SUDO_USER" ]; then
+        USER_HOME=$(eval echo "~$SUDO_USER")
+        sudo rm -rf "$USER_HOME/.cache/pip" "$USER_HOME/.cache/uv" 2>/dev/null || true
+    else
+        sudo rm -rf ~/.cache/pip ~/.cache/uv 2>/dev/null || true
+    fi
+
+    # 3. Clean Bootstrap Artifacts
+    echo -e "\n${BOLD}🧹 Cleaning Bootstrap Temp Archives...${NC}"
+    rm -f /tmp/consul.zip
+    rm -f /tmp/nomad.zip
+    rm -f /tmp/cni-plugins.tgz
+    rm -f /tmp/get-docker.sh
+    rm -f /tmp/pipecatapp.tar
+    rm -rf /tmp/consul
+    rm -rf /tmp/nomad
+
+    echo -e "\n${GREEN}✨ Post-Bootstrap Cleanup Complete!${NC}"
+    df -h /
+    exit 0
+fi
 
 if [ "$SCORCHED_EARTH" -eq 1 ]; then
     echo -e "${BOLD}${RED}⚠️  WARNING: SCORCHED EARTH MODE ACTIVATED ⚠️${NC}"
