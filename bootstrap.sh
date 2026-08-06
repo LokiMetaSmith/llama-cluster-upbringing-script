@@ -999,6 +999,18 @@ EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
     echo -e "\n${GREEN}✨ Bootstrap complete.${NC}"
+
+    # Run Post-Bootstrap Cleanup
+    if [ -x "scripts/cleanup.sh" ]; then
+        echo -e "\n${BOLD}${CYAN}🧹 Initiating Post-Bootstrap Space Reclamation...${NC}"
+        # Execute non-destructive cache and temp file sweep
+        if sudo -n true 2>/dev/null; then
+            sudo ./scripts/cleanup.sh --post-bootstrap
+        else
+            echo "You may be prompted for your sudo password to run post-bootstrap cleanup."
+            sudo ./scripts/cleanup.sh --post-bootstrap
+        fi
+    fi
 else
     echo -e "\n${RED}❌ Bootstrap failed with exit code $EXIT_CODE.${NC}"
 fi
