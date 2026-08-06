@@ -128,6 +128,7 @@
         - opengist
         - e2a
         - traceway
+        - celld
       loop_control:
         loop_var: role_name
       tags:
@@ -141,6 +142,7 @@
         - opengist
         - e2a
         - traceway
+        - celld
 
     - name: Run Paddler Stack
       when: enable_paddler | default(false)
