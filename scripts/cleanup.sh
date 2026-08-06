@@ -6,6 +6,8 @@
 #
 # Usage:
 #   sudo ./scripts/cleanup.sh
+#   OR via bootstrap:
+#   ./bootstrap.sh --system-cleanup
 #
 # Options:
 #   --scorched-earth    Aggressively wipe all caches, repo data, and infrastructure data
