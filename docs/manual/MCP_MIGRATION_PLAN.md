@@ -42,7 +42,7 @@ We will migrate tools iteratively. For each tool:
 
 1. [x] `shell_tool.py` and `code_runner_tool.py` (High risk, immediate benefit from sandbox decoupling).
 2. [x] `file_editor_tool.py` and `document_tool.py`.
-3. `rag_tool.py` (Requires establishing an MCP pattern for streaming large contexts or standardizing resource templates).
+3. [x] `rag_tool.py` (Requires establishing an MCP pattern for streaming large contexts or standardizing resource templates).
 
 ### Phase 3: Deprecation and Cleanup
 
