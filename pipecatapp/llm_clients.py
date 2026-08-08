@@ -69,9 +69,11 @@ class ExternalLLMClient:
         model (str): The specific model to use for the completion (e.g., "gpt-4").
         budget_limit (float, optional): The maximum allowed spend before downshifting or suspending.
         fallback_model (str, optional): The cheaper model to downshift to when budget_limit is reached.
+        max_prompt_tokens (int, optional): Automatically compact the context if it exceeds this threshold.
+        enable_dynamic_routing (bool, optional): If true, routes simple/short prompts to fallback_model automatically.
     """
 
-    def __init__(self, base_url: str, api_key: str, model: str, budget_limit: float | None = None, fallback_model: str | None = None):
+    def __init__(self, base_url: str, api_key: str, model: str, budget_limit: float | None = None, fallback_model: str | None = None, max_prompt_tokens: int | None = None, enable_dynamic_routing: bool = False):
         """Initializes the ExternalLLMClient.
 
         Args:
@@ -80,13 +82,34 @@ class ExternalLLMClient:
             model (str): The name of the model to be used.
             budget_limit (float, optional): Optional maximum budget limit.
             fallback_model (str, optional): Optional model to downshift to if budget is exceeded.
+            max_prompt_tokens (int, optional): Threshold for context compaction.
+            enable_dynamic_routing (bool, optional): Enables task-level routing.
         """
         self.base_url = base_url
         self.api_key = api_key
         self.model = model
         self.budget_limit = budget_limit
         self.fallback_model = fallback_model
+        self.max_prompt_tokens = max_prompt_tokens
+        self.enable_dynamic_routing = enable_dynamic_routing
         self._session = None
+
+    def _compact_prompt(self, prompt: str) -> str:
+        """Compacts the prompt if it exceeds the maximum token limit by truncating from the middle."""
+        if not self.max_prompt_tokens:
+            return prompt
+
+        estimated_tokens = len(prompt) // 4
+        if estimated_tokens <= self.max_prompt_tokens:
+            return prompt
+
+        logging.info(f"Compacting context: estimated tokens ({estimated_tokens}) exceeds max ({self.max_prompt_tokens})")
+
+        # Simple truncation heuristic: keep first 40% and last 40%
+        chars_allowed = self.max_prompt_tokens * 4
+        half_chars = int(chars_allowed * 0.4)
+
+        return prompt[:half_chars] + "\n...[Context automatically compacted]...\n" + prompt[-half_chars:]
 
     def estimate_request_tokens(self, prompt: str, requested_max_tokens: int | None = None) -> int:
         """Estimates total request tokens (input + clamped output reserve) for pre-flight routing validation."""
@@ -119,9 +142,20 @@ class ExternalLLMClient:
             return f"Error: API key not configured for model {self.model}."
 
         current_model = self.model
+        prompt_to_send = self._compact_prompt(prompt)
+        estimated_input_tokens = len(prompt_to_send) // 4
+
+        # Dynamic Routing (Cost Lever #2)
+        if self.enable_dynamic_routing and self.fallback_model:
+            # Simple heuristic: if the prompt is very short/simple, route to the cheaper model
+            if estimated_input_tokens < 150:
+                logging.info(f"Dynamic routing triggered: prompt is simple ({estimated_input_tokens} tokens). Routing to {self.fallback_model}.")
+                current_model = self.fallback_model
+
+        # Budget Enforcement / Downshifting (Cost Lever #3)
         if self.budget_limit is not None and global_cost_tracker.total_cost >= self.budget_limit:
             if self.fallback_model:
-                logging.warning(f"Budget limit ({self.budget_limit}) reached! Downshifting from {self.model} to {self.fallback_model}.")
+                logging.warning(f"Budget limit ({self.budget_limit}) reached! Downshifting from {current_model} to {self.fallback_model}.")
                 current_model = self.fallback_model
             else:
                 logging.error(f"Budget limit ({self.budget_limit}) reached and no fallback model configured. Suspending requests.")
@@ -133,7 +167,7 @@ class ExternalLLMClient:
         }
         data = {
             "model": current_model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [{"role": "user", "content": prompt_to_send}],
         }
 
         try:

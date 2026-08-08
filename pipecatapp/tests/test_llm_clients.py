@@ -118,6 +118,66 @@ async def test_suspension():
         assert result == "Error: Budget limit reached. Request suspended."
 
 @pytest.mark.asyncio
+async def test_dynamic_routing():
+    client = ExternalLLMClient(
+        base_url="http://test",
+        api_key="test",
+        model="gpt-4",
+        fallback_model="gpt-3.5-turbo",
+        enable_dynamic_routing=True
+    )
+
+    with patch("aiohttp.ClientSession.post") as mock_post:
+        mock_response_obj = AsyncMock()
+        mock_response_obj.json.return_value = {"choices": [{"message": {"content": "Test"}}]}
+        mock_response_obj.raise_for_status = MagicMock()
+        mock_response_obj.__aenter__.return_value = mock_response_obj
+        mock_post.return_value = mock_response_obj
+
+        # "Hello" is 5 chars, ~1 token, clearly < 150
+        await client.process_text("Hello")
+
+        # Verify it routed to fallback model
+        _, kwargs = mock_post.call_args
+        assert kwargs["json"]["model"] == "gpt-3.5-turbo"
+
+        # Verify it routes to standard model for long prompts
+        long_prompt = "A" * 800 # 200 tokens
+        await client.process_text(long_prompt)
+
+        _, kwargs = mock_post.call_args
+        assert kwargs["json"]["model"] == "gpt-4"
+
+@pytest.mark.asyncio
+async def test_context_compaction():
+    client = ExternalLLMClient(
+        base_url="http://test",
+        api_key="test",
+        model="gpt-4",
+        max_prompt_tokens=100
+    )
+
+    with patch("aiohttp.ClientSession.post") as mock_post:
+        mock_response_obj = AsyncMock()
+        mock_response_obj.json.return_value = {"choices": [{"message": {"content": "Test"}}]}
+        mock_response_obj.raise_for_status = MagicMock()
+        mock_response_obj.__aenter__.return_value = mock_response_obj
+        mock_post.return_value = mock_response_obj
+
+        # Prompt with 800 chars = 200 tokens (exceeds max of 100)
+        long_prompt = "A" * 800
+        await client.process_text(long_prompt)
+
+        _, kwargs = mock_post.call_args
+        sent_content = kwargs["json"]["messages"][0]["content"]
+
+        assert len(sent_content) < len(long_prompt)
+        assert "[Context automatically compacted]" in sent_content
+        # 40% of 400 chars (100 * 4) is 160. 160 + length of message + 160
+        assert sent_content.startswith("A" * 160)
+        assert sent_content.endswith("A" * 160)
+
+@pytest.mark.asyncio
 async def test_ds4_think_stripping():
     client = ExternalLLMClient(base_url="http://ds4-server", api_key="test", model="ds4-model")
 
