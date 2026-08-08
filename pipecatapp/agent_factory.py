@@ -138,13 +138,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "design_docs": DesignDocsTool(),
         "schema_mapper": SchemaMapperTool(),
         "planner": PlannerTool(twin_service) if twin_service else None,
-        "file_editor": MCPClientAdapter(
-            name="file_editor",
-            server_command="python3",
-            server_args=["-m", "pipecatapp.servers.file_editor_server"],
-            description="Reads, writes, and patches files in the codebase.",
-            twin_service=twin_service
-        ),
+        "file_editor": FileEditorTool(root_dir="/opt/pipecatapp"),
         "security_remediation": SecurityRemediationTool(),
         "network_investigator": NetworkInvestigatorTool(),
         "process_investigator": ProcessInvestigatorTool(),
@@ -202,12 +196,8 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "wasm": WasmTool(wasm_path=config.get("wasm_path")),
         "autoloop": AutoloopTool(),
         "cq": CQ_Tool(),
-        "document": MCPClientAdapter(
-            name="document",
-            server_command="python3",
-            server_args=["-m", "pipecatapp.servers.document_server"],
-            description="Searches and reads internal documents or code files.",
-            twin_service=twin_service
+        "document": DocumentTool(
+            backend_config=config.get("document_backend", {"type": "local", "directory": "/opt/pipecatapp"})
         ),
         "heretic": HereticTool(root_dir=config.get("heretic_root_dir")),
         "jules": JulesTool(api_key=config.get("jules_api_key")),
@@ -253,13 +243,7 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
                 elif name == "desktop_control":
                     tools["desktop_control"] = DesktopControlTool()
                 elif name == "code_runner":
-                    tools["code_runner"] = MCPClientAdapter(
-                        name="code_runner",
-                        server_command="python3",
-                        server_args=["-m", "pipecatapp.servers.code_runner_server"],
-                        description="Execute Python code in a sandboxed Docker/Nomad container.",
-                        twin_service=twin_service
-                    )
+                    tools["code_runner"] = CodeRunnerTool()
                 elif name == "web_browser":
                     tools["web_browser"] = WebBrowserTool()
                 elif name == "ansible":
@@ -269,12 +253,39 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
                 elif name == "term_everything":
                     tools["term_everything"] = TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage")
                 elif name == "rag":
-                    tools["rag"] = MCPClientAdapter(
-                        name="rag",
-                        server_command="python3",
-                        server_args=["-m", "pipecatapp.servers.rag_server"],
-                        description="Retrieves information from a project-specific knowledge base.",
-                        twin_service=twin_service
+                    # RAG Tool has specific local dependencies (memory)
+                    # Allow configurability for base_dir, but default to secure app dir
+                    rag_base_dir = config.get("rag_base_dir", "/opt/pipecatapp")
+                    rag_allowed_root = config.get("rag_allowed_root", rag_base_dir)
+
+                    # Optional RAG Pruning
+                    pruner = None
+                    pruner_model = config.get("rag_pruner_model")
+                    if pruner_model:
+                        # Use the same base URL as the router if not specified
+                        # We try to find a sensible base_url for the pruner
+                        pruner_base_url = config.get("rag_pruner_base_url")
+                        if not pruner_base_url:
+                            # Attempt to infer from other config or env
+                            pruner_base_url = os.getenv("LLAMA_API_BASE_URL") or config.get("llama_api_url")
+
+                        pruner_api_key = config.get("rag_pruner_api_key") or os.getenv("GROQ_API_KEY") or os.getenv("OPENAI_API_KEY") or "dummy"
+
+                        if pruner_base_url and pruner_model:
+                            llm_client = ExternalLLMClient(
+                                base_url=pruner_base_url,
+                                api_key=pruner_api_key,
+                                model=pruner_model
+                            )
+                            pruner = RAGPruner(llm_client=llm_client)
+
+                    tools["rag"] = RAG_Tool(
+                        pmm_memory=twin_service.long_term_memory if twin_service else None,
+                        base_dir=rag_base_dir,
+                        allowed_root=rag_allowed_root,
+                        pruner=pruner,
+                        pruning_threshold=config.get("rag_pruning_threshold", 4),
+                        keep_top_k=config.get("rag_keep_top_k", 3)
                     )
                 elif name == "ha":
                     tools["ha"] = HA_Tool(

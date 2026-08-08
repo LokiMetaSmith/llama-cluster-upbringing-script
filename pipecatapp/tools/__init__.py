@@ -146,6 +146,4 @@ __all__ = [
     "WebBrowserTool",
     "WOLTool",
     "HolographicMemoryTool",
-    "WorkspaceTool",
 ]
-from .workspace_tool import WorkspaceTool
