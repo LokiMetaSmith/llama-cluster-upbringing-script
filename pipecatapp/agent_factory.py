@@ -202,8 +202,12 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "wasm": WasmTool(wasm_path=config.get("wasm_path")),
         "autoloop": AutoloopTool(),
         "cq": CQ_Tool(),
-        "document": DocumentTool(
-            backend_config=config.get("document_backend", {"type": "local", "directory": "/opt/pipecatapp"})
+        "document": MCPClientAdapter(
+            name="document",
+            server_command="python3",
+            server_args=["-m", "pipecatapp.servers.document_server"],
+            description="Searches and reads internal documents or code files.",
+            twin_service=twin_service
         ),
         "heretic": HereticTool(root_dir=config.get("heretic_root_dir")),
         "jules": JulesTool(api_key=config.get("jules_api_key")),

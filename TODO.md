@@ -411,7 +411,7 @@ This section tracks actionable ideas derived from the `docs/analysis/FLOWISE_ANA
 
 ## Suggested New Items
 
-- [x] **Review and Implement MCP Migration Plan:** Execute the phases outlined in `docs/manual/MCP_MIGRATION_PLAN.md` to transition custom tools to the Model Context Protocol. (Note: Completed Phase 1 and Phase 2 for tools: shell_tool, file_editor_tool, code_runner_tool)
+- [x] **Review and Implement MCP Migration Plan:** Execute the phases outlined in `docs/manual/MCP_MIGRATION_PLAN.md` to transition custom tools to the Model Context Protocol. (Note: Completed Phase 1 and Phase 2 for tools: shell_tool, file_editor_tool, code_runner_tool, document_tool)
 
 - [x] **Remove `load_llm_config` file fallback:** Update `reflection/reflect.py` to remove the hardcoded file reading fallback, update `scripts/supervisor.py` to pass the config from memory, and update `reflection/adaptation_manager.py` and its tests to accept `--llm-config`.
 - [x] **Fix Missing Test Dependencies:** Update requirements-dev.txt to include `pytest`, `pytest-asyncio`, and `httpx` to fix the test suite.
