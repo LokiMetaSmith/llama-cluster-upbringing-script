@@ -33,16 +33,16 @@ The migration to MCP will decouple tools from the core agentic framework, treati
 ### Phase 2: Refactoring Existing Tools
 
 We will migrate tools iteratively. For each tool:
-* [x] (shell_tool) 1.  Create a standalone server script (e.g., `servers/shell_server.py`) using the MCP `@server.tool()` decorators.
-* [x] (shell_tool) 2.  Define explicit Pydantic schemas for the tool's inputs and outputs, replacing loose `**kwargs`.
-* [x] (shell_tool) 3.  Remove internal `TwinService` dependencies. If a tool needs state, it must receive it via the MCP context or request it explicitly.
-* [x] (shell_tool) 4.  Update the tool registry in `agent_factory.py` to map the old tool name to an instantiation of the new `MCPClientAdapter` pointing to the new server.
+* [x] (shell_tool, file_editor_tool, code_runner_tool) 1.  Create a standalone server script (e.g., `servers/shell_server.py`) using the MCP `@server.tool()` decorators.
+* [x] (shell_tool, file_editor_tool, code_runner_tool) 2.  Define explicit Pydantic schemas for the tool's inputs and outputs, replacing loose `**kwargs`.
+* [x] (shell_tool, file_editor_tool, code_runner_tool) 3.  Remove internal `TwinService` dependencies. If a tool needs state, it must receive it via the MCP context or request it explicitly.
+* [x] (shell_tool, file_editor_tool, code_runner_tool) 4.  Update the tool registry in `agent_factory.py` to map the old tool name to an instantiation of the new `MCPClientAdapter` pointing to the new server.
 
 **Priority Tools for Migration:**
 
-1. `shell_tool.py` and `code_runner_tool.py` (High risk, immediate benefit from sandbox decoupling).
-2. `file_editor_tool.py` and `document_tool.py`.
-3. `rag_tool.py` (Requires establishing an MCP pattern for streaming large contexts or standardizing resource templates).
+1. [x] `shell_tool.py` and `code_runner_tool.py` (High risk, immediate benefit from sandbox decoupling).
+2. [x] `file_editor_tool.py` and `document_tool.py`.
+3. [x] `rag_tool.py` (Requires establishing an MCP pattern for streaming large contexts or standardizing resource templates).
 
 ### Phase 3: Deprecation and Cleanup
 
