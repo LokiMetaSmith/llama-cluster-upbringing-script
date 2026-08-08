@@ -1,0 +1,53 @@
+name: "Holographic Learning (Morpho HDL Emulation)"
+description: "A test workflow demonstrating the generation of Morpho HDL to tune an emulated continuous physical substrate, and saving the resulting activation matrix as structurally encoded memory."
+global_mission: "Solve a complex routing problem by tuning the emulated reservoir substrate and saving the resulting holographic memory."
+
+nodes:
+  - id: "input"
+    type: "InputNode"
+    position: { x: 100, y: 100 }
+    config:
+      outputs:
+        - name: "problem_context"
+          description: "The problem context that requires continuous tuning to solve."
+
+  - id: "hdl_modulator"
+    type: "SimpleLLMNode"
+    position: { x: 400, y: 100 }
+    inputs:
+      - name: "prompt"
+        value: "Analyze the input problem and generate a Morpho HDL string that specifies how to tune the correlation length and structural parameters of an optical substrate to route the signal correctly. Output ONLY the HDL string."
+      - name: "context"
+        connection: { from_node: "input", from_output: "problem_context" }
+    config:
+      system_prompt: "You are the AGI modulating a continuous physical substrate. Generate Morpho HDL instructions to tune the virtual reservoir."
+
+  - id: "reservoir"
+    type: "ReservoirSubstrateNode"
+    position: { x: 700, y: 100 }
+    inputs:
+      - name: "input_signal"
+        connection: { from_node: "input", from_output: "problem_context" }
+      - name: "hdl_modulation"
+        connection: { from_node: "hdl_modulator", from_output: "result" }
+
+  - id: "memory_saver"
+    type: "ToolExecutorNode"
+    position: { x: 1000, y: 100 }
+    inputs:
+      - name: "instruction"
+        value: "Save the generated activation matrix using the holographic_memory tool."
+      - name: "matrix_data"
+        connection: { from_node: "reservoir", from_output: "activation_matrix" }
+      - name: "collimated_output"
+        connection: { from_node: "reservoir", from_output: "collimated_output" }
+    config:
+      autonomous_tools: ["holographic_memory"]
+      system_prompt: "You have received an activation matrix and a collimated output from a continuous substrate. Save the matrix_data using the holographic_memory tool with action 'save', a unique matrix_name, and include the collimated_output in the context_description."
+
+  - id: "output"
+    type: "OutputNode"
+    position: { x: 1300, y: 100 }
+    inputs:
+      - name: "final_result"
+        connection: { from_node: "memory_saver", from_output: "result" }
