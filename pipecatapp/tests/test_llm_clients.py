@@ -56,6 +56,68 @@ async def test_cost_tracker():
         assert abs(summary["total_cost"] - 0.0035) < 1e-6
 
 @pytest.mark.asyncio
+async def test_downshifting():
+    from pipecatapp.llm_clients import global_cost_tracker
+
+    global_cost_tracker.total_cost = 10.0 # Exceeds budget
+    global_cost_tracker.usage_by_model = {}
+
+    client = ExternalLLMClient(
+        base_url="http://test",
+        api_key="test",
+        model="gpt-4",
+        budget_limit=5.0,
+        fallback_model="gpt-3.5-turbo"
+    )
+
+    mock_response = {
+        "choices": [{"message": {"content": "Downshifted response"}}],
+        "usage": {"prompt_tokens": 100, "completion_tokens": 100, "total_tokens": 200}
+    }
+
+    with patch("aiohttp.ClientSession.post") as mock_post:
+        mock_response_obj = AsyncMock()
+        mock_response_obj.json.return_value = mock_response
+        mock_response_obj.raise_for_status = MagicMock()
+        mock_response_obj.__aenter__.return_value = mock_response_obj
+        mock_post.return_value = mock_response_obj
+
+        result = await client.process_text("Hello")
+
+        assert result == "Downshifted response"
+
+        # Verify the API request was made with the fallback model
+        _, kwargs = mock_post.call_args
+        assert kwargs["json"]["model"] == "gpt-3.5-turbo"
+
+        # Verify usage was tracked against the fallback model
+        summary = global_cost_tracker.get_summary()
+        assert "gpt-3.5-turbo" in summary["usage_by_model"]
+        assert "gpt-4" not in summary["usage_by_model"]
+
+@pytest.mark.asyncio
+async def test_suspension():
+    from pipecatapp.llm_clients import global_cost_tracker
+
+    global_cost_tracker.total_cost = 10.0 # Exceeds budget
+    global_cost_tracker.usage_by_model = {}
+
+    client = ExternalLLMClient(
+        base_url="http://test",
+        api_key="test",
+        model="gpt-4",
+        budget_limit=5.0
+        # No fallback model
+    )
+
+    with patch("aiohttp.ClientSession.post") as mock_post:
+        result = await client.process_text("Hello")
+
+        # The request shouldn't have been made
+        mock_post.assert_not_called()
+        assert result == "Error: Budget limit reached. Request suspended."
+
+@pytest.mark.asyncio
 async def test_ds4_think_stripping():
     client = ExternalLLMClient(base_url="http://ds4-server", api_key="test", model="ds4-model")
 

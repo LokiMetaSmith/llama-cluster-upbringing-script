@@ -67,19 +67,25 @@ class ExternalLLMClient:
         base_url (str): The base URL of the LLM API (e.g., "https://api.openai.com/v1").
         api_key (str): The API key for authentication.
         model (str): The specific model to use for the completion (e.g., "gpt-4").
+        budget_limit (float, optional): The maximum allowed spend before downshifting or suspending.
+        fallback_model (str, optional): The cheaper model to downshift to when budget_limit is reached.
     """
 
-    def __init__(self, base_url: str, api_key: str, model: str):
+    def __init__(self, base_url: str, api_key: str, model: str, budget_limit: float | None = None, fallback_model: str | None = None):
         """Initializes the ExternalLLMClient.
 
         Args:
             base_url (str): The base URL for the API endpoint.
             api_key (str): The API key for authentication.
             model (str): The name of the model to be used.
+            budget_limit (float, optional): Optional maximum budget limit.
+            fallback_model (str, optional): Optional model to downshift to if budget is exceeded.
         """
         self.base_url = base_url
         self.api_key = api_key
         self.model = model
+        self.budget_limit = budget_limit
+        self.fallback_model = fallback_model
         self._session = None
 
     def estimate_request_tokens(self, prompt: str, requested_max_tokens: int | None = None) -> int:
@@ -112,12 +118,21 @@ class ExternalLLMClient:
             logging.error(f"API key is missing for expert {self.model}. Cannot make request.")
             return f"Error: API key not configured for model {self.model}."
 
+        current_model = self.model
+        if self.budget_limit is not None and global_cost_tracker.total_cost >= self.budget_limit:
+            if self.fallback_model:
+                logging.warning(f"Budget limit ({self.budget_limit}) reached! Downshifting from {self.model} to {self.fallback_model}.")
+                current_model = self.fallback_model
+            else:
+                logging.error(f"Budget limit ({self.budget_limit}) reached and no fallback model configured. Suspending requests.")
+                return f"Error: Budget limit reached. Request suspended."
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
         data = {
-            "model": self.model,
+            "model": current_model,
             "messages": [{"role": "user", "content": prompt}],
         }
 
@@ -152,7 +167,7 @@ class ExternalLLMClient:
             completion_tokens = usage.get("completion_tokens", 0)
 
             if prompt_tokens > 0 or completion_tokens > 0:
-                global_cost_tracker.record_usage(self.model, prompt_tokens, completion_tokens)
+                global_cost_tracker.record_usage(current_model, prompt_tokens, completion_tokens)
 
             content = response_json.get("choices", [{}])[0].get("message", {}).get("content", "")
             # DwarfStar (ds4) might include <think> blocks in the content depending on the model/mode.
