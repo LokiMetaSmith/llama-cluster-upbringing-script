@@ -1,0 +1,756 @@
+from mcp.server.fastmcp import FastMCP
+import os
+import asyncio
+import logging
+from typing import List, Optional
+
+mcp = FastMCP("code_runner_server")
+
+from pipecatapp.tools.retry_utils import retry
+import abc
+import docker
+import logging
+import os
+import asyncio
+import tempfile
+import time
+import uuid
+import jupyter_client
+import atexit
+import queue
+import aiohttp
+import base64
+import multiprocessing
+from llm_sandbox import SandboxSession
+from typing import List, Optional
+from pipecatapp.tools.dependency_scanner_tool import DependencyScannerTool
+from pipecatapp.tools.execution_history import ExecutionHistory
+
+# Security: Limit the maximum size of the code payload to prevent DoS attacks
+# especially against Nomad templates which might expand significantly or cause OOM.
+MAX_CODE_LENGTH = 100000
+
+class SandboxExecutor(abc.ABC):
+    """Abstract base class for sandbox execution strategies."""
+
+    @abc.abstractmethod
+    def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+        pass
+
+
+
+
+class JupyterSandboxExecutor(SandboxExecutor):
+    """Executes code using a persistent Jupyter/IPython kernel inside a Docker container."""
+
+    def __init__(self):
+        self._lock = asyncio.Lock()
+        self.container = None
+        self.client = None
+        self.connection_file = None
+        self.km = None
+        self.kc = None
+
+    async def _initialize(self):
+        if self.kc is not None:
+            return
+
+        import docker
+        import json
+        import tempfile
+        import jupyter_client
+
+        try:
+            self.client = docker.from_env()
+        except Exception as e:
+            logging.error(f"Failed to connect to Docker: {e}")
+            raise
+
+        # 1. Create a local connection file with open ports
+        import socket
+        def get_free_port():
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('', 0))
+                return s.getsockname()[1]
+
+        ip = "0.0.0.0"
+        ports = {
+            "shell_port": get_free_port(),
+            "iopub_port": get_free_port(),
+            "stdin_port": get_free_port(),
+            "control_port": get_free_port(),
+            "hb_port": get_free_port(),
+            "ip": ip,
+            "key": str(uuid.uuid4()),
+            "transport": "tcp",
+            "signature_scheme": "hmac-sha256",
+            "kernel_name": ""
+        }
+
+        self.conn_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(ports, self.conn_file)
+        self.conn_file.flush()
+
+        port_bindings = {
+            ports["shell_port"]: ports["shell_port"],
+            ports["iopub_port"]: ports["iopub_port"],
+            ports["stdin_port"]: ports["stdin_port"],
+            ports["control_port"]: ports["control_port"],
+            ports["hb_port"]: ports["hb_port"]
+        }
+
+        # 2. Start Docker container running ipykernel using the connection file
+        try:
+            self.container = self.client.containers.run(
+                "python:3.9-slim",
+                command=f"sh -c 'pip install ipykernel && python -m ipykernel_launcher -f /tmp/conn.json'",
+                detach=True,
+                network_mode="bridge",
+                ports=port_bindings,
+                volumes={self.conn_file.name: {'bind': '/tmp/conn.json', 'mode': 'ro'}},
+                cap_drop=["ALL"]
+            )
+
+            # Wait for kernel to start
+            await asyncio.sleep(5)
+
+            # Update IP for local client to connect to localhost
+            ports["ip"] = "127.0.0.1"
+            with open(self.conn_file.name, 'w') as f:
+                json.dump(ports, f)
+
+            self.km = jupyter_client.AsyncKernelManager(connection_file=self.conn_file.name)
+            self.km.load_connection_file()
+            self.kc = self.km.client()
+            self.kc.start_channels()
+            await self.kc.wait_for_ready(timeout=15)
+
+        except Exception as e:
+            logging.error(f"Failed to start Jupyter kernel in Docker: {e}")
+            self.close()
+            raise
+
+    async def execute_async(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+        if language != "python":
+            return "Error: Jupyter Sandbox currently only supports Python."
+
+        async with self._lock:
+            await self._initialize()
+
+            if libraries:
+                install_cmd = f"import subprocess; subprocess.run(['pip', 'install', '{' '.join(libraries)}'], capture_output=True)"
+                msg_id = self.kc.execute(install_cmd)
+                await self._wait_for_reply(msg_id, timeout=30)
+
+            msg_id = self.kc.execute(code)
+            job_timeout = timeout if timeout is not None else 30
+            return await self._wait_for_reply(msg_id, timeout=job_timeout)
+
+    async def _wait_for_reply(self, msg_id: str, timeout: int) -> str:
+        import queue
+        output = ""
+        start_time = time.time()
+        while True:
+            if time.time() - start_time > timeout:
+                return output + f"\nError: Execution timed out after {timeout} seconds."
+            try:
+                msg = await self.kc.get_iopub_msg(timeout=0.1)
+
+                # IMPORTANT: Match msg_id to prevent race conditions as requested in code review
+                if msg['parent_header'].get('msg_id') != msg_id:
+                    continue
+
+                msg_type = msg['header']['msg_type']
+                content = msg['content']
+
+                if msg_type == 'stream':
+                    output += content['text']
+                elif msg_type == 'execute_result':
+                    output += str(content['data'].get('text/plain', '')) + "\n"
+                elif msg_type == 'error':
+                    output += f"Error: {content['ename']}: {content['evalue']}\n"
+                    for trace in content['traceback']:
+                        output += trace + "\n"
+                elif msg_type == 'status' and content['execution_state'] == 'idle':
+                    break
+            except queue.Empty:
+                continue
+            except TimeoutError: # asyncio.TimeoutError
+                continue
+            except Exception as e:
+                output += f"\nInternal Error receiving message: {e}"
+                break
+        return output.strip()
+
+    def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+        pass
+
+    def close(self):
+        try:
+            if self.kc:
+                self.kc.stop_channels()
+            if self.container:
+                self.container.remove(force=True)
+            import os
+            if self.conn_file and os.path.exists(self.conn_file.name):
+                os.remove(self.conn_file.name)
+        except:
+            pass
+
+class DockerSandboxExecutor(SandboxExecutor):
+    """Executes code using local Docker containers (via docker-py or llm-sandbox)."""
+
+    def __init__(self):
+        self.image = "python:3.9-slim"
+        self.scanner = DependencyScannerTool()
+        try:
+            self.client = docker.from_env()
+        except Exception as e:
+            logging.warning(f"Failed to initialize Docker client for CodeRunnerTool: {e}")
+            self.client = None
+
+    @retry()
+    def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+        """Executes code using llm-sandbox for robust multi-language support."""
+        if libraries is None:
+            libraries = []
+
+        # Dependency Intelligence Check
+        if language == "python" and libraries:
+            for lib in libraries:
+                if '==' in lib:
+                    name, version = lib.split('==', 1)
+                else:
+                    name, version = lib, None
+
+                scan_result = self.scanner.scan_package(name, version)
+                if "UNSAFE" in scan_result:
+                    return f"Operation blocked by security policy. Vulnerability detected in dependency '{lib}':\n{scan_result}"
+
+        import multiprocessing
+
+        job_timeout = timeout if timeout is not None else 30
+
+        import sys
+
+        def _run_sandbox(q, c, l, lang):
+            import signal
+            # Signal handler to ensure graceful context manager exit on SIGTERM
+            class TimeoutException(Exception): pass
+            def sigterm_handler(signum, frame):
+                raise TimeoutException("Timed out")
+            signal.signal(signal.SIGTERM, sigterm_handler)
+
+            try:
+                with SandboxSession(lang=lang) as session:
+                    res = session.run(c, libraries=l)
+                    q.put((res.exit_code, res.stdout, res.stderr, res.plots))
+            except TimeoutException:
+                q.put("TIMEOUT")
+            except Exception as e:
+                q.put(e)
+
+        try:
+            q = multiprocessing.Queue()
+            p = multiprocessing.Process(target=_run_sandbox, args=(q, code, libraries, language))
+            p.start()
+            p.join(job_timeout)
+
+            if p.is_alive():
+                p.terminate()
+                p.join()
+                return f"Error: Execution timed out after {job_timeout} seconds."
+
+            if not q.empty():
+                res = q.get()
+                if res == "TIMEOUT":
+                    return f"Error: Execution timed out after {job_timeout} seconds."
+                if isinstance(res, Exception):
+                    raise res
+                exit_code, stdout, stderr, plots = res
+
+                if exit_code == 0:
+                    output = stdout
+                else:
+                    output = f"Exit Code: {exit_code}\n---STDERR---\n{stderr}\n---STDOUT---\n{stdout}"
+
+                if plots:
+                    output += "\n\nGenerated plots are available."
+
+                return output
+            else:
+                return "Error: Sandbox execution failed to return a result."
+        except Exception as e:
+            from pipecatapp.tools.retry_utils import is_transient_error
+            if is_transient_error(e):
+                raise e
+            return f"An unexpected error occurred: {e}"
+
+    @retry()
+    def execute_simple_python(self, code: str, timeout: Optional[int] = None) -> str:
+        """Runs simple Python code using raw docker-py for speed/legacy support."""
+        if not self.client:
+            return "Error: Docker execution is not available (Docker client failed to initialize)."
+
+        container = None
+        try:
+            # Use TemporaryDirectory for better isolation than mounting /tmp
+            with tempfile.TemporaryDirectory() as temp_dir:
+                script_name = "script.py"
+                host_script_path = os.path.join(temp_dir, script_name)
+
+                with open(host_script_path, "w") as f:
+                    f.write(code)
+
+                # Mount the temp dir to /code
+                volumes = {temp_dir: {'bind': '/code', 'mode': 'ro'}}
+
+                container = self.client.containers.run(
+                    self.image,
+                    command=["python", f"/code/{script_name}"],
+                    volumes=volumes,
+                    working_dir="/code",
+                    network_mode="none",  # Security: No internet access
+                    mem_limit="128m",     # Security: Limit memory
+                    cpu_period=100000,
+                    cpu_quota=50000,      # Security: Limit CPU (50%)
+                    pids_limit=20,        # Security: Limit processes
+                    detach=True,          # Security: Run in background to support timeout
+                    stderr=True,
+                    stdout=True,
+                    cap_drop=["ALL"],     # Security: Drop all capabilities
+                    read_only=True,       # Security: Read-only root filesystem
+                    init=True,            # Security: Use tini as init process to handle signals
+                    tmpfs={"/tmp": "rw,size=100m,exec,nosuid"} # Security: ephemeral tmpfs
+                )
+
+                job_timeout = timeout if timeout is not None else 30
+                # Security: Implement timeout mechanism to prevent DoS via infinite loops
+                start_time = time.time()
+                while time.time() - start_time < job_timeout:
+                    container.reload()
+                    if container.status != 'running':
+                        break
+                    time.sleep(0.5)
+
+                if container.status == 'running':
+                    container.kill()
+                    return f"Error: Execution timed out after {job_timeout} seconds."
+
+                output = container.logs().decode('utf-8')
+                return output
+
+        except docker.errors.ImageNotFound:
+            return f"Error: The Docker image '{self.image}' was not found. Please pull it first."
+        except Exception as e:
+            from pipecatapp.tools.retry_utils import is_transient_error
+            if is_transient_error(e):
+                raise e
+            return f"An error occurred: {e}"
+        finally:
+            if container:
+                try:
+                    container.remove(force=True)
+                except Exception:
+                    pass
+
+class NomadSandboxExecutor(SandboxExecutor):
+    """Executes code by dispatching ephemeral Nomad batch jobs."""
+
+    def __init__(self):
+        self.nomad_url = os.environ.get("NOMAD_ADDR", f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:4646")
+        self.token = os.environ.get("NOMAD_TOKEN")
+        self.default_timeout = 300 # 5 minutes default timeout for job execution
+        self.headers = {"X-Nomad-Token": self.token} if self.token else {}
+        self._session = None
+
+    async def close(self):
+        """Closes the underlying aiohttp session."""
+        if self._session:
+            await self._session.close()
+            self._session = None
+
+    def _get_session(self) -> aiohttp.ClientSession:
+        if not self._session:
+            self._session = aiohttp.ClientSession()
+        return self._session
+
+    @retry()
+    async def execute(self, code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+        if language != "python":
+            return "Error: Nomad executor currently only supports Python."
+        if libraries:
+             return "Error: Nomad executor currently does not support dynamic library installation. Use Docker executor or pre-built images."
+
+        job_id = f"sandbox-{uuid.uuid4()}"
+        logging.info(f"Dispatching Nomad sandbox job: {job_id}")
+
+        # Security Enhancement: Base64 encode the code to prevent Nomad Template Injection
+        code_b64 = base64.b64encode(code.encode('utf-8')).decode('utf-8')
+
+        # Construct Job JSON
+        job_payload = {
+            "Job": {
+                "ID": job_id,
+                "Name": job_id,
+                "Type": "batch",
+                "Datacenters": ["dc1"],
+                "TaskGroups": [
+                    {
+                        "Name": "sandbox",
+                        "Count": 1,
+                        "RestartPolicy": {
+                            "Attempts": 0,
+                            "Mode": "fail"
+                        },
+                        "Tasks": [
+                            {
+                                "Name": "execution",
+                                "Driver": "docker",
+                                "Config": {
+                                    "image": "python:3.9-slim",
+                                    "command": "/bin/sh",
+                                    # Decode base64 to script.py and then execute it
+                                    "args": [
+                                        "-c",
+                                        "python3 -c 'import base64; open(\"/local/script.py\", \"wb\").write(base64.b64decode(open(\"/local/script.b64\", \"rb\").read()))' && python3 /local/script.py"
+                                    ],
+                                    "network_mode": "none",
+                                    "cap_drop": ["ALL"],
+                                    "readonly_rootfs": True,
+                                    "init": True,
+                                    "mounts": [
+                                        {
+                                            "type": "tmpfs",
+                                            "target": "/tmp",
+                                            "tmpfs_options": {
+                                                "size": 104857600  # 100MB
+                                            }
+                                        }
+                                    ]
+                                },
+                                "Resources": {
+                                    "CPU": 100,
+                                    "MemoryMB": 128
+                                },
+                                "Templates": [
+                                    {
+                                        "EmbeddedTmpl": code_b64,
+                                        "DestPath": "local/script.b64",
+                                        "ChangeMode": "noop"
+                                        # Removed LeftDelim/RightDelim as base64 is safe with default {{ }}
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+
+        job_timeout = timeout if timeout is not None else self.default_timeout
+
+        session = self._get_session()
+        try:
+            # 1. Register Job
+            async with session.post(f"{self.nomad_url}/v1/jobs", json=job_payload, headers=self.headers, timeout=10) as reg_resp:
+                reg_resp.raise_for_status()
+
+            # 2. Wait for Allocation
+            alloc_id = None
+            start_time = time.time()
+            while time.time() - start_time < job_timeout:
+                try:
+                    async with session.get(f"{self.nomad_url}/v1/job/{job_id}/allocations", headers=self.headers, timeout=10) as allocs_resp:
+                        allocs_resp.raise_for_status()
+                        allocs = await allocs_resp.json()
+
+                        if allocs:
+                            # Sort by CreateTime desc to get latest
+                            allocs.sort(key=lambda x: x.get('CreateTime', 0), reverse=True)
+                            latest_alloc = allocs[0]
+                            alloc_id = latest_alloc['ID']
+                            client_status = latest_alloc.get('ClientStatus')
+
+                            if client_status in ['complete', 'failed']:
+                                break
+                except Exception as e:
+                    logging.warning(f"Error polling allocations for job {job_id}: {e}")
+
+                await asyncio.sleep(1)
+
+            if not alloc_id:
+                return "Error: Nomad job timed out waiting for allocation."
+
+            # 3. Retrieve Logs
+            try:
+                # Re-fetch alloc to get NodeID/Address
+                async with session.get(f"{self.nomad_url}/v1/allocation/{alloc_id}", headers=self.headers, timeout=10) as alloc_detail_resp:
+                    alloc_detail = await alloc_detail_resp.json()
+                node_id = alloc_detail.get("NodeID")
+                # We can find the Node address from /v1/node/:node_id
+                async with session.get(f"{self.nomad_url}/v1/node/{node_id}", headers=self.headers, timeout=10) as node_detail_resp:
+                    node_detail = await node_detail_resp.json()
+                node_addr = node_detail.get("HTTPAddr")
+                # This is likely the internal IP.
+
+                logs = ""
+                for log_type in ["stdout", "stderr"]:
+                    # Using the node address directly
+                    try:
+                        log_url = f"http://{node_addr}/v1/client/fs/logs/{alloc_id}?task=execution&type={log_type}&plain=true"
+                        async with session.get(log_url, headers=self.headers, timeout=10) as log_resp:
+                            if log_resp.status == 200:
+                                content = await log_resp.text()
+                                if content:
+                                    logs += f"---{log_type.upper()}---\n{content}\n"
+                    except Exception as e:
+                        logs += f"Error fetching {log_type}: {e}\n"
+
+                return logs.strip()
+            except Exception as e:
+                return f"Error retrieving logs for job {job_id}: {e}"
+
+        except Exception as e:
+            from pipecatapp.tools.retry_utils import is_transient_error
+            if is_transient_error(e):
+                raise e
+            return f"Nomad execution error: {e}"
+        finally:
+            # 4. Cleanup
+            try:
+                async with session.delete(f"{self.nomad_url}/v1/job/{job_id}?purge=true", headers=self.headers, timeout=10) as cleanup_resp:
+                    pass
+            except:
+                pass
+
+class CodeRunnerTool:
+    """A tool for executing Python code in a sandboxed environment (Docker or Nomad).
+
+    Attributes:
+        description (str): A brief description of the tool's purpose.
+        name (str): The name of the tool.
+    """
+    def __init__(self):
+        """Initializes the CodeRunnerTool."""
+        self.description = (
+            "Execute Python code in a sandboxed Docker/Nomad container. "
+            "Use this tool as an executable oracle to test snippets before modifying host files. "
+            "Dependencies can be specified in the `libraries` argument (e.g., `['requests==2.31.0']`). "
+            "The tool validates dependencies against an OSV vulnerability scanner. "
+            "A timeout is enforced to prevent infinite loops."
+        )
+        self.name = "code_runner"
+
+        # Determine executor mode: 'docker' (default) or 'nomad'
+        # Can be overridden by env var SANDBOX_EXECUTOR
+        self.mode = os.environ.get("SANDBOX_EXECUTOR", "docker").lower()
+
+        self.history = ExecutionHistory()
+
+        if self.mode == "nomad":
+            self.executor = NomadSandboxExecutor()
+            logging.info("CodeRunnerTool initialized in NOMAD mode.")
+        elif self.mode == "hybrid":
+            self.executor = NomadSandboxExecutor()
+            self.fast_executor = DockerSandboxExecutor()
+            logging.info("CodeRunnerTool initialized in HYBRID mode.")
+        else:
+            self.executor = DockerSandboxExecutor()
+            logging.info("CodeRunnerTool initialized in DOCKER mode.")
+
+        self.jupyter_executor = JupyterSandboxExecutor()
+        import atexit
+        atexit.register(self.jupyter_executor.close)
+
+
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "coderunnertool"),
+                "description": getattr(self, "description", "Tool CodeRunnerTool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform. Available: run_python_code, run_code_in_sandbox, run_interactive_python"
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Additional arguments for the action."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
+    def execute(self, action: str, **kwargs):
+        if action == "run_python_code":
+            return getattr(self, "run_python_code")(**kwargs.get("kwargs", kwargs))
+        if action == "run_code_in_sandbox":
+            return getattr(self, "run_code_in_sandbox")(**kwargs.get("kwargs", kwargs))
+        if action == "run_interactive_python":
+            return getattr(self, "run_interactive_python")(**kwargs.get("kwargs", kwargs))
+        else:
+            return f"Unknown action: {action}"
+
+    async def _execute_with_history(self, code: str, language: str, libraries: Optional[List[str]], timeout: Optional[int], execute_func) -> str:
+        # Check idempotency / history
+        cached = self.history.get_cached_result(code, language, libraries)
+        if cached:
+            logging.info("Returning cached execution result.")
+            return cached.get("stdout", "")
+
+        execution_id = f"exec-{uuid.uuid4()}"
+        start_time = time.time()
+
+        status = "failed"
+        stdout = ""
+        error_msg = None
+        exit_code = -1
+
+        try:
+            if asyncio.iscoroutinefunction(execute_func):
+                stdout = await execute_func(code=code, timeout=timeout)
+            else:
+                stdout = execute_func(code=code, timeout=timeout)
+            status = "success"
+            exit_code = 0
+
+            # Simple heuristic for timeout in the current return format
+            if stdout.startswith("Error: Execution timed out"):
+                status = "timeout"
+                exit_code = 124
+            elif stdout.startswith("Error:") or stdout.startswith("An error occurred:") or stdout.startswith("An unexpected error occurred:") or stdout.startswith("Nomad execution error:"):
+                status = "failed"
+                exit_code = 1
+
+        except Exception as e:
+            error_msg = str(e)
+            stdout = f"Error: {e}"
+            status = "failed"
+            exit_code = 1
+        finally:
+            duration_ms = int((time.time() - start_time) * 1000)
+            self.history.record_execution(
+                execution_id=execution_id,
+                code=code,
+                language=language,
+                libraries=libraries,
+                status=status,
+                stdout=stdout,
+                exit_code=exit_code,
+                duration_ms=duration_ms,
+                error=error_msg
+            )
+
+        return stdout
+
+    async def run_python_code(self, code: str, timeout: Optional[int] = None) -> str:
+        """Runs a string of Python code and returns the output.
+
+        Args:
+            code (str): The Python code to execute.
+            timeout (int, optional): The maximum execution time in seconds. Defaults to 30.
+
+        Preserves legacy behavior for Docker mode (simple execution).
+        """
+        if len(code) > MAX_CODE_LENGTH:
+            return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
+
+        # Safe, deterministic in-process fallback for unit tests and local mock verification
+        if os.getenv("SCHEMA_HARNESS_TEST_MODE") == "true":
+            import io
+            import sys
+            import contextlib
+            f = io.StringIO()
+            with contextlib.redirect_stdout(f):
+                try:
+                    glob = {}
+                    # Passing a single dictionary ensures correct resolution of free variables (classic exec trap)
+                    exec(code, glob)
+                except Exception as e:
+                    return f"Error: {e}"
+            return f.getvalue()
+
+        async def _exec(code: str, timeout: Optional[int]) -> str:
+            if self.mode == "hybrid" and hasattr(self, 'fast_executor'):
+                if self.fast_executor.client:
+                    return self.fast_executor.execute_simple_python(code, timeout=timeout)
+                logging.warning("Local Docker client unavailable in hybrid mode. Falling back to Nomad.")
+                return await self.executor.execute(code, language="python", timeout=timeout)
+
+            if isinstance(self.executor, DockerSandboxExecutor):
+                return self.executor.execute_simple_python(code, timeout=timeout)
+
+            if isinstance(self.executor, NomadSandboxExecutor):
+                return await self.executor.execute(code, language="python", timeout=timeout)
+
+            return self.executor.execute(code, language="python", timeout=timeout)
+
+        return await self._execute_with_history(code, "python", None, timeout, _exec)
+
+    async def run_code_in_sandbox(
+        self,
+        code: str,
+        language: str = "python",
+        libraries: Optional[List[str]] = None,
+        timeout: Optional[int] = None
+    ) -> str:
+        """Runs code in a secure sandbox, with support for multiple languages.
+
+        Args:
+            code (str): The code to execute.
+            language (str, optional): The programming language (e.g., 'python', 'nodejs'). Defaults to 'python'.
+            libraries (List[str], optional): A list of library dependencies to install before running.
+            timeout (int, optional): The maximum execution time in seconds. Defaults to 30 for Docker and 300 for Nomad.
+        """
+        if len(code) > MAX_CODE_LENGTH:
+            return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
+
+        async def _exec(code: str, timeout: Optional[int]) -> str:
+            if isinstance(self.executor, NomadSandboxExecutor):
+                return await self.executor.execute(code, language, libraries, timeout)
+            return self.executor.execute(code, language, libraries, timeout)
+
+        return await self._execute_with_history(code, language, libraries, timeout, _exec)
+
+    async def run_interactive_python(self, code: str, libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+        """Runs a string of Python code in a persistent interactive REPL and returns the output.
+        Variables and functions defined here will be available in subsequent calls to run_interactive_python.
+
+        Args:
+            code (str): The Python code to execute.
+            libraries (List[str], optional): Libraries to install before running.
+            timeout (int, optional): The maximum execution time in seconds. Defaults to 30.
+        """
+        if len(code) > MAX_CODE_LENGTH:
+            return f"Error: Code length exceeds the maximum limit of {MAX_CODE_LENGTH} characters."
+
+        async def _exec(code: str, timeout: Optional[int]) -> str:
+            return await self.jupyter_executor.execute_async(code, language="python", libraries=libraries, timeout=timeout)
+
+        return await self._execute_with_history(code, "python", libraries, timeout, _exec)
+
+_code_runner_instance = CodeRunnerTool()
+
+@mcp.tool()
+async def run_python_code(code: str, timeout: Optional[int] = None) -> str:
+    """Runs a string of Python code and returns the output."""
+    return await _code_runner_instance.run_python_code(code, timeout)
+
+@mcp.tool()
+async def run_code_in_sandbox(code: str, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+    """Runs code in a secure sandbox, with support for multiple languages."""
+    return await _code_runner_instance.run_code_in_sandbox(code, language, libraries, timeout)
+
+@mcp.tool()
+async def run_interactive_python(code: str, libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+    """Runs a string of Python code in a persistent interactive REPL and returns the output."""
+    return await _code_runner_instance.run_interactive_python(code, libraries, timeout)
+
+if __name__ == "__main__":
+    mcp.run()

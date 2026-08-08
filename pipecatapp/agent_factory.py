@@ -138,7 +138,13 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "design_docs": DesignDocsTool(),
         "schema_mapper": SchemaMapperTool(),
         "planner": PlannerTool(twin_service) if twin_service else None,
-        "file_editor": FileEditorTool(root_dir="/opt/pipecatapp"),
+        "file_editor": MCPClientAdapter(
+            name="file_editor",
+            server_command="python3",
+            server_args=["-m", "pipecatapp.servers.file_editor_server"],
+            description="Reads, writes, and patches files in the codebase.",
+            twin_service=twin_service
+        ),
         "security_remediation": SecurityRemediationTool(),
         "network_investigator": NetworkInvestigatorTool(),
         "process_investigator": ProcessInvestigatorTool(),
@@ -243,7 +249,13 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
                 elif name == "desktop_control":
                     tools["desktop_control"] = DesktopControlTool()
                 elif name == "code_runner":
-                    tools["code_runner"] = CodeRunnerTool()
+                    tools["code_runner"] = MCPClientAdapter(
+                        name="code_runner",
+                        server_command="python3",
+                        server_args=["-m", "pipecatapp.servers.code_runner_server"],
+                        description="Execute Python code in a sandboxed Docker/Nomad container.",
+                        twin_service=twin_service
+                    )
                 elif name == "web_browser":
                     tools["web_browser"] = WebBrowserTool()
                 elif name == "ansible":
