@@ -5,6 +5,51 @@ import re
 
 OUTPUT_RESERVE_CAP = 2000
 
+class CostTracker:
+    """Tracks token usage and estimates costs for LLM API calls."""
+    def __init__(self):
+        self.total_cost = 0.0
+        self.usage_by_model = {}
+        # Example rates per 1M tokens (input, output)
+        self.rates = {
+            "gpt-4": (30.0, 60.0),
+            "gpt-3.5-turbo": (0.50, 1.50),
+            "claude-3-opus": (15.0, 75.0),
+            "claude-3-sonnet": (3.0, 15.0),
+            "claude-3-haiku": (0.25, 1.25),
+        }
+
+    def record_usage(self, model: str, prompt_tokens: int, completion_tokens: int):
+        if model not in self.usage_by_model:
+            self.usage_by_model[model] = {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "estimated_cost": 0.0
+            }
+
+        self.usage_by_model[model]["prompt_tokens"] += prompt_tokens
+        self.usage_by_model[model]["completion_tokens"] += completion_tokens
+        self.usage_by_model[model]["total_tokens"] += (prompt_tokens + completion_tokens)
+
+        cost = self._estimate_cost(model, prompt_tokens, completion_tokens)
+        self.usage_by_model[model]["estimated_cost"] += cost
+        self.total_cost += cost
+
+    def _estimate_cost(self, model: str, prompt_tokens: int, completion_tokens: int) -> float:
+        # Default fallback to $1.0 input / $2.0 output per 1M if not found
+        input_rate, output_rate = self.rates.get(model, (1.0, 2.0))
+        return (prompt_tokens / 1_000_000) * input_rate + (completion_tokens / 1_000_000) * output_rate
+
+    def get_summary(self):
+        return {
+            "total_cost": self.total_cost,
+            "usage_by_model": self.usage_by_model
+        }
+
+
+global_cost_tracker = CostTracker()
+
 def clamp_output_tokens(requested_max_tokens: int | None) -> int:
     """Clamps pre-flight output token estimation to prevent bogus rate limit exclusions."""
     requested = requested_max_tokens if (requested_max_tokens is not None and requested_max_tokens > 0) else 1000
@@ -101,6 +146,13 @@ class ExternalLLMClient:
             ) as response:
                 response.raise_for_status()
                 response_json = await response.json()
+
+            usage = response_json.get("usage", {})
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+
+            if prompt_tokens > 0 or completion_tokens > 0:
+                global_cost_tracker.record_usage(self.model, prompt_tokens, completion_tokens)
 
             content = response_json.get("choices", [{}])[0].get("message", {}).get("content", "")
             # DwarfStar (ds4) might include <think> blocks in the content depending on the model/mode.
