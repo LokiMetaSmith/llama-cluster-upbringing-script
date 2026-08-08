@@ -269,39 +269,12 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
                 elif name == "term_everything":
                     tools["term_everything"] = TermEverythingTool(app_image_path="/opt/mcp/termeverything.AppImage")
                 elif name == "rag":
-                    # RAG Tool has specific local dependencies (memory)
-                    # Allow configurability for base_dir, but default to secure app dir
-                    rag_base_dir = config.get("rag_base_dir", "/opt/pipecatapp")
-                    rag_allowed_root = config.get("rag_allowed_root", rag_base_dir)
-
-                    # Optional RAG Pruning
-                    pruner = None
-                    pruner_model = config.get("rag_pruner_model")
-                    if pruner_model:
-                        # Use the same base URL as the router if not specified
-                        # We try to find a sensible base_url for the pruner
-                        pruner_base_url = config.get("rag_pruner_base_url")
-                        if not pruner_base_url:
-                            # Attempt to infer from other config or env
-                            pruner_base_url = os.getenv("LLAMA_API_BASE_URL") or config.get("llama_api_url")
-
-                        pruner_api_key = config.get("rag_pruner_api_key") or os.getenv("GROQ_API_KEY") or os.getenv("OPENAI_API_KEY") or "dummy"
-
-                        if pruner_base_url and pruner_model:
-                            llm_client = ExternalLLMClient(
-                                base_url=pruner_base_url,
-                                api_key=pruner_api_key,
-                                model=pruner_model
-                            )
-                            pruner = RAGPruner(llm_client=llm_client)
-
-                    tools["rag"] = RAG_Tool(
-                        pmm_memory=twin_service.long_term_memory if twin_service else None,
-                        base_dir=rag_base_dir,
-                        allowed_root=rag_allowed_root,
-                        pruner=pruner,
-                        pruning_threshold=config.get("rag_pruning_threshold", 4),
-                        keep_top_k=config.get("rag_keep_top_k", 3)
+                    tools["rag"] = MCPClientAdapter(
+                        name="rag",
+                        server_command="python3",
+                        server_args=["-m", "pipecatapp.servers.rag_server"],
+                        description="Retrieves information from a project-specific knowledge base.",
+                        twin_service=twin_service
                     )
                 elif name == "ha":
                     tools["ha"] = HA_Tool(
