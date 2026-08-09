@@ -20,7 +20,7 @@ class HolographicMemoryTool:
         "properties": {
             "action": {
                 "type": "string",
-                "description": "The action to perform: 'save', 'recall', or 'freeze'."
+                "description": "The action to perform: 'save', 'recall', 'freeze', or 'search'."
             },
             "matrix_name": {
                 "type": "string",
@@ -35,7 +35,7 @@ class HolographicMemoryTool:
                 "description": "A brief description of what this structural memory solves."
             }
         },
-        "required": ["action", "matrix_name"]
+        "required": ["action"]
     }
 
     def __init__(self, memory_dir: str = "holographic_memory"):
@@ -48,8 +48,29 @@ class HolographicMemoryTool:
         # Only allow alphanumeric characters, dashes, and underscores
         return re.sub(r'[^a-zA-Z0-9_-]', '', name)
 
-    def run(self, action: str, matrix_name: str, matrix_data: Optional[dict] = None, context_description: Optional[str] = None) -> Any:
+    def run(self, action: str, matrix_name: str = "", matrix_data: Optional[dict] = None, context_description: Optional[str] = None) -> Any:
         try:
+            if action == "search":
+                if not context_description:
+                    return "Error: 'context_description' is required as the query for the 'search' action."
+
+                results = []
+                query = context_description.lower()
+                for filename in os.listdir(self.memory_dir):
+                    if filename.endswith(".json"):
+                        with open(os.path.join(self.memory_dir, filename), "r") as mf:
+                            try:
+                                data = json.load(mf)
+                                desc = data.get("context_description", "").lower()
+                                if query in desc or desc in query:
+                                    results.append(data.get("matrix_name"))
+                            except json.JSONDecodeError:
+                                continue
+
+                if not results:
+                    return f"No holographic memory found matching query '{context_description}'."
+                return f"Found {len(results)} matching memories: {', '.join(results)}"
+
             safe_name = self._sanitize_name(matrix_name)
             if not safe_name:
                 return "Error: Invalid matrix_name provided."

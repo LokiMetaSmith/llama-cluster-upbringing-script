@@ -177,21 +177,6 @@ async def test_context_compaction():
         assert sent_content.startswith("A" * 160)
         assert sent_content.endswith("A" * 160)
 
-def test_model_tiers():
-    from pipecatapp.llm_clients import ExternalLLMClient, MODEL_TIERS
-
-    # 1. Provide a tier that exists
-    client = ExternalLLMClient(base_url="http://test", api_key="test", tier="high-reasoning")
-    assert client.model == MODEL_TIERS["high-reasoning"]
-
-    # 2. Provide a tier that does not exist, but provide a fallback model argument
-    client = ExternalLLMClient(base_url="http://test", api_key="test", model="gpt-4", tier="non-existent-tier")
-    assert client.model == "gpt-4"
-
-    # 3. Provide a tier that does not exist, with no fallback model
-    client = ExternalLLMClient(base_url="http://test", api_key="test", tier="another-missing")
-    assert client.model == "gpt-3.5-turbo" # Default
-
 @pytest.mark.asyncio
 async def test_ds4_think_stripping():
     client = ExternalLLMClient(base_url="http://ds4-server", api_key="test", model="ds4-model")

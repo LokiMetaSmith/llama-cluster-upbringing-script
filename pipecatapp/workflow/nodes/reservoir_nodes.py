@@ -118,3 +118,48 @@ class ReservoirBenchmarkNode(Node):
         logger.info(f"ReservoirBenchmarkNode Results: Score {benchmark_results['overall_score']}, Passed: {benchmark_results['passed']}")
 
         self.set_output(context, "benchmark_results", benchmark_results)
+
+
+@registry.register
+class HolographicRouterNode(Node):
+    """
+    Emulates routing a user query through a pre-optimized structural memory matrix.
+    Uses the "branched flow" pattern to deterministically select the correct expert/pathway.
+    """
+
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.expected_inputs = ["user_query", "recalled_matrix"]
+        self.expected_outputs = ["selected_expert"]
+
+    async def execute(self, context: WorkflowContext) -> None:
+        user_query = self.get_input(context, "user_query")
+        recalled_matrix = self.get_input(context, "recalled_matrix")
+
+        if not user_query or not recalled_matrix:
+            raise ValueError("HolographicRouterNode requires 'user_query' and 'recalled_matrix'.")
+
+        logger.info("HolographicRouterNode: Propagating query through structurally encoded branched flow.")
+
+        # Emulate the physical routing process
+        # A matrix with high correlation length (well-optimized) routes cleanly.
+        # A scattered matrix might route unpredictably.
+
+        matrix_data = recalled_matrix.get("matrix_data", {})
+        substrate_state = matrix_data.get("substrate_state", "scattered")
+        desc = recalled_matrix.get("context_description", "").lower()
+
+        # In a real MoE emulation, the branches would collapse to a vector corresponding to an expert.
+        # We mock this by scanning the description for known expert types if the matrix is focused.
+        selected_expert = "general_fallback"
+
+        if substrate_state == "focused":
+            if "python" in desc or "code" in desc:
+                selected_expert = "coding_expert"
+            elif "math" in desc:
+                selected_expert = "math_expert"
+            else:
+                selected_expert = "specialized_expert"
+
+        logger.info(f"HolographicRouterNode: Signal collimated to '{selected_expert}'.")
+        self.set_output(context, "selected_expert", selected_expert)
