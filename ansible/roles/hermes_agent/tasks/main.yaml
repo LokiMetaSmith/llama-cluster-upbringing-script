@@ -4,6 +4,16 @@
   ignore_errors: yes
   changed_when: false
 
+- name: Remove stale git lock files in hermes-agent to prevent git update failures
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - "/home/{{ target_user | default('pipecatapp') }}/.hermes/hermes-agent/.git/HEAD.lock"
+    - "/home/{{ target_user | default('pipecatapp') }}/.hermes/hermes-agent/.git/index.lock"
+  become: yes
+  become_user: "{{ target_user | default('pipecatapp') }}"
+
 - name: Install Hermes Agent
   ansible.builtin.shell:
     cmd: "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --non-interactive --skip-setup"
