@@ -117,3 +117,66 @@ async def test_reservoir_benchmark_node_failing():
     assert results["collimation_efficiency_snr"] == 0 # 0.2 * 100 - 30 penalty = < 0
     assert results["branch_reduction_rate"] == 10.0 # (20-18)/20 * 100
     assert results["passed"] is False
+
+
+from pipecatapp.workflow.nodes.reservoir_nodes import HolographicRouterNode
+
+@pytest.mark.asyncio
+async def test_holographic_router_node_focused():
+    recalled_matrix = {
+        "matrix_name": "python_coder",
+        "context_description": "routes to python expert",
+        "matrix_data": {
+            "substrate_state": "focused"
+        }
+    }
+
+    node_config = {
+        "id": "router_test",
+        "type": "HolographicRouterNode",
+        "inputs": [
+            {"name": "user_query", "global_input": "query"},
+            {"name": "recalled_matrix", "global_input": "matrix"}
+        ]
+    }
+
+    workflow_def = {"nodes": [node_config]}
+    context = WorkflowContext(workflow_def)
+    context.set_global_input("query", "How do I write a loop in python?")
+    context.set_global_input("matrix", recalled_matrix)
+
+    node = HolographicRouterNode(node_config)
+    await node.execute(context)
+
+    expert = context.node_outputs["router_test"]["selected_expert"]
+    assert expert == "coding_expert"
+
+@pytest.mark.asyncio
+async def test_holographic_router_node_scattered():
+    recalled_matrix = {
+        "matrix_name": "messy_memory",
+        "context_description": "routes to math expert",
+        "matrix_data": {
+            "substrate_state": "scattered"
+        }
+    }
+
+    node_config = {
+        "id": "router_test_fail",
+        "type": "HolographicRouterNode",
+        "inputs": [
+            {"name": "user_query", "global_input": "query"},
+            {"name": "recalled_matrix", "global_input": "matrix"}
+        ]
+    }
+
+    workflow_def = {"nodes": [node_config]}
+    context = WorkflowContext(workflow_def)
+    context.set_global_input("query", "What is 2+2?")
+    context.set_global_input("matrix", recalled_matrix)
+
+    node = HolographicRouterNode(node_config)
+    await node.execute(context)
+
+    expert = context.node_outputs["router_test_fail"]["selected_expert"]
+    assert expert == "general_fallback"

@@ -147,5 +147,7 @@ __all__ = [
     "WOLTool",
     "HolographicMemoryTool",
     "WorkspaceTool",
+    "SubstrateVisualizerTool",
 ]
 from .workspace_tool import WorkspaceTool
+from .substrate_visualizer_tool import SubstrateVisualizerTool

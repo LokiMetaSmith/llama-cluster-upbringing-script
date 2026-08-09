@@ -56,3 +56,18 @@ def test_holographic_memory_sanitize(memory_tool):
     # Check file exists and contents with sanitized name
     file_path = os.path.join(memory_tool.memory_dir, "etcpasswd.json")
     assert os.path.exists(file_path)
+
+def test_holographic_memory_search(memory_tool):
+    matrix_data = {"dimensions": [128, 128], "branches": 5}
+    memory_tool.run("save", "test_matrix_1", matrix_data, "routes to python expert")
+    memory_tool.run("save", "test_matrix_2", matrix_data, "routes to math expert")
+
+    result = memory_tool.run("search", context_description="python")
+
+    assert "Found 1 matching memories" in result
+    assert "test_matrix_1" in result
+    assert "test_matrix_2" not in result
+
+def test_holographic_memory_search_not_found(memory_tool):
+    result = memory_tool.run("search", context_description="nonexistent")
+    assert "No holographic memory found" in result

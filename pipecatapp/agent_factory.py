@@ -22,6 +22,8 @@ from pipecatapp.tools.mcp_client_adapter import MCPClientAdapter
 from pipecatapp.tools.prompt_improver_tool import PromptImproverTool
 from pipecatapp.tools.council_tool import CouncilTool
 from pipecatapp.tools.swarm_tool import SwarmTool
+from pipecatapp.tools.holographic_memory_tool import HolographicMemoryTool
+from pipecatapp.tools.substrate_visualizer_tool import SubstrateVisualizerTool
 from pipecatapp.tools.project_mapper_tool import ProjectMapperTool
 from pipecatapp.tools.planner_tool import PlannerTool
 from pipecatapp.tools.file_editor_tool import FileEditorTool
@@ -116,6 +118,8 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         "smol_agent_computer": SmolAgentTool(),
         "llxprt_code": LLxprt_Code_Tool(),
         "final_answer": FinalAnswerTool(),
+        "holographic_memory": HolographicMemoryTool(),
+        "substrate_visualizer": SubstrateVisualizerTool(),
         "shell": MCPClientAdapter(
             name="shell",
             server_command="python3",
