@@ -1,5 +1,5 @@
 import pytest
-from pipecatapp.workflow.nodes.reservoir_nodes import ReservoirSubstrateNode
+from pipecatapp.workflow.nodes.reservoir_nodes import ReservoirSubstrateNode, ReservoirBenchmarkNode
 from pipecatapp.workflow.context import WorkflowContext
 
 @pytest.mark.asyncio
@@ -55,9 +55,6 @@ async def test_reservoir_substrate_node_with_hdl():
     activation_matrix = context.node_outputs["reservoir_test"]["activation_matrix"]
     assert activation_matrix["correlation_length"] == 0.8
     assert activation_matrix["substrate_state"] == "focused"
-
-
-from pipecatapp.workflow.nodes.reservoir_nodes import ReservoirBenchmarkNode
 
 @pytest.mark.asyncio
 async def test_reservoir_benchmark_node_passing():
