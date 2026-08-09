@@ -53,3 +53,68 @@ class ReservoirSubstrateNode(Node):
 
         self.set_output(context, "activation_matrix", activation_matrix)
         self.set_output(context, "collimated_output", collimated_output)
+
+@registry.register
+class ReservoirBenchmarkNode(Node):
+    """
+    Benchmarks the quality and efficiency of a generated activation matrix.
+    Evaluates collimation efficiency, branch reduction, memory capacity, and energy cost.
+    Useful for iterative optimization loops where the agent refines HDL modulation.
+    """
+
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.expected_inputs = ["activation_matrix"]
+        self.expected_outputs = ["benchmark_results"]
+
+    async def execute(self, context: WorkflowContext) -> None:
+        activation_matrix = self.get_input(context, "activation_matrix")
+
+        if not activation_matrix:
+            raise ValueError("ReservoirBenchmarkNode requires an 'activation_matrix' input.")
+
+        logger.info(f"ReservoirBenchmarkNode: Evaluating matrix with {activation_matrix.get('branches', 0)} branches.")
+
+        # Calculate simulated physical metrics based on the matrix state
+        correlation_length = activation_matrix.get("correlation_length", 0.5)
+        branches = activation_matrix.get("branches", 15)
+        substrate_state = activation_matrix.get("substrate_state", "scattered")
+
+        # Collimation Efficiency / Signal-to-Noise Ratio (SNR)
+        # Higher correlation length generally leads to better focusing.
+        base_collimation = correlation_length * 100
+        snr_penalty = 0 if substrate_state == "focused" else 30
+        collimation_efficiency = max(0, min(100, base_collimation - snr_penalty))
+
+        # Branch Reduction Rate
+        # Fewer branches means a more streamlined, high-intensity pathway.
+        # Assume a baseline of 20 branches for a totally unoptimized state.
+        branch_reduction_rate = max(0, min(100, ((20 - branches) / 20) * 100))
+
+        # Memory Capacity (MC)
+        # A standard reservoir metric; assume standard matrix size gives base capacity,
+        # tuned slightly by correlation length.
+        dims = activation_matrix.get("dimensions", [128, 128])
+        memory_capacity = (dims[0] * dims[1]) / 1000 * correlation_length
+
+        # Modulation Energy Cost
+        # Penalizes overly complex instructions. High correlation length implies more
+        # "force" applied to the medium.
+        energy_cost = correlation_length * 50
+
+        # Calculate an overall composite score (0-100)
+        overall_score = (collimation_efficiency * 0.5) + (branch_reduction_rate * 0.3) - (energy_cost * 0.1)
+        overall_score = max(0, min(100, overall_score))
+
+        benchmark_results = {
+            "collimation_efficiency_snr": round(collimation_efficiency, 2),
+            "branch_reduction_rate": round(branch_reduction_rate, 2),
+            "memory_capacity": round(memory_capacity, 2),
+            "modulation_energy_cost": round(energy_cost, 2),
+            "overall_score": round(overall_score, 2),
+            "passed": overall_score > 60.0 # Agent can use this boolean for fast logic routing
+        }
+
+        logger.info(f"ReservoirBenchmarkNode Results: Score {benchmark_results['overall_score']}, Passed: {benchmark_results['passed']}")
+
+        self.set_output(context, "benchmark_results", benchmark_results)

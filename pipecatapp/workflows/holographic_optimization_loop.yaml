@@ -1,0 +1,73 @@
+name: "Holographic Optimization Loop"
+description: "An actor-critic workflow where the agent dynamically generates Morpho HDL, simulates the physical substrate, benchmarks the resulting activation matrix, and recursively optimizes until a quality threshold is met before saving."
+global_mission: "Optimize the correlation length of an emulated optical medium to achieve high collimation efficiency, then save the structural memory."
+
+nodes:
+  - id: "input"
+    type: "InputNode"
+    position: { x: 100, y: 100 }
+    config:
+      outputs:
+        - name: "problem_context"
+          description: "The problem context that requires continuous tuning to solve."
+
+  - id: "hdl_generator_actor"
+    type: "SimpleLLMNode"
+    position: { x: 400, y: 100 }
+    inputs:
+      - name: "prompt"
+        value: "Analyze the input problem and generate Morpho HDL to tune the correlation length and minimize chaotic branching in the optical substrate. Output ONLY the HDL string."
+      - name: "context"
+        connection: { from_node: "input", from_output: "problem_context" }
+      - name: "previous_feedback"
+        connection: { from_node: "evaluator_critic", from_output: "feedback", optional: true }
+    config:
+      system_prompt: "You are the AGI modulating a continuous physical substrate. If you receive previous feedback indicating low collimation or high branching, adjust your HDL to increase correlation length and focus the signal."
+
+  - id: "reservoir_simulation"
+    type: "ReservoirSubstrateNode"
+    position: { x: 700, y: 100 }
+    inputs:
+      - name: "input_signal"
+        connection: { from_node: "input", from_output: "problem_context" }
+      - name: "hdl_modulation"
+        connection: { from_node: "hdl_generator_actor", from_output: "result" }
+
+  - id: "reservoir_benchmark"
+    type: "ReservoirBenchmarkNode"
+    position: { x: 1000, y: 100 }
+    inputs:
+      - name: "activation_matrix"
+        connection: { from_node: "reservoir_simulation", from_output: "activation_matrix" }
+
+  - id: "evaluator_critic"
+    type: "DynamicSupervisorNode"
+    position: { x: 1300, y: 100 }
+    inputs:
+      - name: "execution_result"
+        connection: { from_node: "reservoir_benchmark", from_output: "benchmark_results" }
+    config:
+      system_prompt: "Review the benchmark_results. If 'passed' is true (score > 60), output PASS. If not, output FAIL with feedback on whether collimation is too low or branching is too high."
+      pass_route: "memory_saver"
+      escalate_route: "hdl_generator_actor" # Loop back for refinement
+
+  - id: "memory_saver"
+    type: "ToolExecutorNode"
+    position: { x: 1600, y: 300 }
+    inputs:
+      - name: "instruction"
+        value: "The matrix passed optimization. Save the generated activation matrix using the holographic_memory tool."
+      - name: "matrix_data"
+        connection: { from_node: "reservoir_simulation", from_output: "activation_matrix" }
+      - name: "collimated_output"
+        connection: { from_node: "reservoir_simulation", from_output: "collimated_output" }
+    config:
+      autonomous_tools: ["holographic_memory"]
+      system_prompt: "Save the highly optimized matrix_data using the holographic_memory tool with action 'save'."
+
+  - id: "output"
+    type: "OutputNode"
+    position: { x: 1900, y: 300 }
+    inputs:
+      - name: "final_result"
+        connection: { from_node: "memory_saver", from_output: "result" }
