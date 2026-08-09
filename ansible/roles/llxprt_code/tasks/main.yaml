@@ -63,7 +63,7 @@
     dest: "{{ llxprt_code_dir }}/.env"
 
 - name: Remove existing MCP server from llxprt-code
-  ansible.builtin.command: npx llxprt mcp remove tool-server
+  ansible.builtin.command: sh ./packages/cli/bin/llxprt mcp remove tool-server
   args:
     chdir: "{{ llxprt_code_dir }}"
   ignore_errors: true
@@ -72,8 +72,8 @@
 - name: Add MCP server to llxprt-code
   ansible.builtin.command:
     argv:
-      - npx
-      - llxprt
+      - sh
+      - ./packages/cli/bin/llxprt
       - mcp
       - add
       - tool-server
