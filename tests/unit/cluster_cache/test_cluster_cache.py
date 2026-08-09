@@ -64,3 +64,41 @@ def test_node_expiration(monkeypatch):
     assert response.status_code == 200
     assert test_ip not in response.json()["nodes"]
     assert response.json() == {"nodes": []}
+
+def test_cleanup_expired_nodes_direct(monkeypatch):
+    """Directly test cleanup_expired_nodes to ensure correct handling of mixed nodes."""
+    # Setup mock active_nodes
+    # Assuming NODE_TTL is 300 seconds
+    original_time = time.time()
+    active_nodes["unexpired_1"] = original_time - 100
+    active_nodes["unexpired_2"] = original_time - 299
+    active_nodes["expired_1"] = original_time - 301
+    active_nodes["expired_2"] = original_time - 500
+
+    # Mock time.time to return original_time in the app module where it's used
+    monkeypatch.setattr('cluster_cache.app.time.time', lambda: original_time)
+
+    # Call function
+    cleanup_expired_nodes()
+
+    # Assertions
+    assert "unexpired_1" in active_nodes
+    assert "unexpired_2" in active_nodes
+    assert "expired_1" not in active_nodes
+    assert "expired_2" not in active_nodes
+    assert len(active_nodes) == 2
+
+def test_cleanup_expired_nodes_none_expired(monkeypatch):
+    """Directly test cleanup_expired_nodes when no nodes are expired."""
+    original_time = time.time()
+    active_nodes["unexpired_1"] = original_time - 10
+    active_nodes["unexpired_2"] = original_time - 200
+
+    # Mock time.time to return original_time in the app module where it's used
+    monkeypatch.setattr('cluster_cache.app.time.time', lambda: original_time)
+
+    cleanup_expired_nodes()
+
+    assert "unexpired_1" in active_nodes
+    assert "unexpired_2" in active_nodes
+    assert len(active_nodes) == 2
