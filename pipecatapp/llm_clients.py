@@ -5,6 +5,13 @@ import re
 
 OUTPUT_RESERVE_CAP = 2000
 
+# Global configuration for Model Tiers (Meta-Harness Pattern - Cost Lever #1)
+MODEL_TIERS = {
+    "high-reasoning": "gpt-4",
+    "fast-worker": "gpt-3.5-turbo",
+    "cheap-fallback": "claude-3-haiku"
+}
+
 class CostTracker:
     """Tracks token usage and estimates costs for LLM API calls."""
     def __init__(self):
@@ -73,21 +80,33 @@ class ExternalLLMClient:
         enable_dynamic_routing (bool, optional): If true, routes simple/short prompts to fallback_model automatically.
     """
 
-    def __init__(self, base_url: str, api_key: str, model: str, budget_limit: float | None = None, fallback_model: str | None = None, max_prompt_tokens: int | None = None, enable_dynamic_routing: bool = False):
+    def __init__(self, base_url: str, api_key: str, model: str | None = None, budget_limit: float | None = None, fallback_model: str | None = None, max_prompt_tokens: int | None = None, enable_dynamic_routing: bool = False, tier: str | None = None):
         """Initializes the ExternalLLMClient.
 
         Args:
             base_url (str): The base URL for the API endpoint.
             api_key (str): The API key for authentication.
-            model (str): The name of the model to be used.
+            model (str, optional): The name of the model to be used.
             budget_limit (float, optional): Optional maximum budget limit.
             fallback_model (str, optional): Optional model to downshift to if budget is exceeded.
             max_prompt_tokens (int, optional): Threshold for context compaction.
             enable_dynamic_routing (bool, optional): Enables task-level routing.
+            tier (str, optional): The capability tier of the model to resolve to. Overrides `model`.
         """
         self.base_url = base_url
         self.api_key = api_key
+
         self.model = model
+        if tier:
+            if tier in MODEL_TIERS:
+                self.model = MODEL_TIERS[tier]
+                logging.info(f"Resolved tier '{tier}' to model '{self.model}'")
+            else:
+                logging.warning(f"Tier '{tier}' not found in MODEL_TIERS configuration. Falling back to default model.")
+                self.model = model or "gpt-3.5-turbo"
+        elif not model:
+            self.model = "gpt-3.5-turbo" # Safe default if neither provided
+
         self.budget_limit = budget_limit
         self.fallback_model = fallback_model
         self.max_prompt_tokens = max_prompt_tokens
