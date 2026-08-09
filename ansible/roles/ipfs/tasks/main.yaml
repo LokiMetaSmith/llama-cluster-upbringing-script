@@ -61,7 +61,7 @@
     group: root
   loop: "{{ groups['all'] | default([inventory_hostname]) }}"
   become: yes
-  when: inventory_hostname in groups['controller_nodes']
+  when: inventory_hostname in groups.get('controller_nodes', [])
 
 - name: Ensure local IPFS data directory exists
   ansible.builtin.file:
