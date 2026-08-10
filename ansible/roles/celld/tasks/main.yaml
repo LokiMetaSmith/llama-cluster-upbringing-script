@@ -1,3 +1,12 @@
+- name: Check if Nomad CLI cert exists
+  ansible.builtin.stat:
+    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
+  register: nomad_cli_cert_stat
+
+- name: Set nomad_protocol fact
+  ansible.builtin.set_fact:
+    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
+
 - name: Deploy MinIO Nomad Job
   template:
     src: minio.nomad.j2
@@ -8,9 +17,12 @@
   when: celld_enabled | default(false)
 
 - name: Run MinIO Nomad Job
-  command: nomad job run /opt/nomad/jobs/minio.nomad
+  command: /usr/local/bin/nomad job run /opt/nomad/jobs/minio.nomad
   environment:
-    NOMAD_ADDR: "http://127.0.0.1:4646"
+    NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
   register: minio_nomad_output
   changed_when: "'No changes detected' not in minio_nomad_output.stdout"
   when: celld_enabled | default(false)
@@ -25,9 +37,12 @@
   when: celld_enabled | default(false)
 
 - name: Run Celld Nomad Job
-  command: nomad job run /opt/nomad/jobs/celld.nomad
+  command: /usr/local/bin/nomad job run /opt/nomad/jobs/celld.nomad
   environment:
-    NOMAD_ADDR: "http://127.0.0.1:4646"
+    NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
   register: celld_nomad_output
   changed_when: "'No changes detected' not in celld_nomad_output.stdout"
   when: celld_enabled | default(false)
