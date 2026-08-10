@@ -17,7 +17,7 @@
   when: celld_enabled | default(false)
 
 - name: Run MinIO Nomad Job
-  command: /usr/local/bin/nomad job run /opt/nomad/jobs/minio.nomad
+  command: /usr/local/bin/nomad job run -detach /opt/nomad/jobs/minio.nomad
   environment:
     NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -37,7 +37,7 @@
   when: celld_enabled | default(false)
 
 - name: Run Celld Nomad Job
-  command: /usr/local/bin/nomad job run /opt/nomad/jobs/celld.nomad
+  command: /usr/local/bin/nomad job run -detach /opt/nomad/jobs/celld.nomad
   environment:
     NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
     NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
