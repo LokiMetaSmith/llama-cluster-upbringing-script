@@ -89,6 +89,11 @@ client {
     read_only = true
   }
 
+  host_volume "unified_fs" {
+    path      = "/opt/unified_fs_backend"
+    read_only = false
+  }
+
   host_volume "mqtt-data" {
     path      = "{{ nomad_volumes_dir }}/mqtt-data"
     read_only = false
