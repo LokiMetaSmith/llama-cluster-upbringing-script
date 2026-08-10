@@ -1211,7 +1211,7 @@ class TwinService(FrameProcessor):
         self.consul_http_addr = format_url("http", self.app_config.get('consul_host', os.getenv('CLUSTER_IP', '127.0.0.1')), self.app_config.get('consul_port', 8500))
 
         # Initialize tools via factory
-        self.tools = create_tools(self.app_config, twin_service=self, runner=self.runner)
+        self.tools = create_tools(self.app_config, twin_service=self, runner=self.runner, agent_name="main_app")
         # Add vision detector explicitly as it is a special case (frame processor)
         self.tools["vision"] = self.vision_detector
 

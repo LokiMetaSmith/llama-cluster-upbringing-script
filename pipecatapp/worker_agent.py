@@ -421,7 +421,7 @@ Respond in exactly this JSON format:
             except Exception as e:
                 logger.error(f"Failed to report worker_started event: {e}")
 
-        self.tools = create_tools()
+        self.tools = create_tools(agent_name="worker_agent")
         self.tools["submit_solution"] = SubmitSolutionTool()
         logger.info(f"Initialized tools: {list(self.tools.keys())}")
 

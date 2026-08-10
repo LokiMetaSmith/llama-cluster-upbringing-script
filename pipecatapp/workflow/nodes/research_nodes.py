@@ -239,7 +239,7 @@ class RunToolsNode(BaseResearchNode):
         tool_requests = inputs.get("tool_requests", [])
         session_id = inputs.get("session_id", "unknown_session")
 
-        tools = create_tools()
+        tools = create_tools(agent_name="research_node")
         results = []
 
         for req in tool_requests:

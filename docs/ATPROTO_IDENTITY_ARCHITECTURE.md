@@ -34,7 +34,7 @@ Because our agents run on a local cluster that may operate offline or experience
 
 ## Implementation Status
 
-1. **Identity Mapping (In Progress)**: Core mapping is configured in the `ATProtoTool` initialization block, but dynamic role-based routing (e.g., Consul KV integration per agent) can be expanded.
-2. **Sync Buffer Module (Completed)**: The `PdsSyncBuffer` module is implemented in `pipecatapp/tools/atproto_sync/sync_buffer.py`. It uses a SQLite backend to queue ATProto intents locally.
+1. **Identity Mapping (Completed)**: Core mapping is configured dynamically in `pipecatapp/agent_factory.py`. It utilizes an `agent_name` parameter to fetch specific identities from the agent configuration, falling back to a global default.
+2. **Sync Buffer Module (Completed)**: The `PdsSyncBuffer` module is implemented in `pipecatapp/tools/atproto_sync/sync_buffer.py`. It uses a SQLite backend (dynamically named per agent identity to avoid cross-talk) to queue ATProto intents locally.
 3. **Background Sync Worker (Completed)**: The `SyncWorker` is implemented in `pipecatapp/tools/atproto_sync/sync_worker.py` as an asyncio background loop that periodically flushes the queue to the remote PDS.
 4. **Tool and Prompt Updates (Completed)**: `ATProtoTool` has been updated to use the sync buffer natively. The `router.txt` prompt has been updated with explicit boundary rules preventing internal state from leaking to public broadcasts.
