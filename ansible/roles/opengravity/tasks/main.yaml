@@ -22,7 +22,7 @@
 
 - name: Sync OpenGravity files to build context
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../../pipecatapp/ui/opengravity/"
+    src: "{{ playbook_dir }}/../pipecatapp/ui/opengravity/"
     dest: "/opt/opengravity-build/"
     mode: '0644'
     directory_mode: '0755'
@@ -45,7 +45,7 @@
     image_tag: "local"
     build_dir: "/opt/opengravity-build"
   ansible.builtin.include_tasks:
-    file: "../../tasks/build_cached_image.yaml"
+    file: "../tasks/build_cached_image.yaml"
 
 - name: Export opengravity image to tarball
   ansible.builtin.command: docker save -o /opt/opengravity.tar opengravity:local

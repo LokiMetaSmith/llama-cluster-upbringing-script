@@ -29,7 +29,7 @@
     - name: Run Consul Unit Tests
       ansible.builtin.command:
         cmd: "{{ ansible_playbook_python }} -m unittest tests.unit.test_infrastructure.TestInfrastructure.test_consul_running"
-        chdir: "{{ playbook_dir }}/../../"
+        chdir: "{{ playbook_dir }}/../"
       changed_when: false
       tags:
         - consul_test

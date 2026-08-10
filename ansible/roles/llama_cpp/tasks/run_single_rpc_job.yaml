@@ -17,7 +17,7 @@
 
 - name: Template rpc job for {{ model_item.filename }}
   ansible.builtin.template:
-    src: ../../jobs/llamacpp-rpc.nomad.j2
+    src: ../jobs/llamacpp-rpc.nomad.j2
     dest: "/tmp/rpc-{{ model_item.filename | regex_replace('[^a-zA-Z0-9-]', '-') }}.nomad"
     mode: '0644'
   vars:

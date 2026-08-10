@@ -161,7 +161,7 @@
 
     - name: "Expert {{ expert_name }} : Analyze allocations"
       ansible.builtin.command:
-        cmd: "python3 {{ playbook_dir }}/../../scripts/analyze_nomad_allocs.py /tmp/expert_{{ expert_name }}_allocs.json"
+        cmd: "python3 {{ playbook_dir }}/../scripts/analyze_nomad_allocs.py /tmp/expert_{{ expert_name }}_allocs.json"
       register: expert_allocs_analysis
       changed_when: false
       failed_when: false

@@ -17,7 +17,7 @@
     name: last30days-service
     tag: local
     build:
-      path: "{{ role_path }}/../../../last30days_service"
+      path: "{{ role_path }}/../../last30days_service"
       nocache: true
     source: build
     force_source: true

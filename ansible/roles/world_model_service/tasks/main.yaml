@@ -41,7 +41,7 @@
   tags:
     - world_model_service
   ansible.builtin.include_tasks:
-    file: "../../tasks/build_cached_image.yaml"
+    file: "../tasks/build_cached_image.yaml"
   vars:
     build_dir: "/opt/world_model_service"
     image_name: "world-model-service"
@@ -246,7 +246,7 @@
   tags:
     - world_model_service
   ansible.builtin.template:
-    src: "../../jobs/llamacpp-batch.nomad.j2"
+    src: "../jobs/llamacpp-batch.nomad.j2"
     dest: "{{ nomad_jobs_dir }}/llamacpp-batch.nomad"
     owner: "root"
     group: "root"

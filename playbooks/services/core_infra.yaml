@@ -23,7 +23,7 @@
       tags:
         - sync
       ansible.posix.synchronize:
-        src: "{{ playbook_dir }}/../../"
+        src: "{{ playbook_dir }}/../"
         dest: /opt/cluster-infra/
         rsync_opts:
           - "--exclude=.git"
@@ -37,7 +37,7 @@
       tags:
         - sync
       ansible.posix.synchronize:
-        src: "{{ playbook_dir }}/../../"
+        src: "{{ playbook_dir }}/../"
         dest: /opt/cluster-infra/
         rsync_opts:
           - "--exclude=.git"
