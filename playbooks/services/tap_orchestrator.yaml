@@ -1,5 +1,7 @@
 - hosts: controller_nodes
   gather_facts: yes
   become: yes
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/all.yaml"
   roles:
     - tap_orchestrator

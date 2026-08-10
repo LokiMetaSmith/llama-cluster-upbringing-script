@@ -22,7 +22,7 @@
 
 - name: Sync OpenGravity files to build context
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../pipecatapp/ui/opengravity/"
+    src: "{{ project_root }}/pipecatapp/ui/opengravity/"
     dest: "/opt/opengravity-build/"
     mode: '0644'
     directory_mode: '0755'

@@ -232,7 +232,7 @@
 
 - name: Deploy OS Recovery tool to target host
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../scripts/recover_os.py"
+    src: "{{ project_root }}/scripts/recover_os.py"
     dest: "/opt/cluster-infra/scripts/recover_os.py"
     mode: '0755'
   become: yes

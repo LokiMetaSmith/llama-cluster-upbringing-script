@@ -14,7 +14,7 @@
 
     - name: "Expert {{ expert_name }} : Synchronize pipecatapp source"
       ansible.posix.synchronize:
-        src: "{{ inventory_dir }}/pipecatapp/"
+        src: "{{ project_root }}/pipecatapp/"
         dest: "{{ pipecat_app_mount_source }}/"
         rsync_opts:
           - "--exclude=.git"
@@ -32,7 +32,7 @@
       block:
         - name: "Expert {{ expert_name }} : Build {{ pipecat_image_name }} Docker image"
           ansible.builtin.include_tasks:
-            file: "{{ inventory_dir }}/ansible/tasks/build_pipecatapp_image.yaml"
+            file: "{{ project_root }}/ansible/tasks/build_pipecatapp_image.yaml"
           vars:
             pipecat_build_dir: "{{ pipecat_app_mount_source }}"
 
@@ -49,7 +49,7 @@
 
     - name: "Expert {{ expert_name }} : Ensure startup script exists (Dev Mode fallback)"
       ansible.builtin.template:
-        src: "{{ inventory_dir }}/ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2"
+        src: "{{ project_root }}/ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2"
         dest: "{{ pipecat_app_mount_source }}/start_pipecat.sh"
         mode: '0755'
 
@@ -161,7 +161,7 @@
 
     - name: "Expert {{ expert_name }} : Analyze allocations"
       ansible.builtin.command:
-        cmd: "python3 {{ playbook_dir }}/../scripts/analyze_nomad_allocs.py /tmp/expert_{{ expert_name }}_allocs.json"
+        cmd: "python3 {{ project_root }}/scripts/analyze_nomad_allocs.py /tmp/expert_{{ expert_name }}_allocs.json"
       register: expert_allocs_analysis
       changed_when: false
       failed_when: false

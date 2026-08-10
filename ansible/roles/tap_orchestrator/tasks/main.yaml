@@ -40,7 +40,7 @@
 
 - name: Copy Tap Orchestrator python source files
   ansible.builtin.copy:
-    src: "{{ inventory_dir }}/services/tap_orchestrator/"
+    src: "{{ project_root }}/services/tap_orchestrator/"
     dest: "/opt/tap_orchestrator/"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
