@@ -32,9 +32,9 @@ Because our agents run on a local cluster that may operate offline or experience
 - **Sync Buffer Mechanism**: We will implement a local, persistent queue (e.g., a SQLite-backed buffer or a durable Nomad task) that caches intended ATProto actions.
 - **Eventual Consistency**: Once network connectivity to the PDS is restored, a background synchronization process will flush the queued posts to the remote server, ensuring eventual consistency without blocking the agent's real-time execution loop.
 
-## Implementation Plan (Proposed)
+## Implementation Status
 
-1. **Identity Mapping**: Create a configuration (e.g., YAML or Consul KV) that maps each internal agent personality/role to a specific ATProto handle and app password.
-2. **Sync Buffer Module**: Develop a `PdsSyncBuffer` module to intercept calls from the `ATProtoTool`. If the PDS is reachable, it forwards the request; if not, it queues it locally.
-3. **Background Sync Worker**: Deploy a lightweight background task (e.g., via Nomad or a threading loop) that periodically checks the sync buffer and pushes pending records to the PDS when online.
-4. **Tool and Prompt Updates**: Update the `ATProtoTool` to use the sync buffer and update agent system prompts to inject their assigned ATProto handles, emphasizing the strict separation of public broadcast vs. private internal thoughts.
+1. **Identity Mapping (In Progress)**: Core mapping is configured in the `ATProtoTool` initialization block, but dynamic role-based routing (e.g., Consul KV integration per agent) can be expanded.
+2. **Sync Buffer Module (Completed)**: The `PdsSyncBuffer` module is implemented in `pipecatapp/tools/atproto_sync/sync_buffer.py`. It uses a SQLite backend to queue ATProto intents locally.
+3. **Background Sync Worker (Completed)**: The `SyncWorker` is implemented in `pipecatapp/tools/atproto_sync/sync_worker.py` as an asyncio background loop that periodically flushes the queue to the remote PDS.
+4. **Tool and Prompt Updates (Completed)**: `ATProtoTool` has been updated to use the sync buffer natively. The `router.txt` prompt has been updated with explicit boundary rules preventing internal state from leaking to public broadcasts.
