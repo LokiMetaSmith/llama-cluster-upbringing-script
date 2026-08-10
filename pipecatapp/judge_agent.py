@@ -67,7 +67,7 @@ class JudgeAgent:
     def initialize_tools(self):
         """Initializes verification tools."""
         # Judge needs tools to read files, run tests/linters
-        self.tools = create_tools(config={}, twin_service=None, runner=None)
+        self.tools = create_tools(config={}, twin_service=None, runner=None, agent_name="judge_agent")
         # We might restrict tools later, but for now full access is fine for QA
         logger.info(f"Initialized tools: {list(self.tools.keys())}")
 

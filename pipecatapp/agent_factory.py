@@ -94,7 +94,7 @@ REMOTE_SUPPORTED_TOOLS = [
 # Heavy tools that should ideally be offloaded to the Tool Server for microservice de-monolithization
 HEAVY_TOOLS = ["rag", "code_runner", "ansible", "ocr", "wasm", "heretic"]
 
-def create_tools(config: dict, twin_service=None, runner=None) -> dict:
+def create_tools(config: dict = None, twin_service=None, runner=None, agent_name: str = None) -> dict:
     """
     Initializes and returns the dictionary of tools.
 
@@ -102,10 +102,13 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
         config (dict): Configuration dictionary (e.g. from Consul).
         twin_service: Reference to the agent/service using the tools (optional).
         runner: Reference to the pipeline runner (optional).
+        agent_name (str): The name of the agent calling this, for identity mapping (optional).
 
     Returns:
         dict: A dictionary of tool instances.
     """
+    if config is None:
+        config = {}
 
     mode = config.get("tool_execution_mode", "local")
     tool_server_url = config.get("tool_server_url")
@@ -172,8 +175,8 @@ def create_tools(config: dict, twin_service=None, runner=None) -> dict:
             gateway_url=config.get("openclaw_gateway_url", "ws://openclaw.service.consul:18789")
         ),
         "atproto": ATProtoTool(
-            username=config.get("pds_username", ""),
-            password=config.get("pds_password", ""),
+            username=config.get("pds_identities", {}).get(agent_name, config.get("pds_username", "")) if agent_name else config.get("pds_username", ""),
+            password=config.get("pds_passwords", {}).get(agent_name, config.get("pds_password", "")) if agent_name else config.get("pds_password", ""),
             pds_url=config.get("pds_url", "https://pds.local")
         ),
         "scheduler": SchedulerTool(),

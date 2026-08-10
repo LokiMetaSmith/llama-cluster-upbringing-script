@@ -13,7 +13,7 @@ class ATProtoTool:
     Instead of broadcasting directly, actions like send_post are queued to a local sync buffer
     for eventual consistency.
     """
-    def __init__(self, username: str, password: str, pds_url: str = "https://bsky.social", buffer_db_path: str = "atproto_sync_buffer.sqlite"):
+    def __init__(self, username: str, password: str, pds_url: str = "https://bsky.social", buffer_db_path: str = None):
         self.username = username
         self.password = password
         self.pds_url = pds_url
@@ -21,8 +21,12 @@ class ATProtoTool:
         self.name = "atproto"
         self._client = None
 
+        # Isolate the queue per identity so background workers don't cross-post if sharing a filesystem
+        safe_username = "".join([c if c.isalnum() else "_" for c in self.username])
+        actual_db_path = buffer_db_path if buffer_db_path else f"atproto_sync_{safe_username}.sqlite"
+
         # Initialize sync buffer and worker for local-first eventual consistency
-        self.buffer = PdsSyncBuffer(db_path=buffer_db_path)
+        self.buffer = PdsSyncBuffer(db_path=actual_db_path)
         self.worker = SyncWorker(self.buffer, self._get_client, interval_seconds=30)
 
         # We start the worker immediately (or could delay until first action)

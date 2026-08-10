@@ -119,7 +119,7 @@ class TechnicianAgent:
     def initialize_tools(self):
         """Initializes tools using the agent factory."""
         # Technician agent runs standalone, so no twin_service
-        self.tools = create_tools(config={}, twin_service=None, runner=None)
+        self.tools = create_tools(config={}, twin_service=None, runner=None, agent_name="technician_agent")
         logger.info(f"Initialized tools: {list(self.tools.keys())}")
 
     async def report_event(self, kind: str, content: str, meta: Dict[str, Any] = None):
