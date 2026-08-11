@@ -60,7 +60,7 @@
       ansible.builtin.shell:
         cmd: |
           /tmp/jinja2_venv/bin/python {{ project_root }}/render_template.py \
-          {{ project_root }}/ansible/jobs/expert.nomad.j2 \
+          {{ ansible_jobs_dir }}/expert.nomad.j2 \
           {{ playbook_dir }}/tmp/expert-{{ current_expert }}-vars.json \
           > {{ playbook_dir }}/tmp/expert-{{ current_expert }}.nomad
 

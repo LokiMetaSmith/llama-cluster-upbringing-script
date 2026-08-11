@@ -1,7 +1,7 @@
 - hosts: all
   become: yes
   vars_files:
-    - ../../group_vars/all.yaml
+    - "{{ playbook_dir }}/../group_vars/all.yaml"
   roles:
     - role: nanochat
       when: node_tier == 'high' and (enable_nanochat | default(false))
