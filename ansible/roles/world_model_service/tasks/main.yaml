@@ -246,7 +246,7 @@
   tags:
     - world_model_service
   ansible.builtin.template:
-    src: "../jobs/llamacpp-batch.nomad.j2"
+    src: "{{ ansible_jobs_dir }}/llamacpp-batch.nomad.j2"
     dest: "{{ nomad_jobs_dir }}/llamacpp-batch.nomad"
     owner: "root"
     group: "root"

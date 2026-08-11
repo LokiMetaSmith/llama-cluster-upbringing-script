@@ -9,7 +9,7 @@
 
 - name: Template smol-agent-server job
   ansible.builtin.template:
-    src: ../jobs/smol-agent-server.nomad.j2
+    src: "{{ ansible_jobs_dir }}/smol-agent-server.nomad.j2"
     dest: /tmp/smol-agent-server.nomad
     mode: '0644'
 
