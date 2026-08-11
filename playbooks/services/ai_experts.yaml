@@ -105,7 +105,7 @@
 
         - name: Ensure pipecatapp Docker image is built
           ansible.builtin.include_tasks:
-            file: "{{ project_root }}/ansible/tasks/build_pipecatapp_image.yaml"
+            file: "{{ ansible_tasks_dir }}/build_pipecatapp_image.yaml"
           vars:
             pipecat_build_dir: "{{ cluster_infra_dir }}/pipecatapp"
           tags:
@@ -150,7 +150,7 @@
 
         - name: Deploy and run the GPU Provider Pool job for verified models
           include_tasks:
-            file: "{{ project_root }}/ansible/tasks/deploy_model_gpu_provider.yaml"
+            file: "{{ ansible_tasks_dir }}/deploy_model_gpu_provider.yaml"
           loop: "{{ deployment_candidates }}"
           loop_control:
             loop_var: model
@@ -259,7 +259,7 @@
 
         - name: Create Expert Orchestrator job files
           include_tasks:
-            file: "{{ project_root }}/ansible/tasks/create_expert_job.yaml"
+            file: "{{ ansible_tasks_dir }}/create_expert_job.yaml"
           loop: "{{ verified_experts | default([]) }}"
           loop_control:
             loop_var: current_expert
@@ -269,7 +269,7 @@
 
         - name: Deploy the Expert Orchestrator services with debugging
           include_tasks:
-            file: "{{ project_root }}/ansible/tasks/deploy_expert_wrapper.yaml"
+            file: "{{ ansible_tasks_dir }}/deploy_expert_wrapper.yaml"
           vars:
             registry_is_reachable: "{{ global_registry_check.state | default('stopped') == 'started' }}"
           loop: "{{ verified_experts | default([]) }}"

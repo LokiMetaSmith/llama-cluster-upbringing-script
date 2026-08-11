@@ -41,7 +41,7 @@
 
 - name: Build Semantic Router Docker Image (cached)
   ansible.builtin.include_tasks:
-    file: "../tasks/build_cached_image.yaml"
+    file: "{{ ansible_tasks_dir }}/build_cached_image.yaml"
   vars:
     build_dir: "{{ semantic_router_build_dir }}"
     image_name: "{{ _semantic_router_base_image }}"

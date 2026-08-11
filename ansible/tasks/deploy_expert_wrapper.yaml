@@ -32,7 +32,7 @@
       block:
         - name: "Expert {{ expert_name }} : Build {{ pipecat_image_name }} Docker image"
           ansible.builtin.include_tasks:
-            file: "{{ project_root }}/ansible/tasks/build_pipecatapp_image.yaml"
+            file: "{{ ansible_tasks_dir }}/build_pipecatapp_image.yaml"
           vars:
             pipecat_build_dir: "{{ pipecat_app_mount_source }}"
 

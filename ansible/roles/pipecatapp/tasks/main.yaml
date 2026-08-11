@@ -1050,7 +1050,7 @@
 
 - name: Build pipecatapp Docker image
   ansible.builtin.include_tasks:
-    file: "{{ project_root }}/ansible/tasks/build_pipecatapp_image.yaml"
+    file: "{{ ansible_tasks_dir }}/build_pipecatapp_image.yaml"
 
 - name: Handle docker specific tasks for pipecatapp
   block:
