@@ -52,7 +52,7 @@
       rescue:
         - name: "DEBUG: Run Mesh Debug Script on Failure"
           script:
-            cmd: "{{ playbook_dir }}/../../scripts/debug_mesh.sh"
+            cmd: "{{ project_root }}/scripts/debug_mesh.sh"
           register: debug_output
           ignore_errors: yes
 

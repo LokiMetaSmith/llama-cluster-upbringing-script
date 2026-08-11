@@ -19,7 +19,7 @@
   community.docker.docker_image:
     name: "memory-graph-service:local"
     build:
-      path: "{{ inventory_dir }}/pipecatapp/memory_graph_service"
+      path: "{{ project_root }}/pipecatapp/memory_graph_service"
       pull: yes
     source: build
     force_source: true

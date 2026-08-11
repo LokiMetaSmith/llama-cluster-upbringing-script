@@ -15,7 +15,7 @@
     - name: Run Nomad Unit Tests
       ansible.builtin.command:
         cmd: "{{ ansible_playbook_python }} -m unittest tests.unit.test_infrastructure.TestInfrastructure.test_nomad_running"
-        chdir: "{{ playbook_dir }}/../../"
+        chdir: "{{ project_root }}/"
       changed_when: false
       tags:
         - nomad_test

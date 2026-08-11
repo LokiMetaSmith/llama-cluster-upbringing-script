@@ -284,3 +284,4 @@ celld_enabled: true
 celld_bucket: "celld-cells"
 minio_root_user: "minioadmin"
 minio_root_password: "change_me_in_prod_minio"
+project_root: "{{ inventory_dir }}"

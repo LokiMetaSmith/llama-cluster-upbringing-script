@@ -6,7 +6,7 @@
   tasks:
     - name: Load global variables
       ansible.builtin.include_vars:
-        file: "{{ inventory_dir | default(playbook_dir + '/../../') }}/group_vars/all.yaml"
+        file: "{{ project_root }}/group_vars/all.yaml"
 
     - name: Set facts for Grafana access
       ansible.builtin.set_fact:

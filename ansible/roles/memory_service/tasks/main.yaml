@@ -15,7 +15,7 @@
 
 - name: Copy Dockerfile to build directory
   ansible.builtin.copy:
-    src: "{{ role_path }}/../../../docker/memory_service/Dockerfile"
+    src: "{{ project_root }}/docker/memory_service/Dockerfile"
     dest: "/opt/memory_service/build/Dockerfile"
     mode: '0644'
 
