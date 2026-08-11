@@ -4,8 +4,8 @@
   become: no
 
   vars_files:
-    - "{{ playbook_dir }}/../group_vars/models.yaml"
-    - "{{ playbook_dir }}/../group_vars/external_experts.yaml"
+    - "../../group_vars/models.yaml"
+    - "../../group_vars/external_experts.yaml"
 
   tags:
     - ai-experts

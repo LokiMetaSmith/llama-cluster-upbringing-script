@@ -4,8 +4,8 @@
   gather_facts: yes
 
   vars_files:
-    - "{{ playbook_dir }}/../group_vars/models.yaml"
-    - "{{ playbook_dir }}/../group_vars/external_experts.yaml"
+    - "../../group_vars/models.yaml"
+    - "../../group_vars/external_experts.yaml"
 
   tags:
     - core-ai-services
