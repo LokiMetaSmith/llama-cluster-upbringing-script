@@ -41,7 +41,7 @@
   tags:
     - world_model_service
   ansible.builtin.include_tasks:
-    file: "{{ ansible_tasks_dir }}/build_cached_image.yaml"
+    file: "{{ project_root }}/ansible/tasks/build_cached_image.yaml"
   vars:
     build_dir: "/opt/world_model_service"
     image_name: "world-model-service"

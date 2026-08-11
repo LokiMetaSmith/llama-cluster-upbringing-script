@@ -45,7 +45,7 @@
     image_tag: "local"
     build_dir: "/opt/opengravity-build"
   ansible.builtin.include_tasks:
-    file: "{{ ansible_tasks_dir }}/build_cached_image.yaml"
+    file: "{{ project_root }}/ansible/tasks/build_cached_image.yaml"
 
 - name: Export opengravity image to tarball
   ansible.builtin.command: docker save -o /opt/opengravity.tar opengravity:local
