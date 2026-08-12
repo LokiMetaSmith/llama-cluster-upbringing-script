@@ -26,7 +26,7 @@
     NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
 - name: Template tml-interaction nomad job for each model
   ansible.builtin.template:
-    src: ../jobs/tml-interaction.nomad.j2
+    src: "{{ ansible_jobs_dir }}/tml-interaction.nomad.j2"
     dest: "/tmp/tml-interaction-{{ item.name | regex_replace('[^a-zA-Z0-9-]', '-') | lower }}.nomad"
     mode: '0644'
   loop: "{{ tml_models }}"
