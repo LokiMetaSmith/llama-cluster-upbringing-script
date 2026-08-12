@@ -1,4 +1,13 @@
 ---
+- name: Check if Nomad CLI cert exists
+  ansible.builtin.stat:
+    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
+  register: nomad_cli_cert_stat
+
+- name: Set nomad_protocol fact
+  ansible.builtin.set_fact:
+    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
+
 - name: Fetch Authentik Tap Client ID from Consul
   ansible.builtin.uri:
     url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/authentik/tap-client-id"
@@ -64,6 +73,9 @@
 
 - name: Start Tap Orchestrator Nomad job
   ansible.builtin.command:
-    cmd: nomad job run {{ nomad_jobs_dir }}/tap_orchestrator.nomad
+    cmd: /usr/local/bin/nomad job run -detach {{ nomad_jobs_dir }}/tap_orchestrator.nomad
   environment:
-    NOMAD_ADDR: "http://{{ cluster_ip }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
