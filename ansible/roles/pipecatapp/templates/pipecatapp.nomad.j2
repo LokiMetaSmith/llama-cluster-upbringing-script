@@ -118,13 +118,13 @@ job "{{ job_name | default('pipecat-app') }}" {
       {{ env_vars }}
 
       template {
-        data        = "{{ lookup('file', '{{ internal_cert_path | default(\'/etc/ssl/certs/internal-cert.pem\') }}') | default('', true) }}"
+        data        = "{{ lookup('file', internal_cert_path | default('/etc/ssl/certs/internal-cert.pem'), errors='ignore') | default('', true) }}"
         destination = "/secrets/internal-cert.pem"
         change_mode = "restart"
       }
 
       template {
-        data        = "{{ lookup('file', '{{ internal_key_path | default(\'/etc/ssl/private/internal-key.pem\') }}') | default('', true) }}"
+        data        = "{{ lookup('file', internal_key_path | default('/etc/ssl/private/internal-key.pem'), errors='ignore') | default('', true) }}"
         destination = "/secrets/internal-key.pem"
         change_mode = "restart"
       }
@@ -167,13 +167,13 @@ job "{{ job_name | default('pipecat-app') }}" {
       {{ env_vars }}
 
       template {
-        data        = "{{ lookup('file', '{{ internal_cert_path | default(\'/etc/ssl/certs/internal-cert.pem\') }}') | default('', true) }}"
+        data        = "{{ lookup('file', internal_cert_path | default('/etc/ssl/certs/internal-cert.pem'), errors='ignore') | default('', true) }}"
         destination = "/secrets/internal-cert.pem"
         change_mode = "restart"
       }
 
       template {
-        data        = "{{ lookup('file', '{{ internal_key_path | default(\'/etc/ssl/private/internal-key.pem\') }}') | default('', true) }}"
+        data        = "{{ lookup('file', internal_key_path | default('/etc/ssl/private/internal-key.pem'), errors='ignore') | default('', true) }}"
         destination = "/secrets/internal-key.pem"
         change_mode = "restart"
       }
