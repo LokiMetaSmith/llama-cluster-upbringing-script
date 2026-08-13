@@ -1,0 +1,77 @@
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+define WAN = {{ swarm_router_wan_interface }}
+define LAN = {{ swarm_router_lan_interface }}
+define TAILSCALE = "tailscale0"
+
+# IPv4/IPv6 stateful firewall
+table inet filter {
+    chain input {
+        type filter hook input priority filter;
+        policy drop;
+
+        iifname "lo" accept
+
+        # Allow traffic from Tailscale interface
+        iifname $TAILSCALE accept
+
+        ct state established,related accept
+        ct state invalid drop
+
+        ip protocol icmp accept
+        ip6 nexthdr icmpv6 accept
+        ip6 nexthdr 41 accept
+
+        # DHCP client -> server
+        iifname $WAN udp sport 68 udp dport 67 accept
+        iifname $WAN udp sport 546 udp dport 547 accept
+
+        # DHCP server for LAN
+        iifname $LAN udp sport 68 udp dport 67 accept
+        iifname $LAN udp sport 546 udp dport 547 accept
+
+        # SSH Admin
+        iifname $LAN tcp dport 22 accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter;
+        policy drop;
+
+        ct state established,related accept
+        ct state invalid drop
+
+        # LAN -> WAN
+        iifname $LAN oifname $WAN accept
+
+        # Tailscale -> WAN
+        iifname $TAILSCALE oifname $WAN accept
+
+        # Tailscale <-> LAN
+        iifname $TAILSCALE oifname $LAN accept
+        iifname $LAN oifname $TAILSCALE accept
+    }
+
+    chain output {
+        type filter hook output priority filter;
+        policy accept;
+    }
+}
+
+# IPv4 NAT
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+        policy accept;
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        policy accept;
+
+        # IPv4 LAN Internet access
+        oifname $WAN masquerade
+    }
+}

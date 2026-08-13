@@ -265,6 +265,12 @@ pxe_router: "10.0.0.1"
 # Cluster Overlay Network (Tailscale/Headscale)
 overlay_subnet: "100.64.0.0/10"
 
+# -- Swarm Router Configuration --
+is_swarm_router: false
+swarm_router_wan_interface: "eth0"
+swarm_router_lan_interface: "eth1"
+swarm_router_guest_subnets: "10.10.0.0/16"
+
 # -- Tap Orchestrator Configuration --
 tap_orchestrator_port: 8011
 tap_orchestrator_secret: "change_me_in_prod_tap_secret"
