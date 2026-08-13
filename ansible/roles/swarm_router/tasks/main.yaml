@@ -1,0 +1,51 @@
+- name: Ensure systemd-networkd and nftables are installed
+  ansible.builtin.apt:
+    name:
+      - systemd
+      - nftables
+    state: present
+    update_cache: yes
+
+- name: Enable IPv4 and IPv6 forwarding
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+  loop:
+    - net.ipv4.ip_forward
+    - net.ipv6.conf.all.forwarding
+
+- name: Create systemd-networkd WAN config
+  ansible.builtin.template:
+    src: wan.network.j2
+    dest: /etc/systemd/network/11_wan.network
+    mode: '0644'
+  notify: Restart systemd-networkd
+
+- name: Create systemd-networkd LAN config
+  ansible.builtin.template:
+    src: lan.network.j2
+    dest: /etc/systemd/network/31_lan.network
+    mode: '0644'
+  notify: Restart systemd-networkd
+
+- name: Deploy nftables ruleset for router
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    mode: '0644'
+  notify: Restart nftables
+
+- name: Ensure systemd-networkd is enabled and started
+  ansible.builtin.systemd:
+    name: systemd-networkd
+    enabled: yes
+    state: started
+
+- name: Ensure nftables is enabled and started
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: yes
+    state: started

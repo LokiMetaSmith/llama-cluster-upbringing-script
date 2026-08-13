@@ -1,0 +1,29 @@
+[Match]
+Name={{ swarm_router_lan_interface }}
+
+[Network]
+# Ensure LAN acts as router, using DHCPServer and IPMasquerade for IPv6
+IPv6SendRA=yes
+IPv6AcceptRA=no
+DHCPServer=yes
+DHCPPrefixDelegation=yes
+IPMasquerade=ipv6
+
+[DHCPServer]
+PoolOffset=100
+PoolSize=100
+EmitDNS=yes
+# Assuming this node also handles DNS if requested, otherwise external DNS
+DNS=1.1.1.1 8.8.8.8
+
+[IPv6SendRA]
+Managed=no
+OtherInformation=no
+RouterLifetimeSec=1800
+
+[DHCPPrefixDelegation]
+UplinkInterface={{ swarm_router_wan_interface }}
+SubnetId=0x2
+Announce=yes
+Assign=yes
+Token=::1

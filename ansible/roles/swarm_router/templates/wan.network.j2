@@ -1,0 +1,19 @@
+[Match]
+Name={{ swarm_router_wan_interface }}
+
+[Network]
+Description=WAN
+DHCP=both
+IPv6AcceptRA=yes
+
+[DHCPv4]
+UseRoutes=yes
+RouteMetric=100
+
+[IPv6AcceptRA]
+RouteMetric=100
+DHCPv6Client=always
+
+[DHCPv6]
+ForceDHCPv6PDOtherInformation=yes
+PrefixDelegationHint=::/59

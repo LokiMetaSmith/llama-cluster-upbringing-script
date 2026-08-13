@@ -7,3 +7,11 @@
   become: yes
   roles:
     - tailscale
+
+- hosts: all
+  become: yes
+  tasks:
+    - name: Include Swarm Router setup
+      ansible.builtin.include_role:
+        name: swarm_router
+      when: is_swarm_router | default(false) | bool

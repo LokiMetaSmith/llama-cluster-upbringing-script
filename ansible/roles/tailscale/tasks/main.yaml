@@ -69,15 +69,43 @@
       {%- endif -%}
   when: tailscale_status.rc != 0
 
-- name: Connect to Headscale
+- name: Connect to Headscale (Standard Node)
   command: >
     tailscale up
     --login-server={{ resolved_login_server }}
     --authkey={{ resolved_authkey }}
     --accept-routes
-  when: tailscale_status.rc != 0
-  register: tailscale_up
-  changed_when: "'Success' in tailscale_up.stdout"
+  when:
+    - tailscale_status.rc != 0
+    - not (is_swarm_router | default(false) | bool)
+  register: tailscale_up_standard
+  changed_when: "'Success' in tailscale_up_standard.stdout"
+
+- name: Connect to Headscale (Swarm Router)
+  command: >
+    tailscale up
+    --login-server={{ resolved_login_server }}
+    --authkey={{ resolved_authkey }}
+    --accept-routes
+    --advertise-routes={{ swarm_router_guest_subnets }}
+    --advertise-exit-node
+  when:
+    - tailscale_status.rc != 0
+    - is_swarm_router | default(false) | bool
+  register: tailscale_up_router
+  changed_when: "'Success' in tailscale_up_router.stdout"
+
+- name: Update Tailscale routing (Swarm Router) if already running
+  command: >
+    tailscale up
+    --accept-routes
+    --advertise-routes={{ swarm_router_guest_subnets }}
+    --advertise-exit-node
+  when:
+    - tailscale_status.rc == 0
+    - is_swarm_router | default(false) | bool
+  register: tailscale_update_router
+  changed_when: "'Success' in tailscale_update_router.stdout"
 
 - name: Wait for tailscale0 interface to have an IP
   ansible.builtin.shell: 'tailscale ip -4 | grep "^100\."'
