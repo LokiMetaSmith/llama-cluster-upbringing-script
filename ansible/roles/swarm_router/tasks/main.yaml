@@ -31,6 +31,22 @@
     mode: '0644'
   notify: Restart systemd-networkd
 
+- name: Create systemd-networkd VLAN NetDev configs
+  ansible.builtin.template:
+    src: vlan.netdev.j2
+    dest: /etc/systemd/network/31_{{ item.name }}.netdev
+    mode: '0644'
+  loop: "{{ swarm_router_vlans | default([]) }}"
+  notify: Restart systemd-networkd
+
+- name: Create systemd-networkd VLAN Network configs
+  ansible.builtin.template:
+    src: vlan.network.j2
+    dest: /etc/systemd/network/31_{{ item.name }}.network
+    mode: '0644'
+  loop: "{{ swarm_router_vlans | default([]) }}"
+  notify: Restart systemd-networkd
+
 - name: Deploy nftables ruleset for router
   ansible.builtin.template:
     src: nftables.conf.j2

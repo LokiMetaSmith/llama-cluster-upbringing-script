@@ -1,0 +1,14 @@
+- name: Ensure jq is installed for parsing Headscale JSON
+  ansible.builtin.apt:
+    name: jq
+    state: present
+
+- name: Enable all routes for all nodes in Headscale
+  ansible.builtin.shell: |
+    for NODE_ID in $(/usr/local/bin/headscale nodes list -o json | jq -r '.[].id'); do
+      /usr/local/bin/headscale routes enable -i $NODE_ID -a
+    done
+  args:
+    executable: /bin/bash
+  register: route_approval
+  changed_when: route_approval.stdout != ""

@@ -1,0 +1,28 @@
+[Match]
+Name={{ item.name }}
+
+[Network]
+Address={{ item.address }}
+IPv6SendRA=yes
+IPv6AcceptRA=no
+DHCPServer=yes
+DHCPPrefixDelegation=yes
+IPMasquerade=ipv6
+
+[DHCPServer]
+PoolOffset={{ item.dhcp_pool_offset | default(100) }}
+PoolSize={{ item.dhcp_pool_size | default(100) }}
+EmitDNS=yes
+DNS=1.1.1.1 8.8.8.8
+
+[IPv6SendRA]
+Managed=no
+OtherInformation=no
+RouterLifetimeSec=1800
+
+[DHCPPrefixDelegation]
+UplinkInterface={{ swarm_router_wan_interface }}
+SubnetId=0x{{ item.id }}
+Announce=yes
+Assign=yes
+Token=::1

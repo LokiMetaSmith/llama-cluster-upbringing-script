@@ -46,3 +46,13 @@
 [[inputs.swap]]
 
 [[inputs.system]]
+
+[[inputs.net]]
+  # collect metrics for all interfaces
+
+[[inputs.netstat]]
+
+{% if is_swarm_router | default(false) | bool %}
+# Use iptables plugin since nftables requires complex sudo rules to allow telegraf access
+# Telegraf doesn't have a native nftables plugin without extra scripting yet.
+{% endif %}

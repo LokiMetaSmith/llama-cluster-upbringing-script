@@ -15,3 +15,11 @@
       ansible.builtin.include_role:
         name: swarm_router
       when: is_swarm_router | default(false) | bool
+
+- hosts: controller_nodes[0]
+  become: yes
+  tasks:
+    - name: Auto-approve Headscale routes
+      ansible.builtin.include_role:
+        name: headscale
+        tasks_from: auto_approve_routes

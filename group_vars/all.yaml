@@ -270,6 +270,14 @@ is_swarm_router: false
 swarm_router_wan_interface: "eth0"
 swarm_router_lan_interface: "eth1"
 swarm_router_guest_subnets: "10.10.0.0/16"
+# Example of defining VLANs:
+# swarm_router_vlans:
+#   - id: 20
+#     name: "eth1.20"
+#     address: "10.10.20.1/24"
+#     dhcp_pool_offset: 100
+#     dhcp_pool_size: 100
+swarm_router_vlans: []
 
 # -- Tap Orchestrator Configuration --
 tap_orchestrator_port: 8011
