@@ -118,13 +118,17 @@ job "{{ job_name | default('pipecat-app') }}" {
       {{ env_vars }}
 
       template {
-        data        = "{{ lookup('file', internal_cert_path | default('/etc/ssl/certs/internal-cert.pem'), errors='ignore') | default('', true) }}"
+        data        = <<EOT
+{{ lookup('file', internal_cert_path | default('/etc/ssl/certs/internal-cert.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
+EOT
         destination = "/secrets/internal-cert.pem"
         change_mode = "restart"
       }
 
       template {
-        data        = "{{ lookup('file', internal_key_path | default('/etc/ssl/private/internal-key.pem'), errors='ignore') | default('', true) }}"
+        data        = <<EOT
+{{ lookup('file', internal_key_path | default('/etc/ssl/private/internal-key.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
+EOT
         destination = "/secrets/internal-key.pem"
         change_mode = "restart"
       }
@@ -167,13 +171,17 @@ job "{{ job_name | default('pipecat-app') }}" {
       {{ env_vars }}
 
       template {
-        data        = "{{ lookup('file', internal_cert_path | default('/etc/ssl/certs/internal-cert.pem'), errors='ignore') | default('', true) }}"
+        data        = <<EOT
+{{ lookup('file', internal_cert_path | default('/etc/ssl/certs/internal-cert.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
+EOT
         destination = "/secrets/internal-cert.pem"
         change_mode = "restart"
       }
 
       template {
-        data        = "{{ lookup('file', internal_key_path | default('/etc/ssl/private/internal-key.pem'), errors='ignore') | default('', true) }}"
+        data        = <<EOT
+{{ lookup('file', internal_key_path | default('/etc/ssl/private/internal-key.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
+EOT
         destination = "/secrets/internal-key.pem"
         change_mode = "restart"
       }
