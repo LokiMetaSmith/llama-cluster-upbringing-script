@@ -27,20 +27,70 @@ type ListResponse struct {
 func (a *App) QueryHandler(key []byte, w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("list-type") == "2" {
 		// this is an S3 style query
-		// TODO: this is very incomplete
-		key = []byte(string(key) + "/" + r.URL.Query().Get("prefix"))
-		iter := a.db.NewIterator(util.BytesPrefix(key), nil)
+		prefix := r.URL.Query().Get("prefix")
+		marker := r.URL.Query().Get("continuation-token") // use continuation-token as marker
+		maxKeysStr := r.URL.Query().Get("max-keys")
+
+		maxKeys := 1000 // Default S3 max-keys
+		if maxKeysStr != "" {
+			if parsedMax, err := strconv.Atoi(maxKeysStr); err == nil && parsedMax > 0 {
+				maxKeys = parsedMax
+			}
+		}
+
+		searchKey := string(key)
+		if prefix != "" {
+			searchKey += "/" + prefix
+		} else {
+			searchKey += "/"
+		}
+
+		iter := a.db.NewIterator(util.BytesPrefix([]byte(searchKey)), nil)
 		defer iter.Release()
 
+		if marker != "" {
+			iter.Seek([]byte(string(key) + "/" + marker))
+			// S3 continuation tokens are exclusive (start *after* the marker)
+			if iter.Valid() && string(iter.Key()) == string(key) + "/" + marker {
+			    iter.Next()
+			}
+		} else {
+		    iter.Next()
+		}
+
 		ret := "<ListBucketResult>"
-		for iter.Next() {
+		count := 0
+		isTruncated := false
+		nextContinuationToken := ""
+
+		for iter.Valid() {
 			rec := toRecord(iter.Value())
+
 			if rec.deleted != NO {
+			    iter.Next()
 				continue
 			}
-			ret += "<Contents><Key>" + string(iter.Key()[len(key):]) + "</Key></Contents>"
+
+			if count >= maxKeys {
+				isTruncated = true
+				nextContinuationToken = string(iter.Key()[len(key)+1:]) // strip prefix
+				break
+			}
+
+			ret += "<Contents><Key>" + string(iter.Key()[len(key)+1:]) + "</Key></Contents>"
+			count++
+			iter.Next()
 		}
+
+		if isTruncated {
+			ret += "<IsTruncated>true</IsTruncated>"
+			ret += "<NextContinuationToken>" + nextContinuationToken + "</NextContinuationToken>"
+		} else {
+			ret += "<IsTruncated>false</IsTruncated>"
+		}
+
 		ret += "</ListBucketResult>"
+		w.Header().Set("Content-Type", "application/xml")
 		w.WriteHeader(200)
 		w.Write([]byte(ret))
 		return
