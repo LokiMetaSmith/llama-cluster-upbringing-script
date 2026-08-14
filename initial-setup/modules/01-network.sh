@@ -166,7 +166,16 @@ fi
 # --- Final Service Restart Attempt (Generic) ---
 # This ensures that if we made changes (or if the system state is inconsistent),
 # we try to poke relevant services, ignoring failures if they don't exist.
+# --- Increase inotify limits to prevent 'Too many open files' during systemctl commands ---
+log "Increasing inotify limits to support cluster operations..."
+cat << 'SYSCTL_EOF' > /etc/sysctl.d/99-inotify.conf
+fs.inotify.max_user_watches=524288
+fs.inotify.max_user_instances=512
+SYSCTL_EOF
+sysctl --system > /dev/null 2>&1 || log "Warning: Failed to apply sysctl changes"
+
 log "Ensuring network services are in consistent state..."
+
 for service in networking NetworkManager systemd-networkd; do
     if systemctl is-active --quiet "$service"; then
         log "Restarting active service: $service"
