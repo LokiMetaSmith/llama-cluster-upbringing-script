@@ -2,13 +2,22 @@
 Name={{ swarm_router_lan_interface }}
 
 [Network]
+{% if swarm_router_vlans is defined and swarm_router_vlans | length > 0 %}
+DHCP=no
+IPv6AcceptRA=no
+{% for vlan in swarm_router_vlans %}
+VLAN={{ vlan.name }}
+{% endfor %}
+{% else %}
 # Ensure LAN acts as router, using DHCPServer and IPMasquerade for IPv6
 IPv6SendRA=yes
 IPv6AcceptRA=no
 DHCPServer=yes
 DHCPPrefixDelegation=yes
 IPMasquerade=ipv6
+{% endif %}
 
+{% if not (swarm_router_vlans is defined and swarm_router_vlans | length > 0) %}
 [DHCPServer]
 PoolOffset=100
 PoolSize=100
@@ -27,3 +36,4 @@ SubnetId=0x2
 Announce=yes
 Assign=yes
 Token=::1
+{% endif %}

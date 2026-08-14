@@ -5,6 +5,9 @@ flush ruleset
 define WAN = {{ swarm_router_wan_interface }}
 define LAN = {{ swarm_router_lan_interface }}
 define TAILSCALE = "tailscale0"
+{% if swarm_router_vlans is defined and swarm_router_vlans | length > 0 %}
+define VLANS = { {% for vlan in swarm_router_vlans %}"{{ vlan.name }}"{% if not loop.last %}, {% endif %}{% endfor %} }
+{% endif %}
 
 # IPv4/IPv6 stateful firewall
 table inet filter {
@@ -31,9 +34,16 @@ table inet filter {
         # DHCP server for LAN
         iifname $LAN udp sport 68 udp dport 67 accept
         iifname $LAN udp sport 546 udp dport 547 accept
+{% if swarm_router_vlans is defined and swarm_router_vlans | length > 0 %}
+        iifname $VLANS udp sport 68 udp dport 67 accept
+        iifname $VLANS udp sport 546 udp dport 547 accept
+{% endif %}
 
         # SSH Admin
         iifname $LAN tcp dport 22 accept
+{% if swarm_router_vlans is defined and swarm_router_vlans | length > 0 %}
+        iifname $VLANS tcp dport 22 accept
+{% endif %}
     }
 
     chain forward {
@@ -45,6 +55,9 @@ table inet filter {
 
         # LAN -> WAN
         iifname $LAN oifname $WAN accept
+{% if swarm_router_vlans is defined and swarm_router_vlans | length > 0 %}
+        iifname $VLANS oifname $WAN accept
+{% endif %}
 
         # Tailscale -> WAN
         iifname $TAILSCALE oifname $WAN accept
@@ -52,6 +65,10 @@ table inet filter {
         # Tailscale <-> LAN
         iifname $TAILSCALE oifname $LAN accept
         iifname $LAN oifname $TAILSCALE accept
+{% if swarm_router_vlans is defined and swarm_router_vlans | length > 0 %}
+        iifname $TAILSCALE oifname $VLANS accept
+        iifname $VLANS oifname $TAILSCALE accept
+{% endif %}
     }
 
     chain output {
