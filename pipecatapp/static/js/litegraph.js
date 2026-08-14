@@ -141,7 +141,7 @@
 		release_link_on_empty_shows_menu: false, //[true!] dragging a link to empty space will open a menu, add from list, search or defaults
 
         pointerevents_method: "mouse", // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
-        // TODO implement pointercancel, gotpointercapture, lostpointercapture, (pointerover, pointerout if necessary)
+        // implemented pointercancel, gotpointercapture, lostpointercapture
 
         ctrl_shift_v_paste_connect_unselected_outputs: false, //[true!] allows ctrl + shift + v to paste nodes with the outputs of the unselected nodes connected with the inputs of the newly pasted nodes
 
@@ -5718,14 +5718,24 @@ LGraphNode.prototype.executeAction = function(action)
         this._mousemove_callback = this.processMouseMove.bind(this);
         this._mouseup_callback = this.processMouseUp.bind(this);
 
-        //touch events -- TODO IMPLEMENT
-        //this._touch_callback = this.touchHandler.bind(this);
+        //touch events
+        this._touch_callback = this.touchHandler.bind(this);
+
+        canvas.addEventListener("touchstart", this._touch_callback, {passive: false});
+        canvas.addEventListener("touchmove", this._touch_callback, {passive: false});
+        canvas.addEventListener("touchend", this._touch_callback, {passive: false});
+        canvas.addEventListener("touchcancel", this._touch_callback, {passive: false});
 
 		LiteGraph.pointerListenerAdd(canvas,"down", this._mousedown_callback, true); //down do not need to store the binded
         canvas.addEventListener("mousewheel", this._mousewheel_callback, false);
 
         LiteGraph.pointerListenerAdd(canvas,"up", this._mouseup_callback, true); // CHECK: ??? binded or not
 		LiteGraph.pointerListenerAdd(canvas,"move", this._mousemove_callback);
+
+        if (LiteGraph.pointerevents_method === "pointer") {
+            canvas.addEventListener("pointercancel", this._mouseup_callback, true);
+            canvas.addEventListener("lostpointercapture", this._mouseup_callback, true);
+        }
 
         canvas.addEventListener("contextmenu", this._doNothing);
         canvas.addEventListener(
@@ -10410,13 +10420,11 @@ LGraphNode.prototype.executeAction = function(action)
         return; //disabled
     };
 
-    /* this is an implementation for touch not in production and not ready
-     */
-    /*LGraphCanvas.prototype.touchHandler = function(event) {
-        //alert("foo");
-        var touches = event.changedTouches,
-            first = touches[0],
-            type = "";
+    LGraphCanvas.prototype.touchHandler = function(event) {
+        var touches = event.changedTouches;
+        if (!touches || !touches.length) return;
+        var first = touches[0];
+        var type = "";
 
         switch (event.type) {
             case "touchstart":
@@ -10426,46 +10434,37 @@ LGraphNode.prototype.executeAction = function(action)
                 type = "mousemove";
                 break;
             case "touchend":
+            case "touchcancel":
                 type = "mouseup";
                 break;
             default:
                 return;
         }
 
-        //initMouseEvent(type, canBubble, cancelable, view, clickCount,
-        //           screenX, screenY, clientX, clientY, ctrlKey,
-        //           altKey, shiftKey, metaKey, button, relatedTarget);
+        var window = this.getCanvasWindow ? this.getCanvasWindow() : document.defaultView;
 
-        // this is eventually a Dom object, get the LGraphCanvas back
-        if(typeof this.getCanvasWindow == "undefined"){
-            var window = this.lgraphcanvas.getCanvasWindow();
-        }else{
-            var window = this.getCanvasWindow();
-        }
+        var simulatedEvent = new MouseEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            detail: 1,
+            screenX: first.screenX,
+            screenY: first.screenY,
+            clientX: first.clientX,
+            clientY: first.clientY,
+            ctrlKey: false,
+            altKey: false,
+            shiftKey: false,
+            metaKey: false,
+            button: 0,
+            relatedTarget: null
+        });
 
-        var document = window.document;
-
-        var simulatedEvent = document.createEvent("MouseEvent");
-        simulatedEvent.initMouseEvent(
-            type,
-            true,
-            true,
-            window,
-            1,
-            first.screenX,
-            first.screenY,
-            first.clientX,
-            first.clientY,
-            false,
-            false,
-            false,
-            false,
-            0, //left
-            null
-        );
         first.target.dispatchEvent(simulatedEvent);
-        event.preventDefault();
-    };*/
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+    };
 
     /* CONTEXT MENU ********************/
 
@@ -14040,7 +14039,9 @@ LGraphNode.prototype.executeAction = function(action)
             clearTimeout(this.root.closing_timer);
         }
 
-        // TODO implement : LiteGraph.contextMenuClosed(); :: keep track of opened / closed / current ContextMenu
+        if (LiteGraph.contextMenuClosed) {
+            LiteGraph.contextMenuClosed(this);
+        }
         // on key press, allow filtering/selecting the context menu elements
     };
 
