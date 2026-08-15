@@ -139,6 +139,16 @@ client {
     read_only = false
   }
 
+  host_volume "gitea_data" {
+    path      = "{{ nomad_volumes_dir }}/gitea_data"
+    read_only = false
+  }
+
+  host_volume "radicle_data" {
+    path      = "{{ nomad_volumes_dir }}/radicle_data"
+    read_only = false
+  }
+
 }
 
 tls {

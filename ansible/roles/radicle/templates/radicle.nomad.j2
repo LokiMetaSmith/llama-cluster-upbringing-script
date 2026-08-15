@@ -1,0 +1,112 @@
+job "radicle" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "radicle-seed" {
+    count = 1
+
+    network {
+      port "node" {
+        to = 8776
+      }
+      port "http" {
+        to = 8080
+      }
+    }
+
+    volume "radicle_data" {
+      type      = "host"
+      source    = "radicle_data"
+      read_only = false
+    }
+
+    service {
+      name = "radicle-node"
+      port = "node"
+
+      tags = [
+        "radicle",
+        "git",
+        "p2p"
+      ]
+
+      check {
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    service {
+      name = "radicle-http"
+      port = "http"
+
+      tags = [
+        "radicle",
+        "git",
+        "http",
+        "traefik.enable=true",
+        "traefik.http.routers.radicle.rule=Host(`radicle.service.consul`)",
+        "traefik.http.routers.radicle.entrypoints=web"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/api/v1/node"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "radicle" {
+      driver = "docker"
+
+      config {
+        image = "radicle/node:latest"
+        ports = ["node", "http"]
+        command = "radicle-node"
+        args = ["--listen", "0.0.0.0:8776", "--force"]
+      }
+
+      volume_mount {
+        volume      = "radicle_data"
+        destination = "/root/.radicle"
+      }
+
+      env {
+        RAD_HOME = "/root/.radicle"
+        RAD_PASSPHRASE = "changeme_in_production"
+      }
+
+      resources {
+        cpu    = 250
+        memory = 256
+      }
+    }
+
+    task "radicle-httpd" {
+      driver = "docker"
+
+      config {
+        image = "radicle/httpd:latest"
+        ports = ["http"]
+        command = "radicle-httpd"
+        args = ["--listen", "0.0.0.0:8080"]
+      }
+
+      volume_mount {
+        volume      = "radicle_data"
+        destination = "/root/.radicle"
+      }
+
+      env {
+        RAD_HOME = "/root/.radicle"
+      }
+
+      resources {
+        cpu    = 250
+        memory = 256
+      }
+    }
+  }
+}
