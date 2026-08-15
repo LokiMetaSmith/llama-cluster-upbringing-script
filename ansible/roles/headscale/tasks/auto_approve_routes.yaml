@@ -5,8 +5,8 @@
 
 - name: Enable all routes for all nodes in Headscale
   ansible.builtin.shell: |
-    for NODE_ID in $(/usr/local/bin/headscale nodes list -o json | jq -r '.[].id'); do
-      /usr/local/bin/headscale routes enable -i $NODE_ID -a
+    for ROUTE_ID in $(/usr/local/bin/headscale routes list -o json | jq -r '.[].id'); do
+      /usr/local/bin/headscale routes enable -r $ROUTE_ID
     done
   args:
     executable: /bin/bash
