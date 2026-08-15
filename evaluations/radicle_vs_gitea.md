@@ -54,11 +54,55 @@ The Radicle Nomad job defines a "seed node" deployment.
 *   **Discovery:** It registers the node and HTTP services in Consul.
 *   **Integration:** In the cluster context, this job acts as an "always-on" seed node to ensure high availability of the repositories, while individual developer machines or agents would run their own local Radicle nodes to gossip with this seed.
 
-## 5. Conclusion and Recommendations
+## 5. Hybrid Architecture Recommendation
 
-The choice between Radicle and Gitea hinges entirely on how strongly the team weighs **absolute decentralization/offline survivability** versus **ecosystem compatibility and ease of integration**.
+Instead of forcing an all-or-nothing tradeoff between Gitea's integration capabilities and Radicle's true offline resilience, running both in a **hybrid architecture** provides the best of both worlds.
 
-*   **Choose Radicle if:** The highest priority is absolute resilience against network partitions, ensuring that every node (human or agent) can continue full operations (including issue tracking) entirely offline, and you are willing to adapt tooling to its P2P DID-based model.
-*   **Choose Gitea if:** You need a lightweight, local-first centralized forge that integrates seamlessly with existing OIDC (Authentik) infrastructure, provides a familiar GitHub-style API for autonomous agents, and offers frictionless CI/CD through Gitea Actions.
+### 5.1. How the Hybrid Architecture Works
 
-For a cluster primarily focused on automated agent workflows that rely on standard HTTP APIs, OIDC authentication, and GitHub Actions-style CI, **Gitea is currently the more pragmatic choice**, despite Radicle's superior architectural offline resilience.
+```
+                     +---------------------------------------+
+                     |         Authentik (OIDC / SSO)        |
+                     +-------------------+-------------------+
+                                         |
+                                         v
+   +-------------------------------------------------------------------------+
+   |                        Gitea (Nomad Service)                            |
+   |  - Web UI & Central Repository Forge                                    |
+   |  - REST/GraphQL API for autonomous AI agents                            |
+   |  - Gitea Actions (act_runner) for automated CI/CD pipelines             |
+   +-------------------------------------+-----------------------------------+
+                                         |
+                       (Git Hook / Action Push Mirror)
+                                         |
+                                         v
+   +-------------------------------------------------------------------------+
+   |                    Radicle Seed Node (Nomad Service)                    |
+   |  - P2P Gossip Daemon (`radicle-node`) & Seed HTTP API                   |
+   |  - Offline survivability & cryptographic keypair DID identity           |
+   |  - Async LAN sync across isolated/partitioned nodes & IPFS mesh         |
+   +-------------------------------------------------------------------------+
+```
+
+### 5.2. Why Running Both Makes Sense
+
+1.  **Gitea Handles Cluster Ergonomics & Automation:**
+    *   **Central Identity & Access:** Natively integrates with **Authentik** for single sign-on across the cluster.
+    *   **Agent API & CI/CD:** Agents can use standard GitHub/GitLab-style REST APIs and trigger **Gitea Actions** (`act_runner`) for containerized builds and test suites.
+
+2.  **Radicle Handles Network Partitioning & True Decentralization:**
+    *   **Local-First & Offline Workflows:** When cluster nodes or development machines disconnect from the central network, developers and agents can continue committing, creating patches, and tracking issues locally via Radicle Collaborative Objects (COBs).
+    *   **Automatic Gossip Sync:** Once reconnected to the LAN or IPFS mesh, the Radicle nodes automatically gossip and reconcile state.
+
+3.  **Negligible Resource Overhead:**
+    *   **Gitea** (Go) + **Radicle** (Rust) combined consume **less than 750 MB of RAM** and negligible idle CPU, making them well within the capacity of a lightweight Nomad cluster.
+
+### 5.3. Recommended Integration Pattern
+
+*   **Primary Forge / CI Hub:** Gitea serves as the canonical web forge registered in Consul (`gitea.service.consul`).
+*   **Auto-Mirroring to Radicle:** A simple Gitea webhook or server-side `post-receive` Git hook runs `rad push` / `rad sync` on the local Radicle seed node upon every merge.
+*   **Dual Remotes:** Workstations and agent environments can configure `origin` to point to Gitea for standard CI pipelines and `rad` as a fallback peer remote for zero-infrastructure offline sync.
+
+### 5.4. Conclusion
+
+By deploying both Gitea and Radicle as Nomad services, the cluster achieves a highly robust Git backbone. Gitea provides the necessary tooling, standard APIs, and familiar UI required for efficient AI agent integration and developer workflows, while Radicle acts as an invisible, decentralized failover mesh ensuring absolute data survivability and offline capability during network partitions.
