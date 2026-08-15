@@ -1,0 +1,33 @@
+- name: Create Radicle data directory
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/radicle_data"
+    state: directory
+    mode: '0755'
+    owner: "1000"
+    group: "1000"
+
+- name: Render Radicle Nomad job template
+  ansible.builtin.template:
+    src: radicle.nomad.j2
+    dest: /tmp/radicle.nomad
+    mode: '0644'
+
+- name: Check if Nomad CLI certificate exists
+  ansible.builtin.stat:
+    path: "{{ nomad_tls_dir }}/cli.pem"
+  register: nomad_cli_cert_stat
+
+- name: Run Radicle Nomad job
+  ansible.builtin.command: /usr/local/bin/nomad job run -detach /tmp/radicle.nomad
+  environment:
+    NOMAD_ADDR: "https://127.0.0.1:4646"
+    NOMAD_CACERT: "{{ nomad_tls_dir }}/ca.pem"
+    NOMAD_CLIENT_CERT: "{{ nomad_tls_dir }}/cli.pem"
+    NOMAD_CLIENT_KEY: "{{ nomad_tls_dir }}/cli-key.pem"
+  when: nomad_cli_cert_stat.stat.exists
+
+- name: Run Radicle Nomad job (No TLS)
+  ansible.builtin.command: /usr/local/bin/nomad job run -detach /tmp/radicle.nomad
+  environment:
+    NOMAD_ADDR: "http://127.0.0.1:4646"
+  when: not nomad_cli_cert_stat.stat.exists
