@@ -1727,12 +1727,12 @@
         for (var i = nodes_list.length - 1; i >= 0; i--) {
             var n = nodes_list[i];
             if (n.isPointInside(x, y, margin)) {
-                // check for lesser interest nodes (TODO check for overlapping, use the top)
-				/*if (typeof n == "LGraphGroup"){
+                // check for lesser interest nodes, use the top
+				if (n.constructor === LiteGraph.LGraphGroup){
 					nRet = n;
-				}else{*/
+				}else{
 					return n;
-				/*}*/
+				}
             }
         }
         return nRet;
@@ -13818,18 +13818,20 @@ LGraphNode.prototype.executeAction = function(action)
             num++;
         }
 
-        //close on leave? touch enabled devices won't work TODO use a global device detector and condition on that
-        /*LiteGraph.pointerListenerAdd(root,"leave", function(e) {
-			console.log("pointerevents: ContextMenu leave");
-            if (that.lock) {
-                return;
-            }
-            if (root.closing_timer) {
-                clearTimeout(root.closing_timer);
-            }
-            root.closing_timer = setTimeout(that.close.bind(that, e), 500);
-            //that.close(e);
-        });*/
+        // auto-close on leave (disabled on touch devices)
+        if (typeof window !== "undefined" && window.matchMedia && !window.matchMedia("(pointer: coarse)").matches) {
+            LiteGraph.pointerListenerAdd(root,"leave", function(e) {
+                //console.log("pointerevents: ContextMenu leave");
+                if (that.lock) {
+                    return;
+                }
+                if (root.closing_timer) {
+                    clearTimeout(root.closing_timer);
+                }
+                root.closing_timer = setTimeout(that.close.bind(that, e), 500);
+                //that.close(e);
+            });
+        }
 
 		LiteGraph.pointerListenerAdd(root,"enter", function(e) {
 			//console.log("pointerevents: ContextMenu enter");

@@ -245,6 +245,7 @@ This section tracks actionable ideas derived from the `docs/analysis/GNUTELLA_AN
 
 This section tracks identified placeholder files, corrupted binaries, and code that needs to be fixed or removed.
 
+- [x] **LiteGraph Inline TODOs:** Fixed overlapping group logic in `getNodeOnPos` and touch device auto-close in `ContextMenu`.
 - [x] **Remove or Implement Empty Handler:**
   - [x] `ansible/roles/bootstrap_agent/handlers/main.yaml` is currently empty.
 
