@@ -272,7 +272,13 @@
           DNS.3 = server.dc1.consul
           DNS.4 = consul.service.consul
           IP.1 = 127.0.0.1
+          {% if hostvars[item] is defined and hostvars[item]['cluster_ip'] is defined and hostvars[item]['cluster_ip'] %}
           IP.2 = {{ hostvars[item]['cluster_ip'] }}
+          {% elif cluster_ip is defined and cluster_ip %}
+          IP.2 = {{ cluster_ip }}
+          {% elif advertise_ip is defined and advertise_ip %}
+          IP.2 = {{ advertise_ip }}
+          {% endif %}
       loop: "{{ groups['controller_nodes'] }}"
 
     - name: Generate server keys for controller nodes
@@ -319,7 +325,13 @@
           DNS.3 = client.dc1.consul
           DNS.4 = consul.service.consul
           IP.1 = 127.0.0.1
+          {% if hostvars[item] is defined and hostvars[item]['cluster_ip'] is defined and hostvars[item]['cluster_ip'] %}
           IP.2 = {{ hostvars[item]['cluster_ip'] }}
+          {% elif cluster_ip is defined and cluster_ip %}
+          IP.2 = {{ cluster_ip }}
+          {% elif advertise_ip is defined and advertise_ip %}
+          IP.2 = {{ advertise_ip }}
+          {% endif %}
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
 
     - name: Generate client keys for client nodes
@@ -462,7 +474,7 @@
   block:
     - name: Wait for Consul API to be ready
       ansible.builtin.uri:
-        url: "https://{{ cluster_ip }}:{{ consul_https_port }}/v1/status/leader"
+        url: "https://{% if cluster_ip is defined and cluster_ip %}{{ cluster_ip }}{% else %}127.0.0.1{% endif %}:{{ consul_https_port }}/v1/status/leader"
         client_cert: "{{ consul_config_dir | default('/etc/consul.d') }}/cert.pem"
         client_key: "{{ consul_config_dir | default('/etc/consul.d') }}/key.pem"
         ca_path: "/etc/consul.d/ca.pem"
@@ -497,7 +509,7 @@
 
 - name: Wait for Consul to be ready before ACL bootstrap
   ansible.builtin.wait_for:
-    host: "{{ advertise_ip }}"
+    host: "{% if advertise_ip is defined and advertise_ip %}{{ advertise_ip }}{% else %}127.0.0.1{% endif %}"
     port: "{{ consul_http_port }}"
     delay: 10
 

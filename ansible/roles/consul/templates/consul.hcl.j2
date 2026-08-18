@@ -1,6 +1,16 @@
 data_dir = "{{ consul_data_dir }}"
+{% if cluster_ip is defined and cluster_ip and cluster_ip != "127.0.0.1" %}
+bind_addr = "{{ cluster_ip }}"
+{% else %}
 bind_addr = "0.0.0.0"
+{% endif %}
+{% if cluster_ip is defined and cluster_ip %}
 advertise_addr = "{{ cluster_ip }}"
+{% elif ansible_default_ipv4 is defined and ansible_default_ipv4.address is defined %}
+advertise_addr = "{{ ansible_default_ipv4.address }}"
+{% else %}
+advertise_addr = "127.0.0.1"
+{% endif %}
 log_level = "INFO"
 
 {% if cluster_ip == '127.0.0.1' %}

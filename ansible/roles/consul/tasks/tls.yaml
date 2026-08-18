@@ -33,7 +33,7 @@
 
     - name: Force kill Consul and Nomad processes
       become: yes
-      ansible.builtin.command: pkill -9 -f "consul|nomad"
+      ansible.builtin.shell: pkill -9 nomad || true; pkill -9 consul || true
       ignore_errors: yes
       failed_when: false
 
@@ -56,7 +56,7 @@
       ansible.builtin.command: /usr/sbin/update-ca-certificates --fresh
       changed_when: true
       failed_when: false
-  when: target_consul_ca_validity is defined and target_consul_ca_validity.rc != 0
+  when: target_consul_ca_validity is defined and target_consul_ca_validity.rc != 0 and not ansible_check_mode
 
 - name: Force clear existing certificates on target nodes to trigger rotation
   become: yes

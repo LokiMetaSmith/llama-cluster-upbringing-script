@@ -190,6 +190,8 @@
   loop:
     - mqtt-data
     - world_model_storage
+    - gitea_data
+    - radicle_data
     - postgres_data
     - memory-data
     - traceway
