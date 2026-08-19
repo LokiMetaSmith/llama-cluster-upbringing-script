@@ -157,11 +157,11 @@
       DNS.5 = client.global.nomad
       DNS.6 = consul.service.consul
       IP.1 = 127.0.0.1
-      {% if hostvars[item] is defined and hostvars[item]['cluster_ip'] is defined %}
+      {% if hostvars[item] is defined and hostvars[item]['cluster_ip'] is defined and hostvars[item]['cluster_ip'] %}
       IP.2 = {{ hostvars[item]['cluster_ip'] }}
-      {% elif cluster_ip is defined %}
+      {% elif cluster_ip is defined and cluster_ip %}
       IP.2 = {{ cluster_ip }}
-      {% elif advertise_ip is defined %}
+      {% elif advertise_ip is defined and advertise_ip %}
       IP.2 = {{ advertise_ip }}
       {% endif %}
   loop: "{{ groups['controller_nodes'] | default([inventory_hostname]) }}"
@@ -217,7 +217,9 @@
       DNS.2 = localhost
       DNS.3 = consul.service.consul
       IP.1 = 127.0.0.1
+      {% if hostvars[item] is defined and hostvars[item]['cluster_ip'] is defined and hostvars[item]['cluster_ip'] %}
       IP.2 = {{ hostvars[item]['cluster_ip'] }}
+      {% endif %}
   loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
   when: "groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0"
   delegate_to: localhost
@@ -307,7 +309,7 @@
 
     - name: Force kill Consul and Nomad processes (Nomad side)
       become: yes
-      ansible.builtin.command: pkill -9 -f "consul|nomad"
+      ansible.builtin.shell: pkill -9 nomad || true; pkill -9 consul || true
       ignore_errors: yes
       failed_when: false
 
@@ -329,7 +331,7 @@
       ansible.builtin.command: /usr/sbin/update-ca-certificates --fresh
       changed_when: true
       failed_when: false
-  when: target_nomad_ca_validity is defined and target_nomad_ca_validity.rc != 0
+  when: target_nomad_ca_validity is defined and target_nomad_ca_validity.rc != 0 and not ansible_check_mode
 
 - name: Force clear existing Nomad certificates on target nodes to trigger rotation
   become: yes

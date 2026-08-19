@@ -4,15 +4,15 @@ bind_addr = "0.0.0.0"
 
 addresses {
   http = "0.0.0.0"
-  rpc  = "{{ cluster_ip }}"
-  serf = "{{ cluster_ip }}"
+  rpc  = "{% if cluster_ip is defined and cluster_ip and cluster_ip != '127.0.0.1' %}{{ cluster_ip }}{% else %}0.0.0.0{% endif %}"
+  serf = "{% if cluster_ip is defined and cluster_ip and cluster_ip != '127.0.0.1' %}{{ cluster_ip }}{% else %}0.0.0.0{% endif %}"
 }
 
 advertise {
   # Advertise the private IP so other nodes talk over the private lane
-  http = "{{ advertise_ip }}"
-  rpc  = "{{ cluster_ip }}"
-  serf = "{{ cluster_ip }}"
+  http = "{% if advertise_ip is defined and advertise_ip %}{{ advertise_ip }}{% else %}127.0.0.1{% endif %}"
+  rpc  = "{% if cluster_ip is defined and cluster_ip %}{{ cluster_ip }}{% else %}127.0.0.1{% endif %}"
+  serf = "{% if cluster_ip is defined and cluster_ip %}{{ cluster_ip }}{% else %}127.0.0.1{% endif %}"
 }
 
 consul {
@@ -54,7 +54,7 @@ client {
   enabled = true
   servers = [
     {% for host in groups['controller_nodes'] %}
-    "{{ hostvars[host]['cluster_ip'] }}"{% if not loop.last %},{% endif %}
+    "{% if hostvars[host]['cluster_ip'] is defined and hostvars[host]['cluster_ip'] %}{{ hostvars[host]['cluster_ip'] }}{% else %}127.0.0.1{% endif %}"{% if not loop.last %},{% endif %}
     {% endfor %}
   ]
   
