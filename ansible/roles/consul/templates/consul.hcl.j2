@@ -2,10 +2,12 @@ data_dir = "{{ consul_data_dir }}"
 {% if cluster_ip is defined and cluster_ip and cluster_ip != "127.0.0.1" %}
 bind_addr = "{{ cluster_ip }}"
 {% else %}
-bind_addr = "0.0.0.0"
+{% set final_ip = cluster_ip | default('', true) %}
+bind_addr = "{% if final_ip != '' and final_ip != '127.0.0.1' %}{{ final_ip }}{% else %}0.0.0.0{% endif %}"
 {% endif %}
 {% if cluster_ip is defined and cluster_ip %}
-advertise_addr = "{{ cluster_ip }}"
+{% set final_ip = cluster_ip | default(advertise_ip | default('127.0.0.1', true), true) %}
+advertise_addr = "{{ final_ip }}"
 {% elif ansible_default_ipv4 is defined and ansible_default_ipv4.address is defined %}
 advertise_addr = "{{ ansible_default_ipv4.address }}"
 {% else %}
@@ -72,7 +74,7 @@ bootstrap_expect = 1
 bootstrap_expect = {{ groups['controller_nodes'] | length }}
 retry_join = [
   {% for host in groups['controller_nodes'] %}
-  "{{ hostvars[host]['cluster_ip'] }}"{% if not loop.last %},{% endif %}
+  "{% set host_ip = hostvars[host]['cluster_ip'] | default('', true) %}{% if host_ip != '' %}{{ host_ip }}{% else %}127.0.0.1{% endif %}"{% if not loop.last %},{% endif %}
   {% endfor %}
 ]
 {% endif %}
@@ -81,7 +83,7 @@ retry_join = [
 server = false
 retry_join = [
   {% for host in groups['controller_nodes'] %}
-  "{{ hostvars[host]['cluster_ip'] }}"{% if not loop.last %},{% endif %}
+  "{% set host_ip = hostvars[host]['cluster_ip'] | default('', true) %}{% if host_ip != '' %}{{ host_ip }}{% else %}127.0.0.1{% endif %}"{% if not loop.last %},{% endif %}
   {% endfor %}
 ]
 {% endif %}
