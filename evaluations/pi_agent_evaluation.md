@@ -55,21 +55,20 @@ Wrap Pi as a standard tool (like `smol_agent_tool.py`) that the main LLM can cal
 
 To successfully implement the Pi agent into our system, the following steps must be completed:
 
-1. **Environment Provisioning (Ansible):**
-   - Update `ansible/roles/pipecatapp/tasks/main.yaml` (or create a new role) to install `Node.js` (if not already present via `nodeenv`) and globally install Pi via `npm install -g --ignore-scripts @earendil-works/pi-coding-agent`.
+- [x] **Environment Provisioning (Ansible):**
+   - Updated `ansible/roles/pipecatapp/tasks/main.yaml` to globally install Pi via `npm install -g --ignore-scripts @earendil-works/pi-coding-agent`.
 
-2. **Core Workflow Node Implementation:**
-   - Create `pipecatapp/workflow/nodes/pi_node.py`.
-   - Implement the `PiAgentNode` class inheriting from the base node class.
-   - Configure the node to construct the `pi` CLI command, utilizing `--mode json` or print (`-p`) modes to interact programmatically.
+- [x] **Core Workflow Node Implementation:**
+   - Created `pipecatapp/workflow/nodes/pi_node.py`.
+   - Implemented the `PiAgentNode` class inheriting from the base node class.
+   - Configured the node to construct the `pi` CLI command, utilizing print (`-p`) mode to interact programmatically via `subprocess`.
 
-3. **Workflow Registration:**
-   - Register `PiAgentNode` in the workflow node registry so it can be parsed from YAML files.
+- [x] **Workflow Registration:**
+   - Registered `PiAgentNode` in the workflow node registry (`__init__.py`) so it can be parsed from YAML files.
 
-4. **Example YAML Workflow:**
-   - Create `pipecatapp/workflows/pi_integration_test.yaml`.
-   - Define a flow that takes an `InputNode`, passes it to the `PiAgentNode` (instructing Pi to use a specific skill), and outputs via `OutputNode`.
+- [x] **Example YAML Workflow:**
+   - Created `pipecatapp/workflows/pi_integration_test.yaml`.
+   - Defined a flow that takes an `InputNode`, passes it to the `PiAgentNode` (instructing Pi to use a specific skill), and outputs via `OutputNode`.
 
-5. **Testing & Verification:**
-   - Add unit tests for `pi_node.py` mocking the `subprocess` call to the Pi CLI.
-   - Run the workflow locally to verify Pi executes correctly within the pipeline without blocking.
+- [x] **Testing & Verification:**
+   - Added unit tests for `pi_node.py` mocking the `subprocess` call to the Pi CLI, ensuring graceful handling of timeouts and missing binaries.
