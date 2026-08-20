@@ -272,12 +272,9 @@
           DNS.3 = server.dc1.consul
           DNS.4 = consul.service.consul
           IP.1 = 127.0.0.1
-          {% if hostvars[item] is defined and hostvars[item]['cluster_ip'] is defined and hostvars[item]['cluster_ip'] %}
-          IP.2 = {{ hostvars[item]['cluster_ip'] }}
-          {% elif cluster_ip is defined and cluster_ip %}
-          IP.2 = {{ cluster_ip }}
-          {% elif advertise_ip is defined and advertise_ip %}
-          IP.2 = {{ advertise_ip }}
+          {% set final_ip = hostvars[item]['cluster_ip'] | default(cluster_ip | default(advertise_ip | default('', true), true), true) %}
+          {% if final_ip != '' %}
+          IP.2 = {{ final_ip }}
           {% endif %}
       loop: "{{ groups['controller_nodes'] }}"
 
@@ -325,12 +322,9 @@
           DNS.3 = client.dc1.consul
           DNS.4 = consul.service.consul
           IP.1 = 127.0.0.1
-          {% if hostvars[item] is defined and hostvars[item]['cluster_ip'] is defined and hostvars[item]['cluster_ip'] %}
-          IP.2 = {{ hostvars[item]['cluster_ip'] }}
-          {% elif cluster_ip is defined and cluster_ip %}
-          IP.2 = {{ cluster_ip }}
-          {% elif advertise_ip is defined and advertise_ip %}
-          IP.2 = {{ advertise_ip }}
+          {% set final_ip = hostvars[item]['cluster_ip'] | default(cluster_ip | default(advertise_ip | default('', true), true), true) %}
+          {% if final_ip != '' %}
+          IP.2 = {{ final_ip }}
           {% endif %}
       loop: "{{ query('inventory_hostnames', 'all:!controller_nodes') }}"
 
