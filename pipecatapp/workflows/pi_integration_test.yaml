@@ -1,0 +1,23 @@
+name: "Pi Agent Integration Test Workflow"
+nodes:
+  - id: "Input"
+    type: "InputNode"
+    inputs: []
+
+  - id: "PiExecution"
+    type: "PiAgentNode"
+    config:
+      timeout: 120
+    inputs:
+      - name: "prompt"
+        connection:
+          from_node: "Input"
+          from_output: "user_text"
+
+  - id: "Output"
+    type: "OutputNode"
+    inputs:
+      - name: "final_output"
+        connection:
+          from_node: "PiExecution"
+          from_output: "result"
