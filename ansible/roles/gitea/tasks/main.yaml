@@ -14,20 +14,17 @@
 
 - name: Check if Nomad CLI certificate exists
   ansible.builtin.stat:
-    path: "{{ nomad_tls_dir }}/cli.pem"
+    path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
   register: nomad_cli_cert_stat
+
+- name: Set nomad_protocol fact
+  ansible.builtin.set_fact:
+    nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
 
 - name: Run Gitea Nomad job
   ansible.builtin.command: /usr/local/bin/nomad job run -detach /tmp/gitea.nomad
   environment:
-    NOMAD_ADDR: "https://127.0.0.1:4646"
-    NOMAD_CACERT: "{{ nomad_tls_dir }}/ca.pem"
-    NOMAD_CLIENT_CERT: "{{ nomad_tls_dir }}/cli.pem"
-    NOMAD_CLIENT_KEY: "{{ nomad_tls_dir }}/cli-key.pem"
-  when: nomad_cli_cert_stat.stat.exists
-
-- name: Run Gitea Nomad job (No TLS)
-  ansible.builtin.command: /usr/local/bin/nomad job run -detach /tmp/gitea.nomad
-  environment:
-    NOMAD_ADDR: "http://127.0.0.1:4646"
-  when: not nomad_cli_cert_stat.stat.exists
+    NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
