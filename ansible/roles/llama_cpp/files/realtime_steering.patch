@@ -1,8 +1,8 @@
 diff --git a/tools/server/server-common.cpp b/tools/server/server-common.cpp
-index 21c843c0d..9853683a6 100644
+index 585f65e83..9f5695682 100644
 --- a/tools/server/server-common.cpp
 +++ b/tools/server/server-common.cpp
-@@ -165,6 +165,20 @@ std::vector<size_t> lora_get_enabled_ids(const std::vector<common_adapter_lora_i
+@@ -195,6 +195,20 @@ std::vector<size_t> lora_get_enabled_ids(const std::vector<common_adapter_lora_i
      return enabled_ids;
  }
 
@@ -24,10 +24,10 @@ index 21c843c0d..9853683a6 100644
  // base64 utils (TODO: use the base64::decode from base64.hpp)
  //
 diff --git a/tools/server/server-common.h b/tools/server/server-common.h
-index 4681f9c51..c67701b23 100644
+index 6488be344..c80058fb2 100644
 --- a/tools/server/server-common.h
 +++ b/tools/server/server-common.h
-@@ -117,6 +117,12 @@ bool are_lora_equal(
+@@ -125,6 +125,12 @@ bool are_lora_equal(
  // get the ids of all enabled loras
  std::vector<size_t> lora_get_enabled_ids(const std::vector<common_adapter_lora_info> & loras);
 
@@ -41,10 +41,10 @@ index 4681f9c51..c67701b23 100644
  // server_tokens
  //
 diff --git a/tools/server/server-context.cpp b/tools/server/server-context.cpp
-index ce743e665..30dbfa942 100644
+index 1293c8640..7b175466f 100644
 --- a/tools/server/server-context.cpp
 +++ b/tools/server/server-context.cpp
-@@ -2663,6 +2663,50 @@ private:
+@@ -2652,6 +2652,50 @@ private:
                      res->id = task.id;
                      queue_results.send(std::move(res));
                  } break;
@@ -93,9 +93,9 @@ index ce743e665..30dbfa942 100644
 +                    queue_results.send(std::move(res));
 +                } break;
          }
-     }
 
-@@ -3958,6 +4002,13 @@ server_response_reader server_context::get_response_reader() {
+         return true;
+@@ -4096,6 +4140,13 @@ server_response_reader server_context::get_response_reader() {
      return impl->get_response_reader();
  }
 
@@ -109,75 +109,11 @@ index ce743e665..30dbfa942 100644
  server_context_meta server_context::get_meta() const {
      auto bos_id = llama_vocab_bos(impl->vocab);
      auto eos_id = llama_vocab_eos(impl->vocab);
-@@ -5071,6 +5122,62 @@ void server_routes::init_routes() {
-         res->ok(result->to_json());
-         return res;
-     };
-+
-+    this->get_control_vectors = [this](const server_http_req & req) {
-+        auto res = create_response();
-+        auto & rd = res->rd;
-+
-+        {
-+            server_task task(SERVER_TASK_TYPE_GET_CONTROL_VECTORS);
-+            task.id = rd.get_new_id();
-+            rd.post_task(std::move(task));
-+        }
-+
-+        auto result = rd.next(req.should_stop);
-+        if (!result) {
-+            GGML_ASSERT(req.should_stop());
-+            return res;
-+        }
-+
-+        if (result->is_error()) {
-+            res->error(result->to_json());
-+            return res;
-+        }
-+
-+        res->ok(result->to_json());
-+        return res;
-+    };
-+
-+    this->post_control_vectors = [this](const server_http_req & req) {
-+        auto res = create_response();
-+        const json body = json::parse(req.body);
-+        if (!body.is_array()) {
-+            res->error(format_error_response("Request body must be an array", ERROR_TYPE_INVALID_REQUEST));
-+            return res;
-+        }
-+
-+        auto & rd = res->rd;
-+        {
-+            server_task task(SERVER_TASK_TYPE_SET_CONTROL_VECTORS);
-+            task.id = rd.get_new_id();
-+            task.set_control_vectors = parse_control_vector_request(body);
-+            rd.post_task(std::move(task));
-+        }
-+
-+        auto result = rd.next(req.should_stop);
-+        if (!result) {
-+            GGML_ASSERT(req.should_stop());
-+            return res;
-+        }
-+
-+        if (result->is_error()) {
-+            res->error(result->to_json());
-+            return res;
-+        }
-+
-+        res->ok(result->to_json());
-+        return res;
-+    };
- }
-
- json server_routes::get_model_info() const {
 diff --git a/tools/server/server-context.h b/tools/server/server-context.h
-index 58dda8914..98fe0935c 100644
+index 764df0e08..7471ebc32 100644
 --- a/tools/server/server-context.h
 +++ b/tools/server/server-context.h
-@@ -107,6 +107,9 @@ struct server_context {
-     // get server metadata (read-only), can only be called after load_model()
+@@ -108,6 +108,9 @@ struct server_context {
      // not thread-safe, should only be used from the main thread
      server_context_meta get_meta() const;
 
@@ -186,7 +122,8 @@ index 58dda8914..98fe0935c 100644
 +
      // note: must be set before load_model() is called
      void set_state_callback(server_state_callback_t callback);
-@@ -153,6 +156,8 @@ struct server_routes {
+ };
+@@ -154,6 +157,8 @@ struct server_routes {
      server_http_context::handler_t post_rerank;
      server_http_context::handler_t get_lora_adapters;
      server_http_context::handler_t post_lora_adapters;
@@ -196,10 +133,10 @@ index 58dda8914..98fe0935c 100644
      // to be used in router mode
      json get_model_info() const;
 diff --git a/tools/server/server-task.h b/tools/server/server-task.h
-index c3eea2ecb..2e9f32842 100644
+index 25ff01512..f3facc536 100644
 --- a/tools/server/server-task.h
 +++ b/tools/server/server-task.h
-@@ -27,6 +27,8 @@ enum server_task_type {
+@@ -28,6 +28,8 @@ enum server_task_type {
      SERVER_TASK_TYPE_SLOT_ERASE,
      SERVER_TASK_TYPE_GET_LORA,
      SERVER_TASK_TYPE_SET_LORA,
@@ -208,7 +145,7 @@ index c3eea2ecb..2e9f32842 100644
  };
 
  // TODO: change this to more generic "response_format" to replace the "format_response_*" in server-common
-@@ -175,6 +177,9 @@ struct server_task {
+@@ -176,6 +178,9 @@ struct server_task {
      // used by SERVER_TASK_TYPE_SET_LORA
      std::map<int, float> set_lora; // mapping adapter ID -> scale
 
@@ -218,7 +155,7 @@ index c3eea2ecb..2e9f32842 100644
      server_task() = default;
 
      server_task(server_task_type type) : type(type) {}
-@@ -584,6 +589,29 @@ struct server_task_result_apply_lora : server_task_result {
+@@ -564,6 +569,29 @@ struct server_task_result_apply_lora : server_task_result {
      virtual json to_json() override;
  };
 
@@ -249,10 +186,10 @@ index c3eea2ecb..2e9f32842 100644
      server_tokens tokens;
 
 diff --git a/tools/server/server.cpp b/tools/server/server.cpp
-index 371b13c44..463db80dd 100644
+index 5fe2729ba..18b1b92c4 100644
 --- a/tools/server/server.cpp
 +++ b/tools/server/server.cpp
-@@ -268,6 +268,9 @@ int llama_server(common_params & params, int argc, char ** argv) {
+@@ -269,6 +269,9 @@ int llama_server(common_params & params, int argc, char ** argv) {
      // LoRA adapters hotswap
      ctx_http.get ("/lora-adapters",            ex_wrapper(routes.get_lora_adapters));
      ctx_http.post("/lora-adapters",            ex_wrapper(routes.post_lora_adapters));
