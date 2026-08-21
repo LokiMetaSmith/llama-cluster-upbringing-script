@@ -1000,6 +1000,9 @@ EXIT_CODE=$?
 if [ $EXIT_CODE -eq 0 ]; then
     echo -e "\n${GREEN}✨ Bootstrap complete.${NC}"
 
+    # Mark the system as bootstrapped to prevent re-running the systemd service
+    sudo touch /var/lib/pipecat_bootstrapped
+
     # Run Post-Bootstrap Cleanup
     if [ -x "scripts/cleanup.sh" ]; then
         echo -e "\n${BOLD}${CYAN}🧹 Initiating Post-Bootstrap Space Reclamation...${NC}"
