@@ -105,6 +105,6 @@ tree-sitter-swift>=0.7.0
 # Model Context Protocol support
 mcp
 smolagents
-aiofiles==23.2.1
+aiofiles>=24.1.0,<27
 datasets>=4.0.0
 jupyter-client
