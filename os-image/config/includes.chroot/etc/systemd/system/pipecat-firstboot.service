@@ -6,11 +6,10 @@ ConditionPathExists=!/var/lib/pipecat_bootstrapped
 ConditionKernelCommandLine=!boot=live
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStartPre=/bin/sleep 30
 ExecStart=/bin/bash -c "cd /opt/pipecat-cluster && ./bootstrap.sh"
-ExecStartPost=/bin/touch /var/lib/pipecat_bootstrapped
-RemainAfterExit=yes
+TimeoutStartSec=infinity
 StandardOutput=journal+console
 StandardError=journal+console
 
