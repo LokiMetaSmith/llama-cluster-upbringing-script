@@ -1,0 +1,24 @@
+#!/bin/bash
+# .githooks/post-commit
+# Automatically tags the commit with the latest version from .repo_version
+
+VERSION_FILE=".repo_version"
+
+if [ -f "$VERSION_FILE" ]; then
+    CURRENT_VERSION=$(tail -n 1 "$VERSION_FILE")
+
+    # Strip the branch suffix for the tag
+    STRIPPED_VERSION=$(echo "$CURRENT_VERSION" | grep -Eo "^[0-9]+\.[0-9]+\.[0-9]+")
+
+    if [ -n "$STRIPPED_VERSION" ]; then
+        TAG_NAME="v$STRIPPED_VERSION"
+
+        # Check if tag already exists
+        if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists, skipping tagging."
+        else
+            echo "Creating lightweight tag: $TAG_NAME"
+            git tag "$TAG_NAME"
+        fi
+    fi
+fi

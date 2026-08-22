@@ -668,6 +668,14 @@ ask_confirm() {
     fi
 }
 
+# --- Git Hooks Setup ---
+setup_git_hooks() {
+    if [ -d ".git" ]; then
+        git config core.hooksPath .githooks
+        echo -e "${GREEN}✅ Configured git to use .githooks for hooks.${NC}"
+    fi
+}
+
 # --- Environment Setup (Reusable) ---
 VENV_DIR="$SCRIPT_DIR/.venv"
 
@@ -695,6 +703,7 @@ ensure_python_environment() {
     echo -e "\n${BOLD}=== Environment Setup ===${NC}"
     chmod o-w . ansible.cfg
 
+    run_step "Setting up Git Hooks" "setup_git_hooks"
     run_step "Creating Python virtual environment" "setup_venv"
 
     # Activate venv for this script execution

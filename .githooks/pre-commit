@@ -41,4 +41,101 @@ if git diff --cached --name-only | grep -q "\.py$"; then
 fi
 
 echo "Pre-commit safety check passed."
+
+# LLM VERSION BUMP HOOK (Appended)
+
+VERSION_FILE=".repo_version"
+
+# Get the staged diff
+DIFF=$(git diff --cached)
+
+# If there are changes, check if version file needs update
+if [ -n "$DIFF" ]; then
+
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+
+    # Ensure version file exists
+    if [ ! -f "$VERSION_FILE" ]; then
+        echo "1.0.0-$CURRENT_BRANCH" > "$VERSION_FILE"
+    fi
+
+    CURRENT_VERSION=$(tail -n 1 "$VERSION_FILE")
+
+    # Strip the branch suffix for incrementing logic
+    STRIPPED_VERSION=$(echo "$CURRENT_VERSION" | grep -Eo "^[0-9]+\.[0-9]+\.[0-9]+")
+    if [ -z "$STRIPPED_VERSION" ]; then
+        STRIPPED_VERSION="1.0.0"
+    fi
+    IFS='.' read -r MAJOR MINOR PATCH <<< "$STRIPPED_VERSION"
+
+    echo "🤖 Analyzing staged changes to determine version bump..."
+
+    # Prepare the prompt for the local LLM
+    PROMPT="You are a strict semantic versioning classifier. Analyze the following git diff and determine the version bump required.
+    Rules:
+    - MAJOR: Incompatible API changes, massive architectural shifts, or complete overhauls.
+    - MINOR: Added functionality in a backwards-compatible manner (e.g., new features, new playbooks).
+    - PATCH: Backwards-compatible bug fixes or minor refactors.
+    Reply with EXACTLY ONE WORD: MAJOR, MINOR, or PATCH. Do not explain.
+
+    Diff:
+    $DIFF"
+
+    # Call a local LLM endpoint (e.g., llama.cpp server running on localhost:8080)
+    # Adjust the URL and model name to match your local setup
+    LLM_RESPONSE=$(curl -s -X POST http://localhost:8080/v1/chat/completions \
+      -H "Content-Type: application/json" \
+      -d '{
+        "model": "local-model",
+        "messages": [{"role": "user", "content": "'"${PROMPT//$'
+'/\\n}"'"}],
+        "temperature": 0.1,
+        "max_tokens": 10
+      }' | grep -o '"content":"[^"]*' | cut -d'"' -f4 | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')
+
+    BUMP_TYPE=$LLM_RESPONSE
+
+    # Validate LLM response, fallback to user input if it failed or hallucinated
+    if [[ "$BUMP_TYPE" != "MAJOR" && "$BUMP_TYPE" != "MINOR" && "$BUMP_TYPE" != "PATCH" ]]; then
+        echo "⚠️ LLM determination failed or was ambiguous (Response: '$LLM_RESPONSE')."
+
+        # Prompt the user interactively (redirecting stdin from /dev/tty since git hooks close it)
+        echo "Please manually enter the bump type (MAJOR, MINOR, PATCH):" > /dev/tty
+        read USER_INPUT < /dev/tty
+        while true; do
+            USER_INPUT=$(echo "$USER_INPUT" | tr '[:lower:]' '[:upper:]')
+            if [[ "$USER_INPUT" == "MAJOR" || "$USER_INPUT" == "MINOR" || "$USER_INPUT" == "PATCH" ]]; then
+                BUMP_TYPE=$USER_INPUT
+                break
+            fi
+            echo "Please manually enter the bump type (MAJOR, MINOR, PATCH):" > /dev/tty
+            read USER_INPUT < /dev/tty
+        done
+    fi
+
+    # Apply the version bump
+    case $BUMP_TYPE in
+        MAJOR)
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+            ;;
+        MINOR)
+            MINOR=$((MINOR + 1))
+            PATCH=0
+            ;;
+        PATCH)
+            PATCH=$((PATCH + 1))
+            ;;
+    esac
+
+    NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}-$CURRENT_BRANCH"
+
+    echo "$NEW_VERSION" >> "$VERSION_FILE"
+    git add "$VERSION_FILE"
+
+    echo "✅ Version bumped: $CURRENT_VERSION -> $NEW_VERSION ($BUMP_TYPE)"
+
+fi
+
 exit 0
