@@ -164,7 +164,10 @@ class AsyncCache:
 service_cache = AsyncCache(ttl=30)
 metrics_cache = AsyncCache(ttl=5)
 # Reusable HTTP client for service discovery
-service_discovery_client = httpx.AsyncClient(timeout=2.0)
+# Initialize with Consul token if available
+consul_token = os.getenv("CONSUL_HTTP_TOKEN", "")
+consul_headers = {"X-Consul-Token": consul_token} if consul_token else {}
+service_discovery_client = httpx.AsyncClient(headers=consul_headers, timeout=2.0)
 # Reusable HTTP client for metrics
 metrics_client = httpx.AsyncClient(timeout=2.0)
 

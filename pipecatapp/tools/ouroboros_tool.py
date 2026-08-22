@@ -14,7 +14,10 @@ class OuroborosTool:
         self.consul_host = consul_host or os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1"))
         self.consul_port = consul_port
         self.consul_url = f"http://{self.consul_host}:{self.consul_port}"
-        self.client = httpx.AsyncClient(timeout=5.0)
+
+        token = os.getenv("CONSUL_HTTP_TOKEN", "")
+        headers = {"X-Consul-Token": token} if token else {}
+        self.client = httpx.AsyncClient(headers=headers, timeout=5.0)
 
 
     def get_schema(self) -> dict:
