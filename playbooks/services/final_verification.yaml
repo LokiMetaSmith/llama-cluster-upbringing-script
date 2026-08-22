@@ -75,5 +75,3 @@
             when: not ansible_check_mode
             tags:
               - nomad-health
-
-      when: node_tier == 'high'
