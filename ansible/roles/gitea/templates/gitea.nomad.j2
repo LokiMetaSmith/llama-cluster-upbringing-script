@@ -76,10 +76,16 @@ job "gitea" {
              mv /root/.radicle/bin/* /usr/local/bin/
           fi
 
-          # Setup global hooks
-          mkdir -p /data/git/hooks/post-receive.d
-          cp /local/post-receive-radicle.sh /data/git/hooks/post-receive.d/radicle-mirror
-          chmod +x /data/git/hooks/post-receive.d/radicle-mirror
+          # Setup global hooks in the background to avoid race conditions with s6 init
+          (
+            # Wait for Gitea's s6-svscan to initialize the /data/git structure
+            until [ -d /data/git ]; do sleep 1; done
+            # Wait another moment for permissions/initialization to settle
+            sleep 5
+            mkdir -p /data/git/hooks/post-receive.d
+            cp /local/post-receive-radicle.sh /data/git/hooks/post-receive.d/radicle-mirror
+            chmod +x /data/git/hooks/post-receive.d/radicle-mirror
+          ) &
 
           # Call original entrypoint with default CMD arguments to start s6 supervisor
           exec /usr/bin/entrypoint /bin/s6-svscan /etc/s6

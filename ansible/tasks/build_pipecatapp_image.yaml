@@ -11,14 +11,14 @@
 - name: Copy pipecat startup script to build context
   ansible.builtin.template:
     src: "{{ pipecat_template_src | default(inventory_dir ~ '/ansible/roles/pipecatapp/templates/start_pipecatapp.sh.j2') }}"
-    dest: "{{ pipecat_build_dir | default(inventory_dir ~ '/pipecatapp') }}/start_pipecat.sh"
+    dest: "{{ pipecat_app_dir }}/start_pipecat.sh"
     mode: '0755'
   become: yes
   when: pipecat_deployment_style == 'docker'
 
 - name: Get checksum of Dockerfile
   ansible.builtin.stat:
-    path: "{{ pipecat_build_dir | default(inventory_dir ~ '/pipecatapp') }}/Dockerfile"
+    path: "{{ pipecat_app_dir }}/Dockerfile"
     checksum_algorithm: sha256
   register: dockerfile_stat
   become: yes
@@ -26,7 +26,7 @@
 
 - name: Get checksum of requirements.txt
   ansible.builtin.stat:
-    path: "{{ pipecat_build_dir | default(inventory_dir ~ '/pipecatapp') }}/requirements.txt"
+    path: "{{ pipecat_app_dir }}/requirements.txt"
     checksum_algorithm: sha256
   register: requirements_stat
   become: yes
@@ -34,7 +34,7 @@
 
 - name: Get checksum of start_pipecat.sh
   ansible.builtin.stat:
-    path: "{{ pipecat_build_dir | default(inventory_dir ~ '/pipecatapp') }}/start_pipecat.sh"
+    path: "{{ pipecat_app_dir }}/start_pipecat.sh"
     checksum_algorithm: sha256
   register: startup_script_stat
   become: yes
@@ -63,7 +63,7 @@
     name: "{{ pipecat_image_name | default('pipecatapp') }}"
     tag: "{{ pipecat_versioned_tag }}"
     build:
-      path: "{{ pipecat_build_dir | default(inventory_dir ~ '/pipecatapp') }}"
+      path: "{{ pipecat_app_dir }}"
       nocache: true
     source: build
     force_source: true
