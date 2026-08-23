@@ -292,7 +292,9 @@ class AppManager:
 
         # Fetch current members
         try:
-            resp = requests.get(consul_kv_url, timeout=5)
+            token = os.getenv("CONSUL_HTTP_TOKEN", "")
+            headers = {"X-Consul-Token": token} if token else {}
+            resp = requests.get(consul_kv_url, headers=headers, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
                 if data and "Value" in data[0] and data[0]["Value"]:
@@ -325,7 +327,9 @@ class AppManager:
         # Save back to Consul
         try:
             payload = json.dumps(members)
-            put_resp = requests.put(consul_kv_url, data=payload, timeout=5)
+            token = os.getenv("CONSUL_HTTP_TOKEN", "")
+            headers = {"X-Consul-Token": token} if token else {}
+            put_resp = requests.put(consul_kv_url, data=payload, headers=headers, timeout=5)
             return put_resp.status_code == 200
         except Exception as e:
             logger.error(f"Failed to save updated webring to Consul: {e}")
