@@ -26,6 +26,107 @@
   become: yes
   when: traefik_acme_enabled | bool
 
+
+- name: Ensure temp directory for Traefik certs exists
+  ansible.builtin.file:
+    path: /tmp/traefik_certs
+    state: directory
+    mode: '0700'
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Generate private key for mesh domain
+  community.crypto.openssl_privatekey:
+    path: /tmp/traefik_certs/tls.key
+    size: 2048
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Generate CSR for mesh domain
+  community.crypto.openssl_csr:
+    path: /tmp/traefik_certs/tls.csr
+    privatekey_path: /tmp/traefik_certs/tls.key
+    common_name: "{{ cluster_domain | default('local.mesh') }}"
+    subject_alt_name: "DNS:*.{{ cluster_domain | default('local.mesh') }},DNS:{{ cluster_domain | default('local.mesh') }},IP:{{ cluster_ip | default('127.0.0.1') }},IP:{{ advertise_ip | default('127.0.0.1') }}"
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Generate self-signed certificate for mesh domain
+  community.crypto.x509_certificate:
+    path: /tmp/traefik_certs/tls.crt
+    privatekey_path: /tmp/traefik_certs/tls.key
+    csr_path: /tmp/traefik_certs/tls.csr
+    provider: selfsigned
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Read generated cert
+  ansible.builtin.slurp:
+    src: /tmp/traefik_certs/tls.crt
+  register: tls_crt_file
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Read generated key
+  ansible.builtin.slurp:
+    src: /tmp/traefik_certs/tls.key
+  register: tls_key_file
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Read Consul management token
+  ansible.builtin.slurp:
+    src: "{{ consul_config_dir | default('/etc/consul.d') }}/management_token"
+  register: consul_token_file
+  become: yes
+  ignore_errors: yes
+  when: consul_bootstrap_token is not defined or consul_bootstrap_token == ''
+
+- name: Set consul_bootstrap_token fact
+  ansible.builtin.set_fact:
+    consul_bootstrap_token: "{{ consul_token_file['content'] | b64decode | trim }}"
+  when: consul_token_file is success and consul_token_file.content is defined and (consul_bootstrap_token is not defined or consul_bootstrap_token == '')
+
+- name: Push TLS cert to Consul KV
+  ansible.builtin.uri:
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/certs/mesh/tls.crt"
+    client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+    client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+    ca_path: "/etc/consul.d/ca.pem"
+    method: PUT
+    body: "{{ tls_crt_file['content'] | b64decode }}"
+    status_code: [200, 201, 204]
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
+  run_once: true
+
+- name: Push TLS key to Consul KV
+  ansible.builtin.uri:
+    url: "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}/v1/kv/certs/mesh/tls.key"
+    client_cert: "{{ consul_client_cert_path | default('/etc/consul.d/cert.pem') }}"
+    client_key: "{{ consul_client_key_path | default('/etc/consul.d/key.pem') }}"
+    ca_path: "/etc/consul.d/ca.pem"
+    method: PUT
+    body: "{{ tls_key_file['content'] | b64decode }}"
+    status_code: [200, 201, 204]
+    headers:
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
+  run_once: true
+
+- name: Clean up temporary Traefik certs directory
+  ansible.builtin.file:
+    path: /tmp/traefik_certs
+    state: absent
+  delegate_to: localhost
+  run_once: true
+  become: false
+
 - name: Template Traefik Nomad job
   ansible.builtin.template:
     src: traefik.nomad.j2
