@@ -52,6 +52,19 @@ job "{{ job_name | default('pipecat-app') }}" {
     }
     {% endset %}
 
+
+    volume "pipecatapp" {
+      type      = "host"
+      source    = "pipecatapp"
+      read_only = false
+    }
+
+    volume "models" {
+      type      = "host"
+      source    = "models"
+      read_only = true
+    }
+
     {% if pipecat_deployment_style == 'docker' %}
     network {
       mode = "host"
@@ -145,10 +158,21 @@ EOT
         # Mount volumes for models and config. Models are read-only.
         # Assumes /app is the WORKDIR in the container.
         volumes = [
-          "/opt/nomad/models:/opt/nomad/models:ro",
-          "/opt/pipecatapp:/opt/pipecatapp",
           "/opt/pipecatapp/chromadb:/app/chromadb_storage",
         ]
+      }
+
+      volume_mount {
+        volume      = "models"
+        destination = "/opt/nomad/models"
+        read_only   = true
+      }
+
+      volume_mount {
+        volume      = "pipecatapp"
+        destination = "/opt/pipecatapp"
+        read_only   = false
+
         # Pass through the sound device to the container
         {% if sound_enabled | default(false) %}
         devices = [

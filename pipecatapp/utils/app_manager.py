@@ -294,7 +294,7 @@ class AppManager:
         try:
             token = os.getenv("CONSUL_HTTP_TOKEN", "")
             headers = {"X-Consul-Token": token} if token else {}
-            resp = requests.get(consul_kv_url, headers=headers, timeout=5)
+            resp = requests.get(consul_kv_url, headers=headers, timeout=5, verify=False)
             if resp.status_code == 200:
                 data = resp.json()
                 if data and "Value" in data[0] and data[0]["Value"]:
