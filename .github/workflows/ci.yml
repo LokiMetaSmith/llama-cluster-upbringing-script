@@ -50,7 +50,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: "Install Ansible collections"
-        run: ansible-galaxy collection install community.general ansible.posix community.docker
+        run: ansible-galaxy collection install community.general ansible.posix community.docker community.sops community.crypto
 
       - name: "Run unit tests with coverage"
         run: python -m pytest --cov=pipecatapp --cov-report=xml tests/unit/
@@ -71,7 +71,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: "Install Ansible collections"
-        run: ansible-galaxy collection install community.general ansible.posix community.docker
+        run: ansible-galaxy collection install community.general ansible.posix community.docker community.sops community.crypto
 
       - name: "Cache Ansible baselines"
         uses: actions/cache@v4
