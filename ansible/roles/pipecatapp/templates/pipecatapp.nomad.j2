@@ -43,7 +43,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       ROUTER_PORT            = "{{ router_port }}"
       LLAMA_API_URL          = "http://{{ cluster_ip }}:{{ router_port }}/v1"
       WEB_PORT               = "${NOMAD_PORT_http}"
-      YOLO_MODEL_PATH        = "{{ pipecat_app_dir }}/vision/yolov8n.pt"
+      YOLO_MODEL_PATH        = "{{ nomad_models_dir }}/vision/yolov8n.pt"
       MAIN_API_SERVICE_NAME = "llama-api-main"
       PLAYWRIGHT_BROWSERS_PATH = "/opt/ms-playwright"
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"

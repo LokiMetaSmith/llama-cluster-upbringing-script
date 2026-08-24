@@ -85,6 +85,7 @@ job "gitea" {
             mkdir -p /data/git/hooks/post-receive.d
             cp /local/post-receive-radicle.sh /data/git/hooks/post-receive.d/radicle-mirror
             chmod +x /data/git/hooks/post-receive.d/radicle-mirror
+            chown -R git:git /data/git/hooks/post-receive.d
           ) &
 
           # Call original entrypoint with default CMD arguments to start s6 supervisor
