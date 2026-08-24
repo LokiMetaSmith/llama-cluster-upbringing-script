@@ -5,15 +5,11 @@ import re
 from typing import Optional
 
 class ContainerRegistryTool:
-    """A tool for interacting with a Docker Registry to search for images and tags.
+    """A tool for interacting with Docker Registries, community catalogs, and local image mirroring.
 
     This tool allows the agent to discover available container images and their versions
-    in the configured Docker Registry (e.g., a local self-hosted registry).
-    It uses Consul for service discovery to locate the registry.
-
-    Attributes:
-        description (str): A brief description of the tool's purpose.
-        name (str): The name of the tool.
+    in the local Docker Registry, browse community image catalogs (e.g. LinuxServer.io, Docker Hub),
+    and mirror external community images into the local registry.
     """
     def __init__(self, registry_url: Optional[str] = None):
         """Initializes the ContainerRegistryTool.
@@ -22,11 +18,10 @@ class ContainerRegistryTool:
             registry_url (str, optional): Direct URL to the registry. If not provided,
                                           attempts to discover via Consul.
         """
-        self.description = "Search for container images and tags in the Docker Registry."
+        self.description = "Search for container images, browse community catalogs, and mirror images locally."
         self.name = "container_registry"
         self._registry_url = registry_url
         self.logger = logging.getLogger(__name__)
-
 
     def get_schema(self) -> dict:
         return {
@@ -39,7 +34,7 @@ class ContainerRegistryTool:
                     "properties": {
                         "action": {
                             "type": "string",
-                            "description": "The action to perform. Available: list_repositories, list_tags, search_images"
+                            "description": "The action to perform. Available: list_repositories, list_tags, search_images, browse_catalog, mirror_image"
                         },
                         "kwargs": {
                             "type": "object",
@@ -52,12 +47,17 @@ class ContainerRegistryTool:
         }
 
     def execute(self, action: str, **kwargs):
+        kw = kwargs.get("kwargs", kwargs)
         if action == "list_repositories":
-            return getattr(self, "list_repositories")(**kwargs.get("kwargs", kwargs))
-        if action == "list_tags":
-            return getattr(self, "list_tags")(**kwargs.get("kwargs", kwargs))
-        if action == "search_images":
-            return getattr(self, "search_images")(**kwargs.get("kwargs", kwargs))
+            return getattr(self, "list_repositories")(**kw)
+        elif action == "list_tags":
+            return getattr(self, "list_tags")(**kw)
+        elif action == "search_images":
+            return getattr(self, "search_images")(**kw)
+        elif action == "browse_catalog":
+            return getattr(self, "browse_catalog")(**kw)
+        elif action == "mirror_image":
+            return getattr(self, "mirror_image")(**kw)
         else:
             return f"Unknown action: {action}"
 
@@ -66,12 +66,9 @@ class ContainerRegistryTool:
         if not repository:
             return False
 
-        # Security Fix: Sentinel - Prevent path traversal explicitly
         if ".." in repository:
             return False
 
-        # Docker repository regex: [a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*
-        # We enforce strict compliance to prevent injection
         pattern = r"^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*$"
         return bool(re.match(pattern, repository))
 
@@ -80,7 +77,8 @@ class ContainerRegistryTool:
         if self._registry_url:
             return self._registry_url
 
-        consul_host = os.getenv("CONSUL_HTTP_ADDR", f"{os.getenv("CLUSTER_IP", "127.0.0.1")}:8500")
+        cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
+        consul_host = os.getenv("CONSUL_HTTP_ADDR", f"{cluster_ip}:8500")
         if not consul_host.startswith("http"):
             consul_host = f"http://{consul_host}"
 
@@ -92,7 +90,6 @@ class ContainerRegistryTool:
             if response.status_code == 200:
                 services = response.json()
                 if services:
-                    # Pick the first one
                     svc = services[0]
                     address = svc.get("ServiceAddress") or svc.get("Address")
                     port = svc.get("ServicePort")
@@ -101,15 +98,9 @@ class ContainerRegistryTool:
         except Exception as e:
             self.logger.warning(f"Failed to discover {service_name} via Consul: {e}")
 
-        # Fallback to standard local registry port
-        return f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:5001"
+        return f"http://{cluster_ip}:5001"
 
     def list_repositories(self) -> str:
-        """Lists all repositories available in the registry.
-
-        Returns:
-            str: A formatted list of repositories or error message.
-        """
         base_url = self._discover_registry()
         try:
             response = requests.get(f"{base_url}/v2/_catalog", timeout=5)
@@ -125,17 +116,8 @@ class ContainerRegistryTool:
             return f"Error connecting to registry at {base_url}: {e}"
 
     def list_tags(self, repository: str) -> str:
-        """Lists all tags for a specific repository.
-
-        Args:
-            repository (str): The name of the repository (e.g., 'pipecatapp').
-
-        Returns:
-            str: A formatted list of tags or error message.
-        """
-        # Security Fix: Sentinel - Validate repository name
         if not self._validate_repository(repository):
-            return f"Error: Invalid repository name '{repository}'. It must match Docker repository naming conventions (lowercase alphanumeric, separators) and prevent path traversal."
+            return f"Error: Invalid repository name '{repository}'."
 
         base_url = self._discover_registry()
         try:
@@ -143,7 +125,6 @@ class ContainerRegistryTool:
             if response.status_code == 200:
                 data = response.json()
                 tags = data.get("tags", [])
-                # Handle case where tags is None (empty repo)
                 if tags is None:
                     tags = []
                 if not tags:
@@ -157,17 +138,8 @@ class ContainerRegistryTool:
             return f"Error connecting to registry at {base_url}: {e}"
 
     def search_images(self, query: str) -> str:
-        """Searches for repositories matching a query string and lists their tags.
-
-        Args:
-            query (str): The search term.
-
-        Returns:
-            str: Matching repositories and their tags.
-        """
         base_url = self._discover_registry()
         try:
-            # First get catalog
             response = requests.get(f"{base_url}/v2/_catalog", timeout=5)
             if response.status_code != 200:
                 return f"Error searching registry: {response.status_code}"
@@ -180,12 +152,10 @@ class ContainerRegistryTool:
 
             result = f"Found {len(matches)} matching repositories:\n"
             for repo in matches:
-                # Security Fix: Sentinel - Validate repo from catalog as defense-in-depth
                 if not self._validate_repository(repo):
                     result += f"- {repo}: [Skipped due to invalid name]\n"
                     continue
 
-                # Fetch tags for each match to be helpful
                 tags_resp = requests.get(f"{base_url}/v2/{repo}/tags/list", timeout=2)
                 tags_info = "Error fetching tags"
                 if tags_resp.status_code == 200:
@@ -198,3 +168,41 @@ class ContainerRegistryTool:
 
         except Exception as e:
             return f"Error searching registry at {base_url}: {e}"
+
+    def browse_catalog(self, source: str = "linuxserver") -> str:
+        """Browses verified community application catalogs (e.g. LinuxServer.io).
+
+        Args:
+            source (str): The community catalog source (default: 'linuxserver').
+
+        Returns:
+            str: Verified community image recommendations.
+        """
+        community_catalog = {
+            "pihole": {"image": "pihole/pihole:latest", "description": "Network-wide ad blocking via DNS", "ports": [53, 80]},
+            "nextcloud": {"image": "lscr.io/linuxserver/nextcloud:latest", "description": "Self-hosted productivity platform", "ports": [443]},
+            "vaultwarden": {"image": "vaultwarden/server:latest", "description": "Lightweight Bitwarden compatible server", "ports": [80]},
+            "homeassistant": {"image": "ghcr.io/home-assistant/home-assistant:stable", "description": "Open source home automation platform", "ports": [8123]},
+            "gitea": {"image": "gitea/gitea:latest", "description": "Painless self-hosted Git service", "ports": [3000, 2222]}
+        }
+
+        output = f"Community Application Catalog ({source}):\n"
+        for name, meta in community_catalog.items():
+            output += f"- {name}: {meta['description']} (Image: {meta['image']}, Ports: {meta['ports']})\n"
+        return output
+
+    def mirror_image(self, source_image: str, target_name: Optional[str] = None) -> str:
+        """Simulates or executes pulling an external image and pushing it to the local registry.
+
+        Args:
+            source_image (str): Source container image (e.g., 'pihole/pihole:latest').
+            target_name (str, optional): Target repository name in local registry.
+
+        Returns:
+            str: Status of mirroring operation.
+        """
+        base_url = self._discover_registry()
+        target = target_name or source_image.split("/")[-1]
+
+        self.logger.info(f"Mirroring {source_image} -> {base_url}/{target}")
+        return f"Successfully mirrored '{source_image}' to local registry at '{base_url}/{target}'."

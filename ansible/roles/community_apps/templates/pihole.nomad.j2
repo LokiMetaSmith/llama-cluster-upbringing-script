@@ -1,0 +1,95 @@
+job "{{ app_name | default('pihole') }}" {
+  datacenters = ["{{ datacenter | default('dc1') }}"]
+  type        = "service"
+
+  group "{{ app_name | default('pihole') }}" {
+    count = {{ instance_count | default(1) }}
+
+    network {
+      port "dns_tcp" {
+        static = {{ dns_tcp_port | default(53) }}
+        to     = 53
+      }
+      port "dns_udp" {
+        static = {{ dns_udp_port | default(53) }}
+        to     = 53
+      }
+      port "web" {
+        to = {{ web_container_port | default(80) }}
+      }
+    }
+
+    volume "pihole_data" {
+      type      = "host"
+      read_only = false
+      source    = "{{ pihole_data_volume | default('pihole_data') }}"
+    }
+
+    volume "dnsmasq_data" {
+      type      = "host"
+      read_only = false
+      source    = "{{ dnsmasq_data_volume | default('dnsmasq_data') }}"
+    }
+
+    service {
+      name = "{{ app_name | default('pihole') }}-web"
+      port = "web"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.{{ app_name | default('pihole') }}.rule=Host(`{{ domain_name | default('pihole.local') }}`)",
+        "traefik.http.routers.{{ app_name | default('pihole') }}.entrypoints={{ traefik_entrypoint | default('web') }}"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/admin/index.php"
+        interval = "15s"
+        timeout  = "3s"
+      }
+    }
+
+    service {
+      name = "{{ app_name | default('pihole') }}-dns"
+      port = "dns_udp"
+
+      check {
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    task "pihole" {
+      driver = "docker"
+
+      config {
+        image = "{{ container_image | default('pihole/pihole:latest') }}"
+        ports = ["dns_tcp", "dns_udp", "web"]
+      }
+
+      volume_mount {
+        volume      = "pihole_data"
+        destination = "/etc/pihole"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "dnsmasq_data"
+        destination = "/etc/dnsmasq.d"
+        read_only   = false
+      }
+
+      env {
+        TZ           = "{{ timezone | default('UTC') }}"
+        WEBPASSWORD  = "{{ admin_password | default('admin') }}"
+        FTLCONF_LOCAL_IPV4 = "{{ local_ipv4 | default('127.0.0.1') }}"
+      }
+
+      resources {
+        cpu    = {{ cpu_limit | default(500) }}
+        memory = {{ memory_limit | default(512) }}
+      }
+    }
+  }
+}
