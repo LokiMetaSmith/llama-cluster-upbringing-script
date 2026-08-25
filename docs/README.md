@@ -20,6 +20,7 @@ All user-facing manuals, deployment playbooks, and architectural blueprints are 
 
 The `analysis/` directory contains strategic technical reviews, system comparisons, and capability evaluation reports compiled during development.
 
+*   **[Community Container Management Manual](manual/COMMUNITY_CONTAINER_MANAGEMENT.md)**: Implemented (Complete system manual for community container apps)
 *   **[LiteGraph vs ReactFlow Analysis](analysis/LITEGRAPH_VS_REACTFLOW.md)**: Implemented (Analysis completed)
 *   **[Agent Lightning Analysis](analysis/AGENT_LIGHTNING_ANALYSIS.md)**: Implemented (Investigated as agent improvement method)
 *   **[Ceph Evaluation](analysis/CEPH_EVALUATION.md)**: Completed (Evaluated for potential cluster inclusion)
