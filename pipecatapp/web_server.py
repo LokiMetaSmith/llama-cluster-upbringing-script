@@ -452,6 +452,15 @@ async def get_vr_index_ui(rate_limit: None = Depends(standard_limiter)):
     with open(vr_index_html_path) as f:
         return HTMLResponse(f.read())
 
+@app.get("/apps", summary="Serve Community Container Apps UI", description="Serves the `apps.html` dashboard for managing community apps.", tags=["UI"])
+async def get_apps_ui(rate_limit: None = Depends(standard_limiter)):
+    """Serves the Community Apps Management UI."""
+    apps_html_path = os.path.join(static_dir, "apps.html")
+    if os.path.exists(apps_html_path):
+        with open(apps_html_path) as f:
+            return HTMLResponse(f.read())
+    return HTMLResponse("<html><body><h1>Community Apps UI</h1><p>apps.html is loading...</p></body></html>", status_code=200)
+
 @app.get("/api/cluster/metrics", summary="Get Cluster Metrics", description="Retrieves CPU and Memory metrics for services from Prometheus.", tags=["System"])
 async def get_cluster_metrics(api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """Retrieves cluster metrics from Prometheus."""
@@ -1222,6 +1231,201 @@ async def configure_rag(request: Request, payload: Dict = Body(..., examples=[{"
 
 
 
+
+# -------------------------------------------------------------------------
+# Category: Community Apps Management Endpoints
+# -------------------------------------------------------------------------
+
+COMMUNITY_APPS_CATALOG = {
+    "pihole": {
+        "id": "pihole",
+        "name": "Pi-hole",
+        "category": "Networking & Security",
+        "description": "Network-wide ad blocking via DNS sinkhole with admin web dashboard.",
+        "image": "pihole/pihole:latest",
+        "template": "pihole.nomad.j2",
+        "ports": [53, 80],
+        "default_domain": "pihole.local"
+    },
+    "nextcloud": {
+        "id": "nextcloud",
+        "name": "Nextcloud",
+        "category": "Storage & Collaboration",
+        "description": "Self-hosted productivity suite, file sync, and cloud storage platform.",
+        "image": "lscr.io/linuxserver/nextcloud:latest",
+        "template": "nextcloud.nomad.j2",
+        "ports": [443],
+        "default_domain": "nextcloud.local"
+    },
+    "vaultwarden": {
+        "id": "vaultwarden",
+        "name": "Vaultwarden",
+        "category": "Security & Identity",
+        "description": "Lightweight Bitwarden-compatible password manager server in Rust.",
+        "image": "vaultwarden/server:latest",
+        "template": "vaultwarden.nomad.j2",
+        "ports": [80],
+        "default_domain": "vaultwarden.local"
+    },
+    "homeassistant": {
+        "id": "homeassistant",
+        "name": "Home Assistant",
+        "category": "Smart Home",
+        "description": "Open source home automation platform focused on local control and privacy.",
+        "image": "ghcr.io/home-assistant/home-assistant:stable",
+        "template": "homeassistant.nomad.j2",
+        "ports": [8123],
+        "default_domain": "homeassistant.local"
+    },
+    "gitea": {
+        "id": "gitea",
+        "name": "Gitea",
+        "category": "Developer Tools",
+        "description": "Painless self-hosted Git service and software development forge.",
+        "image": "gitea/gitea:latest",
+        "template": "gitea.nomad.j2",
+        "ports": [3000, 2222],
+        "default_domain": "gitea.local"
+    }
+}
+
+@app.get("/api/apps/catalog", summary="Get Community Apps Catalog", tags=["Community Apps"])
+async def get_apps_catalog(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """Returns the pre-populated list of verified community applications."""
+    return JSONResponse(content=list(COMMUNITY_APPS_CATALOG.values()))
+
+@app.get("/api/apps/installed", summary="Get Installed Community Apps", tags=["Community Apps"])
+async def get_installed_apps(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """Queries Consul and Nomad to retrieve currently installed and running community applications."""
+    installed = []
+    cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
+    consul_url = format_url("http", os.getenv("CONSUL_HOST", cluster_ip), 8500)
+    nomad_url = format_url("http", os.getenv("NOMAD_HOST", cluster_ip), 4646)
+
+    try:
+        # Query Nomad for active jobs
+        nomad_resp = await service_discovery_client.get(f"{nomad_url}/v1/jobs", timeout=3.0)
+        nomad_jobs = nomad_resp.json() if nomad_resp.status_code == 200 else []
+
+        for job in nomad_jobs:
+            job_id = job.get("ID", "")
+            if job_id in COMMUNITY_APPS_CATALOG or any(app_id in job_id for app_id in COMMUNITY_APPS_CATALOG):
+                matched_id = job_id if job_id in COMMUNITY_APPS_CATALOG else next((a for a in COMMUNITY_APPS_CATALOG if a in job_id), job_id)
+                app_meta = COMMUNITY_APPS_CATALOG.get(matched_id, {"name": job_id, "category": "Custom", "image": "unknown"})
+
+                # Fetch specific job status
+                status_resp = await service_discovery_client.get(f"{nomad_url}/v1/job/{job_id}", timeout=2.0)
+                status_info = status_resp.json() if status_resp.status_code == 200 else {}
+
+                installed.append({
+                    "id": job_id,
+                    "app_id": matched_id,
+                    "name": app_meta.get("name", job_id),
+                    "status": job.get("Status", "unknown"),
+                    "type": job.get("Type", "service"),
+                    "status_description": job.get("StatusDescription", ""),
+                    "image": app_meta.get("image", ""),
+                    "create_index": job.get("CreateIndex", 0),
+                    "modify_index": job.get("ModifyIndex", 0)
+                })
+    except Exception as e:
+        logging.error(f"Error listing installed community apps: {e}")
+
+    return JSONResponse(content=installed)
+
+@app.get("/api/apps/status/{app_id}", summary="Investigate Community App Status", tags=["Community Apps"])
+async def get_app_status(app_id: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """Queries Consul health checks and Nomad allocation details for a specific app."""
+    cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
+    consul_url = format_url("http", os.getenv("CONSUL_HOST", cluster_ip), 8500)
+    nomad_url = format_url("http", os.getenv("NOMAD_HOST", cluster_ip), 4646)
+
+    # Sanitize app_id
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", app_id):
+        raise HTTPException(status_code=400, detail="Invalid app_id")
+
+    result = {
+        "app_id": app_id,
+        "nomad_job": None,
+        "allocations": [],
+        "consul_checks": []
+    }
+
+    try:
+        # Fetch Nomad Job
+        job_resp = await service_discovery_client.get(f"{nomad_url}/v1/job/{app_id}", timeout=3.0)
+        if job_resp.status_code == 200:
+            result["nomad_job"] = job_resp.json()
+
+        # Fetch Nomad Allocations
+        alloc_resp = await service_discovery_client.get(f"{nomad_url}/v1/job/{app_id}/allocations", timeout=3.0)
+        if alloc_resp.status_code == 200:
+            result["allocations"] = alloc_resp.json()
+
+        # Fetch Consul Health
+        consul_resp = await service_discovery_client.get(f"{consul_url}/v1/health/service/{app_id}", timeout=3.0)
+        if consul_resp.status_code == 200:
+            result["consul_checks"] = consul_resp.json()
+
+    except Exception as e:
+        logging.error(f"Error fetching status for app {app_id}: {e}")
+
+    return JSONResponse(content=result)
+
+@app.post("/api/apps/install", summary="Install Community App", tags=["Community Apps"])
+async def install_community_app(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """Triggers Ansible deployment playbook or Nomad job runner to install a community container app."""
+    app_id = payload.get("app_id")
+    if not app_id or app_id not in COMMUNITY_APPS_CATALOG:
+        raise HTTPException(status_code=400, detail=f"Invalid or unsupported app_id: {app_id}")
+
+    app_config = COMMUNITY_APPS_CATALOG[app_id]
+    domain_name = payload.get("domain_name", app_config["default_domain"])
+
+    # Prepare command execution for Ansible deploy playbook
+    cmd = [
+        "uvx", "--from", "ansible-core", "ansible-playbook",
+        "-i", "localhost,", "-c", "local",
+        "playbooks/deploy_community_app.yaml",
+        "-e", f"app_name={app_id}",
+        "-e", f"template_file={app_config['template']}",
+        "-e", f"domain_name={domain_name}"
+    ]
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode == 0:
+            return JSONResponse(content={"status": "success", "message": f"App {app_id} installed successfully", "output": stdout.decode()})
+        else:
+            return JSONResponse(status_code=500, content={"status": "error", "message": f"Failed to install {app_id}", "error": stderr.decode()})
+    except Exception as e:
+        logging.error(f"Error installing app {app_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/apps/remove/{app_id}", summary="Remove Community App", tags=["Community Apps"])
+async def remove_community_app(app_id: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """Purges the specified community container application job from Nomad and Consul."""
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", app_id):
+        raise HTTPException(status_code=400, detail="Invalid app_id")
+
+    cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
+    nomad_url = format_url("http", os.getenv("NOMAD_HOST", cluster_ip), 4646)
+
+    try:
+        # Purge job via Nomad API
+        purge_resp = await service_discovery_client.delete(f"{nomad_url}/v1/job/{app_id}?purge=true", timeout=5.0)
+        if purge_resp.status_code in [200, 202]:
+            return JSONResponse(content={"status": "success", "message": f"App {app_id} purged successfully."})
+        else:
+            return JSONResponse(status_code=purge_resp.status_code, content={"status": "error", "message": f"Nomad returned status {purge_resp.status_code}: {purge_resp.text}"})
+    except Exception as e:
+        logging.error(f"Error removing app {app_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # -------------------------------------------------------------------------
 # Category A: Sharded Event-routing Endpoints

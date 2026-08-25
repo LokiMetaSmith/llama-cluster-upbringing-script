@@ -1,0 +1,62 @@
+job "{{ app_name | default('homeassistant') }}" {
+  datacenters = ["{{ datacenter | default('dc1') }}"]
+  type        = "service"
+
+  group "homeassistant" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 8123
+      }
+    }
+
+    volume "ha_data" {
+      type      = "host"
+      read_only = false
+      source    = "ha_data"
+    }
+
+    service {
+      name = "{{ app_name | default('homeassistant') }}"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.homeassistant.rule=Host(`{{ domain_name | default('homeassistant.local') }}`)",
+        "traefik.http.routers.homeassistant.entrypoints=web"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/manifest.json"
+        interval = "15s"
+        timeout  = "3s"
+      }
+    }
+
+    task "homeassistant" {
+      driver = "docker"
+
+      config {
+        image = "ghcr.io/home-assistant/home-assistant:stable"
+        ports = ["http"]
+      }
+
+      volume_mount {
+        volume      = "ha_data"
+        destination = "/config"
+        read_only   = false
+      }
+
+      env {
+        TZ = "UTC"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+  }
+}

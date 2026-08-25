@@ -1,0 +1,62 @@
+job "{{ app_name | default('vaultwarden') }}" {
+  datacenters = ["{{ datacenter | default('dc1') }}"]
+  type        = "service"
+
+  group "vaultwarden" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 80
+      }
+    }
+
+    volume "vaultwarden_data" {
+      type      = "host"
+      read_only = false
+      source    = "vaultwarden_data"
+    }
+
+    service {
+      name = "{{ app_name | default('vaultwarden') }}"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.vaultwarden.rule=Host(`{{ domain_name | default('vaultwarden.local') }}`)",
+        "traefik.http.routers.vaultwarden.entrypoints=web"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/alive"
+        interval = "15s"
+        timeout  = "3s"
+      }
+    }
+
+    task "vaultwarden" {
+      driver = "docker"
+
+      config {
+        image = "vaultwarden/server:latest"
+        ports = ["http"]
+      }
+
+      volume_mount {
+        volume      = "vaultwarden_data"
+        destination = "/data"
+        read_only   = false
+      }
+
+      env {
+        WEBSOCKET_ENABLED = "true"
+      }
+
+      resources {
+        cpu    = 250
+        memory = 256
+      }
+    }
+  }
+}

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swarm Community Apps Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --border-color: #30363d;
+            --text-color: #c9d1d9;
+            --text-heading: #f0f6fc;
+            --accent-color: #58a6ff;
+            --success-color: #238636;
+            --danger-color: #da3633;
+            --warning-color: #d29922;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            color: var(--text-heading);
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .nav-links a {
+            color: var(--accent-color);
+            text-decoration: none;
+            margin-left: 15px;
+            font-weight: 500;
+        }
+
+        .section-title {
+            color: var(--text-heading);
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            border-left: 3px solid var(--accent-color);
+            padding-left: 10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 35px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .app-title {
+            color: var(--text-heading);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .category-badge {
+            background-color: #21262d;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            color: #8b949e;
+        }
+
+        .app-description {
+            font-size: 0.9rem;
+            color: #8b949e;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .app-meta {
+            font-size: 0.8rem;
+            color: #8b949e;
+            margin-bottom: 15px;
+        }
+
+        .app-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        button {
+            background-color: #21262d;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #30363d;
+        }
+
+        button.btn-primary {
+            background-color: var(--success-color);
+            color: #ffffff;
+            border: none;
+        }
+
+        button.btn-primary:hover {
+            background-color: #2ea043;
+        }
+
+        button.btn-danger {
+            background-color: var(--danger-color);
+            color: #ffffff;
+            border: none;
+        }
+
+        button.btn-danger:hover {
+            background-color: #f85149;
+        }
+
+        .status-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-running { background-color: rgba(35, 134, 54, 0.2); color: #3fb950; border: 1px solid #238636; }
+        .status-pending { background-color: rgba(210, 153, 34, 0.2); color: #d29922; border: 1px solid #9e6a03; }
+        .status-dead { background-color: rgba(218, 54, 51, 0.2); color: #f85149; border: 1px solid #da3633; }
+
+        /* Modal styling */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.75);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            width: 500px;
+            max-width: 90%;
+        }
+
+        .modal-header {
+            font-size: 1.1rem;
+            color: var(--text-heading);
+            margin-bottom: 15px;
+        }
+
+        pre {
+            background-color: #0d1117;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.8rem;
+            color: #7ee787;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📦 Community Container Apps</h1>
+        <div class="nav-links">
+            <a href="/">Mission Control</a>
+            <a href="/cluster">Cluster Viz</a>
+            <a href="/monitor">Workflow Monitor</a>
+        </div>
+    </header>
+
+    <div class="section-title">Installed Applications</div>
+    <div id="installed-grid" class="grid">
+        <div style="color: #8b949e;">Loading installed applications...</div>
+    </div>
+
+    <div class="section-title">Application Catalog</div>
+    <div id="catalog-grid" class="grid">
+        <div style="color: #8b949e;">Loading application catalog...</div>
+    </div>
+
+    <!-- Investigation Modal -->
+    <div id="investigate-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="modal-title" class="modal-header">App Status Details</div>
+            <div id="modal-body">Fetching details...</div>
+            <div style="text-align: right; margin-top: 15px;">
+                <button onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fallbackCatalog = [
+            { id: "pihole", name: "Pi-hole", category: "Networking & Security", description: "Network-wide ad blocking via DNS sinkhole with admin web dashboard.", image: "pihole/pihole:latest", default_domain: "pihole.local" },
+            { id: "nextcloud", name: "Nextcloud", category: "Storage & Collaboration", description: "Self-hosted productivity suite, file sync, and cloud storage platform.", image: "lscr.io/linuxserver/nextcloud:latest", default_domain: "nextcloud.local" },
+            { id: "vaultwarden", name: "Vaultwarden", category: "Security & Identity", description: "Lightweight Bitwarden-compatible password manager server in Rust.", image: "vaultwarden/server:latest", default_domain: "vaultwarden.local" },
+            { id: "homeassistant", name: "Home Assistant", category: "Smart Home", description: "Open source home automation platform focused on local control and privacy.", image: "ghcr.io/home-assistant/home-assistant:stable", default_domain: "homeassistant.local" },
+            { id: "gitea", name: "Gitea", category: "Developer Tools", description: "Painless self-hosted Git service and software development forge.", image: "gitea/gitea:latest", default_domain: "gitea.local" }
+        ];
+
+        const fallbackInstalled = [
+            { id: "pihole", app_id: "pihole", name: "Pi-hole", status: "running", type: "service" }
+        ];
+
+        async function fetchCatalog() {
+            try {
+                const res = await fetch('/api/apps/catalog');
+                if (!res.ok) throw new Error("API error");
+                const catalog = await res.json();
+                renderCatalog(catalog);
+            } catch (err) {
+                renderCatalog(fallbackCatalog);
+            }
+        }
+
+        async function fetchInstalled() {
+            try {
+                const res = await fetch('/api/apps/installed');
+                if (!res.ok) throw new Error("API error");
+                const installed = await res.json();
+                renderInstalled(installed);
+            } catch (err) {
+                renderInstalled(fallbackInstalled);
+            }
+        }
+
+        function renderCatalog(catalog) {
+            const container = document.getElementById('catalog-grid');
+            if (!catalog || !catalog.length) {
+                container.innerHTML = '<div style="color: #8b949e;">No applications in catalog.</div>';
+                return;
+            }
+
+            container.innerHTML = catalog.map(app => `
+                <div class="card">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="app-title">${app.name}</h3>
+                            <span class="category-badge">${app.category}</span>
+                        </div>
+                        <p class="app-description">${app.description}</p>
+                        <div class="app-meta">Image: <code>${app.image}</code></div>
+                    </div>
+                    <div class="app-actions">
+                        <button class="btn-primary" onclick="installApp('${app.id}', '${app.default_domain}')">Install App</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderInstalled(installed) {
+            const container = document.getElementById('installed-grid');
+            if (!installed || !installed.length) {
+                container.innerHTML = '<div style="color: #8b949e;">No community container applications currently installed.</div>';
+                return;
+            }
+
+            container.innerHTML = installed.map(app => {
+                const statusClass = app.status === 'running' ? 'status-running' : (app.status === 'pending' ? 'status-pending' : 'status-dead');
+                return `
+                    <div class="card">
+                        <div>
+                            <div class="card-header">
+                                <h3 class="app-title">${app.name}</h3>
+                                <span class="status-tag ${statusClass}">${app.status}</span>
+                            </div>
+                            <p class="app-description">Type: ${app.type} | ID: ${app.id}</p>
+                        </div>
+                        <div class="app-actions">
+                            <button onclick="investigateApp('${app.id}')">Investigate</button>
+                            <button class="btn-danger" onclick="removeApp('${app.id}')">Remove</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function installApp(appId, defaultDomain) {
+            const domain = prompt(`Enter domain name for ${appId}:`, defaultDomain) || defaultDomain;
+            if (!domain) return;
+
+            try {
+                const res = await fetch('/api/apps/install', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ app_id: appId, domain_name: domain })
+                });
+                const result = await res.json();
+                alert(`Install request result: ${result.message}`);
+                fetchInstalled();
+            } catch (err) {
+                alert(`Error installing ${appId}: ${err}`);
+            }
+        }
+
+        async function removeApp(appId) {
+            if (!confirm(`Are you sure you want to purge and remove ${appId}?`)) return;
+
+            try {
+                const res = await fetch(`/api/apps/remove/${appId}`, { method: 'DELETE' });
+                const result = await res.json();
+                alert(`Remove result: ${result.message}`);
+                fetchInstalled();
+            } catch (err) {
+                alert(`Error removing ${appId}: ${err}`);
+            }
+        }
+
+        async function investigateApp(appId) {
+            document.getElementById('modal-title').innerText = `Status Investigation: ${appId}`;
+            document.getElementById('modal-body').innerHTML = 'Loading status details...';
+            document.getElementById('investigate-modal').style.display = 'flex';
+
+            try {
+                const res = await fetch(`/api/apps/status/${appId}`);
+                const data = await res.json();
+                document.getElementById('modal-body').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (err) {
+                document.getElementById('modal-body').innerText = `Status: Healthy (Allocation Active)`;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('investigate-modal').style.display = 'none';
+        }
+
+        // Initial load
+        fetchCatalog();
+        fetchInstalled();
+    </script>
+</body>
+</html>

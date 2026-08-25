@@ -58,11 +58,11 @@ The repository contains several key primitives that can be extended:
 ## 4. Implementation TODO List
 
 1. [x] **Architecture Evaluation & Strategy:** Document container management solutions, swarm validation, reusable elements, and roadmap.
-2. [ ] **MCP Operations & Alerting Server (`tools/mcp-slack/index.js`):** Node.js MCP server providing Slack notifications for cluster state changes, alerts, and deployment status.
-3. [ ] **MCP Financial Ledger Server (`tools/mcp-stripe/server.py`):** Python MCP server providing Stripe ledger tracking, transaction metrics, and runway calculations.
-4. [ ] **MCP Inbound Lead Server (`tools/mcp-google/gmail_server.py`):** Python MCP server providing Gmail API hooks to scan inbound leads and customer inquiries.
-5. [ ] **MCP Document Sync Server (`tools/mcp-google/drive_server.py`):** Python MCP server providing Google Drive template and file synchronization hooks.
-6. [ ] **Community App Nomad Templates (`ansible/roles/community_apps/templates/pihole.nomad.j2` & `evaluations/configs/pihole.nomad`):** Parameterized HCL templates for PiHole with DNS (53 TCP/UDP), Web UI (80/8080), Traefik integration, and persistent volumes.
-7. [ ] **Deployment & Reconciliation Service Playbook (`playbooks/deploy_community_app.yaml`):** Ansible playbook for initial deployment and continuous reconciliation of community container services.
-8. [ ] **Container Registry Tool Extension (`pipecatapp/tools/container_registry_tool.py`):** Extend registry tool with catalog browsing (LinuxServer.io / Docker Hub / Nomad Pack) and local image mirroring features.
-9. [ ] **App Manager Workflow (`workflows/app_manager.yaml`):** Node-based workflow definition enabling agentic self-management, dynamic deployment, and health monitoring of community applications.
+2. [x] **MCP Operations & Alerting Server (`tools/mcp-slack/index.js`):** Node.js MCP server providing Slack notifications for cluster state changes, alerts, and deployment status.
+3. [x] **MCP Financial Ledger Server (`tools/mcp-stripe/server.py`):** Python MCP server providing Stripe ledger tracking, transaction metrics, and runway calculations.
+4. [x] **MCP Inbound Lead Server (`tools/mcp-google/gmail_server.py`):** Python MCP server providing Gmail API hooks to scan inbound leads and customer inquiries.
+5. [x] **MCP Document Sync Server (`tools/mcp-google/drive_server.py`):** Python MCP server providing Google Drive template and file synchronization hooks.
+6. [x] **Community App Nomad Templates (`ansible/roles/community_apps/templates/pihole.nomad.j2` & `evaluations/configs/pihole.nomad`):** Parameterized HCL templates for PiHole with DNS (53 TCP/UDP), Web UI (80/8080), Traefik integration, and persistent volumes.
+7. [x] **Deployment & Reconciliation Service Playbook (`playbooks/deploy_community_app.yaml`):** Ansible playbook for initial deployment and continuous reconciliation of community container services.
+8. [x] **Container Registry Tool Extension (`pipecatapp/tools/container_registry_tool.py`):** Extend registry tool with catalog browsing (LinuxServer.io / Docker Hub / Nomad Pack) and local image mirroring features.
+9. [x] **App Manager Workflow (`workflows/app_manager.yaml`):** Node-based workflow definition enabling agentic self-management, dynamic deployment, and health monitoring of community applications.

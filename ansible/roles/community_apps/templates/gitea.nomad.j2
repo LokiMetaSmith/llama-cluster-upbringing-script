@@ -1,0 +1,66 @@
+job "{{ app_name | default('gitea') }}" {
+  datacenters = ["{{ datacenter | default('dc1') }}"]
+  type        = "service"
+
+  group "gitea" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 3000
+      }
+      port "ssh" {
+        to = 2222
+      }
+    }
+
+    volume "gitea_data" {
+      type      = "host"
+      read_only = false
+      source    = "gitea_data"
+    }
+
+    service {
+      name = "{{ app_name | default('gitea') }}"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.gitea.rule=Host(`{{ domain_name | default('gitea.local') }}`)",
+        "traefik.http.routers.gitea.entrypoints=web"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/api/v1/version"
+        interval = "15s"
+        timeout  = "3s"
+      }
+    }
+
+    task "gitea" {
+      driver = "docker"
+
+      config {
+        image = "gitea/gitea:latest"
+        ports = ["http", "ssh"]
+      }
+
+      volume_mount {
+        volume      = "gitea_data"
+        destination = "/data"
+        read_only   = false
+      }
+
+      env {
+        USER_UID = "1000"
+        USER_GID = "1000"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+  }
+}
