@@ -64,6 +64,10 @@ job "{{ app_name | default('pihole') }}" {
         "traefik.http.routers.{{ app_name | default('pihole') }}.entrypoints={{ traefik_entrypoint | default('web') }}"
       ]
 
+      connect {
+        sidecar_service {}
+      }
+
       check {
         type     = "http"
         path     = "/admin/index.php"

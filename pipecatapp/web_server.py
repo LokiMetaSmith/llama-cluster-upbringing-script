@@ -1294,6 +1294,18 @@ async def get_apps_catalog(api_key: str = Security(get_api_key), rate_limit: Non
     """Returns the pre-populated list of verified community applications."""
     return JSONResponse(content=list(COMMUNITY_APPS_CATALOG.values()))
 
+@app.post("/api/apps/catalog/sync", summary="Sync Upstream Catalog", tags=["Community Apps"])
+async def sync_upstream_catalog(request: Request, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """Fetches and syncs latest upstream application catalog metadata."""
+    enforce_admin_role(request)
+    try:
+        from pipecatapp.tools.container_registry_tool import ContainerRegistryTool
+        tool = ContainerRegistryTool()
+        result = tool.browse_catalog(source="linuxserver_api")
+        return JSONResponse(content={"status": "success", "catalog_feed": result})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
 @app.get("/api/apps/installed", summary="Get Installed Community Apps", tags=["Community Apps"])
 async def get_installed_apps(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """Queries Consul and Nomad to retrieve currently installed and running community applications."""
