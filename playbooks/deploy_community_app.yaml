@@ -1,0 +1,49 @@
+---
+- name: Deploy and Reconcile Community Container Application on Nomad Swarm
+  hosts: controller_nodes
+  gather_facts: false
+  vars:
+    app_name: "pihole"
+    template_file: "pihole.nomad.j2"
+    datacenter: "dc1"
+    container_image: "pihole/pihole:latest"
+    domain_name: "pihole.local"
+    traefik_entrypoint: "web"
+    admin_password: "admin"
+    cpu_limit: 500
+    memory_limit: 512
+    nomad_bin: "/usr/local/bin/nomad"
+    nomad_addr: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+
+  tasks:
+    - name: Ensure target directory for rendered Nomad job specs exists
+      ansible.builtin.file:
+        path: "/tmp/community_apps"
+        state: directory
+        mode: '0755'
+
+    - name: Render Nomad job specification from Jinja2 template
+      ansible.builtin.template:
+        src: "../ansible/roles/community_apps/templates/{{ template_file }}"
+        dest: "/tmp/community_apps/{{ app_name }}.nomad"
+        mode: '0644'
+
+    - name: Check Nomad CLI Certificate file existence
+      ansible.builtin.stat:
+        path: "/etc/nomad.d/certs/cli.cert.pem"
+      register: nomad_cert_stat
+
+    - name: Submit and reconcile Nomad job
+      ansible.builtin.command:
+        cmd: "{{ nomad_bin }} job run -detach /tmp/community_apps/{{ app_name }}.nomad"
+      environment:
+        NOMAD_ADDR: "{{ nomad_addr }}"
+        NOMAD_CACERT: "{{ '/etc/nomad.d/certs/ca.pem' if nomad_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ '/etc/nomad.d/certs/cli.cert.pem' if nomad_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ '/etc/nomad.d/certs/cli.key.pem' if nomad_cert_stat.stat.exists else omit }}"
+      register: nomad_run_output
+      changed_when: nomad_run_output.rc == 0
+
+    - name: Output deployment status
+      ansible.builtin.debug:
+        msg: "Community app '{{ app_name }}' successfully submitted to Nomad: {{ nomad_run_output.stdout }}"

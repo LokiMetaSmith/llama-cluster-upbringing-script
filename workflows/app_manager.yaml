@@ -1,0 +1,37 @@
+name: app_manager
+description: Autonomous orchestration workflow for community container application deployment and lifecycle reconciliation.
+
+nodes:
+  - id: discover_apps
+    type: container_registry
+    action: browse_catalog
+    kwargs:
+      source: linuxserver
+
+  - id: select_app
+    type: manager
+    prompt: |
+      Select the community application to deploy or reconcile (e.g., PiHole, Nextcloud).
+      Ensure parameters such as domain name, web/dns ports, and volume paths are specified.
+
+  - id: mirror_app_image
+    type: container_registry
+    action: mirror_image
+    kwargs:
+      source_image: "pihole/pihole:latest"
+
+  - id: deploy_app_playbook
+    type: ansible
+    playbook: playbooks/deploy_community_app.yaml
+    extra_vars:
+      app_name: "pihole"
+      template_file: "pihole.nomad.j2"
+      domain_name: "pihole.local"
+
+edges:
+  - from: discover_apps
+    to: select_app
+  - from: select_app
+    to: mirror_app_image
+  - from: mirror_app_image
+    to: deploy_app_playbook
