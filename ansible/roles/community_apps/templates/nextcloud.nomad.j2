@@ -1,0 +1,64 @@
+job "{{ app_name | default('nextcloud') }}" {
+  datacenters = ["{{ datacenter | default('dc1') }}"]
+  type        = "service"
+
+  group "nextcloud" {
+    count = 1
+
+    network {
+      port "http" {
+        to = 80
+      }
+    }
+
+    volume "nextcloud_data" {
+      type      = "host"
+      read_only = false
+      source    = "nextcloud_data"
+    }
+
+    service {
+      name = "{{ app_name | default('nextcloud') }}"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.nextcloud.rule=Host(`{{ domain_name | default('nextcloud.local') }}`)",
+        "traefik.http.routers.nextcloud.entrypoints=web"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/status.php"
+        interval = "15s"
+        timeout  = "3s"
+      }
+    }
+
+    task "nextcloud" {
+      driver = "docker"
+
+      config {
+        image = "lscr.io/linuxserver/nextcloud:latest"
+        ports = ["http"]
+      }
+
+      volume_mount {
+        volume      = "nextcloud_data"
+        destination = "/data"
+        read_only   = false
+      }
+
+      env {
+        PUID = "1000"
+        PGID = "1000"
+        TZ   = "UTC"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+  }
+}
