@@ -170,7 +170,7 @@ class ContainerRegistryTool:
             return f"Error searching registry at {base_url}: {e}"
 
     def browse_catalog(self, source: str = "linuxserver") -> str:
-        """Browses verified community application catalogs (e.g. LinuxServer.io).
+        """Browses verified community application catalogs (e.g. LinuxServer.io) or dynamically fetches upstream registry feeds.
 
         Args:
             source (str): The community catalog source (default: 'linuxserver').
@@ -178,6 +178,18 @@ class ContainerRegistryTool:
         Returns:
             str: Verified community image recommendations.
         """
+        try:
+            if source == "linuxserver_api":
+                resp = requests.get("https://fleet.linuxserver.io/api/v1/images", timeout=3)
+                if resp.status_code == 200:
+                    data = resp.json().get("data", {})
+                    output = "Upstream LinuxServer.io Catalog Feed:\n"
+                    for key, val in list(data.items())[:10]:
+                        output += f"- {key}: {val.get('description', 'No description')} (Image: {val.get('image', key)})\n"
+                    return output
+        except Exception as e:
+            self.logger.warning(f"Failed upstream fetch for catalog source '{source}': {e}")
+
         community_catalog = {
             "pihole": {"image": "pihole/pihole:latest", "description": "Network-wide ad blocking via DNS", "ports": [53, 80]},
             "nextcloud": {"image": "lscr.io/linuxserver/nextcloud:latest", "description": "Self-hosted productivity platform", "ports": [443]},

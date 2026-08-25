@@ -37,6 +37,15 @@
       register: backup_output
       changed_when: backup_output.rc == 0
 
+    - name: Upload backup archives to remote S3 / Backblaze B2 offsite disaster recovery
+      ansible.builtin.shell: |
+        if command -v aws >/dev/null 2>&1 && [ -n "$S3_BACKUP_BUCKET" ]; then
+          aws s3 sync "{{ backup_root }}" "s3://${S3_BACKUP_BUCKET}/community_apps_backups/"
+        fi
+      register: s3_sync_output
+      changed_when: false
+      ignore_errors: true
+
     - name: Output snapshot backup summary
       ansible.builtin.debug:
         msg: "Community app volume backups completed at {{ backup_root }}"
