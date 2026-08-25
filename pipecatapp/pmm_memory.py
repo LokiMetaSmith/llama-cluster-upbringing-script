@@ -7,6 +7,11 @@ import os
 import uuid
 from typing import Dict, Any, Optional, List
 
+try:
+    from pipecatapp.security import redact_sensitive_data, sanitize_data
+except ImportError:
+    from security import redact_sensitive_data, sanitize_data
+
 class PMMMemory:
     """A memory store based on the Persistent Mind Model's event-sourcing.
 
@@ -130,17 +135,35 @@ class PMMMemory:
         hasher.update(json.dumps(payload, sort_keys=True).encode('utf-8'))
         return hasher.hexdigest()
 
-    def add_event_sync(self, kind: str, content: str, meta: Optional[Dict[str, Any]] = None) -> None:
-        """Adds a new event to the memory ledger synchronously.
+    def add_event_sync(self, kind: str, content: str, meta: Optional[Dict[str, Any]] = None, provenance: Optional[Dict[str, Any]] = None) -> None:
+        """Adds a new event to the memory ledger synchronously with PII scrubbing and provenance tracking.
 
         Args:
             kind (str): The type of event (e.g., 'user_message', 'assistant_message').
             content (str): The content of the event.
             meta (Optional[Dict[str, Any]], optional): Additional metadata.
                 Defaults to None.
+            provenance (Optional[Dict[str, Any]], optional): Provenance metadata.
         """
         meta = meta or {}
         timestamp = time.time()
+
+        # Sanitize PII and sensitive data before committing to storage
+        if isinstance(content, str):
+            content = redact_sensitive_data(content)
+        meta = sanitize_data(meta)
+
+        # Attach standard provenance tracking
+        prov = meta.get("provenance", {})
+        if provenance:
+            prov.update(provenance)
+
+        prov.setdefault("agent_id", meta.get("agent_id", "default_agent"))
+        prov.setdefault("prompt_version", meta.get("prompt_version", "1.0.0"))
+        prov.setdefault("source_model", meta.get("source_model", "unknown"))
+        prov.setdefault("timestamp", timestamp)
+        meta["provenance"] = prov
+
         prev_hash = self._get_last_hash()
         event_hash = self._calculate_hash(timestamp, kind, content, meta, prev_hash)
 
@@ -151,7 +174,7 @@ class PMMMemory:
         """, (timestamp, kind, content, json.dumps(meta), prev_hash, event_hash))
         self.conn.commit()
 
-    async def add_event(self, kind: str, content: str, meta: Optional[Dict[str, Any]] = None) -> None:
+    async def add_event(self, kind: str, content: str, meta: Optional[Dict[str, Any]] = None, provenance: Optional[Dict[str, Any]] = None) -> None:
         """Adds a new event to the memory ledger asynchronously.
 
         Args:
@@ -159,9 +182,53 @@ class PMMMemory:
             content (str): The content of the event.
             meta (Optional[Dict[str, Any]], optional): Additional metadata.
                 Defaults to None.
+            provenance (Optional[Dict[str, Any]], optional): Provenance metadata.
         """
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self.add_event_sync, kind, content, meta)
+        await loop.run_in_executor(None, self.add_event_sync, kind, content, meta, provenance)
+
+    def purge_user_data_sync(self, identifier: str) -> int:
+        """Purges all events and work items associated with a specified user or session identifier (GDPR Right to Erasure).
+
+        Args:
+            identifier (str): User ID, session ID, or username to purge.
+
+        Returns:
+            int: Total number of records deleted across events and work_items tables.
+        """
+        if not identifier:
+            return 0
+
+        cursor = self.conn.cursor()
+        deleted_count = 0
+
+        cursor.execute("""
+            DELETE FROM events
+            WHERE json_extract(meta, '$.user_id') = ?
+               OR json_extract(meta, '$.session_id') = ?
+               OR json_extract(meta, '$.created_by') = ?
+               OR json_extract(meta, '$.assignee_id') = ?
+               OR meta LIKE ?
+        """, (identifier, identifier, identifier, identifier, f'%"{identifier}"%'))
+        deleted_count += cursor.rowcount
+
+        cursor.execute("""
+            DELETE FROM work_items
+            WHERE created_by = ?
+               OR assignee_id = ?
+               OR json_extract(meta, '$.user_id') = ?
+               OR json_extract(meta, '$.session_id') = ?
+               OR meta LIKE ?
+        """, (identifier, identifier, identifier, identifier, f'%"{identifier}"%'))
+        deleted_count += cursor.rowcount
+
+        self.conn.commit()
+        return deleted_count
+
+    async def purge_user_data(self, identifier: str) -> int:
+        """Purges user data asynchronously."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.purge_user_data_sync, identifier)
 
     def get_events_sync(self, kind: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """Retrieves the most recent events from the ledger synchronously.
