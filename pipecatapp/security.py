@@ -27,10 +27,15 @@ _GITLAB_KEY_PATTERN = re.compile(r'(glpat-[0-9a-zA-Z\-_]{20,})')
 # Captures: 1=scheme separator "://", 2=user, 3=password
 _URL_CREDENTIALS_PATTERN = re.compile(r'(://)([^:/]+):([^@]+)@')
 
+# PII Redaction Patterns (GDPR Compliance)
+_EMAIL_PATTERN = re.compile(r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b')
+_SSN_PATTERN = re.compile(r'\b\d{3}-\d{2}-\d{4}\b')
+_CREDIT_CARD_PATTERN = re.compile(r'\b(?:\d[ -]*?){13,19}\b')
+
 # Bolt ⚡ Optimization: Combined fast-path regex
 # This is significantly faster than iterating over a list of triggers with 'any'
 # especially for short strings which dominate the data (2.6x speedup).
-_FAST_PATH_PATTERN = re.compile(r'sk-|Bearer|AIza|AKIA|ASIA|ABIA|ACCA|xox|gh[pousr]_|glpat|://')
+_FAST_PATH_PATTERN = re.compile(r'sk-|Bearer|AIza|AKIA|ASIA|ABIA|ACCA|xox|gh[pousr]_|glpat|://|@|\b\d{3}-\d{2}-\d{4}\b|\b(?:\d[ -]*?){13,19}\b')
 
 # Keys containing sensitive data that should be removed during sanitization
 # Bolt ⚡ Optimization: Use set for O(1) lookups
@@ -60,6 +65,17 @@ def _redact_impl(text: str) -> str:
     # Redact credentials in URLs (e.g. for Bitbucket, generic git, etc.)
     # Replace with scheme://user:[REDACTED]@
     text = _URL_CREDENTIALS_PATTERN.sub(r'\1\2:[REDACTED]@', text)
+
+    # Redact GDPR PII (emails, SSNs, credit card numbers)
+    text = _EMAIL_PATTERN.sub(r'[EMAIL_REDACTED]', text)
+    text = _SSN_PATTERN.sub(r'[SSN_REDACTED]', text)
+    # Only redact numbers that look like credit card digits when 13-19 digits long
+    def _card_replacer(match):
+        digits = re.sub(r'\D', '', match.group(0))
+        if 13 <= len(digits) <= 19:
+            return '[CARD_REDACTED]'
+        return match.group(0)
+    text = _CREDIT_CARD_PATTERN.sub(_card_replacer, text)
 
     return text
 

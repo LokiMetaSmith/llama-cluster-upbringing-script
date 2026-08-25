@@ -84,7 +84,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Security Enhancement: Add Security Headers
+# Security & Compliance Enhancement: Add Security and Provenance Headers
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
@@ -101,6 +101,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://aframe.io https://supereggbert.github.io https://cdn.jsdelivr.net; "
             "connect-src 'self' ws: wss: https://cdn.aframe.io;"
         )
+
+        # Attach Agent Provenance Lineage metadata headers
+        response.headers.setdefault("X-Agent-ID", os.getenv("AGENT_ID", "pipecat_master"))
+        response.headers.setdefault("X-Prompt-Version", os.getenv("PROMPT_VERSION", "1.0.0"))
+        response.headers.setdefault("X-Source-Model", os.getenv("SOURCE_MODEL", "qwen-2.5-coder"))
+        response.headers.setdefault("X-Timestamp", str(time.time()))
+
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -1482,6 +1489,32 @@ async def upgrade_community_app(request: Request, payload: Dict = Body(...), api
             return JSONResponse(status_code=500, content={"status": "error", "message": stderr.decode()})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# -------------------------------------------------------------------------
+# Category: GDPR Compliance & Provenance Endpoints
+# -------------------------------------------------------------------------
+
+@app.delete("/api/memory/gdpr/purge", summary="GDPR Right to Erasure Purge", tags=["Memory", "GDPR"])
+async def purge_gdpr_user_data(identifier: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """Purges all stored events and work items for a specified user or session identifier to comply with GDPR Right to Erasure."""
+    if not identifier or not re.match(r"^[a-zA-Z0-9_\-@\.]+$", identifier):
+        raise HTTPException(status_code=400, detail="Invalid identifier format")
+
+    deleted_total = 0
+
+    # Purge from sharded memory router if active
+    router = getattr(app.state, "memory_router", None)
+    if router:
+        for memory_instance in router.local_memories.values():
+            deleted_total += await memory_instance.purge_user_data(identifier)
+    else:
+        # Fallback to monolithic memory
+        twin = getattr(app.state, "twin_service_instance", None)
+        if twin and hasattr(twin, "long_term_memory"):
+            deleted_total += await twin.long_term_memory.purge_user_data(identifier)
+
+    return {"status": "success", "identifier": identifier, "records_purged": deleted_total}
+
 
 # -------------------------------------------------------------------------
 # Category A: Sharded Event-routing Endpoints
