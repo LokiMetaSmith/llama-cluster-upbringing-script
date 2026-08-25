@@ -1,0 +1,53 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Community Container CPU Usage",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (task) (rate(nomad_client_allocs_cpu_total_ticks[1m]))",
+          "legendFormat": "{{task}}"
+        }
+      ]
+    },
+    {
+      "title": "Community Container Memory Usage",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (task) (nomad_client_allocs_memory_usage)",
+          "legendFormat": "{{task}}"
+        }
+      ]
+    },
+    {
+      "title": "Consul Health Check Status",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "consul_health_service_status",
+          "legendFormat": "{{service}} - {{status}}"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["community", "containers", "nomad", "swarm"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Swarm Community Apps Telemetry & Health",
+  "uid": "community-apps-telemetry"
+}
