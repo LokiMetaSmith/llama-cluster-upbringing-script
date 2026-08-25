@@ -1,0 +1,42 @@
+---
+- name: Backup and Snapshot Community Application Persistent Host Volumes
+  hosts: controller_nodes
+  gather_facts: false
+  vars:
+    backup_root: "/var/backups/community_apps"
+    volume_paths:
+      - "/var/lib/pihole"
+      - "/var/lib/nextcloud"
+      - "/var/lib/vaultwarden"
+      - "/var/lib/homeassistant"
+      - "/var/lib/gitea"
+
+  tasks:
+    - name: Ensure backup directory exists
+      ansible.builtin.file:
+        path: "{{ backup_root }}"
+        state: directory
+        mode: '0755'
+
+    - name: Check Btrfs filesystem status on volume path
+      ansible.builtin.command:
+        cmd: "btrfs filesystem show /"
+      register: btrfs_check
+      failed_when: false
+      changed_when: false
+
+    - name: Create volume backup archives
+      ansible.builtin.shell: |
+        TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+        for vol in {{ volume_paths | join(' ') }}; do
+          if [ -d "$vol" ]; then
+            APP_NAME=$(basename "$vol")
+            tar -czf "{{ backup_root }}/${APP_NAME}_${TIMESTAMP}.tar.gz" -C "$vol" .
+          fi
+        done
+      register: backup_output
+      changed_when: backup_output.rc == 0
+
+    - name: Output snapshot backup summary
+      ansible.builtin.debug:
+        msg: "Community app volume backups completed at {{ backup_root }}"

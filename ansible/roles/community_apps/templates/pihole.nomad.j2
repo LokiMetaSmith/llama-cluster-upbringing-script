@@ -5,6 +5,20 @@ job "{{ app_name | default('pihole') }}" {
   group "{{ app_name | default('pihole') }}" {
     count = {{ instance_count | default(1) }}
 
+    restart {
+      attempts = 3
+      interval = "5m"
+      delay    = "25s"
+      mode     = "delay"
+    }
+
+    reschedule {
+      delay          = "30s"
+      delay_function = "exponential"
+      max_delay      = "10m"
+      unlimited      = true
+    }
+
     network {
       port "dns_tcp" {
         static = {{ dns_tcp_port | default(53) }}

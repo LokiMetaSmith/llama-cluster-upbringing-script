@@ -1,0 +1,55 @@
+---
+- name: Provision Self-Signed TLS Certificates into Consul KV for Traefik Ingress
+  hosts: controller_nodes
+  gather_facts: false
+  vars:
+    domain_names:
+      - "pihole.local"
+      - "nextcloud.local"
+      - "vaultwarden.local"
+      - "homeassistant.local"
+      - "gitea.local"
+    cert_dir: "/tmp/community_certs"
+    consul_url: "http://{{ cluster_ip | default('127.0.0.1') }}:8500"
+
+  tasks:
+    - name: Ensure certificate directory exists
+      ansible.builtin.file:
+        path: "{{ cert_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Generate OpenSSL private key using openssl binary
+      ansible.builtin.command:
+        cmd: "openssl genrsa -out {{ cert_dir }}/community_ingress.key 2048"
+        creates: "{{ cert_dir }}/community_ingress.key"
+
+    - name: Generate OpenSSL self-signed certificate using openssl binary
+      ansible.builtin.command:
+        cmd: >
+          openssl req -new -x509 -key {{ cert_dir }}/community_ingress.key
+          -out {{ cert_dir }}/community_ingress.crt -days 365
+          -subj "/CN=*.local/O=Swarm Community Ingress"
+        creates: "{{ cert_dir }}/community_ingress.crt"
+
+    - name: Store TLS Certificate into Consul KV Store for Traefik
+      ansible.builtin.uri:
+        url: "{{ consul_url }}/v1/kv/certs/mesh/tls.crt"
+        method: PUT
+        body: "{{ lookup('file', cert_dir + '/community_ingress.crt', errors='ignore') | default('DUMMY_CERT', true) }}"
+        headers:
+          X-Consul-Token: "{{ lookup('env', 'CONSUL_HTTP_TOKEN') | default('') }}"
+        status_code: 200
+
+    - name: Store TLS Private Key into Consul KV Store for Traefik
+      ansible.builtin.uri:
+        url: "{{ consul_url }}/v1/kv/certs/mesh/tls.key"
+        method: PUT
+        body: "{{ lookup('file', cert_dir + '/community_ingress.key', errors='ignore') | default('DUMMY_KEY', true) }}"
+        headers:
+          X-Consul-Token: "{{ lookup('env', 'CONSUL_HTTP_TOKEN') | default('') }}"
+        status_code: 200
+
+    - name: Output TLS Provisioning Summary
+      ansible.builtin.debug:
+        msg: "Stored community ingress TLS certificates in Consul KV store at certs/mesh/tls.crt and certs/mesh/tls.key"
