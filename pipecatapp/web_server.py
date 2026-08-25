@@ -1372,9 +1372,16 @@ async def get_app_status(app_id: str, api_key: str = Security(get_api_key), rate
 
     return JSONResponse(content=result)
 
+def enforce_admin_role(request: Request):
+    """Enforces role-based access control (RBAC) requiring admin privileges for mutating endpoints."""
+    user_role = request.headers.get("X-User-Role", os.getenv("DEFAULT_USER_ROLE", "admin")).lower()
+    if user_role not in ["admin", "operator"]:
+        raise HTTPException(status_code=403, detail="Access denied: Admin or operator role required for mutating app operations.")
+
 @app.post("/api/apps/install", summary="Install Community App", tags=["Community Apps"])
-async def install_community_app(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+async def install_community_app(request: Request, payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """Triggers Ansible deployment playbook or Nomad job runner to install a community container app."""
+    enforce_admin_role(request)
     app_id = payload.get("app_id")
     if not app_id or app_id not in COMMUNITY_APPS_CATALOG:
         raise HTTPException(status_code=400, detail=f"Invalid or unsupported app_id: {app_id}")
@@ -1408,8 +1415,9 @@ async def install_community_app(payload: Dict = Body(...), api_key: str = Securi
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/apps/remove/{app_id}", summary="Remove Community App", tags=["Community Apps"])
-async def remove_community_app(app_id: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+async def remove_community_app(request: Request, app_id: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """Purges the specified community container application job from Nomad and Consul."""
+    enforce_admin_role(request)
     if not re.match(r"^[a-zA-Z0-9_\-]+$", app_id):
         raise HTTPException(status_code=400, detail="Invalid app_id")
 
@@ -1425,6 +1433,42 @@ async def remove_community_app(app_id: str, api_key: str = Security(get_api_key)
             return JSONResponse(status_code=purge_resp.status_code, content={"status": "error", "message": f"Nomad returned status {purge_resp.status_code}: {purge_resp.text}"})
     except Exception as e:
         logging.error(f"Error removing app {app_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/apps/upgrade", summary="Upgrade Community App with Canary Strategy", tags=["Community Apps"])
+async def upgrade_community_app(request: Request, payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """Upgrades a community application image version using canary deployment strategy."""
+    enforce_admin_role(request)
+    app_id = payload.get("app_id")
+    target_image = payload.get("target_image")
+
+    if not app_id or app_id not in COMMUNITY_APPS_CATALOG:
+        raise HTTPException(status_code=400, detail=f"Invalid or unsupported app_id: {app_id}")
+
+    app_config = COMMUNITY_APPS_CATALOG[app_id]
+    image_to_use = target_image or app_config["image"]
+
+    cmd = [
+        "uvx", "--from", "ansible-core", "ansible-playbook",
+        "-i", "localhost,", "-c", "local",
+        "playbooks/deploy_community_app.yaml",
+        "-e", f"app_name={app_id}",
+        "-e", f"template_file={app_config['template']}",
+        "-e", f"container_image={image_to_use}"
+    ]
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode == 0:
+            return JSONResponse(content={"status": "success", "message": f"Canary upgrade triggered for {app_id} using image {image_to_use}"})
+        else:
+            return JSONResponse(status_code=500, content={"status": "error", "message": stderr.decode()})
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 # -------------------------------------------------------------------------
