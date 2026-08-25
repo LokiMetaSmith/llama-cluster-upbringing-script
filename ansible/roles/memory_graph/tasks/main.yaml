@@ -20,7 +20,6 @@
     name: "memory-graph-service:local"
     build:
       path: "{{ project_root }}/pipecatapp/memory_graph_service"
-      pull: yes
     source: build
     force_source: true
 
