@@ -2,9 +2,9 @@
 
 ## Next
 
-- [ ] **Community Apps Autonomous Health Monitor & Self-Healing Loop:** Periodic background polling of community apps via Consul/Nomad health APIs with automated Ansible repair triggers.
-- [ ] **Automated Application Upgrade & Canary Rollback Workflow:** `/api/apps/upgrade` endpoint and Nomad canary `update` blocks with `auto_revert` for zero-downtime updates and rollbacks.
-- [ ] **Multi-Tenant Access & Role-Based Control (RBAC):** Role enforcement (admin vs viewer) on mutating community app endpoints.
+- [x] **Community Apps Autonomous Health Monitor & Self-Healing Loop:** Periodic background polling of community apps via Consul/Nomad health APIs with automated Ansible repair triggers.
+- [x] **Automated Application Upgrade & Canary Rollback Workflow:** `/api/apps/upgrade` endpoint and Nomad canary `update` blocks with `auto_revert` for zero-downtime updates and rollbacks.
+- [x] **Multi-Tenant Access & Role-Based Control (RBAC):** Role enforcement (admin vs viewer) on mutating community app endpoints.
 - [x] Evaluate and execute the Proof-of-Concept for integrating HelixDB as a unified graph-vector memory backend (see `docs/analysis/HELIXDB_EVALUATION.md` for the PoC TODO list).
 - [x] Implement `apt` package caching proxy via IPFS.
 
