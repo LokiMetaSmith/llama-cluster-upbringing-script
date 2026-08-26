@@ -3,7 +3,22 @@ import base64
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import Prehashed
-from cryptography.hazmat.primitives.serialization import load_der_private_key, load_der_public_key
+from cryptography.hazmat.primitives.serialization import load_der_private_key, load_der_public_key, Encoding, PublicFormat
+
+def generate_key_pair() -> tuple[str, str]:
+    """Generates a SECP256R1 private and public key pair in hex format."""
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    private_numbers = private_key.private_numbers()
+    private_key_hex = private_numbers.private_value.to_bytes(32, byteorder='big').hex()
+
+    public_key = private_key.public_key()
+    public_key_hex = public_key.public_bytes(
+        encoding=Encoding.X962,
+        format=PublicFormat.UncompressedPoint
+    ).hex()
+
+    return private_key_hex, public_key_hex
+
 
 def _get_deterministic_json(payload_dict: dict) -> bytes:
     """Returns a deterministic JSON byte representation of the payload."""

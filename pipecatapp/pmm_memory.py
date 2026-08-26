@@ -9,8 +9,10 @@ from typing import Dict, Any, Optional, List
 
 try:
     from pipecatapp.security import redact_sensitive_data, sanitize_data
+    from pipecatapp.atproto_crypto import generate_key_pair, sign_payload
 except ImportError:
     from security import redact_sensitive_data, sanitize_data
+    from atproto_crypto import generate_key_pair, sign_payload
 
 class PMMMemory:
     """A memory store based on the Persistent Mind Model's event-sourcing.
@@ -36,6 +38,15 @@ class PMMMemory:
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
         self.conn = self._init_db()
+
+        # Initialize cryptographic signing keys for provenance tracking
+        priv_env = os.getenv("AGENT_PRIVATE_KEY_HEX")
+        pub_env = os.getenv("AGENT_PUBLIC_KEY_HEX")
+        if priv_env and pub_env:
+            self.private_key_hex = priv_env
+            self.public_key_hex = pub_env
+        else:
+            self.private_key_hex, self.public_key_hex = generate_key_pair()
 
     def _init_db(self):
         """Initializes the SQLite database and creates the events table."""
@@ -162,6 +173,16 @@ class PMMMemory:
         prov.setdefault("prompt_version", meta.get("prompt_version", "1.0.0"))
         prov.setdefault("source_model", meta.get("source_model", "unknown"))
         prov.setdefault("timestamp", timestamp)
+
+        # Cryptographically sign provenance metadata
+        try:
+            signable_payload = {k: v for k, v in prov.items() if k not in ("signature", "public_key")}
+            signature = sign_payload(signable_payload, self.private_key_hex)
+            prov["signature"] = signature
+            prov["public_key"] = self.public_key_hex
+        except Exception:
+            pass
+
         meta["provenance"] = prov
 
         prev_hash = self._get_last_hash()
@@ -204,11 +225,12 @@ class PMMMemory:
 
         cursor.execute("""
             DELETE FROM events
-            WHERE json_extract(meta, '$.user_id') = ?
+            WHERE (json_extract(meta, '$.user_id') = ?
                OR json_extract(meta, '$.session_id') = ?
                OR json_extract(meta, '$.created_by') = ?
                OR json_extract(meta, '$.assignee_id') = ?
-               OR meta LIKE ?
+               OR meta LIKE ?)
+               AND kind NOT IN ('gdpr_erasure_audit', 'gdpr_export_audit')
         """, (identifier, identifier, identifier, identifier, f'%"{identifier}"%'))
         deleted_count += cursor.rowcount
 
@@ -223,12 +245,94 @@ class PMMMemory:
         deleted_count += cursor.rowcount
 
         self.conn.commit()
+
+        # Record erasure audit log event
+        self.add_event_sync("gdpr_erasure_audit", f"Purged data for identifier {identifier}", {
+            "action": "erasure",
+            "target_identifier": identifier,
+            "records_purged": deleted_count
+        })
+
         return deleted_count
 
     async def purge_user_data(self, identifier: str) -> int:
         """Purges user data asynchronously."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.purge_user_data_sync, identifier)
+
+    def export_user_data_sync(self, identifier: str) -> Dict[str, Any]:
+        """Exports all events and work items for a specified identifier (GDPR Data Portability / Article 20).
+
+        Args:
+            identifier (str): User ID or session ID.
+
+        Returns:
+            Dict[str, Any]: Structured dictionary containing events and work items.
+        """
+        if not identifier:
+            return {"identifier": identifier, "events": [], "work_items": []}
+
+        cursor = self.conn.cursor()
+
+        # Retrieve events
+        cursor.execute("""
+            SELECT id, timestamp, kind, content, meta FROM events
+            WHERE json_extract(meta, '$.user_id') = ?
+               OR json_extract(meta, '$.session_id') = ?
+               OR json_extract(meta, '$.created_by') = ?
+               OR json_extract(meta, '$.assignee_id') = ?
+               OR meta LIKE ?
+            ORDER BY id ASC
+        """, (identifier, identifier, identifier, identifier, f'%"{identifier}"%'))
+        events = []
+        for row in cursor.fetchall():
+            meta = json.loads(row[4]) if row[4] else {}
+            events.append({
+                "id": row[0],
+                "timestamp": row[1],
+                "kind": row[2],
+                "content": row[3],
+                "meta": meta
+            })
+
+        # Retrieve work items
+        cursor.execute("""
+            SELECT * FROM work_items
+            WHERE created_by = ?
+               OR assignee_id = ?
+               OR json_extract(meta, '$.user_id') = ?
+               OR json_extract(meta, '$.session_id') = ?
+               OR meta LIKE ?
+            ORDER BY created_at ASC
+        """, (identifier, identifier, identifier, identifier, f'%"{identifier}"%'))
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        work_items = []
+        for row in rows:
+            item = dict(zip(columns, row))
+            item['meta'] = json.loads(item['meta']) if item['meta'] else {}
+            item['validation_results'] = json.loads(item['validation_results']) if item['validation_results'] else {}
+            work_items.append(item)
+
+        # Record export audit log event
+        self.add_event_sync("gdpr_export_audit", f"Exported data for identifier {identifier}", {
+            "action": "export",
+            "target_identifier": identifier,
+            "exported_events_count": len(events),
+            "exported_work_items_count": len(work_items)
+        })
+
+        return {
+            "identifier": identifier,
+            "exported_at": time.time(),
+            "events": events,
+            "work_items": work_items
+        }
+
+    async def export_user_data(self, identifier: str) -> Dict[str, Any]:
+        """Exports user data asynchronously."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.export_user_data_sync, identifier)
 
     def get_events_sync(self, kind: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """Retrieves the most recent events from the ledger synchronously.
