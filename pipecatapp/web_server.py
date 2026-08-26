@@ -19,6 +19,7 @@ from pipecatapp.workflow.runner import ActiveWorkflows, OpenGates
 from pipecatapp.workflow.history import WorkflowHistory
 from pipecatapp.api_keys import get_api_key
 from pipecatapp.security import sanitize_data, escape_html_content
+from pipecatapp.atproto_crypto import generate_key_pair, sign_payload
 if __package__:
     from .models import InternalChatRequest, SystemMessageRequest
     from .rate_limiter import RateLimiter
@@ -84,6 +85,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize server keypair for cryptographically signing HTTP response provenance headers
+SERVER_PRIV_KEY, SERVER_PUB_KEY = generate_key_pair()
+
 # Security & Compliance Enhancement: Add Security and Provenance Headers
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -103,10 +107,28 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
 
         # Attach Agent Provenance Lineage metadata headers
-        response.headers.setdefault("X-Agent-ID", os.getenv("AGENT_ID", "pipecat_master"))
-        response.headers.setdefault("X-Prompt-Version", os.getenv("PROMPT_VERSION", "1.0.0"))
-        response.headers.setdefault("X-Source-Model", os.getenv("SOURCE_MODEL", "qwen-2.5-coder"))
-        response.headers.setdefault("X-Timestamp", str(time.time()))
+        agent_id = os.getenv("AGENT_ID", "pipecat_master")
+        prompt_ver = os.getenv("PROMPT_VERSION", "1.0.0")
+        source_model = os.getenv("SOURCE_MODEL", "qwen-2.5-coder")
+        ts = str(time.time())
+
+        response.headers.setdefault("X-Agent-ID", agent_id)
+        response.headers.setdefault("X-Prompt-Version", prompt_ver)
+        response.headers.setdefault("X-Source-Model", source_model)
+        response.headers.setdefault("X-Timestamp", ts)
+
+        try:
+            prov_payload = {
+                "agent_id": agent_id,
+                "prompt_version": prompt_ver,
+                "source_model": source_model,
+                "timestamp": float(ts)
+            }
+            sig = sign_payload(prov_payload, SERVER_PRIV_KEY)
+            response.headers.setdefault("X-Provenance-Signature", sig)
+            response.headers.setdefault("X-Agent-Public-Key", SERVER_PUB_KEY)
+        except Exception:
+            pass
 
         return response
 
@@ -1496,24 +1518,65 @@ async def upgrade_community_app(request: Request, payload: Dict = Body(...), api
 
 @app.delete("/api/memory/gdpr/purge", summary="GDPR Right to Erasure Purge", tags=["Memory", "GDPR"])
 async def purge_gdpr_user_data(identifier: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
-    """Purges all stored events and work items for a specified user or session identifier to comply with GDPR Right to Erasure."""
+    """Purges or anonymizes stored events and work items for a specified user or session identifier to comply with GDPR Right to Erasure."""
     if not identifier or not re.match(r"^[a-zA-Z0-9_\-@\.]+$", identifier):
         raise HTTPException(status_code=400, detail="Invalid identifier format")
 
     deleted_total = 0
+    anonymized_total = 0
 
     # Purge from sharded memory router if active
     router = getattr(app.state, "memory_router", None)
     if router:
         for memory_instance in router.local_memories.values():
-            deleted_total += await memory_instance.purge_user_data(identifier)
+            res = await memory_instance.purge_user_data(identifier)
+            if isinstance(res, dict):
+                deleted_total += res.get("records_deleted", 0)
+                anonymized_total += res.get("records_anonymized", 0)
+            elif isinstance(res, int):
+                deleted_total += res
     else:
         # Fallback to monolithic memory
         twin = getattr(app.state, "twin_service_instance", None)
         if twin and hasattr(twin, "long_term_memory"):
-            deleted_total += await twin.long_term_memory.purge_user_data(identifier)
+            res = await twin.long_term_memory.purge_user_data(identifier)
+            if isinstance(res, dict):
+                deleted_total += res.get("records_deleted", 0)
+                anonymized_total += res.get("records_anonymized", 0)
+            elif isinstance(res, int):
+                deleted_total += res
 
-    return {"status": "success", "identifier": identifier, "records_purged": deleted_total}
+    return {
+        "status": "success",
+        "identifier": identifier,
+        "records_deleted": deleted_total,
+        "records_anonymized": anonymized_total
+    }
+
+@app.get("/api/memory/gdpr/export", summary="GDPR Data Portability Export", tags=["Memory", "GDPR"])
+async def export_gdpr_user_data(identifier: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """Exports all stored events and work items for a specified user or session identifier in JSON format (GDPR Article 20)."""
+    if not identifier or not re.match(r"^[a-zA-Z0-9_\-@\.]+$", identifier):
+        raise HTTPException(status_code=400, detail="Invalid identifier format")
+
+    twin = getattr(app.state, "twin_service_instance", None)
+    if twin and hasattr(twin, "long_term_memory"):
+        export_payload = await twin.long_term_memory.export_user_data(identifier)
+        return JSONResponse(content=export_payload)
+
+    raise HTTPException(status_code=503, detail="Memory store not available")
+
+@app.get("/api/memory/gdpr/audit_logs", summary="Get GDPR Audit Logs", tags=["Memory", "GDPR"])
+async def get_gdpr_audit_logs(limit: int = 50, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """Retrieves immutable audit logs for GDPR erasure and data export actions."""
+    twin = getattr(app.state, "twin_service_instance", None)
+    if twin and hasattr(twin, "long_term_memory"):
+        erasure_logs = await twin.long_term_memory.get_events(kind="gdpr_erasure_audit", limit=limit)
+        export_logs = await twin.long_term_memory.get_events(kind="gdpr_export_audit", limit=limit)
+        combined = sorted(erasure_logs + export_logs, key=lambda x: x["timestamp"], reverse=True)
+        return JSONResponse(content=combined[:limit])
+
+    raise HTTPException(status_code=503, detail="Memory store not available")
 
 
 # -------------------------------------------------------------------------

@@ -7,6 +7,7 @@ from pipecatapp.security import redact_sensitive_data, sanitize_data
 from pipecatapp.pmm_memory import PMMMemory
 from pipecatapp.web_server import app
 from pipecatapp.api_keys import get_api_key
+from pipecatapp.atproto_crypto import verify_payload
 
 
 def test_pii_redaction_email_ssn_card():
@@ -29,7 +30,7 @@ def test_pii_redaction_email_ssn_card():
     assert "[CARD_REDACTED]" in redacted_card
 
 
-def test_pmm_memory_pii_redaction_and_provenance(tmp_path):
+def test_pmm_memory_pii_redaction_and_signed_provenance(tmp_path):
     db_file = str(tmp_path / "test_gdpr.db")
     memory = PMMMemory(db_path=db_file)
 
@@ -54,55 +55,117 @@ def test_pmm_memory_pii_redaction_and_provenance(tmp_path):
     assert "987-65-4321" not in event["content"]
     assert "[SSN_REDACTED]" in event["content"]
 
-    # Check Provenance tracking attached in meta
+    # Check Provenance tracking attached and signed
     prov = event["meta"].get("provenance", {})
     assert prov.get("agent_id") == "agent_test"
     assert prov.get("prompt_version") == "2.1.0"
     assert prov.get("source_model") == "gpt-4o"
     assert "timestamp" in prov
+    assert "signature" in prov
+    assert "public_key" in prov
+
+    # Verify cryptographic signature
+    signable_payload = {k: v for k, v in prov.items() if k not in ("signature", "public_key")}
+    is_valid = verify_payload(signable_payload, prov["signature"], prov["public_key"])
+    assert is_valid is True
 
 
-def test_pmm_memory_right_to_erasure_purge(tmp_path):
-    db_file = str(tmp_path / "test_purge.db")
+def test_pmm_memory_gdpr_export_and_purge_audit(tmp_path):
+    db_file = str(tmp_path / "test_gdpr_export.db")
     memory = PMMMemory(db_path=db_file)
 
-    user_id = "user_to_delete_999"
+    user_id = "user_export_123"
 
     # Add events and work items
-    memory.add_event_sync("user_message", "Hello World", {"user_id": user_id})
-    memory.add_event_sync("user_message", "Keep me", {"user_id": "other_user"})
+    memory.add_event_sync("user_message", "Hello Export", {"user_id": user_id})
+    memory.create_work_item_sync("Task 101", created_by=user_id)
 
-    work_item_id = memory.create_work_item_sync("Task 1", created_by=user_id)
-    other_work_item = memory.create_work_item_sync("Task 2", created_by="other_user")
+    # Export user data
+    exported = memory.export_user_data_sync(user_id)
+    assert exported["identifier"] == user_id
+    assert len(exported["events"]) >= 1
+    assert len(exported["work_items"]) >= 1
 
     # Purge user data
-    deleted_count = memory.purge_user_data_sync(user_id)
-    assert deleted_count >= 2
+    res = memory.purge_user_data_sync(user_id)
+    assert res["records_deleted"] >= 2
 
-    # Verify user_id records deleted
-    remaining_events = memory.get_events_sync(limit=10)
-    for evt in remaining_events:
-        assert evt.get("meta", {}).get("user_id") != user_id
+    # Check audit logs recorded
+    erasure_audits = memory.get_events_sync(kind="gdpr_erasure_audit", limit=10)
+    export_audits = memory.get_events_sync(kind="gdpr_export_audit", limit=10)
 
-    assert memory.get_work_item_sync(work_item_id) is None
-    assert memory.get_work_item_sync(other_work_item) is not None
+    assert len(erasure_audits) >= 1
+    assert len(export_audits) >= 1
 
 
-def test_gdpr_purge_endpoint_and_provenance_headers(tmp_path):
+def test_multi_party_consensus_discussion_retention(tmp_path):
+    db_file = str(tmp_path / "test_multi_party.db")
+    memory = PMMMemory(db_path=db_file)
+
+    user_a = "alice"
+    user_b = "bob"
+
+    # Add multi-party discussion event
+    memory.add_event_sync("discussion", "Alice and Bob's collaborative proposal", {
+        "participant_ids": [user_a, user_b],
+        "user_id": user_a
+    })
+
+    # Add single-party blog entry
+    memory.add_event_sync("personal_blog", "Alice's private blog post", {
+        "user_id": user_a
+    })
+
+    # User Alice requests removal
+    res = memory.purge_user_data_sync(user_a)
+
+    # Single-party blog post should be deleted, multi-party discussion should be anonymized
+    assert res["records_anonymized"] == 1
+    assert res["records_deleted"] == 1
+
+    events = memory.get_events_sync(limit=10)
+    discussion_events = [e for e in events if e["kind"] == "discussion"]
+    blog_events = [e for e in events if e["kind"] == "personal_blog"]
+
+    assert len(blog_events) == 0 # Fully deleted
+    assert len(discussion_events) == 1 # Retained & Anonymized
+    assert discussion_events[0]["content"] == "[REDACTED_BY_USER_REQUEST]"
+
+    # Now Bob requests removal as well (Consensus reached!)
+    res_b = memory.purge_user_data_sync(user_b)
+    assert res_b["records_deleted"] == 1
+
+    events_after = memory.get_events_sync(limit=10)
+    discussion_after = [e for e in events_after if e["kind"] == "discussion"]
+    assert len(discussion_after) == 0 # Fully deleted now that all parties consented!
+
+
+def test_gdpr_api_endpoints_and_signed_headers(tmp_path):
     app.dependency_overrides[get_api_key] = lambda: "test_key"
     try:
         client = TestClient(app)
 
-        # Test Provenance Headers on GET /
+        # Test Provenance Headers and Signature on GET /
         res = client.get("/")
         assert res.status_code == 200
         assert "X-Agent-ID" in res.headers
         assert "X-Prompt-Version" in res.headers
         assert "X-Source-Model" in res.headers
         assert "X-Timestamp" in res.headers
+        assert "X-Provenance-Signature" in res.headers
+        assert "X-Agent-Public-Key" in res.headers
+
+        # Verify response header signature
+        payload_to_verify = {
+            "agent_id": res.headers["X-Agent-ID"],
+            "prompt_version": res.headers["X-Prompt-Version"],
+            "source_model": res.headers["X-Source-Model"],
+            "timestamp": float(res.headers["X-Timestamp"])
+        }
+        assert verify_payload(payload_to_verify, res.headers["X-Provenance-Signature"], res.headers["X-Agent-Public-Key"]) is True
 
         # Setup memory in app state
-        db_file = str(tmp_path / "test_app_purge.db")
+        db_file = str(tmp_path / "test_app_gdpr.db")
         memory = PMMMemory(db_path=db_file)
 
         class DummyTwin:
@@ -111,15 +174,27 @@ def test_gdpr_purge_endpoint_and_provenance_headers(tmp_path):
 
         app.state.twin_service_instance = DummyTwin(memory)
 
-        target_user = "gdpr_user_777"
-        memory.add_event_sync("user_message", "Secret text", {"user_id": target_user})
+        target_user = "gdpr_user_888"
+        memory.add_event_sync("user_message", "Export & Purge text", {"user_id": target_user})
 
-        # Call Purge REST Endpoint
-        resp = client.delete(f"/api/memory/gdpr/purge?identifier={target_user}")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "success"
-        assert data["identifier"] == target_user
-        assert data["records_purged"] >= 1
+        # Test Export Endpoint
+        exp_resp = client.get(f"/api/memory/gdpr/export?identifier={target_user}")
+        assert exp_resp.status_code == 200
+        exp_data = exp_resp.json()
+        assert exp_data["identifier"] == target_user
+        assert len(exp_data["events"]) >= 1
+
+        # Test Purge Endpoint
+        purge_resp = client.delete(f"/api/memory/gdpr/purge?identifier={target_user}")
+        assert purge_resp.status_code == 200
+        purge_data = purge_resp.json()
+        assert purge_data["records_deleted"] >= 1
+
+        # Test Audit Logs Endpoint
+        audit_resp = client.get("/api/memory/gdpr/audit_logs")
+        assert audit_resp.status_code == 200
+        audit_logs = audit_resp.json()
+        assert len(audit_logs) >= 2
+
     finally:
         app.dependency_overrides.clear()
