@@ -113,7 +113,7 @@
         dialog_close_on_mouse_leave: (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ? false : true, // [false on mobile] better true if not touch device, TODO add an helper/listener to close if false
         dialog_close_on_mouse_leave_delay: 500,
 
-        shift_click_do_break_link_from: false, // [false!] prefer false if results too easy to break links - implement with ALT or TODO custom keys
+        alt_click_do_break_link_from: false, // [false!] prefer false if results too easy to break links
         click_do_break_link_to: false, // [false!]prefer false, way too easy to break links
 
         search_hide_on_mouse_leave: (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ? false : true, // [false on mobile] better true if not touch device, TODO add an helper/listener to close if false
@@ -6084,8 +6084,8 @@ LGraphNode.prototype.executeAction = function(action)
                                     this.connecting_pos = node.getConnectionPos( false, i );
                                     this.connecting_slot = i;
 
-                                    if (LiteGraph.shift_click_do_break_link_from){
-                                        if (e.shiftKey) {
+                                    if (LiteGraph.alt_click_do_break_link_from){
+                                        if (e.altKey) {
                                             node.disconnectOutput(i);
                                         }
                                     }
