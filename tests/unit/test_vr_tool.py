@@ -59,3 +59,18 @@ def test_vr_spatial_mapping_and_trajectories():
     assert trajectory["signal_type"] == "polyphony_baton"
     assert trajectory["source"]["agent_id"] == "node1"
     assert trajectory["target"]["agent_id"] == "node2"
+
+def test_circuit_breaker_and_hitl_gate_broadcast():
+    tool = VRTool()
+    mock_web_server = MagicMock()
+    mock_web_server.manager = MagicMock()
+
+    async def mock_broadcast(msg): pass
+    mock_web_server.manager.broadcast = mock_broadcast
+
+    with patch.dict(sys.modules, {'pipecatapp.web_server': mock_web_server, 'web_server': mock_web_server}):
+        cb_res = asyncio.run(tool.broadcast_circuit_breaker("agent1", "Throttled"))
+        assert "Broadcasted circuit breaker status 'Throttled'" in cb_res
+
+        gate_res = asyncio.run(tool.broadcast_hitl_gate("req123", "agent1", "Delete DB"))
+        assert "Broadcasted HITL approval gate request 'req123'" in gate_res

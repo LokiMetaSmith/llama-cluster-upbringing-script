@@ -64,12 +64,12 @@ Rather than hosting Munder Difflin's desktop app, we will apply its spatial narr
 ## 5. Recommended Implementation Strategy & Prioritized TODO List
 
 ### Phase 1: Event-Driven Status & Narrative Hooks (Short-Term)
-- [ ] **Visualizer Event Adapter:** Update `pipecatapp/web_server.py` to broadcast structured telemetry events (`agent_id`, `state`, `current_tool`, `target_agent`, `status_text`) over WebSockets.
-- [ ] **Thought & Action Bubbles in Web Viewer:** Upgrade `pipecatapp/static/` web UI to render real-time action status badges and thought bubbles over active agents during workflow execution.
+- [x] **Visualizer Event Adapter:** Update `pipecatapp/web_server.py` to broadcast structured telemetry events (`agent_id`, `state`, `current_tool`, `target_agent`, `status_text`) over WebSockets.
+- [x] **Thought & Action Bubbles in Web Viewer:** Upgrade `pipecatapp/static/` web UI to render real-time action status badges and thought bubbles over active agents during workflow execution.
 
 ### Phase 2: 3D VR Spatial Enhancements (`VRTool`) (Mid-Term)
-- [ ] **Spatial Agent Mapping in VR:** Extend `pipecatapp/tools/vr_tool.py` to position cluster nodes and active Pipecat workers in a 3D spatial grid.
-- [ ] **Signal Pulse Trajectories:** Render animated trajectory rays in the 3D VR scene representing Liminal Mesh messages and Polyphony task handoffs between agents.
+- [x] **Spatial Agent Mapping in VR:** Extend `pipecatapp/tools/vr_tool.py` to position cluster nodes and active Pipecat workers in a 3D spatial grid.
+- [x] **Signal Pulse Trajectories:** Render animated trajectory rays in the 3D VR scene representing Liminal Mesh messages and Polyphony task handoffs between agents.
 
 ### Phase 3: Spatial Circuit Breaker & Approval Queue UI (Long-Term)
 - [ ] **Visual Circuit Breaker:** Implement visual status indicators (Normal $\rightarrow$ Throttled $\rightarrow$ Escalated $\rightarrow$ Stopped) in both Web and VR visualizers.

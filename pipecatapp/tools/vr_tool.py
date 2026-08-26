@@ -40,6 +40,35 @@ class VRTool:
         self.trajectories.append(trajectory)
         return trajectory
 
+    async def broadcast_circuit_breaker(self, agent_id: str, level: str) -> str:
+        """Broadcasts a visual circuit breaker status update ('Normal' -> 'Throttled' -> 'Escalated' -> 'Stopped') to the Web/VR visualizer."""
+        try:
+            from pipecatapp import web_server
+            await web_server.manager.broadcast(json.dumps({
+                "type": "circuit_breaker_update",
+                "agent_id": agent_id,
+                "circuit_breaker_level": level
+            }))
+            return f"Broadcasted circuit breaker status '{level}' for agent {agent_id}."
+        except Exception as e:
+            logging.error(f"Failed to broadcast circuit breaker status: {e}")
+            return f"Error: Failed to broadcast circuit breaker status: {e}"
+
+    async def broadcast_hitl_gate(self, request_id: str, agent_id: str, proposal: str) -> str:
+        """Broadcasts a Human-In-The-Loop gate approval request to the Web/VR visualizer."""
+        try:
+            from pipecatapp import web_server
+            await web_server.manager.broadcast(json.dumps({
+                "type": "hitl_gate_request",
+                "request_id": request_id,
+                "agent_id": agent_id,
+                "proposal": proposal
+            }))
+            return f"Broadcasted HITL approval gate request '{request_id}' for agent {agent_id}."
+        except Exception as e:
+            logging.error(f"Failed to broadcast HITL gate request: {e}")
+            return f"Error: Failed to broadcast HITL gate request: {e}"
+
 
     def get_schema(self) -> dict:
         return {
