@@ -113,7 +113,7 @@
         dialog_close_on_mouse_leave: (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ? false : true, // [false on mobile] better true if not touch device, TODO add an helper/listener to close if false
         dialog_close_on_mouse_leave_delay: 500,
 
-        alt_click_do_break_link_from: false, // [false!] prefer false if results too easy to break links
+        break_link_on_keys: false, // array of key strings or a single string (e.g. "shiftKey", "altKey", "metaKey", "ctrlKey")
         click_do_break_link_to: false, // [false!]prefer false, way too easy to break links
 
         search_hide_on_mouse_leave: (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ? false : true, // [false on mobile] better true if not touch device, TODO add an helper/listener to close if false
@@ -6084,8 +6084,13 @@ LGraphNode.prototype.executeAction = function(action)
                                     this.connecting_pos = node.getConnectionPos( false, i );
                                     this.connecting_slot = i;
 
-                                    if (LiteGraph.alt_click_do_break_link_from){
-                                        if (e.altKey) {
+                                    if (LiteGraph.break_link_on_keys){
+                                        var keys = Array.isArray(LiteGraph.break_link_on_keys) ? LiteGraph.break_link_on_keys : [LiteGraph.break_link_on_keys];
+                                        var should_break = false;
+                                        for (var k = 0; k < keys.length; k++) {
+                                            if (e[keys[k]]) { should_break = true; break; }
+                                        }
+                                        if (should_break) {
                                             node.disconnectOutput(i);
                                         }
                                     }
