@@ -8,6 +8,37 @@ class VRTool:
             "Server Room": {"x": 10, "y": 0, "z": 4},
             "Chill Zone": {"x": -10, "y": 0, "z": 4}
         }
+        self.spatial_nodes = {}
+        self.trajectories = []
+
+    def compute_spatial_grid(self, node_ids: list) -> dict:
+        """Computes 3D spatial grid coordinates for cluster nodes and active Pipecat workers."""
+        grid = {}
+        spacing = 4.0
+        cols = max(1, int(len(node_ids) ** 0.5))
+        for idx, node_id in enumerate(node_ids):
+            col = idx % cols
+            row = idx // cols
+            grid[node_id] = {
+                "x": round((col - cols / 2) * spacing, 2),
+                "y": 1.5,
+                "z": round((row - cols / 2) * spacing, 2)
+            }
+        self.spatial_nodes = grid
+        return grid
+
+    def emit_signal_trajectory(self, source_agent: str, target_agent: str, signal_type: str = "liminal_mesh") -> dict:
+        """Emits a signal pulse/trajectory ray between two spatial nodes in the 3D VR environment."""
+        source_pos = self.spatial_nodes.get(source_agent, {"x": 0, "y": 1.5, "z": 0})
+        target_pos = self.spatial_nodes.get(target_agent, {"x": 5, "y": 1.5, "z": 5})
+        trajectory = {
+            "type": "signal_trajectory",
+            "signal_type": signal_type,
+            "source": {"agent_id": source_agent, "pos": source_pos},
+            "target": {"agent_id": target_agent, "pos": target_pos}
+        }
+        self.trajectories.append(trajectory)
+        return trajectory
 
 
     def get_schema(self) -> dict:
@@ -64,8 +95,8 @@ class VRTool:
             return f"Error: Room '{destination}' not found. Available rooms: {', '.join(self.available_rooms.keys())}"
 
         try:
-            import pipecatapp.web_server
-            await pipecatapp.web_server.manager.broadcast(json.dumps({
+            from pipecatapp import web_server
+            await web_server.manager.broadcast(json.dumps({
                 "type": "navigation",
                 "destination": destination,
                 "coordinates": self.available_rooms[destination]

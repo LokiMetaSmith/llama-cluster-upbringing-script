@@ -580,7 +580,37 @@
 
         ws.onmessage = (e) => {
             const msg = JSON.parse(e.data);
-            if (msg.type === 'log' || msg.type === 'agent' || msg.type === 'user') {
+            if (msg.type === 'narrative_event') {
+                // Real-time spatial narrative status & thought bubble rendering
+                const agentId = msg.agent_id || 'pipecat_master';
+                const statusText = msg.status_text || msg.state || 'active';
+                const bubbleText = msg.thought_bubble || (msg.current_tool ? `Tool: ${msg.current_tool}` : '');
+
+                // Update HUD Log with narrative status
+                HUD_LOG.setAttribute('value', `[Narrative] ${agentId}: ${statusText}`);
+
+                // Update node visual status if matching entity exists
+                if (nodeEntities[agentId]) {
+                    const el = nodeEntities[agentId];
+                    let bubble = el.querySelector('.narrative-bubble');
+                    if (!bubble) {
+                        bubble = document.createElement('a-text');
+                        bubble.setAttribute('class', 'narrative-bubble');
+                        bubble.setAttribute('align', 'center');
+                        bubble.setAttribute('position', '0 2.2 0');
+                        bubble.setAttribute('color', '#00ffff');
+                        bubble.setAttribute('scale', '1.8 1.8 1.8');
+                        el.appendChild(bubble);
+                    }
+                    bubble.setAttribute('value', bubbleText ? `💬 ${bubbleText}` : `⚡ ${statusText}`);
+                }
+
+                if (msg.target_agent && nodeEntities[agentId] && nodeEntities[msg.target_agent]) {
+                    spawnProjectile(agentId, msg.target_agent);
+                } else {
+                    randomTraffic();
+                }
+            } else if (msg.type === 'log' || msg.type === 'agent' || msg.type === 'user') {
                 const text = `[${msg.type.toUpperCase()}] ${msg.data || msg.message}`;
                 logs.push(text);
                 if (logs.length > 15) logs.shift();
