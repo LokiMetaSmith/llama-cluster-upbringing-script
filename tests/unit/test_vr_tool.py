@@ -23,26 +23,17 @@ def test_execute_invalid_room():
 def test_execute_success():
     tool = VRTool()
 
-    mock_web_server = MagicMock()
-    mock_web_server.manager = MagicMock()
-
-    async def mock_broadcast(msg): pass
-    mock_web_server.manager.broadcast = mock_broadcast
-
-    with patch.dict(sys.modules, {'pipecatapp.web_server': mock_web_server, 'web_server': mock_web_server}):
+    with patch("pipecatapp.web_server.manager") as mock_manager:
+        async def mock_broadcast(msg): pass
+        mock_manager.broadcast = mock_broadcast
         res = asyncio.run(tool.execute("Main"))
         assert "Navigating user to Main" in res
 
 def test_execute_failure():
     tool = VRTool()
 
-    mock_web_server = MagicMock()
-    mock_web_server.manager = MagicMock()
-
-    async def mock_broadcast(msg): raise Exception("Network error")
-    mock_web_server.manager.broadcast = mock_broadcast
-
-    with patch.dict(sys.modules, {'pipecatapp.web_server': mock_web_server, 'web_server': mock_web_server}):
+    with patch("pipecatapp.web_server.manager") as mock_manager:
+        mock_manager.broadcast.side_effect = Exception("Network error")
         res = asyncio.run(tool.execute("Main"))
         assert "Failed to send navigation command" in res
 

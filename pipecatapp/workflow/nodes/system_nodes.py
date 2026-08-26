@@ -3,6 +3,8 @@ import os
 from .registry import registry
 from ..node import Node
 from ..context import WorkflowContext
+from pipecatapp.rate_limiter import RateLimiter
+from pipecatapp.tools.vr_tool import VRTool
 
 @registry.register
 class ConsulServiceDiscoveryNode(Node):
@@ -189,6 +191,132 @@ class HumanApprovalNode(Node):
             self.set_output(context, "approval_status", "rejected")
             self.set_output(context, "human_feedback", "Rejected by human via CLI.")
             raise ValueError(f"Workflow execution halted: Human approval rejected. Action: {action_details}")
+
+@registry.register
+class CircuitBreakerNode(Node):
+    """
+    A node that evaluates the multi-tier circuit breaker status (Normal -> Throttled -> Escalated -> Stopped)
+    for a workflow execution or agent task.
+
+    Config / Inputs:
+    - identifier: string identifier for the entity (default: workflow_id or "default_agent")
+    - limit: maximum allowed operations per window (default: 10)
+    - window: sliding window in seconds (default: 60)
+    - halt_on_stopped: boolean (default: True). If True and circuit status is 'Stopped', raises ValueError.
+    - current_count: optional integer override for total failures/requests.
+
+    Outputs:
+    - status: 'Normal' | 'Throttled' | 'Escalated' | 'Stopped'
+    - is_tripped: boolean
+    """
+    _limiter_cache = {}
+
+    async def execute(self, context: WorkflowContext):
+        identifier = self.get_input(context, "identifier") or context.workflow_id or "default_agent"
+        limit = int(self.get_input(context, "limit") or self.config.get("config", {}).get("limit", 10))
+        window = int(self.get_input(context, "window") or self.config.get("config", {}).get("window", 60))
+        halt_on_stopped = self.config.get("config", {}).get("halt_on_stopped", True)
+
+        if identifier not in CircuitBreakerNode._limiter_cache:
+            CircuitBreakerNode._limiter_cache[identifier] = RateLimiter(limit=limit, window=window)
+        limiter = CircuitBreakerNode._limiter_cache[identifier]
+        limiter.limit = limit
+        limiter.window = window
+
+        try:
+            explicit_count = self.get_input(context, "current_count")
+        except ValueError:
+            explicit_count = None
+
+        if explicit_count is not None:
+            limiter.requests[identifier].clear()
+            import time
+            for _ in range(int(explicit_count)):
+                limiter.requests[identifier].append(time.time())
+        else:
+            import time
+            limiter.requests[identifier].append(time.time())
+
+        level = limiter.get_circuit_breaker_level(identifier)
+        is_tripped = (level == "Stopped")
+
+        # Broadcast update to visualizer / VR
+        vr_tool = VRTool()
+        await vr_tool.broadcast_circuit_breaker(identifier, level)
+
+        self.set_output(context, "status", level)
+        self.set_output(context, "is_tripped", is_tripped)
+
+        if halt_on_stopped and level == "Stopped":
+            raise ValueError(f"Circuit Breaker TRIPPED for identifier '{identifier}'. Level: {level}")
+
+@registry.register
+class HITLGateNode(Node):
+    """
+    Human-In-The-Loop Approval Gate Node.
+    Pauses or checks approval for high-risk actions, broadcasting real-time HITL gate
+    requests to the spatial web/VR dashboard.
+
+    Config / Inputs:
+    - prompt: string prompt describing the approval request.
+    - action_details: string details of the action.
+    - gate_id: string identifier for the gate (default: node_id).
+
+    Outputs:
+    - approval_status: 'approved' | 'rejected'
+    - human_feedback: string
+    """
+    async def execute(self, context: WorkflowContext):
+        try:
+            prompt = self.get_input(context, "prompt")
+        except ValueError:
+            prompt = "Human approval required for action."
+
+        try:
+            action_details = self.get_input(context, "action_details")
+        except ValueError:
+            action_details = "No details provided."
+
+        try:
+            gate_id = self.get_input(context, "gate_id")
+        except ValueError:
+            gate_id = self.id
+
+        # Broadcast HITL gate request to visualizer / VR tool
+        vr_tool = VRTool()
+        await vr_tool.broadcast_hitl_gate(gate_id, prompt, action_details)
+
+        # Global input overrides for testing/automated execution
+        if context.global_inputs.get("human_approval_granted") is True:
+            self.set_output(context, "approval_status", "approved")
+            self.set_output(context, "human_feedback", "Auto-approved via global input.")
+            return
+
+        if context.global_inputs.get("human_approval_granted") is False:
+            self.set_output(context, "approval_status", "rejected")
+            self.set_output(context, "human_feedback", "Auto-rejected via global input.")
+            raise ValueError(f"HITL Gate HALT: Human approval rejected for '{action_details}'")
+
+        # CLI fallback for interactive terminal runs
+        import asyncio
+        print(f"\n=== HITL APPROVAL GATE [{gate_id}] ===")
+        print(f"Prompt: {prompt}")
+        print(f"Details: {action_details}")
+        print(f"=====================================\n")
+
+        loop = asyncio.get_event_loop()
+        try:
+            user_input = await loop.run_in_executor(None, input, "Approve this action? (yes/no): ")
+        except EOFError:
+            user_input = "no"
+
+        if user_input.strip().lower() in ['y', 'yes']:
+            self.set_output(context, "approval_status", "approved")
+            self.set_output(context, "human_feedback", "Approved by human operator via CLI.")
+        else:
+            self.set_output(context, "approval_status", "rejected")
+            self.set_output(context, "human_feedback", "Rejected by human operator via CLI.")
+            raise ValueError(f"HITL Gate HALT: Human approval rejected for '{action_details}'")
 
 @registry.register
 class SleepNode(Node):

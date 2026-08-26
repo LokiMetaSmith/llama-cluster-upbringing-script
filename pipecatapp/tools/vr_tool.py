@@ -1,5 +1,6 @@
 import json
 import logging
+import asyncio
 
 class VRTool:
     def __init__(self):
@@ -125,11 +126,14 @@ class VRTool:
 
         try:
             from pipecatapp import web_server
-            await web_server.manager.broadcast(json.dumps({
-                "type": "navigation",
-                "destination": destination,
-                "coordinates": self.available_rooms[destination]
-            }))
+            if callable(web_server.manager.broadcast):
+                res = web_server.manager.broadcast(json.dumps({
+                    "type": "navigation",
+                    "destination": destination,
+                    "coordinates": self.available_rooms[destination]
+                }))
+                if hasattr(res, "__await__"):
+                    await res
             return f"Navigating user to {destination}."
         except Exception as e:
             logging.error(f"Failed to send navigation command: {e}")
