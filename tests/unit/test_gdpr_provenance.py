@@ -87,8 +87,8 @@ def test_pmm_memory_gdpr_export_and_purge_audit(tmp_path):
     assert len(exported["work_items"]) >= 1
 
     # Purge user data
-    deleted_count = memory.purge_user_data_sync(user_id)
-    assert deleted_count >= 2
+    res = memory.purge_user_data_sync(user_id)
+    assert res["records_deleted"] >= 2
 
     # Check audit logs recorded
     erasure_audits = memory.get_events_sync(kind="gdpr_erasure_audit", limit=10)
@@ -96,6 +96,48 @@ def test_pmm_memory_gdpr_export_and_purge_audit(tmp_path):
 
     assert len(erasure_audits) >= 1
     assert len(export_audits) >= 1
+
+
+def test_multi_party_consensus_discussion_retention(tmp_path):
+    db_file = str(tmp_path / "test_multi_party.db")
+    memory = PMMMemory(db_path=db_file)
+
+    user_a = "alice"
+    user_b = "bob"
+
+    # Add multi-party discussion event
+    memory.add_event_sync("discussion", "Alice and Bob's collaborative proposal", {
+        "participant_ids": [user_a, user_b],
+        "user_id": user_a
+    })
+
+    # Add single-party blog entry
+    memory.add_event_sync("personal_blog", "Alice's private blog post", {
+        "user_id": user_a
+    })
+
+    # User Alice requests removal
+    res = memory.purge_user_data_sync(user_a)
+
+    # Single-party blog post should be deleted, multi-party discussion should be anonymized
+    assert res["records_anonymized"] == 1
+    assert res["records_deleted"] == 1
+
+    events = memory.get_events_sync(limit=10)
+    discussion_events = [e for e in events if e["kind"] == "discussion"]
+    blog_events = [e for e in events if e["kind"] == "personal_blog"]
+
+    assert len(blog_events) == 0 # Fully deleted
+    assert len(discussion_events) == 1 # Retained & Anonymized
+    assert discussion_events[0]["content"] == "[REDACTED_BY_USER_REQUEST]"
+
+    # Now Bob requests removal as well (Consensus reached!)
+    res_b = memory.purge_user_data_sync(user_b)
+    assert res_b["records_deleted"] == 1
+
+    events_after = memory.get_events_sync(limit=10)
+    discussion_after = [e for e in events_after if e["kind"] == "discussion"]
+    assert len(discussion_after) == 0 # Fully deleted now that all parties consented!
 
 
 def test_gdpr_api_endpoints_and_signed_headers(tmp_path):
@@ -146,7 +188,7 @@ def test_gdpr_api_endpoints_and_signed_headers(tmp_path):
         purge_resp = client.delete(f"/api/memory/gdpr/purge?identifier={target_user}")
         assert purge_resp.status_code == 200
         purge_data = purge_resp.json()
-        assert purge_data["records_purged"] >= 1
+        assert purge_data["records_deleted"] >= 1
 
         # Test Audit Logs Endpoint
         audit_resp = client.get("/api/memory/gdpr/audit_logs")

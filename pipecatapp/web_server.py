@@ -1518,24 +1518,40 @@ async def upgrade_community_app(request: Request, payload: Dict = Body(...), api
 
 @app.delete("/api/memory/gdpr/purge", summary="GDPR Right to Erasure Purge", tags=["Memory", "GDPR"])
 async def purge_gdpr_user_data(identifier: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
-    """Purges all stored events and work items for a specified user or session identifier to comply with GDPR Right to Erasure."""
+    """Purges or anonymizes stored events and work items for a specified user or session identifier to comply with GDPR Right to Erasure."""
     if not identifier or not re.match(r"^[a-zA-Z0-9_\-@\.]+$", identifier):
         raise HTTPException(status_code=400, detail="Invalid identifier format")
 
     deleted_total = 0
+    anonymized_total = 0
 
     # Purge from sharded memory router if active
     router = getattr(app.state, "memory_router", None)
     if router:
         for memory_instance in router.local_memories.values():
-            deleted_total += await memory_instance.purge_user_data(identifier)
+            res = await memory_instance.purge_user_data(identifier)
+            if isinstance(res, dict):
+                deleted_total += res.get("records_deleted", 0)
+                anonymized_total += res.get("records_anonymized", 0)
+            elif isinstance(res, int):
+                deleted_total += res
     else:
         # Fallback to monolithic memory
         twin = getattr(app.state, "twin_service_instance", None)
         if twin and hasattr(twin, "long_term_memory"):
-            deleted_total += await twin.long_term_memory.purge_user_data(identifier)
+            res = await twin.long_term_memory.purge_user_data(identifier)
+            if isinstance(res, dict):
+                deleted_total += res.get("records_deleted", 0)
+                anonymized_total += res.get("records_anonymized", 0)
+            elif isinstance(res, int):
+                deleted_total += res
 
-    return {"status": "success", "identifier": identifier, "records_purged": deleted_total}
+    return {
+        "status": "success",
+        "identifier": identifier,
+        "records_deleted": deleted_total,
+        "records_anonymized": anonymized_total
+    }
 
 @app.get("/api/memory/gdpr/export", summary="GDPR Data Portability Export", tags=["Memory", "GDPR"])
 async def export_gdpr_user_data(identifier: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):

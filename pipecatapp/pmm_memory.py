@@ -208,23 +208,26 @@ class PMMMemory:
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self.add_event_sync, kind, content, meta, provenance)
 
-    def purge_user_data_sync(self, identifier: str) -> int:
-        """Purges all events and work items associated with a specified user or session identifier (GDPR Right to Erasure).
+    def purge_user_data_sync(self, identifier: str) -> Dict[str, Any]:
+        """Purges or anonymizes events and work items associated with a specified user or session identifier.
+        Enforces Multi-Party Consensus: Joint contributions/discussions are anonymized unless ALL participants request removal.
 
         Args:
             identifier (str): User ID, session ID, or username to purge.
 
         Returns:
-            int: Total number of records deleted across events and work_items tables.
+            Dict[str, Any]: Summary dictionary with records_deleted and records_anonymized counts.
         """
         if not identifier:
-            return 0
+            return {"records_deleted": 0, "records_anonymized": 0}
 
         cursor = self.conn.cursor()
         deleted_count = 0
+        anonymized_count = 0
 
+        # Fetch candidate events matching identifier
         cursor.execute("""
-            DELETE FROM events
+            SELECT id, meta, content FROM events
             WHERE (json_extract(meta, '$.user_id') = ?
                OR json_extract(meta, '$.session_id') = ?
                OR json_extract(meta, '$.created_by') = ?
@@ -232,8 +235,47 @@ class PMMMemory:
                OR meta LIKE ?)
                AND kind NOT IN ('gdpr_erasure_audit', 'gdpr_export_audit')
         """, (identifier, identifier, identifier, identifier, f'%"{identifier}"%'))
-        deleted_count += cursor.rowcount
+        candidate_events = cursor.fetchall()
 
+        events_to_delete = []
+        events_to_anonymize = []
+
+        for evt_id, meta_json, content in candidate_events:
+            meta = json.loads(meta_json) if meta_json else {}
+            participants = set(meta.get("participant_ids", []))
+
+            # If user_id is in meta, count it as participant
+            if meta.get("user_id"):
+                participants.add(meta["user_id"])
+            if meta.get("created_by"):
+                participants.add(meta["created_by"])
+
+            # Check removal request history
+            removal_requests = set(meta.get("removal_requested_by", []))
+            removal_requests.add(identifier)
+            meta["removal_requested_by"] = list(removal_requests)
+
+            # If multi-party discussion (>1 participant) and NOT all participants have requested removal
+            if len(participants) > 1 and not (participants <= removal_requests):
+                # Anonymize personal contribution while keeping discussion structure
+                anonymized_content = "[REDACTED_BY_USER_REQUEST]"
+                events_to_anonymize.append((anonymized_content, json.dumps(meta), evt_id))
+            else:
+                # Single-party OR consensus reached by all participants
+                events_to_delete.append(evt_id)
+
+        # Execute event deletions
+        if events_to_delete:
+            placeholders = ",".join("?" * len(events_to_delete))
+            cursor.execute(f"DELETE FROM events WHERE id IN ({placeholders})", events_to_delete)
+            deleted_count += cursor.rowcount
+
+        # Execute event anonymizations
+        if events_to_anonymize:
+            cursor.executemany("UPDATE events SET content = ?, meta = ? WHERE id = ?", events_to_anonymize)
+            anonymized_count += len(events_to_anonymize)
+
+        # Work items purge logic
         cursor.execute("""
             DELETE FROM work_items
             WHERE created_by = ?
@@ -247,15 +289,16 @@ class PMMMemory:
         self.conn.commit()
 
         # Record erasure audit log event
-        self.add_event_sync("gdpr_erasure_audit", f"Purged data for identifier {identifier}", {
+        self.add_event_sync("gdpr_erasure_audit", f"Purge request processed for identifier {identifier}", {
             "action": "erasure",
             "target_identifier": identifier,
-            "records_purged": deleted_count
+            "records_deleted": deleted_count,
+            "records_anonymized": anonymized_count
         })
 
-        return deleted_count
+        return {"records_deleted": deleted_count, "records_anonymized": anonymized_count}
 
-    async def purge_user_data(self, identifier: str) -> int:
+    async def purge_user_data(self, identifier: str) -> Dict[str, Any]:
         """Purges user data asynchronously."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.purge_user_data_sync, identifier)
