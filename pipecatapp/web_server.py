@@ -331,7 +331,20 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
-            if message.get("type") == "approval_response":
+            if message.get("type") == "narrative_event":
+                # Real-time WebSocket narrative broadcast adapter for active worker state/bubbles
+                broadcast_data = {
+                    "type": "narrative_event",
+                    "agent_id": message.get("agent_id", "pipecat_master"),
+                    "state": message.get("state", "active"),
+                    "current_tool": message.get("current_tool", None),
+                    "target_agent": message.get("target_agent", None),
+                    "status_text": message.get("status_text", ""),
+                    "thought_bubble": message.get("thought_bubble", ""),
+                    "timestamp": time.time()
+                }
+                await manager.broadcast(json.dumps(broadcast_data))
+            elif message.get("type") == "approval_response":
                 await approval_queue.put(message)
             elif message.get("type") == "user_message":
                 # Security Fix: Sentinel - Prevent SSRF by stripping 'response_url'

@@ -57,6 +57,27 @@ class RateLimiter:
         # Add current timestamp
         timestamps.append(now)
 
+    def get_circuit_breaker_level(self, identifier: str) -> str:
+        """
+        Evaluates the circuit breaker ladder level for an agent/identifier:
+        'Normal' -> 'Throttled' -> 'Escalated' -> 'Stopped'
+        """
+        now = time.time()
+        timestamps = self.requests[identifier]
+        while timestamps and now - timestamps[0] > self.window:
+            timestamps.popleft()
+
+        req_count = len(timestamps)
+        ratio = req_count / float(self.limit) if self.limit > 0 else 0
+
+        if ratio >= 1.0:
+            return "Stopped"
+        elif ratio >= 0.8:
+            return "Escalated"
+        elif ratio >= 0.5:
+            return "Throttled"
+        return "Normal"
+
     def _cleanup(self, now: float):
         """Removes expired entries from the requests dictionary."""
         self.last_cleanup = now

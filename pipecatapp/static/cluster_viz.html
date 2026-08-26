@@ -580,7 +580,84 @@
 
         ws.onmessage = (e) => {
             const msg = JSON.parse(e.data);
-            if (msg.type === 'log' || msg.type === 'agent' || msg.type === 'user') {
+            if (msg.type === 'narrative_event') {
+                // Real-time spatial narrative status & thought bubble rendering
+                const agentId = msg.agent_id || 'pipecat_master';
+                const statusText = msg.status_text || msg.state || 'active';
+                const bubbleText = msg.thought_bubble || (msg.current_tool ? `Tool: ${msg.current_tool}` : '');
+
+                // Update HUD Log with narrative status
+                HUD_LOG.setAttribute('value', `[Narrative] ${agentId}: ${statusText}`);
+
+                // Update node visual status if matching entity exists
+                if (nodeEntities[agentId]) {
+                    const el = nodeEntities[agentId];
+                    let bubble = el.querySelector('.narrative-bubble');
+                    if (!bubble) {
+                        bubble = document.createElement('a-text');
+                        bubble.setAttribute('class', 'narrative-bubble');
+                        bubble.setAttribute('align', 'center');
+                        bubble.setAttribute('position', '0 2.2 0');
+                        bubble.setAttribute('color', '#00ffff');
+                        bubble.setAttribute('scale', '1.8 1.8 1.8');
+                        el.appendChild(bubble);
+                    }
+                    bubble.setAttribute('value', bubbleText ? `💬 ${bubbleText}` : `⚡ ${statusText}`);
+                }
+
+                if (msg.target_agent && nodeEntities[agentId] && nodeEntities[msg.target_agent]) {
+                    spawnProjectile(agentId, msg.target_agent);
+                } else {
+                    randomTraffic();
+                }
+            } else if (msg.type === 'circuit_breaker_update') {
+                // Visual Circuit Breaker ladder update (Normal -> Throttled -> Escalated -> Stopped)
+                const agentId = msg.agent_id;
+                const level = msg.circuit_breaker_level || 'Normal';
+                const levelColors = {
+                    'Normal': '#00ff00',
+                    'Throttled': '#ffff00',
+                    'Escalated': '#ff8800',
+                    'Stopped': '#ff0000'
+                };
+                HUD_LOG.setAttribute('value', `[Breaker] ${agentId}: ${level}`);
+                if (nodeEntities[agentId]) {
+                    const el = nodeEntities[agentId];
+                    el.setAttribute('color', levelColors[level] || '#00ff00');
+                    let badge = el.querySelector('.breaker-badge');
+                    if (!badge) {
+                        badge = document.createElement('a-text');
+                        badge.setAttribute('class', 'breaker-badge');
+                        badge.setAttribute('align', 'center');
+                        badge.setAttribute('position', '0 -1.2 0');
+                        badge.setAttribute('scale', '1.5 1.5 1.5');
+                        el.appendChild(badge);
+                    }
+                    badge.setAttribute('value', `[Breaker: ${level}]`);
+                    badge.setAttribute('color', levelColors[level] || '#00ff00');
+                }
+            } else if (msg.type === 'hitl_gate_request') {
+                // Human-in-the-loop approval request overlay
+                const agentId = msg.agent_id;
+                const reqId = msg.request_id;
+                const proposal = msg.proposal || 'Action approval required';
+                HUD_LOG.setAttribute('value', `[APPROVAL REQUIRED] ${agentId}: ${reqId}`);
+                if (nodeEntities[agentId]) {
+                    const el = nodeEntities[agentId];
+                    el.setAttribute('color', '#ff00ff'); // Highlight in magenta for approval
+                    let gateText = el.querySelector('.gate-badge');
+                    if (!gateText) {
+                        gateText = document.createElement('a-text');
+                        gateText.setAttribute('class', 'gate-badge');
+                        gateText.setAttribute('align', 'center');
+                        gateText.setAttribute('position', '0 3.2 0');
+                        gateText.setAttribute('color', '#ff00ff');
+                        gateText.setAttribute('scale', '2 2 2');
+                        el.appendChild(gateText);
+                    }
+                    gateText.setAttribute('value', `⚠️ APPROVAL REQ: ${proposal}`);
+                }
+            } else if (msg.type === 'log' || msg.type === 'agent' || msg.type === 'user') {
                 const text = `[${msg.type.toUpperCase()}] ${msg.data || msg.message}`;
                 logs.push(text);
                 if (logs.length > 15) logs.shift();
