@@ -45,7 +45,12 @@
     repo: 'https://github.com/vybestack/llxprt-code.git'
     dest: "{{ llxprt_code_dir }}"
     version: main
+    depth: 1
     force: yes
+  register: llxprt_git_clone
+  until: llxprt_git_clone is success
+  retries: 3
+  delay: 10
 
 - name: Install llxprt-code dependencies
   ansible.builtin.command: npm install

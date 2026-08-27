@@ -35,10 +35,14 @@
     repo: "{{ nanochat_repo }}"
     dest: "{{ nanochat_install_dir }}"
     version: "{{ nanochat_version }}"
+    depth: 1
     force: yes
   become: yes
   become_user: "{{ target_user }}"
   register: nanochat_git_clone
+  until: nanochat_git_clone is success
+  retries: 3
+  delay: 10
 
 - name: Create virtual environment with uv
   ansible.builtin.command:

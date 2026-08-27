@@ -17,10 +17,12 @@
     repo: 'https://github.com/xero/figlet-fonts.git'
     dest: "{{ ansible_facts['user_dir'] }}/.local/share/fonts"
     version: main
+    depth: 1
+    force: yes
     update: yes
   register: clone_figlet
   until: clone_figlet is success
-  retries: 5
+  retries: 3
   delay: 10
 
 - name: Create a temporary build directory for no-more-secrets
@@ -34,10 +36,12 @@
     repo: 'https://github.com/bartobri/no-more-secrets.git'
     dest: "{{ nms_build_dir.get('path', '/tmp/nms-build-check') }}"
     version: master
+    depth: 1
+    force: yes
     update: yes
   register: clone_nms
   until: clone_nms is success
-  retries: 5
+  retries: 3
   delay: 10
 
 - name: Build no-more-secrets
