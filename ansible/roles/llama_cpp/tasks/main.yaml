@@ -97,7 +97,13 @@
         repo: 'https://github.com/ggml-org/llama.cpp.git'
         dest: "{{ llama_cpp_build_dir }}"
         version: "{{ latest_commit_hash }}"
+        depth: 1
+        force: yes
         update: yes
+      register: llama_cpp_git_clone
+      until: llama_cpp_git_clone is success
+      retries: 3
+      delay: 10
 
     - name: Reset git repo to clean state
       ansible.builtin.command:

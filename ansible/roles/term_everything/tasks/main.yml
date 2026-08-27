@@ -61,9 +61,14 @@
         repo: "https://github.com/mmulet/term.everything.git"
         dest: "/tmp/term.everything"
         version: "{{ latest_commit_hash }}"
+        depth: 1
         recursive: yes
         update: yes
         force: yes
+      register: term_everything_git_clone
+      until: term_everything_git_clone is success
+      retries: 3
+      delay: 10
 
     - name: Build term.everything AppImage
       block:

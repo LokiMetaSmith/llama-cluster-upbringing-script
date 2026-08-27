@@ -11,7 +11,13 @@
     repo: https://github.com/AlexsJones/llmfit.git
     dest: /opt/llmfit/src
     version: main
+    depth: 1
+    force: yes
     update: yes
+  register: llmfit_git_clone
+  until: llmfit_git_clone is success
+  retries: 3
+  delay: 10
 
 - name: Update Rust via rustup to ensure compatibility with latest crates
   ansible.builtin.shell: /root/.cargo/bin/rustup update || ~/.cargo/bin/rustup update || rustup update

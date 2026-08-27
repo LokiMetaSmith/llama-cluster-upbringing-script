@@ -54,7 +54,13 @@
         repo: 'https://github.com/ggml-org/whisper.cpp.git'
         dest: /opt/whisper.cpp-build
         version: "{{ latest_commit_hash }}"
+        depth: 1
+        force: yes
         update: yes
+      register: whisper_cpp_git_clone
+      until: whisper_cpp_git_clone is success
+      retries: 3
+      delay: 10
 
     - name: Configure whisper.cpp build
       ansible.builtin.command:
