@@ -39,7 +39,7 @@ def scan_network_for_llms():
     except Exception:
         local_ip = '127.0.0.1'
 
-    ports = [11434, 8080]
+    ports = [8081, 11434, 8080]
 
     # Check localhost and local ip first
     for ip in ['127.0.0.1', local_ip]:
@@ -84,17 +84,18 @@ def scan_network_for_llms():
     return ""
 
 def discover_from_consul():
-    try:
-        req = urllib.request.Request("http://127.0.0.1:8500/v1/health/service/llamacpp-rpc-api?passing")
-        with urllib.request.urlopen(req, timeout=2) as response:
-            if response.status == 200:
-                data = json.loads(response.read().decode())
-                if data:
-                    addr = data[0]['Service']['Address']
-                    port = data[0]['Service']['Port']
-                    return f"http://{addr}:{port}/v1"
-    except Exception:
-        pass
+    for service_name in ["router-api", "llamacpp-rpc-api", "llama-api-main"]:
+        try:
+            req = urllib.request.Request(f"http://127.0.0.1:8500/v1/health/service/{service_name}?passing")
+            with urllib.request.urlopen(req, timeout=2) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode())
+                    if data:
+                        addr = data[0]['Service']['Address']
+                        port = data[0]['Service']['Port']
+                        return f"http://{addr}:{port}/v1"
+        except Exception:
+            pass
     return ""
 
 def main():
@@ -104,10 +105,12 @@ def main():
         print("No LLM in Consul, scanning network...", file=sys.stderr)
         llm_url = scan_network_for_llms()
 
-    if llm_url:
-        print(f"export OPENAI_BASE_URL='{llm_url}'")
-        print(f"export OPENAI_API_KEY='dummy'")
-        print(f"export LLAMA_API_URL='{llm_url}'")
+    if not llm_url:
+        llm_url = "http://127.0.0.1:8081/v1"
+
+    print(f"export OPENAI_BASE_URL='{llm_url}'")
+    print(f"export OPENAI_API_KEY='dummy'")
+    print(f"export LLAMA_API_URL='{llm_url}'")
 
 if __name__ == "__main__":
     main()
@@ -124,7 +127,8 @@ EOH
       }
 
       env {
-        OPENAI_API_KEY      = "{{ openai_api_key | default('') }}"
+        OPENAI_API_KEY      = "{{ 'dummy' if (openai_api_key is not defined or not openai_api_key or 'your_openai_api_key_here' in openai_api_key) else openai_api_key }}"
+        OPENAI_BASE_URL     = "http://127.0.0.1:8081/v1"
         ANTHROPIC_API_KEY   = "{{ anthropic_api_key | default('') }}"
       }
     }

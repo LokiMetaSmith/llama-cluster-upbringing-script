@@ -111,7 +111,11 @@ class OpenCodeProviderTool:
                                 "Config": {
                                     # We use raw_exec assuming opencode is installed on the node (via the Ansible role)
                                     "command": "timeout",
-                                    "args": [str(self.default_timeout), "/usr/local/bin/npm", "exec", "--", "opencode", task]
+                                    "args": [str(self.default_timeout), "/usr/local/bin/npm", "exec", "--", "opencode", "run", "--model", "openai/local/router", task]
+                                },
+                                "Env": {
+                                    "OPENAI_BASE_URL": os.environ.get("OPENAI_BASE_URL", f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8081/v1"),
+                                    "OPENAI_API_KEY": "dummy" if (not os.environ.get("OPENAI_API_KEY") or "your_openai_api_key_here" in os.environ.get("OPENAI_API_KEY", "")) else os.environ.get("OPENAI_API_KEY")
                                 },
                                 "Resources": {
                                     "CPU": 500,
