@@ -21,7 +21,7 @@
   gather_facts: no
 
   vars_files:
-    - group_vars/models.yaml
+    - "{{ ansible_config_file | dirname }}/group_vars/models.yaml"
 
   # Define the variables that the llama-expert.nomad template expects.
   # This simulates how the main `llama_cpp` role would deploy the default expert.
