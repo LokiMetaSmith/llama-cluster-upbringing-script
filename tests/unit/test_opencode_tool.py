@@ -13,6 +13,12 @@ class TestOpencodeTool(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.tool = OpencodeTool(base_url="http://test-url", provider_id="test-provider", model_id="test-model")
 
+    def test_default_initialization(self):
+        default_tool = OpencodeTool()
+        self.assertEqual(default_tool.base_url, "http://localhost:8081/v1")
+        self.assertEqual(default_tool.model_id, "local/router")
+        self.assertEqual(default_tool.provider_id, "openai")
+
     @patch('opencode_ai.AsyncOpencode')
     async def test_run_success(self, mock_async_opencode):
         # Mock the client and session

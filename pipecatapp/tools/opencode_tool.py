@@ -11,17 +11,17 @@ class OpencodeTool:
         description (str): A brief description of the tool's purpose.
         name (str): The name of the tool.
     """
-    def __init__(self, base_url: str = None, provider_id: str = "openai", model_id: str = "gpt-4o"):
+    def __init__(self, base_url: str = None, provider_id: str = "openai", model_id: str = "local/router"):
         """Initializes the OpencodeTool.
 
         Args:
             base_url (str): The base URL of the OpenCode server.
             provider_id (str): The AI provider ID (e.g., "openai", "anthropic").
-            model_id (str): The model ID (e.g., "gpt-4o", "claude-3-5-sonnet").
+            model_id (str): The model ID (e.g., "local/router", "gpt-4o").
         """
         self.description = "Delegate complex coding tasks to the OpenCode agent."
         self.name = "opencode"
-        self.base_url = base_url or os.getenv("OPENCODE_API_URL")
+        self.base_url = base_url or os.getenv("OPENCODE_API_URL") or os.getenv("OPENAI_BASE_URL") or "http://localhost:8081/v1"
         self.provider_id = provider_id
         self.model_id = model_id
 
