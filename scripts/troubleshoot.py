@@ -46,6 +46,16 @@ CRITICAL_SYSTEMD_SERVICES = [
     "paddler-balancer",
 ]
 
+# Service dependency mapping for root-cause diagnosis
+SERVICE_DEPENDENCY_MAP = {
+    "pipecat-app": ["consul", "nomad", "docker", "unified_fs", "world-model-service", "memory-service"],
+    "gitea": ["consul", "nomad", "docker", "unified_fs"],
+    "radicle": ["consul", "nomad", "docker", "gitea"],
+    "router": ["consul", "nomad"],
+    "expert-main": ["consul", "nomad", "rpc-LFM2-5-1-2B-Instruct-Q4-K-M-gguf"],
+    "unified_fs": ["docker"]
+}
+
 
 class DummyArgs:
     """Helper class to mock parsed CLI arguments for programmatic calls."""
@@ -331,6 +341,74 @@ def fetch_alloc_logs_with_fallback(alloc_id, task_name, log_type="stderr"):
     return res.get("stdout", "")
 
 
+def check_service_dependencies(job_id_or_name):
+    """Checks status of upstream dependencies for a given service or job."""
+    deps = SERVICE_DEPENDENCY_MAP.get(job_id_or_name, [])
+    if not deps:
+        return {"target": job_id_or_name, "dependencies": [], "unhealthy_deps": []}
+
+    health_status = []
+    unhealthy_deps = []
+
+    # Get systemd states
+    for dep in deps:
+        if dep in CRITICAL_SYSTEMD_SERVICES:
+            state = check_systemd_service(dep)
+            is_healthy = (state.get("status") == "healthy")
+            health_status.append({"name": dep, "type": "systemd", "healthy": is_healthy, "details": state})
+            if not is_healthy:
+                unhealthy_deps.append(dep)
+        else:
+            # Assume Nomad job
+            job_info = api_get(f"/v1/job/{dep}")
+            status = job_info.get("Status", "unknown").lower() if job_info else "missing"
+            is_healthy = status in ["running", "nominal"]
+            health_status.append({"name": dep, "type": "nomad_job", "healthy": is_healthy, "status": status})
+            if not is_healthy:
+                unhealthy_deps.append(dep)
+
+    return {
+        "target": job_id_or_name,
+        "dependencies": health_status,
+        "unhealthy_deps": unhealthy_deps
+    }
+
+
+def cmd_deps(args):
+    """Analyzes and displays service dependency health for jobs/services."""
+    target = getattr(args, "target", None)
+    if target:
+        targets = [target]
+    else:
+        targets = list(SERVICE_DEPENDENCY_MAP.keys())
+
+    results = {}
+    for t in targets:
+        results[t] = check_service_dependencies(t)
+
+    if getattr(args, "json", False):
+        print(json.dumps(results, indent=2))
+        return
+
+    print("=== Service Dependency Diagnostics ===")
+    for target_name, res in results.items():
+        unhealthy = res["unhealthy_deps"]
+        status_str = "✅ ALL OK" if not unhealthy else f"❌ BLOCKED BY: {', '.join(unhealthy)}"
+        print(f"\nTarget: {target_name} [{status_str}]")
+        for dep in res["dependencies"]:
+            dep_type = dep["type"]
+            dep_name = dep["name"]
+            is_h = dep["healthy"]
+            symbol = "  ✅" if is_h else "  ❌"
+            if dep_type == "systemd":
+                active = dep["details"].get("active_state", "unknown")
+                sub = dep["details"].get("sub_state", "unknown")
+                print(f"{symbol} [Systemd] {dep_name:<25} | Active: {active:<10} | SubState: {sub}")
+            else:
+                st = dep.get("status", "unknown")
+                print(f"{symbol} [Nomad Job] {dep_name:<23} | Status: {st}")
+
+
 def cmd_list(args):
     """List jobs in dead or pending state."""
     jobs = api_get("/v1/jobs")
@@ -433,6 +511,13 @@ def cmd_inspect(args):
 
     print(f"=== Inspecting Job: {job_id} ===")
     print(f"Status: {inspect_data['job_status']} | Submitted: {inspect_data['submit_time']}")
+
+    # Check dependencies if available
+    dep_info = check_service_dependencies(job_id)
+    if dep_info["dependencies"]:
+        unhealthy = dep_info["unhealthy_deps"]
+        status_str = "✅ ALL OK" if not unhealthy else f"❌ BLOCKED BY: {', '.join(unhealthy)}"
+        print(f"Upstream Dependencies Status: {status_str}")
 
     if inspect_data["placement_failures"]:
         print("\n=== Placement Failures ===")
@@ -974,6 +1059,11 @@ def main():
     """Main CLI execution entry point."""
     parser = argparse.ArgumentParser(description="Troubleshoot Nomad & Systemd services.")
     subparsers = parser.add_subparsers(dest="command")
+
+    deps_parser = subparsers.add_parser("deps", help="Analyze service dependencies and root cause blockages")
+    deps_parser.add_argument("target", nargs="?", help="Specific service or job target to inspect dependencies for")
+    deps_parser.add_argument("--json", action="store_true", help="Output dependency tree in JSON format")
+    deps_parser.set_defaults(func=cmd_deps)
 
     opencode_status_parser = subparsers.add_parser("opencode-status", help="Unified Opencode status diagnostics")
     opencode_status_parser.add_argument("--json", action="store_true", help="Output in JSON format")
