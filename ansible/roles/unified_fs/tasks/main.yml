@@ -1,6 +1,8 @@
-- name: Install system FUSE package
+- name: Install system FUSE package and python fusepy bindings
   apt:
-    name: fuse
+    name:
+      - fuse
+      - python3-fusepy
     state: present
     update_cache: yes
     update_cache_retries: 10
