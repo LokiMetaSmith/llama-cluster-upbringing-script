@@ -1,23 +1,26 @@
-# Comprehensive Architectural & Agentic Evaluation: `the-simian` GitHub Open Source Portfolio
+# Comprehensive Architectural & Agentic Evaluation: `the-simian` GitHub Ecosystem & Open Source Portfolio
 
-## Executive Summary & Combined Synthesis
+## Executive Summary & Multi-Agent Combined Synthesis
 
-This evaluation presents a thorough, multi-agent analysis of all **117 GitHub repositories** owned or forked by user [`the-simian`](https://github.com/the-simian) (Jesse Harlin).
+This evaluation presents an exhaustive, multi-perspective analysis of all **117 GitHub repositories** owned or forked by user [`the-simian`](https://github.com/the-simian) (Jesse Harlin), as well as associated "Simian" open-source ecosystems (`simiancraft`, `Simian-Web-Apps`, and `quandarypeak/simian`).
 
-By combining our initial granular code-level scan with broad portfolio trajectory analysis, we have identified key transferable architectures, procedural algorithms, agentic disciplines, component patterns, and tooling systems that can be incorporated into or adapted for our system (`pipecatapp` agent workflow engine, 3D VR/web visualizer, and Liminal Mesh infrastructure).
+By synthesizing granular code-level scans, repository trajectory analysis, and ecosystem mapping, we have identified transferable architectures, agentic disciplines, procedural algorithms, component patterns, MCP services, and tooling systems that can be incorporated into or adapted for our system (`pipecatapp` agent workflow engine, 3D VR/web visualizer, Liminal Mesh infrastructure, and MCP tool suite).
 
-### Portfolio Trajectory & Evolution
-Analyzing the chronological evolution of `the-simian`'s repositories reveals a clear progression:
+### Portfolio Trajectory & Ecosystem Scope Expansion
+Analyzing `the-simian`'s open-source trajectory reveals a clear evolutionary progression across user repositories and affiliated organization clusters:
+
 ```
-[Historical Canvas/Audio/Game Demos] ──► [Component UI & Scaffolding Systems] ──► [Developer Tooling & Metrics] ──► [Agent Skills & Multi-Agent Protocols]
- (Phaser, D3, ImpactJS, Canvas)              (Structor, Waffles, Downshift)               (es6-plato, SST, Joi)                (skills, multi-agent-planning)
+[Canvas / Audio / Game Experiments] ──► [Component UI & Scaffolding Systems] ──► [Developer Tooling & Metrics] ──► [Agent Skills, MCP & Multi-Agent Protocols]
+ (Phaser, D3, ImpactJS, Canvas)              (Structor, Waffles, Downshift)             (es6-plato, Simian Analyzer)         (skills, multi-agent-planning, google-mcp-suite)
 ```
 
-While earlier repositories focus on procedural graphics, web audio synthesis, and frontend framework experiments, the most recent contributions center on **governed agent capabilities**, **durable git-native multi-agent coordination**, **component vocabulary composition**, and **typed infrastructure primitives**.
+**Scope Distinction Note**:
+- **User Portfolio (`the-simian`)**: 117 public repositories authored or forked directly by Jesse Harlin, focused on agent skills (`skills`), git-native coordination (`multi-agent-planning`), code complexity (`es6-plato`), 3D/procedural generation (`dedungeon`, `desteer.js`), and WebGL shaders (`phaser-glsl-loader`).
+- **Affiliated "Simian" Ecosystems (`simiancraft`, `Simian-Web-Apps`, `quandarypeak/simian`)**: Broader toolsets covering Model Context Protocol (MCP) integrations (`google-mcp-suite`), structural code deduplication engines (Simian Similarity Analyzer), visual AI bridges (`Simian-ComfyUI-WebApps`), and specialized reasoning libraries (`unitforge`, `chromonym`).
 
 ---
 
-## Detailed In-Depth Evaluation of Promising Repositories
+## Detailed In-Depth Evaluation of Promising Repositories & Ecosystems
 
 ### 1. `multi-agent-planning` (Fork) — Durable Git-Native Multi-Agent Coordination
 - **Evaluation Rating**: 9.5 / 10 | **Utility**: High Architectural Relevance
@@ -43,9 +46,9 @@ While earlier repositories focus on procedural graphics, web audio synthesis, an
 
 ---
 
-### 2. `skills` (Fork - Sentry Agent Skills) — Governed Executable Knowledge & Security
+### 2. `skills` / `simiancraft-skills` — Governed Executable Knowledge & Marketplace Packaging
 - **Evaluation Rating**: 10 / 10 | **Utility**: High Tactical Relevance
-- **Overview**: Structured repository of open-format agent skills (compatible with `skills.sh`, Claude Code, Cursor, etc.).
+- **Overview**: Structured repositories of open-format agent skills (compatible with `skills.sh`, Claude Code, Cursor, etc.) and marketplace packaging conventions.
 - **Key Concepts & Mechanics**:
   - **Open-Format Architecture**:
     ```
@@ -64,8 +67,60 @@ While earlier repositories focus on procedural graphics, web audio synthesis, an
 
 ---
 
-### 3. Combined Multi-Agent + Skills Operating System
-Combining `multi-agent-planning` (coordination protocol) and `skills` (executable capability engine) yields a unified operating architecture:
+### 3. Model Context Protocol (MCP) Ecosystem — `google-mcp-suite`
+- **Evaluation Rating**: 9.5 / 10 | **Utility**: High Interoperability Value
+- **Overview**: Suite of Model Context Protocol (MCP) servers and connectors for Google Workspace services (Gmail, Drive, Sheets, Docs).
+- **Key Concepts & Mechanics**:
+  - Standardized JSON-RPC tool endpoints exposing document reading, spreadsheet querying, email drafting, and file management to LLM agents.
+- **System Integration for `pipecatapp`**:
+  - Incorporate into our `tools/mcp-*` directory alongside existing MCP servers (`tools/mcp-slack/`, `tools/mcp-stripe/`, `tools/mcp-google/`), enriching our agent workflow nodes with standardized Google Workspace connectors.
+
+---
+
+### 4. Codebase Complexity & Similarity Engines — `es6-plato` & Simian Similarity Analyzer
+- **Evaluation Rating**: 8.5 / 10 | **Utility**: High Analytical & Refactoring Value
+- **Overview**:
+  - `es6-plato` (Fork, 206 stars): Evaluates AST Cyclomatic Complexity, Halstead metrics, SLOC, and Maintainability Index scores across JavaScript/ES6 base.
+  - `Simian Similarity Analyzer` (`quandarypeak/simian`): Structural, multi-language duplicate-code detection engine supporting Java, C#, C++, SQL, Ruby, and plain text.
+- **System Integration for `pipecatapp`**:
+  - Combine AST complexity metrics (`es6-plato`) and structural similarity checking (Simian Analyzer) into a repository health workflow node in `pipecatapp/workflow/nodes/`, enabling refactoring agents to identify code duplication, high-risk modules, and prompt dataset redundancy.
+
+---
+
+### 5. Procedural Generation & Spatial Systems — `dedungeon`, `desteer.js`, `dorky-markov`
+- **Evaluation Rating**: 8.5 / 10 | **Utility**: Medium-High Systemic Value
+- **Overview**:
+  - `dedungeon` (Source, C++): Graph-based procedural dungeon and building interior generator. Converts abstract room connectivity graphs into physical spatial layouts.
+  - `desteer.js` (Fork, JS): Autonomous steering behaviors library (flocking, obstacle avoidance, path following).
+  - `dorky-markov` (Source, JS): Lightweight Markov chain text generator and n-gram probability matrix builder.
+- **System Integration for `pipecatapp`**:
+  - Leverage graph-based room partitioning (`dedungeon`) and autonomous steering math (`desteer.js`) inside `VRTool.compute_spatial_grid` (`pipecatapp/tools/vr_tool.py`) for organic 3D placement of agent nodes in the WebGL visualizer (`pipecatapp/static/cluster_viz.html`).
+
+---
+
+### 6. Component Vocabularies & Visual AI — `structor`, `react-native-reusables`, `Simian-ComfyUI-WebApps`, `chromonym`
+- **Evaluation Rating**: 8 / 10 | **Utility**: High UI/UX & Generative AI Pattern Value
+- **Overview**:
+  - `structor` & `react-native-reusables`: Component vocabulary pattern (shadcn model) where agents select and tailor bounded primitives rather than generating arbitrary markup.
+  - `Simian-ComfyUI-WebApps`: Web application bridge connecting web interfaces to ComfyUI node-based visual AI workflows.
+  - `chromonym`: Color-naming and palette reasoning library (Pantone, Crayola, X11).
+- **System Integration for `pipecatapp`**:
+  - Integrate component primitives into frontend builder agents, connect ComfyUI workflows to visualizer image nodes, and utilize `chromonym` for design assistant palette reasoning.
+
+---
+
+### 7. Specialized Reasoning & Infrastructure — `unitforge`, `sst`, `drizzle-orm`
+- **Evaluation Rating**: 7.5 / 10 | **Utility**: High Precision & Infrastructure Value
+- **Overview**:
+  - `unitforge`: Units and measurement conversion library that operates without domain-specific physical assumptions.
+  - `sst`: Serverless Stack framework exposing infrastructure primitives (queues, databases, functions) as typed code components.
+  - `drizzle-orm`: TypeScript-first ORM with SQL schema definitions, Zod validation, and migration tooling.
+- **System Integration for `pipecatapp`**:
+  - Use `unitforge` in reasoning agent nodes for measurement conversions, and model Nomad/Consul service deployments and database schemas through typed Python/YAML workflow primitives.
+
+---
+
+## Combined Multi-Agent Operating System Diagram
 
 ```
                     ┌──────────────────────────────┐
@@ -81,6 +136,7 @@ Combining `multi-agent-planning` (coordination protocol) and `skills` (executabl
        ▼                           ▼                           ▼
   [Researcher]               [Implementer]                 [Reviewer]
   (skills/research)       (skills/code-review)        (skills/security)
+  (google-mcp-suite)      (component-registry)        (Simian-Analyzer)
        │                           │                           │
        └───────────────────────────┼───────────────────────────┘
                                    ▼
@@ -93,75 +149,22 @@ Combining `multi-agent-planning` (coordination protocol) and `skills` (executabl
 
 ---
 
-### 4. `es6-plato` (Fork - 206 Stars) — Codebase Complexity Metrics & Health Dashboards
-- **Evaluation Rating**: 8 / 10 | **Utility**: High Analytical Value
-- **Overview**: Static source code analysis and visual complexity reporting tool for ES6 JavaScript.
-- **Key Concepts & Mechanics**:
-  - Evaluates AST Cyclomatic Complexity, Halstead metrics, SLOC, and Maintainability Index scores across codebase modules.
-  - Generates interactive visual web dashboards summarizing code debt trends.
-- **System Integration for `pipecatapp`**:
-  - Implement a codebase intelligence workflow node in `pipecatapp/workflow/nodes/` that evaluates repository complexity scores to guide automated code-review and refactoring agents.
-
----
-
-### 5. Procedural Generation & Spatial Systems — `dedungeon`, `desteer.js`, `dorky-markov`
-- **Evaluation Rating**: 8.5 / 10 | **Utility**: Medium-High Systemic Value
-- **Overview**:
-  - `dedungeon` (Source, C++): Graph-based procedural dungeon and building interior generator. Converts abstract room connectivity graphs into physical spatial layouts.
-  - `desteer.js` (Fork, JS): Autonomous steering behaviors library (flocking, obstacle avoidance, path following).
-  - `dorky-markov` (Source, JS): Lightweight Markov chain text generator and n-gram probability matrix builder.
-- **System Integration for `pipecatapp`**:
-  - Leverage graph-based room partitioning (`dedungeon`) and autonomous steering math (`desteer.js`) inside `VRTool.compute_spatial_grid` (`pipecatapp/tools/vr_tool.py`) for organic 3D placement of agent nodes in the WebGL visualizer (`pipecatapp/static/cluster_viz.html`).
-
----
-
-### 6. Component Vocabularies & UI Composition — `structor`, `react-native-reusables`, `downshift`, `Waffles`
-- **Evaluation Rating**: 8 / 10 | **Utility**: High Frontend Pattern Value
-- **Overview**:
-  - `structor`: Visual UI builder working from pre-built, configurable component libraries.
-  - `react-native-reusables`: Copy-pasteable component primitives (shadcn model) enabling granular tailoring.
-  - `downshift`: WAI-ARIA compliant accessible UI behavioral primitives.
-  - `Waffles`: Responsive CSS grid framework supporting automatic sizing and fluid layouts.
-- **System Integration for `pipecatapp`**:
-  - Create a UI component registry for `pipecatapp/static/` and WebGL visualizer UIs, allowing frontend builder agents to select and assemble interfaces from validated primitives instead of generating arbitrary markup from scratch.
-
----
-
-### 7. Typed Infrastructure & Data Abstractions — `sst` & `drizzle-orm`
-- **Evaluation Rating**: 7.5 / 10 | **Utility**: Medium-High Infrastructure Value
-- **Overview**:
-  - `sst`: Serverless Stack framework exposing infrastructure primitives (queues, databases, functions) as typed code components.
-  - `drizzle-orm`: TypeScript-first ORM with SQL schema definitions, Zod validation, and migration tooling.
-- **System Integration for `pipecatapp`**:
-  - Expose Nomad/Consul service deployments and PMM SQLite/PostgreSQL schemas through typed Python/YAML primitives in system workflows.
-
----
-
-### 8. Shaders & Asset Pipelines — `phaser-glsl-loader` & Audio Experiments
-- **Evaluation Rating**: 7 / 10 | **Utility**: Visual/Audio Shader Modularity
-- **Overview**:
-  - `phaser-glsl-loader` (Source, 16 stars): Webpack/Gulp loader for externalizing GLSL fragment and vertex shader files.
-  - `brite-sequencer` / `midi-synth` / `force-tune`: Web Audio API synthesizers and D3 force-directed audio experiments.
-- **System Integration for `pipecatapp`**:
-  - Modular GLSL shader file injection into `pipecatapp/static/cluster_viz.html` 3D background canvas effects.
-
----
-
 ## Combined Priority Matrix & Implementation Roadmap
 
-| Tier | Priority Focus | Source Repositories | Target Integration in System |
+| Tier | Priority Focus | Source Repositories / Ecosystems | Target Integration in System |
 |---|---|---|---|
-| **Tier 1 (Immediate)** | **Governed Skill Architecture** | `skills` | Adopt `SKILL.md` + `SPEC.md` + `EVAL.md` spec model across all MCP tools and `pipecat-agent-extension`. |
+| **Tier 1 (Immediate)** | **Governed Skill Architecture** | `skills`, `simiancraft-skills` | Adopt `SKILL.md` + `SPEC.md` + `EVAL.md` spec model across all MCP tools and `pipecat-agent-extension`. |
 | **Tier 1 (Immediate)** | **Git-Native Multi-Agent Coordination** | `multi-agent-planning` | Implement durable file-based coordination (`PLAN.md`, `STATE.md`, `EVIDENCE.md`) for agent handoffs. |
+| **Tier 1 (Immediate)** | **Google MCP Productivity Suite** | `google-mcp-suite` | Expand `tools/mcp-*` suite with standardized Gmail, Drive, Sheets, and Docs connectors. |
 | **Tier 1 (Immediate)** | **Hard Evidence Verification** | `multi-agent-planning`, `skills` | Enforce test execution logs & evidence baselines prior to plan step completion. |
+| **Tier 2 (Next Phase)** | **Codebase Complexity & Deduplication** | `es6-plato`, `quandarypeak/simian` | Add static code complexity & structural similarity checking workflow node for refactoring agents. |
 | **Tier 2 (Next Phase)** | **3D VR Spatial & Steering Placement** | `dedungeon`, `desteer.js` | Enhance `VRTool.compute_spatial_grid` with graph dungeon generation and steering math. |
-| **Tier 2 (Next Phase)** | **Repository Code Health Metrics** | `es6-plato`, `escomplex-js` | Add static code complexity & maintainability analysis workflow node. |
-| **Tier 2 (Next Phase)** | **Component Vocabulary Registry** | `structor`, `react-native-reusables`, `Waffles` | Bounded frontend & 3D WebGL component composition primitives for visualizer UI agents. |
-| **Tier 2 (Next Phase)** | **Typed Infrastructure Primitives** | `sst`, `drizzle-orm` | High-level typed abstraction nodes for Nomad/Consul service provisioning. |
+| **Tier 2 (Next Phase)** | **Component Registry & Visual AI** | `structor`, `react-native-reusables`, `Simian-ComfyUI-WebApps` | Bounded UI component composition primitives & ComfyUI visual workflow bridges. |
+| **Tier 2 (Next Phase)** | **Typed Infrastructure & Unit Reasoning** | `sst`, `drizzle-orm`, `unitforge`, `chromonym` | High-level typed infrastructure nodes, database ORM schemas, and unit/color reasoning tools. |
 
 ---
 
-## Exhaustive Verification Table of All 117 Repositories
+## Exhaustive Verification Table of All 117 User Repositories
 
 | # | Repository Name | Fork Status | Primary Language | Stars | Category / Evaluated Utility Level |
 |---|---|---|---|---|---|
