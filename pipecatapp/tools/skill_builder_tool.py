@@ -74,6 +74,25 @@ class SkillBuilderTool:
                     return json.dumps(skill, indent=2)
                 return f"Skill '{name}' not found."
 
+            elif action == "scaffold_governed_skill":
+                name = kwargs.get("name")
+                description = kwargs.get("description")
+                intent = kwargs.get("intent", "Operational prompt directives and execution rules.")
+                evidence = kwargs.get("evidence", "Test execution logs and verification assertions required.")
+
+                if not name or not description:
+                    return "Error: 'name' and 'description' parameters are required for scaffold_governed_skill."
+
+                skill_md = f"# Skill: {name}\n\n## Description\n{description}\n\n## Directives\n- Execute tasks under strict evidence criteria.\n"
+                spec_md = f"# Spec: {name}\n\n## Intent\n{intent}\n\n## Scope & Limitations\n- Enforce evidence verification prior to step completion.\n"
+                eval_md = f"# Eval: {name}\n\n## Quality Criteria\n- Zero prompt injection vulnerabilities.\n- Verification output logged to EVIDENCE.md.\n\n## Evidence Requirements\n{evidence}\n"
+
+                self.memory_store.save_skill(f"{name}/SKILL", f"{description} (SKILL.md)", skill_md)
+                self.memory_store.save_skill(f"{name}/SPEC", f"{description} (SPEC.md)", spec_md)
+                self.memory_store.save_skill(f"{name}/EVAL", f"{description} (EVAL.md)", eval_md)
+
+                return f"Governed skill package '{name}' successfully scaffolded with SKILL.md, SPEC.md, and EVAL.md."
+
             elif action == "list":
                 skills = self.memory_store.list_skills()
                 return json.dumps(skills, indent=2)
