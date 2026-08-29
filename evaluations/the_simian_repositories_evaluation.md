@@ -321,6 +321,32 @@ Analyzing `the-simian`'s open-source timeline reveals an evolutionary progressio
 
 ---
 
+## Codebase Audit & Feature Anti-Clobber Safeguards
+
+To prevent regressions or overwriting existing system capabilities, this evaluation performed a cross-codebase audit comparing proposed roadmap capabilities against established tooling in `pipecatapp` and `tools/`.
+
+### 1. Existing Stigmergy & Design Doc Tooling vs. Proposed Simian Additions
+- **Codebase Reality**: `pipecatapp/tools/field_guide_tool.py` (`FieldGuideTool`) and `pipecatapp/tools/design_docs_tool.py` (`DesignDocsTool`) already exist in the codebase and are registered in `agent_factory.py`.
+- **Anti-Clobber Action**: Do NOT create duplicate `FieldGuide` or `DesignDocs` classes. Instead, preserve the existing 200-line budget `FieldGuideTool` and file-based `DesignDocsTool` implementations, injecting them into agent prompt contexts during initial worker node startup.
+
+### 2. AST Code Editing & Refactoring Tools
+- **Codebase Reality**: AST-based code manipulation and query tools (`ASTEditorTool` in `pipecatapp/tools/ast_editor_tool.py` and `CQ_Tool` in `pipecatapp/tools/cq_tool.py`) are actively registered and used in `pipecatapp/workflow/nodes/system_nodes.py`.
+- **Anti-Clobber Action**: Avoid replacing `ASTEditorTool`. Wrap `es6-plato` cyclomatic complexity metrics and Simian structural similarity algorithms as an *additive metric node* (`ComplexityEvaluatorNode` in `pipecatapp/workflow/nodes/`) that feeds complexity scores into `ASTEditorTool` for targeted refactoring.
+
+### 3. Multi-Agent Coordination Substrate (Git-Native vs. Keystone Polyphony)
+- **Codebase Reality**: Micro-task concurrency and mutex ownership are governed by Keystone Polyphony (`PolyphonyTool` in `pipecatapp/tools/polyphony_tool.py`) using active batons (`polyphony task claim`).
+- **Anti-Clobber Action**: Durable Git coordination files (`PLAN.md`, `STATE.md`, `DECISIONS.md`, `EVIDENCE.md`) must serve as immutable, readable audit logs for inter-agent handoffs, while Keystone Polyphony retains real-time mutex lock authority to prevent race conditions.
+
+### 4. Google MCP Suite Integration
+- **Codebase Reality**: `tools/mcp-google/` currently houses `gmail_server.py` and `drive_server.py`.
+- **Anti-Clobber Action**: Add `sheets_server.py` and `docs_server.py` as complementary modules within `tools/mcp-google/` without modifying or overwriting existing Gmail/Drive servers.
+
+### 5. 3D Spatial Grid & Procedural Node Placement
+- **Codebase Reality**: `VRTool` (`pipecatapp/tools/vr_tool.py`) already provides `compute_spatial_grid` and `emit_signal_trajectory` for spatial visualizer layout.
+- **Anti-Clobber Action**: Incorporate `dedungeon` room partitioning logic and `desteer.js` steering vector algorithms directly into `VRTool.compute_spatial_grid` as coordinate layout helpers rather than creating an independent visualizer tool.
+
+---
+
 ## Exhaustive Verification Table of All 117 Repositories
 
 | # | Repository Name | Fork Status | Primary Language | Stars | Category / Evaluated Utility Level |
