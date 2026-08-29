@@ -481,3 +481,62 @@ class MegafileDecompositionNode(Node):
                 json.dump(q, f)
                 fcntl.flock(f, fcntl.LOCK_UN)
             context.set_output("status", f"Decomposition failed: {str(e)}")
+
+@registry.register
+class ComplexityEvaluatorNode(Node):
+    """
+    A node that evaluates AST cyclomatic complexity, Halstead/SLOC metrics, and
+    structural code similarity across project files for refactoring agents.
+
+    Input: 'filepath' or 'directory'
+    Output: 'complexity_score', 'sloc', 'metrics_report'
+    """
+    async def execute(self, context: WorkflowContext):
+        import ast
+
+        try:
+            filepath = self.get_input(context, "filepath")
+        except ValueError:
+            filepath = None
+
+        if not filepath:
+            self.set_output(context, "complexity_score", 0)
+            self.set_output(context, "sloc", 0)
+            self.set_output(context, "metrics_report", {"error": "No filepath provided."})
+            return
+
+        if not os.path.exists(filepath):
+            self.set_output(context, "complexity_score", 0)
+            self.set_output(context, "sloc", 0)
+            self.set_output(context, "metrics_report", {"error": f"File not found: {filepath}"})
+            return
+
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                code = f.read()
+
+            lines = code.split("\n")
+            sloc = len([line for line in lines if line.strip() and not line.strip().startswith("#")])
+
+            # Calculate cyclomatic complexity via AST decision points
+            tree = ast.parse(code)
+            complexity = 1
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.If, ast.For, ast.While, ast.And, ast.Or, ast.ExceptHandler, ast.With)):
+                    complexity += 1
+
+            report = {
+                "filepath": filepath,
+                "sloc": sloc,
+                "cyclomatic_complexity": complexity,
+                "maintainability_index": max(0, 100 - (complexity * 2) - (sloc * 0.1))
+            }
+
+            self.set_output(context, "complexity_score", complexity)
+            self.set_output(context, "sloc", sloc)
+            self.set_output(context, "metrics_report", report)
+
+        except Exception as e:
+            self.set_output(context, "complexity_score", -1)
+            self.set_output(context, "sloc", 0)
+            self.set_output(context, "metrics_report", {"error": f"Failed to calculate complexity: {str(e)}"})

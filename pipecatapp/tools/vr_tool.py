@@ -12,18 +12,43 @@ class VRTool:
         self.spatial_nodes = {}
         self.trajectories = []
 
-    def compute_spatial_grid(self, node_ids: list) -> dict:
-        """Computes 3D spatial grid coordinates for cluster nodes and active Pipecat workers."""
+    def compute_spatial_grid(self, node_ids: list, use_procedural_steering: bool = True) -> dict:
+        """Computes 3D spatial grid coordinates for cluster nodes and active Pipecat workers.
+        Leverages room partitioning and steering vector repulsion to avoid node collisions in 3D space.
+        """
+        import math
+
         grid = {}
         spacing = 4.0
         cols = max(1, int(len(node_ids) ** 0.5))
+
         for idx, node_id in enumerate(node_ids):
             col = idx % cols
             row = idx // cols
+            # Room partitioning offset based on hash of node_id
+            room_hash = sum(ord(c) for c in str(node_id)) % 3
+            room_offset_x = (room_hash - 1) * 12.0
+
+            base_x = (col - cols / 2) * spacing + room_offset_x
+            base_z = (row - cols / 2) * spacing
+
+            # Apply steering vector repulsion if enabled
+            if use_procedural_steering and idx > 0:
+                repulsion_x, repulsion_z = 0.0, 0.0
+                for existing_id, pos in grid.items():
+                    dx = base_x - pos["x"]
+                    dz = base_z - pos["z"]
+                    dist = math.sqrt(dx * dx + dz * dz)
+                    if 0.001 < dist < spacing:
+                        repulsion_x += (dx / dist) * (spacing - dist) * 0.5
+                        repulsion_z += (dz / dist) * (spacing - dist) * 0.5
+                base_x += repulsion_x
+                base_z += repulsion_z
+
             grid[node_id] = {
-                "x": round((col - cols / 2) * spacing, 2),
+                "x": round(base_x, 2),
                 "y": 1.5,
-                "z": round((row - cols / 2) * spacing, 2)
+                "z": round(base_z, 2)
             }
         self.spatial_nodes = grid
         return grid
