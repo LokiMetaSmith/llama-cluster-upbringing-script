@@ -53,7 +53,12 @@ class GitCoordinationTool:
         }
 
     def execute(self, project: str, artifact: str, action: str, content: Optional[str] = None, **kwargs) -> str:
-        project_dir = os.path.join(self.base_dir, project)
+        abs_base = os.path.abspath(self.base_dir)
+        project_dir = os.path.abspath(os.path.join(self.base_dir, project))
+
+        if not project_dir.startswith(abs_base):
+            return "Error: Path traversal attempt detected."
+
         os.makedirs(project_dir, exist_ok=True)
         filepath = os.path.join(project_dir, f"{artifact}.md")
 
