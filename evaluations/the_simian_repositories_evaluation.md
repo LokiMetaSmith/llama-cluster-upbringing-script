@@ -308,16 +308,16 @@ Analyzing `the-simian`'s open-source timeline reveals an evolutionary progressio
 
 ## Priority Matrix & Implementation Roadmap
 
-| Tier | Priority Focus | Source Repositories / Ecosystems | Target Integration in System |
-|---|---|---|---|
-| **Tier 1 (Immediate)** | **Governed Skill Architecture** | `skills`, `simiancraft-skills` | Adopt `SKILL.md` + `SPEC.md` + `EVAL.md` spec model across all MCP tools and `pipecat-agent-extension`. |
-| **Tier 1 (Immediate)** | **Git-Native Multi-Agent Coordination** | `multi-agent-planning` | Implement durable file-based coordination (`PLAN.md`, `STATE.md`, `EVIDENCE.md`) for agent handoffs. |
-| **Tier 1 (Immediate)** | **Google MCP Productivity Suite** | `google-mcp-suite` | Expand `tools/mcp-*` suite with standardized Gmail, Drive, Sheets, and Docs connectors. |
-| **Tier 1 (Immediate)** | **Hard Evidence Verification** | `multi-agent-planning`, `skills` | Enforce test execution logs & evidence baselines prior to plan step completion. |
-| **Tier 2 (Next Phase)** | **Codebase Complexity & Deduplication** | `es6-plato`, `quandarypeak/simian` | Add static code complexity & structural similarity checking workflow node for refactoring agents. |
-| **Tier 2 (Next Phase)** | **3D VR Spatial & Steering Placement** | `dedungeon`, `desteer.js` | Enhance `VRTool.compute_spatial_grid` with graph dungeon generation and steering math. |
-| **Tier 2 (Next Phase)** | **Component Registry & Visual AI** | `structor`, `react-native-reusables`, `Simian-ComfyUI-WebApps` | Bounded UI component composition primitives & ComfyUI visual workflow bridges. |
-| **Tier 2 (Next Phase)** | **Typed Infrastructure & Unit Reasoning** | `sst`, `drizzle-orm`, `unitforge`, `chromonym` | High-level typed infrastructure nodes, database ORM schemas, and unit/color reasoning tools. |
+| Tier | Priority Focus | Source Repositories / Ecosystems | Target Integration in System | Status |
+|---|---|---|---|---|
+| **Tier 1 (Immediate)** | **Governed Skill Architecture** | `skills`, `simiancraft-skills` | Adopt `SKILL.md` + `SPEC.md` + `EVAL.md` spec model via `SkillBuilderTool.scaffold_governed_skill`. | **[x] Completed** |
+| **Tier 1 (Immediate)** | **Git-Native Multi-Agent Coordination** | `multi-agent-planning` | Implement durable file-based coordination (`PLAN.md`, `STATE.md`, `DECISIONS.md`, `EVIDENCE.md`) via `GitCoordinationTool`. | **[x] Completed** |
+| **Tier 1 (Immediate)** | **Google MCP Productivity Suite** | `google-mcp-suite` | Expand `tools/mcp-google/` with standardized `sheets_server.py` and `docs_server.py` connectors. | **[x] Completed** |
+| **Tier 1 (Immediate)** | **Hard Evidence Verification** | `multi-agent-planning`, `skills` | Enforce test execution logs & evidence baselines recorded in `EVIDENCE.md` prior to plan step completion. | **[x] Completed** |
+| **Tier 2 (Next Phase)** | **Codebase Complexity & Deduplication** | `es6-plato`, `quandarypeak/simian` | Added static code complexity & structural similarity checking via `ComplexityEvaluatorNode`. | **[x] Completed** |
+| **Tier 2 (Next Phase)** | **3D VR Spatial & Steering Placement** | `dedungeon`, `desteer.js` | Enhanced `VRTool.compute_spatial_grid` with room partitioning and steering vector repulsion math. | **[x] Completed** |
+| **Tier 2 (Next Phase)** | **Component Registry & Visual AI** | `structor`, `react-native-reusables`, `Simian-ComfyUI-WebApps` | Bounded UI component composition primitives & ComfyUI visual workflow bridges. | [ ] Pending |
+| **Tier 2 (Next Phase)** | **Typed Infrastructure & Unit Reasoning** | `sst`, `drizzle-orm`, `unitforge`, `chromonym` | High-level typed infrastructure nodes, database ORM schemas, and unit/color reasoning tools. | [ ] Pending |
 
 ---
 

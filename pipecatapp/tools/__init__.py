@@ -19,6 +19,7 @@ from .external_app_manager_tool import ExternalAppManagerTool
 from .file_editor_tool import FileEditorTool
 from .final_answer_tool import FinalAnswerTool
 from .get_nomad_job import GetNomadJobTool
+from .git_coordination_tool import GitCoordinationTool
 from .git_tool import Git_Tool
 from .ha_tool import HA_Tool
 from .heretic_tool import HereticTool
@@ -94,6 +95,7 @@ __all__ = [
     "FileEditorTool",
     "FinalAnswerTool",
     "GetNomadJobTool",
+    "GitCoordinationTool",
     "Git_Tool",
     "HA_Tool",
     "HereticTool",
