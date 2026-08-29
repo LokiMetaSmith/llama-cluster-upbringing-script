@@ -4,8 +4,8 @@
   become: no
 
   vars_files:
-    - "../../group_vars/models.yaml"
-    - "../../group_vars/external_experts.yaml"
+    - "{{ ansible_config_file | dirname }}/group_vars/models.yaml"
+    - "{{ ansible_config_file | dirname }}/group_vars/external_experts.yaml"
 
   tags:
     - ai-experts

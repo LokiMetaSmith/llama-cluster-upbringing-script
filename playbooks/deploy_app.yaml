@@ -4,7 +4,7 @@
   become: yes
 
   vars_files:
-    - group_vars/models.yaml
+    - "{{ ansible_config_file | dirname }}/group_vars/models.yaml"
 
   vars:
     target_user: "pipecatapp"
