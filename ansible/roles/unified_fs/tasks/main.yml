@@ -2,7 +2,7 @@
   apt:
     name:
       - fuse
-      - python3-fuse
+      - python3-fusepy
       - python3-requests
     state: present
     update_cache: yes
