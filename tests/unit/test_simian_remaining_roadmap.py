@@ -16,7 +16,10 @@ def test_unit_reasoning_tool():
     assert "Error: Unknown conversion type" in res_err
 
 @pytest.mark.asyncio
-async def test_comfyui_bridge_node():
+async def test_comfyui_bridge_node(monkeypatch):
+    monkeypatch.setenv("CLUSTER_IP", "10.0.0.15")
+    monkeypatch.delenv("COMFYUI_URL", raising=False)
+
     node = ComfyUIBridgeNode(config={"id": "comfy_1", "inputs": [{"name": "prompt", "value": "A Cyberpunk City"}]})
     context = WorkflowContext(
         workflow_definition={"name": "test_wf", "nodes": [{"id": "comfy_1", "inputs": [{"name": "prompt", "value": "A Cyberpunk City"}]}]}
@@ -29,3 +32,4 @@ async def test_comfyui_bridge_node():
 
     assert img_url is not None
     assert status is not None
+    assert "127.0.0.1" not in status or "10.0.0.15" in status or "ComfyUI offline" in status
