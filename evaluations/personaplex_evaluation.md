@@ -86,3 +86,11 @@ PersonaPlex's text prompts are not just static strings; they can act as dynamic 
    - Measure the end-to-end latency from a remote mesh node capturing audio to receiving the first audio frame back from the GPU node.
 5. **SSD Streaming Prototype (Colibri + Moshi):**
    - Review the [Colibri/Moshi SSD Streaming Blueprint](./colibri_moshi_ssd_streaming.md) for a long-term strategy to offload inference back onto local NVMe-equipped edge nodes. Begin prototyping the Rust `io_uring` module.
+
+---
+
+## Implementation Status & Integration Summary
+
+- [x] **Voice Conditioning Embeddings (`NATF2`, `VARM1`, `AAMF1`)**: Integrated into `PersonalityTool` (`pipecatapp/tools/personality_tool.py`) via `set_voice_persona`.
+- [x] **REST API Endpoint (`POST /api/personality/voice_persona`)**: Exposed in `pipecatapp/web_server.py`.
+- [x] **3D Visualizer Emotion Aura Broadcast**: Implemented `VRTool.broadcast_persona_emotion` and WebSocket rendering in `pipecatapp/static/cluster_viz.html`.

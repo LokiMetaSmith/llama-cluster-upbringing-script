@@ -1276,6 +1276,29 @@ async def reset_personality(api_key: str = Security(get_api_key), rate_limit: No
     result = app.state.personality_tool.reset_personality()
     return JSONResponse(status_code=200, content={"message": result})
 
+@app.post("/api/personality/voice_persona", summary="Set Voice Persona", description="Sets PersonaPlex voice embedding and role prompt.", tags=["Agent"])
+async def set_voice_persona(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """Sets PersonaPlex voice persona embedding and role prompt."""
+    if not hasattr(app.state, 'personality_tool'):
+        if __package__:
+            from .tools.personality_tool import PersonalityTool
+        else:
+            from pipecatapp.tools.personality_tool import PersonalityTool
+        app.state.personality_tool = PersonalityTool()
+
+    voice_id = payload.get("voice_id", "NATF2")
+    role_prompt = payload.get("role_prompt", "Standard Assistant")
+    emotion = payload.get("emotion", "neutral")
+
+    result = app.state.personality_tool.set_voice_persona(voice_id, role_prompt, emotion)
+
+    # Broadcast emotion aura to 3D VR visualizer
+    from pipecatapp.tools.vr_tool import VRTool
+    vr = VRTool()
+    await vr.broadcast_persona_emotion(agent_id=os.getenv("AGENT_ID", "pipecat_master"), voice_id=voice_id, emotion=emotion)
+
+    return JSONResponse(status_code=200, content={"message": result})
+
 @app.post("/api/rag/configure", summary="Configure RAG Scope", description="Changes the search scope (base directory) for the RAG tool.", tags=["Agent"])
 async def configure_rag(request: Request, payload: Dict = Body(..., examples=[{"path": "/opt/pipecatapp/docs"}]), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     """Configures the RAG tool's search scope.

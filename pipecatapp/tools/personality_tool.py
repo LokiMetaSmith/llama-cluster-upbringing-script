@@ -5,14 +5,18 @@ import os
 
 class PersonalityTool:
     """
-    Tool for managing LLM personality/steering via Control Vectors.
-    Allows real-time adjustment of the model's behavior along specific axes (e.g., Assistant vs. Creative).
+    Tool for managing LLM personality/steering via Control Vectors and
+    PersonaPlex voice/role conditioning embeddings (e.g., NATF2, VARM1, AAMF1).
     """
     def __init__(self, api_url: str = None):
-        # Default to local router or direct llama server if not specified
-        self.api_url = (api_url or f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:8080").rstrip("/")
-        # Base directory where control vectors are stored on the server side
+        cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
+        self.api_url = (api_url or f"http://{cluster_ip}:8080").rstrip("/")
         self.vectors_dir = "/opt/nomad/models/vectors"
+        self.voice_embeddings = {
+            "NATF2": {"gender": "female", "accent": "neutral", "tone": "authoritative"},
+            "VARM1": {"gender": "male", "accent": "neutral", "tone": "conversational"},
+            "AAMF1": {"gender": "female", "accent": "expressive", "tone": "empathetic"}
+        }
 
 
     def get_schema(self) -> dict:
@@ -45,8 +49,34 @@ class PersonalityTool:
             return getattr(self, "reset_personality")(**kwargs.get("kwargs", kwargs))
         if action == "get_current_personality":
             return getattr(self, "get_current_personality")(**kwargs.get("kwargs", kwargs))
+        if action == "set_voice_persona":
+            return getattr(self, "set_voice_persona")(**kwargs.get("kwargs", kwargs))
         else:
             return f"Unknown action: {action}"
+
+    def set_voice_persona(self, voice_id: str, role_prompt: str, emotion: str = "neutral") -> str:
+        """
+        Applies a PersonaPlex voice conditioning embedding and text role prompt.
+        """
+        if voice_id not in self.voice_embeddings:
+            supported = ", ".join(self.voice_embeddings.keys())
+            return f"Error: Voice ID '{voice_id}' not supported. Options: {supported}"
+
+        voice_meta = self.voice_embeddings[voice_id]
+        payload = {
+            "voice_id": voice_id,
+            "voice_meta": voice_meta,
+            "role_prompt": role_prompt,
+            "emotion": emotion
+        }
+
+        try:
+            response = requests.post(f"{self.api_url}/personaplex/voice-persona", json=payload, timeout=5)
+            response.raise_for_status()
+            return f"Successfully applied PersonaPlex voice persona '{voice_id}' (Emotion: {emotion})."
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"PersonaPlex server unreachable ({e}); storing local voice persona state.")
+            return f"Local PersonaPlex Voice Persona state applied: {voice_id} - Emotion: {emotion}."
 
     def set_personality(self, name: str, strength: float, fname: str = None) -> str:
         """

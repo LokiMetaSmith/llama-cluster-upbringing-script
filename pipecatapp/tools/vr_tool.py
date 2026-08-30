@@ -125,6 +125,37 @@ class VRTool:
             logging.error(f"Failed to broadcast visual AI image: {e}")
             return f"Error: Failed to broadcast visual AI image: {e}"
 
+    async def broadcast_persona_emotion(self, agent_id: str, voice_id: str, emotion: str) -> str:
+        """Broadcasts PersonaPlex voice conditioning & audio/visual emotion aura updates to the Web/VR visualizer."""
+        try:
+            from pipecatapp import web_server
+            await web_server.manager.broadcast(json.dumps({
+                "type": "persona_emotion_update",
+                "agent_id": agent_id,
+                "voice_id": voice_id,
+                "emotion": emotion
+            }))
+            return f"Broadcasted persona emotion update '{emotion}' ({voice_id}) for {agent_id}."
+        except Exception as e:
+            logging.error(f"Failed to broadcast persona emotion: {e}")
+            return f"Error: Failed to broadcast persona emotion: {e}"
+
+    async def broadcast_p2p_telemetry(self, source_peer: str, target_peer: str, throughput_mbps: float, transport: str = "hyperswarm") -> str:
+        """Broadcasts P2P swarm model weight & prompt cache transfer throughput to the Web/VR visualizer."""
+        try:
+            from pipecatapp import web_server
+            await web_server.manager.broadcast(json.dumps({
+                "type": "p2p_telemetry_update",
+                "source_peer": source_peer,
+                "target_peer": target_peer,
+                "throughput_mbps": throughput_mbps,
+                "transport": transport
+            }))
+            return f"Broadcasted P2P telemetry ({throughput_mbps} Mbps via {transport}) between {source_peer} and {target_peer}."
+        except Exception as e:
+            logging.error(f"Failed to broadcast P2P telemetry: {e}")
+            return f"Error: Failed to broadcast P2P telemetry: {e}"
+
 
     def get_schema(self) -> dict:
         return {
