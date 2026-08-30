@@ -636,6 +636,50 @@
                     badge.setAttribute('value', `[Breaker: ${level}]`);
                     badge.setAttribute('color', levelColors[level] || '#00ff00');
                 }
+            } else if (msg.type === 'complexity_heatmap_update') {
+                // Render AST complexity heatmap metrics on 3D node
+                const filepath = msg.filepath || 'unknown';
+                const complexity = msg.complexity || 1;
+                const maintainability = msg.maintainability || 100;
+
+                HUD_LOG.setAttribute('value', `[AST Complexity] ${filepath}: Complexity=${complexity}`);
+
+                // Find matching entity or apply to active worker
+                const targetNode = Object.values(nodeEntities)[0];
+                if (targetNode) {
+                    let heatmap = targetNode.querySelector('.complexity-badge');
+                    if (!heatmap) {
+                        heatmap = document.createElement('a-text');
+                        heatmap.setAttribute('class', 'complexity-badge');
+                        heatmap.setAttribute('align', 'center');
+                        heatmap.setAttribute('position', '0 2.8 0');
+                        heatmap.setAttribute('scale', '1.6 1.8 1.8');
+                        targetNode.appendChild(heatmap);
+                    }
+                    const heatColor = complexity > 10 ? '#ff0000' : (complexity > 5 ? '#ff8800' : '#00ff00');
+                    heatmap.setAttribute('value', `🔥 Complexity: ${complexity} (MI: ${Math.round(maintainability)})`);
+                    heatmap.setAttribute('color', heatColor);
+                }
+            } else if (msg.type === 'comfyui_image_update') {
+                // Display ComfyUI visual AI generated images on spatial node cards
+                const imageUrl = msg.image_url;
+                const promptText = msg.prompt || 'Generated AI Node Image';
+
+                HUD_LOG.setAttribute('value', `[ComfyUI] New Image Generated: ${promptText}`);
+
+                const targetNode = Object.values(nodeEntities)[0];
+                if (targetNode) {
+                    let imgCard = targetNode.querySelector('.visual-ai-card');
+                    if (!imgCard) {
+                        imgCard = document.createElement('a-image');
+                        imgCard.setAttribute('class', 'visual-ai-card');
+                        imgCard.setAttribute('position', '0 4.0 0');
+                        imgCard.setAttribute('width', '3');
+                        imgCard.setAttribute('height', '3');
+                        targetNode.appendChild(imgCard);
+                    }
+                    imgCard.setAttribute('src', imageUrl);
+                }
             } else if (msg.type === 'hitl_gate_request') {
                 // Human-in-the-loop approval request overlay
                 const agentId = msg.agent_id;

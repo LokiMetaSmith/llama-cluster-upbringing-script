@@ -95,6 +95,36 @@ class VRTool:
             logging.error(f"Failed to broadcast HITL gate request: {e}")
             return f"Error: Failed to broadcast HITL gate request: {e}"
 
+    async def broadcast_complexity_heatmap(self, filepath: str, complexity: int, maintainability: float) -> str:
+        """Broadcasts AST code complexity heatmap metrics to the Web/VR visualizer."""
+        try:
+            from pipecatapp import web_server
+            await web_server.manager.broadcast(json.dumps({
+                "type": "complexity_heatmap_update",
+                "filepath": filepath,
+                "complexity": complexity,
+                "maintainability": maintainability
+            }))
+            return f"Broadcasted complexity heatmap for {filepath}."
+        except Exception as e:
+            logging.error(f"Failed to broadcast complexity heatmap: {e}")
+            return f"Error: Failed to broadcast complexity heatmap: {e}"
+
+    async def broadcast_visual_ai_image(self, prompt_id: str, image_url: str, prompt: str) -> str:
+        """Broadcasts ComfyUI generated visual AI image updates to the Web/VR visualizer."""
+        try:
+            from pipecatapp import web_server
+            await web_server.manager.broadcast(json.dumps({
+                "type": "comfyui_image_update",
+                "prompt_id": prompt_id,
+                "image_url": image_url,
+                "prompt": prompt
+            }))
+            return f"Broadcasted visual AI image update for {prompt_id}."
+        except Exception as e:
+            logging.error(f"Failed to broadcast visual AI image: {e}")
+            return f"Error: Failed to broadcast visual AI image: {e}"
+
 
     def get_schema(self) -> dict:
         return {

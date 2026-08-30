@@ -536,6 +536,14 @@ class ComplexityEvaluatorNode(Node):
             self.set_output(context, "sloc", sloc)
             self.set_output(context, "metrics_report", report)
 
+            # Broadcast heatmap update to 3D visualizer
+            vr_tool = VRTool()
+            await vr_tool.broadcast_complexity_heatmap(
+                filepath=filepath,
+                complexity=complexity,
+                maintainability=report.get("maintainability_index", 100)
+            )
+
         except Exception as e:
             self.set_output(context, "complexity_score", -1)
             self.set_output(context, "sloc", 0)
@@ -579,11 +587,18 @@ class ComfyUIBridgeNode(Node):
                 if resp.status_code == 200:
                     data = resp.json()
                     prompt_id = data.get("prompt_id", "mock_prompt_123")
-                    self.set_output(context, "image_url", f"{comfyui_url}/view?filename={prompt_id}.png")
+                    img_url = f"{comfyui_url}/view?filename={prompt_id}.png"
+                    self.set_output(context, "image_url", img_url)
                     self.set_output(context, "status", "Queued successfully")
+
+                    vr_tool = VRTool()
+                    await vr_tool.broadcast_visual_ai_image(prompt_id=prompt_id, image_url=img_url, prompt=prompt)
                 else:
-                    self.set_output(context, "image_url", f"/static/assets/generated_placeholder.png")
+                    img_url = f"/static/assets/generated_placeholder.png"
+                    self.set_output(context, "image_url", img_url)
                     self.set_output(context, "status", f"ComfyUI HTTP {resp.status_code}")
+                    vr_tool = VRTool()
+                    await vr_tool.broadcast_visual_ai_image(prompt_id="placeholder", image_url=img_url, prompt=prompt)
         except Exception as e:
             # Fallback for offline environments
             self.set_output(context, "image_url", f"/static/assets/generated_placeholder.png")
