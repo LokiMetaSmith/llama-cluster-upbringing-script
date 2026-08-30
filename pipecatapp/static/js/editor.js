@@ -164,26 +164,31 @@ const WorkflowEditor = {
     },
 
     registerNodeTypes: async function() {
-        // Fetch node metadata from backend
+        // Fetch node metadata and dynamic schemas from backend
         let backendMetadata = [];
+        let backendSchemas = {};
         try {
             const headers = {};
             const apiKey = localStorage.getItem('api_key');
             if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
 
-            const response = await fetch('/api/workflows/nodes/metadata', { headers });
+            const response = await fetch('/api/workflows/node_schemas', { headers });
             if (response.ok) {
                 const data = await response.json();
-                if (data && data.nodes) {
-                    backendMetadata = data.nodes;
-                } else if (Array.isArray(data)) {
-                    backendMetadata = data;
+                if (data) {
+                    backendMetadata = data.nodes || [];
+                    backendSchemas = data.schemas || {};
                 }
             } else {
-                console.error("Failed to fetch node metadata:", response.status, response.statusText);
+                // Fallback to legacy metadata endpoint
+                const legacyResp = await fetch('/api/workflows/nodes/metadata', { headers });
+                if (legacyResp.ok) {
+                    const legacyData = await legacyResp.json();
+                    backendMetadata = legacyData.nodes || legacyData || [];
+                }
             }
         } catch (error) {
-            console.error("Error fetching node metadata:", error);
+            console.error("Error fetching node metadata/schemas:", error);
         }
 
         // Generic function to create node classes based on our YAML types
