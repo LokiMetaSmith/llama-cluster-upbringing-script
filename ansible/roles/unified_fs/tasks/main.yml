@@ -1,14 +1,20 @@
-- name: Install system FUSE package and python fusepy bindings
+- name: Install system FUSE package and python pip dependencies
   apt:
     name:
       - fuse
-      - python3-fusepy
+      - python3-pip
       - python3-requests
     state: present
     update_cache: yes
     update_cache_retries: 10
     update_cache_retry_max_delay: 15
     cache_valid_time: 3600
+
+- name: Install fusepy Python library via pip
+  ansible.builtin.pip:
+    name: fusepy
+    executable: pip3
+    state: present
 
 - name: Create mount directory
   file:
