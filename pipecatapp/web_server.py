@@ -1526,6 +1526,49 @@ async def upgrade_community_app(request: Request, payload: Dict = Body(...), api
         raise HTTPException(status_code=500, detail=str(e))
 
 # -------------------------------------------------------------------------
+# Category: Datalog Program Analysis Memory Endpoints
+# -------------------------------------------------------------------------
+
+@app.get("/api/memory/datalog/state", summary="Get Current Datalog State", tags=["Memory", "Datalog"])
+async def get_datalog_state(predicate: Optional[str] = None, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """Queries current active facts maintained in Datalog state."""
+    datalog_mem = getattr(app.state, "datalog_memory", None)
+    if not datalog_mem:
+        from pipecatapp.datalog_memory import DatalogMemory
+        datalog_mem = DatalogMemory()
+        app.state.datalog_memory = datalog_mem
+
+    active_state = datalog_mem.query_state(predicate=predicate)
+    return JSONResponse(content={"predicate_filter": predicate, "facts": active_state})
+
+@app.get("/api/memory/datalog/explain", summary="Explain Datalog Fact Provenance", tags=["Memory", "Datalog"])
+async def explain_datalog_fact(predicate: str, args: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """Explains the provenance and support graph for a specific fact."""
+    datalog_mem = getattr(app.state, "datalog_memory", None)
+    if not datalog_mem:
+        from pipecatapp.datalog_memory import DatalogMemory
+        datalog_mem = DatalogMemory()
+        app.state.datalog_memory = datalog_mem
+
+    parsed_args = [a.strip() for a in args.split(",") if a.strip()]
+    explanation = datalog_mem.explain(predicate, *parsed_args)
+    return JSONResponse(content=explanation)
+
+@app.post("/api/memory/datalog/extract", summary="Extract and Update Datalog State", tags=["Memory", "Datalog"])
+async def extract_datalog_state(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """Receives structured extractions and updates Datalog state."""
+    datalog_mem = getattr(app.state, "datalog_memory", None)
+    if not datalog_mem:
+        from pipecatapp.datalog_memory import DatalogMemory
+        datalog_mem = DatalogMemory()
+        app.state.datalog_memory = datalog_mem
+
+    from pipecatapp.tools.datalog_extraction_tool import DatalogExtractionTool
+    tool = DatalogExtractionTool(datalog_memory=datalog_mem)
+    result = tool.execute({"action": "extract_and_apply", "extraction": payload})
+    return JSONResponse(content=result)
+
+# -------------------------------------------------------------------------
 # Category: GDPR Compliance & Provenance Endpoints
 # -------------------------------------------------------------------------
 
