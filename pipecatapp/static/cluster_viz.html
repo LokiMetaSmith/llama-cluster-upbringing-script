@@ -680,6 +680,51 @@
                     }
                     imgCard.setAttribute('src', imageUrl);
                 }
+            } else if (msg.type === 'persona_emotion_update') {
+                // Render PersonaPlex voice conditioning & audio/visual emotion aura on spatial node
+                const agentId = msg.agent_id || 'pipecat_master';
+                const voiceId = msg.voice_id || 'NATF2';
+                const emotion = msg.emotion || 'neutral';
+
+                const emotionColors = {
+                    'neutral': '#00ffff',
+                    'happy': '#00ff00',
+                    'panicked': '#ff0000',
+                    'authoritative': '#ff8800',
+                    'empathetic': '#ff00ff'
+                };
+
+                HUD_LOG.setAttribute('value', `[Voice Persona] ${agentId}: ${voiceId} (${emotion})`);
+
+                if (nodeEntities[agentId]) {
+                    const el = nodeEntities[agentId];
+                    el.setAttribute('color', emotionColors[emotion] || '#00ffff');
+                    let aura = el.querySelector('.emotion-aura');
+                    if (!aura) {
+                        aura = document.createElement('a-text');
+                        aura.setAttribute('class', 'emotion-aura');
+                        aura.setAttribute('align', 'center');
+                        aura.setAttribute('position', '0 3.6 0');
+                        aura.setAttribute('scale', '1.8 1.8 1.8');
+                        el.appendChild(aura);
+                    }
+                    aura.setAttribute('value', `🎙️ ${voiceId} [${emotion.toUpperCase()}]`);
+                    aura.setAttribute('color', emotionColors[emotion] || '#00ffff');
+                }
+            } else if (msg.type === 'p2p_telemetry_update') {
+                // Render Liminal Mesh / P2P Swarm transfer throughput
+                const source = msg.source_peer || 'node_1';
+                const target = msg.target_peer || 'node_2';
+                const mbps = msg.throughput_mbps || 0.0;
+                const transport = msg.transport || 'hyperswarm';
+
+                HUD_LOG.setAttribute('value', `[P2P Mesh] ${source} ➔ ${target}: ${mbps} Mbps (${transport})`);
+
+                if (nodeEntities[source] && nodeEntities[target]) {
+                    spawnProjectile(source, target);
+                } else {
+                    randomTraffic();
+                }
             } else if (msg.type === 'hitl_gate_request') {
                 // Human-in-the-loop approval request overlay
                 const agentId = msg.agent_id;

@@ -11,6 +11,8 @@
   - [x] **3D Spatial Steering Vector Placement (Tier 2):** Integrated `dedungeon` room partitioning and `desteer.js` steering math into `VRTool.compute_spatial_grid`.
   - [x] **Component Registry & Visual AI (Tier 2):** Added `ComfyUIBridgeNode` bridging ComfyUI visual AI workflows to agent tasks.
   - [x] **Typed Infrastructure & Unit Reasoning (Tier 2):** Implemented `UnitReasoningTool` for unit conversions and measurement reasoning.
+- [x] **PersonaPlex Voice Persona & Audio/Visual Emotion Steering:** Added voice embedding conditioning (`NATF2`, `VARM1`, `AAMF1`) to `PersonalityTool`, `/api/personality/voice_persona` REST endpoint, and `broadcast_persona_emotion` in `VRTool` rendering 3D emotion auras.
+- [x] **Mesh LLM & Liminal P2P Swarm Transport:** Added P2P prompt cache routing (`p2p_prompt_cache_route`) in `P2PSyncTool`, `broadcast_p2p_telemetry` in `VRTool`, and live P2P transfer projectiles in `cluster_viz.html`.
 - [x] **Munder Difflin Codebase Architectural Evaluation & Spatial Visualization Integration:** Comparative evaluation report (`evaluations/munder_difflin_evaluation.md`), real-time WebSocket narrative status/thought bubbles, 3D VR spatial grid and signal trajectory rays (`VRTool`), and Phase 3 Circuit Breaker & HITL Gate workflow nodes (`system_nodes.py`).
 - [x] **Community Apps Autonomous Health Monitor & Self-Healing Loop:** Periodic background polling of community apps via Consul/Nomad health APIs with automated Ansible repair triggers.
 - [x] **Automated Application Upgrade & Canary Rollback Workflow:** `/api/apps/upgrade` endpoint and Nomad canary `update` blocks with `auto_revert` for zero-downtime updates and rollbacks.

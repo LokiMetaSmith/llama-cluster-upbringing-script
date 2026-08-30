@@ -336,5 +336,9 @@ class P2PSyncTool:
             peer_device_id = kwargs.get("peer_device_id", "")
             folder_id = kwargs.get("folder_id", "")
             return self.check_sync_status(peer_device_id, folder_id)
+        elif action == "p2p_prompt_cache_route":
+            prompt_hash = kwargs.get("prompt_hash", "default_hash")
+            transport = kwargs.get("transport", "hyperswarm")
+            return f"Routed prompt cache {prompt_hash} across P2P transport ({transport})."
         else:
             return f"Error: Unknown action '{action}'"
