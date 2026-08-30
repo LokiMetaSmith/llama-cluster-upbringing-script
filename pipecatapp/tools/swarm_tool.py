@@ -223,7 +223,8 @@ class SwarmTool:
         import os
         import httpx
         import uuid
-        consul_url = os.getenv("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
+        cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
+        consul_url = os.getenv("CONSUL_HTTP_ADDR", f"http://{cluster_ip}:8500")
         msg_id = str(uuid.uuid4())
         key = f"swarm/messages/{target_task_id}/{msg_id}"
 

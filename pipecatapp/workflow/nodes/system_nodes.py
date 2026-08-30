@@ -566,7 +566,7 @@ class ComfyUIBridgeNode(Node):
         try:
             comfyui_url = self.get_input(context, "comfyui_url")
         except ValueError:
-            comfyui_url = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")
+            comfyui_url = os.getenv("COMFYUI_URL", f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8188")
 
         payload = {
             "prompt": {

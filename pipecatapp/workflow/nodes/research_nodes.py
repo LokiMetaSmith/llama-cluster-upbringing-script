@@ -41,7 +41,8 @@ class BaseResearchNode(Node):
             except Exception as e:
                 logger.warning(f"Could not discover Memory Service: {e}")
                 # Fallback
-                self.memory_client = PMMMemoryClient("http://127.0.0.1:8000")
+                cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
+                self.memory_client = PMMMemoryClient(f"http://{cluster_ip}:8000")
 
     async def call_llm(self, messages: List[Dict[str, str]], temperature: float = 0.7, model: Optional[str] = None) -> str:
         await self._discover_services()
