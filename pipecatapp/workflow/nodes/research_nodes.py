@@ -16,8 +16,8 @@ from pipecatapp.worker_agent import WorkerAgent
 logger = logging.getLogger("ResearchNodes")
 
 class BaseResearchNode(Node):
-    def __init__(self, node_id: str, config: Dict[str, Any]):
-        super().__init__(node_id, config)
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
         self.consul_addr = os.getenv("CONSUL_HTTP_ADDR", "http://10.0.0.1:8500")
         self.token = os.getenv("CONSUL_HTTP_TOKEN")
         self.headers = {"X-Consul-Token": self.token} if self.token else {}

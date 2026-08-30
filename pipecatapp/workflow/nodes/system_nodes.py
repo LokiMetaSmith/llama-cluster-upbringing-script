@@ -536,7 +536,70 @@ class ComplexityEvaluatorNode(Node):
             self.set_output(context, "sloc", sloc)
             self.set_output(context, "metrics_report", report)
 
+            # Broadcast heatmap update to 3D visualizer
+            vr_tool = VRTool()
+            await vr_tool.broadcast_complexity_heatmap(
+                filepath=filepath,
+                complexity=complexity,
+                maintainability=report.get("maintainability_index", 100)
+            )
+
         except Exception as e:
             self.set_output(context, "complexity_score", -1)
             self.set_output(context, "sloc", 0)
             self.set_output(context, "metrics_report", {"error": f"Failed to calculate complexity: {str(e)}"})
+
+@registry.register
+class ComfyUIBridgeNode(Node):
+    """
+    A workflow node that bridges Pipecat agent workflows to ComfyUI node-based visual AI image generation pipelines.
+
+    Input: 'prompt', 'comfyui_url' (default: http://127.0.0.1:8188)
+    Output: 'image_url', 'status'
+    """
+    async def execute(self, context: WorkflowContext):
+        try:
+            prompt = self.get_input(context, "prompt")
+        except ValueError:
+            prompt = "A high tech 3D neural network visualizer node in a futuristic server room"
+
+        try:
+            comfyui_url = self.get_input(context, "comfyui_url")
+        except ValueError:
+            comfyui_url = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")
+
+        payload = {
+            "prompt": {
+                "3": {
+                    "inputs": {"seed": 12345, "steps": 20, "cfg": 8, "sampler_name": "euler", "scheduler": "normal", "denoise": 1},
+                    "class_type": "KSampler"
+                },
+                "6": {
+                    "inputs": {"text": prompt, "clip": ["11", 0]},
+                    "class_type": "CLIPTextEncode"
+                }
+            }
+        }
+
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(f"{comfyui_url}/prompt", json=payload, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    prompt_id = data.get("prompt_id", "mock_prompt_123")
+                    img_url = f"{comfyui_url}/view?filename={prompt_id}.png"
+                    self.set_output(context, "image_url", img_url)
+                    self.set_output(context, "status", "Queued successfully")
+
+                    vr_tool = VRTool()
+                    await vr_tool.broadcast_visual_ai_image(prompt_id=prompt_id, image_url=img_url, prompt=prompt)
+                else:
+                    img_url = f"/static/assets/generated_placeholder.png"
+                    self.set_output(context, "image_url", img_url)
+                    self.set_output(context, "status", f"ComfyUI HTTP {resp.status_code}")
+                    vr_tool = VRTool()
+                    await vr_tool.broadcast_visual_ai_image(prompt_id="placeholder", image_url=img_url, prompt=prompt)
+        except Exception as e:
+            # Fallback for offline environments
+            self.set_output(context, "image_url", f"/static/assets/generated_placeholder.png")
+            self.set_output(context, "status", f"ComfyUI offline fallback ({str(e)})")

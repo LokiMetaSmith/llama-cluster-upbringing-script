@@ -316,8 +316,8 @@ Analyzing `the-simian`'s open-source timeline reveals an evolutionary progressio
 | **Tier 1 (Immediate)** | **Hard Evidence Verification** | `multi-agent-planning`, `skills` | Enforce test execution logs & evidence baselines recorded in `EVIDENCE.md` prior to plan step completion. | **[x] Completed** |
 | **Tier 2 (Next Phase)** | **Codebase Complexity & Deduplication** | `es6-plato`, `quandarypeak/simian` | Added static code complexity & structural similarity checking via `ComplexityEvaluatorNode`. | **[x] Completed** |
 | **Tier 2 (Next Phase)** | **3D VR Spatial & Steering Placement** | `dedungeon`, `desteer.js` | Enhanced `VRTool.compute_spatial_grid` with room partitioning and steering vector repulsion math. | **[x] Completed** |
-| **Tier 2 (Next Phase)** | **Component Registry & Visual AI** | `structor`, `react-native-reusables`, `Simian-ComfyUI-WebApps` | Bounded UI component composition primitives & ComfyUI visual workflow bridges. | [ ] Pending |
-| **Tier 2 (Next Phase)** | **Typed Infrastructure & Unit Reasoning** | `sst`, `drizzle-orm`, `unitforge`, `chromonym` | High-level typed infrastructure nodes, database ORM schemas, and unit/color reasoning tools. | [ ] Pending |
+| **Tier 2 (Next Phase)** | **Component Registry & Visual AI** | `structor`, `react-native-reusables`, `Simian-ComfyUI-WebApps` | Bounded UI component composition primitives & ComfyUI visual workflow bridges via `ComfyUIBridgeNode`. | **[x] Completed** |
+| **Tier 2 (Next Phase)** | **Typed Infrastructure & Unit Reasoning** | `sst`, `drizzle-orm`, `unitforge`, `chromonym` | High-level typed infrastructure nodes, database ORM schemas, and unit/color reasoning tools via `UnitReasoningTool`. | **[x] Completed** |
 
 ---
 

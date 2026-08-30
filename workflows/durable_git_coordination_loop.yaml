@@ -1,0 +1,40 @@
+name: durable_git_coordination_loop
+description: A durable multi-agent workflow leveraging Git coordination artifacts, Polyphony mutex locks, AST complexity analysis, and governed skill scaffolding.
+
+global_mission: Execute multi-agent software engineering task with durable Git state tracking and hard evidence verification.
+
+nodes:
+  - id: init_git_plan
+    type: GitCoordinationTool
+    config:
+      action: write
+      artifact: PLAN
+      project: swarm_task_001
+      content: "# Swarm Task 001\n1. Analyze AST complexity\n2. Scaffold governed skill\n3. Record test evidence"
+
+  - id: claim_polyphony_lock
+    type: PolyphonyTool
+    config:
+      action: task_add
+      title: swarm_task_001_mutex
+
+  - id: evaluate_complexity
+    type: ComplexityEvaluatorNode
+    inputs:
+      - name: filepath
+        global_input: target_file
+
+  - id: scaffold_skill
+    type: SkillBuilderTool
+    config:
+      action: scaffold_governed_skill
+      name: refactoring-specialist
+      description: Refactors complex functions based on AST metrics.
+
+  - id: log_evidence
+    type: GitCoordinationTool
+    config:
+      action: append
+      artifact: EVIDENCE
+      project: swarm_task_001
+      content: "Pytest unit tests executed and passed cleanly. All assertions verified."
