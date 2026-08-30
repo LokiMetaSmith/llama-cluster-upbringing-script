@@ -92,3 +92,36 @@ class DatalogMemory:
     def explain(self, predicate: str, *args: Any) -> Dict[str, Any]:
         """Explains the provenance and support graph for a fact."""
         return self.engine.explain(predicate, *args)
+
+    def query_hybrid(self, query_text: str, timestamp: Optional[float] = None, limit: int = 10) -> Dict[str, Any]:
+        """Hybrid retrieval combining active Datalog facts with relevant PMMMemory episodic event snippets.
+
+        Returns:
+            Dict containing:
+                - matching_datalog_facts: List of active Datalog facts matching keywords
+                - matching_events: List of episodic event logs from PMMMemory
+                - query_text: The input query string
+        """
+        query_words = set(query_text.lower().split())
+
+        # 1. Retrieve active Datalog facts
+        active_facts = self.query_state(timestamp=timestamp)
+        matching_facts = []
+        for fact in active_facts:
+            fact_repr = fact["representation"].lower()
+            if any(w in fact_repr for w in query_words):
+                matching_facts.append(fact)
+
+        # 2. Retrieve episodic event snippets from PMMMemory ledger
+        events = self.pmm.get_events_sync(limit=50)
+        matching_events = []
+        for event in events:
+            content = (event.get("content") or "").lower()
+            if any(w in content for w in query_words):
+                matching_events.append(event)
+
+        return {
+            "query_text": query_text,
+            "matching_datalog_facts": matching_facts[:limit],
+            "matching_events": matching_events[:limit]
+        }
