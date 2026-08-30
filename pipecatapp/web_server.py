@@ -608,6 +608,38 @@ async def get_health(request: Request):
         # during long startup phases (e.g., waiting for other services).
         return JSONResponse(status_code=200, content={"status": "initializing"})
 
+@app.get("/api/workflows/node_schemas", response_class=JSONResponse, summary="Get Workflow Dynamic Node Schemas", description="Retrieves dynamic JSON schemas and metadata for registered custom workflow nodes (e.g. ComplexityEvaluatorNode, ComfyUIBridgeNode, CircuitBreakerNode, HITLGateNode).", tags=["Workflow"])
+async def get_workflow_node_schemas(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    """Endpoint to get dynamic node schemas for visual editor binding."""
+    from pipecatapp.workflow.nodes.registry import registry
+    metadata = registry.get_all_nodes_metadata()
+
+    # Expand metadata with explicit slot types and property schemas
+    node_schemas = {}
+    for node_meta in metadata:
+        name = node_meta.get("name") or node_meta.get("type", "UnknownNode")
+        category = "System"
+        if "Research" in name or "Search" in name or "Find" in name:
+            category = "Research"
+        elif "LLM" in name or "Router" in name or "Reasoning" in name:
+            category = "Intelligence"
+        elif "Comfy" in name or "VR" in name:
+            category = "Visual AI & VR"
+
+        node_schemas[name] = {
+            "type": name,
+            "category": category,
+            "description": node_meta.get("description", ""),
+            "expected_inputs": node_meta.get("inputs", []),
+            "expected_outputs": node_meta.get("outputs", []),
+            "spatial": {
+                "color": "#1f6beb" if category == "Intelligence" else ("#238636" if category == "Research" else "#a371f7"),
+                "shape": "box"
+            }
+        }
+
+    return JSONResponse(content={"schemas": node_schemas, "nodes": metadata})
+
 @app.get("/api/workflows/nodes/metadata", response_class=JSONResponse, summary="Get Workflow Nodes Metadata", description="Retrieves metadata for all registered workflow nodes to construct the UI.", tags=["Workflow"])
 async def get_workflow_nodes_metadata(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """Endpoint to get metadata for all workflow nodes."""
