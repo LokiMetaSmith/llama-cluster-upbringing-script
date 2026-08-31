@@ -84,6 +84,7 @@ from pipecatapp.tools.field_guide_tool import FieldGuideTool
 from pipecatapp.tools.design_docs_tool import DesignDocsTool
 from pipecatapp.tools.git_coordination_tool import GitCoordinationTool
 from pipecatapp.tools.unit_reasoning_tool import UnitReasoningTool
+from pipecatapp.tools.ssd_streaming_tool import SSDStreamingTool
 
 # Tools that are supported by the Tool Server and can be proxied
 REMOTE_SUPPORTED_TOOLS = [
@@ -147,6 +148,7 @@ def create_tools(config: dict = None, twin_service=None, runner=None, agent_name
         "design_docs": DesignDocsTool(),
         "git_coordination": GitCoordinationTool(),
         "unit_reasoning": UnitReasoningTool(),
+        "ssd_streaming": SSDStreamingTool(),
         "schema_mapper": SchemaMapperTool(),
         "planner": PlannerTool(twin_service) if twin_service else None,
         "file_editor": FileEditorTool(root_dir="/opt/pipecatapp"),
