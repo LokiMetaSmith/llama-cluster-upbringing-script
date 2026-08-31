@@ -72,5 +72,5 @@ Rather than hosting Munder Difflin's desktop app, we will apply its spatial narr
 - [x] **Signal Pulse Trajectories:** Render animated trajectory rays in the 3D VR scene representing Liminal Mesh messages and Polyphony task handoffs between agents.
 
 ### Phase 3: Spatial Circuit Breaker & Approval Queue UI (Long-Term)
-- [ ] **Visual Circuit Breaker:** Implement visual status indicators (Normal $\rightarrow$ Throttled $\rightarrow$ Escalated $\rightarrow$ Stopped) in both Web and VR visualizers.
-- [ ] **VR & Web HITL Gate:** Allow operators in 3D VR or the Web UI to tap/click an agent in an "Approval Required" state to inspect its proposal and approve/deny actions.
+- [x] **Visual Circuit Breaker:** Implement visual status indicators (Normal $\rightarrow$ Throttled $\rightarrow$ Escalated $\rightarrow$ Stopped) in both Web and VR visualizers.
+- [x] **VR & Web HITL Gate:** Allow operators in 3D VR or the Web UI to tap/click an agent in an "Approval Required" state to inspect its proposal and approve/deny actions.
