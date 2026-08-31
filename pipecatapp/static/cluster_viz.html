@@ -101,6 +101,14 @@
              </a-plane>
         </a-entity>
 
+        <!-- Datalog State & Provenance Panel -->
+        <a-entity position="0 4 -4" rotation="15 0 0">
+             <a-plane color="#051005" opacity="0.85" width="5" height="2.5" border="1 #00ff00">
+                 <a-text value="Datalog Maintained State & Provenance" position="0 1.0 0.1" align="center" color="#00ff00" scale="1.2 1.2 1.2"></a-text>
+                 <a-text id="datalog-panel-text" value="Querying active Datalog facts..." position="-2.3 0.6 0.1" width="4.6" align="left" baseline="top" wrap-count="45" color="#aaffaa"></a-text>
+             </a-plane>
+        </a-entity>
+
         <!-- ComfyUI / Workflow Editor (To the Left) -->
         <a-entity position="-8 2.5 8" rotation="0 90 0">
             <a-text value="Workflow Editor" align="center" position="0 2.2 0" width="8"></a-text>
@@ -319,6 +327,32 @@
         } catch (e) {
             showError(e.message);
         }
+
+        // --- Datalog State Polling ---
+        async function updateDatalogPanel() {
+            const datalogText = document.getElementById('datalog-panel-text');
+            if (!datalogText) return;
+            try {
+                const headers = {};
+                const apiKey = localStorage.getItem('api_key');
+                if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+                const res = await fetch('/api/memory/datalog/state', { headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    const facts = data.facts || [];
+                    if (facts.length === 0) {
+                        datalogText.setAttribute('value', 'Active Facts: 0\n(Engine ready for state extraction)');
+                    } else {
+                        const lines = facts.slice(0, 6).map(f => `• ${f.representation}`);
+                        datalogText.setAttribute('value', `Active Facts (${facts.length}):\n` + lines.join('\n'));
+                    }
+                }
+            } catch (e) {
+                console.warn("Datalog polling failed:", e);
+            }
+        }
+        setInterval(updateDatalogPanel, 3000);
+        updateDatalogPanel();
 
         // --- 3. Data Fetching & Graph Building ---
         async function updateGraph() {

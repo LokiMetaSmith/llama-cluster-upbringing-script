@@ -46,4 +46,4 @@ async def test_durable_git_coordination_loop_integration(tmp_path, mocker):
     # Cleanup created project test files
     if os.path.exists(project_dir):
         import shutil
-        shutil.rmtree(os.path.dirname(project_dir), ignore_errors=True)
+        shutil.rmtree(project_dir, ignore_errors=True)

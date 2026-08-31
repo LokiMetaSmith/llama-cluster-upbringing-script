@@ -124,8 +124,10 @@ if [ "$RUN_PLAYBOOKS" = true ]; then
         PLAYBOOK_EXIT_CODE=$?
 
         # Filter and summarize the output
-        PASSED_COUNT=$(grep -c "Dry-run PASSED" "$PLAYBOOK_LOG" || echo "0")
-        FAILED_COUNT=$(grep -c "Dry-run FAILED" "$PLAYBOOK_LOG" || echo "0")
+        PASSED_COUNT=$(grep -c "Dry-run PASSED" "$PLAYBOOK_LOG" 2>/dev/null || echo "0")
+        FAILED_COUNT=$(grep -c "Dry-run FAILED" "$PLAYBOOK_LOG" 2>/dev/null || echo "0")
+        PASSED_COUNT=$(echo "$PASSED_COUNT" | tr -d '\r\n')
+        FAILED_COUNT=$(echo "$FAILED_COUNT" | tr -d '\r\n')
 
         # Look specifically for structural/YAML syntax/parsing errors
         # (Exclude expected local connection / missing variable false positives)
@@ -174,8 +176,13 @@ if [ "$RUN_TESTS" = true ]; then
     echo -e "Executing pytest with targets/options: ${YELLOW}${PYTEST_TARGETS[*]}${NC}"
     echo ""
 
-    if command -v pytest &> /dev/null; then
-        pytest "${PYTEST_TARGETS[@]}"
+    PYTHON_EXEC="python3"
+    if [ -f ".venv/bin/python" ]; then
+        PYTHON_EXEC=".venv/bin/python"
+    fi
+
+    if $PYTHON_EXEC -m pytest --version &> /dev/null; then
+        $PYTHON_EXEC -m pytest "${PYTEST_TARGETS[@]}"
         TEST_EXIT_CODE=$?
         if [ $TEST_EXIT_CODE -eq 0 ]; then
             TEST_STATUS="${GREEN}PASSED${NC}"

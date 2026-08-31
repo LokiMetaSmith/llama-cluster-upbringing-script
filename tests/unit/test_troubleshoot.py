@@ -358,6 +358,35 @@ def test_fetch_alloc_logs_with_fallback(mock_api_get, mock_run_command):
     assert "Actual docker stderr fallback log line!" in logs
 
 
+def test_cmd_deps(mock_api_get, mock_run_command, capsys):
+    """Verifies that cmd_deps properly displays service dependencies."""
+    def run_cmd_side_effect(command, shell=False):
+        if "systemctl" in command and "show" in command:
+            return {
+                "exit_code": 0,
+                "stdout": "ActiveState=active\nSubState=running\nLoadState=loaded\nUnitFileState=enabled\n",
+                "stderr": ""
+            }
+        return {"exit_code": 0, "stdout": "", "stderr": ""}
+
+    mock_run_command.side_effect = run_cmd_side_effect
+    mock_api_get.return_value = {"ID": "world-model-service", "Status": "running"}
+
+    args_json = DummyArgs(json=True, target="pipecat-app")
+    troubleshoot.cmd_deps(args_json)
+
+    captured = capsys.readouterr()
+    res_json = json.loads(captured.out)
+    assert "pipecat-app" in res_json
+    assert res_json["pipecat-app"]["target"] == "pipecat-app"
+
+    args_txt = DummyArgs(json=False, target="pipecat-app")
+    troubleshoot.cmd_deps(args_txt)
+    captured_txt = capsys.readouterr()
+    assert "Service Dependency Diagnostics" in captured_txt.out
+    assert "Target: pipecat-app" in captured_txt.out
+
+
 @patch('troubleshoot.cmd_report')
 def test_main_default_command(mock_cmd_report):
     """Verifies that calling main with no command arguments defaults to cmd_report."""

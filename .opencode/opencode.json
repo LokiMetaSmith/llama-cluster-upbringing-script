@@ -1,3 +1,14 @@
 {
-  "plugin": ["superpowers@git+https://github.com/obra/superpowers.git"]
+  "plugin": [
+    "superpowers@git+https://github.com/obra/superpowers.git"
+  ],
+  "model": "openai/local/router",
+  "provider": {
+    "openai": {
+      "options": {
+        "baseURL": "http://localhost:8081/v1",
+        "apiKey": "dummy"
+      }
+    }
+  }
 }

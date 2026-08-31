@@ -11,3 +11,4 @@ from . import schema_nodes
 from . import research_nodes
 from . import reservoir_nodes
 from . import pi_node
+from . import datalog_nodes

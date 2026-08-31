@@ -74,8 +74,10 @@ from .wasm_tool import WasmTool
 from .web_browser_tool import WebBrowserTool
 from .wol_tool import WOLTool
 from .holographic_memory_tool import HolographicMemoryTool
+from .datalog_extraction_tool import DatalogExtractionTool
 
 __all__ = [
+    "DatalogExtractionTool",
     "Ansible_Tool",
     "ArchivistTool",
     "ASTEditorTool",

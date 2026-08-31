@@ -4,7 +4,7 @@
   vars:
     target_user: nomad
   vars_files:
-    - group_vars/models.yaml
+    - "{{ ansible_config_file | dirname }}/group_vars/models.yaml"
   pre_tasks:
     - name: Ensure the target user 'nomad' exists
       ansible.builtin.user:
