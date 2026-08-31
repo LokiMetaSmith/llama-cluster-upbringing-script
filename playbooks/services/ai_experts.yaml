@@ -146,6 +146,7 @@
                 pipecat_image_id: "{{ (pipecat_image_info.stdout | from_json)[0].Id }}"
               tags:
                 - deploy-expert
+          become: yes
           when: pipecat_deployment_style == 'docker'
 
         - name: Deploy and run the GPU Provider Pool job for verified models
