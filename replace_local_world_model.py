@@ -1,5 +1,3 @@
-import base64
-
 content = """import threading
 import json
 import logging
