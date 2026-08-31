@@ -146,10 +146,6 @@ EOT
         change_mode = "restart"
       }
 
-      constraint {
-        attribute = "${meta.node_type}"
-        value     = "controller"
-      }
 
       config {
         image = "{{ pipecatapp_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag | default('local') }}"
