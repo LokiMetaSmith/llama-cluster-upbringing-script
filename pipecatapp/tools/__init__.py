@@ -67,6 +67,7 @@ from .swarm_tool import SwarmTool
 from .term_everything_tool import TermEverythingTool
 from .ternlight_tool import TernlightTool
 from .update_litellm_tool import UpdateLitellmTool
+from .ssd_streaming_tool import SSDStreamingTool
 from .unit_reasoning_tool import UnitReasoningTool
 from .vr_tool import VRTool
 from .wasm_tool import WasmTool
@@ -146,6 +147,7 @@ __all__ = [
     "TermEverythingTool",
     "TernlightTool",
     "UpdateLitellmTool",
+    "SSDStreamingTool",
     "UnitReasoningTool",
     "VRTool",
     "WasmTool",
