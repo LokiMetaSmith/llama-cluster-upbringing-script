@@ -6,9 +6,9 @@ Requires=network.target
 [Service]
 Type=simple
 User={{ unified_fs_user }}
-ExecStartPre=-/bin/fusermount -u {{ unified_fs_mount_point }}
+ExecStartPre=-/bin/sh -c '/bin/fusermount -u -z {{ unified_fs_mount_point }} 2>/dev/null || true'
 ExecStart=/usr/local/bin/unified_fs_agent.py {{ unified_fs_mount_point }} {{ unified_fs_root_storage }}
-ExecStop=-/bin/fusermount -u {{ unified_fs_mount_point }}
+ExecStop=-/bin/sh -c '/bin/fusermount -u -z {{ unified_fs_mount_point }} 2>/dev/null || true'
 Restart=always
 RestartSec=10
 
