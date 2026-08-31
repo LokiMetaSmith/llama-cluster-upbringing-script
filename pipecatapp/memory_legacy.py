@@ -588,12 +588,15 @@ class MemoryStore:
         """Lists all dynamic skills."""
         cursor = self.conn.cursor()
         cursor.execute("SELECT name, description, version FROM dynamic_skills ORDER BY name ASC")
-        skills = []
-        for row in cursor.fetchall():
-            skill = dict(row)
-            skill['description'] = self._decrypt(skill['description'])
-            skills.append(skill)
-        return skills
+        rows = cursor.fetchall()
+        if not rows:
+            return []
+
+        if not self.fernet:
+            return [{"name": name, "description": desc, "version": ver} for name, desc, ver in rows]
+
+        decrypt = self._decrypt
+        return [{"name": name, "description": decrypt(desc), "version": ver} for name, desc, ver in rows]
 
     def delete_skill(self, name: str) -> bool:
         """Deletes a dynamic skill by name. Returns True if deleted, False if not found."""
