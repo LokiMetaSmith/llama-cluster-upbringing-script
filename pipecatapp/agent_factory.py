@@ -217,7 +217,7 @@ def create_tools(config: dict = None, twin_service=None, runner=None, agent_name
         "autoloop": AutoloopTool(),
         "cq": CQ_Tool(),
         "document": DocumentTool(
-            backend_config=config.get("document_backend", {"type": "local", "directory": "/opt/pipecatapp"})
+            backend_config=config.get("document_backend", {"type": "local", "directory": "/opt/pipecatapp" if os.path.exists("/opt/pipecatapp") else os.getcwd()})
         ),
         "document_mcp": MCPClientAdapter(
             name="document_mcp",

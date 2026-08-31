@@ -5,16 +5,18 @@ global_mission: Execute multi-agent software engineering task with durable Git s
 
 nodes:
   - id: init_git_plan
-    type: GitCoordinationTool
+    type: ToolNode
     config:
+      tool_name: git_coordination
       action: write
       artifact: PLAN
       project: swarm_task_001
       content: "# Swarm Task 001\n1. Analyze AST complexity\n2. Scaffold governed skill\n3. Record test evidence"
 
   - id: claim_polyphony_lock
-    type: PolyphonyTool
+    type: ToolNode
     config:
+      tool_name: polyphony
       action: task_add
       title: swarm_task_001_mutex
 
@@ -25,15 +27,17 @@ nodes:
         global_input: target_file
 
   - id: scaffold_skill
-    type: SkillBuilderTool
+    type: ToolNode
     config:
+      tool_name: skill_builder
       action: scaffold_governed_skill
       name: refactoring-specialist
       description: Refactors complex functions based on AST metrics.
 
   - id: log_evidence
-    type: GitCoordinationTool
+    type: ToolNode
     config:
+      tool_name: git_coordination
       action: append
       artifact: EVIDENCE
       project: swarm_task_001
