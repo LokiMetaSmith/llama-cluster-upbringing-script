@@ -215,9 +215,10 @@ class FileEditorTool:
 
     def flag_megafile(self, filepath: str) -> str:
         """Flags a file as bloated or highly contested by appending it to the Megafile queue."""
-        full_path = self._get_safe_path(filepath)
-        if "Error" in full_path:
-            return full_path
+        try:
+            full_path = self._validate_path(filepath)
+        except Exception as e:
+            return f"Error validating path: {e}"
 
         queue_path = os.path.join(self.root_dir, ".liminal", "megafiles_queue.json")
         try:

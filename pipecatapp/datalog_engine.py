@@ -1,9 +1,12 @@
-"""Datalog State Engine for Maintained Agentic Memory in PipecatApp.
+"""Datalog State & Program Analysis Engine for PipecatApp.
 
 Provides deterministic logic evaluation, incremental support counting,
-retraction propagation, temporal validity bounds, and provenance explanations.
+retraction propagation, temporal validity bounds, provenance explanations,
+and AST program analysis call graph indexing.
 """
 
+import ast
+import os
 import time
 from typing import Dict, Any, List, Tuple, Optional, Set
 
@@ -54,7 +57,7 @@ class DatalogRule:
 
 
 class DatalogEngine:
-    """Deterministic Datalog fixed-point analysis engine with support-based retractions."""
+    """Deterministic Datalog fixed-point analysis engine with support-based retractions and AST program indexing."""
 
     def __init__(self):
         # Maps fact key -> FactRecord
@@ -63,6 +66,126 @@ class DatalogEngine:
         self.rules: List[DatalogRule] = []
         # Support map for derived facts: fact_key -> Set of (rule_index, premise_fact_keys_tuple)
         self.support: Dict[Tuple[str, Tuple[Any, ...]], Set[Tuple[int, Tuple[Tuple[str, Tuple[Any, ...]], ...]]]] = {}
+
+        # Program AST Analysis Relational Facts Cache
+        self.ast_facts: Dict[str, List[tuple]] = {
+            "defines_function": [],   # (file, func_name, lineno)
+            "calls_function": [],     # (file, caller_func, callee_func, lineno)
+            "imports_module": [],     # (file, imported_module)
+            "defines_class": [],      # (file, class_name, lineno)
+        }
+
+    # --- AST Program Analysis Methods ---
+
+    def index_file(self, filepath: str, code_content: str = None) -> Dict[str, Any]:
+        """Parses Python AST and populates Datalog program analysis facts."""
+        if code_content is None:
+            if not os.path.exists(filepath):
+                return {"error": f"File {filepath} not found."}
+            with open(filepath, "r", encoding="utf-8") as f:
+                code_content = f.read()
+
+        try:
+            tree = ast.parse(code_content, filename=filepath)
+        except Exception as e:
+            return {"error": f"Failed to parse AST: {e}"}
+
+        rel_path = filepath
+        engine_self = self
+
+        class ASTVisitor(ast.NodeVisitor):
+            def __init__(visitor_self):
+                visitor_self.scope_stack = ["<global>"]
+
+            def visit_FunctionDef(visitor_self, node):
+                func_name = node.name
+                engine_self.ast_facts["defines_function"].append((rel_path, func_name, node.lineno))
+                engine_self.assert_fact("defines_function", rel_path, func_name, node.lineno)
+                visitor_self.scope_stack.append(func_name)
+                visitor_self.generic_visit(node)
+                visitor_self.scope_stack.pop()
+
+            def visit_AsyncFunctionDef(visitor_self, node):
+                visitor_self.visit_FunctionDef(node)
+
+            def visit_ClassDef(visitor_self, node):
+                engine_self.ast_facts["defines_class"].append((rel_path, node.name, node.lineno))
+                engine_self.assert_fact("defines_class", rel_path, node.name, node.lineno)
+                visitor_self.generic_visit(node)
+
+            def visit_Call(visitor_self, node):
+                caller = visitor_self.scope_stack[-1]
+                callee = None
+                if isinstance(node.func, ast.Name):
+                    callee = node.func.id
+                elif isinstance(node.func, ast.Attribute):
+                    callee = node.func.attr
+                if callee:
+                    line = getattr(node, 'lineno', 0)
+                    engine_self.ast_facts["calls_function"].append((rel_path, caller, callee, line))
+                    engine_self.assert_fact("calls_function", rel_path, caller, callee, line)
+                visitor_self.generic_visit(node)
+
+            def visit_Import(visitor_self, node):
+                for alias in node.names:
+                    engine_self.ast_facts["imports_module"].append((rel_path, alias.name))
+                    engine_self.assert_fact("imports_module", rel_path, alias.name)
+                visitor_self.generic_visit(node)
+
+            def visit_ImportFrom(visitor_self, node):
+                if node.module:
+                    engine_self.ast_facts["imports_module"].append((rel_path, node.module))
+                    engine_self.assert_fact("imports_module", rel_path, node.module)
+                visitor_self.generic_visit(node)
+
+        visitor = ASTVisitor()
+        visitor.visit(tree)
+
+        return {
+            "indexed_file": rel_path,
+            "defines_count": len(self.ast_facts["defines_function"]),
+            "calls_count": len(self.ast_facts["calls_function"]),
+            "imports_count": len(self.ast_facts["imports_module"])
+        }
+
+    def query_callers(self, target_function: str) -> List[Dict[str, Any]]:
+        """Finds all functions that call target_function."""
+        results = []
+        for file, caller, callee, lineno in self.ast_facts["calls_function"]:
+            if callee == target_function:
+                results.append({
+                    "file": file,
+                    "caller": caller,
+                    "lineno": lineno
+                })
+        return results
+
+    def query_transitive_calls(self, start_function: str, max_depth: int = 5) -> List[Dict[str, Any]]:
+        """Datalog transitive closure: finds all functions transitively reachable from start_function."""
+        visited = set()
+        call_chain = []
+
+        def dfs(current: str, depth: int, path: List[str]):
+            if depth > max_depth or current in visited:
+                return
+            visited.add(current)
+            for file, caller, callee, lineno in self.ast_facts["calls_function"]:
+                if caller == current and callee not in path:
+                    new_path = path + [callee]
+                    call_chain.append({
+                        "caller": current,
+                        "callee": callee,
+                        "depth": depth,
+                        "file": file,
+                        "lineno": lineno,
+                        "path": new_path
+                    })
+                    dfs(callee, depth + 1, new_path)
+
+        dfs(start_function, 1, [start_function])
+        return call_chain
+
+    # --- Datalog Fixed-Point Engine Methods ---
 
     def add_rule(self, head_predicate: str, head_args: Tuple[str, ...], body: List[Tuple[str, Tuple[str, ...]]]) -> DatalogRule:
         rule = DatalogRule(head_predicate, head_args, body)
@@ -102,16 +225,13 @@ class DatalogEngine:
         record = self.facts[key]
 
         if not record.is_base and key in self.support and len(self.support[key]) > 0:
-            # Derived fact with active support cannot be manually retracted without retracting underlying premises
             return False
 
-        # Mark base status as False or remove fact
         if key in self.support and len(self.support[key]) > 0:
             record.is_base = False
         else:
             del self.facts[key]
 
-        # Cascading retraction update
         self._prune_unsupported_facts()
         return True
 
@@ -134,16 +254,14 @@ class DatalogEngine:
         ):
             nonlocal new_derived
             if body_idx == len(rule.body):
-                # All body predicates matched! Construct head fact
                 head_args = tuple(bindings[var] for var in rule.head_args)
                 head_key = (rule.head_predicate, head_args)
 
-                # Temporal validity of derived fact is intersection of premise validity intervals
                 v_from = max(p.valid_from for p in matched_premises)
                 v_to = min(p.valid_to for p in matched_premises)
 
                 if v_from >= v_to:
-                    return  # Invalid temporal range
+                    return
 
                 premise_keys = tuple(p.key for p in matched_premises)
                 support_item = (rule_idx, premise_keys)
@@ -181,7 +299,6 @@ class DatalogEngine:
                 return
 
             pred, patterns = rule.body[body_idx]
-            # Find candidate matching facts
             for fact_key, fact in list(self.facts.items()):
                 if fact.predicate != pred or len(fact.args) != len(patterns):
                     continue
@@ -189,14 +306,14 @@ class DatalogEngine:
                 new_bindings = dict(bindings)
                 match_possible = True
                 for pat, arg in zip(patterns, fact.args):
-                    if pat[0].isupper():  # Variable
+                    if pat[0].isupper():
                         if pat in new_bindings:
                             if new_bindings[pat] != arg:
                                 match_possible = False
                                 break
                         else:
                             new_bindings[pat] = arg
-                    else:  # Constant symbol
+                    else:
                         if pat != arg:
                             match_possible = False
                             break
@@ -217,7 +334,6 @@ class DatalogEngine:
                 valid_supports = set()
 
                 for rule_idx, premise_keys in supports:
-                    # Premise is valid if all premise keys still exist in self.facts
                     if all(pk in self.facts for pk in premise_keys):
                         valid_supports.add((rule_idx, premise_keys))
 
@@ -242,29 +358,46 @@ class DatalogEngine:
                 results.append(fact)
         return results
 
-    def explain(self, predicate: str, *args: Any) -> Dict[str, Any]:
-        """Builds an explicit provenance tree explaining why a fact is currently believed."""
-        key = (predicate, tuple(args))
-        if key not in self.facts:
-            return {"fact": f"{predicate}{args}", "status": "NOT_FOUND"}
+    def explain(self, predicate_or_symbol: str, *args: Any) -> Dict[str, Any]:
+        """
+        Builds an explicit provenance tree explaining why a fact or AST symbol is currently believed.
+        Supports both Datalog fact tuples and AST symbol queries.
+        """
+        key = (predicate_or_symbol, tuple(args))
+        if key in self.facts:
+            record = self.facts[key]
+            if record.is_base:
+                return {"fact": repr(record), "type": "base_observation", "support": []}
 
-        record = self.facts[key]
-        if record.is_base:
-            return {"fact": repr(record), "type": "base_observation", "support": []}
+            tree = {
+                "fact": repr(record),
+                "type": "derived",
+                "derivations": []
+            }
 
-        tree = {
-            "fact": repr(record),
-            "type": "derived",
-            "derivations": []
-        }
+            if key in self.support:
+                for rule_idx, premise_keys in self.support[key]:
+                    rule = self.rules[rule_idx]
+                    derivation_branch = {
+                        "rule": str(rule),
+                        "premises": [self.explain(pk[0], *pk[1]) for pk in premise_keys]
+                    }
+                    tree["derivations"].append(derivation_branch)
 
-        if key in self.support:
-            for rule_idx, premise_keys in self.support[key]:
-                rule = self.rules[rule_idx]
-                derivation_branch = {
-                    "rule": str(rule),
-                    "premises": [self.explain(pk[0], *pk[1]) for pk in premise_keys]
-                }
-                tree["derivations"].append(derivation_branch)
+            return tree
 
-        return tree
+        if not args:
+            # Symbol explanation for AST program analysis
+            target_symbol = predicate_or_symbol
+            defines = [f for f in self.ast_facts["defines_function"] if f[1] == target_symbol]
+            callers = self.query_callers(target_symbol)
+            transitive_callees = self.query_transitive_calls(target_symbol)
+
+            return {
+                "symbol": target_symbol,
+                "definitions": [{"file": f[0], "lineno": f[2]} for f in defines],
+                "direct_callers": callers,
+                "transitive_call_graph": transitive_callees
+            }
+
+        return {"fact": f"{predicate_or_symbol}{args}", "status": "NOT_FOUND"}

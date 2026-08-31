@@ -1,15 +1,49 @@
-import pytest
 import os
 import tempfile
-import time
+import pytest
 from pipecatapp.datalog_engine import DatalogEngine
 from pipecatapp.datalog_memory import DatalogMemory
 from pipecatapp.pmm_memory import PMMMemory
 
+def test_datalog_indexing_and_explain():
+    engine = DatalogEngine()
+    sample_code = """
+import os
+
+def helper_a():
+    return 42
+
+def helper_b(x):
+    return helper_a() + x
+
+class Calculator:
+    def compute(self, val):
+        return helper_b(val)
+"""
+    res = engine.index_file("test_calc.py", sample_code)
+    assert res["indexed_file"] == "test_calc.py"
+    assert res["defines_count"] == 3
+    assert res["calls_count"] == 2
+
+    # Query callers of helper_a
+    callers = engine.query_callers("helper_a")
+    assert len(callers) == 1
+    assert callers[0]["caller"] == "helper_b"
+
+    # Query transitive calls from helper_b
+    transitive = engine.query_transitive_calls("helper_b")
+    assert len(transitive) >= 1
+    assert transitive[0]["callee"] == "helper_a"
+
+    # Explain symbol
+    exp = engine.explain("helper_a")
+    assert exp["symbol"] == "helper_a"
+    assert len(exp["definitions"]) == 1
+    assert len(exp["direct_callers"]) == 1
+
 def test_datalog_engine_basic_fact_and_rule():
     engine = DatalogEngine()
 
-    # Rule: controls_kernel_object(Attacker) :- controls(Attacker, ObjA), points_to(ObjA, ObjB), kernel_object(ObjB)
     engine.add_rule(
         head_predicate="controls_kernel_object",
         head_args=("Attacker",),
@@ -32,23 +66,18 @@ def test_datalog_engine_basic_fact_and_rule():
 def test_datalog_engine_retraction_propagation():
     engine = DatalogEngine()
 
-    # Rule: reachable(X, Y) :- edge(X, Y)
     engine.add_rule("reachable", ("X", "Y"), [("edge", ("X", "Y"))])
-    # Rule: reachable(X, Z) :- edge(X, Y), reachable(Y, Z)
     engine.add_rule("reachable", ("X", "Z"), [("edge", ("X", "Y")), ("reachable", ("Y", "Z"))])
 
     engine.assert_fact("edge", "node1", "node2")
     engine.assert_fact("edge", "node2", "node3")
 
-    # Reachable: (node1, node2), (node2, node3), (node1, node3)
     results = engine.query("reachable")
     assert len(results) == 3
 
-    # Retract edge(node1, node2)
     retracted = engine.retract_fact("edge", "node1", "node2")
     assert retracted is True
 
-    # Remaining reachable: only (node2, node3)
     results_after = engine.query("reachable")
     assert len(results_after) == 1
     assert results_after[0].args == ("node2", "node3")
@@ -82,7 +111,6 @@ def test_datalog_memory_integration():
         assert len(active_state) == 1
         assert active_state[0]["args"] == ["target_system_a"]
 
-        # Verify event ledger recorded assertion and rule addition
         events = pmm.get_events_sync(limit=10)
         kinds = [e["kind"] for e in events]
         assert "datalog_rule_added" in kinds

@@ -71,17 +71,26 @@ class FieldGuideTool:
 
     def _update_guide(self, content: str) -> str:
         lines = content.split('\n')
+        truncated = False
         if len(lines) > self.line_budget:
-            return (
-                f"Error: Your content exceeds the strict {self.line_budget} line budget "
-                f"(provided {len(lines)} lines). Please condense and summarize the most "
-                "critical knowledge."
-            )
+            # Automatic dense summarization / truncation fallback to enforce budget
+            header = lines[:5]
+            body = lines[5:self.line_budget-5]
+            footer = [
+                "",
+                f"<!-- AUTO-CONDENSED: Originally {len(lines)} lines; truncated to strict {self.line_budget} line budget -->"
+            ]
+            lines = header + body + footer
+            content = "\n".join(lines)
+            truncated = True
 
         try:
             with open(self.filepath, "w") as f:
                 f.write(content)
-            return f"Successfully updated {self.filepath} ({len(lines)} lines)."
+            status_msg = f"Successfully updated {self.filepath} ({len(lines)} lines)."
+            if truncated:
+                status_msg += f" Note: Content was automatically condensed/truncated to meet line budget limit of {self.line_budget} lines."
+            return status_msg
         except Exception as e:
             self.logger.error(f"Failed to write field guide: {e}")
             return f"Error writing field guide: {e}"

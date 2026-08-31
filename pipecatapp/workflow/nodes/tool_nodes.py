@@ -218,6 +218,72 @@ class ToolExecutorNode(Node):
         self.set_output(context, "tool_receipt", receipt)
 
 @registry.register
+class ToolNode(Node):
+    """A workflow node that dynamically instantiates and executes any tool from the tool factory."""
+
+    async def execute(self, context: WorkflowContext):
+        tool_name = self.config.get("tool_name") or self.config.get("config", {}).get("tool_name")
+        if not tool_name:
+            self.set_output(context, "output", "Error: No tool_name specified in node config.")
+            return
+
+        from pipecatapp.agent_factory import create_tools
+        try:
+            tools = create_tools(agent_name="workflow_tool_node")
+        except Exception as e:
+            tools = {}
+
+        if tool_name not in tools or tools[tool_name] is None:
+            # Instantiate directly if present in pipecatapp.tools
+            try:
+                import pipecatapp.tools as tools_module
+                target_norm = tool_name.lower().replace("_", "").removesuffix("tool")
+                for attr_name in dir(tools_module):
+                    cls = getattr(tools_module, attr_name)
+                    cls_norm = attr_name.lower().replace("_", "").removesuffix("tool")
+                    tool_attr_name = getattr(cls, "name", "").lower().replace("_", "").removesuffix("tool")
+                    if hasattr(cls, "__name__") and inspect.isclass(cls) and (cls_norm == target_norm or tool_attr_name == target_norm):
+                        try:
+                            tool_instance = cls()
+                            tools[tool_name] = tool_instance
+                            break
+                        except Exception:
+                            continue
+            except Exception:
+                pass
+
+        if tool_name not in tools or tools[tool_name] is None:
+            self.set_output(context, "output", f"Error: Tool '{tool_name}' not available in agent factory.")
+            return
+
+        tool_instance = tools[tool_name]
+
+        # Gather arguments from node config or inputs
+        kwargs = {}
+        for key, val in self.config.get("config", {}).items():
+            if key not in ["id", "type", "tool_name"]:
+                kwargs[key] = val
+
+        for key, val in self.config.items():
+            if key not in ["id", "type", "config", "inputs", "outputs"]:
+                kwargs[key] = val
+
+        try:
+            if hasattr(tool_instance, "execute"):
+                res = tool_instance.execute(**kwargs)
+            elif hasattr(tool_instance, "run"):
+                res = tool_instance.run(**kwargs)
+            else:
+                res = f"Error: Tool '{tool_name}' has no executable method."
+
+            if inspect.iscoroutine(res):
+                res = await res
+
+            self.set_output(context, "output", str(res))
+        except Exception as e:
+            self.set_output(context, "output", f"Error executing tool '{tool_name}': {e}")
+
+@registry.register
 class HereticNode(Node):
     """A node that uses the HereticTool to align/ablate a model."""
     async def execute(self, context: WorkflowContext):

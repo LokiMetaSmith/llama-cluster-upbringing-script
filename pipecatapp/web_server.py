@@ -20,6 +20,7 @@ from pipecatapp.workflow.history import WorkflowHistory
 from pipecatapp.api_keys import get_api_key
 from pipecatapp.security import sanitize_data, escape_html_content
 from pipecatapp.atproto_crypto import generate_key_pair, sign_payload
+from pipecatapp.datalog_engine import DatalogEngine
 if __package__:
     from .models import InternalChatRequest, SystemMessageRequest
     from .rate_limiter import RateLimiter
@@ -254,7 +255,24 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.join(script_dir, "static")
 index_html_path = os.path.join(static_dir, "index.html")
 
+datalog_engine = DatalogEngine()
+
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+@app.post("/api/memory/datalog/index", summary="Index Datalog AST", tags=["Datalog"])
+async def index_datalog_code(payload: dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    filepath = payload.get("filepath")
+    code_content = payload.get("code_content")
+    if not filepath:
+        raise HTTPException(status_code=400, detail="filepath is required")
+    res = datalog_engine.index_file(filepath, code_content)
+    return JSONResponse(content=res)
+
+@app.get("/api/memory/datalog/explain_symbol", summary="Explain Symbol with Datalog", tags=["Datalog"])
+async def explain_datalog_symbol(symbol: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+    if not symbol:
+        raise HTTPException(status_code=400, detail="symbol query parameter is required")
+    return JSONResponse(content=datalog_engine.explain(symbol))
 
 
 @app.websocket("/ws")
