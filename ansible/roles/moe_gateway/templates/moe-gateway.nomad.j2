@@ -1,6 +1,7 @@
 job "moe-gateway" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   type        = "service"
+  priority    = 80
 
   group "gateway" {
     count = 1

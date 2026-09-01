@@ -3,7 +3,7 @@ job "router" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   type        = "service"
   namespace   = "{{ nomad_namespace | default('default') }}"
-  priority    = 50
+  priority    = 80
 
   group "router" {
     count = {{ router_count }}

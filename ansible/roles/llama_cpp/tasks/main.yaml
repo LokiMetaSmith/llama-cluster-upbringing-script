@@ -191,7 +191,16 @@
 
 - name: Flatten model list for RPC jobs
   ansible.builtin.set_fact:
-    all_models_for_rpc: "{{ expert_models.values() | sum(start=[]) | unique(attribute='filename') }}"
+    all_models_for_rpc: >-
+      {{
+        [
+          expert_models.router[0],
+          expert_models.instruct[0]
+        ] | select('defined') | unique(attribute='filename')
+        if (deploy_partial_stack | default(true) | bool) else (
+          expert_models.values() | sum(start=[]) | unique(attribute='filename')
+        )
+      }}
 
 - name: Stop and purge any existing llamacpp-rpc jobs if llama.cpp was rebuilt
   ansible.builtin.command:
@@ -247,7 +256,16 @@
 
     - name: Flatten model list for benchmarking
       ansible.builtin.set_fact:
-        all_models_to_benchmark: "{{ expert_models.values() | sum(start=[]) | unique(attribute='filename') }}"
+        all_models_to_benchmark: >-
+          {{
+            [
+              expert_models.router[0],
+              expert_models.instruct[0]
+            ] | select('defined') | unique(attribute='filename')
+            if (deploy_partial_stack | default(true) | bool) else (
+              expert_models.values() | sum(start=[]) | unique(attribute='filename')
+            )
+          }}
 
     - name: Benchmark each available model and record results
       ansible.builtin.include_tasks: ../../../playbooks/benchmark_single_model.yaml

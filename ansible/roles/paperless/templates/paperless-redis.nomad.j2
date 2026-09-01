@@ -1,6 +1,7 @@
 job "paperless-redis" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   type        = "service"
+  priority    = 80
 
   group "paperless-redis-group" {
     count = 1

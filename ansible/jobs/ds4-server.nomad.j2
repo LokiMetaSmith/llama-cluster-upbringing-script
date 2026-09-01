@@ -2,6 +2,7 @@ job "ds4-server-{{ model.name | lower | replace(' ', '-') }}" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   namespace   = "{{ nomad_namespace | default('default') }}"
   type        = "service"
+  priority    = 20
 
   group "ds4-server-group" {
     count = 1

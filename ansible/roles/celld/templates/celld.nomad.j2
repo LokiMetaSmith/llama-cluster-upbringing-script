@@ -1,6 +1,7 @@
 job "celld" {
   datacenters = ["dc1"]
   type        = "system"
+  priority    = 80
 
   constraint {
     attribute = "${meta.node_tier}"

@@ -1,6 +1,7 @@
 job "influxdb" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   type        = "service"
+  priority    = 80
 
   group "influxdb" {
     count = 1
