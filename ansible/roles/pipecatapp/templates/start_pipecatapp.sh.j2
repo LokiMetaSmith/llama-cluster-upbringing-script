@@ -265,13 +265,9 @@ if ! python -c "import sys; sys.path.append('$(dirname "$APP_DIR")'); import pip
     log_msg "CRITICAL: Pre-flight import check failed. This usually indicates missing dependencies or syntax errors."
 fi
 
-if [ "$IS_DOCKER" -eq 0 ]; then
-# For raw_exec, we explicitly manage our own log file via redirection.
+# Launch application with output mirrored to both stdout/stderr (for Nomad/Docker logs) and LOG_FILE
 PYTHON_EXEC="$(dirname "$ACTIVATE")/python"
-exec "$PYTHON_EXEC" -u -m pipecatapp.app >> "$LOG_FILE" 2>&1
-else
-# For Docker, we want logs to stdout/stderr (for `docker logs`) AND to the file (for debugging).
-# We use process substitution to pipe to tee.
-# Note: We rely on the active venv here.
-exec python -u -m pipecatapp.app 2>&1 | tee -a "$LOG_FILE"
+if [ ! -x "$PYTHON_EXEC" ]; then
+    PYTHON_EXEC="python"
 fi
+exec "$PYTHON_EXEC" -u -m pipecatapp.app 2>&1 | tee -a "$LOG_FILE"

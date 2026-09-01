@@ -1711,7 +1711,6 @@
         pipecat_health.json | map(attribute='Checks') | flatten | selectattr('Status', 'equalto', 'passing') | list | length > 0
       retries: 60
       delay: 10
-      failed_when: false
       changed_when: false
   rescue:
     - name: "Pipecat App : Get Pipecat App job status"
@@ -1802,6 +1801,18 @@
       ansible.builtin.debug:
         var: pipecat_logs_stderr.stdout
       when: pipecat_logs_stderr.stdout is defined
+
+    - name: "Pipecat App : Read startup log from disk"
+      ansible.builtin.command:
+        cmd: "cat {{ pipecat_app_dir }}/startup.log"
+      register: pipecat_startup_log
+      failed_when: false
+      changed_when: false
+
+    - name: "Pipecat App : Display startup log"
+      ansible.builtin.debug:
+        var: pipecat_startup_log.stdout
+      when: pipecat_startup_log.stdout is defined and (pipecat_startup_log.stdout | length > 0)
 
     - name: "Pipecat App : Clean up temp file"
       ansible.builtin.file:
