@@ -27,6 +27,7 @@
 job "{{ job_name | default('llamacpp-rpc-pool') }}" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   namespace   = "{{ nomad_namespace | default('default') }}"
+  priority    = 20
   
   meta {
     # These should reflect the specific model this job instance is for

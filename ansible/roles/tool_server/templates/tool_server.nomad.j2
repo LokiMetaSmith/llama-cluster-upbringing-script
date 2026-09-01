@@ -1,6 +1,7 @@
 job "tool-server" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   type        = "service"
+  priority    = 80
 
   group "tool-server-group" {
     count = 1

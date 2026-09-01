@@ -1,6 +1,7 @@
 job "postgres" {
   datacenters = ["dc1"]
   type      = "service"
+  priority  = 80
 
   update {
     max_parallel      = 1

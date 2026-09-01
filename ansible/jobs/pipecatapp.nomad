@@ -1,6 +1,7 @@
 job "pipecat-app" {
   datacenters = ["dc1"]
   type        = "service"
+  priority    = 80
 
   group "pipecat-group" {
     count = 3

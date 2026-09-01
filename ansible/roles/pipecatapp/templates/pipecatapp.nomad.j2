@@ -1,6 +1,7 @@
 job "{{ job_name | default('pipecat-app') }}" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   type        = "service"
+  priority    = 80
 
   meta {
     version = "{{ pipecat_versioned_tag | default('local') }}"

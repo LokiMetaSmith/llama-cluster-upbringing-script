@@ -1,6 +1,7 @@
 job "minio" {
   datacenters = ["dc1"]
   type        = "service"
+  priority    = 80
 
   group "minio" {
     count = 1

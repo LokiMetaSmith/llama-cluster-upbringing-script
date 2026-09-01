@@ -1,6 +1,7 @@
 job "traefik" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   type        = "system"
+  priority    = 80
 
   group "traefik" {
     network {

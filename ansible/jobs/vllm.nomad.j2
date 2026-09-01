@@ -1,6 +1,7 @@
 job "vllm-server-{{ model.name }}" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
   namespace   = "{{ nomad_namespace | default('default') }}"
+  priority    = 20
 
   meta {
     model_name    = "{{ model.name }}"
