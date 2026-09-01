@@ -164,6 +164,24 @@
   tags:
     - deploy_app
 
+- name: Copy datalog_engine module
+  ansible.builtin.copy:
+    mode: '0644'
+    src: "{{ project_root }}/pipecatapp/datalog_engine.py"
+    dest: "{{ pipecat_app_dir }}/datalog_engine.py"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy datalog_memory module
+  ansible.builtin.copy:
+    mode: '0644'
+    src: "{{ project_root }}/pipecatapp/datalog_memory.py"
+    dest: "{{ pipecat_app_dir }}/datalog_memory.py"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Deploy ATProto sync buffer module directory
   ansible.builtin.file:
     path: "{{ pipecat_app_dir }}/tools/atproto_sync"
