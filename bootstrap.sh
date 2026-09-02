@@ -720,7 +720,7 @@ ensure_python_environment() {
 
     if [ "$DO_DRY_RUN" != true ]; then
         run_step "Installing Node.js Environment" "pip install nodeenv && (command -v node >/dev/null 2>&1 || nodeenv -p)"
-        run_step "Installing OpenCode AI Agent" "npm ci"
+        run_step "Installing OpenCode AI Agent" "npm install"
     fi
 
     run_step "Installing Ansible Core" "pip install ansible-core pyyaml resolvelib"
