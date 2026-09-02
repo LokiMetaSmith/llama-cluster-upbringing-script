@@ -26,7 +26,7 @@ job "polyphony" {
         command = "/bin/sh"
         args    = [
           "-c",
-          "cd {{ target_dir | default('/opt/pipecat/modules/keystone-polyphony') }} && exec ./polyphony daemon"
+          "cd {{ target_dir | default('/opt/pipecatapp/modules/keystone-polyphony') }} && exec ./polyphony daemon"
         ]
       }
 

@@ -161,136 +161,36 @@ client {
   }
 
   host_volume "radicle_data" {
-
-  host_volume "influxdb-data" {
-    path      = "{{ nomad_volumes_dir }}/influxdb-data"
-    read_only = false
-  }
-
-  host_volume "openclaw-config" {
-    path      = "{{ nomad_volumes_dir }}/openclaw-config"
-    read_only = false
-  }
-
-  host_volume "openclaw-data" {
-    path      = "{{ nomad_volumes_dir }}/openclaw-data"
-    read_only = false
-  }
-
-  host_volume "cluster-infra" {
-    path      = "{{ nomad_volumes_dir }}/cluster-infra"
-    read_only = true
-  }
-
-  host_volume "mcp-config" {
-    path      = "{{ nomad_volumes_dir }}/mcp-config"
-    read_only = false
-  }
     path      = "{{ nomad_volumes_dir }}/radicle_data"
-
-  host_volume "influxdb-data" {
-    path      = "{{ nomad_volumes_dir }}/influxdb-data"
     read_only = false
   }
 
-  host_volume "openclaw-config" {
-    path      = "{{ nomad_volumes_dir }}/openclaw-config"
-    read_only = false
-  }
-
-  host_volume "openclaw-data" {
-    path      = "{{ nomad_volumes_dir }}/openclaw-data"
-    read_only = false
-  }
-
-  host_volume "cluster-infra" {
-    path      = "{{ nomad_volumes_dir }}/cluster-infra"
-    read_only = true
-  }
-
-  host_volume "mcp-config" {
-    path      = "{{ nomad_volumes_dir }}/mcp-config"
-    read_only = false
-  }
-    read_only = false
-
-  host_volume "influxdb-data" {
-    path      = "{{ nomad_volumes_dir }}/influxdb-data"
-    read_only = false
-  }
-
-  host_volume "openclaw-config" {
-    path      = "{{ nomad_volumes_dir }}/openclaw-config"
-    read_only = false
-  }
-
-  host_volume "openclaw-data" {
-    path      = "{{ nomad_volumes_dir }}/openclaw-data"
-    read_only = false
-  }
-
-  host_volume "cluster-infra" {
-    path      = "{{ nomad_volumes_dir }}/cluster-infra"
-    read_only = true
-  }
-
-  host_volume "mcp-config" {
-    path      = "{{ nomad_volumes_dir }}/mcp-config"
-    read_only = false
-  }
-  }
-
-  host_volume "influxdb-data" {
-    path      = "{{ nomad_volumes_dir }}/influxdb-data"
-    read_only = false
-  }
-
-  host_volume "openclaw-config" {
-    path      = "{{ nomad_volumes_dir }}/openclaw-config"
-    read_only = false
-  }
-
-  host_volume "openclaw-data" {
-    path      = "{{ nomad_volumes_dir }}/openclaw-data"
-    read_only = false
-  }
-
-  host_volume "cluster-infra" {
-    path      = "{{ nomad_volumes_dir }}/cluster-infra"
-    read_only = true
-  }
-
-  host_volume "mcp-config" {
-    path      = "{{ nomad_volumes_dir }}/mcp-config"
-    read_only = false
-  }
-
-
-  host_volume "influxdb-data" {
-    path      = "{{ nomad_volumes_dir }}/influxdb-data"
-    read_only = false
-  }
-
-  host_volume "openclaw-config" {
-    path      = "{{ nomad_volumes_dir }}/openclaw-config"
-    read_only = false
-  }
-
-  host_volume "openclaw-data" {
-    path      = "{{ nomad_volumes_dir }}/openclaw-data"
-    read_only = false
-  }
-
-  host_volume "cluster-infra" {
-    path      = "{{ nomad_volumes_dir }}/cluster-infra"
-    read_only = true
-  }
-
-  host_volume "mcp-config" {
-    path      = "{{ nomad_volumes_dir }}/mcp-config"
-    read_only = false
-  }
 }
+
+  host_volume "influxdb-data" {
+    path      = "{{ nomad_volumes_dir }}/influxdb-data"
+    read_only = false
+  }
+
+  host_volume "openclaw-config" {
+    path      = "{{ nomad_volumes_dir }}/openclaw-config"
+    read_only = false
+  }
+
+  host_volume "openclaw-data" {
+    path      = "{{ nomad_volumes_dir }}/openclaw-data"
+    read_only = false
+  }
+
+  host_volume "cluster-infra" {
+    path      = "{{ nomad_volumes_dir }}/cluster-infra"
+    read_only = true
+  }
+
+  host_volume "mcp-config" {
+    path      = "{{ nomad_volumes_dir }}/mcp-config"
+    read_only = false
+  }
 
 tls {
   http = true
