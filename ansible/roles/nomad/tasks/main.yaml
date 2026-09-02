@@ -195,6 +195,11 @@
     - postgres_data
     - memory-data
     - traceway
+    - influxdb-data
+    - openclaw-config
+    - openclaw-data
+    - cluster-infra
+    - mcp-config
     - authentik/postgres
     - authentik/media
     - authentik/templates

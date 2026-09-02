@@ -2,12 +2,6 @@ job "e2a" {
   datacenters = ["dc1"]
   type        = "service"
 
-  # Deploy on edge tier node (as specified by the user)
-  constraint {
-    attribute = "${node.class}"
-    value     = "edge"
-  }
-
   group "e2a" {
     count = 1
 
