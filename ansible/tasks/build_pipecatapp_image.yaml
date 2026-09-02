@@ -81,6 +81,23 @@
   become: yes
   when: pipecat_deployment_style == 'docker'
 
+- name: Ensure local IPFS data directory exists
+  ansible.builtin.file:
+    path: "{{ ipfs_path }}"
+    state: directory
+    mode: '0755'
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Initialize IPFS repository on host if needed
+  ansible.builtin.command: /usr/local/bin/ipfs init --profile server,local-discovery
+  args:
+    creates: "{{ ipfs_path }}/config"
+  environment:
+    IPFS_PATH: "{{ ipfs_path }}"
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
 - name: Pin pipecatapp tarball to IPFS
   ansible.builtin.command: "ipfs add -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}.tar"
   become: yes
