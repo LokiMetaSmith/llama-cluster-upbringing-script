@@ -80,7 +80,18 @@
 
         - name: Set deployment candidates based on verification
           ansible.builtin.set_fact:
-            deployment_candidates: "{{ (unique_models | selectattr('filename', 'in', successful_models) | list) if (successful_models is defined and successful_models | length > 0) else [] }}"
+            deployment_candidates: >-
+              {{
+                (
+                  [
+                    expert_models.router[0],
+                    expert_models.instruct[0]
+                  ] | select('defined') | unique(attribute='filename')
+                ) if (deploy_partial_stack | default(true) | bool) else (
+                  (unique_models | selectattr('filename', 'in', successful_models) | list)
+                  if (successful_models is defined and successful_models | length > 0) else []
+                )
+              }}
           tags:
             - benchmark
             - deploy-gpu-provider
