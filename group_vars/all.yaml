@@ -171,7 +171,7 @@ enable_traceway: true
 
 # Service Ports
 minio_api_port: 9000
-minio_console_port: 9001
+minio_console_port: 9091
 celld_port: 8084
 paperless_port: 8010
 opengist_http_port: 6157
@@ -302,3 +302,4 @@ project_root: "{{ inventory_dir }}"
 
 ansible_jobs_dir: "{{ project_root }}/ansible/jobs"
 ansible_tasks_dir: "{{ project_root }}/ansible/tasks"
+semantic_router_port: 8082
