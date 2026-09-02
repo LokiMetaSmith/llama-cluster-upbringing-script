@@ -276,7 +276,7 @@ profile_system() {
             echo -e "${YELLOW}⚠️  Low resource machine detected ($RAM_GB GB RAM, $DISK_GB GB Disk). Defaulting role to 'worker', enabling external models and minimal stack.${NC}"
             ROLE="worker"
             PROCESSED_ARGS+=("--role" "worker" "--external-model-server" "--deploy-minimal-stack")
-        elif [ "$RAM_GB" -ge 16 ] && [ "$CPU_CORES" -ge 4 ] && [ "$DISK_GB" -ge 256 ]; then
+        elif [ "$RAM_GB" -ge 32 ] && [ "$CPU_CORES" -ge 4 ] && [ "$DISK_GB" -ge 500 ]; then
             echo -e "${GREEN}✅ Powerful machine detected. Defaulting role to 'all' and enabling full stack deployment.${NC}"
             ROLE="all"
             PROCESSED_ARGS+=("--role" "all" "--deploy-full-stack")

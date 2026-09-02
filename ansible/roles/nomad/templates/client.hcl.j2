@@ -67,6 +67,9 @@ client {
     node_type = "worker"
   }
 
+  gc_disk_usage_threshold = 95
+  gc_inode_usage_threshold = 95
+
   host_volume "apt_proxy" {
     path      = "{{ nomad_volumes_dir }}/apt_proxy"
     read_only = false
