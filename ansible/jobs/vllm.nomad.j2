@@ -20,6 +20,7 @@ job "vllm-server-{{ model.name }}" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "vllm-server-{{ model.name }}"
       provider = "consul"
       port     = "http"

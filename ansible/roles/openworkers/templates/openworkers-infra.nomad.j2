@@ -13,6 +13,7 @@ job "openworkers-infra" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "postgate"
       port     = "http"
       provider = "consul"
@@ -59,6 +60,7 @@ EOH
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "openworkers-api"
       port     = "http"
       provider = "consul"
@@ -195,6 +197,7 @@ EOH
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "openworkers-dash"
       port     = "http"
       provider = "consul"

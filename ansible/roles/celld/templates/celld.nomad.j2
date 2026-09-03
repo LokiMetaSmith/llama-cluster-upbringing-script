@@ -43,6 +43,7 @@ job "celld" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "celld"
         port = "http"
         check {

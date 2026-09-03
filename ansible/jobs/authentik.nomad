@@ -50,6 +50,7 @@ EOH
         AUTHENTIK_ERROR_REPORTING__ENABLED = "true"
       }
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "authentik"
         port = "http"
       }

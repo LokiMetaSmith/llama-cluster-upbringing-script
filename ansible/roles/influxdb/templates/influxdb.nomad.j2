@@ -19,6 +19,7 @@ job "influxdb" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "influxdb"
       port     = "http"
       provider = "consul"

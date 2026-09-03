@@ -12,6 +12,7 @@ job "e2a" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "e2a"
       port = "http"
 

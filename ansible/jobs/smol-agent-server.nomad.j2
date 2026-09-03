@@ -12,6 +12,7 @@ job "smol-agent-server" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "smol-agent-server"
       port = "http"
       tags = ["llm", "smolagents", "llama-cpp"]

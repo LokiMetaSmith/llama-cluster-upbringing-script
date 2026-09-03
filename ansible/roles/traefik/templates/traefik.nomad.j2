@@ -17,6 +17,7 @@ job "traefik" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "traefik"
       port = "http"
 

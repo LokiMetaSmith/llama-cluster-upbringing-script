@@ -71,6 +71,7 @@ job "{{ job_name }}" {
 
     # The LLM API Service
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "{{ service_name }}"
       tags = [{{ current_expert_tags | map('to_json') | join(', ') }}]
       port = "api"
@@ -91,6 +92,7 @@ job "{{ job_name }}" {
 
     # The Pipecat Agent Service
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "{{ service_name }}-agent"
       port = "http"
       tags = ["agent", "expert={{ current_expert }}"]

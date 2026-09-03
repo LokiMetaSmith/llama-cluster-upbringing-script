@@ -134,6 +134,7 @@ EOH
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "opencode-api"
       port = "http"
       tags = ["opencode", "api"]

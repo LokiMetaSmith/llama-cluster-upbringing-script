@@ -15,6 +15,7 @@ job "e2a" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "e2a"
       port = "http"
 
@@ -36,6 +37,7 @@ job "e2a" {
 
     # TCP router for SMTP if needed
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "e2a-smtp"
       port = "smtp"
 

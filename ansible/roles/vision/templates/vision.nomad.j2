@@ -59,6 +59,7 @@ job "vision" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "frigate"
         port = "http"
         check {

@@ -67,6 +67,7 @@ job "openclaw" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "openclaw"
         port = "gateway"
         tags = ["openclaw", "gateway"]

@@ -35,6 +35,7 @@ job "radicle" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "radicle-node"
       port = "node"
 
@@ -52,6 +53,7 @@ job "radicle" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "radicle-http"
       port = "http"
 

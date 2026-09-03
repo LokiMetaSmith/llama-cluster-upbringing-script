@@ -27,6 +27,7 @@ job "statsping" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "statsping"
         port = "http"
         tags = []

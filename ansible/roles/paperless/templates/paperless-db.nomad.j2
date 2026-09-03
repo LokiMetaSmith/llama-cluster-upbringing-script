@@ -28,6 +28,7 @@ job "paperless-db" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "paperless-db"
       port     = "db"
       provider = "consul"

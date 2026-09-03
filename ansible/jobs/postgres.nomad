@@ -34,6 +34,7 @@ EOH
         POSTGRES_DB       = "authentik"
       }
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "postgres"
         port = "postgres"
         connect {

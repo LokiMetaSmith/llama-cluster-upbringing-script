@@ -21,6 +21,7 @@ job "beszel-hub" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "beszel-hub"
         port = "http"
         tags = []

@@ -41,6 +41,7 @@ job "sunshine" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "sunshine-web"
         port = "web"
         check {

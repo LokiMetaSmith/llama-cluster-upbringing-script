@@ -38,6 +38,7 @@ job "opengist" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "opengist-http"
         port = "http"
         tags = [
@@ -60,6 +61,7 @@ job "opengist" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "opengist-ssh"
         port = "ssh"
         tags = ["opengist", "git", "ssh"]

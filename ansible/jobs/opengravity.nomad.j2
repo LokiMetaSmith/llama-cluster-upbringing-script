@@ -12,6 +12,7 @@ job "opengravity" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "opengravity"
       port = "http"
 

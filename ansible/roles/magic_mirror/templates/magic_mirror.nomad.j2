@@ -46,6 +46,7 @@ EOH
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "magic-mirror"
         port = "mm"
         check {

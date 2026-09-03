@@ -52,6 +52,7 @@ job "tap-orchestrator" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "tap-orchestrator"
         port = "http"
         tags = ["tap-orchestrator"]

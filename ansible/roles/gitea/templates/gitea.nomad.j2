@@ -21,6 +21,7 @@ job "gitea" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "gitea"
       port = "http"
 
@@ -42,6 +43,7 @@ job "gitea" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "gitea-ssh"
       port = "ssh"
 

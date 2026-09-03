@@ -80,6 +80,7 @@ EOF
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "grafana"
         port = "http"
         tags = ["urlprefix-/"]

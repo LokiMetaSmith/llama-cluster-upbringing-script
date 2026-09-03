@@ -38,6 +38,7 @@ job "polyphony" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "polyphony-api"
       port = "http"
       tags = ["polyphony", "api"]

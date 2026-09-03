@@ -46,6 +46,7 @@ job "exo" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "exo"
         port = "http"
 

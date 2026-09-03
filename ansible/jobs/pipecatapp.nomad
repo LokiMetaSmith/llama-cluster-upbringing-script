@@ -39,6 +39,7 @@ job "pipecat-app" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "pipecat-app-http"
       port = "http"
       provider = "consul"

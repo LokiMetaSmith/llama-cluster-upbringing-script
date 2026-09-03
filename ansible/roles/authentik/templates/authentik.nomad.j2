@@ -44,6 +44,7 @@ update {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "redis"
         port = "redis"
         check {
@@ -104,6 +105,7 @@ update {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "postgres"
         port = "postgres"
         check {
@@ -181,6 +183,7 @@ EOH
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "authentik"
         port = "http"
         tags = [

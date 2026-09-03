@@ -18,6 +18,7 @@ job "{{ app_name | default('vaultwarden') }}" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "{{ app_name | default('vaultwarden') }}"
       port = "http"
 

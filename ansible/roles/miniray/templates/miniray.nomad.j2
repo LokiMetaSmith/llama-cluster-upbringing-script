@@ -26,6 +26,7 @@ job "miniray" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "redis"
         port = "db"
         check {

@@ -12,6 +12,7 @@ job "filebrowser" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "filebrowser"
       port = "http"
       tags = []

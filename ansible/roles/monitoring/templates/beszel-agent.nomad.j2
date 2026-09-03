@@ -36,6 +36,7 @@ job "beszel-agent" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "beszel-agent"
         port = "agent"
         check {
