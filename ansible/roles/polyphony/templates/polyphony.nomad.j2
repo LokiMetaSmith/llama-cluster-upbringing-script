@@ -38,14 +38,11 @@ job "polyphony" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "polyphony-api"
       port = "http"
       tags = ["polyphony", "api"]
 
       check {
-        address_mode = "host"
         type     = "http"
         path     = "/health"
         interval = "20s"

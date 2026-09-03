@@ -13,8 +13,6 @@ job "openworkers-infra" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name     = "postgate"
       port     = "http"
       provider = "consul"
@@ -31,7 +29,7 @@ job "openworkers-infra" {
       template {
         data = <<EOH
 {{ range service "postgres" }}
-DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Name }}.service.consul:{{ .Port }}/{{ env "postgres_db" }}"
 {{ end }}
 EOH
         destination = "local/postgres.env"
@@ -61,15 +59,12 @@ EOH
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name     = "openworkers-api"
       port     = "http"
       provider = "consul"
       tags     = ["urlprefix-/openworkers-api"]
 
       check {
-        address_mode = "host"
         name     = "API Health"
         type     = "http"
         path     = "/api/health"
@@ -89,17 +84,17 @@ EOH
       template {
         data = <<EOH
 {{ range service "postgres" }}
-POSTGRES_HOST="{{ .Address }}"
+POSTGRES_HOST="{{ .Name }}.service.consul"
 POSTGRES_PORT="{{ .Port }}"
-DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Name }}.service.consul:{{ .Port }}/{{ env "postgres_db" }}"
 {{ end }}
 
 {{ range service "nats" }}
-NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
+NATS_SERVERS="nats://{{ .Name }}.service.consul:{{ .Port }}"
 {{ end }}
 
 {{ range service "postgate" }}
-POSTGATE_URL="http://{{ .Address }}:{{ .Port }}"
+POSTGATE_URL="http://{{ .Name }}.service.consul:{{ .Port }}"
 {{ end }}
 EOH
         destination = "local/openworkers.env"
@@ -137,10 +132,10 @@ EOH
       template {
         data = <<EOH
 {{ range service "postgres" }}
-DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Name }}.service.consul:{{ .Port }}/{{ env "postgres_db" }}"
 {{ end }}
 {{ range service "nats" }}
-NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
+NATS_SERVERS="nats://{{ .Name }}.service.consul:{{ .Port }}"
 {{ end }}
 EOH
         destination = "local/scheduler.env"
@@ -170,10 +165,10 @@ EOH
       template {
         data = <<EOH
 {{ range service "postgres" }}
-DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Name }}.service.consul:{{ .Port }}/{{ env "postgres_db" }}"
 {{ end }}
 {{ range service "nats" }}
-NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
+NATS_SERVERS="nats://{{ .Name }}.service.consul:{{ .Port }}"
 {{ end }}
 EOH
         destination = "local/logs.env"
@@ -200,15 +195,12 @@ EOH
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name     = "openworkers-dash"
       port     = "http"
       provider = "consul"
       tags     = ["urlprefix-/openworkers-dash"]
 
       check {
-        address_mode = "host"
         name     = "Dashboard Health"
         type     = "http"
         path     = "/"

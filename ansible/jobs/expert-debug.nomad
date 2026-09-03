@@ -19,14 +19,11 @@ job "{{ job_name | default('llama-expert-main') }}" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name     = "{{ service_name | default('llama-api') }}"
       provider = "consul"
       port     = "http"
 
       check {
-        address_mode = "host"
         type     = "http"
         path     = "/health"
         interval = "15s"

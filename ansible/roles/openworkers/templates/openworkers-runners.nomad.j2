@@ -12,14 +12,11 @@ job "openworkers-runners" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name     = "openworkers-runner"
       port     = "http"
       provider = "consul"
 
       check {
-        address_mode = "host"
         name     = "Runner Health"
         type     = "http"
         path     = "/health"
@@ -39,10 +36,10 @@ job "openworkers-runners" {
       template {
         data = <<EOH
 {{ range service "postgres" }}
-DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Name }}.service.consul:{{ .Port }}/{{ env "postgres_db" }}"
 {{ end }}
 {{ range service "nats" }}
-NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
+NATS_SERVERS="nats://{{ .Name }}.service.consul:{{ .Port }}"
 {{ end }}
 EOH
         destination = "local/runner.env"

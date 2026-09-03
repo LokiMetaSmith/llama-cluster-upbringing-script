@@ -15,8 +15,6 @@ job "e2a" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "e2a"
       port = "http"
 
@@ -29,7 +27,6 @@ job "e2a" {
       ]
 
       check {
-        address_mode = "host"
         type     = "http"
         path     = "/health"
         interval = "10s"
@@ -39,8 +36,6 @@ job "e2a" {
 
     # TCP router for SMTP if needed
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "e2a-smtp"
       port = "smtp"
 

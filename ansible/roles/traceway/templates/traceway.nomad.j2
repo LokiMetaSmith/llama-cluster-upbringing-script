@@ -19,8 +19,6 @@ job "traceway" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "traceway"
       port = "http"
 
@@ -32,7 +30,6 @@ job "traceway" {
       ]
 
       check {
-        address_mode = "host"
         type     = "http"
         path     = "/health"
         interval = "10s"

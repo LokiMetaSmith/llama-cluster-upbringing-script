@@ -43,12 +43,9 @@ job "celld" {
       }
 
       service {
-        address_mode = "auto"
-        address = "${attr.unique.network.ip-address}"
         name = "celld"
         port = "http"
         check {
-          address_mode = "host"
           name     = "celld-alive"
           type     = "tcp"
           interval = "10s"

@@ -18,8 +18,6 @@ job "{{ app_name | default('homeassistant') }}" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "{{ app_name | default('homeassistant') }}"
       port = "http"
 
@@ -30,7 +28,6 @@ job "{{ app_name | default('homeassistant') }}" {
       ]
 
       check {
-        address_mode = "host"
         type     = "http"
         path     = "/manifest.json"
         interval = "15s"

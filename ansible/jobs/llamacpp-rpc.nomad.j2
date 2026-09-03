@@ -91,8 +91,6 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
 
     # Register the RPC provider in Consul for discovery by the orchestrator.
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name     = "{{ job_name | default('llamacpp-rpc-pool') }}-provider"
       provider = "consul"
       port     = "rpc"
@@ -111,7 +109,6 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
         type         = "tcp"
         interval     = "15s"
         timeout      = "5s"
-        address_mode = "host"
       }
     }
 

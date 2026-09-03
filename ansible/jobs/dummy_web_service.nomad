@@ -12,8 +12,6 @@ job "dummy-web-service" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "dummy-web"
       port = "http"
 
@@ -21,7 +19,6 @@ job "dummy-web-service" {
       tags = []
 
       check {
-        address_mode = "host"
         type     = "http"
         path     = "/"
         interval = "10s"

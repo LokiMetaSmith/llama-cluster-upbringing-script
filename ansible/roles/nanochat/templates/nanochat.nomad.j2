@@ -61,8 +61,6 @@ job "nanochat" {
       }
 
       service {
-        address_mode = "auto"
-        address = "${attr.unique.network.ip-address}"
         name = "nanochat"
         port = "http"
         tags = [
@@ -82,7 +80,6 @@ job "nanochat" {
           interval = "10s"
           timeout  = "2s"
           method   = "GET"
-          address_mode = "host"
         }
       }
     }

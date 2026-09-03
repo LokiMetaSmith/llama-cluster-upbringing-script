@@ -95,8 +95,6 @@ job "{{ job_name }}" {
       }
 
       service {
-        address_mode = "auto"
-        address = "${attr.unique.network.ip-address}"
         name = "{{ job_name }}"
         port = "http"
 
@@ -106,7 +104,6 @@ job "{{ job_name }}" {
           path     = "/health"
           interval = "10s"
           timeout  = "2s"
-          address_mode = "host"
         }
       }
     }

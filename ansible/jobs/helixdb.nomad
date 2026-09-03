@@ -13,13 +13,10 @@ job "helixdb" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "helixdb"
       port = "http"
       tags = ["traefik.enable=true", "traefik.http.routers.helixdb.rule=Host(`helixdb.localhost`)", "traefik.http.routers.helixdb.entrypoints=web"]
       check {
-        address_mode = "host"
         type     = "tcp"
         interval = "10s"
         timeout  = "2s"

@@ -27,13 +27,10 @@ job "mqtt" {
 
     # Service Block at Group Level (Correct Placement)
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name     = "mqtts"
       port     = "mqtts"
       provider = "consul"
       check {
-        address_mode = "host"
         type     = "tcp"
         name     = "mqtts_health"
         check_restart {

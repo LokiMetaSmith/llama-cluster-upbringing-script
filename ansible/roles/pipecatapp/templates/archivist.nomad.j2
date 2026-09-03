@@ -14,8 +14,6 @@ job "archivist" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name     = "archivist-api"
       port     = "http"
       provider = "consul"
@@ -26,7 +24,6 @@ job "archivist" {
         path     = "/health"
         interval = "10s"
         timeout  = "2s"
-        address_mode = "host"
       }
     }
 

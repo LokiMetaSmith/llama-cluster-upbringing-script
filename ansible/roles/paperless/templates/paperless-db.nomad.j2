@@ -28,14 +28,11 @@ job "paperless-db" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name     = "paperless-db"
       port     = "db"
       provider = "consul"
 
       check {
-        address_mode = "host"
         name     = "Paperless Postgres"
         type     = "tcp"
         interval = "10s"

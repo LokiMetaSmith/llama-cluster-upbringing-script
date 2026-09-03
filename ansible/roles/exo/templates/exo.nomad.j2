@@ -46,8 +46,6 @@ job "exo" {
       }
 
       service {
-        address_mode = "auto"
-        address = "${attr.unique.network.ip-address}"
         name = "exo"
         port = "http"
 
@@ -57,7 +55,6 @@ job "exo" {
           path     = "/"
           interval = "10s"
           timeout  = "2s"
-          address_mode = "host"
         }
       }
 

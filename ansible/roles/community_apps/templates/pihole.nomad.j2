@@ -55,8 +55,6 @@ job "{{ app_name | default('pihole') }}" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "{{ app_name | default('pihole') }}-web"
       port = "web"
 
@@ -71,7 +69,6 @@ job "{{ app_name | default('pihole') }}" {
       }
 
       check {
-        address_mode = "host"
         type     = "http"
         path     = "/admin/index.php"
         interval = "15s"
@@ -80,13 +77,10 @@ job "{{ app_name | default('pihole') }}" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "{{ app_name | default('pihole') }}-dns"
       port = "dns_udp"
 
       check {
-        address_mode = "host"
         type     = "tcp"
         interval = "10s"
         timeout  = "2s"

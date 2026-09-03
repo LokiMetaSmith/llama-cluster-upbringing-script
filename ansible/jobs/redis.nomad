@@ -36,8 +36,6 @@ job "redis" {
         image = "redis:7.2-alpine"
       }
       service {
-        address_mode = "auto"
-        address = "${attr.unique.network.ip-address}"
         name = "redis"
         port = "redis"
         connect {
@@ -49,7 +47,6 @@ job "redis" {
           }
         }
         check {
-          address_mode = "host"
           type     = "tcp"
           interval = "10s"
           timeout  = "2s"
