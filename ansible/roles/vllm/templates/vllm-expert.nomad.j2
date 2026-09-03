@@ -95,6 +95,7 @@ job "{{ job_name }}" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "{{ job_name }}"
         port = "http"
 

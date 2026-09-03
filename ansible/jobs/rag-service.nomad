@@ -13,6 +13,7 @@ job "rag-service" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "rag-service"
       port = "8000"
 

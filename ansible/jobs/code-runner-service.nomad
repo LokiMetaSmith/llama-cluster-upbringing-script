@@ -13,6 +13,7 @@ job "code-runner-service" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "code-runner-service"
       port = "8000"
 

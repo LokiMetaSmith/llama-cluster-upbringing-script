@@ -18,6 +18,7 @@ job "security-agent" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "security-agent"
       port = "tcp"
 

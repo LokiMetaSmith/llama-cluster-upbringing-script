@@ -54,6 +54,7 @@ job "mqtt-exporter" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "mqtt-exporter"
         port = "metrics"
         tags = ["metrics"]

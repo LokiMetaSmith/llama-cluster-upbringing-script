@@ -27,6 +27,7 @@ job "mqtt" {
 
     # Service Block at Group Level (Correct Placement)
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "mqtts"
       port     = "mqtts"
       provider = "consul"

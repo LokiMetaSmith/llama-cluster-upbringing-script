@@ -36,6 +36,7 @@ job "redis" {
         image = "redis:7.2-alpine"
       }
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "redis"
         port = "redis"
         connect {

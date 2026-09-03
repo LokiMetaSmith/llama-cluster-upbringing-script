@@ -33,6 +33,7 @@ job "semantic-router" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "semantic-router"
         port = "http"
         tags = ["router"]

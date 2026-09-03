@@ -19,6 +19,7 @@ job "{{ job_name | default('llama-expert-main') }}" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "{{ service_name | default('llama-api') }}"
       provider = "consul"
       port     = "http"

@@ -13,6 +13,7 @@ job "ternlight-service" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "ternlight-service"
       port = "8000"
 

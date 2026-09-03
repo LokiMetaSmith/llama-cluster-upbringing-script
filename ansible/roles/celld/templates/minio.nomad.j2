@@ -47,6 +47,7 @@ job "minio" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "minio"
         port = "api"
         check {
@@ -59,6 +60,7 @@ job "minio" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "minio-console"
         port = "console"
         check {

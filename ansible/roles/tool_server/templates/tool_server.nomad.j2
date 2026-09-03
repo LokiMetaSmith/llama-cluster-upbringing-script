@@ -85,6 +85,7 @@ job "tool-server" {
       }
       
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "tool-server-api"
         port = "http"
         tags = ["tool-server-api", "http"]

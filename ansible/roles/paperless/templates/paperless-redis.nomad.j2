@@ -28,6 +28,7 @@ job "paperless-redis" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "paperless-redis"
       port     = "redis"
       provider = "consul"

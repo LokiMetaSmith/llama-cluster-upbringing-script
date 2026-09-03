@@ -39,6 +39,7 @@ job "memory-graph" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "memory-graph"
         port = "http"
         tags = ["mcp", "memory"]

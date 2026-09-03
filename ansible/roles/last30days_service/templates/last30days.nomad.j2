@@ -40,6 +40,7 @@ job "last30days-service" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "last30days-service"
         port = "http"
         tags = ["last30days-service", "http"]

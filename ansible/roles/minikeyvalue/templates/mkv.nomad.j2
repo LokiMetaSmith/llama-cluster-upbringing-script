@@ -33,6 +33,7 @@ job "minikeyvalue" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "mkv-master"
         port = "http"
         check {
@@ -77,6 +78,7 @@ job "minikeyvalue" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "mkv-volume"
         port = "http"
         check {

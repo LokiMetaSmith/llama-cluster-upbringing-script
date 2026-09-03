@@ -15,6 +15,7 @@ job "ds4-server-{{ model.name | lower | replace(' ', '-') }}" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "ds4-server-{{ model.name | lower | replace(' ', '-') }}"
       port = "http"
       provider = "consul"

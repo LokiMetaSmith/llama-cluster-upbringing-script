@@ -19,6 +19,7 @@ job "traceway" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "traceway"
       port = "http"
 

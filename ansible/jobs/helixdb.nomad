@@ -13,6 +13,7 @@ job "helixdb" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "helixdb"
       port = "http"
       tags = ["traefik.enable=true", "traefik.http.routers.helixdb.rule=Host(`helixdb.localhost`)", "traefik.http.routers.helixdb.entrypoints=web"]

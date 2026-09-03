@@ -18,6 +18,7 @@ job "{{ job_name | default('tml-interaction') }}" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "tml-interaction-http"
       port = "http"
 
@@ -37,6 +38,7 @@ job "{{ job_name | default('tml-interaction') }}" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "tml-interaction-stream"
       port = "webrtc"
 

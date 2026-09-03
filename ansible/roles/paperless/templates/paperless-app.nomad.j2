@@ -28,6 +28,7 @@ job "paperless-app" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "paperless"
       port     = "http"
       provider = "consul"

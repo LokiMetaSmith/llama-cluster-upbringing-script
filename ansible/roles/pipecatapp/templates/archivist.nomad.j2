@@ -14,6 +14,7 @@ job "archivist" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "archivist-api"
       port     = "http"
       provider = "consul"

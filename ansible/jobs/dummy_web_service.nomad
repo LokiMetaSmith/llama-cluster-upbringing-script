@@ -12,6 +12,7 @@ job "dummy-web-service" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "dummy-web"
       port = "http"
 

@@ -58,6 +58,7 @@ job "mcp-server" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "mcp-server"
         port = "http"
         tags = ["mcp"]

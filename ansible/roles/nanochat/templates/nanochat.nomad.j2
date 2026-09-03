@@ -61,6 +61,7 @@ job "nanochat" {
       }
 
       service {
+        address = "${attr.unique.network.ip-address}"
         name = "nanochat"
         port = "http"
         tags = [

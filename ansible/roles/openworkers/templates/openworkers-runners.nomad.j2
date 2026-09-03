@@ -12,6 +12,7 @@ job "openworkers-runners" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "openworkers-runner"
       port     = "http"
       provider = "consul"

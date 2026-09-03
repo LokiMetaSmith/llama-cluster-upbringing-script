@@ -14,6 +14,7 @@ job "moe-gateway" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "moe-gateway"
       port = "http"
       tags = ["moe-gateway", "http"]

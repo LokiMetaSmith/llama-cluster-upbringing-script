@@ -13,6 +13,7 @@ job "postgres" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name     = "postgres"
       port     = "db"
       provider = "consul"

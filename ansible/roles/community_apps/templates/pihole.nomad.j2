@@ -55,6 +55,7 @@ job "{{ app_name | default('pihole') }}" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "{{ app_name | default('pihole') }}-web"
       port = "web"
 
@@ -77,6 +78,7 @@ job "{{ app_name | default('pihole') }}" {
     }
 
     service {
+      address = "${attr.unique.network.ip-address}"
       name = "{{ app_name | default('pihole') }}-dns"
       port = "dns_udp"
 
