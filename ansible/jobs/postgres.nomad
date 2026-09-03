@@ -34,15 +34,12 @@ EOH
         POSTGRES_DB       = "authentik"
       }
       service {
-        address_mode = "auto"
-        address = "${attr.unique.network.ip-address}"
         name = "postgres"
         port = "postgres"
         connect {
           sidecar_service {}
         }
         check {
-          address_mode = "host"
           type     = "tcp"
           interval = "10s"
           timeout  = "2s"

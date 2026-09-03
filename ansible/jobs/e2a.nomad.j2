@@ -12,8 +12,6 @@ job "e2a" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "e2a"
       port = "http"
 
@@ -25,7 +23,6 @@ job "e2a" {
       ]
 
       check {
-        address_mode = "host"
         type     = "http"
         path     = "/"
         interval = "10s"

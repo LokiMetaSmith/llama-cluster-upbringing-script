@@ -21,8 +21,6 @@ job "gitea" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "gitea"
       port = "http"
 
@@ -36,7 +34,6 @@ job "gitea" {
       ]
 
       check {
-        address_mode = "host"
         type     = "http"
         path     = "/"
         interval = "10s"
@@ -45,8 +42,6 @@ job "gitea" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "gitea-ssh"
       port = "ssh"
 
@@ -57,7 +52,6 @@ job "gitea" {
       ]
 
       check {
-        address_mode = "host"
         type     = "tcp"
         interval = "10s"
         timeout  = "2s"

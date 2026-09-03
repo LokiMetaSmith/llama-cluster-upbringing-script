@@ -14,13 +14,10 @@ job "vector" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name = "vector-metrics"
       port = "metrics"
       tags = ["metrics", "prometheus"]
       check {
-        address_mode = "host"
         type     = "http"
         path     = "/metrics"
         interval = "10s"
@@ -111,7 +108,7 @@ sinks:
       codec: "json"
     mode: "tcp"
     # We will use the Nomad service variable to resolve the host and port
-    address: "{% raw %}{{ range service \"security-agent\" }}{{ .Address }}:{{ .Port }}{{ end }}{% endraw %}"
+    address: "{% raw %}{{ range service \"security-agent\" }}{{ .Name }}.service.consul:{{ .Port }}{{ end }}{% endraw %}"
 
   # Archive to decentralized cluster storage
   fs_archive:

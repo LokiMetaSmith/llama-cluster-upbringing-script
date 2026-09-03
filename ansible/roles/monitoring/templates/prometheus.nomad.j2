@@ -54,14 +54,11 @@ EOF
       }
 
       service {
-        address_mode = "auto"
-        address = "${attr.unique.network.ip-address}"
         name = "prometheus"
         port = "http"
         tags = ["urlprefix-/prometheus", "metrics"]
 
         check {
-          address_mode = "host"
           type     = "http"
           path     = "/prometheus/-/healthy"
           interval = "10s"

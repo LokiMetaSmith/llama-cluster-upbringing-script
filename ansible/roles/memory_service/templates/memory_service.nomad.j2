@@ -54,8 +54,6 @@ job "memory-service" {
       }
 
       service {
-        address_mode = "auto"
-        address = "${attr.unique.network.ip-address}"
         name = "memory-service"
         port = "http"
 
@@ -65,7 +63,6 @@ job "memory-service" {
           path     = "/health"
           interval = "10s"
           timeout  = "2s"
-          address_mode = "host"
         }
       }
     }

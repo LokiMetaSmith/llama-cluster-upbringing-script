@@ -17,7 +17,7 @@ job "openworkers-bootstrap" {
       template {
         data = <<EOH
 {{ range service "postgres" }}
-POSTGRES_HOST="{{ .Address }}"
+POSTGRES_HOST="{{ .Name }}.service.consul"
 POSTGRES_PORT="{{ .Port }}"
 {{ end }}
 EOH

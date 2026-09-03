@@ -28,8 +28,6 @@ job "paperless-app" {
     }
 
     service {
-      address_mode = "auto"
-      address = "${attr.unique.network.ip-address}"
       name     = "paperless"
       port     = "http"
       provider = "consul"
@@ -43,7 +41,6 @@ job "paperless-app" {
       ]
 
       check {
-        address_mode = "host"
         name     = "Paperless Web UI"
         type     = "http"
         path     = "/"
@@ -69,11 +66,11 @@ job "paperless-app" {
       template {
         data = <<EOH
 {{ "{{" }} range service "paperless-redis" {{ "}}" }}
-PAPERLESS_REDIS="redis://{{ "{{" }} .Address {{ "}}" }}:{{ "{{" }} .Port {{ "}}" }}"
+PAPERLESS_REDIS="redis://{{ "{{" }} .Name {{ "}}" }}.service.consul:{{ "{{" }} .Port {{ "}}" }}"
 {{ "{{" }} end {{ "}}" }}
 
 {{ "{{" }} range service "paperless-db" {{ "}}" }}
-PAPERLESS_DBHOST="{{ "{{" }} .Address {{ "}}" }}"
+PAPERLESS_DBHOST="{{ "{{" }} .Name {{ "}}" }}.service.consul"
 PAPERLESS_DBPORT="{{ "{{" }} .Port {{ "}}" }}"
 {{ "{{" }} end {{ "}}" }}
 EOH

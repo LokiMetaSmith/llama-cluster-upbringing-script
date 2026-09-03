@@ -67,14 +67,11 @@ job "openclaw" {
       }
 
       service {
-        address_mode = "auto"
-        address = "${attr.unique.network.ip-address}"
         name = "openclaw"
         port = "gateway"
         tags = ["openclaw", "gateway"]
 
         check {
-          address_mode = "host"
           name     = "alive"
           type     = "tcp"
           interval = "10s"

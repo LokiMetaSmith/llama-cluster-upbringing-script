@@ -52,14 +52,11 @@ job "tap-orchestrator" {
       }
 
       service {
-        address_mode = "auto"
-        address = "${attr.unique.network.ip-address}"
         name = "tap-orchestrator"
         port = "http"
         tags = ["tap-orchestrator"]
 
         check {
-          address_mode = "host"
           type     = "http"
           path     = "/docs" # FastAPI auto-generated docs endpoint
           interval = "10s"
