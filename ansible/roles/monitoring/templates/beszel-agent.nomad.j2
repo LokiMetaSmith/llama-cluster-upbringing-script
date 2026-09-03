@@ -36,10 +36,12 @@ job "beszel-agent" {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "beszel-agent"
         port = "agent"
         check {
+          address_mode = "host"
           name     = "alive"
           type     = "tcp"
           port     = "agent"

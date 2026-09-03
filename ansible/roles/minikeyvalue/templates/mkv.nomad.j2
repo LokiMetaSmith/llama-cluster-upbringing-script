@@ -33,10 +33,12 @@ job "minikeyvalue" {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "mkv-master"
         port = "http"
         check {
+          address_mode = "host"
           type     = "http"
           path     = "/we?list"
           interval = "10s"
@@ -78,10 +80,12 @@ job "minikeyvalue" {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "mkv-volume"
         port = "http"
         check {
+          address_mode = "host"
           type     = "tcp"
           interval = "10s"
           timeout  = "2s"

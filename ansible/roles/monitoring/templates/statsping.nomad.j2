@@ -27,11 +27,13 @@ job "statsping" {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "statsping"
         port = "http"
         tags = []
         check {
+          address_mode = "host"
           name     = "alive"
           type     = "http"
           path     = "/health"

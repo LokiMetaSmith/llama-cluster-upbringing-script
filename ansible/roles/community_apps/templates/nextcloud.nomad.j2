@@ -18,6 +18,7 @@ job "{{ app_name | default('nextcloud') }}" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "{{ app_name | default('nextcloud') }}"
       port = "http"
@@ -29,6 +30,7 @@ job "{{ app_name | default('nextcloud') }}" {
       ]
 
       check {
+        address_mode = "host"
         type     = "http"
         path     = "/status.php"
         interval = "15s"

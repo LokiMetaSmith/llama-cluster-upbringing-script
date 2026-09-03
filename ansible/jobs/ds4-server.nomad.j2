@@ -15,6 +15,7 @@ job "ds4-server-{{ model.name | lower | replace(' ', '-') }}" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "ds4-server-{{ model.name | lower | replace(' ', '-') }}"
       port = "http"
@@ -27,6 +28,7 @@ job "ds4-server-{{ model.name | lower | replace(' ', '-') }}" {
       ]
 
       check {
+        address_mode = "host"
         type     = "http"
         path     = "/v1/models"
         interval = "20s"

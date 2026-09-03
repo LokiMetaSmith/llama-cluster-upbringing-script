@@ -134,12 +134,14 @@ EOH
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "opencode-api"
       port = "http"
       tags = ["opencode", "api"]
 
       check {
+        address_mode = "host"
         type     = "http"
         path     = "/global/health"
         interval = "20s"

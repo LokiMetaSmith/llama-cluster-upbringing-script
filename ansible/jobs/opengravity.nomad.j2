@@ -12,6 +12,7 @@ job "opengravity" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "opengravity"
       port = "http"
@@ -24,6 +25,7 @@ job "opengravity" {
       ]
 
       check {
+        address_mode = "host"
         type     = "http"
         path     = "/"
         interval = "10s"

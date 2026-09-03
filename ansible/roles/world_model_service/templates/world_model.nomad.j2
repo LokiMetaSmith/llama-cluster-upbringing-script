@@ -47,12 +47,14 @@ job "world-model-service" {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "world-model-api"
         tags = ["api", "world-model"]
         port = "http"
 
         check {
+          address_mode = "host"
           type     = "script"
           name     = "alive"
           command  = "python"

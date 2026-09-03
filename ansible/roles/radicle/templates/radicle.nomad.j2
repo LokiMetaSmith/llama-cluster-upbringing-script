@@ -35,6 +35,7 @@ job "radicle" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "radicle-node"
       port = "node"
@@ -46,6 +47,7 @@ job "radicle" {
       ]
 
       check {
+        address_mode = "host"
         type     = "tcp"
         interval = "10s"
         timeout  = "2s"
@@ -53,6 +55,7 @@ job "radicle" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "radicle-http"
       port = "http"
@@ -67,6 +70,7 @@ job "radicle" {
       ]
 
       check {
+        address_mode = "host"
         type     = "http"
         path     = "/api/v1/node"
         interval = "10s"

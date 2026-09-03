@@ -85,12 +85,14 @@ job "tool-server" {
       }
       
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "tool-server-api"
         port = "http"
         tags = ["tool-server-api", "http"]
 
         check {
+          address_mode = "host"
           type     = "http"
           path     = "/health"
           interval = "15s"

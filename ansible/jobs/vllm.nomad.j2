@@ -20,6 +20,7 @@ job "vllm-server-{{ model.name }}" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name     = "vllm-server-{{ model.name }}"
       provider = "consul"
@@ -35,7 +36,7 @@ job "vllm-server-{{ model.name }}" {
         path     = "/health"
         interval = "15s"
         timeout  = "5s"
-        address_mode = "auto"
+        address_mode = "host"
       }
     }
 

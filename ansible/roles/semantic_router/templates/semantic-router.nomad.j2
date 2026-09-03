@@ -33,6 +33,7 @@ job "semantic-router" {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "semantic-router"
         port = "http"
@@ -44,7 +45,7 @@ job "semantic-router" {
           port     = "http"
           interval = "10s"
           timeout  = "2s"
-          address_mode = "auto"
+          address_mode = "host"
         }
       }
     }

@@ -41,12 +41,14 @@ job "forgejo" {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "forgejo-http"
         port = "http"
         tags = ["forgejo", "git", "web"]
 
         check {
+          address_mode = "host"
           type     = "http"
           path     = "/"
           interval = "10s"
@@ -55,12 +57,14 @@ job "forgejo" {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "forgejo-ssh"
         port = "ssh"
         tags = ["forgejo", "git", "ssh"]
 
         check {
+          address_mode = "host"
           type     = "tcp"
           interval = "10s"
           timeout  = "2s"

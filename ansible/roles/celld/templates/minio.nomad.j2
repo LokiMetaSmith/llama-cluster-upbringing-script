@@ -47,10 +47,12 @@ job "minio" {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "minio"
         port = "api"
         check {
+          address_mode = "host"
           name     = "alive"
           type     = "http"
           path     = "/minio/health/live"
@@ -60,10 +62,12 @@ job "minio" {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "minio-console"
         port = "console"
         check {
+          address_mode = "host"
           name     = "alive"
           type     = "tcp"
           interval = "10s"
