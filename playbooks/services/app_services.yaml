@@ -122,14 +122,11 @@
         - moe_gateway
         - mcp_server
         - llmfit
-        - openclaw
         - forgejo
         - gitea
         - radicle
         - paperless
         - opengist
-        - e2a
-        - traceway
         - celld
       loop_control:
         loop_var: role_name
@@ -144,8 +141,6 @@
         - radicle
         - paperless
         - opengist
-        - e2a
-        - traceway
         - celld
 
     - name: Run Paddler Stack
