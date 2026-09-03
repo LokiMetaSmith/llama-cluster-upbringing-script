@@ -51,7 +51,7 @@ job "router" {
         path         = "/health"
         interval     = "15s"
         timeout      = "5s"
-        address_mode = "host"
+        address_mode = "auto"
       }
     }
 
@@ -67,7 +67,7 @@ job "router" {
         path         = "/"
         interval     = "30s"
         timeout      = "5s"
-        address_mode = "host"
+        address_mode = "auto"
       }
     }
 

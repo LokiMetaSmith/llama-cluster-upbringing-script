@@ -110,7 +110,7 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
         type         = "tcp"
         interval     = "15s"
         timeout      = "5s"
-        address_mode = "host"
+        address_mode = "auto"
       }
     }
 

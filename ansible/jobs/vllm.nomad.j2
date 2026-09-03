@@ -35,7 +35,7 @@ job "vllm-server-{{ model.name }}" {
         path     = "/health"
         interval = "15s"
         timeout  = "5s"
-        address_mode = "host"
+        address_mode = "auto"
       }
     }
 

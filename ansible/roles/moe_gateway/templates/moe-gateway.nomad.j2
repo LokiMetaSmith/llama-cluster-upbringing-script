@@ -18,14 +18,14 @@ job "moe-gateway" {
       name = "moe-gateway"
       port = "http"
       tags = ["moe-gateway", "http"]
-      address_mode = "host"
+      address_mode = "auto"
 
       check {
         type         = "http"
         path         = "/health"
         interval     = "10s"
         timeout      = "2s"
-        address_mode = "host"
+        address_mode = "auto"
 
         check_restart {
           limit = 3
