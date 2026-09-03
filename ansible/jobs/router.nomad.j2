@@ -40,6 +40,7 @@ job "router" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name     = "router-api"
       provider = "consul"
@@ -51,11 +52,12 @@ job "router" {
         path         = "/health"
         interval     = "15s"
         timeout      = "5s"
-        address_mode = "auto"
+        address_mode = "host"
       }
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name     = "ollama-api"
       provider = "consul"
@@ -67,7 +69,7 @@ job "router" {
         path         = "/"
         interval     = "30s"
         timeout      = "5s"
-        address_mode = "auto"
+        address_mode = "host"
       }
     }
 

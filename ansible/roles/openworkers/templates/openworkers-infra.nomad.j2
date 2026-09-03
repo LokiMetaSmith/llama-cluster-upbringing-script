@@ -13,6 +13,7 @@ job "openworkers-infra" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name     = "postgate"
       port     = "http"
@@ -60,6 +61,7 @@ EOH
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name     = "openworkers-api"
       port     = "http"
@@ -67,6 +69,7 @@ EOH
       tags     = ["urlprefix-/openworkers-api"]
 
       check {
+        address_mode = "host"
         name     = "API Health"
         type     = "http"
         path     = "/api/health"
@@ -197,6 +200,7 @@ EOH
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name     = "openworkers-dash"
       port     = "http"
@@ -204,6 +208,7 @@ EOH
       tags     = ["urlprefix-/openworkers-dash"]
 
       check {
+        address_mode = "host"
         name     = "Dashboard Health"
         type     = "http"
         path     = "/"

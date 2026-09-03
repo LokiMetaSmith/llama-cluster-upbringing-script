@@ -13,6 +13,7 @@ job "code-runner-service" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "code-runner-service"
       port = "8000"
@@ -22,6 +23,7 @@ job "code-runner-service" {
       }
 
       check {
+        address_mode = "host"
         name     = "Code Runner Service HTTP Check"
         type     = "http"
         path     = "/docs"

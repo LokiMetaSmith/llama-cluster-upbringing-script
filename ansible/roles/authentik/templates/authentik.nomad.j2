@@ -44,10 +44,12 @@ update {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "redis"
         port = "redis"
         check {
+          address_mode = "host"
           name     = "alive"
           type     = "tcp"
           interval = "10s"
@@ -105,10 +107,12 @@ update {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "postgres"
         port = "postgres"
         check {
+          address_mode = "host"
           name     = "alive"
           type     = "tcp"
           interval = "10s"
@@ -183,6 +187,7 @@ EOH
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "authentik"
         port = "http"

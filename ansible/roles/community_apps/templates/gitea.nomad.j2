@@ -21,6 +21,7 @@ job "{{ app_name | default('gitea') }}" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "{{ app_name | default('gitea') }}"
       port = "http"
@@ -32,6 +33,7 @@ job "{{ app_name | default('gitea') }}" {
       ]
 
       check {
+        address_mode = "host"
         type     = "http"
         path     = "/api/v1/version"
         interval = "15s"

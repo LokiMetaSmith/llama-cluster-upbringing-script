@@ -71,12 +71,14 @@ job "{{ job_name }}" {
 
     # The LLM API Service
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "{{ service_name }}"
       tags = [{{ current_expert_tags | map('to_json') | join(', ') }}]
       port = "api"
 
       check {
+        address_mode = "host"
         type     = "http"
         path     = "/health"
         interval = "15s"
@@ -92,12 +94,14 @@ job "{{ job_name }}" {
 
     # The Pipecat Agent Service
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "{{ service_name }}-agent"
       port = "http"
       tags = ["agent", "expert={{ current_expert }}"]
 
       check {
+        address_mode = "host"
         type     = "http"
         path     = "/health"
         interval = "15s"

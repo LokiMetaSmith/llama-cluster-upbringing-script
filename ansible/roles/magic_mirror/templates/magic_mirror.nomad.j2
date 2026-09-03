@@ -46,10 +46,12 @@ EOH
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "magic-mirror"
         port = "mm"
         check {
+          address_mode = "host"
           type     = "script"
           command  = "/bin/bash"
           args     = ["-c", "echo > /dev/tcp/{{ (ansible_facts['default_ipv4'] | default({})).get('address', '127.0.0.1') }}/41111"]

@@ -13,6 +13,7 @@ job "ternlight-service" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "ternlight-service"
       port = "8000"
@@ -22,6 +23,7 @@ job "ternlight-service" {
       }
 
       check {
+        address_mode = "host"
         name     = "Ternlight Service Health Check"
         type     = "http"
         path     = "/health"

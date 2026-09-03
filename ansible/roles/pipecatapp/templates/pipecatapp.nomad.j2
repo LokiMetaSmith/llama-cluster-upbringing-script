@@ -106,6 +106,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       ]
 
       check {
+        address_mode = "host"
         name     = "alive"
         type     = "http"
         path     = "/health"
@@ -114,6 +115,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       }
 
       check {
+        address_mode = "host"
         name     = "pipeline-status"
         type     = "http"
         path     = "/api/status"

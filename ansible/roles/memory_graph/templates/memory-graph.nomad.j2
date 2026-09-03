@@ -39,11 +39,13 @@ job "memory-graph" {
       }
 
       service {
+        address_mode = "auto"
         address = "${attr.unique.network.ip-address}"
         name = "memory-graph"
         port = "http"
         tags = ["mcp", "memory"]
         check {
+          address_mode = "host"
           type     = "http"
           path     = "/sse"
           interval = "10s"

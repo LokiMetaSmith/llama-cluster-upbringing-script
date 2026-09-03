@@ -18,6 +18,7 @@ job "{{ job_name | default('tml-interaction') }}" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "tml-interaction-http"
       port = "http"
@@ -30,6 +31,7 @@ job "{{ job_name | default('tml-interaction') }}" {
       ]
 
       check {
+        address_mode = "host"
         type     = "http"
         path     = "/health"
         interval = "10s"
@@ -38,6 +40,7 @@ job "{{ job_name | default('tml-interaction') }}" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "tml-interaction-stream"
       port = "webrtc"
@@ -51,6 +54,7 @@ job "{{ job_name | default('tml-interaction') }}" {
 
       # Minimal TCP check to ensure the streaming port is bound
       check {
+        address_mode = "host"
         type     = "tcp"
         interval = "10s"
         timeout  = "2s"

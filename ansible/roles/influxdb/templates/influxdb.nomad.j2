@@ -19,12 +19,14 @@ job "influxdb" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name     = "influxdb"
       port     = "http"
       provider = "consul"
 
       check {
+        address_mode = "host"
         type     = "http"
         path     = "/ping"
         interval = "10s"

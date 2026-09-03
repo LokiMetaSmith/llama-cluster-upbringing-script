@@ -39,12 +39,14 @@ job "pipecat-app" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "pipecat-app-http"
       port = "http"
       provider = "consul"
 
       check {
+        address_mode = "host"
         type     = "http"
         path     = "/health"
         interval = "30s"

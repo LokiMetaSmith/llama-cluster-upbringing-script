@@ -69,7 +69,7 @@ job "mcp-server" {
           path     = "/health"
           interval = "10s"
           timeout  = "2s"
-          address_mode = "auto"
+          address_mode = "host"
 
           check_restart {
             limit = 3

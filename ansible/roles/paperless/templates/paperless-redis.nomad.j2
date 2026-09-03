@@ -28,12 +28,14 @@ job "paperless-redis" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name     = "paperless-redis"
       port     = "redis"
       provider = "consul"
 
       check {
+        address_mode = "host"
         name     = "Paperless Redis"
         type     = "tcp"
         interval = "10s"

@@ -13,6 +13,7 @@ job "rag-service" {
     }
 
     service {
+      address_mode = "auto"
       address = "${attr.unique.network.ip-address}"
       name = "rag-service"
       port = "8000"
@@ -22,6 +23,7 @@ job "rag-service" {
       }
 
       check {
+        address_mode = "host"
         name     = "RAG Service HTTP Check"
         type     = "http"
         path     = "/docs"
