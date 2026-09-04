@@ -48,8 +48,8 @@ job "{{ job_name | default('pipecat-app') }}" {
       MAIN_API_SERVICE_NAME = "llama-api-main"
       PLAYWRIGHT_BROWSERS_PATH = "/opt/ms-playwright"
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
-      SSL_KEYFILE            = "/secrets/internal-key.pem"
-      SSL_CERTFILE           = "/secrets/internal-cert.pem"
+      SSL_KEYFILE            = "${NOMAD_SECRETS_DIR}/internal-key.pem"
+      SSL_CERTFILE           = "${NOMAD_SECRETS_DIR}/internal-cert.pem"
     }
     {% endset %}
 
@@ -135,7 +135,7 @@ job "{{ job_name | default('pipecat-app') }}" {
         data        = <<EOT
 {{ lookup('file', internal_cert_path | default('/etc/ssl/certs/internal-cert.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
 EOT
-        destination = "/secrets/internal-cert.pem"
+        destination = "secrets/internal-cert.pem"
         change_mode = "restart"
       }
 
@@ -143,7 +143,7 @@ EOT
         data        = <<EOT
 {{ lookup('file', internal_key_path | default('/etc/ssl/private/internal-key.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
 EOT
-        destination = "/secrets/internal-key.pem"
+        destination = "secrets/internal-key.pem"
         change_mode = "restart"
       }
 
@@ -195,7 +195,7 @@ EOT
         data        = <<EOT
 {{ lookup('file', internal_cert_path | default('/etc/ssl/certs/internal-cert.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
 EOT
-        destination = "/secrets/internal-cert.pem"
+        destination = "secrets/internal-cert.pem"
         change_mode = "restart"
       }
 
@@ -203,7 +203,7 @@ EOT
         data        = <<EOT
 {{ lookup('file', internal_key_path | default('/etc/ssl/private/internal-key.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
 EOT
-        destination = "/secrets/internal-key.pem"
+        destination = "secrets/internal-key.pem"
         change_mode = "restart"
       }
 
