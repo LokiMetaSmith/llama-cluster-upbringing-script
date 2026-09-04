@@ -12,6 +12,14 @@
     update_cache_retry_max_delay: 15
     cache_valid_time: 3600
 
+- name: Ensure uv is installed globally
+  ansible.builtin.pip:
+    name: uv
+    state: present
+    executable: pip3
+    extra_args: "--break-system-packages"
+  become: yes
+
 - name: Create Librarian directory
   file:
     path: "{{ librarian_install_path }}"

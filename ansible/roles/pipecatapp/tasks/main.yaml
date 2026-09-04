@@ -224,6 +224,15 @@
   tags:
     - deploy_app
 
+- name: Ensure uv is installed globally for pipecatapp deployment
+  ansible.builtin.pip:
+    name: uv
+    state: present
+    executable: pip3
+    extra_args: "--break-system-packages"
+  become: yes
+  ignore_errors: yes
+
 - name: Ensure setuptools, wheel, and Cython are pre-installed
   ansible.builtin.command:
     cmd: "uv pip install setuptools wheel \"Cython>=3.0.0\""
