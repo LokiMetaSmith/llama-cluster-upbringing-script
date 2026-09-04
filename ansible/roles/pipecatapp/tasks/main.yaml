@@ -225,22 +225,22 @@
     - deploy_app
 
 - name: Ensure setuptools, wheel, and Cython are pre-installed
-  ansible.builtin.pip:
-    name:
-      - setuptools
-      - wheel
-      - "Cython>=3.0.0"
-    virtualenv: "{{ pipecat_app_dir }}/venv"
-    virtualenv_command: "{{ ansible_playbook_python }} -m venv"
+  ansible.builtin.command:
+    cmd: "uv pip install setuptools wheel \"Cython>=3.0.0\""
+  environment:
+    UV_LINK_MODE: "hardlink"
+    VIRTUAL_ENV: "{{ pipecat_app_dir }}/venv"
   become: yes
   become_user: "{{ target_user }}"
   tags:
     - deploy_app
 
 - name: Install python dependencies
-  ansible.builtin.pip:
-    requirements: "{{ pipecat_app_dir }}/requirements.txt"
-    virtualenv: "{{ pipecat_app_dir }}/venv"
+  ansible.builtin.command:
+    cmd: "uv pip install -r {{ pipecat_app_dir }}/requirements.txt"
+  environment:
+    UV_LINK_MODE: "hardlink"
+    VIRTUAL_ENV: "{{ pipecat_app_dir }}/venv"
   become: yes
   become_user: "{{ target_user }}"
   tags:

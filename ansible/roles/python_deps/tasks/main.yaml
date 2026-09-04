@@ -1,7 +1,9 @@
 - name: Create a virtual environment for the application
   ansible.builtin.command:
-    cmd: "{{ ansible_playbook_python }} -m venv /opt/pipecatapp/venv"
+    cmd: "uv venv --seed /opt/pipecatapp/venv"
     creates: "/opt/pipecatapp/venv/bin/pip"
+  environment:
+    UV_LINK_MODE: "hardlink"
   become: yes
   tags:
     - deploy_app
@@ -49,16 +51,13 @@
     - deploy_app
 
 - name: Install/Upgrade base python packages, Cython, and uv in venv
-  ansible.builtin.pip:
-    name:
-      - pip
-      - setuptools
-      - wheel
-      - cython
-      - uv
-    state: latest
-    extra_args: "--no-cache-dir"
-    executable: "/opt/pipecatapp/venv/bin/pip3"
+  ansible.builtin.command:
+    cmd: "uv pip install pip setuptools wheel cython uv"
+  environment:
+    UV_LINK_MODE: "hardlink"
+    VIRTUAL_ENV: "/opt/pipecatapp/venv"
+    TMPDIR: /var/tmp/ansible_pip_build
+    UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
   become: yes
   become_user: "{{ target_user }}"
   tags:
@@ -66,8 +65,10 @@
 
 - name: Pre-install webrtcvad explicitly
   ansible.builtin.command:
-    cmd: "/opt/pipecatapp/venv/bin/uv pip install webrtcvad-wheels==2.0.14 --python /opt/pipecatapp/venv/bin/python"
+    cmd: "uv pip install webrtcvad-wheels==2.0.14"
   environment:
+    UV_LINK_MODE: "hardlink"
+    VIRTUAL_ENV: "/opt/pipecatapp/venv"
     TMPDIR: /var/tmp/ansible_pip_build
     UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
   become: yes
@@ -77,7 +78,7 @@
 
 - name: Clean up uv cache after webrtcvad installation
   ansible.builtin.command:
-    cmd: "/opt/pipecatapp/venv/bin/uv cache clean"
+    cmd: "uv cache clean"
   environment:
     UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
   become: yes
@@ -87,8 +88,10 @@
 
 - name: Install python dependencies with uv
   ansible.builtin.command:
-    cmd: "/opt/pipecatapp/venv/bin/uv pip install -r /opt/pipecatapp/requirements.txt --python /opt/pipecatapp/venv/bin/python"
+    cmd: "uv pip install -r /opt/pipecatapp/requirements.txt"
   environment:
+    UV_LINK_MODE: "hardlink"
+    VIRTUAL_ENV: "/opt/pipecatapp/venv"
     TMPDIR: /var/tmp/ansible_pip_build
     UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
     CFLAGS: "-I/usr/include/python3.12 -I/usr/include/python3.13"
@@ -113,7 +116,7 @@
 
 - name: Clean up uv cache
   ansible.builtin.command:
-    cmd: "/opt/pipecatapp/venv/bin/uv cache clean"
+    cmd: "uv cache clean"
   environment:
     UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
   become: yes

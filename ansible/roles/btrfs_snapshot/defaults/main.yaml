@@ -5,9 +5,12 @@ btrfs_active_subvolume: "/btrfs_root/active"
 btrfs_device: "/dev/vdb"  # can be overridden in inventory/host_vars/group_vars
 btrfs_format_device: false
 
+# Enable loop fallback if a physical device is not available.
+btrfs_enable_loop_fallback: false
+
 # Fallback sparse file details if physical device is unavailable
 btrfs_loop_file: "/opt/btrfs_root.img"
-btrfs_loop_file_size: "15G"
+btrfs_loop_file_size: "5G"
 
 # Directories to back up/protect and sync to the Btrfs active subvolume
 btrfs_protected_dirs:

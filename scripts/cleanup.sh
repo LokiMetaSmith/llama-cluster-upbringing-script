@@ -52,12 +52,19 @@ if [ "$POST_BOOTSTRAP" -eq 1 ]; then
 
     # 2. Safely Clean UV / PIP Caches
     echo -e "\n${BOLD}🧹 Cleaning UV / PIP Caches...${NC}"
-    sudo rm -rf /root/.cache/pip /root/.cache/uv /var/tmp/ansible_pip_build/uv_cache 2>/dev/null || true
+    sudo rm -rf /root/.cache/pip /var/tmp/ansible_pip_build/uv_cache 2>/dev/null || true
+
+    # Use uv cache prune instead of deleting the directory to preserve hardlinks
+    if command -v uv &> /dev/null; then
+        echo "Pruning uv cache..."
+        uv cache prune || sudo uv cache prune || true
+    fi
+
     if [ -n "$SUDO_USER" ]; then
         USER_HOME=$(eval echo "~$SUDO_USER")
-        sudo rm -rf "$USER_HOME/.cache/pip" "$USER_HOME/.cache/uv" 2>/dev/null || true
+        sudo rm -rf "$USER_HOME/.cache/pip" 2>/dev/null || true
     else
-        sudo rm -rf ~/.cache/pip ~/.cache/uv 2>/dev/null || true
+        sudo rm -rf ~/.cache/pip 2>/dev/null || true
     fi
 
     # 3. Clean Bootstrap Artifacts
@@ -67,6 +74,7 @@ if [ "$POST_BOOTSTRAP" -eq 1 ]; then
     rm -f /tmp/cni-plugins.tgz
     rm -f /tmp/get-docker.sh
     rm -f /tmp/pipecatapp.tar
+    rm -f /opt/pipecatapp.tar
     rm -rf /tmp/consul
     rm -rf /tmp/nomad
 
@@ -96,13 +104,13 @@ fi
 if command -v docker &> /dev/null; then
     echo -e "\n${BOLD}🐳 Cleaning Docker System...${NC}"
     echo "Pruning stopped containers, unused networks, and dangling images..."
-    docker system prune --all --force --volumes
+    docker system prune -a --force --volumes
 
     echo "Pruning build cache..."
     docker builder prune --all --force
 
-    # Optional: Remove all unused images, not just dangling ones
-    docker image prune --all --force
+    # Optional: Remove all unused images older than 24h, not just dangling ones
+    docker image prune -a --filter "until=24h" --force
 else
     echo "Docker not found, skipping Docker cleanup."
 fi
@@ -168,6 +176,7 @@ rm -f /tmp/nomad.zip
 rm -f /tmp/cni-plugins.tgz
 rm -f /tmp/get-docker.sh
 rm -f /tmp/pipecatapp.tar
+rm -f /opt/pipecatapp.tar
 
 # Remove extracted directories
 rm -rf /tmp/consul
@@ -180,6 +189,9 @@ sudo find /var/tmp -type f -atime +3 -delete 2>/dev/null || true
 
 echo -e "\n${BOLD}🧹 Cleaning UV Cache...${NC}"
 sudo rm -rf /var/tmp/ansible_pip_build/uv_cache 2>/dev/null || true
+if command -v uv &> /dev/null; then
+    uv cache prune || sudo uv cache prune || true
+fi
 
 # 6. Log Files
 echo -e "\n${BOLD}📝 Cleaning Log Files...${NC}"
