@@ -59,7 +59,7 @@
     force: yes
 
 - name: Create virtual environment
-  command: uv venv venv
+  command: uv venv --seed venv
   args:
     chdir: "{{ librarian_install_path }}/local_file_organizer"
     creates: "{{ librarian_install_path }}/local_file_organizer/venv"

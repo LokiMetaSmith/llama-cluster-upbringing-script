@@ -21,7 +21,7 @@
 
 - name: Create heretic tool virtual environment
   ansible.builtin.command:
-    cmd: uv venv {{ heretic_tool_venv_dir }}
+    cmd: uv venv --seed {{ heretic_tool_venv_dir }}
     creates: "{{ heretic_tool_venv_dir }}/bin/activate"
   environment:
     UV_LINK_MODE: "hardlink"
