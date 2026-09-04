@@ -46,10 +46,12 @@
 
 - name: Create virtual environment with uv
   ansible.builtin.command:
-    cmd: "uv venv {{ nanochat_venv_dir }}"
+    cmd: "uv venv --seed {{ nanochat_venv_dir }}"
     creates: "{{ nanochat_venv_dir }}"
   args:
     chdir: "{{ nanochat_install_dir }}"
+  environment:
+    UV_LINK_MODE: "hardlink"
   become: yes
   become_user: "{{ target_user }}"
 
@@ -59,6 +61,7 @@
   args:
     chdir: "{{ nanochat_install_dir }}"
   environment:
+    UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "{{ nanochat_venv_dir }}"
   become: yes
   become_user: "{{ target_user }}"
@@ -70,6 +73,7 @@
   args:
     chdir: "{{ nanochat_install_dir }}"
   environment:
+    UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "{{ nanochat_venv_dir }}"
   become: yes
   become_user: "{{ target_user }}"
@@ -81,6 +85,7 @@
   args:
     chdir: "{{ nanochat_install_dir }}"
   environment:
+    UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "{{ nanochat_venv_dir }}"
   become: yes
   become_user: "{{ target_user }}"

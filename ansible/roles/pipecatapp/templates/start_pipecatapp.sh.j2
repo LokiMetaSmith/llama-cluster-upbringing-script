@@ -131,7 +131,7 @@ try_create_venv() {
     fi
 
     set +e
-    UV_LINK_MODE=hardlink uv venv "$venv_path" 2>&1 | tee -a "$LOG_FILE"
+    UV_LINK_MODE=hardlink uv venv --seed "$venv_path" 2>&1 | tee -a "$LOG_FILE"
     local ret=$?
     set -e
 

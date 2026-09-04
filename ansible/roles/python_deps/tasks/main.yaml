@@ -1,3 +1,11 @@
+- name: Ensure uv is installed globally
+  ansible.builtin.pip:
+    name: uv
+    state: present
+    executable: pip3
+    extra_args: "--break-system-packages"
+  become: yes
+
 - name: Create a virtual environment for the application
   ansible.builtin.command:
     cmd: "uv venv --seed /opt/pipecatapp/venv"
@@ -78,7 +86,7 @@
 
 - name: Clean up uv cache after webrtcvad installation
   ansible.builtin.command:
-    cmd: "uv cache clean"
+    cmd: "uv cache prune"
   environment:
     UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
   become: yes
@@ -116,7 +124,7 @@
 
 - name: Clean up uv cache
   ansible.builtin.command:
-    cmd: "uv cache clean"
+    cmd: "uv cache prune"
   environment:
     UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
   become: yes
