@@ -19,6 +19,7 @@
     name: uv
     state: present
     executable: pip3
+    extra_args: "--break-system-packages"
   become: yes
 
 - name: Ensure install directory exists
