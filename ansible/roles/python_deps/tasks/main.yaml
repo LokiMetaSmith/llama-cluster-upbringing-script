@@ -6,9 +6,15 @@
     extra_args: "--break-system-packages"
   become: yes
 
+- name: Get path to uv
+  ansible.builtin.command: which uv
+  register: uv_path
+  changed_when: false
+  become: yes
+
 - name: Create a virtual environment for the application
   ansible.builtin.command:
-    cmd: "uv venv --seed /opt/pipecatapp/venv"
+    cmd: "{{ uv_path.stdout }} venv --seed /opt/pipecatapp/venv"
     creates: "/opt/pipecatapp/venv/bin/pip"
   environment:
     UV_LINK_MODE: "hardlink"
@@ -60,7 +66,7 @@
 
 - name: Install/Upgrade base python packages, Cython, and uv in venv
   ansible.builtin.command:
-    cmd: "uv pip install pip setuptools wheel cython uv"
+    cmd: "{{ uv_path.stdout }} pip install pip setuptools wheel cython uv"
   environment:
     UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "/opt/pipecatapp/venv"
@@ -73,7 +79,7 @@
 
 - name: Pre-install webrtcvad explicitly
   ansible.builtin.command:
-    cmd: "uv pip install webrtcvad-wheels==2.0.14"
+    cmd: "{{ uv_path.stdout }} pip install webrtcvad-wheels==2.0.14"
   environment:
     UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "/opt/pipecatapp/venv"
@@ -86,7 +92,7 @@
 
 - name: Clean up uv cache after webrtcvad installation
   ansible.builtin.command:
-    cmd: "uv cache prune"
+    cmd: "{{ uv_path.stdout }} cache prune"
   environment:
     UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
   become: yes
@@ -96,7 +102,7 @@
 
 - name: Install python dependencies with uv
   ansible.builtin.command:
-    cmd: "uv pip install -r /opt/pipecatapp/requirements.txt"
+    cmd: "{{ uv_path.stdout }} pip install -r /opt/pipecatapp/requirements.txt"
   environment:
     UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "/opt/pipecatapp/venv"
@@ -124,7 +130,7 @@
 
 - name: Clean up uv cache
   ansible.builtin.command:
-    cmd: "uv cache prune"
+    cmd: "{{ uv_path.stdout }} cache prune"
   environment:
     UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
   become: yes
