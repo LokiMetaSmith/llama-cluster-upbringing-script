@@ -1,6 +1,7 @@
 /var/log/consul.log {
     daily
-    rotate 7
+    rotate 4
+    maxsize 100M
     missingok
     notifempty
     compress

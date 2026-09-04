@@ -59,25 +59,30 @@
     force: yes
 
 - name: Create virtual environment
-  command: python3 -m venv venv
+  command: uv venv venv
   args:
     chdir: "{{ librarian_install_path }}/local_file_organizer"
     creates: "{{ librarian_install_path }}/local_file_organizer/venv"
+  environment:
+    UV_LINK_MODE: "hardlink"
   when: not ansible_check_mode
 
 - name: Install requirements
-  pip:
-    requirements: "{{ librarian_install_path }}/local_file_organizer/requirements.txt"
-    virtualenv: "{{ librarian_install_path }}/local_file_organizer/venv"
+  command: uv pip install -r "{{ librarian_install_path }}/local_file_organizer/requirements.txt"
+  args:
+    chdir: "{{ librarian_install_path }}/local_file_organizer"
+  environment:
+    UV_LINK_MODE: "hardlink"
+    VIRTUAL_ENV: "{{ librarian_install_path }}/local_file_organizer/venv"
   when: not ansible_check_mode
 
 - name: Install additional requirements (openai, schedule)
-  pip:
-    name:
-      - openai
-      - schedule
-      - requests
-    virtualenv: "{{ librarian_install_path }}/local_file_organizer/venv"
+  command: uv pip install openai schedule requests
+  args:
+    chdir: "{{ librarian_install_path }}/local_file_organizer"
+  environment:
+    UV_LINK_MODE: "hardlink"
+    VIRTUAL_ENV: "{{ librarian_install_path }}/local_file_organizer/venv"
   when: not ansible_check_mode
 
 - name: Download Spacedrive Core (Headless)

@@ -21,14 +21,18 @@
 
 - name: Create heretic tool virtual environment
   ansible.builtin.command:
-    cmd: python3 -m venv {{ heretic_tool_venv_dir }}
+    cmd: uv venv {{ heretic_tool_venv_dir }}
     creates: "{{ heretic_tool_venv_dir }}/bin/activate"
+  environment:
+    UV_LINK_MODE: "hardlink"
   become: yes
   become_user: "{{ target_user }}"
 
 - name: Install heretic-llm
-  ansible.builtin.pip:
-    name: heretic-llm
-    virtualenv: "{{ heretic_tool_venv_dir }}"
+  ansible.builtin.command:
+    cmd: uv pip install heretic-llm
+  environment:
+    UV_LINK_MODE: "hardlink"
+    VIRTUAL_ENV: "{{ heretic_tool_venv_dir }}"
   become: yes
   become_user: "{{ target_user }}"

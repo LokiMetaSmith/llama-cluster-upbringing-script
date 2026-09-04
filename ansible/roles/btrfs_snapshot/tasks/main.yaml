@@ -106,15 +106,17 @@
   when:
     - not btrfs_enabled
     - btrfs_supported
+    - btrfs_enable_loop_fallback
 
 - name: Create sparse fallback file
   ansible.builtin.command:
-    cmd: "truncate -s {{ btrfs_loop_file_size | default('15G') }} {{ btrfs_loop_file }}"
+    cmd: "truncate -s {{ btrfs_loop_file_size | default('5G') }} {{ btrfs_loop_file }}"
     creates: "{{ btrfs_loop_file }}"
   become: yes
   when:
     - not btrfs_enabled
     - btrfs_supported
+    - btrfs_enable_loop_fallback
 
 - name: Check loop file filesystem type
   ansible.builtin.command: "blkid -o value -s TYPE {{ btrfs_loop_file }}"
@@ -125,6 +127,7 @@
   when:
     - not btrfs_enabled
     - btrfs_supported
+    - btrfs_enable_loop_fallback
 
 - name: Format loop file as Btrfs if unformatted
   ansible.builtin.command:
@@ -133,6 +136,7 @@
   when:
     - not btrfs_enabled
     - btrfs_supported
+    - btrfs_enable_loop_fallback
     - loop_file_fs_type.stdout | default('') != 'btrfs'
 
 - name: Mount loop Btrfs device
@@ -148,6 +152,7 @@
   when:
     - not btrfs_enabled
     - btrfs_supported
+    - btrfs_enable_loop_fallback
 
 - name: Update btrfs_enabled fact if loop mount succeeded
   ansible.builtin.set_fact:

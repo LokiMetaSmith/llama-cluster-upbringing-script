@@ -98,22 +98,21 @@
   become: yes
   when: pipecat_deployment_style == 'docker'
 
-- name: Pin pipecatapp tarball to IPFS
-  ansible.builtin.command: "ipfs add -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}.tar"
-  become: yes
-  register: ipfs_add_result
-  environment:
-    IPFS_PATH: "{{ ipfs_path }}"
-  when: pipecat_deployment_style == 'docker'
+- name: Pin pipecatapp tarball to IPFS and cleanup
+  block:
+    - name: Pin pipecatapp tarball to IPFS
+      ansible.builtin.command: "ipfs add -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}.tar"
+      register: ipfs_add_result
+      environment:
+        IPFS_PATH: "{{ ipfs_path }}"
 
-- name: Clean up temporary tarball
-  ansible.builtin.file:
-    path: "/opt/{{ pipecat_image_name | default('pipecatapp') }}.tar"
-    state: absent
+    - name: Set pipecatapp_ipfs_cid fact
+      ansible.builtin.set_fact:
+        pipecatapp_ipfs_cid: "{{ ipfs_add_result.stdout }}"
+  always:
+    - name: Clean up temporary tarball
+      ansible.builtin.file:
+        path: "/opt/{{ pipecat_image_name | default('pipecatapp') }}.tar"
+        state: absent
   become: yes
-  when: pipecat_deployment_style == 'docker'
-
-- name: Set pipecatapp_ipfs_cid fact
-  ansible.builtin.set_fact:
-    pipecatapp_ipfs_cid: "{{ ipfs_add_result.stdout }}"
   when: pipecat_deployment_style == 'docker'
