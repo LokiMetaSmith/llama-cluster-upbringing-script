@@ -64,6 +64,13 @@
     shell: /bin/bash
   become: yes
 
+- name: Ensure target user is in consul group
+  ansible.builtin.user:
+    name: "{{ target_user | default('pipecatapp') }}"
+    groups: consul
+    append: yes
+  become: yes
+
 - name: Read and parse benchmark results
   block:
     - name: Check if benchmark log file exists
