@@ -233,6 +233,20 @@
   become: yes
   ignore_errors: yes
 
+- name: Locate uv executable in virtual environment
+  ansible.builtin.stat:
+    path: "/home/pipecatapp/llama-cluster-upbringing-script/.venv/bin/uv"
+  register: venv_uv
+
+- name: Ensure uv is symlinked to /usr/local/bin
+  ansible.builtin.file:
+    src: "{{ venv_uv.stat.path }}"
+    dest: /usr/local/bin/uv
+    state: link
+    force: yes
+  become: yes
+  when: venv_uv.stat.exists
+
 - name: Ensure setuptools, wheel, and Cython are pre-installed
   ansible.builtin.command:
     cmd: "uv pip install setuptools wheel \"Cython>=3.0.0\""
