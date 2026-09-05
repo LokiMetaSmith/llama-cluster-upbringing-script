@@ -58,8 +58,8 @@
 
 ## 6. Swarm Cluster Implementation Checklist
 
-* [ ] **MoE Gateway Dynamic Catalog Sync:** Update `moe-gateway` to poll Consul tags for actively warmed models, preventing round-robin dispatch to nodes requiring a disk-to-VRAM model reload.
-* [ ] **VRAM & Node Headroom Health Checks:** Expose a lightweight GPU telemetry sidecar in Telegraf or Consul health scripts to factor free VRAM into Nomad routing decisions.
-* [ ] **Ollama / LM Studio Peer Gateway:** Implement a Nomad service profile enabling ad-hoc consumer workstations running Ollama or LM Studio to register into the Consul service catalog as standard upstream expert providers.
-* [ ] **Workstation Ad-Hoc Bridge (PAIR-Style Mesh Node):** Add an optional mDNS/PIN listener on worker nodes to let local developer machines safely join the Headscale network without full bare-metal Ansible provisioning.
-* [ ] **OpenAI-Compatible Model Aliasing:** Expand the MoE routing layer to map generalized frontend model requests (e.g., `gpt-4o-mini`) directly to active internal model aliases (`expert-main`, `expert-extract`, or local quantized GGUF engines).
+* [x] **MoE Gateway Dynamic Catalog Sync:** Update `moe-gateway` to poll Consul tags for actively warmed models, preventing round-robin dispatch to nodes requiring a disk-to-VRAM model reload.
+* [x] **VRAM & Node Headroom Health Checks:** Expose a lightweight GPU telemetry sidecar in Telegraf or Consul health scripts to factor free VRAM into Nomad routing decisions.
+* [x] **Ollama / LM Studio Peer Gateway:** Implement a Nomad service profile enabling ad-hoc consumer workstations running Ollama or LM Studio to register into the Consul service catalog as standard upstream expert providers.
+* [x] **Workstation Ad-Hoc Bridge (PAIR-Style Mesh Node):** Add an optional mDNS/PIN listener on worker nodes to let local developer machines safely join the Headscale network without full bare-metal Ansible provisioning.
+* [x] **OpenAI-Compatible Model Aliasing:** Expand the MoE routing layer to map generalized frontend model requests (e.g., `gpt-4o-mini`) directly to active internal model aliases (`expert-main`, `expert-extract`, or local quantized GGUF engines).
