@@ -271,7 +271,18 @@ def get_expert_scores(db_path: str, external_experts: dict) -> dict:
         elif "flash" in name or "mini" in name:
             intel = 0.4
 
-        score = 0.5 * reliability + 0.25 * speed + 0.25 * intel
+        # VRAM score normalization (penalize if under 4GB, boost if > 12GB)
+        vram_multiplier = 1.0
+        if name in external_experts and "vram_free" in external_experts[name]:
+            vram = external_experts[name]["vram_free"]
+            if vram < 4000:
+                vram_multiplier = 0.2  # Severe penalty, out of VRAM
+            elif vram < 8000:
+                vram_multiplier = 0.7  # Mild penalty
+            elif vram > 12000:
+                vram_multiplier = 1.2  # Bonus for lots of VRAM
+
+        score = (0.5 * reliability + 0.25 * speed + 0.25 * intel) * vram_multiplier
         scores[name] = score
 
     return scores
@@ -356,6 +367,30 @@ async def poll_consul_catalog():
         try:
             # Fallback if CONSUL_HTTP_ADDR is not set in env (which can happen during local testing)
             consul_addr = os.getenv("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
+
+            # Step 1: Fetch GPU telemetry map
+            telemetry_url = f"{consul_addr}/v1/health/service/gpu-telemetry?passing"
+            node_vram_map = {}
+            async with httpx.AsyncClient(verify=verify_param, timeout=5.0) as client:
+                try:
+                    tel_res = await client.get(telemetry_url, headers=headers)
+                    tel_res.raise_for_status()
+                    tel_data = tel_res.json()
+                    for entry in tel_data:
+                        node_name = entry["Node"]["Node"]
+                        tags = entry["Service"].get("Tags", [])
+                        free_vram = 0
+                        for tag in tags:
+                            if tag.startswith("vram-free-"):
+                                try:
+                                    free_vram = int(tag.split("-")[-1])
+                                except ValueError:
+                                    pass
+                        node_vram_map[node_name] = free_vram
+                except Exception as e:
+                    logger.warning(f"Failed to fetch GPU telemetry: {e}")
+
+            # Step 2: Fetch Expert Services
             consul_url = f"{consul_addr}/v1/catalog/services"
             async with httpx.AsyncClient(verify=verify_param, timeout=5.0) as client:
                 response = await client.get(consul_url, headers=headers)
@@ -373,6 +408,9 @@ async def poll_consul_catalog():
                         h_data = h_response.json()
 
                         if h_data:
+                            # Use the first healthy instance's node for VRAM mapping
+                            node_name = h_data[0]["Node"]["Node"]
+
                             # Parse tags to find model and tier if available
                             tags = h_data[0]["Service"].get("Tags", [])
                             tier = "complex"
@@ -385,7 +423,15 @@ async def poll_consul_catalog():
                                     model_alias = tag[len("model-"):]
                                     break
 
-                            new_dynamic_experts[svc_name] = {"model": model_alias, "tier": tier}
+                            # Attach the Node's VRAM directly to the expert routing profile
+                            vram_free = node_vram_map.get(node_name, 0) # default 0 if no telemetry
+
+                            new_dynamic_experts[svc_name] = {
+                                "model": model_alias,
+                                "tier": tier,
+                                "vram_free": vram_free,
+                                "node_name": node_name
+                            }
 
             if new_dynamic_experts:
                 global DYNAMIC_EXPERTS
@@ -437,6 +483,29 @@ async def api_logs(limit: int = 50):
 async def api_metrics():
     return await get_metrics()
 
+@app.get("/api/experts")
+async def api_experts():
+    """Returns the currently active dynamic experts and their live Thompson Sampling scores."""
+    all_experts = get_all_experts()
+    scores = get_expert_scores(DB_PATH, all_experts)
+
+    result = []
+    for expert_name, details in all_experts.items():
+        if expert_name == 'default':
+            continue
+
+        expert_info = details.copy()
+        expert_info["name"] = expert_name
+        expert_info["score"] = scores.get(expert_name, 0.0)
+
+        # Determine if it's dynamic or static based on presence in DYNAMIC_EXPERTS
+        expert_info["source"] = "dynamic" if expert_name in DYNAMIC_EXPERTS else "static"
+
+        result.append(expert_info)
+
+    # Sort by score descending
+    result.sort(key=lambda x: x["score"], reverse=True)
+    return result
 
 # --- In-memory store for pending requests ---
 # In a production system, you might use Redis or another store for this.

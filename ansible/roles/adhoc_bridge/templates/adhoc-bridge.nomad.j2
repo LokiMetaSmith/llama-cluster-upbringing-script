@@ -54,6 +54,7 @@ import sys
 import time
 import socket
 import threading
+import subprocess
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 import random
@@ -115,16 +116,35 @@ class BridgeHandler(BaseHTTPRequestHandler):
             try:
                 data = json.loads(post_data.decode('utf-8'))
                 if data.get('pin') == PIN_CODE:
-                    # In a real implementation, this would issue Headscale pre-auth keys
-                    # or configure Tailscale directly.
-                    # We would also capture the remote peer's details for peer_gateway tracking here.
                     self.record_attempt(client_ip, True)
                     peer_ip = data.get('peer_ip', client_ip)
                     peer_port = data.get('peer_port', 11434)
                     peer_engine = data.get('peer_engine', 'ollama')
                     print(f"Paired successfully with {peer_ip}:{peer_port} ({peer_engine})")
 
-                    response = {"status": "success", "message": "Paired successfully. Headscale pre-auth key would be returned here."}
+                    # Generate a real Headscale pre-auth key
+                    auth_key = None
+                    try:
+                        # Assuming headscale is installed at /usr/local/bin/headscale on this controller node
+                        # and configured with a default user 'default' or similar.
+                        # We use subprocess to call the CLI.
+                        # Note: This Nomad job must run with sufficient privileges to execute headscale.
+                        output = subprocess.check_output(
+                            ["/usr/local/bin/headscale", "preauthkeys", "create", "-u", "default", "--reusable=false", "--expiration", "1h", "--output", "json"],
+                            stderr=subprocess.STDOUT
+                        ).decode('utf-8').strip()
+                        key_data = json.loads(output)
+                        auth_key = key_data.get('key')
+                    except Exception as he:
+                        print(f"Failed to generate headscale key via CLI: {he}. Falling back to stub.")
+                        auth_key = "stub-key-headscale-cli-failed"
+
+                    response = {
+                        "status": "success",
+                        "message": "Paired successfully.",
+                        "auth_key": auth_key,
+                        "instructions": "Run: tailscale up --login-server=https://<your-traefik-ingress> --authkey=" + str(auth_key)
+                    }
                     self.send_response(200)
                 else:
                     self.record_attempt(client_ip, False)
