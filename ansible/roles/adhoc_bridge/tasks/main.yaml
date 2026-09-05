@@ -1,0 +1,14 @@
+---
+- name: Render adhoc-bridge job template
+  template:
+    src: adhoc-bridge.nomad.j2
+    dest: /opt/nomad/jobs/adhoc-bridge.nomad
+    mode: '0644'
+
+- name: Run adhoc-bridge job
+  command: nomad job run /opt/nomad/jobs/adhoc-bridge.nomad
+  environment:
+    NOMAD_ADDR: "http://127.0.0.1:4646"
+  register: nomad_run
+  changed_when: "'Job registration successful' in nomad_run.stdout"
+  ignore_errors: yes

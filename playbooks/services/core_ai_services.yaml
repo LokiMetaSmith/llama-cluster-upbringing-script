@@ -60,3 +60,12 @@
       tags:
         - tml_interaction
         - interaction_models
+    - role: gpu_telemetry
+      tags:
+        - gpu_telemetry
+    - role: peer_gateway
+      tags:
+        - peer_gateway
+    - role: adhoc_bridge
+      tags:
+        - adhoc_bridge

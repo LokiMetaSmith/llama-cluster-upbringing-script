@@ -191,6 +191,13 @@ if not EXTERNAL_EXPERTS:
         "together_1bit_bonsai_27b": {"model": "prism-ml/1bit-bonsai-27b", "tier": "trivial"}
     }
 
+DYNAMIC_EXPERTS = {}
+
+def get_all_experts() -> dict:
+    experts = EXTERNAL_EXPERTS.copy()
+    experts.update(DYNAMIC_EXPERTS)
+    return experts
+
 def get_expert_scores(db_path: str, external_experts: dict) -> dict:
     """
     Calculates decay-weighted successes and failures for each expert,
@@ -272,7 +279,8 @@ def get_expert_scores(db_path: str, external_experts: dict) -> dict:
 def select_best_expert(tier_filter: str = None) -> str:
     """Selects the highest scoring expert based on Thompson Sampling scores, optionally filtered by tier."""
     try:
-        scores = get_expert_scores(DB_PATH, EXTERNAL_EXPERTS)
+        all_experts = get_all_experts()
+        scores = get_expert_scores(DB_PATH, all_experts)
 
         candidate_scores = {}
         for k, v in scores.items():
@@ -280,8 +288,8 @@ def select_best_expert(tier_filter: str = None) -> str:
                 continue
 
             # If a tier filter is provided, skip experts that don't match
-            if tier_filter and k in EXTERNAL_EXPERTS:
-                expert_tier = EXTERNAL_EXPERTS[k].get("tier")
+            if tier_filter and k in all_experts:
+                expert_tier = all_experts[k].get("tier")
                 if expert_tier and expert_tier != tier_filter:
                     continue
 
@@ -337,10 +345,62 @@ async def get_metrics() -> Dict:
 
 from contextlib import asynccontextmanager
 
+async def poll_consul_catalog():
+    """Periodically polls Consul for services matching 'llama-api-' or 'expert-' to populate DYNAMIC_EXPERTS."""
+    headers = {}
+    token = os.getenv("CONSUL_HTTP_TOKEN")
+    if token:
+        headers["X-Consul-Token"] = token
+
+    while True:
+        try:
+            # Fallback if CONSUL_HTTP_ADDR is not set in env (which can happen during local testing)
+            consul_addr = os.getenv("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
+            consul_url = f"{consul_addr}/v1/catalog/services"
+            async with httpx.AsyncClient(verify=verify_param, timeout=5.0) as client:
+                response = await client.get(consul_url, headers=headers)
+                response.raise_for_status()
+                services = response.json()
+
+            new_dynamic_experts = {}
+            for svc_name in services:
+                if svc_name.startswith("llama-api-") or svc_name.startswith("expert-"):
+                    # Check health to only route to active ones
+                    health_url = f"{consul_addr}/v1/health/service/{svc_name}?passing"
+                    async with httpx.AsyncClient(verify=verify_param, timeout=5.0) as client:
+                        h_response = await client.get(health_url, headers=headers)
+                        h_response.raise_for_status()
+                        h_data = h_response.json()
+
+                        if h_data:
+                            # Parse tags to find model and tier if available
+                            tags = h_data[0]["Service"].get("Tags", [])
+                            tier = "complex"
+                            if "tier-trivial" in tags:
+                                tier = "trivial"
+
+                            model_alias = svc_name
+                            for tag in tags:
+                                if tag.startswith("model-"):
+                                    model_alias = tag[len("model-"):]
+                                    break
+
+                            new_dynamic_experts[svc_name] = {"model": model_alias, "tier": tier}
+
+            global DYNAMIC_EXPERTS
+            DYNAMIC_EXPERTS = new_dynamic_experts
+            logger.debug(f"Polled Consul catalog. Discovered active dynamic experts: {list(DYNAMIC_EXPERTS.keys())}")
+        except Exception as e:
+            logger.error(f"Error polling Consul catalog for dynamic experts: {e}")
+
+        await asyncio.sleep(15) # Poll every 15 seconds
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # On startup, discover the pipecat service in the background so it doesn't block startup
     asyncio.create_task(discover_pipecat_service())
+    # Start polling Consul for dynamic experts
+    asyncio.create_task(poll_consul_catalog())
     yield
 
 # --- FastAPI App ---
@@ -489,8 +549,39 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
         # Force routing to a local/trivial model to prevent expensive frontier model jailbreaks
         tier = "trivial"
 
-    # Dynamic expert selection using Thompson-sampling convex combination filtered by tier
-    selected_expert = select_best_expert(tier_filter=tier)
+    requested_model = payload.get("model", "")
+
+    selected_expert = None
+    all_experts = get_all_experts()
+
+    # 1. Exact alias match (if they requested 'expert-coding', route to it directly)
+    if requested_model in all_experts:
+        selected_expert = requested_model
+
+    # 2. General model translation mapping (e.g. gpt-4o-mini -> local fast model)
+    if not selected_expert:
+        model_translation = {
+            "gpt-4o-mini": "trivial",
+            "gpt-3.5-turbo": "trivial",
+            "gpt-4": "complex",
+            "gpt-4o": "complex",
+            "claude-3-haiku": "trivial",
+            "claude-3-opus": "complex",
+        }
+
+        # If they requested a generalized model, override the tier classification
+        mapped_tier = None
+        for k, v in model_translation.items():
+            if k in requested_model.lower():
+                mapped_tier = v
+                break
+
+        if mapped_tier:
+            tier = mapped_tier
+
+    # 3. If still no expert selected, fallback to dynamic expert selection using Thompson-sampling convex combination filtered by tier
+    if not selected_expert:
+        selected_expert = select_best_expert(tier_filter=tier)
 
     request_id = str(uuid.uuid4())
     event = asyncio.Event()

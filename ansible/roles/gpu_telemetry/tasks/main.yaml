@@ -1,0 +1,14 @@
+---
+- name: Render gpu-telemetry job template
+  template:
+    src: gpu-telemetry.nomad.j2
+    dest: /opt/nomad/jobs/gpu-telemetry.nomad
+    mode: '0644'
+
+- name: Run gpu-telemetry job
+  command: nomad job run /opt/nomad/jobs/gpu-telemetry.nomad
+  environment:
+    NOMAD_ADDR: "http://127.0.0.1:4646"
+  register: nomad_run
+  changed_when: "'Job registration successful' in nomad_run.stdout"
+  ignore_errors: yes

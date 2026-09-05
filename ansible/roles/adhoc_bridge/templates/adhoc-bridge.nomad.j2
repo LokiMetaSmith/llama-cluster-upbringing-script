@@ -1,0 +1,86 @@
+job "adhoc-bridge" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "system"
+  priority    = 50
+
+  group "mdns-listener" {
+    network {
+      mode = "host"
+      port "http" {
+        static = 5555 # Ad-hoc PAIR-style bridge port
+      }
+    }
+
+    task "mdns-agent" {
+      driver = "raw_exec"
+
+      env {
+        CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token }}"
+        CONSUL_HTTP_ADDR  = "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}"
+        NOMAD_NODE_ID     = "${node.unique.id}"
+        NOMAD_NODE_NAME   = "${node.unique.name}"
+      }
+
+      config {
+        command = "/usr/bin/python3"
+        args    = ["local/mdns_bridge.py"]
+      }
+
+      template {
+        data = <<EOH
+import sys
+import time
+import socket
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
+import random
+
+PIN_CODE = str(random.randint(100000, 999999))
+print(f"\n======================================")
+print(f"Ad-Hoc Bridge PIN Code: {PIN_CODE}")
+print(f"======================================\n")
+
+class BridgeHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        if self.path == '/pair':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                if data.get('pin') == PIN_CODE:
+                    # In a real implementation, this would issue Headscale pre-auth keys
+                    # or configure Tailscale directly.
+                    response = {"status": "success", "message": "Paired successfully. Headscale pre-auth key would be returned here."}
+                    self.send_response(200)
+                else:
+                    response = {"status": "error", "message": "Invalid PIN"}
+                    self.send_response(403)
+            except Exception as e:
+                response = {"status": "error", "message": str(e)}
+                self.send_response(400)
+
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+
+def run_server():
+    server_address = ('', 5555)
+    httpd = HTTPServer(server_address, BridgeHandler)
+    print(f"Starting Ad-Hoc PAIR bridge on port 5555...")
+    httpd.serve_forever()
+
+if __name__ == "__main__":
+    run_server()
+EOH
+        destination = "local/mdns_bridge.py"
+        perms       = "755"
+      }
+
+      resources {
+        cpu    = 100
+        memory = 64
+      }
+    }
+  }
+}
