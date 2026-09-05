@@ -1,13 +1,35 @@
 job "adhoc-bridge" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
-  type        = "system"
+  # Changed from system to service with count = 1 to prevent round-robin across unique in-memory PINs
+  type        = "service"
   priority    = 50
 
   group "mdns-listener" {
+    count = 1
     network {
       mode = "host"
       port "http" {
         static = 5555 # Ad-hoc PAIR-style bridge port
+      }
+    }
+
+    service {
+      name = "adhoc-bridge"
+      port = "http"
+
+      tags = [
+        "adhoc-bridge",
+        "http",
+        "traefik.enable=true",
+        "traefik.http.routers.adhoc-bridge.rule=PathPrefix(`/pair`)",
+        "traefik.http.routers.adhoc-bridge.entrypoints=websecure",
+        "traefik.http.routers.adhoc-bridge.tls=true"
+      ]
+
+      check {
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
       }
     }
 
@@ -73,7 +95,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 rate_limits[client_ip] = (1, now)
 
     def do_POST(self):
-        client_ip = self.client_address[0]
+        # Support X-Forwarded-For if routed through Traefik proxy
+        forwarded_for = self.headers.get('X-Forwarded-For')
+        if forwarded_for:
+            client_ip = forwarded_for.split(',')[0].strip()
+        else:
+            client_ip = self.client_address[0]
 
         if self.path == '/pair':
             if not self.check_rate_limit(client_ip):
@@ -112,9 +139,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode('utf-8'))
 
 def run_server():
-    server_address = ('', 5555)
+    # Bind to 0.0.0.0 so Consul health checks and Traefik can route to it via the host LAN IP.
+    # We rely on Traefik for public ingress and host firewalls to prevent direct port 5555 access.
+    server_address = ('0.0.0.0', 5555)
     httpd = HTTPServer(server_address, BridgeHandler)
-    print(f"Starting Ad-Hoc PAIR bridge on port 5555...")
+    print(f"Starting Ad-Hoc PAIR bridge on 0.0.0.0:5555...")
     httpd.serve_forever()
 
 if __name__ == "__main__":
