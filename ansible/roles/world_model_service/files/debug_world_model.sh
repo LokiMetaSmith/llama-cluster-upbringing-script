@@ -57,7 +57,7 @@ else
     echo "listener 1883 0.0.0.0" > /tmp/mosquitto-debug/mosquitto.conf
     echo "allow_anonymous true" >> /tmp/mosquitto-debug/mosquitto.conf
 
-    docker run -d --name $MQTT_CONTAINER_NAME \
+    docker run -d --rm --name $MQTT_CONTAINER_NAME \
         --net=host \
         -v /tmp/mosquitto-debug/mosquitto.conf:/mosquitto/config/mosquitto.conf \
         $MQTT_IMAGE
@@ -81,7 +81,7 @@ echo "Running world model container..."
 HOST_IP=$(hostname -I | awk '{print $1}')
 echo "Detected Host IP: $HOST_IP"
 
-docker run -d --name $CONTAINER_NAME \
+docker run -d --rm --name $CONTAINER_NAME \
   --net=host \
   -e NOMAD_PORT_http=$DEBUG_PORT \
   -e PYTHONUNBUFFERED=1 \

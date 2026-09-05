@@ -44,10 +44,11 @@ if [ "$POST_BOOTSTRAP" -eq 1 ]; then
     fi
     sudo du -sh /tmp/*.zip /tmp/*.tgz /tmp/*.tar /tmp/*.sh 2>/dev/null || echo "No large temp archives found."
 
-    # 1. Safely Prune Docker Build Cache
+    # 1. Safely Prune Docker Build Cache and Anonymous Volumes
     if command -v docker &> /dev/null; then
-        echo -e "\n${BOLD}🐳 Pruning Docker Build Cache...${NC}"
+        echo -e "\n${BOLD}🐳 Pruning Docker Build Cache and Anonymous Volumes...${NC}"
         docker builder prune --all --force
+        docker system prune --force --volumes
     fi
 
     # 2. Safely Clean UV / PIP Caches

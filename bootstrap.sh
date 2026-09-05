@@ -936,7 +936,7 @@ if [ "$USE_CONTAINER" = true ]; then
             exit 1
         fi
 
-        DOCKER_RUN_CMD=(docker run -d --privileged --name "$CONTAINER_NAME" \
+        DOCKER_RUN_CMD=(docker run -d --rm --privileged --name "$CONTAINER_NAME" \
             --hostname "$CONTAINER_NAME" \
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw --cgroupns=host \
             -v "$SCRIPT_DIR":/opt/cluster-infra -e "HOST_IP=$HOST_IP")
