@@ -130,7 +130,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         # We use subprocess to call the CLI.
                         # Note: This Nomad job must run with sufficient privileges to execute headscale.
                         output = subprocess.check_output(
-                            ["/usr/local/bin/headscale", "preauthkeys", "create", "-u", "default", "--reusable=false", "--expiration", "1h", "--output", "json"],
+                            ["/usr/local/bin/headscale", "preauthkeys", "create", "-u", "default", "--reusable=false", "--expiration", "5m", "--output", "json"],
                             stderr=subprocess.STDOUT
                         ).decode('utf-8').strip()
                         key_data = json.loads(output)
