@@ -40,7 +40,10 @@ NODE_NAME = os.environ.get("NOMAD_NODE_NAME", "unknown")
 SERVICE_NAME = "gpu-telemetry"
 SERVICE_ID = f"gpu-telemetry-{NODE_NAME}"
 
+import re
+
 def get_vram_info():
+    # Try NVIDIA first
     try:
         output = subprocess.check_output(
             ["nvidia-smi", "--query-gpu=memory.free,memory.total,utilization.gpu", "--format=csv,nounits,noheader"],
@@ -56,9 +59,53 @@ def get_vram_info():
                     "total_mb": int(parts[1]),
                     "util_pct": int(parts[2])
                 })
-        return gpus
+        if gpus:
+            return gpus
     except Exception:
-        return None
+        pass
+
+    # Fallback to AMD rocm-smi
+    try:
+        output = subprocess.check_output(
+            ["rocm-smi", "--showmeminfo", "vram", "--showuse"],
+            stderr=subprocess.DEVNULL
+        ).decode('utf-8').strip()
+
+        parsed_gpus = {}
+        for line in output.split('\n'):
+            match = re.search(r'GPU\[(\d+)\]', line)
+            if not match:
+                continue
+            idx = match.group(1)
+            if idx not in parsed_gpus:
+                parsed_gpus[idx] = {"total_b": 0, "used_b": 0, "util_pct": 0}
+
+            if "VRAM Total Memory" in line:
+                val = re.search(r':\s*(\d+)', line)
+                if val: parsed_gpus[idx]["total_b"] = int(val.group(1))
+            elif "VRAM Total Used Memory" in line:
+                val = re.search(r':\s*(\d+)', line)
+                if val: parsed_gpus[idx]["used_b"] = int(val.group(1))
+            elif "GPU use" in line:
+                val = re.search(r':\s*(\d+)', line)
+                if val: parsed_gpus[idx]["util_pct"] = int(val.group(1))
+
+        gpus = []
+        for idx, data in parsed_gpus.items():
+            total_mb = data["total_b"] // (1024*1024)
+            used_mb = data["used_b"] // (1024*1024)
+            free_mb = max(0, total_mb - used_mb)
+            gpus.append({
+                "free_mb": free_mb,
+                "total_mb": total_mb,
+                "util_pct": data["util_pct"]
+            })
+        if gpus:
+            return gpus
+    except Exception:
+        pass
+
+    return None
 
 def register_service(vram_tags):
     url = f"{CONSUL_HTTP_ADDR}/v1/agent/service/register"
