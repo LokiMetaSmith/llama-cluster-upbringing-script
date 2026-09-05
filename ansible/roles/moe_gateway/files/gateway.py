@@ -387,9 +387,10 @@ async def poll_consul_catalog():
 
                             new_dynamic_experts[svc_name] = {"model": model_alias, "tier": tier}
 
-            global DYNAMIC_EXPERTS
-            DYNAMIC_EXPERTS = new_dynamic_experts
-            logger.debug(f"Polled Consul catalog. Discovered active dynamic experts: {list(DYNAMIC_EXPERTS.keys())}")
+            if new_dynamic_experts:
+                global DYNAMIC_EXPERTS
+                DYNAMIC_EXPERTS = new_dynamic_experts
+                logger.debug(f"Polled Consul catalog. Discovered active dynamic experts: {list(DYNAMIC_EXPERTS.keys())}")
         except Exception as e:
             logger.error(f"Error polling Consul catalog for dynamic experts: {e}")
 
@@ -398,10 +399,14 @@ async def poll_consul_catalog():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # On startup, discover the pipecat service in the background so it doesn't block startup
-    asyncio.create_task(discover_pipecat_service())
+    t1 = asyncio.create_task(discover_pipecat_service())
     # Start polling Consul for dynamic experts
-    asyncio.create_task(poll_consul_catalog())
-    yield
+    t2 = asyncio.create_task(poll_consul_catalog())
+    try:
+        yield
+    finally:
+        t1.cancel()
+        t2.cancel()
 
 # --- FastAPI App ---
 app = FastAPI(
@@ -571,9 +576,10 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
 
         # If they requested a generalized model, override the tier classification
         mapped_tier = None
-        for k, v in model_translation.items():
+        # Sort keys by length descending to prevent substring collisions (e.g. gpt-4o vs gpt-4)
+        for k in sorted(model_translation.keys(), key=len, reverse=True):
             if k in requested_model.lower():
-                mapped_tier = v
+                mapped_tier = model_translation[k]
                 break
 
         if mapped_tier:
