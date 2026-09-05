@@ -101,18 +101,16 @@ def update_ttl():
 def main():
     while True:
         vram = get_vram_info()
-        tags = ["gpu-telemetry"]
         if vram:
+            tags = ["gpu-telemetry"]
             total_free = sum(g["free_mb"] for g in vram)
             avg_util = sum(g["util_pct"] for g in vram) // len(vram) if vram else 0
             tags.append(f"vram-free-{total_free}")
             tags.append(f"gpu-util-{avg_util}")
             tags.append("has-gpu-true")
-        else:
-            tags.append("has-gpu-false")
 
-        register_service(tags)
-        update_ttl()
+            register_service(tags)
+            update_ttl()
         time.sleep(15)
 
 if __name__ == "__main__":

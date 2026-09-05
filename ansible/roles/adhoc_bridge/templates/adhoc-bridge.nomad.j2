@@ -41,9 +41,48 @@ print(f"\n======================================")
 print(f"Ad-Hoc Bridge PIN Code: {PIN_CODE}")
 print(f"======================================\n")
 
+# Ephemeral PIN logic:
+# Implement a basic rate limit dictionary mapping IP -> (attempts, last_attempt_time)
+rate_limits = {}
+MAX_ATTEMPTS = 5
+LOCKOUT_TIME = 60 # seconds
+
 class BridgeHandler(BaseHTTPRequestHandler):
+    def check_rate_limit(self, client_ip):
+        now = time.time()
+        if client_ip in rate_limits:
+            attempts, last_time = rate_limits[client_ip]
+            if attempts >= MAX_ATTEMPTS:
+                if now - last_time < LOCKOUT_TIME:
+                    return False
+                else:
+                    # Reset lockout
+                    rate_limits[client_ip] = (0, now)
+        return True
+
+    def record_attempt(self, client_ip, success):
+        now = time.time()
+        if success:
+            if client_ip in rate_limits:
+                del rate_limits[client_ip]
+        else:
+            if client_ip in rate_limits:
+                attempts, _ = rate_limits[client_ip]
+                rate_limits[client_ip] = (attempts + 1, now)
+            else:
+                rate_limits[client_ip] = (1, now)
+
     def do_POST(self):
+        client_ip = self.client_address[0]
+
         if self.path == '/pair':
+            if not self.check_rate_limit(client_ip):
+                self.send_response(429)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": "Rate limit exceeded"}).encode('utf-8'))
+                return
+
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             try:
@@ -51,9 +90,17 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if data.get('pin') == PIN_CODE:
                     # In a real implementation, this would issue Headscale pre-auth keys
                     # or configure Tailscale directly.
+                    # We would also capture the remote peer's details for peer_gateway tracking here.
+                    self.record_attempt(client_ip, True)
+                    peer_ip = data.get('peer_ip', client_ip)
+                    peer_port = data.get('peer_port', 11434)
+                    peer_engine = data.get('peer_engine', 'ollama')
+                    print(f"Paired successfully with {peer_ip}:{peer_port} ({peer_engine})")
+
                     response = {"status": "success", "message": "Paired successfully. Headscale pre-auth key would be returned here."}
                     self.send_response(200)
                 else:
+                    self.record_attempt(client_ip, False)
                     response = {"status": "error", "message": "Invalid PIN"}
                     self.send_response(403)
             except Exception as e:

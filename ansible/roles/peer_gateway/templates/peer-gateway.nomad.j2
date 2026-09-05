@@ -46,9 +46,15 @@ ENGINES = {
     "lmstudio": {"port": 1234, "path": "/v1/models"}
 }
 
-def check_engine(port, path):
+def get_peer_endpoints():
+    endpoints = [("127.0.0.1", port) for port in [11434, 1234]]
+    # In a real implementation, this would query a KV store or local file
+    # populated by the adhoc-bridge to include remote peers (e.g. 100.64.x.x)
+    return endpoints
+
+def check_engine(ip, port, path):
     try:
-        url = f"http://127.0.0.1:{port}{path}"
+        url = f"http://{ip}:{port}{path}"
         req = urllib.request.Request(url)
         with urllib.request.urlopen(req, timeout=2) as response:
             data = json.loads(response.read().decode())
@@ -61,10 +67,11 @@ def check_engine(port, path):
     except Exception:
         return []
 
-def register_service(engine_name, port, models):
+def register_service(engine_name, ip, port, models):
     for model in models:
         safe_model_name = model.replace(":", "-").replace("/", "-")
-        service_id = f"peer-{engine_name}-{safe_model_name}-{NODE_NAME}"
+        safe_ip = ip.replace(".", "-")
+        service_id = f"peer-{engine_name}-{safe_model_name}-{safe_ip}-{NODE_NAME}"
 
         url = f"{CONSUL_HTTP_ADDR}/v1/agent/service/register"
         headers = {"Content-Type": "application/json"}
@@ -76,12 +83,13 @@ def register_service(engine_name, port, models):
             "ID": service_id,
             "Tags": ["peer-node", engine_name, f"model-{model}", "tier-complex"],
             "Port": port,
+            "Address": ip,
             "Meta": {
                 "node_name": NODE_NAME,
                 "engine": engine_name
             },
             "Check": {
-                "TCP": f"127.0.0.1:{port}",
+                "TCP": f"{ip}:{port}",
                 "Interval": "30s",
                 "Timeout": "2s",
                 "DeregisterCriticalServiceAfter": "2m"
@@ -98,10 +106,15 @@ def register_service(engine_name, port, models):
 def main():
     print(f"Starting peer-gateway discovery on node {NODE_NAME}...")
     while True:
-        for engine, config in ENGINES.items():
-            models = check_engine(config["port"], config["path"])
-            if models:
-                register_service(engine, config["port"], models)
+        endpoints = get_peer_endpoints()
+        for ip, port in endpoints:
+            # Figure out engine type from port (simplified logic)
+            engine = "ollama" if port == 11434 else "lmstudio"
+            config = ENGINES.get(engine)
+            if config:
+                models = check_engine(ip, port, config["path"])
+                if models:
+                    register_service(engine, ip, port, models)
         time.sleep(60)
 
 if __name__ == "__main__":
