@@ -8,7 +8,7 @@
     nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
 
 - name: Prune Docker system to free space
-  ansible.builtin.command: docker system prune --force
+  ansible.builtin.command: docker system prune --force --volumes
   become: yes
   ignore_errors: yes
 
