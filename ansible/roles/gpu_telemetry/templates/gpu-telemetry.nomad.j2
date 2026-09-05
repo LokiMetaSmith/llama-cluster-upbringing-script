@@ -1,0 +1,131 @@
+job "gpu-telemetry" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "system"
+  priority    = 50
+
+  group "gpu-telemetry" {
+    network {
+      mode = "host"
+    }
+
+    task "gpu-telemetry-agent" {
+      driver = "raw_exec"
+
+      env {
+        CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token }}"
+        CONSUL_HTTP_ADDR  = "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}"
+        NOMAD_NODE_ID     = "${node.unique.id}"
+        NOMAD_NODE_NAME   = "${node.unique.name}"
+      }
+
+      config {
+        command = "/usr/bin/python3"
+        args    = ["local/gpu_telemetry.py"]
+      }
+
+      template {
+        data = <<EOH
+import sys
+import subprocess
+import json
+import time
+import os
+import urllib.request
+import urllib.error
+import urllib.parse
+
+CONSUL_HTTP_ADDR = os.environ.get("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
+CONSUL_HTTP_TOKEN = os.environ.get("CONSUL_HTTP_TOKEN", "")
+NODE_NAME = os.environ.get("NOMAD_NODE_NAME", "unknown")
+SERVICE_NAME = "gpu-telemetry"
+SERVICE_ID = f"gpu-telemetry-{NODE_NAME}"
+
+def get_vram_info():
+    try:
+        output = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=memory.free,memory.total,utilization.gpu", "--format=csv,nounits,noheader"],
+            stderr=subprocess.DEVNULL
+        ).decode('utf-8').strip()
+
+        gpus = []
+        for line in output.split('\n'):
+            parts = line.split(', ')
+            if len(parts) == 3:
+                gpus.append({
+                    "free_mb": int(parts[0]),
+                    "total_mb": int(parts[1]),
+                    "util_pct": int(parts[2])
+                })
+        return gpus
+    except Exception:
+        return None
+
+def register_service(vram_tags):
+    url = f"{CONSUL_HTTP_ADDR}/v1/agent/service/register"
+    headers = {"Content-Type": "application/json"}
+    if CONSUL_HTTP_TOKEN:
+        headers["X-Consul-Token"] = CONSUL_HTTP_TOKEN
+
+    data = {
+        "Name": SERVICE_NAME,
+        "ID": SERVICE_ID,
+        "Tags": vram_tags,
+        "Meta": {
+            "node_name": NODE_NAME
+        },
+        "Check": {
+            "TTL": "30s",
+            "DeregisterCriticalServiceAfter": "1m"
+        }
+    }
+
+    req = urllib.request.Request(url, data=json.dumps(data).encode(), headers=headers, method="PUT")
+    try:
+        with urllib.request.urlopen(req) as response:
+            pass
+    except urllib.error.URLError as e:
+        print(f"Failed to register service: {e}")
+
+def update_ttl():
+    url = f"{CONSUL_HTTP_ADDR}/v1/agent/check/pass/service:{SERVICE_ID}"
+    headers = {}
+    if CONSUL_HTTP_TOKEN:
+        headers["X-Consul-Token"] = CONSUL_HTTP_TOKEN
+    req = urllib.request.Request(url, headers=headers, method="PUT")
+    try:
+        with urllib.request.urlopen(req) as response:
+            pass
+    except urllib.error.URLError as e:
+        print(f"Failed to update TTL: {e}")
+
+def main():
+    while True:
+        vram = get_vram_info()
+        tags = ["gpu-telemetry"]
+        if vram:
+            total_free = sum(g["free_mb"] for g in vram)
+            avg_util = sum(g["util_pct"] for g in vram) // len(vram) if vram else 0
+            tags.append(f"vram-free-{total_free}")
+            tags.append(f"gpu-util-{avg_util}")
+            tags.append("has-gpu-true")
+        else:
+            tags.append("has-gpu-false")
+
+        register_service(tags)
+        update_ttl()
+        time.sleep(15)
+
+if __name__ == "__main__":
+    main()
+EOH
+        destination = "local/gpu_telemetry.py"
+        perms       = "755"
+      }
+
+      resources {
+        cpu    = 100
+        memory = 64
+      }
+    }
+  }
+}

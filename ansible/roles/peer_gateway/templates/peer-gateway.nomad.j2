@@ -1,0 +1,120 @@
+job "peer-gateway" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "system"
+  priority    = 50
+
+  group "peer-gateway" {
+    network {
+      mode = "host"
+    }
+
+    task "peer-discovery" {
+      driver = "raw_exec"
+
+      env {
+        CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token }}"
+        CONSUL_HTTP_ADDR  = "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}"
+        NOMAD_NODE_ID     = "${node.unique.id}"
+        NOMAD_NODE_NAME   = "${node.unique.name}"
+      }
+
+      config {
+        command = "/usr/bin/python3"
+        args    = ["local/peer_discovery.py"]
+      }
+
+      template {
+        data = <<EOH
+import sys
+import subprocess
+import json
+import time
+import os
+import urllib.request
+import urllib.error
+import urllib.parse
+import socket
+
+CONSUL_HTTP_ADDR = os.environ.get("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
+CONSUL_HTTP_TOKEN = os.environ.get("CONSUL_HTTP_TOKEN", "")
+NODE_NAME = os.environ.get("NOMAD_NODE_NAME", "unknown")
+SERVICE_NAME_PREFIX = "expert-"
+
+# Peer engines to check locally
+ENGINES = {
+    "ollama": {"port": 11434, "path": "/api/tags"},
+    "lmstudio": {"port": 1234, "path": "/v1/models"}
+}
+
+def check_engine(port, path):
+    try:
+        url = f"http://127.0.0.1:{port}{path}"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=2) as response:
+            data = json.loads(response.read().decode())
+            models = []
+            if "models" in data:
+                models = [m.get("name", m.get("id")) for m in data["models"]]
+            elif "data" in data: # LM Studio format
+                models = [m.get("id") for m in data["data"]]
+            return models
+    except Exception:
+        return []
+
+def register_service(engine_name, port, models):
+    for model in models:
+        safe_model_name = model.replace(":", "-").replace("/", "-")
+        service_id = f"peer-{engine_name}-{safe_model_name}-{NODE_NAME}"
+
+        url = f"{CONSUL_HTTP_ADDR}/v1/agent/service/register"
+        headers = {"Content-Type": "application/json"}
+        if CONSUL_HTTP_TOKEN:
+            headers["X-Consul-Token"] = CONSUL_HTTP_TOKEN
+
+        data = {
+            "Name": f"{SERVICE_NAME_PREFIX}{safe_model_name}",
+            "ID": service_id,
+            "Tags": ["peer-node", engine_name, f"model-{model}", "tier-complex"],
+            "Port": port,
+            "Meta": {
+                "node_name": NODE_NAME,
+                "engine": engine_name
+            },
+            "Check": {
+                "TCP": f"127.0.0.1:{port}",
+                "Interval": "30s",
+                "Timeout": "2s",
+                "DeregisterCriticalServiceAfter": "2m"
+            }
+        }
+
+        req = urllib.request.Request(url, data=json.dumps(data).encode(), headers=headers, method="PUT")
+        try:
+            with urllib.request.urlopen(req) as response:
+                pass
+        except urllib.error.URLError as e:
+            print(f"Failed to register peer service {service_id}: {e}")
+
+def main():
+    print(f"Starting peer-gateway discovery on node {NODE_NAME}...")
+    while True:
+        for engine, config in ENGINES.items():
+            models = check_engine(config["port"], config["path"])
+            if models:
+                register_service(engine, config["port"], models)
+        time.sleep(60)
+
+if __name__ == "__main__":
+    main()
+EOH
+        destination = "local/peer_discovery.py"
+        perms       = "755"
+      }
+
+      resources {
+        cpu    = 50
+        memory = 32
+      }
+    }
+  }
+}
