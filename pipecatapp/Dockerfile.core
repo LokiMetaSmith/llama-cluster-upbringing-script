@@ -1,0 +1,37 @@
+# Use an official Python runtime as a parent image
+FROM python:3.12-slim-bookworm
+
+# Set the working directory in the container
+WORKDIR /opt/pipecatapp
+
+# Install core system dependencies (exclude heavy GUI/Rust/Playwright deps)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-dev \
+    portaudio19-dev \
+    libevent-2.1-7 \
+    libgstreamer-plugins-bad1.0-0 \
+    libflite1 \
+    gstreamer1.0-libav \
+    pkg-config \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create and activate virtual environment
+RUN python3 -m venv /opt/pipecat_venv
+ENV PATH="/opt/pipecat_venv/bin:$PATH"
+
+# Install Python packages
+COPY requirements-core.txt .
+RUN pip install --no-cache-dir -r requirements-core.txt
+
+# Copy the rest of the application source code
+COPY . .
+
+# Move the startup script to /opt/ to avoid being masked by bind mounts
+RUN mv /opt/pipecatapp/start_pipecat.sh /opt/start_pipecat.sh && chmod +x /opt/start_pipecat.sh
+
+# Set the entrypoint for the container
+RUN useradd -m -s /bin/bash pipecatapp && chown -R pipecatapp:pipecatapp /opt/pipecatapp /opt/pipecat_venv /opt/start_pipecat.sh
+USER pipecatapp
+ENTRYPOINT ["/opt/start_pipecat.sh"]

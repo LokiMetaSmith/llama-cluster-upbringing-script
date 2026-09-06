@@ -162,11 +162,29 @@
     mode: '0755'
   become: yes
 
-- name: Copy requirements.txt
+- name: Copy requirements-core.txt
   ansible.builtin.copy:
     mode: '0644'
-    src: "{{ project_root }}/pipecatapp/requirements.txt"
-    dest: "{{ pipecat_app_dir }}/requirements.txt"
+    src: "{{ project_root }}/pipecatapp/requirements-core.txt"
+    dest: "{{ pipecat_app_dir }}/requirements-core.txt"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy requirements-browser.txt
+  ansible.builtin.copy:
+    mode: '0644'
+    src: "{{ project_root }}/pipecatapp/requirements-browser.txt"
+    dest: "{{ pipecat_app_dir }}/requirements-browser.txt"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy start_browser.sh
+  ansible.builtin.copy:
+    mode: '0755'
+    src: "{{ project_root }}/pipecatapp/start_browser.sh"
+    dest: "{{ pipecat_app_dir }}/start_browser.sh"
   become: yes
   tags:
     - deploy_app
@@ -1108,11 +1126,20 @@
 
 
 
-- name: Copy Dockerfile
+- name: Copy Dockerfile.core
   ansible.builtin.copy:
     mode: '0644'
-    src: "{{ project_root }}/pipecatapp/Dockerfile"
-    dest: "{{ pipecat_app_dir }}/Dockerfile"
+    src: "{{ project_root }}/pipecatapp/Dockerfile.core"
+    dest: "{{ pipecat_app_dir }}/Dockerfile.core"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy Dockerfile.browser
+  ansible.builtin.copy:
+    mode: '0644'
+    src: "{{ project_root }}/pipecatapp/Dockerfile.browser"
+    dest: "{{ pipecat_app_dir }}/Dockerfile.browser"
   become: yes
   tags:
     - deploy_app

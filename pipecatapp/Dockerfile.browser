@@ -1,0 +1,50 @@
+# Use an official Python runtime as a parent image
+FROM python:3.12-slim-bookworm
+
+# Set the working directory in the container
+WORKDIR /opt/pipecatapp
+
+# Install system dependencies (GUI/Browsers)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-dev \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libgtk-3-0 \
+    libatk1.0-0 \
+    libnss3 \
+    libgtk-4-1 \
+    libgraphene-1.0-0 \
+    libxslt1.1 \
+    libwebpdemux2 \
+    libwoff1 \
+    libharfbuzz-icu0 \
+    libenchant-2-2 \
+    libsecret-1-0 \
+    libhyphen0 \
+    libmanette-0.2-0 \
+    libgles2 \
+    libasound2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create and activate virtual environment
+RUN python3 -m venv /opt/pipecat_venv
+ENV PATH="/opt/pipecat_venv/bin:$PATH"
+
+# Install Python packages
+COPY requirements-browser.txt .
+RUN pip install --no-cache-dir -r requirements-browser.txt
+
+# Install Playwright browsers
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
+RUN playwright install
+
+# Copy browser specific start script if any
+COPY start_browser.sh /opt/start_browser.sh
+RUN chmod +x /opt/start_browser.sh
+
+RUN useradd -m -s /bin/bash pipecatapp && chown -R pipecatapp:pipecatapp /opt/pipecatapp /opt/pipecat_venv /opt/pw-browsers /opt/start_browser.sh
+USER pipecatapp
+ENTRYPOINT ["/opt/start_browser.sh"]

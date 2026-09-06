@@ -135,10 +135,19 @@ class WebBrowserTool:
 
     async def ensure_initialized(self):
         """Ensures Playwright, Browser, and Page are initialized."""
+        import os
         if not self.playwright:
             self.playwright = await async_playwright().start()
         if not self.browser:
-            self.browser = await self.playwright.chromium.launch()
+            # Connect to a remote browser runner using CDP
+            # Default to consul service discovery domain or cluster IP if available
+            remote_browser_url = os.getenv("PLAYWRIGHT_REMOTE_URL", "ws://browser-runner.service.consul:9222")
+            try:
+                self.browser = await self.playwright.chromium.connect_over_cdp(remote_browser_url)
+            except Exception as e:
+                logging.error(f"Failed to connect to remote browser at {remote_browser_url}: {e}")
+                # Fallback to local launch if possible (e.g. testing)
+                self.browser = await self.playwright.chromium.launch()
         if not self.page:
             self.page = await self.browser.new_page()
 
