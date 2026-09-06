@@ -145,16 +145,20 @@ if trusted_proxies_env:
     app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted_hosts)
     logging.info(f"Enabled ProxyHeadersMiddleware with trusted hosts: {trusted_hosts}")
 
-def is_origin_allowed(origin: str, allowed_origins: list) -> bool:
+def get_allowed_origins() -> list[str]:
+    """Returns the currently configured allowed origins."""
+    return allowed_origins
+
+def is_origin_allowed(origin: str, current_allowed_origins: list) -> bool:
     """Checks if the given origin is allowed based on the configuration."""
-    if "*" in allowed_origins:
+    if "*" in current_allowed_origins:
         return True
     if not origin:
         # Reject requests without an Origin header for strict security,
         # unless you expect non-browser clients that don't send it.
         # For this web-based agent, we expect browsers.
         return False
-    return origin in allowed_origins
+    return origin in current_allowed_origins
 
 # Security Enhancement: Rate Limiters
 # Strict limiter for sensitive operations (10 requests per minute)
@@ -315,8 +319,9 @@ async def websocket_endpoint(websocket: WebSocket):
     origin = websocket.headers.get("origin")
 
     # 1. Check strict list first (if configured)
-    if allowed_origins:
-        if not is_origin_allowed(origin, allowed_origins):
+    current_origins = get_allowed_origins()
+    if current_origins:
+        if not is_origin_allowed(origin, current_origins):
             logging.warning(f"Rejected WebSocket connection from untrusted origin: {origin}")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
