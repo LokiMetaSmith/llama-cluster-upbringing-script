@@ -1,36 +1,23 @@
---index-url https://download.pytorch.org/whl/cpu
 --extra-index-url https://pypi.org/simple
 setuptools
 wheel
 Cython>=3.0.0
-torch
-torchvision
-torchaudio
-accelerate
 aiohttp
 apscheduler
 beautifulsoup4
-ctranslate2==4.7.1
 docker
 duckduckgo-search
-einops
-espeakng_loader
 faiss-cpu
 fastapi
-faster-whisper>=1.0.3
 fugashi-plus
 httpx
 huggingface-hub
-https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-none-any.whl
 langchain
 langchain-community
 langchain-core
-misaki[en] @ git+https://github.com/hexgrad/misaki.git@fba1236595f2d2bf21d414ba6e57d25256afada3
 python-nomad
 num2words
 numpy
-onnxruntime
-opencv-python-headless
 pandas
 paramiko
 pillow>=10.4.0
@@ -39,24 +26,19 @@ pipecat-ai-whisker
 piper-tts
 kokoro
 wyoming
-playwright
 pydantic
 python-consul2
 llama-cpp-python
 python-multipart
-pyvips-binary
 PyYAML
 jinja2
 RealtimeSTT>=0.3.100
 litert-lm>=0.10.1
 webrtcvad-wheels==2.0.14
 requests
-sentence-transformers
 soundfile
 spacy>=3.8.0,<4.0.0
 thinc>=8.3.13,<8.4.0
-transformers
-ultralytics
 uvicorn
 websockets>=13.1
 wikipedia
@@ -108,3 +90,5 @@ smolagents
 aiofiles>=24.1.0,<27
 datasets>=4.0.0
 jupyter-client
+playwright
+onnxruntime

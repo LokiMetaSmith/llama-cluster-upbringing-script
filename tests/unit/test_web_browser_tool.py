@@ -27,6 +27,7 @@ class TestWebBrowserTool(unittest.IsolatedAsyncioTestCase):
 
         # Make chromium.launch an AsyncMock
         self.mock_playwright_instance.chromium.launch = AsyncMock(return_value=self.mock_browser)
+        self.mock_playwright_instance.chromium.connect_over_cdp = AsyncMock(return_value=self.mock_browser)
 
         # Make browser.new_page an AsyncMock
         self.mock_browser.new_page = AsyncMock(return_value=self.mock_page)
@@ -41,7 +42,7 @@ class TestWebBrowserTool(unittest.IsolatedAsyncioTestCase):
 
         # Verify initialization happened
         self.mock_async_playwright.return_value.start.assert_awaited()
-        self.mock_playwright_instance.chromium.launch.assert_awaited()
+        self.mock_playwright_instance.chromium.connect_over_cdp.assert_awaited()
         self.mock_browser.new_page.assert_awaited()
 
         # Verify action

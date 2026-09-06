@@ -16,19 +16,35 @@
   become: yes
   when: pipecat_deployment_style == 'docker'
 
-- name: Get checksum of Dockerfile
+- name: Get checksum of Dockerfile.core
   ansible.builtin.stat:
-    path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}/Dockerfile"
+    path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}/Dockerfile.core"
     checksum_algorithm: sha256
-  register: dockerfile_stat
+  register: dockerfile_core_stat
   become: yes
   when: pipecat_deployment_style == 'docker'
 
-- name: Get checksum of requirements.txt
+- name: Get checksum of Dockerfile.browser
   ansible.builtin.stat:
-    path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}/requirements.txt"
+    path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}/Dockerfile.browser"
     checksum_algorithm: sha256
-  register: requirements_stat
+  register: dockerfile_browser_stat
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Get checksum of requirements-core.txt
+  ansible.builtin.stat:
+    path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}/requirements-core.txt"
+    checksum_algorithm: sha256
+  register: requirements_core_stat
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Get checksum of requirements-browser.txt
+  ansible.builtin.stat:
+    path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}/requirements-browser.txt"
+    checksum_algorithm: sha256
+  register: requirements_browser_stat
   become: yes
   when: pipecat_deployment_style == 'docker'
 
@@ -40,9 +56,17 @@
   become: yes
   when: pipecat_deployment_style == 'docker'
 
+- name: Get checksum of start_browser.sh
+  ansible.builtin.stat:
+    path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}/start_browser.sh"
+    checksum_algorithm: sha256
+  register: start_browser_script_stat
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
 - name: Generate build configuration hash
   ansible.builtin.set_fact:
-    pipecat_build_hash: "{{ (dockerfile_stat.stat.checksum ~ requirements_stat.stat.checksum ~ startup_script_stat.stat.checksum) | hash('sha256') }}"
+    pipecat_build_hash: "{{ (dockerfile_core_stat.stat.checksum ~ dockerfile_browser_stat.stat.checksum ~ requirements_core_stat.stat.checksum ~ requirements_browser_stat.stat.checksum ~ startup_script_stat.stat.checksum ~ start_browser_script_stat.stat.checksum) | hash('sha256') }}"
   when: pipecat_deployment_style == 'docker'
 
 - name: Set versioned tag
@@ -50,34 +74,79 @@
     pipecat_versioned_tag: "expert-{{ pipecat_build_hash }}"
   when: pipecat_deployment_style == 'docker'
 
-- name: Check if versioned image exists locally
-  ansible.builtin.command: "docker image inspect {{ pipecat_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag }}"
-  register: versioned_image_check
+- name: Check if versioned core image exists locally
+  ansible.builtin.command: "docker image inspect {{ pipecat_image_name | default('pipecatapp') }}-core:{{ pipecat_versioned_tag }}"
+  register: versioned_image_check_core
   failed_when: false
   changed_when: false
   become: yes
   when: pipecat_deployment_style == 'docker'
 
-- name: Build pipecatapp Docker image (if missing)
-  community.docker.docker_image:
-    name: "{{ pipecat_image_name | default('pipecatapp') }}"
-    tag: "{{ pipecat_versioned_tag }}"
-    build:
-      path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}"
-      nocache: true
-    source: build
-    force_source: true
-  register: build_result
-  become: yes
-  when: pipecat_deployment_style == 'docker' and versioned_image_check.rc != 0
-
-- name: Tag image with stable tag
-  ansible.builtin.command: "docker tag {{ pipecat_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag }} {{ pipecat_image_name | default('pipecatapp') }}:{{ pipecat_image_tag | default('local') }}"
+- name: Check if versioned browser image exists locally
+  ansible.builtin.command: "docker image inspect {{ pipecat_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag }}"
+  register: versioned_image_check_browser
+  failed_when: false
+  changed_when: false
   become: yes
   when: pipecat_deployment_style == 'docker'
 
-- name: Export pipecatapp image to tarball
-  ansible.builtin.command: "docker save -o /opt/{{ pipecat_image_name | default('pipecatapp') }}.tar {{ pipecat_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag }}"
+- name: Build pipecat-core Docker image (if missing)
+  community.docker.docker_image:
+    name: "{{ pipecat_image_name | default('pipecatapp') }}-core"
+    tag: "{{ pipecat_versioned_tag }}"
+    build:
+      path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}"
+      dockerfile: Dockerfile.core
+      nocache: true
+    source: build
+    force_source: true
+  register: build_result_core
+  become: yes
+  when: pipecat_deployment_style == 'docker' and versioned_image_check_core.rc != 0
+
+- name: Build pipecat-browser Docker image (if missing)
+  community.docker.docker_image:
+    name: "{{ pipecat_image_name | default('pipecatapp') }}-browser"
+    tag: "{{ pipecat_versioned_tag }}"
+    build:
+      path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}"
+      dockerfile: Dockerfile.browser
+      nocache: true
+    source: build
+    force_source: true
+  register: build_result_browser
+  become: yes
+  when: pipecat_deployment_style == 'docker' and versioned_image_check_browser.rc != 0
+
+- name: Tag core image with stable tag
+  ansible.builtin.command: "docker tag {{ pipecat_image_name | default('pipecatapp') }}-core:{{ pipecat_versioned_tag }} {{ pipecat_image_name | default('pipecatapp') }}-core:{{ pipecat_image_tag | default('local') }}"
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Tag browser image with stable tag
+  ansible.builtin.command: "docker tag {{ pipecat_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag }} {{ pipecat_image_name | default('pipecatapp') }}-browser:{{ pipecat_image_tag | default('local') }}"
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+# Also tag core as the default pipecatapp for backwards compatibility for any job templates that still refer to just "pipecatapp"
+- name: Tag core image as generic pipecatapp
+  ansible.builtin.command: "docker tag {{ pipecat_image_name | default('pipecatapp') }}-core:{{ pipecat_versioned_tag }} {{ pipecat_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag }}"
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Tag core image as generic pipecatapp (local tag)
+  ansible.builtin.command: "docker tag {{ pipecat_image_name | default('pipecatapp') }}-core:{{ pipecat_versioned_tag }} {{ pipecat_image_name | default('pipecatapp') }}:{{ pipecat_image_tag | default('local') }}"
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+
+- name: Export pipecat-core image to tarball
+  ansible.builtin.command: "docker save -o /opt/{{ pipecat_image_name | default('pipecatapp') }}-core.tar {{ pipecat_image_name | default('pipecatapp') }}-core:{{ pipecat_versioned_tag }}"
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Export pipecat-browser image to tarball
+  ansible.builtin.command: "docker save -o /opt/{{ pipecat_image_name | default('pipecatapp') }}-browser.tar {{ pipecat_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag }}"
   become: yes
   when: pipecat_deployment_style == 'docker'
 
@@ -98,21 +167,40 @@
   become: yes
   when: pipecat_deployment_style == 'docker'
 
-- name: Pin pipecatapp tarball to IPFS and cleanup
+- name: Pin pipecatapp core tarball to IPFS and cleanup
   block:
-    - name: Pin pipecatapp tarball to IPFS
-      ansible.builtin.command: "ipfs add -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}.tar"
-      register: ipfs_add_result
+    - name: Pin pipecatapp core tarball to IPFS
+      ansible.builtin.command: "ipfs add -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}-core.tar"
+      register: ipfs_add_result_core
       environment:
         IPFS_PATH: "{{ ipfs_path }}"
 
-    - name: Set pipecatapp_ipfs_cid fact
+    - name: Set pipecatapp_core_ipfs_cid fact
       ansible.builtin.set_fact:
-        pipecatapp_ipfs_cid: "{{ ipfs_add_result.stdout }}"
+        pipecatapp_core_ipfs_cid: "{{ ipfs_add_result_core.stdout }}"
   always:
-    - name: Clean up temporary tarball
+    - name: Clean up temporary core tarball
       ansible.builtin.file:
-        path: "/opt/{{ pipecat_image_name | default('pipecatapp') }}.tar"
+        path: "/opt/{{ pipecat_image_name | default('pipecatapp') }}-core.tar"
+        state: absent
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
+- name: Pin pipecatapp browser tarball to IPFS and cleanup
+  block:
+    - name: Pin pipecatapp browser tarball to IPFS
+      ansible.builtin.command: "ipfs add -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}-browser.tar"
+      register: ipfs_add_result_browser
+      environment:
+        IPFS_PATH: "{{ ipfs_path }}"
+
+    - name: Set pipecatapp_browser_ipfs_cid fact
+      ansible.builtin.set_fact:
+        pipecatapp_browser_ipfs_cid: "{{ ipfs_add_result_browser.stdout }}"
+  always:
+    - name: Clean up temporary browser tarball
+      ansible.builtin.file:
+        path: "/opt/{{ pipecat_image_name | default('pipecatapp') }}-browser.tar"
         state: absent
   become: yes
   when: pipecat_deployment_style == 'docker'

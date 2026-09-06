@@ -50,6 +50,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
       SSL_KEYFILE            = "${NOMAD_SECRETS_DIR}/internal-key.pem"
       SSL_CERTFILE           = "${NOMAD_SECRETS_DIR}/internal-cert.pem"
+      PLAYWRIGHT_REMOTE_URL = "ws://${NOMAD_ADDR_cdp}"
     }
     {% endset %}
 
@@ -72,6 +73,9 @@ job "{{ job_name | default('pipecat-app') }}" {
       port "http" {
         static = {{ pipecat_port }}
       }
+      port "cdp" {
+        to = 9222
+      }
     }
 
     {% if sound_enabled | default(false) %}
@@ -85,6 +89,9 @@ job "{{ job_name | default('pipecat-app') }}" {
       mode = "host"
       port "http" {
         static = {{ pipecat_port }}
+      }
+      port "cdp" {
+        to = 9222
       }
     }
     {% endif %}
@@ -149,7 +156,7 @@ EOT
 
 
       config {
-        image = "{{ pipecatapp_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag | default('local') }}"
+        image = "{{ pipecatapp_image_name | default('pipecatapp') }}-core:{{ pipecat_versioned_tag | default('local') }}"
         force_pull = false
         ports = ["http"]
         # Mount volumes for models and config. Models are read-only.
@@ -219,5 +226,45 @@ EOT
       }
     }
     {% endif %}
+
+    task "browser-runner" {
+      driver = "docker"
+
+      config {
+        image = "{{ pipecatapp_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag | default('local') }}"
+
+        # Expose the CDP port
+        ports = ["cdp"]
+
+        # Browser might need some shared memory
+        shm_size = 256 * 1024 * 1024 # 256MB
+      }
+
+      env {
+        PLAYWRIGHT_BROWSERS_PATH = "/opt/pw-browsers"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 1024
+      }
+
+      service {
+        name = "browser-runner"
+        port = "cdp"
+
+        tags = [
+          "browser",
+          "playwright"
+        ]
+
+        check {
+          type     = "tcp"
+          port     = "cdp"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
   }
 }
