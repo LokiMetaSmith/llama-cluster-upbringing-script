@@ -57,6 +57,7 @@ from pipecatapp.tools.polyphony_tool import PolyphonyTool
 from pipecatapp.tools.skill_builder_tool import SkillBuilderTool
 from pipecatapp.tools.dynamic_skill_tool import DynamicSkillTool
 from pipecatapp.tools.ast_editor_tool import ASTEditorTool
+from pipecatapp.tools.shunt_tool import ShuntTool
 from pipecatapp.tools.lightweight_project_mapper_tool import LightweightProjectMapperTool
 from pipecatapp.tools.schema_harness_tool import SchemaHarnessTool
 from pipecatapp.tools.schema_mapper_tool import SchemaMapperTool
@@ -152,6 +153,7 @@ def create_tools(config: dict = None, twin_service=None, runner=None, agent_name
         "schema_mapper": SchemaMapperTool(),
         "planner": PlannerTool(twin_service) if twin_service else None,
         "file_editor": FileEditorTool(root_dir="/opt/pipecatapp"),
+        "shunt": ShuntTool(),
         "file_editor_mcp": MCPClientAdapter(
             name="file_editor_mcp",
             server_command="python3",

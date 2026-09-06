@@ -252,6 +252,25 @@ class FileEditorTool:
         """
         try:
             path = self._validate_path(filepath)
+
+            # Check line count guardrail
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    line_count = sum(1 for _ in f)
+            except Exception:
+                line_count = 0
+
+            start_line = view_range[0] if view_range and len(view_range) > 0 else 1
+            end_line = view_range[1] if view_range and len(view_range) > 1 else -1
+
+            lines_requested = line_count
+            if end_line != -1:
+                lines_requested = end_line - start_line + 1
+
+            # Guardrail: block reads larger than 350 lines
+            if lines_requested > 350:
+                return f"Error: File is too large ({line_count} lines). Reading more than 350 lines directly into context is blocked to save tokens. Please use the `shunt` tool with action `bulk_read` to analyze this file, or use `view_range` to read a smaller, targeted portion."
+
             with open(path, 'rb') as f_bin:
                 raw_content = f_bin.read()
                 if b'\r\n' in raw_content:
