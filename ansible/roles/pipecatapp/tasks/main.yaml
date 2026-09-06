@@ -278,7 +278,7 @@
 
 - name: Install python dependencies
   ansible.builtin.command:
-    cmd: "uv pip install -r {{ pipecat_app_dir }}/requirements.txt"
+    cmd: "uv pip install -r {{ pipecat_app_dir }}/requirements-core.txt"
   environment:
     UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "{{ pipecat_app_dir }}/venv"

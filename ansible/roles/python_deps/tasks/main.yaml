@@ -34,8 +34,8 @@
 
 - name: Copy requirements.txt to the application directory
   copy:
-    src: requirements.txt
-    dest: "/opt/pipecatapp/requirements.txt"
+    src: requirements-core.txt
+    dest: "/opt/pipecatapp/requirements-core.txt"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
   become: yes
