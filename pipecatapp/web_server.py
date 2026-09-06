@@ -21,6 +21,7 @@ from pipecatapp.api_keys import get_api_key
 from pipecatapp.security import sanitize_data, escape_html_content
 from pipecatapp.atproto_crypto import generate_key_pair, sign_payload
 from pipecatapp.datalog_engine import DatalogEngine
+from prometheus_client import make_asgi_app, Histogram, Counter
 if __package__:
     from .models import InternalChatRequest, SystemMessageRequest
     from .rate_limiter import RateLimiter
@@ -263,6 +264,22 @@ datalog_engine = DatalogEngine()
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+# Expose Prometheus metrics endpoint
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
+
+# Track WebSocket message cadence
+websocket_cadence_histogram = Histogram(
+    'pipecatapp_websocket_cadence_seconds',
+    'Time elapsed between human prompts on the WebSocket',
+    ['client_ip']
+)
+websocket_message_counter = Counter(
+    'pipecatapp_websocket_messages_total',
+    'Total number of messages received on the WebSocket',
+    ['client_ip', 'message_type']
+)
+
 @app.post("/api/memory/datalog/index", summary="Index Datalog AST", tags=["Datalog"])
 async def index_datalog_code(payload: dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     filepath = payload.get("filepath")
@@ -350,10 +367,23 @@ async def websocket_endpoint(websocket: WebSocket):
             return
 
     await manager.connect(websocket)
+    last_message_time = time.time()
+    client_ip = websocket.client.host if websocket.client else "unknown"
+
     try:
         while True:
             data = await websocket.receive_text()
+            current_time = time.time()
+            elapsed = current_time - last_message_time
+            last_message_time = current_time
+
             message = json.loads(data)
+            msg_type = message.get("type", "unknown")
+
+            websocket_message_counter.labels(client_ip=client_ip, message_type=msg_type).inc()
+            if msg_type == "text" or msg_type == "prompt":
+                websocket_cadence_histogram.labels(client_ip=client_ip).observe(elapsed)
+
             if message.get("type") == "narrative_event":
                 # Real-time WebSocket narrative broadcast adapter for active worker state/bubbles
                 broadcast_data = {

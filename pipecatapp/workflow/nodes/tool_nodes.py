@@ -5,9 +5,16 @@ from ..crypto_receipts import ToolExecutionSigner
 import json
 import inspect
 from pydantic import create_model, ValidationError
+from pipecatapp.datalog_engine import DatalogEngine
+import os
+import asyncio
+from openai import AsyncOpenAI
+import logging
 
 # Global signer instance for the workflow engine
 signer = ToolExecutionSigner()
+datalog_engine = DatalogEngine()
+logger = logging.getLogger(__name__)
 
 @registry.register
 class SystemPromptNode(Node):
@@ -257,6 +264,63 @@ class ToolNode(Node):
             return
 
         tool_instance = tools[tool_name]
+
+        # Pre-flight Laziness Check
+        human_prompt_tools = ["request_user_input", "prompt_human", "ask_user"]
+
+        if tool_name in human_prompt_tools:
+            # Check if this could be answered by Datalog
+            try:
+                # Gather question/prompt from kwargs
+                question = self.config.get("config", {}).get("message") or self.config.get("message") or "Unknown question"
+
+                # Context from Datalog (e.g. facts)
+                # Just fetch the first 100 to avoid blowing context
+                facts = datalog_engine.query()[:100]
+                context_str = "\n".join(str(f) for f in facts)
+
+                gateway_url = os.getenv("GATEWAY_URL", "http://localhost:8081/v1")
+                client = AsyncOpenAI(base_url=gateway_url, api_key="dummy")
+
+                system_prompt = (
+                    "You are a pre-flight validator. Based on the provided context, determine if the question can be answered strictly using the context. "
+                    "If yes, provide the answer and start your response with 'YES:'. If no, start your response with 'NO:'."
+                )
+
+                user_prompt = f"Context:\n{context_str}\n\nQuestion: {question}"
+
+                response = await client.chat.completions.create(
+                    model="openai/local/router",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    extra_body={"tier": "trivial"},
+                    temperature=0.0,
+                    max_tokens=200,
+                    timeout=1.5
+                )
+
+                answer = response.choices[0].message.content.strip()
+                if answer.startswith("YES:"):
+                    # Apply penalty
+                    import time
+                    agent_id = context.workflow_id or "default_agent"
+
+                    # Make the facts unique with timestamp so they accumulate
+                    datalog_engine.assert_fact("deducted", agent_id, 5, time.time())
+                    datalog_engine.assert_fact("penalty_reason", agent_id, f"Lazy prompt: {question}", time.time())
+
+                    # Enforce credit limit
+                    available_credit = datalog_engine.get_available_credit(agent_id)
+                    if available_credit <= 0:
+                        self.set_output(context, "output", f"ESCALATION: Agent '{agent_id}' has depleted its mutual credit ({available_credit}). Interaction suspended.")
+                        return
+
+                    self.set_output(context, "output", f"System Intercept (Laziness Penalty Applied): {answer[4:].strip()}")
+                    return
+            except Exception as e:
+                logger.warning(f"Failed to pre-flight check laziness: {e}")
 
         # Gather arguments from node config or inputs
         kwargs = {}

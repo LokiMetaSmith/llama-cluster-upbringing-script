@@ -5,6 +5,54 @@ from ..node import Node
 from ..context import WorkflowContext
 from pipecatapp.rate_limiter import RateLimiter
 from pipecatapp.tools.vr_tool import VRTool
+import asyncio
+from prometheus_client import Gauge, Counter
+
+# Prometheus metrics for TelemetryNode
+semantic_density_gauge = Gauge(
+    'pipecatapp_semantic_density',
+    'Semantic density score of the agent message',
+    ['node_id', 'agent_id']
+)
+semantic_length_counter = Counter(
+    'pipecatapp_message_words_total',
+    'Total words processed in messages',
+    ['node_id', 'agent_id']
+)
+
+@registry.register
+class TelemetryNode(Node):
+    """
+    A transparent pass-through node that intercepts the payload, calculates
+    semantic density, and asynchronously updates Prometheus metrics.
+    """
+    async def _calculate_metrics(self, payload: str, node_id: str, agent_id: str):
+        if not payload:
+            return
+
+        words = payload.split()
+        num_words = len(words)
+        if num_words == 0:
+            return
+
+        unique_words = len(set(word.lower() for word in words))
+        density = unique_words / num_words
+
+        # Update prometheus metrics
+        semantic_density_gauge.labels(node_id=node_id, agent_id=agent_id).set(density)
+        semantic_length_counter.labels(node_id=node_id, agent_id=agent_id).inc(num_words)
+
+    async def execute(self, context: WorkflowContext):
+        payload = self.get_input(context, "payload")
+        agent_id = self.get_input(context, "agent_id") or "unknown"
+
+        if payload is not None:
+            # Dispatch calculation asynchronously to avoid blocking the workflow execution
+            asyncio.create_task(self._calculate_metrics(str(payload), self.id, agent_id))
+
+        # Pass payload through transparently
+        self.set_output(context, "payload", payload)
+
 
 @registry.register
 class ConsulServiceDiscoveryNode(Node):
