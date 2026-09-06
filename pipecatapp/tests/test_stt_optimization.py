@@ -70,9 +70,9 @@ sys.modules["workflow.nodes.system_nodes"] = MagicMock()
 sys.modules["api_keys"] = MagicMock()
 sys.modules["security"] = MagicMock()
 sys.modules["PIL"] = MagicMock()
-sys.modules["requests"] = MagicMock()
-sys.modules["httpx"] = MagicMock()
-sys.modules["torch"] = MagicMock()
+# sys.modules["requests"] = MagicMock()
+# sys.modules["httpx"] = MagicMock()
+import torch; sys.modules["torch"] = MagicMock(); sys.modules["torch"].__version__ = torch.__version__
 
 # Now we can import the class we want to test
 # We need to use patch because FrameProcessor is imported from pipecat

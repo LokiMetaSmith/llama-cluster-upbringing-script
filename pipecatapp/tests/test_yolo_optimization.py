@@ -16,8 +16,8 @@ sys.modules["piper"] = MagicMock()
 sys.modules["piper.voice"] = MagicMock()
 sys.modules["consul"] = MagicMock()
 sys.modules["consul.aio"] = MagicMock()
-sys.modules["requests"] = MagicMock()
-sys.modules["httpx"] = MagicMock()
+# sys.modules["requests"] = MagicMock()
+# sys.modules["httpx"] = MagicMock()
 sys.modules["paramiko"] = MagicMock()
 sys.modules["fastapi"] = MagicMock()
 sys.modules["fastapi.security"] = MagicMock()
@@ -110,6 +110,9 @@ mock_web_server.manager.broadcast = AsyncMock()
 mock_web_server.manager.active_connections = [1] # Simulate active connection
 sys.modules["web_server"] = mock_web_server
 
+import pipecatapp.web_server
+from unittest.mock import patch
+
 # Mock Ultralytics YOLO
 mock_yolo_class = MagicMock()
 sys.modules["ultralytics"] = MagicMock()
@@ -132,7 +135,9 @@ from pipecatapp.app import YOLOv8Detector
 @pytest.mark.asyncio
 async def test_yolo_inference_optimization():
     # Arrange
-    detector = YOLOv8Detector()
+    with patch.dict(os.environ, {"YOLO_MODEL_PATH": "/tmp/dummy.pt"}):
+        with patch('os.path.exists', return_value=True), patch('os.path.getsize', return_value=1024):
+            detector = YOLOv8Detector()
 
     # Mock the model instance and its return value
     mock_model_instance = mock_yolo_class.return_value
@@ -166,7 +171,8 @@ async def test_yolo_inference_optimization():
     # process_frame is async and calls run_in_executor.
     # For unit testing, calling process_frame is better integration test.
 
-    await detector.process_frame(input_frame, direction=None)
+    with patch.object(pipecatapp.web_server, "manager", mock_web_server.manager):
+        await detector.process_frame(input_frame, direction=None)
 
     # Assert
     # Verify that web_server.manager.broadcast was called with a vision_debug message
