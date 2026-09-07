@@ -32,10 +32,20 @@
   tags:
     - deploy_app
 
-- name: Copy requirements.txt to the application directory
+- name: Copy requirements-core.txt to the application directory
   copy:
-    src: requirements-core.txt
+    src: "{{ project_root | default(playbook_dir ~ '/../..') }}/pipecatapp/requirements-core.txt"
     dest: "/opt/pipecatapp/requirements-core.txt"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+  become: yes
+  tags:
+    - deploy_app
+
+- name: Copy requirements-browser.txt to the application directory
+  copy:
+    src: "{{ project_root | default(playbook_dir ~ '/../..') }}/pipecatapp/requirements-browser.txt"
+    dest: "/opt/pipecatapp/requirements-browser.txt"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
   become: yes
@@ -102,7 +112,7 @@
 
 - name: Install python dependencies with uv
   ansible.builtin.command:
-    cmd: "{{ uv_path.stdout }} pip install -r /opt/pipecatapp/requirements.txt"
+    cmd: "{{ uv_path.stdout }} pip install -r /opt/pipecatapp/requirements-core.txt -r /opt/pipecatapp/requirements-browser.txt"
   environment:
     UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "/opt/pipecatapp/venv"
