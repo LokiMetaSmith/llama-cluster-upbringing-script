@@ -67,6 +67,31 @@ class DatalogEngine:
         # Support map for derived facts: fact_key -> Set of (rule_index, premise_fact_keys_tuple)
         self.support: Dict[Tuple[str, Tuple[Any, ...]], Set[Tuple[int, Tuple[Tuple[str, Tuple[Any, ...]], ...]]]] = {}
 
+        self._initialize_mutual_credit()
+
+    def _initialize_mutual_credit(self):
+        """Initializes the baseline mutual credit balances."""
+        # Setup base credit for default agents/humans
+        self.assert_fact("credit", "default_agent", 100.0)
+        self.assert_fact("credit", "human_operator", 100.0)
+
+    def get_available_credit(self, agent_id: str) -> float:
+        """Calculates the available credit for an agent by subtracting deductions from base."""
+        base_credits = self.query(predicate="credit")
+        base_val = 0.0
+        for fact in base_credits:
+            if fact.args[0] == agent_id:
+                base_val = float(fact.args[1])
+                break
+
+        deductions = self.query(predicate="deducted")
+        total_deducted = 0.0
+        for fact in deductions:
+            if fact.args[0] == agent_id:
+                total_deducted += float(fact.args[1])
+
+        return base_val - total_deducted
+
         # Program AST Analysis Relational Facts Cache
         self.ast_facts: Dict[str, List[tuple]] = {
             "defines_function": [],   # (file, func_name, lineno)
