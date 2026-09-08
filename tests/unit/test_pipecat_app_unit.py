@@ -49,7 +49,7 @@ sys.modules["pipecat.services.openai"] = mock_pipecat.services.openai
 sys.modules["pipecat.services.openai.llm"] = mock_pipecat.services.openai.llm
 
 # Now we can import from the files in ansible/roles/pipecatapp/files
-from pipecatapp.app import TwinService
+from pipecatapp.core.twin import TwinService
 from pipecatapp.web_server import app
 from fastapi.testclient import TestClient
 
@@ -84,16 +84,16 @@ def test_health_check(client):
 async def test_workflow_runner_loads_definition():
     """Tests that the WorkflowRunner can successfully load and parse the default workflow."""
     # We need to mock the nodes and other dependencies to isolate the runner
-    patch('workflow.runner.registry.get_node_class', return_value=MagicMock())
+    patch('pipecatapp.workflow.runner.registry.get_node_class', return_value=MagicMock())
 
     # The path is relative to the `app.py` file's location
     workflow_path = os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp', 'workflows', 'default_agent_loop.yaml')
 
     # Mock yaml loading to avoid relying on actual file contents which may change or be mocked out globally
-    patch('yaml.safe_load', return_value={"id": "test_workflow", "nodes": []})
+    patch('pipecatapp.workflow.runner.yaml.safe_load', return_value={"id": "test_workflow", "nodes": []})
 
     # This will raise an error if the file is not found or is invalid YAML
-    from workflow.runner import WorkflowRunner
+    from pipecatapp.workflow.runner import WorkflowRunner
     runner = WorkflowRunner(workflow_path)
 
     assert runner is not None
@@ -152,7 +152,7 @@ async def test_loop_detection_mechanism():
     mock_config = {"debug_mode": True, "document_backend": {"type": "local", "directory": "/tmp"}}
     mock_approval_queue = asyncio.Queue()
 
-    with patch('app.PMMMemoryClient'), patch('app.PMMMemory'), patch('tools.code_runner_tool.docker.from_env', create=True), patch('tools.skill_builder_tool.MemoryStore'):
+    with patch('pipecatapp.core.twin.PMMMemoryClient'), patch('pipecatapp.core.twin.PMMMemory'), patch('pipecatapp.tools.code_runner_tool.docker.from_env', create=True), patch('pipecatapp.tools.skill_builder_tool.MemoryStore'):
         with patch.dict(os.environ, {"HA_URL": "http://mock-ha", "HA_TOKEN": "mock-token"}):
             service = TwinService(mock_llm, mock_vision, mock_runner, mock_config, mock_approval_queue)
 
@@ -182,7 +182,7 @@ async def test_loop_detection_mechanism():
 
     mock_workflow_runner.run = AsyncMock(side_effect=side_effect_values)
 
-    with patch('pipecatapp.app.WorkflowRunner', return_value=mock_workflow_runner), patch('pipecatapp.web_server.manager.broadcast', new_callable=AsyncMock):
+    with patch('pipecatapp.core.twin.WorkflowRunner', return_value=mock_workflow_runner), patch('pipecatapp.web_server.manager.broadcast', new_callable=AsyncMock):
         with patch.object(service, '_send_response', new_callable=AsyncMock) as mock_send_response:
             service.long_term_memory = MagicMock()
             service.long_term_memory.add_event = AsyncMock()
@@ -193,7 +193,7 @@ async def test_loop_detection_mechanism():
                     self.text = text
                     self.meta = meta or {}
 
-            with patch('pipecatapp.app.TranscriptionFrame', MockTranscriptionFrame):
+            with patch('pipecatapp.core.twin.TranscriptionFrame', MockTranscriptionFrame):
                 frame = MockTranscriptionFrame("Run loop test", meta={"request_id": "test_req"})
 
                 service.push_frame = AsyncMock()
