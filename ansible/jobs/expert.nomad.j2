@@ -121,7 +121,7 @@ echo "Starting llama-server for {{ best_model.filename }}..."
 RPC_SERVERS=""
 {% raw %}
 {{ range service "rpc-{% endraw %}{{ best_model_sanitized }}{% raw %}-provider" }}
-RPC_SERVERS="$RPC_SERVERS,{{ .Name }}.service.consul:{{ .Port }}"
+RPC_SERVERS="$RPC_SERVERS,{{ .Address }}:{{ .Port }}"
 {{ end }}
 {% endraw %}
 # Remove leading comma
@@ -168,7 +168,7 @@ EOH
       }
 
       artifact {
-        source      = "http://${attr.unique.network.ip-address}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ pipecatapp_ipfs_cid }}"
+        source      = "http://{{ cluster_ip | default('100.64.0.1') }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ pipecatapp_ipfs_cid }}"
         destination = "local/pipecatapp.tar"
         mode        = "file"
       }
@@ -222,9 +222,9 @@ EOH
         PIPECAT_API_KEYS = "{{ pipecat_api_keys | default('') }}"
 
         # Necessary for service discovery
-        CONSUL_HOST = "${attr.unique.network.ip-address}"
+        CONSUL_HOST = "{{ cluster_ip | default('100.64.0.1') }}"
         CONSUL_PORT = "8500"
-        CONSUL_HTTP_ADDR = "http://${attr.unique.network.ip-address}:8500"
+        CONSUL_HTTP_ADDR = "http://{{ cluster_ip | default('100.64.0.1') }}:8500"
         CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
       }
 
@@ -258,9 +258,9 @@ EOH
         PIPECAT_API_KEYS = "{{ pipecat_api_keys | default('') }}"
 
         # Necessary for service discovery
-        CONSUL_HOST = "${attr.unique.network.ip-address}"
+        CONSUL_HOST = "{{ cluster_ip | default('100.64.0.1') }}"
         CONSUL_PORT = "8500"
-        CONSUL_HTTP_ADDR = "http://${attr.unique.network.ip-address}:8500"
+        CONSUL_HTTP_ADDR = "http://{{ cluster_ip | default('100.64.0.1') }}:8500"
         CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
       }
 

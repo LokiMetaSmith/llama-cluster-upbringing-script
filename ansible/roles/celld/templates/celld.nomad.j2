@@ -24,7 +24,7 @@ job "celld" {
 
         args = [
           "--bucket", "s3://{{ celld_bucket | default('celld-cells') }}",
-          "--endpoint", "http://minio.service.consul:{{ minio_api_port | default(9000) }}",
+          "--endpoint", "http://{{ cluster_ip | default('100.64.0.1') }}:{{ minio_api_port | default(9000) }}",
           "--listen", "0.0.0.0:{{ celld_port | default(8080) }}",
           "--advertise", "${attr.unique.network.ip-address}:{{ celld_port | default(8080) }}"
         ]

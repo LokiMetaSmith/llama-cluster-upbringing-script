@@ -66,11 +66,11 @@ job "paperless-app" {
       template {
         data = <<EOH
 {{ "{{" }} range service "paperless-redis" {{ "}}" }}
-PAPERLESS_REDIS="redis://{{ "{{" }} .Name {{ "}}" }}.service.consul:{{ "{{" }} .Port {{ "}}" }}"
+PAPERLESS_REDIS="redis://{{ "{{" }} .Address {{ "}}" }}:{{ "{{" }} .Port {{ "}}" }}"
 {{ "{{" }} end {{ "}}" }}
 
 {{ "{{" }} range service "paperless-db" {{ "}}" }}
-PAPERLESS_DBHOST="{{ "{{" }} .Name {{ "}}" }}.service.consul"
+PAPERLESS_DBHOST="{{ "{{" }} .Address {{ "}}" }}"
 PAPERLESS_DBPORT="{{ "{{" }} .Port {{ "}}" }}"
 {{ "{{" }} end {{ "}}" }}
 EOH
