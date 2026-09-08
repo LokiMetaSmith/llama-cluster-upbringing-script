@@ -30,6 +30,13 @@ job "tool-server" {
       read_only = false
     }
 
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
     task "tool-server-task" {
       driver = "docker"
 
@@ -85,13 +92,19 @@ job "tool-server" {
       }
       
       service {
-        name = "tool-server-api"
-        port = "http"
-        tags = ["tool-server-api", "http"]
+        name    = "tool-server-api"
+        port    = "http"
+        address = "${attr.unique.network.ip-address}"
+        tags    = ["tool-server-api", "http"]
 
         check {
           type     = "http"
           path     = "/health"
+          check_restart {
+            limit           = 3
+            grace           = "90s"
+            ignore_warnings = false
+          }
           interval = "15s"
           timeout  = "5s"
         }
