@@ -14,9 +14,10 @@ job "moe-gateway" {
     }
 
     service {
-      name = "moe-gateway"
-      port = "http"
-      tags = ["moe-gateway", "http"]
+      name    = "moe-gateway"
+      port    = "http"
+      address = "${attr.unique.network.ip-address}"
+      tags    = ["moe-gateway", "http"]
 
       check {
         type         = "http"
@@ -32,12 +33,22 @@ job "moe-gateway" {
       }
     }
 
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
     task "gateway-server" {
       driver = "raw_exec"
 
       env {
         CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token }}"
         CONSUL_HTTP_ADDR  = "https://{{ cluster_ip | default('127.0.0.1') }}:{{ consul_https_port | default(8501) }}"
+        HOST              = "0.0.0.0"
+        HOST_IP           = "0.0.0.0"
+        PORT              = "${NOMAD_PORT_http}"
       }
 
       config {
