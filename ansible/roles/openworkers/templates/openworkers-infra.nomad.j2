@@ -29,7 +29,7 @@ job "openworkers-infra" {
       template {
         data = <<EOH
 {{ range service "postgres" }}
-DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Name }}.service.consul:{{ .Port }}/{{ env "postgres_db" }}"
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
 {{ end }}
 EOH
         destination = "local/postgres.env"
@@ -84,17 +84,17 @@ EOH
       template {
         data = <<EOH
 {{ range service "postgres" }}
-POSTGRES_HOST="{{ .Name }}.service.consul"
+POSTGRES_HOST="{{ .Address }}"
 POSTGRES_PORT="{{ .Port }}"
-DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Name }}.service.consul:{{ .Port }}/{{ env "postgres_db" }}"
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
 {{ end }}
 
 {{ range service "nats" }}
-NATS_SERVERS="nats://{{ .Name }}.service.consul:{{ .Port }}"
+NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
 {{ end }}
 
 {{ range service "postgate" }}
-POSTGATE_URL="http://{{ .Name }}.service.consul:{{ .Port }}"
+POSTGATE_URL="http://{{ .Address }}:{{ .Port }}"
 {{ end }}
 EOH
         destination = "local/openworkers.env"
@@ -132,10 +132,10 @@ EOH
       template {
         data = <<EOH
 {{ range service "postgres" }}
-DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Name }}.service.consul:{{ .Port }}/{{ env "postgres_db" }}"
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
 {{ end }}
 {{ range service "nats" }}
-NATS_SERVERS="nats://{{ .Name }}.service.consul:{{ .Port }}"
+NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
 {{ end }}
 EOH
         destination = "local/scheduler.env"
@@ -165,10 +165,10 @@ EOH
       template {
         data = <<EOH
 {{ range service "postgres" }}
-DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Name }}.service.consul:{{ .Port }}/{{ env "postgres_db" }}"
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
 {{ end }}
 {{ range service "nats" }}
-NATS_SERVERS="nats://{{ .Name }}.service.consul:{{ .Port }}"
+NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
 {{ end }}
 EOH
         destination = "local/logs.env"

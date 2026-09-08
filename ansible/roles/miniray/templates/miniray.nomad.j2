@@ -78,7 +78,7 @@ job "miniray" {
 
       template {
         data = <<EOH
-REDIS_HOST="{{ range service "redis" }}{{ .Name }}.service.consul{{ end }}"
+REDIS_HOST="{{ range service "redis" }}{{ .Address }}{{ end }}"
 TRITON_SERVER_ENABLED="0"
 EOH
         destination = "local/env.txt"

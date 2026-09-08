@@ -40,10 +40,10 @@ EOH
         env         = true
       }
       env {
-        AUTHENTIK_REDIS__HOST        = "redis.service.consul"
+        AUTHENTIK_REDIS__HOST        = "{{ '{{' }} range service "redis" {{ '}}' }}{{ '{{' }} .Address {{ '}}' }}{{ '{{' }} end {{ '}}' }}"
         AUTHENTIK_REDIS__PORT        = "6379"
         AUTHENTIK_REDIS__PASSWORD    = ""
-        AUTHENTIK_POSTGRESQL__HOST = "postgres.service.consul"
+        AUTHENTIK_POSTGRESQL__HOST = "{{ '{{' }} range service "postgres" {{ '}}' }}{{ '{{' }} .Address {{ '}}' }}{{ '{{' }} end {{ '}}' }}"
         AUTHENTIK_POSTGRESQL__PORT   = "5432"
         AUTHENTIK_POSTGRESQL__USER = "authentik"
         AUTHENTIK_POSTGRESQL__NAME = "authentik"
@@ -84,10 +84,10 @@ EOH
         env         = true
       }
       env {
-        AUTHENTIK_REDIS__HOST        = "redis.service.consul"
+        AUTHENTIK_REDIS__HOST        = "{{ '{{' }} range service "redis" {{ '}}' }}{{ '{{' }} .Address {{ '}}' }}{{ '{{' }} end {{ '}}' }}"
         AUTHENTIK_REDIS__PORT        = "6379"
         AUTHENTIK_REDIS__PASSWORD    = ""
-        AUTHENTIK_POSTGRESQL__HOST = "postgres.service.consul"
+        AUTHENTIK_POSTGRESQL__HOST = "{{ '{{' }} range service "postgres" {{ '}}' }}{{ '{{' }} .Address {{ '}}' }}{{ '{{' }} end {{ '}}' }}"
         AUTHENTIK_POSTGRESQL__PORT   = "5432"
         AUTHENTIK_POSTGRESQL__USER = "authentik"
         AUTHENTIK_POSTGRESQL__NAME = "authentik"

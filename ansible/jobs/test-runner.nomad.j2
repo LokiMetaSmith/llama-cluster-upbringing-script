@@ -18,7 +18,7 @@ job "test-runner" {
       }
 
       env {
-        TARGET_SERVICE_URL = "http://{{ service_name }}.service.consul:8000"
+        TARGET_SERVICE_URL = "http://{{ '{{' }} range service "{{ service_name }}" {{ '}}' }}{{ '{{' }} .Address {{ '}}' }}:{{ '{{' }} .Port {{ '}}' }}{{ '{{' }} end {{ '}}' }}"
       }
 
       resources {

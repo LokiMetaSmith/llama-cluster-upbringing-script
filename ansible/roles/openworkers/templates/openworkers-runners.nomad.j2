@@ -36,10 +36,10 @@ job "openworkers-runners" {
       template {
         data = <<EOH
 {{ range service "postgres" }}
-DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Name }}.service.consul:{{ .Port }}/{{ env "postgres_db" }}"
+DATABASE_URL="postgres://{{ env "postgres_user" }}:{{ env "postgres_password" }}@{{ .Address }}:{{ .Port }}/{{ env "postgres_db" }}"
 {{ end }}
 {{ range service "nats" }}
-NATS_SERVERS="nats://{{ .Name }}.service.consul:{{ .Port }}"
+NATS_SERVERS="nats://{{ .Address }}:{{ .Port }}"
 {{ end }}
 EOH
         destination = "local/runner.env"
