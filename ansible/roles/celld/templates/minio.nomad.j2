@@ -21,6 +21,13 @@ job "minio" {
       source    = "unified_fs"
     }
 
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
     task "minio" {
       driver = "docker"
 
@@ -47,23 +54,35 @@ job "minio" {
       }
 
       service {
-        name = "minio"
-        port = "api"
+        name    = "minio"
+        port    = "api"
+        address = "${attr.unique.network.ip-address}"
         check {
           name     = "alive"
           type     = "http"
           path     = "/minio/health/live"
+          check_restart {
+            limit           = 3
+            grace           = "90s"
+            ignore_warnings = false
+          }
           interval = "10s"
           timeout  = "2s"
         }
       }
 
       service {
-        name = "minio-console"
-        port = "console"
+        name    = "minio-console"
+        port    = "console"
+        address = "${attr.unique.network.ip-address}"
         check {
           name     = "alive"
           type     = "tcp"
+          check_restart {
+            limit           = 3
+            grace           = "90s"
+            ignore_warnings = false
+          }
           interval = "10s"
           timeout  = "2s"
         }

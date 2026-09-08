@@ -22,13 +22,26 @@ job "influxdb" {
       name     = "influxdb"
       port     = "http"
       provider = "consul"
+      address  = "${attr.unique.network.ip-address}"
 
       check {
         type     = "http"
         path     = "/ping"
+        check_restart {
+          limit           = 3
+          grace           = "90s"
+          ignore_warnings = false
+        }
         interval = "10s"
         timeout  = "2s"
       }
+    }
+
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
     }
 
     task "influxdb" {
