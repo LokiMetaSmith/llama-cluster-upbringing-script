@@ -1,1559 +1,67 @@
 import asyncio
+import json
 import logging
 import os
-import re
-# Set config dir before importing ultralytics to avoid permission errors
-os.environ["YOLO_CONFIG_DIR"] = "/tmp/Ultralytics"
-try:
-    from ultralytics import YOLO
-except ImportError:
-    YOLO = None
-    logging.warning("Ultralytics not found. YOLOv8 vision will be disabled.")
-import time
-import json
-import io
-import wave
-import struct
-import base64
-import cv2
-import inspect
-import threading
 from contextlib import asynccontextmanager
-from collections import defaultdict
-from pipecatapp.network_scanner import scan_network_for_llms
-
-from pipecatapp.gossip_discovery import gossip_registry
-from pipecatapp.services.obsidian_gardener import ObsidianGardener
-from pipecatapp.workflow.runner import WorkflowRunner
-
-from pipecat.frames.frames import (
-    Frame,
-    AudioRawFrame,
-    TextFrame,
-    UserImageRawFrame as VisionImageRawFrame,
-    UserStartedSpeakingFrame,
-    UserStoppedSpeakingFrame,
-    TranscriptionFrame,
-)
-import tempfile
-import uuid
-
-class AudioFileFrame(Frame):
-    """A frame containing a path to an audio file."""
-    def __init__(self, file_path: str, meta: dict = None):
-        super().__init__()
-        self.file_path = file_path
-        self.meta = meta or {}
-from pipecat.pipeline.pipeline import Pipeline
-from pipecat.pipeline.runner import PipelineRunner
-from pipecat.pipeline.task import PipelineTask
-from pipecat.processors.frame_processor import FrameProcessor
-from pipecat.services.openai.llm import OpenAILLMService
-from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
-from faster_whisper import WhisperModel
-from piper.voice import PiperVoice
-from wyoming.client import AsyncTcpClient
-from wyoming.audio import AudioChunk, AudioStart, AudioStop
-from wyoming.asr import Transcribe
-from wyoming.event import Event
-from kokoro import KPipeline
-import requests
-import httpx
-import consul.aio
-import numpy as np
-from pipecatapp.pmm_memory import PMMMemory
-from pipecatapp.pmm_memory_client import PMMMemoryClient
-from pipecatapp.quality_control import CodeQualityAnalyzer
-import pipecatapp.web_server
-from pipecatapp.web_server import approval_queue, text_message_queue
-from pipecatapp.tools.ssh_tool import SSH_Tool
-from pipecatapp.tools.mcp_tool import MCP_Tool
-from pipecatapp.tools.desktop_control_tool import DesktopControlTool
-from pipecatapp.tools.code_runner_tool import CodeRunnerTool
-from pipecatapp.tools.web_browser_tool import WebBrowserTool
-from pipecatapp.tools.ansible_tool import Ansible_Tool
-from pipecatapp.tools.power_tool import Power_Tool
-from pipecatapp.tools.summarizer_tool import SummarizerTool
-from pipecatapp.tools.term_everything_tool import TermEverythingTool
-from pipecatapp.tools.rag_tool import RAG_Tool
-from pipecatapp.tools.ha_tool import HA_Tool
-from pipecatapp.tools.git_tool import Git_Tool
-from pipecatapp.local_world_model import LocalWorldModel
-from pipecatapp.mqtt_world_model_client import MQTTWorldModelClient
-
-from pipecatapp.tools.orchestrator_tool import OrchestratorTool
-from pipecatapp.tools.llxprt_code_tool import LLxprt_Code_Tool
-from pipecatapp.tools.smol_agent_tool import SmolAgentTool
-from pipecatapp.tools.final_answer_tool import FinalAnswerTool
-from pipecatapp.tools.prompt_improver_tool import PromptImproverTool
-from pipecatapp.tools.council_tool import CouncilTool
-from pipecatapp.tools.swarm_tool import SwarmTool
-from pipecatapp.tools.project_mapper_tool import ProjectMapperTool
-from pipecatapp.tools.planner_tool import PlannerTool
-from pipecatapp.agent_factory import create_tools
-from pipecatapp.task_supervisor import TaskSupervisor
-from pipecatapp.durable_execution import DurableExecutionEngine, durable_step
-from pipecatapp.moondream_detector import MoondreamDetector
-from pipecatapp.workflow.runner import WorkflowRunner, ActiveWorkflows
-# Import all node classes to ensure they are registered
-from pipecatapp.workflow.nodes.base_nodes import *
-from opentelemetry import trace
-from pipecatapp.workflow.nodes.llm_nodes import *
-from pipecatapp.workflow.nodes.tool_nodes import *
-from pipecatapp.workflow.nodes.system_nodes import *
-from pipecatapp.api_keys import initialize_api_keys
-from pipecatapp.security import redact_sensitive_data
-from pipecatapp.secret_manager import secret_manager
-try:
-    from .net_utils import format_url, validate_url, resolve_and_validate_url, get_safe_url_and_headers
-except ImportError:
-    from pipecatapp.net_utils import format_url, validate_url, resolve_and_validate_url, get_safe_url_and_headers
-
 
 import uvicorn
 from fastapi import FastAPI
+from pipecat.pipeline.pipeline import Pipeline
+from pipecat.pipeline.runner import PipelineRunner
+from pipecat.pipeline.task import PipelineTask
+from pipecat.services.openai.llm import OpenAILLMService
+from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
+
+# Import components from newly refactored modules to maintain backward compatibility and for use in this file
+from pipecatapp.core.audio_setup import find_workable_audio_input_device
+from pipecatapp.core.config import load_config_from_consul
+from pipecatapp.core.service_discovery import discover_main_llm_service, discover_services
+from pipecatapp.core.twin import TwinService, session_locks
+from pipecatapp.pipeline.processors import (
+    AudioFileFrame,
+    BenchmarkCollector,
+    TextMessageInjector,
+    UILogger,
+    WebsocketAudioStreamer,
+)
+from pipecatapp.services.stt import FasterWhisperSTTService, GroqSTTService, WyomingSTTService
+from pipecatapp.services.tts import KokoroTTSService, PiperTTSService, DummyTTSService
+from pipecatapp.services.vision import YOLOv8Detector, initialize_vision_detector
+
+from pipecatapp.api_keys import initialize_api_keys
+from pipecatapp.gossip_discovery import gossip_registry
+from pipecatapp.local_world_model import LocalWorldModel
+from pipecatapp.mqtt_world_model_client import MQTTWorldModelClient
+from pipecatapp.secret_manager import secret_manager
+from pipecatapp.security import redact_sensitive_data
+from pipecatapp.services.obsidian_gardener import ObsidianGardener
+from pipecatapp.task_supervisor import TaskSupervisor
+import pipecatapp.web_server
+from pipecatapp.web_server import approval_queue, text_message_queue
+from pipecatapp.workflow.runner import WorkflowRunner
+
 
 # -----------------------
 # Logging -> web UI bridge
 # -----------------------
-
 class WebSocketLogHandler(logging.Handler):
     """A logging handler that forwards records to a WebSocket connection.
 
     This class allows the application's logs to be streamed in real-time
     to a web-based user interface.
     """
-
     def emit(self, record):
-        """Formats the log record and broadcasts it to WebSocket clients.
-
-        Args:
-            record: The log record to be emitted.
-        """
+        """Formats the log record and broadcasts it to WebSocket clients."""
         log_entry = self.format(record)
-
-        # Security Fix: Sentinel - Redact sensitive information
-        # Redact generic API key patterns and Bearer tokens
         log_entry = redact_sensitive_data(log_entry)
-
         try:
-            # Get the running asyncio loop to safely schedule the broadcast.
             loop = asyncio.get_running_loop()
             loop.create_task(pipecatapp.web_server.manager.broadcast(json.dumps({"type": "log", "data": log_entry})))
         except RuntimeError:
-            # If no event loop is running (e.g., during shutdown), do nothing.
             pass
 
 logger = logging.getLogger()
 logger.addHandler(WebSocketLogHandler())
-
-# Setup generic tracer for the application module
-tracer = trace.get_tracer(__name__)
-
-# -----------------------
-# Frame processors
-# -----------------------
-class UILogger(FrameProcessor):
-    """A Pipecat frame processor that logs frames to the web UI.
-
-    This processor intercepts transcription and text frames and sends their
-    content to the WebSocket manager for display in the UI.
-
-    Attributes:
-        sender (str): A string identifier ('user' or 'agent') to label
-                      the source of the message in the UI.
-    """
-    def __init__(self, sender: str):
-        """Initializes the UILogger.
-
-        Args:
-            sender (str): The identifier for the message source (e.g., "user").
-        """
-        super().__init__()
-        self.sender = sender
-
-    async def process_frame(self, frame, direction):
-        """Processes incoming frames and logs relevant ones to the UI.
-
-        Args:
-            frame: The frame to process.
-            direction: The direction of the frame in the pipeline.
-        """
-        if isinstance(frame, (TranscriptionFrame, TextFrame)):
-            # Security Fix: Sentinel - Redact sensitive information
-            redacted_text = redact_sensitive_data(frame.text)
-            await pipecatapp.web_server.manager.broadcast(json.dumps({"type": self.sender, "data": redacted_text}))
-        await self.push_frame(frame, direction)
-
-class BenchmarkCollector(FrameProcessor):
-    """A Pipecat frame processor for measuring pipeline latency.
-
-    This captures timestamps at key stages of the conversational pipeline
-    (speech detection, transcription, LLM response, audio synthesis) to
-    calculate and log performance metrics.
-    """
-    def __init__(self):
-        """Initializes the BenchmarkCollector and resets its state."""
-        super().__init__()
-        self.reset()
-
-    async def process_frame(self, frame, direction):
-        """Processes frames to capture timing information.
-
-        Args:
-            frame: The frame to process.
-            direction: The direction of the frame in the pipeline.
-        """
-        if isinstance(frame, UserStoppedSpeakingFrame):
-            self.start_time = time.time()
-        elif isinstance(frame, TranscriptionFrame):
-            self.stt_end_time = time.time()
-        elif isinstance(frame, TextFrame) and self.llm_first_token_time == 0:
-            self.llm_first_token_time = time.time()
-        elif isinstance(frame, AudioRawFrame) and self.tts_first_audio_time == 0:
-            self.tts_first_audio_time = time.time()
-            self.log_benchmarks()
-            self.reset()
-        await self.push_frame(frame, direction)
-
-    def log_benchmarks(self):
-        """Calculates and logs the latency benchmarks."""
-        stt_latency = self.stt_end_time - self.start_time
-        llm_ttft = self.llm_first_token_time - self.stt_end_time
-        tts_ttfa = self.tts_first_audio_time - self.llm_first_token_time
-        total_latency = self.tts_first_audio_time - self.start_time
-        logging.info(
-            f"--- BENCHMARK RESULTS ---\n"
-            f"STT Latency: {stt_latency:.4f}s\n"
-            f"LLM Time to First Token: {llm_ttft:.4f}s\n"
-            f"TTS Time to First Audio: {tts_ttfa:.4f}s\n"
-            f"Total Pipeline Latency: {total_latency:.4f}s\n"
-            f"-------------------------"
-        )
-
-    def reset(self):
-        """Resets all benchmark timestamps to zero."""
-        self.start_time = 0
-        self.stt_end_time = 0
-        self.llm_first_token_time = 0
-        self.tts_first_audio_time = 0
-
-class WyomingSTTService(FrameProcessor):
-    """A Pipecat processor for Speech-to-Text using a Wyoming protocol server.
-
-    This service connects to a Wyoming server (e.g., Wyoming ONNX ASR), sends audio
-    frames, and waits for transcriptions.
-    """
-    def __init__(self, host: str, port: int, sample_rate: int = 16000):
-        super().__init__()
-        self.host = host
-        self.port = port
-        self.sample_rate = sample_rate
-        self.audio_buffer = bytearray()
-
-    async def process_frame(self, frame, direction):
-        if isinstance(frame, UserStartedSpeakingFrame):
-            self.audio_buffer.clear()
-        elif isinstance(frame, AudioRawFrame):
-            self.audio_buffer.extend(frame.audio)
-        elif isinstance(frame, UserStoppedSpeakingFrame):
-            if not self.audio_buffer:
-                return
-
-            audio_bytes = bytes(self.audio_buffer)
-            self.audio_buffer.clear()
-
-            try:
-                # Wyoming protocol interaction
-                client = AsyncTcpClient(self.host, self.port)
-                await client.connect()
-
-                await client.write_event(Transcribe().event())
-                await client.write_event(AudioStart(rate=self.sample_rate, width=2, channels=1).event())
-
-                # Send audio in chunks
-                chunk_size = 4096
-                for i in range(0, len(audio_bytes), chunk_size):
-                    chunk = audio_bytes[i:i + chunk_size]
-                    await client.write_event(AudioChunk(rate=self.sample_rate, width=2, channels=1, audio=chunk).event())
-
-                await client.write_event(AudioStop().event())
-
-                # Wait for response
-                while True:
-                    event = await client.read_event()
-                    if event is None:
-                        break
-                    if event.type == "transcript":
-                        text = event.data.get("text", "").strip()
-                        if text:
-                            await self.push_frame(TranscriptionFrame(text))
-                        break
-
-                await client.disconnect()
-            except Exception as e:
-                logging.error(f"Error communicating with Wyoming STT server: {e}")
-
-class FasterWhisperSTTService(FrameProcessor):
-    """A Pipecat processor for Speech-to-Text using Faster-Whisper.
-
-    This service buffers incoming audio frames and, upon detecting the end of
-    speech, transcribes the audio using a CPU-optimized Whisper model.
-
-    Attributes:
-        model: The loaded Faster-Whisper model.
-        audio_buffer (bytearray): A buffer to accumulate audio data.
-        sample_rate (int): The audio sample rate required by the model.
-    """
-    def __init__(self, model_path: str, sample_rate: int = 16000):
-        """Initializes the STT service.
-
-        Args:
-            model_path (str): The path to the Faster-Whisper model directory.
-            sample_rate (int): The sample rate of the input audio.
-        """
-        super().__init__()
-        # Use CPU int8 to reduce memory; adjust if you want GPU
-        if not os.path.isdir(model_path):
-            logging.error(f"Model directory not found at: {model_path}")
-            # Fallback to model name if path doesn't exist
-            model_identifier = os.path.basename(model_path)
-            logging.info(f"Attempting to load model by name: {model_identifier}")
-        else:
-            model_identifier = model_path
-
-        try:
-            self.model = WhisperModel(
-                model_identifier,
-                device="cpu",
-                compute_type="int8"
-            )
-        except Exception as e:
-            logging.error(f"Fatal error loading WhisperModel with identifier '{model_identifier}': {e}")
-            raise e
-
-        self.audio_buffer = bytearray()
-        self.sample_rate = sample_rate
-        logging.info(f"FasterWhisperSTTService initialized with model identifier '{model_identifier}'")
-
-    def _convert_audio_bytes_to_float_array(self, audio_bytes: bytes) -> np.ndarray:
-        """Converts raw 16-bit PCM audio bytes to a 32-bit float NumPy array.
-
-        Args:
-            audio_bytes (bytes): The raw audio data.
-
-        Returns:
-            np.ndarray: The audio data as a normalized float array.
-        """
-        audio_s16 = np.frombuffer(audio_bytes, dtype=np.int16)
-        # Bolt ⚡ Optimization: In-place multiplication to avoid extra allocation
-        audio_f32 = audio_s16.astype(np.float32)
-        audio_f32 *= (1.0 / 32768.0)
-        return audio_f32
-
-    def _transcribe_sync(self, audio_bytes: bytes) -> str:
-        """Synchronous helper for transcription to run in a thread."""
-        # Bolt ⚡ Optimization: Perform CPU-heavy numpy conversion in the thread
-        audio_data = self._convert_audio_bytes_to_float_array(audio_bytes)
-        segments, _ = self.model.transcribe(audio_data, language="en")
-        return "".join(segment.text for segment in segments).strip()
-
-    def _transcribe_file_sync(self, file_path: str) -> str:
-        """Synchronous helper for file transcription."""
-        segments, _ = self.model.transcribe(file_path, language="en")
-        return "".join(segment.text for segment in segments).strip()
-
-    async def process_frame(self, frame, direction):
-        """Processes audio frames, buffering and transcribing them.
-
-        Args:
-            frame: The frame to process.
-            direction: The direction of the frame in the pipeline.
-        """
-        if isinstance(frame, UserStartedSpeakingFrame):
-            self.audio_buffer.clear()
-        elif isinstance(frame, AudioRawFrame):
-            # append incoming audio bytes (signed int16)
-            self.audio_buffer.extend(frame.audio)
-        elif isinstance(frame, UserStoppedSpeakingFrame):
-            if not self.audio_buffer:
-                return
-            # Bolt ⚡ Optimization: Avoid bytes() copy by swapping buffer
-            audio_bytes = self.audio_buffer
-            self.audio_buffer = bytearray()
-
-            # Bolt ⚡ Optimization: Run blocking inference in a thread
-            loop = asyncio.get_running_loop()
-            full_text = await loop.run_in_executor(None, self._transcribe_sync, audio_bytes)
-
-            if full_text:
-                await self.push_frame(TranscriptionFrame(full_text))
-        elif isinstance(frame, AudioFileFrame):
-            logging.info(f"Processing AudioFileFrame: {frame.file_path}")
-            loop = asyncio.get_running_loop()
-            try:
-                full_text = await loop.run_in_executor(None, self._transcribe_file_sync, frame.file_path)
-                if full_text:
-                    await self.push_frame(TranscriptionFrame(full_text, meta=frame.meta))
-            except Exception as e:
-                logging.error(f"Error transcribing audio file: {e}")
-            finally:
-                # Cleanup temp file
-                if os.path.exists(frame.file_path):
-                    os.remove(frame.file_path)
-        else:
-            await self.push_frame(frame, direction)
-
-class GroqSTTService(FrameProcessor):
-    """A Pipecat processor for Speech-to-Text using Groq's fast Whisper API.
-
-    Attributes:
-        api_key: The Groq API key.
-        model: The Whisper model to use (default: whisper-large-v3).
-    """
-    def __init__(self, api_key: str, model: str = "whisper-large-v3"):
-        super().__init__()
-        self.api_key = api_key
-        self.model = model
-        self.audio_buffer = bytearray()
-        self.client = httpx.AsyncClient(headers={"Authorization": f"Bearer {api_key}"}, timeout=10.0)
-
-    async def _transcribe(self, audio_bytes):
-        try:
-            # Prepare WAV header (16kHz, 16-bit, Mono)
-            header = struct.pack(
-                '<4sI4s4sIHHIIHH4sI',
-                b'RIFF', 36 + len(audio_bytes), b'WAVE', b'fmt ', 16, 1, 1,
-                16000, 32000, 2, 16, b'data', len(audio_bytes)
-            )
-            wav_data = header + audio_bytes
-
-            files = {'file': ('audio.wav', wav_data, 'audio/wav')}
-            data = {'model': self.model, 'response_format': 'json'}
-
-            response = await self.client.post(
-                "https://api.groq.com/openai/v1/audio/transcriptions",
-                files=files,
-                data=data
-            )
-            response.raise_for_status()
-            return response.json().get("text", "").strip()
-        except Exception as e:
-            logging.error(f"Groq STT error: {e}")
-            return ""
-
-    def _read_file_sync(self, file_path: str):
-        with open(file_path, "rb") as f:
-            return f.read()
-
-    async def _transcribe_file(self, file_path: str):
-        try:
-            loop = asyncio.get_running_loop()
-            file_content = await loop.run_in_executor(None, self._read_file_sync, file_path)
-
-            filename = os.path.basename(file_path)
-            # Basic mime type guess or fallback
-            mime_type = "audio/mpeg"
-            if filename.endswith(".wav"):
-                mime_type = "audio/wav"
-            elif filename.endswith(".ogg"):
-                mime_type = "audio/ogg"
-            elif filename.endswith(".m4a"):
-                mime_type = "audio/m4a"
-
-            files = {'file': (filename, file_content, mime_type)}
-            data = {'model': self.model, 'response_format': 'json'}
-
-            response = await self.client.post(
-                "https://api.groq.com/openai/v1/audio/transcriptions",
-                files=files,
-                data=data
-            )
-            response.raise_for_status()
-            return response.json().get("text", "").strip()
-        except Exception as e:
-            logging.error(f"Groq STT file error: {e}")
-            return ""
-
-    async def process_frame(self, frame, direction):
-        if isinstance(frame, UserStartedSpeakingFrame):
-            self.audio_buffer.clear()
-        elif isinstance(frame, AudioRawFrame):
-            self.audio_buffer.extend(frame.audio)
-        elif isinstance(frame, UserStoppedSpeakingFrame):
-            if not self.audio_buffer:
-                return
-
-            audio_bytes = self.audio_buffer
-            self.audio_buffer = bytearray()
-
-            text = await self._transcribe(audio_bytes)
-            if text:
-                await self.push_frame(TranscriptionFrame(text))
-        elif isinstance(frame, AudioFileFrame):
-            logging.info(f"GroqSTT processing file: {frame.file_path}")
-            text = await self._transcribe_file(frame.file_path)
-            if text:
-                await self.push_frame(TranscriptionFrame(text, meta=frame.meta))
-            if os.path.exists(frame.file_path):
-                os.remove(frame.file_path)
-        else:
-            await self.push_frame(frame, direction)
-
-class KokoroTTSService(FrameProcessor):
-    """A Pipecat processor for Text-to-Speech using Kokoro.
-
-    This service synthesizes speech from text frames using the Kokoro TTS engine
-    and pushes the resulting raw audio frames back into the pipeline.
-    """
-    def __init__(self, model_path: str, lang_code: str = 'a', voice_name: str = 'af_heart'):
-        super().__init__()
-        self.pipeline = KPipeline(lang_code=lang_code)
-        self.voice_name = voice_name
-        self.sample_rate = 24000
-
-    def _synthesize_sync(self, text: str) -> bytes:
-        """Helper to run synthesis in a separate thread."""
-        audio_stream = io.BytesIO()
-        # Generate audio using Kokoro
-        # KPipeline returns an iterator of (graphemes, phonemes, audio)
-        result = list(self.pipeline(text, voice=self.voice_name, speed=1, split_pattern=r'\n+'))
-        if not result:
-             return b""
-
-        # Concatenate audio chunks if multiple
-        import numpy as np
-        audio_chunks = [chunk[2] for chunk in result if chunk[2] is not None]
-        if not audio_chunks:
-            return b""
-
-        full_audio = np.concatenate(audio_chunks)
-
-        # Convert to 16-bit PCM
-        import soundfile as sf
-        sf.write(audio_stream, full_audio, self.sample_rate, format='WAV', subtype='PCM_16')
-
-        audio_stream.seek(0)
-        with wave.open(audio_stream, "rb") as wf:
-            return wf.readframes(wf.getnframes())
-
-    async def process_frame(self, frame, direction):
-        if not isinstance(frame, TextFrame):
-            await self.push_frame(frame, direction)
-            return
-
-        loop = asyncio.get_running_loop()
-        audio_bytes = await loop.run_in_executor(None, self._synthesize_sync, frame.text)
-        await self.push_frame(AudioRawFrame(audio_bytes))
-
-class PiperTTSService(FrameProcessor):
-    """A Pipecat processor for Text-to-Speech using Piper.
-
-    This service synthesizes speech from text frames and pushes the resulting
-    raw audio frames back into the pipeline.
-
-    Attributes:
-        voice: The loaded Piper voice model.
-        sample_rate (int): The sample rate of the synthesized audio.
-    """
-    def __init__(self, model_path: str):
-        """Initializes the TTS service.
-
-        Args:
-            model_path (str): The path to the Piper TTS model file.
-        """
-        super().__init__()
-        self.voice = PiperVoice.load(model_path)
-        self.sample_rate = self.voice.config.sample_rate
-
-    def _synthesize_sync(self, text: str) -> bytes:
-        """Helper to run synthesis in a separate thread."""
-        audio_stream = io.BytesIO()
-        self.voice.synthesize(text, audio_stream)
-        audio_stream.seek(0)
-        with wave.open(audio_stream, "rb") as wf:
-            return wf.readframes(wf.getnframes())
-
-    async def process_frame(self, frame, direction):
-        """Processes text frames to synthesize audio.
-
-        Args:
-            frame: The frame to process.
-            direction: The direction of the frame in the pipeline.
-        """
-        if not isinstance(frame, TextFrame):
-            await self.push_frame(frame, direction)
-            return
-
-        loop = asyncio.get_running_loop()
-        # Bolt ⚡ Optimization: Run blocking synthesis in a thread
-        audio_bytes = await loop.run_in_executor(None, self._synthesize_sync, frame.text)
-        await self.push_frame(AudioRawFrame(audio_bytes))
-
-class WebsocketAudioStreamer(FrameProcessor):
-    """A Pipecat processor that streams audio frames to the frontend via WebSockets.
-
-    This enables spatial audio in the VR interface.
-    """
-    def __init__(self, sample_rate: int = 16000):
-        super().__init__()
-        self.sample_rate = sample_rate
-
-    async def process_frame(self, frame, direction):
-        if not isinstance(frame, AudioRawFrame):
-            await self.push_frame(frame, direction)
-            return
-
-        # Wrap raw PCM in WAV container for browser compatibility
-        try:
-            # Bolt ⚡ Optimization: Manually construct WAV header instead of using 'wave' module
-            # This is ~7x faster and reduces object allocation
-            audio_data = frame.audio
-            length = len(audio_data)
-
-            # WAV Header: 44 bytes
-            # RIFF + size + WAVE + fmt + size + 1 (PCM) + 1 (channels) + rate + byte_rate + block_align + bits + data + size
-            # We assume Mono 16-bit PCM as per app config
-            header = struct.pack(
-                '<4sI4s4sIHHIIHH4sI',
-                b'RIFF',
-                36 + length,
-                b'WAVE',
-                b'fmt ',
-                16,
-                1, # PCM
-                1, # Mono
-                self.sample_rate,
-                self.sample_rate * 2, # ByteRate (SampleRate * NumChannels * BitsPerSample/8)
-                2, # BlockAlign (NumChannels * BitsPerSample/8)
-                16, # BitsPerSample
-                b'data',
-                length
-            )
-
-            # Combine header and audio data, then encode
-            wav_bytes = header + audio_data
-            b64_audio = base64.b64encode(wav_bytes).decode('utf-8')
-
-            # Fix: Import web_server locally
-            try:
-                import pipecatapp.web_server
-                await pipecatapp.web_server.manager.broadcast(json.dumps({
-                    "type": "audio",
-                    "data": b64_audio
-                }))
-            except Exception as ws_err:
-                logging.error(f"Failed to stream audio frame: {ws_err}")
-
-        except Exception as e:
-             logging.error(f"Error packing audio for stream: {e}")
-
-        await self.push_frame(frame, direction)
-
-# -----------------------
-# YOLO Vision Detector
-# -----------------------
-class YOLOv8Detector(FrameProcessor):
-    """A Pipecat processor for real-time object detection using YOLOv8.
-
-    This processor analyzes incoming video frames to detect objects and maintains
-    a textual description of the current scene.
-
-    Attributes:
-        model: The loaded YOLOv8 model.
-        latest_observation (str): A human-readable string of detected objects.
-        last_detected_objects (set): The set of objects detected in the last frame.
-    """
-    def __init__(self):
-        """Initializes the YOLOv8 detector."""
-        super().__init__()
-        model_path = os.getenv("YOLO_MODEL_PATH")
-        if not model_path:
-             logging.error("YOLO_MODEL_PATH environment variable not set.")
-             model_path = "/opt/nomad/models/vision/yolov8n.pt" # Last resort fallback
-        self.latest_observation = "I don't see anything."
-        self.last_detected_objects = set()
-        self.last_processed_time = 0
-        self.is_processing = False
-        self.connection_check_callback = None
-
-        if YOLO is None:
-             logging.error("YOLOv8 model unavailable because ultralytics module is missing.")
-             self.model = None
-             self.latest_observation = "Vision system unavailable (missing dependency)."
-             return
-
-        try:
-            self.model = YOLO(model_path)
-        except Exception as e:
-            logging.error(f"Failed to load YOLOv8 model from {model_path}: {e}")
-            self.model = None
-            self.latest_observation = "Vision system unavailable."
-
-    def set_connection_check_callback(self, callback):
-        """Sets a callback to check if there are active connections.
-
-        Args:
-            callback (callable): A function that returns True if debug images should be generated.
-        """
-        self.connection_check_callback = callback
-
-    def _run_inference(self, image, generate_debug_image=False):
-        """Helper to run inference in a separate thread.
-
-        Args:
-            image: The image data to process.
-            generate_debug_image (bool): Whether to generate a base64 debug image.
-
-        Returns:
-            tuple: (set of detected object names, base64_encoded_jpeg_string)
-        """
-        results = self.model(image)
-        detected_objects = {self.model.names[int(c)] for r in results for c in r.boxes.cls}
-
-        # Generate visual debug frame
-        img_base64 = None
-        if generate_debug_image:
-            try:
-                # Plot returns a numpy array (BGR)
-                annotated_frame = results[0].plot()
-
-                # Bolt ⚡ Optimization: Use OpenCV for faster JPEG encoding (avoid PIL & extra allocations)
-                # annotated_frame is BGR. cv2.imencode expects BGR.
-                success, buffer = cv2.imencode('.jpg', annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
-                if success:
-                    img_base64 = base64.b64encode(buffer).decode('utf-8')
-            except Exception as e:
-                logging.error(f"Error generating visual debug frame: {e}")
-
-        return detected_objects, img_base64
-
-    async def process_frame(self, frame, direction):
-        """Processes an image frame to detect objects.
-
-        Args:
-            frame: The image frame to process.
-            direction: The direction of the frame in the pipeline.
-        """
-        if not isinstance(frame, VisionImageRawFrame):
-            await self.push_frame(frame, direction)
-            return
-
-        if self.model is None:
-            # Pass frame through without processing if vision is unavailable
-            await self.push_frame(frame, direction)
-            return
-
-        current_time = time.time()
-        # Bolt ⚡ Optimization: Rate limit to 1 FPS and avoid concurrent processing
-        if (current_time - self.last_processed_time < 1.0) or self.is_processing:
-            await self.push_frame(frame, direction)
-            return
-
-        self.is_processing = True
-        self.last_processed_time = current_time
-
-        try:
-            # Bolt ⚡ Optimization: Check if anyone is watching to avoid expensive image encoding
-            generate_debug_image = True
-            if self.connection_check_callback:
-                try:
-                    generate_debug_image = self.connection_check_callback()
-                except Exception as e:
-                    logging.warning(f"Connection check callback failed: {e}")
-                    generate_debug_image = True
-
-            loop = asyncio.get_running_loop()
-            # Bolt ⚡ Optimization: Run blocking inference in a thread
-            detected_objects, img_base64 = await loop.run_in_executor(
-                None, self._run_inference, frame.image, generate_debug_image
-            )
-
-            # Broadcast visual debug frame
-            if img_base64:
-                # Fix: Import web_server locally to avoid NameError and circular dependencies
-                try:
-                    import pipecatapp.web_server
-                    await pipecatapp.web_server.manager.broadcast(json.dumps({
-                        "type": "vision_debug",
-                        "data": img_base64
-                    }))
-                except Exception as ws_err:
-                     logging.error(f"Failed to broadcast vision frame: {ws_err}")
-
-        except Exception as e:
-            logging.error(f"YOLOv8 detection error: {e}")
-            detected_objects = set()
-        finally:
-            self.is_processing = False
-
-        if detected_objects != self.last_detected_objects:
-            self.last_detected_objects = detected_objects
-            self.latest_observation = f"I see {', '.join(detected_objects)}." if detected_objects else "I don't see anything."
-            logging.info(f"YOLOv8Detector updated observation: {self.latest_observation}")
-
-    def get_observation(self) -> str:
-        """Returns the latest observation of detected objects.
-
-        Returns:
-            A string describing the objects currently visible.
-        """
-        return self.latest_observation
-
-# -----------------------
-# Text message injector (UI -> pipeline)
-# -----------------------
-class TextMessageInjector(FrameProcessor):
-    """A processor to inject text from the UI into the Pipecat pipeline.
-
-    This allows a user to type messages in a web interface and have them
-    processed by the agent as if they were spoken.
-
-    Attributes:
-        queue (asyncio.Queue): The queue for receiving messages from the UI.
-    """
-    def __init__(self, queue: asyncio.Queue):
-        """Initializes the TextMessageInjector.
-
-        Args:
-            queue (asyncio.Queue): The queue to listen on for new messages.
-        """
-        super().__init__()
-        self.queue = queue
-        self._task = None
-
-    def start_listening(self):
-        """Starts the background task that listens for messages on the queue."""
-        if not self._task:
-            self._task = asyncio.create_task(self._run())
-
-    async def _run(self):
-        """The main loop that waits for messages and pushes them into the pipeline."""
-        while True:
-            try:
-                message = await self.queue.get()
-                # The message can be a simple string (from UI) or a dict (from gateway)
-                if isinstance(message, dict):
-                    audio_url = message.get("audio_url")
-                    audio_base64 = message.get("audio_base64")
-                    text = message.get("text")
-                    is_system_alert = message.get("is_system_alert", False)
-
-                    if audio_url:
-                        logging.info(f"Downloading audio from: {audio_url}")
-                        try:
-                            # Security Fix: Sentinel - Validate URL and use resolved IP for HTTP to prevent DNS Rebinding
-                            original_url, safe_ip = await resolve_and_validate_url(audio_url)
-                            safe_url, headers = get_safe_url_and_headers(original_url, safe_ip)
-
-                            # Create a temp file to store the audio
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
-                                async with httpx.AsyncClient() as client:
-                                    # Security Fix: Sentinel - Enforce size limit on audio downloads to prevent DoS
-                                    MAX_AUDIO_SIZE = 50 * 1024 * 1024  # 50 MB limit
-                                    async with client.stream("GET", safe_url, headers=headers) as resp:
-                                        if resp.status_code == 200:
-                                            downloaded_size = 0
-                                            async for chunk in resp.aiter_bytes():
-                                                downloaded_size += len(chunk)
-                                                if downloaded_size > MAX_AUDIO_SIZE:
-                                                    raise ValueError(f"Audio file exceeds limit of {MAX_AUDIO_SIZE} bytes")
-                                                tmp_file.write(chunk)
-                                            tmp_path = tmp_file.name
-                                            await self.push_frame(AudioFileFrame(tmp_path, meta=message))
-                                        else:
-                                            logging.error(f"Failed to download audio from {audio_url}: {resp.status_code}")
-                        except Exception as e:
-                            logging.error(f"Error downloading audio: {e}")
-
-                    elif audio_base64:
-                        logging.info("Decoding base64 audio message")
-                        try:
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
-                                tmp_file.write(base64.b64decode(audio_base64))
-                                tmp_path = tmp_file.name
-                                await self.push_frame(AudioFileFrame(tmp_path, meta=message))
-                        except Exception as e:
-                            logging.error(f"Error decoding base64 audio: {e}")
-
-                    elif text:
-                        if is_system_alert:
-                            prefix = "SYSTEM ALERT: "
-                            logging.warning(f"Injecting system alert: {text}")
-
-                            # Check if this is a gateway exhaustion trigger for auto-scaling
-                            if "Gateway reported critical exhaustion for expert" in text:
-                                try:
-                                    # Extract expert name from the message
-                                    parts = text.split("expert:")
-                                    if len(parts) > 1:
-                                        expert_name = parts[1].split(".")[0].strip()
-                                        import pipecatapp.web_server
-                                        twin_service = getattr(pipecatapp.web_server.app.state, "twin_service_instance", None)
-                                        if twin_service and hasattr(twin_service, "task_supervisor"):
-                                            # Trigger dynamic auto-scaling in the supervisor
-                                            asyncio.create_task(twin_service.task_supervisor.handle_gateway_exhaustion(expert_name))
-                                except Exception as ex_fail:
-                                    logging.error(f"Failed to trigger auto-scaling from system alert: {ex_fail}")
-
-                            # Prepend alert tag to text to ensure the agent takes it seriously
-                            text = f"{prefix}{text}"
-
-                        logging.info(f"Injecting text message from gateway: {text}")
-                        await self.push_frame(TranscriptionFrame(text, meta=message))
-                elif isinstance(message, str):
-                     # Legacy support for simple text messages
-                    logging.info(f"Injecting text message from UI: {message}")
-                    await self.push_frame(TranscriptionFrame(message))
-            except Exception as e:
-                logging.error(f"Error in TextMessageInjector: {e}")
-
-    async def process_frame(self, frame, direction):
-        """Passes frames through without modification.
-
-        Args:
-            frame: The frame to process.
-            direction: The direction of the frame in the pipeline.
-        """
-        await self.push_frame(frame, direction)
-
-    def stop_listening(self):
-        """Stops the background listening task."""
-        if self._task:
-            self._task.cancel()
-            self._task = None
-
-# -----------------------
-# Helper: find workable audio config
-# -----------------------
-import contextlib
-import sys
-
-@contextlib.contextmanager
-def suppress_stderr():
-    """A context manager to temporarily redirect stderr to /dev/null."""
-    stderr = sys.stderr
-    devnull = open(os.devnull, 'w')
-    sys.stderr = devnull
-    try:
-        yield
-    finally:
-        sys.stderr = stderr  # Restore stderr
-        devnull.close()
-
-def find_workable_audio_input_device():
-    """
-    Silently scans for a workable PyAudio input device.
-
-    Returns:
-        An integer (device_index) if a workable device is found.
-        None if no workable device is found.
-    """
-    logging.info("Starting silent audio device scan...")
-    pa = None
-    try:
-        import pyaudio
-        # 1. Suppress C-level spam during init
-        with suppress_stderr():
-            pa = pyaudio.PyAudio()
-
-        # 2. Scan devices for a workable input
-        for i in range(pa.get_device_count()):
-            device_info = pa.get_device_info_by_index(i)
-            # This is a basic check. You can make this more robust
-            # (e.g., check for sample rate, "USB", "Analog", etc.)
-            if device_info.get('maxInputChannels') > 0:
-                logging.info(f"Found workable audio device: [Index {i}] {device_info.get('name')}")
-                return i  # Return the first workable device index
-
-        logging.warning("No workable audio input device found after full scan.")
-        return None
-
-    except (ImportError, Exception) as e:
-        # This catches errors like "No Default Input Device" on truly headless systems
-        logging.warning(f"Audio subsystem scan failed (this is OK for headless): {e}")
-        return None
-
-    finally:
-        # 3. Always terminate PyAudio to release resources
-        if pa:
-            pa.terminate()
-
-# -----------------------
-# Session Locks
-# -----------------------
-session_locks = defaultdict(asyncio.Lock)
-
-# -----------------------
-# Service discovery helpers
-# -----------------------
-async def discover_services(service_names: list, consul_http_addr: str, delay=10):
-    """Periodically queries Consul to find a healthy instance of a service, with failover support.
-
-    Args:
-        service_names (list): A list of service names to discover, in order of preference.
-        consul_http_addr (str): The HTTP address of the Consul agent.
-        delay (int): The number of seconds to wait between retries.
-
-    Returns:
-        The base URL (e.g., "http://1.2.3.4:5678/v1") of the first discovered service.
-    """
-    logging.info(f"Attempting to discover services: {service_names}")
-
-    # Check for override URLs first
-    override_map = {
-        "llama-api-main": os.getenv("LLAMA_API_URL_OVERRIDE"),
-        "llamacpp-rpc-api": os.getenv("LLAMA_API_URL_OVERRIDE"),
-        "router-api": os.getenv("LLAMA_API_URL_OVERRIDE"),
-        "tool-server-api": os.getenv("TOOL_SERVER_URL_OVERRIDE"),
-        "memory-service": os.getenv("MEMORY_SERVICE_URL_OVERRIDE"),
-    }
-
-    for service_name in service_names:
-        override_url = override_map.get(service_name)
-        # also support generic naming OVERRIDE logic
-        if not override_url:
-            env_key = f"{service_name.replace('-', '_').upper()}_URL_OVERRIDE"
-            override_url = os.getenv(env_key)
-
-        if override_url:
-            logging.info(f"Using override URL for {service_name}: {override_url}")
-            return override_url
-
-    token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
-    headers = {"X-Consul-Token": token} if token else {}
-
-    async with httpx.AsyncClient() as client:
-        while True:
-            for service_name in service_names:
-                try:
-                    logging.debug(f"Checking status of service: {service_name}")
-                    url = f"{consul_http_addr}/v1/health/service/{service_name}?passing"
-                    response = await client.get(url, headers=headers, timeout=5)
-
-                    if response.status_code != 200:
-                        logging.warning(f"Consul returned {response.status_code} for {service_name} at {url}: {response.text}")
-                        continue
-
-                    services = response.json()
-                    if services:
-                        address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
-                        base_url = format_url("http", address, port, "v1")
-                        logging.info(f"Successfully discovered {service_name} at {base_url}")
-                        return base_url
-                    else:
-                        logging.info(f"Consul returned empty list for {service_name} at {url}")
-                except Exception as e:
-                    logging.error(f"Unexpected error discovering {service_name}: {e}")
-
-            # Fallback to local network scan before sleeping
-            fallback_url = await scan_network_for_llms()
-            if fallback_url:
-                logging.info(f"Using fallback network LLM at {fallback_url}")
-                return fallback_url
-
-            logging.info(f"No healthy services found in list {service_names}, retrying in {delay} seconds...")
-            await asyncio.sleep(delay)
-
-async def discover_main_llm_service(consul_http_addr=None, delay=10):
-    if consul_http_addr is None:
-        consul_host = os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1"))
-        consul_port = os.getenv("CONSUL_PORT", "8500")
-        consul_http_addr = f"http://{consul_host}:{consul_port}"
-    """Discovers the main LLM service used for vision-related tasks.
-
-    This is a specialized wrapper around `discover_service` for the primary
-    vision-capable LLM.
-
-    Args:
-        consul_http_addr (str): The HTTP address of the Consul agent.
-        delay (int): The number of seconds to wait between retries.
-
-    Returns:
-        The base URL of the discovered LLM service.
-    """
-    # This is useful for vision-specific LLM calls (used by TwinService._call_vision_llm)
-    service_name = os.getenv("MAIN_API_SERVICE_NAME")
-    if not service_name:
-         logging.warning("MAIN_API_SERVICE_NAME not set, defaulting to llama-api-main")
-         service_name = "llama-api-main"
-
-    token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
-    headers = {"X-Consul-Token": token} if token else {}
-
-    async with httpx.AsyncClient() as client:
-        while True:
-            try:
-                url = f"{consul_http_addr}/v1/health/service/{service_name}?passing"
-                response = await client.get(url, headers=headers, timeout=5)
-
-                if response.status_code != 200:
-                    logging.warning(f"Consul returned {response.status_code} for {service_name} at {url}: {response.text}")
-                else:
-                    services = response.json()
-                    if services:
-                        address, port = services[0]['Service']['Address'], services[0]['Service']['Port']
-                        base_url = format_url("http", address, port, "v1")
-                        logging.info(f"Discovered main LLM service at {base_url}")
-                        return base_url
-                    else:
-                        logging.info(f"Consul returned empty list for {service_name} at {url}")
-            except Exception as e:
-                logging.warning(f"Could not find service {service_name}: {e}")
-
-            # Fallback to local network scan
-            fallback_url = await scan_network_for_llms()
-            if fallback_url:
-                logging.info(f"Using fallback network LLM at {fallback_url}")
-                return fallback_url
-
-            await asyncio.sleep(delay)
-
-# -----------------------
-# TwinService (keeps the richer app_config-aware version)
-# -----------------------
-class TwinService(FrameProcessor):
-    """Core conversational agent orchestrator.
-
-    This class is the "brain" of the agent. It receives user input,
-    initializes the workflow engine, and sends the final response.
-    The core logic is now managed by the declarative workflow system.
-    """
-    def __init__(self, llm, vision_detector, runner, app_config: dict, approval_queue=None, llm_base_url=None, tts_service=None):
-        """Initializes the TwinService.
-
-        Args:
-            llm: The primary LLM service client.
-            vision_detector: An instance of YOLOv8Detector for scene analysis.
-            runner: The Pipecat PipelineRunner instance.
-            app_config (dict): The application's configuration loaded from Consul.
-            approval_queue: The queue for handling tool use approval requests.
-            llm_base_url (str, optional): The base URL of the LLM service.
-            tts_service (FrameProcessor, optional): The TTS service for generating audio responses.
-        """
-        super().__init__()
-        self.router_llm = llm
-        self.llm_base_url = llm_base_url
-        self.vision_detector = vision_detector
-        self.runner = runner
-        self.app_config = app_config or {}
-        self.approval_queue = approval_queue
-        self.tts_service = tts_service
-        self.short_term_memory = []
-
-        # Optimization: Pre-load external experts config to avoid json.loads in process_frame loop
-        external_experts_config_str = os.getenv("EXTERNAL_EXPERTS_CONFIG", "{}")
-        try:
-            self.external_experts_config = json.loads(external_experts_config_str)
-        except json.JSONDecodeError:
-            self.external_experts_config = {}
-            logging.warning("Failed to parse EXTERNAL_EXPERTS_CONFIG JSON.")
-
-        # Check for sharded memory routing proxy
-        enable_sharded = os.getenv("ENABLE_SHARDED_MEMORY", "false").lower() in ("true", "yes", "1")
-        if enable_sharded:
-            logging.info("ENABLE_SHARDED_MEMORY is true. Initializing ShardedPMMMemoryRouter.")
-            try:
-                import yaml
-                try:
-                    import pipecatapp.web_server
-                except ImportError:
-                    from pipecatapp import web_server
-                from pipecatapp.sharded_router import ShardedPMMMemoryRouter
-                config_path = os.getenv("SHARDING_CONFIG_PATH", "sharding_config.yaml")
-                if not os.path.exists(config_path):
-                    # Write a default mock sharding config for standalone/graceful fallback
-                    default_config = {
-                        "sharding": {
-                            "algorithm": "consistent_hash",
-                            "replica_count": 128,
-                            "coordinator_node": "node_0",
-                            "nodes": {
-                                "node_0": {
-                                    "sqlite_path": os.path.expanduser("~/.config/pipecat/pypicat_memory.db"),
-                                    "api_url": "http://localhost:8000"
-                                }
-                            }
-                        }
-                    }
-                    logging.warning(f"Sharding config {config_path} not found. Creating a default single-node sharding config.")
-                    with open(config_path, "w") as f:
-                        yaml.dump(default_config, f)
-
-                router = ShardedPMMMemoryRouter(config_path)
-                pipecatapp.web_server.app.state.memory_router = router
-                self.long_term_memory = router
-                logging.info(f"ShardedPMMMemoryRouter successfully initialized using {config_path}")
-            except Exception as e:
-                logging.error(f"Failed to initialize ShardedPMMMemoryRouter: {e}. Falling back to standard memory.")
-                enable_sharded = False
-
-        if not enable_sharded:
-            # Use Remote Memory if available (via Consul discovery or env var), otherwise fallback to local
-            memory_service_url = os.getenv("MEMORY_SERVICE_URL")
-            if memory_service_url:
-                 logging.info(f"Using Remote Memory Service at {memory_service_url}")
-                 self.long_term_memory = PMMMemoryClient(base_url=memory_service_url)
-            else:
-                 logging.info("Using Local PMMMemory (SQLite)")
-                 self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")
-
-        self.quality_analyzer = CodeQualityAnalyzer()
-
-        # This will hold metadata from incoming requests (e.g., from the gateway)
-        self.current_request_meta = None
-
-        # Optimization: Reusable HTTP client for gateway responses
-        self.http_client = httpx.AsyncClient(timeout=30.0)
-
-        self.debug_mode = self.app_config.get("debug_mode", False)
-        self.approval_mode = self.app_config.get("approval_mode", False)
-        self.consul_http_addr = format_url("http", self.app_config.get('consul_host', os.getenv('CLUSTER_IP', '127.0.0.1')), self.app_config.get('consul_port', 8500))
-
-        # Initialize tools via factory
-        self.tools = create_tools(self.app_config, twin_service=self, runner=self.runner, agent_name="main_app")
-        # Add vision detector explicitly as it is a special case (frame processor)
-        self.tools["vision"] = self.vision_detector
-
-    def compact_session(self):
-        """Compacts the short-term memory if it exceeds a certain token threshold."""
-        # Estimate token count (roughly 4 chars per token)
-        token_estimate = sum(len(str(m)) for m in self.short_term_memory) // 4
-
-        # Arbitrary threshold for context length. Let's use 4000 tokens.
-        if token_estimate < 4000:
-            return
-
-        logging.info("Compacting short-term memory...")
-        split = len(self.short_term_memory) // 2
-        old, recent = self.short_term_memory[:split], self.short_term_memory[split:]
-
-        # Ensure summarizer tool is available before trying to use it
-        summarizer = self.tools.get("summarizer")
-
-        if summarizer and hasattr(summarizer, "get_summary"):
-            # The summarizer extracts the top 3 most relevant turns. For a general
-            # compaction, we just summarize everything we want to compact.
-            # But the existing get_summary tool is an extractive summarizer focused on a query.
-            # If we don't have a specific query, we can use a general string, or just keep recent
-            summary_query = "important facts, decisions, and tasks"
-            summary_text = summarizer.get_summary(summary_query, conversation_history=old)
-
-            # get_summary might return a string starting with "Here are the most relevant points..."
-            self.short_term_memory = [f"[Previous conversation summary]\n{summary_text}"] + recent
-        else:
-            # Fallback if no summarizer available: just truncate to keep recent half
-            logging.info("No summarizer tool available; truncating short-term memory.")
-            self.short_term_memory = ["[Older conversation history truncated]"] + recent
-
-    def audit_log_tool_call(self, tool_name: str, args: dict, result: str, signature: str):
-        """Appends a tamper-evident JSON log of the tool execution trace."""
-        log_entry = {
-            "timestamp": time.time(),
-            "action": tool_name,
-            "prompt": args,
-            "response": result,
-            "signature": signature
-        }
-        try:
-            with open("audit.log", "a") as f:
-                f.write(json.dumps(log_entry) + "\n")
-        except Exception as e:
-            logging.error(f"Failed to write to audit log: {e}")
-
-    @tracer.start_as_current_span("TwinService.process_frame")
-    async def process_frame(self, frame, direction):
-        """Entry point for the agent's logic, triggered by a transcription frame.
-        This now uses the new workflow engine.
-        Args:
-            frame: The incoming frame from the pipeline.
-            direction: The direction of the frame in the pipeline.
-        """
-        span = trace.get_current_span()
-        if not isinstance(frame, TranscriptionFrame):
-            await self.push_frame(frame, direction)
-            return
-
-        span.set_attribute("agent.input_text", frame.text)
-
-        # Compact memory before executing workflow
-        self.compact_session()
-
-        # Store meta for this request
-        self.current_request_meta = frame.meta if hasattr(frame, 'meta') else None
-
-        logging.info(f"Starting workflow for user query: {frame.text}")
-
-        active_workflows = ActiveWorkflows()
-        request_id = self.current_request_meta.get("request_id", str(time.time()))
-
-        # Detect the requested workflow
-        workflow_file = "workflows/default_agent_loop.yaml"
-        if frame.text.strip().startswith("/deep"):
-            logging.info("Deep Context / Slow Thinking mode activated.")
-            workflow_file = "workflows/deep_context.yaml"
-        elif frame.text.strip().startswith("/manager") or frame.text.strip().startswith("/openclaw"):
-            logging.info("Project Manager / OpenClaw mode activated.")
-            workflow_file = "workflows/manager.yaml"
-        elif frame.text.strip().startswith("/sandbox"):
-            logging.info("Sandbox Execution mode activated.")
-            workflow_file = "workflows/sandbox.yaml"
-        elif frame.text.strip().startswith(("/adversary", "/sim", "/redteam")):
-            logging.info("Adversarial Simulation / Red Teaming mode activated.")
-            workflow_file = "workflows/adversarial_simulation.yaml"
-
-        session_id = self.current_request_meta.get("session_id", "default") if self.current_request_meta else "default"
-
-        try:
-            span.set_attribute("agent.workflow_file", workflow_file)
-            span.set_attribute("agent.request_id", request_id)
-
-            workflow_runner = WorkflowRunner(workflow_file, runner_id=request_id)
-            active_workflows.add_runner(request_id, workflow_runner)
-
-            global_inputs = {
-                "user_text": frame.text,
-                "tools_dict": self.tools,
-                "tool_result": None, # Start with no tool result
-                "consul_http_addr": self.consul_http_addr,
-                "twin_service": self,
-                "external_experts_config": self.external_experts_config
-            }
-
-            previous_tool_calls = []
-
-            async with session_locks[session_id]:
-                for step_idx in range(10): # Allow up to 10 steps in the thought process
-                    with tracer.start_as_current_span(f"Workflow.Step_{step_idx}") as step_span:
-                        workflow_result = await workflow_runner.run(global_inputs)
-
-                        final_response = workflow_result.get("final_response")
-                        if final_response:
-                            step_span.set_attribute("workflow.final_response", final_response)
-
-                        tool_call = workflow_result.get("tool_call")
-                        if tool_call:
-                            step_span.set_attribute("workflow.tool_call", str(tool_call.get("name")))
-
-                    final_response = workflow_result.get("final_response")
-                    tool_call = workflow_result.get("tool_call")
-
-                    if final_response:
-                        logging.info(f"Workflow produced final response: {final_response}")
-                        await self._send_response(final_response)
-                        await self.long_term_memory.add_event(kind="assistant_message", content=final_response)
-                        self.short_term_memory.append(f"Assistant: {final_response}")
-                        return # End the loop
-
-                    if tool_call:
-                        logging.info(f"Workflow produced tool call: {tool_call}")
-
-                        # Detect Loops
-                        tool_name = tool_call.get("name")
-                        tool_args = tool_call.get("arguments", {})
-                        # Normalize args to ensure consistent string representation
-                        try:
-                            tool_args_str = json.dumps(tool_args, sort_keys=True)
-                        except Exception:
-                            tool_args_str = str(tool_args)
-
-                        current_signature = (tool_name, tool_args_str)
-                        previous_tool_calls.append(current_signature)
-
-                        # Check if the last 3 calls are identical
-                        if len(previous_tool_calls) >= 3 and all(c == current_signature for c in previous_tool_calls[-3:]):
-                            logging.warning("Loop detected in tool calls. Injecting system alert.")
-                            global_inputs["tool_result"] = "SYSTEM ALERT: You have called this tool with these exact arguments 3 times in a row. Please change your strategy or ask the user for help."
-                        else:
-                            # The tool is executed within the workflow, so we just need to
-                            # grab the result and feed it back into the next iteration.
-                            global_inputs["tool_result"] = workflow_result.get("tool_result")
-
-                            # Extract tool_receipt to log audit trail
-                            tool_receipt = None
-                            for node_id, outputs in workflow_runner.context.node_outputs.items():
-                                if "tool_receipt" in outputs:
-                                    tool_receipt = outputs["tool_receipt"]
-                                    break
-
-                            # Always log the audit trail even if receipt is None to maintain a complete record
-                            if global_inputs.get("tool_result") is not None:
-                                self.audit_log_tool_call(tool_name, tool_args, str(global_inputs["tool_result"]), tool_receipt)
-
-                        # Continue the loop
-                    else:
-                        # This case should not be reached if the workflow is designed correctly
-                        logging.error("Workflow ended without a final response or a tool call.")
-                        await self._send_response("I'm sorry, my thought process ended unexpectedly.")
-                        return
-
-                # If the loop completes without a final answer
-                await self._send_response("I seem to be stuck in a thought loop. Could you please clarify your request?")
-
-        except Exception as e:
-            logging.error(f"An error occurred during workflow execution: {e}", exc_info=True)
-            await self._send_response("I'm sorry, an internal error occurred while processing your request with the new workflow engine.")
-        finally:
-            active_workflows.remove_runner(request_id)
-
-    @tracer.start_as_current_span("TwinService._send_response")
-    async def _send_response(self, text: str):
-        """Sends a response back to the appropriate channel (TTS or Gateway)."""
-        span = trace.get_current_span()
-        span.set_attribute("agent.output_text", text)
-
-        if self.current_request_meta and self.current_request_meta.get("is_sync"):
-            request_id = self.current_request_meta.get("request_id")
-            if request_id and request_id in pipecatapp.web_server.sync_response_store:
-                response_data = {"response": text}
-
-                # Generate TTS if available
-                if self.tts_service:
-                    try:
-                         # Use run_in_executor to avoid blocking
-                         loop = asyncio.get_running_loop()
-                         audio_bytes = await loop.run_in_executor(None, self.tts_service._synthesize_sync, text)
-                         audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
-                         response_data["audio_base64"] = audio_b64
-                    except Exception as e:
-                         logging.error(f"TTS generation failed for sync response: {e}")
-
-                pipecatapp.web_server.sync_response_store[request_id]["response"] = response_data
-                pipecatapp.web_server.sync_response_store[request_id]["event"].set()
-                logging.info(f"Set synchronous response for request {request_id}")
-            else:
-                logging.warning(f"Sync response request {request_id} not found in store.")
-        elif self.current_request_meta and "response_url" in self.current_request_meta:
-            response_url = self.current_request_meta["response_url"]
-            request_id = self.current_request_meta["request_id"]
-
-            try:
-                # Security Fix: Sentinel - Validate URL and use resolved IP for HTTP to prevent DNS Rebinding
-                original_url, safe_ip = await resolve_and_validate_url(response_url)
-                safe_url, headers = get_safe_url_and_headers(original_url, safe_ip)
-            except ValueError as e:
-                logging.error(f"Blocked SSRF attempt in response_url: {e}")
-                return
-
-            response_payload = {"request_id": request_id, "content": text}
-
-            # Generate TTS if available
-            if self.tts_service:
-                 try:
-                     loop = asyncio.get_running_loop()
-                     audio_bytes = await loop.run_in_executor(None, self.tts_service._synthesize_sync, text)
-                     audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
-                     response_payload["audio_base64"] = audio_b64
-                 except Exception as e:
-                     logging.error(f"TTS generation failed for callback response: {e}")
-
-            try:
-                # Bolt ⚡ Optimization: Use reused client instead of creating new one
-                await self.http_client.post(safe_url, json=response_payload, headers=headers)
-                logging.info(f"Sent response for request {request_id} to gateway.")
-            except Exception as e:
-                logging.error(f"Failed to send response to gateway: {e}")
-        else:
-            # Default to pushing to the audio pipeline
-            await self.push_frame(TextFrame(text))
-
-    async def _request_approval(self, tool_call_info: dict) -> bool:
-        """Sends a tool call to the web UI for user approval.
-
-        Args:
-            tool_call_info (dict): A dictionary describing the tool call.
-
-        Returns:
-            True if the user approved the action, False otherwise.
-        """
-        request_id = str(time.time())
-        await pipecatapp.web_server.manager.broadcast(json.dumps({"type": "approval_request", "data": {"request_id": request_id, "tool_call": tool_call_info}}))
-        while True:
-            response = await self.approval_queue.get()
-            if response.get("data", {}).get("request_id") == request_id:
-                return response.get("data", {}).get("approved", False)
-
-# -----------------------
-# Main entrypoint
-# -----------------------
-def initialize_vision_detector(app_config: dict) -> FrameProcessor:
-    """Initializes the vision detector based on configuration with failover.
-
-    This function selects a primary vision model (e.g., YOLOv8, Moondream)
-    based on the `app_config`. If the primary model fails to initialize,
-    it attempts to load a fallback model. If both fail, it returns a dummy
-    processor that indicates the vision system is unavailable.
-
-    Args:
-        app_config (dict): The application configuration dictionary.
-
-    Returns:
-        An instance of a vision detector (e.g., YOLOv8Detector, MoondreamDetector)
-        or a dummy FrameProcessor if initialization fails.
-    """
-    vision_model_name = app_config.get("vision_model", "yolov8")
-    primary_model, fallback_model = (YOLOv8Detector, MoondreamDetector) if vision_model_name == "yolov8" else (MoondreamDetector, YOLOv8Detector)
-
-    try:
-        logging.info(f"Attempting to initialize primary vision model: {primary_model.__name__}")
-        detector = primary_model()
-        logging.info(f"Successfully initialized {primary_model.__name__}")
-        return detector
-    except Exception as e:
-        logging.warning(f"Failed to initialize {primary_model.__name__}: {e}. Attempting fallback.")
-        try:
-            logging.info(f"Attempting to initialize fallback vision model: {fallback_model.__name__}")
-            detector = fallback_model()
-            logging.info(f"Successfully initialized {fallback_model.__name__}")
-            return detector
-        except Exception as e_fallback:
-            logging.error(f"Failed to initialize fallback vision model {fallback_model.__name__}: {e_fallback}")
-            class VisionUnavailable(FrameProcessor):
-                def get_observation(self) -> str:
-                    return "Vision system is completely unavailable."
-            detector = VisionUnavailable()
-            logging.info("Initialized with a dummy vision processor.")
-            return detector
-
-async def load_config_from_consul(consul_host, consul_port):
-    """Loads application and model configuration from the Consul KV store.
-
-    Args:
-        consul_host (str): The hostname or IP address of the Consul agent.
-        consul_port (int): The port of the Consul agent.
-
-    Returns:
-        A dictionary containing the loaded configuration.
-    """
-    logging.info("Loading configuration from Consul KV store...")
-    config = {}
-    token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
-    c = consul.aio.Consul(host=consul_host, port=consul_port, token=token, scheme='http', verify=False)
-    try:
-        index, data = await c.kv.get('config/app/settings')
-        if data:
-            app_settings = json.loads(data['Value'].decode('utf-8'))
-            config.update(app_settings)
-            logging.info("Successfully loaded application settings from Consul.")
-        else:
-            logging.error("Could not find 'config/app/settings' in Consul KV.")
-
-        index, data = await c.kv.get('config/models/tts_voices')
-        if data:
-            config['tts_voices'] = json.loads(data['Value'].decode('utf-8'))
-            logging.info("Successfully loaded TTS voices from Consul.")
-        else:
-            logging.warning("Could not find 'config/models/tts_voices' in Consul KV.")
-
-    except Exception as e:
-        logging.error(f"Error loading configuration from Consul: {e}")
-
-    if "TOOL_EXECUTION_MODE" in os.environ:
-        config["tool_execution_mode"] = os.getenv("TOOL_EXECUTION_MODE")
-    if "TOOL_SERVER_URL" in os.environ:
-        config["tool_server_url"] = os.getenv("TOOL_SERVER_URL")
-
-    return config
 
 # Global variable to hold the background task
 agent_task = None
@@ -1563,7 +71,6 @@ async def run_agent():
     logging.info("Starting agent background task...")
 
     # Security: Initialize SecretManager and scrub environment
-    # This prevents ambient authority and accidental leakage via os.environ
     sensitive_keys = {
         "OPENAI_API_KEY",
         "OPENROUTER_API_KEY",
@@ -1575,72 +82,47 @@ async def run_agent():
     }
     secret_manager.initialize_from_env(sensitive_keys)
 
-    # Initialize API Keys (retrieve from SecretManager)
     api_keys_str = secret_manager.get_secret("PIPECAT_API_KEYS") or secret_manager.get_secret("PIECAT_API_KEYS")
     if api_keys_str:
         hashed_keys = [key.strip() for key in api_keys_str.split(',')]
         initialize_api_keys(hashed_keys)
         logging.info(f"Initialized with {len(hashed_keys)} API key(s).")
     else:
-        logging.warning("No API keys found in PIPECAT_API_KEYS. Sensitive endpoints will be insecure if not protected elsewhere.")
+        logging.warning("No API keys found in PIPECAT_API_KEYS.")
 
-    # Set initial state for web server
     pipecatapp.web_server.app.state.is_ready = False
     pipecatapp.web_server.app.state.twin_service_instance = None
 
-    # Initialize World Model
     world_model_mode = os.getenv("WORLD_MODEL_MODE", "distributed")
     if world_model_mode == "local":
-        logging.info("Initializing LocalWorldModel (Monolith mode)")
         world_model = LocalWorldModel()
     else:
-        logging.info("Initializing MQTTWorldModelClient (Distributed mode)")
         world_model = MQTTWorldModelClient()
-
     pipecatapp.web_server.app.state.world_model = world_model
 
-
-    # Load configuration from Consul
-    consul_host = os.getenv("CONSUL_HOST")
-    if not consul_host:
-         logging.warning("CONSUL_HOST environment variable not set. Defaulting to CLUSTER_IP or 127.0.0.1")
-         consul_host = os.getenv("CLUSTER_IP", "127.0.0.1")
-
-    consul_port_str = os.getenv("CONSUL_PORT")
-    if not consul_port_str:
-         logging.warning("CONSUL_PORT environment variable not set. Defaulting to 8500")
-         consul_port = 8500
-    else:
-         consul_port = int(consul_port_str)
+    consul_host = os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1"))
+    consul_port = int(os.getenv("CONSUL_PORT", 8500))
 
     try:
         app_config = await load_config_from_consul(consul_host, consul_port)
     except Exception as e:
         logging.critical(f"Failed to load config from Consul: {e}")
-        # We can't exit the process here easily without killing Uvicorn too,
-        # but logging critical is good. The health check will remain failing.
         return
 
-    # Add consul host/port to app_config
     app_config['consul_host'] = consul_host
     app_config['consul_port'] = consul_port
 
-    # Run the robust, silent pre-flight check
     audio_device_index = find_workable_audio_input_device()
 
-    # Discover main LLM from Consul or Environment
     env_service_names = os.getenv("LLAMA_API_SERVICE_NAME")
     if env_service_names:
         main_llm_service_names = [s.strip() for s in env_service_names.split(",") if s.strip()]
     else:
-        logging.warning("LLAMA_API_SERVICE_NAME not set, falling back to Consul config or default.")
         main_llm_service_names = [app_config.get("llama_api_service_name", "llamacpp-rpc-api")]
 
+    from pipecatapp.net_utils import format_url
     consul_http_addr = format_url("http", consul_host, consul_port)
-
     run_local_llm = os.getenv("RUN_LOCAL_LLM", "false").lower() == "true"
-
-    # Define variables in the outer scope
     llm_provider = os.getenv("LLM_PROVIDER", "local")
     llm_api_key = "dummy"
     llm_model = "dummy"
@@ -1649,7 +131,6 @@ async def run_agent():
     if run_local_llm:
         from pipecatapp.local_llm import LocalLLMService
         model_path = os.getenv("LOCAL_LLM_MODEL_PATH", "/opt/nomad/models/llama-2-7b-chat.gguf")
-        logging.info(f"RUN_LOCAL_LLM is true. Loading llama_cpp directly with model: {model_path}")
         llm = LocalLLMService(model_path=model_path)
         llm_base_url = "local"
     else:
@@ -1657,50 +138,34 @@ async def run_agent():
             llm_base_url = "https://api.groq.com/openai/v1"
             llm_api_key = secret_manager.get_secret("GROQ_API_KEY", "")
             llm_model = os.getenv("LLM_MODEL", "llama3-70b-8192")
-            logging.info("Using Groq LLM provider.")
         elif llm_provider == "deepseek":
             llm_base_url = "https://api.deepseek.com"
             llm_api_key = secret_manager.get_secret("DEEPSEEK_API_KEY", "")
             llm_model = os.getenv("LLM_MODEL", "deepseek-chat")
-            logging.info("Using DeepSeek LLM provider.")
         elif llm_provider == "openai":
             llm_base_url = "https://api.openai.com/v1"
             llm_api_key = secret_manager.get_secret("OPENAI_API_KEY", "")
             llm_model = os.getenv("LLM_MODEL", "gpt-4o")
-            logging.info("Using OpenAI LLM provider.")
         else:
-            # Bolt ⚡ Optimization: check for explicit LLAMA_API_BASE_URL (e.g. from Expert Sidecar)
-            # This bypasses Consul discovery for faster startup when the LLM is local.
             explicit_llm_url = os.getenv("LLAMA_API_BASE_URL")
-            # We only use the explicit URL if it points to localhost (sidecar pattern)
-            # otherwise we prefer Consul discovery for load balancing.
             if explicit_llm_url and "localhost" in explicit_llm_url:
-                 logging.info(f"Using explicit LLAMA_API_BASE_URL from environment: {explicit_llm_url}")
                  llm_base_url = explicit_llm_url
             else:
                  llm_base_url = await discover_services(main_llm_service_names, consul_http_addr)
 
-        llm = OpenAILLMService(
-            base_url=llm_base_url,
-            api_key=llm_api_key,
-            model=llm_model
-        )
+        llm = OpenAILLMService(base_url=llm_base_url, api_key=llm_api_key, model=llm_model)
 
     runner = PipelineRunner()
-
     vision_detector = initialize_vision_detector(app_config)
-    # Bolt ⚡ Optimization: Inject callback to check for active connections
+
     if isinstance(vision_detector, YOLOv8Detector):
         vision_detector.set_connection_check_callback(lambda: len(pipecatapp.web_server.manager.active_connections) > 0)
 
     if app_config.get("debug_mode", False):
         logging.getLogger().setLevel(logging.DEBUG)
-        logging.debug("Debug mode enabled.")
-
     if app_config.get("approval_mode", False):
-        logging.info("Approval mode enabled. Sensitive actions will require user confirmation.")
+        logging.info("Approval mode enabled.")
 
-    # Pre-initialize TTS services if available (Moved up to pass to TwinService)
     tts = None
     websocket_streamer = None
 
@@ -1714,7 +179,6 @@ async def run_agent():
                 model_path = f"/opt/nomad/models/tts/{first_voice['model']}"
                 tts = PiperTTSService(model_path=model_path)
             websocket_streamer = WebsocketAudioStreamer(sample_rate=tts.sample_rate)
-            logging.info("TTS and Websocket Audio Streamer initialized.")
         else:
             logging.warning("TTS voices not configured in Consul. Audio output will be disabled.")
     except Exception as e:
@@ -1731,17 +195,14 @@ async def run_agent():
     )
     pipecatapp.web_server.app.state.twin_service_instance = twin
 
-    # Start Task Supervisor
     task_supervisor = TaskSupervisor(twin)
     twin.task_supervisor = task_supervisor
     asyncio.create_task(task_supervisor.start())
 
-    # Now that the twin service is initialized, mark the application as ready.
     pipecatapp.web_server.app.state.is_ready = True
     logging.info("Application is fully initialized and ready.")
 
     text_injector = TextMessageInjector(text_message_queue)
-
     pipeline_steps = []
 
     if audio_device_index is not None:
@@ -1762,21 +223,15 @@ async def run_agent():
                 host = app_config.get("wyoming_host", "localhost")
                 port = int(app_config.get("wyoming_port", 10300))
                 stt = WyomingSTTService(host=host, port=port)
-                logging.info(f"Configured Wyoming for STT at {host}:{port}.")
             else:
                 stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
-                # Sanitize the model name if it contains the provider name as a prefix
                 if stt_model_name.startswith(f"{stt_provider}-"):
                     stt_model_name = stt_model_name[len(stt_provider) + 1:]
                 model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
                 stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
-                logging.info(f"Configured FasterWhisper for STT with model '{model_path}' and sample rate 16000Hz.")
         elif stt_service_name == "groq":
             groq_key = secret_manager.get_secret("GROQ_API_KEY")
-            if not groq_key:
-                raise RuntimeError("STT_SERVICE is 'groq' but GROQ_API_KEY is not set.")
             stt = GroqSTTService(api_key=groq_key)
-            logging.info("Configured Groq for STT.")
         else:
             raise RuntimeError(f"STT_SERVICE not configured correctly in Consul. Got '{stt_service_name}'")
 
@@ -1794,34 +249,23 @@ async def run_agent():
                  pipeline_steps.append(websocket_streamer)
 
         pipeline_steps.append(transport.output())
-
     else:
-        logging.warning("No audio device found. Starting in headless mode (no audio source, no STT).")
-        # In headless mode (e.g. Docker), we inject text from the UI, process it,
-        # generate TTS, and stream it back to the UI.
-        pipeline_steps.append(twin)
-        pipeline_steps.append(UILogger(sender="agent"))
-
+        logging.warning("No audio device found. Starting in headless mode.")
+        pipeline_steps.extend([twin, UILogger(sender="agent")])
         if tts:
              pipeline_steps.append(tts)
              if websocket_streamer:
                  pipeline_steps.append(websocket_streamer)
 
     pipeline_steps.insert(0, text_injector)
-
-    # Optionally insert benchmark collector
     if app_config.get("benchmark_mode", False):
         pipeline_steps.insert(1, BenchmarkCollector())
 
     main_pipeline = Pipeline(pipeline_steps)
     main_task = PipelineTask(main_pipeline)
-
-    # Vision pipeline (parallel)
     vision_pipeline = Pipeline([vision_detector])
-
     text_injector.start_listening()
 
-    # This runs forever
     await asyncio.gather(
         runner.run(main_task),
         runner.run(PipelineTask(vision_pipeline))
@@ -1829,65 +273,39 @@ async def run_agent():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manages the lifecycle of the agent background task."""
     global agent_task
-
-    # Start gossip registry
     await gossip_registry.start()
 
-    # Initialize Obsidian Gardener if Vault path is provided
     vault_path = os.getenv("OBSIDIAN_VAULT_PATH")
     gardener = None
     if vault_path:
         gardener = ObsidianGardener(vault_path=vault_path, workflow_runner_class=WorkflowRunner)
         gardener.start()
 
-    # Start the agent loop in the background
-    # We use a task name to easily identify it in debug tools
     agent_task = asyncio.create_task(run_agent(), name="pipecat_agent_loop")
-
-    # Start Ouroboros Webring Discovery Task
     asyncio.create_task(pipecatapp.web_server.discover_ouroboros_members(), name="ouroboros_discovery")
-    yield
-    # Cleanup on shutdown
-    await gossip_registry.stop()
 
+    yield
+
+    await gossip_registry.stop()
     if gardener:
         gardener.stop()
-
     if agent_task:
-        logging.info("Cancelling agent background task...")
         agent_task.cancel()
         try:
             await agent_task
         except asyncio.CancelledError:
-            logging.info("Agent task cancelled successfully.")
-        except Exception as e:
-            logging.error(f"Error during agent task shutdown: {e}")
+            pass
 
 if __name__ == "__main__":
-    # Determine port
-    web_port_str = os.getenv("WEB_PORT")
-    if not web_port_str:
-        logging.warning("WEB_PORT not set, defaulting to 8000")
-        web_port = 8000
-    else:
-        web_port = int(web_port_str)
-
+    web_port = int(os.getenv("WEB_PORT", os.getenv("PORT", os.getenv("NOMAD_PORT_http", 8000))))
     gossip_registry.register_service("pipecatapp", web_port)
-
-    # Attach the lifespan context manager to the FastAPI app defined in pipecatapp.web_server.py
-    # This allows us to start the background tasks when Uvicorn starts the app
     pipecatapp.web_server.app.router.lifespan_context = lifespan
 
-    # Run Uvicorn in the main thread (blocking)
-    # This ensures standard signal handling and socket management
     ssl_keyfile = os.getenv("SSL_KEYFILE")
     ssl_certfile = os.getenv("SSL_CERTFILE")
 
     if ssl_keyfile and ssl_certfile:
-        logging.info(f"Starting Uvicorn with SSL on 0.0.0.0:{web_port}")
         uvicorn.run(pipecatapp.web_server.app, host="0.0.0.0", port=web_port, log_level="info", ssl_keyfile=ssl_keyfile, ssl_certfile=ssl_certfile)
     else:
-        logging.info(f"Starting Uvicorn on 0.0.0.0:{web_port}")
         uvicorn.run(pipecatapp.web_server.app, host="0.0.0.0", port=web_port, log_level="info")

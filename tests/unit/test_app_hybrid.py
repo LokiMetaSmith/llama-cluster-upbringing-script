@@ -68,7 +68,7 @@ async def test_discover_services_distributed_mode_failure(mocker):
     mocker.patch("httpx.AsyncClient.get", mock_get)
 
     # Mock fallback to also return None
-    mocker.patch("pipecatapp.app.scan_network_for_llms", new_callable=AsyncMock, return_value=None)
+    mocker.patch("pipecatapp.core.service_discovery.scan_network_for_llms", new_callable=AsyncMock, return_value=None)
 
     with patch.dict(os.environ, {}, clear=True):
         # With clear=True, there are no overrides
@@ -103,11 +103,11 @@ async def test_monolith_mode_answers_hello(mocker):
     }
     mock_workflow_runner.run = AsyncMock(return_value=final_response_payload)
 
-    with patch('app.PMMMemoryClient'), patch('app.PMMMemory'), patch('tools.code_runner_tool.docker.from_env', create=True), patch('tools.skill_builder_tool.MemoryStore'), patch('pipecatapp.tools.document_tool.os.path.exists', return_value=True), patch('pipecatapp.tools.p2p_sync_tool.os.makedirs'):
+    with patch('pipecatapp.core.twin.PMMMemoryClient'), patch('pipecatapp.core.twin.PMMMemory'), patch('pipecatapp.tools.code_runner_tool.docker.from_env', create=True), patch('pipecatapp.tools.skill_builder_tool.MemoryStore'), patch('pipecatapp.tools.document_tool.os.path.exists', return_value=True), patch('pipecatapp.tools.p2p_sync_tool.os.makedirs'):
         with patch.dict(os.environ, {"HA_URL": "http://mock-ha", "HA_TOKEN": "mock-token", "LLAMA_API_URL_OVERRIDE": "http://localhost:8080"}):
             service = TwinService(mock_llm, mock_vision, mock_runner, mock_config, asyncio.Queue())
 
-    with patch('pipecatapp.app.WorkflowRunner', return_value=mock_workflow_runner), patch('pipecatapp.web_server.manager.broadcast', new_callable=AsyncMock):
+    with patch('pipecatapp.core.twin.WorkflowRunner', return_value=mock_workflow_runner), patch('pipecatapp.web_server.manager.broadcast', new_callable=AsyncMock):
         with patch.object(service, '_send_response', new_callable=AsyncMock) as mock_send_response:
             service.long_term_memory = MagicMock()
             service.long_term_memory.add_event = AsyncMock()
@@ -118,7 +118,7 @@ async def test_monolith_mode_answers_hello(mocker):
                     self.text = text
                     self.meta = meta or {}
 
-            with patch('pipecatapp.app.TranscriptionFrame', MockTranscriptionFrame):
+            with patch('pipecatapp.core.twin.TranscriptionFrame', MockTranscriptionFrame):
                 frame = MockTranscriptionFrame("Say hello", meta={"request_id": "test_req"})
 
                 service.push_frame = AsyncMock()
