@@ -111,6 +111,10 @@ job "{{ job_name }}" {
         value     = "controller"
       }
 
+      env {
+        CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
+      }
+
       template {
         data = <<EOH
 #!/bin/bash

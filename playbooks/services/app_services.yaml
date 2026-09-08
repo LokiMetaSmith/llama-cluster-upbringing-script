@@ -124,7 +124,6 @@
         - llmfit
         - openclaw
         - forgejo
-        - gitea
         - radicle
         - paperless
         - opengist
@@ -140,7 +139,6 @@
         - world_model_service
         - tool_server
         - forgejo
-        - gitea
         - radicle
         - paperless
         - opengist
