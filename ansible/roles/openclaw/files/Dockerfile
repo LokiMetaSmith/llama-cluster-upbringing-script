@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim
+FROM node:24-bookworm-slim
 
 # Install system dependencies (curl for integration)
 # We update sources to bypass invalid/expired signature issues due to system time
