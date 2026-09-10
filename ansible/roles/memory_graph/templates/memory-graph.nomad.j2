@@ -4,6 +4,22 @@ job "memory-graph" {
   priority = 80
 
   group "memory" {
+    count = 1
+
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    reschedule {
+      delay          = "30s"
+      delay_function = "exponential"
+      max_delay      = "10m"
+      unlimited      = true
+    }
+
     network {
       port "http" { to = 8000 }
     }
@@ -47,6 +63,12 @@ job "memory-graph" {
           path     = "/sse"
           interval = "10s"
           timeout  = "2s"
+
+          check_restart {
+            limit           = 3
+            grace           = "90s"
+            ignore_warnings = false
+          }
         }
       }
     }

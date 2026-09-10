@@ -5,6 +5,20 @@ job "zigbee2mqtt" {
   group "zigbee2mqtt" {
     count = 1
 
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    reschedule {
+      delay          = "30s"
+      delay_function = "exponential"
+      max_delay      = "10m"
+      unlimited      = true
+    }
+
     network {
       port "http" {
         to = {{ zigbee2mqtt_port | default(8080) }}
@@ -27,16 +41,24 @@ job "zigbee2mqtt" {
         path     = "/"
         interval = "30s"
         timeout  = "5s"
+
+        check_restart {
+          limit           = 3
+          grace           = "90s"
+          ignore_warnings = false
+        }
       }
     }
 
     task "zigbee2mqtt" {
       driver = "docker"
 
+      {% if require_zigbee_hardware | default(true) %}
       constraint {
         attribute = "${meta.zigbee_coordinator}"
         value     = "true"
       }
+      {% endif %}
 
       config {
         image = "koenkk/zigbee2mqtt:latest"
