@@ -74,17 +74,15 @@ def get_ssl_context():
         if hasattr(ssl, 'VERIFY_X509_STRICT'):
             context.verify_flags &= ~ssl.VERIFY_X509_STRICT
 
-        if os.environ.get("NOMAD_TLS_SKIP_VERIFY") in ["1", "true", "True"]:
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
-        else:
-            cacert = os.environ.get("NOMAD_CACERT")
-            if cacert and os.path.exists(cacert):
-                context.load_verify_locations(cafile=cacert)
+        cacert = os.environ.get("NOMAD_CACERT")
+        if cacert and os.path.exists(cacert):
+            context.load_verify_locations(cafile=cacert)
+        elif os.path.exists("/etc/nomad.d/tls/ca.pem"):
+            context.load_verify_locations(cafile="/etc/nomad.d/tls/ca.pem")
 
-        client_cert = os.environ.get("NOMAD_CLIENT_CERT")
-        client_key = os.environ.get("NOMAD_CLIENT_KEY")
-        if client_cert and client_key and os.path.exists(client_cert) and os.path.exists(client_key):
+        client_cert = os.environ.get("NOMAD_CLIENT_CERT") or "/etc/nomad.d/tls/cli.cert.pem"
+        client_key = os.environ.get("NOMAD_CLIENT_KEY") or "/etc/nomad.d/tls/cli.key.pem"
+        if os.path.exists(client_cert) and os.path.exists(client_key):
             context.load_cert_chain(certfile=client_cert, keyfile=client_key)
 
         return context

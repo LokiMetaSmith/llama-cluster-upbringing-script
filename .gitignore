@@ -3,6 +3,7 @@
 troubleshoot_report_*.txt
 node_modules/
 __pycache__/
+.mypy_cache/
 playbook_output.log
 playbook_output.log.before_changes
 .aider*
