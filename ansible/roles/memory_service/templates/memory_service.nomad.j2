@@ -6,6 +6,20 @@ job "memory-service" {
   group "memory-api" {
     count = 1
 
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    reschedule {
+      delay          = "30s"
+      delay_function = "exponential"
+      max_delay      = "10m"
+      unlimited      = true
+    }
+
     network {
       mode = "bridge"
       port "http" {
@@ -63,6 +77,12 @@ job "memory-service" {
           path     = "/health"
           interval = "10s"
           timeout  = "2s"
+
+          check_restart {
+            limit           = 3
+            grace           = "90s"
+            ignore_warnings = false
+          }
         }
       }
     }

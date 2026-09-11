@@ -10,6 +10,13 @@ job "{{ job_name | default('pipecat-app') }}" {
   group "pipecat-group" {
     count = 1
 
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
     update {
       max_parallel     = 3
       min_healthy_time = "30s"
@@ -40,6 +47,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       MEMORY_SERVICE_URL     = "http://{{ cluster_ip }}:8000"
       CONSUL_HOST            = "{{ cluster_ip }}"
       CONSUL_PORT            = "{{ consul_http_port }}"
+      CONSUL_HTTP_ADDR      = "http://{{ cluster_ip }}:8500"
       CONSUL_HTTP_TOKEN      = "{{ consul_bootstrap_token | default('') }}"
       ROUTER_PORT            = "{{ router_port }}"
       LLAMA_API_URL          = "http://{{ cluster_ip }}:{{ router_port }}/v1"
@@ -118,6 +126,12 @@ job "{{ job_name | default('pipecat-app') }}" {
         path     = "/health"
         interval = "20s"
         timeout  = "5s"
+
+        check_restart {
+          limit           = 3
+          grace           = "90s"
+          ignore_warnings = false
+        }
       }
 
       check {
@@ -263,6 +277,12 @@ EOT
           port     = "cdp"
           interval = "10s"
           timeout  = "2s"
+
+          check_restart {
+            limit           = 3
+            grace           = "90s"
+            ignore_warnings = false
+          }
         }
       }
     }

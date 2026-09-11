@@ -35,6 +35,20 @@ job "{{ job_name }}" {
   group "{{ job_name }}-group" {
     count = 1
 
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    reschedule {
+      delay          = "30s"
+      delay_function = "exponential"
+      max_delay      = "10m"
+      unlimited      = true
+    }
+
     scaling {
       enabled = true
       min     = 1
@@ -100,16 +114,23 @@ job "{{ job_name }}" {
         path     = "/health"
         interval = "15s"
         timeout  = "10s"
+
+        check_restart {
+          limit = 3
+          grace = "90s"
+        }
       }
     }
 
     task "llama-server" {
       driver = "raw_exec"
 
+      {% if require_controller_node | default(false) %}
       constraint {
         attribute = "${meta.node_type}"
         value     = "controller"
       }
+      {% endif %}
 
       env {
         CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
@@ -121,30 +142,36 @@ job "{{ job_name }}" {
 set -e
 echo "Starting llama-server for {{ best_model.filename }}..."
 
-# Discover RPC servers
+# Wait for RPC servers if available
 RPC_SERVERS=""
-{% raw %}
-{{ range service "rpc-{% endraw %}{{ best_model_sanitized }}{% raw %}-provider" }}
-RPC_SERVERS="$RPC_SERVERS,{{ .Address }}:{{ .Port }}"
-{{ end }}
-{% endraw %}
-# Remove leading comma
-RPC_SERVERS="$${RPC_SERVERS#,}"
+for i in $(seq 1 6); do
+  RPC_SERVERS=""
+  {% raw %}
+  {{ range service "rpc-{% endraw %}{{ best_model_sanitized }}{% raw %}-provider" }}
+  RPC_SERVERS="$RPC_SERVERS,{{ .Address }}:{{ .Port }}"
+  {{ end }}
+  {% endraw %}
+  RPC_SERVERS="$${RPC_SERVERS#,}"
+  if [ -n "$RPC_SERVERS" ]; then
+    break
+  fi
+  echo "Waiting for RPC servers (attempt $i/6)..."
+  sleep 5
+done
 
-if [ -z "$RPC_SERVERS" ]; then
-  echo "Warning: No RPC servers found for model {{ best_model.filename }}. Waiting..."
-  # Just sleep to avoid crash loops if RPC servers are starting up
-  sleep 10
-  exit 1
+if [ -n "$RPC_SERVERS" ]; then
+  echo "Found RPC servers: $RPC_SERVERS"
+  RPC_ARG="--rpc $RPC_SERVERS"
+else
+  echo "No remote RPC servers found. Starting standalone instance."
+  RPC_ARG=""
 fi
-
-echo "Found RPC servers: $RPC_SERVERS"
 
 exec /usr/local/bin/llama-server \
     --model /opt/nomad/models/llm/{{ best_model.filename }} \
     --host 0.0.0.0 \
     --port ${NOMAD_PORT_api} \
-    --rpc "$RPC_SERVERS" \
+    $RPC_ARG \
     --n-gpu-layers 99 \
     --mlock \
     --verbose
@@ -186,10 +213,12 @@ EOH
     task "{{ job_name }}" {
       driver = "docker"
 
+      {% if require_controller_node | default(false) %}
       constraint {
         attribute = "${meta.node_type}"
         value     = "controller"
       }
+      {% endif %}
 
       config {
         image = "{{ pipecatapp_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag | default('local') }}"
@@ -241,10 +270,12 @@ EOH
     task "{{ job_name }}" {
       driver = "raw_exec"
 
+      {% if require_controller_node | default(false) %}
       constraint {
         attribute = "${meta.node_type}"
         value     = "controller"
       }
+      {% endif %}
 
       config {
         command = "/bin/bash"
