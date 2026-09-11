@@ -111,8 +111,8 @@ job "{{ job_name | default('tml-interaction') }}" {
       }
 
       resources {
-        # Allocate sufficient memory for a large MoE model and streaming buffers
-        memory = {{ model.memory_mb | default(16384) }}
+        # Allocate sufficient memory for a large MoE model and streaming buffers (reduced default for mid-tier workers)
+        memory = {{ model.memory_mb | default(2048) }}
       }
     }
   }

@@ -19,6 +19,11 @@
 - [x] **Multi-Tenant Access & Role-Based Control (RBAC):** Role enforcement (admin vs viewer) on mutating community app endpoints.
 - [x] Evaluate and execute the Proof-of-Concept for integrating HelixDB as a unified graph-vector memory backend (see `docs/analysis/HELIXDB_EVALUATION.md` for the PoC TODO list).
 - [x] Implement `apt` package caching proxy via IPFS.
+- [ ] **TML Interaction Models Research Preview Implementation:**
+  - **Goal:** Flesh out the full multi-turn multi-modal continuous audio/video streaming architecture and real model weights for Thinking Machines Lab's Interaction Models research preview.
+  - **Location:** `ansible/jobs/tml-interaction.nomad.j2` and `ansible/roles/tml_interaction`.
+- [ ] **Dynamic Multi-Node Job Rescheduling & Resource Shuffling:**
+  - **Goal:** Implement automated Nomad cluster job rescheduling and shuffling policies when high-resource nodes (e.g. multi-GPU, 1TB RAM nodes) dynamically join or leave the swarm cluster.
 
 ## Immediate Actions
 
