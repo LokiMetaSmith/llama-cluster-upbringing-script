@@ -52,8 +52,14 @@ class MemoryStore:
         """
         # The embedding model is now managed by Ansible and placed in a predictable location.
         embedding_model_path = "/opt/nomad/models/embedding/bge-large-en-v1.5"
-        self.embedding_model = SentenceTransformer(embedding_model_path)
-        self.dimension = self.embedding_model.get_sentence_embedding_dimension()
+        if os.path.exists(embedding_model_path):
+            self.embedding_model = SentenceTransformer(embedding_model_path)
+        else:
+            try:
+                self.embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+            except Exception:
+                self.embedding_model = None
+        self.dimension = self.embedding_model.get_sentence_embedding_dimension() if self.embedding_model else 384
         self.index_file = index_file
         self.store_file = store_file
         self.sqlite_file = sqlite_file

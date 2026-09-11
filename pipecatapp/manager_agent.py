@@ -28,6 +28,17 @@ class ManagerAgent:
         self.swarm_tool = None
         # Gas Town: We might have a root work item ID for the manager task itself
         self.root_work_item_id = os.getenv("WORK_ITEM_ID")
+
+    async def delegate_mini_swe(self, task: str, environment_type: str = "docker", cwd: str = None) -> Dict[str, Any]:
+        """Delegates coding repair / repository tasks directly to mini-swe-agent."""
+        logger.info(f"Delegating coding task to mini-swe-agent: {task[:60]}...")
+        try:
+            from pipecatapp.tools.mini_swe_tool import MiniSWEAgentTool
+            tool = MiniSWEAgentTool()
+            return tool.execute(task=task, environment_type=environment_type, cwd=cwd)
+        except Exception as e:
+            logger.error(f"Failed to delegate to mini-swe-agent: {e}")
+            return {"status": "error", "error": str(e)}
         
     def discover_services(self):
         """Discovers services via Consul."""

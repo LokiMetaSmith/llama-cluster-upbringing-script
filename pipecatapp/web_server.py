@@ -280,6 +280,36 @@ websocket_message_counter = Counter(
     ['client_ip', 'message_type']
 )
 
+@app.post("/api/agents/mini-swe/run", summary="Run Mini-SWE-Agent Task", description="Executes a software engineering / debugging task using mini-swe-agent.", tags=["Agent"])
+async def run_mini_swe_agent_endpoint(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+    """API endpoint to submit code repair tasks to mini-swe-agent."""
+    task = payload.get("task")
+    if not task or not isinstance(task, str):
+        raise HTTPException(status_code=400, detail="Field 'task' (string) is required.")
+
+    environment_type = payload.get("environment_type", "docker")
+    cwd = payload.get("cwd")
+    model_name = payload.get("model_name")
+    api_base = payload.get("api_base")
+
+    try:
+        from pipecatapp.services.mini_swe_service import MiniSWEService
+        service = MiniSWEService(
+            model_name=model_name,
+            api_base=api_base,
+            environment_type=environment_type,
+            cwd=cwd
+        )
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: service.run_task(task=task, cwd=cwd, environment_type=environment_type)
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        logging.error(f"Failed executing mini-swe-agent endpoint task: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"status": "error", "error": str(e)})
+
 @app.post("/api/memory/datalog/index", summary="Index Datalog AST", tags=["Datalog"])
 async def index_datalog_code(payload: dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
     filepath = payload.get("filepath")
