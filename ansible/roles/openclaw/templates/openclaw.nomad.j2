@@ -67,7 +67,7 @@ job "openclaw" {
 
       env {
         TERM = "xterm-256color"
-        OPENAI_BASE_URL = "http://{{ controller_host }}:8000/v1"
+        OPENAI_BASE_URL = "http://{{ controller_host }}:{{ router_port | default(8081) }}/v1"
         OPENAI_API_KEY = "EMPTY"
         OPENAI_MODEL = "Ornith-1.0-9B-GGUF"
         # Enable Shell tool for integration

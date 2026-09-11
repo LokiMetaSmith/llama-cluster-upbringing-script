@@ -256,8 +256,8 @@ EOH
 
         # Necessary for service discovery
         CONSUL_HOST = "{{ cluster_ip | default('100.64.0.1') }}"
-        CONSUL_PORT = "8500"
-        CONSUL_HTTP_ADDR = "http://{{ cluster_ip | default('100.64.0.1') }}:8500"
+        CONSUL_PORT = "{{ consul_http_port | default(8500) }}"
+        CONSUL_HTTP_ADDR = "http://{{ cluster_ip | default('100.64.0.1') }}:{{ consul_http_port | default(8500) }}"
         CONSUL_HTTP_TOKEN = "{{ consul_bootstrap_token | default('') }}"
       }
 

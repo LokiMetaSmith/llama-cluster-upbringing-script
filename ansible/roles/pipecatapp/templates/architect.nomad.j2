@@ -37,7 +37,7 @@ job "architect" {
       EXTERNAL_EXPERTS_CONFIG = "{{ external_experts_config | to_json | replace('\"', '\\\"') }}"
       OPENAI_API_KEY         = "{{ openai_api_key }}"
       OPENROUTER_API_KEY     = "{{ openrouter_api_key }}"
-      MEMORY_SERVICE_URL     = "http://{{ cluster_ip }}:8000"
+      MEMORY_SERVICE_URL     = "http://{{ cluster_ip }}:{{ memory_service_port | default(8000) }}"
       CONSUL_HOST            = "{{ cluster_ip }}"
       CONSUL_PORT            = "{{ consul_http_port }}"
       CONSUL_HTTP_TOKEN      = "{{ consul_bootstrap_token | default('') }}"

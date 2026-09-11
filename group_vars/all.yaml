@@ -81,6 +81,7 @@ nanochat_port: 8005
 tool_server_port: 8006
 frigate_port: 5000
 archivist_port: 8008
+memory_service_port: 8000
 last30days_port: 8009
 node_exporter_port: 9100
 prometheus_port: 9090
