@@ -106,7 +106,7 @@ def main():
         llm_url = scan_network_for_llms()
 
     if not llm_url:
-        llm_url = "http://127.0.0.1:8081/v1"
+        llm_url = "http://127.0.0.1:{{ router_port | default(8081) }}/v1"
 
     print(f"export OPENAI_BASE_URL='{llm_url}'")
     print(f"export OPENAI_API_KEY='dummy'")
@@ -128,7 +128,7 @@ EOH
 
       env {
         OPENAI_API_KEY      = "{{ 'dummy' if (openai_api_key is not defined or not openai_api_key or 'your_openai_api_key_here' in openai_api_key) else openai_api_key }}"
-        OPENAI_BASE_URL     = "http://127.0.0.1:8081/v1"
+        OPENAI_BASE_URL     = "http://127.0.0.1:{{ router_port | default(8081) }}/v1"
         ANTHROPIC_API_KEY   = "{{ anthropic_api_key | default('') }}"
       }
     }

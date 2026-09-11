@@ -5,6 +5,20 @@ job "polyphony" {
   group "polyphony" {
     count = 1
 
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    reschedule {
+      delay          = "30s"
+      delay_function = "exponential"
+      max_delay      = "10m"
+      unlimited      = true
+    }
+
     update {
       max_parallel      = 1
       min_healthy_time  = "10s"
@@ -47,6 +61,12 @@ job "polyphony" {
         path     = "/health"
         interval = "20s"
         timeout  = "10s"
+
+        check_restart {
+          limit           = 3
+          grace           = "90s"
+          ignore_warnings = false
+        }
       }
     }
   }

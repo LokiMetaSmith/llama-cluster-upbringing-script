@@ -5,6 +5,20 @@ job "last30days-service" {
   group "last30days-group" {
     count = 1
 
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    reschedule {
+      delay          = "30s"
+      delay_function = "exponential"
+      max_delay      = "10m"
+      unlimited      = true
+    }
+
     network {
       port "http" {
         static = {{ last30days_port | default(8009) }}
@@ -49,6 +63,12 @@ job "last30days-service" {
           path     = "/health"
           interval = "15s"
           timeout  = "5s"
+
+          check_restart {
+            limit           = 3
+            grace           = "90s"
+            ignore_warnings = false
+          }
         }
       }
     }
