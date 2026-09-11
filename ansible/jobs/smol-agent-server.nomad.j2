@@ -21,7 +21,7 @@ job "smol-agent-server" {
 
     network {
       port "http" {
-        static = 8089
+        static = {{ smol_agent_server_port | default(8091) }}
       }
     }
 
