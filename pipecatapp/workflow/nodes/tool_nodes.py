@@ -348,6 +348,31 @@ class ToolNode(Node):
             self.set_output(context, "output", f"Error executing tool '{tool_name}': {e}")
 
 @registry.register
+class MiniSWEAgentNode(Node):
+    """A LiteGraph workflow node that delegates software engineering tasks to mini-swe-agent."""
+    async def execute(self, context: WorkflowContext):
+        try:
+            task = self.get_input(context, "task")
+        except ValueError:
+            task = self.config.get("config", {}).get("task") or self.config.get("task")
+
+        if not task:
+            self.set_output(context, "output", "Error: 'task' input or config parameter is required.")
+            return
+
+        env_type = self.config.get("config", {}).get("environment_type") or self.config.get("environment_type", "docker")
+        cwd = self.config.get("config", {}).get("cwd") or self.config.get("cwd")
+
+        try:
+            from pipecatapp.tools.mini_swe_tool import MiniSWEAgentTool
+            tool = MiniSWEAgentTool()
+            res = tool.execute(task=task, environment_type=env_type, cwd=cwd)
+            self.set_output(context, "output", json.dumps(res))
+        except Exception as e:
+            logger.error(f"Error in MiniSWEAgentNode: {e}", exc_info=True)
+            self.set_output(context, "output", json.dumps({"status": "error", "error": str(e)}))
+
+@registry.register
 class HereticNode(Node):
     """A node that uses the HereticTool to align/ablate a model."""
     async def execute(self, context: WorkflowContext):

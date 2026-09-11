@@ -115,7 +115,11 @@ class Memorizer:
         self.index_dir = index_dir
         self.llm_client = llm_client
         # Use the same model as RAG tool/Memory Store for consistency
-        self.embedding_model = SentenceTransformer('/opt/nomad/models/embedding/bge-large-en-v1.5')
+        model_path = '/opt/nomad/models/embedding/bge-large-en-v1.5'
+        if os.path.exists(model_path):
+            self.embedding_model = SentenceTransformer(model_path)
+        else:
+            self.embedding_model = None
 
         self.faiss_index_path = os.path.join(index_dir, "pages.faiss")
         self.bm25_index_path = os.path.join(index_dir, "pages.bm25")

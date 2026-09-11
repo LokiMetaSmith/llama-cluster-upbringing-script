@@ -87,6 +87,7 @@ tree-sitter-swift>=0.7.0
 # Model Context Protocol support
 mcp
 smolagents
+mini-swe-agent
 aiofiles>=24.1.0,<27
 datasets>=4.0.0
 jupyter-client

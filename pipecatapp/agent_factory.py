@@ -17,6 +17,7 @@ from pipecatapp.tools.git_tool import Git_Tool
 from pipecatapp.tools.orchestrator_tool import OrchestratorTool
 from pipecatapp.tools.llxprt_code_tool import LLxprt_Code_Tool
 from pipecatapp.tools.smol_agent_tool import SmolAgentTool
+from pipecatapp.tools.mini_swe_tool import MiniSWEAgentTool
 from pipecatapp.tools.final_answer_tool import FinalAnswerTool
 from pipecatapp.tools.mcp_client_adapter import MCPClientAdapter
 from pipecatapp.tools.prompt_improver_tool import PromptImproverTool
@@ -123,6 +124,7 @@ def create_tools(config: dict = None, twin_service=None, runner=None, agent_name
         "goal": GoalTool(),
         "mcp": MCP_Tool(twin_service, runner) if twin_service and runner else None,
         "smol_agent_computer": SmolAgentTool(),
+        "mini_swe_agent": MiniSWEAgentTool(),
         "llxprt_code": LLxprt_Code_Tool(),
         "final_answer": FinalAnswerTool(),
         "holographic_memory": HolographicMemoryTool(),
