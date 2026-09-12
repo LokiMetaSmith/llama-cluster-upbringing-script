@@ -22,7 +22,7 @@
 - [ ] **TML Interaction Models Research Preview Implementation:**
   - **Goal:** Flesh out the full multi-turn multi-modal continuous audio/video streaming architecture and real model weights for Thinking Machines Lab's Interaction Models research preview.
   - **Location:** `ansible/jobs/tml-interaction.nomad.j2` and `ansible/roles/tml_interaction`.
-- [ ] **Dynamic Multi-Node Job Rescheduling & Resource Shuffling:**
+- [x] **Dynamic Multi-Node Job Rescheduling & Resource Shuffling:**
   - **Goal:** Implement automated Nomad cluster job rescheduling and shuffling policies when high-resource nodes (e.g. multi-GPU, 1TB RAM nodes) dynamically join or leave the swarm cluster.
 
 ## Immediate Actions
