@@ -17,6 +17,16 @@ advertise {
 
 {% if is_controller is defined and is_controller %}
 server {
+  default_scheduler_config {
+    scheduler_algorithm             = "binpack"
+    memory_oversubscription_enabled = true
+    preemption_config {
+      batch_scheduler_enabled    = true
+      system_scheduler_enabled   = true
+      service_scheduler_enabled  = true
+      sysbatch_scheduler_enabled = true
+    }
+  }
   enabled = true
   bootstrap_expect = {{ groups['controller_nodes'] | length }}
   server_join {
