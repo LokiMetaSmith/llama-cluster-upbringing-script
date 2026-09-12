@@ -31,6 +31,12 @@
   changed_when: false
   become: yes
 
+- name: "Build Cached Image : Prune Docker builder cache before build"
+  ansible.builtin.command: docker builder prune -f
+  become: yes
+  ignore_errors: yes
+  when: _versioned_image_check.rc != 0 or (force_rebuild | default(false) | bool)
+
 - name: "Build Cached Image : Build the docker image"
   ansible.builtin.command:
     cmd: "docker build --no-cache -t {{ image_name }}:{{ _versioned_tag }} ."
@@ -39,6 +45,12 @@
   changed_when: "_docker_build_result.stdout is defined and ('Successfully built' in _docker_build_result.stdout or 'writing image' in _docker_build_result.stdout)"
   become: yes
   when: _versioned_image_check.rc != 0 or (force_rebuild | default(false) | bool)
+
+- name: "Build Cached Image : Prune Docker builder cache after build"
+  ansible.builtin.command: docker builder prune -f
+  become: yes
+  ignore_errors: yes
+  when: _docker_build_result is changed
 
 - name: "Build Cached Image : Tag image with target tag"
   ansible.builtin.command: "docker tag {{ image_name }}:{{ _versioned_tag }} {{ image_name }}:{{ image_tag | default('latest') }}"

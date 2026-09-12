@@ -104,25 +104,37 @@
   become: yes
   changed_when: false
 
-- name: Export tool-server image to tarball
-  ansible.builtin.command: docker save -o /opt/tool-server.tar tool-server:local
-  become: yes
+- name: Export and Pin tool-server image to IPFS
+  block:
+    - name: Prune Docker builder cache to free space
+      ansible.builtin.command: docker builder prune -f
+      become: yes
+      ignore_errors: yes
 
-- name: Pin tool-server tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /opt/tool-server.tar
-  become: yes
-  register: ipfs_add_result_tool
-  environment:
-    IPFS_PATH: "{{ ipfs_path }}"
-- name: Clean up temporary tool-server tarball
-  ansible.builtin.file:
-    path: /opt/tool-server.tar
-    state: absent
-  become: yes
+    - name: Prune dangling Docker images
+      ansible.builtin.command: docker image prune -f
+      become: yes
+      ignore_errors: yes
+
+    - name: Stream tool-server image directly to IPFS
+      ansible.builtin.shell: docker save tool-server:local | ipfs add -Q -
+      become: yes
+      register: ipfs_add_result_tool
+      environment:
+        IPFS_PATH: "{{ ipfs_path }}"
+  always:
+    - name: Clean up temporary tool-server tarballs if any
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /opt/tool-server.tar
+        - /opt/.tmp-tool-server.tar
+      become: yes
 
 - name: Set tool_server_ipfs_cid fact
   ansible.builtin.set_fact:
-    tool_server_ipfs_cid: "{{ ipfs_add_result_tool.stdout }}"
+    tool_server_ipfs_cid: "{{ ipfs_add_result_tool.stdout | trim }}"
 
 - name: "Tool Server : Verify Docker image exists"
   ansible.builtin.command:
