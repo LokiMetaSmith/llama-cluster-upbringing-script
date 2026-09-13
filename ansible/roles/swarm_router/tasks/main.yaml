@@ -5,6 +5,9 @@
       - nftables
     state: present
     update_cache: yes
+    update_cache_retries: 10
+    update_cache_retry_max_delay: 15
+    cache_valid_time: 3600
 
 - name: Enable IPv4 and IPv6 forwarding
   ansible.posix.sysctl:
