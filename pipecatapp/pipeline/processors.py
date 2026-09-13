@@ -59,8 +59,8 @@ class UILogger(FrameProcessor):
             redacted_text = redact_sensitive_data(frame.text)
 
             # Import dynamically to avoid circular dependencies
-            import pipecatapp.web_server
-            await pipecatapp.web_server.manager.broadcast(json.dumps({"type": self.sender, "data": redacted_text}))
+            import pipecatapp.web_server as web_server
+            await web_server.manager.broadcast(json.dumps({"type": self.sender, "data": redacted_text}))
         await self.push_frame(frame, direction)
 
 class BenchmarkCollector(FrameProcessor):
@@ -201,8 +201,8 @@ class TextMessageInjector(FrameProcessor):
                                     parts = text.split("expert:")
                                     if len(parts) > 1:
                                         expert_name = parts[1].split(".")[0].strip()
-                                        import pipecatapp.web_server
-                                        twin_service = getattr(pipecatapp.web_server.app.state, "twin_service_instance", None)
+                                        import pipecatapp.web_server as web_server
+                                        twin_service = getattr(web_server.app.state, "twin_service_instance", None)
                                         if twin_service and hasattr(twin_service, "task_supervisor"):
                                             # Trigger dynamic auto-scaling in the supervisor
                                             asyncio.create_task(twin_service.task_supervisor.handle_gateway_exhaustion(expert_name))
@@ -283,8 +283,8 @@ class WebsocketAudioStreamer(FrameProcessor):
 
             # Fix: Import web_server locally
             try:
-                import pipecatapp.web_server
-                await pipecatapp.web_server.manager.broadcast(json.dumps({
+                import pipecatapp.web_server as web_server
+                await web_server.manager.broadcast(json.dumps({
                     "type": "audio",
                     "data": b64_audio
                 }))
