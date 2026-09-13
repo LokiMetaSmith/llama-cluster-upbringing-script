@@ -19,6 +19,30 @@ job "paperless-app" {
       unlimited      = true
     }
 
+    volume "paperless_data" {
+      type      = "host"
+      read_only = false
+      source    = "paperless_data"
+    }
+
+    volume "paperless_media" {
+      type      = "host"
+      read_only = false
+      source    = "paperless_media"
+    }
+
+    volume "paperless_export" {
+      type      = "host"
+      read_only = false
+      source    = "paperless_export"
+    }
+
+    volume "paperless_consume" {
+      type      = "host"
+      read_only = false
+      source    = "paperless_consume"
+    }
+
     network {
       mode = "host"
       port "http" {
@@ -52,15 +76,30 @@ job "paperless-app" {
     task "paperless-ngx" {
       driver = "docker"
 
+      volume_mount {
+        volume      = "paperless_data"
+        destination = "/usr/src/paperless/data"
+        read_only   = false
+      }
+      volume_mount {
+        volume      = "paperless_media"
+        destination = "/usr/src/paperless/media"
+        read_only   = false
+      }
+      volume_mount {
+        volume      = "paperless_export"
+        destination = "/usr/src/paperless/export"
+        read_only   = false
+      }
+      volume_mount {
+        volume      = "paperless_consume"
+        destination = "/usr/src/paperless/consume"
+        read_only   = false
+      }
+
       config {
         image = "ghcr.io/paperless-ngx/paperless-ngx:latest"
         ports = ["http"]
-        volumes = [
-          "/opt/paperless/data:/usr/src/paperless/data",
-          "/opt/paperless/media:/usr/src/paperless/media",
-          "/opt/paperless/export:/usr/src/paperless/export",
-          "/opt/paperless/consume:/usr/src/paperless/consume"
-        ]
       }
 
       template {

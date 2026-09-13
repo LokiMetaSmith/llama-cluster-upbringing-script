@@ -5,6 +5,12 @@ job "filebrowser" {
   group "filebrowser" {
     count = 1
 
+    volume "filebrowser_data" {
+      type      = "host"
+      read_only = false
+      source    = "filebrowser_data"
+    }
+
     network {
       port "http" {
         to = 80
@@ -26,14 +32,27 @@ job "filebrowser" {
     task "filebrowser" {
       driver = "docker"
 
+      volume_mount {
+        volume      = "filebrowser_data"
+        destination = "/srv"
+        read_only   = false
+      }
+
       config {
         image = "filebrowser/filebrowser:latest"
         ports = ["http"]
-        volumes = [
-          "/mnt/storage:/srv",
-          "/opt/filebrowser/filebrowser.db:/database.db",
-          "/opt/filebrowser/.filebrowser.json:/.filebrowser.json"
-        ]
+        mount {
+          type     = "bind"
+          source   = "/opt/filebrowser/filebrowser.db"
+          target   = "/database.db"
+          readonly = false
+        }
+        mount {
+          type     = "bind"
+          source   = "/opt/filebrowser/.filebrowser.json"
+          target   = "/.filebrowser.json"
+          readonly = true
+        }
       }
 
       resources {

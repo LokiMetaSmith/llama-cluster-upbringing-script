@@ -12,6 +12,24 @@ job "authentik" {
   }
 
   group "authentik" {
+    volume "authentik_media" {
+      type      = "host"
+      read_only = false
+      source    = "authentik_media"
+    }
+
+    volume "authentik_templates" {
+      type      = "host"
+      read_only = false
+      source    = "authentik_templates"
+    }
+
+    volume "authentik_certs" {
+      type      = "host"
+      read_only = false
+      source    = "authentik_certs"
+    }
+
     network {
       mode = "bridge"
       port "http" {
@@ -22,14 +40,23 @@ job "authentik" {
 
     task "server" {
       driver = "docker"
+
+      volume_mount {
+        volume      = "authentik_media"
+        destination = "/media"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "authentik_templates"
+        destination = "/templates"
+        read_only   = false
+      }
+
       config {
         image = "ghcr.io/goauthentik/server:2024.2.2"
         args  = ["server"]
         ports = ["http"]
-        volumes = [
-          "/opt/nomad/volumes/authentik/media:/media",
-          "/opt/nomad/volumes/authentik/templates:/templates"
-        ]
       }
       template {
         data = <<EOH
@@ -66,14 +93,28 @@ EOH
 
     task "worker" {
       driver = "docker"
+
+      volume_mount {
+        volume      = "authentik_media"
+        destination = "/media"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "authentik_certs"
+        destination = "/certs"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "authentik_templates"
+        destination = "/templates"
+        read_only   = false
+      }
+
       config {
         image = "ghcr.io/goauthentik/server:2024.2.2"
         args  = ["worker"]
-        volumes = [
-          "/opt/nomad/volumes/authentik/media:/media",
-          "/opt/nomad/volumes/authentik/certs:/certs",
-          "/opt/nomad/volumes/authentik/templates:/templates"
-        ]
       }
       template {
         data = <<EOH

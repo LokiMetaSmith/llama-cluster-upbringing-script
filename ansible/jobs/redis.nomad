@@ -1,16 +1,3 @@
-# Consul Connect Service Mesh Configuration
-#
-# To enable Consul Connect sidecar for service mesh:
-# 1. Ensure Consul is configured with connect.enabled = true
-# 2. The sidecar_service block enables automatic mTLS between services
-# 3. Upstream services can connect via localhost:<mappedPort>
-#    (Consul Connect handles the routing automatically)
-#
-# NOTE: This feature requires:
-# - Consul 1.6+ with Connect enabled
-# - Nomad 0.9+ with connect plugin
-# - Proper ACL tokens for Connect
-#
 job "redis" {
   datacenters = ["dc1"]
   type      = "service"
@@ -23,6 +10,12 @@ job "redis" {
   }
 
   group "redis" {
+    volume "redis_data" {
+      type      = "host"
+      read_only = false
+      source    = "redis_data"
+    }
+
     network {
       mode = "bridge"
       port "redis" {
@@ -32,17 +25,23 @@ job "redis" {
 
     task "redis" {
       driver = "docker"
+
+      volume_mount {
+        volume      = "redis_data"
+        destination = "/data"
+        read_only   = false
+      }
+
       config {
         image = "redis:7.2-alpine"
+        command = "redis-server"
+        args    = ["--appendonly", "yes"]
       }
       service {
         name = "redis"
         port = "redis"
         connect {
           sidecar_service {
-            # Enable Consul Connect sidecar
-            # This allows automatic service mesh capabilities
-            # including mTLS between services
             port = "6379"
           }
         }

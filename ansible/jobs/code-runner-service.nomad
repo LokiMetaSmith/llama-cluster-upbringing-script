@@ -36,9 +36,12 @@ job "code-runner-service" {
         image = "code-runner-service:local"
         ports = ["http"]
         # Required for CodeRunner to spin up isolated docker containers or interact with nomad
-        volumes = [
-          "/var/run/docker.sock:/var/run/docker.sock"
-        ]
+        mount {
+          type     = "bind"
+          source   = "/var/run/docker.sock"
+          target   = "/var/run/docker.sock"
+          readonly = false
+        }
       }
 
       env {
