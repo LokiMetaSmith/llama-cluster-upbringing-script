@@ -9,29 +9,16 @@ import asyncio
 from unittest.mock import MagicMock, patch, AsyncMock
 from pipecat.frames.frames import AudioRawFrame
 
-# Mock web_server before importing app to avoid circular import issues or missing dependencies
+# Mock web_server before importing processors to avoid circular import issues or missing dependencies
 import sys
 mock_web_server = MagicMock()
 mock_web_server.manager = MagicMock()
 mock_web_server.manager.broadcast = AsyncMock()
 sys.modules["web_server"] = mock_web_server
+sys.modules["pipecatapp.web_server"] = mock_web_server
 
-# Now we can import WebsocketAudioStreamer from app
-# We need to mock other dependencies that app.py imports
-sys.modules["ultralytics"] = MagicMock()
-sys.modules["faster_whisper"] = MagicMock()
-sys.modules["piper"] = MagicMock()
-sys.modules["piper.voice"] = MagicMock()
-sys.modules["consul"] = MagicMock()
-sys.modules["consul.aio"] = MagicMock()
-sys.modules["numpy"] = MagicMock()
-
-# Mocking internal modules
-# sys.modules["pipecat.frames.frames"] = MagicMock() # already imported
-# from pipecat.frames.frames import AudioRawFrame
-
-# Re-import app to get the class
-from pipecatapp.app import WebsocketAudioStreamer
+# Import WebsocketAudioStreamer directly from processors
+from pipecatapp.pipeline.processors import WebsocketAudioStreamer
 
 class TestWebsocketAudioStreamer(unittest.IsolatedAsyncioTestCase):
     async def test_websocket_audio_streamer_wav_header(self):
@@ -42,7 +29,7 @@ class TestWebsocketAudioStreamer(unittest.IsolatedAsyncioTestCase):
         # Create a dummy audio frame (16-bit PCM, mono)
         # 20ms of silence
         audio_data = b'\x00\x00' * 320
-        frame = AudioRawFrame(audio=audio_data)
+        frame = AudioRawFrame(audio=audio_data, sample_rate=16000, num_channels=1)
 
         # Mock push_frame to avoid downstream effects
         streamer.push_frame = AsyncMock()
