@@ -52,6 +52,9 @@
           - "{{ cuda_toolkit_package }}"
         state: present
         update_cache: yes
+        update_cache_retries: 10
+        update_cache_retry_max_delay: 15
+        cache_valid_time: 3600
       become: yes
 
     - name: Add NVIDIA Container Toolkit GPG Key
@@ -71,6 +74,9 @@
         name: "{{ nvidia_container_toolkit_package }}"
         state: present
         update_cache: yes
+        update_cache_retries: 10
+        update_cache_retry_max_delay: 15
+        cache_valid_time: 3600
       become: yes
 
     - name: Configure Docker to use NVIDIA container runtime
