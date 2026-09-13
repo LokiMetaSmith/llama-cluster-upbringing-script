@@ -206,18 +206,10 @@
   delegate_to: "{{ controller_host }}"
   run_once: true
 
-- name: Cache Mosquitto image to controller local tarball
-  ansible.builtin.command:
-    cmd: "docker save -o /opt/mosquitto.tar eclipse-mosquitto:2"
+- name: Export Mosquitto image and pin to IPFS
+  ansible.builtin.shell: docker save eclipse-mosquitto:2 | ipfs add -Q -
   become: yes
   when: not mosquitto_cache_stat.stat.exists or (load_mosquitto_cache is defined and load_mosquitto_cache is failed)
-  delegate_to: "{{ controller_host }}"
-  run_once: true
-
-- name: Pin Mosquitto tarball to IPFS
-  ansible.builtin.command:
-    cmd: "/usr/local/bin/ipfs add -Q /opt/mosquitto.tar"
-  become: yes
   register: ipfs_add_result_mosquitto
   environment:
     IPFS_PATH: "{{ ipfs_path }}"

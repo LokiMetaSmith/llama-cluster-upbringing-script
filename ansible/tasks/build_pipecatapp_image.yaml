@@ -140,16 +140,6 @@
   when: pipecat_deployment_style == 'docker'
 
 
-- name: Export pipecat-core image to tarball
-  ansible.builtin.command: "docker save -o /opt/{{ pipecat_image_name | default('pipecatapp') }}-core.tar {{ pipecat_image_name | default('pipecatapp') }}-core:{{ pipecat_versioned_tag }}"
-  become: yes
-  when: pipecat_deployment_style == 'docker'
-
-- name: Export pipecat-browser image to tarball
-  ansible.builtin.command: "docker save -o /opt/{{ pipecat_image_name | default('pipecatapp') }}-browser.tar {{ pipecat_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag }}"
-  become: yes
-  when: pipecat_deployment_style == 'docker'
-
 - name: Ensure local IPFS data directory exists
   ansible.builtin.file:
     path: "{{ ipfs_path }}"
@@ -167,40 +157,28 @@
   become: yes
   when: pipecat_deployment_style == 'docker'
 
-- name: Pin pipecatapp core tarball to IPFS and cleanup
-  block:
-    - name: Pin pipecatapp core tarball to IPFS
-      ansible.builtin.command: "ipfs add -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}-core.tar"
-      register: ipfs_add_result_core
-      environment:
-        IPFS_PATH: "{{ ipfs_path }}"
-
-    - name: Set pipecatapp_core_ipfs_cid fact
-      ansible.builtin.set_fact:
-        pipecatapp_core_ipfs_cid: "{{ ipfs_add_result_core.stdout }}"
-  always:
-    - name: Clean up temporary core tarball
-      ansible.builtin.file:
-        path: "/opt/{{ pipecat_image_name | default('pipecatapp') }}-core.tar"
-        state: absent
+- name: Export pipecat-core image and pin to IPFS
+  ansible.builtin.shell: "docker save {{ pipecat_image_name | default('pipecatapp') }}-core:{{ pipecat_versioned_tag }} | ipfs add -Q -"
   become: yes
+  register: ipfs_add_result_core
+  environment:
+    IPFS_PATH: "{{ ipfs_path }}"
   when: pipecat_deployment_style == 'docker'
 
-- name: Pin pipecatapp browser tarball to IPFS and cleanup
-  block:
-    - name: Pin pipecatapp browser tarball to IPFS
-      ansible.builtin.command: "ipfs add -Q /opt/{{ pipecat_image_name | default('pipecatapp') }}-browser.tar"
-      register: ipfs_add_result_browser
-      environment:
-        IPFS_PATH: "{{ ipfs_path }}"
+- name: Set pipecatapp_core_ipfs_cid fact
+  ansible.builtin.set_fact:
+    pipecatapp_core_ipfs_cid: "{{ ipfs_add_result_core.stdout }}"
+  when: pipecat_deployment_style == 'docker'
 
-    - name: Set pipecatapp_browser_ipfs_cid fact
-      ansible.builtin.set_fact:
-        pipecatapp_browser_ipfs_cid: "{{ ipfs_add_result_browser.stdout }}"
-  always:
-    - name: Clean up temporary browser tarball
-      ansible.builtin.file:
-        path: "/opt/{{ pipecat_image_name | default('pipecatapp') }}-browser.tar"
-        state: absent
+- name: Export pipecat-browser image and pin to IPFS
+  ansible.builtin.shell: "docker save {{ pipecat_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag }} | ipfs add -Q -"
   become: yes
+  register: ipfs_add_result_browser
+  environment:
+    IPFS_PATH: "{{ ipfs_path }}"
+  when: pipecat_deployment_style == 'docker'
+
+- name: Set pipecatapp_browser_ipfs_cid fact
+  ansible.builtin.set_fact:
+    pipecatapp_browser_ipfs_cid: "{{ ipfs_add_result_browser.stdout }}"
   when: pipecat_deployment_style == 'docker'
