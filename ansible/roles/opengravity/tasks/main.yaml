@@ -47,21 +47,12 @@
   ansible.builtin.include_tasks:
     file: "{{ project_root }}/ansible/tasks/build_cached_image.yaml"
 
-- name: Export opengravity image to tarball
-  ansible.builtin.command: docker save -o /opt/opengravity.tar opengravity:local
-  become: yes
-
-- name: Pin opengravity tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /opt/opengravity.tar
+- name: Export opengravity image and pin to IPFS
+  ansible.builtin.shell: docker save opengravity:local | ipfs add -Q -
   become: yes
   register: ipfs_add_result_opengravity
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
-- name: Clean up temporary opengravity tarball
-  ansible.builtin.file:
-    path: /opt/opengravity.tar
-    state: absent
-  become: yes
 
 - name: Set opengravity_ipfs_cid fact
   ansible.builtin.set_fact:

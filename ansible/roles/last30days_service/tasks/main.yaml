@@ -23,22 +23,12 @@
     force_source: true
   become: yes
 
-- name: Export last30days_service image to tarball
-  ansible.builtin.command: docker save -o /opt/last30days-service.tar last30days-service:local
-  become: yes
-
-- name: Pin last30days_service tarball to IPFS
-  ansible.builtin.command: "ipfs add -Q /opt/last30days-service.tar"
+- name: Export last30days_service image and pin to IPFS
+  ansible.builtin.shell: docker save last30days-service:local | ipfs add -Q -
   become: yes
   register: ipfs_add_result
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
-
-- name: Clean up temporary last30days_service tarball
-  ansible.builtin.file:
-    path: "/opt/last30days-service.tar"
-    state: absent
-  become: yes
 
 - name: Set last30days_service_ipfs_cid fact
   ansible.builtin.set_fact:

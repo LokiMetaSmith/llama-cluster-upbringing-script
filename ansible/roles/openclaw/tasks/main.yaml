@@ -29,27 +29,28 @@
     owner: "{{ target_user | default('root') }}"
     group: "{{ target_user | default('root') }}"
 
+- name: Prune Docker system to free up space
+  ansible.builtin.command: docker system prune -f -a --volumes
+  become: yes
+  changed_when: true
+
+- name: Prune Docker volumes
+  ansible.builtin.command: docker volume prune -f
+  become: yes
+  changed_when: true
+
 - name: Build OpenClaw Docker image
   ansible.builtin.command: docker build -t openclaw:latest .
   args:
     chdir: /opt/openclaw/docker
   changed_when: true
 
-- name: Export openclaw image to tarball
-  ansible.builtin.command: docker save -o /opt/openclaw.tar openclaw:latest
-  become: yes
-
-- name: Pin openclaw tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /opt/openclaw.tar
+- name: Export OpenClaw image and pin to IPFS
+  ansible.builtin.shell: docker save openclaw:latest | ipfs add -Q -
   become: yes
   register: ipfs_add_result_openclaw
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
-- name: Clean up temporary openclaw tarball
-  ansible.builtin.file:
-    path: /opt/openclaw.tar
-    state: absent
-  become: yes
 
 - name: Set openclaw_ipfs_cid fact
   ansible.builtin.set_fact:

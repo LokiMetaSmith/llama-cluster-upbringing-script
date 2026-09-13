@@ -114,8 +114,8 @@
   when: not ipfs_kubo_cache_stat.stat.exists or (load_kubo_cache is defined and load_kubo_cache is failed)
   changed_when: "'Downloaded newer image' in docker_pull.stdout"
 
-- name: Cache IPFS kubo image to local tarball if not already cached
-  ansible.builtin.command: docker save -o /opt/ipfs_kubo.tar ipfs/kubo:latest
+- name: Export IPFS kubo image and pin to IPFS if not already cached
+  ansible.builtin.shell: docker save ipfs/kubo:latest | ipfs add -Q -
   become: yes
   when: not ipfs_kubo_cache_stat.stat.exists or (load_kubo_cache is defined and load_kubo_cache is failed)
 

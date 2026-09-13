@@ -49,24 +49,12 @@
     force_source: true # Ensure we rebuild if files change
   when: exo_enable
 
-- name: Export Exo image to tarball
-  ansible.builtin.command: docker save -o /opt/{{ exo_docker_image_name }}.tar {{ exo_docker_image_name }}:latest
-  become: yes
-  when: exo_enable
-
-- name: Pin Exo tarball to IPFS
-  ansible.builtin.command: ipfs add -Q /opt/{{ exo_docker_image_name }}.tar
+- name: Export Exo image and pin to IPFS
+  ansible.builtin.shell: docker save {{ exo_docker_image_name }}:latest | ipfs add -Q -
   become: yes
   register: ipfs_add_result_exo
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
-  when: exo_enable
-
-- name: Clean up temporary Exo tarball
-  ansible.builtin.file:
-    path: /opt/{{ exo_docker_image_name }}.tar
-    state: absent
-  become: yes
   when: exo_enable
 
 - name: Set exo_ipfs_cid fact
