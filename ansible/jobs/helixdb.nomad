@@ -5,6 +5,12 @@ job "helixdb" {
   group "db" {
     count = 1
 
+    volume "helixdb_data" {
+      type      = "host"
+      read_only = false
+      source    = "helixdb_data"
+    }
+
     network {
       port "http" {
         to = 6969
@@ -26,13 +32,16 @@ job "helixdb" {
     task "helix" {
       driver = "docker"
 
+      volume_mount {
+        volume      = "helixdb_data"
+        destination = "/data"
+        read_only   = false
+      }
+
       config {
         image = "ghcr.io/helixdb/enterprise-dev:latest"
         ports = ["http"]
         args = ["--disk", "/data"]
-        volumes = [
-          "local/data:/data"
-        ]
       }
 
       resources {

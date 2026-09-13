@@ -10,6 +10,12 @@ job "postgres" {
   }
 
   group "postgres" {
+    volume "postgres_data" {
+      type      = "host"
+      read_only = false
+      source    = "postgres_data"
+    }
+
     network {
       mode = "bridge"
       port "postgres" {
@@ -19,6 +25,13 @@ job "postgres" {
 
     task "postgres" {
       driver = "docker"
+
+      volume_mount {
+        volume      = "postgres_data"
+        destination = "/var/lib/postgresql/data"
+        read_only   = false
+      }
+
       config {
         image = "postgres:15-alpine"
       }
