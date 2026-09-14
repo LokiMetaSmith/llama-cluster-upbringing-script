@@ -12,6 +12,26 @@
   ansible.builtin.set_fact:
     tml_models: "{{ interaction_models.tml | default([]) }}"
 
+- name: Build moshi-rust Docker image
+  community.docker.docker_image:
+    build:
+      path: "{{ playbook_dir }}/../"
+      dockerfile: "{{ playbook_dir }}/../docker/moshi-rust/Dockerfile"
+    name: moshi-rust
+    tag: latest
+    source: build
+  delegate_to: localhost
+
+- name: Export moshi-rust image and add to IPFS
+  ansible.builtin.shell: |
+    docker save moshi-rust:latest | ipfs add -Q -
+  register: ipfs_add_result
+  delegate_to: localhost
+
+- name: Set moshi_rust_ipfs_cid fact
+  ansible.builtin.set_fact:
+    moshi_rust_ipfs_cid: "{{ ipfs_add_result.stdout | trim }}"
+
 - name: Stop and purge any existing tml-interaction jobs (for updates)
   ansible.builtin.command:
     cmd: /usr/local/bin/nomad job stop -purge "tml-interaction-{{ item.name | regex_replace('[^a-zA-Z0-9-]', '-') | lower }}"

@@ -19,7 +19,7 @@
 - [x] **Multi-Tenant Access & Role-Based Control (RBAC):** Role enforcement (admin vs viewer) on mutating community app endpoints.
 - [x] Evaluate and execute the Proof-of-Concept for integrating HelixDB as a unified graph-vector memory backend (see `docs/analysis/HELIXDB_EVALUATION.md` for the PoC TODO list).
 - [x] Implement `apt` package caching proxy via IPFS.
-- [ ] **TML Interaction Models Research Preview Implementation:**
+- [x] **TML Interaction Models Research Preview Implementation:**
   - **Goal:** Flesh out the full multi-turn multi-modal continuous audio/video streaming architecture and real model weights for Thinking Machines Lab's Interaction Models research preview.
   - **Location:** `ansible/jobs/tml-interaction.nomad.j2` and `ansible/roles/tml_interaction`.
   - **Context Note:** There's a placeholder `tml-interaction.nomad.j2` job pointing to a non-existent `thinkingmachines/interaction-runtime:preview` image, but we do have some Rust code in `moshi/rust` (an audio/video streaming architecture). We didn't record sufficient context to complete this task currently. We may need to integrate Inkling weights (e.g. `unsloth/inkling-GGUF:UD-IQ1_S` via `llama.cpp`) with the Moshi Rust backend.
