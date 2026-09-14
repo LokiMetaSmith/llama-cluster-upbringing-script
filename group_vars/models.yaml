@@ -180,7 +180,7 @@ vision_models:
 interaction_models:
   tml:
     - name: "TML-Interaction-Small"
-      url: "placeholder://thinkingmachines.ai/tml-interaction-small"
-      filename: "tml-interaction-small.gguf"
+      url: "huggingface://unsloth/inkling-GGUF/inkling-UD-IQ1_S.gguf"
+      filename: "inkling-UD-IQ1_S.gguf"
       memory_mb: 16384 # Estimate for a 12B active parameter MoE model
       description: "Thinking Machines Lab Interaction Model (Research Preview)"

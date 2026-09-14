@@ -21,26 +21,46 @@ job "{{ job_name | default('tml-interaction') }}" {
     }
 
     network {
-      # The HTTP port for configuration and control plane communication
-      port "http" {
-        to = 8000
-      }
-      # The WebRTC port for the continuous audio/video micro-turn stream
-      port "webrtc" {
-        to = 8080
+      port "moshi_http" {}
+      port "llama_http" {}
+    }
+
+    volume "models" {
+      type      = "host"
+      source    = "models"
+      read_only = true
+    }
+
+    service {
+      name    = "tml-interaction-moshi"
+      port    = "moshi_http"
+      address = "${attr.unique.network.ip-address}"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.tml-interaction-moshi.rule=Host(`interaction.{{ mesh_domain | default('local.mesh') }}`)",
+        "traefik.http.routers.tml-interaction-moshi.entrypoints=websecure",
+        "traefik.http.routers.tml-interaction-moshi.tls=true"
+      ]
+
+      check {
+        type     = "http"
+        path     = "/"
+        interval = "10s"
+        timeout  = "2s"
+
+        check_restart {
+          limit           = 3
+          grace           = "90s"
+          ignore_warnings = false
+        }
       }
     }
 
     service {
-      name = "tml-interaction-http"
-      port = "http"
-
-      tags = [
-        "traefik.enable=true",
-        "traefik.http.routers.tml-interaction.rule=Host(`interaction.{{ mesh_domain | default('local.mesh') }}`)",
-        "traefik.http.routers.tml-interaction.entrypoints=websecure",
-        "traefik.http.routers.tml-interaction.tls=true"
-      ]
+      name    = "tml-interaction-llama"
+      port    = "llama_http"
+      address = "${attr.unique.network.ip-address}"
 
       check {
         type     = "http"
@@ -56,63 +76,79 @@ job "{{ job_name | default('tml-interaction') }}" {
       }
     }
 
-    service {
-      name = "tml-interaction-stream"
-      port = "webrtc"
-
-      tags = [
-        # Traefik routing could be set up for WebRTC if desired (e.g., via UDP/TCP routers)
-        "traefik.enable=true",
-        "traefik.udp.routers.tml-stream.entrypoints=webrtc",
-        "traefik.udp.services.tml-stream.loadbalancer.server.port=8080"
-      ]
-
-      # Minimal TCP check to ensure the streaming port is bound
-      check {
-        type     = "tcp"
-        interval = "10s"
-        timeout  = "2s"
-
-        check_restart {
-          limit           = 3
-          grace           = "90s"
-          ignore_warnings = false
-        }
-      }
-    }
-
-    task "tml-runtime" {
+    task "llama-cpp" {
       driver = "docker"
 
       config {
-        # This is a placeholder for the actual TML interaction runtime image
-        image = "thinkingmachines/interaction-runtime:preview"
+        image = "{{ container_registry | default('ghcr.io') }}/ggerganov/llama.cpp:server"
+        ports = ["llama_http"]
 
-        ports = ["http", "webrtc"]
-
-        # Ensure GPUs are passed through for real-time model inference
-        # (Assuming the model runs natively requiring GPU acceleration)
-        {% if enable_gpu | default(true) %}
-        # Experimental feature in Nomad Docker driver for GPU passthrough
-        # Some setups use `device` blocks or `gpus = "all"`
         args = [
-          "--gpus", "all"
+          "--host", "0.0.0.0",
+          "--port", "${NOMAD_PORT_llama_http}",
+          "--model", "/models/{{ model.filename | default('inkling-UD-IQ1_S.gguf') }}",
+          "--ctx-size", "4096",
+          "--n-predict", "-1",
+          "--batch-size", "512",
+          "--n-gpu-layers", "99"
         ]
-        {% endif %}
       }
 
-      env {
-        MODEL_PATH = "{{ nomad_models_dir }}/{{ model.filename | default('tml-interaction-small.gguf') }}"
-        STREAMING_PORT = "8080"
-        HTTP_PORT = "8000"
-        # Enable multi-modal processing for micro-turns
-        ENABLE_AUDIO = "true"
-        ENABLE_VIDEO = "true"
+      volume_mount {
+        volume      = "models"
+        destination = "/models"
+        read_only   = true
       }
 
       resources {
-        # Allocate sufficient memory for a large MoE model and streaming buffers (reduced default for mid-tier workers)
-        memory = {{ model.memory_mb | default(2048) }}
+        memory = {{ model.memory_mb | default(16384) }}
+        {% if enable_gpu | default(true) %}
+        device "gpu" {
+          count = 1
+        }
+        {% endif %}
+      }
+    }
+
+    task "moshi-rust" {
+      driver = "raw_exec"
+
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
+
+      artifact {
+        source      = "http://{{ cluster_ip | default('100.64.0.1') }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ moshi_rust_ipfs_cid | default('') }}"
+        destination = "local/moshi-rust.tar"
+        mode        = "file"
+      }
+
+      config {
+        command = "docker"
+        args    = ["load", "-i", "local/moshi-rust.tar"]
+      }
+    }
+
+    task "moshi-rust-server" {
+      driver = "docker"
+
+      config {
+        image = "moshi-rust:latest"
+        ports = ["moshi_http"]
+      }
+
+      env {
+        ADDR = "0.0.0.0"
+        PORT = "${NOMAD_PORT_moshi_http}"
+        # Connect to the local llama-cpp task using Nomad dynamic port assignments
+        LM_MODEL_ENDPOINT = "http://${NOMAD_ADDR_llama_http}/v1"
+        LLAMA_ENDPOINT = "http://${NOMAD_ADDR_llama_http}/v1"
+        OPENAI_API_BASE = "http://${NOMAD_ADDR_llama_http}/v1"
+      }
+
+      resources {
+        memory = 2048
       }
     }
   }
