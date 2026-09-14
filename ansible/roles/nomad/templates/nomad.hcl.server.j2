@@ -38,6 +38,10 @@ server {
 }
 
 client {
+  meta {
+    zigbee_coordinator = "true"
+  }
+
   node_class = "{{ nomad_node_class | default('controller') }}"
   enabled = true
   servers = [
