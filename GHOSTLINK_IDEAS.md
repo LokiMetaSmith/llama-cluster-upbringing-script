@@ -48,3 +48,23 @@ Ghostlink includes foundational scaffolding for an AF_XDP (eXpress Data Path) ke
 1. **`ggml-rpc` Security Wrapper**: The HMAC-SHA256 handshake over an auth port + loopback proxy is a highly reusable pattern for securing *any* unauthenticated third-party service across our cluster.
 2. **Ring Buffer**: The `std::ptr::copy_nonoverlapping` batch approach combined with cache-padded local pointers is an excellent pattern if we need to optimize our own multi-threaded data pipelines.
 3. **Hardware Fingerprinting**: Caching configuration payloads keyed by a deterministic hardware hash is a solid architecture to prevent stale configurations during deployment changes.
+
+## 5. Comparison to Current `pipecatapp` Architecture
+
+While Ghostlink and `pipecatapp` both solve problems in distributed inference and hardware awareness, they take fundamentally different architectural approaches. Below is a comparison of how Ghostlink's ideas map to our current systems.
+
+### Hardware Telemetry & Profiling
+* **Ghostlink:** Uses an embedded Rust `SystemProfile` module that probes low-level OS APIs directly (e.g., parsing Windows `SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX`, querying CPUID for AVX/AMX support, and matching GPU strings like "rtx 40" to compute capabilities). It deterministically hashes this into an `AutoTuner` fingerprint to adapt thread pools and network buffers.
+* **pipecatapp:** Uses a distributed agent (`gpu_telemetry`) that queries `nvidia-smi` and `rocm-smi`, then publishes VRAM availability as Consul tags (e.g., `vram-free-X`). Our system relies heavily on Consul's service mesh for distributed state rather than local OS profiling hashes. Ghostlink's approach is more granular (detecting P/E cores and vector instructions) whereas our approach is highly dynamic and cluster-aware.
+
+### Distributed Inference Orchestration
+* **Ghostlink:** Focuses on **Tensor Splitting** via `ggml-rpc`. It calculates VRAM across multiple machines and splits a single model's layers across nodes sequentially. If a model needs 40GB of VRAM, it can put 24GB on Node A and 16GB on Node B to run a single inference pass together.
+* **pipecatapp:** Focuses on **Request Routing and MoE (Mixture of Experts)** via the MoE Gateway. We route entire requests to specific experts or tiers based on Thompson Sampling and real-time Consul VRAM tags. We don't split single models across machines; instead, we discover unmanaged instances (via `peer_gateway`) and route smaller, context-heavy tasks to cheaper local models (via `ShuntTool` and the `trivial` tier).
+
+### Access Control and Authentication
+* **Ghostlink:** Employs a bespoke **HMAC-SHA256 Auth Proxy** over a custom port. Clients complete a cryptographic nonce challenge to temporarily (30s) allowlist their IP, after which an L4 proxy splices their TCP connection to a loopback-bound `ggml-rpc-server`.
+* **pipecatapp:** Utilizes the `adhoc_bridge` Nomad job, which issues Headscale pre-auth keys via a rate-limited PIN handshake. We rely heavily on industry-standard Traefik for TLS/HTTPS ingress and mesh routing rather than rolling our own L4 proxy authentication protocol. However, Ghostlink's IP-splicing proxy pattern is an interesting lightweight alternative for securing raw internal TCP services without full TLS/Headscale overhead.
+
+### Networking and I/O Pipelines
+* **Ghostlink:** Built for raw throughput, implementing experimental **AF_XDP kernel bypass** scaffolding to skip the Linux network stack, paired with **Zero-Copy SPSC Ring Buffers** (`std::ptr::copy_nonoverlapping`) to pass tensor data between threads instantly without cache invalidation.
+* **pipecatapp:** Employs high-level abstractions like Traefik for routing and standard ASGI/WebSocket pipelines (`prometheus_client.make_asgi_app`, Uvicorn) for streaming audio/video (via the Moshi Rust backend). Ghostlink's ring buffer pattern could be highly beneficial if we ever need to optimize our Moshi/Inkling continuous multi-modal streaming pipelines to reduce CPU cache bouncing.
