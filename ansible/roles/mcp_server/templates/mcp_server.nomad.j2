@@ -10,11 +10,30 @@ job "mcp-server" {
       port "http" {}
     }
 
+    task "load-image" {
+      driver = "raw_exec"
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
+
+      artifact {
+        source      = "http://{{ cluster_ip | default('100.64.0.1') }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ tool_server_ipfs_cid }}"
+        destination = "local/tool-server.tar"
+        mode        = "file"
+      }
+
+      config {
+        command = "docker"
+        args    = ["load", "-i", "local/tool-server.tar"]
+      }
+    }
+
     task "mcp-server" {
       driver = "docker"
       config {
         image = "{{ mcp_server_image }}"
-        force_pull = false
+        # force_pull = false # local image
         command = "uvicorn"
         args = ["app:app", "--host", "0.0.0.0", "--port", "${NOMAD_PORT_http}"]
 

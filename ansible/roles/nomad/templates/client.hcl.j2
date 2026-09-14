@@ -191,6 +191,27 @@ client {
     read_only = false
   }
 
+  host_volume "paperless_data" {
+    path      = "{{ nomad_volumes_dir }}/paperless_data"
+    read_only = false
+  }
+
+  host_volume "paperless_media" {
+    path      = "{{ nomad_volumes_dir }}/paperless_media"
+    read_only = false
+  }
+
+  host_volume "paperless_export" {
+    path      = "{{ nomad_volumes_dir }}/paperless_export"
+    read_only = false
+  }
+
+  host_volume "paperless_consume" {
+    path      = "{{ nomad_volumes_dir }}/paperless_consume"
+    read_only = false
+  }
+
+
 
 }
 

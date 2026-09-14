@@ -101,7 +101,8 @@ job "{{ job_name | default('tml-interaction') }}" {
       }
 
       resources {
-        memory = {{ model.memory_mb | default(16384) }}
+        memory = {{ model.memory_mb | default(2048) }}
+        memory_max = {{ model.memory_max_mb | default(16384) }}
         {% if enable_gpu | default(true) %}
         device "gpu" {
           count = 1

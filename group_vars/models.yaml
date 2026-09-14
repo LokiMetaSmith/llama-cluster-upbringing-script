@@ -74,12 +74,12 @@ expert_models:
     - name: "gpt-oss-20B"
       url: "https://huggingface.co/bartowski/gpt-oss-20B-GGUF/resolve/main/gpt-oss-20B-Q4_K_M.gguf"
       filename: "gpt-oss-20B-Q4_K_M.gguf"
-      memory_mb: 16384
+      memory_mb: 2048
   qwen3-5:
     - name: "Qwen3-5-35B-A3B-MXFP4_MOE"
       url: "https://huggingface.co/byteshape/Qwen3.5-35B-A3B-MXFP4_MOE-GGUF/resolve/main/Qwen3.5-35B-A3B-MXFP4_MOE-Q4_K_M.gguf"
       filename: "Qwen3.5-35B-A3B-MXFP4_MOE-Q4_K_M.gguf"
-      memory_mb: 16384
+      memory_mb: 2048
   orthrus:
     - name: "Orthrus-9b-v0-3-Q6_K"
       url: "https://huggingface.co/Pyroserenus/Orthrus-9b-v0.3-Q6_K-GGUF/resolve/main/orthrus-9b-v0.3-q6_k.gguf"
@@ -89,7 +89,7 @@ expert_models:
     - name: "DeepSeek-V4-Flash-Q2-Imatrix"
       url: "https://huggingface.co/antirez/deepseek-v4-gguf/resolve/main/DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-Instruct-imatrix.gguf"
       filename: "DeepSeek-V4-Flash-IQ2XXS-imatrix.gguf"
-      memory_mb: 16384
+      memory_mb: 2048
     - name: "DeepSeek-V4-Flash-Q4-Imatrix"
       url: "https://huggingface.co/antirez/deepseek-v4-gguf/resolve/main/DeepSeek-V4-Flash-Q4KExperts-F16HC-F16Compressor-F16Indexer-Q8Attn-Q8Shared-Q8Out-chat-v2.gguf"
       filename: "DeepSeek-V4-Flash-Q4K-imatrix.gguf"
@@ -182,5 +182,5 @@ interaction_models:
     - name: "TML-Interaction-Small"
       url: "huggingface://unsloth/inkling-GGUF/inkling-UD-IQ1_S.gguf"
       filename: "inkling-UD-IQ1_S.gguf"
-      memory_mb: 16384 # Estimate for a 12B active parameter MoE model
+      memory_mb: 2048 # Estimate for a 12B active parameter MoE model
       description: "Thinking Machines Lab Interaction Model (Research Preview)"

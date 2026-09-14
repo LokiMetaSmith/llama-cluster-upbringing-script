@@ -31,9 +31,7 @@ job "router" {
 
     network {
       mode = "host"
-      port "http" {
-        static = {{ monolithic_router_port | default(8086) }}
-      }
+      port "http" {}
       port "ollama" {
         static = 11434
       }
@@ -76,7 +74,7 @@ job "router" {
         args = [
           "--port", "${NOMAD_PORT_ollama}",
           "--model", "openai/{{ expert_models.router[0].filename }}",
-          "--api_base", "http://localhost:{{ monolithic_router_port | default(8086) }}/v1",
+          "--api_base", "http://localhost:${NOMAD_PORT_http}/v1",
           "--drop_params"
         ]
       }

@@ -200,6 +200,10 @@
     - openclaw-data
     - cluster-infra
     - mcp-config
+    - paperless_data
+    - paperless_media
+    - paperless_export
+    - paperless_consume
     - authentik/postgres
     - authentik/media
     - authentik/templates
