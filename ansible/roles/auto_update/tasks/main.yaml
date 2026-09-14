@@ -21,13 +21,20 @@
     daemon_reload: yes
   when: auto_update_enabled | default(false)
 
+- name: Check if auto-update timer exists
+  ansible.builtin.stat:
+    path: /etc/systemd/system/cluster-auto-update.timer
+  register: timer_file_stat
+  when: not (auto_update_enabled | default(false))
+
 - name: Stop and disable auto-update timer if disabled
   ansible.builtin.systemd:
     name: cluster-auto-update.timer
     state: stopped
     enabled: no
-  when: not (auto_update_enabled | default(false))
-  ignore_errors: yes
+  when:
+    - not (auto_update_enabled | default(false))
+    - timer_file_stat.stat.exists
 
 - name: Remove auto-update systemd units if disabled
   ansible.builtin.file:
