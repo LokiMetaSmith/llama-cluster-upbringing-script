@@ -89,7 +89,8 @@ job "{{ job_name | default('tml-interaction') }}" {
           "--model", "/models/{{ model.filename | default('inkling-UD-IQ1_S.gguf') }}",
           "--ctx-size", "4096",
           "--n-predict", "-1",
-          "--batch-size", "512"
+          "--batch-size", "512",
+          "--n-gpu-layers", "99"
         ]
       }
 
@@ -101,6 +102,11 @@ job "{{ job_name | default('tml-interaction') }}" {
 
       resources {
         memory = {{ model.memory_mb | default(16384) }}
+        {% if enable_gpu | default(true) %}
+        device "gpu" {
+          count = 1
+        }
+        {% endif %}
       }
     }
 
