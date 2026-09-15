@@ -39,7 +39,7 @@
 
 - name: "Build Cached Image : Build the docker image"
   ansible.builtin.command:
-    cmd: "docker build --no-cache -t {{ image_name }}:{{ _versioned_tag }} ."
+    cmd: "docker build --no-cache -f {{ dockerfile_path | default('Dockerfile') }} -t {{ image_name }}:{{ _versioned_tag }} ."
     chdir: "{{ build_dir }}"
   register: _docker_build_result
   changed_when: "_docker_build_result.stdout is defined and ('Successfully built' in _docker_build_result.stdout or 'writing image' in _docker_build_result.stdout)"
