@@ -1,17 +1,19 @@
 # Stage 1: Build Moshi Rust Backend
-FROM rust:1.80-slim-bookworm AS builder
+FROM rustlang/rust:nightly-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     build-essential \
+    cmake \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/moshi
 
 # Copy the rust source code
 COPY moshi/rust/ /usr/src/moshi/
+COPY colibri_io_uring/ /usr/colibri_io_uring/
 
 # Build the moshi-backend standalone binary
 # Use release profile and compile without GPU features for the lean image by default
