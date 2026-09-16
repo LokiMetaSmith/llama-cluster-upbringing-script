@@ -503,3 +503,11 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 - [x] **Automated Authentik Configuration:** Update the existing Authentik Ansible roles to automatically provision the M2M OAuth2 application, client ID, and service account required by the orchestrator during cluster bootstrap.
 - [x] **Flesh out the Dry-Runs (Nomad/Vault):** Replace the dry-run HTTP stubs in `orchestrator.py` with actual API calls to the Vault PKI/SSH secrets engine (for short-lived certificates) and Nomad (for dispatching parameterized jobs with vector store mounts).
 - [x] **End-to-End Cluster Tests:** Write an integration test playbook that stands up the orchestrator, publishes a mock MQTT event, and verifies that the correct Nomad allocations are triggered.
+
+
+
+## Python Testing & Preflight Pipeline
+
+- [ ] **Fix Python testing environment:** The `pipecatapp` directory lacks several dependencies required for successful `pytest` collection (such as `fastapi`, `pydantic`, `opentelemetry`, and the private `minisweagent` GitHub module).
+- [ ] **Fix `mypy` typing errors:** There are hundreds of `mypy` typing errors in the `pipecatapp` directory (e.g., missing annotations, implicit optionals, untyped imports) that need to be resolved.
+- [ ] **Fix duplicate Prometheus metrics:** The pytest test suite fails to collect tests like `test_poc_ensemble.py` and `test_tasky_poc.py` due to duplicate Prometheus metric registrations in `pipecatapp/workflow/nodes/system_nodes.py`.

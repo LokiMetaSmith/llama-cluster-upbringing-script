@@ -31,7 +31,9 @@ job "router" {
 
     network {
       mode = "host"
-      port "http" {}
+      port "http" {
+        static = {{ monolithic_router_port | default(8086) }}
+      }
       port "ollama" {
         static = 11434
       }
