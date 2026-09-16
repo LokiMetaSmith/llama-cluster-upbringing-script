@@ -46,6 +46,10 @@ expert_models:
       filename: "LFM2-1.2B-Tool-Q4_K_M.gguf"
       memory_mb: 4096
   thinking:
+    - name: "Swift-Qwen3.8-27b"
+      url: "https://huggingface.co/ukisai/Swift-Qwen3.8-27B-GGUF/resolve/main/Swift-Qwen3.8-27B-Q4_K_M.gguf"
+      filename: "Swift-Qwen3.8-27B-Q4_K_M.gguf"
+      memory_mb: 20000
     - name: "LFM2-5-1-2B-Thinking"
       url: "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Thinking-GGUF/resolve/main/LFM2.5-1.2B-Thinking-Q4_K_M.gguf"
       filename: "LFM2.5-1.2B-Thinking-Q4_K_M.gguf"
