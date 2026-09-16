@@ -93,3 +93,4 @@ datasets>=4.0.0
 jupyter-client
 playwright
 onnxruntime
+sentence-transformers
