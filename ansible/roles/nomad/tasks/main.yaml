@@ -493,6 +493,11 @@
 - name: Wait for Nomad API to be ready
   when: not ansible_check_mode
   block:
+    - name: Fail early if start task failed
+      ansible.builtin.fail:
+        msg: "Nomad service start task failed before checking API."
+      when: nomad_service_start.failed
+
     - name: Wait for Nomad API to be ready
       ansible.builtin.uri:
         url: "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
@@ -537,6 +542,4 @@
           or failed dependencies like Consul or Docker.
           Logs:
           {{ nomad_logs.stdout }}
-      notify:
-        - Restart nomad
 
