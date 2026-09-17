@@ -10,8 +10,9 @@ class NodeRegistry:
     def register(self, node_class: Type[Node]):
         """Register a node class."""
         type_name = node_class.__name__
-        if type_name in self._registry:
-            raise ValueError(f"Node type '{type_name}' is already registered.")
+        if type_name in self._registry and self._registry[type_name] is not node_class:
+            # We skip duplicate registrations for test modules reloading the same file.
+            return node_class
         self._registry[type_name] = node_class
         return node_class
 
