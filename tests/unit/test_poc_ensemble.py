@@ -9,10 +9,10 @@ import logging
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pipecatapp')))
 
-from workflow.runner import WorkflowRunner
-from workflow.context import WorkflowContext
+from pipecatapp.workflow.runner import WorkflowRunner
+from pipecatapp.workflow.context import WorkflowContext
 # Ensure nodes are registered
-from workflow.nodes import base_nodes, llm_nodes
+from pipecatapp.workflow.nodes import base_nodes, llm_nodes
 
 # Mock external experts config
 MOCK_EXPERTS_CONFIG = {

@@ -8,17 +8,23 @@ from pipecatapp.tools.vr_tool import VRTool
 import asyncio
 from prometheus_client import Gauge, Counter
 
-# Prometheus metrics for TelemetryNode
-semantic_density_gauge = Gauge(
-    'pipecatapp_semantic_density',
-    'Semantic density score of the agent message',
-    ['node_id', 'agent_id']
-)
-semantic_length_counter = Counter(
-    'pipecatapp_message_words_total',
-    'Total words processed in messages',
-    ['node_id', 'agent_id']
-)
+from prometheus_client import REGISTRY
+
+# Prometheus metrics for TelemetryNode (with duplicate check for tests)
+if 'pipecatapp_semantic_density' not in REGISTRY._names_to_collectors:
+    semantic_density_gauge = Gauge(
+        'pipecatapp_semantic_density',
+        'Semantic density score of the agent message',
+        ['node_id', 'agent_id']
+    )
+    semantic_length_counter = Counter(
+        'pipecatapp_message_words_total',
+        'Total words processed in messages',
+        ['node_id', 'agent_id']
+    )
+else:
+    semantic_density_gauge = REGISTRY._names_to_collectors['pipecatapp_semantic_density']
+    semantic_length_counter = REGISTRY._names_to_collectors['pipecatapp_message_words_total']
 
 @registry.register
 class TelemetryNode(Node):

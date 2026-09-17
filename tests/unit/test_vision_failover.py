@@ -52,11 +52,11 @@ sys.modules['cv2'] = MagicMock()
 sys.modules['kokoro'] = MagicMock()
 sys.modules['ultralytics'] = MagicMock()
 sys.modules['pipecat.services.openai'] = MagicMock()
-from app import initialize_vision_detector, YOLOv8Detector
+from pipecatapp.services.vision import initialize_vision_detector, YOLOv8Detector
 
 # Correct patch target is where the object is looked up
-@patch('app.MoondreamDetector')
-@patch('app.YOLOv8Detector')
+@patch('pipecatapp.services.vision.MoondreamDetector')
+@patch('pipecatapp.services.vision.YOLOv8Detector')
 def test_vision_selection_primary_succeeds(mock_yolo, mock_moondream):
     """Test that the correct primary model is chosen and initialized."""
     mock_yolo.__name__ = "YOLOv8Detector"
@@ -77,8 +77,8 @@ def test_vision_selection_primary_succeeds(mock_yolo, mock_moondream):
     mock_moondream.assert_called_once()
     assert detector == mock_moondream.return_value
 
-@patch('app.MoondreamDetector')
-@patch('app.YOLOv8Detector', side_effect=Exception("YOLO failed"))
+@patch('pipecatapp.services.vision.MoondreamDetector')
+@patch('pipecatapp.services.vision.YOLOv8Detector', side_effect=Exception("YOLO failed"))
 def test_vision_selection_fallback_succeeds(mock_yolo, mock_moondream):
     """Test that the fallback model is used when the primary one fails."""
     mock_yolo.__name__ = "YOLOv8Detector"
@@ -88,8 +88,8 @@ def test_vision_selection_fallback_succeeds(mock_yolo, mock_moondream):
     mock_moondream.assert_called_once()
     assert detector == mock_moondream.return_value
 
-@patch('app.MoondreamDetector', side_effect=Exception("Moondream failed"))
-@patch('app.YOLOv8Detector', side_effect=Exception("YOLO failed"))
+@patch('pipecatapp.services.vision.MoondreamDetector', side_effect=Exception("Moondream failed"))
+@patch('pipecatapp.services.vision.YOLOv8Detector', side_effect=Exception("YOLO failed"))
 def test_vision_selection_both_fail(mock_yolo, mock_moondream):
     """Test that a dummy detector is returned when both models fail."""
     mock_yolo.__name__ = "YOLOv8Detector"
@@ -101,7 +101,7 @@ def test_vision_selection_both_fail(mock_yolo, mock_moondream):
 
 def test_yolo_internal_initialization_failover():
     """Test that YOLOv8Detector's internal try/except to load the model works."""
-    with patch("app.YOLO", side_effect=Exception("Model file not found")), patch("app.VisionImageRawFrame", MockVisionImageRawFrame):
+    with patch("pipecatapp.services.vision.YOLO", side_effect=Exception("Model file not found")), patch("pipecatapp.services.vision.VisionImageRawFrame", MockVisionImageRawFrame):
         detector = YOLOv8Detector()
         assert detector.model is None
         assert detector.get_observation() == "Vision system unavailable."
@@ -109,7 +109,7 @@ def test_yolo_internal_initialization_failover():
 @pytest.mark.asyncio
 async def test_yolo_internal_process_frame_failover():
     """Test that process_frame doesn't crash if the model failed to load."""
-    with patch("app.YOLO", side_effect=Exception("Model file not found")), patch("app.VisionImageRawFrame", MockVisionImageRawFrame):
+    with patch("pipecatapp.services.vision.YOLO", side_effect=Exception("Model file not found")), patch("pipecatapp.services.vision.VisionImageRawFrame", MockVisionImageRawFrame):
         detector = YOLOv8Detector()
         # Ensure push_frame is called if frame processing skips due to missing model
         detector.push_frame = AsyncMock()
