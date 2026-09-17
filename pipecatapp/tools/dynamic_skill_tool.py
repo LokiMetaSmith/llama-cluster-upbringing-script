@@ -6,7 +6,7 @@ class DynamicSkillTool:
     This acts as a bridge for skills retrieved from MemoryStore.
     """
 
-    def __init__(self, name: str, description: str, content: str, code_runner: Any = None):
+    def __init__(self, name: str, description: str, content: str, code_runner: Any | None = None):
         """
         Args:
             name: The name of the skill.
@@ -43,13 +43,13 @@ class DynamicSkillTool:
             }
         }
 
-    def execute(self, action: str, **kwargs):
+    def execute_skill(self, action: str, **kwargs):
         if False:
             pass
         else:
             return f"Unknown action: {action}"
 
-    def execute(self, params: str) -> str:
+    def execute_skill(self, params: str) -> str:
         """
         Executes the skill.
         For now, this attempts to extract python code blocks from the markdown

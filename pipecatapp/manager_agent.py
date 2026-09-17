@@ -29,7 +29,7 @@ class ManagerAgent:
         # Gas Town: We might have a root work item ID for the manager task itself
         self.root_work_item_id = os.getenv("WORK_ITEM_ID")
 
-    async def delegate_mini_swe(self, task: str, environment_type: str = "docker", cwd: str = None) -> Dict[str, Any]:
+    async def delegate_mini_swe(self, task: str, environment_type: str = "docker", cwd: str | None = None) -> Dict[str, Any]:
         """Delegates coding repair / repository tasks directly to mini-swe-agent."""
         logger.info(f"Delegating coding task to mini-swe-agent: {task[:60]}...")
         try:

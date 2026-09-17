@@ -43,7 +43,7 @@ class UpdateLitellmTool:
     def schema(self):
         return self._schema
 
-    def run(self, action: str, chosen_tag: str = None, **kwargs) -> str:
+    def run(self, action: str, chosen_tag: str | None = None, **kwargs) -> str:
         """Runs the LiteLLM update action."""
         return self.execute(action, chosen_tag, **kwargs)
 

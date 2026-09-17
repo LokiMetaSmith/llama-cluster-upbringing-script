@@ -90,7 +90,7 @@ class ShardedPMMMemory:
     # Gas Town Work Ledger Methods
     # -------------------------------------------------------------------------
 
-    def create_work_item_sync(self, title: str, created_by: str, assignee_id: str = None, parent_id: str = None, meta: Dict = None) -> str:
+    def create_work_item_sync(self, title: str, created_by: str, assignee_id: str | None = None, parent_id: str | None = None, meta: Dict = None) -> str:
         """Creates a new work item on a dynamically chosen shard based on title/creator hash."""
         # Route by generated UUID first or a hash of the title + creator
         # We can generate the short ID upfront to route it consistently
@@ -123,16 +123,16 @@ class ShardedPMMMemory:
         shard.add_event_sync("work_item_created", f"Created work item {item_id}: {title}", {"work_item_id": item_id, "creator": created_by})
         return item_id
 
-    async def create_work_item(self, title: str, created_by: str, assignee_id: str = None, parent_id: str = None, meta: Dict = None) -> str:
+    async def create_work_item(self, title: str, created_by: str, assignee_id: str | None = None, parent_id: str | None = None, meta: Dict = None) -> str:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.create_work_item_sync, title, created_by, assignee_id, parent_id, meta)
 
-    def update_work_item_sync(self, item_id: str, status: str = None, assignee_id: str = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
+    def update_work_item_sync(self, item_id: str, status: str | None = None, assignee_id: str | None = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
         """Updates a work item in the corresponding shard."""
         shard = self._get_shard_for_id(item_id)
         return shard.update_work_item_sync(item_id, status, assignee_id, validation_results, meta_update)
 
-    async def update_work_item(self, item_id: str, status: str = None, assignee_id: str = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
+    async def update_work_item(self, item_id: str, status: str | None = None, assignee_id: str | None = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.update_work_item_sync, item_id, status, assignee_id, validation_results, meta_update)
 
@@ -145,7 +145,7 @@ class ShardedPMMMemory:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.get_work_item_sync, item_id)
 
-    def list_work_items_sync(self, status: str = None, assignee_id: str = None, limit: int = 50) -> List[Dict]:
+    def list_work_items_sync(self, status: str | None = None, assignee_id: str | None = None, limit: int = 50) -> List[Dict]:
         """Scatter-gathers work items across all shards."""
         all_items = []
         for shard in self.shards:
@@ -156,7 +156,7 @@ class ShardedPMMMemory:
         all_items.sort(key=lambda x: x["created_at"], reverse=True)
         return all_items[:limit]
 
-    async def list_work_items(self, status: str = None, assignee_id: str = None, limit: int = 50) -> List[Dict]:
+    async def list_work_items(self, status: str | None = None, assignee_id: str | None = None, limit: int = 50) -> List[Dict]:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.list_work_items_sync, status, assignee_id, limit)
 
@@ -251,12 +251,12 @@ class ShardedPMMMemory:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.claim_dlq_item_sync, worker_id, supported_types)
 
-    def update_dlq_item_sync(self, item_id: str, status: str, result: str = None, retry_after: float = None, increment_retry: bool = False) -> bool:
+    def update_dlq_item_sync(self, item_id: str, status: str, result: str | None = None, retry_after: float | None = None, increment_retry: bool = False) -> bool:
         """Updates a DLQ item in its matching shard."""
         shard = self._get_shard_for_id(item_id)
         return shard.update_dlq_item_sync(item_id, status, result, retry_after, increment_retry)
 
-    async def update_dlq_item(self, item_id: str, status: str, result: str = None, retry_after: float = None, increment_retry: bool = False) -> bool:
+    async def update_dlq_item(self, item_id: str, status: str, result: str | None = None, retry_after: float | None = None, increment_retry: bool = False) -> bool:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.update_dlq_item_sync, item_id, status, result, retry_after, increment_retry)
 

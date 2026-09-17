@@ -80,7 +80,7 @@ class ClusterStatusTool:
             logger.error(error_msg)
             return error_msg
 
-    def execute(self, arguments: dict = None) -> str:
+    def execute(self, arguments: dict | None = None) -> str:
         """Executes the tool with the given arguments."""
         # This tool requires no arguments
         return self.get_status()

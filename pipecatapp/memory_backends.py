@@ -17,7 +17,7 @@ class BaseMemoryBackend(ABC):
         pass
 
     @abstractmethod
-    def add_memory(self, source: str, raw_text: str, summary: str = None, entities: list = None, topics: list = None, importance: int = None, consolidated: bool = False, metadata: dict = None, doc_id: str = None):
+    def add_memory(self, source: str, raw_text: str, summary: str | None = None, entities: list | None = None, topics: list | None = None, importance: int | None = None, consolidated: bool = False, metadata: dict | None = None, doc_id: str | None = None):
         pass
 
     @abstractmethod
@@ -29,7 +29,7 @@ class BaseMemoryBackend(ABC):
         pass
 
     @abstractmethod
-    def add_consolidation(self, source_ids: List[int], summary: str, insight: str = None) -> int:
+    def add_consolidation(self, source_ids: List[int], summary: str, insight: str | None = None) -> int:
         pass
 
     @abstractmethod
@@ -41,7 +41,7 @@ class BaseMemoryBackend(ABC):
         pass
 
     @abstractmethod
-    def add_activity(self, activity_type: str, description: str, metadata: dict = None) -> int:
+    def add_activity(self, activity_type: str, description: str, metadata: dict | None = None) -> int:
         pass
 
     @abstractmethod

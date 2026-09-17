@@ -426,7 +426,7 @@ class PMMMemory:
     # Gas Town Work Ledger Methods
     # -------------------------------------------------------------------------
 
-    def create_work_item_sync(self, title: str, created_by: str, assignee_id: str = None, parent_id: str = None, meta: Dict = None) -> str:
+    def create_work_item_sync(self, title: str, created_by: str, assignee_id: str | None = None, parent_id: str | None = None, meta: Dict = None) -> str:
         """Creates a new work item in the ledger."""
         item_id = str(uuid.uuid4())[:8] # Short ID like 'a1b2c3d4'
         timestamp = time.time()
@@ -444,11 +444,11 @@ class PMMMemory:
 
         return item_id
 
-    async def create_work_item(self, title: str, created_by: str, assignee_id: str = None, parent_id: str = None, meta: Dict = None) -> str:
+    async def create_work_item(self, title: str, created_by: str, assignee_id: str | None = None, parent_id: str | None = None, meta: Dict = None) -> str:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.create_work_item_sync, title, created_by, assignee_id, parent_id, meta)
 
-    def update_work_item_sync(self, item_id: str, status: str = None, assignee_id: str = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
+    def update_work_item_sync(self, item_id: str, status: str | None = None, assignee_id: str | None = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
         """Updates an existing work item."""
         cursor = self.conn.cursor()
 
@@ -489,7 +489,7 @@ class PMMMemory:
             return True
         return False
 
-    async def update_work_item(self, item_id: str, status: str = None, assignee_id: str = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
+    async def update_work_item(self, item_id: str, status: str | None = None, assignee_id: str | None = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.update_work_item_sync, item_id, status, assignee_id, validation_results, meta_update)
 
@@ -511,7 +511,7 @@ class PMMMemory:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.get_work_item_sync, item_id)
 
-    def list_work_items_sync(self, status: str = None, assignee_id: str = None, limit: int = 50) -> List[Dict]:
+    def list_work_items_sync(self, status: str | None = None, assignee_id: str | None = None, limit: int = 50) -> List[Dict]:
         cursor = self.conn.cursor()
         query = "SELECT * FROM work_items"
         conditions = []
@@ -542,7 +542,7 @@ class PMMMemory:
             results.append(item)
         return results
 
-    async def list_work_items(self, status: str = None, assignee_id: str = None, limit: int = 50) -> List[Dict]:
+    async def list_work_items(self, status: str | None = None, assignee_id: str | None = None, limit: int = 50) -> List[Dict]:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.list_work_items_sync, status, assignee_id, limit)
 
@@ -753,7 +753,7 @@ class PMMMemory:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.claim_dlq_item_sync, worker_id, supported_types)
 
-    def update_dlq_item_sync(self, item_id: str, status: str, result: str = None, retry_after: float = None, increment_retry: bool = False) -> bool:
+    def update_dlq_item_sync(self, item_id: str, status: str, result: str | None = None, retry_after: float | None = None, increment_retry: bool = False) -> bool:
         """Updates the status of a DLQ item."""
         cursor = self.conn.cursor()
         now = time.time()
@@ -779,7 +779,7 @@ class PMMMemory:
         self.conn.commit()
         return cursor.rowcount > 0
 
-    async def update_dlq_item(self, item_id: str, status: str, result: str = None, retry_after: float = None, increment_retry: bool = False) -> bool:
+    async def update_dlq_item(self, item_id: str, status: str, result: str | None = None, retry_after: float | None = None, increment_retry: bool = False) -> bool:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.update_dlq_item_sync, item_id, status, result, retry_after, increment_retry)
 

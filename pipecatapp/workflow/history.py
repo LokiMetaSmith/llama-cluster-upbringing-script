@@ -7,6 +7,8 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 class WorkflowHistory:
+    db_path: str
+    lock: 'threading.Lock'
     """Manages the persistence of workflow execution history.
 
     Bolt ⚡ Optimization:
@@ -15,7 +17,7 @@ class WorkflowHistory:
     - Uses threading.Lock to ensure thread-safe writes on the shared connection.
     """
 
-    _instances = {}
+    _instances: dict[str, 'WorkflowHistory'] = {}
     _instances_lock = threading.Lock()
 
     def __new__(cls, db_path: str = "~/.config/pipecat/workflow_history.db"):

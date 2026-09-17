@@ -52,7 +52,7 @@ class GemmaE2BService(FrameProcessor):
     raw audio and images, bypassing the need for separate STT or VLM steps.
     """
 
-    def __init__(self, system_prompt: str = None, **kwargs):
+    def __init__(self, system_prompt: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if litert_lm is None:
             raise ImportError("litert-lm is not installed. Please install it to use GemmaE2BService.")

@@ -94,7 +94,7 @@ class SpecLoaderTool:
 
         return name
 
-    def run(self, action: str, repo_url: str = None, repo_name: str = None) -> str:
+    def run(self, action: str, repo_url: str | None = None, repo_name: str | None = None) -> str:
         """
         Executes the spec loader action.
 
@@ -110,7 +110,7 @@ class SpecLoaderTool:
         else:
             return f"Unknown action: {action}"
 
-    def clone_and_ingest(self, repo_url: str, repo_name: str = None) -> str:
+    def clone_and_ingest(self, repo_url: str, repo_name: str | None = None) -> str:
         if not repo_url:
             return "Error: repo_url is required for clone action."
 

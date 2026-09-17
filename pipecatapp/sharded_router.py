@@ -212,7 +212,7 @@ class ShardedPMMMemoryRouter:
     # Gas Town Work Ledger (Centralized on Coordinator Node)
     # -------------------------------------------------------------------------
 
-    def create_work_item_sync(self, title: str, created_by: str, assignee_id: str = None, parent_id: str = None, meta: Dict = None) -> str:
+    def create_work_item_sync(self, title: str, created_by: str, assignee_id: str | None = None, parent_id: str | None = None, meta: Dict = None) -> str:
         """Synchronously creates a new work item on the centralized coordinator node."""
         coord_node = self.coordinator_node_id
         if coord_node in self.local_memories:
@@ -231,7 +231,7 @@ class ShardedPMMMemoryRouter:
                 self.logger.error(f"Failed to route create_work_item_sync to coordinator: {e}")
                 return None
 
-    async def create_work_item(self, title: str, created_by: str, assignee_id: str = None, parent_id: str = None, meta: Dict = None) -> str:
+    async def create_work_item(self, title: str, created_by: str, assignee_id: str | None = None, parent_id: str | None = None, meta: Dict = None) -> str:
         """Asynchronously creates a new work item on the centralized coordinator node."""
         coord_node = self.coordinator_node_id
         if coord_node in self.local_memories:
@@ -250,7 +250,7 @@ class ShardedPMMMemoryRouter:
                 self.logger.error(f"Failed to route create_work_item to coordinator: {e}")
                 return None
 
-    def update_work_item_sync(self, item_id: str, status: str = None, assignee_id: str = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
+    def update_work_item_sync(self, item_id: str, status: str | None = None, assignee_id: str | None = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
         """Synchronously updates an existing work item on the centralized coordinator node."""
         coord_node = self.coordinator_node_id
         if coord_node in self.local_memories:
@@ -269,7 +269,7 @@ class ShardedPMMMemoryRouter:
                 self.logger.error(f"Failed to route update_work_item_sync to coordinator: {e}")
                 return False
 
-    async def update_work_item(self, item_id: str, status: str = None, assignee_id: str = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
+    async def update_work_item(self, item_id: str, status: str | None = None, assignee_id: str | None = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
         """Asynchronously updates an existing work item on the centralized coordinator node."""
         coord_node = self.coordinator_node_id
         if coord_node in self.local_memories:
@@ -328,7 +328,7 @@ class ShardedPMMMemoryRouter:
                 self.logger.error(f"Failed to route get_work_item from coordinator: {e}")
                 return None
 
-    def list_work_items_sync(self, status: str = None, assignee_id: str = None, limit: int = 50) -> List[Dict]:
+    def list_work_items_sync(self, status: str | None = None, assignee_id: str | None = None, limit: int = 50) -> List[Dict]:
         """Synchronously lists work items from the centralized coordinator node."""
         coord_node = self.coordinator_node_id
         if coord_node in self.local_memories:
@@ -350,7 +350,7 @@ class ShardedPMMMemoryRouter:
                 self.logger.error(f"Failed to route list_work_items_sync from coordinator: {e}")
                 return []
 
-    async def list_work_items(self, status: str = None, assignee_id: str = None, limit: int = 50) -> List[Dict]:
+    async def list_work_items(self, status: str | None = None, assignee_id: str | None = None, limit: int = 50) -> List[Dict]:
         """Asynchronously lists work items from the centralized coordinator node."""
         coord_node = self.coordinator_node_id
         if coord_node in self.local_memories:
@@ -456,7 +456,7 @@ class ShardedPMMMemoryRouter:
                 self.logger.error(f"Failed to route claim_dlq_item from coordinator: {e}")
                 return None
 
-    def update_dlq_item_sync(self, item_id: str, status: str, result: str = None, retry_after: float = None, increment_retry: bool = False) -> bool:
+    def update_dlq_item_sync(self, item_id: str, status: str, result: str | None = None, retry_after: float | None = None, increment_retry: bool = False) -> bool:
         """Synchronously updates a DLQ item's status on the centralized coordinator node."""
         coord_node = self.coordinator_node_id
         if coord_node in self.local_memories:
@@ -475,7 +475,7 @@ class ShardedPMMMemoryRouter:
                 self.logger.error(f"Failed to route update_dlq_item_sync to coordinator: {e}")
                 return False
 
-    async def update_dlq_item(self, item_id: str, status: str, result: str = None, retry_after: float = None, increment_retry: bool = False) -> bool:
+    async def update_dlq_item(self, item_id: str, status: str, result: str | None = None, retry_after: float | None = None, increment_retry: bool = False) -> bool:
         """Asynchronously updates a DLQ item's status on the centralized coordinator node."""
         coord_node = self.coordinator_node_id
         if coord_node in self.local_memories:

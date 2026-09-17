@@ -6,19 +6,28 @@ from ..context import WorkflowContext
 from pipecatapp.rate_limiter import RateLimiter
 from pipecatapp.tools.vr_tool import VRTool
 import asyncio
-from prometheus_client import Gauge, Counter
+from prometheus_client import REGISTRY, Gauge, Counter
 
 # Prometheus metrics for TelemetryNode
-semantic_density_gauge = Gauge(
-    'pipecatapp_semantic_density',
-    'Semantic density score of the agent message',
-    ['node_id', 'agent_id']
-)
-semantic_length_counter = Counter(
-    'pipecatapp_message_words_total',
-    'Total words processed in messages',
-    ['node_id', 'agent_id']
-)
+# Catch ValueError to prevent duplicate registrations during pytest collection
+try:
+    semantic_density_gauge = Gauge(
+        'pipecatapp_semantic_density',
+        'Semantic density score of the agent message',
+        ['node_id', 'agent_id']
+    )
+except ValueError:
+    semantic_density_gauge = REGISTRY._names_to_collectors['pipecatapp_semantic_density']
+
+try:
+    semantic_length_counter = Counter(
+        'pipecatapp_message_words_total',
+        'Total words processed in messages',
+        ['node_id', 'agent_id']
+    )
+except ValueError:
+    semantic_length_counter = REGISTRY._names_to_collectors['pipecatapp_message_words_total']
+
 
 @registry.register
 class TelemetryNode(Node):

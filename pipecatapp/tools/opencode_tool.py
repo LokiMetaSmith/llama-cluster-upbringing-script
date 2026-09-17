@@ -11,7 +11,7 @@ class OpencodeTool:
         description (str): A brief description of the tool's purpose.
         name (str): The name of the tool.
     """
-    def __init__(self, base_url: str = None, provider_id: str = "openai", model_id: str = "local/router"):
+    def __init__(self, base_url: str | None = None, provider_id: str = "openai", model_id: str = "local/router"):
         """Initializes the OpencodeTool.
 
         Args:

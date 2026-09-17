@@ -236,7 +236,7 @@ class Git_Tool:
         # Note: message can start with - (e.g. "-fix bug") as it is value for -m
         return self._run_git_command(["commit", "-m", message], working_dir)
 
-    def branch(self, working_dir: str, branch_name: str = None) -> str:
+    def branch(self, working_dir: str, branch_name: str | None = None) -> str:
         """Creates or lists branches.
 
         Args:
@@ -285,7 +285,7 @@ class Git_Tool:
         """
         return self._run_git_command(["status"], working_dir)
 
-    def diff(self, working_dir: str, commit1: str = None, commit2: str = None) -> str:
+    def diff(self, working_dir: str, commit1: str | None = None, commit2: str | None = None) -> str:
         """Shows the differences between commits, branches, or the working directory.
 
         Args:

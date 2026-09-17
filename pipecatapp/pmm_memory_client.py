@@ -78,7 +78,7 @@ class PMMMemoryClient:
     # Gas Town Work Ledger Client Methods
     # -------------------------------------------------------------------------
 
-    async def create_work_item(self, title: str, created_by: str, assignee_id: str = None, parent_id: str = None, meta: Dict = None) -> str:
+    async def create_work_item(self, title: str, created_by: str, assignee_id: str | None = None, parent_id: str | None = None, meta: Dict = None) -> str:
         url = f"{self.base_url}/work_items"
         payload = {
             "title": title,
@@ -96,7 +96,7 @@ class PMMMemoryClient:
             self.logger.error(f"Failed to create work item: {e}")
             return None
 
-    async def update_work_item(self, item_id: str, status: str = None, assignee_id: str = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
+    async def update_work_item(self, item_id: str, status: str | None = None, assignee_id: str | None = None, validation_results: Dict = None, meta_update: Dict = None) -> bool:
         url = f"{self.base_url}/work_items/{item_id}"
         payload = {}
         if status: payload["status"] = status
@@ -126,7 +126,7 @@ class PMMMemoryClient:
             self.logger.error(f"Failed to get work item {item_id}: {e}")
             return None
 
-    async def list_work_items(self, status: str = None, assignee_id: str = None, limit: int = 50) -> List[Dict]:
+    async def list_work_items(self, status: str | None = None, assignee_id: str | None = None, limit: int = 50) -> List[Dict]:
         url = f"{self.base_url}/work_items"
         params = {"limit": limit}
         if status: params["status"] = status
@@ -189,7 +189,7 @@ class PMMMemoryClient:
             self.logger.error(f"Failed to claim DLQ item: {e}")
             return None
 
-    async def update_dlq_item(self, item_id: str, status: str, result: str = None, retry_after: float = None, increment_retry: bool = False) -> bool:
+    async def update_dlq_item(self, item_id: str, status: str, result: str | None = None, retry_after: float | None = None, increment_retry: bool = False) -> bool:
         url = f"{self.base_url}/dlq/{item_id}"
         payload = {
             "status": status,

@@ -12,7 +12,7 @@ class JulesTool:
         description (str): A brief description of the tool's purpose.
         name (str): The name of the tool.
     """
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str | None = None):
         """Initializes the JulesTool.
 
         Args:
@@ -45,7 +45,7 @@ class JulesTool:
             "required": ["prompt", "source"]
         }
 
-    async def run(self, prompt: str, source: str, title: str = None, automation_mode: str = None) -> str:
+    async def run(self, prompt: str, source: str, title: str | None = None, automation_mode: str | None = None) -> str:
         """Runs a task using the Jules agent by creating a new session.
 
         Args:

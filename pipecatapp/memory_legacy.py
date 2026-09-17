@@ -212,7 +212,7 @@ class MemoryStore:
                 return text
         return text
 
-    def add_memory(self, source: str, raw_text: str, summary: str = None, entities: list = None, topics: list = None, importance: int = None, consolidated: bool = False, metadata: dict = None, doc_id: str = None):
+    def add_memory(self, source: str, raw_text: str, summary: str | None = None, entities: list | None = None, topics: list | None = None, importance: int | None = None, consolidated: bool = False, metadata: dict | None = None, doc_id: str | None = None):
         """Adds a new memory to the SQLite store.
 
         Args:
@@ -254,7 +254,7 @@ class MemoryStore:
         self.conn.commit()
         return cursor.lastrowid
 
-    def add_consolidation(self, source_ids: list, summary: str, insight: str = None):
+    def add_consolidation(self, source_ids: list, summary: str, insight: str | None = None):
         """Adds a new consolidation to the SQLite store.
 
         Args:
@@ -310,7 +310,7 @@ class MemoryStore:
 
         return memories
 
-    def get_memory(self, memory_id: int) -> dict:
+    def get_memory(self, memory_id: int) -> dict | None:
         """Fetches a single memory by ID.
 
         Args:
@@ -342,7 +342,7 @@ class MemoryStore:
             return memory
         return None
 
-    def get_consolidation(self, consolidation_id: int) -> dict:
+    def get_consolidation(self, consolidation_id: int) -> dict | None:
         """Fetches a single consolidation by ID.
 
         Args:
@@ -373,7 +373,7 @@ class MemoryStore:
         cursor.execute('UPDATE memories SET consolidated = 1 WHERE id = ?', (memory_id,))
         self.conn.commit()
 
-    def add_activity(self, activity_type: str, description: str, metadata: dict = None):
+    def add_activity(self, activity_type: str, description: str, metadata: dict | None = None):
         """Adds a new activity to the activity timeline.
 
         Args:

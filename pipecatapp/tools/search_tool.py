@@ -69,7 +69,7 @@ class SearchTool:
 
         return full_path
 
-    def grep(self, pattern: str, path: str = ".", include: str = None, exclude: str = None, context_lines: int = 0) -> str:
+    def grep(self, pattern: str, path: str = ".", include: str | None = None, exclude: str | None = None, context_lines: int = 0) -> str:
         """
         Searches for a text pattern in files using grep.
 
