@@ -13,14 +13,13 @@
     tml_models: "{{ interaction_models.tml | default([]) }}"
 
 - name: Build moshi-rust Docker image
-  community.docker.docker_image:
-    build:
-      path: "{{ playbook_dir }}/../"
-      dockerfile: "{{ playbook_dir }}/../docker/moshi-rust/Dockerfile"
-    name: moshi-rust
-    tag: latest
-    source: build
-  delegate_to: localhost
+  ansible.builtin.include_tasks:
+    file: "{{ project_root | default(playbook_dir ~ '/../..') }}/ansible/tasks/build_cached_image.yaml"
+  vars:
+    build_dir: "{{ project_root | default(playbook_dir ~ '/../..') }}"
+    dockerfile_path: "docker/moshi-rust/Dockerfile"
+    image_name: "moshi-rust"
+    image_tag: "latest"
 
 - name: Export moshi-rust image and add to IPFS
   ansible.builtin.shell: |

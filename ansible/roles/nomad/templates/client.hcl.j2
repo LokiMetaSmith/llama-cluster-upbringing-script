@@ -186,6 +186,12 @@ client {
     read_only = true
   }
 
+
+  host_volume "zigbee2mqtt-data" {
+    path      = "{{ nomad_volumes_dir }}/zigbee2mqtt-data"
+    read_only = false
+  }
+
   host_volume "mcp-config" {
     path      = "{{ nomad_volumes_dir }}/mcp-config"
     read_only = false

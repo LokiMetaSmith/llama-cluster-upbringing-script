@@ -10,6 +10,20 @@ job "mcp-server" {
       port "http" {}
     }
 
+
+    volume "cluster-infra" {
+      type      = "host"
+      source    = "cluster-infra"
+      read_only = true
+    }
+
+    volume "mcp-config" {
+      type      = "host"
+      source    = "mcp-config"
+      read_only = false
+    }
+
+    {% if tool_server_ipfs_cid is defined and tool_server_ipfs_cid %}
     task "load-image" {
       driver = "raw_exec"
       lifecycle {
@@ -28,6 +42,8 @@ job "mcp-server" {
         args    = ["load", "-i", "local/tool-server.tar"]
       }
     }
+
+    {% endif %}
 
     task "mcp-server" {
       driver = "docker"
@@ -49,17 +65,21 @@ job "mcp-server" {
         ]
 
         volumes = [
-          # Read-only source of truth from host
-          "{{ cluster_infra_dir }}:/mnt/host_repo:ro",
-          # MCP tools configuration
-          "{{ mcp_dir }}:/opt/mcp",
-          # Docker socket for CodeRunnerTool
-          "/var/run/docker.sock:/var/run/docker.sock",
-          # Uncomment below to enable host SSH keys (Not recommended for isolation)
-          # "/home/{{ target_user }}/.ssh:/root/.ssh:ro",
+          "/var/run/docker.sock:/var/run/docker.sock"
         ]
       }
 
+      volume_mount {
+        volume      = "cluster-infra"
+        destination = "/mnt/host_repo"
+        read_only   = true
+      }
+
+      volume_mount {
+        volume      = "mcp-config"
+        destination = "/opt/mcp"
+        read_only   = false
+      }
       env {
         # Adapting to tool-server:local expectations
         TOOL_SERVER_API_KEY = "{{ jules_api_key }}"
