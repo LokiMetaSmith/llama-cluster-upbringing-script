@@ -52,7 +52,7 @@ class SSH_Tool:
         else:
             return f"Unknown action: {action}"
 
-    def run_command(self, host: str, username: str, command: str, key_filename: str = None, password: str = None) -> str:
+    def run_command(self, host: str, username: str, command: str, key_filename: str | None = None, password: str | None = None) -> str:
         """Executes a command on a remote machine via SSH.
 
         It is highly recommended to use key-based authentication for security.

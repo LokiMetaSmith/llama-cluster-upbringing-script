@@ -21,7 +21,7 @@ class ProjectOverviewTool:
         """Runs the project overview tool."""
         return self.execute()
 
-    def execute(self, arguments: dict = None) -> str:
+    def execute(self, arguments: dict | None = None) -> str:
         """
         Executes the tool.
 

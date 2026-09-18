@@ -58,7 +58,7 @@ class CRDTMemoryBackend:
     A prototype CRDT-based memory backend to enable seamless failover
     if a Nomad node crashes, tracking active agent conversation state.
     """
-    def __init__(self, node_id: str = None):
+    def __init__(self, node_id: str | None = None):
         self.node_id = node_id or str(uuid.uuid4())
         self.doc = BasicORSet()
 

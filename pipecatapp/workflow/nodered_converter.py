@@ -8,7 +8,7 @@ class NodeRedConverter:
     """
 
     @staticmethod
-    def nodered_to_workflow(nodered_path: str = None, nodered_data: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def nodered_to_workflow(nodered_path: str | None = None, nodered_data: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Parses a Node-RED flow and converts it into a Pipecat Workflow definition.
         Accepts either a file path or direct JSON data.
@@ -112,7 +112,7 @@ class NodeRedConverter:
         return config
 
     @staticmethod
-    def workflow_to_nodered(workflow: Dict[str, Any], output_path: str = None) -> List[Dict[str, Any]]:
+    def workflow_to_nodered(workflow: Dict[str, Any], output_path: str | None = None) -> List[Dict[str, Any]]:
         """
         Converts a Pipecat Workflow back into a Node-RED Flow format.
         """

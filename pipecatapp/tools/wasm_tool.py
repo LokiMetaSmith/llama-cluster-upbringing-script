@@ -115,7 +115,7 @@ class WasmTool:
             logging.error(f"Failed to execute custom WASM function '{function_name}': {e}")
             return f"Error executing custom WASM function '{function_name}': {e}"
 
-    def run(self, action: str, text: str = "", custom_function: str = None, input_payload: dict = None, **kwargs) -> str:
+    def run(self, action: str, text: str = "", custom_function: str | None = None, input_payload: dict | None = None, **kwargs) -> str:
         """Runs the WASM tool action."""
         if action in ["uppercase", "lowercase", "reverse"]:
             return self.process_text(action, text)

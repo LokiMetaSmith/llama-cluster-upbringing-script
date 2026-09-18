@@ -40,7 +40,7 @@ class MindwalkTraceExporter:
         fovea_files = set()      # Read or edited
         parafovea_files = set()  # Hit only (not read or edited)
         edited_files = set()     # Edited
-        edit_counts_per_file = {}  # File path -> edit count
+        edit_counts_per_file: dict[str, int] = {}  # File path -> edit count
 
         events_before_first_edit = 0
         has_edited = False

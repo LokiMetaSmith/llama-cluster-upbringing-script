@@ -36,7 +36,7 @@ class RemoteRAGTool:
             }
         }
 
-    def execute(self, action: str, **kwargs):
+    def execute_rag(self, action: str, **kwargs):
         if action == "add_document":
             return getattr(self, "add_document")(**kwargs.get("kwargs", kwargs))
         if action == "search":
@@ -72,7 +72,7 @@ class RemoteRAGTool:
         return self._make_request("scan_directory", {"directory": directory})
 
     # The executor expects an `execute` method for generic tool routing
-    def execute(self, arguments: dict = None) -> str:
+    def execute_rag(self, arguments: dict | None = None) -> str:
         """
         Executes the RAG tool remotely.
         Expects a dictionary with 'action' (search, add_document, scan_directory)

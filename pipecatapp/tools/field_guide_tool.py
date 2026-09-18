@@ -51,7 +51,7 @@ class FieldGuideTool:
             }
         }
 
-    def execute(self, action: str, content: str = None, **kwargs) -> str:
+    def execute(self, action: str, content: str | None = None, **kwargs) -> str:
         if action == "read":
             return self._read_guide()
         elif action == "update":

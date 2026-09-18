@@ -240,7 +240,7 @@ class FileEditorTool:
             self.logger.error(f"Failed to flag megafile: {e}")
             return f"Error flagging megafile: {e}"
 
-    def read_file(self, filepath: str, use_hashlines: bool = False, view_range: list = None) -> str:
+    def read_file(self, filepath: str, use_hashlines: bool = False, view_range: list | None = None) -> str:
         """Reads the content of a file and detects line endings metadata.
 
         Args:

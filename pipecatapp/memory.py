@@ -36,7 +36,7 @@ class MemoryStore:
     def search(self, query_text: str, k: int = 3) -> List[str]:
         return self.backend.search(query_text, k)
 
-    def add_memory(self, source: str, raw_text: str, summary: str = None, entities: list = None, topics: list = None, importance: int = None, consolidated: bool = False, metadata: dict = None, doc_id: str = None):
+    def add_memory(self, source: str, raw_text: str, summary: str | None = None, entities: list | None = None, topics: list | None = None, importance: int | None = None, consolidated: bool = False, metadata: dict | None = None, doc_id: str | None = None):
         return self.backend.add_memory(source, raw_text, summary, entities, topics, importance, consolidated, metadata, doc_id)
 
     def get_memory(self, memory_id: int) -> Optional[dict]:
@@ -45,7 +45,7 @@ class MemoryStore:
     def get_unconsolidated_memories(self, limit: int = 50) -> List[dict]:
         return self.backend.get_unconsolidated_memories(limit)
 
-    def add_consolidation(self, source_ids: List[int], summary: str, insight: str = None) -> int:
+    def add_consolidation(self, source_ids: List[int], summary: str, insight: str | None = None) -> int:
         return self.backend.add_consolidation(source_ids, summary, insight)
 
     def get_consolidation(self, consolidation_id: int) -> Optional[dict]:
@@ -54,7 +54,7 @@ class MemoryStore:
     def mark_memory_consolidated(self, memory_id: int):
         self.backend.mark_memory_consolidated(memory_id)
 
-    def add_activity(self, activity_type: str, description: str, metadata: dict = None) -> int:
+    def add_activity(self, activity_type: str, description: str, metadata: dict | None = None) -> int:
         return self.backend.add_activity(activity_type, description, metadata)
 
     def get_activities(self, limit: int = 50) -> List[dict]:

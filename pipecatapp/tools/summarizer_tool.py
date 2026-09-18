@@ -57,7 +57,7 @@ class SummarizerTool:
         else:
             return f"Unknown action: {action}"
 
-    def get_summary(self, query: str, conversation_history: list = None) -> str:
+    def get_summary(self, query: str, conversation_history: list | None = None) -> str:
         """Returns the most relevant parts of the conversation related to a query.
 
         This method performs extractive summarization. It embeds the user's query

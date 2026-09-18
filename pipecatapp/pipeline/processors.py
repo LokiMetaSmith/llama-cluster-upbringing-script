@@ -23,7 +23,7 @@ from pipecatapp.security import redact_sensitive_data
 
 class AudioFileFrame(Frame):
     """A frame containing a path to an audio file."""
-    def __init__(self, file_path: str, meta: dict = None):
+    def __init__(self, file_path: str, meta: dict | None = None):
         super().__init__()
         self.file_path = file_path
         self.meta = meta or {}

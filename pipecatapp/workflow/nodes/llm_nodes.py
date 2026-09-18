@@ -12,7 +12,7 @@ try:
 except ImportError:
     from pipecatapp.secret_manager import secret_manager
 
-def build_extensible_payload(base_payload: dict, context: WorkflowContext, node_config: dict = None) -> dict:
+def build_extensible_payload(base_payload: dict, context: WorkflowContext, node_config: dict | None = None) -> dict:
     """
     Extends a standard LLM RPC payload with a GGEP-inspired 'pipecat_extensions'
     block. This ensures forward compatibility and allows passing rich routing,

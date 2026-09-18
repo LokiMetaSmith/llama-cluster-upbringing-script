@@ -21,7 +21,7 @@ class HelixClient:
                 logger.error(f"Response text: {e.response.text}")
             return {}
 
-    def execute_ast(self, queries: List[dict], parameters: dict = None, parameter_types: dict = None, returns: List[str] = None, request_type: str = "write") -> dict:
+    def execute_ast(self, queries: List[dict], parameters: dict | None = None, parameter_types: dict | None = None, returns: List[str] = None, request_type: str = "write") -> dict:
         payload = {
             "request_type": request_type,
             "query": {

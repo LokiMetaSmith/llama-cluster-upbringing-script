@@ -52,7 +52,7 @@ class CheckResult:
 
 def extract_env_example_params(repo_root: Path) -> list[Param]:
     """Extract params from .env.example or .env.sample."""
-    params = []
+    params: list['Param'] = []
     for candidate in [".env.example", ".env.sample", ".env.template"]:
         path = repo_root / candidate
         if path.exists():
@@ -62,7 +62,7 @@ def extract_env_example_params(repo_root: Path) -> list[Param]:
 
 
 def _parse_env_file(path: Path, source: str) -> list[Param]:
-    params = []
+    params: list['Param'] = []
     lines = path.read_text().splitlines()
     for line in lines:
         line = line.strip()
@@ -87,7 +87,7 @@ def _parse_env_file(path: Path, source: str) -> list[Param]:
 
 def extract_ci_secret_params(repo_root: Path) -> list[Param]:
     """Extract secret params referenced in GitHub Actions workflows."""
-    params = []
+    params: list['Param'] = []
     workflows_dir = repo_root / ".github" / "workflows"
     if not workflows_dir.exists():
         return params

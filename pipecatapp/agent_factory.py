@@ -99,7 +99,7 @@ REMOTE_SUPPORTED_TOOLS = [
 # Heavy tools that should ideally be offloaded to the Tool Server for microservice de-monolithization
 HEAVY_TOOLS = ["rag", "code_runner", "ansible", "ocr", "wasm", "heretic"]
 
-def create_tools(config: dict = None, twin_service=None, runner=None, agent_name: str = None) -> dict:
+def create_tools(config: dict | None = None, twin_service=None, runner=None, agent_name: str | None = None) -> dict:
     """
     Initializes and returns the dictionary of tools.
 

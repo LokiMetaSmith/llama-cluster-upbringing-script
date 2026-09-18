@@ -10,7 +10,7 @@ class OuroborosTool:
     A tool for managing and navigating the Ouroboros webring.
     Ouroboros is a circular linked list of cluster services and friend agents.
     """
-    def __init__(self, consul_host: str = None, consul_port: int = 8500):
+    def __init__(self, consul_host: str | None = None, consul_port: int = 8500):
         self.consul_host = consul_host or os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1"))
         self.consul_port = consul_port
         self.consul_url = f"http://{self.consul_host}:{self.consul_port}"

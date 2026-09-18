@@ -48,7 +48,7 @@ class DesignDocsTool:
             }
         }
 
-    def execute(self, action: str, content: str = None, **kwargs) -> str:
+    def execute(self, action: str, content: str | None = None, **kwargs) -> str:
         if action == "read":
             return self._read_docs()
         elif action in ["append", "overwrite"]:

@@ -18,7 +18,7 @@ class AutoresearchTool:
     running a test/evaluation command in an isolated sandbox, and committing or reverting the change
     based on the evaluation outcome (e.g. strict exit_code).
     """
-    def __init__(self, llm_client: Any = None):
+    def __init__(self, llm_client: Any | None = None):
         self.logger = logging.getLogger(__name__)
         # The LLM client to be used for generating code mutations
         self.llm_client = llm_client
