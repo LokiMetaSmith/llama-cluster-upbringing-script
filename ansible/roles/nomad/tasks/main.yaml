@@ -188,6 +188,7 @@
     mode: '0755'
     recurse: yes
   loop:
+    - zigbee2mqtt-data
     - mqtt-data
     - world_model_storage
     - gitea_data
