@@ -198,7 +198,7 @@ class MemoryStore:
         ''')
         self.conn.commit()
 
-    def _encrypt(self, text: str) -> str:
+    def _encrypt(self, text: str | None) -> str:
         if self.fernet and text is not None:
             return self.fernet.encrypt(text.encode()).decode()
         return text

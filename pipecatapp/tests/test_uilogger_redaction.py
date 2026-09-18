@@ -1,5 +1,3 @@
-import pytest
-pytest.skip('TODO: Fix async broadcast mock', allow_module_level=True)
 import sys
 import os
 import json
@@ -118,6 +116,8 @@ sys.modules["web_server"] = mock_web_server
 # Now import the class we want to test
 from pipecatapp.app import UILogger
 
+import pytest
+@pytest.mark.skip(reason="TODO: Fix async broadcast mock")
 def test_uilogger_redaction_verification():
     """
     Test that UILogger redacts secrets.

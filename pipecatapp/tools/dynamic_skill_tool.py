@@ -43,13 +43,13 @@ class DynamicSkillTool:
             }
         }
 
-    def execute_skill(self, action: str, **kwargs):
+    def execute(self, action: str, **kwargs):
         if False:
             pass
         else:
             return f"Unknown action: {action}"
 
-    def execute_skill(self, params: str) -> str:
+    def execute(self, params: str) -> str:
         """
         Executes the skill.
         For now, this attempts to extract python code blocks from the markdown

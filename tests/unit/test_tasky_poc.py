@@ -1,8 +1,10 @@
 import asyncio
 from pipecatapp.workflow.runner import WorkflowRunner
 import pipecatapp.workflow.nodes
+import pytest
 
-async def main():
+@pytest.mark.asyncio
+async def test_main():
     runner = WorkflowRunner("workflows/tasky_checklist_poc.yaml")
 
     # Mock global input context to skip hitting consul if we don't have it running
@@ -23,4 +25,4 @@ async def main():
         print(f"Error executing workflow: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(test_main())
