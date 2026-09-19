@@ -25,11 +25,15 @@
   ansible.builtin.shell: |
     docker save moshi-rust:latest | ipfs add -Q -
   register: ipfs_add_result
-  delegate_to: localhost
+  become: yes
+  environment:
+    IPFS_PATH: "{{ ipfs_path }}"
+  when: moshi_rust_ipfs_cid is not defined or not moshi_rust_ipfs_cid
 
 - name: Set moshi_rust_ipfs_cid fact
   ansible.builtin.set_fact:
     moshi_rust_ipfs_cid: "{{ ipfs_add_result.stdout | trim }}"
+  when: moshi_rust_ipfs_cid is not defined or not moshi_rust_ipfs_cid
 
 - name: Stop and purge any existing tml-interaction jobs (for updates)
   ansible.builtin.command:

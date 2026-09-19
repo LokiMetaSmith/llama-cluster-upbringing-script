@@ -117,6 +117,8 @@
 - name: Export IPFS kubo image and pin to IPFS if not already cached
   ansible.builtin.shell: docker save ipfs/kubo:latest | ipfs add -Q -
   become: yes
+  environment:
+    IPFS_PATH: "{{ ipfs_path }}"
   when: not ipfs_kubo_cache_stat.stat.exists or (load_kubo_cache is defined and load_kubo_cache is failed)
 
 - name: Run ipfs job

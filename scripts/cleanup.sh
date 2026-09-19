@@ -51,9 +51,9 @@ if [ "$POST_BOOTSTRAP" -eq 1 ]; then
         docker system prune --force --volumes
     fi
 
-    # 2. Safely Clean UV / PIP Caches
-    echo -e "\n${BOLD}🧹 Cleaning UV / PIP Caches...${NC}"
-    sudo rm -rf /root/.cache/pip /var/tmp/ansible_pip_build/uv_cache 2>/dev/null || true
+    # 2. Safely Clean UV / PIP Caches & Root IPFS Artifacts
+    echo -e "\n${BOLD}🧹 Cleaning UV / PIP Caches & Root IPFS Artifacts...${NC}"
+    sudo rm -rf /root/.cache/pip /var/tmp/ansible_pip_build/uv_cache /root/.ipfs 2>/dev/null || true
 
     # Use uv cache prune instead of deleting the directory to preserve hardlinks
     if command -v uv &> /dev/null; then
@@ -303,7 +303,7 @@ if [ "$SCORCHED_EARTH" -eq 1 ]; then
 
     # Wipe user and root caches
     echo "Wiping ~/.cache and /root/.cache for pip, uv, npm, playwright, etc..."
-    sudo rm -rf /root/.cache/pip /root/.cache/uv /root/.npm /root/.cache/ms-playwright 2>/dev/null || true
+    sudo rm -rf /root/.cache/pip /root/.cache/uv /root/.npm /root/.cache/ms-playwright /root/.ipfs 2>/dev/null || true
 
     if [ -n "$SUDO_USER" ]; then
         USER_HOME=$(eval echo "~$SUDO_USER")
