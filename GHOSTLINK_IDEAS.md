@@ -100,5 +100,5 @@ To act on these recommendations, the following steps should be taken:
 - [ ] **Test:** Deploy it in front of a low-level service (like a Prometheus node exporter or an internal raw socket) and verify that only clients with the `shared_secret` can establish a connection.
 
 ### 3. Review `gpu_telemetry` for Missing Signals
-- [ ] **Audit:** Review Ghostlink's `system_profile.rs` to see if there are any valuable signals (like AVX-512 support, P/E core layouts, or specific NPU detection) that our current `gpu_telemetry` daemon is missing.
-- [ ] **Enhance:** If valuable, add those specific probes to `gpu_telemetry` so they can be published as Consul tags and utilized by the MoE Gateway for routing decisions.
+- [x] **Audit:** Review Ghostlink's `system_profile.rs` to see if there are any valuable signals (like AVX-512 support, P/E core layouts, or specific NPU detection) that our current `gpu_telemetry` daemon is missing.
+- [x] **Enhance:** If valuable, add those specific probes to `gpu_telemetry` so they can be published as Consul tags and utilized by the MoE Gateway for routing decisions.
