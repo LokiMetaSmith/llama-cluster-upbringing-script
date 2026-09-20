@@ -41,7 +41,7 @@ def _save_for_undo(path: str):
          _undo_history[path].append(None) # None means file didn't exist
 
 @mcp.tool()
-def read_file(filepath: str, use_hashlines: bool = False, view_range: list = None) -> str:
+def read_file(filepath: str, use_hashlines: bool = False, view_range: list | None = None) -> str:
     """Reads the content of a file and detects line endings metadata."""
     try:
         path = _validate_path(filepath)

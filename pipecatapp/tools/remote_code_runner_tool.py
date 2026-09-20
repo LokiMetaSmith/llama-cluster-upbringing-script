@@ -35,7 +35,7 @@ class RemoteCodeRunnerTool:
             }
         }
 
-    def execute(self, action: str, **kwargs):
+    def execute_code(self, action: str, **kwargs):
         if False:
             pass
         else:
@@ -57,7 +57,7 @@ class RemoteCodeRunnerTool:
                 return f"Code Runner Service Error: {e.response.status_code} - {e.response.text}"
             return f"Failed to connect to Code Runner Service at {self.base_url}: {e}"
 
-    def execute(self, arguments: dict = None, code: Optional[str] = None, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
+    def execute_code(self, arguments: dict | None = None, code: Optional[str] = None, language: str = "python", libraries: Optional[List[str]] = None, timeout: Optional[int] = None) -> str:
         """
         Executes code remotely. Supports both direct kwargs and dictionary of arguments (for ToolExecutorNode compatibility).
         """

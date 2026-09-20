@@ -13,7 +13,7 @@ class ATProtoTool:
     Instead of broadcasting directly, actions like send_post are queued to a local sync buffer
     for eventual consistency.
     """
-    def __init__(self, username: str, password: str, pds_url: str = "https://bsky.social", buffer_db_path: str = None):
+    def __init__(self, username: str, password: str, pds_url: str = "https://bsky.social", buffer_db_path: str | None = None):
         self.username = username
         self.password = password
         self.pds_url = pds_url

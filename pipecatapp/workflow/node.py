@@ -1,3 +1,6 @@
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from pipecatapp.workflow.context import WorkflowContext
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Set, Optional, Tuple
 
@@ -42,7 +45,7 @@ class Node(ABC):
     def validate_io(self) -> List[str]:
         """Validates that the node's config satisfies its explicit I/O contracts.
         Returns a list of error messages, or an empty list if valid."""
-        errors = []
+        errors: list[str] = []
         if not self.config:
             return errors
 

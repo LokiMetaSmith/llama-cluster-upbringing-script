@@ -102,7 +102,7 @@ class DatalogEngine:
 
     # --- AST Program Analysis Methods ---
 
-    def index_file(self, filepath: str, code_content: str = None) -> Dict[str, Any]:
+    def index_file(self, filepath: str, code_content: str | None = None) -> Dict[str, Any]:
         """Parses Python AST and populates Datalog program analysis facts."""
         if code_content is None:
             if not os.path.exists(filepath):

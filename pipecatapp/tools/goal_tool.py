@@ -112,7 +112,7 @@ class GoalTool:
             logger.error(f"Error fetching active goal: {e}")
             return None
 
-    def create_goal(self, task_id: str, objective: str, budget: int = None) -> str:
+    def create_goal(self, task_id: str, objective: str, budget: int | None = None) -> str:
         """
         Creates a new active goal for the current task.
         """
@@ -181,7 +181,7 @@ class GoalTool:
             logger.error(f"Error scheduling wakeup: {e}")
             return f"Error scheduling wakeup: {e}"
 
-    def run(self, action: str, task_id: str, objective: str = "", status: str = "", budget: int = None, delay_seconds: int = 0, context: str = "") -> str:
+    def run(self, action: str, task_id: str, objective: str = "", status: str = "", budget: int | None = None, delay_seconds: int = 0, context: str = "") -> str:
         """
         Main entry point for the tool.
         """

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # --- The Emperor's Tools (adapted for Node context) ---
 
-def resolve_abs_path(path_str: str, root_dir: str = None) -> Path:
+def resolve_abs_path(path_str: str, root_dir: str | None = None) -> Path:
     """
     file.py -> /path/to/root/file.py
     Ensures path stays within root_dir for safety.
@@ -491,7 +491,7 @@ class EmperorAgentNode(Node):
         self.set_output(context, "response", final_response)
 
 
-def heretic_align_tool(model: str, harmful_dataset: str, harmless_dataset: str, reverse: bool = False, output_dir: str = None) -> Dict[str, Any]:
+def heretic_align_tool(model: str, harmful_dataset: str, harmless_dataset: str, reverse: bool = False, output_dir: str | None = None) -> Dict[str, Any]:
     """
     Runs Heretic to adjust the inhibitions of a language model.
     :param model: The Hugging Face model ID or path to the model on disk.

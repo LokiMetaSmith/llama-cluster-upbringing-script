@@ -31,6 +31,7 @@ sudo rm -rf /root/.cache/ccache
 sudo rm -rf /root/.cache/node-gyp
 sudo rm -rf /root/.cargo/registry
 sudo rm -rf /root/.cargo/git
+sudo rm -rf /root/.ipfs
 
 # Clean apt cache
 echo "Cleaning apt cache..."

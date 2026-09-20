@@ -8,7 +8,7 @@ class PersonalityTool:
     Tool for managing LLM personality/steering via Control Vectors and
     PersonaPlex voice/role conditioning embeddings (e.g., NATF2, VARM1, AAMF1).
     """
-    def __init__(self, api_url: str = None):
+    def __init__(self, api_url: str | None = None):
         cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
         self.api_url = (api_url or f"http://{cluster_ip}:8080").rstrip("/")
         self.vectors_dir = "/opt/nomad/models/vectors"
@@ -78,7 +78,7 @@ class PersonalityTool:
             logging.warning(f"PersonaPlex server unreachable ({e}); storing local voice persona state.")
             return f"Local PersonaPlex Voice Persona state applied: {voice_id} - Emotion: {emotion}."
 
-    def set_personality(self, name: str, strength: float, fname: str = None) -> str:
+    def set_personality(self, name: str, strength: float, fname: str | None = None) -> str:
         """
         Sets the current personality by applying a control vector.
 
