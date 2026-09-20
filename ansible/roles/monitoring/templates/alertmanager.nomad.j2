@@ -1,0 +1,65 @@
+job "alertmanager" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "service"
+
+  update {
+    max_parallel      = 1
+    health_check      = "checks"
+    min_healthy_time  = "10s"
+    healthy_deadline  = "15m"
+    progress_deadline = "20m"
+    auto_revert       = true
+    canary            = 0
+  }
+
+  group "alertmanager" {
+    count = 1
+
+    network {
+      mode = "host"
+      port "http" {
+        static = {{ alertmanager_port }}
+      }
+    }
+
+    task "alertmanager" {
+      driver = "docker"
+
+      config {
+        image = "prom/alertmanager:v{{ alertmanager_version }}"
+        args = [
+          "--config.file=/local/alertmanager.yml",
+          "--storage.path=/alertmanager",
+          "--web.external-url=http://{{ cluster_ip }}:{{ alertmanager_port }}/alertmanager",
+          "--web.route-prefix=/alertmanager"
+        ]
+      }
+
+      template {
+        data = <<-TPL
+{{ lookup('template', 'alertmanager.yml.j2') }}
+TPL
+        destination = "local/alertmanager.yml"
+        change_mode = "restart"
+      }
+
+      resources {
+        cpu    = 100
+        memory = 128
+      }
+
+      service {
+        name = "alertmanager"
+        port = "http"
+        tags = ["urlprefix-/alertmanager", "metrics"]
+
+        check {
+          type     = "http"
+          path     = "/alertmanager/-/healthy"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}

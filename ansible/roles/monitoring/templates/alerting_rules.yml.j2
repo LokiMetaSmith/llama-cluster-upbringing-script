@@ -1,0 +1,11 @@
+groups:
+  - name: test_alerts
+    rules:
+      - alert: Watchdog
+        expr: vector(1)
+        for: 1m
+        labels:
+          severity: none
+        annotations:
+          summary: "Watchdog Alert"
+          description: "This is a test alert that is always firing to ensure the alerting pipeline is functional."

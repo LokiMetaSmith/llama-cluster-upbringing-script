@@ -75,12 +75,16 @@
   register: llm_model_files
   become: yes
 
-- name: Download all LLM models if they do not exist
-  ansible.builtin.get_url:
-    url: "{{ item.item.url }}"
-    dest: "{{ nomad_models_dir }}/llm/{{ item.item.filename }}"
-    mode: '0644'
-    timeout: 3600
+- name: Download all LLM models if they do not exist (Unified)
+  ansible.builtin.command:
+    cmd: >
+      /opt/pipecatapp/venv/bin/python3
+      {{ role_path }}/files/unified_download.py
+      --uri "{{ item.item.url }}"
+      --dest-dir "{{ nomad_models_dir }}/llm"
+      --filename "{{ item.item.filename }}"
+      --consul-key "models/ipfs/llm/{{ item.item.filename }}"
+      --ipfs-path "{{ ipfs_path }}"
   loop: "{{ llm_model_files.results }}"
   when: not (item.stat.exists | default(false))
   become: yes
@@ -128,13 +132,15 @@
   register: vllm_model_files_hub
   become: yes
 
-- name: Download all vLLM models (Hub-based) if they do not exist
+- name: Download all vLLM models (Hub-based) if they do not exist (Unified)
   ansible.builtin.command:
     cmd: >
       /opt/pipecatapp/venv/bin/python3
-      {{ role_path }}/../download_models/files/download_hf_repo.py
-      "{{ item.item.repo_id }}"
-      "{{ nomad_models_dir }}/vllm/{{ item.item.repo_id.split('/')[-1] }}"
+      {{ role_path }}/files/unified_download.py
+      --uri "hf://{{ item.item.repo_id }}"
+      --dest-dir "{{ nomad_models_dir }}/vllm/{{ item.item.repo_id.split('/')[-1] }}"
+      --consul-key "models/ipfs/vllm/{{ item.item.repo_id.split('/')[-1] }}"
+      --ipfs-path "{{ ipfs_path }}"
   environment:
     HF_TOKEN: "{{ hf_token }}"
   loop: "{{ vllm_model_files_hub.results }}"
@@ -192,24 +198,31 @@
   register: stt_model_files_hub
   become: yes
 
-- name: Download all STT models (URL-based) if they do not exist
-  ansible.builtin.get_url:
-    url: "{{ item.item[1].url }}"
-    dest: "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}/{{ item.item[1].filename }}"
-    mode: '0644'
+- name: Download all STT models (URL-based) if they do not exist (Unified)
+  ansible.builtin.command:
+    cmd: >
+      /opt/pipecatapp/venv/bin/python3
+      {{ role_path }}/files/unified_download.py
+      --uri "{{ item.item[1].url }}"
+      --dest-dir "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}"
+      --filename "{{ item.item[1].filename }}"
+      --consul-key "models/ipfs/stt/{{ item.item[0].key }}/{{ item.item[1].filename }}"
+      --ipfs-path "{{ ipfs_path }}"
   loop: "{{ stt_model_files_url.results }}"
   when: not item.stat.exists
   become: yes
   loop_control:
     loop_var: item
 
-- name: Download all STT models (Hub-based) if they do not exist
+- name: Download all STT models (Hub-based) if they do not exist (Unified)
   ansible.builtin.command:
     cmd: >
       /opt/pipecatapp/venv/bin/python3
-      {{ role_path }}/../download_models/files/download_hf_repo.py
-      "{{ item.item[1].repo_id }}"
-      "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
+      {{ role_path }}/files/unified_download.py
+      --uri "hf://{{ item.item[1].repo_id }}"
+      --dest-dir "{{ nomad_models_dir }}/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
+      --consul-key "models/ipfs/stt/{{ item.item[0].key }}/{{ item.item[1].name }}"
+      --ipfs-path "{{ ipfs_path }}"
   environment:
     HF_TOKEN: "{{ hf_token }}"
   loop: "{{ stt_model_files_hub.results }}"
@@ -285,11 +298,16 @@
   register: tts_model_files
   become: yes
 
-- name: Download all Text-to-Speech model files if they do not exist
-  ansible.builtin.get_url:
-    url: "{{ item.item.url }}"
-    dest: "{{ nomad_models_dir }}/tts/{{ item.item.filename }}"
-    mode: '0644'
+- name: Download all Text-to-Speech model files if they do not exist (Unified)
+  ansible.builtin.command:
+    cmd: >
+      /opt/pipecatapp/venv/bin/python3
+      {{ role_path }}/files/unified_download.py
+      --uri "{{ item.item.url }}"
+      --dest-dir "{{ nomad_models_dir }}/tts"
+      --filename "{{ item.item.filename }}"
+      --consul-key "models/ipfs/tts/{{ item.item.filename }}"
+      --ipfs-path "{{ ipfs_path }}"
   loop: "{{ tts_model_files.results }}"
   when: not item.stat.exists
   become: yes
@@ -344,24 +362,31 @@
   register: vision_model_files_hub
   become: yes
 
-- name: Download all Vision models (URL-based) if they do not exist
-  ansible.builtin.get_url:
-    url: "{{ item.item.url }}"
-    dest: "{{ nomad_models_dir }}/vision/{{ item.item.filename }}"
-    mode: '0644'
+- name: Download all Vision models (URL-based) if they do not exist (Unified)
+  ansible.builtin.command:
+    cmd: >
+      /opt/pipecatapp/venv/bin/python3
+      {{ role_path }}/files/unified_download.py
+      --uri "{{ item.item.url }}"
+      --dest-dir "{{ nomad_models_dir }}/vision"
+      --filename "{{ item.item.filename }}"
+      --consul-key "models/ipfs/vision/{{ item.item.filename }}"
+      --ipfs-path "{{ ipfs_path }}"
   loop: "{{ vision_model_files_url.results }}"
   when: not item.stat.exists
   become: yes
   loop_control:
     loop_var: item
 
-- name: Download all Vision models (Hub-based) if they do not exist
+- name: Download all Vision models (Hub-based) if they do not exist (Unified)
   ansible.builtin.command:
     cmd: >
       /opt/pipecatapp/venv/bin/python3
-      {{ role_path }}/../download_models/files/download_hf_repo.py
-      "{{ item.item.repo_id }}"
-      "{{ nomad_models_dir }}/vision/{{ item.item.name }}"
+      {{ role_path }}/files/unified_download.py
+      --uri "hf://{{ item.item.repo_id }}"
+      --dest-dir "{{ nomad_models_dir }}/vision/{{ item.item.name }}"
+      --consul-key "models/ipfs/vision/{{ item.item.name }}"
+      --ipfs-path "{{ ipfs_path }}"
   environment:
     HF_TOKEN: "{{ hf_token }}"
   loop: "{{ vision_model_files_hub.results }}"
@@ -437,13 +462,15 @@
   register: embedding_model_files_hub
   become: yes
 
-- name: Download all Embedding models (Hub-based) if they do not exist
+- name: Download all Embedding models (Hub-based) if they do not exist (Unified)
   ansible.builtin.command:
     cmd: >
       /opt/pipecatapp/venv/bin/python3
-      {{ role_path }}/../download_models/files/download_hf_repo.py
-      "{{ item.item.repo_id }}"
-      "{{ nomad_models_dir }}/embedding/{{ item.item.name }}"
+      {{ role_path }}/files/unified_download.py
+      --uri "hf://{{ item.item.repo_id }}"
+      --dest-dir "{{ nomad_models_dir }}/embedding/{{ item.item.name }}"
+      --consul-key "models/ipfs/embedding/{{ item.item.name }}"
+      --ipfs-path "{{ ipfs_path }}"
   environment:
     HF_TOKEN: "{{ hf_token }}"
   loop: "{{ embedding_model_files_hub.results }}"

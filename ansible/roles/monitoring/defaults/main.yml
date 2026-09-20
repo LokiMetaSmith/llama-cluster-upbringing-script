@@ -1,5 +1,6 @@
 node_exporter_version: "1.7.0"
 prometheus_version: "2.45.1"
+alertmanager_version: "0.26.0"
 grafana_version: "10.2.2"
 mqtt_exporter_version: "1.9.0" # kpetremann/mqtt-exporter
 

@@ -195,6 +195,53 @@ def get_current_ram_usage():
         pass
     return None
 
+def check_and_cleanup_disk_space():
+    """Checks disk space and performs safe cleanup if below 20GB. Aborts if still below 15GB."""
+    _, free_mb = get_current_disk_usage()
+    if free_mb is None:
+        print_warning("Could not determine disk usage. Skipping disk cleanup check.")
+        return
+
+    if free_mb < 20480:  # Less than 20 GB
+        print(f"{Colors.WARNING}⚠️  Disk space is low ({free_mb} MB). Initiating safe cleanup...{Colors.ENDC}")
+
+        # 1. Docker Cleanup
+        try:
+            print("Pruning Docker system and build caches...")
+            subprocess.run(["docker", "system", "prune", "-a", "--volumes", "--force"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["docker", "builder", "prune", "-a", "--force"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            print_warning(f"Failed to prune Docker: {e}")
+
+        # 2. Cache & Temp Cleanup
+        print("Cleaning temporary files and package caches...")
+        try:
+            # Targeted temp cleanup
+            subprocess.run("rm -rf /tmp/pip-* /tmp/npm-* /tmp/uv-* /tmp/tmp*", shell=True, stderr=subprocess.DEVNULL)
+
+            # Root cache
+            subprocess.run("rm -rf /root/.cache/pip /root/.cache/uv /root/.npm", shell=True, stderr=subprocess.DEVNULL)
+
+            # Sudo user cache
+            sudo_user = os.environ.get("SUDO_USER")
+            if sudo_user:
+                user_home = os.path.expanduser(f"~{sudo_user}")
+                if user_home and os.path.exists(user_home):
+                    subprocess.run(f"rm -rf {user_home}/.cache/pip {user_home}/.cache/uv {user_home}/.npm", shell=True, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            print_warning(f"Failed to clean temporary files: {e}")
+
+        # Re-check space
+        _, new_free_mb = get_current_disk_usage()
+        if new_free_mb is not None and new_free_mb < 15360:  # Still less than 15 GB
+            print_error(f"CRITICAL: Insufficient disk space after cleanup. Only {new_free_mb} MB free, need at least 15 GB.")
+            print_error("Aborting to prevent corrupted Docker builds or system crashes.")
+            sys.exit(1)
+        else:
+            print(f"{Colors.OKGREEN}✅ Disk cleanup complete. Reclaimed space. Currently {new_free_mb} MB free.{Colors.ENDC}")
+
 def cleanup_memory_for_core_ai():
     """Performs cleanup to free RAM before heavy AI services start."""
     print(f"{Colors.OKCYAN}🧹 Performing pre-Core AI Services cleanup to free RAM...{Colors.ENDC}")
@@ -1031,6 +1078,7 @@ def main():
         # Cleanup before Core AI
         if "core_ai_services.yaml" in normalized_path:
             cleanup_memory_for_core_ai()
+            check_and_cleanup_disk_space()
 
         # --- Profiling Before ---
         ram_before = get_current_ram_usage()

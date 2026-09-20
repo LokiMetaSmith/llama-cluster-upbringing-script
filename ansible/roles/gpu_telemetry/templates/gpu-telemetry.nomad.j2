@@ -136,6 +136,10 @@ def get_cpu_instructions():
             tags.append("inst-avx2")
         if re.search(r'\bamx', cpuinfo):
             tags.append("inst-amx")
+        if re.search(r'\bf16c\b', cpuinfo):
+            tags.append("inst-f16c")
+        if re.search(r'\bvnni\b', cpuinfo):
+            tags.append("inst-vnni")
         if re.search(r'\b(asimd|neon)\b', cpuinfo):
             tags.append("inst-neon")
     except Exception:
@@ -144,9 +148,15 @@ def get_cpu_instructions():
 
 def get_npu_info():
     tags = []
-    # Basic check for NPU devices, often exposed under /dev/accel/ or specific misc devices
+    # Basic check for NPU devices, often exposed under /dev/accel/ or /sys/class/accel
     try:
+        found_npu = False
         if os.path.exists('/dev/accel') and os.listdir('/dev/accel'):
+            found_npu = True
+        elif os.path.exists('/sys/class/accel') and os.listdir('/sys/class/accel'):
+            found_npu = True
+
+        if found_npu:
             tags.append("accel-npu")
     except Exception:
         pass
@@ -157,14 +167,29 @@ def get_hybrid_cores():
     # This is added to metadata, not tags, as requested
     info = {"p_cores": 0, "e_cores": 0}
     try:
-        # A rough heuristic for Linux: read cpu-freq max frequencies or core types if exposed
         cpu_dir = '/sys/devices/system/cpu'
         if os.path.exists(cpu_dir):
+            freqs = {}
             for entry in os.listdir(cpu_dir):
                 if re.match(r'^cpu\d+$', entry):
-                    # For simplicity, we just stub this out for the payload
-                    # In a real environment, you'd check cpufreq/cpuinfo_max_freq
-                    pass
+                    freq_path = os.path.join(cpu_dir, entry, 'cpufreq', 'cpuinfo_max_freq')
+                    if os.path.exists(freq_path):
+                        with open(freq_path, 'r') as f:
+                            freq = int(f.read().strip())
+                            freqs[entry] = freq
+
+            if freqs:
+                max_freq = max(freqs.values())
+                for entry, freq in freqs.items():
+                    if freq == max_freq:
+                        info["p_cores"] += 1
+                    else:
+                        info["e_cores"] += 1
+            else:
+                # Fallback if cpufreq is not available: count all as p_cores
+                for entry in os.listdir(cpu_dir):
+                    if re.match(r'^cpu\d+$', entry):
+                        info["p_cores"] += 1
     except Exception:
         pass
     return info
