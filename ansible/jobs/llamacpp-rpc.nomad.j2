@@ -125,7 +125,7 @@ job "{{ job_name | default('llamacpp-rpc-pool') }}" {
 
       resources {
         cpu    = 500
-        memory = 1024 # Memory for the RPC daemon itself.
+        memory = {{ rpc_memory_mb | default(256) }} # Memory for the RPC daemon itself.
       }
     }
   }

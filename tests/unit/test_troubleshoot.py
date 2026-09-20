@@ -182,7 +182,7 @@ def test_report_job_with_dead_pending(mock_api_get, capsys):
         assert len(report_files) > 0
         latest_report = max(report_files, key=os.path.getmtime)
         try:
-            with open(latest_report, 'r') as f:
+            with open(latest_report, 'r', encoding='utf-8') as f:
                 content = f.read()
                 assert "Analysis of Dead/Pending Jobs" in content
                 assert "Job: dead-expert" in content

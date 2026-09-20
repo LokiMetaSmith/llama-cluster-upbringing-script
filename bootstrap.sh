@@ -58,6 +58,7 @@ show_help() {
     echo ""
     echo "Cluster and Node Recovery Options:"
     echo "  --heal-cluster               Run the cluster healing playbook to restore core services."
+    echo "  --heal                       Run automated self-healing on unhealthy or pending Nomad jobs."
     echo "  --troubleshoot [args]        Run the unified system-wide troubleshoot/healing utility."
     echo "  --recover-node <ip>          Attempt to recover a remote node by its IP address."
     echo "  --ipmi-host <host>           IPMI network address (BMC IP) for remote node recovery."
@@ -449,6 +450,10 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             ;;
         --heal-cluster)
             DO_HEAL_CLUSTER=true
+            ;;
+        --heal)
+            DO_TROUBLESHOOT=true
+            TROUBLESHOOT_ARGS+=("heal")
             ;;
         --troubleshoot)
             DO_TROUBLESHOOT=true
@@ -1008,6 +1013,12 @@ EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
     echo -e "\n${GREEN}✨ Bootstrap complete.${NC}"
+
+    # Automated post-provisioning cluster health probe and self-healing
+    if [ "$DO_DRY_RUN" != true ] && [ -f "scripts/troubleshoot.py" ]; then
+        echo -e "\n${BOLD}${CYAN}🩺 Running automated post-provisioning cluster health probe & self-healing...${NC}"
+        python3 scripts/troubleshoot.py heal || true
+    fi
 
     # Mark the system as bootstrapped to prevent re-running the systemd service
     sudo touch /var/lib/pipecat_bootstrapped

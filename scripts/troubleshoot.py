@@ -18,6 +18,7 @@ import subprocess
 import getpass
 import tempfile
 import time
+import platform
 from datetime import datetime
 
 
@@ -573,10 +574,11 @@ def cmd_report(args):
     if not args.json:
         print(f"Generating troubleshooting report: {report_file}")
 
-    with open(report_file, 'w') as f:
+    with open(report_file, 'w', encoding='utf-8') as f:
         f.write(section("TROUBLESHOOTING REPORT"))
         f.write(f"Date: {datetime.now()}\n")
-        f.write(f"Hostname: {os.uname().nodename}\n")
+        hostname = platform.node() if hasattr(platform, "node") else (os.uname().nodename if hasattr(os, "uname") else "unknown")
+        f.write(f"Hostname: {hostname}\n")
         f.write(f"Git Commit Hash: {get_git_commit_hash()}\n")
         try:
             user = getpass.getuser()
@@ -719,7 +721,7 @@ def cmd_probe(args):
     report = {
         "timestamp": timestamp,
         "system": {
-            "hostname": os.uname().nodename,
+            "hostname": platform.node() if hasattr(platform, "node") else (os.uname().nodename if hasattr(os, "uname") else "unknown"),
             "user": getpass.getuser(),
             "git_commit_hash": get_git_commit_hash()
         },
@@ -743,7 +745,7 @@ def cmd_probe(args):
                 "id": job_id,
                 "type": job.get("Type"),
                 "status": status,
-                "healthy": status not in ["dead", "failed"]
+                "healthy": status not in ["dead", "failed", "pending"]
             }
             report["nomad_jobs"].append(job_report)
             report["summary"]["total_count"] += 1
@@ -814,6 +816,34 @@ def cmd_probe(args):
     return report
 
 
+def find_job_file(job_id):
+    """Locate the rendered .nomad job file for a given job ID."""
+    search_dirs = [
+        "/opt/nomad/jobs",
+        "/tmp",
+        os.path.join(REPO_ROOT, "ansible", "jobs")
+    ]
+    candidates = [
+        f"{job_id}.nomad",
+        f"{job_id.replace('-', '_')}.nomad",
+        f"{job_id.replace('_', '-')}.nomad",
+    ]
+    for sdir in search_dirs:
+        if not os.path.isdir(sdir):
+            continue
+        for cand in candidates:
+            cpath = os.path.join(sdir, cand)
+            if os.path.isfile(cpath):
+                return cpath
+        try:
+            for f in os.listdir(sdir):
+                if f.endswith(".nomad") and (job_id in f or f[:-6] in job_id):
+                    return os.path.join(sdir, f)
+        except OSError:
+            pass
+    return None
+
+
 def cmd_heal(args):
     """Force runs dead/failed services/jobs system-wide and verifies execution."""
     print("🚀 Initiating System Healing / Force-Run Sequence...")
@@ -823,10 +853,14 @@ def cmd_heal(args):
     healed_units = []
 
     # 1. Heal Nomad Jobs
+    # Trigger system GC once before healing to flush dead evaluations & allocations
+    run_command(["nomad", "system", "gc"])
+
     for job in health_state["nomad_jobs"]:
         if not job["healthy"]:
             job_id = job["id"]
-            print(f"\n[Heal] Attempting to force-run failed Nomad Job: {job_id}")
+            job_status = job.get("status", "unknown")
+            print(f"\n[Heal] Attempting to force-run failed Nomad Job: {job_id} (Status: {job_status})")
             allocs = api_get(f"/v1/job/{job_id}/allocations")
             if allocs:
                 allocs.sort(key=lambda x: x.get('ModifyTime', 0), reverse=True)
@@ -840,24 +874,42 @@ def cmd_heal(args):
                     log_file_dir = os.path.join(REPO_ROOT, "logs", "healer")
                     os.makedirs(log_file_dir, exist_ok=True)
                     log_filepath = os.path.join(log_file_dir, f"{job_id}_{task_name}_{alloc_id[:8]}_stderr.log")
-                    with open(log_filepath, "w") as lf:
+                    with open(log_filepath, "w", encoding="utf-8") as lf:
                         lf.write(f"Timestamp: {datetime.now()}\n--- STDERR LOGS ---\n{err_logs}\n--- STDOUT LOGS ---\n{out_logs}\n")
                     print(f"  Captured and saved logs to: {log_filepath}")
 
-            print(f"[Heal] Restarting Nomad job {job_id}...")
-            res = run_command(["nomad", "job", "restart", "-yes", job_id])
-            if res["exit_code"] == 0:
-                healed_units.append({"type": "Nomad Job", "id": job_id})
-                print(f"  Successfully triggered restart command for {job_id}.")
-            else:
-                print(f"  Nomad command line restart failed. Attempting Ansible healing playbook for {job_id}...")
-                solution_json = json.dumps({"action": "restart", "parameters": {"job_id": job_id}})
-                playbook_res = run_command(["ansible-playbook", os.path.join(REPO_ROOT, "playbooks", "heal_job.yaml"), "-e", f"solution_json={solution_json}"])
-                if playbook_res["exit_code"] == 0:
+            restarted = False
+            job_file = find_job_file(job_id)
+
+            # If job is dead, pending, or placement-blocked, purge and redeploy from job file
+            if job_file and job_status in ["dead", "pending"]:
+                print(f"  Found job file: {job_file}. Stopping, purging, and redeploying...")
+                run_command(["nomad", "job", "stop", "-purge", job_id])
+                run_command(["nomad", "system", "gc"])
+                run_res = run_command(["nomad", "job", "run", "-detach", job_file])
+                if run_res["exit_code"] == 0:
+                    restarted = True
                     healed_units.append({"type": "Nomad Job", "id": job_id})
-                    print(f"  Successfully healed {job_id} using heal_job.yaml playbook.")
+                    print(f"  Successfully redeployed {job_id} from {job_file}.")
                 else:
-                    print(f"  Failed to heal {job_id} via playbook: {playbook_res['stderr']}")
+                    print(f"  Redeploy from job file failed: {run_res.get('stderr')}")
+
+            if not restarted:
+                print(f"[Heal] Restarting Nomad job {job_id}...")
+                res = run_command(["nomad", "job", "restart", "-yes", job_id])
+                if res["exit_code"] == 0:
+                    restarted = True
+                    healed_units.append({"type": "Nomad Job", "id": job_id})
+                    print(f"  Successfully triggered restart command for {job_id}.")
+                else:
+                    print(f"  Nomad command line restart failed. Attempting Ansible healing playbook for {job_id}...")
+                    solution_json = json.dumps({"action": "restart", "parameters": {"job_id": job_id}})
+                    playbook_res = run_command(["ansible-playbook", os.path.join(REPO_ROOT, "playbooks", "heal_job.yaml"), "-e", f"solution_json={solution_json}"])
+                    if playbook_res["exit_code"] == 0:
+                        healed_units.append({"type": "Nomad Job", "id": job_id})
+                        print(f"  Successfully healed {job_id} using heal_job.yaml playbook.")
+                    else:
+                        print(f"  Failed to heal {job_id} via playbook: {playbook_res['stderr']}")
 
     # 2. Heal Systemd Services
     for svc in health_state["systemd_services"]:
@@ -868,7 +920,7 @@ def cmd_heal(args):
             log_file_dir = os.path.join(REPO_ROOT, "logs", "healer")
             os.makedirs(log_file_dir, exist_ok=True)
             log_filepath = os.path.join(log_file_dir, f"systemd_{svc_name}_stderr.log")
-            with open(log_filepath, "w") as lf:
+            with open(log_filepath, "w", encoding="utf-8") as lf:
                 lf.write(f"Timestamp: {datetime.now()}\nSystemd Logs:\n{logs}\n")
             print(f"  Captured and saved logs to: {log_filepath}")
 
@@ -940,7 +992,7 @@ def cmd_daemon(args):
         log_file_dir = os.path.join(REPO_ROOT, "logs")
         os.makedirs(log_file_dir, exist_ok=True)
         daemon_log_path = os.path.join(log_file_dir, "self_healing_daemon.log")
-        with open(daemon_log_path, "a") as lf:
+        with open(daemon_log_path, "a", encoding="utf-8") as lf:
             lf.write(f"[{datetime.now()}] Cycle {cycle_count} completed. Unhealthy: {unhealthy_count} | Status: {health_state['summary']['status']}\n")
 
         print(f"--- [Daemon Loop Cycle {cycle_count}] Complete. Sleeping for {interval}s... ---")
