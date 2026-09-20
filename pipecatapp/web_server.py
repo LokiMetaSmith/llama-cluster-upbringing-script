@@ -2009,6 +2009,21 @@ async def lookup_shard_for_key(key: str, api_key: str = Security(get_api_key), r
         "api_url": router.nodes_config.get(target_node, {}).get("api_url")
     }
 
+@app.post("/webhook", summary="Alertmanager Webhook Receiver", description="Receives alert notifications from Prometheus Alertmanager.", tags=["Monitoring"])
+async def alertmanager_webhook(request: Request):
+    """
+    Receives JSON payload from Alertmanager.
+    Alertmanager sends an array of alerts.
+    """
+    try:
+        payload = await request.json()
+        logger.info(f"Received webhook alert payload: {json.dumps(payload)}")
+        # In the future, this can be parsed and routed to agent logic or LLMs
+        return JSONResponse(content={"status": "success", "message": "Alert received"}, status_code=200)
+    except Exception as e:
+        logger.error(f"Failed to process webhook alert: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process alert webhook")
+
 
 if __name__ == "__main__":
 

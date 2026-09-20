@@ -87,7 +87,7 @@ def test_cluster_metrics(mock_get):
     assert data[0]["mem"] == 1048576
     assert data[0]["status"] == "running"
 
-@patch("workflow.runner.ActiveWorkflows.get_all_states")
+@patch("pipecatapp.workflow.runner.ActiveWorkflows.get_all_states")
 def test_active_workflows_sanitization(mock_get_all_states):
     """Test that active workflows output is sanitized."""
     def mock_get_all_states_func(sanitize=False):

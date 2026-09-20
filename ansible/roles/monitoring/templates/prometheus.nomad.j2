@@ -48,6 +48,14 @@ EOF
         change_mode = "restart"
       }
 
+      template {
+        data = <<-EOF
+{{ lookup('template', 'alerting_rules.yml.j2') }}
+EOF
+        destination = "local/alerting_rules.yml"
+        change_mode = "restart"
+      }
+
       resources {
         cpu    = 200
         memory = 256
