@@ -2,6 +2,16 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+alerting:
+  alertmanagers:
+    - consul_sd_configs:
+        - server: '{{ cluster_ip }}:{{ consul_http_port }}'
+          services: ['alertmanager']
+      path_prefix: /alertmanager
+
+rule_files:
+  - "/local/alerting_rules.yml"
+
 scrape_configs:
   - job_name: 'nomad'
     consul_sd_configs:
