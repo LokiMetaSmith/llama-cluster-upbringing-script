@@ -492,23 +492,22 @@
   meta: flush_handlers
 
 - name: Wait for Nomad API to be ready
-  ansible.builtin.uri:
-    url: "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
-    validate_certs: yes
-    ca_path: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    status_code: 200
-    client_cert: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-    client_key: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
-  register: nomad_api_status
-  until: nomad_api_status.status == 200
-  retries: 60
-  delay: 10
-  ignore_errors: false
   when: not ansible_check_mode
-
-- name: Check Nomad service status if start task failed
-  when: not ansible_check_mode and (nomad_service_start.failed or nomad_api_status.failed)
   block:
+    - name: Wait for Nomad API to be ready
+      ansible.builtin.uri:
+        url: "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
+        validate_certs: yes
+        ca_path: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        status_code: 200
+        client_cert: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        client_key: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: nomad_api_status
+      until: nomad_api_status.status == 200
+      retries: 60
+      delay: 10
+      ignore_errors: false
+  rescue:
     - name: Get Nomad service status
       ansible.builtin.command: systemctl status nomad --no-pager
       register: nomad_status
@@ -539,6 +538,6 @@
           or failed dependencies like Consul or Docker.
           Logs:
           {{ nomad_logs.stdout }}
-  notify:
-    - Restart nomad
+      notify:
+        - Restart nomad
 
