@@ -94,3 +94,4 @@ jupyter-client
 playwright
 onnxruntime
 sentence-transformers
+opencv-python-headless
