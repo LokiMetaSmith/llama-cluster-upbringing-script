@@ -12,6 +12,8 @@ The `mini-AGI` project presents several innovative mechanisms designed to enable
 
 Instead of keeping the entire model in VRAM, `mini-AGI` stores all experts (and their Adam moments) on disk as independent `.npz` files. A working set (32 experts) is paged into VRAM dynamically based on the demand of the incoming text chunk. This allows the model parameter count to be bounded by disk space rather than VRAM, while keeping VRAM usage strictly within an 8 GB envelope.
 
+* **Serialization & Zero-Copy Paging (`.npz` Replacement):** `mini-AGI` relies on standard NumPy `.npz` files (zipped archives). Decompressing and deserializing ZIP archives on every page-in introduces heavy CPU serialization overhead, negating NVMe IOPS gains. This architecture must be modified to replace `.npz` with flat, uncompressed memory-mapped formats (such as raw contiguous binary buffers via `mmap` or uncompressed `safetensors`). This allows zero-copy direct memory access (DMA) transfers from NVMe into pinned host memory and GPU VRAM via CUDA streams (`cudaMemcpyAsync`), drastically reducing paging latency.
+
 ### 2.2. Dynamic Expert Growth (Recombination)
 
 The model dynamically grows its capacity. New experts are added conditionally when the existing pool is saturated, there is sufficient disk/VRAM capacity, and the previous cohort of experts has proven useful. New experts are built by recombining hidden units from existing experts rather than random initialization, ensuring they provide immediate value. Experts that remain unaddressed for long periods are pruned (deleted from disk).
@@ -19,6 +21,8 @@ The model dynamically grows its capacity. New experts are added conditionally wh
 ### 2.3. Continuous Learning (Anti-Forgetting)
 
 To prevent catastrophic forgetting when training on a single stream of data, the architecture uses an extremely low learning rate for its shared trunk (embeddings, attention, routers, halting head)—specifically 0.1x the learning rate of the experts. Because the routing mechanism ensures that only a sparse subset of experts receives gradient updates for any given chunk, the majority of the model remains untouched, mitigating displacement of existing knowledge.
+
+* **Continual Learning Regression Gates & Poisoning Defense:** Unbounded single-stream gradient updates are susceptible to catastrophic drift, router collapse (where a small subset of experts hogs all tokens), or adversarial data poisoning. We will introduce an automated **frozen regression benchmark**. Every $N$ iterations (or during scheduled "sleep cycles"), training is paused and the model evaluated against a static, ground-truth validation set. If loss or perplexity degrades beyond a set tolerance threshold, the recent expert deltas are discarded and rolled back to the last known healthy snapshot.
 
 ## 3. Hardware & I/O Feasibility
 
@@ -35,6 +39,7 @@ The paging mechanism relies heavily on rapid disk reads to swap experts into VRA
 
 * **8 GB VRAM Baseline:** `mini-AGI` is explicitly designed for an 8 GB VRAM GPU. Our baseline nodes (e.g., the Jules environment) have roughly 7.8 GiB of total system RAM and rely heavily on CPU fallbacks when GPUs are constrained.
 * **Coexistence:** Allocating a dedicated 8 GB VRAM GPU to a continuous learning worker may conflict with the resources required by our primary real-time inference stack (`llama.cpp`, `moshi`). For this to work, we would need Nomad placement constraints targeting specific high-capacity GPU nodes (using our precise hardware tags like `accel-npu`, `inst-avx512`, etc.) and ensure it does not preempt critical inference tasks. Operating this via CPU fallback would be unfeasibly slow for continuous gradient updates.
+* **VRAM Allocation & Fragmentation Shielding:** Dynamically allocating and deallocating tensors in PyTorch VRAM during continuous expert swapping leads to severe CUDA allocator heap fragmentation, eventually causing out-of-memory (OOM) errors even when aggregate VRAM usage is under 8 GB. We must mandate a **static pre-allocated VRAM pool** (ring buffer/slot system). Pre-allocate fixed VRAM slots for the 32 active experts at process initialization. When an expert is paged in, write directly into an existing slot's pre-allocated memory address rather than invoking `malloc` or `torch.empty` at runtime.
 
 ## 4. Proposed Integration Points
 
@@ -49,6 +54,19 @@ Since `mini-AGI` is not intended to replace our fast MoE gateway, it should be t
 
    * The background worker could expose a specialized routing endpoint or occasionally export refined knowledge facts to the `DatalogEngine` ledger.
    * It could serve as a specialized backend for tasks requiring high adaptation but no strict latency guarantees, entirely isolated from the main `MoE Gateway` hot-path.
+
+3. **Nomad Node Mobility & State Persistence:**
+
+   * Nomad `host_volume` paths are node-local. If the host node restarts, drains, or reschedules the allocation, dynamically learned weights, Adam states, and expert topologies remain stranded on that specific NVMe drive.
+   * We will architect an asynchronous **snapshot daemon** or checkpointing task. Periodically archive modified expert weights and the routing topology to IPFS or cluster object storage, and register an `ephemeral_disk` or warm-up hook in the Nomad job template to restore the active expert set on rescheduling.
+
+4. **Observability & Prometheus Instrumentation:**
+
+   * Integrate native Prometheus instrumentation to expose operational metrics to the monitoring stack, including:
+     * `mini_agi_expert_page_latency_seconds` (histogram measuring NVMe-to-VRAM transfer latency).
+     * `mini_agi_expert_cache_hit_ratio` (router locality tracking).
+     * `mini_agi_expert_total_count` (gauge monitoring dynamic expert growth and pruning).
+     * `mini_agi_trunk_loss` vs. `mini_agi_expert_loss` (divergence tracking).
 
 ## 5. Pros and Cons
 
@@ -85,6 +103,8 @@ To safely test and integrate these mechanisms, we will follow a phased approach:
 * [ ] **Extract Paging Logic:** Isolate `mini-AGI`'s `npz` disk-loading logic and `ram_cache` (LRU eviction) into an independent test Python module (`poc/mini_agi_paging/`).
 * [ ] **Simulate Working Set Demand:** Write a script that mocks random text chunk demands and forces the cache to swap 32 experts in and out of simulated VRAM/RAM.
 * [ ] **Measure Latency:** Run this script on the dedicated NVMe volume and verify if the paging latency meets the minimum requirement for continuous learning without stalling.
+* [ ] **Benchmark Serialization Formats:** Benchmark page-in latency of standard `.npz` vs. uncompressed `safetensors` vs. raw `mmap` binary files across 10,000 simulated expert swaps.
+* [ ] **Implement Static VRAM Slot Allocator:** Prototype a fixed-memory buffer in PyTorch to eliminate runtime CUDA memory allocation calls during swaps.
 
 ### Phase 3: Background Learner Scaffolding
 
@@ -92,7 +112,10 @@ To safely test and integrate these mechanisms, we will follow a phased approach:
 * [ ] **Build Environment Image:** Write a minimal Dockerfile/build script to package the `mini-AGI` dependencies (`torch`, `numpy`, etc.) for the background worker.
 * [ ] **Deploy Dry-Run:** Deploy the service to the cluster in a dry-run state (not reading real data) to verify scheduling and volume attachment success.
 
-### Phase 4: MoE Gateway Integration
+### Phase 4: MoE Gateway & Resilience
 
 * [ ] **DatalogEngine Hook:** Create a lightweight Python bridge that reads the output/knowledge state from the background learner and writes generic `credit` or semantic facts to the `DatalogEngine` ledger.
 * [ ] **Experimental Route:** Add a feature flag in the `MoE Gateway` to optionally route a small percentage of asynchronous, latency-insensitive queries (e.g., long-form document summaries) to the new worker for testing.
+* [ ] **Add Prometheus Metrics Exporter:** Instrument the worker with `/metrics` endpoints tracking paging latency, cache hits, and expert growth.
+* [ ] **Automated Snapshot/Restore Hook:** Write an export script to sync modified expert weights from the local NVMe volume to IPFS at regular checkpoint intervals.
+* [ ] **Frozen Validation Test Harness:** Implement the sleep-cycle validation routine to detect model drift before saving persistent weight updates to disk.
