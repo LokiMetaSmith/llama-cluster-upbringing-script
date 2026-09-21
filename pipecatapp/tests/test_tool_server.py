@@ -41,6 +41,8 @@ with patch.dict('os.environ', {'TOOL_SERVER_API_KEY': 'test-key'}):
 
         client = TestClient(tool_server.app)
 
+import importlib
+
 class TestToolServer(unittest.TestCase):
     def test_run_tool_valid_auth(self):
         with patch.dict(tool_server.tools, {'search': MagicMock(grep=MagicMock(return_value="found"))}):
@@ -54,6 +56,9 @@ class TestToolServer(unittest.TestCase):
     def test_run_tool_missing_auth(self):
         response = client.post("/run_tool/", json={"tool": "search", "method": "grep", "args": {"pattern": "def test"}})
         self.assertEqual(response.status_code, 401)
+
+    def test_roles(self):
+        pass
 
 if __name__ == '__main__':
     unittest.main()

@@ -65,8 +65,12 @@ RUN pip install --no-cache-dir \
     sentence_transformers \
     pydantic
 
+# Configure cache for ML models to ensure pipecatapp can read/write them
+ENV HF_HOME=/opt/cache/huggingface
+RUN mkdir -p /opt/cache/huggingface && chown -R pipecatapp:pipecatapp /opt/cache && chmod -R 755 /opt/cache
+
 COPY preload_models.py .
-RUN python preload_models.py
+RUN chown pipecatapp:pipecatapp preload_models.py && su pipecatapp -c "python preload_models.py"
 
 COPY app.py .
 COPY pmm_memory.py .
@@ -78,8 +82,7 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Run as unprivileged user with cache dir
-RUN useradd -m -u 1000 pipecatapp && \
-    mkdir -p /home/pipecatapp/.cache && \
+RUN mkdir -p /home/pipecatapp/.cache && \
     chown -R pipecatapp:pipecatapp /home/pipecatapp /app /entrypoint.sh
 USER pipecatapp
 ENTRYPOINT ["/entrypoint.sh"]

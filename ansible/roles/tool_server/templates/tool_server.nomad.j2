@@ -102,12 +102,19 @@ job "tool-server" {
           path     = "/health"
           check_restart {
             limit           = 3
-            grace           = "90s"
+            grace           = "60s"
             ignore_warnings = false
           }
           interval = "15s"
           timeout  = "5s"
         }
+      }
+
+      service {
+        name    = "tool-server-api"
+        port    = "http"
+        address = "${attr.unique.network.ip-address}"
+        tags    = ["legacy-alias", "http"]
       }
     }
   }
