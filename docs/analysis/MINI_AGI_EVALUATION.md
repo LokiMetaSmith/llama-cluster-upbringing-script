@@ -69,3 +69,30 @@ Since `mini-AGI` is not intended to replace our fast MoE gateway, it should be t
 1. **I/O Benchmarking:** Before writing any implementation code, run a synthetic I/O benchmark on our Nomad host-volumes to ensure our NVMe drives can support the necessary read/write IOPS for expert swapping.
 2. **Prototype Paging:** Implement a minimal Python prototype of the `npz` disk-to-VRAM loading mechanism in a test Nomad job to measure real-world latency within our infrastructure.
 3. **Draft Nomad Spec:** Once hardware feasibility is proven, draft a `.nomad.j2` template utilizing host-volume mounts and GPU placement constraints for the background worker.
+
+## 7. Implementation Task Breakdown (TODOs)
+
+To safely test and integrate these mechanisms, we will follow a phased approach:
+
+### Phase 1: Storage and I/O Benchmarking
+
+* [ ] **Create I/O Benchmark Script:** Write a Python script to synthesize random read/writes of 3MB chunk files (simulating the `.npz` expert loads).
+* [ ] **Provision Test Host Volume:** Update the Ansible `nomad` role to provision a dedicated `/opt/nomad/data/nvme_test` host volume mounted directly on an NVMe block device.
+* [ ] **Deploy Benchmark Job:** Create a temporary Nomad `raw_exec` job to run the benchmark script against the NVMe mount and against a standard OverlayFS mount to quantify the speed delta.
+
+### Phase 2: Python Paging Prototype
+
+* [ ] **Extract Paging Logic:** Isolate `mini-AGI`'s `npz` disk-loading logic and `ram_cache` (LRU eviction) into an independent test Python module (`poc/mini_agi_paging/`).
+* [ ] **Simulate Working Set Demand:** Write a script that mocks random text chunk demands and forces the cache to swap 32 experts in and out of simulated VRAM/RAM.
+* [ ] **Measure Latency:** Run this script on the dedicated NVMe volume and verify if the paging latency meets the minimum requirement for continuous learning without stalling.
+
+### Phase 3: Background Learner Scaffolding
+
+* [ ] **Draft Nomad Job Specification:** Create `playbooks/templates/nomad/mini_agi_worker.nomad.j2` with explicit GPU placement constraints (`accel-npu`, >8GB VRAM) and the NVMe `volume_mount`.
+* [ ] **Build Environment Image:** Write a minimal Dockerfile/build script to package the `mini-AGI` dependencies (`torch`, `numpy`, etc.) for the background worker.
+* [ ] **Deploy Dry-Run:** Deploy the service to the cluster in a dry-run state (not reading real data) to verify scheduling and volume attachment success.
+
+### Phase 4: MoE Gateway Integration
+
+* [ ] **DatalogEngine Hook:** Create a lightweight Python bridge that reads the output/knowledge state from the background learner and writes generic `credit` or semantic facts to the `DatalogEngine` ledger.
+* [ ] **Experimental Route:** Add a feature flag in the `MoE Gateway` to optionally route a small percentage of asynchronous, latency-insensitive queries (e.g., long-form document summaries) to the new worker for testing.
