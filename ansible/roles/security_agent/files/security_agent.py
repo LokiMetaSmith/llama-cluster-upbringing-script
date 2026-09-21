@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 # Constants
 MQTT_BROKER = os.getenv("MQTT_BROKER", "mqtt.service.consul")
 MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
+MQTT_CA_CERT = os.getenv("MQTT_CA_CERT")
+MQTT_CLIENT_CERT = os.getenv("MQTT_CLIENT_CERT")
+MQTT_CLIENT_KEY = os.getenv("MQTT_CLIENT_KEY")
 TCP_LISTEN_PORT = int(os.getenv("TCP_LISTEN_PORT", "9000"))
 
 ATPROTO_PRIVATE_KEY_HEX = os.getenv("ATPROTO_PRIVATE_KEY_HEX")
@@ -65,6 +68,11 @@ def setup_mqtt():
 
     client.on_connect = on_connect
     client.on_message = on_message
+
+    if MQTT_CA_CERT and os.path.exists(MQTT_CA_CERT):
+        logger.info(f"Configuring TLS with CA={MQTT_CA_CERT}")
+        client.tls_set(ca_certs=MQTT_CA_CERT, certfile=MQTT_CLIENT_CERT, keyfile=MQTT_CLIENT_KEY)
+        client.tls_insecure_set(True)
 
     try:
         client.connect(MQTT_BROKER, MQTT_PORT, 60)

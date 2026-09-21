@@ -5,6 +5,10 @@ mqtt:
   client_id: frigate
   user: {{ frigate_mqtt_user }}
   password: {{ frigate_mqtt_password }}
+  tls_ca_certs: /etc/tls/ca.pem
+  tls_client_cert: /etc/tls/mqtt_client.cert.pem
+  tls_client_key: /etc/tls/mqtt_client.key.pem
+  tls_insecure: true
 
 cameras:
   test_cam:

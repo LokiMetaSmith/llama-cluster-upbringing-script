@@ -30,6 +30,12 @@ job "mqtt-exporter" {
       }
     }
 
+    volume "nomad_tls" {
+      type      = "host"
+      source    = "nomad_tls"
+      read_only = true
+    }
+
     task "mqtt-exporter" {
       driver = "docker"
 
@@ -37,9 +43,20 @@ job "mqtt-exporter" {
         image = "kpetrem/mqtt-exporter:{{ mqtt_exporter_version }}"
       }
 
+      volume_mount {
+        volume      = "nomad_tls"
+        destination = "/etc/tls"
+        read_only   = true
+      }
+
       env {
         MQTT_ADDRESS = "{{ cluster_ip }}"
-        MQTT_PORT = "{{ mqtt_port | default(1883) }}"
+        MQTT_PORT = "{{ mqtts_port | default(8883) }}"
+        MQTT_ENABLE_TLS = "True"
+        MQTT_TLS_NO_VERIFY = "True"
+        MQTT_TLS_CA_CERT = "/etc/tls/ca.pem"
+        MQTT_TLS_CLIENT_CERT = "/etc/tls/mqtt_client.cert.pem"
+        MQTT_TLS_CLIENT_KEY = "/etc/tls/mqtt_client.key.pem"
         PROMETHEUS_PORT = "{{ mqtt_exporter_metrics_port | default(9000) }}"
         PROMETHEUS_ADDRESS = "0.0.0.0"
         PROMETHEUS_BIND_ADDRESS = "0.0.0.0"

@@ -29,6 +29,10 @@ MQTT_HOST = os.getenv("MQTT_HOST", "localhost")
 MQTT_PORT = get_env_int("MQTT_PORT", 1883)
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", "#")
 
+MQTT_CA_CERT = os.getenv("MQTT_CA_CERT")
+MQTT_CLIENT_CERT = os.getenv("MQTT_CLIENT_CERT")
+MQTT_CLIENT_KEY = os.getenv("MQTT_CLIENT_KEY")
+
 NOMAD_ADDR = os.getenv("NOMAD_ADDR", "http://localhost:4646")
 
 # Robustly determine the port
@@ -128,6 +132,11 @@ def run_mqtt_client():
     client.on_connect = on_connect
     client.on_message = on_message
     client.on_disconnect = on_disconnect
+
+    if MQTT_CA_CERT and os.path.exists(MQTT_CA_CERT):
+        logger.info(f"Configuring TLS with CA={MQTT_CA_CERT}")
+        client.tls_set(ca_certs=MQTT_CA_CERT, certfile=MQTT_CLIENT_CERT, keyfile=MQTT_CLIENT_KEY)
+        client.tls_insecure_set(True) # In case hostname doesn't match CN exactly on tailscale IP
 
     max_retries = 50
     retry_delay = 5  # seconds

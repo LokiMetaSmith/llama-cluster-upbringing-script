@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Depends
 import uvicorn
+import ssl
 import aiomqtt
 from pydantic import ValidationError
 
@@ -69,10 +70,18 @@ async def mqtt_listener():
     Background task to listen for MQTT tap events.
     """
     reconnect_interval = 5
+    tls_context = None
+    if settings.mqtt_ca_cert:
+        tls_context = ssl.create_default_context(cafile=settings.mqtt_ca_cert)
+        if settings.mqtt_client_cert and settings.mqtt_client_key:
+            tls_context.load_cert_chain(certfile=settings.mqtt_client_cert, keyfile=settings.mqtt_client_key)
+        # Check hostname might need to be bypassed if using IP address in cert
+        tls_context.check_hostname = False
+
     while True:
         try:
             logger.info(f"Connecting to MQTT broker at {settings.mqtt_broker_host}:{settings.mqtt_broker_port}")
-            async with aiomqtt.Client(hostname=settings.mqtt_broker_host, port=settings.mqtt_broker_port) as client:
+            async with aiomqtt.Client(hostname=settings.mqtt_broker_host, port=settings.mqtt_broker_port, tls_context=tls_context) as client:
                 logger.info(f"Subscribing to {settings.mqtt_topic_success}")
                 await client.subscribe(settings.mqtt_topic_success)
                 async for message in client.messages:

@@ -40,8 +40,8 @@ if [ -f "/etc/profile.d/nomad.sh" ]; then
 fi
 
 # Check for MQTT
-echo "Checking for MQTT broker on port 1883..."
-if nc -z localhost 1883 2>/dev/null; then
+echo "Checking for MQTT broker on port 8883 or 1883..."
+if nc -z localhost 8883 2>/dev/null || nc -z localhost 1883 2>/dev/null; then
     echo "MQTT broker detected."
 else
     echo "No MQTT broker detected. Starting temporary Mosquitto container..."
@@ -86,6 +86,7 @@ docker run -d --rm --name $CONTAINER_NAME \
   -e NOMAD_PORT_http=$DEBUG_PORT \
   -e PYTHONUNBUFFERED=1 \
   -e MQTT_HOST="$HOST_IP" \
+  -e MQTT_PORT="1883" \
   -e NOMAD_ADDR="${NOMAD_ADDR:-http://$HOST_IP:4646}" \
   $IMAGE_NAME
 

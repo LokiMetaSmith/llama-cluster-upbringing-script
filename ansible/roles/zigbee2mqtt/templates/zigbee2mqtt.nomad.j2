@@ -31,6 +31,12 @@ job "zigbee2mqtt" {
       read_only = false
     }
 
+    volume "nomad_tls" {
+      type      = "host"
+      source    = "nomad_tls"
+      read_only = true
+    }
+
     service {
       name     = "zigbee2mqtt"
       port     = "http"
@@ -75,7 +81,11 @@ job "zigbee2mqtt" {
       env {
         TZ = "UTC"
         # Base config, points directly to mqtt broker
-        ZIGBEE2MQTT_CONFIG_MQTT_SERVER = "mqtt://{{ hostvars['controller_node_1']['ansible_host'] | default(advertise_ip) }}:{{ mqtt_port | default(1883) }}"
+        ZIGBEE2MQTT_CONFIG_MQTT_SERVER = "mqtts://{{ hostvars['controller_node_1']['ansible_host'] | default(advertise_ip) }}:{{ mqtts_port | default(8883) }}"
+        ZIGBEE2MQTT_CONFIG_MQTT_CA = "/etc/tls/ca.pem"
+        ZIGBEE2MQTT_CONFIG_MQTT_CERT = "/etc/tls/mqtt_client.cert.pem"
+        ZIGBEE2MQTT_CONFIG_MQTT_KEY = "/etc/tls/mqtt_client.key.pem"
+        ZIGBEE2MQTT_CONFIG_MQTT_REJECT_UNAUTHORIZED = "false"
         ZIGBEE2MQTT_CONFIG_FRONTEND_PORT = "{{ zigbee2mqtt_port | default(8080) }}"
         ZIGBEE2MQTT_CONFIG_SERIAL_PORT = "{{ zigbee_serial_port | default('/dev/ttyACM0') }}"
       }
@@ -84,6 +94,12 @@ job "zigbee2mqtt" {
         volume      = "zigbee2mqtt-data"
         destination = "/app/data"
         read_only   = false
+      }
+
+      volume_mount {
+        volume      = "nomad_tls"
+        destination = "/etc/tls"
+        read_only   = true
       }
 
       resources {

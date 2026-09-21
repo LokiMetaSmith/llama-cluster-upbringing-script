@@ -37,6 +37,12 @@ job "vision" {
             target = "/media/frigate"
           },
           {
+            type   = "bind"
+            source = "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}"
+            target = "/etc/tls"
+            readonly = true
+          },
+          {
             type   = "tmpfs"
             target = "/tmp/cache"
             readonly = false
