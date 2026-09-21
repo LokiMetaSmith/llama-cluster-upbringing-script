@@ -13,18 +13,6 @@ if __package__:
 else:
     from rate_limiter import RateLimiter
 
-from tools.ssh_tool import SSH_Tool
-from tools.desktop_control_tool import DesktopControlTool
-from tools.code_runner_tool import CodeRunnerTool
-from tools.web_browser_tool import WebBrowserTool
-from tools.ansible_tool import Ansible_Tool
-from tools.power_tool import Power_Tool
-from tools.summarizer_tool import SummarizerTool
-from tools.term_everything_tool import TermEverythingTool
-from tools.rag_tool import RAG_Tool
-from tools.ha_tool import HA_Tool
-from tools.git_tool import Git_Tool
-from tools.orchestrator_tool import OrchestratorTool
 from pmm_memory import PMMMemory
 
 app = FastAPI()
@@ -34,30 +22,56 @@ class ToolRequest(BaseModel):
     method: str
     args: dict = {}
 
-# Instantiate all available tools
-# Note: Some tools might require specific env vars or paths that need to be set in Nomad job
-tools = {
-    "ssh": SSH_Tool(),
-    "desktop_control": DesktopControlTool(),
-    "code_runner": CodeRunnerTool(),
-    "web_browser": WebBrowserTool(),
-    "ansible": Ansible_Tool(),
-    "power": Power_Tool(),
-    "summarizer": SummarizerTool(twin_service=None),
-    "term_everything": TermEverythingTool(app_image_path="/opt/mcp/tools/termeverything.AppImage"),
-    "rag": RAG_Tool(pmm_memory=None, base_dir="/mnt/host_repo"),
-    "git": Git_Tool(),
-    "orchestrator": OrchestratorTool(),
-}
+tools = {}
+role = os.getenv("TOOL_SERVER_ROLE", "core")
 
-if os.getenv("HA_URL") and os.getenv("HA_TOKEN"):
-    try:
-        tools["ha"] = HA_Tool(
-            ha_url=os.getenv("HA_URL"),
-            ha_token=os.getenv("HA_TOKEN")
-        )
-    except ValueError as e:
-        print(f"Warning: Failed to initialize HA_Tool: {e}")
+if role == "core":
+    from tools.ssh_tool import SSH_Tool
+    from tools.desktop_control_tool import DesktopControlTool
+    from tools.code_runner_tool import CodeRunnerTool
+    from tools.ansible_tool import Ansible_Tool
+    from tools.power_tool import Power_Tool
+    from tools.term_everything_tool import TermEverythingTool
+    from tools.ha_tool import HA_Tool
+    from tools.git_tool import Git_Tool
+    from tools.orchestrator_tool import OrchestratorTool
+
+    tools.update({
+        "ssh": SSH_Tool(),
+        "desktop_control": DesktopControlTool(),
+        "code_runner": CodeRunnerTool(),
+        "ansible": Ansible_Tool(),
+        "power": Power_Tool(),
+        "term_everything": TermEverythingTool(app_image_path="/opt/mcp/tools/termeverything.AppImage"),
+        "git": Git_Tool(),
+        "orchestrator": OrchestratorTool(),
+    })
+
+    if os.getenv("HA_URL") and os.getenv("HA_TOKEN"):
+        try:
+            tools["ha"] = HA_Tool(
+                ha_url=os.getenv("HA_URL"),
+                ha_token=os.getenv("HA_TOKEN")
+            )
+        except ValueError as e:
+            print(f"Warning: Failed to initialize HA_Tool: {e}")
+
+elif role == "browser":
+    from tools.web_browser_tool import WebBrowserTool
+    tools.update({
+        "web_browser": WebBrowserTool(),
+    })
+
+elif role == "vision":
+    from tools.summarizer_tool import SummarizerTool
+    from tools.rag_tool import RAG_Tool
+    tools.update({
+        "summarizer": SummarizerTool(twin_service=None),
+        "rag": RAG_Tool(pmm_memory=None, base_dir="/mnt/host_repo"),
+    })
+else:
+    raise ValueError(f"Unknown TOOL_SERVER_ROLE: {role}")
+
 
 API_KEY = os.getenv("TOOL_SERVER_API_KEY")
 strict_limiter = RateLimiter(limit=10, window=60)
@@ -116,7 +130,7 @@ async def run_tool(request: ToolRequest, authorization: Optional[str] = Header(N
         raise HTTPException(status_code=401, detail="Invalid authorization header format.")
 
     if request.tool not in tools:
-        raise HTTPException(status_code=404, detail=f"Tool '{request.tool}' not found.")
+        raise HTTPException(status_code=404, detail=f"Tool '{request.tool}' not found in role '{role}'.")
 
     tool_instance = tools[request.tool]
 

@@ -26,19 +26,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip install --no-cache-dir --upgrade pip
 
-# Install pipecat-ai and its extras first
+# Install pipecat-ai and its extras
 RUN pip install --no-cache-dir "pipecat-ai[all]"
 
-# Install Playwright dependencies
-RUN pip install --no-cache-dir playwright && \
-    playwright install --with-deps chromium
-
-# Now install the other requirements
+# Install Vision/ML requirements
 RUN pip install --no-cache-dir \
     av==16.0.1 \
     ctranslate2==4.7.1 \
     chromadb \
-    docker \
     einops \
     espeakng_loader \
     faiss-cpu \
@@ -50,7 +45,6 @@ RUN pip install --no-cache-dir \
     num2words \
     onnxruntime \
     opencv-python-headless \
-    paramiko \
     piper-tts \
     kokoro \
     wyoming \
@@ -62,7 +56,6 @@ RUN pip install --no-cache-dir \
     pyvips-binary \
     realtimestt \
     langchain \
-    llm-sandbox \
     soundfile \
     spacy \
     uvicorn \
@@ -70,8 +63,7 @@ RUN pip install --no-cache-dir \
     websockets \
     ultralytics \
     sentence_transformers \
-    pyautogui \
-    ansible
+    pydantic
 
 COPY preload_models.py .
 RUN python preload_models.py
@@ -85,7 +77,10 @@ COPY entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh
 
-RUN useradd -m -s /bin/bash pipecatapp && chown -R pipecatapp:pipecatapp /app /entrypoint.sh
+# Run as unprivileged user with cache dir
+RUN useradd -m -u 1000 pipecatapp && \
+    mkdir -p /home/pipecatapp/.cache && \
+    chown -R pipecatapp:pipecatapp /home/pipecatapp /app /entrypoint.sh
 USER pipecatapp
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
