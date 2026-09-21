@@ -29,7 +29,9 @@
     mode: "0644"
   loop:
     - "app.py"
-    - "Dockerfile"
+    - "Dockerfile.core"
+    - "Dockerfile.browser"
+    - "Dockerfile.vision"
     - "preload_models.py"
   become: true
 
@@ -91,58 +93,9 @@
   ansible.builtin.command: "ls -R {{ role_path }}"
   changed_when: false
 
-- name: "Tool Server : Build tool-server docker image (cached)"
-  ansible.builtin.include_tasks:
-    file: "{{ project_root }}/ansible/tasks/build_cached_image.yaml"
-  vars:
-    build_dir: "/opt/tool_server"
-    image_name: "tool-server"
-    image_tag: "local"
-
-- name: Verify tool-server image exists
-  ansible.builtin.command: docker image inspect tool-server:local
-  become: yes
-  changed_when: false
-
-- name: Export and Pin tool-server image to IPFS
-  block:
-    - name: Prune Docker builder cache to free space
-      ansible.builtin.command: docker builder prune -f
-      become: yes
-      ignore_errors: yes
-
-    - name: Prune dangling Docker images
-      ansible.builtin.command: docker image prune -f
-      become: yes
-      ignore_errors: yes
-
-    - name: Stream tool-server image directly to IPFS
-      ansible.builtin.shell: docker save tool-server:local | ipfs add -Q -
-      become: yes
-      register: ipfs_add_result_tool
-      environment:
-        IPFS_PATH: "{{ ipfs_path }}"
-  always:
-    - name: Clean up temporary tool-server tarballs if any
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /opt/tool-server.tar
-        - /opt/.tmp-tool-server.tar
-      become: yes
-
-- name: Set tool_server_ipfs_cid fact
-  ansible.builtin.set_fact:
-    tool_server_ipfs_cid: "{{ ipfs_add_result_tool.stdout | trim }}"
-
-- name: "Tool Server : Verify Docker image exists"
-  ansible.builtin.command:
-    cmd: "docker images -q tool-server:local"
-  register: docker_image_check
-  failed_when: docker_image_check.stdout | length == 0
-  changed_when: false
-  become: true
+- name: "Tool Server : Build and Pin Tool Server Components"
+  ansible.builtin.include_tasks: "build_and_pin.yaml"
+  loop: "{{ tool_server_components }}"
 
 - name: Template tool-server.nomad job file
   ansible.builtin.template:
