@@ -33,13 +33,15 @@ from fastapi.testclient import TestClient
 
 with patch.dict('os.environ', {'TOOL_SERVER_API_KEY': 'test-key'}):
     with patch.dict('sys.modules'):
-        import pipecatapp.tool_server
+        import pipecatapp.tool_server as tool_server
 
         # Manually reset the API_KEY as it was evaluated during module load
         # before the mock if not mocked properly
         tool_server.API_KEY = "test-key"
 
         client = TestClient(tool_server.app)
+
+import importlib
 
 class TestToolServer(unittest.TestCase):
     def test_run_tool_valid_auth(self):
@@ -54,6 +56,9 @@ class TestToolServer(unittest.TestCase):
     def test_run_tool_missing_auth(self):
         response = client.post("/run_tool/", json={"tool": "search", "method": "grep", "args": {"pattern": "def test"}})
         self.assertEqual(response.status_code, 401)
+
+    def test_roles(self):
+        pass
 
 if __name__ == '__main__':
     unittest.main()

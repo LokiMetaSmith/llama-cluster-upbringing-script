@@ -28,6 +28,9 @@ async def discover_services(service_names: list, consul_http_addr: str, delay=10
         "llamacpp-rpc-api": os.getenv("LLAMA_API_URL_OVERRIDE"),
         "router-api": os.getenv("LLAMA_API_URL_OVERRIDE"),
         "tool-server-api": os.getenv("TOOL_SERVER_URL_OVERRIDE"),
+        "tool-server-core": os.getenv("TOOL_SERVER_URL_OVERRIDE"),
+        "tool-server-browser": os.getenv("TOOL_SERVER_URL_OVERRIDE"),
+        "tool-server-vision": os.getenv("TOOL_SERVER_URL_OVERRIDE"),
         "memory-service": os.getenv("MEMORY_SERVICE_URL_OVERRIDE"),
     }
 

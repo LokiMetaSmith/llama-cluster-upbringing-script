@@ -1,0 +1,44 @@
+FROM python:3.12-slim-bookworm
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    libffi-dev \
+    libssl-dev \
+    git \
+    rsync \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install pipecat-ai core dependencies
+RUN pip install --no-cache-dir \
+    docker \
+    fastapi \
+    httpx \
+    requests \
+    python-consul2 \
+    python-dotenv \
+    paramiko \
+    llm-sandbox \
+    uvicorn \
+    websockets \
+    pyautogui \
+    ansible \
+    pydantic
+
+COPY app.py .
+COPY pmm_memory.py .
+COPY secret_manager.py .
+COPY net_utils.py .
+COPY tools ./tools
+COPY entrypoint.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+# Core must run as root to access mounted docker sockets, SSH keys, etc.
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

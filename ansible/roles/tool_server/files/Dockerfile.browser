@@ -1,0 +1,45 @@
+FROM python:3.12-slim-bookworm
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    libffi-dev \
+    libssl-dev \
+    git \
+    rsync \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install Playwright dependencies
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
+RUN pip install --no-cache-dir playwright && \
+    playwright install --with-deps chromium && \
+    chmod -R 755 /opt/ms-playwright
+
+# Install core requirements for the app
+RUN pip install --no-cache-dir \
+    fastapi \
+    httpx \
+    requests \
+    python-consul2 \
+    python-dotenv \
+    uvicorn \
+    pydantic
+
+COPY app.py .
+COPY pmm_memory.py .
+COPY secret_manager.py .
+COPY net_utils.py .
+COPY tools ./tools
+COPY entrypoint.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+RUN useradd -m -s /bin/bash pipecatapp && chown -R pipecatapp:pipecatapp /app /entrypoint.sh
+USER pipecatapp
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
