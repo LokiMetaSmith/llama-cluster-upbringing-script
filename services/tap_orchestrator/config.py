@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     # MQTT
     mqtt_broker_host: str = "localhost"
     mqtt_broker_port: int = 1883
+    mqtt_ca_cert: Optional[str] = None
+    mqtt_client_cert: Optional[str] = None
+    mqtt_client_key: Optional[str] = None
     mqtt_topic_success: str = "tagreader/auth/success"
     mqtt_topic_failure: str = "tagreader/auth/failure"
 

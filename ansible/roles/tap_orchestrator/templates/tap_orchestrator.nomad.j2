@@ -17,7 +17,10 @@ job "tap-orchestrator" {
 
       env {
         MQTT_BROKER_HOST        = "{{ cluster_ip }}"
-        MQTT_BROKER_PORT        = "{{ mqtt_port }}"
+        MQTT_BROKER_PORT        = "{{ mqtts_port | default(8883) }}"
+        MQTT_CA_CERT            = "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+        MQTT_CLIENT_CERT        = "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/mqtt_client.cert.pem"
+        MQTT_CLIENT_KEY         = "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/mqtt_client.key.pem"
         MQTT_TOPIC_SUCCESS      = "tagreader/auth/success"
         MQTT_TOPIC_FAILURE      = "tagreader/auth/failure"
         TAP_ORCHESTRATOR_PORT   = "{{ tap_orchestrator_port }}"

@@ -20,11 +20,15 @@
   bucket = "{{ influxdb_bucket | default('telemetry') }}"
 
 [[inputs.mqtt_consumer]]
-  servers = ["tcp://{{ hostvars['controller_node_1']['ansible_host'] | default(advertise_ip) }}:{{ mqtt_port | default(1883) }}"]
+  servers = ["ssl://{{ hostvars['controller_node_1']['ansible_host'] | default(advertise_ip) }}:{{ mqtts_port | default(8883) }}"]
   topics = [
     "#"
   ]
   data_format = "json"
+  tls_ca = "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+  tls_cert = "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/mqtt_client.cert.pem"
+  tls_key = "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/mqtt_client.key.pem"
+  insecure_skip_verify = true
 
 [[inputs.cpu]]
   percpu = true

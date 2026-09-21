@@ -11,6 +11,12 @@ job "world-model-service" {
       source    = "world_model_storage"
     }
 
+    volume "nomad_tls" {
+      type      = "host"
+      read_only = true
+      source    = "nomad_tls"
+    }
+
     network {
       mode = "host"
       port "http" {}
@@ -33,12 +39,21 @@ job "world-model-service" {
       env {
       #  MQTT_HOST = "{{ cluster_ip }}"
         MQTT_HOST = "{{ advertise_ip }}"
-        MQTT_PORT = "{{ mqtt_port }}"
+        MQTT_PORT = "{{ mqtts_port | default(8883) }}"
+        MQTT_CA_CERT = "/etc/tls/ca.pem"
+        MQTT_CLIENT_CERT = "/etc/tls/mqtt_client.cert.pem"
+        MQTT_CLIENT_KEY = "/etc/tls/mqtt_client.key.pem"
       #  CONSUL_HOST = "{{ cluster_ip }}"
         CONSUL_HOST = "{{ advertise_ip }}"
         CONSUL_PORT = "{{ consul_http_port }}"
       #  NOMAD_ADDR = "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port }}"
         NOMAD_ADDR = "https://{{ advertise_ip }}:{{ nomad_http_port }}"
+      }
+
+      volume_mount {
+        volume      = "nomad_tls"
+        destination = "/etc/tls"
+        read_only   = true
       }
 
       resources {

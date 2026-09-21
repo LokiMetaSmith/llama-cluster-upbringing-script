@@ -28,6 +28,12 @@ job "security-agent" {
       }
     }
 
+    volume "nomad_tls" {
+      type      = "host"
+      source    = "nomad_tls"
+      read_only = true
+    }
+
     task "security-agent" {
       driver = "docker"
 
@@ -36,9 +42,18 @@ job "security-agent" {
         ports = ["tcp"]
       }
 
+      volume_mount {
+        volume      = "nomad_tls"
+        destination = "/etc/tls"
+        read_only   = true
+      }
+
       env {
         MQTT_BROKER     = "{{ cluster_ip | default('127.0.0.1') }}"
-        MQTT_PORT       = "1883"
+        MQTT_PORT       = "{{ mqtts_port | default(8883) }}"
+        MQTT_CA_CERT    = "/etc/tls/ca.pem"
+        MQTT_CLIENT_CERT = "/etc/tls/mqtt_client.cert.pem"
+        MQTT_CLIENT_KEY = "/etc/tls/mqtt_client.key.pem"
         TCP_LISTEN_PORT = "9000"
       }
 
