@@ -295,7 +295,7 @@ fi
 
 # 8. Force kill orphaned and running opencode processes
 echo -e "\n${BOLD}🔪 Terminating all running and orphaned opencode processes...${NC}"
-sudo pkill -9 -x "opencode" || sudo pkill -9 -f "bin/opencode" || true
+sudo pkill -9 -x "opencode" || sudo pkill -9 -f "[b]in/opencode" || true
 
 
 if [ "$SCORCHED_EARTH" -eq 1 ]; then
@@ -330,7 +330,7 @@ if [ -x "${SCRIPT_DIR}/ipfs_cleanup.sh" ]; then
     # Don't run ipfs_cleanup if we already wiped the IPFS directory entirely
     if [ "$SCORCHED_EARTH" -ne 1 ]; then
         echo "Executing ipfs_cleanup.sh..."
-        "${SCRIPT_DIR}/ipfs_cleanup.sh"
+        "${SCRIPT_DIR}/ipfs_cleanup.sh" || true
     fi
 else
     echo "Warning: ipfs_cleanup.sh not found or not executable."
