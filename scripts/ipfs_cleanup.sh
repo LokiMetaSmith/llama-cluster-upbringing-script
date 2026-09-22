@@ -18,7 +18,7 @@ echo -e "${BOLD}${YELLOW}Starting Smart IPFS Cleanup...${NC}"
 # Check if IPFS repo exists
 if [ ! -d "$IPFS_PATH" ]; then
     echo "No IPFS repo found at $IPFS_PATH. Stopping."
-    kill -SIGINT $$
+    exit 0
 fi
 
 # We use IPFS_PATH env var to target the correct repo
@@ -27,7 +27,7 @@ export IPFS_PATH
 # Check if IPFS is installed
 if ! command -v $IPFS_CMD &> /dev/null; then
     echo "ipfs command not found. Stopping."
-    kill -SIGINT $$
+    exit 0
 fi
 
 echo -e "\n${BOLD}1. Gathering currently pinned CIDs...${NC}"
