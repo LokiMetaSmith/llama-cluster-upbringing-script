@@ -1,4 +1,14 @@
 ---
-tool_server_core_ipfs_cid: ""
-tool_server_browser_ipfs_cid: ""
-tool_server_vision_ipfs_cid: ""
+tool_server_components:
+  - name: core
+    image_name: "tool-server-core"
+    dockerfile: "Dockerfile.core"
+    cid_fact: "tool_server_core_ipfs_cid"
+  - name: browser
+    image_name: "tool-server-browser"
+    dockerfile: "Dockerfile.browser"
+    cid_fact: "tool_server_browser_ipfs_cid"
+  - name: vision
+    image_name: "tool-server-vision"
+    dockerfile: "Dockerfile.vision"
+    cid_fact: "tool_server_vision_ipfs_cid"

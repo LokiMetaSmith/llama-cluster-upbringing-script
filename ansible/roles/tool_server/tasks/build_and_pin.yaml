@@ -1,0 +1,37 @@
+---
+- name: "Tool Server : Build {{ item.image_name }} docker image (cached)"
+  ansible.builtin.include_tasks:
+    file: "{{ project_root }}/ansible/tasks/build_cached_image.yaml"
+  vars:
+    build_dir: "/opt/tool_server"
+    image_name: "{{ item.image_name }}"
+    image_tag: "local"
+    dockerfile_path: "{{ item.dockerfile }}"
+
+- name: "Verify {{ item.image_name }} image exists"
+  ansible.builtin.command: docker image inspect {{ item.image_name }}:local
+  become: yes
+  changed_when: false
+
+- name: "Export and Pin {{ item.image_name }} image to IPFS"
+  block:
+    - name: "Prune Docker builder cache to free space"
+      ansible.builtin.command: docker builder prune -f
+      become: yes
+      ignore_errors: yes
+
+    - name: "Prune dangling Docker images"
+      ansible.builtin.command: docker image prune -f
+      become: yes
+      ignore_errors: yes
+
+    - name: "Stream {{ item.image_name }} image directly to IPFS"
+      ansible.builtin.shell: "docker save {{ item.image_name }}:local | ipfs add -Q -"
+      become: yes
+      register: ipfs_add_result
+      environment:
+        IPFS_PATH: "{{ ipfs_path }}"
+
+- name: "Set {{ item.cid_fact }} fact"
+  ansible.builtin.set_fact:
+    "{{ item.cid_fact }}": "{{ ipfs_add_result.stdout | trim }}"

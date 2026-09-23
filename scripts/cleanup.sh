@@ -210,66 +210,62 @@ if [ -f "playbook_output.log" ]; then
     rm -f playbook_output.log
 fi
 
-# 7. Application State and Config Cleanup
-echo -e "\n${BOLD}🧹 Cleaning Application State in /opt...${NC}"
+if [ "$SCORCHED_EARTH" -eq 1 ]; then
+    echo -e "\n${BOLD}🔥 Scorched Earth: Wiping Application State, Global Caches & Untracked Files...${NC}"
 
-# Define directories that should be completely wiped to ensure a pristine state
-APP_DIRS=(
-    "/opt/pipecatapp"
-    "/opt/tool_server"
-    "/opt/paperless"
-    "/opt/llmfit"
-    "/opt/llxprt-code"
-    "/opt/opengravity-build"
-    "/opt/exo"
-    "/opt/exo_build"
-    "/opt/mcp"
-    "/opt/cni"
-    "/opt/cluster-infra"
-    "/opt/openclaw"
-    "/opt/power_manager"
-    "/opt/provisioning_api"
-    "/opt/world_model_service"
-    "/opt/heretic_tool"
-)
+    # 7. Application State and Config Cleanup
+    echo -e "\n${BOLD}🧹 Cleaning Application State in /opt...${NC}"
 
-for dir in "${APP_DIRS[@]}"; do
-    if [ -d "$dir" ]; then
-        echo "Removing $dir..."
-        sudo rm -rf "$dir"
-    fi
-done
+    # Define directories that should be completely wiped to ensure a pristine state
+    APP_DIRS=(
+        "/opt/pipecatapp"
+        "/opt/tool_server"
+        "/opt/paperless"
+        "/opt/llmfit"
+        "/opt/llxprt-code"
+        "/opt/opengravity-build"
+        "/opt/exo"
+        "/opt/exo_build"
+        "/opt/mcp"
+        "/opt/cni"
+        "/opt/cluster-infra"
+        "/opt/openclaw"
+        "/opt/power_manager"
+        "/opt/provisioning_api"
+        "/opt/world_model_service"
+        "/opt/heretic_tool"
+    )
 
-# Clean up Consul state
-if [ -d "/opt/consul/data" ] || [ "$SCORCHED_EARTH" -eq 1 ]; then
+    for dir in "${APP_DIRS[@]}"; do
+        if [ -d "$dir" ]; then
+            echo "Removing $dir..."
+            sudo rm -rf "$dir"
+        fi
+    done
+
+    # Clean up Consul state
     echo "Stopping Consul service (if running)..."
     sudo systemctl stop consul 2>/dev/null || true
     echo "Removing /opt/consul/data..."
     sudo rm -rf "/opt/consul/data"
-fi
 
-# Clean up Vault state (Scorched Earth)
-if [ "$SCORCHED_EARTH" -eq 1 ]; then
+    # Clean up Vault state (Scorched Earth)
     echo "Stopping Vault service (if running)..."
     sudo systemctl stop vault 2>/dev/null || true
     if [ -d "/opt/vault/data" ]; then
         echo "Removing /opt/vault/data..."
         sudo rm -rf "/opt/vault/data"
     fi
-fi
 
-# Clean up IPFS state (Scorched Earth)
-if [ "$SCORCHED_EARTH" -eq 1 ]; then
+    # Clean up IPFS state (Scorched Earth)
     echo "Stopping IPFS service (if running)..."
     sudo systemctl stop ipfs 2>/dev/null || true
     if [ -d "/opt/unified_fs/ipfs" ]; then
         echo "Removing /opt/unified_fs/ipfs..."
         sudo rm -rf "/opt/unified_fs/ipfs"
     fi
-fi
 
-# Clean up Nomad state
-if [ -d "/opt/nomad" ] || [ "$SCORCHED_EARTH" -eq 1 ]; then
+    # Clean up Nomad state
     echo "Stopping Nomad service (if running)..."
     sudo systemctl stop nomad 2>/dev/null || true
 
@@ -279,27 +275,15 @@ if [ -d "/opt/nomad" ] || [ "$SCORCHED_EARTH" -eq 1 ]; then
         sudo umount "$mount" || true
     done
 
-    if [ "$SCORCHED_EARTH" -eq 1 ]; then
-        echo "Cleaning ENTIRE /opt/nomad state (Scorched Earth)..."
-        sudo rm -rf /opt/nomad
-    else
-        echo "Cleaning /opt/nomad state (preserving models)..."
-        # Find and delete everything in /opt/nomad EXCEPT the models directory
-        # -mindepth 1 prevents matching /opt/nomad itself
-        # -maxdepth 1 prevents diving into subdirectories for matching
-        # ! -name "models" excludes the models folder
-        # -exec rm -rf {} + executes rm -rf on the matched items
-        sudo find /opt/nomad -mindepth 1 -maxdepth 1 ! -name "models" -exec rm -rf {} +
-    fi
-fi
+    echo "Cleaning ENTIRE /opt/nomad state (Scorched Earth)..."
+    sudo rm -rf /opt/nomad
 
-# 8. Force kill orphaned and running opencode processes
-echo -e "\n${BOLD}🔪 Terminating all running and orphaned opencode processes...${NC}"
-sudo pkill -9 -x "opencode" || sudo pkill -9 -f "[b]in/opencode" || true
+    # 8. Force kill orphaned and running opencode processes
+    echo -e "\n${BOLD}🔪 Terminating all running and orphaned opencode processes...${NC}"
+    sudo pkill -9 -x "opencode" || sudo pkill -9 -f "[b]in/opencode" || true
 
-
-if [ "$SCORCHED_EARTH" -eq 1 ]; then
-    echo -e "\n${BOLD}🔥 Scorched Earth: Wiping Global Caches & Untracked Files...${NC}"
+    # Wipe user and root caches
+    echo "Wiping ~/.cache and /root/.cache for pip, uv, npm, playwright, etc..."
 
     # Wipe user and root caches
     echo "Wiping ~/.cache and /root/.cache for pip, uv, npm, playwright, etc..."
