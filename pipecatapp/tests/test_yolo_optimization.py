@@ -110,7 +110,6 @@ mock_web_server.manager.broadcast = AsyncMock()
 mock_web_server.manager.active_connections = [1] # Simulate active connection
 sys.modules["web_server"] = mock_web_server
 
-import pipecatapp.web_server
 from unittest.mock import patch
 
 # Mock Ultralytics YOLO
@@ -130,10 +129,10 @@ sys.modules["PIL.Image"] = MagicMock()
 # Import the class to test
 # We need to use 'from app import ...' but app.py is in pipecatapp/
 # sys.path is already set.
-from pipecatapp.app import YOLOv8Detector
+from pipecatapp.services.vision import YOLOv8Detector
 
 import pytest
-@pytest.mark.skip(reason='TODO: Fix async broadcast mock')
+
 @pytest.mark.asyncio
 async def test_yolo_inference_optimization():
     # Arrange
@@ -173,7 +172,9 @@ async def test_yolo_inference_optimization():
     # process_frame is async and calls run_in_executor.
     # For unit testing, calling process_frame is better integration test.
 
-    with patch.object(pipecatapp.web_server, "manager", mock_web_server.manager):
+    import pipecatapp
+    setattr(pipecatapp, "web_server", mock_web_server)
+    with patch.dict("sys.modules", {"pipecatapp.web_server": mock_web_server, "web_server": mock_web_server}):
         await detector.process_frame(input_frame, direction=None)
 
     # Assert

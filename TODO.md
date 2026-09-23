@@ -511,3 +511,5 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 - [x] **Fix Python testing environment:** The `pipecatapp` directory lacks several dependencies required for successful `pytest` collection (such as `fastapi`, `pydantic`, `opentelemetry`, and the private `minisweagent` GitHub module).
 - [x] **Fix `mypy` typing errors:** There are hundreds of `mypy` typing errors in the `pipecatapp` directory (e.g., missing annotations, implicit optionals, untyped imports) that need to be resolved.
 - [x] **Fix duplicate Prometheus metrics:** The pytest test suite fails to collect tests like `test_poc_ensemble.py` and `test_tasky_poc.py` due to duplicate Prometheus metric registrations in `pipecatapp/workflow/nodes/system_nodes.py`.
+
+- [x] Fixed async broadcast mocks in `pipecatapp/tests/test_uilogger_redaction.py` and `pipecatapp/tests/test_yolo_optimization.py`
