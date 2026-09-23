@@ -114,10 +114,10 @@ mock_web_server.manager.broadcast = AsyncMock()
 sys.modules["web_server"] = mock_web_server
 
 # Now import the class we want to test
-from pipecatapp.app import UILogger
+from pipecatapp.pipeline.processors import UILogger
 
 import pytest
-@pytest.mark.skip(reason="TODO: Fix async broadcast mock")
+
 def test_uilogger_redaction_verification():
     """
     Test that UILogger redacts secrets.
@@ -132,7 +132,10 @@ def test_uilogger_redaction_verification():
         mock_web_server.manager.broadcast.reset_mock()
 
         # Act
-        await logger.process_frame(frame, direction=None)
+        import pipecatapp
+        setattr(pipecatapp, "web_server", mock_web_server)
+        with patch.dict("sys.modules", {"pipecatapp.web_server": mock_web_server, "web_server": mock_web_server}):
+            await logger.process_frame(frame, direction=None)
 
         # Assert
         args, _ = mock_web_server.manager.broadcast.call_args
