@@ -67,6 +67,7 @@ RUN pip install --no-cache-dir \
 
 # Configure cache for ML models to ensure pipecatapp can read/write them
 ENV HF_HOME=/opt/cache/huggingface
+RUN useradd -m -s /bin/bash pipecatapp || true
 RUN mkdir -p /opt/cache/huggingface && chown -R pipecatapp:pipecatapp /opt/cache && chmod -R 755 /opt/cache
 
 COPY preload_models.py .
