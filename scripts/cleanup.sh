@@ -314,7 +314,7 @@ if [ -x "${SCRIPT_DIR}/ipfs_cleanup.sh" ]; then
     # Don't run ipfs_cleanup if we already wiped the IPFS directory entirely
     if [ "$SCORCHED_EARTH" -ne 1 ]; then
         echo "Executing ipfs_cleanup.sh..."
-        "${SCRIPT_DIR}/ipfs_cleanup.sh"
+        "${SCRIPT_DIR}/ipfs_cleanup.sh" || true
     fi
 else
     echo "Warning: ipfs_cleanup.sh not found or not executable."
