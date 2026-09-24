@@ -122,7 +122,6 @@
         - moe_gateway
         - mcp_server
         - llmfit
-        - openclaw
         - forgejo
         - radicle
         - paperless
@@ -130,6 +129,7 @@
         - e2a
         - traceway
         - celld
+        - pipecatapp
       loop_control:
         loop_var: role_name
       tags:
