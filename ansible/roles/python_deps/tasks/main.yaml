@@ -54,7 +54,7 @@
 
 - name: Create a persistent temporary directory for pip builds
   ansible.builtin.file:
-    path: /var/tmp/ansible_pip_build
+    path: /var/tmp/pipecat_build
     state: directory
     mode: '0777'
     owner: "{{ target_user }}"
@@ -65,7 +65,7 @@
 
 - name: Create a temporary cache directory for uv builds
   ansible.builtin.file:
-    path: /var/tmp/ansible_pip_build/uv_cache
+    path: /var/tmp/pipecat_build/uv_cache
     state: directory
     mode: '0777'
     owner: "{{ target_user }}"
@@ -80,8 +80,8 @@
   environment:
     UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "/opt/pipecatapp/venv"
-    TMPDIR: /var/tmp/ansible_pip_build
-    UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
+    TMPDIR: /var/tmp/pipecat_build
+    UV_CACHE_DIR: /var/tmp/pipecat_build/uv_cache
   become: yes
   become_user: "{{ target_user }}"
   tags:
@@ -93,8 +93,8 @@
   environment:
     UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "/opt/pipecatapp/venv"
-    TMPDIR: /var/tmp/ansible_pip_build
-    UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
+    TMPDIR: /var/tmp/pipecat_build
+    UV_CACHE_DIR: /var/tmp/pipecat_build/uv_cache
   become: yes
   become_user: "{{ target_user }}"
   tags:
@@ -104,7 +104,7 @@
   ansible.builtin.command:
     cmd: "{{ uv_path.stdout }} cache prune"
   environment:
-    UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
+    UV_CACHE_DIR: /var/tmp/pipecat_build/uv_cache
   become: yes
   become_user: "{{ target_user }}"
   tags:
@@ -116,8 +116,8 @@
   environment:
     UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "/opt/pipecatapp/venv"
-    TMPDIR: /var/tmp/ansible_pip_build
-    UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
+    TMPDIR: /var/tmp/pipecat_build
+    UV_CACHE_DIR: /var/tmp/pipecat_build/uv_cache
     CFLAGS: "-I/usr/include/python3.12 -I/usr/include/python3.13"
     C_INCLUDE_PATH: "/usr/include/python3.12:/usr/include/python3.13"
     CPLUS_INCLUDE_PATH: "/usr/include/python3.12:/usr/include/python3.13"
@@ -142,16 +142,19 @@
   ansible.builtin.command:
     cmd: "{{ uv_path.stdout }} cache prune"
   environment:
-    UV_CACHE_DIR: /var/tmp/ansible_pip_build/uv_cache
+    UV_CACHE_DIR: /var/tmp/pipecat_build/uv_cache
   become: yes
   become_user: "{{ target_user }}"
   tags:
     - deploy_app
 
-- name: Clean up pip build directory
+- name: Clean up temporary build and cache directories
   ansible.builtin.file:
-    path: /var/tmp/ansible_pip_build
+    path: "{{ item }}"
     state: absent
+  loop:
+    - "/var/tmp/pipecat_build"
+    - "/home/{{ target_user }}/.ansible_async"
   become: yes
   tags:
     - deploy_app

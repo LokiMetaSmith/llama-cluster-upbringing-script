@@ -22,6 +22,8 @@ show_help() {
     echo "This script runs the main Ansible playbook to bootstrap the system."
     echo ""
     echo "Options:"
+    echo "  --cluster-only               Run only cluster upbringing tasks (Host, OS, network, Nomad/Consul)."
+    echo "  --build-only                 Run only image/artifact build tasks (container builds, model caching)."
     echo "  --role <role>                Specify the role for this node (all, controller, worker). Default: all."
     echo "  --controller-ip <ip>         Required if --role is 'worker'. IP address of the controller node."
     echo "  --tags <tags>                Comma-separated list of Ansible tags to run."
@@ -347,6 +349,12 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
     case $arg in
         --status)
             DO_STATUS=true
+            ;;
+        --cluster-only)
+            PROCESSED_ARGS+=("--tags" "upbringing,nomad,consul,system")
+            ;;
+        --build-only)
+            PROCESSED_ARGS+=("--tags" "build,images,models")
             ;;
         --system-cleanup)
             DO_SYSTEM_CLEANUP=true
