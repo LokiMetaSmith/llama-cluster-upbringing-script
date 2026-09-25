@@ -900,10 +900,10 @@ if [ "$DO_CLEAN_GIT" = true ]; then
     perform_git_clean
 fi
 
-# If the user only requested cleanup, we might want to stop here?
-# But typically bootstrap means "setup". If I wanted to JUST clean, I might not expect it to start building again.
-# However, for now we follow the pattern: cleanup then proceed.
-
+if [ "$DO_SYSTEM_CLEANUP" = true ] || [ "$DO_CLEAN_GIT" = true ]; then
+    echo -e "\n${GREEN}✨ Cleanup actions completed. Exiting as requested.${NC}"
+    exit 0
+fi
 
 # --- Container Mode ---
 if [ "$USE_CONTAINER" = true ]; then
