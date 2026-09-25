@@ -22,17 +22,27 @@
 
 - name: "Tool Server : Copy build files"
   ansible.builtin.copy:
-    src: "{{ item }}"
+    src: "{{ role_path }}/{{ item }}"
     dest: "/opt/tool_server/"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
     mode: "0644"
   loop:
     - "app.py"
+    - "preload_models.py"
+  become: true
+
+- name: "Tool Server : Copy Dockerfiles"
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/opt/tool_server/"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0644"
+  loop:
     - "Dockerfile.core"
     - "Dockerfile.browser"
     - "Dockerfile.vision"
-    - "preload_models.py"
   become: true
 
 - name: "Tool Server : Copy start_pipecat.sh"
@@ -46,7 +56,7 @@
 
 - name: "Tool Server : Copy entrypoint.sh"
   ansible.builtin.copy:
-    src: "entrypoint.sh"
+    src: "{{ role_path }}/entrypoint.sh"
     dest: "/opt/tool_server/"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
