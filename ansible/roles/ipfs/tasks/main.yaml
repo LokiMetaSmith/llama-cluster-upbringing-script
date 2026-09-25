@@ -78,6 +78,12 @@
     IPFS_PATH: "{{ ipfs_path }}"
   become: yes
 
+- name: Configure IPFS Addresses.API to listen on 0.0.0.0
+  ansible.builtin.command: /usr/local/bin/ipfs config Addresses.API "/ip4/0.0.0.0/tcp/5001"
+  environment:
+    IPFS_PATH: "{{ ipfs_path }}"
+  become: yes
+
 - name: Set IPFS directory ownership for Kubo container
   ansible.builtin.file:
     path: "{{ ipfs_path }}"
@@ -141,15 +147,31 @@
   changed_when: false
   ignore_errors: yes
 
+- name: Allow IPFS API from Tailscale interface
+  community.general.ufw:
+    rule: allow
+    port: "{{ ipfs_api_port | default('5001') }}"
+    proto: tcp
+    interface: tailscale0
+  become: yes
+  ignore_errors: yes
+
 - name: Flush handlers to ensure ipfs service is started
   ansible.builtin.meta: flush_handlers
 
+- name: Check if IPFS service is active
+  ansible.builtin.command: systemctl is-active ipfs
+  register: ipfs_service_status
+  failed_when: false
+  changed_when: false
+  ignore_errors: yes
+
 - name: Wait for IPFS API to be ready
   ansible.builtin.wait_for:
-    host: "{{ cluster_ip | default('127.0.0.1') }}"
+    host: "127.0.0.1"
     port: "{{ ipfs_api_port | default(5001) }}"
     delay: 5
-    timeout: 300
+    timeout: 60
     state: started
 
 - name: Wait for IPFS Gateway to be fully ready
