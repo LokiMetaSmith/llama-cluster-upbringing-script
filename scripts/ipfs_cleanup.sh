@@ -3,7 +3,13 @@
 # Finds IPFS pins that are no longer referenced by active models/images and unpins them,
 # then performs garbage collection.
 
-IPFS_PATH="/opt/unified_fs/ipfs"
+if [ -d "/opt/unified_fs_backend/ipfs/$(hostname)" ]; then
+    IPFS_PATH="/opt/unified_fs_backend/ipfs/$(hostname)"
+elif [ -d "/opt/unified_fs_backend/ipfs/localhost" ]; then
+    IPFS_PATH="/opt/unified_fs_backend/ipfs/localhost"
+else
+    IPFS_PATH="/opt/unified_fs/ipfs"
+fi
 IPFS_CMD="ipfs"
 
 # Colors for output

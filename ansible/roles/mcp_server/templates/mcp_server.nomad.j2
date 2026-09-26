@@ -32,7 +32,7 @@ job "mcp-server" {
       }
 
       artifact {
-        source      = "http://{{ cluster_ip | default('100.64.0.1') }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ tool_server_ipfs_cid }}"
+        source      = "http://{{ cluster_ip | default('100.64.0.1') }}:{{ ipfs_gateway_port | default(8092) }}/ipfs/{{ tool_server_ipfs_cid }}"
         destination = "local/tool-server.tar"
         mode        = "file"
       }

@@ -28,7 +28,7 @@ job "pypi-proxy" {
         PORT = "{{ pypi_proxy_port | default(3141) }}"
         PROXY_BASE_URL = "http://127.0.0.1:{{ pypi_proxy_port | default(3141) }}"
         IPFS_API_URL = "http://127.0.0.1:{{ ipfs_api_port | default(5001) }}"
-        IPFS_GATEWAY_URL = "http://127.0.0.1:{{ ipfs_gateway_port | default(8080) }}"
+        IPFS_GATEWAY_URL = "http://127.0.0.1:{{ ipfs_gateway_port | default(8092) }}"
       }
 
       resources {

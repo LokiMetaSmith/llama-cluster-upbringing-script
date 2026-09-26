@@ -120,7 +120,7 @@ job "{{ job_name | default('tml-interaction') }}" {
       }
 
       artifact {
-        source      = "http://{{ cluster_ip | default('100.64.0.1') }}:{{ ipfs_gateway_port | default(8080) }}/ipfs/{{ moshi_rust_ipfs_cid | default('') }}"
+        source      = "http://{{ cluster_ip | default('100.64.0.1') }}:{{ ipfs_gateway_port | default(8092) }}/ipfs/{{ moshi_rust_ipfs_cid | default('') }}"
         destination = "local/moshi-rust.tar"
         mode        = "file"
       }

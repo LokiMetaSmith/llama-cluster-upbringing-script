@@ -52,44 +52,74 @@
   when: not ipfs_binary.stat.exists or (ipfs_version is defined and ipfs_version.stdout is defined and '0.41.0' not in ipfs_version.stdout)
 
 
+- name: Determine node hostname for IPFS directory
+  ansible.builtin.set_fact:
+    ipfs_node_name: "{{ ansible_nodename | default(ansible_hostname | default(ansible_facts.get('nodename', ansible_facts.get('hostname', inventory_hostname)))) }}"
+
+- name: Get system hostname if not present in facts or is localhost
+  ansible.builtin.command: hostname
+  register: system_hostname_cmd
+  changed_when: false
+  when: ipfs_node_name == 'localhost' or ipfs_node_name is not defined or not ipfs_node_name
+
+- name: Set definitive ipfs_node_name
+  ansible.builtin.set_fact:
+    ipfs_node_name: "{{ system_hostname_cmd.stdout | trim }}"
+  when: system_hostname_cmd is defined and system_hostname_cmd.stdout is defined and system_hostname_cmd.stdout | trim != ''
+
 - name: Ensure IPFS node-specific data directories exist
   ansible.builtin.file:
-    path: "/opt/unified_fs_backend/ipfs/{{ item }}"
+    path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
     state: directory
     mode: '0755'
-    owner: root
-    group: root
-  loop: "{{ groups['all'] | default([inventory_hostname]) }}"
+    owner: "1000"
+    group: "100"
   become: yes
-  when: inventory_hostname in groups.get('controller_nodes', [])
 
-- name: Ensure local IPFS data directory exists
+- name: Ensure IPFS node directory symlink for inventory aliases
   ansible.builtin.file:
-    path: "{{ ipfs_path }}"
-    state: directory
-    mode: '0755'
+    src: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
+    dest: "/opt/unified_fs_backend/ipfs/{{ item }}"
+    state: link
+    force: yes
+  loop: "{{ [inventory_hostname, 'localhost'] | unique | reject('equalto', ipfs_node_name) | list }}"
   become: yes
 
 - name: Initialize IPFS repository on host
   ansible.builtin.command: /usr/local/bin/ipfs init --profile server,local-discovery
   args:
-    creates: "{{ ipfs_path }}/config"
+    creates: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}/config"
   environment:
-    IPFS_PATH: "{{ ipfs_path }}"
+    IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
   become: yes
 
 - name: Configure IPFS Addresses.API to listen on 0.0.0.0
-  ansible.builtin.command: /usr/local/bin/ipfs config Addresses.API "/ip4/0.0.0.0/tcp/5001"
+  ansible.builtin.command: /usr/local/bin/ipfs config Addresses.API "/ip4/0.0.0.0/tcp/{{ ipfs_api_port | default(5001) }}"
   environment:
-    IPFS_PATH: "{{ ipfs_path }}"
+    IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
+  become: yes
+
+- name: Configure IPFS Addresses.Gateway to listen on 0.0.0.0
+  ansible.builtin.command: /usr/local/bin/ipfs config Addresses.Gateway "/ip4/0.0.0.0/tcp/{{ ipfs_gateway_port | default(8092) }}"
+  environment:
+    IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
   become: yes
 
 - name: Set IPFS directory ownership for Kubo container
   ansible.builtin.file:
-    path: "{{ ipfs_path }}"
+    path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
     owner: "1000"
     group: "100"
     recurse: yes
+  become: yes
+
+- name: Remove stale IPFS lock files before starting daemon
+  ansible.builtin.file:
+    path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}/{{ item }}"
+    state: absent
+  loop:
+    - "repo.lock"
+    - "api"
   become: yes
 
 - name: Template ipfs job
@@ -142,7 +172,7 @@
   loop:
     - "{{ ipfs_swarm_port | default(4001) }}"
     - "{{ ipfs_api_port | default(5001) }}"
-    - "{{ ipfs_gateway_port | default(8080) }}"
+    - "{{ ipfs_gateway_port | default(8092) }}"
   become: yes
   changed_when: false
   ignore_errors: yes
@@ -159,24 +189,28 @@
 - name: Flush handlers to ensure ipfs service is started
   ansible.builtin.meta: flush_handlers
 
-- name: Check if IPFS service is active
-  ansible.builtin.command: systemctl is-active ipfs
-  register: ipfs_service_status
+- name: Check IPFS Nomad job status
+  ansible.builtin.command: /usr/local/bin/nomad job status ipfs
+  environment:
+    NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+    NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+    NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+  register: ipfs_nomad_status
   failed_when: false
   changed_when: false
-  ignore_errors: yes
 
 - name: Wait for IPFS API to be ready
   ansible.builtin.wait_for:
     host: "127.0.0.1"
     port: "{{ ipfs_api_port | default(5001) }}"
     delay: 5
-    timeout: 60
+    timeout: 120
     state: started
 
 - name: Wait for IPFS Gateway to be fully ready
   ansible.builtin.uri:
-    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ ipfs_gateway_port | default(8080) }}/"
+    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ ipfs_gateway_port | default(8092) }}/"
     return_content: yes
     status_code: [200, 400, 403, 404, 502, 504, -1]
   register: ipfs_gateway_status

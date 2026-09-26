@@ -45,7 +45,7 @@ nomad_jobs_dir: "/opt/nomad/jobs"
 nomad_volumes_dir: "/opt/nomad/volumes"
 nomad_tls_dir: "/etc/nomad.d/tls"
 nomad_models_dir: "/opt/unified_fs_backend/models"
-ipfs_path: "/opt/unified_fs_backend/ipfs/{{ inventory_hostname }}"
+ipfs_path: "/opt/unified_fs_backend/ipfs/{{ ansible_nodename | default(ansible_hostname | default(inventory_hostname)) }}"
 
 # Standard Ports
 consul_http_port: 8500
@@ -93,7 +93,7 @@ traceway_port: 8089
 smol_agent_server_port: 8091
 ipfs_swarm_port: 4001
 ipfs_api_port: 5001
-ipfs_gateway_port: 8080
+ipfs_gateway_port: 8092  # Avoid conflict with traefik_api_port (8080)
 pypi_proxy_port: 3141
 apt_proxy_host: "{{ cluster_ip }}"
 apt_proxy_port: 3142

@@ -24,7 +24,7 @@ job "apt-proxy" {
         DB_PATH = "/data/cache.db"
         PORT = "{{ apt_proxy_port | default(3142) }}"
         IPFS_API_URL = "http://127.0.0.1:{{ ipfs_api_port | default(5001) }}"
-        IPFS_GATEWAY_URL = "http://127.0.0.1:{{ ipfs_gateway_port | default(8080) }}"
+        IPFS_GATEWAY_URL = "http://127.0.0.1:{{ ipfs_gateway_port | default(8092) }}"
       }
 
       resources {
