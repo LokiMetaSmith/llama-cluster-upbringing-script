@@ -76,6 +76,21 @@
     group: "100"
   become: yes
 
+- name: Migrate data from existing alias directories if they are real directories
+  ansible.builtin.shell: |
+    set -e
+    if [ -d /opt/unified_fs_backend/ipfs/{{ item | quote }} ] && [ ! -L /opt/unified_fs_backend/ipfs/{{ item | quote }} ]; then
+      rsync -a /opt/unified_fs_backend/ipfs/{{ item | quote }}/ /opt/unified_fs_backend/ipfs/{{ ipfs_node_name | quote }}/ && rm -rf /opt/unified_fs_backend/ipfs/{{ item | quote }}
+      echo "Migrated"
+    else
+      echo "Skipped"
+    fi
+  loop: "{{ [inventory_hostname, 'localhost'] | unique | reject('equalto', ipfs_node_name) | list }}"
+  become: yes
+  register: ipfs_migration_result
+  changed_when: "'Migrated' in ipfs_migration_result.stdout"
+
+
 - name: Ensure IPFS node directory symlink for inventory aliases
   ansible.builtin.file:
     src: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
