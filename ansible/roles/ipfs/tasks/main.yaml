@@ -79,9 +79,15 @@
 - name: Migrate data from existing alias directories if they are real directories
   ansible.builtin.shell: |
     set -e
-    if [ -d /opt/unified_fs_backend/ipfs/{{ item | quote }} ] && [ ! -L /opt/unified_fs_backend/ipfs/{{ item | quote }} ]; then
-      rsync -a /opt/unified_fs_backend/ipfs/{{ item | quote }}/ /opt/unified_fs_backend/ipfs/{{ ipfs_node_name | quote }}/ && rm -rf /opt/unified_fs_backend/ipfs/{{ item | quote }}
-      echo "Migrated"
+    if [ -d "/opt/unified_fs_backend/ipfs/{{ item }}" ] && [ ! -L "/opt/unified_fs_backend/ipfs/{{ item }}" ]; then
+      if rsync -a --remove-source-files "/opt/unified_fs_backend/ipfs/{{ item }}/" "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}/"; then
+        find "/opt/unified_fs_backend/ipfs/{{ item }}" -type d -empty -delete
+        rm -rf "/opt/unified_fs_backend/ipfs/{{ item }}"
+        echo "Migrated"
+      else
+        echo "Failed to migrate" >&2
+        exit 1
+      fi
     else
       echo "Skipped"
     fi
