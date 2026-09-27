@@ -73,13 +73,6 @@ import pipecatapp.workflow.nodes.system_nodes
 import pipecatapp.workflow.nodes.tasky_nodes
 import pipecatapp.workflow.nodes.tool_nodes
 import pipecatapp.workflow.runner
-import scripts.compare_exo_llama
-import scripts.evaluate_clamav
-import scripts.generate_file_map
-import scripts.healer
-import scripts.provisioning
-import scripts.prune_consul_services
-import scripts.salvage_task
 
 # Methods and classes flagged by vulture but needed
 generate_api_key

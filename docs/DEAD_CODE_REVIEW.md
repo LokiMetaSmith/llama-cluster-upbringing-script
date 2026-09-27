@@ -6,13 +6,13 @@ When reviewing items in this list, mark them as complete by placing an `[x]` at 
 
 This document contains a list of potentially unused code segments identified by `vulture`. These items have been flagged for review to determine if they meet requirements to implement, have been implemented and need to be documented, or are truly dead code that should be removed.
 
-- [ ] .vulture_whitelist.py:76: unused import 'scripts' (90% confidence)
-- [ ] .vulture_whitelist.py:77: unused import 'scripts' (90% confidence)
-- [ ] .vulture_whitelist.py:78: unused import 'scripts' (90% confidence)
-- [ ] .vulture_whitelist.py:79: unused import 'scripts' (90% confidence)
-- [ ] .vulture_whitelist.py:80: unused import 'scripts' (90% confidence)
-- [ ] .vulture_whitelist.py:81: unused import 'scripts' (90% confidence)
-- [ ] .vulture_whitelist.py:82: unused import 'scripts' (90% confidence)
+- [x] .vulture_whitelist.py:76: unused import 'scripts' (90% confidence)
+- [x] .vulture_whitelist.py:77: unused import 'scripts' (90% confidence)
+- [x] .vulture_whitelist.py:78: unused import 'scripts' (90% confidence)
+- [x] .vulture_whitelist.py:79: unused import 'scripts' (90% confidence)
+- [x] .vulture_whitelist.py:80: unused import 'scripts' (90% confidence)
+- [x] .vulture_whitelist.py:81: unused import 'scripts' (90% confidence)
+- [x] .vulture_whitelist.py:82: unused import 'scripts' (90% confidence)
 - [ ] ansible/roles/memory_service/files/app.py:69: unused function 'startup_event' (60% confidence)
 - [ ] ansible/roles/memory_service/files/app.py:186: unused function 'get_work_items_sync' (60% confidence)
 - [ ] ansible/roles/memory_service/files/app.py:194: unused function 'post_work_items_sync' (60% confidence)
