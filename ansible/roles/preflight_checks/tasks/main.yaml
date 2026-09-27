@@ -1,3 +1,15 @@
+- name: Pre-Flight | Automatically set system timezone via IP geolocation
+  ansible.builtin.shell: |
+    TZ=$(curl -s http://ip-api.com/line?fields=timezone)
+    if [ -n "$TZ" ]; then
+      timedatectl set-timezone "$TZ"
+    fi
+  args:
+    executable: /bin/bash
+  become: yes
+  changed_when: false
+  ignore_errors: true
+
 - name: Check free disk space on root
   ansible.builtin.assert:
     that:
