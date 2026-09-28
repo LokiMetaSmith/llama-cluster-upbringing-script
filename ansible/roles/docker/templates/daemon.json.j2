@@ -4,6 +4,6 @@
   "log-opts": {
     "max-size": "100m"
   },
-  "storage-driver": "overlay2",
+  "storage-driver": "{{ docker_storage_driver | default('overlay2') }}",
   "dns": ["8.8.8.8", "1.1.1.1"]
 }
