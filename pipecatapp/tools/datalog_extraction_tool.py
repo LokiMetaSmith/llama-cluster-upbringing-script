@@ -11,6 +11,38 @@ class DatalogExtractionTool:
     def __init__(self, datalog_memory: Optional[DatalogMemory] = None):
         self.datalog_memory = datalog_memory or DatalogMemory()
 
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": "datalog_extraction",
+                "description": "Extract structured facts and rules into Datalog memory.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "Action: extract_and_apply, query, or explain"
+                        },
+                        "extraction": {
+                            "type": "object",
+                            "description": "JSON payload for extract_and_apply"
+                        },
+                        "predicate": {
+                            "type": "string",
+                            "description": "Predicate for query/explain"
+                        },
+                        "args": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Args for explain"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
+
     def parse_and_apply_extraction(self, extraction_payload: Dict[str, Any]) -> Dict[str, Any]:
         """Applies extracted assertions, retractions, and rules to DatalogMemory.
 
