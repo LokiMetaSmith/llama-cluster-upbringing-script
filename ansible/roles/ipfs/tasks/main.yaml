@@ -204,6 +204,7 @@
     port: "{{ ipfs_api_port | default('5001') }}"
     proto: tcp
     interface: tailscale0
+    direction: in
   become: yes
   ignore_errors: yes
 
