@@ -24,9 +24,14 @@
     force_source: true
 
 - name: Export memory-graph-service image and pin to IPFS
-  ansible.builtin.shell: docker save memory-graph-service:local | ipfs add -Q -
+  ansible.builtin.shell: "set -o pipefail; docker save memory-graph-service:local | ipfs add -Q -"
+  args:
+    executable: /bin/bash
   become: yes
   register: ipfs_add_result_memory_graph
+  until: ipfs_add_result_memory_graph is success
+  retries: 3
+  delay: 10
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
 

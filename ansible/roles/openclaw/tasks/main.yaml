@@ -46,9 +46,14 @@
   changed_when: true
 
 - name: Export OpenClaw image and pin to IPFS
-  ansible.builtin.shell: docker save openclaw:latest | ipfs add -Q -
+  ansible.builtin.shell: "set -o pipefail; docker save openclaw:latest | ipfs add -Q -"
+  args:
+    executable: /bin/bash
   become: yes
   register: ipfs_add_result_openclaw
+  until: ipfs_add_result_openclaw is success
+  retries: 3
+  delay: 10
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
 

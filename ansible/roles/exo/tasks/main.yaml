@@ -50,9 +50,14 @@
   when: exo_enable
 
 - name: Export Exo image and pin to IPFS
-  ansible.builtin.shell: docker save {{ exo_docker_image_name }}:latest | ipfs add -Q -
+  ansible.builtin.shell: "set -o pipefail; docker save {{ exo_docker_image_name }}:latest | ipfs add -Q -"
+  args:
+    executable: /bin/bash
   become: yes
   register: ipfs_add_result_exo
+  until: ipfs_add_result_exo is success
+  retries: 3
+  delay: 10
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   when: exo_enable
