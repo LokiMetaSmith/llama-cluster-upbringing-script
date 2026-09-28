@@ -8,6 +8,9 @@ node_tier: "mid"
 # Deployment topology setting: monolith vs distributed
 deploy_topology: "distributed"
 
+# Docker storage driver
+docker_storage_driver: "vfs"
+
 expected_cluster_size: "{{ groups['worker_nodes'] | length if 'worker_nodes' in groups else 1 }}"
 
 # This variable dynamically determines the node ID based on the hostname.

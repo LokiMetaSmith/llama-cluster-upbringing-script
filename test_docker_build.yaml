@@ -1,0 +1,12 @@
+- name: Test Docker Build
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    inventory_dir: "/app"
+  vars_files:
+    - group_vars/all.yaml
+  tasks:
+    - name: Run Tool Server role
+      ansible.builtin.include_role:
+        name: tool_server
