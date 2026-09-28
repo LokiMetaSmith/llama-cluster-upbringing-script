@@ -30,9 +30,14 @@
     force_source: true
 
 - name: Export memory_service image and pin to IPFS
-  ansible.builtin.shell: docker save memory_service:local | ipfs add -Q -
+  ansible.builtin.shell: "set -o pipefail; docker save memory_service:local | ipfs add -Q -"
+  args:
+    executable: /bin/bash
   become: yes
   register: ipfs_add_result_memory
+  until: ipfs_add_result_memory is success
+  retries: 3
+  delay: 10
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
 

@@ -172,8 +172,14 @@
   changed_when: "'Downloaded newer image' in docker_pull.stdout"
 
 - name: Export IPFS kubo image and pin to IPFS if not already cached
-  ansible.builtin.shell: docker save ipfs/kubo:latest | ipfs add -Q -
+  ansible.builtin.shell: "set -o pipefail; docker save ipfs/kubo:latest | ipfs add -Q -"
+  args:
+    executable: /bin/bash
   become: yes
+  register: ipfs_add_result_kubo
+  until: ipfs_add_result_kubo is success
+  retries: 3
+  delay: 10
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   when: not ipfs_kubo_cache_stat.stat.exists or (load_kubo_cache is defined and load_kubo_cache is failed)

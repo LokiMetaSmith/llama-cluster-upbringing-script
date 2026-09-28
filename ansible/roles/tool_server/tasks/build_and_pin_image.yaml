@@ -25,9 +25,14 @@
       ignore_errors: yes
 
     - name: "Stream tool-server-{{ component.name }} image directly to IPFS"
-      ansible.builtin.shell: docker save tool-server-{{ component.name }}:local | ipfs add -Q -
+      ansible.builtin.shell: "set -o pipefail; docker save tool-server-{{ component.name }}:local | ipfs add -Q -"
+      args:
+        executable: /bin/bash
       become: yes
       register: ipfs_add_result
+      until: ipfs_add_result is success
+      retries: 3
+      delay: 10
       environment:
         IPFS_PATH: "{{ ipfs_path }}"
 

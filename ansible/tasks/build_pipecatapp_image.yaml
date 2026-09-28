@@ -158,9 +158,14 @@
   when: pipecat_deployment_style == 'docker'
 
 - name: Export pipecat-core image and pin to IPFS
-  ansible.builtin.shell: "docker save {{ pipecat_image_name | default('pipecatapp') }}-core:{{ pipecat_versioned_tag }} | ipfs add -Q -"
+  ansible.builtin.shell: "set -o pipefail; docker save {{ pipecat_image_name | default('pipecatapp') }}-core:{{ pipecat_versioned_tag }} | ipfs add -Q -"
+  args:
+    executable: /bin/bash
   become: yes
   register: ipfs_add_result_core
+  until: ipfs_add_result_core is success
+  retries: 3
+  delay: 10
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   when: pipecat_deployment_style == 'docker'
@@ -171,9 +176,14 @@
   when: pipecat_deployment_style == 'docker'
 
 - name: Export pipecat-browser image and pin to IPFS
-  ansible.builtin.shell: "docker save {{ pipecat_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag }} | ipfs add -Q -"
+  ansible.builtin.shell: "set -o pipefail; docker save {{ pipecat_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag }} | ipfs add -Q -"
+  args:
+    executable: /bin/bash
   become: yes
   register: ipfs_add_result_browser
+  until: ipfs_add_result_browser is success
+  retries: 3
+  delay: 10
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   when: pipecat_deployment_style == 'docker'

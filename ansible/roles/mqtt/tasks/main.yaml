@@ -207,9 +207,14 @@
   run_once: true
 
 - name: Export Mosquitto image and pin to IPFS
-  ansible.builtin.shell: docker save eclipse-mosquitto:2 | ipfs add -Q -
+  ansible.builtin.shell: "set -o pipefail; docker save eclipse-mosquitto:2 | ipfs add -Q -"
+  args:
+    executable: /bin/bash
   become: yes
   register: ipfs_add_result_mosquitto
+  until: ipfs_add_result_mosquitto is success
+  retries: 3
+  delay: 10
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   changed_when: false
