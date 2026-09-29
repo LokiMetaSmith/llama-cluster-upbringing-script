@@ -2,15 +2,16 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     libffi-dev \
     libssl-dev \
     git \
     rsync \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    curl
 
 RUN pip install --no-cache-dir --upgrade pip
 
