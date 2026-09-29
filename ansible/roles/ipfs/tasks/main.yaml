@@ -291,3 +291,12 @@
     job: "/bin/bash /usr/local/bin/ipfs_p2p_pin_models.sh >/dev/null 2>&1"
     user: "root"
   become: yes
+
+- name: Configure daily 4:00 AM automated IPFS GC cron job
+  ansible.builtin.cron:
+    name: "Daily IPFS GC"
+    minute: "0"
+    hour: "4"
+    job: "IPFS_PATH=\"/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}\" /usr/local/bin/ipfs repo gc >/dev/null 2>&1"
+    user: "root"
+  become: yes
