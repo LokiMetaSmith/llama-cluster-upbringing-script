@@ -306,7 +306,7 @@ celld_enabled: true
 celld_bucket: "celld-cells"
 minio_root_user: "minioadmin"
 minio_root_password: "change_me_in_prod_minio"
-project_root: "{{ inventory_dir }}"
+project_root: "{{ inventory_dir | default(playbook_dir) }}"
 
 ansible_jobs_dir: "{{ project_root }}/ansible/jobs"
 ansible_tasks_dir: "{{ project_root }}/ansible/tasks"

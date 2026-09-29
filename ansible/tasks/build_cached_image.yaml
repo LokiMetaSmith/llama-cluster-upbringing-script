@@ -32,7 +32,13 @@
   become: yes
 
 - name: "Build Cached Image : Prune Docker builder cache before build"
-  ansible.builtin.command: docker builder prune -f
+  ansible.builtin.command: docker builder prune -a -f
+  become: yes
+  ignore_errors: yes
+  when: _versioned_image_check.rc != 0 or (force_rebuild | default(false) | bool)
+
+- name: "Build Cached Image : Prune dangling Docker images before build"
+  ansible.builtin.command: docker image prune -f
   become: yes
   ignore_errors: yes
   when: _versioned_image_check.rc != 0 or (force_rebuild | default(false) | bool)
