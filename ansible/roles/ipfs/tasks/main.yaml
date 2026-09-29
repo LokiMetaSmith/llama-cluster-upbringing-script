@@ -72,8 +72,6 @@
     path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
     state: directory
     mode: '0755'
-    owner: "1000"
-    group: "100"
   become: yes
 
 - name: Migrate data from existing alias directories if they are real directories
@@ -126,14 +124,6 @@
     IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
   become: yes
 
-- name: Set IPFS directory ownership for Kubo container
-  ansible.builtin.file:
-    path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
-    owner: "1000"
-    group: "100"
-    recurse: yes
-  become: yes
-
 - name: Remove stale IPFS lock files before starting daemon
   ansible.builtin.file:
     path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}/{{ item }}"
@@ -143,46 +133,28 @@
     - "api"
   become: yes
 
+- name: Validate existing IPFS repository for native migration
+  block:
+    - name: Run IPFS repo fsck
+      ansible.builtin.command: /usr/local/bin/ipfs repo fsck
+      environment:
+        IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
+      register: ipfs_fsck_result
+      changed_when: "'fsck successful' in ipfs_fsck_result.stdout"
+  rescue:
+    - name: Log fsck failure
+      ansible.builtin.debug:
+        msg: "IPFS repo fsck failed with return code {{ ipfs_fsck_result.rc | default('unknown') }}: {{ ipfs_fsck_result.stderr | default(ipfs_fsck_result.msg | default('Unknown error')) }}"
+    - name: Fail task due to IPFS repo corruption
+      ansible.builtin.fail:
+        msg: "Failed to validate IPFS repo. Migration cannot safely proceed."
+  become: yes
+
 - name: Template ipfs job
   ansible.builtin.template:
     src: ipfs.nomad.j2
     dest: "{{ nomad_jobs_dir }}/ipfs.nomad"
   become: yes
-
-- name: Check if IPFS kubo image is cached locally
-  ansible.builtin.stat:
-    path: /opt/ipfs_kubo.tar
-  register: ipfs_kubo_cache_stat
-
-- name: Load IPFS kubo image from local cache if available
-  ansible.builtin.command: docker load -i /opt/ipfs_kubo.tar
-  become: yes
-  when: ipfs_kubo_cache_stat.stat.exists
-  register: load_kubo_cache
-  ignore_errors: yes
-
-- name: Ensure ipfs kubo image is pulled if not loaded from cache
-  ansible.builtin.command: docker pull ipfs/kubo:latest
-  become: yes
-  register: docker_pull
-  until: docker_pull is success
-  retries: 5
-  delay: 10
-  when: not ipfs_kubo_cache_stat.stat.exists or (load_kubo_cache is defined and load_kubo_cache is failed)
-  changed_when: "'Downloaded newer image' in docker_pull.stdout"
-
-- name: Export IPFS kubo image and pin to IPFS if not already cached
-  ansible.builtin.shell: "set -o pipefail; docker save ipfs/kubo:latest | ipfs add -Q -"
-  args:
-    executable: /bin/bash
-  become: yes
-  register: ipfs_add_result_kubo
-  until: ipfs_add_result_kubo is success
-  retries: 3
-  delay: 10
-  environment:
-    IPFS_PATH: "{{ ipfs_path }}"
-  when: not ipfs_kubo_cache_stat.stat.exists or (load_kubo_cache is defined and load_kubo_cache is failed)
 
 - name: Run ipfs job
   ansible.builtin.command:
