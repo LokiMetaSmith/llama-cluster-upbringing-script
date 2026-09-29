@@ -54,3 +54,44 @@ If maintaining standard OCI images (from Dockerfiles or registries) is necessary
 1. **Move I/O-Heavy Storage Daemons to Host / `exec`:** Services that manage their own blockstores (such as IPFS) or local databases run much cleaner as direct system services or Nomad `exec` tasks using host volumes. This eliminates container filesystem translation layers and prevents runaway overlay bloat.
 2. **Eliminate In-Sandbox Docker Builds:** If building tool images, avoid running `docker build` with `vfs` inside resource-constrained sandboxes. Build images on a staging runner using native `overlay2` or `buildah`, push to a local registry (like Gitea), and pull pre-built images.
 3. **Adopt Podman or `containerd` for Remaining OCI Tasks:** Swap the Nomad `docker` driver for `nomad-driver-podman` or `nomad-driver-containerd` to drop the heavy Docker daemon while preserving existing Dockerfiles.
+
+---
+
+## Implementation Roadmap & Action Items
+
+### Phase 1: High-I/O Storage Decoupling (Immediate Wins)
+
+*IPFS manages its own sharded blockstore. Running it under Docker adds overhead and contributes heavily to overlay/disk exhaustion. We will migrate it to run natively.*
+
+* [ ] **Create native IPFS Nomad job template**
+  * Update `ansible/roles/ipfs/templates/ipfs.nomad.j2` to use the `exec` or `raw_exec` driver instead of `docker`.
+  * Remove the Docker `image` declaration and instead execute the locally installed `/usr/local/bin/ipfs` binary.
+* [ ] **Adjust IPFS Ansible role**
+  * Ensure `ansible/roles/ipfs/tasks/main.yaml` handles Kubo binary extraction, `/usr/local/bin` placement, and permissions correctly across all target nodes.
+* [ ] **Data Migration & Validation**
+  * Ensure the existing IPFS repository under `/opt/unified_fs_backend/ipfs/` seamlessly transitions to the native daemon without permission errors.
+
+### Phase 2: Build Pipeline & Inode Remediation (Fixing `vfs` bloat)
+
+*The `tool-server` build tasks suffer from inode exhaustion due to Docker `vfs` duplicating entire root filesystems per layer. We need to eliminate nested Docker builds.*
+
+* [ ] **Evaluate Buildah for sandbox building**
+  * Create a test Ansible task verifying `buildah` installation and functionality in the cluster environment.
+  * Convert `ansible/tasks/build_cached_image.yaml` to use `buildah bud` instead of `docker build`.
+* [ ] **Refactor `tool-server` build pipeline**
+  * If Buildah is unviable, refactor `ansible/roles/tool_server` to run the tools in native virtual environments directly supervised by Nomad `exec` tasks, skipping containerization entirely.
+* [ ] **Purge local Docker build cache**
+  * Ensure automated cluster scripts wipe orphaned `vfs` build layers (`/var/lib/docker/vfs`) post-migration to reclaim gigabytes of disk and inodes.
+
+### Phase 3: Runtime Transition & Driver Evaluation
+
+*For remaining auxiliary services (`postgres`, `authentik`, `gitea`, etc.), evaluate swapping the Nomad `docker` task driver.*
+
+* [ ] **Install and configure Podman**
+  * Create a new Ansible role `podman` to install the daemonless runtime and dependencies across worker nodes.
+* [ ] **Deploy Nomad Podman plugin**
+  * Update the `nomad` Ansible role to download and configure `nomad-driver-podman` into Nomad's plugin directory.
+* [ ] **Service validation testing**
+  * Convert a non-critical service (e.g., `opengist` or `radicle`) in its Nomad job template from `driver = "docker"` to `driver = "podman"` to verify networking, volume mounts, and stability.
+* [ ] **Deprecate Docker**
+  * Systematically roll out Podman or Containerd to all remaining OCI-based jobs, followed by the complete removal of the Docker daemon from the cluster via Ansible provisioning.
