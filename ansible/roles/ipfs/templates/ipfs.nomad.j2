@@ -3,6 +3,12 @@ job "ipfs" {
   type        = "system"
 
   group "ipfs" {
+    ephemeral_disk {
+      migrate = true
+      size    = 50
+      sticky  = true
+    }
+
     network {
       port "swarm" {
         static = {{ ipfs_swarm_port | default(4001) }}
@@ -22,25 +28,21 @@ job "ipfs" {
       mode     = "fail"
     }
 
-    task "kubo" {
-      driver = "docker"
+    task "ipfs" {
+      driver = "raw_exec"
+      user   = "1000"
 
       config {
-        image = "ipfs/kubo:latest"
-        network_mode = "host"
-        command = "daemon"
+        command = "/usr/local/bin/ipfs"
         args = [
+          "daemon",
           "--enable-gc",
           "--migrate"
         ]
-        volumes = [
-          "/opt/unified_fs_backend/ipfs/${attr.unique.hostname}:/data/ipfs",
-          "{{ nomad_models_dir }}:{{ nomad_models_dir }}:ro"
-        ]
-
       }
 
       env {
+        IPFS_PATH = "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
         IPFS_PROFILE = "server"
         IPFS_CONFIG_Datastore_StorageMax = "10GB"
         IPFS_CONFIG_Experimental_FilestoreEnabled = "true"
