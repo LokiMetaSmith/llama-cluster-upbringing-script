@@ -1,0 +1,19 @@
+- name: Ensure Nomad plugin directory exists
+  ansible.builtin.file:
+    path: /opt/nomad/plugins
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: Download containerd driver plugin for Nomad
+  ansible.builtin.get_url:
+    url: "https://github.com/Roblox/nomad-driver-containerd/releases/download/v0.9.4/containerd-driver"
+    dest: /opt/nomad/plugins/containerd-driver
+    mode: '0755'
+    owner: root
+    group: root
+  become: yes
+  notify:
+    - Restart nomad
