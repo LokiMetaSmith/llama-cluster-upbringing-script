@@ -42,7 +42,7 @@ job "ipfs" {
       }
 
       env {
-        IPFS_PATH = "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
+        IPFS_PATH = "/opt/unified_fs_backend/ipfs/${attr.unique.hostname}"
         IPFS_PROFILE = "server"
         IPFS_CONFIG_Datastore_StorageMax = "10GB"
         IPFS_CONFIG_Experimental_FilestoreEnabled = "true"

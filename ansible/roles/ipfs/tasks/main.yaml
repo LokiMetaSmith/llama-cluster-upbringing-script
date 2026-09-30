@@ -143,6 +143,31 @@
     - "api"
   become: yes
 
+- name: Validate existing IPFS repository for native migration
+  block:
+    - name: Run IPFS repo fsck
+      ansible.builtin.command: /usr/local/bin/ipfs repo fsck
+      environment:
+        IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
+      register: ipfs_fsck_result
+      changed_when: "'fsck successful' in ipfs_fsck_result.stdout"
+  rescue:
+    - name: Log fsck failure
+      ansible.builtin.debug:
+        msg: "IPFS repo fsck failed with return code {{ ipfs_fsck_result.rc | default('unknown') }}: {{ ipfs_fsck_result.stderr | default(ipfs_fsck_result.msg | default('Unknown error')) }}"
+    - name: Fail task due to IPFS repo corruption
+      ansible.builtin.fail:
+        msg: "Failed to validate IPFS repo. Migration cannot safely proceed."
+  become: yes
+
+- name: Set IPFS directory ownership for native execution
+  ansible.builtin.file:
+    path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
+    owner: "1000"
+    group: "100"
+    recurse: yes
+  become: yes
+
 - name: Template ipfs job
   ansible.builtin.template:
     src: ipfs.nomad.j2

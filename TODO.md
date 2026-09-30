@@ -19,6 +19,7 @@
 - [x] **Multi-Tenant Access & Role-Based Control (RBAC):** Role enforcement (admin vs viewer) on mutating community app endpoints.
 - [x] Evaluate and execute the Proof-of-Concept for integrating HelixDB as a unified graph-vector memory backend (see `docs/analysis/HELIXDB_EVALUATION.md` for the PoC TODO list).
 - [x] Implement `apt` package caching proxy via IPFS.
+- [x] **Phase 1 IPFS Nomad job migration:** Converted IPFS from a Docker container to a native `raw_exec` job directly supervised by Nomad.
 - [x] **TML Interaction Models Research Preview Implementation:**
   - **Goal:** Flesh out the full multi-turn multi-modal continuous audio/video streaming architecture and real model weights for Thinking Machines Lab's Interaction Models research preview.
   - **Location:** `ansible/jobs/tml-interaction.nomad.j2` and `ansible/roles/tml_interaction`.
