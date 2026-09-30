@@ -9,7 +9,7 @@ job "memory-audit" {
 
   group "audit" {
     task "audit" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "python:3.9-slim"

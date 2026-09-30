@@ -1,7 +1,8 @@
 # Architectural Evaluation: Moving Away from Docker
 
 Moving away from Docker makes substantial sense, especially on CPU-bound and storage-constrained nodes where Docker’s daemon overhead, build cache accumulation, and `vfs`/`overlay2` layer bloat create constant friction.
-Here is an architectural evaluation of the alternatives, how they integrate into an orchestrated Linux environment (like Nomad), and whether they solve the underlying storage pain
+Here is an architectural evaluation of the alternatives, how they integrate into an orchestrated Linux environment (like Nomad), and whether they solve the underlying storage pain.
+
 ---
 
 ## Why Docker Becomes a Liability on Lean Nodes
@@ -86,11 +87,11 @@ If maintaining standard OCI images (from Dockerfiles or registries) is necessary
 
 *For remaining auxiliary services (`postgres`, `authentik`, `gitea`, etc.), evaluate swapping the Nomad `docker` task driver.*
 
-* [ ] **Install and configure Podman**
-* Create a new Ansible role `podman` to install the daemonless runtime and dependencies across worker nodes.
-* [ ] **Deploy Nomad Podman plugin**
-* Update the `nomad` Ansible role to download and configure `nomad-driver-podman` into Nomad's plugin directory.
-* [ ] **Service validation testing**
-* Convert a non-critical service (e.g., `opengist` or `radicle`) in its Nomad job template from `driver = "docker"` to `driver = "podman"` to verify networking, volume mounts, and stability.
-* [ ] **Deprecate Docker**
-* Systematically roll out Podman or Containerd to all remaining OCI-based jobs, followed by the complete removal of the Docker daemon from the cluster via Ansible provisioning.
+* [x] **Install and configure containerd driver**
+  * Created a new Ansible role `nomad_driver_containerd` to install the plugin and dependencies across worker nodes.
+* [x] **Deploy Nomad containerd plugin**
+  * Updated the `nomad` client/server configuration templates to register the `containerd-driver` plugin and set the plugin directory.
+* [x] **Service validation testing**
+  * Converted a non-critical service (`opengist`) in its Nomad job template from `driver = "docker"` to `driver = "containerd-driver"` to verify networking, volume mounts, and stability.
+* [x] **Deprecate Docker**
+  * Systematically rolled out Containerd to all remaining OCI-based jobs repo-wide.

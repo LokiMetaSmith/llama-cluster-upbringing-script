@@ -37,7 +37,7 @@ job "opengravity" {
     {% include 'load_image_task.nomad.j2' %}
 
     task "nginx" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "opengravity:local"

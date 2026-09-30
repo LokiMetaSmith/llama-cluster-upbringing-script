@@ -43,7 +43,7 @@ job "memory-service" {
     {% include 'load_image_task.nomad.j2' %}
 
     task "api" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "memory_service:local"

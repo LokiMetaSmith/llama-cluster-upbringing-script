@@ -37,7 +37,7 @@ job "tool-server" {
     }
 
     task "tool-server-core-task" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "tool-server-core:local"
@@ -55,9 +55,13 @@ job "tool-server" {
           }
         ]
 
-        volumes = [
-          # Docker socket for CodeRunnerTool
-          "/var/run/docker.sock:/var/run/docker.sock"
+        mounts = [
+          {
+            type     = "bind"
+            source   = "/var/run/docker.sock"
+            target   = "/var/run/docker.sock"
+            readonly = false
+          }
         ]
 
         command = "uvicorn"
@@ -141,7 +145,7 @@ job "tool-server" {
     }
 
     task "tool-server-browser-task" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image    = "tool-server-browser:local"
@@ -212,7 +216,7 @@ job "tool-server" {
     }
 
     task "tool-server-vision-task" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "tool-server-vision:local"

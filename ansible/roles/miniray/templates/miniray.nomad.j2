@@ -13,7 +13,7 @@ job "miniray" {
     }
 
     task "redis" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "redis:7-alpine"
@@ -50,7 +50,7 @@ job "miniray" {
     }
 
     task "miniray-worker" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "miniray:latest"

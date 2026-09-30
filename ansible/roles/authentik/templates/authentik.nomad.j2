@@ -36,7 +36,7 @@ update {
     }
 
     task "redis" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "redis:7.2-alpine"
@@ -91,7 +91,7 @@ update {
     }
 
     task "postgresql" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       volume_mount {
         volume      = "authentik-postgres"
@@ -140,7 +140,7 @@ EOH
     }
 
     task "server" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       volume_mount {
         volume      = "authentik-media"
@@ -205,7 +205,7 @@ EOH
     }
 
     task "worker" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       volume_mount {
         volume      = "authentik-media"

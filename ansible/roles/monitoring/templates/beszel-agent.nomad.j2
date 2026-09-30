@@ -10,17 +10,32 @@ job "beszel-agent" {
     }
 
     task "agent" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image        = "henrygd/beszel-agent"
         network_mode = "host"
         pid_mode     = "host"
         privileged   = true
-        volumes = [
-          "/var/run/docker.sock:/var/run/docker.sock:ro",
-          "/:/host:ro",
-          "/dev/disk:/dev/disk:ro",
+        mounts = [
+          {
+            type     = "bind"
+            source   = "/var/run/docker.sock"
+            target   = "/var/run/docker.sock"
+            readonly = true
+          },
+          {
+            type     = "bind"
+            source   = "/"
+            target   = "/host"
+            readonly = true
+          },
+          {
+            type     = "bind"
+            source   = "/dev/disk"
+            target   = "/dev/disk"
+            readonly = true
+          }
         ]
       }
 

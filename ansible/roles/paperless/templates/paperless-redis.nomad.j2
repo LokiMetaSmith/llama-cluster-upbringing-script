@@ -41,13 +41,18 @@ job "paperless-redis" {
     }
 
     task "redis" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "redis:7.2-alpine"
         ports = ["redis"]
-        volumes = [
-          "/opt/paperless/redis:/data"
+        mounts = [
+          {
+            type     = "bind"
+            source   = "/opt/paperless/redis"
+            target   = "/data"
+            readonly = false
+          }
         ]
       }
 

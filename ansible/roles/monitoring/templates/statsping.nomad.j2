@@ -11,13 +11,18 @@ job "statsping" {
     }
 
     task "statsping" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "statping/statping:latest"
         ports = ["http"]
-        volumes = [
-          "{{ nomad_volumes_dir }}/statsping:/app"
+        mounts = [
+          {
+            type     = "bind"
+            source   = "{{ nomad_volumes_dir }}/statsping"
+            target   = "/app"
+            readonly = false
+          }
         ]
       }
 

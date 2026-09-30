@@ -18,7 +18,7 @@ job "vision" {
     }
 
     task "frigate" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "{{ frigate_image }}"

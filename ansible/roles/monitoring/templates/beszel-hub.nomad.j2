@@ -10,13 +10,18 @@ job "beszel-hub" {
     }
 
     task "hub" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image        = "henrygd/beszel"
         network_mode = "host"
-        volumes = [
-          "{{ nomad_volumes_dir }}/beszel:/beszel_data",
+        mounts = [
+          {
+            type     = "bind"
+            source   = "{{ nomad_volumes_dir }}/beszel"
+            target   = "/beszel_data"
+            readonly = false
+          }
         ]
       }
 

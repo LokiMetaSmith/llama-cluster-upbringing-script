@@ -30,7 +30,7 @@ job "nats" {
     }
 
     task "nats" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "nats:2.12.2-alpine3.22"

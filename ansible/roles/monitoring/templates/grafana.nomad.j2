@@ -32,7 +32,7 @@ job "grafana" {
     }
 
     task "grafana" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "grafana/grafana:{{ grafana_version }}"

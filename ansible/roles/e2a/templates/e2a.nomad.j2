@@ -67,15 +67,20 @@ job "e2a" {
     }
 
     task "e2a" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "ghcr.io/mnexa-ai/e2a:latest"
         ports = ["http", "smtp"]
 
         # Volumes for e2a data persistence
-        volumes = [
-          "{{ nomad_volumes_dir }}/e2a/data:/data"
+        mounts = [
+          {
+            type     = "bind"
+            source   = "{{ nomad_volumes_dir }}/e2a/data"
+            target   = "/data"
+            readonly = false
+          }
         ]
       }
 

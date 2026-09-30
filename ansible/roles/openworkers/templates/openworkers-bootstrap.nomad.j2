@@ -6,7 +6,7 @@ job "openworkers-bootstrap" {
     count = 1
 
     task "migrate" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "alpine/git"

@@ -35,7 +35,7 @@ job "security-agent" {
     }
 
     task "security-agent" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "local/security-agent:latest"

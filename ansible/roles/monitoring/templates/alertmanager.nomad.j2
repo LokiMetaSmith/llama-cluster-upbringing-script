@@ -23,7 +23,7 @@ job "alertmanager" {
     }
 
     task "alertmanager" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "prom/alertmanager:v{{ alertmanager_version }}"

@@ -73,7 +73,7 @@ job "radicle" {
     }
 
     task "radicle" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "radicle/node:latest"
@@ -99,7 +99,7 @@ job "radicle" {
     }
 
     task "radicle-httpd" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "radicle/httpd:latest"

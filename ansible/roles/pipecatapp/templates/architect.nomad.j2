@@ -68,7 +68,7 @@ job "architect" {
     {% include 'load_image_task.nomad.j2' %}
 
     task "architect-task" {
-      driver = "docker"
+      driver = "containerd-driver"
       {{ env_vars }}
 
       constraint {
@@ -80,11 +80,31 @@ job "architect" {
         image = "{{ pipecatapp_image_name | default('pipecatapp') }}:{{ pipecat_versioned_tag | default('local') }}"
         force_pull = false
 
-        volumes = [
-          "/opt/nomad/models:/opt/nomad/models:ro",
-          "/opt/pipecatapp:/opt/pipecatapp",
-          "/opt/pipecatapp/chromadb:/app/chromadb_storage",
-          "/opt/pipecatapp/workflows:/app/workflows",
+        mounts = [
+          {
+            type     = "bind"
+            source   = "/opt/nomad/models"
+            target   = "/opt/nomad/models"
+            readonly = true
+          },
+          {
+            type     = "bind"
+            source   = "/opt/pipecatapp"
+            target   = "/opt/pipecatapp"
+            readonly = false
+          },
+          {
+            type     = "bind"
+            source   = "/opt/pipecatapp/chromadb"
+            target   = "/app/chromadb_storage"
+            readonly = false
+          },
+          {
+            type     = "bind"
+            source   = "/opt/pipecatapp/workflows"
+            target   = "/app/workflows"
+            readonly = false
+          }
         ]
       }
 

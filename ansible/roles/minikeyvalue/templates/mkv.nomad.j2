@@ -13,7 +13,7 @@ job "minikeyvalue" {
     }
 
     task "mkv-master" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "minikeyvalue:latest"
@@ -58,7 +58,7 @@ job "minikeyvalue" {
     }
 
     task "mkv-volume" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "minikeyvalue:latest"

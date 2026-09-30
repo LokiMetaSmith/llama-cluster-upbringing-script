@@ -57,7 +57,7 @@ job "zigbee2mqtt" {
     }
 
     task "zigbee2mqtt" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       {% if require_zigbee_hardware | default(true) %}
       constraint {

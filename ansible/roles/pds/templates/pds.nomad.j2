@@ -30,16 +30,26 @@ job "pds" {
     }
 
     task "pds-server" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "ghcr.io/bluesky-social/pds:latest"
 
         # In a real environment we'd want to mount volumes for persistence.
         # But this is okay for a simple sandbox self-hosted instance.
-        volumes = [
-          "{{ pds_data_directory }}:/pds",
-          "{{ pds_blobstore_disk_location }}:/pds/blocks"
+        mounts = [
+          {
+            type     = "bind"
+            source   = "{{ pds_data_directory }}"
+            target   = "/pds"
+            readonly = false
+          },
+          {
+            type     = "bind"
+            source   = "{{ pds_blobstore_disk_location }}"
+            target   = "/pds/blocks"
+            readonly = false
+          }
         ]
       }
 

@@ -13,7 +13,7 @@ job "semantic-router" {
     }
 
     task "router-server" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "{{ semantic_router_image_name }}"

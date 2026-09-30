@@ -56,12 +56,19 @@ job "mqtt" {
     {% include 'load_image_task.nomad.j2' %}
 
     task "mosquitto" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "eclipse-mosquitto:2"
         network_mode = "host"
-        volumes = ["/opt/mqtt/certs:/mosquitto/certs:ro"]
+        mounts = [
+          {
+            type     = "bind"
+            source   = "/opt/mqtt/certs"
+            target   = "/mosquitto/certs"
+            readonly = true
+          }
+        ]
         # Host mode networking requires no port map here
         cap_add = ["SETUID", "SETGID", "CHOWN", "NET_BIND_SERVICE"]
         command = "mosquitto"
