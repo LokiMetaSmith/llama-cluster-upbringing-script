@@ -145,16 +145,16 @@
 
 - name: Validate existing IPFS repository for native migration
   block:
-    - name: Run IPFS repo fsck
-      ansible.builtin.command: /usr/local/bin/ipfs repo fsck
+    - name: Run IPFS repo verify
+      ansible.builtin.command: /usr/local/bin/ipfs repo verify
       environment:
         IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
-      register: ipfs_fsck_result
-      changed_when: "'fsck successful' in ipfs_fsck_result.stdout"
+      register: ipfs_verify_result
+      changed_when: "'verify successful' in ipfs_verify_result.stdout"
   rescue:
-    - name: Log fsck failure
+    - name: Log verify failure
       ansible.builtin.debug:
-        msg: "IPFS repo fsck failed with return code {{ ipfs_fsck_result.rc | default('unknown') }}: {{ ipfs_fsck_result.stderr | default(ipfs_fsck_result.msg | default('Unknown error')) }}"
+        msg: "IPFS repo verify failed with return code {{ ipfs_verify_result.rc | default('unknown') }}: {{ ipfs_verify_result.stderr | default(ipfs_verify_result.msg | default('Unknown error')) }}"
     - name: Fail task due to IPFS repo corruption
       ansible.builtin.fail:
         msg: "Failed to validate IPFS repo. Migration cannot safely proceed."
