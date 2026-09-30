@@ -1,0 +1,15 @@
+- name: Test Opengist Nomad template
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - group_vars/all.yaml
+  tasks:
+    - name: Create opengist test dir
+      ansible.builtin.file:
+        path: /tmp/opengist_test
+        state: directory
+    - name: Template opengist job
+      ansible.builtin.template:
+        src: ansible/roles/opengist/templates/opengist.nomad.j2
+        dest: /tmp/opengist_test/opengist.nomad

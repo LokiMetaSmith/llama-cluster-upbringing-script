@@ -16,14 +16,19 @@ job "opengist" {
     }
 
     task "opengist" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "ghcr.io/thomiceli/opengist:1.12"
         ports = ["http", "ssh"]
 
-        volumes = [
-          "/opt/opengist/data:/opengist"
+        mounts = [
+          {
+            type     = "bind"
+            source   = "/opt/opengist/data"
+            target   = "/opengist"
+            readonly = false
+          }
         ]
       }
 
