@@ -3,6 +3,12 @@ job "ipfs" {
   type        = "system"
 
   group "ipfs" {
+    ephemeral_disk {
+      migrate = true
+      size    = 50
+      sticky  = true
+    }
+
     network {
       port "swarm" {
         static = {{ ipfs_swarm_port | default(4001) }}
@@ -22,8 +28,9 @@ job "ipfs" {
       mode     = "fail"
     }
 
-    task "kubo" {
+    task "ipfs" {
       driver = "raw_exec"
+      user   = "1000"
 
       config {
         command = "/usr/local/bin/ipfs"

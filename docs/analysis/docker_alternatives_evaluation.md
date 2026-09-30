@@ -1,8 +1,7 @@
 # Architectural Evaluation: Moving Away from Docker
 
 Moving away from Docker makes substantial sense, especially on CPU-bound and storage-constrained nodes where Docker’s daemon overhead, build cache accumulation, and `vfs`/`overlay2` layer bloat create constant friction.
-Here is an architectural evaluation of the alternatives, how they integrate into an orchestrated Linux environment (like Nomad), and whether they solve the underlying storage pain.
-
+Here is an architectural evaluation of the alternatives, how they integrate into an orchestrated Linux environment (like Nomad), and whether they solve the underlying storage pain
 ---
 
 ## Why Docker Becomes a Liability on Lean Nodes
@@ -76,22 +75,22 @@ If maintaining standard OCI images (from Dockerfiles or registries) is necessary
 *The `tool-server` build tasks suffer from inode exhaustion due to Docker `vfs` duplicating entire root filesystems per layer. We need to eliminate nested Docker builds.*
 
 * [ ] **Evaluate Buildah for sandbox building**
-  * Create a test Ansible task verifying `buildah` installation and functionality in the cluster environment.
-  * Convert `ansible/tasks/build_cached_image.yaml` to use `buildah bud` instead of `docker build`.
+* Create a test Ansible task verifying `buildah` installation and functionality in the cluster environment.
+* Convert `ansible/tasks/build_cached_image.yaml` to use `buildah bud` instead of `docker build`.
 * [ ] **Refactor `tool-server` build pipeline**
-  * If Buildah is unviable, refactor `ansible/roles/tool_server` to run the tools in native virtual environments directly supervised by Nomad `exec` tasks, skipping containerization entirely.
+* If Buildah is unviable, refactor `ansible/roles/tool_server` to run the tools in native virtual environments directly supervised by Nomad `exec` tasks, skipping containerization entirely.
 * [ ] **Purge local Docker build cache**
-  * Ensure automated cluster scripts wipe orphaned `vfs` build layers (`/var/lib/docker/vfs`) post-migration to reclaim gigabytes of disk and inodes.
+* Ensure automated cluster scripts wipe orphaned `vfs` build layers (`/var/lib/docker/vfs`) post-migration to reclaim gigabytes of disk and inodes.
 
 ### Phase 3: Runtime Transition & Driver Evaluation
 
 *For remaining auxiliary services (`postgres`, `authentik`, `gitea`, etc.), evaluate swapping the Nomad `docker` task driver.*
 
 * [ ] **Install and configure Podman**
-  * Create a new Ansible role `podman` to install the daemonless runtime and dependencies across worker nodes.
+* Create a new Ansible role `podman` to install the daemonless runtime and dependencies across worker nodes.
 * [ ] **Deploy Nomad Podman plugin**
-  * Update the `nomad` Ansible role to download and configure `nomad-driver-podman` into Nomad's plugin directory.
+* Update the `nomad` Ansible role to download and configure `nomad-driver-podman` into Nomad's plugin directory.
 * [ ] **Service validation testing**
-  * Convert a non-critical service (e.g., `opengist` or `radicle`) in its Nomad job template from `driver = "docker"` to `driver = "podman"` to verify networking, volume mounts, and stability.
+* Convert a non-critical service (e.g., `opengist` or `radicle`) in its Nomad job template from `driver = "docker"` to `driver = "podman"` to verify networking, volume mounts, and stability.
 * [ ] **Deprecate Docker**
-  * Systematically roll out Podman or Containerd to all remaining OCI-based jobs, followed by the complete removal of the Docker daemon from the cluster via Ansible provisioning.
+* Systematically roll out Podman or Containerd to all remaining OCI-based jobs, followed by the complete removal of the Docker daemon from the cluster via Ansible provisioning.
