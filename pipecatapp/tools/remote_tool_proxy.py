@@ -12,6 +12,24 @@ class RemoteToolProxy:
         self.base_url = base_url.rstrip('/')
         self.api_key = api_key or os.getenv("TOOL_SERVER_API_KEY")
 
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "tool_name", "remote_tool_proxy"),
+                "description": f"Remote proxy for {getattr(self, 'tool_name', 'tool')}.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Keyword arguments to pass to the remote tool."
+                        }
+                    }
+                }
+            }
+        }
+
     def __getattr__(self, name):
         """
         Catches any method call and forwards it to the remote server.

@@ -29,7 +29,7 @@ job "minio" {
     }
 
     task "minio" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "minio/minio:latest"
@@ -90,7 +90,7 @@ job "minio" {
     }
 
     task "mc" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       lifecycle {
         hook    = "poststart"

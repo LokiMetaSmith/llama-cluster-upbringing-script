@@ -16,15 +16,25 @@ job "forgejo" {
     }
 
     task "forgejo" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "codeberg.org/forgejo/forgejo:9-rootless"
         ports = ["http", "ssh"]
 
-        volumes = [
-          "/opt/forgejo/data:/var/lib/gitea",
-          "/opt/forgejo/config:/etc/gitea"
+        mounts = [
+          {
+            type     = "bind"
+            source   = "/opt/forgejo/data"
+            target   = "/var/lib/gitea"
+            readonly = false
+          },
+          {
+            type     = "bind"
+            source   = "/opt/forgejo/config"
+            target   = "/etc/gitea"
+            readonly = false
+          }
         ]
       }
 

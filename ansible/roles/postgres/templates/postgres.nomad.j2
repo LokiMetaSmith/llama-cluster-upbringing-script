@@ -32,7 +32,7 @@ job "postgres" {
     }
 
     task "postgres" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       volume_mount {
         volume      = "postgres_data"

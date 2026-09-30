@@ -19,7 +19,7 @@ job "exo" {
     {% include 'load_image_task.nomad.j2' %}
 
     task "exo" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "{{ exo_docker_image_name }}"
@@ -34,9 +34,19 @@ job "exo" {
         ]
 
         # Use direct bind mounts for simplicity
-        volumes = [
-          "{{ exo_data_dir }}:/root/.cache/huggingface",
-          "{{ exo_home_dir }}:/root/.exo"
+        mounts = [
+          {
+            type     = "bind"
+            source   = "{{ exo_data_dir }}"
+            target   = "/root/.cache/huggingface"
+            readonly = false
+          },
+          {
+            type     = "bind"
+            source   = "{{ exo_home_dir }}"
+            target   = "/root/.exo"
+            readonly = false
+          }
         ]
       }
 

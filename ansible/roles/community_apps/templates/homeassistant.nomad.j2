@@ -36,7 +36,7 @@ job "{{ app_name | default('homeassistant') }}" {
     }
 
     task "homeassistant" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "ghcr.io/home-assistant/home-assistant:stable"

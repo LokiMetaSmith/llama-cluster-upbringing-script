@@ -88,7 +88,7 @@ job "{{ app_name | default('pihole') }}" {
     }
 
     task "pihole" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "{{ container_image | default('pihole/pihole:latest') }}"

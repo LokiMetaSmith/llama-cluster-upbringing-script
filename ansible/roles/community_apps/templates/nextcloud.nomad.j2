@@ -36,7 +36,7 @@ job "{{ app_name | default('nextcloud') }}" {
     }
 
     task "nextcloud" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "lscr.io/linuxserver/nextcloud:latest"

@@ -10,13 +10,18 @@ job "apt-proxy" {
     }
 
     task "fastapi" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "apt_proxy:latest"
         network_mode = "host"
-        volumes = [
-          "{{ nomad_volumes_dir }}/apt_proxy:/data"
+        mounts = [
+          {
+            type     = "bind"
+            source   = "{{ nomad_volumes_dir }}/apt_proxy"
+            target   = "/data"
+            readonly = false
+          }
         ]
       }
 

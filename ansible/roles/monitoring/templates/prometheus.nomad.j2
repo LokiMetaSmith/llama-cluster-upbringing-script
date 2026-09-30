@@ -24,7 +24,7 @@ job "prometheus" {
     }
 
     task "prometheus" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "prom/prometheus:v{{ prometheus_version }}"

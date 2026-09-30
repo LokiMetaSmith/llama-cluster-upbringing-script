@@ -14,18 +14,38 @@ job "telegraf" {
     }
 
     task "telegraf" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "telegraf:latest"
         network_mode = "host"
 
         # Mount host metrics
-        volumes = [
-          "/var/run/docker.sock:/var/run/docker.sock:ro",
-          "/sys:/rootfs/sys:ro",
-          "/proc:/rootfs/proc:ro",
-          "/etc:/rootfs/etc:ro"
+        mounts = [
+          {
+            type     = "bind"
+            source   = "/var/run/docker.sock"
+            target   = "/var/run/docker.sock"
+            readonly = true
+          },
+          {
+            type     = "bind"
+            source   = "/sys"
+            target   = "/rootfs/sys"
+            readonly = true
+          },
+          {
+            type     = "bind"
+            source   = "/proc"
+            target   = "/rootfs/proc"
+            readonly = true
+          },
+          {
+            type     = "bind"
+            source   = "/etc"
+            target   = "/rootfs/etc"
+            readonly = true
+          }
         ]
       }
 

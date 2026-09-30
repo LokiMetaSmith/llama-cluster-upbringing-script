@@ -39,7 +39,7 @@ job "{{ app_name | default('gitea') }}" {
     }
 
     task "gitea" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "gitea/gitea:latest"

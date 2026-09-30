@@ -77,7 +77,7 @@ job "seed-agent" {
 
 
     task "seed-agent-task" {
-      driver = "docker"
+      driver = "containerd-driver"
       {{ env_vars }}
 
       constraint {
@@ -92,11 +92,31 @@ job "seed-agent" {
         # Granting elevated privileges since it's the infrastructure manager
         privileged = true
 
-        volumes = [
-          "/opt/nomad/models:/opt/nomad/models:ro",
-          "/opt/pipecatapp:/opt/pipecatapp",
-          "/root/.ssh:/root/.ssh:ro",
-          "/etc/nomad.d/tls:/etc/nomad.d/tls:ro",
+        mounts = [
+          {
+            type     = "bind"
+            source   = "/opt/nomad/models"
+            target   = "/opt/nomad/models"
+            readonly = true
+          },
+          {
+            type     = "bind"
+            source   = "/opt/pipecatapp"
+            target   = "/opt/pipecatapp"
+            readonly = false
+          },
+          {
+            type     = "bind"
+            source   = "/root/.ssh"
+            target   = "/root/.ssh"
+            readonly = true
+          },
+          {
+            type     = "bind"
+            source   = "/etc/nomad.d/tls"
+            target   = "/etc/nomad.d/tls"
+            readonly = true
+          }
         ]
       }
 

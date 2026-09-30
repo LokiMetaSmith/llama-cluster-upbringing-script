@@ -36,7 +36,7 @@ job "{{ app_name | default('vaultwarden') }}" {
     }
 
     task "vaultwarden" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "vaultwarden/server:latest"

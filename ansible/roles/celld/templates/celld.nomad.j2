@@ -17,7 +17,7 @@ job "celld" {
     }
 
     task "celld" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "ghcr.io/denoland/celld:latest"

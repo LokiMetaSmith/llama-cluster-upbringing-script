@@ -26,7 +26,7 @@ job "openworkers-runners" {
     }
 
     task "runner" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "ghcr.io/openworkers/openworkers-runner:v0.7.3-v8"

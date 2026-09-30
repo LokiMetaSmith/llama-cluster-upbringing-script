@@ -1,5 +1,6 @@
 ignore: |
   node_modules/
+  *.nomad.j2
 rules:
   line-length: disable
   truthy:

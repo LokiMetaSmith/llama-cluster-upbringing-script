@@ -35,6 +35,29 @@ class MCPClientAdapter:
         self._exit_stack = AsyncExitStack()
         self._available_tools = None
 
+    def get_schema(self) -> dict:
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(self, "name", "mcp_client_adapter"),
+                "description": getattr(self, "description", "MCP Client Adapter Tool"),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "method_name": {
+                            "type": "string",
+                            "description": "The method to execute on the MCP server."
+                        },
+                        "kwargs": {
+                            "type": "object",
+                            "description": "Keyword arguments for the method."
+                        }
+                    },
+                    "required": ["method_name"]
+                }
+            }
+        }
+
     def load_approvals(self):
         if os.path.exists(APPROVALS_FILE):
             try:

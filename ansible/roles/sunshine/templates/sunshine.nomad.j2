@@ -13,7 +13,7 @@ job "sunshine" {
     }
 
     task "sunshine" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image        = "lizardbyte/sunshine:{{ sunshine_version }}"
@@ -21,8 +21,13 @@ job "sunshine" {
         ipc_mode     = "host"
         privileged   = true
 
-        volumes = [
-          "/opt/nomad/volumes/sunshine:/config"
+        mounts = [
+          {
+            type     = "bind"
+            source   = "/opt/nomad/volumes/sunshine"
+            target   = "/config"
+            readonly = false
+          }
         ]
 
         # Device mapping requires privileged mode or specific device allow listing in Nomad client config.

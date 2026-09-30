@@ -30,7 +30,7 @@ job "last30days-service" {
     {% include 'load_image_task.nomad.j2' %}
 
     task "last30days-task" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "last30days-service:local"

@@ -10,7 +10,7 @@ job "node-exporter" {
     }
 
     task "node-exporter" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "prom/node-exporter:v{{ node_exporter_version }}"

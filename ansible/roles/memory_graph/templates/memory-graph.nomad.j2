@@ -37,7 +37,7 @@ job "memory-graph" {
     {% include 'load_image_task.nomad.j2' %}
 
     task "server" {
-      driver = "docker"
+      driver = "containerd-driver"
       config {
         image = "{{ memory_graph_image }}"
         force_pull = false

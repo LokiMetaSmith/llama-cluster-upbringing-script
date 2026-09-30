@@ -58,7 +58,7 @@ job "traceway" {
     }
 
     task "traceway" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "tracewayapp/traceway:latest"

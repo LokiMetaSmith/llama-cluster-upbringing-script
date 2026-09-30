@@ -149,7 +149,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     {% include 'load_image_task.nomad.j2' %}
 
     task "pipecat-app" {
-      driver = "docker"
+      driver = "containerd-driver"
       {{ env_vars }}
 
       template {
@@ -175,8 +175,13 @@ EOT
         ports = ["http"]
         # Mount volumes for models and config. Models are read-only.
         # Assumes /app is the WORKDIR in the container.
-        volumes = [
-          "/opt/pipecatapp/chromadb:/app/chromadb_storage",
+        mounts = [
+          {
+            type     = "bind"
+            source   = "/opt/pipecatapp/chromadb"
+            target   = "/app/chromadb_storage"
+            readonly = false
+          }
         ]
       }
 
@@ -242,7 +247,7 @@ EOT
     {% endif %}
 
     task "browser-runner" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "{{ pipecatapp_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag | default('local') }}"

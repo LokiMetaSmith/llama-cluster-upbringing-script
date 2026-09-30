@@ -45,7 +45,7 @@ job "influxdb" {
     }
 
     task "influxdb" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       config {
         image = "influxdb:2"

@@ -30,7 +30,7 @@ job "traefik" {
     }
 
     task "traefik" {
-      driver = "docker"
+      driver = "containerd-driver"
 
       {% if traefik_acme_enabled | bool and traefik_acme_dns_credentials is defined and traefik_acme_dns_credentials | length > 0 %}
       env {
@@ -43,12 +43,32 @@ job "traefik" {
       config {
         image        = "traefik:v3.0"
         network_mode = "host"
-        volumes = [
-          "local/traefik.yml:/etc/traefik/traefik.yml",
-          "local/dynamic:/etc/traefik/dynamic",
-          "local/certs:/etc/traefik/certs",
+        mounts = [
+          {
+            type     = "bind"
+            source   = "local/traefik.yml"
+            target   = "/etc/traefik/traefik.yml"
+            readonly = false
+          },
+          {
+            type     = "bind"
+            source   = "local/dynamic"
+            target   = "/etc/traefik/dynamic"
+            readonly = false
+          },
+          {
+            type     = "bind"
+            source   = "local/certs"
+            target   = "/etc/traefik/certs"
+            readonly = false
+          }
           {% if traefik_acme_enabled | bool %}
-          "{{ nomad_volumes_dir | default('/opt/nomad/volumes') }}/traefik:/etc/traefik/acme",
+          ,{
+            type     = "bind"
+            source   = "{{ nomad_volumes_dir | default('/opt/nomad/volumes') }}/traefik"
+            target   = "/etc/traefik/acme"
+            readonly = false
+          }
           {% endif %}
         ]
       }
