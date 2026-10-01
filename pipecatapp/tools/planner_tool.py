@@ -47,10 +47,10 @@ class PlannerTool:
 
     async def _discover_llm_url(self):
         """Discovers the LLM service URL."""
-        # Try to find base_url in existing router_llm if available
-        if hasattr(self.twin_service, 'router_llm') and hasattr(self.twin_service.router_llm, '_client'):
+        # Try to find base_url in existing moe_llm if available
+        if hasattr(self.twin_service, 'moe_llm') and hasattr(self.twin_service.moe_llm, '_client'):
              try:
-                 return str(self.twin_service.router_llm._client.base_url)
+                 return str(self.twin_service.moe_llm._client.base_url)
              except Exception:
                  pass
 

@@ -175,7 +175,7 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
         "opencode_provider": OpenCodeProviderTool(),
         "dependency_scanner": DependencyScannerTool(),
         "vr": VRTool(),
-        "autoresearch": AutoresearchTool(llm_client=getattr(twin_service, 'router_llm', None) if twin_service else None),
+        "autoresearch": AutoresearchTool(llm_client=getattr(twin_service, 'moe_llm', None) if twin_service else None),
         "experiment": ExperimentTool(),
         "submit_solution": SubmitSolutionTool(),
         "container_registry": ContainerRegistryTool(),

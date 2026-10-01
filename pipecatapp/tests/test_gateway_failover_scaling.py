@@ -39,6 +39,6 @@ async def test_handle_gateway_exhaustion_failure():
 
     supervisor = TaskSupervisor(mock_twin)
 
-    result = await supervisor.handle_gateway_exhaustion("openrouter_claude_sonnet")
+    result = await supervisor.handle_gateway_exhaustion("local_claude_sonnet")
 
     assert result is False

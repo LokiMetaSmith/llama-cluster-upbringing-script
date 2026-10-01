@@ -47,7 +47,7 @@ class TwinService(FrameProcessor):
             tts_service (FrameProcessor, optional): The TTS service for generating audio responses.
         """
         super().__init__()
-        self.router_llm = llm
+        self.moe_llm = llm
         self.llm_base_url = llm_base_url
         self.vision_detector = vision_detector
         self.runner = runner

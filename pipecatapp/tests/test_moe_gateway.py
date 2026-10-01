@@ -43,12 +43,12 @@ def test_select_best_expert():
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (f"req-{i}", now - i * 60, "hi", "response", 200, 0.2, "openai_gpt4"))
 
-    # Log 10 failures for openrouter_gemini_flash (should have low score)
+    # Log 10 failures for local_gemini_flash (should have low score)
     for i in range(10):
         c.execute('''
             INSERT INTO requests (request_id, timestamp, user_input, response, status_code, latency, expert_name)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (f"req-fail-{i}", now - i * 60, "hi", "error", 500, 1.0, "openrouter_gemini_flash"))
+        ''', (f"req-fail-{i}", now - i * 60, "hi", "error", 500, 1.0, "local_gemini_flash"))
 
     conn.commit()
     conn.close()
@@ -57,9 +57,9 @@ def test_select_best_expert():
     scores = gateway.get_expert_scores(test_db, gateway.EXTERNAL_EXPERTS)
 
     assert "openai_gpt4" in scores
-    assert "openrouter_gemini_flash" in scores
+    assert "local_gemini_flash" in scores
     # Due to reliability sampling, gpt4 should beat gemini_flash (as gemini has all 500s)
-    assert scores["openai_gpt4"] > scores["openrouter_gemini_flash"]
+    assert scores["openai_gpt4"] > scores["local_gemini_flash"]
 
     if os.path.exists(test_db):
         os.remove(test_db)

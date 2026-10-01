@@ -1720,17 +1720,7 @@ async def purge_gdpr_user_data(identifier: str, api_key: str = Security(get_api_
     anonymized_total = 0
 
     # Purge from sharded memory router if active
-    router = getattr(app.state, "memory_router", None)
-    if router:
-        for memory_instance in router.local_memories.values():
-            res = await memory_instance.purge_user_data(identifier)
-            if isinstance(res, dict):
-                deleted_total += res.get("records_deleted", 0)
-                anonymized_total += res.get("records_anonymized", 0)
-            elif isinstance(res, int):
-                deleted_total += res
-    else:
-        # Fallback to monolithic memory
+    # Fallback to monolithic memory
         twin = getattr(app.state, "twin_service_instance", None)
         if twin and hasattr(twin, "long_term_memory"):
             res = await twin.long_term_memory.purge_user_data(identifier)
@@ -1791,14 +1781,6 @@ async def add_sharded_event(payload: Dict = Body(...), api_key: str = Security(g
     if "session_id" not in meta:
         meta["session_id"] = session_id
 
-    router = getattr(app.state, "memory_router", None)
-    if router:
-        # Route to local SQLite db shard hosted on this node
-        node_id = router.local_node_id
-        if node_id in router.local_memories:
-            await router.local_memories[node_id].add_event(kind, content, meta)
-            return {"status": "success", "node": node_id}
-
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
@@ -1811,13 +1793,6 @@ async def add_sharded_event(payload: Dict = Body(...), api_key: str = Security(g
 @app.get("/api/memory/sharded/events", summary="Get Sharded Events", tags=["Memory"])
 async def get_sharded_events(session_id: str, kind: Optional[str] = None, limit: int = 10, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """Retrieves and filters sharded events for a specific session ID from the local database shard."""
-    router = getattr(app.state, "memory_router", None)
-    if router:
-        node_id = router.local_node_id
-        if node_id in router.local_memories:
-            events = await router.local_memories[node_id].get_events(kind=kind, limit=limit)
-            return [e for e in events if e.get("meta", {}).get("session_id") == session_id]
-
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
@@ -1840,11 +1815,6 @@ async def coordinator_create_work_item(payload: Dict = Body(...), api_key: str =
     parent_id = payload.get("parent_id")
     meta = payload.get("meta")
 
-    router = getattr(app.state, "memory_router", None)
-    if router and router.coordinator_node_id in router.local_memories:
-        item_id = await router.local_memories[router.coordinator_node_id].create_work_item(title, created_by, assignee_id, parent_id, meta)
-        return {"item_id": item_id}
-
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
@@ -1862,11 +1832,6 @@ async def coordinator_update_work_item(item_id: str, payload: Dict = Body(...), 
     validation_results = payload.get("validation_results")
     meta_update = payload.get("meta_update")
 
-    router = getattr(app.state, "memory_router", None)
-    if router and router.coordinator_node_id in router.local_memories:
-        res = await router.local_memories[router.coordinator_node_id].update_work_item(item_id, status, assignee_id, validation_results, meta_update)
-        return {"updated": res}
-
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
@@ -1879,13 +1844,6 @@ async def coordinator_update_work_item(item_id: str, payload: Dict = Body(...), 
 @app.get("/api/memory/coordinator/work_items/{item_id}", summary="Get Task from Coordinator Node", tags=["Memory"])
 async def coordinator_get_work_item(item_id: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """Retrieves full details of a specific task from the central coordinator node."""
-    router = getattr(app.state, "memory_router", None)
-    if router and router.coordinator_node_id in router.local_memories:
-        item = await router.local_memories[router.coordinator_node_id].get_work_item(item_id)
-        if item is None:
-            raise HTTPException(status_code=404, detail="Work item not found")
-        return item
-
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
@@ -1900,10 +1858,6 @@ async def coordinator_get_work_item(item_id: str, api_key: str = Security(get_ap
 @app.get("/api/memory/coordinator/work_items", summary="List Tasks from Coordinator Node", tags=["Memory"])
 async def coordinator_list_work_items(status: Optional[str] = None, assignee_id: Optional[str] = None, limit: int = 50, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """Lists tasks matching filters from the central coordinator node."""
-    router = getattr(app.state, "memory_router", None)
-    if router and router.coordinator_node_id in router.local_memories:
-        return await router.local_memories[router.coordinator_node_id].list_work_items(status, assignee_id, limit)
-
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
@@ -1920,11 +1874,6 @@ async def coordinator_enqueue_dlq(payload: Dict = Body(...), api_key: str = Secu
     error_reason = payload.get("error_reason")
     retry_count = payload.get("retry_count", 0)
 
-    router = getattr(app.state, "memory_router", None)
-    if router and router.coordinator_node_id in router.local_memories:
-        item_id = await router.local_memories[router.coordinator_node_id].enqueue_dlq_item(event_type, dlq_payload, error_reason, retry_count)
-        return {"id": item_id}
-
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
@@ -1939,11 +1888,6 @@ async def coordinator_claim_dlq(payload: Dict = Body(...), api_key: str = Securi
     """Atomically claims a pending DLQ item from the coordinator node to prevent double claiming."""
     worker_id = payload.get("worker_id")
     supported_types = payload.get("supported_types")
-
-    router = getattr(app.state, "memory_router", None)
-    if router and router.coordinator_node_id in router.local_memories:
-        item = await router.local_memories[router.coordinator_node_id].claim_dlq_item(worker_id, supported_types)
-        return item or JSONResponse(status_code=204, content={})
 
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
@@ -1962,11 +1906,6 @@ async def coordinator_update_dlq(item_id: str, payload: Dict = Body(...), api_ke
     retry_after = payload.get("retry_after")
     increment_retry = payload.get("increment_retry", False)
 
-    router = getattr(app.state, "memory_router", None)
-    if router and router.coordinator_node_id in router.local_memories:
-        res = await router.local_memories[router.coordinator_node_id].update_dlq_item(item_id, status, result, retry_after, increment_retry)
-        return {"updated": res}
-
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
@@ -1983,31 +1922,13 @@ async def coordinator_update_dlq(item_id: str, payload: Dict = Body(...), api_ke
 @app.get("/api/memory/sharded/status", summary="Get Sharding Status", tags=["Memory"])
 async def get_sharding_status(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """Retrieves the status of the sharding routing proxy, indicating if it is active and which shards are configured."""
-    router = getattr(app.state, "memory_router", None)
-    if not router:
-        return {"enabled": False}
-    return {
-        "enabled": True,
-        "local_node_id": router.local_node_id,
-        "coordinator_node_id": router.coordinator_node_id,
-        "replica_count": router.replica_count,
-        "shards": list(router.nodes_config.keys()),
-        "local_databases": list(router.local_memories.keys())
-    }
+
 
 
 @app.get("/api/memory/sharded/lookup", summary="Lookup Shard for Key", tags=["Memory"])
 async def lookup_shard_for_key(key: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
     """Looks up the target node ID and API URL mapping for a given session or hash key on the consistent hash ring."""
-    router = getattr(app.state, "memory_router", None)
-    if not router:
-        raise HTTPException(status_code=400, detail="Sharded memory is not enabled")
-    target_node = router.get_shard_for_session(key)
-    return {
-        "key": key,
-        "target_node": target_node,
-        "api_url": router.nodes_config.get(target_node, {}).get("api_url")
-    }
+
 
 @app.post("/webhook", summary="Alertmanager Webhook Receiver", description="Receives alert notifications from Prometheus Alertmanager.", tags=["Monitoring"])
 async def alertmanager_webhook(request: Request):
