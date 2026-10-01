@@ -1,4 +1,6 @@
 from pipecatapp.memory_backends_impl.consul_kv_backend import ConsulKVBackend
+from pipecatapp.memory_backends import BaseMemoryBackend
+
 import faiss
 import json
 import sqlite3
@@ -21,7 +23,7 @@ class Document:
     def to_dict(self):
         return {"id": self.id, "content": self.content, "metadata": self.metadata}
 
-class MemoryStore:
+class MemoryStore(BaseMemoryBackend):
     """Manages the agent's long-term memory using a vector database.
 
     This class handles the storage and retrieval of textual memories. It uses a
@@ -87,7 +89,7 @@ class MemoryStore:
     def _load_index(self):
         """Loads the FAISS index from disk or creates a new one."""
         if os.path.exists(self.index_file):
-            return faiss.read_index(self.index_file)
+            return faiss.read_index(self.index_file, faiss.IO_FLAG_MMAP)
         else:
             return faiss.IndexFlatL2(self.dimension)
 

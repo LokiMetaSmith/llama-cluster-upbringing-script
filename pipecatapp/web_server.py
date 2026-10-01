@@ -3,6 +3,7 @@ import re
 import json
 import asyncio
 import logging
+import tracemalloc
 import requests
 import httpx
 import base64
@@ -54,6 +55,10 @@ if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
     processor = BatchSpanProcessor(OTLPSpanExporter())
     provider.add_span_processor(processor)
 trace.set_tracer_provider(provider)
+
+
+# Start tracemalloc to establish a memory resource baseline and hunt for leaks
+tracemalloc.start()
 
 app = FastAPI(
     title="Pipecat Agent API",
@@ -1950,3 +1955,15 @@ if __name__ == "__main__":
     import uvicorn
     host_ip = os.getenv("HOST_IP", "::")
     uvicorn.run(app, host=host_ip, port=8000)
+
+@app.get("/api/v1/memory/tracemalloc_stats", summary="Dump Tracemalloc Stats", tags=["Diagnostics"])
+async def dump_tracemalloc_stats(top_n: int = 10, api_key: str = Security(get_api_key)):
+    """Dumps the top N memory-consuming lines to identify leaks."""
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+
+    results = []
+    for stat in top_stats[:top_n]:
+        results.append(str(stat))
+
+    return {"status": "success", "top_stats": results}

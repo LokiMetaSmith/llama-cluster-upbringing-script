@@ -25,7 +25,7 @@ job "model-benchmark-{{ model_filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
       }
 
       resources {
-        cpu    = 2000
+        cpu = 1000
         memory = 8192 # Allocate enough memory for the largest model
       }
     }
