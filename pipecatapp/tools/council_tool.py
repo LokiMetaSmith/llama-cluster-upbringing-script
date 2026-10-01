@@ -17,12 +17,7 @@ class CouncilTool:
         self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
 
         # Hardcoded list of council models if openrouter is available
-        self.openrouter_models = [
-            "openai/gpt-4-turbo",
-            "anthropic/claude-3-opus",
-            "google/gemini-pro-1.5",
-            "google/gemma-4-31b-it"
-        ] if self.openrouter_api_key else []
+        self.openrouter_models = []
 
 
     def get_schema(self) -> dict:

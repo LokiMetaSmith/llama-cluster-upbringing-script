@@ -139,7 +139,7 @@ class ShuntTool:
         try:
             # We use a general model name here; our MoE gateway routes requests
             response = await self.client.chat.completions.create(
-                model="openai/local/router",
+                model="openai/local/moe",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
@@ -175,7 +175,7 @@ class ShuntTool:
 
         try:
             response = await self.client.chat.completions.create(
-                model="openai/local/router",
+                model="openai/local/moe",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}

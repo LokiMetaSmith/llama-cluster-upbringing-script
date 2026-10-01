@@ -248,7 +248,7 @@ class SwarmTool:
 
         async with httpx.AsyncClient() as client:
             try:
-                resp = await client.get(f"{consul_url}/v1/kv/{prefix}?keys")
+                resp = await client.get(f"{consul_url}/v1/kv/{prefix}?keys&index=0&wait=1s") # Simple blocking query fallback
                 if resp.status_code == 404:
                     return json.dumps([])
                 resp.raise_for_status()

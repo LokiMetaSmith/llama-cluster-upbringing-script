@@ -2,8 +2,6 @@
 
 **Instructions for AI Agents:**
 When reviewing items in this list, mark them as complete by placing an `[x]` at the beginning of the line (e.g., `- [x] path/to/file.py:line: item`). If the item is already marked `[x]`, change it to `[x]`.
-
-
 This document contains a list of potentially unused code segments identified by `vulture`. These items have been flagged for review to determine if they meet requirements to implement, have been implemented and need to be documented, or are truly dead code that should be removed.
 
 - [x] .vulture_whitelist.py:76: unused import 'scripts' (90% confidence)
@@ -102,9 +100,9 @@ This document contains a list of potentially unused code segments identified by 
 - [x] pipecatapp/tests/test_openclaw.py:69: unused variable 'exc_val' (100% confidence)
 - [x] pipecatapp/tests/test_proxy_security.py:29: unused function 'get_ip' (60% confidence)
 - [x] pipecatapp/tests/test_proxy_security.py:60: unused function 'get_ip' (60% confidence)
-- [x] pipecatapp/tests/test_rag_pruning.py:24: unused attribute '__spec__' (60% confidence)
+- [x] pipecatapp/tests/test_rag_pruning.py:24: unused attribute '**spec**' (60% confidence)
 - [x] pipecatapp/tests/test_rate_limiter.py:14: unused function 'sample_endpoint' (60% confidence)
-- [x] pipecatapp/tools/__init__.py:169: unused function '__getattr__' (60% confidence)
+- [x] pipecatapp/tools/**init**.py:169: unused function '**getattr**' (60% confidence)
 - [x] pipecatapp/tools/archivist_tool.py:51: unsatisfiable 'if' condition (100% confidence)
 - [x] pipecatapp/tools/autoresearch_tool.py:56: unsatisfiable 'if' condition (100% confidence)
 - [x] pipecatapp/tools/code_runner_tool.py:42: unused attribute 'connection_file' (60% confidence)
@@ -280,7 +278,9 @@ This document contains a list of potentially unused code segments identified by 
 - [x] tools/mcp-stripe/server.py:25: unused method 'do_POST' (60% confidence)
 
 ## Dependency/Test Collection Issues
+
 During this dead code review, widespread dependency resolution issues were observed when running the test suite across the repository (`pipecatapp`, `tools/mcp`, `tests/e2e`, etc). Many `import` statements throw `ModuleNotFoundError` due to unmet third-party dependencies not present in `requirements-dev.txt`, `pyproject.toml` or `uv.lock`. These include but are not limited to:
+
 - `fastapi` and `fastapi.testclient`
 - `jupyter_client`
 - `mcp.server` and `mcp` SDK packages
@@ -290,3 +290,11 @@ During this dead code review, widespread dependency resolution issues were obser
 - `aiofiles`
 - `cryptography`
 These issues caused widespread pytest collection failures and should be resolved in a dedicated dependency-hardening pass.
+- [x] pipecatapp/sharded_router.py (Deleted)
+- [x] pipecatapp/router_train_embeddings.pt (Deleted)
+- [x] pipecatapp/router_trained_model.pkl (Deleted)
+- [x] pipecatapp/router_training_data.csv (Deleted)
+- [x] pipecatapp/router_training_data.jsonl (Deleted)
+- [x] pipecatapp/train_router.py (Deleted)
+- [x] pipecatapp/generate_real_embeddings.py (Deleted)
+- [x] pipecatapp/router_config.yaml (Deleted)

@@ -47,7 +47,7 @@ class TwinService(FrameProcessor):
             tts_service (FrameProcessor, optional): The TTS service for generating audio responses.
         """
         super().__init__()
-        self.router_llm = llm
+        self.moe_llm = llm
         self.llm_base_url = llm_base_url
         self.vision_detector = vision_detector
         self.runner = runner
@@ -74,7 +74,7 @@ class TwinService(FrameProcessor):
                     import pipecatapp.web_server
                 except ImportError:
                     from pipecatapp import web_server
-                from pipecatapp.sharded_router import ShardedPMMMemoryRouter
+
                 config_path = os.getenv("SHARDING_CONFIG_PATH", "sharding_config.yaml")
                 if not os.path.exists(config_path):
                     # Write a default mock sharding config for standalone/graceful fallback

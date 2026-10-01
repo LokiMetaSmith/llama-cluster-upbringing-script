@@ -51,7 +51,7 @@ job "vllm-server-{{ model.name }}" {
       }
 
       resources {
-        cpu    = 2000
+        cpu = 1000
         memory = {{ model.memory_mb }}
         device "cuda" {
           count = 1
