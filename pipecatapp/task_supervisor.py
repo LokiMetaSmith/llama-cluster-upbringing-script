@@ -50,6 +50,19 @@ class TaskSupervisor:
                 tasks=[{"id": tid, "prompt": payload["prompt"], "context": payload["context"]}],
                 agent_type=payload["agent_type"]
             )
+            try:
+                res_dict = json.loads(spawn_res)
+                if res_dict.get("job_ids"):
+                    nomad_job_id = res_dict["job_ids"][0]
+                    self.active_tasks[tid] = {
+                        "start_time": time.time(),
+                        "meta": payload,
+                        "status": "starting",
+                        "nomad_job_id": nomad_job_id
+                    }
+                    self.logger.info(f"Task '{tid}' initialized with job ID '{nomad_job_id}'")
+            except Exception as e:
+                self.logger.error(f"Failed to parse spawn result for '{tid}': {e}")
             return spawn_res
 
         async def _on_cancel(tid, payload):
@@ -207,6 +220,11 @@ class TaskSupervisor:
                         "status": "running",
                         "nomad_job_id": meta.get("nomad_job_id")
                     }
+                else:
+                    self.active_tasks[task_id]["status"] = "running"
+                    if meta.get("nomad_job_id"):
+                        self.active_tasks[task_id]["nomad_job_id"] = meta.get("nomad_job_id")
+                    self.active_tasks[task_id]["meta"].update(meta)
             elif kind == "worker_result":
                 if task_id in self.active_tasks:
                     self.logger.info(f"Task {task_id} completed successfully.")
@@ -247,6 +265,22 @@ class TaskSupervisor:
                             agent_type=agent_type
                         )
                         self.logger.info(f"Retry spawn result: {spawn_res}")
+
+                        # Re-parse exact nomad_job_id for the retried task
+                        try:
+                            res_dict = json.loads(spawn_res)
+                            if res_dict.get("job_ids"):
+                                new_job_id = res_dict["job_ids"][0]
+                                self.active_tasks[task_id] = {
+                                    "start_time": time.time(),
+                                    "meta": info["meta"],
+                                    "status": "starting",
+                                    "nomad_job_id": new_job_id
+                                }
+                                self.logger.info(f"Task '{task_id}' retried and re-initialized with new job ID '{new_job_id}'")
+                        except Exception as parse_e:
+                            self.logger.error(f"Failed to parse retry spawn result for '{task_id}': {parse_e}")
+
                     except Exception as se:
                         self.logger.error(f"Failed to retry spawn for task {task_id}: {se}")
                 else:
