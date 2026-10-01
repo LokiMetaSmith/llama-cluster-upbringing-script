@@ -3,7 +3,8 @@ import uuid
 import logging
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
-from pipecatapp.memory_backends_impl.consul_backend import ConsulMemoryBackend
+from pipecatapp.memory_legacy import MemoryStore as LegacyMemoryStore
+from pipecatapp.memory_backends_impl.helix_backend import HelixMemoryBackend
 
 @dataclass
 class Document:
@@ -16,12 +17,15 @@ class Document:
         return {"id": self.id, "content": self.content, "metadata": self.metadata}
 
 class MemoryStore:
-    """
-    A unified entry point for memory operations, delegating to the selected backend.
-    """
-    def __init__(self, index_file=None, store_file=None, sqlite_file=None):
-        logging.info("Initializing Consul KV Memory Backend for stateless operation...")
-        self.backend = ConsulMemoryBackend()
+    def __init__(self, index_file="long_term_memory.faiss", store_file="long_term_memory.json", sqlite_file="long_term_memory.sqlite"):
+        self.use_helix = os.getenv("USE_HELIX_MEMORY", "false").lower() == "true"
+
+        if self.use_helix:
+            logging.info("Initializing HelixDB Memory Backend...")
+            self.backend = HelixMemoryBackend()
+        else:
+            logging.info("Initializing Legacy FAISS+SQLite Memory Backend...")
+            self.backend = LegacyMemoryStore(index_file=index_file, store_file=store_file, sqlite_file=sqlite_file)
 
     def add(self, text: str):
         self.backend.add(text)
@@ -69,7 +73,18 @@ class MemoryStore:
         return self.backend.delete_skill(name)
 
     def write_documents(self, documents: List[Document]) -> int:
-        return self.backend.write_documents(documents)
+        if self.use_helix:
+             # Basic implementation for PoC using add
+             for doc in documents:
+                  meta_str = ", ".join(f"{k}: {v}" for k, v in doc.metadata.items())
+                  full_text = f"[{meta_str}] {doc.content}" if meta_str else doc.content
+                  self.add(full_text)
+             return len(documents)
+        else:
+             return self.backend.write_documents(documents)
 
     def filter_documents(self, filters: Dict[str, Any] = None) -> List[Document]:
-        return self.backend.filter_documents(filters)
+        if self.use_helix:
+             return []
+        else:
+             return self.backend.filter_documents(filters)

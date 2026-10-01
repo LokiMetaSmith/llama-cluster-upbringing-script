@@ -1719,16 +1719,15 @@ async def purge_gdpr_user_data(identifier: str, api_key: str = Security(get_api_
     deleted_total = 0
     anonymized_total = 0
 
-    # Purge from sharded memory router if active
     # Fallback to monolithic memory
-        twin = getattr(app.state, "twin_service_instance", None)
-        if twin and hasattr(twin, "long_term_memory"):
-            res = await twin.long_term_memory.purge_user_data(identifier)
-            if isinstance(res, dict):
-                deleted_total += res.get("records_deleted", 0)
-                anonymized_total += res.get("records_anonymized", 0)
-            elif isinstance(res, int):
-                deleted_total += res
+    twin = getattr(app.state, "twin_service_instance", None)
+    if twin and hasattr(twin, "long_term_memory"):
+        res = await twin.long_term_memory.purge_user_data(identifier)
+        if isinstance(res, dict):
+            deleted_total += res.get("records_deleted", 0)
+            anonymized_total += res.get("records_anonymized", 0)
+        elif isinstance(res, int):
+            deleted_total += res
 
     return {
         "status": "success",
