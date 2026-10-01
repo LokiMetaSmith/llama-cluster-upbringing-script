@@ -95,9 +95,9 @@ To act on these recommendations, the following steps should be taken:
 - [ ] **Benchmark:** Measure the reduction in CPU cache misses and latency improvements.
 
 ### 2. Generalize the HMAC Proxy
-- [ ] **Extract:** Lift the core logic from Ghostlink's `rpc_cluster.rs` (nonce generation, HMAC calculation, and the L4 TCP splicing proxy).
-- [ ] **Package:** Create a standalone Rust binary or Ansible role in `pipecatapp` (e.g., `ansible/roles/lightweight_auth_proxy`) that can be placed in front of any arbitrary TCP port.
-- [ ] **Test:** Deploy it in front of a low-level service (like a Prometheus node exporter or an internal raw socket) and verify that only clients with the `shared_secret` can establish a connection.
+- [x] **Extract:** Lift the core logic from Ghostlink's `rpc_cluster.rs` (nonce generation, HMAC calculation, and the L4 TCP splicing proxy).
+- [x] **Package:** Create a standalone Rust binary or Ansible role in `pipecatapp` (e.g., `ansible/roles/lightweight_auth_proxy`) that can be placed in front of any arbitrary TCP port.
+- [x] **Test:** Deploy it in front of a low-level service (like a Prometheus node exporter or an internal raw socket) and verify that only clients with the `shared_secret` can establish a connection.
 
 ### 3. Review `gpu_telemetry` for Missing Signals
 - [x] **Audit:** Review Ghostlink's `system_profile.rs` to see if there are any valuable signals (like AVX-512 support, P/E core layouts, or specific NPU detection) that our current `gpu_telemetry` daemon is missing.

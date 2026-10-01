@@ -1,0 +1,27 @@
+---
+- name: Ensure Rust is installed
+  ansible.builtin.shell: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  args:
+    creates: "{{ ansible_env.HOME }}/.cargo/bin/cargo"
+  become_user: "{{ target_user | default(ansible_user_id) }}"
+
+- name: Build lightweight auth proxy
+  ansible.builtin.shell: "{{ ansible_env.HOME }}/.cargo/bin/cargo build --release"
+  args:
+    chdir: "{{ role_path }}/files"
+    creates: "{{ role_path }}/files/target/release/lightweight_auth_proxy"
+  become_user: "{{ target_user | default(ansible_user_id) }}"
+
+- name: Create bin directory if not exists
+  ansible.builtin.file:
+    path: /usr/local/bin
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Copy binary to /usr/local/bin
+  ansible.builtin.copy:
+    src: "{{ role_path }}/files/target/release/lightweight_auth_proxy"
+    dest: /usr/local/bin/lightweight_auth_proxy
+    mode: '0755'
+  become: true
