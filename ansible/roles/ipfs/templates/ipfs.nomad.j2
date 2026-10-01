@@ -5,7 +5,7 @@ job "ipfs" {
   group "ipfs" {
     ephemeral_disk {
       migrate = true
-      size    = 50
+      size    = 200
       sticky  = true
     }
 
@@ -31,6 +31,11 @@ job "ipfs" {
     task "ipfs" {
       driver = "raw_exec"
       user   = "1000"
+
+      logs {
+        max_files     = 5
+        max_file_size = 10
+      }
 
       config {
         command = "/usr/local/bin/ipfs"
