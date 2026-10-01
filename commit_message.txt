@@ -1,0 +1,6 @@
+Implement lightweight auth proxy
+
+- Created `lightweight_auth_proxy` Rust binary using `tokio`, `ring`, and `clap` to proxy TCP connections after validating an HMAC-SHA256 challenge.
+- Wrote integration tests verifying the auth challenge logic and proxy splicing (`tokio::io::copy_bidirectional`).
+- Created an Ansible role wrapper in `ansible/roles/lightweight_auth_proxy/` containing the build logic for deploying the proxy binary.
+- Updated `GHOSTLINK_IDEAS.md` to mark the "Generalize the HMAC Proxy" tasks as complete.
