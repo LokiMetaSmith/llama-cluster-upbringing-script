@@ -30,7 +30,7 @@ job "ipfs" {
 
     task "ipfs" {
       driver = "raw_exec"
-      user   = "1000"
+      user   = "{{ target_user | default('pipecatapp') }}"
 
       logs {
         max_files     = 5

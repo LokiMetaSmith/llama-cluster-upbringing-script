@@ -239,14 +239,14 @@
       failed_when: false
       changed_when: false
 
-    - name: Get Pending Alloc ID
-      ansible.builtin.shell: "echo '{{ ipfs_job_status.stdout }}' | grep pending | awk '{print $1}' | head -n 1"
-      register: ipfs_pending_alloc_id
+    - name: Get Latest Alloc ID
+      ansible.builtin.shell: "echo '{{ ipfs_job_status.stdout }}' | awk '/Allocations/{flag=1; next} flag && NF > 0 { if ($1 != \"ID\") {print $1; exit} }'"
+      register: ipfs_latest_alloc_id
       failed_when: false
       changed_when: false
 
-    - name: Diagnose Pending Alloc Status
-      ansible.builtin.command: /usr/local/bin/nomad alloc status {{ ipfs_pending_alloc_id.stdout }}
+    - name: Diagnose Latest Alloc Status
+      ansible.builtin.command: /usr/local/bin/nomad alloc status {{ ipfs_latest_alloc_id.stdout }}
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -255,10 +255,10 @@
       register: ipfs_alloc_status
       failed_when: false
       changed_when: false
-      when: ipfs_pending_alloc_id.stdout != ""
+      when: ipfs_latest_alloc_id.stdout != ""
 
-    - name: Diagnose Pending Alloc Logs
-      ansible.builtin.command: /usr/local/bin/nomad alloc logs -stderr {{ ipfs_pending_alloc_id.stdout }}
+    - name: Diagnose Latest Alloc Logs
+      ansible.builtin.command: /usr/local/bin/nomad alloc logs -stderr {{ ipfs_latest_alloc_id.stdout }}
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -267,7 +267,7 @@
       register: ipfs_alloc_logs
       failed_when: false
       changed_when: false
-      when: ipfs_pending_alloc_id.stdout != ""
+      when: ipfs_latest_alloc_id.stdout != ""
 
     - name: Log Diagnoses
       ansible.builtin.debug:
@@ -315,14 +315,14 @@
       failed_when: false
       changed_when: false
 
-    - name: Get Pending Alloc ID
-      ansible.builtin.shell: "echo '{{ ipfs_job_status.stdout }}' | grep pending | awk '{print $1}' | head -n 1"
-      register: ipfs_pending_alloc_id
+    - name: Get Latest Alloc ID
+      ansible.builtin.shell: "echo '{{ ipfs_job_status.stdout }}' | awk '/Allocations/{flag=1; next} flag && NF > 0 { if ($1 != \"ID\") {print $1; exit} }'"
+      register: ipfs_latest_alloc_id
       failed_when: false
       changed_when: false
 
-    - name: Diagnose Pending Alloc Status
-      ansible.builtin.command: /usr/local/bin/nomad alloc status {{ ipfs_pending_alloc_id.stdout }}
+    - name: Diagnose Latest Alloc Status
+      ansible.builtin.command: /usr/local/bin/nomad alloc status {{ ipfs_latest_alloc_id.stdout }}
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -331,10 +331,10 @@
       register: ipfs_alloc_status
       failed_when: false
       changed_when: false
-      when: ipfs_pending_alloc_id.stdout != ""
+      when: ipfs_latest_alloc_id.stdout != ""
 
-    - name: Diagnose Pending Alloc Logs
-      ansible.builtin.command: /usr/local/bin/nomad alloc logs -stderr {{ ipfs_pending_alloc_id.stdout }}
+    - name: Diagnose Latest Alloc Logs
+      ansible.builtin.command: /usr/local/bin/nomad alloc logs -stderr {{ ipfs_latest_alloc_id.stdout }}
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -343,7 +343,7 @@
       register: ipfs_alloc_logs
       failed_when: false
       changed_when: false
-      when: ipfs_pending_alloc_id.stdout != ""
+      when: ipfs_latest_alloc_id.stdout != ""
 
     - name: Log Diagnoses
       ansible.builtin.debug:
