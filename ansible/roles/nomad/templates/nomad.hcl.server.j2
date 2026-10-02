@@ -83,6 +83,12 @@ client {
     read_only = false
   }
 
+  host_volume "ipfs" {
+    path      = "/opt/unified_fs_backend/ipfs"
+    read_only = false
+  }
+
+
   host_volume "mqtt-data" {
     path      = "{{ nomad_volumes_dir }}/mqtt-data"
     read_only = false

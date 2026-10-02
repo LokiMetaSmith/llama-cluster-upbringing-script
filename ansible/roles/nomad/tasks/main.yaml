@@ -288,6 +288,17 @@
   notify:
     - Restart nomad
 
+
+- name: Ensure /opt/unified_fs_backend/ipfs directory exists for Nomad volume
+  ansible.builtin.file:
+    path: "/opt/unified_fs_backend/ipfs"
+    state: directory
+    owner: "1000"
+    group: "100"
+    mode: '0755'
+    recurse: yes
+  become: yes
+
 - name: Ensure /opt/pipecatapp directory exists for Nomad volume
   ansible.builtin.file:
     path: "{{ pipecat_app_dir }}"
