@@ -166,9 +166,26 @@ _module_lookup = {
     "SubstrateVisualizerTool": "substrate_visualizer_tool",
 }
 
+
 def __getattr__(name):
     if name in _module_lookup:
         module_name = _module_lookup[name]
         module = importlib.import_module(f".{module_name}", package=__name__)
         return getattr(module, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+from typing import Optional
+
+
+def get_component_spec_for_tool(tool_instance) -> "Optional[ComponentSpec]":
+    """Helper method to dynamically generate a KFP-style ComponentSpec for any tool."""
+    from pipecatapp.workflow.component_spec import (
+        ComponentSpec,
+        convert_json_schema_to_component_spec,
+    )
+
+    if hasattr(tool_instance, "get_schema"):
+        schema = tool_instance.get_schema()
+        return convert_json_schema_to_component_spec(schema)
+    return None

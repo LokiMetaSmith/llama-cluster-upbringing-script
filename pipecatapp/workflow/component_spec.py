@@ -248,3 +248,79 @@ class GraphSpec(_BaseModel):
 @dataclasses.dataclass
 class GraphImplementation(_BaseModel):
     graph: GraphSpec
+
+
+def convert_json_schema_to_component_spec(
+    schema: dict,
+    image: str = "pipecat-default-worker",
+    command: Optional[List[CommandlineArgumentType]] = None,
+    args: Optional[List[CommandlineArgumentType]] = None,
+) -> ComponentSpec:
+    """Converts a standard OpenAI-style JSON schema (from a Tool) to a KFP-style ComponentSpec."""
+    function_def = schema.get(
+        "function", schema
+    )  # Handle if wrapped in "type": "function"
+    name = function_def.get("name", "UnknownComponent")
+    description = function_def.get("description", "")
+
+    inputs: List[InputSpec] = []
+
+    parameters = function_def.get("parameters", {})
+    properties = parameters.get("properties", {})
+    required = parameters.get("required", [])
+
+    for prop_name, prop_details in properties.items():
+        is_optional = prop_name not in required
+        prop_type_str = prop_details.get("type", "String")
+        # Map basic types
+        if prop_type_str == "string":
+            mapped_type = "String"
+        elif prop_type_str == "integer":
+            mapped_type = "Integer"
+        elif prop_type_str == "boolean":
+            mapped_type = "Boolean"
+        elif prop_type_str == "number":
+            mapped_type = "Float"
+        else:
+            mapped_type = "JsonObject"
+
+        inputs.append(
+            InputSpec(
+                name=prop_name,
+                type=mapped_type,
+                description=prop_details.get("description"),
+                optional=is_optional,
+            )
+        )
+
+    # We create a generic output for the tool result
+    outputs = [
+        OutputSpec(
+            name="result", type="JsonObject", description="Result of the tool execution"
+        )
+    ]
+
+    # Auto-generate args if not provided
+    if args is None:
+        args = []
+        for prop_name in properties.keys():
+            args.extend(
+                [f"--{prop_name}=", InputValuePlaceholder(input_name=prop_name)]
+            )
+        args.append(OutputPathPlaceholder(output_name="result"))
+
+    implementation = ContainerImplementation(
+        container=ContainerSpec(
+            image=image,
+            command=command or ["python", "-m", f"pipecatapp.tools.{name}"],
+            args=args,
+        )
+    )
+
+    return ComponentSpec(
+        name=name,
+        description=description,
+        inputs=inputs,
+        outputs=outputs,
+        implementation=implementation,
+    )
