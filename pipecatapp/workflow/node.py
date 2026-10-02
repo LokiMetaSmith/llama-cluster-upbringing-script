@@ -3,6 +3,7 @@ if TYPE_CHECKING:
     from pipecatapp.workflow.context import WorkflowContext
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Set, Optional, Tuple
+from .component_spec import ComponentSpec, InputSpec, OutputSpec
 
 class Node(ABC):
     """Abstract base class for a node in the workflow graph."""
@@ -66,3 +67,20 @@ class Node(ABC):
             "style": self.style,
             "parent": self.parent
         }
+
+    def to_component_spec(self) -> ComponentSpec:
+        """Converts this node's signature into a ComponentSpec."""
+        inputs = []
+        for inp in self.expected_inputs:
+            inputs.append(InputSpec(name=inp, type="Any"))
+
+        outputs = []
+        for out in self.expected_outputs:
+            outputs.append(OutputSpec(name=out, type="Any"))
+
+        return ComponentSpec(
+            name=self.__class__.__name__,
+            description=self.__doc__ or f"{self.__class__.__name__} node",
+            inputs=inputs if inputs else None,
+            outputs=outputs if outputs else None
+        )

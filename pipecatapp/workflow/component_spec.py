@@ -248,3 +248,47 @@ class GraphSpec(_BaseModel):
 @dataclasses.dataclass
 class GraphImplementation(_BaseModel):
     graph: GraphSpec
+
+
+def tool_to_component_spec(tool: Any) -> ComponentSpec:
+    """Converts a tool instance (with name, description, and input schema) into a ComponentSpec."""
+    name = getattr(tool, "name", tool.__class__.__name__)
+    description = getattr(tool, "description", tool.__doc__ or f"{name} tool")
+
+    schema = {}
+    if hasattr(tool, "get_schema") and callable(tool.get_schema):
+        try:
+            tool_schema = tool.get_schema()
+            # If it's wrapped in a function tool schema (OpenAI format)
+            if "function" in tool_schema:
+                schema = tool_schema["function"].get("parameters", {})
+            else:
+                schema = tool_schema
+        except Exception:
+            pass
+    elif hasattr(tool, "input_schema"):
+        schema = tool.input_schema
+
+    inputs = []
+    if schema and "properties" in schema:
+        required = schema.get("required", [])
+        for prop_name, prop_def in schema["properties"].items():
+            inputs.append(
+                InputSpec(
+                    name=prop_name,
+                    type=prop_def.get("type", "Any"),
+                    description=prop_def.get("description", None),
+                    optional=(prop_name not in required)
+                )
+            )
+
+    # Tools generally output a single result or a dict of results.
+    # Without explicit output schemas in our tools, we'll assume a generic 'output'.
+    outputs = [OutputSpec(name="output", type="Any", description="Result of the tool execution")]
+
+    return ComponentSpec(
+        name=name,
+        description=description,
+        inputs=inputs if inputs else None,
+        outputs=outputs
+    )
