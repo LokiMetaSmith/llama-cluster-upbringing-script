@@ -219,23 +219,148 @@
   changed_when: false
 
 - name: Wait for IPFS API to be ready
-  ansible.builtin.wait_for:
-    host: "127.0.0.1"
-    port: "{{ ipfs_api_port | default(5001) }}"
-    delay: 5
-    timeout: 120
-    state: started
+  block:
+    - name: Wait for IPFS API to be ready
+      ansible.builtin.wait_for:
+        host: "127.0.0.1"
+        port: "{{ ipfs_api_port | default(5001) }}"
+        delay: 5
+        timeout: 120
+        state: started
+  rescue:
+    - name: Diagnose IPFS Nomad job status
+      ansible.builtin.command: /usr/local/bin/nomad job status ipfs
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: ipfs_job_status
+      failed_when: false
+      changed_when: false
+
+    - name: Get Pending Alloc ID
+      ansible.builtin.shell: "echo '{{ ipfs_job_status.stdout }}' | grep pending | awk '{print $1}' | head -n 1"
+      register: ipfs_pending_alloc_id
+      failed_when: false
+      changed_when: false
+
+    - name: Diagnose Pending Alloc Status
+      ansible.builtin.command: /usr/local/bin/nomad alloc status {{ ipfs_pending_alloc_id.stdout }}
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: ipfs_alloc_status
+      failed_when: false
+      changed_when: false
+      when: ipfs_pending_alloc_id.stdout != ""
+
+    - name: Diagnose Pending Alloc Logs
+      ansible.builtin.command: /usr/local/bin/nomad alloc logs -stderr {{ ipfs_pending_alloc_id.stdout }}
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: ipfs_alloc_logs
+      failed_when: false
+      changed_when: false
+      when: ipfs_pending_alloc_id.stdout != ""
+
+    - name: Log Diagnoses
+      ansible.builtin.debug:
+        msg: |
+          Job Status:
+          {{ ipfs_job_status.stdout | default('No job status') }}
+
+          Alloc Status:
+          {{ ipfs_alloc_status.stdout | default('No alloc status') }}
+
+          Alloc Logs:
+          {{ ipfs_alloc_logs.stdout | default('No alloc logs') }}
+
+    - name: Fail task due to IPFS API timeout
+      ansible.builtin.fail:
+        msg: "Timeout waiting for IPFS API to be ready on 127.0.0.1:{{ ipfs_api_port | default(5001) }}"
+
 
 - name: Wait for IPFS Gateway to be fully ready
-  ansible.builtin.uri:
-    url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ ipfs_gateway_port | default(8092) }}/"
-    return_content: yes
-    status_code: [200, 400, 403, 404, 502, 504, -1]
-  register: ipfs_gateway_status
-  until: ipfs_gateway_status.status is defined and ipfs_gateway_status.status in [200, 400, 403, 404]
-  failed_when: false
-  retries: 6
-  delay: 10
+  block:
+    - name: Wait for IPFS Gateway to be fully ready
+      ansible.builtin.uri:
+        url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ ipfs_gateway_port | default(8092) }}/"
+        return_content: yes
+        status_code: [200, 400, 403, 404, 502, 504, -1]
+      register: ipfs_gateway_status
+      until: ipfs_gateway_status.status is defined and ipfs_gateway_status.status in [200, 400, 403, 404]
+      failed_when: false
+      retries: 6
+      delay: 10
+
+    - name: Check Gateway Status Success
+      ansible.builtin.fail:
+        msg: "Gateway failed to start properly. Status: {{ ipfs_gateway_status.status | default('unknown') }}"
+      when: "not (ipfs_gateway_status.status is defined and ipfs_gateway_status.status in [200, 400, 403, 404])"
+  rescue:
+    - name: Diagnose IPFS Nomad job status
+      ansible.builtin.command: /usr/local/bin/nomad job status ipfs
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: ipfs_job_status
+      failed_when: false
+      changed_when: false
+
+    - name: Get Pending Alloc ID
+      ansible.builtin.shell: "echo '{{ ipfs_job_status.stdout }}' | grep pending | awk '{print $1}' | head -n 1"
+      register: ipfs_pending_alloc_id
+      failed_when: false
+      changed_when: false
+
+    - name: Diagnose Pending Alloc Status
+      ansible.builtin.command: /usr/local/bin/nomad alloc status {{ ipfs_pending_alloc_id.stdout }}
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: ipfs_alloc_status
+      failed_when: false
+      changed_when: false
+      when: ipfs_pending_alloc_id.stdout != ""
+
+    - name: Diagnose Pending Alloc Logs
+      ansible.builtin.command: /usr/local/bin/nomad alloc logs -stderr {{ ipfs_pending_alloc_id.stdout }}
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: ipfs_alloc_logs
+      failed_when: false
+      changed_when: false
+      when: ipfs_pending_alloc_id.stdout != ""
+
+    - name: Log Diagnoses
+      ansible.builtin.debug:
+        msg: |
+          Job Status:
+          {{ ipfs_job_status.stdout | default('No job status') }}
+
+          Alloc Status:
+          {{ ipfs_alloc_status.stdout | default('No alloc status') }}
+
+          Alloc Logs:
+          {{ ipfs_alloc_logs.stdout | default('No alloc logs') }}
+
+    - name: Fail task due to IPFS Gateway timeout
+      ansible.builtin.fail:
+        msg: "Timeout waiting for IPFS Gateway to be fully ready"
+
 
 - name: Deploy automated IPFS P2P model pinning script
   ansible.builtin.copy:
