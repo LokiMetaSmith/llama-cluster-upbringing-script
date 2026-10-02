@@ -48,6 +48,13 @@
     3. [x] Create a `live-build` configuration to generate a custom, headless Debian bootable ISO that includes the project source and dependencies.
 - [x] **Gas Town Integration:**
   - **Goal:** Adapt Gas Town concepts (Work Ledger, Attribution, Agent CVs) into the Pipecat App ecosystem.
+- [ ] **Tangle Feature Extraction (Workflow Augmentation):**
+  - **Goal:** Extract and adapt specific decoupled features from the Tangle project (Visual DAG UI and Component Specification format) into our existing `pipecatapp` Workflow Engine architecture, while strictly adhering to the 8GB memory limits by avoiding a full Tangle backend deployment.
+  - **Tasks:**
+    1. [ ] Implement a KFP-style `ComponentSpec` parser within `pipecatapp/workflow/` based on Tangle's `ComponentSpec` dataclasses.
+    2. [ ] Standardize existing `pipecatapp` tools and workflow nodes to output schemas compatible with the new `ComponentSpec` format.
+    3. [ ] Adapt the decoupled Tangle SPA frontend (`tangle-ui`) into our cluster as a lightweight static asset (e.g. served via NGINX or embedded directly in the Pipecat UI).
+    4. [ ] Build a lightweight API adapter within `pipecatapp` mimicking Tangle's REST endpoints (`/api/components`, `/api/pipeline_runs`) to interface the extracted DAG frontend natively with our Consul state layer and Nomad job launcher.
   - Reference: `docs/manual/GASTOWN_TODO.md`
 - [x] **Obsidian & 3D Workflow Integration:**
   - **Goal:** Integrate Obsidian Canvas and 3D spatial reasoning into the Pipecat workflow engine.
@@ -493,8 +500,10 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 - [x] **Orthrus Integration:** Track upstream support in `llama.cpp` or native `vLLM` for "Orthrus" (dual-view diffusion decoding model, e.g., `chiennv/Orthrus-Qwen3-8B`). Once supported by our core inference engines, integrate it into `group_vars/models.yaml` to take advantage of its memory-efficient parallel token generation for complex reasoning tasks.
 
 ## Code Cleanup & Standardization
+
 - [x] **Update Dead Code Review:** Run Vulture and update `docs/DEAD_CODE_REVIEW.md` to reflect the current state of unused code.
 - [x] **Standardize Tool Schemas:** Review all tools in `pipecatapp/tools/` and ensure they define an `input_schema` attribute or a `get_schema()` method for proper LLM integration.
+
 ## Security Hardening & Zero-Touch Provisioning
 
 - [x] **FIDO Security Key Onboarding & USB Keychain Imprinting:** Implement an automated onboarding flow using FIDO/FIDO2 hardware security keys. The goal is to imprint keys securely onto the USB bootstrap OS image during generation, allowing any new node provisioned from that flash drive to seamlessly and securely auto-enroll into the swarm mesh network without manual credential intervention.
@@ -505,8 +514,6 @@ This section tracks the integration of Aleph Alpha's "Model Training as Code" (M
 - [x] **Automated Authentik Configuration:** Update the existing Authentik Ansible roles to automatically provision the M2M OAuth2 application, client ID, and service account required by the orchestrator during cluster bootstrap.
 - [x] **Flesh out the Dry-Runs (Nomad/Vault):** Replace the dry-run HTTP stubs in `orchestrator.py` with actual API calls to the Vault PKI/SSH secrets engine (for short-lived certificates) and Nomad (for dispatching parameterized jobs with vector store mounts).
 - [x] **End-to-End Cluster Tests:** Write an integration test playbook that stands up the orchestrator, publishes a mock MQTT event, and verifies that the correct Nomad allocations are triggered.
-
-
 
 ## Python Testing & Preflight Pipeline
 
