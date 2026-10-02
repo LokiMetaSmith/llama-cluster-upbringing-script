@@ -53,8 +53,8 @@
   - **Tasks:**
     1. [x] Implement a KFP-style `ComponentSpec` parser within `pipecatapp/workflow/` based on Tangle's `ComponentSpec` dataclasses.
     2. [x] Standardize existing `pipecatapp` tools and workflow nodes to output schemas compatible with the new `ComponentSpec` format.
-    3. [ ] Adapt the decoupled Tangle SPA frontend (`tangle-ui`) into our cluster as a lightweight static asset (e.g. served via NGINX or embedded directly in the Pipecat UI).
-    4. [ ] Build a lightweight API adapter within `pipecatapp` mimicking Tangle's REST endpoints (`/api/components`, `/api/pipeline_runs`) to interface the extracted DAG frontend natively with our Consul state layer and Nomad job launcher.
+    3. [x] Adapt the decoupled Tangle SPA frontend (`tangle-ui`) into our cluster as a lightweight static asset (e.g. served via NGINX or embedded directly in the Pipecat UI).
+    4. [x] Build a lightweight API adapter within `pipecatapp` mimicking Tangle's REST endpoints (`/api/components`, `/api/pipeline_runs`) to interface the extracted DAG frontend natively with our Consul state layer and Nomad job launcher.
   - Reference: `docs/manual/GASTOWN_TODO.md`
 - [x] **Obsidian & 3D Workflow Integration:**
   - **Goal:** Integrate Obsidian Canvas and 3D spatial reasoning into the Pipecat workflow engine.

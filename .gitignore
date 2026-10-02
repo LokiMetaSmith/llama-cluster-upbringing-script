@@ -76,3 +76,10 @@ moshi/*
 
 # Explicitly un-ignore the rust directory and its contents
 !moshi/rust/
+pipecatapp/ui/tangle_frontend/assets/js/*.map
+pipecatapp/ui/tangle_frontend/example-pipelines/*.png
+pipecatapp/ui/tangle_frontend/assets/js/index-*.js.map
+pipecatapp/ui/tangle_frontend/logo*.png
+pipecatapp/ui/tangle_frontend/logo*.svg
+pipecatapp/ui/tangle_frontend/site_preview_*.png
+pmm_datalog_memory.db

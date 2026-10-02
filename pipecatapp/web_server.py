@@ -9,7 +9,16 @@ import httpx
 import base64
 import yaml
 import time  # Added back for the backup timestamp
-from fastapi import FastAPI, WebSocket, Body, Request, HTTPException, Depends, Security, status
+from fastapi import (
+    FastAPI,
+    WebSocket,
+    Body,
+    Request,
+    HTTPException,
+    Depends,
+    Security,
+    status,
+)
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +32,7 @@ from pipecatapp.security import sanitize_data, escape_html_content
 from pipecatapp.atproto_crypto import generate_key_pair, sign_payload
 from pipecatapp.datalog_engine import DatalogEngine
 from prometheus_client import make_asgi_app, Histogram, Counter
+
 if __package__:
     from .models import InternalChatRequest, SystemMessageRequest
     from .rate_limiter import RateLimiter
@@ -46,9 +56,7 @@ from opentelemetry.sdk.resources import Resource
 logging.basicConfig(level=logging.INFO)
 
 # Setup OpenTelemetry Tracer Provider
-resource = Resource(attributes={
-    "service.name": "pipecatapp"
-})
+resource = Resource(attributes={"service.name": "pipecatapp"})
 provider = TracerProvider(resource=resource)
 # Only configure the OTLP exporter if the endpoint is provided to avoid errors when tracing is not expected
 if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
@@ -81,8 +89,12 @@ else:
 if "*" in allowed_origins:
     env_mode = os.getenv("ENV", "development").lower()
     if env_mode == "production":
-        raise RuntimeError("Insecure CORS Configuration: Wildcard origin ('*') is not allowed in production mode. Set ALLOWED_ORIGINS to a specific list of trusted domains.")
-    logging.warning("⚠️  Security Warning: CORS is configured to allow all origins ('*'). This is acceptable for development but insecure for production. Set 'ALLOWED_ORIGINS' environment variable to a comma-separated list of trusted domains.")
+        raise RuntimeError(
+            "Insecure CORS Configuration: Wildcard origin ('*') is not allowed in production mode. Set ALLOWED_ORIGINS to a specific list of trusted domains."
+        )
+    logging.warning(
+        "⚠️  Security Warning: CORS is configured to allow all origins ('*'). This is acceptable for development but insecure for production. Set 'ALLOWED_ORIGINS' environment variable to a comma-separated list of trusted domains."
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -94,6 +106,7 @@ app.add_middleware(
 
 # Initialize server keypair for cryptographically signing HTTP response provenance headers
 SERVER_PRIV_KEY, SERVER_PUB_KEY = generate_key_pair()
+
 
 # Security & Compliance Enhancement: Add Security and Provenance Headers
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -129,7 +142,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "agent_id": agent_id,
                 "prompt_version": prompt_ver,
                 "source_model": source_model,
-                "timestamp": float(ts)
+                "timestamp": float(ts),
             }
             sig = sign_payload(prov_payload, SERVER_PRIV_KEY)
             response.headers.setdefault("X-Provenance-Signature", sig)
@@ -139,6 +152,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         return response
 
+
 app.add_middleware(SecurityHeadersMiddleware)
 
 # Security Enhancement: Support for running behind a proxy
@@ -147,13 +161,19 @@ app.add_middleware(SecurityHeadersMiddleware)
 trusted_proxies_env = os.getenv("TRUSTED_PROXIES")
 if trusted_proxies_env:
     # If explicitly set to "*", we trust all proxies (e.g. strict internal network or dev)
-    trusted_hosts = "*" if trusted_proxies_env.strip() == "*" else [h.strip() for h in trusted_proxies_env.split(",")]
+    trusted_hosts = (
+        "*"
+        if trusted_proxies_env.strip() == "*"
+        else [h.strip() for h in trusted_proxies_env.split(",")]
+    )
     app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted_hosts)
     logging.info(f"Enabled ProxyHeadersMiddleware with trusted hosts: {trusted_hosts}")
+
 
 def get_allowed_origins() -> list[str]:
     """Returns the currently configured allowed origins."""
     return allowed_origins
+
 
 def is_origin_allowed(origin: str, current_allowed_origins: list) -> bool:
     """Checks if the given origin is allowed based on the configuration."""
@@ -165,6 +185,7 @@ def is_origin_allowed(origin: str, current_allowed_origins: list) -> bool:
         # For this web-based agent, we expect browsers.
         return False
     return origin in current_allowed_origins
+
 
 # Security Enhancement: Rate Limiters
 # Strict limiter for sensitive operations (10 requests per minute)
@@ -179,6 +200,7 @@ text_message_queue = asyncio.Queue()
 # Store for synchronous request responses
 # Structure: request_id -> {"event": asyncio.Event(), "response": str}
 sync_response_store = {}
+
 
 # Simple generic in-memory cache
 class AsyncCache:
@@ -201,15 +223,19 @@ class AsyncCache:
         self.cache = value
         self.last_update = time.time()
 
+
 service_cache = AsyncCache(ttl=30)
 metrics_cache = AsyncCache(ttl=5)
 # Reusable HTTP client for service discovery
 # Initialize with Consul token if available
 consul_token = os.getenv("CONSUL_HTTP_TOKEN", "")
 consul_headers = {"X-Consul-Token": consul_token} if consul_token else {}
-service_discovery_client = httpx.AsyncClient(headers=consul_headers, timeout=2.0, verify=False)
+service_discovery_client = httpx.AsyncClient(
+    headers=consul_headers, timeout=2.0, verify=False
+)
 # Reusable HTTP client for metrics
 metrics_client = httpx.AsyncClient(timeout=2.0)
+
 
 class WebSocketManager:
     """Manages active WebSocket connections.
@@ -221,6 +247,7 @@ class WebSocketManager:
     Attributes:
         active_connections (List[WebSocket]): A list of active WebSocket connections.
     """
+
     def __init__(self):
         """Initializes the ConnectionManager."""
         self.active_connections: List[WebSocket] = []
@@ -259,6 +286,7 @@ class WebSocketManager:
         for connection in self.active_connections:
             await connection.send_text(message)
 
+
 manager = WebSocketManager()
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -275,22 +303,34 @@ app.mount("/metrics", metrics_app)
 
 # Track WebSocket message cadence
 websocket_cadence_histogram = Histogram(
-    'pipecatapp_websocket_cadence_seconds',
-    'Time elapsed between human prompts on the WebSocket',
-    ['client_ip']
+    "pipecatapp_websocket_cadence_seconds",
+    "Time elapsed between human prompts on the WebSocket",
+    ["client_ip"],
 )
 websocket_message_counter = Counter(
-    'pipecatapp_websocket_messages_total',
-    'Total number of messages received on the WebSocket',
-    ['client_ip', 'message_type']
+    "pipecatapp_websocket_messages_total",
+    "Total number of messages received on the WebSocket",
+    ["client_ip", "message_type"],
 )
 
-@app.post("/api/agents/mini-swe/run", summary="Run Mini-SWE-Agent Task", description="Executes a software engineering / debugging task using mini-swe-agent.", tags=["Agent"])
-async def run_mini_swe_agent_endpoint(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/agents/mini-swe/run",
+    summary="Run Mini-SWE-Agent Task",
+    description="Executes a software engineering / debugging task using mini-swe-agent.",
+    tags=["Agent"],
+)
+async def run_mini_swe_agent_endpoint(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """API endpoint to submit code repair tasks to mini-swe-agent."""
     task = payload.get("task")
     if not task or not isinstance(task, str):
-        raise HTTPException(status_code=400, detail="Field 'task' (string) is required.")
+        raise HTTPException(
+            status_code=400, detail="Field 'task' (string) is required."
+        )
 
     environment_type = payload.get("environment_type", "docker")
     cwd = payload.get("cwd")
@@ -299,24 +339,36 @@ async def run_mini_swe_agent_endpoint(payload: Dict = Body(...), api_key: str = 
 
     try:
         from pipecatapp.services.mini_swe_service import MiniSWEService
+
         service = MiniSWEService(
             model_name=model_name,
             api_base=api_base,
             environment_type=environment_type,
-            cwd=cwd
+            cwd=cwd,
         )
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
             None,
-            lambda: service.run_task(task=task, cwd=cwd, environment_type=environment_type)
+            lambda: service.run_task(
+                task=task, cwd=cwd, environment_type=environment_type
+            ),
         )
         return JSONResponse(content=result)
     except Exception as e:
-        logging.error(f"Failed executing mini-swe-agent endpoint task: {e}", exc_info=True)
-        return JSONResponse(status_code=500, content={"status": "error", "error": str(e)})
+        logging.error(
+            f"Failed executing mini-swe-agent endpoint task: {e}", exc_info=True
+        )
+        return JSONResponse(
+            status_code=500, content={"status": "error", "error": str(e)}
+        )
+
 
 @app.post("/api/memory/datalog/index", summary="Index Datalog AST", tags=["Datalog"])
-async def index_datalog_code(payload: dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+async def index_datalog_code(
+    payload: dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     filepath = payload.get("filepath")
     code_content = payload.get("code_content")
     if not filepath:
@@ -324,10 +376,21 @@ async def index_datalog_code(payload: dict = Body(...), api_key: str = Security(
     res = datalog_engine.index_file(filepath, code_content)
     return JSONResponse(content=res)
 
-@app.get("/api/memory/datalog/explain_symbol", summary="Explain Symbol with Datalog", tags=["Datalog"])
-async def explain_datalog_symbol(symbol: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/memory/datalog/explain_symbol",
+    summary="Explain Symbol with Datalog",
+    tags=["Datalog"],
+)
+async def explain_datalog_symbol(
+    symbol: str,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     if not symbol:
-        raise HTTPException(status_code=400, detail="symbol query parameter is required")
+        raise HTTPException(
+            status_code=400, detail="symbol query parameter is required"
+        )
     return JSONResponse(content=datalog_engine.explain(symbol))
 
 
@@ -351,7 +414,9 @@ async def websocket_endpoint(websocket: WebSocket):
     if pipecatapp.api_keys.API_KEYS:
         token = websocket.query_params.get("token")
         if not token:
-            logging.warning("Rejected WebSocket connection: Missing 'token' query parameter.")
+            logging.warning(
+                "Rejected WebSocket connection: Missing 'token' query parameter."
+            )
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
@@ -374,7 +439,9 @@ async def websocket_endpoint(websocket: WebSocket):
     current_origins = get_allowed_origins()
     if current_origins:
         if not is_origin_allowed(origin, current_origins):
-            logging.warning(f"Rejected WebSocket connection from untrusted origin: {origin}")
+            logging.warning(
+                f"Rejected WebSocket connection from untrusted origin: {origin}"
+            )
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
@@ -382,7 +449,9 @@ async def websocket_endpoint(websocket: WebSocket):
     else:
         # If origin is missing, we reject in strict mode to be safe.
         if not origin:
-            logging.warning("Rejected WebSocket connection: Missing Origin header in strict mode.")
+            logging.warning(
+                "Rejected WebSocket connection: Missing Origin header in strict mode."
+            )
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
@@ -393,7 +462,9 @@ async def websocket_endpoint(websocket: WebSocket):
             server_host = websocket.headers.get("host")
 
             if origin_host != server_host:
-                logging.warning(f"Rejected Cross-Origin WebSocket (Strict Mode): Origin={origin_host}, Host={server_host}")
+                logging.warning(
+                    f"Rejected Cross-Origin WebSocket (Strict Mode): Origin={origin_host}, Host={server_host}"
+                )
                 await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
                 return
         except Exception as e:
@@ -415,7 +486,9 @@ async def websocket_endpoint(websocket: WebSocket):
             message = json.loads(data)
             msg_type = message.get("type", "unknown")
 
-            websocket_message_counter.labels(client_ip=client_ip, message_type=msg_type).inc()
+            websocket_message_counter.labels(
+                client_ip=client_ip, message_type=msg_type
+            ).inc()
             if msg_type == "text" or msg_type == "prompt":
                 websocket_cadence_histogram.labels(client_ip=client_ip).observe(elapsed)
 
@@ -429,7 +502,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     "target_agent": message.get("target_agent", None),
                     "status_text": message.get("status_text", ""),
                     "thought_bubble": message.get("thought_bubble", ""),
-                    "timestamp": time.time()
+                    "timestamp": time.time(),
                 }
                 await manager.broadcast(json.dumps(broadcast_data))
             elif message.get("type") == "approval_response":
@@ -448,7 +521,9 @@ async def websocket_endpoint(websocket: WebSocket):
                         safe_url = await validate_url(message["audio_url"])
                         message["audio_url"] = safe_url
                     except ValueError as e:
-                        logging.warning(f"Rejected unsafe audio_url from WebSocket: {e}")
+                        logging.warning(
+                            f"Rejected unsafe audio_url from WebSocket: {e}"
+                        )
                         del message["audio_url"]
 
                 await text_message_queue.put(message)
@@ -456,8 +531,17 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-@app.post("/internal/chat", summary="Process Internal Chat Message", description="Receives a chat message from an internal service like the MoE Gateway, processes it, and sends the response to a specified callback URL.", tags=["Internal"])
-async def internal_chat(payload: InternalChatRequest, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+@app.post(
+    "/internal/chat",
+    summary="Process Internal Chat Message",
+    description="Receives a chat message from an internal service like the MoE Gateway, processes it, and sends the response to a specified callback URL.",
+    tags=["Internal"],
+)
+async def internal_chat(
+    payload: InternalChatRequest,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """
     Handles a chat message from another internal service.
     The payload should contain the user's text, a unique request_id,
@@ -484,8 +568,17 @@ async def internal_chat(payload: InternalChatRequest, api_key: str = Security(ge
     return JSONResponse(status_code=202, content={"message": "Request accepted"})
 
 
-@app.post("/internal/chat/sync", summary="Process Synchronous Internal Chat", description="Receives a chat message, processes it, and returns the response synchronously.", tags=["Internal"])
-async def internal_chat_sync(payload: InternalChatRequest, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+@app.post(
+    "/internal/chat/sync",
+    summary="Process Synchronous Internal Chat",
+    description="Receives a chat message, processes it, and returns the response synchronously.",
+    tags=["Internal"],
+)
+async def internal_chat_sync(
+    payload: InternalChatRequest,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """
     Handles a synchronous chat message.
     Waits for the agent to generate a response and returns it.
@@ -511,7 +604,7 @@ async def internal_chat_sync(payload: InternalChatRequest, api_key: str = Securi
             await asyncio.wait_for(event.wait(), timeout=60.0)
             response_data = sync_response_store[request_id]["response"]
             if isinstance(response_data, str):
-                 return JSONResponse(content={"response": response_data})
+                return JSONResponse(content={"response": response_data})
             return JSONResponse(content=response_data)
         except asyncio.TimeoutError:
             return JSONResponse(status_code=504, content={"message": "Agent timeout"})
@@ -522,8 +615,17 @@ async def internal_chat_sync(payload: InternalChatRequest, api_key: str = Securi
             del sync_response_store[request_id]
 
 
-@app.post("/internal/system_message", summary="Process System Alert", description="Receives a system alert (e.g., from Supervisor), injecting it into the agent's workflow.", tags=["Internal"])
-async def internal_system_message(payload: SystemMessageRequest, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+@app.post(
+    "/internal/system_message",
+    summary="Process System Alert",
+    description="Receives a system alert (e.g., from Supervisor), injecting it into the agent's workflow.",
+    tags=["Internal"],
+)
+async def internal_system_message(
+    payload: SystemMessageRequest,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """
     Handles a system alert. These are treated as high-priority inputs from the infrastructure.
     """
@@ -534,70 +636,128 @@ async def internal_system_message(payload: SystemMessageRequest, api_key: str = 
     return JSONResponse(status_code=202, content={"message": "System alert accepted"})
 
 
-@app.get("/", summary="Serve Web UI", description="Serves the main `index.html` file for the web user interface.", tags=["UI"])
+@app.get(
+    "/",
+    summary="Serve Web UI",
+    description="Serves the main `index.html` file for the web user interface.",
+    tags=["UI"],
+)
 async def get(rate_limit: None = Depends(standard_limiter)):
     """Serves the main `index.html` file for the web UI."""
     with open(index_html_path) as f:
         return HTMLResponse(f.read())
 
-@app.get("/workflow", summary="Serve Workflow UI", description="Serves the `workflow.html` file for the workflow visualization UI.", tags=["UI"])
+
+@app.get(
+    "/workflow",
+    summary="Serve Workflow UI",
+    description="Serves the `workflow.html` file for the workflow visualization UI.",
+    tags=["UI"],
+)
 async def get_workflow_ui(rate_limit: None = Depends(standard_limiter)):
     """Serves the workflow visualization UI."""
     workflow_html_path = os.path.join(static_dir, "workflow.html")
     with open(workflow_html_path) as f:
         return HTMLResponse(f.read())
 
-@app.get("/monitor", summary="Serve Workflow Monitor", description="Serves the `monitor.html` file for the workflow monitor UI.", tags=["UI"])
+
+@app.get(
+    "/monitor",
+    summary="Serve Workflow Monitor",
+    description="Serves the `monitor.html` file for the workflow monitor UI.",
+    tags=["UI"],
+)
 async def get_monitor_ui(rate_limit: None = Depends(standard_limiter)):
     """Serves the workflow monitor UI."""
     monitor_html_path = os.path.join(static_dir, "monitor.html")
     with open(monitor_html_path) as f:
         return HTMLResponse(f.read())
 
-@app.get("/cluster", summary="Serve Cluster UI", description="Serves the `cluster.html` file for the cluster visualization UI.", tags=["UI"])
+
+@app.get(
+    "/cluster",
+    summary="Serve Cluster UI",
+    description="Serves the `cluster.html` file for the cluster visualization UI.",
+    tags=["UI"],
+)
 async def get_cluster_ui(rate_limit: None = Depends(standard_limiter)):
     """Serves the cluster visualization UI."""
     cluster_html_path = os.path.join(static_dir, "cluster.html")
     with open(cluster_html_path) as f:
         return HTMLResponse(f.read())
 
-@app.get("/cluster_viz", summary="Serve Cluster VR Viz", description="Serves the `cluster_viz.html` file for the 3D cluster visualization UI.", tags=["UI"])
+
+@app.get(
+    "/cluster_viz",
+    summary="Serve Cluster VR Viz",
+    description="Serves the `cluster_viz.html` file for the 3D cluster visualization UI.",
+    tags=["UI"],
+)
 async def get_cluster_viz(rate_limit: None = Depends(standard_limiter)):
     """Serves the 3D cluster visualization UI."""
     viz_html_path = os.path.join(static_dir, "cluster_viz.html")
     with open(viz_html_path) as f:
         return HTMLResponse(f.read())
 
-@app.get("/workflow_3d", summary="Serve 3D Workflow UI", description="Serves the `workflow_3d.html` file for the 3D workflow visualization UI.", tags=["UI"])
+
+@app.get(
+    "/workflow_3d",
+    summary="Serve 3D Workflow UI",
+    description="Serves the `workflow_3d.html` file for the 3D workflow visualization UI.",
+    tags=["UI"],
+)
 async def get_workflow_3d_ui(rate_limit: None = Depends(standard_limiter)):
     """Serves the 3D workflow visualization UI."""
     workflow_3d_html_path = os.path.join(static_dir, "workflow_3d.html")
     with open(workflow_3d_html_path) as f:
         return HTMLResponse(f.read())
 
-@app.get("/vr_index", summary="Serve VR Index", description="Serves the `vr_index.html` file for the VR user interface.", tags=["UI"])
+
+@app.get(
+    "/vr_index",
+    summary="Serve VR Index",
+    description="Serves the `vr_index.html` file for the VR user interface.",
+    tags=["UI"],
+)
 async def get_vr_index_ui(rate_limit: None = Depends(standard_limiter)):
     """Serves the VR index UI."""
     vr_index_html_path = os.path.join(static_dir, "vr_index.html")
     with open(vr_index_html_path) as f:
         return HTMLResponse(f.read())
 
-@app.get("/apps", summary="Serve Community Container Apps UI", description="Serves the `apps.html` dashboard for managing community apps.", tags=["UI"])
+
+@app.get(
+    "/apps",
+    summary="Serve Community Container Apps UI",
+    description="Serves the `apps.html` dashboard for managing community apps.",
+    tags=["UI"],
+)
 async def get_apps_ui(rate_limit: None = Depends(standard_limiter)):
     """Serves the Community Apps Management UI."""
     apps_html_path = os.path.join(static_dir, "apps.html")
     if os.path.exists(apps_html_path):
         with open(apps_html_path) as f:
             return HTMLResponse(f.read())
-    return HTMLResponse("<html><body><h1>Community Apps UI</h1><p>apps.html is loading...</p></body></html>", status_code=200)
+    return HTMLResponse(
+        "<html><body><h1>Community Apps UI</h1><p>apps.html is loading...</p></body></html>",
+        status_code=200,
+    )
 
-@app.get("/api/cluster/metrics", summary="Get Cluster Metrics", description="Retrieves CPU and Memory metrics for services from Prometheus.", tags=["System"])
-async def get_cluster_metrics(api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.get(
+    "/api/cluster/metrics",
+    summary="Get Cluster Metrics",
+    description="Retrieves CPU and Memory metrics for services from Prometheus.",
+    tags=["System"],
+)
+async def get_cluster_metrics(
+    api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)
+):
     """Retrieves cluster metrics from Prometheus."""
     # Bolt ⚡ Optimization: Return cached metrics if available
     cached_metrics = await metrics_cache.get()
     if cached_metrics is not None:
-         return JSONResponse(content=cached_metrics)
+        return JSONResponse(content=cached_metrics)
 
     prom_url = os.getenv("PROMETHEUS_URL", "http://localhost:9090")
 
@@ -608,27 +768,31 @@ async def get_cluster_metrics(api_key: str = Security(get_api_key), rate_limit: 
         client = metrics_client
 
         # CPU Query (rate over 1m)
-        cpu_query = 'sum by (task) (rate(nomad_client_allocs_cpu_total_ticks[1m]))'
+        cpu_query = "sum by (task) (rate(nomad_client_allocs_cpu_total_ticks[1m]))"
 
         # Memory Query
-        mem_query = 'sum by (task) (nomad_client_allocs_memory_usage)'
+        mem_query = "sum by (task) (nomad_client_allocs_memory_usage)"
 
         # Execute in parallel
         cpu_resp, mem_resp = await asyncio.gather(
-            client.get(f"{prom_url}/api/v1/query", params={'query': cpu_query}, timeout=2.0),
-            client.get(f"{prom_url}/api/v1/query", params={'query': mem_query}, timeout=2.0)
+            client.get(
+                f"{prom_url}/api/v1/query", params={"query": cpu_query}, timeout=2.0
+            ),
+            client.get(
+                f"{prom_url}/api/v1/query", params={"query": mem_query}, timeout=2.0
+            ),
         )
 
         cpu_data = {}
         if cpu_resp.status_code == 200:
             data = cpu_resp.json()
-            if data.get('status') == 'success':
-                results = data.get('data', {}).get('result', [])
+            if data.get("status") == "success":
+                results = data.get("data", {}).get("result", [])
                 for res in results:
-                    task = res['metric'].get('task')
+                    task = res["metric"].get("task")
                     # Prometheus value is [timestamp, "value"]
                     try:
-                        val = float(res['value'][1])
+                        val = float(res["value"][1])
                         if task:
                             cpu_data[task] = val
                     except (ValueError, IndexError):
@@ -637,12 +801,12 @@ async def get_cluster_metrics(api_key: str = Security(get_api_key), rate_limit: 
             mem_data = {}
             if mem_resp.status_code == 200:
                 data = mem_resp.json()
-                if data.get('status') == 'success':
-                    results = data.get('data', {}).get('result', [])
+                if data.get("status") == "success":
+                    results = data.get("data", {}).get("result", [])
                     for res in results:
-                        task = res['metric'].get('task')
+                        task = res["metric"].get("task")
                         try:
-                            val = float(res['value'][1])
+                            val = float(res["value"][1])
                             if task:
                                 mem_data[task] = val
                         except (ValueError, IndexError):
@@ -651,12 +815,14 @@ async def get_cluster_metrics(api_key: str = Security(get_api_key), rate_limit: 
             # Combine
             all_tasks = set(cpu_data.keys()) | set(mem_data.keys())
             for task in all_tasks:
-                services.append({
-                    "id": task,
-                    "cpu": cpu_data.get(task, 0),
-                    "mem": mem_data.get(task, 0),
-                    "status": "running"
-                })
+                services.append(
+                    {
+                        "id": task,
+                        "cpu": cpu_data.get(task, 0),
+                        "mem": mem_data.get(task, 0),
+                        "status": "running",
+                    }
+                )
 
         # Cache the result
         await metrics_cache.set(services)
@@ -667,13 +833,23 @@ async def get_cluster_metrics(api_key: str = Security(get_api_key), rate_limit: 
 
     return JSONResponse(content=services)
 
-@app.get("/api/status", summary="Get Agent Status", description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks.", tags=["Agent"])
-async def get_status(request: Request, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/status",
+    summary="Get Agent Status",
+    description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks.",
+    tags=["Agent"],
+)
+async def get_status(
+    request: Request,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
     twin_service = request.app.state.twin_service_instance
-    if twin_service and hasattr(twin_service, 'tools'):
-        mcp = twin_service.tools.get('mcp')
-        if mcp and hasattr(mcp, 'runner') and mcp.runner:
+    if twin_service and hasattr(twin_service, "tools"):
+        mcp = twin_service.tools.get("mcp")
+        if mcp and hasattr(mcp, "runner") and mcp.runner:
             tasks = mcp.runner.get_tasks()
             if not tasks:
                 return {"status": "No active pipelines."}
@@ -686,7 +862,13 @@ async def get_status(request: Request, api_key: str = Security(get_api_key), rat
             return {"status": "MCP tool or runner not available."}
     return {"status": "Agent not fully initialized. Please wait..."}
 
-@app.get("/health", summary="Health Check", description="Provides a health check endpoint. It returns a 200 OK if the agent is initialized and ready, otherwise a 503 Service Unavailable. This is used by Nomad for service health checks.", tags=["System"])
+
+@app.get(
+    "/health",
+    summary="Health Check",
+    description="Provides a health check endpoint. It returns a 200 OK if the agent is initialized and ready, otherwise a 503 Service Unavailable. This is used by Nomad for service health checks.",
+    tags=["System"],
+)
 async def get_health(request: Request):
     """A health check endpoint that verifies the agent is fully initialized."""
     if getattr(request.app.state, "is_ready", False):
@@ -696,10 +878,20 @@ async def get_health(request: Request):
         # during long startup phases (e.g., waiting for other services).
         return JSONResponse(status_code=200, content={"status": "initializing"})
 
-@app.get("/api/workflows/node_schemas", response_class=JSONResponse, summary="Get Workflow Dynamic Node Schemas", description="Retrieves dynamic JSON schemas and metadata for registered custom workflow nodes (e.g. ComplexityEvaluatorNode, ComfyUIBridgeNode, CircuitBreakerNode, HITLGateNode).", tags=["Workflow"])
-async def get_workflow_node_schemas(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/workflows/node_schemas",
+    response_class=JSONResponse,
+    summary="Get Workflow Dynamic Node Schemas",
+    description="Retrieves dynamic JSON schemas and metadata for registered custom workflow nodes (e.g. ComplexityEvaluatorNode, ComfyUIBridgeNode, CircuitBreakerNode, HITLGateNode).",
+    tags=["Workflow"],
+)
+async def get_workflow_node_schemas(
+    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+):
     """Endpoint to get dynamic node schemas for visual editor binding."""
     from pipecatapp.workflow.nodes.registry import registry
+
     metadata = registry.get_all_nodes_metadata()
 
     # Expand metadata with explicit slot types and property schemas
@@ -721,30 +913,56 @@ async def get_workflow_node_schemas(api_key: str = Security(get_api_key), rate_l
             "expected_inputs": node_meta.get("inputs", []),
             "expected_outputs": node_meta.get("outputs", []),
             "spatial": {
-                "color": "#1f6beb" if category == "Intelligence" else ("#238636" if category == "Research" else "#a371f7"),
-                "shape": "box"
-            }
+                "color": "#1f6beb"
+                if category == "Intelligence"
+                else ("#238636" if category == "Research" else "#a371f7"),
+                "shape": "box",
+            },
         }
 
     return JSONResponse(content={"schemas": node_schemas, "nodes": metadata})
 
-@app.get("/api/workflows/nodes/metadata", response_class=JSONResponse, summary="Get Workflow Nodes Metadata", description="Retrieves metadata for all registered workflow nodes to construct the UI.", tags=["Workflow"])
-async def get_workflow_nodes_metadata(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/workflows/nodes/metadata",
+    response_class=JSONResponse,
+    summary="Get Workflow Nodes Metadata",
+    description="Retrieves metadata for all registered workflow nodes to construct the UI.",
+    tags=["Workflow"],
+)
+async def get_workflow_nodes_metadata(
+    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+):
     """Endpoint to get metadata for all workflow nodes."""
     from pipecatapp.workflow.nodes.registry import registry
+
     metadata = registry.get_all_nodes_metadata()
     return JSONResponse(content={"nodes": metadata})
 
+
 @app.get("/api/workflows/active", response_class=JSONResponse)
-async def get_active_workflows(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+async def get_active_workflows(
+    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+):
     """Returns a snapshot of the state of all active workflows."""
     active_workflows = ActiveWorkflows()
     # Security Fix: Sanitize sensitive data from the active workflow states
     # Bolt ⚡ Optimization: Sanitize during serialization to avoid double copy
     return active_workflows.get_all_states(sanitize=True)
 
-@app.get("/api/workflows/history", response_class=JSONResponse, summary="Get Workflow History", description="Retrieves a list of past workflow runs.", tags=["Workflow"])
-async def get_workflow_history(limit: int = 50, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/workflows/history",
+    response_class=JSONResponse,
+    summary="Get Workflow History",
+    description="Retrieves a list of past workflow runs.",
+    tags=["Workflow"],
+)
+async def get_workflow_history(
+    limit: int = 50,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Retrieves a list of past workflow runs."""
     history = WorkflowHistory()
     loop = asyncio.get_running_loop()
@@ -763,8 +981,19 @@ async def get_workflow_history(limit: int = 50, api_key: str = Security(get_api_
 
     return runs
 
-@app.get("/api/workflows/history/{runner_id}", response_class=JSONResponse, summary="Get Workflow Run Details", description="Retrieves the full details of a specific workflow run.", tags=["Workflow"])
-async def get_workflow_run(runner_id: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/workflows/history/{runner_id}",
+    response_class=JSONResponse,
+    summary="Get Workflow Run Details",
+    description="Retrieves the full details of a specific workflow run.",
+    tags=["Workflow"],
+)
+async def get_workflow_run(
+    runner_id: str,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Retrieves the full details of a specific workflow run."""
     history = WorkflowHistory()
     loop = asyncio.get_running_loop()
@@ -776,8 +1005,13 @@ async def get_workflow_run(runner_id: str, api_key: str = Security(get_api_key),
     # This removes potential secrets in global_inputs or tool outputs before returning to the UI
     return sanitize_data(run_details)
 
+
 @app.post("/api/gate/approve", response_class=JSONResponse)
-async def approve_gate(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+async def approve_gate(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Approves a paused gate, allowing the workflow to continue."""
     request_id = payload.get("request_id")
     if not request_id:
@@ -787,10 +1021,17 @@ async def approve_gate(payload: Dict = Body(...), api_key: str = Security(get_ap
     if open_gates.approve(request_id):
         return {"message": f"Gate for request {request_id} approved."}
     else:
-        raise HTTPException(status_code=404, detail=f"No open gate found for request {request_id}.")
+        raise HTTPException(
+            status_code=404, detail=f"No open gate found for request {request_id}."
+        )
+
 
 @app.get("/api/workflows/definition/{workflow_name}", response_class=JSONResponse)
-async def get_workflow_definition(workflow_name: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+async def get_workflow_definition(
+    workflow_name: str,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Loads a workflow definition from a YAML file and returns it as JSON."""
     # Basic security to prevent directory traversal
     if ".." in workflow_name or not workflow_name.endswith((".yaml", ".yml")):
@@ -808,52 +1049,93 @@ async def get_workflow_definition(workflow_name: str, api_key: str = Security(ge
         raise HTTPException(status_code=404, detail="Workflow not found.")
 
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             return yaml.safe_load(f)
     except Exception as e:
         logging.error(f"Error loading workflow {file_path}: {e}")
         # Security fix: Do not expose internal exception details
-        raise HTTPException(status_code=500, detail="An error occurred while loading the workflow.")
+        raise HTTPException(
+            status_code=500, detail="An error occurred while loading the workflow."
+        )
 
 
-@app.post("/api/workflows/import/nodered", summary="Import Node-RED Flow", description="Imports a Node-RED flow JSON and converts it to a Pipecat workflow.", tags=["Workflow"])
-async def import_nodered_flow(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+@app.post(
+    "/api/workflows/import/nodered",
+    summary="Import Node-RED Flow",
+    description="Imports a Node-RED flow JSON and converts it to a Pipecat workflow.",
+    tags=["Workflow"],
+)
+async def import_nodered_flow(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """
     Imports a Node-RED flow JSON and returns the converted Pipecat workflow definition.
     Payload: { "nodered_data": [ ... ] }
     """
     nodered_data = payload.get("nodered_data")
     if not nodered_data or not isinstance(nodered_data, list):
-        raise HTTPException(status_code=400, detail="Invalid Node-RED data format. Expected a JSON array.")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid Node-RED data format. Expected a JSON array.",
+        )
 
     try:
         from pipecatapp.workflow.nodered_converter import NodeRedConverter
+
         workflow = NodeRedConverter.nodered_to_workflow(nodered_data=nodered_data)
         return workflow
     except Exception as e:
         logger.error(f"Node-RED import failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to convert Node-RED flow.")
 
-@app.post("/api/workflows/export/nodered", summary="Export Node-RED Flow", description="Exports a Pipecat workflow definition to a Node-RED flow JSON.", tags=["Workflow"])
-async def export_nodered_flow(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/workflows/export/nodered",
+    summary="Export Node-RED Flow",
+    description="Exports a Pipecat workflow definition to a Node-RED flow JSON.",
+    tags=["Workflow"],
+)
+async def export_nodered_flow(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """
     Exports a Pipecat workflow definition to a Node-RED flow JSON.
     Payload: { "workflow": { ... } }
     """
     workflow = payload.get("workflow")
     if not workflow or not isinstance(workflow, dict):
-        raise HTTPException(status_code=400, detail="Invalid workflow data format. Expected a JSON object.")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid workflow data format. Expected a JSON object.",
+        )
 
     try:
         from pipecatapp.workflow.nodered_converter import NodeRedConverter
+
         nodered_data = NodeRedConverter.workflow_to_nodered(workflow=workflow)
         return nodered_data
     except Exception as e:
         logger.error(f"Node-RED export failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to export to Node-RED flow.")
+        raise HTTPException(
+            status_code=500, detail="Failed to export to Node-RED flow."
+        )
 
-@app.post("/api/workflows/save", summary="Save Workflow", description="Saves a workflow definition to a YAML file.", tags=["Workflow"])
-async def save_workflow_definition(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/workflows/save",
+    summary="Save Workflow",
+    description="Saves a workflow definition to a YAML file.",
+    tags=["Workflow"],
+)
+async def save_workflow_definition(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """
     Saves a workflow definition.
     Payload: { "name": "filename.yaml", "definition": { ... } }
@@ -892,21 +1174,33 @@ async def save_workflow_definition(payload: Dict = Body(...), api_key: str = Sec
             logging.warning(f"Failed to backup workflow: {e}")
 
     try:
-        with open(file_path, 'w') as f:
+        with open(file_path, "w") as f:
             yaml.dump(definition, f, default_flow_style=False, sort_keys=False)
         return {"message": f"Workflow {workflow_name} saved successfully."}
     except Exception as e:
         logging.error(f"Error saving workflow {file_path}: {e}")
         # Security fix: Do not expose internal exception details
-        raise HTTPException(status_code=500, detail="An error occurred while saving the workflow.")
+        raise HTTPException(
+            status_code=500, detail="An error occurred while saving the workflow."
+        )
 
-@app.get("/api/mtac/telemetry/{job_id}", summary="Get MTaC Telemetry", description="Retrieves telemetry data (metrics.jsonl) for a specific MTaC Nomad job.", tags=["MTaC"])
-async def get_mtac_telemetry(job_id: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.get(
+    "/api/mtac/telemetry/{job_id}",
+    summary="Get MTaC Telemetry",
+    description="Retrieves telemetry data (metrics.jsonl) for a specific MTaC Nomad job.",
+    tags=["MTaC"],
+)
+async def get_mtac_telemetry(
+    job_id: str,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     import os
     import json
 
     # Sanitize job_id to prevent path traversal
-    if not job_id.replace('-', '').isalnum():
+    if not job_id.replace("-", "").isalnum():
         raise HTTPException(status_code=400, detail="Invalid job ID")
 
     metrics_file = f"/opt/nomad/data/mtac/{job_id}/metrics.jsonl"
@@ -921,12 +1215,16 @@ async def get_mtac_telemetry(job_id: str, api_key: str = Security(get_api_key), 
                     telemetry.append(json.loads(line))
         return {"job_id": job_id, "telemetry": telemetry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to read telemetry: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to read telemetry: {str(e)}"
+        )
+
 
 def rewrite_webring_redirect_url(target_url: str, request: Request) -> str:
     """Helper to dynamically rewrite target redirect hostname to match request hostname."""
     if target_url.startswith("http://") or target_url.startswith("https://"):
         from urllib.parse import urlparse, urlunparse
+
         parsed_target = urlparse(target_url)
         parsed_request = urlparse(str(request.url))
 
@@ -946,9 +1244,12 @@ def rewrite_webring_redirect_url(target_url: str, request: Request) -> str:
                 return urlunparse(parsed_target._replace(netloc=new_netloc))
     return target_url
 
+
 async def get_ouroboros_members():
     """Helper to fetch webring members from Consul KV."""
-    consul_url = format_url("http", os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1")), 8500)
+    consul_url = format_url(
+        "http", os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1")), 8500
+    )
     key = "pipecatapp/webring/members"
     members = []
     try:
@@ -972,21 +1273,27 @@ async def get_ouroboros_members():
             {"name": "Cluster VR", "url": "/cluster_viz"},
             {"name": "3D Workflow", "url": "/workflow_3d"},
             {"name": "VR Index", "url": "/vr_index"},
-            {"name": "CommandDeck", "url": "http://127.0.0.1:8085/"}
+            {"name": "CommandDeck", "url": "http://127.0.0.1:8085/"},
         ]
     return members
 
+
 async def save_ouroboros_members(members: List[Dict]):
     """Helper to save webring members to Consul KV."""
-    consul_url = format_url("http", os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1")), 8500)
+    consul_url = format_url(
+        "http", os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1")), 8500
+    )
     key = "pipecatapp/webring/members"
     try:
         value = json.dumps(members)
-        response = await service_discovery_client.put(f"{consul_url}/v1/kv/{key}", content=value)
+        response = await service_discovery_client.put(
+            f"{consul_url}/v1/kv/{key}", content=value
+        )
         return response.status_code == 200
     except Exception as e:
         logging.error(f"Error saving Ouroboros members: {e}")
     return False
+
 
 async def discover_ouroboros_members():
     """Background task to discover web UIs and update the Ouroboros ring."""
@@ -1017,7 +1324,10 @@ async def discover_ouroboros_members():
                 {"name": "3D Workflow", "url": "/workflow_3d"},
                 {"name": "VR Index", "url": "/vr_index"},
                 {"name": "CommandDeck", "url": "http://127.0.0.1:8085/"},
-                {"name": "Security Dashboard", "url": "http://127.0.0.1:3000/d/security-dashboard"}
+                {
+                    "name": "Security Dashboard",
+                    "url": "http://127.0.0.1:3000/d/security-dashboard",
+                },
             ]
 
             for m in default_members:
@@ -1028,11 +1338,13 @@ async def discover_ouroboros_members():
 
             for ui in web_uis:
                 if ui.get("url") and ui["url"] != "#" and ui["url"] not in curated_urls:
-                    new_members.append({
-                        "name": ui["name"],
-                        "url": ui["url"],
-                        "source": "auto-discovery"
-                    })
+                    new_members.append(
+                        {
+                            "name": ui["name"],
+                            "url": ui["url"],
+                            "source": "auto-discovery",
+                        }
+                    )
                     curated_urls.add(ui["url"])
                     added = True
 
@@ -1043,24 +1355,52 @@ async def discover_ouroboros_members():
         except Exception as e:
             logging.error(f"Error in discover_ouroboros_members task: {e}")
 
-        await asyncio.sleep(300) # Run every 5 minutes
+        await asyncio.sleep(300)  # Run every 5 minutes
 
-@app.get("/api/webring/members", summary="Get Ouroboros Members", description="Retrieves the list of members in the Ouroboros webring.", tags=["Webring"])
-async def get_webring_members(api_key: Optional[str] = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/webring/members",
+    summary="Get Ouroboros Members",
+    description="Retrieves the list of members in the Ouroboros webring.",
+    tags=["Webring"],
+)
+async def get_webring_members(
+    api_key: Optional[str] = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     members = await get_ouroboros_members()
     return JSONResponse(content=members)
 
-@app.post("/api/webring/members", summary="Update Ouroboros Members", description="Updates the list of members in the Ouroboros webring.", tags=["Webring"])
-async def update_webring_members(members: List[Dict] = Body(...), api_key: Optional[str] = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.post(
+    "/api/webring/members",
+    summary="Update Ouroboros Members",
+    description="Updates the list of members in the Ouroboros webring.",
+    tags=["Webring"],
+)
+async def update_webring_members(
+    members: List[Dict] = Body(...),
+    api_key: Optional[str] = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     if await save_ouroboros_members(members):
         return {"message": "Webring members updated."}
     raise HTTPException(status_code=500, detail="Failed to save webring members.")
 
-@app.get("/webring/next", summary="Next Member", description="Redirects to the next member in the webring.", tags=["Webring"])
+
+@app.get(
+    "/webring/next",
+    summary="Next Member",
+    description="Redirects to the next member in the webring.",
+    tags=["Webring"],
+)
 async def webring_next(request: Request, rate_limit: None = Depends(standard_limiter)):
     members = await get_ouroboros_members()
     if not members:
-        return HTMLResponse("<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Webring is empty.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>", status_code=404)
+        return HTMLResponse(
+            "<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Webring is empty.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>",
+            status_code=404,
+        )
 
     referrer = request.query_params.get("from") or request.headers.get("referer") or ""
     # Try to match the referrer with the member URLs
@@ -1077,18 +1417,33 @@ async def webring_next(request: Request, rate_limit: None = Depends(standard_lim
         # If not found, just go to the first one or a random one?
         # Blog post returns 404. Let's be nicer and go to random if not found?
         # Actually, let's stick to 404 or a message for now.
-        return HTMLResponse("<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Current member not found in webring.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>", status_code=404)
+        return HTMLResponse(
+            "<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Current member not found in webring.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>",
+            status_code=404,
+        )
 
     next_member = members[(current_index + 1) % len(members)]
     redirect_url = rewrite_webring_redirect_url(next_member["url"], request)
     import urllib.parse
-    return RedirectResponse(url=f"/static/webring.html?target={urllib.parse.quote(redirect_url)}")
 
-@app.get("/webring/prev", summary="Previous Member", description="Redirects to the previous member in the webring.", tags=["Webring"])
+    return RedirectResponse(
+        url=f"/static/webring.html?target={urllib.parse.quote(redirect_url)}"
+    )
+
+
+@app.get(
+    "/webring/prev",
+    summary="Previous Member",
+    description="Redirects to the previous member in the webring.",
+    tags=["Webring"],
+)
 async def webring_prev(request: Request, rate_limit: None = Depends(standard_limiter)):
     members = await get_ouroboros_members()
     if not members:
-        return HTMLResponse("<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Webring is empty.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>", status_code=404)
+        return HTMLResponse(
+            "<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Webring is empty.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>",
+            status_code=404,
+        )
 
     referrer = request.query_params.get("from") or request.headers.get("referer") or ""
     current_index = -1
@@ -1101,26 +1456,48 @@ async def webring_prev(request: Request, rate_limit: None = Depends(standard_lim
                 break
 
     if current_index == -1:
-        return HTMLResponse("<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Current member not found in webring.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>", status_code=404)
+        return HTMLResponse(
+            "<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Current member not found in webring.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>",
+            status_code=404,
+        )
 
     prev_member = members[(current_index - 1 + len(members)) % len(members)]
     redirect_url = rewrite_webring_redirect_url(prev_member["url"], request)
     import urllib.parse
-    return RedirectResponse(url=f"/static/webring.html?target={urllib.parse.quote(redirect_url)}")
 
-@app.get("/webring/random", summary="Random Member", description="Redirects to a random member in the webring.", tags=["Webring"])
+    return RedirectResponse(
+        url=f"/static/webring.html?target={urllib.parse.quote(redirect_url)}"
+    )
+
+
+@app.get(
+    "/webring/random",
+    summary="Random Member",
+    description="Redirects to a random member in the webring.",
+    tags=["Webring"],
+)
 async def webring_random(rate_limit: None = Depends(standard_limiter)):
     members = await get_ouroboros_members()
     if not members:
-        return HTMLResponse("<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Webring is empty.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>", status_code=404)
+        return HTMLResponse(
+            "<html><body style='background-color:#1a1a1a;color:#f0f0f0;font-family:monospace;text-align:center;padding:50px;'><h1>404 Error</h1><p>Webring is empty.</p><a href='/' style='color:#00ff00;'>Return Home</a></body></html>",
+            status_code=404,
+        )
 
     import random
+
     random_member = random.choice(members)
     import urllib.parse
-    return RedirectResponse(url=f"/static/webring.html?target={urllib.parse.quote(random_member['url'])}")
+
+    return RedirectResponse(
+        url=f"/static/webring.html?target={urllib.parse.quote(random_member['url'])}"
+    )
+
 
 @app.get("/api/web_uis")
-async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+async def get_web_uis(
+    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+):
     """
     Discovers web UIs from Consul.
     It explicitly adds Consul and Nomad, and then discovers other services
@@ -1132,7 +1509,9 @@ async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = D
         return JSONResponse(content=cached_uis)
 
     web_uis = []
-    consul_url = format_url("http", os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1")), 8500)
+    consul_url = format_url(
+        "http", os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1")), 8500
+    )
 
     try:
         # Use the reusable client instead of creating a new one every time
@@ -1140,43 +1519,80 @@ async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = D
 
         # 1. Add Consul UI
         # We assume Consul itself is healthy if we can talk to it
-        web_uis.append({"name": "Consul", "url": f"{consul_url}/ui", "status": "healthy"})
+        web_uis.append(
+            {"name": "Consul", "url": f"{consul_url}/ui", "status": "healthy"}
+        )
 
         # 2. Add Nomad UI
         try:
-            nomad_service_response = await client.get(f"{consul_url}/v1/catalog/service/nomad")
+            nomad_service_response = await client.get(
+                f"{consul_url}/v1/catalog/service/nomad"
+            )
             nomad_service_response.raise_for_status()
             nomad_services = nomad_service_response.json()
             if nomad_services:
-                nomad_address = nomad_services[0].get("ServiceAddress") or nomad_services[0].get("Address")
+                nomad_address = nomad_services[0].get(
+                    "ServiceAddress"
+                ) or nomad_services[0].get("Address")
                 # Check Nomad health via Consul
-                nomad_health_resp = await client.get(f"{consul_url}/v1/health/service/nomad?passing")
-                nomad_status = "healthy" if nomad_health_resp.status_code == 200 and nomad_health_resp.json() else "unhealthy"
-                web_uis.append({"name": "Nomad", "url": format_url("http", nomad_address, 4646), "status": nomad_status})
+                nomad_health_resp = await client.get(
+                    f"{consul_url}/v1/health/service/nomad?passing"
+                )
+                nomad_status = (
+                    "healthy"
+                    if nomad_health_resp.status_code == 200 and nomad_health_resp.json()
+                    else "unhealthy"
+                )
+                web_uis.append(
+                    {
+                        "name": "Nomad",
+                        "url": format_url("http", nomad_address, 4646),
+                        "status": nomad_status,
+                    }
+                )
         except Exception:
             web_uis.append({"name": "Nomad", "url": "#", "status": "unhealthy"})
 
-
         # 3. Add Grafana / Security Dashboard specifically
         try:
-            grafana_service_response = await client.get(f"{consul_url}/v1/catalog/service/grafana")
+            grafana_service_response = await client.get(
+                f"{consul_url}/v1/catalog/service/grafana"
+            )
             grafana_service_response.raise_for_status()
             grafana_services = grafana_service_response.json()
             if grafana_services:
-                grafana_address = grafana_services[0].get("ServiceAddress") or grafana_services[0].get("Address")
+                grafana_address = grafana_services[0].get(
+                    "ServiceAddress"
+                ) or grafana_services[0].get("Address")
                 grafana_port = grafana_services[0].get("ServicePort")
                 # Check Grafana health via Consul
-                grafana_health_resp = await client.get(f"{consul_url}/v1/health/service/grafana?passing")
-                grafana_status = "healthy" if grafana_health_resp.status_code == 200 and grafana_health_resp.json() else "unhealthy"
+                grafana_health_resp = await client.get(
+                    f"{consul_url}/v1/health/service/grafana?passing"
+                )
+                grafana_status = (
+                    "healthy"
+                    if grafana_health_resp.status_code == 200
+                    and grafana_health_resp.json()
+                    else "unhealthy"
+                )
 
                 grafana_url = format_url("http", grafana_address, grafana_port)
                 # Add base Grafana
-                web_uis.append({"name": "Grafana", "url": grafana_url, "status": grafana_status})
+                web_uis.append(
+                    {"name": "Grafana", "url": grafana_url, "status": grafana_status}
+                )
                 # Add direct link to Security Dashboard
-                web_uis.append({"name": "Security Dashboard", "url": f"{grafana_url}/d/security-dashboard", "status": grafana_status})
+                web_uis.append(
+                    {
+                        "name": "Security Dashboard",
+                        "url": f"{grafana_url}/d/security-dashboard",
+                        "status": grafana_status,
+                    }
+                )
         except Exception as e:
-            web_uis.append({"name": "Grafana / Security", "url": "#", "status": "unhealthy"})
-
+            web_uis.append(
+                {"name": "Grafana / Security", "url": "#", "status": "unhealthy"}
+            )
 
         # 4. Discover other HTTP services
         services_response = await client.get(f"{consul_url}/v1/catalog/services")
@@ -1189,7 +1605,9 @@ async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = D
 
             try:
                 # Removed ?passing to get all services including unhealthy ones
-                health_response = await client.get(f"{consul_url}/v1/health/service/{service_name}")
+                health_response = await client.get(
+                    f"{consul_url}/v1/health/service/{service_name}"
+                )
                 if health_response.status_code != 200:
                     return None
 
@@ -1205,31 +1623,41 @@ async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = D
                     checks = instance.get("Checks", [])
 
                     # Check for HTTP check presence (loose check for "http" in Type)
-                    has_http = any("http" in check.get("Type", "").lower() for check in checks)
+                    has_http = any(
+                        "http" in check.get("Type", "").lower() for check in checks
+                    )
 
                     if has_http:
                         # Capture address/port
                         service_info = instance.get("Service", {})
-                        address = service_info.get("Address") or instance.get("Node", {}).get("Address")
+                        address = service_info.get("Address") or instance.get(
+                            "Node", {}
+                        ).get("Address")
                         port = service_info.get("Port")
 
                         if address and port:
                             candidate_url = format_url("http", address, port)
 
                             # Check health of this specific instance
-                            instance_passing = all(check.get("Status") == "passing" for check in checks)
+                            instance_passing = all(
+                                check.get("Status") == "passing" for check in checks
+                            )
 
                             if instance_passing:
                                 is_healthy = True
                                 ui_candidate = candidate_url
-                                break # Found a healthy instance
+                                break  # Found a healthy instance
                             else:
                                 # Unhealthy, store candidate but keep looking for a healthy one
                                 if not ui_candidate:
                                     ui_candidate = candidate_url
 
                 if ui_candidate:
-                     return {"name": service_name, "url": ui_candidate, "status": "healthy" if is_healthy else "unhealthy"}
+                    return {
+                        "name": service_name,
+                        "url": ui_candidate,
+                        "status": "healthy" if is_healthy else "unhealthy",
+                    }
 
             except Exception:
                 # Ignore failures for individual services so we don't break the whole list
@@ -1251,7 +1679,7 @@ async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = D
             content=[
                 {"name": "Consul (Not Reachable)", "url": "#", "status": "unhealthy"},
                 {"name": "Nomad (Not Reachable)", "url": "#", "status": "unhealthy"},
-            ]
+            ],
         )
 
     # Dictionary deduplication logic needs to handle 'status' now.
@@ -1259,13 +1687,24 @@ async def get_web_uis(api_key: str = Security(get_api_key), rate_limit: None = D
     # Actually current logic returns max 1 entry per service name from check_service.
     # But Consul/Nomad are separate.
     unique_uis = [dict(t) for t in {tuple(d.items()) for d in web_uis}]
-    sorted_uis = sorted(unique_uis, key=lambda x: x['name'])
+    sorted_uis = sorted(unique_uis, key=lambda x: x["name"])
 
     await service_cache.set(sorted_uis)
     return JSONResponse(content=sorted_uis)
 
-@app.post("/api/state/save", summary="Save Agent State", description="Saves the agent's current conversation and internal state to a named snapshot.", tags=["Agent"])
-async def save_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/state/save",
+    summary="Save Agent State",
+    description="Saves the agent's current conversation and internal state to a named snapshot.",
+    tags=["Agent"],
+)
+async def save_state_endpoint(
+    request: Request,
+    payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """API endpoint to save the agent's current state to a named snapshot.
 
     Args:
@@ -1276,21 +1715,41 @@ async def save_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     """
     save_name = payload.get("save_name")
     if not save_name:
-        return JSONResponse(status_code=400, content={"message": "save_name is required"})
+        return JSONResponse(
+            status_code=400, content={"message": "save_name is required"}
+        )
 
     # Security Fix: Stronger input validation to prevent path traversal and injection
     # Allow only alphanumeric, underscore, hyphen, and period.
     if not re.match(r"^[a-zA-Z0-9_\-\.]+$", save_name) or ".." in save_name:
-        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must only contain alphanumeric characters, dots, dashes, or underscores."})
+        return JSONResponse(
+            status_code=400,
+            content={
+                "message": "Invalid save_name. Must only contain alphanumeric characters, dots, dashes, or underscores."
+            },
+        )
 
     twin_service = request.app.state.twin_service_instance
     if twin_service:
         result = twin_service.save_state(save_name)
         return {"message": result}
-    return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
+    return JSONResponse(
+        status_code=503, content={"message": "Agent not fully initialized."}
+    )
 
-@app.post("/api/state/load", summary="Load Agent State", description="Loads the agent's state from a previously saved snapshot.", tags=["Agent"])
-async def load_state_endpoint(request: Request, payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/state/load",
+    summary="Load Agent State",
+    description="Loads the agent's state from a previously saved snapshot.",
+    tags=["Agent"],
+)
+async def load_state_endpoint(
+    request: Request,
+    payload: Dict = Body(..., examples=[{"save_name": "my_snapshot"}]),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """API endpoint to load the agent's state from a named snapshot.
 
     Args:
@@ -1301,23 +1760,40 @@ async def load_state_endpoint(request: Request, payload: Dict = Body(..., exampl
     """
     save_name = payload.get("save_name")
     if not save_name:
-        return JSONResponse(status_code=400, content={"message": "save_name is required"})
+        return JSONResponse(
+            status_code=400, content={"message": "save_name is required"}
+        )
 
     # Security Fix: Stronger input validation to prevent path traversal and injection
     # Allow only alphanumeric, underscore, hyphen, and period.
     if not re.match(r"^[a-zA-Z0-9_\-\.]+$", save_name) or ".." in save_name:
-        return JSONResponse(status_code=400, content={"message": "Invalid save_name. Must only contain alphanumeric characters, dots, dashes, or underscores."})
+        return JSONResponse(
+            status_code=400,
+            content={
+                "message": "Invalid save_name. Must only contain alphanumeric characters, dots, dashes, or underscores."
+            },
+        )
 
     twin_service = request.app.state.twin_service_instance
     if twin_service:
         result = twin_service.load_state(save_name)
         return {"message": result}
-    return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
+    return JSONResponse(
+        status_code=503, content={"message": "Agent not fully initialized."}
+    )
 
-@app.get("/api/personality", summary="Get Current Personality", description="Retrieves the current personality control vectors.", tags=["Agent"])
-async def get_personality(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/personality",
+    summary="Get Current Personality",
+    description="Retrieves the current personality control vectors.",
+    tags=["Agent"],
+)
+async def get_personality(
+    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+):
     """Retrieves current personality configuration."""
-    if not hasattr(app.state, 'personality_tool'):
+    if not hasattr(app.state, "personality_tool"):
         if __package__:
             from .tools.personality_tool import PersonalityTool
         else:
@@ -1327,10 +1803,20 @@ async def get_personality(api_key: str = Security(get_api_key), rate_limit: None
     status_str = app.state.personality_tool.get_current_personality()
     return JSONResponse(status_code=200, content={"status": status_str})
 
-@app.post("/api/personality", summary="Set Personality", description="Sets the personality using control vectors.", tags=["Agent"])
-async def set_personality(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/personality",
+    summary="Set Personality",
+    description="Sets the personality using control vectors.",
+    tags=["Agent"],
+)
+async def set_personality(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Sets a new personality vector."""
-    if not hasattr(app.state, 'personality_tool'):
+    if not hasattr(app.state, "personality_tool"):
         if __package__:
             from .tools.personality_tool import PersonalityTool
         else:
@@ -1341,7 +1827,9 @@ async def set_personality(payload: Dict = Body(...), api_key: str = Security(get
     strength = payload.get("strength")
 
     if not name or strength is None:
-        raise HTTPException(status_code=400, detail="Missing required parameters: 'name' and 'strength'")
+        raise HTTPException(
+            status_code=400, detail="Missing required parameters: 'name' and 'strength'"
+        )
 
     try:
         strength = float(strength)
@@ -1351,10 +1839,18 @@ async def set_personality(payload: Dict = Body(...), api_key: str = Security(get
     result = app.state.personality_tool.set_personality(name, strength)
     return JSONResponse(status_code=200, content={"message": result})
 
-@app.delete("/api/personality", summary="Reset Personality", description="Resets all personality control vectors.", tags=["Agent"])
-async def reset_personality(api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.delete(
+    "/api/personality",
+    summary="Reset Personality",
+    description="Resets all personality control vectors.",
+    tags=["Agent"],
+)
+async def reset_personality(
+    api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)
+):
     """Resets the personality back to neutral."""
-    if not hasattr(app.state, 'personality_tool'):
+    if not hasattr(app.state, "personality_tool"):
         if __package__:
             from .tools.personality_tool import PersonalityTool
         else:
@@ -1364,10 +1860,20 @@ async def reset_personality(api_key: str = Security(get_api_key), rate_limit: No
     result = app.state.personality_tool.reset_personality()
     return JSONResponse(status_code=200, content={"message": result})
 
-@app.post("/api/personality/voice_persona", summary="Set Voice Persona", description="Sets PersonaPlex voice embedding and role prompt.", tags=["Agent"])
-async def set_voice_persona(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/personality/voice_persona",
+    summary="Set Voice Persona",
+    description="Sets PersonaPlex voice embedding and role prompt.",
+    tags=["Agent"],
+)
+async def set_voice_persona(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Sets PersonaPlex voice persona embedding and role prompt."""
-    if not hasattr(app.state, 'personality_tool'):
+    if not hasattr(app.state, "personality_tool"):
         if __package__:
             from .tools.personality_tool import PersonalityTool
         else:
@@ -1378,17 +1884,35 @@ async def set_voice_persona(payload: Dict = Body(...), api_key: str = Security(g
     role_prompt = payload.get("role_prompt", "Standard Assistant")
     emotion = payload.get("emotion", "neutral")
 
-    result = app.state.personality_tool.set_voice_persona(voice_id, role_prompt, emotion)
+    result = app.state.personality_tool.set_voice_persona(
+        voice_id, role_prompt, emotion
+    )
 
     # Broadcast emotion aura to 3D VR visualizer
     from pipecatapp.tools.vr_tool import VRTool
+
     vr = VRTool()
-    await vr.broadcast_persona_emotion(agent_id=os.getenv("AGENT_ID", "pipecat_master"), voice_id=voice_id, emotion=emotion)
+    await vr.broadcast_persona_emotion(
+        agent_id=os.getenv("AGENT_ID", "pipecat_master"),
+        voice_id=voice_id,
+        emotion=emotion,
+    )
 
     return JSONResponse(status_code=200, content={"message": result})
 
-@app.post("/api/rag/configure", summary="Configure RAG Scope", description="Changes the search scope (base directory) for the RAG tool.", tags=["Agent"])
-async def configure_rag(request: Request, payload: Dict = Body(..., examples=[{"path": "/opt/pipecatapp/docs"}]), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/rag/configure",
+    summary="Configure RAG Scope",
+    description="Changes the search scope (base directory) for the RAG tool.",
+    tags=["Agent"],
+)
+async def configure_rag(
+    request: Request,
+    payload: Dict = Body(..., examples=[{"path": "/opt/pipecatapp/docs"}]),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Configures the RAG tool's search scope.
 
     Args:
@@ -1402,19 +1926,23 @@ async def configure_rag(request: Request, payload: Dict = Body(..., examples=[{"
         return JSONResponse(status_code=400, content={"message": "path is required"})
 
     twin_service = getattr(request.app.state, "twin_service_instance", None)
-    if not twin_service or not hasattr(twin_service, 'tools'):
-         return JSONResponse(status_code=503, content={"message": "Agent not fully initialized."})
+    if not twin_service or not hasattr(twin_service, "tools"):
+        return JSONResponse(
+            status_code=503, content={"message": "Agent not fully initialized."}
+        )
 
-    rag_tool = twin_service.tools.get('rag')
+    rag_tool = twin_service.tools.get("rag")
     if not rag_tool:
-        return JSONResponse(status_code=503, content={"message": "RAG tool not available."})
+        return JSONResponse(
+            status_code=503, content={"message": "RAG tool not available."}
+        )
 
     if rag_tool.set_scope(path):
         return {"message": f"RAG scope updated to {path}"}
     else:
-        return JSONResponse(status_code=400, content={"message": "Invalid path or security violation."})
-
-
+        return JSONResponse(
+            status_code=400, content={"message": "Invalid path or security violation."}
+        )
 
 
 # -------------------------------------------------------------------------
@@ -1430,7 +1958,7 @@ COMMUNITY_APPS_CATALOG = {
         "image": "pihole/pihole:latest",
         "template": "pihole.nomad.j2",
         "ports": [53, 80],
-        "default_domain": "pihole.local"
+        "default_domain": "pihole.local",
     },
     "nextcloud": {
         "id": "nextcloud",
@@ -1440,7 +1968,7 @@ COMMUNITY_APPS_CATALOG = {
         "image": "lscr.io/linuxserver/nextcloud:latest",
         "template": "nextcloud.nomad.j2",
         "ports": [443],
-        "default_domain": "nextcloud.local"
+        "default_domain": "nextcloud.local",
     },
     "vaultwarden": {
         "id": "vaultwarden",
@@ -1450,7 +1978,7 @@ COMMUNITY_APPS_CATALOG = {
         "image": "vaultwarden/server:latest",
         "template": "vaultwarden.nomad.j2",
         "ports": [80],
-        "default_domain": "vaultwarden.local"
+        "default_domain": "vaultwarden.local",
     },
     "homeassistant": {
         "id": "homeassistant",
@@ -1460,7 +1988,7 @@ COMMUNITY_APPS_CATALOG = {
         "image": "ghcr.io/home-assistant/home-assistant:stable",
         "template": "homeassistant.nomad.j2",
         "ports": [8123],
-        "default_domain": "homeassistant.local"
+        "default_domain": "homeassistant.local",
     },
     "gitea": {
         "id": "gitea",
@@ -1470,29 +1998,51 @@ COMMUNITY_APPS_CATALOG = {
         "image": "gitea/gitea:latest",
         "template": "gitea.nomad.j2",
         "ports": [3000, 2222],
-        "default_domain": "gitea.local"
-    }
+        "default_domain": "gitea.local",
+    },
 }
 
-@app.get("/api/apps/catalog", summary="Get Community Apps Catalog", tags=["Community Apps"])
-async def get_apps_catalog(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/apps/catalog", summary="Get Community Apps Catalog", tags=["Community Apps"]
+)
+async def get_apps_catalog(
+    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+):
     """Returns the pre-populated list of verified community applications."""
     return JSONResponse(content=list(COMMUNITY_APPS_CATALOG.values()))
 
-@app.post("/api/apps/catalog/sync", summary="Sync Upstream Catalog", tags=["Community Apps"])
-async def sync_upstream_catalog(request: Request, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/apps/catalog/sync", summary="Sync Upstream Catalog", tags=["Community Apps"]
+)
+async def sync_upstream_catalog(
+    request: Request,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Fetches and syncs latest upstream application catalog metadata."""
     enforce_admin_role(request)
     try:
         from pipecatapp.tools.container_registry_tool import ContainerRegistryTool
+
         tool = ContainerRegistryTool()
         result = tool.browse_catalog(source="linuxserver_api")
         return JSONResponse(content={"status": "success", "catalog_feed": result})
     except Exception as e:
-        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+        return JSONResponse(
+            status_code=500, content={"status": "error", "message": str(e)}
+        )
 
-@app.get("/api/apps/installed", summary="Get Installed Community Apps", tags=["Community Apps"])
-async def get_installed_apps(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/apps/installed",
+    summary="Get Installed Community Apps",
+    tags=["Community Apps"],
+)
+async def get_installed_apps(
+    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+):
     """Queries Consul and Nomad to retrieve currently installed and running community applications."""
     installed = []
     cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
@@ -1501,37 +2051,65 @@ async def get_installed_apps(api_key: str = Security(get_api_key), rate_limit: N
 
     try:
         # Query Nomad for active jobs
-        nomad_resp = await service_discovery_client.get(f"{nomad_url}/v1/jobs", timeout=3.0)
+        nomad_resp = await service_discovery_client.get(
+            f"{nomad_url}/v1/jobs", timeout=3.0
+        )
         nomad_jobs = nomad_resp.json() if nomad_resp.status_code == 200 else []
 
         for job in nomad_jobs:
             job_id = job.get("ID", "")
-            if job_id in COMMUNITY_APPS_CATALOG or any(app_id in job_id for app_id in COMMUNITY_APPS_CATALOG):
-                matched_id = job_id if job_id in COMMUNITY_APPS_CATALOG else next((a for a in COMMUNITY_APPS_CATALOG if a in job_id), job_id)
-                app_meta = COMMUNITY_APPS_CATALOG.get(matched_id, {"name": job_id, "category": "Custom", "image": "unknown"})
+            if job_id in COMMUNITY_APPS_CATALOG or any(
+                app_id in job_id for app_id in COMMUNITY_APPS_CATALOG
+            ):
+                matched_id = (
+                    job_id
+                    if job_id in COMMUNITY_APPS_CATALOG
+                    else next(
+                        (a for a in COMMUNITY_APPS_CATALOG if a in job_id), job_id
+                    )
+                )
+                app_meta = COMMUNITY_APPS_CATALOG.get(
+                    matched_id,
+                    {"name": job_id, "category": "Custom", "image": "unknown"},
+                )
 
                 # Fetch specific job status
-                status_resp = await service_discovery_client.get(f"{nomad_url}/v1/job/{job_id}", timeout=2.0)
-                status_info = status_resp.json() if status_resp.status_code == 200 else {}
+                status_resp = await service_discovery_client.get(
+                    f"{nomad_url}/v1/job/{job_id}", timeout=2.0
+                )
+                status_info = (
+                    status_resp.json() if status_resp.status_code == 200 else {}
+                )
 
-                installed.append({
-                    "id": job_id,
-                    "app_id": matched_id,
-                    "name": app_meta.get("name", job_id),
-                    "status": job.get("Status", "unknown"),
-                    "type": job.get("Type", "service"),
-                    "status_description": job.get("StatusDescription", ""),
-                    "image": app_meta.get("image", ""),
-                    "create_index": job.get("CreateIndex", 0),
-                    "modify_index": job.get("ModifyIndex", 0)
-                })
+                installed.append(
+                    {
+                        "id": job_id,
+                        "app_id": matched_id,
+                        "name": app_meta.get("name", job_id),
+                        "status": job.get("Status", "unknown"),
+                        "type": job.get("Type", "service"),
+                        "status_description": job.get("StatusDescription", ""),
+                        "image": app_meta.get("image", ""),
+                        "create_index": job.get("CreateIndex", 0),
+                        "modify_index": job.get("ModifyIndex", 0),
+                    }
+                )
     except Exception as e:
         logging.error(f"Error listing installed community apps: {e}")
 
     return JSONResponse(content=installed)
 
-@app.get("/api/apps/status/{app_id}", summary="Investigate Community App Status", tags=["Community Apps"])
-async def get_app_status(app_id: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/apps/status/{app_id}",
+    summary="Investigate Community App Status",
+    tags=["Community Apps"],
+)
+async def get_app_status(
+    app_id: str,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Queries Consul health checks and Nomad allocation details for a specific app."""
     cluster_ip = os.getenv("CLUSTER_IP", "127.0.0.1")
     consul_url = format_url("http", os.getenv("CONSUL_HOST", cluster_ip), 8500)
@@ -1545,22 +2123,28 @@ async def get_app_status(app_id: str, api_key: str = Security(get_api_key), rate
         "app_id": app_id,
         "nomad_job": None,
         "allocations": [],
-        "consul_checks": []
+        "consul_checks": [],
     }
 
     try:
         # Fetch Nomad Job
-        job_resp = await service_discovery_client.get(f"{nomad_url}/v1/job/{app_id}", timeout=3.0)
+        job_resp = await service_discovery_client.get(
+            f"{nomad_url}/v1/job/{app_id}", timeout=3.0
+        )
         if job_resp.status_code == 200:
             result["nomad_job"] = job_resp.json()
 
         # Fetch Nomad Allocations
-        alloc_resp = await service_discovery_client.get(f"{nomad_url}/v1/job/{app_id}/allocations", timeout=3.0)
+        alloc_resp = await service_discovery_client.get(
+            f"{nomad_url}/v1/job/{app_id}/allocations", timeout=3.0
+        )
         if alloc_resp.status_code == 200:
             result["allocations"] = alloc_resp.json()
 
         # Fetch Consul Health
-        consul_resp = await service_discovery_client.get(f"{consul_url}/v1/health/service/{app_id}", timeout=3.0)
+        consul_resp = await service_discovery_client.get(
+            f"{consul_url}/v1/health/service/{app_id}", timeout=3.0
+        )
         if consul_resp.status_code == 200:
             result["consul_checks"] = consul_resp.json()
 
@@ -1569,50 +2153,92 @@ async def get_app_status(app_id: str, api_key: str = Security(get_api_key), rate
 
     return JSONResponse(content=result)
 
+
 def enforce_admin_role(request: Request):
     """Enforces role-based access control (RBAC) requiring admin privileges for mutating endpoints."""
-    user_role = request.headers.get("X-User-Role", os.getenv("DEFAULT_USER_ROLE", "admin")).lower()
+    user_role = request.headers.get(
+        "X-User-Role", os.getenv("DEFAULT_USER_ROLE", "admin")
+    ).lower()
     if user_role not in ["admin", "operator"]:
-        raise HTTPException(status_code=403, detail="Access denied: Admin or operator role required for mutating app operations.")
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Admin or operator role required for mutating app operations.",
+        )
+
 
 @app.post("/api/apps/install", summary="Install Community App", tags=["Community Apps"])
-async def install_community_app(request: Request, payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+async def install_community_app(
+    request: Request,
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Triggers Ansible deployment playbook or Nomad job runner to install a community container app."""
     enforce_admin_role(request)
     app_id = payload.get("app_id")
     if not app_id or app_id not in COMMUNITY_APPS_CATALOG:
-        raise HTTPException(status_code=400, detail=f"Invalid or unsupported app_id: {app_id}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid or unsupported app_id: {app_id}"
+        )
 
     app_config = COMMUNITY_APPS_CATALOG[app_id]
     domain_name = payload.get("domain_name", app_config["default_domain"])
 
     # Prepare command execution for Ansible deploy playbook
     cmd = [
-        "uvx", "--from", "ansible-core", "ansible-playbook",
-        "-i", "localhost,", "-c", "local",
+        "uvx",
+        "--from",
+        "ansible-core",
+        "ansible-playbook",
+        "-i",
+        "localhost,",
+        "-c",
+        "local",
         "playbooks/deploy_community_app.yaml",
-        "-e", f"app_name={app_id}",
-        "-e", f"template_file={app_config['template']}",
-        "-e", f"domain_name={domain_name}"
+        "-e",
+        f"app_name={app_id}",
+        "-e",
+        f"template_file={app_config['template']}",
+        "-e",
+        f"domain_name={domain_name}",
     ]
 
     try:
         proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await proc.communicate()
         if proc.returncode == 0:
-            return JSONResponse(content={"status": "success", "message": f"App {app_id} installed successfully", "output": stdout.decode()})
+            return JSONResponse(
+                content={
+                    "status": "success",
+                    "message": f"App {app_id} installed successfully",
+                    "output": stdout.decode(),
+                }
+            )
         else:
-            return JSONResponse(status_code=500, content={"status": "error", "message": f"Failed to install {app_id}", "error": stderr.decode()})
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "status": "error",
+                    "message": f"Failed to install {app_id}",
+                    "error": stderr.decode(),
+                },
+            )
     except Exception as e:
         logging.error(f"Error installing app {app_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/apps/remove/{app_id}", summary="Remove Community App", tags=["Community Apps"])
-async def remove_community_app(request: Request, app_id: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.delete(
+    "/api/apps/remove/{app_id}", summary="Remove Community App", tags=["Community Apps"]
+)
+async def remove_community_app(
+    request: Request,
+    app_id: str,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Purges the specified community container application job from Nomad and Consul."""
     enforce_admin_role(request)
     if not re.match(r"^[a-zA-Z0-9_\-]+$", app_id):
@@ -1623,73 +2249,134 @@ async def remove_community_app(request: Request, app_id: str, api_key: str = Sec
 
     try:
         # Purge job via Nomad API
-        purge_resp = await service_discovery_client.delete(f"{nomad_url}/v1/job/{app_id}?purge=true", timeout=5.0)
+        purge_resp = await service_discovery_client.delete(
+            f"{nomad_url}/v1/job/{app_id}?purge=true", timeout=5.0
+        )
         if purge_resp.status_code in [200, 202]:
-            return JSONResponse(content={"status": "success", "message": f"App {app_id} purged successfully."})
+            return JSONResponse(
+                content={
+                    "status": "success",
+                    "message": f"App {app_id} purged successfully.",
+                }
+            )
         else:
-            return JSONResponse(status_code=purge_resp.status_code, content={"status": "error", "message": f"Nomad returned status {purge_resp.status_code}: {purge_resp.text}"})
+            return JSONResponse(
+                status_code=purge_resp.status_code,
+                content={
+                    "status": "error",
+                    "message": f"Nomad returned status {purge_resp.status_code}: {purge_resp.text}",
+                },
+            )
     except Exception as e:
         logging.error(f"Error removing app {app_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/apps/upgrade", summary="Upgrade Community App with Canary Strategy", tags=["Community Apps"])
-async def upgrade_community_app(request: Request, payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/apps/upgrade",
+    summary="Upgrade Community App with Canary Strategy",
+    tags=["Community Apps"],
+)
+async def upgrade_community_app(
+    request: Request,
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Upgrades a community application image version using canary deployment strategy."""
     enforce_admin_role(request)
     app_id = payload.get("app_id")
     target_image = payload.get("target_image")
 
     if not app_id or app_id not in COMMUNITY_APPS_CATALOG:
-        raise HTTPException(status_code=400, detail=f"Invalid or unsupported app_id: {app_id}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid or unsupported app_id: {app_id}"
+        )
 
     app_config = COMMUNITY_APPS_CATALOG[app_id]
     image_to_use = target_image or app_config["image"]
 
     cmd = [
-        "uvx", "--from", "ansible-core", "ansible-playbook",
-        "-i", "localhost,", "-c", "local",
+        "uvx",
+        "--from",
+        "ansible-core",
+        "ansible-playbook",
+        "-i",
+        "localhost,",
+        "-c",
+        "local",
         "playbooks/deploy_community_app.yaml",
-        "-e", f"app_name={app_id}",
-        "-e", f"template_file={app_config['template']}",
-        "-e", f"container_image={image_to_use}"
+        "-e",
+        f"app_name={app_id}",
+        "-e",
+        f"template_file={app_config['template']}",
+        "-e",
+        f"container_image={image_to_use}",
     ]
 
     try:
         proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await proc.communicate()
         if proc.returncode == 0:
-            return JSONResponse(content={"status": "success", "message": f"Canary upgrade triggered for {app_id} using image {image_to_use}"})
+            return JSONResponse(
+                content={
+                    "status": "success",
+                    "message": f"Canary upgrade triggered for {app_id} using image {image_to_use}",
+                }
+            )
         else:
-            return JSONResponse(status_code=500, content={"status": "error", "message": stderr.decode()})
+            return JSONResponse(
+                status_code=500, content={"status": "error", "message": stderr.decode()}
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # -------------------------------------------------------------------------
 # Category: Datalog Program Analysis Memory Endpoints
 # -------------------------------------------------------------------------
 
-@app.get("/api/memory/datalog/state", summary="Get Current Datalog State", tags=["Memory", "Datalog"])
-async def get_datalog_state(predicate: Optional[str] = None, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/memory/datalog/state",
+    summary="Get Current Datalog State",
+    tags=["Memory", "Datalog"],
+)
+async def get_datalog_state(
+    predicate: Optional[str] = None,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Queries current active facts maintained in Datalog state."""
     datalog_mem = getattr(app.state, "datalog_memory", None)
     if not datalog_mem:
         from pipecatapp.datalog_memory import DatalogMemory
+
         datalog_mem = DatalogMemory()
         app.state.datalog_memory = datalog_mem
 
     active_state = datalog_mem.query_state(predicate=predicate)
     return JSONResponse(content={"predicate_filter": predicate, "facts": active_state})
 
-@app.get("/api/memory/datalog/explain", summary="Explain Datalog Fact Provenance", tags=["Memory", "Datalog"])
-async def explain_datalog_fact(predicate: str, args: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/memory/datalog/explain",
+    summary="Explain Datalog Fact Provenance",
+    tags=["Memory", "Datalog"],
+)
+async def explain_datalog_fact(
+    predicate: str,
+    args: str,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Explains the provenance and support graph for a specific fact."""
     datalog_mem = getattr(app.state, "datalog_memory", None)
     if not datalog_mem:
         from pipecatapp.datalog_memory import DatalogMemory
+
         datalog_mem = DatalogMemory()
         app.state.datalog_memory = datalog_mem
 
@@ -1697,26 +2384,47 @@ async def explain_datalog_fact(predicate: str, args: str, api_key: str = Securit
     explanation = datalog_mem.explain(predicate, *parsed_args)
     return JSONResponse(content=explanation)
 
-@app.post("/api/memory/datalog/extract", summary="Extract and Update Datalog State", tags=["Memory", "Datalog"])
-async def extract_datalog_state(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/memory/datalog/extract",
+    summary="Extract and Update Datalog State",
+    tags=["Memory", "Datalog"],
+)
+async def extract_datalog_state(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Receives structured extractions and updates Datalog state."""
     datalog_mem = getattr(app.state, "datalog_memory", None)
     if not datalog_mem:
         from pipecatapp.datalog_memory import DatalogMemory
+
         datalog_mem = DatalogMemory()
         app.state.datalog_memory = datalog_mem
 
     from pipecatapp.tools.datalog_extraction_tool import DatalogExtractionTool
+
     tool = DatalogExtractionTool(datalog_memory=datalog_mem)
     result = tool.execute({"action": "extract_and_apply", "extraction": payload})
     return JSONResponse(content=result)
+
 
 # -------------------------------------------------------------------------
 # Category: GDPR Compliance & Provenance Endpoints
 # -------------------------------------------------------------------------
 
-@app.delete("/api/memory/gdpr/purge", summary="GDPR Right to Erasure Purge", tags=["Memory", "GDPR"])
-async def purge_gdpr_user_data(identifier: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.delete(
+    "/api/memory/gdpr/purge",
+    summary="GDPR Right to Erasure Purge",
+    tags=["Memory", "GDPR"],
+)
+async def purge_gdpr_user_data(
+    identifier: str,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Purges or anonymizes stored events and work items for a specified user or session identifier to comply with GDPR Right to Erasure."""
     if not identifier or not re.match(r"^[a-zA-Z0-9_\-@\.]+$", identifier):
         raise HTTPException(status_code=400, detail="Invalid identifier format")
@@ -1738,11 +2446,20 @@ async def purge_gdpr_user_data(identifier: str, api_key: str = Security(get_api_
         "status": "success",
         "identifier": identifier,
         "records_deleted": deleted_total,
-        "records_anonymized": anonymized_total
+        "records_anonymized": anonymized_total,
     }
 
-@app.get("/api/memory/gdpr/export", summary="GDPR Data Portability Export", tags=["Memory", "GDPR"])
-async def export_gdpr_user_data(identifier: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/memory/gdpr/export",
+    summary="GDPR Data Portability Export",
+    tags=["Memory", "GDPR"],
+)
+async def export_gdpr_user_data(
+    identifier: str,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Exports all stored events and work items for a specified user or session identifier in JSON format (GDPR Article 20)."""
     if not identifier or not re.match(r"^[a-zA-Z0-9_\-@\.]+$", identifier):
         raise HTTPException(status_code=400, detail="Invalid identifier format")
@@ -1754,14 +2471,29 @@ async def export_gdpr_user_data(identifier: str, api_key: str = Security(get_api
 
     raise HTTPException(status_code=503, detail="Memory store not available")
 
-@app.get("/api/memory/gdpr/audit_logs", summary="Get GDPR Audit Logs", tags=["Memory", "GDPR"])
-async def get_gdpr_audit_logs(limit: int = 50, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+
+@app.get(
+    "/api/memory/gdpr/audit_logs",
+    summary="Get GDPR Audit Logs",
+    tags=["Memory", "GDPR"],
+)
+async def get_gdpr_audit_logs(
+    limit: int = 50,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Retrieves immutable audit logs for GDPR erasure and data export actions."""
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
-        erasure_logs = await twin.long_term_memory.get_events(kind="gdpr_erasure_audit", limit=limit)
-        export_logs = await twin.long_term_memory.get_events(kind="gdpr_export_audit", limit=limit)
-        combined = sorted(erasure_logs + export_logs, key=lambda x: x["timestamp"], reverse=True)
+        erasure_logs = await twin.long_term_memory.get_events(
+            kind="gdpr_erasure_audit", limit=limit
+        )
+        export_logs = await twin.long_term_memory.get_events(
+            kind="gdpr_export_audit", limit=limit
+        )
+        combined = sorted(
+            erasure_logs + export_logs, key=lambda x: x["timestamp"], reverse=True
+        )
         return JSONResponse(content=combined[:limit])
 
     raise HTTPException(status_code=503, detail="Memory store not available")
@@ -1771,15 +2503,23 @@ async def get_gdpr_audit_logs(limit: int = 50, api_key: str = Security(get_api_k
 # Category A: Sharded Event-routing Endpoints
 # -------------------------------------------------------------------------
 
+
 @app.post("/api/memory/sharded/events", summary="Add Sharded Event", tags=["Memory"])
-async def add_sharded_event(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+async def add_sharded_event(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Adds a conversational event directly to the local node's PMMMemory database shard."""
     session_id = payload.get("session_id")
     kind = payload.get("kind")
     content = payload.get("content")
     meta = payload.get("meta", {})
     if not session_id or not kind or not content:
-        raise HTTPException(status_code=400, detail="Missing required parameters: session_id, kind, content")
+        raise HTTPException(
+            status_code=400,
+            detail="Missing required parameters: session_id, kind, content",
+        )
 
     # Ensure session_id is indexed in metadata
     if "session_id" not in meta:
@@ -1795,7 +2535,13 @@ async def add_sharded_event(payload: Dict = Body(...), api_key: str = Security(g
 
 
 @app.get("/api/memory/sharded/events", summary="Get Sharded Events", tags=["Memory"])
-async def get_sharded_events(session_id: str, kind: Optional[str] = None, limit: int = 10, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+async def get_sharded_events(
+    session_id: str,
+    kind: Optional[str] = None,
+    limit: int = 10,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Retrieves and filters sharded events for a specific session ID from the local database shard."""
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
@@ -1810,8 +2556,17 @@ async def get_sharded_events(session_id: str, kind: Optional[str] = None, limit:
 # Category B: Coordinator Task & DLQ Endpoints
 # -------------------------------------------------------------------------
 
-@app.post("/api/memory/coordinator/work_items", summary="Create Task on Coordinator Node", tags=["Memory"])
-async def coordinator_create_work_item(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+
+@app.post(
+    "/api/memory/coordinator/work_items",
+    summary="Create Task on Coordinator Node",
+    tags=["Memory"],
+)
+async def coordinator_create_work_item(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Creates a new Gas Town work item/task on the central coordinator node."""
     title = payload.get("title")
     created_by = payload.get("created_by")
@@ -1822,14 +2577,25 @@ async def coordinator_create_work_item(payload: Dict = Body(...), api_key: str =
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
-        item_id = await twin.long_term_memory.create_work_item(title, created_by, assignee_id, parent_id, meta)
+        item_id = await twin.long_term_memory.create_work_item(
+            title, created_by, assignee_id, parent_id, meta
+        )
         return {"item_id": item_id}
 
     raise HTTPException(status_code=503, detail="Coordinator memory not available")
 
 
-@app.post("/api/memory/coordinator/work_items/{item_id}", summary="Update Task on Coordinator Node", tags=["Memory"])
-async def coordinator_update_work_item(item_id: str, payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+@app.post(
+    "/api/memory/coordinator/work_items/{item_id}",
+    summary="Update Task on Coordinator Node",
+    tags=["Memory"],
+)
+async def coordinator_update_work_item(
+    item_id: str,
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Updates an existing Gas Town work item/task on the central coordinator node."""
     status = payload.get("status")
     assignee_id = payload.get("assignee_id")
@@ -1839,14 +2605,24 @@ async def coordinator_update_work_item(item_id: str, payload: Dict = Body(...), 
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
-        res = await twin.long_term_memory.update_work_item(item_id, status, assignee_id, validation_results, meta_update)
+        res = await twin.long_term_memory.update_work_item(
+            item_id, status, assignee_id, validation_results, meta_update
+        )
         return {"updated": res}
 
     raise HTTPException(status_code=503, detail="Coordinator memory not available")
 
 
-@app.get("/api/memory/coordinator/work_items/{item_id}", summary="Get Task from Coordinator Node", tags=["Memory"])
-async def coordinator_get_work_item(item_id: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+@app.get(
+    "/api/memory/coordinator/work_items/{item_id}",
+    summary="Get Task from Coordinator Node",
+    tags=["Memory"],
+)
+async def coordinator_get_work_item(
+    item_id: str,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Retrieves full details of a specific task from the central coordinator node."""
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
@@ -1859,8 +2635,18 @@ async def coordinator_get_work_item(item_id: str, api_key: str = Security(get_ap
     raise HTTPException(status_code=503, detail="Coordinator memory not available")
 
 
-@app.get("/api/memory/coordinator/work_items", summary="List Tasks from Coordinator Node", tags=["Memory"])
-async def coordinator_list_work_items(status: Optional[str] = None, assignee_id: Optional[str] = None, limit: int = 50, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+@app.get(
+    "/api/memory/coordinator/work_items",
+    summary="List Tasks from Coordinator Node",
+    tags=["Memory"],
+)
+async def coordinator_list_work_items(
+    status: Optional[str] = None,
+    assignee_id: Optional[str] = None,
+    limit: int = 50,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Lists tasks matching filters from the central coordinator node."""
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
@@ -1870,8 +2656,16 @@ async def coordinator_list_work_items(status: Optional[str] = None, assignee_id:
     raise HTTPException(status_code=503, detail="Coordinator memory not available")
 
 
-@app.post("/api/memory/coordinator/dlq", summary="Enqueue DLQ Item on Coordinator Node", tags=["Memory"])
-async def coordinator_enqueue_dlq(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+@app.post(
+    "/api/memory/coordinator/dlq",
+    summary="Enqueue DLQ Item on Coordinator Node",
+    tags=["Memory"],
+)
+async def coordinator_enqueue_dlq(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Enqueues a failed event into the central coordinator node's Dead Letter Queue."""
     event_type = payload.get("event_type")
     dlq_payload = payload.get("payload")
@@ -1881,14 +2675,24 @@ async def coordinator_enqueue_dlq(payload: Dict = Body(...), api_key: str = Secu
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
-        item_id = await twin.long_term_memory.enqueue_dlq_item(event_type, dlq_payload, error_reason, retry_count)
+        item_id = await twin.long_term_memory.enqueue_dlq_item(
+            event_type, dlq_payload, error_reason, retry_count
+        )
         return {"id": item_id}
 
     raise HTTPException(status_code=503, detail="Coordinator memory not available")
 
 
-@app.post("/api/memory/coordinator/dlq/claim", summary="Claim DLQ Item from Coordinator Node", tags=["Memory"])
-async def coordinator_claim_dlq(payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+@app.post(
+    "/api/memory/coordinator/dlq/claim",
+    summary="Claim DLQ Item from Coordinator Node",
+    tags=["Memory"],
+)
+async def coordinator_claim_dlq(
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Atomically claims a pending DLQ item from the coordinator node to prevent double claiming."""
     worker_id = payload.get("worker_id")
     supported_types = payload.get("supported_types")
@@ -1902,8 +2706,17 @@ async def coordinator_claim_dlq(payload: Dict = Body(...), api_key: str = Securi
     raise HTTPException(status_code=503, detail="Coordinator memory not available")
 
 
-@app.post("/api/memory/coordinator/dlq/{item_id}", summary="Update DLQ Status on Coordinator Node", tags=["Memory"])
-async def coordinator_update_dlq(item_id: str, payload: Dict = Body(...), api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)):
+@app.post(
+    "/api/memory/coordinator/dlq/{item_id}",
+    summary="Update DLQ Status on Coordinator Node",
+    tags=["Memory"],
+)
+async def coordinator_update_dlq(
+    item_id: str,
+    payload: Dict = Body(...),
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
     """Updates a claimed DLQ item status on the central coordinator node."""
     status = payload.get("status")
     result = payload.get("result")
@@ -1913,7 +2726,9 @@ async def coordinator_update_dlq(item_id: str, payload: Dict = Body(...), api_ke
     # Fallback to monolithic memory
     twin = getattr(app.state, "twin_service_instance", None)
     if twin and hasattr(twin, "long_term_memory"):
-        res = await twin.long_term_memory.update_dlq_item(item_id, status, result, retry_after, increment_retry)
+        res = await twin.long_term_memory.update_dlq_item(
+            item_id, status, result, retry_after, increment_retry
+        )
         return {"updated": res}
 
     raise HTTPException(status_code=503, detail="Coordinator memory not available")
@@ -1923,18 +2738,29 @@ async def coordinator_update_dlq(item_id: str, payload: Dict = Body(...), api_ke
 # Category C: Routing Status & Topology Inspect Endpoints
 # -------------------------------------------------------------------------
 
+
 @app.get("/api/memory/sharded/status", summary="Get Sharding Status", tags=["Memory"])
-async def get_sharding_status(api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+async def get_sharding_status(
+    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+):
     """Retrieves the status of the sharding routing proxy, indicating if it is active and which shards are configured."""
 
 
-
 @app.get("/api/memory/sharded/lookup", summary="Lookup Shard for Key", tags=["Memory"])
-async def lookup_shard_for_key(key: str, api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)):
+async def lookup_shard_for_key(
+    key: str,
+    api_key: str = Security(get_api_key),
+    rate_limit: None = Depends(standard_limiter),
+):
     """Looks up the target node ID and API URL mapping for a given session or hash key on the consistent hash ring."""
 
 
-@app.post("/webhook", summary="Alertmanager Webhook Receiver", description="Receives alert notifications from Prometheus Alertmanager.", tags=["Monitoring"])
+@app.post(
+    "/webhook",
+    summary="Alertmanager Webhook Receiver",
+    description="Receives alert notifications from Prometheus Alertmanager.",
+    tags=["Monitoring"],
+)
 async def alertmanager_webhook(request: Request):
     """
     Receives JSON payload from Alertmanager.
@@ -1944,26 +2770,48 @@ async def alertmanager_webhook(request: Request):
         payload = await request.json()
         logger.info(f"Received webhook alert payload: {json.dumps(payload)}")
         # In the future, this can be parsed and routed to agent logic or LLMs
-        return JSONResponse(content={"status": "success", "message": "Alert received"}, status_code=200)
+        return JSONResponse(
+            content={"status": "success", "message": "Alert received"}, status_code=200
+        )
     except Exception as e:
         logger.error(f"Failed to process webhook alert: {e}")
         raise HTTPException(status_code=500, detail="Failed to process alert webhook")
 
 
 if __name__ == "__main__":
-
     import uvicorn
+
     host_ip = os.getenv("HOST_IP", "::")
     uvicorn.run(app, host=host_ip, port=8000)
 
-@app.get("/api/v1/memory/tracemalloc_stats", summary="Dump Tracemalloc Stats", tags=["Diagnostics"])
+
+@app.get(
+    "/api/v1/memory/tracemalloc_stats",
+    summary="Dump Tracemalloc Stats",
+    tags=["Diagnostics"],
+)
 async def dump_tracemalloc_stats(top_n: int = 10, api_key: str = Security(get_api_key)):
     """Dumps the top N memory-consuming lines to identify leaks."""
     snapshot = tracemalloc.take_snapshot()
-    top_stats = snapshot.statistics('lineno')
+    top_stats = snapshot.statistics("lineno")
 
     results = []
     for stat in top_stats[:top_n]:
         results.append(str(stat))
 
     return {"status": "success", "top_stats": results}
+
+
+# Include Tangle API adapter
+try:
+    from pipecatapp.tangle_adapter import tangle_router
+    app.include_router(tangle_router)
+except ImportError as e:
+    logging.warning(f"Failed to load Tangle API adapter: {e}")
+
+# Mount Tangle frontend UI if it exists
+tangle_ui_dir = os.path.join(script_dir, "ui", "tangle_frontend")
+if os.path.exists(tangle_ui_dir):
+    app.mount(
+        "/tangle-ui", StaticFiles(directory=tangle_ui_dir, html=True), name="tangle-ui"
+    )
