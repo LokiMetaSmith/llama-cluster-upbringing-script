@@ -1410,6 +1410,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "mini-swe-agent" },
     { name = "prometheus-client" },
+    { name = "pydantic" },
 ]
 
 [package.metadata]
@@ -1417,6 +1418,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=41.0.0" },
     { name = "mini-swe-agent", specifier = ">=0.1.0" },
     { name = "prometheus-client", specifier = ">=0.19.0" },
+    { name = "pydantic", specifier = ">=2.13.5" },
 ]
 
 [[package]]
