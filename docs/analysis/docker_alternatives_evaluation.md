@@ -75,7 +75,7 @@ If maintaining standard OCI images (from Dockerfiles or registries) is necessary
 
 *The `tool-server` build tasks suffer from inode exhaustion due to Docker `vfs` duplicating entire root filesystems per layer. We need to eliminate nested Docker builds.*
 
-* [ ] **Evaluate Buildah for sandbox building**
+* [x] **Evaluate Buildah for sandbox building**
 * Create a test Ansible task verifying `buildah` installation and functionality in the cluster environment.
 * Convert `ansible/tasks/build_cached_image.yaml` to use `buildah bud` instead of `docker build`.
 * [ ] **Refactor `tool-server` build pipeline**
