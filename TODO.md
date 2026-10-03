@@ -48,7 +48,7 @@
     3. [x] Create a `live-build` configuration to generate a custom, headless Debian bootable ISO that includes the project source and dependencies.
 - [x] **Gas Town Integration:**
   - **Goal:** Adapt Gas Town concepts (Work Ledger, Attribution, Agent CVs) into the Pipecat App ecosystem.
-- [ ] **Tangle Feature Extraction (Workflow Augmentation):**
+- [x] **Tangle Feature Extraction (Workflow Augmentation):**
   - **Goal:** Extract and adapt specific decoupled features from the Tangle project (Visual DAG UI and Component Specification format) into our existing `pipecatapp` Workflow Engine architecture, while strictly adhering to the 8GB memory limits by avoiding a full Tangle backend deployment.
   - **Tasks:**
     1. [x] Implement a KFP-style `ComponentSpec` parser within `pipecatapp/workflow/` based on Tangle's `ComponentSpec` dataclasses.
