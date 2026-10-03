@@ -1,0 +1,16 @@
+---
+- name: "Test Buildah : Check if buildah is installed"
+  ansible.builtin.command: buildah --version
+  register: _buildah_check
+  changed_when: false
+  become: yes
+
+- name: "Test Buildah : Verify buildah functionality"
+  ansible.builtin.command: buildah info
+  register: _buildah_info
+  changed_when: false
+  become: yes
+
+- name: "Test Buildah : Print buildah version"
+  ansible.builtin.debug:
+    var: _buildah_check.stdout
