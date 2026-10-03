@@ -103,11 +103,19 @@ async def run_agent():
     consul_host = os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1"))
     consul_port = int(os.getenv("CONSUL_PORT", 8500))
 
-    try:
-        app_config = await load_config_from_consul(consul_host, consul_port)
-    except Exception as e:
-        logging.critical(f"Failed to load config from Consul: {e}")
-        return
+    app_config = {}
+    for attempt in range(5):
+        try:
+            app_config = await load_config_from_consul(consul_host, consul_port)
+            if app_config:
+                break
+        except Exception as e:
+            logging.warning(f"Attempt {attempt + 1}/5 to load config from Consul failed: {e}")
+        await asyncio.sleep(2)
+
+    if not app_config:
+        logging.warning("Consul config unavailable or empty. Proceeding with environment defaults.")
+        app_config = {}
 
     app_config['consul_host'] = consul_host
     app_config['consul_port'] = consul_port
@@ -216,39 +224,49 @@ async def run_agent():
         )
         transport = LocalAudioTransport(transport_params)
 
-        stt_service_name = app_config.get("stt_service") or os.getenv("STT_SERVICE")
-        if stt_service_name == "faster-whisper":
-            stt_provider = app_config.get("active_stt_provider", "faster-whisper")
-            if stt_provider == "wyoming":
-                host = app_config.get("wyoming_host", "localhost")
-                port = int(app_config.get("wyoming_port", 10300))
-                stt = WyomingSTTService(host=host, port=port)
+        stt = None
+        stt_service_name = app_config.get("stt_service") or os.getenv("STT_SERVICE", "faster-whisper")
+        try:
+            if stt_service_name == "faster-whisper":
+                stt_provider = app_config.get("active_stt_provider", "faster-whisper")
+                if stt_provider == "wyoming":
+                    host = app_config.get("wyoming_host", "localhost")
+                    port = int(app_config.get("wyoming_port", 10300))
+                    stt = WyomingSTTService(host=host, port=port)
+                else:
+                    stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
+                    if stt_model_name.startswith(f"{stt_provider}-"):
+                        stt_model_name = stt_model_name[len(stt_provider) + 1:]
+                    model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
+                    stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
+            elif stt_service_name == "groq":
+                groq_key = secret_manager.get_secret("GROQ_API_KEY")
+                stt = GroqSTTService(api_key=groq_key)
             else:
-                stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
-                if stt_model_name.startswith(f"{stt_provider}-"):
-                    stt_model_name = stt_model_name[len(stt_provider) + 1:]
-                model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
-                stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
-        elif stt_service_name == "groq":
-            groq_key = secret_manager.get_secret("GROQ_API_KEY")
-            stt = GroqSTTService(api_key=groq_key)
+                logging.warning(f"STT_SERVICE '{stt_service_name}' not recognized. Audio input disabled.")
+        except Exception as e:
+            logging.warning(f"Failed to initialize STT service '{stt_service_name}': {e}. Falling back to text mode.")
+            stt = None
+
+        if stt:
+            pipeline_steps.extend([
+                transport.input(),
+                stt,
+                UILogger(sender="user"),
+                twin,
+                UILogger(sender="agent")
+            ])
+            if tts:
+                 pipeline_steps.append(tts)
+                 if websocket_streamer:
+                     pipeline_steps.append(websocket_streamer)
+            pipeline_steps.append(transport.output())
         else:
-            raise RuntimeError(f"STT_SERVICE not configured correctly in Consul. Got '{stt_service_name}'")
-
-        pipeline_steps.extend([
-            transport.input(),
-            stt,
-            UILogger(sender="user"),
-            twin,
-            UILogger(sender="agent")
-        ])
-
-        if tts:
-             pipeline_steps.append(tts)
-             if websocket_streamer:
-                 pipeline_steps.append(websocket_streamer)
-
-        pipeline_steps.append(transport.output())
+            pipeline_steps.extend([twin, UILogger(sender="agent")])
+            if tts:
+                 pipeline_steps.append(tts)
+                 if websocket_streamer:
+                     pipeline_steps.append(websocket_streamer)
     else:
         logging.warning("No audio device found. Starting in headless mode.")
         pipeline_steps.extend([twin, UILogger(sender="agent")])

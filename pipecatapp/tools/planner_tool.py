@@ -59,7 +59,7 @@ class PlannerTool:
 
         # Fallback to Consul discovery
         try:
-            consul_addr = getattr(self.twin_service, 'consul_http_addr', f'http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8500')
+            consul_addr = getattr(self.twin_service, 'consul_http_addr', f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8500")
             service_name = app_config.get("llama_api_service_name", "llamacpp-rpc-api")
 
             async with httpx.AsyncClient() as client:

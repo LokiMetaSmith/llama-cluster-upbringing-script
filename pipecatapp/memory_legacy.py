@@ -1,11 +1,19 @@
 from pipecatapp.memory_backends_impl.consul_kv_backend import ConsulKVBackend
 from pipecatapp.memory_backends import BaseMemoryBackend
 
-import faiss
+try:
+    import faiss
+except ImportError:
+    faiss = None
+
 import json
 import sqlite3
 import atexit
-from sentence_transformers import SentenceTransformer
+
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    SentenceTransformer = None
 import os
 import uuid
 import logging
@@ -55,13 +63,18 @@ class MemoryStore(BaseMemoryBackend):
         """
         # The embedding model is now managed by Ansible and placed in a predictable location.
         embedding_model_path = "/opt/nomad/models/embedding/bge-large-en-v1.5"
-        if os.path.exists(embedding_model_path):
-            self.embedding_model = SentenceTransformer(embedding_model_path)
-        else:
+        if SentenceTransformer and os.path.exists(embedding_model_path):
+            try:
+                self.embedding_model = SentenceTransformer(embedding_model_path)
+            except Exception:
+                self.embedding_model = None
+        elif SentenceTransformer:
             try:
                 self.embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
             except Exception:
                 self.embedding_model = None
+        else:
+            self.embedding_model = None
         self.dimension = self.embedding_model.get_sentence_embedding_dimension() if self.embedding_model else 384
         self.index_file = index_file
         self.store_file = store_file
@@ -88,6 +101,9 @@ class MemoryStore(BaseMemoryBackend):
 
     def _load_index(self):
         """Loads the FAISS index from disk or creates a new one."""
+        if faiss is None:
+            logging.warning("faiss is not installed. Vector index disabled.")
+            return None
         if os.path.exists(self.index_file):
             return faiss.read_index(self.index_file, faiss.IO_FLAG_MMAP)
         else:
@@ -121,7 +137,8 @@ class MemoryStore(BaseMemoryBackend):
 
     def _save(self):
         """Saves the FAISS index and the text store to disk, encrypting if configured."""
-        faiss.write_index(self.index, self.index_file)
+        if faiss is not None and self.index is not None:
+            faiss.write_index(self.index, self.index_file)
 
         store_to_save = {}
         for k, v in self.store.items():
@@ -437,10 +454,14 @@ class MemoryStore(BaseMemoryBackend):
         Args:
             text (str): The text to add to the memory.
         """
-        embedding = self.embedding_model.encode([text])
-        new_id = self.index.ntotal
-        self.index.add(embedding)
-        self.store[str(new_id)] = self._encrypt(text)
+        if self.embedding_model is not None and self.index is not None:
+            embedding = self.embedding_model.encode([text])
+            new_id = self.index.ntotal
+            self.index.add(embedding)
+            self.store[str(new_id)] = self._encrypt(text)
+        else:
+            new_id = len(self.store)
+            self.store[str(new_id)] = self._encrypt(text)
 
         # Debounce/batch saving to reduce I/O overhead
         self._add_count += 1
@@ -471,7 +492,7 @@ class MemoryStore(BaseMemoryBackend):
         Returns:
             list[str]: A list of the most relevant text entries found.
         """
-        if self.index.ntotal == 0:
+        if self.index is None or getattr(self.index, 'ntotal', 0) == 0 or self.embedding_model is None:
             return []
 
         query_embedding = self.embedding_model.encode([query_text])

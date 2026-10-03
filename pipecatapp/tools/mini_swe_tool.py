@@ -4,7 +4,10 @@ Tool wrapper around mini-swe-agent for task delegation.
 
 import os
 from typing import Dict, Any, Optional
-from pipecatapp.services.mini_swe_service import MiniSWEService
+try:
+    from pipecatapp.services.mini_swe_service import MiniSWEService
+except ImportError:
+    MiniSWEService = None
 
 class MiniSWEAgentTool:
     """
@@ -12,13 +15,21 @@ class MiniSWEAgentTool:
     to mini-swe-agent with optional Docker sandboxing or Local execution.
     """
 
-    def __init__(self, service: Optional[MiniSWEService] = None):
+    def __init__(self, service: Optional[Any] = None):
         self.name = "mini_swe_agent"
         self.description = (
             "Executes software engineering, debugging, and bash code tasks using mini-swe-agent. "
             "Requires a 'task' string argument. Accepts 'environment_type' ('docker' or 'local') and 'cwd'."
         )
-        self.service = service or MiniSWEService()
+        if service is not None:
+            self.service = service
+        elif MiniSWEService is not None:
+            try:
+                self.service = MiniSWEService()
+            except Exception:
+                self.service = None
+        else:
+            self.service = None
 
     def get_schema(self) -> dict:
         return {
@@ -52,6 +63,9 @@ class MiniSWEAgentTool:
         task_str = task or kwargs.get("task") or action
         if not task_str:
             return {"status": "error", "error": "Parameter 'task' is required."}
+
+        if not self.service:
+            return {"status": "error", "error": "MiniSWEService is not available or minisweagent is not installed."}
 
         env_type = kwargs.get("environment_type", "docker")
         cwd = kwargs.get("cwd")

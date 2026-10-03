@@ -1,6 +1,10 @@
-from .mini_swe_service import MiniSWEService
+__all__ = []
 
-__all__ = ["MiniSWEService"]
+try:
+    from .mini_swe_service import MiniSWEService
+    __all__.append("MiniSWEService")
+except ImportError:
+    pass
 
 try:
     from .gemma_e2b_service import GemmaE2BService

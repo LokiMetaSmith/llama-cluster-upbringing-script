@@ -1,19 +1,33 @@
 from .retry_utils import retry
 import abc
-import docker
+try:
+    import docker
+except ImportError:
+    docker = None
+
 import logging
 import os
 import asyncio
 import tempfile
 import time
 import uuid
-import jupyter_client
+
+try:
+    import jupyter_client
+except ImportError:
+    jupyter_client = None
+
 import atexit
 import queue
 import aiohttp
 import base64
 import multiprocessing
-from llm_sandbox import SandboxSession
+
+try:
+    from llm_sandbox import SandboxSession
+except ImportError:
+    SandboxSession = None
+
 from typing import List, Optional
 from .dependency_scanner_tool import DependencyScannerTool
 from .execution_history import ExecutionHistory
@@ -350,7 +364,7 @@ class NomadSandboxExecutor(SandboxExecutor):
     """Executes code by dispatching ephemeral Nomad batch jobs."""
 
     def __init__(self):
-        self.nomad_url = os.environ.get("NOMAD_ADDR", f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:4646")
+        self.nomad_url = os.environ.get("NOMAD_ADDR", f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:4646")
         self.token = os.environ.get("NOMAD_TOKEN")
         self.default_timeout = 300 # 5 minutes default timeout for job execution
         self.headers = {"X-Nomad-Token": self.token} if self.token else {}
@@ -551,9 +565,13 @@ class CodeRunnerTool:
             self.executor = DockerSandboxExecutor()
             logging.info("CodeRunnerTool initialized in DOCKER mode.")
 
-        self.jupyter_executor = JupyterSandboxExecutor()
-        import atexit
-        atexit.register(self.jupyter_executor.close)
+        try:
+            self.jupyter_executor = JupyterSandboxExecutor()
+            import atexit
+            atexit.register(self.jupyter_executor.close)
+        except Exception as e:
+            self.jupyter_executor = None
+            logging.warning(f"JupyterSandboxExecutor not available: {e}")
 
 
     def get_schema(self) -> dict:

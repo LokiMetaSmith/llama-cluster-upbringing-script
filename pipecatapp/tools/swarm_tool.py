@@ -5,13 +5,16 @@ import logging
 import uuid
 import asyncio
 import time
+from typing import Optional, Dict, Any, List
 
 class SwarmTool:
     """
     A tool that allows the agent to spawn multiple 'worker' agents to perform tasks in parallel.
     This enables the 'Frontier Agent' capability of scaling by spawning 10 versions of itself.
     """
-    def __init__(self, nomad_url: str = f"http://{os.getenv("CLUSTER_IP", "127.0.0.1")}:4646", memory_client=None):
+    def __init__(self, nomad_url: Optional[str] = None, memory_client=None):
+        if nomad_url is None:
+            nomad_url = f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:4646"
         self.nomad_url = nomad_url
         self.memory_client = memory_client
         self.logger = logging.getLogger(__name__)

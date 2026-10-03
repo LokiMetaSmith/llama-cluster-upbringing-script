@@ -128,8 +128,8 @@ job "{{ job_name | default('pipecat-app') }}" {
         timeout  = "5s"
 
         check_restart {
-          limit           = 3
-          grace           = "90s"
+          limit           = 5
+          grace           = "120s"
           ignore_warnings = false
         }
       }
@@ -149,7 +149,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     {% include 'load_image_task.nomad.j2' %}
 
     task "pipecat-app" {
-      driver = "containerd-driver"
+      driver = "{{ nomad_container_driver | default('docker') }}"
       {{ env_vars }}
 
       template {
@@ -247,7 +247,7 @@ EOT
     {% endif %}
 
     task "browser-runner" {
-      driver = "containerd-driver"
+      driver = "{{ nomad_container_driver | default('docker') }}"
 
       config {
         image = "{{ pipecatapp_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag | default('local') }}"

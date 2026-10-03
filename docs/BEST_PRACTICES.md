@@ -32,7 +32,26 @@ The repository is a hybrid monorepo consisting of Ansible playbooks, Rust system
 
 ---
 
-## 3. Security Guidelines
+## 3. Hierarchy of Stability & Anti-Looping Rules
+
+To eliminate the recurring cycle where agents repeatedly break cluster infrastructure (Nomad, Consul, IPFS, TLS) while attempting to fix application or tool-level bugs, all code modifications MUST respect the **Hierarchy of Stability**:
+
+*   **Level 0: Substrate & Mesh Core (Consul, Nomad, Tailscale, IPFS Gateway/Daemon, TLS/Certs)**
+    *   *Inviolable Guarantee:* Application-level or tool-level fixes MUST NEVER modify cluster substrate ports, bypass TLS certificates, or reconfigure Nomad/Consul service blocks.
+    *   *Fixed Infrastructure Ports:* Consul (`8500`), Nomad (`4646`), IPFS Gateway (`8092`), IPFS API (`5001`), Pipecat App (`8007`).
+    *   *Health Check Rule:* All infrastructure health check targets (e.g., `/health`, `/api/status`) must be publicly accessible without authentication.
+*   **Level 1: Core Runtime (`pipecatapp` Service Layer)**
+    *   *Startup Budget:* Must initialize and pass Nomad health checks in under 3 seconds using < 300MB RAM.
+    *   *Lazy Tool Loading:* Eager static imports of tools or heavy libraries (PyTorch, Playwright, OpenCV, Faiss) in `agent_factory.py` or `web_server.py` are strictly prohibited. All tools must be registered in `TOOL_CLASS_MAP` and imported on-demand.
+    *   *Fault Tolerance:* External service dependencies (Consul KV, Whisper/Wyoming audio models) must have retry loops with fallbacks (e.g., text mode fallback if audio STT models are absent, default config fallback if Consul KV is briefly unreachable).
+*   **Level 2: Background Services & Distributed Tool Layer (`tool_server`)**
+    *   *Isolation:* Heavy tools (RAG, Docker code execution, WASM runner, Ansible executor) must run out-of-process via `tool_server` or separate Nomad batch jobs to protect Level 1 memory limits.
+*   **Level 3: Experimental & Workflow Extensions (Tangle UI, VR Visualizer, Obsidian Gardener)**
+    *   *Additive Degradation:* Experimental features must degrade gracefully. An unconfigured or missing experimental component must never prevent Level 0 or Level 1 from booting or passing health checks.
+
+---
+
+## 4. Security Guidelines
 
 *   **Zero-Tolerance for TLS/SSL Bypasses:** Agents must never use arguments like `validate_certs: no` (Ansible), `--insecure` / `-k` (cURL), `verify=False` (Python/Requests), or `NODE_TLS_REJECT_UNAUTHORIZED=0` (Node.js). Fix the root cause (trust infrastructure, SANs).
 *   **Defense in Depth:** Web applications (e.g., Uvicorn) must natively serve HTTPS at the application layer using internal CA certificates (injected via Nomad `template` blocks), rather than relying solely on network-level encryption like WireGuard. Python scripts must explicitly trust the internal CA.
@@ -42,7 +61,7 @@ The repository is a hybrid monorepo consisting of Ansible playbooks, Rust system
 
 ---
 
-## 4. Development & Testing Practices
+## 5. Development & Testing Practices
 
 *   **Environment Setup:** Initialize virtual environments with `uv venv` and install via `uv pip install -r pipecatapp/requirements.txt`. System dependencies (e.g., `portaudio19-dev` for `pyaudio`) must be installed first.
 *   **Test Location & Imports:** Unit tests must reside in `tests/unit/`. Run internal package tests using PYTHONPATH correctly (e.g., `PYTHONPATH=$(pwd):$(pwd)/pipecatapp uv run pytest <test_file>`).
@@ -54,7 +73,7 @@ The repository is a hybrid monorepo consisting of Ansible playbooks, Rust system
 
 ---
 
-## 5. Infrastructure & Deployment Rules
+## 6. Infrastructure & Deployment Rules
 
 *   **Nomad/Consul Raft Quorum:** Dynamically set `bootstrap_expect` to `{{ groups['controller_nodes'] | length }}`.
 *   **Mesh Node Discovery:** Nomad/Consul configurations must populate their `retry_join` lists with ALL controller node IPs using `groups['controller_nodes']` (not just a single primary).

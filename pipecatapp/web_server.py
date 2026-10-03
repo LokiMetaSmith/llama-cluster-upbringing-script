@@ -842,7 +842,6 @@ async def get_cluster_metrics(
 )
 async def get_status(
     request: Request,
-    api_key: str = Security(get_api_key),
     rate_limit: None = Depends(standard_limiter),
 ):
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""

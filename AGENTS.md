@@ -18,6 +18,26 @@ You must strictly adhere to the following rules, tools, and workflows. Do not de
 
 ---
 
+## 🧱 ARCHITECTURAL STABILITY: The Hierarchy of Stability (Anti-Looping Guardrails)
+
+Agents working in this repository frequently fall into an "agent loop" (fixing an application-level bug by breaking Nomad, Consul, IPFS, or TLS, then breaking the application while trying to fix the mesh). To permanently eliminate this loop, you MUST obey the **Hierarchy of Stability**:
+
+* **Level 0: Substrate & Mesh Core (Consul, Nomad, Tailscale, IPFS Gateway/Daemon, TLS/Certs)**
+  * **Inviolable Invariant:** You must NEVER modify substrate ports, disable TLS verification, or alter cluster discovery to resolve higher-level app issues.
+  * **Fixed Ports:** Consul (`8500`), Nomad (`4646`), IPFS Gateway (`8092`), IPFS API (`5001`), Pipecat App (`8007`).
+  * **Health Check Invariant:** Endpoints checked by Nomad/Consul (e.g., `/health`, `/api/status`) MUST remain unauthenticated. Never attach API keys or auth middleware to these routes.
+* **Level 1: Core Runtime (`pipecatapp` Service Layer)**
+  * **Startup Budget:** The core application must initialize and pass health checks in < 3 seconds using < 300 MB RAM.
+  * **Lazy Tool Loading:** Zero static imports of heavy tool libraries (PyTorch, Playwright, OpenCV, Faiss) in `agent_factory.py` or `web_server.py`. All tools must be registered in `TOOL_CLASS_MAP` and loaded on demand.
+  * **Fault Recovery:** External service lookups (Consul KV, Whisper/Wyoming audio models) must use retry loops with graceful fallbacks (e.g. text-only fallback if audio STT models are absent, default config fallback if Consul KV is unreachable).
+  * **Mandatory Syntax Audit:** Always run `python3 -m compileall -q pipecatapp` to detect f-string syntax regressions before testing.
+* **Level 2: Background Services & Distributed Tool Layer (`tool_server`)**
+  * **Out-of-Process Execution:** Heavy workloads (RAG indexers, Docker sandboxes, WASM runners, Ansible executors) must run out-of-process via `tool_server` or dedicated Nomad batch jobs to prevent OOM kills of the Level 1 web server.
+* **Level 3: Experimental & Workflow Extensions (Tangle UI, VR Visualizer, Obsidian Gardener)**
+  * **Additive & Graceful:** Experimental extensions must fail gracefully. If an experimental dependency is missing, the core service must continue running unaffected.
+
+---
+
 ## Project overview
 
 The repository is a Distributed Conversational AI Pipeline: A stateful, embodied AI agent pipeline on a cluster of legacy computers, powered by Ansible, Nomad, Consul, and Pipecat.

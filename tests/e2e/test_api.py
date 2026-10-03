@@ -1,3 +1,4 @@
+import sys
 import requests
 import os
 import hashlib
@@ -7,7 +8,7 @@ import time
 import pytest
 
 # Base URL of the service to test
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://127.0.0.1:8000"
 
 def get_api_key_hash(api_key: str) -> str:
     """Hashes an API key using SHA-256."""
@@ -32,30 +33,45 @@ def start_service(api_key_and_hash):
     # Set the environment variable for the subprocess
     env = os.environ.copy()
     env["PIECAT_API_KEYS"] = hashed_key
-    env["PYTHONPATH"] = "./pipecatapp"
+    env["PYTHONPATH"] = os.path.abspath(".")
+
+    venv = os.environ.get("VIRTUAL_ENV")
+    if venv:
+        python_bin = os.path.join(venv, "Scripts", "python.exe") if os.name == 'nt' else os.path.join(venv, "bin", "python")
+    else:
+        python_bin = os.path.join(sys.prefix, "Scripts", "python.exe") if os.name == 'nt' else os.path.join(sys.prefix, "bin", "python")
+    if not os.path.exists(python_bin):
+        python_bin = sys.executable
 
     # Start the FastAPI server as a subprocess
     # We run it from the root directory to ensure all paths are correct
     process = subprocess.Popen(
-        ["python", "-m", "uvicorn", "test_server:app", "--host", "0.0.0.0", "--port", "8000"],
+        [python_bin, "-m", "uvicorn", "test_server:app", "--host", "127.0.0.1", "--port", "8000"],
         cwd=os.path.abspath("pipecatapp"),
         env=env,
+        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
     )
 
     # Wait for the service to be ready
-    for _ in range(10):
+    for _ in range(15):
+        if process.poll() is not None:
+            stdout, stderr = process.communicate()
+            pytest.fail(f"Service process terminated unexpectedly with code {process.returncode}:\nSTDOUT: {stdout}\nSTDERR: {stderr}")
         try:
-            response = requests.get(f"{BASE_URL}/health")
+            response = requests.get(f"{BASE_URL}/health", timeout=2)
             # 503 is also ok as it means server is up but agent not ready
             if response.status_code == 200 or response.status_code == 503:
                 print("Service is up.")
                 break
-        except requests.ConnectionError:
+        except (requests.ConnectionError, requests.Timeout):
             time.sleep(1)
     else:
+        stdout, stderr = process.communicate(timeout=2)
         process.terminate()
         process.wait()
-        pytest.fail("Service failed to start.")
+        pytest.fail(f"Service failed to start.\nSTDOUT: {stdout}\nSTDERR: {stderr}")
 
     yield
 
