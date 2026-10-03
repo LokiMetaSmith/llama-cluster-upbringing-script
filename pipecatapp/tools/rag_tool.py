@@ -33,7 +33,7 @@ class RAG_Tool:
     the agent to find relevant information to answer user queries about the
     project.
     """
-    def __init__(self, pmm_memory: Optional[PMMMemory] = None, base_dir=None, allowed_root: Optional[str] = None, model_name="all-MiniLM-L6-v2", allow_root_scan: bool = False, pruner=None, pruning_threshold: int = 4, keep_top_k: int = 3):
+    def __init__(self, pmm_memory: Optional[PMMMemory] = None, base_dir=None, allowed_root: Optional[str] = None, model_name="all-MiniLM-L6-v2", allow_root_scan: bool = False, pruner=None, pruning_threshold: int = 4, keep_top_k: int = 3, auto_index: bool = False):
         """Initializes the RAG_Tool.
 
         Args:
@@ -116,10 +116,12 @@ class RAG_Tool:
         self.pruning_threshold = pruning_threshold
         self.keep_top_k = keep_top_k
 
-        if self.pmm_memory:
+        auto_index_enabled = auto_index and (os.getenv("RAG_AUTO_INDEX", "false" if "PYTEST_CURRENT_TEST" in os.environ else "true").lower() == "true")
+        if self.pmm_memory and auto_index_enabled:
             # Run knowledge base build in a separate thread
-            threading.Thread(target=self._build_knowledge_base, daemon=True).start()
-        else:
+            self._indexer_thread = threading.Thread(target=self._build_knowledge_base, daemon=True)
+            self._indexer_thread.start()
+        elif not self.pmm_memory:
              logging.warning("RAG Tool disabled: PMMMemory unavailable.")
 
 
@@ -493,6 +495,15 @@ class RAG_Tool:
                 logging.warning(f"Error connecting to ChromaDB: {e}")
 
         logging.info(f"RAG tool received query: {query}")
+        if self.model is None:
+            if SentenceTransformer is not None:
+                try:
+                    self.model = SentenceTransformer(self.model_name)
+                except Exception as e:
+                    logging.warning(f"Could not load SentenceTransformer model: {e}")
+            if self.model is None:
+                return "RAG model is not loaded."
+
         query_embedding = self.model.encode([query])
         query_embedding_np = np.array(query_embedding, dtype=np.float32)
 

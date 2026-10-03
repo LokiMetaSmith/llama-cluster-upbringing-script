@@ -13,22 +13,9 @@ if __package__:
 else:
     from pipecatapp.rate_limiter import RateLimiter
 
-from pipecatapp.tools.ssh_tool import SSH_Tool
-from pipecatapp.tools.desktop_control_tool import DesktopControlTool
-from pipecatapp.tools.code_runner_tool import CodeRunnerTool
-from pipecatapp.tools.web_browser_tool import WebBrowserTool
-from pipecatapp.tools.ansible_tool import Ansible_Tool
-from pipecatapp.tools.power_tool import Power_Tool
-from pipecatapp.tools.summarizer_tool import SummarizerTool
-from pipecatapp.tools.term_everything_tool import TermEverythingTool
-from pipecatapp.tools.rag_tool import RAG_Tool
-from pipecatapp.tools.ha_tool import HA_Tool
-from pipecatapp.tools.git_tool import Git_Tool
-from pipecatapp.tools.orchestrator_tool import OrchestratorTool
-from pipecatapp.tools.ocr_tool import OCRTool
-from pipecatapp.tools.wasm_tool import WasmTool
-from pipecatapp.tools.heretic_tool import HereticTool
-from pipecatapp.pmm_memory import PMMMemory
+import logging
+
+logger = logging.getLogger("ToolServer")
 
 app = FastAPI()
 
@@ -37,33 +24,40 @@ class ToolRequest(BaseModel):
     method: str
     args: dict = {}
 
-# Instantiate all available tools
-# Note: Some tools might require specific env vars or paths that need to be set in Nomad job
-tools = {
-    "ssh": SSH_Tool(),
-    "desktop_control": DesktopControlTool(),
-    "code_runner": CodeRunnerTool(),
-    "web_browser": WebBrowserTool(),
-    "ansible": Ansible_Tool(),
-    "power": Power_Tool(),
-    "summarizer": SummarizerTool(twin_service=None),
-    "term_everything": TermEverythingTool(app_image_path="/opt/mcp/tools/termeverything.AppImage"),
-    "rag": RAG_Tool(pmm_memory=None, base_dir="/mnt/host_repo"),
-    "git": Git_Tool(),
-    "orchestrator": OrchestratorTool(),
-    "ocr": OCRTool(),
-    "wasm": WasmTool(),
-    "heretic": HereticTool(),
-}
+tools = {}
+
+def _safe_import_and_init(name: str, module_path: str, class_name: str, factory=None):
+    """Safely import and initialize a tool, omitting it gracefully if dependencies or paths are missing."""
+    try:
+        import importlib
+        mod = importlib.import_module(module_path)
+        cls = getattr(mod, class_name)
+        instance = factory(cls) if factory else cls()
+        if instance is not None:
+            tools[name] = instance
+    except Exception as e:
+        logger.warning(f"ToolServer: Optional tool '{name}' could not be initialized ({e}). It will be omitted.")
+
+_safe_import_and_init("ssh", "pipecatapp.tools.ssh_tool", "SSH_Tool")
+_safe_import_and_init("desktop_control", "pipecatapp.tools.desktop_control_tool", "DesktopControlTool")
+_safe_import_and_init("code_runner", "pipecatapp.tools.code_runner_tool", "CodeRunnerTool")
+_safe_import_and_init("web_browser", "pipecatapp.tools.web_browser_tool", "WebBrowserTool")
+_safe_import_and_init("ansible", "pipecatapp.tools.ansible_tool", "Ansible_Tool")
+_safe_import_and_init("power", "pipecatapp.tools.power_tool", "Power_Tool")
+_safe_import_and_init("summarizer", "pipecatapp.tools.summarizer_tool", "SummarizerTool", lambda cls: cls(twin_service=None))
+_safe_import_and_init("term_everything", "pipecatapp.tools.term_everything_tool", "TermEverythingTool",
+                      lambda cls: cls(app_image_path=os.getenv("TERM_EVERYTHING_PATH", "/opt/mcp/tools/termeverything.AppImage")))
+_safe_import_and_init("rag", "pipecatapp.tools.rag_tool", "RAG_Tool",
+                      lambda cls: cls(pmm_memory=None, base_dir=os.getenv("RAG_BASE_DIR", "/mnt/host_repo" if os.path.exists("/mnt/host_repo") else os.getcwd())))
+_safe_import_and_init("git", "pipecatapp.tools.git_tool", "Git_Tool")
+_safe_import_and_init("orchestrator", "pipecatapp.tools.orchestrator_tool", "OrchestratorTool")
+_safe_import_and_init("ocr", "pipecatapp.tools.ocr_tool", "OCRTool")
+_safe_import_and_init("wasm", "pipecatapp.tools.wasm_tool", "WasmTool")
+_safe_import_and_init("heretic", "pipecatapp.tools.heretic_tool", "HereticTool")
 
 if os.getenv("HA_URL") and os.getenv("HA_TOKEN"):
-    try:
-        tools["ha"] = HA_Tool(
-            ha_url=os.getenv("HA_URL"),
-            ha_token=os.getenv("HA_TOKEN")
-        )
-    except ValueError as e:
-        print(f"Warning: Failed to initialize HA_Tool: {e}")
+    _safe_import_and_init("ha", "pipecatapp.tools.ha_tool", "HA_Tool",
+                          lambda cls: cls(ha_url=os.getenv("HA_URL"), ha_token=os.getenv("HA_TOKEN")))
 
 API_KEY = os.getenv("TOOL_SERVER_API_KEY")
 strict_limiter = RateLimiter(limit=10, window=60)

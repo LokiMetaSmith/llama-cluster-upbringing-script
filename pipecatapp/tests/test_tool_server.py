@@ -57,6 +57,16 @@ class TestToolServer(unittest.TestCase):
         response = client.post("/run_tool/", json={"tool": "search", "method": "grep", "args": {"pattern": "def test"}})
         self.assertEqual(response.status_code, 401)
 
+    def test_health_check(self):
+        response = client.get("/health")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_list_tools_valid_auth(self):
+        response = client.get("/tools/", headers={"Authorization": "Bearer test-key"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.json(), dict)
+
     def test_roles(self):
         pass
 

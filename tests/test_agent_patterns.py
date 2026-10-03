@@ -50,6 +50,9 @@ async def test_manager_agent_map_reduce():
             [ # Call 2: Results arrive
                 {"kind": "worker_result", "meta": {"task_id": "t1"}, "content": "Done T1"},
                 {"kind": "worker_result", "meta": {"task_id": "t2"}, "content": "Done T2"}
+            ],
+            [ # Call 3: Judge verification result
+                {"kind": "judge_pass", "content": "All tests passed"}
             ]
         ]
         mock_client.get.return_value = mock_response_mem
@@ -124,7 +127,7 @@ async def test_durable_technician():
         cached_result = await agent.phase_1_plan()
         
         assert cached_result == "Plan"
-        assert mock_client.post.call_count == 1  # Should use cache
+        assert mock_client.post.call_count == 0  # Should use cache (no network call)
 
 if __name__ == "__main__":
     asyncio.run(test_manager_agent_map_reduce())

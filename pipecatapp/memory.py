@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 from pipecatapp.memory_legacy import MemoryStore as LegacyMemoryStore
 from pipecatapp.memory_backends_impl.helix_backend import HelixMemoryBackend
+from pipecatapp.memory_backends_impl.pmm_backend import PMMMemoryBackend
 
 @dataclass
 class Document:
@@ -18,11 +19,17 @@ class Document:
 
 class MemoryStore:
     def __init__(self, index_file="long_term_memory.faiss", store_file="long_term_memory.json", sqlite_file="long_term_memory.sqlite"):
-        self.use_helix = os.getenv("USE_HELIX_MEMORY", "false").lower() == "true"
+        backend_type = os.getenv("MEMORY_BACKEND", "").lower()
+        self.use_helix = os.getenv("USE_HELIX_MEMORY", "false").lower() == "true" or backend_type == "helix"
+        self.use_pmm = os.getenv("USE_PMM_MEMORY", "false").lower() == "true" or backend_type == "pmm"
 
         if self.use_helix:
             logging.info("Initializing HelixDB Memory Backend...")
             self.backend = HelixMemoryBackend()
+        elif self.use_pmm:
+            logging.info("Initializing PMM Event-Sourced SQLite Memory Backend...")
+            pmm_db = sqlite_file.replace(".sqlite", ".db") if sqlite_file != "long_term_memory.sqlite" else "pmm_memory.db"
+            self.backend = PMMMemoryBackend(db_path=pmm_db)
         else:
             logging.info("Initializing Legacy FAISS+SQLite Memory Backend...")
             self.backend = LegacyMemoryStore(index_file=index_file, store_file=store_file, sqlite_file=sqlite_file)

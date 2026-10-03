@@ -35,9 +35,9 @@
 
 ## 🧠 Phase 1: Memory & State Consolidation (P1 - High Priority)
 
-- [ ] **Unify Disparate Memory Implementations:**
-  - [ ] Consolidate legacy memory stores (`pipecatapp/memory_legacy.py`, `pipecatapp/memory.py`, and `pipecatapp/pmm_memory_client.py`).
-  - [ ] Standardize on `PMMMemory` / SQLite deterministic ledger backend as primary persistent storage.
+- [x] **Unify Disparate Memory Implementations:**
+  - [x] Consolidate legacy memory stores (`pipecatapp/memory_legacy.py`, `pipecatapp/memory.py`, and `pipecatapp/pmm_memory_client.py`) via unified `MemoryStore`.
+  - [x] Standardize on `PMMMemory` / SQLite deterministic ledger backend as primary persistent storage (`pipecatapp/memory_backends_impl/pmm_backend.py`).
   - [x] Clean up deprecated ChromaDB and orphaned storage references (made ChromaDB optional with null-safe fallbacks in `rag_tool.py`, added native text-chunking fallbacks without LangChain requirement).
 - [x] **State Preservation Across Syncs:**
   - [x] Verify `ansible.posix.synchronize` tasks strictly preserve `.liminal`, SQLite DBs, and runtime state (verified in `pipecatapp/tasks/main.yaml` and hardened `deploy_expert_wrapper.yaml`).
@@ -48,9 +48,11 @@
 ## ⚙️ Phase 2: Hybrid Distributed Tool Architecture (P2 - Medium Priority)
 
 - [ ] **Offload Heavy Tools to `tool_server`:**
-  - [ ] Migrate heavy tool workloads (RAG document parsing, Docker sandbox code execution, WASM plugins) out-of-process.
+  - [x] Hardened `tool_server.py` with dynamic `_safe_import_and_init` fallbacks, unauthenticated `/health` check, and full `/run_tool/` test verification.
+  - [x] Eliminated background thread leakage and filesystem scan deadlocks in `RAG_Tool` (`auto_index=False` default, lazy model encoder initialization).
+  - [x] Implemented strict request timeouts and circuit breakers for external tool RPCs (`TOOL_RPC_TIMEOUT` in `RemoteToolProxy`).
+  - [ ] Migrate heavy tool workloads (RAG document parsing, Docker sandbox code execution, WASM plugins) out-of-process in production deployment.
   - [ ] Ensure `pipecatapp` core process only communicates with heavy tools via HTTP/Consul service mesh.
-  - [ ] Implement strict request timeouts and circuit breakers for external tool RPCs.
 - [ ] **Memory & Resource Profiling:**
   - [ ] Benchmark memory consumption of `pipecatapp` under multi-turn conversations.
   - [ ] Guarantee background processes remain capped at `-j2` / `-j4` to honor 7.8 GiB hardware limits.
@@ -60,13 +62,13 @@
 ## 🤖 Phase 3: Autonomous Workflow Engine & Agents (P3 - Enhancement)
 
 - [ ] **Technician Agent 3-Phase Execution:**
-  - [ ] Validate Plan, Execute, and Reflect phases in `pipecatapp/technician_agent.py`.
-  - [ ] Ensure `@durable_step` checkpointing functions reliably after transient node crashes.
+  - [x] Validate Plan, Execute, and Reflect phases in `pipecatapp/technician_agent.py`.
+  - [x] Ensure `@durable_step` checkpointing functions reliably with cached idempotency (verified 0 network calls on cached steps).
 - [ ] **Tangle UI & Visual Workflow Integration:**
   - [ ] Complete KFP-style `ComponentSpec` parser in `pipecatapp/workflow/`.
   - [ ] Connect lightweight API adapter (`/api/components`, `/api/pipeline_runs`) to Consul state layer.
 - [ ] **Swarm Orchestration (Map-Reduce):**
-  - [ ] Verify `SwarmTool` worker dispatch and task result reduction across worker nodes.
+  - [x] Verify `SwarmTool` worker dispatch and task result reduction across worker nodes (verified `test_manager_agent_map_reduce`).
   - [ ] Validate Thompson-sampling load routing in `moe_gateway`.
 
 ---
