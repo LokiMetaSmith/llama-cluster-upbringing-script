@@ -239,14 +239,20 @@
       failed_when: false
       changed_when: false
 
-    - name: Get Pending Alloc ID
-      ansible.builtin.shell: "echo '{{ ipfs_job_status.stdout }}' | grep pending | awk '{print $1}' | head -n 1"
-      register: ipfs_pending_alloc_id
+    - name: Get Recent Alloc ID
+      ansible.builtin.shell: |
+        {{ nomad_binary | default('/usr/local/bin/nomad') }} job status ipfs | awk 'NR>14 && $1 ~ /^[0-9a-f]{8}/ {print $1; exit}'
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: ipfs_alloc_id
       failed_when: false
       changed_when: false
 
     - name: Diagnose Pending Alloc Status
-      ansible.builtin.command: /usr/local/bin/nomad alloc status {{ ipfs_pending_alloc_id.stdout }}
+      ansible.builtin.command: /usr/local/bin/nomad alloc status {{ ipfs_alloc_id.stdout }}
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -255,10 +261,10 @@
       register: ipfs_alloc_status
       failed_when: false
       changed_when: false
-      when: ipfs_pending_alloc_id.stdout != ""
+      when: ipfs_alloc_id.stdout != ""
 
     - name: Diagnose Pending Alloc Logs
-      ansible.builtin.command: /usr/local/bin/nomad alloc logs -stderr {{ ipfs_pending_alloc_id.stdout }}
+      ansible.builtin.command: /usr/local/bin/nomad alloc logs -stderr {{ ipfs_alloc_id.stdout }}
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -267,7 +273,7 @@
       register: ipfs_alloc_logs
       failed_when: false
       changed_when: false
-      when: ipfs_pending_alloc_id.stdout != ""
+      when: ipfs_alloc_id.stdout != ""
 
     - name: Log Diagnoses
       ansible.builtin.debug:
@@ -315,14 +321,20 @@
       failed_when: false
       changed_when: false
 
-    - name: Get Pending Alloc ID
-      ansible.builtin.shell: "echo '{{ ipfs_job_status.stdout }}' | grep pending | awk '{print $1}' | head -n 1"
-      register: ipfs_pending_alloc_id
+    - name: Get Recent Alloc ID
+      ansible.builtin.shell: |
+        {{ nomad_binary | default('/usr/local/bin/nomad') }} job status ipfs | awk 'NR>14 && $1 ~ /^[0-9a-f]{8}/ {print $1; exit}'
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_CERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+        NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
+      register: ipfs_alloc_id
       failed_when: false
       changed_when: false
 
     - name: Diagnose Pending Alloc Status
-      ansible.builtin.command: /usr/local/bin/nomad alloc status {{ ipfs_pending_alloc_id.stdout }}
+      ansible.builtin.command: /usr/local/bin/nomad alloc status {{ ipfs_alloc_id.stdout }}
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -331,10 +343,10 @@
       register: ipfs_alloc_status
       failed_when: false
       changed_when: false
-      when: ipfs_pending_alloc_id.stdout != ""
+      when: ipfs_alloc_id.stdout != ""
 
     - name: Diagnose Pending Alloc Logs
-      ansible.builtin.command: /usr/local/bin/nomad alloc logs -stderr {{ ipfs_pending_alloc_id.stdout }}
+      ansible.builtin.command: /usr/local/bin/nomad alloc logs -stderr {{ ipfs_alloc_id.stdout }}
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -343,7 +355,7 @@
       register: ipfs_alloc_logs
       failed_when: false
       changed_when: false
-      when: ipfs_pending_alloc_id.stdout != ""
+      when: ipfs_alloc_id.stdout != ""
 
     - name: Log Diagnoses
       ansible.builtin.debug:
