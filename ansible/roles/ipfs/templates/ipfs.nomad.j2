@@ -30,7 +30,7 @@ job "ipfs" {
 
     task "ipfs" {
       driver = "raw_exec"
-      user   = "{{ target_user | default('pipecatapp') }}"
+      user   = "pipecatapp"
 
       logs {
         max_files     = 5
@@ -47,7 +47,8 @@ job "ipfs" {
       }
 
       env {
-        IPFS_PATH = "/opt/unified_fs_backend/ipfs/${attr.unique.hostname}"
+        IPFS_PATH = "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name | default('pipecat') }}"
+        HOME = "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name | default('pipecat') }}"
         IPFS_PROFILE = "server"
         IPFS_CONFIG_Datastore_StorageMax = "10GB"
         IPFS_CONFIG_Experimental_FilestoreEnabled = "true"
