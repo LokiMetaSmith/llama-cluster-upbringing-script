@@ -267,4 +267,4 @@ def test_rag_root_scan_protection(rag_tool_class, mock_memory):
 
     # Should pass with allow_root_scan=True
     tool = rag_tool_class(pmm_memory=mock_memory, base_dir="/", allow_root_scan=True)
-    assert tool.base_dir == "/"
+    assert tool.base_dir == os.path.realpath("/")

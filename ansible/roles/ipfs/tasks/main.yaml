@@ -72,8 +72,8 @@
     path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
     state: directory
     mode: '0755'
-    owner: "1000"
-    group: "100"
+    owner: "{{ target_user | default('pipecatapp') }}"
+    group: "{{ target_user | default('pipecatapp') }}"
   become: yes
 
 - name: Migrate data from existing alias directories if they are real directories
@@ -129,8 +129,8 @@
 - name: Set IPFS directory ownership for Kubo container
   ansible.builtin.file:
     path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
-    owner: "1000"
-    group: "100"
+    owner: "{{ target_user | default('pipecatapp') }}"
+    group: "{{ target_user | default('pipecatapp') }}"
     recurse: yes
   become: yes
 
@@ -163,8 +163,8 @@
 - name: Set IPFS directory ownership for native execution
   ansible.builtin.file:
     path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
-    owner: "1000"
-    group: "100"
+    owner: "{{ target_user | default('pipecatapp') }}"
+    group: "{{ target_user | default('pipecatapp') }}"
     recurse: yes
   become: yes
 
@@ -296,14 +296,14 @@
   block:
     - name: Wait for IPFS Gateway to be fully ready
       ansible.builtin.uri:
-        url: "http://{{ cluster_ip | default('127.0.0.1') }}:{{ ipfs_gateway_port | default(8092) }}/"
+        url: "http://{{ cluster_ip | default('127.0.0.1', true) }}:{{ ipfs_gateway_port | default(8092) }}/"
         return_content: yes
         status_code: [200, 400, 403, 404, 502, 504, -1]
       register: ipfs_gateway_status
       until: ipfs_gateway_status.status is defined and ipfs_gateway_status.status in [200, 400, 403, 404]
       failed_when: false
-      retries: 6
-      delay: 10
+      retries: 30
+      delay: 5
 
     - name: Check Gateway Status Success
       ansible.builtin.fail:

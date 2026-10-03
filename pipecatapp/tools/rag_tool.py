@@ -77,7 +77,13 @@ class RAG_Tool:
         # If base_dir is root (/) and allow_root_scan is False, raise error.
         # We check allowed_root too because if allowed_root is /, set_scope could later set it to /.
         if not allow_root_scan:
-            if self.base_dir == "/" or self.allowed_root == "/":
+            is_root = (
+                base_dir in ("/", "\\")
+                or self.base_dir in ("/", "\\")
+                or os.path.splitdrive(self.base_dir)[1] in ("/", "\\")
+                or (allowed_root and (allowed_root in ("/", "\\") or os.path.splitdrive(self.allowed_root)[1] in ("/", "\\")))
+            )
+            if is_root:
                  raise ValueError("RAG_Tool: Scanning the filesystem root (/) is forbidden for security reasons. Use allow_root_scan=True to override if absolutely necessary.")
 
         # Ensure initial base_dir is within allowed_root
@@ -92,16 +98,19 @@ class RAG_Tool:
         self.is_ready = False
         self.initialization_error = None
 
-        # Initialize ChromaDB persistent client
-        import chromadb
-        self.chromadb_dir = os.path.join(os.getcwd(), "chromadb_storage")
-        os.makedirs(self.chromadb_dir, exist_ok=True)
-        import chromadb
-        self.chroma_client = chromadb.PersistentClient(path=self.chromadb_dir)
+        # Initialize ChromaDB persistent client if available
+        try:
+            import chromadb
+            self.chromadb_dir = os.path.join(os.getcwd(), "chromadb_storage")
+            os.makedirs(self.chromadb_dir, exist_ok=True)
+            self.chroma_client = chromadb.PersistentClient(path=self.chromadb_dir)
+            self.checkpoint_file = os.path.join(self.chromadb_dir, "rag_checkpoint.json")
+        except ImportError:
+            logging.warning("ChromaDB is not installed. ChromaDB storage will be disabled in RAG tool.")
+            self.chromadb_dir = None
+            self.chroma_client = None
+            self.checkpoint_file = os.path.join(os.getcwd(), "rag_checkpoint.json")
         self.collection_name = "project_documents"
-
-        # Checkpoint file for tracking processed files
-        self.checkpoint_file = os.path.join(self.chromadb_dir, "rag_checkpoint.json")
 
         self.pruner = pruner
         self.pruning_threshold = pruning_threshold
@@ -197,7 +206,7 @@ class RAG_Tool:
         logging.info(f"Building RAG knowledge base for {self.base_dir}...")
 
         # 2. Get or create ChromaDB collection
-        collection = self.chroma_client.get_or_create_collection(name=self.collection_name)
+        collection = self.chroma_client.get_or_create_collection(name=self.collection_name) if self.chroma_client else None
 
         # 3. Load checkpoint
         processed_files = set()
@@ -281,38 +290,42 @@ class RAG_Tool:
 
                         files_to_process.append(file_path)
 
-        # 5. Process files in batches using LangChain
+        # 5. Process files in batches using LangChain or native text splitting fallback
         try:
             from langchain_community.document_loaders import TextLoader
             from langchain_text_splitters import RecursiveCharacterTextSplitter
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=200,
+                length_function=len,
+            )
+            has_langchain = True
         except ImportError:
-            logging.error("LangChain libraries not installed. Run: pip install langchain-community langchain-text-splitters")
-            return
+            has_langchain = False
 
         batch_size = 150
         current_batch_docs = []
         current_batch_ids = []
         current_batch_metadatas = []
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
-            length_function=len,
-        )
-
         for i, file_path in enumerate(files_to_process):
             try:
-                docs = load_document_cached(file_path, encoding='utf-8')
-                split_docs = text_splitter.split_documents(docs)
+                if has_langchain:
+                    docs = load_document_cached(file_path, encoding='utf-8')
+                    split_docs = text_splitter.split_documents(docs)
+                    chunks = [doc.page_content for doc in split_docs if doc.page_content.strip()]
+                else:
+                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        text = f.read()
+                    chunks = [text[j:j+1000] for j in range(0, len(text), 800) if text[j:j+1000].strip()]
 
-                for chunk_idx, doc in enumerate(split_docs):
-                    if doc.page_content.strip():
-                        doc_id = f"{file_path}_{chunk_idx}"
-                        current_batch_docs.append(doc.page_content)
-                        current_batch_ids.append(doc_id)
-                        current_batch_metadatas.append({"source": file_path})
+                for chunk_idx, chunk_text in enumerate(chunks):
+                    doc_id = f"{file_path}_{chunk_idx}"
+                    current_batch_docs.append(chunk_text)
+                    current_batch_ids.append(doc_id)
+                    current_batch_metadatas.append({"source": file_path})
             except Exception as e:
-                logging.warning(f"Could not read or process file {file_path} via LangChain: {e}")
+                logging.warning(f"Could not read or process file {file_path}: {e}")
 
             processed_files.add(file_path)
 
@@ -322,13 +335,14 @@ class RAG_Tool:
                     # Generate embeddings
                     embeddings = self.model.encode(current_batch_docs, show_progress_bar=False)
 
-                    # Store in ChromaDB
-                    collection.add(
-                        documents=current_batch_docs,
-                        embeddings=embeddings.tolist(),
-                        metadatas=current_batch_metadatas,
-                        ids=current_batch_ids
-                    )
+                    # Store in ChromaDB if available
+                    if collection:
+                        collection.add(
+                            documents=current_batch_docs,
+                            embeddings=embeddings.tolist(),
+                            metadatas=current_batch_metadatas,
+                            ids=current_batch_ids
+                        )
 
                     # Update checkpoint
                     with open(self.checkpoint_file, 'w') as f:
@@ -350,7 +364,7 @@ class RAG_Tool:
         self.is_ready = True
 
         # Get count of documents in ChromaDB
-        doc_count = collection.count()
+        doc_count = collection.count() if collection else len(self.documents)
         logging.info(f"RAG knowledge base built/loaded successfully. Total documents in ChromaDB: {doc_count}.")
 
 
@@ -373,49 +387,55 @@ class RAG_Tool:
         try:
             from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, DirectoryLoader
             from langchain_text_splitters import RecursiveCharacterTextSplitter
+            has_langchain = True
         except ImportError:
-            logging.error("LangChain libraries not installed.")
-            return "Error: LangChain libraries not installed."
+            has_langchain = False
 
         try:
-            if filepath.lower().endswith('.pdf'):
-                loader = PyMuPDFLoader(filepath)
-            elif os.path.isdir(filepath):
-                loader = DirectoryLoader(filepath, glob="**/*.txt", loader_cls=TextLoader)
+            if has_langchain:
+                if filepath.lower().endswith('.pdf'):
+                    loader = PyMuPDFLoader(filepath)
+                elif os.path.isdir(filepath):
+                    loader = DirectoryLoader(filepath, glob="**/*.txt", loader_cls=TextLoader)
+                else:
+                    loader = TextLoader(filepath, encoding='utf-8')
+
+                docs = loader.load()
+                text_splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=1000,
+                    chunk_overlap=200,
+                    length_function=len,
+                )
+                split_docs = text_splitter.split_documents(docs)
+                chunks = [doc.page_content for doc in split_docs if doc.page_content.strip()]
             else:
-                loader = TextLoader(filepath, encoding='utf-8')
+                with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                    text = f.read()
+                chunks = [text[j:j+1000] for j in range(0, len(text), 800) if text[j:j+1000].strip()]
 
-            docs = loader.load()
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000,
-                chunk_overlap=200,
-                length_function=len,
-            )
-            split_docs = text_splitter.split_documents(docs)
-
-            if not split_docs:
+            if not chunks:
                 return f"No text found in document: {filepath}"
 
             current_batch_docs = []
             current_batch_ids = []
             current_batch_metadatas = []
 
-            for chunk_idx, doc in enumerate(split_docs):
-                if doc.page_content.strip():
-                    doc_id = f"{filepath}_{chunk_idx}"
-                    current_batch_docs.append(doc.page_content)
-                    current_batch_ids.append(doc_id)
-                    current_batch_metadatas.append({"source": filepath})
+            for chunk_idx, chunk_text in enumerate(chunks):
+                doc_id = f"{filepath}_{chunk_idx}"
+                current_batch_docs.append(chunk_text)
+                current_batch_ids.append(doc_id)
+                current_batch_metadatas.append({"source": filepath})
 
             if current_batch_docs:
                 embeddings = self.model.encode(current_batch_docs, show_progress_bar=False)
-                collection = self.chroma_client.get_collection(name=self.collection_name)
-                collection.add(
-                    documents=current_batch_docs,
-                    embeddings=embeddings.tolist(),
-                    metadatas=current_batch_metadatas,
-                    ids=current_batch_ids
-                )
+                if self.chroma_client:
+                    collection = self.chroma_client.get_collection(name=self.collection_name)
+                    collection.add(
+                        documents=current_batch_docs,
+                        embeddings=embeddings.tolist(),
+                        metadatas=current_batch_metadatas,
+                        ids=current_batch_ids
+                    )
 
                 # Update FAISS cache if applicable
                 if self.index is not None:
@@ -465,10 +485,12 @@ class RAG_Tool:
             return f"RAG Tool unavailable: {self.initialization_error}"
         if not self.is_ready:
             return "The knowledge base is still being built or the model is loading. Please try again shortly."
-        try:
-            collection = self.chroma_client.get_collection(name=self.collection_name)
-        except Exception as e:
-            return f"Error connecting to ChromaDB: {e}"
+        collection = None
+        if self.chroma_client:
+            try:
+                collection = self.chroma_client.get_collection(name=self.collection_name)
+            except Exception as e:
+                logging.warning(f"Error connecting to ChromaDB: {e}")
 
         logging.info(f"RAG tool received query: {query}")
         query_embedding = self.model.encode([query])
@@ -508,7 +530,7 @@ class RAG_Tool:
                 found_in_cache = True
 
         # 2. If no good results in FAISS, search ChromaDB
-        if not found_in_cache:
+        if not found_in_cache and collection:
             logging.info("RAG FAISS Cache MISS. Querying ChromaDB...")
             try:
                 # We use a naive $contains query against source path to ensure directory isolation

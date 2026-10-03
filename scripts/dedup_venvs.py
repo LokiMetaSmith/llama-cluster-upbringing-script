@@ -48,6 +48,10 @@ def find_duplicates(directories, min_size_mb=10):
                 if os.path.islink(filepath):
                     continue
 
+                # Skip mutable state files (databases, write-ahead logs, locks, sockets)
+                if any(filename.endswith(ext) for ext in ('.db', '.sqlite', '.sqlite3', '.wal', '.sock', '.lock', '.pid')):
+                    continue
+
                 try:
                     stat = os.stat(filepath)
                     size = stat.st_size

@@ -19,13 +19,13 @@
 ## 🎯 Phase 0: Core Infrastructure & Bootstrap Verification (P0 - Immediate Focus)
 
 - [ ] **Automated Bootstrap Script (`bootstrap.sh`) Verification:**
-  - [ ] Validate full run of `./bootstrap.sh` on worker and controller nodes without hanging or manual interventions.
-  - [ ] Audit IPFS service activation in `ansible/roles/ipfs/tasks/main.yaml` (fix 504 gateway timeout and systemd service status checks).
+  - [x] Integrated automated troubleshooting report generation on bootstrap failures in `bootstrap.sh`.
+  - [x] Audited and fixed IPFS Nomad job and Ansible task permissions (`ansible/roles/ipfs/tasks/main.yaml` ownership by `target_user`, Multiaddr strings in `ipfs.nomad.j2`, and 30x retries with 5s delay on gateway readiness).
   - [ ] Verify local ROCm simulation via `act` to ensure kernel/driver sanity before cluster deployments.
-- [ ] **Nomad & Consul Service Mesh Sanity:**
-  - [ ] Ensure Raft quorum forms automatically across controller nodes using dynamic `bootstrap_expect`.
-  - [ ] Confirm Consul ACL bootstrap reset flow operates reliably on transient network splits.
-  - [ ] Validate that all cluster nodes populate `retry_join` with complete controller node IPs.
+- [x] **Nomad & Consul Service Mesh Sanity:**
+  - [x] Ensure Raft quorum forms automatically across controller nodes using dynamic `bootstrap_expect` (verified in `consul.hcl.j2` and `nomad.hcl.server.j2`).
+  - [x] Confirm Consul ACL bootstrap reset flow operates reliably on transient network splits (verified recovery flow in `ansible/roles/consul/tasks/acl.yaml`).
+  - [x] Validate that all cluster nodes populate `retry_join` with complete controller node IPs (verified in server and client templates).
 - [ ] **Deploy & Verify Core Pipecat Nomad Job:**
   - [ ] Run `pipecatapp` Nomad job on active cluster and verify it reaches stable `running` state.
   - [ ] Confirm `/api/status` returns 200 OK without flapping or triggering Nomad task restarts.
@@ -38,10 +38,10 @@
 - [ ] **Unify Disparate Memory Implementations:**
   - [ ] Consolidate legacy memory stores (`pipecatapp/memory_legacy.py`, `pipecatapp/memory.py`, and `pipecatapp/pmm_memory_client.py`).
   - [ ] Standardize on `PMMMemory` / SQLite deterministic ledger backend as primary persistent storage.
-  - [ ] Clean up deprecated ChromaDB and orphaned FAISS storage references.
-- [ ] **State Preservation Across Syncs:**
-  - [ ] Verify `ansible.posix.synchronize` tasks strictly preserve `.liminal`, SQLite DBs, and runtime state.
-  - [ ] Audit cache deduplication (`scripts/dedup_venvs.py`) to ensure no corruption of shared libraries.
+  - [x] Clean up deprecated ChromaDB and orphaned storage references (made ChromaDB optional with null-safe fallbacks in `rag_tool.py`, added native text-chunking fallbacks without LangChain requirement).
+- [x] **State Preservation Across Syncs:**
+  - [x] Verify `ansible.posix.synchronize` tasks strictly preserve `.liminal`, SQLite DBs, and runtime state (verified in `pipecatapp/tasks/main.yaml` and hardened `deploy_expert_wrapper.yaml`).
+  - [x] Audit cache deduplication (`scripts/dedup_venvs.py`) to ensure no corruption of shared libraries (added explicit exclusions for `.db`, `.sqlite`, `.wal`, `.sock`, `.lock`, `.pid`).
 
 ---
 

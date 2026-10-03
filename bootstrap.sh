@@ -1044,6 +1044,10 @@ if [ $EXIT_CODE -eq 0 ]; then
     fi
 else
     echo -e "\n${RED}❌ Bootstrap failed with exit code $EXIT_CODE.${NC}"
+    if [ "$DO_DRY_RUN" != true ] && [ -f "scripts/troubleshoot.py" ]; then
+        echo -e "\n${BOLD}${YELLOW}🔍 Automatically generating cluster troubleshooting report...${NC}"
+        python3 scripts/troubleshoot.py report || true
+    fi
 fi
 
 exit $EXIT_CODE

@@ -323,7 +323,21 @@ if __name__ == "__main__":
     ssl_keyfile = os.getenv("SSL_KEYFILE")
     ssl_certfile = os.getenv("SSL_CERTFILE")
 
-    if ssl_keyfile and ssl_certfile:
+    use_ssl = False
+    if ssl_keyfile and ssl_certfile and os.path.exists(ssl_keyfile) and os.path.exists(ssl_certfile):
+        try:
+            with open(ssl_certfile, "r") as f:
+                cert_content = f.read()
+            with open(ssl_keyfile, "r") as f:
+                key_content = f.read()
+            if "BEGIN CERTIFICATE" in cert_content and ("BEGIN PRIVATE KEY" in key_content or "BEGIN RSA PRIVATE KEY" in key_content):
+                use_ssl = True
+            else:
+                logger.warning("SSL files found but contain placeholder or invalid PEM content. Falling back to plain HTTP.")
+        except Exception as e:
+            logger.warning(f"Error checking SSL certificates, falling back to HTTP: {e}")
+
+    if use_ssl:
         uvicorn.run(pipecatapp.web_server.app, host="0.0.0.0", port=web_port, log_level="info", ssl_keyfile=ssl_keyfile, ssl_certfile=ssl_certfile)
     else:
         uvicorn.run(pipecatapp.web_server.app, host="0.0.0.0", port=web_port, log_level="info")

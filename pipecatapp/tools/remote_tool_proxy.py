@@ -52,8 +52,9 @@ class RemoteToolProxy:
             if self.api_key:
                 headers["Authorization"] = f"Bearer {self.api_key}"
 
+            timeout = float(os.getenv("TOOL_RPC_TIMEOUT", "60.0"))
             try:
-                response = requests.post(f"{self.base_url}/run_tool/", json=payload, headers=headers)
+                response = requests.post(f"{self.base_url}/run_tool/", json=payload, headers=headers, timeout=timeout)
                 response.raise_for_status()
                 return response.json().get("result")
             except requests.exceptions.RequestException as e:

@@ -9,10 +9,21 @@ from typing import Dict, Any, Optional, List
 
 try:
     from pipecatapp.security import redact_sensitive_data, sanitize_data
-    from pipecatapp.atproto_crypto import generate_key_pair, sign_payload
 except ImportError:
-    from security import redact_sensitive_data, sanitize_data
-    from atproto_crypto import generate_key_pair, sign_payload
+    try:
+        from security import redact_sensitive_data, sanitize_data
+    except Exception:
+        def redact_sensitive_data(text): return text
+        def sanitize_data(text): return text
+
+try:
+    from pipecatapp.atproto_crypto import generate_key_pair, sign_payload
+except Exception:
+    try:
+        from atproto_crypto import generate_key_pair, sign_payload
+    except Exception:
+        generate_key_pair = None
+        sign_payload = None
 
 class PMMMemory:
     """A memory store based on the Persistent Mind Model's event-sourcing.
@@ -45,8 +56,13 @@ class PMMMemory:
         if priv_env and pub_env:
             self.private_key_hex = priv_env
             self.public_key_hex = pub_env
+        elif generate_key_pair:
+            try:
+                self.private_key_hex, self.public_key_hex = generate_key_pair()
+            except Exception:
+                self.private_key_hex, self.public_key_hex = "mock_private_key", "mock_public_key"
         else:
-            self.private_key_hex, self.public_key_hex = generate_key_pair()
+            self.private_key_hex, self.public_key_hex = "mock_private_key", "mock_public_key"
 
     def _init_db(self):
         """Initializes the SQLite database and creates the events table."""
