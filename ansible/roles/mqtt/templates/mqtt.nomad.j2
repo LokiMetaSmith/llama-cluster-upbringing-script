@@ -60,13 +60,12 @@ job "mqtt" {
 
       config {
         image = "eclipse-mosquitto:2"
-        network_mode = "host"
         mounts = [
           {
-            type     = "bind"
-            source   = "/opt/mqtt/certs"
-            target   = "/mosquitto/certs"
-            readonly = true
+            type    = "bind"
+            source  = "/opt/mqtt/certs"
+            target  = "/mosquitto/certs"
+            options = ["rbind", "ro"]
           }
         ]
         # Host mode networking requires no port map here

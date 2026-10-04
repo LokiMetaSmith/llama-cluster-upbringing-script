@@ -338,6 +338,30 @@
   become: yes
   ignore_errors: yes
 
+- name: Ensure Mosquitto volume certs directory exists
+  ansible.builtin.file:
+    path: "{{ nomad_volumes_dir }}/mqtt-data/certs"
+    state: directory
+    owner: "1883"
+    group: "1883"
+    mode: '0755'
+  become: yes
+
+- name: Copy TLS certificates into Mosquitto volume certs directory
+  ansible.builtin.copy:
+    src: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/{{ item }}"
+    dest: "{{ nomad_volumes_dir }}/mqtt-data/certs/{{ item }}"
+    owner: "1883"
+    group: "1883"
+    mode: '0600'
+    remote_src: yes
+  loop:
+    - ca.pem
+    - cert.pem
+    - key.pem
+  become: yes
+  ignore_errors: yes
+
 - name: Deploy MQTT Job
   block:
     - name: Run mqtt job
