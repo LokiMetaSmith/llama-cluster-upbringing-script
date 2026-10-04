@@ -2,10 +2,18 @@ import asyncio
 import io
 import wave
 
-from kokoro import KPipeline
+try:
+    from kokoro import KPipeline
+except ImportError:
+    KPipeline = None
+
 from pipecat.frames.frames import AudioRawFrame, TextFrame
 from pipecat.processors.frame_processor import FrameProcessor
-from piper.voice import PiperVoice
+
+try:
+    from piper.voice import PiperVoice
+except ImportError:
+    PiperVoice = None
 
 
 class KokoroTTSService(FrameProcessor):
@@ -16,6 +24,8 @@ class KokoroTTSService(FrameProcessor):
     """
     def __init__(self, model_path: str, lang_code: str = 'a', voice_name: str = 'af_heart'):
         super().__init__()
+        if KPipeline is None:
+            raise ImportError("kokoro is not installed.")
         self.pipeline = KPipeline(lang_code=lang_code)
         self.voice_name = voice_name
         self.sample_rate = 24000
@@ -71,6 +81,8 @@ class PiperTTSService(FrameProcessor):
             model_path (str): The path to the Piper TTS model file.
         """
         super().__init__()
+        if PiperVoice is None:
+            raise ImportError("piper is not installed.")
         self.voice = PiperVoice.load(model_path)
         self.sample_rate = self.voice.config.sample_rate
 

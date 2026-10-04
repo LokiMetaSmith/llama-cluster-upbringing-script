@@ -6,7 +6,11 @@ import struct
 import httpx
 import numpy as np
 
-from faster_whisper import WhisperModel
+try:
+    from faster_whisper import WhisperModel
+except ImportError:
+    WhisperModel = None
+
 from pipecat.frames.frames import (
     AudioRawFrame,
     TranscriptionFrame,
@@ -14,9 +18,13 @@ from pipecat.frames.frames import (
     UserStoppedSpeakingFrame,
 )
 from pipecat.processors.frame_processor import FrameProcessor
-from wyoming.asr import Transcribe
-from wyoming.audio import AudioChunk, AudioStart, AudioStop
-from wyoming.client import AsyncTcpClient
+
+try:
+    from wyoming.asr import Transcribe
+    from wyoming.audio import AudioChunk, AudioStart, AudioStop
+    from wyoming.client import AsyncTcpClient
+except ImportError:
+    Transcribe = AudioChunk = AudioStart = AudioStop = AsyncTcpClient = None
 
 from pipecatapp.pipeline.processors import AudioFileFrame
 
@@ -104,6 +112,9 @@ class FasterWhisperSTTService(FrameProcessor):
             logging.info(f"Attempting to load model by name: {model_identifier}")
         else:
             model_identifier = model_path
+
+        if WhisperModel is None:
+            raise ImportError("faster_whisper is not installed.")
 
         try:
             self.model = WhisperModel(
