@@ -1,6 +1,8 @@
 import json
 from typing import Any, Optional
-from pipecatapp.memory import MemoryStore
+
+# Placeholder for backward compatibility and mock patching in tests
+MemoryStore = None
 
 class SkillBuilderTool:
     """
@@ -8,11 +10,22 @@ class SkillBuilderTool:
     Agents can use this tool to evolve their own capabilities through reflective learning.
     """
 
-    def __init__(self, memory_store: Optional[MemoryStore] = None):
-        if memory_store:
-            self.memory_store = memory_store
-        else:
-            self.memory_store = MemoryStore()
+    def __init__(self, memory_store: Optional[Any] = None):
+        self._memory_store = memory_store
+
+    @property
+    def memory_store(self):
+        if self._memory_store is None:
+            global MemoryStore
+            if MemoryStore is None:
+                from pipecatapp.memory import MemoryStore as _MS
+                MemoryStore = _MS
+            self._memory_store = MemoryStore()
+        return self._memory_store
+
+    @memory_store.setter
+    def memory_store(self, value):
+        self._memory_store = value
 
 
     def get_schema(self) -> dict:

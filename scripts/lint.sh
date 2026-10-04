@@ -55,8 +55,8 @@ fi
 # --- Run Linters ---
 
 # YAML Linter
-# Find all yaml files and filter them.
-YAML_FILES_TO_LINT=$(find . -type f \( -name "*.yaml" -o -name "*.yml" \))
+# Find all yaml files and filter them, pruning heavy virtualenv and git directories
+YAML_FILES_TO_LINT=$(find . -type d \( -name .venv -o -name venv -o -name node_modules -o -name .git -o -name chromadb \) -prune -o -type f \( -name "*.yaml" -o -name "*.yml" \) -print)
 if [ -f "$EXCLUDE_FILE" ]; then
     EXCLUDE_PATTERNS=$(grep -v '^#' "$EXCLUDE_FILE" | grep -v '^$')
     if [ -n "$EXCLUDE_PATTERNS" ]; then

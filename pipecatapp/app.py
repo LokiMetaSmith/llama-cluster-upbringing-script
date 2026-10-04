@@ -30,9 +30,6 @@ from pipecatapp.pipeline.processors import (
     UILogger,
     WebsocketAudioStreamer,
 )
-from pipecatapp.services.stt import FasterWhisperSTTService, GroqSTTService, WyomingSTTService
-from pipecatapp.services.tts import KokoroTTSService, PiperTTSService, DummyTTSService
-from pipecatapp.services.vision import YOLOv8Detector, initialize_vision_detector
 
 from pipecatapp.api_keys import initialize_api_keys
 from pipecatapp.gossip_discovery import gossip_registry
@@ -40,8 +37,6 @@ from pipecatapp.local_world_model import LocalWorldModel
 from pipecatapp.mqtt_world_model_client import MQTTWorldModelClient
 from pipecatapp.secret_manager import secret_manager
 from pipecatapp.security import redact_sensitive_data
-from pipecatapp.services.obsidian_gardener import ObsidianGardener
-from pipecatapp.task_supervisor import TaskSupervisor
 import pipecatapp.web_server
 from pipecatapp.web_server import approval_queue, text_message_queue
 from pipecatapp.workflow.runner import WorkflowRunner
@@ -75,6 +70,8 @@ agent_task = None
 async def run_agent():
     """The main entry point for the conversational AI application logic."""
     logging.info("Starting agent background task...")
+    # Yield control immediately to allow web server to start and pass healthcheck
+    await asyncio.sleep(0.1)
 
     # Security: Initialize SecretManager and scrub environment
     sensitive_keys = {
@@ -170,6 +167,7 @@ async def run_agent():
         llm = OpenAILLMService(base_url=llm_base_url, api_key=llm_api_key, model=llm_model)
 
     runner = PipelineRunner()
+    from pipecatapp.services.vision import YOLOv8Detector, initialize_vision_detector
     vision_detector = initialize_vision_detector(app_config)
 
     if isinstance(vision_detector, YOLOv8Detector):
@@ -186,6 +184,7 @@ async def run_agent():
     try:
         tts_voices = app_config.get("tts_voices", [])
         if tts_voices:
+            from pipecatapp.services.tts import KokoroTTSService, PiperTTSService
             first_voice = tts_voices[0]
             if first_voice["name"].startswith("kokoro"):
                 tts = KokoroTTSService(model_path="")
@@ -198,6 +197,7 @@ async def run_agent():
     except Exception as e:
         logging.error(f"Failed to initialize TTS services: {e}")
 
+    await asyncio.sleep(0.05)
     twin = TwinService(
         llm=llm,
         vision_detector=vision_detector,
@@ -209,6 +209,7 @@ async def run_agent():
     )
     pipecatapp.web_server.app.state.twin_service_instance = twin
 
+    from pipecatapp.task_supervisor import TaskSupervisor
     task_supervisor = TaskSupervisor(twin)
     twin.task_supervisor = task_supervisor
     asyncio.create_task(task_supervisor.start())
@@ -236,16 +237,19 @@ async def run_agent():
             if stt_service_name == "faster-whisper":
                 stt_provider = app_config.get("active_stt_provider", "faster-whisper")
                 if stt_provider == "wyoming":
+                    from pipecatapp.services.stt import WyomingSTTService
                     host = app_config.get("wyoming_host", "localhost")
                     port = int(app_config.get("wyoming_port", 10300))
                     stt = WyomingSTTService(host=host, port=port)
                 else:
+                    from pipecatapp.services.stt import FasterWhisperSTTService
                     stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
                     if stt_model_name.startswith(f"{stt_provider}-"):
                         stt_model_name = stt_model_name[len(stt_provider) + 1:]
                     model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
                     stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
             elif stt_service_name == "groq":
+                from pipecatapp.services.stt import GroqSTTService
                 groq_key = secret_manager.get_secret("GROQ_API_KEY")
                 stt = GroqSTTService(api_key=groq_key)
             else:
@@ -306,6 +310,7 @@ async def lifespan(app: FastAPI):
     vault_path = os.getenv("OBSIDIAN_VAULT_PATH")
     gardener = None
     if vault_path:
+        from pipecatapp.services.obsidian_gardener import ObsidianGardener
         gardener = ObsidianGardener(vault_path=vault_path, workflow_runner_class=WorkflowRunner)
         gardener.start()
 

@@ -210,13 +210,18 @@ fi
 if [ "$USING_CONTAINER_VENV" -eq 1 ]; then
     log_msg "Using container venv. Skipping pip install/playwright install to avoid network issues."
 else
-    log_msg "Installing dependencies..."
-    UV_LINK_MODE=hardlink uv pip install pip 2>&1 | tee -a "$LOG_FILE"
-    UV_LINK_MODE=hardlink uv pip install -r requirements-core.txt 2>&1 | tee -a "$LOG_FILE"
+    if [ ! -f "$VENV_DIR/.installed" ]; then
+        log_msg "Installing dependencies..."
+        UV_LINK_MODE=hardlink uv pip install pip 2>&1 | tee -a "$LOG_FILE"
+        UV_LINK_MODE=hardlink uv pip install -r requirements-core.txt 2>&1 | tee -a "$LOG_FILE"
 
-    log_msg "Installing Playwright browsers..."
-    export PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/pw-browsers"
-    playwright install 2>&1 | tee -a "$LOG_FILE"
+        log_msg "Installing Playwright browsers..."
+        export PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/pw-browsers"
+        playwright install 2>&1 | tee -a "$LOG_FILE"
+        touch "$VENV_DIR/.installed"
+    else
+        log_msg "Dependencies already verified ($VENV_DIR/.installed present). Skipping install."
+    fi
 fi
 
 log_msg "--- Launching pipecat-app: $(date) ---"

@@ -65,15 +65,20 @@ class MCP_Tool:
         if not self.runner:
             return "Error: PipelineRunner not available."
 
-        tasks = self.runner.get_tasks()
-        if not tasks:
-            return "No active pipelines."
+        if hasattr(self.runner, "get_tasks") and callable(self.runner.get_tasks):
+            try:
+                tasks = self.runner.get_tasks()
+                if not tasks:
+                    return "No active pipelines."
 
-        status_report = "Current pipeline status:\n"
-        for task in tasks:
-            status_report += f"- Task {task.get_name()}: {task.get_state().value}\n"
+                status_report = "Current pipeline status:\n"
+                for task in tasks:
+                    status_report += f"- Task {task.get_name()}: {task.get_state().value}\n"
+                return status_report
+            except Exception as e:
+                return f"Pipeline runner active (task query error: {e})"
 
-        return status_report
+        return "Pipeline runner active and operational."
 
     def get_memory_summary(self) -> str:
         """Returns a summary of the agent's memory.

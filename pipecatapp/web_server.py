@@ -851,21 +851,22 @@ async def get_status(
     rate_limit: None = Depends(standard_limiter),
 ):
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
-    twin_service = request.app.state.twin_service_instance
+    twin_service = getattr(request.app.state, "twin_service_instance", None)
     if twin_service and hasattr(twin_service, "tools"):
         mcp = twin_service.tools.get("mcp")
-        if mcp and hasattr(mcp, "runner") and mcp.runner:
-            tasks = mcp.runner.get_tasks()
-            if not tasks:
-                return {"status": "No active pipelines."}
-
-            status_report = "Current pipeline status:\n"
-            for task in tasks:
-                status_report += f"- Task {task.get_name()}: {task.get_state().value}\n"
-            return {"status": status_report}
-        else:
-            return {"status": "MCP tool or runner not available."}
-    return {"status": "Agent not fully initialized. Please wait..."}
+        if mcp:
+            if hasattr(mcp, "get_status") and callable(mcp.get_status):
+                try:
+                    return {"status": mcp.get_status()}
+                except Exception as e:
+                    return {"status": f"Active (MCP status check: {e})"}
+            elif hasattr(mcp, "runner") and mcp.runner:
+                return {"status": "PipelineRunner active"}
+            return {"status": "MCP tool available"}
+        return {"status": "MCP tool not available"}
+    if getattr(request.app.state, "is_ready", False):
+        return {"status": "Agent active and ready"}
+    return {"status": "Agent initializing. Please wait..."}
 
 
 @app.get(

@@ -246,11 +246,13 @@ EOT
     }
     {% endif %}
 
+    {% if pipecat_deployment_style == 'docker' %}
     task "browser-runner" {
       driver = "{{ nomad_container_driver | default('docker') }}"
 
       config {
         image = "{{ pipecatapp_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag | default('local') }}"
+        force_pull = false
 
         # Expose the CDP port
         ports = ["cdp"]
@@ -291,5 +293,6 @@ EOT
         }
       }
     }
+    {% endif %}
   }
 }
