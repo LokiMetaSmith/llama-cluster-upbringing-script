@@ -24,6 +24,14 @@
   become: yes
   when: pipecat_deployment_style == 'docker'
 
+- name: Copy .dockerignore to build context
+  ansible.builtin.copy:
+    src: "{{ project_root }}/pipecatapp/.dockerignore"
+    dest: "{{ pipecat_build_dir | default(pipecat_app_dir) }}/.dockerignore"
+    mode: '0644'
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
 - name: Get checksum of Dockerfile.core
   ansible.builtin.stat:
     path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}/Dockerfile.core"

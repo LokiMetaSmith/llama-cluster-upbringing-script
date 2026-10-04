@@ -1,0 +1,13 @@
+.venv
+venv
+pw-browsers
+chromadb
+holographic_memory
+visualizations
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.git
+.pytest_cache
+*.log
