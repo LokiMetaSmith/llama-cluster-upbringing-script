@@ -57,7 +57,7 @@ job "zigbee2mqtt" {
     }
 
     task "zigbee2mqtt" {
-      driver = "containerd-driver"
+      driver = "docker"
 
       {% if require_zigbee_hardware | default(true) %}
       constraint {
@@ -85,7 +85,7 @@ job "zigbee2mqtt" {
         ZIGBEE2MQTT_CONFIG_MQTT_CA = "/etc/tls/ca.pem"
         ZIGBEE2MQTT_CONFIG_MQTT_CERT = "/etc/tls/mqtt_client.cert.pem"
         ZIGBEE2MQTT_CONFIG_MQTT_KEY = "/etc/tls/mqtt_client.key.pem"
-        ZIGBEE2MQTT_CONFIG_MQTT_REJECT_UNAUTHORIZED = "false"
+        ZIGBEE2MQTT_CONFIG_MQTT_REJECT_UNAUTHORIZED = "true"
         ZIGBEE2MQTT_CONFIG_FRONTEND_PORT = "{{ zigbee2mqtt_port | default(8080) }}"
         ZIGBEE2MQTT_CONFIG_SERIAL_PORT = "{{ zigbee_serial_port | default('/dev/ttyACM0') }}"
       }
