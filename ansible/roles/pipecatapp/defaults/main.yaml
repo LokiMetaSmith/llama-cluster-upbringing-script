@@ -1,3 +1,6 @@
 pipecat_image_id: "pipecatapp:local"
 external_experts_config: {}
 pipecat_memory_mb: 2048
+pipecatapp_ipfs_cid: ""
+pipecatapp_core_ipfs_cid: ""
+pipecatapp_browser_ipfs_cid: ""

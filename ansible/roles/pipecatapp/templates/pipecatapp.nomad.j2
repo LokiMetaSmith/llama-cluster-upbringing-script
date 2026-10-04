@@ -144,7 +144,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     }
 
     {% if pipecat_deployment_style == 'docker' %}
-    {% set image_cid = pipecatapp_ipfs_cid %}
+    {% set image_cid = pipecatapp_core_ipfs_cid | default(pipecatapp_ipfs_cid | default('')) %}
     {% set image_tar_name = 'pipecatapp' %}
     {% include 'load_image_task.nomad.j2' %}
 
