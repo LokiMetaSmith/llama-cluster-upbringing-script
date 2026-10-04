@@ -82,7 +82,7 @@ job "{{ job_name | default('pipecat-app') }}" {
         static = {{ pipecat_port }}
       }
       port "cdp" {
-        to = 9222
+        static = 9222
       }
     }
 
@@ -99,7 +99,7 @@ job "{{ job_name | default('pipecat-app') }}" {
         static = {{ pipecat_port }}
       }
       port "cdp" {
-        to = 9222
+        static = 9222
       }
     }
     {% endif %}

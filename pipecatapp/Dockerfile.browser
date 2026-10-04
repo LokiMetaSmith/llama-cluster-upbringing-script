@@ -8,6 +8,13 @@ WORKDIR /opt/pipecatapp
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     python3-dev \
+    libgbm1 \
+    libx11-xcb1 \
+    libxcb-dri3-0 \
+    libxcursor1 \
+    libxi6 \
+    libxtst6 \
+    libxss1 \
     libgl1-mesa-glx \
     libglib2.0-0 \
     libxcomposite1 \
@@ -37,9 +44,9 @@ ENV PATH="/opt/pipecat_venv/bin:$PATH"
 COPY requirements-browser.txt .
 RUN pip install --no-cache-dir -r requirements-browser.txt
 
-# Install Playwright browsers
+# Install Playwright browsers and missing runtime dependencies
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
-RUN playwright install
+RUN playwright install --with-deps chromium
 
 # Copy browser specific start script if any
 COPY start_browser.sh /opt/start_browser.sh

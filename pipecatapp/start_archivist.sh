@@ -4,6 +4,9 @@ set -e
 # Activate virtualenv
 source /opt/pipecatapp/venv/bin/activate
 
+# Add parent directory to PYTHONPATH
+export PYTHONPATH="/opt:${PYTHONPATH:-}"
+
 # Start the service
 # The archivist_service.py is located in the same directory as this script (usually /opt/pipecatapp)
 # or in the files directory if running from repo.
