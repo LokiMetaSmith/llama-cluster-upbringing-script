@@ -107,29 +107,13 @@
   when: pipecat_deployment_style == 'docker'
 
 - name: Build pipecat-core Docker image (if missing)
-  community.docker.docker_image:
-    name: "{{ pipecat_image_name | default('pipecatapp') }}-core"
-    tag: "{{ pipecat_versioned_tag }}"
-    build:
-      path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}"
-      dockerfile: Dockerfile.core
-      nocache: true
-    source: build
-    force_source: true
+  ansible.builtin.command: "docker build -f {{ pipecat_build_dir | default(pipecat_app_dir) }}/Dockerfile.core -t {{ pipecat_image_name | default('pipecatapp') }}-core:{{ pipecat_versioned_tag }} {{ pipecat_build_dir | default(pipecat_app_dir) }}"
   register: build_result_core
   become: yes
   when: pipecat_deployment_style == 'docker' and versioned_image_check_core.rc != 0
 
 - name: Build pipecat-browser Docker image (if missing)
-  community.docker.docker_image:
-    name: "{{ pipecat_image_name | default('pipecatapp') }}-browser"
-    tag: "{{ pipecat_versioned_tag }}"
-    build:
-      path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}"
-      dockerfile: Dockerfile.browser
-      nocache: true
-    source: build
-    force_source: true
+  ansible.builtin.command: "docker build -f {{ pipecat_build_dir | default(pipecat_app_dir) }}/Dockerfile.browser -t {{ pipecat_image_name | default('pipecatapp') }}-browser:{{ pipecat_versioned_tag }} {{ pipecat_build_dir | default(pipecat_app_dir) }}"
   register: build_result_browser
   become: yes
   when: pipecat_deployment_style == 'docker' and versioned_image_check_browser.rc != 0
