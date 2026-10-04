@@ -1,8 +1,8 @@
 - name: Redeploy the pipecat-app Nomad job
-  hosts: coordinator
+  hosts: controller_nodes, coordinator
   become: yes
   vars:
-    target_user: nomad
+    target_user: "{{ target_user | default('pipecatapp') }}"
   vars_files:
     - "{{ ansible_config_file | dirname }}/group_vars/models.yaml"
   pre_tasks:
