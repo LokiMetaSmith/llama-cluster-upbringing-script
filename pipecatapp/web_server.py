@@ -27,7 +27,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from typing import List, Dict, Optional
 from pipecatapp.workflow.runner import ActiveWorkflows, OpenGates
 from pipecatapp.workflow.history import WorkflowHistory
-from pipecatapp.api_keys import get_api_key
+from pipecatapp.api_keys import get_api_key, get_optional_api_key
 from pipecatapp.security import sanitize_data, escape_html_content
 from pipecatapp.atproto_crypto import generate_key_pair, sign_payload
 from pipecatapp.datalog_engine import DatalogEngine
@@ -757,7 +757,7 @@ async def get_apps_ui(rate_limit: None = Depends(standard_limiter)):
     tags=["System"],
 )
 async def get_cluster_metrics(
-    api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)
+    api_key: Optional[str] = Security(get_optional_api_key), rate_limit: None = Depends(strict_limiter)
 ):
     """Retrieves cluster metrics from Prometheus."""
     # Bolt ⚡ Optimization: Return cached metrics if available
@@ -948,7 +948,7 @@ async def get_workflow_nodes_metadata(
 
 @app.get("/api/workflows/active", response_class=JSONResponse)
 async def get_active_workflows(
-    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+    api_key: Optional[str] = Security(get_optional_api_key), rate_limit: None = Depends(standard_limiter)
 ):
     """Returns a snapshot of the state of all active workflows."""
     active_workflows = ActiveWorkflows()
@@ -1371,7 +1371,7 @@ async def discover_ouroboros_members():
     tags=["Webring"],
 )
 async def get_webring_members(
-    api_key: Optional[str] = Security(get_api_key),
+    api_key: Optional[str] = Security(get_optional_api_key),
     rate_limit: None = Depends(standard_limiter),
 ):
     members = await get_ouroboros_members()
@@ -1386,7 +1386,7 @@ async def get_webring_members(
 )
 async def update_webring_members(
     members: List[Dict] = Body(...),
-    api_key: Optional[str] = Security(get_api_key),
+    api_key: Optional[str] = Security(get_optional_api_key),
     rate_limit: None = Depends(standard_limiter),
 ):
     if await save_ouroboros_members(members):
@@ -1502,7 +1502,7 @@ async def webring_random(rate_limit: None = Depends(standard_limiter)):
 
 @app.get("/api/web_uis")
 async def get_web_uis(
-    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+    api_key: Optional[str] = Security(get_optional_api_key), rate_limit: None = Depends(standard_limiter)
 ):
     """
     Discovers web UIs from Consul.
@@ -1681,7 +1681,7 @@ async def get_web_uis(
     except (httpx.RequestError, httpx.HTTPStatusError) as e:
         print(f"Could not connect to Consul to discover UIs: {e}")
         return JSONResponse(
-            status_code=503,
+            status_code=200,
             content=[
                 {"name": "Consul (Not Reachable)", "url": "#", "status": "unhealthy"},
                 {"name": "Nomad (Not Reachable)", "url": "#", "status": "unhealthy"},

@@ -1,5 +1,6 @@
 import secrets
 import hashlib
+from typing import Optional
 from fastapi import Security, HTTPException, status
 from fastapi.security import APIKeyHeader
 
@@ -99,3 +100,28 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
         )
 
     return provided_key
+
+
+async def get_optional_api_key(
+    api_key_header: Optional[str] = Security(api_key_header),
+) -> Optional[str]:
+    """A FastAPI dependency to optionally authenticate requests using an API key.
+
+    If no Authorization header is provided, or if the header is empty / 'Bearer ',
+    returns None without failing.
+    If no API keys are loaded in the cluster, returns None.
+    If a valid token is provided, returns the authenticated key.
+    If an invalid token is provided while keys are configured, raises HTTPException 401.
+    """
+    if not api_key_header:
+        return None
+
+    stripped = api_key_header.strip()
+    if not stripped or stripped.lower() == "bearer":
+        return None
+
+    # If no API keys are loaded in the system, allow access gracefully
+    if not API_KEYS:
+        return None
+
+    return await get_api_key(api_key_header)

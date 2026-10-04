@@ -248,15 +248,20 @@
         // Fetch Metrics and Update Data
         async function fetchMetrics() {
             try {
+                const apiKey = localStorage.getItem('api_key') || '';
+                const authHeaders = apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {};
+
                 // Parallel fetch of metrics and web UIs
                 const [metricsRes, uisRes] = await Promise.all([
-                    fetch('/api/cluster/metrics', { headers: { 'Authorization': `Bearer ${localStorage.getItem('api_key') || ''}` } }),
-                    fetch('/api/web_uis', { headers: { 'Authorization': `Bearer ${localStorage.getItem('api_key') || ''}` } })
+                    fetch('/api/cluster/metrics', { headers: authHeaders }),
+                    fetch('/api/web_uis', { headers: authHeaders })
                 ]);
 
                 if (!metricsRes.ok) return;
-                const services = await metricsRes.json();
-                const uis = uisRes.ok ? await uisRes.json() : [];
+                const rawServices = await metricsRes.json().catch(() => []);
+                const services = Array.isArray(rawServices) ? rawServices : [];
+                const rawUis = uisRes.ok ? await uisRes.json().catch(() => []) : [];
+                const uis = Array.isArray(rawUis) ? rawUis : [];
 
                 // Merge services into SERVICE_DATA
                 services.forEach(svc => {
@@ -318,7 +323,9 @@
 
                 // Fetch active workflows to update HUD
                 try {
-                    const activeRes = await fetch('/api/workflows/active', { headers: { 'Authorization': `Bearer ${localStorage.getItem('api_key') || ''}` } });
+                    const apiKey = localStorage.getItem('api_key') || '';
+                    const authHeaders = apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {};
+                    const activeRes = await fetch('/api/workflows/active', { headers: authHeaders });
                     if (activeRes.ok) {
                         const activeWorkflows = await activeRes.json();
                         const workflowIds = Object.keys(activeWorkflows);
