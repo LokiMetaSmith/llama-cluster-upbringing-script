@@ -3,10 +3,6 @@ import uuid
 import logging
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
-from pipecatapp.memory_legacy import MemoryStore as LegacyMemoryStore
-from pipecatapp.memory_backends_impl.helix_backend import HelixMemoryBackend
-from pipecatapp.memory_backends_impl.pmm_backend import PMMMemoryBackend
-
 @dataclass
 class Document:
     """Standardized Haystack-style Document Protocol for Pipecat memory."""
@@ -25,13 +21,16 @@ class MemoryStore:
 
         if self.use_helix:
             logging.info("Initializing HelixDB Memory Backend...")
+            from pipecatapp.memory_backends_impl.helix_backend import HelixMemoryBackend
             self.backend = HelixMemoryBackend()
         elif self.use_pmm:
             logging.info("Initializing PMM Event-Sourced SQLite Memory Backend...")
+            from pipecatapp.memory_backends_impl.pmm_backend import PMMMemoryBackend
             pmm_db = sqlite_file.replace(".sqlite", ".db") if sqlite_file != "long_term_memory.sqlite" else "pmm_memory.db"
             self.backend = PMMMemoryBackend(db_path=pmm_db)
         else:
             logging.info("Initializing Legacy FAISS+SQLite Memory Backend...")
+            from pipecatapp.memory_legacy import MemoryStore as LegacyMemoryStore
             self.backend = LegacyMemoryStore(index_file=index_file, store_file=store_file, sqlite_file=sqlite_file)
 
     def add(self, text: str):

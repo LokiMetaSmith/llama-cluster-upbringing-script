@@ -1,20 +1,12 @@
 from pipecatapp.memory_backends_impl.consul_kv_backend import ConsulKVBackend
 from pipecatapp.memory_backends import BaseMemoryBackend
 
-try:
-    import faiss
-except ImportError:
-    faiss = None
-
+faiss = None
+SentenceTransformer = None
+import os
 import json
 import sqlite3
 import atexit
-
-try:
-    from sentence_transformers import SentenceTransformer
-except ImportError:
-    SentenceTransformer = None
-import os
 import uuid
 import logging
 from typing import Dict, Any, List, Optional
@@ -61,6 +53,18 @@ class MemoryStore(BaseMemoryBackend):
             sqlite_file (str, optional): The filename for the SQLite store.
                 Defaults to "long_term_memory.sqlite".
         """
+        global faiss, SentenceTransformer
+        if faiss is None:
+            try:
+                import faiss
+            except ImportError:
+                faiss = None
+        if SentenceTransformer is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+            except ImportError:
+                SentenceTransformer = None
+
         # The embedding model is now managed by Ansible and placed in a predictable location.
         embedding_model_path = "/opt/nomad/models/embedding/bge-large-en-v1.5"
         if SentenceTransformer and os.path.exists(embedding_model_path):
