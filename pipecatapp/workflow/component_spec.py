@@ -1,4 +1,5 @@
 import dataclasses
+import yaml
 from typing import Any, Dict, List, Mapping, Optional, Union
 
 import pydantic
@@ -324,3 +325,33 @@ def convert_json_schema_to_component_spec(
         outputs=outputs,
         implementation=implementation,
     )
+
+
+def load_component_from_dict(d: dict) -> ComponentSpec:
+    """Loads a ComponentSpec from a dictionary."""
+    return ComponentSpec.from_json_dict(d)
+
+def load_component_from_text(text: str) -> ComponentSpec:
+    """Loads a ComponentSpec from a YAML or JSON string."""
+    d = yaml.safe_load(text)
+    return load_component_from_dict(d)
+
+def load_component_from_file(filepath: str) -> ComponentSpec:
+    """Loads a ComponentSpec from a YAML or JSON file."""
+    with open(filepath, 'r') as f:
+        d = yaml.safe_load(f)
+    return load_component_from_dict(d)
+
+def dump_component_to_dict(component: ComponentSpec) -> dict:
+    """Dumps a ComponentSpec to a dictionary."""
+    return component.to_json_dict()
+
+def dump_component_to_text(component: ComponentSpec) -> str:
+    """Dumps a ComponentSpec to a YAML string."""
+    d = dump_component_to_dict(component)
+    return yaml.safe_dump(d, sort_keys=False)
+
+def dump_component_to_file(component: ComponentSpec, filepath: str):
+    """Dumps a ComponentSpec to a YAML file."""
+    with open(filepath, 'w') as f:
+        yaml.safe_dump(dump_component_to_dict(component), f, sort_keys=False)
