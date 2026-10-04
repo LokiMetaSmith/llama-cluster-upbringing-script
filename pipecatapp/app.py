@@ -10,7 +10,13 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
 from pipecat.services.openai.llm import OpenAILLMService
-from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
+try:
+    from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
+    HAS_LOCAL_AUDIO = True
+except (ImportError, Exception):
+    LocalAudioTransport = None
+    LocalAudioTransportParams = None
+    HAS_LOCAL_AUDIO = False
 
 # Import components from newly refactored modules to maintain backward compatibility and for use in this file
 from pipecatapp.core.audio_setup import find_workable_audio_input_device
@@ -213,7 +219,7 @@ async def run_agent():
     text_injector = TextMessageInjector(text_message_queue)
     pipeline_steps = []
 
-    if audio_device_index is not None:
+    if audio_device_index is not None and HAS_LOCAL_AUDIO:
         logging.info("Audio device detected. Starting audio pipeline.")
         transport_params = LocalAudioTransportParams(
             audio_in_enabled=True,
@@ -268,7 +274,10 @@ async def run_agent():
                  if websocket_streamer:
                      pipeline_steps.append(websocket_streamer)
     else:
-        logging.warning("No audio device found. Starting in headless mode.")
+        if audio_device_index is not None and not HAS_LOCAL_AUDIO:
+            logging.warning("Audio device found, but local audio transport (pyaudio) is not available. Starting in headless mode.")
+        else:
+            logging.warning("No audio device found. Starting in headless mode.")
         pipeline_steps.extend([twin, UILogger(sender="agent")])
         if tts:
              pipeline_steps.append(tts)
