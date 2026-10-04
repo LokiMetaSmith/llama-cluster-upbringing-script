@@ -375,6 +375,15 @@
   tags:
     - deploy_app
 
+- name: Copy start_browser.sh
+  ansible.builtin.copy:
+    mode: '0755'
+    src: "{{ project_root }}/pipecatapp/start_browser.sh"
+    dest: "{{ pipecat_app_dir }}/start_browser.sh"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Build pipecatapp Docker image
   ansible.builtin.include_tasks:
     file: "{{ ansible_tasks_dir }}/build_pipecatapp_image.yaml"

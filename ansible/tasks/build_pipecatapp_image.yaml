@@ -16,6 +16,14 @@
   become: yes
   when: pipecat_deployment_style == 'docker'
 
+- name: Copy browser startup script to build context
+  ansible.builtin.copy:
+    src: "{{ project_root }}/pipecatapp/start_browser.sh"
+    dest: "{{ pipecat_build_dir | default(pipecat_app_dir) }}/start_browser.sh"
+    mode: '0755'
+  become: yes
+  when: pipecat_deployment_style == 'docker'
+
 - name: Get checksum of Dockerfile.core
   ansible.builtin.stat:
     path: "{{ pipecat_build_dir | default(pipecat_app_dir) }}/Dockerfile.core"
@@ -66,7 +74,7 @@
 
 - name: Generate build configuration hash
   ansible.builtin.set_fact:
-    pipecat_build_hash: "{{ (dockerfile_core_stat.stat.checksum ~ dockerfile_browser_stat.stat.checksum ~ requirements_core_stat.stat.checksum ~ requirements_browser_stat.stat.checksum ~ startup_script_stat.stat.checksum ~ start_browser_script_stat.stat.checksum) | hash('sha256') }}"
+    pipecat_build_hash: "{{ ((dockerfile_core_stat.stat.checksum | default('')) ~ (dockerfile_browser_stat.stat.checksum | default('')) ~ (requirements_core_stat.stat.checksum | default('')) ~ (requirements_browser_stat.stat.checksum | default('')) ~ (startup_script_stat.stat.checksum | default('')) ~ (start_browser_script_stat.stat.checksum | default(''))) | hash('sha256') }}"
   when: pipecat_deployment_style == 'docker'
 
 - name: Set versioned tag
