@@ -23,8 +23,11 @@ class TestSupervisor(unittest.TestCase):
         self.llm_patcher = patch('scripts.supervisor.load_llm_config')
         self.mock_load_llm_config = self.llm_patcher.start()
         self.mock_load_llm_config.return_value = {'mock': 'config'}
+        self.requests_patcher = patch('scripts.supervisor.requests')
+        self.mock_requests = self.requests_patcher.start()
 
     def tearDown(self):
+        self.requests_patcher.stop()
         self.llm_patcher.stop()
 
 
