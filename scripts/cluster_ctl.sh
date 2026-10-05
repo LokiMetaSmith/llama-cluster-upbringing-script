@@ -49,6 +49,7 @@ show_help() {
     echo -e "  ${CYAN}status${NC}        Check health of mesh, Consul, Nomad, and frontends across all nodes"
     echo -e "  ${CYAN}test-job${NC}      Submit a verification batch job to prove cluster task sharing"
     echo -e "  ${CYAN}healer [cmd]${NC}  Manage 24/7 self-healing daemon (start|stop|status|logs|once)"
+    echo -e "  ${CYAN}pxe [cmd]${NC}     Audit or provision PXE network boot server (status|setup)"
     echo -e "  ${CYAN}sync${NC}          Sync repository to all worker nodes via encrypted mesh"
     echo -e "  ${CYAN}help${NC}          Display this usage guide"
     echo ""
@@ -231,11 +232,28 @@ cmd_healer() {
     esac
 }
 
+cmd_pxe() {
+    local SUBCOMMAND="${2:-status}"
+    case "$SUBCOMMAND" in
+        status)
+            bash "${REPO_ROOT}/scripts/verify_pxe_server.sh"
+            ;;
+        setup)
+            sudo bash "${REPO_ROOT}/scripts/setup_pxe_server.sh" "${3:-debian}"
+            ;;
+        *)
+            echo "Usage: $0 pxe [status|setup]"
+            exit 1
+            ;;
+    esac
+}
+
 COMMAND="${1:-help}"
 case "$COMMAND" in
     status) cmd_status ;;
     test-job) cmd_test_job ;;
     healer) cmd_healer "$@" ;;
+    pxe) cmd_pxe "$@" ;;
     sync) cmd_sync ;;
     help|-h|--help) show_help ;;
     *) echo -e "${RED}Unknown command: $COMMAND${NC}"; show_help; exit 1 ;;

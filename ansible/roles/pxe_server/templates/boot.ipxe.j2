@@ -1,13 +1,13 @@
 #!ipxe
 
-echo iPXE boot script loaded
+echo ==============================================================================
+echo  Pipecat Cluster Automated OS Installer (STATION Provisioning)
+echo ==============================================================================
 
-set base-url http://{{ cluster_ip }}/debian
+set base-url http://{{ pxe_server_ip | default(ansible_default_ipv4.address | default('192.168.1.148')) }}/debian
 kernel ${base-url}/linux
 initrd ${base-url}/initrd.gz
 
-# The preseed file is now served over HTTP as well
-# The 'auto=true' and 'priority=critical' flags automate the installer
-# The preseed/url points to our file, also served via HTTP
-imgargs linux auto=true priority=critical preseed/url=http://{{ cluster_ip }}/preseed.cfg --
+# Automated Debian installation using preseed over HTTP
+imgargs linux auto=true priority=critical preseed/url=http://{{ pxe_server_ip | default(ansible_default_ipv4.address | default('192.168.1.148')) }}/preseed.cfg net.ifnames=0 biosdevname=0 --
 boot

@@ -1,12 +1,12 @@
-- hosts: pxe_server
+- hosts: all,localhost,pxe_server,controller_nodes
   become: yes
   tasks:
     - name: Include Debian PXE role
       include_role:
         name: pxe_server
-      when: pxe_os == 'debian'
+      when: (pxe_os | default('debian')) == 'debian'
 
     - name: Include NixOS PXE role
       include_role:
         name: nixos_pxe_server
-      when: pxe_os == 'nixos'
+      when: (pxe_os | default('debian')) == 'nixos'

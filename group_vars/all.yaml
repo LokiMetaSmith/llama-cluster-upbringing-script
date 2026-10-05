@@ -255,18 +255,19 @@ jwt_refresh_secret: "change_me"
 # These variables are only used if pxe_os is set to "nixos".
 
 # The network interface on the PXE server for DHCP/TFTP/HTTP services.
-pxe_interface: "enp0s8"
+pxe_interface: "{{ ansible_default_ipv4.interface | default('eth0') }}"
+pxe_server_ip: "192.168.1.148"
 
 # The public SSH key to embed in the NixOS clients for root access.
 # Replace this with your actual public key.
 pxe_client_ssh_key: "ssh-rsa AAAA..."
 
-# DHCP network configuration for NixOS clients and the pxe_server role.
-pxe_subnet: "10.0.0.0"
+# DHCP network configuration for PXE clients and the pxe_server role.
+pxe_subnet: "192.168.1.0"
 pxe_netmask: "255.255.255.0"
-pxe_range_start: "10.0.0.200"
-pxe_range_end: "10.0.0.250"
-pxe_router: "10.0.0.1"
+pxe_range_start: "192.168.1.200"
+pxe_range_end: "192.168.1.240"
+pxe_router: "192.168.1.1"
 
 # Cluster Overlay Network (Tailscale/Headscale)
 overlay_subnet: "100.64.0.0/10"
