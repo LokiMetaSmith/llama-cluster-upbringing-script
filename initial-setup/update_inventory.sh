@@ -26,19 +26,28 @@ for i in {1..24}; do
     sleep 5
 done
 
+CONSUL_TOKEN="${CONSUL_HTTP_TOKEN:-}"
+if [ -z "$CONSUL_TOKEN" ] && [ -f "/etc/consul.d/consul.env" ]; then
+    CONSUL_TOKEN=$(grep -oP 'CONSUL_HTTP_TOKEN=\K\S+' /etc/consul.d/consul.env 2>/dev/null || true)
+fi
+if [ -z "$CONSUL_TOKEN" ] && [ -f "$REPO_ROOT/group_vars/all.yaml" ]; then
+    CONSUL_TOKEN=$(grep -oP 'consul_bootstrap_token:\s*"\K[^"]+' "$REPO_ROOT/group_vars/all.yaml" 2>/dev/null || true)
+fi
+
+TOKEN_HEADER=()
+if [ -n "$CONSUL_TOKEN" ]; then
+    TOKEN_HEADER=(-H "X-Consul-Token: $CONSUL_TOKEN")
+fi
+
 # Fetch all nodes from the Consul catalog. These are the workers.
-# The '.[] | .Address' jq filter extracts the Address field from each object in the JSON array.
-# We pipe to 'sort -u' to ensure the list is unique, preventing duplicate hosts.
-ALL_NODES=$(curl -s http://127.0.0.1:8500/v1/catalog/nodes | jq -r '.[] | .Address' | sort -u)
+ALL_NODES=$(curl -s "${TOKEN_HEADER[@]}" http://127.0.0.1:8500/v1/catalog/nodes | jq -r '.[] | .Address' 2>/dev/null | sort -u)
 if [ -z "$ALL_NODES" ]; then
     log "Could not fetch nodes from Consul. Aborting."
     exit 1
 fi
 
 # Fetch the nodes running the 'nomad' service. These are the controllers.
-# The filter is similar, but it targets the 'Address' field for the 'nomad' service.
-# The README specifies that controller_nodes are also part of worker_nodes. This logic holds.
-CONTROLLER_NODES=$(curl -s http://127.0.0.1:8500/v1/catalog/service/nomad | jq -r '.[].Address' | sort -u)
+CONTROLLER_NODES=$(curl -s "${TOKEN_HEADER[@]}" http://127.0.0.1:8500/v1/catalog/service/nomad | jq -r '.[].Address' 2>/dev/null | sort -u)
 if [ -z "$CONTROLLER_NODES" ]; then
     log "Could not fetch controller nodes (nomad service) from Consul. Using all nodes as workers only."
 fi
