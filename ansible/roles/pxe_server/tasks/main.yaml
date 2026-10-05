@@ -135,7 +135,7 @@
   lineinfile:
     path: /etc/default/tftpd-hpa
     regexp: '^TFTP_OPTIONS='
-    line: 'TFTP_OPTIONS="--secure"'
+    line: 'TFTP_OPTIONS="--secure --verbose"'
   notify: restart tftpd-hpa
   become: yes
 
