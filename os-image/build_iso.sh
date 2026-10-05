@@ -7,19 +7,21 @@ set -euo pipefail
 KEEP_CACHE=0
 FLASH=0
 INJECT_DIR=""
+KEYS_BUNDLE=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)
-            echo "Usage: ./build_iso.sh [--keep-cache] [--flash] [--inject <dir>]"
+            echo "Usage: ./build_iso.sh [--keep-cache] [--flash] [--inject <dir>] [--keys-bundle <dir>]"
             echo ""
             echo "Builds a custom, bootable, headless Debian ISO for the Pipecat agent cluster."
             echo "Automatically spins up a Debian Trixie Docker container to ensure native live-build compatibility."
             echo ""
             echo "Options:"
-            echo "  --keep-cache    Preserve the package cache and build artifacts to speed up subsequent runs"
-            echo "  --flash         Interactively select USB drives and flash the built ISO to them"
-            echo "  --inject <dir>  Inject the contents of a directory into a new FAT32 CONFIGS partition on the USB drive (Linux only, implies --flash)"
+            echo "  --keep-cache         Preserve the package cache and build artifacts to speed up subsequent runs"
+            echo "  --flash              Interactively select USB drives and flash the built ISO to them"
+            echo "  --inject <dir>       Inject the contents of a directory into a new FAT32 CONFIGS partition on the USB drive (Linux only, implies --flash)"
+            echo "  --keys-bundle <dir>  Pre-bundle cluster credential directory into /opt/cluster_keys inside the ISO for zero-touch auto-joining"
             exit 0
             ;;
         --keep-cache)
@@ -35,12 +37,24 @@ while [[ $# -gt 0 ]]; do
             FLASH=1
             shift 2
             ;;
+        --keys-bundle)
+            KEYS_BUNDLE="$2"
+            shift 2
+            ;;
         *)
             echo "Unknown option $1"
             exit 1
             ;;
     esac
 done
+
+if [ -n "$KEYS_BUNDLE" ]; then
+    if [ ! -d "$KEYS_BUNDLE" ]; then
+        echo "Error: Keys bundle directory '$KEYS_BUNDLE' does not exist."
+        exit 1
+    fi
+    KEYS_BUNDLE="$(cd "$KEYS_BUNDLE" && pwd)"
+fi
 
 if [ -n "$INJECT_DIR" ]; then
     if [ ! -d "$INJECT_DIR" ]; then
@@ -77,6 +91,13 @@ if [ ! -f /.dockerenv ]; then
         DOCKER_ARGS="--keep-cache"
     fi
 
+    if [ -n "$KEYS_BUNDLE" ]; then
+        echo "=== Staging pre-bundled cluster credentials into ISO chroot ==="
+        mkdir -p "${BUILD_DIR}/config/includes.chroot/opt/cluster_keys"
+        cp -r "$KEYS_BUNDLE"/* "${BUILD_DIR}/config/includes.chroot/opt/cluster_keys/"
+        chmod 700 "${BUILD_DIR}/config/includes.chroot/opt/cluster_keys"
+    fi
+
     # Pass along DOCKER_ARGS ensuring we don't pass host-specific flashing args to the inner container build loop
     # Run this script inside a privileged container
     echo "Executing build inside debian:${DISTRIBUTION} container..."
@@ -85,6 +106,9 @@ if [ ! -f /.dockerenv ]; then
         -w "/opt/pipecat-cluster/os-image" \
         "debian:${DISTRIBUTION}" \
         bash -c "apt-get update && apt-get install -y live-build xorriso mtools dosfstools grub-pc-bin grub-efi-amd64-bin grub-efi-amd64-signed shim-signed syslinux syslinux-utils isolinux rsync && ./build_iso.sh $DOCKER_ARGS"
+
+    # Clean up staged keys from host filesystem after build
+    rm -rf "${BUILD_DIR}/config/includes.chroot/opt/cluster_keys"
 
     echo "=== Build Complete (Host Wrapper) ==="
 
@@ -331,13 +355,13 @@ if [ "$KEEP_CACHE" -eq 1 ]; then
         sudo lb clean || true
         sudo rm -rf chroot binary .build \
             *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
-        sudo rm -rf config/includes.chroot/opt/pipecat-cluster
+        sudo rm -rf config/includes.chroot/opt/pipecat-cluster config/includes.chroot/opt/cluster_keys
         sudo rm -f config/package-lists/live.list.chroot
     else
         lb clean || true
         rm -rf chroot binary .build \
             *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
-        rm -rf config/includes.chroot/opt/pipecat-cluster
+        rm -rf config/includes.chroot/opt/pipecat-cluster config/includes.chroot/opt/cluster_keys
         rm -f config/package-lists/live.list.chroot
     fi
 else
@@ -345,13 +369,13 @@ else
         sudo lb clean --purge || true
         sudo rm -rf chroot cache binary .build \
             *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
-        sudo rm -rf config/includes.chroot/opt/pipecat-cluster
+        sudo rm -rf config/includes.chroot/opt/pipecat-cluster config/includes.chroot/opt/cluster_keys
         sudo rm -f config/package-lists/live.list.chroot
     else
         lb clean --purge || true
         rm -rf chroot cache binary .build \
             *.contents *.files *.packages *.modified_timestamps *.zsync.xz *.headers || true
-        rm -rf config/includes.chroot/opt/pipecat-cluster
+        rm -rf config/includes.chroot/opt/pipecat-cluster config/includes.chroot/opt/cluster_keys
         rm -f config/package-lists/live.list.chroot
     fi
 fi
