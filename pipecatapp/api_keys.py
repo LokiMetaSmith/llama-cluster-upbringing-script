@@ -47,21 +47,30 @@ def initialize_api_keys(hashed_keys: list[str]):
     if API_KEYS:
         print(f"Loaded {len(API_KEYS)} API key(s).")
 
-async def get_api_key(api_key_header: str = Security(api_key_header)):
+async def get_api_key(api_key_header: Optional[str] = Security(api_key_header)):
     """A FastAPI dependency to authenticate requests using an API key.
 
     This function checks for the presence of an "Authorization" header and
     validates the provided API key against the list of known keys.
 
     Args:
-        api_key_header (str): The value of the "Authorization" header.
+        api_key_header (Optional[str]): The value of the "Authorization" header.
 
     Raises:
         HTTPException: If the API key is missing or invalid.
 
     Returns:
-        str: The valid API key if authentication is successful.
+        str: The valid API key if authentication is successful, or empty string if no keys are configured.
     """
+    # If no API keys are loaded in the system, allow access gracefully
+    if not API_KEYS:
+        if api_key_header:
+            parts = api_key_header.split()
+            if len(parts) == 2 and parts[0].lower() == "bearer":
+                return parts[1]
+            return api_key_header
+        return ""
+
     if not api_key_header:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

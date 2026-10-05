@@ -893,7 +893,7 @@ async def get_health(request: Request):
     tags=["Workflow"],
 )
 async def get_workflow_node_schemas(
-    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+    api_key: Optional[str] = Security(get_optional_api_key), rate_limit: None = Depends(standard_limiter)
 ):
     """Endpoint to get dynamic node schemas for visual editor binding."""
     from pipecatapp.workflow.nodes.registry import registry
@@ -937,7 +937,7 @@ async def get_workflow_node_schemas(
     tags=["Workflow"],
 )
 async def get_workflow_nodes_metadata(
-    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+    api_key: Optional[str] = Security(get_optional_api_key), rate_limit: None = Depends(standard_limiter)
 ):
     """Endpoint to get metadata for all workflow nodes."""
     from pipecatapp.workflow.nodes.registry import registry
@@ -966,7 +966,7 @@ async def get_active_workflows(
 )
 async def get_workflow_history(
     limit: int = 50,
-    api_key: str = Security(get_api_key),
+    api_key: Optional[str] = Security(get_optional_api_key),
     rate_limit: None = Depends(standard_limiter),
 ):
     """Retrieves a list of past workflow runs."""
@@ -997,7 +997,7 @@ async def get_workflow_history(
 )
 async def get_workflow_run(
     runner_id: str,
-    api_key: str = Security(get_api_key),
+    api_key: Optional[str] = Security(get_optional_api_key),
     rate_limit: None = Depends(standard_limiter),
 ):
     """Retrieves the full details of a specific workflow run."""
@@ -1035,7 +1035,7 @@ async def approve_gate(
 @app.get("/api/workflows/definition/{workflow_name}", response_class=JSONResponse)
 async def get_workflow_definition(
     workflow_name: str,
-    api_key: str = Security(get_api_key),
+    api_key: Optional[str] = Security(get_optional_api_key),
     rate_limit: None = Depends(standard_limiter),
 ):
     """Loads a workflow definition from a YAML file and returns it as JSON."""

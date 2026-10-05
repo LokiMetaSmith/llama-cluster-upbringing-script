@@ -85,7 +85,10 @@ const WorkflowEditor = {
     init: async function(containerId, options = {}) {
         this.options = options;
         this.graph = new LGraph();
-        this.canvas = new LGraphCanvas(containerId, this.graph);
+        const canvasElement = typeof containerId === "string"
+            ? (document.getElementById(containerId) || document.querySelector(containerId) || document.querySelector("#" + containerId))
+            : containerId;
+        this.canvas = new LGraphCanvas(canvasElement, this.graph);
         this.canvas.allow_searchbox = true; // enable search box with double click
 
         // Register custom nodes
@@ -118,14 +121,18 @@ const WorkflowEditor = {
         if (!options.skipResize) {
             // Adjust canvas on resize
             window.addEventListener("resize", () => {
-                const parent = document.getElementById(containerId).parentNode;
-                this.canvas.resize(parent.clientWidth, parent.clientHeight);
+                if (canvasElement && canvasElement.parentNode && this.canvas) {
+                    const parent = canvasElement.parentNode;
+                    this.canvas.resize(parent.clientWidth, parent.clientHeight);
+                }
             });
 
             // Initial resize
             setTimeout(() => {
-                 const parent = document.getElementById(containerId).parentNode;
-                 this.canvas.resize(parent.clientWidth, parent.clientHeight);
+                 if (canvasElement && canvasElement.parentNode && this.canvas) {
+                     const parent = canvasElement.parentNode;
+                     this.canvas.resize(parent.clientWidth, parent.clientHeight);
+                 }
             }, 100);
         }
 
@@ -135,11 +142,14 @@ const WorkflowEditor = {
         this.graph.onConnectionChange = () => { this.validateGraph(); };
 
         // Setup Drag and Drop
-        this.setupDragAndDrop(containerId);
+        this.setupDragAndDrop(canvasElement || containerId);
     },
 
     setupDragAndDrop: function(containerId) {
-        const canvasElement = document.getElementById(containerId);
+        const canvasElement = typeof containerId === "string"
+            ? (document.getElementById(containerId) || document.querySelector(containerId) || document.querySelector("#" + containerId))
+            : containerId;
+        if (!canvasElement) return;
 
         canvasElement.addEventListener("dragover", (e) => {
             e.preventDefault();
@@ -496,10 +506,14 @@ const WorkflowEditor = {
     },
 
     importWorkflow: function(yamlData) {
+        if (!yamlData) {
+            console.warn("importWorkflow called with empty data");
+            return;
+        }
         this.graph.clear();
 
         const nodesMap = {};
-        const yamlNodes = yamlData.nodes;
+        const yamlNodes = Array.isArray(yamlData.nodes) ? yamlData.nodes : [];
 
         // 1. Create Nodes
         yamlNodes.forEach(n => {
@@ -846,20 +860,26 @@ const WorkflowEditor = {
     saveWorkflow: async function() {
         const workflowData = this.exportWorkflow();
         try {
+            const headers = { 'Content-Type': 'application/json' };
+            const apiKey = localStorage.getItem('api_key');
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
             const response = await fetch('/api/workflows/save', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify({
                     name: this.currentWorkflowName,
                     definition: workflowData
                 })
             });
             const res = await response.json();
+            if (!response.ok) {
+                throw new Error(res.detail || `HTTP ${response.status}`);
+            }
 
             if (this.options && this.options.onStatusUpdate) {
-                this.options.onStatusUpdate(res.message, 'success');
+                this.options.onStatusUpdate(res.message || "Workflow saved successfully", 'success');
             } else {
-                alert(res.message);
+                alert(res.message || "Workflow saved successfully");
             }
         } catch (error) {
             console.error("Save failed", error);
