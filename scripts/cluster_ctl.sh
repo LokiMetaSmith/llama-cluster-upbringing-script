@@ -49,7 +49,7 @@ show_help() {
     echo -e "  ${CYAN}status${NC}        Check health of mesh, Consul, Nomad, and frontends across all nodes"
     echo -e "  ${CYAN}test-job${NC}      Submit a verification batch job to prove cluster task sharing"
     echo -e "  ${CYAN}healer [cmd]${NC}  Manage 24/7 self-healing daemon (start|stop|status|logs|once)"
-    echo -e "  ${CYAN}pxe [cmd]${NC}     Audit or provision PXE network boot server (status|setup)"
+    echo -e "  ${CYAN}pxe [cmd]${NC}     Audit, provision, or view logs for PXE boot server (status|setup|logs)"
     echo -e "  ${CYAN}sync${NC}          Sync repository to all worker nodes via encrypted mesh"
     echo -e "  ${CYAN}help${NC}          Display this usage guide"
     echo ""
@@ -241,8 +241,80 @@ cmd_pxe() {
         setup)
             sudo bash "${REPO_ROOT}/scripts/setup_pxe_server.sh" "${3:-debian}"
             ;;
+        logs)
+            local LOG_TYPE="${3:-all}"
+            local LINES="${4:-25}"
+            echo -e "\n${BOLD}${CYAN}============================================================${NC}"
+            echo -e "${BOLD}${CYAN} 📜 PXE Server Logs (${LOG_TYPE})${NC}"
+            echo -e "${BOLD}${CYAN}============================================================${NC}"
+            case "$LOG_TYPE" in
+                dhcp)
+                    echo -e "${YELLOW}--- ISC DHCP Server Logs (last ${LINES} lines) ---${NC}"
+                    sudo journalctl -u isc-dhcp-server -n "$LINES" --no-pager || true
+                    ;;
+                tftp)
+                    echo -e "${YELLOW}--- TFTP Server Logs (last ${LINES} lines) ---${NC}"
+                    sudo journalctl -u tftpd-hpa -n "$LINES" --no-pager || true
+                    ;;
+                http|nginx)
+                    echo -e "${YELLOW}--- Nginx PXE HTTP Access Logs (last ${LINES} lines) ---${NC}"
+                    if [ -f /var/log/nginx/access.log ]; then
+                        sudo tail -n "$LINES" /var/log/nginx/access.log
+                    else
+                        sudo journalctl -u nginx -n "$LINES" --no-pager || true
+                    fi
+                    ;;
+                leases)
+                    echo -e "${YELLOW}--- Active DHCP Leases (/var/lib/dhcp/dhcpd.leases) ---${NC}"
+                    if [ -f /var/lib/dhcp/dhcpd.leases ]; then
+                        sudo grep -E "^lease |hardware ethernet|client-hostname" /var/lib/dhcp/dhcpd.leases | tail -n "$LINES" || cat /var/lib/dhcp/dhcpd.leases
+                    else
+                        echo "No leases file found at /var/lib/dhcp/dhcpd.leases"
+                    fi
+                    ;;
+                follow|-f)
+                    local FOLLOW_TARGET="${4:-all}"
+                    echo -e "${GREEN}Streaming live PXE logs (Ctrl+C to exit)...${NC}"
+                    if [ "$FOLLOW_TARGET" = "http" ] || [ "$FOLLOW_TARGET" = "nginx" ]; then
+                        sudo tail -f /var/log/nginx/access.log
+                    elif [ "$FOLLOW_TARGET" = "dhcp" ]; then
+                        sudo journalctl -u isc-dhcp-server -f
+                    elif [ "$FOLLOW_TARGET" = "tftp" ]; then
+                        sudo journalctl -u tftpd-hpa -f
+                    else
+                        sudo journalctl -u isc-dhcp-server -u tftpd-hpa -u nginx -f
+                    fi
+                    ;;
+                all|*)
+                    echo -e "${YELLOW}--- [1/4] DHCP Daemon Logs (last 15 lines) ---${NC}"
+                    sudo journalctl -u isc-dhcp-server -n 15 --no-pager || true
+                    echo -e "\n${YELLOW}--- [2/4] TFTP Daemon Logs (last 15 lines) ---${NC}"
+                    sudo journalctl -u tftpd-hpa -n 15 --no-pager || true
+                    echo -e "\n${YELLOW}--- [3/4] HTTP Requests (boot.ipxe / debian / preseed) ---${NC}"
+                    if [ -f /var/log/nginx/access.log ]; then
+                        sudo grep -E "boot\.ipxe|debian|preseed|vmlinuz|initrd" /var/log/nginx/access.log | tail -n 15 || sudo tail -n 15 /var/log/nginx/access.log
+                    else
+                        sudo journalctl -u nginx -n 15 --no-pager || true
+                    fi
+                    echo -e "\n${YELLOW}--- [4/4] Recent DHCP Leases ---${NC}"
+                    if [ -f /var/lib/dhcp/dhcpd.leases ]; then
+                        sudo grep -E "^lease |hardware ethernet|client-hostname" /var/lib/dhcp/dhcpd.leases | tail -n 12 || true
+                    fi
+                    echo -e "\n${CYAN}💡 Log Commands:${NC}"
+                    echo "  Live stream all:     ./scripts/cluster_ctl.sh pxe logs follow"
+                    echo "  Live stream HTTP:    ./scripts/cluster_ctl.sh pxe logs follow http"
+                    echo "  DHCP only:           ./scripts/cluster_ctl.sh pxe logs dhcp 50"
+                    echo "  TFTP only:           ./scripts/cluster_ctl.sh pxe logs tftp 50"
+                    echo "  HTTP / downloads:    ./scripts/cluster_ctl.sh pxe logs http 50"
+                    echo "  DHCP leases:         ./scripts/cluster_ctl.sh pxe logs leases"
+                    ;;
+            esac
+            ;;
         *)
-            echo "Usage: $0 pxe [status|setup]"
+            echo "Usage: $0 pxe [status|setup|logs]"
+            echo "  status                       Audit PXE daemons, ports, ISOs & boot assets"
+            echo "  setup [debian]               Install & configure PXE server services"
+            echo "  logs [all|dhcp|tftp|http|leases|follow] [lines]"
             exit 1
             ;;
     esac
