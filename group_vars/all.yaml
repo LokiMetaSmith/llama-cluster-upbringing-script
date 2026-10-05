@@ -266,7 +266,7 @@ pxe_subnet: "192.168.1.0"
 pxe_netmask: "255.255.255.0"
 pxe_range_start: "192.168.1.200"
 pxe_range_end: "192.168.1.240"
-pxe_router: "192.168.1.1"
+pxe_router: "192.168.1.254"
 
 # Cluster Overlay Network (Tailscale/Headscale)
 overlay_subnet: "100.64.0.0/10"
