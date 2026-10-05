@@ -32,7 +32,7 @@
 
 - name: Download iPXE UEFI bootloader
   get_url:
-    url: https://boot.ipxe.org/ipxe.efi
+    url: https://boot.ipxe.org/x86_64-efi/ipxe.efi
     dest: "{{ tftp_root }}/ipxe.efi"
     mode: '0644'
   become: yes
