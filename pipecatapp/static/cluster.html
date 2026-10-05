@@ -304,6 +304,16 @@
                         existing.status = svc.status;
                         if(uiUrl) existing.url = uiUrl;
 
+                        // Emit real data signal if service is under active CPU workload
+                        const prevCpu = existing.cpu || 0;
+                        if (fullMesh && svc.cpu && (svc.cpu > 1.5 || (svc.cpu > 0.5 && (svc.cpu - prevCpu) > 0.3))) {
+                            const parentConn = ARCHITECTURE_CONNECTIONS.find(c => c.to === svc.id || c.from === svc.id);
+                            if (parentConn) {
+                                const fromNode = parentConn.from === svc.id ? parentConn.to : parentConn.from;
+                                emitSignal(fromNode, svc.id, '#ffaa00', 1);
+                            }
+                        }
+
                         // Update particle
                         const p = getParticle(svc.id);
                         if (p) {
@@ -321,7 +331,7 @@
                     }
                 });
 
-                // Fetch active workflows to update HUD
+                // Fetch active workflows to update HUD and real data signals
                 try {
                     const apiKey = localStorage.getItem('api_key') || '';
                     const authHeaders = apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {};
@@ -346,6 +356,19 @@
                                         break;
                                     }
                                 }
+                            }
+
+                            // Trigger real data signals along active pipeline route
+                            if (fullMesh) {
+                                emitSignal('agent_factory', 'pipecat_app', '#58a6ff', 1);
+                                emitSignal('pipecat_app', 'vllm', '#3572A5', 1);
+
+                                const lowerRoute = activeRoute.toLowerCase();
+                                if (lowerRoute.includes('code') || lowerRoute.includes('python')) emitSignal('pipecat_app', 'tool_code', '#89E051', 1);
+                                else if (lowerRoute.includes('git')) emitSignal('pipecat_app', 'tool_git', '#89E051', 1);
+                                else if (lowerRoute.includes('browser') || lowerRoute.includes('web')) emitSignal('pipecat_app', 'tool_browser', '#89E051', 1);
+                                else if (lowerRoute.includes('file')) emitSignal('pipecat_app', 'tool_file', '#89E051', 1);
+                                else if (lowerRoute.includes('memory') || lowerRoute.includes('rag')) emitSignal('pipecat_app', 'memory', '#3572A5', 1);
                             }
 
                             if (expertRouteEl) {
@@ -518,12 +541,13 @@
         }
 
         class Signal {
-            constructor(p1, p2) {
+            constructor(p1, p2, color = '#ffffff') {
                 this.p1 = p1;
                 this.p2 = p2;
                 this.progress = 0;
-                this.speed = 0.02 + Math.random() * 0.03; // Random speed
+                this.speed = 0.02 + Math.random() * 0.025; // Speed of travel
                 this.active = true;
+                this.color = color;
             }
 
             update() {
@@ -534,21 +558,34 @@
             }
 
             draw() {
-                if (!this.active) return;
+                if (!this.active || this.progress < 0) return;
                 const x = this.p1.x + (this.p2.x - this.p1.x) * this.progress;
                 const y = this.p1.y + (this.p2.y - this.p1.y) * this.progress;
 
                 ctx.beginPath();
-                ctx.arc(x, y, 3, 0, Math.PI * 2);
-                ctx.fillStyle = '#fff';
+                ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
                 ctx.fill();
-                // Trail
+
+                // Dynamic glow/trail behind moving data packet
                 ctx.beginPath();
                 ctx.moveTo(x, y);
-                ctx.lineTo(x - (this.p2.x - this.p1.x)*0.05, y - (this.p2.y - this.p1.y)*0.05);
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-                ctx.lineWidth = 2;
+                ctx.lineTo(x - (this.p2.x - this.p1.x) * 0.07, y - (this.p2.y - this.p1.y) * 0.07);
+                ctx.strokeStyle = this.color === '#ffffff' ? 'rgba(255, 255, 255, 0.6)' : this.color;
+                ctx.lineWidth = 2.5;
                 ctx.stroke();
+            }
+        }
+
+        // Emits real data packets only when actual communication occurs
+        function emitSignal(fromId, toId, color = '#ffffff', count = 1) {
+            const p1 = getParticle(fromId);
+            const p2 = getParticle(toId);
+            if (!p1 || !p2 || !p1.visible || !p2.visible) return;
+            for (let i = 0; i < count; i++) {
+                const sig = new Signal(p1, p2, color);
+                if (i > 0) sig.progress = -(i * 0.15); // Stagger bursts
+                signals.push(sig);
             }
         }
 
@@ -594,6 +631,12 @@
                 // Hit detection with slight buffer
                 if (dx*dx + dy*dy < (p.radius + 10) * (p.radius + 10)) {
                     draggedParticle = p;
+                    if (fullMesh) {
+                        ARCHITECTURE_CONNECTIONS.forEach(conn => {
+                            if (conn.from === p.data.id) emitSignal(p.data.id, conn.to, p.color, 1);
+                            else if (conn.to === p.data.id) emitSignal(conn.from, p.data.id, p.color, 1);
+                        });
+                    }
                     break;
                 }
             }
@@ -759,13 +802,68 @@
         const ws = new WebSocket(wsUrl);
 
         ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'log') {
-                // Determine log level color
+            let data;
+            try {
+                data = JSON.parse(event.data);
+            } catch (err) {
+                return;
+            }
+
+            // Real Data Signal Dispatch (only animate when actual events/packets flow)
+            if (fullMesh) {
+                const type = (data.type || '').toLowerCase();
+                const source = (data.source || '').toLowerCase();
+                const msg = (data.message || data.data || data.text || '').toString().toLowerCase();
+
+                if (type === 'user' || type === 'user_message' || type === 'transcription') {
+                    // User audio or text prompt arriving into the conversational pipeline
+                    emitSignal('consul', 'pipecat_app', '#7ee787', 2);
+                    emitSignal('pipecat_app', 'vllm', '#3572A5', 2);
+                } else if (type === 'assistant' || type === 'llm_output' || type === 'audio') {
+                    // LLM generated speech / text returning
+                    emitSignal('vllm', 'pipecat_app', '#3572A5', 2);
+                    emitSignal('pipecat_app', 'agent_factory', '#58a6ff', 1);
+                } else if (type.includes('tool') || type.includes('mcp') || type.includes('shell') || msg.includes('tool_')) {
+                    // Tool execution
+                    let targetTool = 'tool_code';
+                    if (msg.includes('git')) targetTool = 'tool_git';
+                    else if (msg.includes('browser') || msg.includes('web')) targetTool = 'tool_browser';
+                    else if (msg.includes('file')) targetTool = 'tool_file';
+                    emitSignal('pipecat_app', targetTool, '#89E051', 2);
+                    emitSignal(targetTool, 'pipecat_app', '#89E051', 1);
+                } else if (type === 'p2p_telemetry') {
+                    // Swarm telemetry between mesh peers
+                    const src = data.source_peer || 'consul';
+                    const tgt = data.target_peer || 'pipecat_app';
+                    emitSignal(src, tgt, '#00ffcc', 2);
+                } else if (type.includes('worker') || source.includes('nomad')) {
+                    // Nomad job orchestration event
+                    emitSignal('nomad', 'pipecat_app', '#F1E05A', 1);
+                    emitSignal('nomad', 'docker', '#F1E05A', 1);
+                } else if (source.includes('ansible')) {
+                    // Ansible playbook execution
+                    emitSignal('ansible_ctrl', 'playbooks', '#EE0000', 1);
+                    emitSignal('ansible_ctrl', 'consul', '#EE0000', 1);
+                } else {
+                    // Component-level log or status update
+                    if (source && getParticle(source)) {
+                        emitSignal(source, 'pipecat_app', '#ffffff', 1);
+                    } else if (source.includes('vllm')) {
+                        emitSignal('vllm', 'pipecat_app', '#3572A5', 1);
+                    } else if (source.includes('postgres')) {
+                        emitSignal('postgres', 'nomad', '#D19A66', 1);
+                    }
+                }
+            }
+
+            // Terminal logging: filter and format cleanly, suppressing "undefined"
+            const logContent = data.message || data.data || data.text || (typeof data.content === 'string' ? data.content : null);
+            if (logContent && typeof logContent === 'string' && logContent.trim().length > 0) {
                 let level = 'log-info';
                 if (data.level === 'ERROR') level = 'log-error';
-                if (data.level === 'WARNING') level = 'log-warn';
-                log(`[${data.source || 'APP'}] ${data.message}`, level);
+                else if (data.level === 'WARNING') level = 'log-warn';
+                else if (data.type === 'user') level = 'log-highlight';
+                log(`[${data.source || (data.type ? data.type.toUpperCase() : 'APP')}] ${logContent}`, level);
             }
         };
 
@@ -868,15 +966,10 @@
                     // Draw Connection Points (Dots at ends)
                     drawConnectionPoint(p1.x, p1.y, p1.color);
                     drawConnectionPoint(p2.x, p2.y, p1.color);
-
-                    // Chance to spawn signal
-                    if (Math.random() < 0.05) { // 5% chance per frame per connection
-                        signals.push(new Signal(p1, p2));
-                    }
                 }
             });
 
-            // 2. Update and Draw Signals
+            // 2. Update and Draw Signals (only active real-data signals!)
             for (let i = signals.length - 1; i >= 0; i--) {
                 const s = signals[i];
                 s.update();
