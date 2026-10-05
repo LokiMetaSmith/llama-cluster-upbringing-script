@@ -94,14 +94,14 @@ else
 fi
 
 # TFTP Protocol Handshake Test
-if python3 -c "
+if python3 -c '
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.settimeout(2.0)
-s.sendto(b'\x00\x01undionly.kpxe\x00octet\x00', ('127.0.0.1', 69))
+s.sendto(bytes([0, 1]) + b"undionly.kpxe" + bytes([0]) + b"octet" + bytes([0]), ("127.0.0.1", 69))
 data, _ = s.recvfrom(516)
-assert len(data) >= 4 and data[:2] == b'\x00\x03'
-" 2>/dev/null; then
+assert len(data) >= 4 and data[1] == 3
+' 2>/dev/null; then
     echo -e "  • TFTP tftp://${LAN_IP}/undionly.kpxe -> ${GREEN}Handshake 200 OK (Data Block Received)${NC}"
 else
     echo -e "  • TFTP tftp://${LAN_IP}/undionly.kpxe -> ${RED}RRQ Handshake Failed${NC}"
