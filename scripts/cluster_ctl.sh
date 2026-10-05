@@ -213,7 +213,15 @@ cmd_healer() {
             ;;
         once)
             echo -e "Executing single-pass cluster audit and repair..."
-            python3 "${REPO_ROOT}/scripts/healer.py" --once
+            local PY_BIN="python3"
+            if [ -x "${REPO_ROOT}/.venv/bin/python" ]; then
+                PY_BIN="${REPO_ROOT}/.venv/bin/python"
+            elif [ -x "${REPO_ROOT}/.venv/bin/python3" ]; then
+                PY_BIN="${REPO_ROOT}/.venv/bin/python3"
+            elif [ -x "/opt/pipecatapp/venv/bin/python" ]; then
+                PY_BIN="/opt/pipecatapp/venv/bin/python"
+            fi
+            "$PY_BIN" "${REPO_ROOT}/scripts/healer.py" --once
             ;;
         *)
             echo -e "${RED}Unknown healer command: $SUBCOMMAND${NC}"

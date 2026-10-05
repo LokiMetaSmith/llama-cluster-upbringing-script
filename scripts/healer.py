@@ -5,7 +5,6 @@ import time
 import argparse
 import asyncio
 import re
-import httpx
 import subprocess
 import requests
 from typing import List, Optional, Dict, Any, Tuple
@@ -188,9 +187,9 @@ class HealerAgent:
     async def _resolve_service(self, service_name: str) -> Optional[str]:
         """Find the base URL for a service via Consul."""
         headers = {"X-Consul-Token": self.token} if self.token else {}
-        async with httpx.AsyncClient(headers=headers, timeout=5) as client:
+        def _fetch():
             try:
-                resp = await client.get(f"{self.consul_addr}/v1/health/service/{service_name}?passing")
+                resp = requests.get(f"{self.consul_addr}/v1/health/service/{service_name}?passing", headers=headers, timeout=5)
                 if resp.status_code == 200:
                     services = resp.json()
                     if services:
@@ -200,7 +199,8 @@ class HealerAgent:
                         return f"http://{addr}:{port}/v1"
             except Exception as e:
                 print(f"[Agent] Discovery failed for {service_name}: {e}")
-        return None
+            return None
+        return await asyncio.to_thread(_fetch)
 
     async def chat(self, messages: List[Dict], model_service: str = "rpc-coding", mock: bool = False) -> str:
         """Send a chat completion request to the cluster LLM."""
@@ -223,11 +223,13 @@ class HealerAgent:
             "temperature": 0.2
         }
 
+        def _post():
+            resp = requests.post(f"{base_url}/chat/completions", json=payload, timeout=120)
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"]
+
         try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(f"{base_url}/chat/completions", json=payload, timeout=120)
-                resp.raise_for_status()
-                return resp.json()["choices"][0]["message"]["content"]
+            return await asyncio.to_thread(_post)
         except Exception as e:
             return f"Error talking to LLM: {e}"
 
