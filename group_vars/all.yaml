@@ -251,15 +251,13 @@ github_client_secret: "change_me"
 jwt_access_secret: "change_me"
 jwt_refresh_secret: "change_me"
 
-# -- NixOS PXE Server Variables --
-# These variables are only used if pxe_os is set to "nixos".
-
+# -- PXE Server Configuration (Debian & NixOS) --
 # The network interface on the PXE server for DHCP/TFTP/HTTP services.
+# Defaults to auto-detection per host (ansible_default_ipv4.interface), or can be overridden here.
 pxe_interface: "{{ ansible_default_ipv4.interface | default('eth0') }}"
 pxe_server_ip: "192.168.1.148"
 
-# The public SSH key to embed in the NixOS clients for root access.
-# Replace this with your actual public key.
+# The public SSH key to embed in NixOS PXE clients for root access (if pxe_os == 'nixos').
 pxe_client_ssh_key: "ssh-rsa AAAA..."
 
 # DHCP network configuration for PXE clients and the pxe_server role.

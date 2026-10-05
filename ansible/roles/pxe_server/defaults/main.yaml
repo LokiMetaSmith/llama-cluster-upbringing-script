@@ -4,6 +4,10 @@ netboot_url: "https://ftp.debian.org/debian/dists/stable/main/installer-amd64/cu
 tftp_root: "/srv/tftp"
 nfs_root: "/srv/nfs/debian"
 
+# Network interface to bind PXE/DHCP services.
+# Automatically detected per machine via ansible_default_ipv4 or active interfaces if not overridden.
+pxe_interface: "{{ ansible_default_ipv4.interface | default('eth0') }}"
+
 pxe_subnet: "192.168.1.0"
 pxe_netmask: "255.255.255.0"
 pxe_range_start: "192.168.1.200"
