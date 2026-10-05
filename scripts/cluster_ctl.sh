@@ -81,7 +81,15 @@ cmd_status() {
     # 2. Consul Cluster
     echo -e "\n${BOLD}[2/4] Consul Mesh Members & Service Discovery:${NC}"
     if command -v consul &>/dev/null; then
-        consul members || true
+        if ! consul members 2>/dev/null; then
+            if command -v sudo &>/dev/null && sudo -n consul members 2>/dev/null; then
+                :
+            else
+                # Fallback to local Consul HTTP API with token
+                echo -e "Consul Agent Members (via HTTP API):"
+                curl -s -H "X-Consul-Token: ${CONSUL_HTTP_TOKEN}" "${CONSUL_HTTP_ADDR}/v1/agent/members" 2>/dev/null | jq -r '.[] | "\(.Name)\t\(.Addr):\(.Port)\t\(if .Status == 1 then "alive" else "failed" end)\t\(.Tags.role // "node")"' 2>/dev/null || echo -e "${YELLOW}Could not query Consul members.${NC}"
+            fi
+        fi
         echo ""
         local passing_count
         passing_count=$(curl -s -H "X-Consul-Token: ${CONSUL_HTTP_TOKEN}" "${CONSUL_HTTP_ADDR}/v1/health/state/passing" 2>/dev/null | jq 'length' 2>/dev/null || echo "0")

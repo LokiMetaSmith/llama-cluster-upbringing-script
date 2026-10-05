@@ -71,11 +71,14 @@ d-i grub-installer/bootdev string default
 
 # Late command: configure passwordless sudo and allow SSH password authentication
 d-i preseed/late_command string \
+    mkdir -p /target/etc/ssh/sshd_config.d; \
+    echo "PasswordAuthentication yes" > /target/etc/ssh/sshd_config.d/allow-password.conf; \
     in-target sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config; \
-    in-target sed -i 's/^#*PermitRootLogin.*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config; \
     echo "pipecatapp ALL=(ALL) NOPASSWD: ALL" > /target/etc/sudoers.d/pipecatapp; \
     chmod 0440 /target/etc/sudoers.d/pipecatapp; \
     in-target systemctl enable ssh
 
 # Finishing up the installation
+d-i cdrom-detect/eject boolean false
 d-i finish-install/reboot_in_progress note
+d-i debian-installer/exit/reboot boolean true

@@ -4,10 +4,28 @@ echo ===========================================================================
 echo  Pipecat Cluster Automated OS Installer (STATION Provisioning)
 echo ==============================================================================
 
-set base-url http://{{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}/debian
-kernel ${base-url}/linux
-initrd ${base-url}/initrd.gz
+set server_ip {{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}
 
-# Automated Debian installation using preseed over HTTP
-imgargs linux auto=true priority=critical preseed/url=http://{{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}/preseed.cfg net.ifnames=0 biosdevname=0 --
+# Set 5-second timeout menu defaulting to automated unattended installation
+menu Pipecat Cluster Network Boot (Station: ${mac})
+item --gap --             ------------------------- Deployment -------------------------
+item debian-auto          [Default] Automated Debian 12 Netboot Installer (Hands-Free)
+item local                Boot from Local Drive
+item shell                iPXE Interactive Shell
+choose --timeout 5000 --default debian-auto target && goto ${target}
+
+:debian-auto
+echo Booting Automated Debian 12 Installer from http://${server_ip}/debian...
+kernel http://${server_ip}/debian/linux initrd=initrd.gz auto=true priority=critical url=http://${server_ip}/preseed.cfg preseed/url=http://${server_ip}/preseed.cfg netcfg/choose_interface=auto net.ifnames=0 biosdevname=0 --
+initrd http://${server_ip}/debian/initrd.gz
 boot
+
+:local
+echo Booting from local drive...
+exit
+
+:shell
+echo Dropping into iPXE shell. Type 'exit' to return.
+shell
+goto debian-auto
+
