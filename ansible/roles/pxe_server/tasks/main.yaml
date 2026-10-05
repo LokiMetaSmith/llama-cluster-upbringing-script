@@ -161,11 +161,21 @@
     mode: '0644'
   become: yes
 
+- name: Set permissions on TFTP root
+  file:
+    path: /srv/tftp
+    state: directory
+    owner: tftp
+    group: tftp
+    mode: '0755'
+    recurse: yes
+  become: yes
+
 - name: Ensure tftpd-hpa is enabled and running
   systemd:
     name: tftpd-hpa
     enabled: yes
-    state: started
+    state: restarted
   become: yes
 
 - name: Ensure nginx is enabled and running
