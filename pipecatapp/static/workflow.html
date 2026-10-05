@@ -478,7 +478,10 @@
 
                     historyList.appendChild(li);
                 });
+            } catch (e) {
+                console.error("Failed to load history", e);
             }
+        }
 
             document.getElementById('refresh-history-btn').addEventListener('click', loadHistory);
             loadHistory();
