@@ -7,10 +7,10 @@
 - name: Auto-detect PXE network interface per machine
   ansible.builtin.set_fact:
     pxe_interface: >-
-      {%- if pxe_interface is defined and pxe_interface | string | length > 0 and pxe_interface != "None" -%}
+      {%- set matching_iface = namespace(name='') -%}
+      {%- if pxe_interface is defined and pxe_interface | string | length > 0 and pxe_interface in (ansible_interfaces | default([])) -%}
         {{ pxe_interface }}
       {%- else -%}
-        {%- set matching_iface = namespace(name='') -%}
         {%- if pxe_server_ip is defined and pxe_server_ip in (ansible_all_ipv4_addresses | default([])) -%}
           {%- for iface in ansible_interfaces | default([]) -%}
             {%- set iface_key = 'ansible_' + (iface | replace('-', '_')) -%}
@@ -79,6 +79,13 @@
     line: 'INTERFACESv4="{{ pxe_interface }}"'
   become: yes
 
+- name: Ensure isc-dhcp-server IPv6 interface is empty
+  lineinfile:
+    path: /etc/default/isc-dhcp-server
+    regexp: '^INTERFACESv6='
+    line: 'INTERFACESv6=""'
+  become: yes
+
 - name: Configure tftpd-hpa defaults
   lineinfile:
     path: /etc/default/tftpd-hpa
@@ -91,6 +98,11 @@
     src: dhcpd.conf.j2
     dest: /etc/dhcp/dhcpd.conf
   notify: restart dhcpd
+  become: yes
+
+- name: Validate DHCP configuration syntax
+  command: dhcpd -t -cf /etc/dhcp/dhcpd.conf
+  changed_when: false
   become: yes
 
 - name: Copy preseed file to TFTP root (for legacy compatibility)

@@ -7,10 +7,10 @@
 - name: Auto-detect PXE network interface per machine
   ansible.builtin.set_fact:
     pxe_interface: >-
-      {%- if pxe_interface is defined and pxe_interface | string | length > 0 and pxe_interface != "None" -%}
+      {%- set matching_iface = namespace(name='') -%}
+      {%- if pxe_interface is defined and pxe_interface | string | length > 0 and pxe_interface in (ansible_interfaces | default([])) -%}
         {{ pxe_interface }}
       {%- else -%}
-        {%- set matching_iface = namespace(name='') -%}
         {%- if pxe_server_ip is defined and pxe_server_ip in (ansible_all_ipv4_addresses | default([])) -%}
           {%- for iface in ansible_interfaces | default([]) -%}
             {%- set iface_key = 'ansible_' + (iface | replace('-', '_')) -%}

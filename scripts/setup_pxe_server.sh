@@ -28,12 +28,9 @@ fi
 echo "Setting up PXE server for: $PXE_OS"
 
 # Run the Ansible playbook locally
-EXTRA_VARS="-e pxe_os=$PXE_OS -e ansible_python_interpreter=$(which python3)"
-if [ -f "group_vars/all.yaml" ]; then
-    EXTRA_VARS="$EXTRA_VARS -e @group_vars/all.yaml"
-fi
-
-ansible-playbook -i "localhost," -c local playbooks/pxe_setup.yaml $EXTRA_VARS
+ansible-playbook -i "localhost," -c local playbooks/pxe_setup.yaml \
+    -e "pxe_os=$PXE_OS" \
+    -e "ansible_python_interpreter=$(which python3)"
 
 echo "=== Setup Complete ==="
 echo "You can now connect other machines to the same network and boot them via PXE."

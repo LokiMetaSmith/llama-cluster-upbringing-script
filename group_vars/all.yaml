@@ -253,8 +253,9 @@ jwt_refresh_secret: "change_me"
 
 # -- PXE Server Configuration (Debian & NixOS) --
 # The network interface on the PXE server for DHCP/TFTP/HTTP services.
-# Defaults to auto-detection per host (ansible_default_ipv4.interface), or can be overridden here.
-pxe_interface: "{{ ansible_default_ipv4.interface | default('eth0') }}"
+# Automatically detected per machine from active interfaces (e.g. enp5s0, eth0).
+# Uncomment only if you want to hardcode/pin a specific NIC:
+# pxe_interface: "enp5s0"
 pxe_server_ip: "192.168.1.148"
 
 # The public SSH key to embed in NixOS PXE clients for root access (if pxe_os == 'nixos').
