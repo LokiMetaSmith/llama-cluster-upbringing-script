@@ -48,6 +48,7 @@ show_help() {
     echo "Commands:"
     echo -e "  ${CYAN}status${NC}        Check health of mesh, Consul, Nomad, and frontends across all nodes"
     echo -e "  ${CYAN}test-job${NC}      Submit a verification batch job to prove cluster task sharing"
+    echo -e "  ${CYAN}healer [cmd]${NC}  Manage 24/7 self-healing daemon (start|stop|status|logs|once)"
     echo -e "  ${CYAN}sync${NC}          Sync repository to all worker nodes via encrypted mesh"
     echo -e "  ${CYAN}help${NC}          Display this usage guide"
     echo ""
@@ -174,10 +175,59 @@ cmd_sync() {
     echo -e "${GREEN}✅ Synchronization completed.${NC}"
 }
 
+cmd_healer() {
+    local SUBCOMMAND="${2:-status}"
+    local JOB_FILE="${REPO_ROOT}/scripts/healer.nomad"
+
+    echo -e "\n${BOLD}${CYAN}============================================================${NC}"
+    echo -e "${BOLD}${CYAN} 🛡️  Lazarus Autonomous Cluster Healer (${SUBCOMMAND})${NC}"
+    echo -e "${BOLD}${CYAN}============================================================${NC}"
+
+    case "$SUBCOMMAND" in
+        start)
+            if [ ! -f "$JOB_FILE" ]; then
+                echo -e "${RED}❌ Job definition $JOB_FILE not found.${NC}"
+                exit 1
+            fi
+            echo -e "Starting 24/7 Healer job in Nomad..."
+            nomad job run "$JOB_FILE"
+            echo -e "${GREEN}✅ Cluster Healer job submitted.${NC}"
+            ;;
+        stop)
+            echo -e "Stopping Cluster Healer job in Nomad..."
+            nomad job stop -purge cluster-healer >/dev/null 2>&1 || true
+            echo -e "${GREEN}✅ Cluster Healer stopped.${NC}"
+            ;;
+        status)
+            nomad job status cluster-healer || true
+            ;;
+        logs)
+            local alloc_id
+            alloc_id=$(nomad job allocs cluster-healer 2>/dev/null | awk 'NR>1 {print $1}' | head -n 1)
+            if [ -n "$alloc_id" ]; then
+                echo -e "Streaming logs for alloc ${alloc_id}..."
+                nomad alloc logs -f "$alloc_id"
+            else
+                echo -e "${YELLOW}No active allocation found for cluster-healer.${NC}"
+            fi
+            ;;
+        once)
+            echo -e "Executing single-pass cluster audit and repair..."
+            python3 "${REPO_ROOT}/scripts/healer.py" --once
+            ;;
+        *)
+            echo -e "${RED}Unknown healer command: $SUBCOMMAND${NC}"
+            echo "Available: start, stop, status, logs, once"
+            exit 1
+            ;;
+    esac
+}
+
 COMMAND="${1:-help}"
 case "$COMMAND" in
     status) cmd_status ;;
     test-job) cmd_test_job ;;
+    healer) cmd_healer "$@" ;;
     sync) cmd_sync ;;
     help|-h|--help) show_help ;;
     *) echo -e "${RED}Unknown command: $COMMAND${NC}"; show_help; exit 1 ;;
