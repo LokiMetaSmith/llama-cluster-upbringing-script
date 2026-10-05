@@ -1,31 +1,35 @@
 - name: Ensure network facts are gathered
   ansible.builtin.setup:
     gather_subset:
+      - "!all"
       - network
-  when: ansible_interfaces is not defined
+  when: (ansible_facts.interfaces is not defined and ansible_interfaces is not defined) or (ansible_facts.default_ipv4 is not defined and ansible_default_ipv4 is not defined)
 
 - name: Auto-detect PXE network interface per machine
   ansible.builtin.set_fact:
     pxe_interface: >-
-      {%- set matching_iface = namespace(name='') -%}
-      {%- if pxe_interface is defined and pxe_interface | string | length > 0 and pxe_interface in (ansible_interfaces | default([])) -%}
-        {{ pxe_interface }}
+      {%- set all_ifaces = ansible_facts.interfaces | default(ansible_interfaces | default([])) -%}
+      {%- if pxe_interface is defined and pxe_interface | string | trim | length > 0 and (pxe_interface | string | trim in all_ifaces) -%}
+        {{ pxe_interface | string | trim }}
       {%- else -%}
-        {%- if pxe_server_ip is defined and pxe_server_ip in (ansible_all_ipv4_addresses | default([])) -%}
-          {%- for iface in ansible_interfaces | default([]) -%}
-            {%- set iface_key = 'ansible_' + (iface | replace('-', '_')) -%}
-            {%- set iface_data = hostvars[inventory_hostname][iface_key] | default({}) -%}
-            {%- if iface_data.ipv4 is defined and iface_data.ipv4.address == pxe_server_ip -%}
+        {%- set target_ip = pxe_server_ip | default('') -%}
+        {%- set matching_iface = namespace(name='') -%}
+        {%- if target_ip != '' -%}
+          {%- for iface in all_ifaces -%}
+            {%- set iface_data = ansible_facts.get(iface, {}) or hostvars[inventory_hostname].get('ansible_' + (iface | replace('-', '_')), {}) -%}
+            {%- if iface_data.ipv4 is defined and iface_data.ipv4.address == target_ip -%}
               {%- set matching_iface.name = iface -%}
             {%- endif -%}
           {%- endfor -%}
         {%- endif -%}
         {%- if matching_iface.name != '' -%}
           {{ matching_iface.name }}
+        {%- elif ansible_facts.default_ipv4.interface is defined and ansible_facts.default_ipv4.interface | string | length > 0 -%}
+          {{ ansible_facts.default_ipv4.interface }}
         {%- elif ansible_default_ipv4.interface is defined and ansible_default_ipv4.interface | string | length > 0 -%}
           {{ ansible_default_ipv4.interface }}
         {%- else -%}
-          {{ (ansible_interfaces | default([]) | reject('equalto', 'lo') | first) | default('eth0') }}
+          {{ (all_ifaces | reject('equalto', 'lo') | first) | default('eth0') }}
         {%- endif -%}
       {%- endif -%}
 

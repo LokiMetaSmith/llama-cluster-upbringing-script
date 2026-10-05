@@ -5,8 +5,8 @@ tftp_root: "/srv/tftp"
 nfs_root: "/srv/nfs/debian"
 
 # Network interface to bind PXE/DHCP services.
-# Automatically detected per machine via ansible_default_ipv4 or active interfaces if not overridden.
-pxe_interface: "{{ ansible_default_ipv4.interface | default('eth0') }}"
+# Automatically detected per machine via ansible_facts.default_ipv4 or active interfaces if not overridden.
+pxe_interface: ""
 
 pxe_subnet: "192.168.1.0"
 pxe_netmask: "255.255.255.0"

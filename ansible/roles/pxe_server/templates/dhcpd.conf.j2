@@ -19,11 +19,11 @@ subnet {{ pxe_subnet | default('192.168.1.0') }} netmask {{ pxe_netmask | defaul
   option routers {{ pxe_router | default('192.168.1.1') }};
 
   # Point PXE clients to the TFTP server on the local physical network
-  next-server {{ pxe_server_ip | default(ansible_default_ipv4.address | default('192.168.1.148')) }};
+  next-server {{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }};
 
   if exists user-class and option user-class = "iPXE" {
     # Client is already running iPXE - download the boot script over HTTP
-    filename "http://{{ pxe_server_ip | default(ansible_default_ipv4.address | default('192.168.1.148')) }}/boot.ipxe";
+    filename "http://{{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}/boot.ipxe";
   } else if option client-arch = 00:07 or option client-arch = 00:09 {
     # UEFI 64-bit client
     filename "ipxe.efi";

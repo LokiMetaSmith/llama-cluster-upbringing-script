@@ -4,10 +4,10 @@ echo ===========================================================================
 echo  Pipecat Cluster Automated OS Installer (STATION Provisioning)
 echo ==============================================================================
 
-set base-url http://{{ pxe_server_ip | default(ansible_default_ipv4.address | default('192.168.1.148')) }}/debian
+set base-url http://{{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}/debian
 kernel ${base-url}/linux
 initrd ${base-url}/initrd.gz
 
 # Automated Debian installation using preseed over HTTP
-imgargs linux auto=true priority=critical preseed/url=http://{{ pxe_server_ip | default(ansible_default_ipv4.address | default('192.168.1.148')) }}/preseed.cfg net.ifnames=0 biosdevname=0 --
+imgargs linux auto=true priority=critical preseed/url=http://{{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}/preseed.cfg net.ifnames=0 biosdevname=0 --
 boot
