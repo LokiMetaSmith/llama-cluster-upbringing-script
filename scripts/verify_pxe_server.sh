@@ -36,21 +36,21 @@ done
 # 2. Network Ports
 echo -e "\n${BOLD}[2/4] Network Port Listeners:${NC}"
 # DHCP: UDP 67
-if ss -ulpn 2>/dev/null | grep -q ":67 "; then
+if (ss -uln 2>/dev/null || ss -ulpn 2>/dev/null || netstat -uln 2>/dev/null) | grep -E -q ':(67|bootps)\b'; then
     echo -e "  • DHCP Server (UDP 67): ${GREEN}Listening${NC}"
 else
     echo -e "  • DHCP Server (UDP 67): ${RED}Not Listening${NC}"
 fi
 
 # TFTP: UDP 69
-if ss -ulpn 2>/dev/null | grep -q ":69 "; then
+if (ss -uln 2>/dev/null || ss -ulpn 2>/dev/null || netstat -uln 2>/dev/null) | grep -E -q ':(69|tftp)\b'; then
     echo -e "  • TFTP Server (UDP 69): ${GREEN}Listening${NC}"
 else
     echo -e "  • TFTP Server (UDP 69): ${RED}Not Listening${NC}"
 fi
 
 # HTTP: TCP 80
-if ss -tlpn 2>/dev/null | grep -q ":80 "; then
+if (ss -tln 2>/dev/null || ss -tlpn 2>/dev/null || netstat -tln 2>/dev/null) | grep -E -q ':(80|http)\b'; then
     echo -e "  • HTTP Server (TCP 80): ${GREEN}Listening${NC}"
 else
     echo -e "  • HTTP Server (TCP 80): ${RED}Not Listening${NC}"
@@ -78,18 +78,33 @@ for f in "${FILES[@]}"; do
     fi
 done
 
-# 4. HTTP Fetch Test
-echo -e "\n${BOLD}[4/4] Local HTTP Health Test:${NC}"
+# 4. Service Protocol Health Tests
+echo -e "\n${BOLD}[4/4] Live Service Health Tests:${NC}"
+# HTTP Tests
 if curl -s -f "http://127.0.0.1/boot.ipxe" >/dev/null 2>&1; then
-    echo -e "  • http://${LAN_IP}/boot.ipxe -> ${GREEN}HTTP 200 OK${NC}"
+    echo -e "  • HTTP http://${LAN_IP}/boot.ipxe -> ${GREEN}HTTP 200 OK${NC}"
 else
-    echo -e "  • http://${LAN_IP}/boot.ipxe -> ${RED}Failed to fetch${NC}"
+    echo -e "  • HTTP http://${LAN_IP}/boot.ipxe -> ${RED}Failed to fetch${NC}"
 fi
 
 if curl -s -f "http://127.0.0.1/preseed.cfg" >/dev/null 2>&1; then
-    echo -e "  • http://${LAN_IP}/preseed.cfg -> ${GREEN}HTTP 200 OK${NC}"
+    echo -e "  • HTTP http://${LAN_IP}/preseed.cfg -> ${GREEN}HTTP 200 OK${NC}"
 else
-    echo -e "  • http://${LAN_IP}/preseed.cfg -> ${RED}Failed to fetch${NC}"
+    echo -e "  • HTTP http://${LAN_IP}/preseed.cfg -> ${RED}Failed to fetch${NC}"
+fi
+
+# TFTP Protocol Handshake Test
+if python3 -c "
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.settimeout(2.0)
+s.sendto(b'\x00\x01undionly.kpxe\x00octet\x00', ('127.0.0.1', 69))
+data, _ = s.recvfrom(516)
+assert len(data) >= 4 and data[:2] == b'\x00\x03'
+" 2>/dev/null; then
+    echo -e "  • TFTP tftp://${LAN_IP}/undionly.kpxe -> ${GREEN}Handshake 200 OK (Data Block Received)${NC}"
+else
+    echo -e "  • TFTP tftp://${LAN_IP}/undionly.kpxe -> ${RED}RRQ Handshake Failed${NC}"
 fi
 
 echo -e "\n${BOLD}${CYAN}============================================================${NC}"

@@ -90,11 +90,28 @@
     line: 'INTERFACESv6=""'
   become: yes
 
-- name: Configure tftpd-hpa defaults
+- name: Configure tftpd-hpa directory
   lineinfile:
     path: /etc/default/tftpd-hpa
     regexp: '^TFTP_DIRECTORY='
-    line: 'TFTP_DIRECTORY="/srv/tftp"'
+    line: 'TFTP_DIRECTORY="{{ tftp_root }}"'
+  notify: restart tftpd-hpa
+  become: yes
+
+- name: Configure tftpd-hpa address
+  lineinfile:
+    path: /etc/default/tftpd-hpa
+    regexp: '^TFTP_ADDRESS='
+    line: 'TFTP_ADDRESS="0.0.0.0:69"'
+  notify: restart tftpd-hpa
+  become: yes
+
+- name: Configure tftpd-hpa options
+  lineinfile:
+    path: /etc/default/tftpd-hpa
+    regexp: '^TFTP_OPTIONS='
+    line: 'TFTP_OPTIONS="--secure"'
+  notify: restart tftpd-hpa
   become: yes
 
 - name: Copy DHCP config
@@ -164,3 +181,24 @@
     enabled: yes
     state: started
   become: yes
+
+- name: Allow DHCP (UDP 67) in firewall
+  ansible.builtin.command: ufw allow 67/udp comment 'Allow DHCP for PXE clients'
+  become: yes
+  failed_when: false
+  changed_when: false
+  when: ansible_facts.pkg_mgr == 'apt'
+
+- name: Allow TFTP (UDP 69) in firewall
+  ansible.builtin.command: ufw allow 69/udp comment 'Allow TFTP for PXE clients'
+  become: yes
+  failed_when: false
+  changed_when: false
+  when: ansible_facts.pkg_mgr == 'apt'
+
+- name: Allow HTTP (TCP 80) in firewall
+  ansible.builtin.command: ufw allow 80/tcp comment 'Allow HTTP for PXE clients'
+  become: yes
+  failed_when: false
+  changed_when: false
+  when: ansible_facts.pkg_mgr == 'apt'
