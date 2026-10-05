@@ -2,7 +2,7 @@
 # ==============================================================================
 # verify_pxe_server.sh - Verify Cluster PXE & Network Boot Infrastructure
 # ==============================================================================
-# Checks status of DHCP, TFTP, HTTP (Nginx), and verifies installer assets.
+# Checks status of DHCP, TFTP, HTTP (Nginx), installer assets, and ISO images.
 #
 # Usage:
 #   sudo ./scripts/verify_pxe_server.sh [status|tail|test]
@@ -14,8 +14,12 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
 BOLD='\033[1m'
 NC='\033[0m'
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
 LAN_IP=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $7}' || echo "192.168.1.148")
 
@@ -24,17 +28,17 @@ echo -e "${BOLD}${CYAN} 🌐 Pipecat PXE Server Verification (Host: ${LAN_IP})${
 echo -e "${BOLD}${CYAN}============================================================${NC}"
 
 # 1. Services
-echo -e "\n${BOLD}[1/4] Service Daemons Status:${NC}"
+echo -e "\n${BOLD}[1/5] Service Daemons Status:${NC}"
 for svc in isc-dhcp-server tftpd-hpa nginx; do
     if systemctl is-active --quiet "$svc" 2>/dev/null; then
         echo -e "  • ${svc}: ${GREEN}Active (Running)${NC}"
     else
-        echo -e "  • ${svc}: ${RED}Inactive or Failed${NC} (Check: systemctl status $svc)"
+        echo -e "  • ${svc}: ${RED}Inactive or Failed${NC} (Check: sudo systemctl status $svc)"
     fi
 done
 
 # 2. Network Ports
-echo -e "\n${BOLD}[2/4] Network Port Listeners:${NC}"
+echo -e "\n${BOLD}[2/5] Network Port Listeners:${NC}"
 # DHCP: UDP 67
 if (ss -uln 2>/dev/null || ss -ulpn 2>/dev/null || netstat -uln 2>/dev/null) | grep -E -q ':(67|bootps)\b'; then
     echo -e "  • DHCP Server (UDP 67): ${GREEN}Listening${NC}"
@@ -56,8 +60,60 @@ else
     echo -e "  • HTTP Server (TCP 80): ${RED}Not Listening${NC}"
 fi
 
-# 3. Boot Assets
-echo -e "\n${BOLD}[3/4] PXE & iPXE Boot Assets:${NC}"
+# 3. Active OS Image & ISO Targets
+echo -e "\n${BOLD}[3/5] Active OS Image & Boot Target:${NC}"
+
+# Check for custom built ISOs in os-image or web root
+FOUND_ISOS=()
+POSSIBLE_ISO_PATHS=(
+    "/var/www/html/pipecat-installer-amd64.iso"
+    "${REPO_ROOT}/os-image/pipecat-installer-amd64.iso"
+    "/opt/pipecat-cluster/os-image/pipecat-installer-amd64.iso"
+)
+
+# Search /var/www/html and os-image for any .iso
+for iso_candidate in /var/www/html/*.iso "${REPO_ROOT}/os-image"/*.iso; do
+    if [ -f "$iso_candidate" ]; then
+        FOUND_ISOS+=("$iso_candidate")
+    fi
+done
+
+# Remove duplicates
+if [ ${#FOUND_ISOS[@]} -gt 0 ]; then
+    echo -e "  ${BOLD}Custom Cluster ISO(s) Available:${NC}"
+    for iso_file in "${FOUND_ISOS[@]}"; do
+        ISO_NAME=$(basename "$iso_file")
+        ISO_SIZE=$(du -h "$iso_file" 2>/dev/null | awk '{print $1}')
+        ISO_DATE=$(date -r "$iso_file" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown")
+
+        # Ensure symlinked to web root for HTTP serving
+        if [ ! -f "/var/www/html/${ISO_NAME}" ] && [ -d "/var/www/html" ]; then
+            ln -sf "$iso_file" "/var/www/html/${ISO_NAME}" 2>/dev/null || true
+        fi
+
+        echo -e "  • ${CYAN}${ISO_NAME}${NC} (${GREEN}${ISO_SIZE}${NC}, Built: ${ISO_DATE})"
+        echo -e "    File Location: ${iso_file}"
+        echo -e "    HTTP Web URL:  http://${LAN_IP}/${ISO_NAME}"
+    done
+else
+    echo -e "  • Custom ISO: ${YELLOW}pipecat-installer-amd64.iso not found${NC} in os-image/ or /var/www/html/"
+    echo -e "    ${MAGENTA}Tip:${NC} Build the custom offline ISO anytime with: ${CYAN}./os-image/build_iso.sh${NC}"
+fi
+
+echo -e "\n  ${BOLD}Active Network Netboot Installer:${NC}"
+if [ -f "/var/www/html/debian/linux" ] && [ -f "/var/www/html/debian/initrd.gz" ]; then
+    KERNEL_SIZE=$(du -h "/var/www/html/debian/linux" 2>/dev/null | awk '{print $1}')
+    INITRD_SIZE=$(du -h "/var/www/html/debian/initrd.gz" 2>/dev/null | awk '{print $1}')
+    echo -e "  • ${GREEN}Debian 12 (Bookworm) Automated Network Netboot${NC}"
+    echo -e "    Kernel:  http://${LAN_IP}/debian/linux (${KERNEL_SIZE})"
+    echo -e "    Initrd:  http://${LAN_IP}/debian/initrd.gz (${INITRD_SIZE})"
+    echo -e "    Preseed: http://${LAN_IP}/preseed.cfg (Auto-create user: pipecatapp, pass: pipecat, sudo & SSH enabled)"
+else
+    echo -e "  • ${RED}Netboot kernel/initrd missing${NC} under /var/www/html/debian/"
+fi
+
+# 4. Boot Assets
+echo -e "\n${BOLD}[4/5] PXE & iPXE Boot Assets:${NC}"
 FILES=(
     "/srv/tftp/undionly.kpxe"
     "/srv/tftp/ipxe.efi"
@@ -78,8 +134,8 @@ for f in "${FILES[@]}"; do
     fi
 done
 
-# 4. Service Protocol Health Tests
-echo -e "\n${BOLD}[4/4] Live Service Health Tests:${NC}"
+# 5. Service Protocol Health Tests
+echo -e "\n${BOLD}[5/5] Live Service Health Tests:${NC}"
 # HTTP Tests
 if curl -s -f "http://127.0.0.1/boot.ipxe" >/dev/null 2>&1; then
     echo -e "  • HTTP http://${LAN_IP}/boot.ipxe -> ${GREEN}HTTP 200 OK${NC}"
