@@ -43,6 +43,8 @@
       - isc-dhcp-server
       - tftpd-hpa
       - nginx
+      - pxelinux
+      - syslinux-common
     state: present
   become: yes
 
@@ -61,6 +63,29 @@
     remote_src: yes
   become: yes
   check_mode: no
+
+- name: Ensure pxelinux.cfg directory exists in TFTP root
+  file:
+    path: "{{ tftp_root }}/pxelinux.cfg"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Deploy automated PXELINUX boot config (Pure TFTP Boot)
+  template:
+    src: pxelinux.default.j2
+    dest: "{{ tftp_root }}/pxelinux.cfg/default"
+    mode: '0644'
+  become: yes
+
+- name: Ensure pxelinux.0 fallback is installed
+  ansible.builtin.copy:
+    src: /usr/lib/PXELINUX/pxelinux.0
+    dest: "{{ tftp_root }}/pxelinux.0"
+    remote_src: yes
+    mode: '0644'
+  become: yes
+  failed_when: false
 
 - name: Download iPXE BIOS bootloader
   get_url:

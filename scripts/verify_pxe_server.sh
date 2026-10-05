@@ -115,6 +115,8 @@ fi
 # 4. Boot Assets
 echo -e "\n${BOLD}[4/5] PXE & iPXE Boot Assets:${NC}"
 FILES=(
+    "/srv/tftp/pxelinux.0"
+    "/srv/tftp/pxelinux.cfg/default"
     "/srv/tftp/undionly.kpxe"
     "/srv/tftp/ipxe.efi"
     "/var/www/html/boot.ipxe"
@@ -149,25 +151,31 @@ else
     echo -e "  • HTTP http://${LAN_IP}/preseed.cfg -> ${RED}Failed to fetch${NC}"
 fi
 
-# TFTP Protocol Handshake Test
-if python3 -c '
+# TFTP Protocol Handshake Tests (pxelinux.0 & undionly.kpxe)
+for tftp_test_file in "pxelinux.0" "undionly.kpxe"; do
+    if [ -f "/srv/tftp/${tftp_test_file}" ]; then
+        if python3 -c "
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.settimeout(2.0)
-s.sendto(bytes([0, 1]) + b"undionly.kpxe" + bytes([0]) + b"octet" + bytes([0]), ("127.0.0.1", 69))
+s.sendto(bytes([0, 1]) + b'${tftp_test_file}' + bytes([0]) + b'octet' + bytes([0]), ('127.0.0.1', 69))
 data, _ = s.recvfrom(516)
 assert len(data) >= 4 and data[1] == 3
-' 2>/dev/null; then
-    echo -e "  • TFTP tftp://${LAN_IP}/undionly.kpxe -> ${GREEN}Handshake 200 OK (Data Block Received)${NC}"
-else
-    echo -e "  • TFTP tftp://${LAN_IP}/undionly.kpxe -> ${RED}RRQ Handshake Failed${NC}"
-fi
+" 2>/dev/null; then
+            echo -e "  • TFTP tftp://${LAN_IP}/${tftp_test_file} -> ${GREEN}Handshake 200 OK (Data Block Received)${NC}"
+        else
+            echo -e "  • TFTP tftp://${LAN_IP}/${tftp_test_file} -> ${RED}RRQ Handshake Failed${NC}"
+        fi
+    fi
+done
 
 echo -e "\n${BOLD}${CYAN}============================================================${NC}"
 if [ "$ALL_FILES_OK" = true ]; then
     echo -e "${GREEN}✅ PXE Server is ready to boot new client nodes!${NC}"
-    echo -e "Watching for client requests (e.g. MAC 00:25:ab:7a:0d:7e):"
-    echo -e "Run: ${CYAN}journalctl -u isc-dhcp-server -f${NC} to see DHCP handshakes live."
+    echo -e "  • ${BOLD}Pure TFTP (PXELINUX):${NC}  Loads pxelinux.0 directly over TFTP (No HTTP required)"
+    echo -e "  • ${BOLD}iPXE HTTP Chainloading:${NC} Loads undionly.kpxe/ipxe.efi -> http://${LAN_IP}/boot.ipxe"
+    echo -e "\nWatching for client requests (e.g. MAC 00:25:ab:7a:0d:7e):"
+    echo -e "Run: ${CYAN}./scripts/cluster_ctl.sh pxe logs follow${NC} to view live boot activity."
 else
     echo -e "${YELLOW}⚠️  Some files are missing. Run:${NC}"
     echo -e "  ${CYAN}sudo ./scripts/setup_pxe_server.sh debian${NC}"

@@ -29,6 +29,7 @@ subnet {{ pxe_subnet | default('192.168.1.0') }} netmask {{ pxe_netmask | defaul
     filename "ipxe.efi";
   } else {
     # BIOS client (e.g. Intel UNDI 2.1)
-    filename "undionly.kpxe";
+    # Default to pxelinux.0 for pure TFTP boot without requiring client HTTP support
+    filename "{{ pxe_bios_bootloader | default('pxelinux.0') }}";
   }
 }
