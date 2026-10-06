@@ -255,19 +255,21 @@ jwt_refresh_secret: "change_me"
 # The network interface on the PXE server for DHCP/TFTP/HTTP services.
 # Automatically detected per machine from active interfaces (e.g. enp5s0, eth0).
 # Uncomment only if you want to hardcode/pin a specific NIC:
-# pxe_interface: "enp5s0"
-pxe_server_ip: "192.168.1.148"
+# Automatically detected from the active PXE interface IP if not pinned:
+# pxe_server_ip: "192.168.1.148"
 
 # The public SSH key to embed in NixOS PXE clients for root access (if pxe_os == 'nixos').
 pxe_client_ssh_key: "ssh-rsa AAAA..."
 
 # DHCP network configuration for PXE clients and the pxe_server role.
-pxe_subnet: "192.168.1.0"
-pxe_netmask: "255.255.255.0"
-pxe_range_start: "192.168.1.200"
-pxe_range_end: "192.168.1.240"
-pxe_router: "192.168.1.254"
-pxe_dns: "192.168.1.254, 1.1.1.1, 8.8.8.8"
+# Dynamically discovered from host interface and DHCP default route facts.
+# Explicit overrides can be supplied here if a custom non-default network is used.
+# pxe_subnet: "192.168.1.0"
+# pxe_netmask: "255.255.255.0"
+# pxe_range_start: "192.168.1.200"
+# pxe_range_end: "192.168.1.240"
+# pxe_router: ""
+# pxe_dns: ""
 debian_suite: "trixie"
 
 # Cluster Overlay Network (Tailscale/Headscale)

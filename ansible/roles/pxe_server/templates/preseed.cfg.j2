@@ -8,12 +8,11 @@ d-i hw-detect/load_media boolean true
 d-i hw-detect/load_firmware boolean true
 base-config apt-setup/non-free-firmware boolean true
 
-# Network configuration
+# Network configuration (DHCP auto-configuration)
 d-i netcfg/choose_interface select auto
 d-i netcfg/get_hostname string pipecat-node
 d-i netcfg/get_domain string local
 d-i netcfg/wireless_wep string
-d-i netcfg/get_nameservers string 192.168.1.254 1.1.1.1 8.8.8.8
 
 # Mirror settings
 d-i mirror/country string manual

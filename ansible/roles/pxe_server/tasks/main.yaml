@@ -33,9 +33,63 @@
         {%- endif -%}
       {%- endif -%}
 
-- name: Display detected PXE interface
+- name: Dynamically resolve PXE subnet, gateway router, IP, and DNS parameters from host environment
+  ansible.builtin.set_fact:
+    pxe_server_ip: >-
+      {%- if pxe_server_ip is defined and pxe_server_ip | string | trim | length > 0 -%}
+        {{ pxe_server_ip | string | trim }}
+      {%- else -%}
+        {{ ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('address') | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default(''))) }}
+      {%- endif -%}
+    pxe_router: >-
+      {%- if pxe_router is defined and pxe_router | string | trim | length > 0 -%}
+        {{ pxe_router | string | trim }}
+      {%- else -%}
+        {{ ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('gateway') | default(ansible_facts.default_ipv4.gateway | default(ansible_default_ipv4.gateway | default(''))) }}
+      {%- endif -%}
+    pxe_subnet: >-
+      {%- if pxe_subnet is defined and pxe_subnet | string | trim | length > 0 -%}
+        {{ pxe_subnet | string | trim }}
+      {%- else -%}
+        {{ ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default(''))) }}
+      {%- endif -%}
+    pxe_netmask: >-
+      {%- if pxe_netmask is defined and pxe_netmask | string | trim | length > 0 -%}
+        {{ pxe_netmask | string | trim }}
+      {%- else -%}
+        {{ ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('netmask') | default(ansible_facts.default_ipv4.netmask | default(ansible_default_ipv4.netmask | default('255.255.255.0'))) }}
+      {%- endif -%}
+    pxe_dns: >-
+      {%- if pxe_dns is defined and pxe_dns | string | trim | length > 0 -%}
+        {{ pxe_dns | string | trim }}
+      {%- else -%}
+        {%- set detected_gw = ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('gateway') | default(ansible_facts.default_ipv4.gateway | default(ansible_default_ipv4.gateway | default(''))) -%}
+        {%- if detected_gw | length > 0 -%}
+          {{ detected_gw }}, 1.1.1.1, 8.8.8.8
+        {%- else -%}
+          1.1.1.1, 8.8.8.8
+        {%- endif -%}
+      {%- endif -%}
+    pxe_range_start: >-
+      {%- if pxe_range_start is defined and pxe_range_start | string | trim | length > 0 -%}
+        {{ pxe_range_start | string | trim }}
+      {%- else -%}
+        {%- set net_str = ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default('192.168.1.0'))) -%}
+        {%- set net_prefix = net_str.rsplit('.', 1)[0] -%}
+        {{ net_prefix }}.200
+      {%- endif -%}
+    pxe_range_end: >-
+      {%- if pxe_range_end is defined and pxe_range_end | string | trim | length > 0 -%}
+        {{ pxe_range_end | string | trim }}
+      {%- else -%}
+        {%- set net_str = ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default('192.168.1.0'))) -%}
+        {%- set net_prefix = net_str.rsplit('.', 1)[0] -%}
+        {{ net_prefix }}.240
+      {%- endif -%}
+
+- name: Display detected PXE configuration
   ansible.builtin.debug:
-    msg: "Configuring PXE server on interface '{{ pxe_interface }}' for host '{{ inventory_hostname }}'"
+    msg: "PXE on '{{ pxe_interface }}' (IP: {{ pxe_server_ip }}) | Subnet: {{ pxe_subnet }}/{{ pxe_netmask }} | Router: {{ pxe_router }} | DNS: {{ pxe_dns }} | Range: {{ pxe_range_start }}-{{ pxe_range_end }}"
 
 - name: Install PXE boot dependencies
   apt:

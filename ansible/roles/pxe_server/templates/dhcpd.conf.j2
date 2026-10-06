@@ -1,5 +1,6 @@
 option domain-name "cluster.local";
-option domain-name-servers {{ pxe_dns | default('192.168.1.254, 1.1.1.1, 8.8.8.8') }};
+{% set resolved_dns = pxe_dns if (pxe_dns is defined and pxe_dns | string | trim | length > 0) else ((pxe_router ~ ', 1.1.1.1, 8.8.8.8') if (pxe_router is defined and pxe_router | string | trim | length > 0) else '1.1.1.1, 8.8.8.8') %}
+option domain-name-servers {{ resolved_dns }};
 
 default-lease-time 600;
 max-lease-time 7200;
@@ -14,16 +15,18 @@ option client-arch code 93 = unsigned integer 16;
 
 log-facility local7;
 
-subnet {{ pxe_subnet | default('192.168.1.0') }} netmask {{ pxe_netmask | default('255.255.255.0') }} {
+subnet {{ pxe_subnet | default(ansible_facts[pxe_interface].ipv4.network | default(ansible_facts.default_ipv4.network | default('192.168.1.0'))) }} netmask {{ pxe_netmask | default(ansible_facts[pxe_interface].ipv4.netmask | default(ansible_facts.default_ipv4.netmask | default('255.255.255.0'))) }} {
   range {{ pxe_range_start | default('192.168.1.200') }} {{ pxe_range_end | default('192.168.1.240') }};
-  option routers {{ pxe_router | default('192.168.1.254') }};
+{% if pxe_router is defined and pxe_router | string | trim | length > 0 %}
+  option routers {{ pxe_router }};
+{% endif %}
 
   # Point PXE clients to the TFTP server on the local physical network
-  next-server {{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }};
+  next-server {{ pxe_server_ip | default(ansible_facts[pxe_interface].ipv4.address | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('')))) }};
 
   if exists user-class and option user-class = "iPXE" {
     # Client is already running iPXE - download the boot script over HTTP
-    filename "http://{{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}/boot.ipxe";
+    filename "http://{{ pxe_server_ip | default(ansible_facts[pxe_interface].ipv4.address | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('')))) }}/boot.ipxe";
   } elsif option client-arch = 00:07 or option client-arch = 00:09 {
     # UEFI 64-bit client
     filename "ipxe.efi";

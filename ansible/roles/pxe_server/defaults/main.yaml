@@ -8,10 +8,14 @@ nfs_root: "/srv/nfs/debian"
 # Automatically detected per machine via ansible_facts.default_ipv4 or active interfaces if not overridden.
 pxe_interface: ""
 
-pxe_subnet: "192.168.1.0"
-pxe_netmask: "255.255.255.0"
-pxe_range_start: "192.168.1.200"
-pxe_router: "192.168.1.254"
-pxe_dns: "192.168.1.254, 1.1.1.1, 8.8.8.8"
-pxe_server_ip: "192.168.1.148"
+# Network configuration for PXE/DHCP services.
+# Left empty by default to dynamically discover subnet, gateway, netmask, range, and DNS
+# from the host's active network facts and DHCP default route.
+pxe_subnet: ""
+pxe_netmask: ""
+pxe_range_start: ""
+pxe_range_end: ""
+pxe_router: ""
+pxe_dns: ""
+pxe_server_ip: ""
 debian_suite: "trixie"
