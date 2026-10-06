@@ -39,6 +39,7 @@ export NOMAD_CLIENT_KEY="${NOMAD_CLIENT_KEY:-/etc/nomad.d/tls/cli.key.pem}"
 # Load Consul Environment
 export CONSUL_HTTP_ADDR="${CONSUL_HTTP_ADDR:-http://127.0.0.1:8500}"
 export CONSUL_HTTP_TOKEN="${CONSUL_HTTP_TOKEN:-f6976354-9daa-251e-ef81-5fadb26f4fb5}"
+export CONSUL_HTTP_SSL="${CONSUL_HTTP_SSL:-false}"
 
 show_help() {
     echo -e "${BOLD}Pipecat Cluster Management CLI${NC}"
@@ -81,13 +82,15 @@ cmd_status() {
     # 2. Consul Cluster
     echo -e "\n${BOLD}[2/4] Consul Mesh Members & Service Discovery:${NC}"
     if command -v consul &>/dev/null; then
-        if ! consul members 2>/dev/null; then
-            if command -v sudo &>/dev/null && sudo -n consul members 2>/dev/null; then
-                :
-            else
-                # Fallback to local Consul HTTP API with token
-                echo -e "Consul Agent Members (via HTTP API):"
-                curl -s -H "X-Consul-Token: ${CONSUL_HTTP_TOKEN}" "${CONSUL_HTTP_ADDR}/v1/agent/members" 2>/dev/null | jq -r '.[] | "\(.Name)\t\(.Addr):\(.Port)\t\(if .Status == 1 then "alive" else "failed" end)\t\(.Tags.role // "node")"' 2>/dev/null || echo -e "${YELLOW}Could not query Consul members.${NC}"
+        if ! consul members -http-addr="${CONSUL_HTTP_ADDR}" -token="${CONSUL_HTTP_TOKEN}" 2>/dev/null; then
+            if ! consul members 2>/dev/null; then
+                if command -v sudo &>/dev/null && sudo -n consul members 2>/dev/null; then
+                    :
+                else
+                    # Fallback to local Consul HTTP API with token
+                    echo -e "Consul Agent Members (via HTTP API):"
+                    curl -s -H "X-Consul-Token: ${CONSUL_HTTP_TOKEN}" "${CONSUL_HTTP_ADDR}/v1/agent/members" 2>/dev/null | jq -r '.[] | "\(.Name)\t\(.Addr):\(.Port)\t\(if .Status == 1 then "alive" else "failed" end)\t\(.Tags.role // "node")"' 2>/dev/null || echo -e "${YELLOW}Could not query Consul members.${NC}"
+                fi
             fi
         fi
         echo ""
