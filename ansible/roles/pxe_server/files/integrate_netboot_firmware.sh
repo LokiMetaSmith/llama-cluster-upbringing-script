@@ -84,8 +84,8 @@ if id -u tftp >/dev/null 2>&1; then
     chown tftp:tftp "$TFTP_DIR/initrd.gz" || true
 fi
 
-# 7. Sync to web root if present and not a symlink
-if [ -d "$WEB_DIR" ] && [ ! -L "$WEB_DIR/initrd.gz" ] && [ -f "$WEB_DIR/initrd.gz" ]; then
+# 7. Sync to web root if present and not the same directory
+if [ -d "$WEB_DIR" ] && [ "$(realpath "$TFTP_DIR")" != "$(realpath "$WEB_DIR")" ]; then
     cp -p "$TFTP_DIR/initrd.gz" "$WEB_DIR/initrd.gz"
 fi
 
