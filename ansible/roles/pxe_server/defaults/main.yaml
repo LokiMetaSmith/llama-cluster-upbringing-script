@@ -1,5 +1,5 @@
 debian_version: "12.5.0"
-debian_mirror: "deb.debian.org"
+debian_mirror: "ftp.us.debian.org"
 netboot_url: "https://ftp.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/netboot.tar.gz"
 tftp_root: "/srv/tftp"
 nfs_root: "/srv/nfs/debian"
