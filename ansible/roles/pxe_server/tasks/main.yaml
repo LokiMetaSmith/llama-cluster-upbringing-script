@@ -36,54 +36,54 @@
 - name: Dynamically resolve PXE subnet, gateway router, IP, and DNS parameters from host environment
   ansible.builtin.set_fact:
     pxe_server_ip: >-
-      {%- if pxe_server_ip is defined and pxe_server_ip | string | trim | length > 0 -%}
+      {%- if pxe_server_ip is defined and pxe_server_ip and (pxe_server_ip | string | trim | length > 0) -%}
         {{ pxe_server_ip | string | trim }}
       {%- else -%}
-        {{ ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('address') | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default(''))) }}
+        {{ (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('address') | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('', true), true), true) }}
       {%- endif -%}
     pxe_router: >-
-      {%- if pxe_router is defined and pxe_router | string | trim | length > 0 -%}
+      {%- if pxe_router is defined and pxe_router and (pxe_router | string | trim | length > 0) -%}
         {{ pxe_router | string | trim }}
       {%- else -%}
-        {{ ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('gateway') | default(ansible_facts.default_ipv4.gateway | default(ansible_default_ipv4.gateway | default(''))) }}
+        {{ (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('gateway') | default(ansible_facts.default_ipv4.gateway | default(ansible_default_ipv4.gateway | default('', true), true), true) }}
       {%- endif -%}
     pxe_subnet: >-
-      {%- if pxe_subnet is defined and pxe_subnet | string | trim | length > 0 -%}
+      {%- if pxe_subnet is defined and pxe_subnet and (pxe_subnet | string | trim | length > 0) -%}
         {{ pxe_subnet | string | trim }}
       {%- else -%}
-        {{ ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default(''))) }}
+        {{ (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default('192.168.1.0', true), true), true) }}
       {%- endif -%}
     pxe_netmask: >-
-      {%- if pxe_netmask is defined and pxe_netmask | string | trim | length > 0 -%}
+      {%- if pxe_netmask is defined and pxe_netmask and (pxe_netmask | string | trim | length > 0) -%}
         {{ pxe_netmask | string | trim }}
       {%- else -%}
-        {{ ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('netmask') | default(ansible_facts.default_ipv4.netmask | default(ansible_default_ipv4.netmask | default('255.255.255.0'))) }}
+        {{ (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('netmask') | default(ansible_facts.default_ipv4.netmask | default(ansible_default_ipv4.netmask | default('255.255.255.0', true), true), true) }}
       {%- endif -%}
     pxe_dns: >-
-      {%- if pxe_dns is defined and pxe_dns | string | trim | length > 0 -%}
+      {%- if pxe_dns is defined and pxe_dns and (pxe_dns | string | trim | length > 0) -%}
         {{ pxe_dns | string | trim }}
       {%- else -%}
-        {%- set detected_gw = ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('gateway') | default(ansible_facts.default_ipv4.gateway | default(ansible_default_ipv4.gateway | default(''))) -%}
-        {%- if detected_gw | length > 0 -%}
-          {{ detected_gw }}, 1.1.1.1, 8.8.8.8
+        {%- set detected_gw = (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('gateway') | default(ansible_facts.default_ipv4.gateway | default(ansible_default_ipv4.gateway | default('', true), true), true) | default('', true) -%}
+        {%- if detected_gw and (detected_gw | string | trim | length > 0) -%}
+          {{ detected_gw | string | trim }}, 1.1.1.1, 8.8.8.8
         {%- else -%}
           1.1.1.1, 8.8.8.8
         {%- endif -%}
       {%- endif -%}
     pxe_range_start: >-
-      {%- if pxe_range_start is defined and pxe_range_start | string | trim | length > 0 -%}
+      {%- if pxe_range_start is defined and pxe_range_start and (pxe_range_start | string | trim | length > 0) -%}
         {{ pxe_range_start | string | trim }}
       {%- else -%}
-        {%- set net_str = ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default('192.168.1.0'))) -%}
-        {%- set net_prefix = net_str.rsplit('.', 1)[0] -%}
+        {%- set net_str = (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default('192.168.1.0', true), true), true) | default('192.168.1.0', true) -%}
+        {%- set net_prefix = (net_str | string).rsplit('.', 1)[0] -%}
         {{ net_prefix }}.200
       {%- endif -%}
     pxe_range_end: >-
-      {%- if pxe_range_end is defined and pxe_range_end | string | trim | length > 0 -%}
+      {%- if pxe_range_end is defined and pxe_range_end and (pxe_range_end | string | trim | length > 0) -%}
         {{ pxe_range_end | string | trim }}
       {%- else -%}
-        {%- set net_str = ansible_facts.get(pxe_interface, {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default('192.168.1.0'))) -%}
-        {%- set net_prefix = net_str.rsplit('.', 1)[0] -%}
+        {%- set net_str = (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default('192.168.1.0', true), true), true) | default('192.168.1.0', true) -%}
+        {%- set net_prefix = (net_str | string).rsplit('.', 1)[0] -%}
         {{ net_prefix }}.240
       {%- endif -%}
 
