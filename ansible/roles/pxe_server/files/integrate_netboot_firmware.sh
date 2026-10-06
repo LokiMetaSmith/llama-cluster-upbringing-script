@@ -35,7 +35,6 @@ fi
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR/debs" \
          "$STAGING_DIR/extracted" \
-         "$STAGING_DIR/root/lib/firmware" \
          "$STAGING_DIR/root/usr/lib/firmware" \
          "$STAGING_DIR/root/firmware"
 
@@ -55,23 +54,26 @@ for deb in "$STAGING_DIR/debs"/*.deb; do
     fi
 done
 
-# Copy firmware files into both /lib/firmware and /usr/lib/firmware
+# Copy firmware files into ONLY usr/lib/firmware/
+# IMPORTANT: In Debian 12 (UsrMerge), /lib is a symlink: 'lib -> usr/lib'.
+# We must NEVER create a 'lib' directory in the cpio archive because it destroys
+# the root symlink and causes kernel panic (Attempted to kill init!).
 if [ -d "$STAGING_DIR/extracted/usr/lib/firmware" ]; then
     cp -r "$STAGING_DIR/extracted/usr/lib/firmware"/* "$STAGING_DIR/root/usr/lib/firmware/"
-    cp -r "$STAGING_DIR/extracted/usr/lib/firmware"/* "$STAGING_DIR/root/lib/firmware/"
 fi
 
 # Verify the critical requested file exists
-if [ -f "$STAGING_DIR/root/lib/firmware/rtl_nic/rtl8168g-2.fw" ]; then
-    echo "✅ Verified: rtl_nic/rtl8168g-2.fw is present in firmware staging."
+if [ -f "$STAGING_DIR/root/usr/lib/firmware/rtl_nic/rtl8168g-2.fw" ]; then
+    echo "✅ Verified: usr/lib/firmware/rtl_nic/rtl8168g-2.fw is present in firmware staging."
 else
     echo "⚠️ Warning: rtl_nic/rtl8168g-2.fw was not found in downloaded packages!"
 fi
 
 # 5. Pack into cpio.gz archive
+# Only archive usr/lib/firmware and firmware (do NOT include . or root directories)
 echo "Packaging firmware cpio archive..."
 cd "$STAGING_DIR/root"
-find . | cpio -o -H newc 2>/dev/null | gzip -9 > "$STAGING_DIR/firmware_network.cpio.gz"
+find usr/lib/firmware firmware | cpio -o -H newc 2>/dev/null | gzip -9 > "$STAGING_DIR/firmware_network.cpio.gz"
 
 FIRMWARE_SIZE=$(du -h "$STAGING_DIR/firmware_network.cpio.gz" | cut -f1)
 echo "Generated firmware archive: $FIRMWARE_SIZE"
