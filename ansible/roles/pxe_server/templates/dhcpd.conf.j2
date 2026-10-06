@@ -1,5 +1,5 @@
 option domain-name "cluster.local";
-option domain-name-servers {{ pxe_dns | default('1.1.1.1, 8.8.8.8') }};
+option domain-name-servers {{ pxe_dns | default('192.168.1.254, 1.1.1.1, 8.8.8.8') }};
 
 default-lease-time 600;
 max-lease-time 7200;
@@ -16,7 +16,7 @@ log-facility local7;
 
 subnet {{ pxe_subnet | default('192.168.1.0') }} netmask {{ pxe_netmask | default('255.255.255.0') }} {
   range {{ pxe_range_start | default('192.168.1.200') }} {{ pxe_range_end | default('192.168.1.240') }};
-  option routers {{ pxe_router | default('192.168.1.1') }};
+  option routers {{ pxe_router | default('192.168.1.254') }};
 
   # Point PXE clients to the TFTP server on the local physical network
   next-server {{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }};

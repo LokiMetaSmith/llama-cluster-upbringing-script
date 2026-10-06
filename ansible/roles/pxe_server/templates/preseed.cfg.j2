@@ -13,12 +13,15 @@ d-i netcfg/choose_interface select auto
 d-i netcfg/get_hostname string pipecat-node
 d-i netcfg/get_domain string local
 d-i netcfg/wireless_wep string
+d-i netcfg/get_nameservers string 192.168.1.254 1.1.1.1 8.8.8.8
 
 # Mirror settings
 d-i mirror/country string manual
 d-i mirror/http/hostname string {{ debian_mirror | default('ftp.us.debian.org') }}
 d-i mirror/http/directory string /debian
 d-i mirror/http/proxy string
+d-i mirror/suite string {{ debian_suite | default('trixie') }}
+d-i mirror/codename string {{ debian_suite | default('trixie') }}
 
 # Account setup - pipecatapp user with pipecat password
 d-i passwd/root-login boolean false

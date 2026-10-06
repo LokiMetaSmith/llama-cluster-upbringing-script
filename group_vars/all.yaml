@@ -267,6 +267,8 @@ pxe_netmask: "255.255.255.0"
 pxe_range_start: "192.168.1.200"
 pxe_range_end: "192.168.1.240"
 pxe_router: "192.168.1.254"
+pxe_dns: "192.168.1.254, 1.1.1.1, 8.8.8.8"
+debian_suite: "trixie"
 
 # Cluster Overlay Network (Tailscale/Headscale)
 overlay_subnet: "100.64.0.0/10"
