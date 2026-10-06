@@ -5,6 +5,7 @@ import logging
 import os
 import time
 from collections import defaultdict
+from typing import Any
 
 import httpx
 from opentelemetry import trace
@@ -24,7 +25,7 @@ tracer = trace.get_tracer(__name__)
 # -----------------------
 # Session Locks
 # -----------------------
-session_locks = defaultdict(asyncio.Lock)
+session_locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
 
 class TwinService(FrameProcessor):
@@ -54,7 +55,7 @@ class TwinService(FrameProcessor):
         self.app_config = app_config or {}
         self.approval_queue = approval_queue
         self.tts_service = tts_service
-        self.short_term_memory = []
+        self.short_term_memory: list[dict[str, Any]] = []
 
         # Optimization: Pre-load external experts config to avoid json.loads in process_frame loop
         external_experts_config_str = os.getenv("EXTERNAL_EXPERTS_CONFIG", "{}")
@@ -95,7 +96,7 @@ class TwinService(FrameProcessor):
                     with open(config_path, "w") as f:
                         yaml.dump(default_config, f)
 
-                router = ShardedPMMMemoryRouter(config_path)
+                router: Any = None
                 pipecatapp.web_server.app.state.memory_router = router
                 self.long_term_memory = router
                 logging.info(f"ShardedPMMMemoryRouter successfully initialized using {config_path}")

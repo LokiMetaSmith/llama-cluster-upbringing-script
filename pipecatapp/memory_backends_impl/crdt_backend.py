@@ -89,7 +89,7 @@ class CRDTMemoryBackend:
         doc_id = f"skill_{name}"
         self.doc.add({"id": doc_id, "content": instructions, "metadata": {"type": "skill", "description": description}})
 
-    def get_skill(self, name: str) -> Optional[dict]:
+    def get_skill(self, name: str) -> Optional[dict[str, Any]]:
         doc_id = f"skill_{name}"
         values = self.doc.value()
         for val in values:

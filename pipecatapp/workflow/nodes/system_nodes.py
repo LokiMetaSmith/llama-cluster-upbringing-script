@@ -54,12 +54,16 @@ class TelemetryNode(Node):
     async def execute(self, context: WorkflowContext):
         # Pass-through input to output
         payload = self.get_input(context, "payload")
+        if payload is None:
+            payload = ""
         agent_id = self.get_input(context, "agent_id")
+        if agent_id is None:
+            agent_id = ""
 
         self.set_output(context, "payload", payload)
 
         # Fire and forget metrics calculation
-        asyncio.create_task(self._calculate_metrics(payload, self.id, agent_id))
+        asyncio.create_task(self._calculate_metrics(str(payload), str(self.id), str(agent_id)))
 
 @registry.register
 class HITLGateNode(Node):
@@ -108,7 +112,7 @@ class DecomposerNode(Node):
     and FileEditorTool to autonomously rip out classes/functions and move them to new files.
     """
     async def execute(self, context: WorkflowContext):
-        from pipecatapp.core.service_discovery import get_llm_client
+
         from pipecatapp.tools.ast_editor_tool import ASTEditorTool
         from pipecatapp.tools.file_editor_tool import FileEditorTool
         import json
@@ -142,6 +146,7 @@ class DecomposerNode(Node):
 
         file_editor = FileEditorTool()
         ast_editor = ASTEditorTool()
+        file_editor = FileEditorTool()
 
         # 1. Read the megafile
         content_res = file_editor.read_file(target_file)
@@ -164,11 +169,15 @@ class DecomposerNode(Node):
         ]
 
         # Assuming access to the workflow's configured LLM router
-        llm = get_llm_client(getattr(self, "model_override", "gpt-4o"))
+        import litellm
+        response = await litellm.acompletion(model=getattr(self, "model_override", "gpt-4o"), messages=messages, response_format={"type": "json_object"}) # type: ignore
 
         try:
-            response = await llm.generate_chat_completion(messages, response_format={"type": "json_object"})
-            plan = json.loads(response)
+            if response.choices[0].message.content is None:
+                response_str = ""
+            else:
+                response_str = response.choices[0].message.content
+            plan = json.loads(response_str)
 
             # 3. Use ASTEditorTool to actually move the code chunks
             success = True
@@ -179,7 +188,7 @@ class DecomposerNode(Node):
                 # Here, we programmatically extract classes and functions and move them.
 
                 # Use AST tool to fetch top-level classes/functions
-                tree_info_raw = ast_editor.execute("list_functions", filepath=target_file)
+                tree_info_raw = await ast_editor.execute("list_functions", filepath=target_file)
                 if "Error" not in tree_info_raw:
                     try:
                         tree_info = json.loads(tree_info_raw)
@@ -188,12 +197,12 @@ class DecomposerNode(Node):
                             if idx < len(tree_info):
                                 node_name = tree_info[idx].get("name")
                                 # Extract code
-                                extracted_code = ast_editor.execute("read_function", filepath=target_file, function_name=node_name)
+                                extracted_code = await ast_editor.execute("read_function", filepath=target_file, function_name=node_name)
                                 if "Error" not in extracted_code:
                                     # Write to new file
                                     file_editor.write_file(module_path, extracted_code)
                                     # Delete from old file
-                                    ast_editor.execute("delete_function", filepath=target_file, function_name=node_name)
+                                    await ast_editor.execute("delete_function", filepath=target_file, function_name=node_name)
                     except Exception as e:
                         success = False
                         error_msgs.append(f"AST extraction failed: {str(e)}")
@@ -215,8 +224,8 @@ class DecomposerNode(Node):
                         error_msgs.append(f"Validation failed for {module_path}: {comp_res}")
 
             if success:
-                context.set_output("status", f"Decomposed {target_file}")
-                context.set_output("decomposition_plan", plan)
+                self.set_output(context, "status", f"Decomposed {target_file}")
+                self.set_output(context, "decomposition_plan", plan)
             else:
                 # Requeue if failed
                 with open(queue_path, "r+") as f:
@@ -230,7 +239,7 @@ class DecomposerNode(Node):
                     f.truncate()
                     json.dump(q, f)
                     fcntl.flock(f, fcntl.LOCK_UN)
-                context.set_output("status", f"Decomposition failed: {error_msgs}")
+                self.set_output(context, "status", f"Decomposition failed: {error_msgs}")
 
         except Exception as e:
             # Requeue on critical error
@@ -245,7 +254,7 @@ class DecomposerNode(Node):
                 f.truncate()
                 json.dump(q, f)
                 fcntl.flock(f, fcntl.LOCK_UN)
-            context.set_output("status", f"Decomposition failed: {str(e)}")
+            self.set_output(context, "status", f"Decomposition failed: {str(e)}")
 
 @registry.register
 class ComplexityEvaluatorNode(Node):

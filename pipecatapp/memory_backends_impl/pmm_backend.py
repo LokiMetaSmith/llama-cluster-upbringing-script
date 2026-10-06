@@ -86,7 +86,7 @@ class PMMMemoryBackend(BaseMemoryBackend):
         row = cursor.fetchone()
         return row[0] if row else 0
 
-    def get_memory(self, memory_id: int) -> Optional[dict]:
+    def get_memory(self, memory_id: int) -> Optional[dict[str, Any]]:
         """Retrieves a memory by its SQLite event id."""
         cursor = self.pmm.conn.cursor()
         cursor.execute("SELECT id, content, meta FROM events WHERE id = ?", (memory_id,))
@@ -150,7 +150,7 @@ class PMMMemoryBackend(BaseMemoryBackend):
         })
         return consolidation_id
 
-    def get_consolidation(self, consolidation_id: int) -> Optional[dict]:
+    def get_consolidation(self, consolidation_id: int) -> Optional[dict[str, Any]]:
         """Fetches a consolidation by ID."""
         cursor = self.pmm.conn.cursor()
         cursor.execute("SELECT id, source_ids, summary, insight FROM consolidations WHERE id = ?", (consolidation_id,))
@@ -218,7 +218,7 @@ class PMMMemoryBackend(BaseMemoryBackend):
                     updated_at = strftime('%s', 'now')
             """, (name, description, content))
 
-    def get_skill(self, name: str) -> Optional[dict]:
+    def get_skill(self, name: str) -> Optional[dict[str, Any]]:
         """Retrieves a skill by name."""
         cursor = self.pmm.conn.cursor()
         cursor.execute("SELECT name, description, content, version FROM dynamic_skills WHERE name = ?", (name,))
