@@ -64,6 +64,23 @@
   become: yes
   check_mode: no
 
+- name: Ensure cpio is installed for firmware integration
+  apt:
+    name: cpio
+    state: present
+  become: yes
+
+- name: Deploy netboot firmware integration script
+  copy:
+    src: integrate_netboot_firmware.sh
+    dest: /usr/local/bin/integrate_netboot_firmware.sh
+    mode: '0755'
+  become: yes
+
+- name: Integrate non-free network NIC firmware into Debian netboot installer
+  command: /usr/local/bin/integrate_netboot_firmware.sh "{{ tftp_root }}/debian-installer/amd64" "/var/www/html/debian"
+  become: yes
+
 - name: Ensure pxelinux.cfg directory exists in TFTP root
   file:
     path: "{{ tftp_root }}/pxelinux.cfg"
