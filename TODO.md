@@ -3,6 +3,7 @@
 ## 📊 Executive Status & Stability Retrospective
 
 ### Recently Completed (Core Stability & Anti-Looping Fixes)
+
 - [x] **Universal Python Syntax Audit:** Fixed nested double-quote f-strings across `pipecatapp` (`code_runner_tool.py`, `pmm_memory_client.py`, `archivist_tool.py`, `get_nomad_job.py`, `open_workers_tool.py`, `opencode_provider_tool.py`, `planner_tool.py`, `swarm_tool.py`, `emperor_nodes.py`, `ralph_nodes.py`). Zero syntax errors verified via `python -m compileall`.
 - [x] **De-monolithized Agent Factory (Lazy Tool Loading):** Replaced 89 eager top-level imports in `pipecatapp/agent_factory.py` with dynamic `TOOL_CLASS_MAP` and `_safe_create` loader. Prevents OOM crashes and dependency avalanches at startup.
 - [x] **Fault-Tolerant Optional Dependencies:** Added safe fallback handlers for optional libraries (`faiss`, `sentence_transformers`, `minisweagent`, `docker`, `jupyter_client`).
@@ -74,6 +75,13 @@
 ---
 
 ## 🔬 Phase 4: Extended Roadmap & Research Previews (Backlog / Speculative)
+
+- [ ] **Strata Feature Replication (Tiered MoE Expert Caching):**
+  - **Goal:** Replicate Strata's hybrid GPU/RAM MoE offloading features directly into existing inference engines (vLLM/llama.cpp) instead of deploying the standalone Strata app.
+  - **Tasks:**
+    1. [ ] Document Strata's speculative decoding and expert caching heuristics from `docs/analysis/STRATA_EVALUATION.md` as reference architecture.
+    2. [ ] Explore adding expert-aware LRU eviction policies or tiered offloading to our existing `llama.cpp` / `vLLM` implementations.
+    3. [ ] Research network-distributed MoE expert routing using `llama.cpp` RPC or tensor parallelism over local disk swapping to utilize horizontally scaled cluster RAM.
 
 - [ ] **Authentik Identity Provider Job:**
   - [ ] Resolve 'progress deadline' deployment issue in `ansible/jobs/authentik.nomad.j2`.
