@@ -257,6 +257,41 @@
     mode: '0644'
   become: yes
 
+- name: Ensure recovery and maintenance directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /var/www/html/live
+    - "{{ tftp_root }}/live"
+    - /var/www/html/images
+  become: yes
+
+- name: Populate maintenance RAMOS kernel and initrd from netboot assets
+  copy:
+    src: "{{ tftp_root }}/debian-installer/amd64/{{ item.src }}"
+    dest: "/var/www/html/live/{{ item.dest }}"
+    remote_src: yes
+    mode: '0644'
+  loop:
+    - { src: 'linux', dest: 'vmlinuz' }
+    - { src: 'initrd.gz', dest: 'initrd.img' }
+  become: yes
+  failed_when: false
+
+- name: Sync maintenance RAMOS kernel and initrd to TFTP live directory
+  copy:
+    src: "/var/www/html/live/{{ item }}"
+    dest: "{{ tftp_root }}/live/{{ item }}"
+    remote_src: yes
+    mode: '0644'
+  loop:
+    - vmlinuz
+    - initrd.img
+  become: yes
+  failed_when: false
+
 - name: Set permissions on TFTP root
   file:
     path: /srv/tftp

@@ -1,18 +1,29 @@
 #!ipxe
 
 echo ==============================================================================
-echo  Pipecat Cluster Automated OS Installer (STATION Provisioning)
+echo  Pipecat Swarm Autonomous Network Boot & Recovery (Station: ${mac})
 echo ==============================================================================
 
 set server_ip {{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}
 
-# Set 5-second timeout menu defaulting to automated unattended installation
+# First attempt: Query dynamic cluster controller for node state (Healthy -> Local Boot, Quarantined -> Halt, Unknown -> RAMOS Audit)
+echo Querying cluster controller for boot decision...
+chain -ar http://${server_ip}:8007/api/pxe/boot-decision?mac=${net0/mac} || goto default_menu
+
+:default_menu
 menu Pipecat Cluster Network Boot (Station: ${mac})
 item --gap --             ------------------------- Deployment -------------------------
-item debian-auto          [Default] Automated Debian 12 Netboot Installer (Hands-Free)
+item live-audit           [Default] Autonomous Health Audit & Recovery (RAMOS)
+item debian-auto          Automated Debian 12 Netboot Installer (Hands-Free)
 item local                Boot from Local Drive
 item shell                iPXE Interactive Shell
-choose --timeout 5000 --default debian-auto target && goto ${target}
+choose --timeout 5000 --default live-audit target && goto ${target}
+
+:live-audit
+echo Booting Autonomous Health Audit & Maintenance RAMOS...
+kernel http://${server_ip}/live/vmlinuz boot=live components fetch=http://${server_ip}/live/filesystem.squashfs quiet net.ifnames=0
+initrd http://${server_ip}/live/initrd.img
+boot
 
 :debian-auto
 echo Booting Automated Debian 12 Installer from http://${server_ip}/debian...
@@ -22,10 +33,10 @@ boot
 
 :local
 echo Booting from local drive...
-exit
+exit 1
 
 :shell
 echo Dropping into iPXE shell. Type 'exit' to return.
 shell
-goto debian-auto
+goto default_menu
 
