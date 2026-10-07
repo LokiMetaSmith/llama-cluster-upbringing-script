@@ -213,8 +213,8 @@ shell
 echo ==============================================================================
 echo  Pipecat Node {norm_mac} - Verified Healthy
 echo ==============================================================================
-echo Handoff: Exiting iPXE to chainload local disk...
-exit 1
+echo Handoff: Booting installed OS from local drive...
+sanboot --no-describe --drive 0x80 || exit 1
 """
 
         # Default fallback for new/unverified/recovering nodes: Boot RAMOS audit environment

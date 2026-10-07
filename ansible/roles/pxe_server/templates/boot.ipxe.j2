@@ -13,11 +13,11 @@ chain -ar http://${server_ip}:8007/api/pxe/boot-decision?mac=${net0/mac} || goto
 :default_menu
 menu Pipecat Cluster Network Boot (Station: ${mac})
 item --gap --             ------------------------- Deployment -------------------------
-item live-audit           [Default] Autonomous Health Audit & Recovery (RAMOS)
+item local                [Default] Boot from Local Drive
 item debian-auto          Automated Debian 12 Netboot Installer (Hands-Free)
-item local                Boot from Local Drive
+item live-audit           Autonomous Health Audit & Recovery (RAMOS)
 item shell                iPXE Interactive Shell
-choose --timeout 5000 --default live-audit target && goto ${target}
+choose --timeout 5000 --default local target && goto ${target}
 
 :live-audit
 echo Booting Autonomous Health Audit & Maintenance RAMOS...
@@ -33,7 +33,7 @@ boot
 
 :local
 echo Booting from local drive...
-exit 1
+sanboot --no-describe --drive 0x80 || exit 1
 
 :shell
 echo Dropping into iPXE shell. Type 'exit' to return.

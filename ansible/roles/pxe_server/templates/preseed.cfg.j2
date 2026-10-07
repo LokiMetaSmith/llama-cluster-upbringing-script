@@ -76,14 +76,22 @@ d-i grub-installer/only_debian boolean true
 d-i grub-installer/with_other_os boolean true
 d-i grub-installer/bootdev string default
 
-# Late command: configure passwordless sudo and allow SSH password authentication
+# Late command: configure passwordless sudo, allow SSH password authentication, write cluster version and register HEALTHY
 d-i preseed/late_command string \
     mkdir -p /target/etc/ssh/sshd_config.d; \
     echo "PasswordAuthentication yes" > /target/etc/ssh/sshd_config.d/allow-password.conf; \
     in-target sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config; \
     echo "pipecatapp ALL=(ALL) NOPASSWD: ALL" > /target/etc/sudoers.d/pipecatapp; \
     chmod 0440 /target/etc/sudoers.d/pipecatapp; \
-    in-target systemctl enable ssh
+    in-target systemctl enable ssh; \
+    echo "{{ cluster_target_version | default('2026.10.06-v1') }}" > /target/etc/cluster-version; \
+    IFACE=$(ip route show default 2>/dev/null | awk '{print $5}' | head -n1); \
+    MAC=$(cat /sys/class/net/${IFACE}/address 2>/dev/null || echo ""); \
+    if [ -n "$MAC" ]; then \
+      curl -s -X POST -H "Content-Type: application/json" \
+        -d "{\"mac\":\"$MAC\",\"status\":\"HEALTHY\",\"current_version\":\"{{ cluster_target_version | default('2026.10.06-v1') }}\"}" \
+        http://{{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}:8007/api/cluster/node-status || true; \
+    fi
 
 # Finishing up the installation
 d-i cdrom-detect/eject boolean false

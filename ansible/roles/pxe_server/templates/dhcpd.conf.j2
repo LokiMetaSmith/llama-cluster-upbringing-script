@@ -32,7 +32,7 @@ subnet {{ pxe_subnet | default(ansible_facts[pxe_interface].ipv4.network | defau
     filename "ipxe.efi";
   } else {
     # BIOS client (e.g. Intel UNDI 2.1)
-    # Default to pxelinux.0 for pure TFTP boot without requiring client HTTP support
-    filename "{{ pxe_bios_bootloader | default('pxelinux.0') }}";
+    # Chainload universal iPXE network boot program over TFTP
+    filename "{{ pxe_bios_bootloader | default('undionly.kpxe') }}";
   }
 }
