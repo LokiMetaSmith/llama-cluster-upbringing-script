@@ -36,20 +36,31 @@ d-i passwd/user-uid string 1000
 d-i clock-setup/utc boolean true
 d-i time/zone string UTC
 
-# Dynamic Disk Partitioning: Select first non-installation disk
+# Dynamic Disk Partitioning: Select first non-installation disk and clean existing partition residue
 d-i partman/early_command string \
     for dev in /dev/nvme0n1 /dev/sda /dev/sdb /dev/vda /dev/xvda; do \
         if [ -b "$dev" ]; then \
             debconf-set partman-auto/disk "$dev"; \
             debconf-set grub-installer/bootdev "$dev"; \
+            dd if=/dev/zero of="$dev" bs=1M count=1 conv=notrunc 2>/dev/null || true; \
+            SECTORS=$(blockdev --getsz "$dev" 2>/dev/null || echo 0); \
+            if [ "$SECTORS" -gt 2048 ]; then \
+                dd if=/dev/zero of="$dev" bs=512 seek=$((SECTORS - 2048)) count=2048 conv=notrunc 2>/dev/null || true; \
+            fi; \
             break; \
         fi; \
     done
 
 d-i partman-auto/method string regular
 d-i partman-auto/choose_recipe select atomic
-d-i partman-partitioning/choose_label select auto
-d-i partman-partitioning/default_label select auto
+
+# Remove existing LVM and software RAID without prompting
+d-i partman-lvm/device_remove_lvm boolean true
+d-i partman-md/device_remove_md boolean true
+d-i partman-lvm/confirm boolean true
+d-i partman-lvm/confirm_nooverwrite boolean true
+
+# Automated confirmation for writing partition table and filesystems
 d-i partman-partitioning/confirm_write_new_label boolean true
 d-i partman/choose_partition select finish
 d-i partman/confirm boolean true
