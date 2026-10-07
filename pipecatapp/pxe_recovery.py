@@ -147,6 +147,17 @@ class PXERecoveryManager:
                 if status == "HEALTHY":
                     node["quarantine_reason"] = None
 
+            if node.get("status") == "HEALTHY":
+                mac_dash = norm_mac.replace(":", "-").lower()
+                for tftp_dir in ["/srv/tftp/pxelinux.cfg", "/srv/tftp/debian-installer/amd64/pxelinux.cfg"]:
+                    mac_cfg = os.path.join(tftp_dir, f"01-{mac_dash}")
+                    if os.path.exists(mac_cfg):
+                        try:
+                            os.remove(mac_cfg)
+                            logger.info(f"Removed one-time PXELINUX override: {mac_cfg}")
+                        except Exception as e:
+                            logger.warning(f"Could not remove {mac_cfg}: {e}")
+
             self._nodes[norm_mac] = node
             self._save_state()
             return node

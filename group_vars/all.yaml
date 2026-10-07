@@ -270,7 +270,7 @@ pxe_client_ssh_key: "ssh-rsa AAAA..."
 # pxe_range_end: "192.168.1.240"
 # pxe_router: ""
 # pxe_dns: ""
-debian_suite: "trixie"
+debian_suite: "bookworm"
 
 # Cluster Overlay Network (Tailscale/Headscale)
 overlay_subnet: "100.64.0.0/10"

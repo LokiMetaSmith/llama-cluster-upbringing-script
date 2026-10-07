@@ -41,14 +41,15 @@ d-i partman/early_command string \
     for dev in /dev/nvme0n1 /dev/sda /dev/sdb /dev/vda /dev/xvda; do \
         if [ -b "$dev" ]; then \
             debconf-set partman-auto/disk "$dev"; \
+            debconf-set grub-installer/bootdev "$dev"; \
             break; \
         fi; \
     done
 
 d-i partman-auto/method string regular
 d-i partman-auto/choose_recipe select atomic
-d-i partman-partitioning/choose_label string gpt
-d-i partman-partitioning/default_label string gpt
+d-i partman-partitioning/choose_label select auto
+d-i partman-partitioning/default_label select auto
 d-i partman-partitioning/confirm_write_new_label boolean true
 d-i partman/choose_partition select finish
 d-i partman/confirm boolean true
@@ -71,10 +72,10 @@ d-i pkgsel/include string sudo curl wget git python3 openssh-server firmware-rea
 d-i pkgsel/upgrade select full-upgrade
 popularity-contest popularity-contest/participate boolean false
 
-# Boot loader installation
+# Boot loader installation (automatically targeted to the primary drive)
 d-i grub-installer/only_debian boolean true
 d-i grub-installer/with_other_os boolean true
-d-i grub-installer/bootdev string default
+d-i grub-installer/force-efi-extra-removable boolean true
 
 # Late command: configure passwordless sudo, allow SSH password authentication, write cluster version and register HEALTHY
 d-i preseed/late_command string \
