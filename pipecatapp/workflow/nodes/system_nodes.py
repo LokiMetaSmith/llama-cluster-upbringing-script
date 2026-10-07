@@ -146,7 +146,6 @@ class DecomposerNode(Node):
 
         file_editor = FileEditorTool()
         ast_editor = ASTEditorTool()
-        file_editor = FileEditorTool()
 
         # 1. Read the megafile
         content_res = file_editor.read_file(target_file)
@@ -169,15 +168,12 @@ class DecomposerNode(Node):
         ]
 
         # Assuming access to the workflow's configured LLM router
-        import litellm
-        response = await litellm.acompletion(model=getattr(self, "model_override", "gpt-4o"), messages=messages, response_format={"type": "json_object"}) # type: ignore
+        from pipecatapp.core.service_discovery import get_llm_client
+        llm = get_llm_client(getattr(self, "model_override", "gpt-4o"))
+        response = await llm.generate_chat_completion(messages, response_format={"type": "json_object"})
 
         try:
-            if response.choices[0].message.content is None:
-                response_str = ""
-            else:
-                response_str = response.choices[0].message.content
-            plan = json.loads(response_str)
+            plan = json.loads(response)
 
             # 3. Use ASTEditorTool to actually move the code chunks
             success = True
