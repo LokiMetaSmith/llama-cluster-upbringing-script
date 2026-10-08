@@ -67,7 +67,7 @@
   - [x] Ensure `@durable_step` checkpointing functions reliably with cached idempotency (verified 0 network calls on cached steps).
 - [ ] **Tangle UI & Visual Workflow Integration:**
   - [x] Complete KFP-style `ComponentSpec` parser in `pipecatapp/workflow/`.
-  - [ ] Connect lightweight API adapter (`/api/components`, `/api/pipeline_runs`) to Consul state layer.
+  - [x] Connect lightweight API adapter (`/api/components`, `/api/pipeline_runs`) to Consul state layer.
 - [ ] **Swarm Orchestration (Map-Reduce):**
   - [x] Verify `SwarmTool` worker dispatch and task result reduction across worker nodes (verified `test_manager_agent_map_reduce`).
   - [ ] Validate Thompson-sampling load routing in `moe_gateway`.
