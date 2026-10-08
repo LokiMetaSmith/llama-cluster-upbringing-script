@@ -56,7 +56,11 @@ class TelemetryNode(Node):
         payload = self.get_input(context, "payload")
         if payload is None:
             payload = ""
+        if payload is None:
+            payload = ""
         agent_id = self.get_input(context, "agent_id")
+        if agent_id is None:
+            agent_id = ""
         if agent_id is None:
             agent_id = ""
 
@@ -146,6 +150,7 @@ class DecomposerNode(Node):
 
         file_editor = FileEditorTool()
         ast_editor = ASTEditorTool()
+        file_editor = FileEditorTool()
 
         # 1. Read the megafile
         content_res = file_editor.read_file(target_file)
@@ -169,6 +174,7 @@ class DecomposerNode(Node):
 
         # Assuming access to the workflow's configured LLM router
         from pipecatapp.core.service_discovery import get_llm_client
+        import litellm
         llm = get_llm_client(getattr(self, "model_override", "gpt-4o"))
         response = await llm.generate_chat_completion(messages, response_format={"type": "json_object"})
 

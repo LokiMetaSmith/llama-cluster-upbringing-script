@@ -140,6 +140,16 @@ client {
     read_only = false
   }
 
+  host_volume "nomad_tls" {
+    path      = "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}"
+    read_only = true
+  }
+
+  host_volume "postgres_data" {
+    path      = "{{ nomad_volumes_dir }}/postgres_data"
+    read_only = false
+  }
+
   host_volume "memory-data" {
     path      = "{{ nomad_volumes_dir }}/memory-data"
     read_only = false

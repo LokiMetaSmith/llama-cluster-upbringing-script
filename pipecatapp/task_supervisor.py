@@ -4,6 +4,13 @@ import time
 from typing import Dict, Any, Optional
 from pipecatapp.tools.swarm_tool import SwarmTool
 from pipecatapp.pmm_memory_client import PMMMemoryClient
+try:
+    from pipecatapp.pmm_memory import PMMMemory
+except ImportError:
+    try:
+        from pmm_memory import PMMMemory
+    except ImportError:
+        PMMMemory = None
 from pipecatapp.concurrency.queue_manager import ConcurrencyQueueManager, ConcurrencyPolicy, JobQueuePolicy
 
 class TaskSupervisor:
@@ -192,8 +199,8 @@ class TaskSupervisor:
 
     async def _check_tasks(self):
         """Polls memory for task events and manages task lifecycle."""
-        if not isinstance(self.memory, PMMMemoryClient):
-            # Local memory might not support get_events in the same way or isn't shared with workers
+        valid_memory_types = (PMMMemoryClient, PMMMemory) if PMMMemory is not None else (PMMMemoryClient,)
+        if not isinstance(self.memory, valid_memory_types):
             return
 
         # Get recent events

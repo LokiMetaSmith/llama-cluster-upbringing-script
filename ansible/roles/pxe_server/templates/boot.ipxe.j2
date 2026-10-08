@@ -1,13 +1,41 @@
 #!ipxe
 
-echo iPXE boot script loaded
+echo ==============================================================================
+echo  Pipecat Swarm Autonomous Network Boot & Recovery (Station: ${mac})
+echo ==============================================================================
 
-set base-url http://{{ cluster_ip }}/debian
-kernel ${base-url}/linux
-initrd ${base-url}/initrd.gz
+set server_ip {{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}
 
-# The preseed file is now served over HTTP as well
-# The 'auto=true' and 'priority=critical' flags automate the installer
-# The preseed/url points to our file, also served via HTTP
-imgargs linux auto=true priority=critical preseed/url=http://{{ cluster_ip }}/preseed.cfg --
+# First attempt: Query dynamic cluster controller for node state (Healthy -> Local Boot, Quarantined -> Halt, Unknown -> RAMOS Audit)
+echo Querying cluster controller for boot decision...
+chain -ar http://${server_ip}:8007/api/pxe/boot-decision?mac=${net0/mac} || goto default_menu
+
+:default_menu
+menu Pipecat Cluster Network Boot (Station: ${mac})
+item --gap --             ------------------------- Deployment -------------------------
+item local                [Default] Boot from Local Drive
+item debian-auto          Automated Debian 12 Netboot Installer (Hands-Free)
+item live-audit           Autonomous Health Audit & Recovery (RAMOS)
+item shell                iPXE Interactive Shell
+choose --timeout 5000 --default local target && goto ${target}
+
+:live-audit
+echo Booting Autonomous Health Audit & Maintenance RAMOS...
+kernel http://${server_ip}/live/vmlinuz boot=live components fetch=http://${server_ip}/live/filesystem.squashfs quiet net.ifnames=0
+initrd http://${server_ip}/live/initrd.img
 boot
+
+:debian-auto
+echo Booting Automated Debian 12 Installer from http://${server_ip}/debian...
+kernel http://${server_ip}/debian/linux initrd=initrd.gz auto=true priority=critical url=http://${server_ip}/preseed.cfg preseed/url=http://${server_ip}/preseed.cfg netcfg/choose_interface=auto net.ifnames=0 biosdevname=0 --
+initrd http://${server_ip}/debian/initrd.gz
+boot
+
+:local
+echo Booting from local drive...
+sanboot --no-describe --drive 0x80 || exit 1
+
+:shell
+echo Dropping into iPXE shell. Type 'exit' to return.
+shell
+goto default_menu

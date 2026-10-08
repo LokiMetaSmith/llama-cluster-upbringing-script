@@ -85,7 +85,10 @@ const WorkflowEditor = {
     init: async function(containerId, options = {}) {
         this.options = options;
         this.graph = new LGraph();
-        this.canvas = new LGraphCanvas(containerId, this.graph);
+        const canvasElement = typeof containerId === "string"
+            ? (document.getElementById(containerId) || document.querySelector(containerId) || document.querySelector("#" + containerId))
+            : containerId;
+        this.canvas = new LGraphCanvas(canvasElement, this.graph);
         this.canvas.allow_searchbox = true; // enable search box with double click
 
         // Register custom nodes
@@ -118,14 +121,18 @@ const WorkflowEditor = {
         if (!options.skipResize) {
             // Adjust canvas on resize
             window.addEventListener("resize", () => {
-                const parent = document.getElementById(containerId).parentNode;
-                this.canvas.resize(parent.clientWidth, parent.clientHeight);
+                if (canvasElement && canvasElement.parentNode && this.canvas) {
+                    const parent = canvasElement.parentNode;
+                    this.canvas.resize(parent.clientWidth, parent.clientHeight);
+                }
             });
 
             // Initial resize
             setTimeout(() => {
-                 const parent = document.getElementById(containerId).parentNode;
-                 this.canvas.resize(parent.clientWidth, parent.clientHeight);
+                 if (canvasElement && canvasElement.parentNode && this.canvas) {
+                     const parent = canvasElement.parentNode;
+                     this.canvas.resize(parent.clientWidth, parent.clientHeight);
+                 }
             }, 100);
         }
 
@@ -135,11 +142,14 @@ const WorkflowEditor = {
         this.graph.onConnectionChange = () => { this.validateGraph(); };
 
         // Setup Drag and Drop
-        this.setupDragAndDrop(containerId);
+        this.setupDragAndDrop(canvasElement || containerId);
     },
 
     setupDragAndDrop: function(containerId) {
-        const canvasElement = document.getElementById(containerId);
+        const canvasElement = typeof containerId === "string"
+            ? (document.getElementById(containerId) || document.querySelector(containerId) || document.querySelector("#" + containerId))
+            : containerId;
+        if (!canvasElement) return;
 
         canvasElement.addEventListener("dragover", (e) => {
             e.preventDefault();
@@ -221,7 +231,7 @@ const WorkflowEditor = {
                 this.agentNodeType = type; // Store original type
 
                 // Add a text widget to display output data if needed
-                this.outputWidget = this.addWidget("text", "Output", "", null, { disabled: true });
+                this.outputWidget = this.addWidget("text", "Output", "", (v) => {}, { disabled: true });
                 this.image = null; // Store image object for rendering
             }
 
@@ -462,44 +472,189 @@ const WorkflowEditor = {
             this.nodeTypes[type] = GenericNode;
         };
 
+        // 1. Standard node specifications
+        const standardNodes = {
+            "InputNode": {
+                title: "Input",
+                inputs: [],
+                outputs: [
+                    {name: "user_text", type: "string"},
+                    {name: "tools_dict", type: "object"},
+                    {name: "tool_result", type: "object"},
+                    {name: "consul_http_addr", type: "string"}
+                ],
+                properties: {},
+                desc: "Initial inputs for the workflow."
+            },
+            "ConsulServiceDiscoveryNode": {
+                title: "Service Discovery",
+                inputs: [{name: "consul_http_addr", type: "string"}],
+                outputs: [{name: "available_services", type: "object"}],
+                properties: {},
+                desc: "Discovers available services from Consul."
+            },
+            "SystemPromptNode": {
+                title: "System Prompt",
+                inputs: [
+                    {name: "tools", type: "object"},
+                    {name: "available_services", type: "object"},
+                    {name: "custom_prompt", type: "string"}
+                ],
+                outputs: [{name: "system_prompt", type: "string"}],
+                properties: {},
+                desc: "Constructs the system prompt with tool definitions."
+            },
+            "ScreenshotNode": {
+                title: "Screenshot",
+                inputs: [{name: "tools", type: "object"}],
+                outputs: [{name: "screenshot_base64", type: "string"}],
+                properties: {},
+                desc: "Captures desktop screenshot."
+            },
+            "PromptBuilderNode": {
+                title: "Prompt Builder",
+                inputs: [
+                    {name: "system_prompt", type: "string"},
+                    {name: "user_text", type: "string"},
+                    {name: "screenshot", type: "string"},
+                    {name: "tool_result", type: "object"}
+                ],
+                outputs: [{name: "messages", type: "array"}],
+                properties: {},
+                desc: "Builds messages array for LLM."
+            },
+            "SimpleLLMNode": {
+                title: "Simple LLM",
+                inputs: [
+                    {name: "messages", type: "array"},
+                    {name: "user_text", type: "string"},
+                    {name: "system_prompt", type: "string"},
+                    {name: "tool_result", type: "object"}
+                ],
+                outputs: [{name: "response", type: "string"}],
+                properties: {model_tier: "balanced", system_prompt: "You are a helpful assistant."},
+                desc: "Executes LLM inference."
+            },
+            "VisionLLMNode": {
+                title: "Vision LLM",
+                inputs: [{name: "messages", type: "array"}],
+                outputs: [{name: "response_text", type: "string"}],
+                properties: {},
+                desc: "Vision-capable LLM inference."
+            },
+            "ToolParserNode": {
+                title: "Tool Parser",
+                inputs: [{name: "llm_response", type: "string"}],
+                outputs: [
+                    {name: "tool_call_data", type: "object"},
+                    {name: "final_response", type: "string"}
+                ],
+                properties: {},
+                desc: "Parses model output to determine tool call or response."
+            },
+            "ConditionalBranchNode": {
+                title: "Branch",
+                inputs: [{name: "input_value", type: "object"}],
+                outputs: [
+                    {name: "output_true", type: "object"},
+                    {name: "output_false", type: "object"}
+                ],
+                properties: {check_if_tool_is: ""},
+                desc: "Conditional branch based on predicate."
+            },
+            "GateNode": {
+                title: "Gate",
+                inputs: [{name: "input_value", type: "object"}],
+                outputs: [{name: "output", type: "object"}],
+                properties: {},
+                desc: "Pause/approval gate."
+            },
+            "ExpertRouterNode": {
+                title: "Expert Router",
+                inputs: [
+                    {name: "expert_name", type: "string"},
+                    {name: "query", type: "string"}
+                ],
+                outputs: [{name: "expert_response", type: "string"}],
+                properties: {},
+                desc: "Routes task to specialized experts."
+            },
+            "ToolExecutorNode": {
+                title: "Tool Executor",
+                inputs: [
+                    {name: "tool_call_data", type: "object"},
+                    {name: "tools_dict", type: "object"}
+                ],
+                outputs: [{name: "tool_result", type: "object"}],
+                properties: {},
+                desc: "Executes tool calls and returns results."
+            },
+            "MergeNode": {
+                title: "Merge",
+                inputs: [
+                    {name: "in1", type: "object"},
+                    {name: "in2", type: "object"}
+                ],
+                outputs: [{name: "merged_output", type: "object"}],
+                properties: {},
+                desc: "Merges multiple upstream paths."
+            },
+            "OutputNode": {
+                title: "Output",
+                inputs: [
+                    {name: "final_response", type: "string"},
+                    {name: "tool_call", type: "object"},
+                    {name: "tool_result", type: "object"},
+                    {name: "final_output", type: "object"}
+                ],
+                outputs: [],
+                properties: {},
+                desc: "Collects output of workflow."
+            },
+            "PostProcessorNode": {
+                title: "Post Processor",
+                inputs: [
+                    {name: "data", type: "object"},
+                    {name: "expression", type: "string"}
+                ],
+                outputs: [{name: "processed_data", type: "object"}],
+                properties: {expression: "data"},
+                desc: "Processes data using expressions."
+            }
+        };
+
+        // Register standard nodes
+        for (const [nodeType, def] of Object.entries(standardNodes)) {
+            createGenericNode(nodeType, def.title, def.inputs, def.outputs, def.properties, def.desc);
+        }
+
+        // Register additional dynamic nodes from backend
         if (backendMetadata && backendMetadata.length > 0) {
-            // Use dynamic metadata from backend
             backendMetadata.forEach(meta => {
-                createGenericNode(
-                    meta.name,
-                    meta.name.replace(/Node$/, '').replace(/([A-Z])/g, ' $1').trim(), // Friendly title
-                    meta.inputs,
-                    meta.outputs,
-                    meta.properties,
-                    meta.description
-                );
+                if (!standardNodes[meta.name]) {
+                    createGenericNode(
+                        meta.name,
+                        meta.name.replace(/Node$/, '').replace(/([A-Z])/g, ' $1').trim(),
+                        meta.inputs || [],
+                        meta.outputs || [],
+                        meta.properties || {},
+                        meta.description
+                    );
+                }
             });
-        } else {
-            // Fallback to static definitions if backend fetch fails
-            createGenericNode("InputNode", "Input", [], [{name: "user_text", type: "string"}, {name: "tools_dict", type: "object"}, {name: "tool_result", type: "object"}, {name: "consul_http_addr", type: "string"}]);
-            createGenericNode("ConsulServiceDiscoveryNode", "Service Discovery", [{name: "consul_http_addr", type: "string"}], [{name: "available_services", type: "object"}]);
-            createGenericNode("SystemPromptNode", "System Prompt", [{name: "tools", type: "object"}, {name: "available_services", type: "object"}], [{name: "system_prompt", type: "string"}]);
-            createGenericNode("ScreenshotNode", "Screenshot", [{name: "tools", type: "object"}], [{name: "screenshot_base64", type: "string"}]);
-            createGenericNode("PromptBuilderNode", "Prompt Builder", [{name: "system_prompt", type: "string"}, {name: "user_text", type: "string"}, {name: "screenshot", type: "string"}, {name: "tool_result", type: "object"}], [{name: "messages", type: "array"}]);
-            createGenericNode("SimpleLLMNode", "Simple LLM", [{name: "messages", type: "array"}, {name: "user_text", type: "string"}], [{name: "response", type: "string"}], {model_tier: "balanced", system_prompt: "You are a helpful assistant."});
-            createGenericNode("VisionLLMNode", "Vision LLM", [{name: "messages", type: "array"}], [{name: "response_text", type: "string"}]);
-            createGenericNode("ToolParserNode", "Tool Parser", [{name: "llm_response", type: "string"}], [{name: "tool_call_data", type: "object"}, {name: "final_response", type: "string"}]);
-            createGenericNode("ConditionalBranchNode", "Branch", [{name: "input_value", type: "object"}], [{name: "output_true", type: "object"}, {name: "output_false", type: "object"}], {check_if_tool_is: ""});
-            createGenericNode("GateNode", "Gate", [{name: "input_value", type: "object"}], [{name: "output", type: "object"}]);
-            createGenericNode("ExpertRouterNode", "Expert Router", [{name: "expert_name", type: "string"}, {name: "query", type: "string"}], [{name: "expert_response", type: "string"}]);
-            createGenericNode("ToolExecutorNode", "Tool Executor", [{name: "tool_call_data", type: "object"}], [{name: "tool_result", type: "object"}]);
-            createGenericNode("MergeNode", "Merge", [{name: "in1", type: "object"}, {name: "in2", type: "object"}], [{name: "merged_output", type: "object"}]);
-            createGenericNode("OutputNode", "Output", [{name: "final_output", type: "object"}], []);
-            createGenericNode("PostProcessorNode", "Post Processor", [{name: "data", type: "object"}, {name: "expression", type: "string"}], [{name: "processed_data", type: "object"}], {expression: "data"});
         }
 
     },
 
     importWorkflow: function(yamlData) {
+        if (!yamlData) {
+            console.warn("importWorkflow called with empty data");
+            return;
+        }
         this.graph.clear();
 
         const nodesMap = {};
-        const yamlNodes = yamlData.nodes;
+        const yamlNodes = Array.isArray(yamlData.nodes) ? yamlData.nodes : [];
 
         // 1. Create Nodes
         yamlNodes.forEach(n => {
@@ -572,17 +727,17 @@ const WorkflowEditor = {
 
         // 2. Connect Edges
         yamlNodes.forEach(n => {
-            const sourceNode = nodesMap[n.id];
-            if (!sourceNode) return;
+            const destNode = nodesMap[n.id];
+            if (!destNode) return;
 
             if (n.inputs) {
                 n.inputs.forEach(inputDef => {
                     const inputName = inputDef.name;
-                    const inputIndex = sourceNode.findInputSlot(inputName);
+                    let inputIndex = destNode.findInputSlot(inputName);
 
                     if (inputIndex === -1) {
-                        console.warn(`Input slot '${inputName}' not found on node '${n.id}'`);
-                        return;
+                        destNode.addInput(inputName, "any");
+                        inputIndex = destNode.findInputSlot(inputName);
                     }
 
                     // Handle connection object or nested value structure
@@ -605,16 +760,18 @@ const WorkflowEditor = {
                     }
 
                     connections.forEach(conn => {
-                        const targetNodeId = conn.from_node;
-                        const targetOutputName = conn.from_output;
+                        const fromNodeId = conn.from_node;
+                        const fromOutputName = conn.from_output;
 
-                        const targetNode = nodesMap[targetNodeId];
-                        if (targetNode) {
-                            const outputIndex = targetNode.findOutputSlot(targetOutputName);
-                            if (outputIndex !== -1) {
-                                targetNode.connect(outputIndex, sourceNode, inputIndex);
-                            } else {
-                                console.warn(`Output slot '${targetOutputName}' not found on node '${targetNodeId}'`);
+                        const fromNode = nodesMap[fromNodeId];
+                        if (fromNode) {
+                            let outputIndex = fromNode.findOutputSlot(fromOutputName);
+                            if (outputIndex === -1) {
+                                fromNode.addOutput(fromOutputName, "any");
+                                outputIndex = fromNode.findOutputSlot(fromOutputName);
+                            }
+                            if (outputIndex !== -1 && inputIndex !== -1) {
+                                fromNode.connect(outputIndex, destNode, inputIndex);
                             }
                         }
                     });
@@ -846,20 +1003,26 @@ const WorkflowEditor = {
     saveWorkflow: async function() {
         const workflowData = this.exportWorkflow();
         try {
+            const headers = { 'Content-Type': 'application/json' };
+            const apiKey = localStorage.getItem('api_key');
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
             const response = await fetch('/api/workflows/save', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify({
                     name: this.currentWorkflowName,
                     definition: workflowData
                 })
             });
             const res = await response.json();
+            if (!response.ok) {
+                throw new Error(res.detail || `HTTP ${response.status}`);
+            }
 
             if (this.options && this.options.onStatusUpdate) {
-                this.options.onStatusUpdate(res.message, 'success');
+                this.options.onStatusUpdate(res.message || "Workflow saved successfully", 'success');
             } else {
-                alert(res.message);
+                alert(res.message || "Workflow saved successfully");
             }
         } catch (error) {
             console.error("Save failed", error);

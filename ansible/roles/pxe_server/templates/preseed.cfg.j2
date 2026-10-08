@@ -1,56 +1,114 @@
-# Preconfiguration file for Debian installation
-# See preseed.txt for documentation
-
-# Localization
-d-i debian-installer/locale string en_US
+# Default Locale and Keyboard
+d-i debian-installer/locale string en_US.UTF-8
 d-i console-setup/ask_detect boolean false
 d-i keyboard-configuration/xkb-keymap select us
 
-# Network configuration
-d-i netcfg/get_hostname string unassigned-hostname
-d-i netcfg/get_domain string unassigned-domain
+# Automated Hardware & Firmware Detection
+d-i hw-detect/load_media boolean true
+d-i hw-detect/load_firmware boolean true
+base-config apt-setup/non-free-firmware boolean true
+
+# Network configuration (DHCP auto-configuration)
+d-i netcfg/choose_interface select auto
+d-i netcfg/get_hostname string pipecat-node
+d-i netcfg/get_domain string local
 d-i netcfg/wireless_wep string
 
 # Mirror settings
 d-i mirror/country string manual
-d-i mirror/http/hostname string {{ debian_mirror }}
+d-i mirror/http/hostname string {{ debian_mirror | default('ftp.us.debian.org') }}
 d-i mirror/http/directory string /debian
 d-i mirror/http/proxy string
+d-i mirror/suite string {{ debian_suite | default('trixie') }}
+d-i mirror/codename string {{ debian_suite | default('trixie') }}
 
-# Account setup
+# Account setup - pipecatapp user with pipecat password
 d-i passwd/root-login boolean false
 d-i passwd/make-user boolean true
-d-i passwd/user-fullname string user
-d-i passwd/username string user
-d-i passwd/user-password-crypted password $6$qL/S4E/9$vD.B.B5g4N...
+d-i passwd/user-fullname string PipecatApp
+d-i passwd/username string pipecatapp
+d-i passwd/user-password password pipecat
+d-i passwd/user-password-again password pipecat
+d-i user-setup/allow-password-weak boolean true
 d-i passwd/user-uid string 1000
 
 # Clock and time zone setup
 d-i clock-setup/utc boolean true
 d-i time/zone string UTC
 
-# Partitioning
-d-i partman-auto/method string lvm
-d-i partman-auto/disk string /dev/sda
-d-i partman-auto-lvm/guided_size string max
+# Dynamic Disk Partitioning: Select first non-installation disk and clean existing partition residue
+d-i partman/early_command string \
+    for dev in /dev/nvme0n1 /dev/sda /dev/sdb /dev/vda /dev/xvda; do \
+        if [ -b "$dev" ]; then \
+            debconf-set partman-auto/disk "$dev"; \
+            debconf-set grub-installer/bootdev "$dev"; \
+            dd if=/dev/zero of="$dev" bs=1M count=1 conv=notrunc 2>/dev/null || true; \
+            SECTORS=$(blockdev --getsz "$dev" 2>/dev/null || echo 0); \
+            if [ "$SECTORS" -gt 2048 ]; then \
+                dd if=/dev/zero of="$dev" bs=512 seek=$((SECTORS - 2048)) count=2048 conv=notrunc 2>/dev/null || true; \
+            fi; \
+            break; \
+        fi; \
+    done
+
+d-i partman-auto/method string regular
 d-i partman-auto/choose_recipe select atomic
+
+# Remove existing LVM and software RAID without prompting
+d-i partman-lvm/device_remove_lvm boolean true
+d-i partman-md/device_remove_md boolean true
+d-i partman-lvm/confirm boolean true
+d-i partman-lvm/confirm_nooverwrite boolean true
+
+# Automated confirmation for writing partition table and filesystems
 d-i partman-partitioning/confirm_write_new_label boolean true
 d-i partman/choose_partition select finish
 d-i partman/confirm boolean true
 d-i partman/confirm_nooverwrite boolean true
 
-# Package selection
-tasksel tasksel/first multiselect standard, ssh-server
-d-i pkgsel/include string curl wget git
-d-i pkgsel/upgrade select full-upgrade
+# Base system installation
+d-i base-installer/install-recommends boolean false
 
-# Boot loader installation
+# Apt setup
+d-i apt-setup/non-free-firmware boolean true
+d-i apt-setup/non-free boolean true
+d-i apt-setup/contrib boolean true
+d-i apt-setup/use_mirror boolean true
+d-i apt-setup/services-select multiselect security, updates
+d-i apt-setup/security_host string security.debian.org
+
+# Package selection
+tasksel tasksel/first multiselect ssh-server
+d-i pkgsel/include string sudo curl wget git python3 openssh-server firmware-realtek firmware-linux
+d-i pkgsel/upgrade select full-upgrade
+popularity-contest popularity-contest/participate boolean false
+
+# Boot loader installation (automatically targeted to the primary drive)
 d-i grub-installer/only_debian boolean true
 d-i grub-installer/with_other_os boolean true
+d-i grub-installer/force-efi-extra-removable boolean true
+
+# Late command: configure passwordless sudo, allow SSH password authentication, write cluster version and register HEALTHY
+d-i preseed/late_command string \
+    mkdir -p /target/etc/ssh/sshd_config.d; \
+    echo "PasswordAuthentication yes" > /target/etc/ssh/sshd_config.d/allow-password.conf; \
+    in-target sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config; \
+    echo "pipecatapp ALL=(ALL) NOPASSWD: ALL" > /target/etc/sudoers.d/pipecatapp; \
+    chmod 0440 /target/etc/sudoers.d/pipecatapp; \
+    in-target systemctl enable ssh; \
+    echo "{{ cluster_target_version | default('2026.10.06-v1') }}" > /target/etc/cluster-version; \
+    IFACE=$(ip route show default 2>/dev/null | awk '{print $5}' | head -n1); \
+    MAC=$(cat /sys/class/net/${IFACE}/address 2>/dev/null || echo ""); \
+    if [ -n "$MAC" ]; then \
+      in-target curl -s -X POST -H "Content-Type: application/json" \
+        -d "{\"mac\":\"$MAC\",\"status\":\"HEALTHY\",\"current_version\":\"{{ cluster_target_version | default('2026.10.06-v1') }}\"}" \
+        http://{{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}:8007/api/cluster/node-status || \
+      wget --post-data="{\"mac\":\"$MAC\",\"status\":\"HEALTHY\",\"current_version\":\"{{ cluster_target_version | default('2026.10.06-v1') }}\"}" \
+        --header="Content-Type: application/json" \
+        -O- http://{{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}:8007/api/cluster/node-status || true; \
+    fi
 
 # Finishing up the installation
+d-i cdrom-detect/eject boolean false
 d-i finish-install/reboot_in_progress note
-d-i preseed/late_command string \
-    in-target wget -O /tmp/initial-setup.sh https://raw.githubusercontent.com/KittenML/KittenTTS/main/initial-setup/setup.sh; \
-    in-target chmod +x /tmp/initial-setup.sh; \
-    in-target /tmp/initial-setup.sh
+d-i debian-installer/exit/reboot boolean true

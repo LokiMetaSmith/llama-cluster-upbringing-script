@@ -281,14 +281,21 @@
             }
 
             fetch('/api/web_uis', { headers })
-                .then(response => response.json())
+                .then(async response => {
+                    if (!response.ok) {
+                        const err = await response.json().catch(() => ({}));
+                        throw new Error(err.detail || `HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     const adminUiLinks = document.getElementById('admin-ui-links');
+                    if (!adminUiLinks) return;
                     adminUiLinks.innerHTML = ''; // Clear existing content
 
-                    if (data.length === 0) {
+                    if (!Array.isArray(data) || data.length === 0) {
                         const noLink = document.createElement('a');
-                        noLink.textContent = "No UIs found";
+                        noLink.textContent = (!Array.isArray(data)) ? "Error loading UIs" : "No UIs found";
                         noLink.href = "#";
                         adminUiLinks.appendChild(noLink);
                         return;
@@ -322,6 +329,7 @@
                 .catch(error => {
                     console.error('Error fetching web UIs:', error);
                     const adminUiLinks = document.getElementById('admin-ui-links');
+                    if (!adminUiLinks) return;
                     adminUiLinks.innerHTML = ''; // Clear existing content
                     const errorLink = document.createElement('a');
                     errorLink.textContent = "Error loading UIs";

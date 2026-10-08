@@ -1,3 +1,42 @@
+- name: Ensure network facts are gathered
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - network
+  when: (ansible_facts.interfaces is not defined and ansible_interfaces is not defined) or (ansible_facts.default_ipv4 is not defined and ansible_default_ipv4 is not defined)
+
+- name: Auto-detect PXE network interface per machine
+  ansible.builtin.set_fact:
+    pxe_interface: >-
+      {%- set all_ifaces = ansible_facts.interfaces | default(ansible_interfaces | default([])) -%}
+      {%- if pxe_interface is defined and pxe_interface | string | trim | length > 0 and (pxe_interface | string | trim in all_ifaces) -%}
+        {{ pxe_interface | string | trim }}
+      {%- else -%}
+        {%- set target_ip = pxe_server_ip | default('') -%}
+        {%- set matching_iface = namespace(name='') -%}
+        {%- if target_ip != '' -%}
+          {%- for iface in all_ifaces -%}
+            {%- set iface_data = ansible_facts.get(iface, {}) or hostvars[inventory_hostname].get('ansible_' + (iface | replace('-', '_')), {}) -%}
+            {%- if iface_data.ipv4 is defined and iface_data.ipv4.address == target_ip -%}
+              {%- set matching_iface.name = iface -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
+        {%- if matching_iface.name != '' -%}
+          {{ matching_iface.name }}
+        {%- elif ansible_facts.default_ipv4.interface is defined and ansible_facts.default_ipv4.interface | string | length > 0 -%}
+          {{ ansible_facts.default_ipv4.interface }}
+        {%- elif ansible_default_ipv4.interface is defined and ansible_default_ipv4.interface | string | length > 0 -%}
+          {{ ansible_default_ipv4.interface }}
+        {%- else -%}
+          {{ (all_ifaces | reject('equalto', 'lo') | first) | default('eth0') }}
+        {%- endif -%}
+      {%- endif -%}
+
+- name: Display detected PXE interface
+  ansible.builtin.debug:
+    msg: "Configuring NixOS PXE server on interface '{{ pxe_interface }}' for host '{{ inventory_hostname }}'"
+
 - name: Ensure web root directory exists
   ansible.builtin.file:
     path: /var/www

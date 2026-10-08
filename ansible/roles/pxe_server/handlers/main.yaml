@@ -3,3 +3,15 @@
     name: isc-dhcp-server
     state: restarted
   become: yes
+
+- name: restart tftpd-hpa
+  systemd:
+    name: tftpd-hpa
+    state: restarted
+  become: yes
+
+- name: restart nginx
+  systemd:
+    name: nginx
+    state: restarted
+  become: yes

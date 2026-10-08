@@ -4,7 +4,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Support authenticating via API key in localStorage
     const apiKey = localStorage.getItem('api_key') || '';
-    const wsUrl = `ws://${window.location.host}/ws` + (apiKey ? `?token=${encodeURIComponent(apiKey)}` : '');
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws` + (apiKey ? `?token=${encodeURIComponent(apiKey)}` : '');
     const ws = new WebSocket(wsUrl);
 
     // Security Fix: Prevent XSS by escaping HTML special characters

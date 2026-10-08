@@ -2,14 +2,7 @@ import pytest
 import asyncio
 from unittest.mock import MagicMock, patch
 from httpx import AsyncClient, ASGITransport
-from pipecatapp.web_server import app, sync_response_store
-
-# Mock the API key dependency to bypass auth
-# Since we run with PYTHONPATH=pipecatapp, api_keys is imported as top-level by web_server
-try:
-    from api_keys import get_api_key
-except ImportError:
-    from pipecatapp.api_keys import get_api_key
+from pipecatapp.web_server import app, sync_response_store, get_api_key
 
 app.dependency_overrides[get_api_key] = lambda: "valid_key"
 

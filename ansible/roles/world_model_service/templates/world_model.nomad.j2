@@ -23,7 +23,7 @@ job "world-model-service" {
     }
 
     task "server" {
-      driver = "containerd-driver"
+      driver = "docker"
 
       config {
         image   = "world-model-service:local"

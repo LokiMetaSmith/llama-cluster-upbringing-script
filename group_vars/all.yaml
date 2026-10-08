@@ -13,15 +13,13 @@ docker_storage_driver: "vfs"
 
 expected_cluster_size: "{{ groups['worker_nodes'] | length if 'worker_nodes' in groups else 1 }}"
 
-# This variable dynamically determines the node ID based on the hostname.
-# If the hostname is 'devbox', the ID is 10.
-# If the hostname contains numbers (e.g. 'worker1'), it extracts them and adds 10 (worker1 -> 11).
-# If the hostname has no numbers (e.g. 'loki'), it defaults to 11 to match the shell script fallback.
 node_id: >-
   {{
     '10' if inventory_hostname == 'devbox'
     else (
-      ((inventory_hostname | regex_search('[0-9]+')) | int + 10)
+      (((inventory_hostname | regex_search('[0-9]+')) | int + 50)
+       if 'worker' in inventory_hostname
+       else ((inventory_hostname | regex_search('[0-9]+')) | int + 10))
       if (inventory_hostname | regex_search('[0-9]+'))
       else '11'
     )
@@ -253,22 +251,26 @@ github_client_secret: "change_me"
 jwt_access_secret: "change_me"
 jwt_refresh_secret: "change_me"
 
-# -- NixOS PXE Server Variables --
-# These variables are only used if pxe_os is set to "nixos".
-
+# -- PXE Server Configuration (Debian & NixOS) --
 # The network interface on the PXE server for DHCP/TFTP/HTTP services.
-pxe_interface: "enp0s8"
+# Automatically detected per machine from active interfaces (e.g. enp5s0, eth0).
+# Uncomment only if you want to hardcode/pin a specific NIC:
+# Automatically detected from the active PXE interface IP if not pinned:
+# pxe_server_ip: "192.168.1.148"
 
-# The public SSH key to embed in the NixOS clients for root access.
-# Replace this with your actual public key.
+# The public SSH key to embed in NixOS PXE clients for root access (if pxe_os == 'nixos').
 pxe_client_ssh_key: "ssh-rsa AAAA..."
 
-# DHCP network configuration for NixOS clients and the pxe_server role.
-pxe_subnet: "10.0.0.0"
-pxe_netmask: "255.255.255.0"
-pxe_range_start: "10.0.0.200"
-pxe_range_end: "10.0.0.250"
-pxe_router: "10.0.0.1"
+# DHCP network configuration for PXE clients and the pxe_server role.
+# Dynamically discovered from host interface and DHCP default route facts.
+# Explicit overrides can be supplied here if a custom non-default network is used.
+# pxe_subnet: "192.168.1.0"
+# pxe_netmask: "255.255.255.0"
+# pxe_range_start: "192.168.1.200"
+# pxe_range_end: "192.168.1.240"
+# pxe_router: ""
+# pxe_dns: ""
+debian_suite: "bookworm"
 
 # Cluster Overlay Network (Tailscale/Headscale)
 overlay_subnet: "100.64.0.0/10"

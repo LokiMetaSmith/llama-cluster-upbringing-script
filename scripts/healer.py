@@ -4,11 +4,10 @@ import json
 import time
 import argparse
 import asyncio
-import httpx
+import re
 import subprocess
 import requests
-from typing import List, Optional, Dict
-
+from typing import List, Optional, Dict, Any, Tuple
 
 try:
     from sudo_env import load_sudo_env
@@ -16,29 +15,111 @@ try:
 except ImportError:
     pass
 
+# Determine repository root
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # --- Configuration ---
 NOMAD_ADDR = os.environ.get("NOMAD_ADDR", "http://localhost:4646")
 CONSUL_HTTP_ADDR = os.environ.get("CONSUL_HTTP_ADDR", "http://localhost:8500")
 CONSUL_HTTP_TOKEN = os.environ.get("CONSUL_HTTP_TOKEN", "")
 
+
+def get_consul_token() -> str:
+    """Retrieve Consul authentication token from env or disk."""
+    if "CONSUL_HTTP_TOKEN" in os.environ and os.environ["CONSUL_HTTP_TOKEN"].strip():
+        return os.environ["CONSUL_HTTP_TOKEN"].strip()
+    token_file = "/etc/consul.d/management_token"
+    if os.path.exists(token_file):
+        try:
+            with open(token_file, 'r') as f:
+                return f.read().strip()
+        except Exception:
+            pass
+    return ""
+
+
+def get_nomad_tls_kwargs(nomad_url: str) -> Dict[str, Any]:
+    """Generates TLS arguments for Nomad API requests ensuring strict certificate trust."""
+    kwargs: Dict[str, Any] = {}
+    if nomad_url.startswith("https"):
+        cacert = os.environ.get("NOMAD_CACERT") or "/etc/nomad.d/tls/ca.pem"
+        if os.path.exists(cacert):
+            kwargs["verify"] = cacert
+        else:
+            kwargs["verify"] = True  # Strict system CA trust validation, NEVER verify=False
+
+        client_cert = os.environ.get("NOMAD_CLIENT_CERT") or "/etc/nomad.d/tls/cli.cert.pem"
+        client_key = os.environ.get("NOMAD_CLIENT_KEY") or "/etc/nomad.d/tls/cli.key.pem"
+        if os.path.exists(client_cert) and os.path.exists(client_key):
+            kwargs["cert"] = (client_cert, client_key)
+    return kwargs
+
+
+def extract_repo_source_from_traceback(stderr: str, repo_root: str = REPO_ROOT) -> Optional[str]:
+    """Extracts target file path from Python traceback if it points to a file within repo_root."""
+    if not stderr:
+        return None
+    matches = re.findall(r'File\s+"([^"]+)"', stderr)
+    for match in reversed(matches):
+        norm_match = os.path.normpath(match)
+        if os.path.isabs(norm_match):
+            rel = os.path.relpath(norm_match, repo_root)
+            if not rel.startswith("..") and os.path.isfile(os.path.join(repo_root, rel)):
+                # Exclude virtual environments and hidden caches
+                if not any(part in rel for part in (".venv", "venv", "site-packages", "__pycache__")):
+                    return os.path.join(repo_root, rel)
+        else:
+            cand = os.path.join(repo_root, norm_match)
+            if os.path.isfile(cand) and not any(part in cand for part in (".venv", "venv", "site-packages", "__pycache__")):
+                return cand
+    return None
+
+
+def record_adaptation_case(job_id: str, alloc_id: str, diagnostic_data: Dict[str, Any], repo_root: str = REPO_ROOT):
+    """Bridge runtime failure into prompt_engineering/generated_evaluators."""
+    try:
+        reflection_dir = os.path.join(repo_root, "reflection")
+        if reflection_dir not in sys.path:
+            sys.path.insert(0, reflection_dir)
+        import adaptation_manager
+        test_case_yaml = adaptation_manager.generate_test_case(diagnostic_data)
+        out_dir = os.path.join(repo_root, "prompt_engineering", "generated_evaluators")
+        os.makedirs(out_dir, exist_ok=True)
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        case_file = os.path.join(out_dir, f"failure_{job_id}_{timestamp}.yaml")
+        with open(case_file, "w") as f:
+            f.write(test_case_yaml)
+        print(f"[Adaptation] Generated evolution test case at {case_file}")
+    except Exception as e:
+        print(f"[Adaptation] Failed to generate adaptation test case: {e}")
+
+
 class NomadWatcher:
     """Interacts with Nomad to find failed allocations and retrieve logs."""
 
     def __init__(self, nomad_url: str = NOMAD_ADDR):
         self.nomad_url = nomad_url
+        self.tls_kwargs = get_nomad_tls_kwargs(self.nomad_url)
+        self.processed_alloc_ids: set = set()
 
     def get_failed_allocs(self) -> List[Dict]:
-        """Fetch allocations with status 'failed'."""
+        """Fetch allocations with status 'failed', 'lost', or failed task states."""
         try:
-            # We filter client-side for simplicity in this prototype
-            resp = requests.get(f"{self.nomad_url}/v1/allocations", timeout=5)
+            resp = requests.get(f"{self.nomad_url}/v1/allocations", timeout=10, **self.tls_kwargs)
             resp.raise_for_status()
             allocs = resp.json()
 
             failed = []
             for alloc in allocs:
-                if alloc['ClientStatus'] == 'failed':
+                client_status = alloc.get('ClientStatus', '').lower()
+                has_failed_task = False
+                task_states = alloc.get('TaskStates') or {}
+                for tname, tstate in task_states.items():
+                    if tstate.get('Failed', False):
+                        has_failed_task = True
+                        break
+
+                if client_status in ('failed', 'lost') or has_failed_task:
                     failed.append(alloc)
             return failed
         except Exception as e:
@@ -46,55 +127,95 @@ class NomadWatcher:
             return []
 
     def get_logs(self, alloc_id: str, task_name: str, log_type: str = "stderr") -> str:
-        """Fetch logs for a specific task in an allocation."""
+        """Fetch logs for a specific task in an allocation using API with CLI fallback."""
         try:
-            # /v1/client/fs/logs/:alloc_id?task=:task_name&type=:type
             params = {'task': task_name, 'type': log_type, 'plain': 'true'}
-            resp = requests.get(f"{self.nomad_url}/v1/client/fs/logs/{alloc_id}", params=params, timeout=10)
-            if resp.status_code == 200:
+            resp = requests.get(
+                f"{self.nomad_url}/v1/client/fs/logs/{alloc_id}",
+                params=params,
+                timeout=10,
+                **self.tls_kwargs
+            )
+            if resp.status_code == 200 and resp.text.strip():
                 return resp.text
-            else:
-                print(f"[Watcher] Failed to get logs: {resp.status_code} {resp.text}")
-                return ""
         except Exception as e:
-            print(f"[Watcher] Error fetching logs: {e}")
-            return ""
+            print(f"[Watcher] HTTP log fetch failed ({e}), trying CLI fallback...")
+
+        try:
+            cmd = ["nomad", "alloc", "logs", f"-{log_type}", "-tail", "-n", "200", alloc_id, task_name]
+            env = os.environ.copy()
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=15, env=env)
+            if res.returncode == 0 and res.stdout.strip():
+                return res.stdout
+        except Exception as e:
+            print(f"[Watcher] CLI log fetch failed: {e}")
+
+        return ""
+
+    def restart_job(self, job_id: str) -> bool:
+        """Restarts a Nomad job after healing or failure remediation."""
+        print(f"[Watcher] Attempting to restart job '{job_id}'...")
+        try:
+            cmd = ["nomad", "job", "restart", "-yes", job_id]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if res.returncode == 0:
+                print(f"[Watcher] Successfully restarted job '{job_id}'.")
+                return True
+        except Exception as e:
+            print(f"[Watcher] CLI restart failed: {e}")
+
+        try:
+            resp = requests.put(
+                f"{self.nomad_url}/v1/job/{job_id}/scale",
+                json={"Count": 1},
+                timeout=10,
+                **self.tls_kwargs
+            )
+            return resp.status_code in (200, 201)
+        except Exception as e:
+            print(f"[Watcher] API restart failed: {e}")
+            return False
+
 
 class HealerAgent:
     """Interacts with the internal LLM cluster to fix code."""
 
-    def __init__(self, consul_addr: str = CONSUL_HTTP_ADDR, token: str = CONSUL_HTTP_TOKEN):
+    def __init__(self, consul_addr: str = CONSUL_HTTP_ADDR, token: Optional[str] = None):
         self.consul_addr = consul_addr
-        self.token = token.strip() if token else None
+        self.token = token.strip() if token else get_consul_token()
 
     async def _resolve_service(self, service_name: str) -> Optional[str]:
         """Find the base URL for a service via Consul."""
         headers = {"X-Consul-Token": self.token} if self.token else {}
-        async with httpx.AsyncClient(headers=headers) as client:
+        def _fetch():
             try:
-                resp = await client.get(f"{self.consul_addr}/v1/health/service/{service_name}?passing")
-                resp.raise_for_status()
-                services = resp.json()
-                if services:
-                    svc = services[0]['Service']
-                    return f"http://{svc['Address']}:{svc['Port']}/v1"
+                resp = requests.get(f"{self.consul_addr}/v1/health/service/{service_name}?passing", headers=headers, timeout=5)
+                if resp.status_code == 200:
+                    services = resp.json()
+                    if services:
+                        svc = services[0]['Service']
+                        addr = svc.get('Address') or '127.0.0.1'
+                        port = svc.get('Port')
+                        return f"http://{addr}:{port}/v1"
             except Exception as e:
                 print(f"[Agent] Discovery failed for {service_name}: {e}")
-        return None
+            return None
+        return await asyncio.to_thread(_fetch)
 
     async def chat(self, messages: List[Dict], model_service: str = "rpc-coding", mock: bool = False) -> str:
-        """Send a chat completion request."""
+        """Send a chat completion request to the cluster LLM."""
         if mock:
             return self._mock_chat(messages)
 
         base_url = await self._resolve_service(model_service)
         if not base_url:
-            # Fallback for dev environment if consul isn't reachable but we have a direct address
-            # Or return error
-            print(f"[Agent] Could not resolve {model_service}. Using localhost fallback?")
-            # return "Error: Service unavailable"
-            # Hardcoded fallback for testing if Consul fails in sandbox
-            base_url = "http://localhost:8081/v1"
+            for fallback_name in ["llama-api-main", "vllm", "opencode"]:
+                base_url = await self._resolve_service(fallback_name)
+                if base_url:
+                    break
+
+        if not base_url:
+            base_url = os.environ.get("LLAMA_API_URL", "http://127.0.0.1:8081/v1")
 
         payload = {
             "model": model_service,
@@ -102,11 +223,13 @@ class HealerAgent:
             "temperature": 0.2
         }
 
+        def _post():
+            resp = requests.post(f"{base_url}/chat/completions", json=payload, timeout=120)
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"]
+
         try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(f"{base_url}/chat/completions", json=payload, timeout=120)
-                resp.raise_for_status()
-                return resp.json()["choices"][0]["message"]["content"]
+            return await asyncio.to_thread(_post)
         except Exception as e:
             return f"Error talking to LLM: {e}"
 
@@ -120,17 +243,10 @@ import pytest
 from pipecatapp.chaos_module import risky_math
 
 def test_reproduction():
-    # To demonstrate the bug (crash), we call the function directly.
-    # We expect this to execute successfully (no crash) if the code is robust.
-    # Currently, it triggers ZeroDivisionError, causing the test to FAIL/ERROR.
     val = risky_math(0)
-    # If we want to assert specific behavior (like returning 0), we could add:
-    # assert val == 0.0
 ```
 """
         elif "rewrite the Source Code" in last_msg:
-            # We must use triple quotes for the multi-line string, but the inner python code also has triple quotes.
-            # We need to escape them or use a different quote style for the outer string.
             return '''
 ```python
 def risky_math(x):
@@ -207,12 +323,131 @@ INSTRUCTIONS:
             return response.split("```")[1].split("```")[0].strip()
         return response.strip()
 
-# --- Main Logic ---
+
+# --- Remediation & Watch Loops ---
+
+async def heal_allocation(alloc: Dict[str, Any], watcher: NomadWatcher, agent: HealerAgent,
+                          repo_root: str = REPO_ROOT, mock: bool = False, auto_restart: bool = True) -> bool:
+    """Investigate and remediate a single failed allocation."""
+    alloc_id = alloc.get("ID", "unknown")
+    job_id = alloc.get("JobID", "unknown")
+    task_states = alloc.get("TaskStates") or {}
+
+    print(f"\n[Healer] [*] Investigating failed allocation {alloc_id[:8]} for job '{job_id}'...")
+
+    for task_name, task_state in task_states.items():
+        is_failed = task_state.get("Failed", False) or alloc.get("ClientStatus") == "failed"
+        if not is_failed:
+            continue
+
+        stderr_log = watcher.get_logs(alloc_id, task_name, log_type="stderr")
+        diagnostic_data = {
+            "job_id": job_id,
+            "alloc_id": alloc_id,
+            "task_name": task_name,
+            "client_status": alloc.get("ClientStatus"),
+            "events": task_state.get("Events", []),
+            "logs": {"stderr": stderr_log}
+        }
+
+        # Save diagnostic artifact
+        log_dir = os.path.join(repo_root, "logs", "healer")
+        os.makedirs(log_dir, exist_ok=True)
+        dump_path = os.path.join(log_dir, f"failure_{job_id}_{alloc_id[:8]}.json")
+        with open(dump_path, "w") as f:
+            json.dump(diagnostic_data, f, indent=2)
+        print(f"[Healer] Saved failure diagnostics to {dump_path}")
+
+        # Record test case for prompt engineering / evolution archive
+        record_adaptation_case(job_id, alloc_id, diagnostic_data, repo_root=repo_root)
+
+        # Check if traceback points to an internal repository source file
+        target_file = extract_repo_source_from_traceback(stderr_log, repo_root=repo_root)
+        if target_file and os.path.exists(target_file):
+            print(f"[Healer] [+] Located offending source file: {target_file}")
+            with open(target_file, "r") as f:
+                source_content = f.read()
+
+            print("[Healer] Phase 1: Generating reproduction test...")
+            test_code = await agent.generate_reproduction_test(stderr_log, source_content, mock=mock)
+            test_filename = os.path.join(repo_root, "tests", f"repro_{int(time.time())}.py")
+            with open(test_filename, "w") as f:
+                f.write(test_code)
+            print(f"[Healer] Written repro test to {test_filename}")
+
+            env = os.environ.copy()
+            env["PYTHONPATH"] = repo_root
+            repro_res = subprocess.run(["pytest", test_filename], capture_output=True, text=True, env=env)
+
+            if repro_res.returncode != 0:
+                print("[Healer] Phase 2: Bug confirmed reproducible in pytest. Synthesizing fix...")
+                error_output = repro_res.stdout + repro_res.stderr
+                fixed_code = await agent.fix_code(source_content, test_code, error_output, mock=mock)
+
+                backup_path = target_file + ".bak"
+                with open(backup_path, "w") as f:
+                    f.write(source_content)
+                with open(target_file, "w") as f:
+                    f.write(fixed_code)
+
+                verify_res = subprocess.run(["pytest", test_filename], capture_output=True, text=True, env=env)
+                if verify_res.returncode == 0:
+                    print(f"[Healer] [SUCCESS] Autonomous patch verified! Code repaired: {target_file}")
+                    if auto_restart:
+                        watcher.restart_job(job_id)
+                    return True
+                else:
+                    print("[Healer] [FAILURE] Proposed patch failed verification. Reverting...")
+                    with open(target_file, "w") as f:
+                        f.write(source_content)
+            else:
+                print("[Healer] Reproduction test did not reproduce failure. Moving to cluster recovery.")
+
+        # Infrastructure / Service recovery
+        if auto_restart:
+            watcher.restart_job(job_id)
+
+    return True
+
+
+async def watch_allocations(watcher: NomadWatcher, agent: HealerAgent, repo_root: str = REPO_ROOT,
+                            interval: int = 15, run_once: bool = False, mock: bool = False,
+                            auto_restart: bool = True):
+    """Continuously poll Nomad allocations and heal failures in real time."""
+    print(f"\n[Lazarus Healer] [*] Starting Nomad Failure Watcher (Poll Interval: {interval}s)...")
+    print(f"  Nomad URL:  {watcher.nomad_url}")
+    print(f"  Consul URL: {agent.consul_addr}")
+    print(f"  Repo Root:  {repo_root}")
+
+    while True:
+        failed_allocs = watcher.get_failed_allocs()
+        new_failures = [a for a in failed_allocs if a.get("ID") not in watcher.processed_alloc_ids]
+
+        if new_failures:
+            print(f"[Lazarus Healer] Detected {len(new_failures)} new failed allocation(s).")
+            for alloc in new_failures:
+                alloc_id = alloc.get("ID")
+                watcher.processed_alloc_ids.add(alloc_id)
+                await heal_allocation(
+                    alloc=alloc,
+                    watcher=watcher,
+                    agent=agent,
+                    repo_root=repo_root,
+                    mock=mock,
+                    auto_restart=auto_restart
+                )
+        else:
+            print(f"[Lazarus Healer] Cluster allocations healthy ({len(watcher.processed_alloc_ids)} historical failures tracked).")
+
+        if run_once:
+            break
+
+        await asyncio.sleep(interval)
+
 
 async def run_local_mode(args):
+    """Run interactive local reproduction and repair on a single file."""
     agent = HealerAgent()
-
-    # 1. Read Inputs
     with open(args.log, 'r') as f:
         log_content = f.read()
 
@@ -220,78 +455,52 @@ async def run_local_mode(args):
         source_content = f.read()
 
     print(f"[*] Analyzing failure in {args.target}...")
-
-    # 2. Generate Reproduction
-    print("[*] Phase 1: generating reproduction test...")
     test_code = await agent.generate_reproduction_test(log_content, source_content, mock=args.mock)
-
     test_filename = f"tests/repro_{int(time.time())}.py"
     with open(test_filename, 'w') as f:
         f.write(test_code)
     print(f"    -> Written to {test_filename}")
 
-    # 3. Verify Failure
-    print("[*] Phase 2: Verifying failure...")
-    # Make sure we can import the target by adding CWD to PYTHONPATH
     env = os.environ.copy()
     env["PYTHONPATH"] = os.getcwd()
     result = subprocess.run(["pytest", test_filename], capture_output=True, text=True, env=env)
 
-    # NOTE: In reproduction, we EXPECT failure.
-    # However, if the test is "assert X", a crash is also a failure.
-    # If the test is "with pytest.raises(Error)", then a PASS means we successfully reproduced the expected crash logic.
-    # But usually, a reproduction script is written to CRASH if the bug is present (i.e., return code != 0).
-    # OR it asserts the correct behavior and FAILS because the behavior is wrong.
-
-    # My mock generates `risky_math(0)` which crashes. So result.returncode will be != 0.
-
     if result.returncode == 0:
         print("[!] The generated test PASSED (it failed to reproduce the bug). Aborting.")
-        # print(result.stdout)
         return
-    else:
-        print("    -> Test FAILED as expected. Proceeding to fix.")
-        error_output = result.stdout + result.stderr
 
-    # 4. Generate Fix
-    print("[*] Phase 3: Generating fix...")
+    print("    -> Test FAILED as expected. Proceeding to fix.")
+    error_output = result.stdout + result.stderr
     fixed_code = await agent.fix_code(source_content, test_code, error_output, mock=args.mock)
 
-    # Backup
     backup_path = args.target + ".bak"
     with open(backup_path, 'w') as f:
         f.write(source_content)
 
-    # Apply
     with open(args.target, 'w') as f:
         f.write(fixed_code)
     print("    -> Patch applied.")
 
-    # 5. Verify Fix
-    print("[*] Phase 4: Verifying fix...")
-    # Now we expect the test to PASS (because we fixed the code to handle the edge case)
-    # But wait, if the test is `risky_math(0)` and we changed it to return 0.0,
-    # the test script itself might need to update its assertion?
-    # The mock test I wrote does `risky_math(0)` naked. If it returns 0.0, it won't crash, so pytest returns 0 (PASS).
     result_fix = subprocess.run(["pytest", test_filename], capture_output=True, text=True, env=env)
-
     if result_fix.returncode == 0:
         print("[SUCCESS] The fix works! Test passed.")
-        # Commit logic could go here
     else:
         print("[FAILURE] The fix did not work. Reverting...")
         with open(args.target, 'w') as f:
             f.write(source_content)
         print("    -> Reverted to original.")
-        print(result_fix.stdout)
+
 
 def main():
-    parser = argparse.ArgumentParser(description='Lazarus: Self-Healing Agent')
-    parser.add_argument('--watch', action='store_true', help='Watch Nomad for failures')
+    parser = argparse.ArgumentParser(description='Lazarus: Autonomous Cluster Self-Healing Agent')
+    parser.add_argument('--watch', action='store_true', help='Watch Nomad for allocation failures')
+    parser.add_argument('--once', action='store_true', help='Run a single audit pass across allocations and exit')
+    parser.add_argument('--interval', type=int, default=15, help='Polling interval in seconds (default: 15)')
+    parser.add_argument('--no-restart', action='store_true', help='Disable automatic Nomad job restart')
     parser.add_argument('--local-mode', action='store_true', help='Run in local dev mode')
     parser.add_argument('--log', help='Path to crash log (local mode)')
     parser.add_argument('--target', help='Path to target source file (local mode)')
-    parser.add_argument('--mock', action='store_true', help='Use mock LLM responses')
+    parser.add_argument('--mock', action='store_true', help='Use mock LLM responses for dry-run/testing')
 
     args = parser.parse_args()
 
@@ -300,8 +509,21 @@ def main():
             print("Error: --local-mode requires --log and --target")
             sys.exit(1)
         asyncio.run(run_local_mode(args))
+    elif args.watch or args.once:
+        watcher = NomadWatcher()
+        agent = HealerAgent()
+        asyncio.run(watch_allocations(
+            watcher=watcher,
+            agent=agent,
+            repo_root=REPO_ROOT,
+            interval=args.interval,
+            run_once=args.once,
+            mock=args.mock,
+            auto_restart=not args.no_restart
+        ))
     else:
-        print("Watch mode not fully implemented yet.")
+        parser.print_help()
+
 
 if __name__ == "__main__":
     main()

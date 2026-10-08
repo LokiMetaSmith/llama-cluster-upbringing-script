@@ -2,6 +2,10 @@
 
 
 (function(global) {
+    if (typeof window !== "undefined" && typeof document !== "undefined") {
+        window.root_document = document;
+    }
+    var root_document = typeof document !== "undefined" ? document : null;
     // *************************************************************
     //   LiteGraph CLASS                                     *******
     // *************************************************************
@@ -11364,12 +11368,14 @@ LGraphNode.prototype.executeAction = function(action)
             }
         };
         setTimeout(function() {
-            root_document.addEventListener("pointerdown", outsideClickListener);
+            var root_doc = (canvas && canvas.ownerDocument) || (typeof document !== "undefined" ? document : root_document);
+            if (root_doc) root_doc.addEventListener("pointerdown", outsideClickListener);
         }, 10);
 
         var originalClose = dialog.close;
         dialog.close = function() {
-            root_document.removeEventListener("pointerdown", outsideClickListener);
+            var root_doc = (canvas && canvas.ownerDocument) || (typeof document !== "undefined" ? document : root_document);
+            if (root_doc) root_doc.removeEventListener("pointerdown", outsideClickListener);
             if (originalClose) originalClose.apply(dialog, arguments);
         };
 
@@ -11439,12 +11445,14 @@ LGraphNode.prototype.executeAction = function(action)
             }
         };
         setTimeout(function() {
-            root_document.addEventListener("pointerdown", outsideClickListener);
+            var root_doc = (canvas && canvas.ownerDocument) || (typeof document !== "undefined" ? document : root_document);
+            if (root_doc) root_doc.addEventListener("pointerdown", outsideClickListener);
         }, 10);
 
         var originalClose = dialog.close;
         dialog.close = function() {
-            root_document.removeEventListener("pointerdown", outsideClickListener);
+            var root_doc = (canvas && canvas.ownerDocument) || (typeof document !== "undefined" ? document : root_document);
+            if (root_doc) root_doc.removeEventListener("pointerdown", outsideClickListener);
             if (originalClose) originalClose.apply(dialog, arguments);
         };
 
@@ -12308,12 +12316,14 @@ LGraphNode.prototype.executeAction = function(action)
             }
         };
         setTimeout(function() {
-            root_document.addEventListener("pointerdown", outsideClickListener);
+            var root_doc = (canvas && canvas.ownerDocument) || (typeof document !== "undefined" ? document : root_document);
+            if (root_doc) root_doc.addEventListener("pointerdown", outsideClickListener);
         }, 10);
 
         var originalClose = dialog.close;
         dialog.close = function() {
-            root_document.removeEventListener("pointerdown", outsideClickListener);
+            var root_doc = (canvas && canvas.ownerDocument) || (typeof document !== "undefined" ? document : root_document);
+            if (root_doc) root_doc.removeEventListener("pointerdown", outsideClickListener);
             if (originalClose) originalClose.apply(dialog, arguments);
         };
 

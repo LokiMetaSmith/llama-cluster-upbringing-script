@@ -1,9 +1,104 @@
+- name: Ensure network facts are gathered
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - network
+  when: (ansible_facts.interfaces is not defined and ansible_interfaces is not defined) or (ansible_facts.default_ipv4 is not defined and ansible_default_ipv4 is not defined)
+
+- name: Auto-detect PXE network interface per machine
+  ansible.builtin.set_fact:
+    pxe_interface: >-
+      {%- set all_ifaces = ansible_facts.interfaces | default(ansible_interfaces | default([])) -%}
+      {%- if pxe_interface is defined and pxe_interface | string | trim | length > 0 and (pxe_interface | string | trim in all_ifaces) -%}
+        {{ pxe_interface | string | trim }}
+      {%- else -%}
+        {%- set target_ip = pxe_server_ip | default('') -%}
+        {%- set matching_iface = namespace(name='') -%}
+        {%- if target_ip != '' -%}
+          {%- for iface in all_ifaces -%}
+            {%- set iface_data = ansible_facts.get(iface, {}) or hostvars[inventory_hostname].get('ansible_' + (iface | replace('-', '_')), {}) -%}
+            {%- if iface_data.ipv4 is defined and iface_data.ipv4.address == target_ip -%}
+              {%- set matching_iface.name = iface -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
+        {%- if matching_iface.name != '' -%}
+          {{ matching_iface.name }}
+        {%- elif ansible_facts.default_ipv4.interface is defined and ansible_facts.default_ipv4.interface | string | length > 0 -%}
+          {{ ansible_facts.default_ipv4.interface }}
+        {%- elif ansible_default_ipv4.interface is defined and ansible_default_ipv4.interface | string | length > 0 -%}
+          {{ ansible_default_ipv4.interface }}
+        {%- else -%}
+          {{ (all_ifaces | reject('equalto', 'lo') | first) | default('eth0') }}
+        {%- endif -%}
+      {%- endif -%}
+
+- name: Dynamically resolve PXE subnet, gateway router, IP, and DNS parameters from host environment
+  ansible.builtin.set_fact:
+    pxe_server_ip: >-
+      {%- if pxe_server_ip is defined and pxe_server_ip and (pxe_server_ip | string | trim | length > 0) -%}
+        {{ pxe_server_ip | string | trim }}
+      {%- else -%}
+        {{ (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('address') | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('', true), true), true) }}
+      {%- endif -%}
+    pxe_router: >-
+      {%- if pxe_router is defined and pxe_router and (pxe_router | string | trim | length > 0) -%}
+        {{ pxe_router | string | trim }}
+      {%- else -%}
+        {{ (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('gateway') | default(ansible_facts.default_ipv4.gateway | default(ansible_default_ipv4.gateway | default('', true), true), true) }}
+      {%- endif -%}
+    pxe_subnet: >-
+      {%- if pxe_subnet is defined and pxe_subnet and (pxe_subnet | string | trim | length > 0) -%}
+        {{ pxe_subnet | string | trim }}
+      {%- else -%}
+        {{ (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default('192.168.1.0', true), true), true) }}
+      {%- endif -%}
+    pxe_netmask: >-
+      {%- if pxe_netmask is defined and pxe_netmask and (pxe_netmask | string | trim | length > 0) -%}
+        {{ pxe_netmask | string | trim }}
+      {%- else -%}
+        {{ (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('netmask') | default(ansible_facts.default_ipv4.netmask | default(ansible_default_ipv4.netmask | default('255.255.255.0', true), true), true) }}
+      {%- endif -%}
+    pxe_dns: >-
+      {%- if pxe_dns is defined and pxe_dns and (pxe_dns | string | trim | length > 0) -%}
+        {{ pxe_dns | string | trim }}
+      {%- else -%}
+        {%- set detected_gw = (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('gateway') | default(ansible_facts.default_ipv4.gateway | default(ansible_default_ipv4.gateway | default('', true), true), true) | default('', true) -%}
+        {%- if detected_gw and (detected_gw | string | trim | length > 0) -%}
+          {{ detected_gw | string | trim }}, 1.1.1.1, 8.8.8.8
+        {%- else -%}
+          1.1.1.1, 8.8.8.8
+        {%- endif -%}
+      {%- endif -%}
+    pxe_range_start: >-
+      {%- if pxe_range_start is defined and pxe_range_start and (pxe_range_start | string | trim | length > 0) -%}
+        {{ pxe_range_start | string | trim }}
+      {%- else -%}
+        {%- set net_str = (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default('192.168.1.0', true), true), true) | default('192.168.1.0', true) -%}
+        {%- set net_prefix = (net_str | string).rsplit('.', 1)[0] -%}
+        {{ net_prefix }}.200
+      {%- endif -%}
+    pxe_range_end: >-
+      {%- if pxe_range_end is defined and pxe_range_end and (pxe_range_end | string | trim | length > 0) -%}
+        {{ pxe_range_end | string | trim }}
+      {%- else -%}
+        {%- set net_str = (ansible_facts.get(pxe_interface, {}) or {}).get('ipv4', {}).get('network') | default(ansible_facts.default_ipv4.network | default(ansible_default_ipv4.network | default('192.168.1.0', true), true), true) | default('192.168.1.0', true) -%}
+        {%- set net_prefix = (net_str | string).rsplit('.', 1)[0] -%}
+        {{ net_prefix }}.240
+      {%- endif -%}
+
+- name: Display detected PXE configuration
+  ansible.builtin.debug:
+    msg: "PXE on '{{ pxe_interface }}' (IP: {{ pxe_server_ip }}) | Subnet: {{ pxe_subnet }}/{{ pxe_netmask }} | Router: {{ pxe_router }} | DNS: {{ pxe_dns }} | Range: {{ pxe_range_start }}-{{ pxe_range_end }}"
+
 - name: Install PXE boot dependencies
   apt:
     name:
       - isc-dhcp-server
       - tftpd-hpa
       - nginx
+      - pxelinux
+      - syslinux-common
     state: present
   become: yes
 
@@ -11,6 +106,7 @@
   file:
     path: /srv/tftp
     state: directory
+    mode: '0755'
   become: yes
   check_mode: no
 
@@ -22,16 +118,96 @@
   become: yes
   check_mode: no
 
+- name: Ensure cpio is installed for firmware integration
+  apt:
+    name: cpio
+    state: present
+  become: yes
+
+- name: Deploy netboot firmware integration script
+  copy:
+    src: integrate_netboot_firmware.sh
+    dest: /usr/local/bin/integrate_netboot_firmware.sh
+    mode: '0755'
+  become: yes
+
+- name: Integrate non-free network NIC firmware into Debian netboot installer
+  command: /usr/local/bin/integrate_netboot_firmware.sh "{{ tftp_root }}/debian-installer/amd64" "/var/www/html/debian"
+  become: yes
+
+- name: Ensure pxelinux.cfg directory exists in TFTP root
+  file:
+    path: "{{ tftp_root }}/pxelinux.cfg"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Deploy automated PXELINUX boot config (Pure TFTP Boot)
+  template:
+    src: pxelinux.default.j2
+    dest: "{{ tftp_root }}/pxelinux.cfg/default"
+    mode: '0644'
+  become: yes
+
+- name: Ensure pxelinux.0 fallback is installed
+  ansible.builtin.copy:
+    src: /usr/lib/PXELINUX/pxelinux.0
+    dest: "{{ tftp_root }}/pxelinux.0"
+    remote_src: yes
+    mode: '0644'
+  become: yes
+  failed_when: false
+
 - name: Download iPXE BIOS bootloader
   get_url:
     url: https://boot.ipxe.org/undionly.kpxe
     dest: "{{ tftp_root }}/undionly.kpxe"
+    mode: '0644'
   become: yes
 
 - name: Download iPXE UEFI bootloader
   get_url:
-    url: https://boot.ipxe.org/ipxe.efi
+    url: https://boot.ipxe.org/x86_64-efi/ipxe.efi
     dest: "{{ tftp_root }}/ipxe.efi"
+    mode: '0644'
+  become: yes
+
+- name: Configure isc-dhcp-server interfaces
+  lineinfile:
+    path: /etc/default/isc-dhcp-server
+    regexp: '^INTERFACESv4='
+    line: 'INTERFACESv4="{{ pxe_interface }}"'
+  become: yes
+
+- name: Ensure isc-dhcp-server IPv6 interface is empty
+  lineinfile:
+    path: /etc/default/isc-dhcp-server
+    regexp: '^INTERFACESv6='
+    line: 'INTERFACESv6=""'
+  become: yes
+
+- name: Configure tftpd-hpa directory
+  lineinfile:
+    path: /etc/default/tftpd-hpa
+    regexp: '^TFTP_DIRECTORY='
+    line: 'TFTP_DIRECTORY="{{ tftp_root }}"'
+  notify: restart tftpd-hpa
+  become: yes
+
+- name: Configure tftpd-hpa address
+  lineinfile:
+    path: /etc/default/tftpd-hpa
+    regexp: '^TFTP_ADDRESS='
+    line: 'TFTP_ADDRESS="0.0.0.0:69"'
+  notify: restart tftpd-hpa
+  become: yes
+
+- name: Configure tftpd-hpa options
+  lineinfile:
+    path: /etc/default/tftpd-hpa
+    regexp: '^TFTP_OPTIONS='
+    line: 'TFTP_OPTIONS="--secure --verbose"'
+  notify: restart tftpd-hpa
   become: yes
 
 - name: Copy DHCP config
@@ -41,7 +217,12 @@
   notify: restart dhcpd
   become: yes
 
-- name: Copy preseed file to TFTP root (for legacy compatibility if needed)
+- name: Validate DHCP configuration syntax
+  command: dhcpd -t -cf /etc/dhcp/dhcpd.conf
+  changed_when: false
+  become: yes
+
+- name: Copy preseed file to TFTP root (for legacy compatibility)
   template:
     src: preseed.cfg.j2
     dest: "{{ tftp_root }}/preseed.cfg"
@@ -51,6 +232,7 @@
   file:
     path: /var/www/html
     state: directory
+    mode: '0755'
   become: yes
 
 - name: Symlink Debian installer files to web root
@@ -58,16 +240,106 @@
     src: "{{ tftp_root }}/debian-installer/amd64/"
     dest: /var/www/html/debian
     state: link
+    force: yes
   become: yes
 
 - name: Copy preseed file to web root
   template:
     src: preseed.cfg.j2
     dest: /var/www/html/preseed.cfg
+    mode: '0644'
   become: yes
 
 - name: Copy iPXE boot script to web root
   template:
     src: boot.ipxe.j2
     dest: /var/www/html/boot.ipxe
+    mode: '0644'
   become: yes
+
+- name: Ensure recovery and maintenance directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /var/www/html/live
+    - "{{ tftp_root }}/live"
+    - /var/www/html/images
+  become: yes
+
+- name: Populate maintenance RAMOS kernel and initrd from netboot assets
+  copy:
+    src: "{{ tftp_root }}/debian-installer/amd64/{{ item.src }}"
+    dest: "/var/www/html/live/{{ item.dest }}"
+    remote_src: yes
+    mode: '0644'
+  loop:
+    - { src: 'linux', dest: 'vmlinuz' }
+    - { src: 'initrd.gz', dest: 'initrd.img' }
+  become: yes
+  failed_when: false
+
+- name: Sync maintenance RAMOS kernel and initrd to TFTP live directory
+  copy:
+    src: "/var/www/html/live/{{ item }}"
+    dest: "{{ tftp_root }}/live/{{ item }}"
+    remote_src: yes
+    mode: '0644'
+  loop:
+    - vmlinuz
+    - initrd.img
+  become: yes
+  failed_when: false
+
+- name: Set permissions on TFTP root
+  file:
+    path: /srv/tftp
+    state: directory
+    owner: tftp
+    group: tftp
+    mode: '0755'
+    recurse: yes
+  become: yes
+
+- name: Ensure tftpd-hpa is enabled and running
+  systemd:
+    name: tftpd-hpa
+    enabled: yes
+    state: restarted
+  become: yes
+
+- name: Ensure nginx is enabled and running
+  systemd:
+    name: nginx
+    enabled: yes
+    state: started
+  become: yes
+
+- name: Ensure isc-dhcp-server is enabled and running
+  systemd:
+    name: isc-dhcp-server
+    enabled: yes
+    state: started
+  become: yes
+
+- name: Allow DHCP (UDP 67) in firewall
+  ansible.builtin.command: ufw allow 67/udp comment 'Allow DHCP for PXE clients'
+  become: yes
+  failed_when: false
+  changed_when: false
+  when: ansible_facts.pkg_mgr == 'apt'
+
+- name: Allow TFTP (UDP 69) in firewall
+  ansible.builtin.command: ufw allow 69/udp comment 'Allow TFTP for PXE clients'
+  become: yes
+  failed_when: false
+  changed_when: false
+  when: ansible_facts.pkg_mgr == 'apt'
+
+- name: Allow HTTP (TCP 80) in firewall
+  ansible.builtin.command: ufw allow 80/tcp comment 'Allow HTTP for PXE clients'
+  become: yes
+  failed_when: false
+  changed_when: false
+  when: ansible_facts.pkg_mgr == 'apt'

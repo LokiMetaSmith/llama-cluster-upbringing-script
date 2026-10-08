@@ -1411,6 +1411,7 @@ dependencies = [
     { name = "mini-swe-agent" },
     { name = "prometheus-client" },
     { name = "pydantic" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata]
@@ -1419,6 +1420,7 @@ requires-dist = [
     { name = "mini-swe-agent", specifier = ">=0.1.0" },
     { name = "prometheus-client", specifier = ">=0.19.0" },
     { name = "pydantic", specifier = ">=2.13.5" },
+    { name = "pyyaml", specifier = ">=6.0" },
 ]
 
 [[package]]

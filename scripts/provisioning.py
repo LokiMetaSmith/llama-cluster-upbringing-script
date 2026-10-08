@@ -760,10 +760,12 @@ def print_final_status(args, executed_playbooks):
     print(f"\n{Colors.BOLD}Access Interfaces:{Colors.ENDC}")
     print(f"  • {Colors.OKCYAN}Node IP Address:{Colors.ENDC} {ip}")
 
+    ssl_cert = os.getenv("SSL_CERTFILE")
+    pipecat_scheme = "https" if (ssl_cert and os.path.exists(ssl_cert)) else "http"
     interfaces = [
         ("Nomad UI", nomad_port, f"https://{ip}:{nomad_port}", True),
         ("Consul UI", consul_port, f"https://{ip}:{consul_port}", True),
-        ("Pipecat App", pipecat_port, f"https://{ip}:{pipecat_port}", stack_mode != "Infrastructure Only"),
+        ("Pipecat App", pipecat_port, f"{pipecat_scheme}://{ip}:{pipecat_port}", stack_mode != "Infrastructure Only"),
     ]
 
     for name, port, url, should_be_active in interfaces:

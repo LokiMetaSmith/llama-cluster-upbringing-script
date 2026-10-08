@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 
 client = TestClient(app)
 
-@patch("web_server.WorkflowHistory")
+@patch("pipecatapp.web_server.WorkflowHistory")
 def test_workflow_history_xss(mock_history_cls):
     """Test that workflow history endpoint escapes HTML in workflow names and status."""
     mock_history = MagicMock()

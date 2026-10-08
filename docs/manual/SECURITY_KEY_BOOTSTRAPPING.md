@@ -95,19 +95,37 @@ While Tailscale provides the secure overlay, direct SSH access to nodes is gover
 
 ## 5. Bootstrapping and Migration Tooling
 
-### 5.1. USB Keychain Imprinting
+### 5.1. Comprehensive Cluster Credential Extraction
 
-When deploying new nodes, you can bypass the manual OIDC enrollment by securely imprinting credentials directly onto the OS installation media.
+To provision nodes that join the cluster automatically without human interaction or TLS bypasses, use [`scripts/extract_cluster_keys.sh`](../../scripts/extract_cluster_keys.sh). This extracts the full cryptographic chain and authentication tokens:
 
-Run `scripts/imprint_usb_keychain.sh` to:
-1. Trigger a FIDO physical touch challenge via SSH to the controller.
-2. Generate a long-lived, reusable Headscale pre-auth key with the `usb-bootstrap` tag.
-3. Collect your FIDO SSH public key and the controller's IP address.
-4. Stage these credentials and optionally run `os-image/build_iso.sh --flash --inject` to write them into a secure `CONFIGS` partition on the USB drive.
+```bash
+# Run on controller or remote operator machine
+./scripts/extract_cluster_keys.sh --output /path/to/staging_dir
+```
 
-During the initial boot of the live installer, the `00-usb-imprint.sh` module mounts this partition, injects the credentials into the local configuration, and automatically joins the cluster mesh network.
+**Credential Bundle Schema:**
+- `mesh_auth_key`: Reusable Headscale pre-auth key for WireGuard mesh enrollment (`0600`).
+- `headscale_url`: Target Headscale endpoint (`0644`).
+- `controller_ip`: Primary controller LAN IP (`0644`).
+- `nomad_ca.pem`: Cluster Nomad Root CA (`0644`).
+- `nomad_node.cert.pem` / `key`: Mutual TLS node daemon certificates (`0644` / `0600`).
+- `nomad_cli.cert.pem` / `key`: Administrative CLI certificates (`0644` / `0600`).
+- `consul_ca.pem`: Cluster Consul Root CA (`0644`).
+- `consul_token`: Scoped Consul ACL management/bootstrap token (`0600`).
+- `authorized_keys`: Operator SSH public keys (`0600`).
 
-### 5.2. USB Bootstrap Key Revocation
+### 5.2. USB Keychain Imprinting & ISO Burning
+
+Once the bundle is extracted, write it to installation media using either:
+1. **Removable USB Partition (`--inject`)**:
+   `cd os-image && sudo ./build_iso.sh --flash --inject /path/to/staging_dir`
+2. **Pre-Bundled ISO (`--keys-bundle`)**:
+   `cd os-image && sudo ./build_iso.sh --keys-bundle /path/to/staging_dir`
+
+During initial boot, [`00-usb-imprint.sh`](../../initial-setup/modules/00-usb-imprint.sh) mounts the credentials, synchronizes the hardware clock with `chrony`, installs the Root CAs into `/usr/local/share/ca-certificates/`, connects to Tailscale, and starts Consul & Nomad.
+
+### 5.3. USB Bootstrap Key Revocation
 
 Because the USB key is a physical fallback, it represents a risk if lost or stolen. You can instantly revoke the `tag:usb-bootstrap` key using the provided revocation script:
 

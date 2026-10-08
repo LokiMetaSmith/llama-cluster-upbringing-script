@@ -1,0 +1,7 @@
+---
+# defaults/main.yaml for nixos_pxe_server
+
+# Network interface to bind PXE/DHCP services.
+# Automatically detected per machine via ansible_facts.default_ipv4 or active interfaces if not overridden.
+pxe_interface: ""
+cluster_ip: "{{ pxe_server_ip | default('192.168.1.148') }}"

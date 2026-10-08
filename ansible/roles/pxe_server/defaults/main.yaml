@@ -1,5 +1,21 @@
 debian_version: "12.5.0"
-debian_mirror: "https://deb.debian.org/debian"
-netboot_url: "{{ debian_mirror }}/dists/bookworm/main/installer-amd64/current/images/netboot/netboot.tar.gz"
+debian_mirror: "ftp.us.debian.org"
+netboot_url: "https://ftp.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/netboot.tar.gz"
 tftp_root: "/srv/tftp"
 nfs_root: "/srv/nfs/debian"
+
+# Network interface to bind PXE/DHCP services.
+# Automatically detected per machine via ansible_facts.default_ipv4 or active interfaces if not overridden.
+pxe_interface: ""
+
+# Network configuration for PXE/DHCP services.
+# Left empty by default to dynamically discover subnet, gateway, netmask, range, and DNS
+# from the host's active network facts and DHCP default route.
+pxe_subnet: ""
+pxe_netmask: ""
+pxe_range_start: ""
+pxe_range_end: ""
+pxe_router: ""
+pxe_dns: ""
+pxe_server_ip: ""
+debian_suite: "bookworm"

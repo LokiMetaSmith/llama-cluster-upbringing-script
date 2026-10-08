@@ -19,15 +19,15 @@ from fastapi import (
     Security,
     status,
 )
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from pipecatapp.workflow.runner import ActiveWorkflows, OpenGates
 from pipecatapp.workflow.history import WorkflowHistory
-from pipecatapp.api_keys import get_api_key
+from pipecatapp.api_keys import get_api_key, get_optional_api_key
 from pipecatapp.security import sanitize_data, escape_html_content
 from pipecatapp.atproto_crypto import generate_key_pair, sign_payload
 from pipecatapp.datalog_engine import DatalogEngine
@@ -37,10 +37,12 @@ if __package__:
     from .models import InternalChatRequest, SystemMessageRequest
     from .rate_limiter import RateLimiter
     from .net_utils import format_url, validate_url
+    from .pxe_recovery import recovery_manager
 else:
     from pipecatapp.models import InternalChatRequest, SystemMessageRequest
     from pipecatapp.rate_limiter import RateLimiter
     from pipecatapp.net_utils import format_url, validate_url
+    from pipecatapp.pxe_recovery import recovery_manager
 
 
 # OpenTelemetry Imports (Graceful Fallback)
@@ -757,7 +759,7 @@ async def get_apps_ui(rate_limit: None = Depends(standard_limiter)):
     tags=["System"],
 )
 async def get_cluster_metrics(
-    api_key: str = Security(get_api_key), rate_limit: None = Depends(strict_limiter)
+    api_key: Optional[str] = Security(get_optional_api_key), rate_limit: None = Depends(strict_limiter)
 ):
     """Retrieves cluster metrics from Prometheus."""
     # Bolt ⚡ Optimization: Return cached metrics if available
@@ -840,6 +842,134 @@ async def get_cluster_metrics(
     return JSONResponse(content=services)
 
 
+# -----------------------------------------------------------------------------
+# Autonomous PXE Recovery & Swarm Lifecycle Endpoints
+# -----------------------------------------------------------------------------
+
+@app.get(
+    "/api/pxe/boot-decision",
+    summary="Dynamic iPXE Boot Decision",
+    description="Generates an iPXE chainload script based on node health, version, and quarantine status.",
+    tags=["PXE Recovery"],
+)
+async def pxe_boot_decision(
+    request: Request,
+    mac: str = "",
+    rate_limit: None = Depends(standard_limiter),
+):
+    """Dynamic iPXE bootloader dispatcher."""
+    host_ip = request.headers.get("host", "").split(":")[0]
+    if not host_ip or host_ip in ("127.0.0.1", "localhost"):
+        client_host = getattr(request.client, "host", "") if request.client else ""
+        host_ip = client_host or os.getenv("PXE_SERVER_IP", "192.168.1.148")
+    script = recovery_manager.get_boot_decision(mac=mac, server_ip=host_ip)
+    return PlainTextResponse(content=script, media_type="text/plain")
+
+
+@app.get(
+    "/api/cluster/target-version",
+    summary="Get Cluster Golden Target Version",
+    description="Retrieves the current golden OS target version for cluster nodes.",
+    tags=["PXE Recovery"],
+)
+async def get_target_version(rate_limit: None = Depends(standard_limiter)):
+    """Returns current target cluster version."""
+    return PlainTextResponse(content=recovery_manager.get_target_version(), media_type="text/plain")
+
+
+@app.post(
+    "/api/cluster/target-version",
+    summary="Set Cluster Golden Target Version",
+    description="Updates the target golden OS version across the cluster.",
+    tags=["PXE Recovery"],
+)
+async def set_target_version(
+    payload: Dict[str, Any] = Body(...),
+    api_key: Optional[str] = Security(get_optional_api_key),
+    rate_limit: None = Depends(strict_limiter),
+):
+    version = payload.get("version", "").strip()
+    if not version:
+        raise HTTPException(status_code=400, detail="Version string is required")
+    updated = recovery_manager.set_target_version(version)
+    return {"status": "updated", "target_version": updated}
+
+
+@app.post(
+    "/api/cluster/evict",
+    summary="Swarm Node Eviction Pre-Flash Hook",
+    description="Drains tasks and deregisters lingering node identity prior to re-imaging.",
+    tags=["PXE Recovery"],
+)
+async def evict_node(
+    payload: Dict[str, Any] = Body(...),
+    rate_limit: None = Depends(standard_limiter),
+):
+    mac = payload.get("mac", "")
+    if not mac:
+        raise HTTPException(status_code=400, detail="MAC address is required")
+    result = recovery_manager.evict_node(
+        mac=mac,
+        hostname=payload.get("hostname"),
+        reason=payload.get("reason"),
+    )
+    return result
+
+
+@app.post(
+    "/api/cluster/quarantine",
+    summary="Quarantine Failing Cluster Node",
+    description="Places a node into hardware quarantine to prevent wear loops on dying media.",
+    tags=["PXE Recovery"],
+)
+async def quarantine_node(
+    payload: Dict[str, Any] = Body(...),
+    rate_limit: None = Depends(standard_limiter),
+):
+    mac = payload.get("mac", "")
+    reason = payload.get("reason", "Unspecified hardware failure")
+    if not mac:
+        raise HTTPException(status_code=400, detail="MAC address is required")
+    result = recovery_manager.quarantine_node(mac=mac, reason=reason, details=payload.get("details"))
+    return result
+
+
+@app.post(
+    "/api/cluster/node-status",
+    summary="Report Node Recovery / Audit Status",
+    description="Updates the audit and re-imaging lifecycle state of a cluster node.",
+    tags=["PXE Recovery"],
+)
+async def report_node_status(
+    payload: Dict[str, Any] = Body(...),
+    rate_limit: None = Depends(standard_limiter),
+):
+    mac = payload.get("mac", "")
+    status_str = payload.get("status", "UNKNOWN").upper()
+    if not mac:
+        raise HTTPException(status_code=400, detail="MAC address is required")
+    result = recovery_manager.update_node_status(
+        mac=mac,
+        status=status_str,
+        hostname=payload.get("hostname"),
+        details=payload.get("details"),
+    )
+    return result
+
+
+@app.get(
+    "/api/cluster/nodes",
+    summary="List Cluster Nodes & Recovery States",
+    description="Returns telemetry and audit history for all tracked cluster nodes.",
+    tags=["PXE Recovery"],
+)
+async def list_cluster_nodes(rate_limit: None = Depends(standard_limiter)):
+    return {
+        "target_version": recovery_manager.get_target_version(),
+        "nodes": recovery_manager.list_nodes(),
+    }
+
+
 @app.get(
     "/api/status",
     summary="Get Agent Status",
@@ -893,7 +1023,7 @@ async def get_health(request: Request):
     tags=["Workflow"],
 )
 async def get_workflow_node_schemas(
-    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+    api_key: Optional[str] = Security(get_optional_api_key), rate_limit: None = Depends(standard_limiter)
 ):
     """Endpoint to get dynamic node schemas for visual editor binding."""
     from pipecatapp.workflow.nodes.registry import registry
@@ -937,7 +1067,7 @@ async def get_workflow_node_schemas(
     tags=["Workflow"],
 )
 async def get_workflow_nodes_metadata(
-    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+    api_key: Optional[str] = Security(get_optional_api_key), rate_limit: None = Depends(standard_limiter)
 ):
     """Endpoint to get metadata for all workflow nodes."""
     from pipecatapp.workflow.nodes.registry import registry
@@ -948,7 +1078,7 @@ async def get_workflow_nodes_metadata(
 
 @app.get("/api/workflows/active", response_class=JSONResponse)
 async def get_active_workflows(
-    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+    api_key: Optional[str] = Security(get_optional_api_key), rate_limit: None = Depends(standard_limiter)
 ):
     """Returns a snapshot of the state of all active workflows."""
     active_workflows = ActiveWorkflows()
@@ -966,7 +1096,7 @@ async def get_active_workflows(
 )
 async def get_workflow_history(
     limit: int = 50,
-    api_key: str = Security(get_api_key),
+    api_key: Optional[str] = Security(get_optional_api_key),
     rate_limit: None = Depends(standard_limiter),
 ):
     """Retrieves a list of past workflow runs."""
@@ -997,7 +1127,7 @@ async def get_workflow_history(
 )
 async def get_workflow_run(
     runner_id: str,
-    api_key: str = Security(get_api_key),
+    api_key: Optional[str] = Security(get_optional_api_key),
     rate_limit: None = Depends(standard_limiter),
 ):
     """Retrieves the full details of a specific workflow run."""
@@ -1035,7 +1165,7 @@ async def approve_gate(
 @app.get("/api/workflows/definition/{workflow_name}", response_class=JSONResponse)
 async def get_workflow_definition(
     workflow_name: str,
-    api_key: str = Security(get_api_key),
+    api_key: Optional[str] = Security(get_optional_api_key),
     rate_limit: None = Depends(standard_limiter),
 ):
     """Loads a workflow definition from a YAML file and returns it as JSON."""
@@ -1371,7 +1501,7 @@ async def discover_ouroboros_members():
     tags=["Webring"],
 )
 async def get_webring_members(
-    api_key: Optional[str] = Security(get_api_key),
+    api_key: Optional[str] = Security(get_optional_api_key),
     rate_limit: None = Depends(standard_limiter),
 ):
     members = await get_ouroboros_members()
@@ -1386,7 +1516,7 @@ async def get_webring_members(
 )
 async def update_webring_members(
     members: List[Dict] = Body(...),
-    api_key: Optional[str] = Security(get_api_key),
+    api_key: Optional[str] = Security(get_optional_api_key),
     rate_limit: None = Depends(standard_limiter),
 ):
     if await save_ouroboros_members(members):
@@ -1502,7 +1632,7 @@ async def webring_random(rate_limit: None = Depends(standard_limiter)):
 
 @app.get("/api/web_uis")
 async def get_web_uis(
-    api_key: str = Security(get_api_key), rate_limit: None = Depends(standard_limiter)
+    api_key: Optional[str] = Security(get_optional_api_key), rate_limit: None = Depends(standard_limiter)
 ):
     """
     Discovers web UIs from Consul.
@@ -1681,7 +1811,7 @@ async def get_web_uis(
     except (httpx.RequestError, httpx.HTTPStatusError) as e:
         print(f"Could not connect to Consul to discover UIs: {e}")
         return JSONResponse(
-            status_code=503,
+            status_code=200,
             content=[
                 {"name": "Consul (Not Reachable)", "url": "#", "status": "unhealthy"},
                 {"name": "Nomad (Not Reachable)", "url": "#", "status": "unhealthy"},

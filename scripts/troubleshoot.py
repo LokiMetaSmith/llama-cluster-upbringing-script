@@ -29,7 +29,27 @@ except ImportError:
     pass
 
 
-NOMAD_URL = os.environ.get("NOMAD_ADDR", "http://localhost:4646")
+def get_primary_ip():
+    import subprocess
+    try:
+        result = subprocess.run(['ip', '-4', 'addr', 'show', 'tailscale0'], capture_output=True, text=True)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                if 'inet ' in line:
+                    return line.strip().split(' ')[1].split('/')[0]
+    except Exception:
+        pass
+    return "127.0.0.1"
+
+def get_default_nomad_url():
+    if os.environ.get("NOMAD_ADDR"):
+        return os.environ["NOMAD_ADDR"]
+    primary_ip = get_primary_ip()
+    if os.path.exists("/etc/nomad.d/tls/ca.pem"):
+        return f"https://{primary_ip}:4646"
+    return f"http://{primary_ip}:4646"
+
+NOMAD_URL = get_default_nomad_url()
 
 # Determine Repo Root
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

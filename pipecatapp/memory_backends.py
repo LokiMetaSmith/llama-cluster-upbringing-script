@@ -21,7 +21,7 @@ class BaseMemoryBackend(ABC):
         pass
 
     @abstractmethod
-    def get_memory(self, memory_id: int) -> Optional[dict[str, Any]]:
+    def get_memory(self, memory_id: int) -> Optional[dict]:
         pass
 
     @abstractmethod
@@ -33,7 +33,7 @@ class BaseMemoryBackend(ABC):
         pass
 
     @abstractmethod
-    def get_consolidation(self, consolidation_id: int) -> Optional[dict[str, Any]]:
+    def get_consolidation(self, consolidation_id: int) -> Optional[dict]:
         pass
 
     @abstractmethod
@@ -53,7 +53,7 @@ class BaseMemoryBackend(ABC):
         pass
 
     @abstractmethod
-    def get_skill(self, name: str) -> Optional[dict[str, Any]]:
+    def get_skill(self, name: str) -> Optional[dict]:
         pass
 
     @abstractmethod

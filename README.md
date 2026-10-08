@@ -155,14 +155,55 @@ method for getting started.
 
 This single node is now ready to be used as a standalone conversational AI agent. It can also serve as the primary "seed" node for a larger cluster. To expand your cluster, see the advanced guide below.
 
-## 4. Advanced: Multi-Node Cluster Provisioning
+## 4. Advanced: Multi-Node Cluster Provisioning & Lifecycle Management
 
-If you are setting up a multi-node cluster, you will need to work with the Ansible inventory directly.
+The repository supports a distributed multi-node mesh topology where each machine joins the encrypted Tailscale/Headscale WireGuard overlay, shares Nomad/Consul orchestrator state, and runs a local cluster frontend on port `8007`.
 
-1. **Configure Initial Inventory (`inventory.yaml`):** Edit the `inventory.yaml` file to define your *initial* controller nodes. While new worker nodes will be added to the cluster automatically, you must define the initial seed nodes for the control plane here.
-   - Create a *host group* named `controller_nodes`. This group must contain at least one node that will act as the primary control node and Nomad server.
-   - Create an empty *host group* named `worker_nodes`. This group will be populated automatically as new nodes join the cluster.
-2. **Run the Main Playbook:**
+### 4.1. Cluster Health & Lifecycle Management (`cluster_ctl.sh`)
+
+Use the unified [`scripts/cluster_ctl.sh`](scripts/cluster_ctl.sh) tool to monitor and manage all nodes across the cluster:
+
+```bash
+# Complete cluster audit (WireGuard mesh, Consul health, Nomad nodes, Web frontends)
+./scripts/cluster_ctl.sh status
+
+# Verify distributed job sharing across worker nodes
+./scripts/cluster_ctl.sh test-job
+
+# Synchronize git repository across all cluster nodes
+./scripts/cluster_ctl.sh sync
+```
+
+### 4.2. Onboarding an Edge or Worker Node (`join_worker.sh`)
+
+To onboard any worker or edge node running on the local network (e.g. at `192.168.1.183`):
+
+```bash
+./scripts/join_worker.sh --worker-ip 192.168.1.183 --node-id 1
+```
+
+This automated script:
+- Calibrates system time using Chrony/NTP to prevent GPG signature verification errors.
+- Assigns non-conflicting hostnames (`pipecat-1-worker`) and underlay IP aliases (`10.0.0.51`).
+- Enrolls the worker into the encrypted Tailscale/Headscale mesh (`100.64.0.2`).
+- Distributes Consul and Nomad Root CAs and client mutual TLS certificates.
+- Configures and starts Consul & Nomad client services, and launches the local Pipecat frontend.
+
+### 4.3. Automated Zero-Touch ISO Installation
+
+For bare-metal deployments without manual post-install steps:
+1. Extract the cluster credentials bundle from the controller:
+   ```bash
+   ./scripts/extract_cluster_keys.sh --output /tmp/cluster_keys_bundle
+   ```
+2. Burn a bootable USB drive with auto-enrollment credentials:
+   ```bash
+   cd os-image && sudo ./build_iso.sh --flash --inject /tmp/cluster_keys_bundle
+   ```
+   *(Or pre-bake directly into an unattended ISO: `sudo ./build_iso.sh --keys-bundle /tmp/cluster_keys_bundle`)*
+3. Boot the target machine. On first boot, the system automatically steps the clock, enrolls into the mesh, imports mTLS certificates, registers with Nomad/Consul, and launches the local frontend. See [`os-image/README.md`](os-image/README.md) and [`docs/manual/SECURITY_KEY_BOOTSTRAPPING.md`](docs/manual/SECURITY_KEY_BOOTSTRAPPING.md) for full details.
+
+### 4.4. Manual Playbook Provisioning (`inventory.yaml`)
    Run the following command from the root of this repository. This will configure the initial control node(s) and prepare the cluster for auto-expansion.
 
    ```bash

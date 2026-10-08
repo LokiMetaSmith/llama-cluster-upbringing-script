@@ -105,3 +105,36 @@ async def test_client_push_pull():
 
         success = await client.push_work_items([{"id": "item1"}])
         assert success is True
+
+
+@pytest.mark.asyncio
+async def test_client_circuit_breaker_and_local_fallback(tmp_path):
+    local_db = tmp_path / "fallback_memory.db"
+    client = PMMMemoryClient(
+        base_url="http://127.0.0.1:59999",
+        fallback_to_local=True,
+        db_path=str(local_db),
+        cooldown_seconds=60.0
+    )
+
+    # 1. First call fails because nothing is listening on 59999, trips circuit breaker
+    # and gracefully writes to local SQLite store
+    await client.add_event(kind="agent_thought", content="Local fallback thought 1")
+    assert client._is_available is False
+
+    # 2. Subsequent call within cooldown reads from local SQLite store without attempting HTTP
+    with patch("httpx.AsyncClient") as MockClient:
+        events = await client.get_events(limit=10)
+        assert len(events) == 1
+        assert events[0]["content"] == "Local fallback thought 1"
+        # Since circuit breaker is tripped, AsyncClient should NOT even be called
+        MockClient.assert_not_called()
+
+    # 3. Gas town work item operations also gracefully fall back
+    item_id = await client.create_work_item(title="Fallback task", created_by="test_user")
+    assert item_id is not None
+    fetched = await client.get_work_item(item_id)
+    assert fetched is not None
+    assert fetched["title"] == "Fallback task"
+
+    client.close()

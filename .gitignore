@@ -23,6 +23,7 @@ ansible_diff.log
 pipecatapp/start_pipecat.sh
 tests/clamav_evaluation/
 *.sqlite
+.liminal/
 os-image/.build
 os-image/binary
 chromadb_storage/

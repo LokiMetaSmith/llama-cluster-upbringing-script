@@ -1,4 +1,5 @@
 ansible-core
+chrony
 curl
 git
 htop

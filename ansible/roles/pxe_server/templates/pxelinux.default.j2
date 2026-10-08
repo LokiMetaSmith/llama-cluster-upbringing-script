@@ -1,0 +1,12 @@
+default local
+prompt 1
+timeout 50
+
+label local
+  menu label ^Boot from Local Hard Drive (Default)
+  localboot 0
+
+label debian-auto
+  menu label ^Automated Debian 12 Netboot Installer (Hands-Free)
+  kernel debian-installer/amd64/linux
+  append initrd=debian-installer/amd64/initrd.gz auto=true priority=critical url=http://{{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}/preseed.cfg preseed/url=http://{{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}/preseed.cfg netcfg/choose_interface=auto net.ifnames=0 biosdevname=0 --

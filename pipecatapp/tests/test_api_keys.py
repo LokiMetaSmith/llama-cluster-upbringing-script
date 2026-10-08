@@ -2,7 +2,7 @@ import hashlib
 import pytest
 from fastapi import HTTPException, status
 
-from pipecatapp.api_keys import get_api_key, initialize_api_keys, get_api_key_hash
+from pipecatapp.api_keys import get_api_key, get_optional_api_key, initialize_api_keys, get_api_key_hash
 
 def test_get_api_key_hash_known_value():
     """Test that hashing a known value produces the expected SHA-256 hash."""
@@ -80,3 +80,36 @@ async def test_get_api_key_valid(setup_api_keys):
     valid_key = setup_api_keys
     result = await get_api_key(api_key_header=f"Bearer {valid_key}")
     assert result == valid_key
+
+@pytest.mark.asyncio
+async def test_get_api_key_when_no_keys_configured():
+    initialize_api_keys([])
+    # When no keys configured, accessing without header should succeed
+    res_none = await get_api_key(api_key_header=None)
+    assert res_none == ""
+
+    # When header provided, should return the provided token or header
+    res_token = await get_api_key(api_key_header="Bearer any_dev_token")
+    assert res_token == "any_dev_token"
+
+@pytest.mark.asyncio
+async def test_get_optional_api_key_when_no_keys_configured():
+    initialize_api_keys([])
+    assert await get_optional_api_key(api_key_header=None) is None
+    assert await get_optional_api_key(api_key_header="Bearer any_token") is None
+
+@pytest.mark.asyncio
+async def test_get_optional_api_key_when_keys_configured(setup_api_keys):
+    valid_key = setup_api_keys
+    # No header returns None
+    assert await get_optional_api_key(api_key_header=None) is None
+    assert await get_optional_api_key(api_key_header="") is None
+    assert await get_optional_api_key(api_key_header="Bearer ") is None
+
+    # Valid header returns valid key
+    assert await get_optional_api_key(api_key_header=f"Bearer {valid_key}") == valid_key
+
+    # Invalid header raises 401
+    with pytest.raises(HTTPException) as exc_info:
+        await get_optional_api_key(api_key_header="Bearer wrong_token")
+    assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED

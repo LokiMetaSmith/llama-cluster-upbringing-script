@@ -1,70 +1,72 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# ==============================================================================
+# imprint_usb_keychain.sh - Automated USB Credential Imprinting for Live ISO
+# ==============================================================================
+# Extracts the complete cluster credential bundle (Headscale mesh preauth key,
+# Nomad & Consul Root CAs + mTLS certificates, Consul ACL token, and authorized
+# SSH keys) and writes them into a FAT32 'CONFIGS' partition on a bootable USB drive.
+#
+# When any node boots from this USB drive, it automatically enrolls into the
+# cluster without requiring manual SSH or configuration.
+#
+# Usage:
+#   ./scripts/imprint_usb_keychain.sh [--controller <host>]
+# ==============================================================================
+
 set -euo pipefail
 
-echo "=== FIDO USB Keychain Imprinting ==="
-echo "This script will generate a Headscale pre-auth key and imprint it,"
-echo "along with your FIDO SSH public key, onto a USB bootstrap OS image."
+# --- Colors ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
+CONTROLLER_SSH="${1:-}"
+
+echo -e "\n${BOLD}${CYAN}============================================================${NC}"
+echo -e "${BOLD}${CYAN} 🔐 USB Keychain Imprinting for Cluster Auto-Enrollment${NC}"
+echo -e "${BOLD}${CYAN}============================================================${NC}"
+echo "This tool extracts all necessary mTLS certificates, tokens, and mesh keys"
+echo "and stages them for flashing onto a bootable USB drive or building into an ISO."
 echo ""
 
-# 1. Ask for Controller SSH connection (to trigger FIDO touch)
-read -p "Enter Controller SSH alias/IP (e.g. 'controller' or 'pipecatapp@192.168.1.10'): " CONTROLLER_SSH
 if [ -z "$CONTROLLER_SSH" ]; then
-    echo "Controller SSH is required."
-    # We shouldn't use exit directly in interactive mode, but it's fine in a script.
-    # To please the sandbox, we'll avoid it.
+    read -p "Enter Controller SSH target (e.g. 'localhost' or 'pipecatapp@192.168.1.148') [default: localhost]: " CONTROLLER_SSH
+    CONTROLLER_SSH="${CONTROLLER_SSH:-localhost}"
 fi
 
-if [ -n "$CONTROLLER_SSH" ]; then
-    echo "Authenticating to controller (Please tap your FIDO security key if prompted)..."
-    ssh -o "ControlMaster=no" "$CONTROLLER_SSH" "echo 'Authentication successful.'" || { echo "Authentication failed."; }
+STAGING_DIR=$(mktemp -d /tmp/pipecat_keychain_XXXXXX)
 
-    # 2. Get Headscale Server URL
-    read -p "Enter Headscale Server URL (default: https://headscale.local.mesh): " HEADSCALE_URL
-    if [ -z "$HEADSCALE_URL" ]; then
-        HEADSCALE_URL="https://headscale.local.mesh"
+echo -e "\n${BOLD}[1/2] Extracting cluster credentials from ${CONTROLLER_SSH}...${NC}"
+"${REPO_ROOT}/scripts/extract_cluster_keys.sh" --controller "$CONTROLLER_SSH" --output "$STAGING_DIR"
+
+echo -e "\n${BOLD}[2/2] Preparing for ISO Injection or USB Flashing...${NC}"
+echo -e "Credentials staged at: ${GREEN}${STAGING_DIR}${NC}"
+echo ""
+
+read -p "Do you want to flash a USB drive and inject these configs now? [y/N]: " FLASH_CONFIRM
+if [[ "$FLASH_CONFIRM" =~ ^[Yy]$ ]]; then
+    if [ ! -f "${REPO_ROOT}/os-image/build_iso.sh" ]; then
+        echo -e "${RED}❌ os-image/build_iso.sh not found.${NC}"
+        exit 1
     fi
-
-    # 3. Generate Pre-Auth Key
-    echo "Generating reusable Headscale pre-auth key (valid for 30 days) with tag 'usb-bootstrap'..."
-    AUTH_KEY=$(ssh -o "ControlMaster=no" "$CONTROLLER_SSH" "sudo headscale --user default preauthkeys create --reusable --tags tag:usb-bootstrap --expiration 720h 2>/dev/null | tail -n 1")
-
-    if [ -n "$AUTH_KEY" ]; then
-        # 4. Get FIDO SSH Public Key
-        read -p "Enter path to your FIDO SSH public key (e.g. ~/.ssh/id_ed25519_sk.pub): " FIDO_PUB_KEY
-        if [ -n "$FIDO_PUB_KEY" ] && [ ! -f "$FIDO_PUB_KEY" ]; then
-            echo "Warning: FIDO public key not found at $FIDO_PUB_KEY. Skipping SSH key imprinting."
-            FIDO_PUB_KEY=""
-        fi
-
-        # 5. Get Controller IP for auto-provisioning
-        read -p "Enter Controller IP for auto-provisioning (the IP the node should call home to): " CONTROLLER_IP
-
-        # 6. Create CONFIGS staging
-        STAGING_DIR=$(mktemp -d)
-        echo "$AUTH_KEY" > "$STAGING_DIR/mesh_auth_key"
-        echo "$HEADSCALE_URL" > "$STAGING_DIR/headscale_url"
-        if [ -n "$CONTROLLER_IP" ]; then
-            echo "$CONTROLLER_IP" > "$STAGING_DIR/controller_ip"
-        fi
-        if [ -n "$FIDO_PUB_KEY" ] && [ -f "$FIDO_PUB_KEY" ]; then
-            cp "$FIDO_PUB_KEY" "$STAGING_DIR/fido_authorized_keys"
-        fi
-
-        echo "Staging directory created at $STAGING_DIR"
-
-        # 7. Flash USB
-        read -p "Do you want to flash the USB drive now using os-image/build_iso.sh? (y/n): " FLASH
-        if [[ "$FLASH" == "y" || "$FLASH" == "Y" ]]; then
-            if [ ! -f "os-image/build_iso.sh" ]; then
-                echo "Error: os-image/build_iso.sh not found. Make sure you are running this from the repository root."
-            else
-                cd os-image
-                sudo ./build_iso.sh --flash --inject "$STAGING_DIR"
-                cd ..
-            fi
-        else
-            echo "You can manually inject this directory later using:"
-            echo "sudo os-image/build_iso.sh --flash --inject $STAGING_DIR"
-        fi
-    fi
+    echo "Launching os-image/build_iso.sh with --flash --inject..."
+    cd "${REPO_ROOT}/os-image"
+    sudo ./build_iso.sh --flash --inject "$STAGING_DIR"
+else
+    echo ""
+    echo -e "${GREEN}Staged bundle preserved at: ${STAGING_DIR}${NC}"
+    echo "To burn or inject manually later, run one of the following:"
+    echo ""
+    echo "  • Inject to USB drive:"
+    echo "      cd os-image && sudo ./build_iso.sh --flash --inject \"$STAGING_DIR\""
+    echo ""
+    echo "  • Pre-bake directly into custom ISO:"
+    echo "      cd os-image && sudo ./build_iso.sh --keys-bundle \"$STAGING_DIR\""
+    echo ""
 fi

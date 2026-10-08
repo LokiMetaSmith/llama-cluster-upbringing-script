@@ -180,8 +180,8 @@
         </div>
     </div>
 
+    <script>if (typeof window !== "undefined") window.root_document = document;</script>
     <script src="/static/js/dagre.min.js"></script>
-
     <script src="/static/js/litegraph.js"></script>
     <script src="/static/js/editor.js"></script>
     <script type="module">
@@ -216,10 +216,21 @@
                 const apiKey = localStorage.getItem('api_key');
                 if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
                 const response = await fetch('/api/workflows/definition/default_agent_loop.yaml', { headers });
-                const yamlData = await response.json();
-                WorkflowEditor.importWorkflow(yamlData);
+                if (response.ok) {
+                    const yamlData = await response.json();
+                    if (yamlData && Array.isArray(yamlData.nodes)) {
+                        WorkflowEditor.importWorkflow(yamlData);
+                    } else {
+                        console.warn("Invalid workflow definition format:", yamlData);
+                        showStatus("Invalid default workflow structure", "error");
+                    }
+                } else {
+                    console.warn(`Failed to fetch default workflow: HTTP ${response.status}`);
+                    showStatus(`Could not load default workflow (${response.status})`, "error");
+                }
             } catch (e) {
                 console.error("Failed to load default workflow", e);
+                showStatus("Failed to load default workflow", "error");
             }
 
             // Tab Logic
@@ -371,7 +382,9 @@
                         const apiKey = localStorage.getItem('api_key');
                         if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
                         const res = await fetch('/api/workflows/active', { headers });
+                        if (!res.ok) return;
                         const data = await res.json();
+                        if (!data || typeof data !== "object") return;
                         // Get first active workflow state
                         const runIds = Object.keys(data);
                         if (runIds.length > 0) {
@@ -403,19 +416,30 @@
                 const headers = {};
                 const apiKey = localStorage.getItem('api_key');
                 if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
-                const res = await fetch('/api/workflows/history?limit=20', { headers });
-                const runs = await res.json();
-                historyList.innerHTML = '';
-                runs.forEach(run => {
-                    const li = document.createElement('li');
-                    li.className = 'history-item';
-                    li.tabIndex = 0;
-                    li.setAttribute('role', 'option');
-                    li.setAttribute('aria-selected', 'false');
-                    li.innerHTML = `
-                        <div>${new Date(run.start_time * 1000).toLocaleTimeString()}</div>
-                        <div class="history-meta">${run.id.substring(0,8)}...</div>
-                    `;
+                try {
+                    const res = await fetch('/api/workflows/history?limit=20', { headers });
+                    if (!res.ok) {
+                        console.warn(`Failed to fetch workflow history: HTTP ${res.status}`);
+                        return;
+                    }
+                    const runs = await res.json();
+                    if (!Array.isArray(runs)) {
+                        console.warn("Expected array for workflow history, got:", runs);
+                        return;
+                    }
+                    historyList.innerHTML = '';
+                    runs.forEach(run => {
+                        const li = document.createElement('li');
+                        li.className = 'history-item';
+                        li.tabIndex = 0;
+                        li.setAttribute('role', 'option');
+                        li.setAttribute('aria-selected', 'false');
+                        const runIdText = run && run.id ? `${run.id.substring(0,8)}...` : 'unknown';
+                        const timeText = run && run.start_time ? new Date(run.start_time * 1000).toLocaleTimeString() : '';
+                        li.innerHTML = `
+                            <div>${timeText}</div>
+                            <div class="history-meta">${runIdText}</div>
+                        `;
 
                     const handleClick = async () => {
                         // Mark active
@@ -454,7 +478,10 @@
 
                     historyList.appendChild(li);
                 });
+            } catch (e) {
+                console.error("Failed to load history", e);
             }
+        }
 
             document.getElementById('refresh-history-btn').addEventListener('click', loadHistory);
             loadHistory();
