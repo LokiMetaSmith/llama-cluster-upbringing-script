@@ -84,3 +84,4 @@ pipecatapp/ui/tangle_frontend/logo*.png
 pipecatapp/ui/tangle_frontend/logo*.svg
 pipecatapp/ui/tangle_frontend/site_preview_*.png
 pmm_datalog_memory.db
+pipecatapp/static/ascii-rest/
