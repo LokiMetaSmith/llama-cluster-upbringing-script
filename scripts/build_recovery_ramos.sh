@@ -56,7 +56,7 @@ if [ ! -f "${DEST_HTTP}/filesystem.squashfs" ]; then
     cp "${SCRIPT_DIR}/node_reimage.sh" "${TMP_ROOT}/usr/local/bin/reimage-node"
     chmod +x "${TMP_ROOT}/usr/local/bin/"*
     echo "2026.10.06-v1" > "${TMP_ROOT}/etc/cluster-version"
-
+    
     if command -v mksquashfs >/dev/null 2>&1; then
         sudo mksquashfs "${TMP_ROOT}" "${DEST_HTTP}/filesystem.squashfs" -comp zstd -noappend
     else

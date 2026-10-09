@@ -1,7 +1,7 @@
 # Autonomous PXE Recovery & Swarm Re-imaging Plan
 
-**Document Version:** 1.0.0
-**Status:** In Progress / Active Implementation
+**Document Version:** 1.0.0  
+**Status:** In Progress / Active Implementation  
 **Audience:** Cluster Engineers, Automated SRE Agents, and Autonomous Healing Daemons
 
 ---

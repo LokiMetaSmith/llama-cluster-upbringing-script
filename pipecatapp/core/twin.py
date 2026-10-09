@@ -108,8 +108,8 @@ class TwinService(FrameProcessor):
             # Use Remote Memory if available (via Consul discovery or env var), otherwise fallback to local
             memory_service_url = os.getenv("MEMORY_SERVICE_URL")
             if memory_service_url:
-                 logging.info(f"Using Remote Memory Service at {memory_service_url}")
-                 self.long_term_memory = PMMMemoryClient(base_url=memory_service_url)
+                 logging.info(f"Using Remote Memory Service at {memory_service_url} (with local SQLite fallback)")
+                 self.long_term_memory = PMMMemoryClient(base_url=memory_service_url, fallback_to_local=True)
             else:
                  logging.info("Using Local PMMMemory (SQLite)")
                  self.long_term_memory = PMMMemory(db_path="~/.config/pipecat/pypicat_memory.db")

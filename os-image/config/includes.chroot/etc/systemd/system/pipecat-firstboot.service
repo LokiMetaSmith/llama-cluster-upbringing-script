@@ -8,7 +8,7 @@ ConditionKernelCommandLine=!boot=live
 [Service]
 Type=simple
 ExecStartPre=/bin/sleep 30
-ExecStart=/bin/bash -c "cd /opt/pipecat-cluster && ./bootstrap.sh"
+ExecStart=/bin/bash -c "cd /opt/pipecat-cluster && ./bootstrap.sh -y"
 TimeoutStartSec=infinity
 StandardOutput=journal+console
 StandardError=journal+console
