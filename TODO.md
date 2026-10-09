@@ -96,7 +96,7 @@
 - [ ] **P2P Model Pinning via IPFS:**
   - [ ] Automate P2P pinning and weight distribution for `.gguf` files across nodes.
 - [ ] **Type Safety & Static Analysis Cleanliness:**
-  - [ ] Progressively resolve `mypy` typing warnings in `pipecatapp/core/` and `pipecatapp/workflow/`.
+  - [x] Progressively resolve `mypy` typing warnings in `pipecatapp/core/` and `pipecatapp/workflow/`.
 
 ---
 

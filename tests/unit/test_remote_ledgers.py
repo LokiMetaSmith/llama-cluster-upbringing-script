@@ -138,4 +138,3 @@ async def test_client_circuit_breaker_and_local_fallback(tmp_path):
     assert fetched["title"] == "Fallback task"
 
     client.close()
-

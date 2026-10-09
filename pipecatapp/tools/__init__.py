@@ -175,10 +175,10 @@ def __getattr__(name):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-from typing import Optional
+from typing import Optional, Any
 
 
-def get_component_spec_for_tool(tool_instance) -> "Optional[ComponentSpec]":
+def get_component_spec_for_tool(tool_instance) -> "Optional[Any]":
     """Helper method to dynamically generate a KFP-style ComponentSpec for any tool."""
     from pipecatapp.workflow.component_spec import (
         ComponentSpec,

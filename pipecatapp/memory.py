@@ -45,7 +45,7 @@ class MemoryStore:
     def add_memory(self, source: str, raw_text: str, summary: str | None = None, entities: list | None = None, topics: list | None = None, importance: int | None = None, consolidated: bool = False, metadata: dict | None = None, doc_id: str | None = None):
         return self.backend.add_memory(source, raw_text, summary, entities, topics, importance, consolidated, metadata, doc_id)
 
-    def get_memory(self, memory_id: int) -> Optional[dict]:
+    def get_memory(self, memory_id: int) -> Optional[dict[str, Any]]:
         return self.backend.get_memory(memory_id)
 
     def get_unconsolidated_memories(self, limit: int = 50) -> List[dict]:
@@ -54,7 +54,7 @@ class MemoryStore:
     def add_consolidation(self, source_ids: List[int], summary: str, insight: str | None = None) -> int:
         return self.backend.add_consolidation(source_ids, summary, insight)
 
-    def get_consolidation(self, consolidation_id: int) -> Optional[dict]:
+    def get_consolidation(self, consolidation_id: int) -> Optional[dict[str, Any]]:
         return self.backend.get_consolidation(consolidation_id)
 
     def mark_memory_consolidated(self, memory_id: int):
@@ -69,7 +69,7 @@ class MemoryStore:
     def save_skill(self, name: str, description: str, content: str) -> None:
         self.backend.save_skill(name, description, content)
 
-    def get_skill(self, name: str) -> Optional[dict]:
+    def get_skill(self, name: str) -> Optional[dict[str, Any]]:
         return self.backend.get_skill(name)
 
     def list_skills(self) -> List[dict]:

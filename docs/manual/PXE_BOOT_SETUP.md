@@ -79,4 +79,3 @@ Once the installation is complete, the machine will reboot into a fresh Debian s
 For ongoing cluster operations and self-healing nodes, see the comprehensive [Autonomous PXE Recovery & Swarm Re-imaging Plan](PXE_AUTONOMOUS_RECOVERY_PLAN.md).
 
 It specifies the zero-touch maintenance pipeline, hardware SMART audits, filesystem health validation (`e2fsck`), cluster version synchronization, and automated re-imaging guards.
-
