@@ -84,7 +84,7 @@
     3. [ ] Research network-distributed MoE expert routing using `llama.cpp` RPC or tensor parallelism over local disk swapping to utilize horizontally scaled cluster RAM.
 
 - [ ] **Authentik Identity Provider Job:**
-  - [ ] Resolve 'progress deadline' deployment issue in `ansible/jobs/authentik.nomad.j2`.
+  - [x] Resolve 'progress deadline' deployment issue in `ansible/jobs/authentik.nomad.j2`.
   - [ ] Automate M2M OAuth2 service account provisioning during bootstrap.
 - [ ] **HelixDB Unified Graph-Vector Memory:**
   - [ ] Review `docs/analysis/HELIXDB_EVALUATION.md` and prototype HelixDB PoC.
