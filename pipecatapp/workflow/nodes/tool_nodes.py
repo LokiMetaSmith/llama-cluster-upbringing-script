@@ -143,7 +143,7 @@ class ToolExecutorNode(Node):
             fields[param_name] = (annotation, default)
 
         try:
-            DynamicModel = create_model("DynamicModel", **fields)
+            DynamicModel = create_model("DynamicModel", **fields) # type: ignore # type: ignore
             validated_args = DynamicModel(**args)
             args = validated_args.model_dump()
         except ValidationError as e:
@@ -182,7 +182,7 @@ class ToolExecutorNode(Node):
         elif tool_name in requires_approval_tools:
             requires_approval = True
         else:
-            requires_approval = tool_name in HIGH_RISK_TOOLS or (twin_service and twin_service.approval_mode)
+            requires_approval = bool(tool_name in HIGH_RISK_TOOLS or (twin_service and twin_service.approval_mode))
 
         if twin_service and requires_approval:
             if not await twin_service._request_approval({"tool": tool_string, "args": args}):
@@ -301,11 +301,12 @@ class ToolNode(Node):
                     timeout=1.5
                 )
 
-                answer = response.choices[0].message.content.strip()
+                content = response.choices[0].message.content
+                answer = content.strip() if content else ""
                 if answer.startswith("YES:"):
                     # Apply penalty
                     import time
-                    agent_id = context.workflow_id or "default_agent"
+                    agent_id = getattr(context, "workflow_id", "default_agent")
 
                     # Make the facts unique with timestamp so they accumulate
                     datalog_engine.assert_fact("deducted", agent_id, 5, time.time())
@@ -412,9 +413,9 @@ class HereticNode(Node):
             else:
                 output_msg = f"Heretic command completed.\nCommand: {result.get('command')}\nReturn Code: {result.get('returncode')}\n"
                 if result.get('stdout'):
-                    output_msg += f"Stdout: {result.get('stdout')[:500]}...\n"
+                    output_msg += f"Stdout: {(result.get('stdout') or "")[:500]}...\n"
                 if result.get('stderr'):
-                    output_msg += f"Stderr: {result.get('stderr')[:500]}...\n"
+                    output_msg += f"Stderr: {(result.get('stderr') or "")[:500]}...\n"
                 self.set_output(context, "result", output_msg)
 
         except Exception as e:

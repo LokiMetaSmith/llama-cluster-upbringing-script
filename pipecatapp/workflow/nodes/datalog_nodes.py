@@ -25,30 +25,30 @@ class DatalogStateNode(Node):
         self.query_text = config.get("query_text", "")
         self.datalog_memory = config.get("datalog_memory") or DatalogMemory()
 
-    def execute(self, context) -> Dict[str, Any]:
+    async def execute(self, context) -> None:
         """Executes the Datalog state action."""
         if self.action == "assert":
             if not self.predicate:
-                return {"status": "error", "error": "predicate is required for assert action"}
+                self.set_output(context, "status", "error"); self.set_output(context, "error", "predicate is required for assert action"); return
             rec = self.datalog_memory.assert_fact(self.predicate, *self.args)
-            return {"status": "success", "fact": repr(rec)}
+            self.set_output(context, "status", "success"); self.set_output(context, "fact", repr(rec)); return
 
         elif self.action == "retract":
             if not self.predicate:
-                return {"status": "error", "error": "predicate is required for retract action"}
+                self.set_output(context, "status", "error"); self.set_output(context, "error", "predicate is required for retract action"); return
             success = self.datalog_memory.retract_fact(self.predicate, *self.args)
-            return {"status": "success", "retracted": success}
+            self.set_output(context, "status", "success"); self.set_output(context, "retracted", success); return
 
         elif self.action == "explain":
             if not self.predicate:
-                return {"status": "error", "error": "predicate is required for explain action"}
+                self.set_output(context, "status", "error"); self.set_output(context, "error", "predicate is required for explain action"); return
             explanation = self.datalog_memory.explain(self.predicate, *self.args)
-            return {"status": "success", "explanation": explanation}
+            self.set_output(context, "status", "success"); self.set_output(context, "explanation", explanation); return
 
         elif self.action == "hybrid":
             results = self.datalog_memory.query_hybrid(self.query_text)
-            return {"status": "success", "results": results}
+            self.set_output(context, "status", "success"); self.set_output(context, "results", results); return
 
         else:  # default query
             facts = self.datalog_memory.query_state(predicate=self.predicate)
-            return {"status": "success", "facts": facts}
+            self.set_output(context, "status", "success"); self.set_output(context, "facts", facts); return

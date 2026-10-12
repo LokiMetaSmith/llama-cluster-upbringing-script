@@ -21,7 +21,7 @@ class CanvasConverter:
             logging.error(f"Failed to read canvas file {canvas_path}: {e}")
             return {}
 
-        workflow = {
+        workflow: Dict[str, Any] = {
             "name": "Generated from Canvas", # Ideally filename
             "nodes": []
         }
@@ -192,7 +192,7 @@ class CanvasConverter:
         Converts a Pipecat Workflow back into an Obsidian Canvas file.
         Useful for visualizing the state or structure.
         """
-        canvas = {
+        canvas: Dict[str, Any] = {
             "nodes": [],
             "edges": []
         }

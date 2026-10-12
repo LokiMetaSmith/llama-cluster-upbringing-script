@@ -70,7 +70,7 @@
   - [x] Connect lightweight API adapter (`/api/components`, `/api/pipeline_runs`) to Consul state layer.
 - [ ] **Swarm Orchestration (Map-Reduce):**
   - [x] Verify `SwarmTool` worker dispatch and task result reduction across worker nodes (verified `test_manager_agent_map_reduce`).
-  - [ ] Validate Thompson-sampling load routing in `moe_gateway`.
+  - [x] Validate Thompson-sampling load routing in `moe_gateway`.
 
 ---
 
@@ -95,7 +95,7 @@
   - [ ] Replace heuristic routing in `LLMRouterNode` with trained model weights and evaluation dataset.
 - [ ] **P2P Model Pinning via IPFS:**
   - [ ] Automate P2P pinning and weight distribution for `.gguf` files across nodes.
-- [ ] **Type Safety & Static Analysis Cleanliness:**
+- [x] **Type Safety & Static Analysis Cleanliness:**
   - [x] Progressively resolve `mypy` typing warnings in `pipecatapp/core/` and `pipecatapp/workflow/`.
 
 ---

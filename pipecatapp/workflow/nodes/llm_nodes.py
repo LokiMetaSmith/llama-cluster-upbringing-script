@@ -257,8 +257,9 @@ class SimpleLLMNode(Node):
 from collections import defaultdict
 import time
 import socket
+from typing import Dict, List
 
-_cold_request_counts = defaultdict(list)
+_cold_request_counts: Dict[str, List[float]] = defaultdict(list)
 
 @registry.register
 class ExpertRouterNode(Node):
