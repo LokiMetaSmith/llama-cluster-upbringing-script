@@ -85,16 +85,16 @@
 
 - [ ] **Authentik Identity Provider Job:**
   - [x] Resolve 'progress deadline' deployment issue in `ansible/jobs/authentik.nomad.j2`.
-  - [ ] Automate M2M OAuth2 service account provisioning during bootstrap.
+  - [x] Automate M2M OAuth2 service account provisioning during bootstrap.
 - [ ] **HelixDB Unified Graph-Vector Memory:**
-  - [ ] Review `docs/analysis/HELIXDB_EVALUATION.md` and prototype HelixDB PoC.
+  - [x] Review `docs/analysis/HELIXDB_EVALUATION.md` and prototype HelixDB PoC.
 - [ ] **TML Interaction Models Research Preview:**
-  - [ ] Review `moshi/rust` continuous audio/video streaming architecture.
-  - [ ] Replace placeholder `thinkingmachines/interaction-runtime:preview` with verified build.
+  - [x] Review `moshi/rust` continuous audio/video streaming architecture.
+  - [x] Replace placeholder `thinkingmachines/interaction-runtime:preview` with verified build.
 - [ ] **Trained LLMRouter Deployment:**
-  - [ ] Replace heuristic routing in `LLMRouterNode` with trained model weights and evaluation dataset.
+  - [x] Replace heuristic routing in `LLMRouterNode` with trained model weights and evaluation dataset.
 - [ ] **P2P Model Pinning via IPFS:**
-  - [ ] Automate P2P pinning and weight distribution for `.gguf` files across nodes.
+  - [x] Automate P2P pinning and weight distribution for `.gguf` files across nodes.
 - [x] **Type Safety & Static Analysis Cleanliness:**
   - [x] Progressively resolve `mypy` typing warnings in `pipecatapp/core/` and `pipecatapp/workflow/`.
 
