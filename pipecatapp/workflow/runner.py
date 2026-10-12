@@ -8,6 +8,7 @@ import json
 from typing import Dict, Any, List, Optional
 from .context import WorkflowContext
 from .nodes.registry import registry
+from .node import Node
 from .history import WorkflowHistory
 try:
     from ..security import redact_sensitive_data, SENSITIVE_KEYS
@@ -92,6 +93,7 @@ def _save_run_background(runner_id, workflow_name, start_time, end_time, status,
 class ActiveWorkflows:
     """A simple singleton to track active workflow runners."""
     _instance = None
+    runners: Dict[str, 'WorkflowRunner'] = {}
 
     def __new__(cls):
         if cls._instance is None:
@@ -102,19 +104,20 @@ class ActiveWorkflows:
     def add_runner(self, runner_id: str, runner: 'WorkflowRunner'):
         self.runners[runner_id] = runner
 
-    def get_runner(self, runner_id: str) -> 'WorkflowRunner':
+    def get_runner(self, runner_id: str) -> Optional['WorkflowRunner']:
         return self.runners.get(runner_id)
 
     def remove_runner(self, runner_id: str):
         if runner_id in self.runners:
             del self.runners[runner_id]
 
-    def get_all_states(self, sanitize=False) -> Dict[str, Any]:
+    def get_all_states(self, sanitize: bool = False) -> Dict[str, Any]:
         return {runner_id: runner.context_to_dict(sanitize=sanitize) for runner_id, runner in self.runners.items()}
 
 class OpenGates:
     """A simple singleton to track open gates that are waiting for approval."""
     _instance = None
+    gates: Dict[str, asyncio.Event] = {}
 
     def __new__(cls):
         if cls._instance is None:
@@ -138,11 +141,11 @@ class WorkflowRunner:
 
     # Bolt ⚡ Optimization: Cache loaded workflow definitions to avoid repeated file I/O and parsing
     # Key: path, Value: (mtime, parsed_definition)
-    _workflow_cache = {}
+    _workflow_cache: Dict[str, Any] = {}
 
     def __init__(self, workflow_path: str, runner_id: Optional[str] = None):
         self.workflow_definition = self._load_workflow_definition(workflow_path)
-        self.nodes = {}
+        self.nodes: Dict[str, Node] = {}
         self.workflow_name = os.path.basename(workflow_path)
         self.runner_id = runner_id if runner_id else str(uuid.uuid4())
         self.global_mission = self.workflow_definition.get("global_mission") or self.workflow_definition.get("workflow_goal")
@@ -173,7 +176,7 @@ class WorkflowRunner:
 
     def _instantiate_nodes(self):
         """Instantiate all nodes defined in the workflow."""
-        self.nodes = {}
+        self.nodes: Dict[str, Node] = {}
         for node_config in self.workflow_definition["nodes"]:
             node_class = registry.get_node_class(node_config["type"])
             if not node_class:
@@ -236,35 +239,8 @@ class WorkflowRunner:
         return sorted_order
 
 
-    def _interpolate_variables(self, obj: Any, global_inputs: Dict[str, Any]) -> Any:
-        import re
-        if isinstance(obj, dict):
-            return {k: self._interpolate_variables(v, global_inputs) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [self._interpolate_variables(item, global_inputs) for item in obj]
-        elif isinstance(obj, str):
-            pattern = r'\{\{\s*\$vars\.([a-zA-Z0-9_]+)\s*\}\}'
-            exact_match = re.fullmatch(pattern, obj.strip())
-            if exact_match:
-                var_name = exact_match.group(1)
-                if var_name in global_inputs:
-                    return global_inputs[var_name]
-                return obj
 
-            def replace_func(match):
-                var_name = match.group(1)
-                return str(global_inputs.get(var_name, match.group(0)))
-
-
-            def replace_func(match):
-                var_name = match.group(1)
-                return str(global_inputs.get(var_name, match.group(0)))
-
-            return re.sub(pattern, replace_func, obj)
-        return obj
-
-    def context_to_dict(self, sanitize=False) -> Dict[str, Any]:
-
+    def context_to_dict(self, sanitize: bool = False) -> Dict[str, Any]:
         """Returns a serializable dictionary of the current workflow context."""
         # Use shared helper
         context = getattr(self, 'context', None)
@@ -370,7 +346,7 @@ class WorkflowRunner:
                         node = self.nodes[node_id]
                         await node.execute(self.context)
 
-                return self.context.final_output
+                return self.context.final_output or {}
             finally:
                 self.workflow_definition = original_def
 

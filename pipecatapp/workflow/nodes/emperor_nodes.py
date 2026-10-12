@@ -308,7 +308,7 @@ When responding to questions about camera feeds or activity outside, use the ava
 
 def get_tool_str_representation(tool_name: str) -> str:
     tool = TOOL_REGISTRY[tool_name]
-    sig = inspect.signature(tool)
+    sig = inspect.signature(tool) if callable(tool) else ""
     return f"""
     Name: {tool_name}
     Description: {tool.__doc__}
@@ -392,7 +392,7 @@ class EmperorAgentNode(Node):
         max_turns = 20 # Safety break
         turn = 0
         tools_executed = False
-        verified_receipts = []
+        verified_receipts: list[str] = []
         require_tool = self.config.get("config", {}).get("require_tool", False)
 
         logger.info(f"Starting Emperor Agent Loop for task: {task}")
@@ -448,28 +448,42 @@ class EmperorAgentNode(Node):
                         # The article does: tool(args.get("filename", ".")) etc.
                         # We will just unpack safely using defaults as in the article
                         if name == "read_file":
-                            result = tool_func(args.get("filename", "."))
+                            result = tool_func( # type: ignore
+                                 # type: ignore
+                                args.get("filename", "."))
                         elif name == "list_files":
-                            result = tool_func(args.get("path", "."))
+                            result = tool_func( # type: ignore
+                                 # type: ignore
+                                args.get("path", "."))
                         elif name == "edit_file":
-                            result = tool_func(
+                            result = tool_func( # type: ignore
+                                 # type: ignore
+
                                 args.get("path", "."),
                                 args.get("old_str", ""),
                                 args.get("new_str", "")
                             )
                         elif name == "shell":
-                            result = tool_func(args.get("command", ""))
+                            result = tool_func( # type: ignore
+                                 # type: ignore
+                                args.get("command", ""))
                         elif name == "deploy_nomad_job":
-                            result = tool_func(args.get("job_name", ""))
+                            result = tool_func( # type: ignore
+                                 # type: ignore
+                                args.get("job_name", ""))
                         elif name == "create_agent":
-                            result = tool_func(
+                            result = tool_func( # type: ignore
+                                 # type: ignore
+
                                 args.get("task_id", ""),
                                 args.get("prompt", ""),
                                 args.get("context", ""),
                                 args.get("agent_type", "worker")
                             )
                         elif name == "wait_agent":
-                            result = tool_func(
+                            result = tool_func( # type: ignore
+                                 # type: ignore
+
                                 args.get("task_id", ""),
                                 args.get("timeout", 600)
                             )

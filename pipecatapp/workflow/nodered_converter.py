@@ -8,7 +8,7 @@ class NodeRedConverter:
     """
 
     @staticmethod
-    def nodered_to_workflow(nodered_path: str | None = None, nodered_data: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def nodered_to_workflow(nodered_path: str | None = None, nodered_data: List[Dict[str, Any]] | None = None) -> Dict[str, Any]:
         """
         Parses a Node-RED flow and converts it into a Pipecat Workflow definition.
         Accepts either a file path or direct JSON data.
@@ -24,7 +24,7 @@ class NodeRedConverter:
                 logging.error(f"Failed to read Node-RED file {nodered_path}: {e}")
                 return {}
 
-        workflow = {
+        workflow: Dict[str, Any] = {
             "name": "Generated from Node-RED",
             "nodes": []
         }

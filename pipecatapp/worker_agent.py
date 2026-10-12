@@ -189,6 +189,7 @@ class WorkerAgent:
                             self.messages = ctx["messages"]
                             logger.info(f"Restored {len(self.messages)} messages from history.")
                 return True
+            return False
         except Exception as e:
             logger.error(f"Failed to rehydrate state: {e}")
             return False
@@ -282,7 +283,7 @@ Respond in exactly this JSON format:
             except Exception as e:
                 logger.warning(f"Progress check failed: {e}")
 
-        candidates = []
+        candidates: list = []
         logger.info(f"Generating {ENSEMBLE_SIZE} candidates...")
         tasks = []
         for i in range(ENSEMBLE_SIZE):

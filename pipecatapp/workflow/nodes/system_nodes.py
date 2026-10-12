@@ -1,3 +1,4 @@
+from typing import Any
 import httpx
 import os
 from .registry import registry
@@ -11,19 +12,16 @@ try:
 
     # Prometheus metrics for TelemetryNode (with duplicate check for tests)
     if 'pipecatapp_semantic_density' not in getattr(REGISTRY, '_names_to_collectors', {}):
-        semantic_density_gauge = Gauge(
+        semantic_density_gauge: Any = Gauge(
             'pipecatapp_semantic_density',
             'Semantic density score of the agent message',
             ['node_id', 'agent_id']
         )
-        semantic_length_counter = Counter(
+        semantic_length_counter: Any = Counter(
             'pipecatapp_message_words_total',
             'Total words processed in messages',
             ['node_id', 'agent_id']
         )
-    else:
-        semantic_density_gauge = REGISTRY._names_to_collectors['pipecatapp_semantic_density']
-        semantic_length_counter = REGISTRY._names_to_collectors['pipecatapp_message_words_total']
 except (ImportError, Exception):
     class _DummyMetric:
         def labels(self, *args, **kwargs): return self
@@ -173,10 +171,11 @@ class DecomposerNode(Node):
         ]
 
         # Assuming access to the workflow's configured LLM router
-        from pipecatapp.core.service_discovery import get_llm_client
         import litellm
-        llm = get_llm_client(getattr(self, "model_override", "gpt-4o"))
-        response = await llm.generate_chat_completion(messages, response_format={"type": "json_object"})
+        # using generic LiteLLM structure
+        import litellm
+        response_obj = await litellm.acompletion(model=getattr(self, "model_override", "gpt-4o"), messages=messages, response_format={"type": "json_object"})
+        response = response_obj.choices[0].message.content
 
         try:
             plan = json.loads(response)

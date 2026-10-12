@@ -33,14 +33,14 @@ class Node(ABC):
         """Execute the node's logic."""
         pass
 
-    def get_input(self, context: "WorkflowContext", name: str) -> Any:
+    def get_input(self, context: Any, name: str) -> Any:
         """Retrieve an input value from the context."""
         if self.expected_inputs and name not in self.expected_inputs:
             # We don't raise an exception yet to avoid breaking existing nodes that haven't been updated
             print(f"Warning: Node '{self.id}' retrieved undeclared input '{name}'")
         return context.get_input(self.id, name)
 
-    def set_output(self, context: "WorkflowContext", name: str, value: Any):
+    def set_output(self, context: Any, name: str, value: Any):
         """Set an output value in the context."""
         if self.expected_outputs and name not in self.expected_outputs:
             print(f"Warning: Node '{self.id}' set undeclared output '{name}'")

@@ -47,7 +47,7 @@ class TaskyAuditNode(Node):
                 # Attempt to get the token, handle imports properly
                 token = ""
                 try:
-                    from pipecatapp.utils import secret_manager
+                    from pipecatapp.secret_manager import secret_manager
                     token = secret_manager.get_secret("CONSUL_HTTP_TOKEN") or ""
                 except ImportError:
                     token = os.getenv("CONSUL_HTTP_TOKEN", "")
