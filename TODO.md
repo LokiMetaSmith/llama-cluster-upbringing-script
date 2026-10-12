@@ -76,12 +76,12 @@
 
 ## 🔬 Phase 4: Extended Roadmap & Research Previews (Backlog / Speculative)
 
-- [ ] **Reverse Engineer Anything (REA) Integration:**
+- [x] **Reverse Engineer Anything (REA) Integration:**
   - **Goal:** Integrate `morluto/rea` (Node.js MCP server with headless Ghidra) into the cluster via `tool-server` and wrap it as a Pipecat tool to enable AI agents to perform deep application reverse engineering.
   - **Tasks:**
-    1. [ ] Create `docker/Dockerfile.rea` for Node.js 22, Headless Ghidra, and `rea-agents`.
-    2. [ ] Update `ansible/roles/tool_server/defaults/main.yaml` to include the new REA container component.
-    3. [ ] Implement `pipecatapp/tools/reverse_engineer_tool.py` as a Python MCP wrapper that exposes REA to the workflow engine.
+    1. [x] Create `docker/Dockerfile.rea` for Node.js 22, Headless Ghidra, and `rea-agents`.
+    2. [x] Update `ansible/roles/tool_server/defaults/main.yaml` to include the new REA container component.
+    3. [x] Implement `pipecatapp/tools/reverse_engineer_tool.py` as a Python MCP wrapper that exposes REA to the workflow engine.
 
 - [ ] **Strata Feature Replication (Tiered MoE Expert Caching):**
   - **Goal:** Replicate Strata's hybrid GPU/RAM MoE offloading features directly into existing inference engines (vLLM/llama.cpp) instead of deploying the standalone Strata app.
