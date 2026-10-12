@@ -189,6 +189,70 @@ job "tool-server" {
   }
 
   # ==========================================
+  # REA GROUP
+  # ==========================================
+  group "tool-server-rea" {
+    count = 1
+
+    network {
+      port "http" {}
+    }
+
+    {% set image_cid = tool_server_rea_ipfs_cid %}
+    {% set image_tar_name = 'tool_server_rea' %}
+    {% include 'load_image_task.nomad.j2' %}
+
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    task "tool-server-rea-task" {
+      driver = "containerd-driver"
+
+      config {
+        image = "tool-server-rea:local"
+        force_pull = false
+        ports = ["http"]
+
+        command = "uvicorn"
+        args = ["app_rea:app", "--host", "0.0.0.0", "--port", "${NOMAD_PORT_http}"]
+      }
+
+      env {
+        TOOL_SERVER_ROLE    = "rea"
+      }
+
+      resources {
+        cpu    = 1500
+        memory = 4096
+      }
+
+      service {
+        name    = "tool-server-rea"
+        port    = "http"
+        address = "${attr.unique.network.ip-address}"
+        tags    = ["tool-server-rea", "http"]
+
+        check {
+          initial_status = "warning"
+          type     = "http"
+          path     = "/health"
+          check_restart {
+            limit           = 3
+            grace           = "120s"
+            ignore_warnings = false
+          }
+          interval = "20s"
+          timeout  = "10s"
+        }
+      }
+    }
+  }
+
+  # ==========================================
   # VISION GROUP
   # ==========================================
   group "tool-server-vision" {

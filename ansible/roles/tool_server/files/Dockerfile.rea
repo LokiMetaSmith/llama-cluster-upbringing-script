@@ -1,0 +1,47 @@
+FROM node:22-bookworm-slim
+
+# Create unprivileged user early
+RUN useradd -m -s /bin/bash pipecatapp || true
+
+WORKDIR /app
+
+# Install Java 17+ (required for Ghidra) and other dependencies
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    unzip \
+    default-jre \
+    ca-certificates \
+    python3 \
+    build-essential
+
+# Download and install Headless Ghidra
+RUN wget -q -O ghidra.zip https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.1_build/ghidra_11.1_PUBLIC_20240607.zip && \
+    unzip ghidra.zip -d /opt/ && \
+    rm ghidra.zip && \
+    mv /opt/ghidra_11.1_PUBLIC /opt/ghidra
+
+# Install rea-agents globally
+RUN npm install --global rea-agents
+
+# Expose REA env vars
+ENV REA_GHIDRA_INSTALL_DIR="/opt/ghidra"
+ENV REA_GHIDRA_STARTUP_TIMEOUT_MS="120000"
+
+# Copy python bridge dependencies if necessary, but this container runs Node.js natively
+# We can use a basic python script to forward MCP to stdout/stdin, or simply use npx.
+# Here we will use a small Python API server to wrap the MCP tool, so we need Python + FastAPI
+RUN apt-get update && apt-get install -y python3-pip python3-venv && \
+    python3 -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir fastapi uvicorn pydantic mcp
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY app_rea.py .
+
+RUN chown -R pipecatapp:pipecatapp /app
+
+USER pipecatapp
+
+CMD ["uvicorn", "app_rea:app", "--host", "0.0.0.0", "--port", "8000"]
