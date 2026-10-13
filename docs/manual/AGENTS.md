@@ -136,7 +136,7 @@ This agent acts as the guardian of the codebase's integrity. It analyzes the exi
 
 #### c. New Task Review
 
-This agent is responsible for reviewing the implementation of new tasks. It focuses on code quality, adherence to standards, functionality, and proper integration with the existing codebase, acting as a peer reviewer.
+This agent is responsible for reviewing the implementation of new tasks. It focuses on code quality, adherence to standards, functionality, and proper integration with the existing codebase, acting as a peer reviewer. Please refer to the main repository [AGENTS.md](../../AGENTS.md) for global Git workflow norms, such as ensuring all changes are committed and pushed locally, having tests, and ensuring that test artifacts remain untracked.
 
 #### d. Debug and Analysis
 
