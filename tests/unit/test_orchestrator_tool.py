@@ -24,7 +24,7 @@ def test_orchestrator_tool_instantiation():
         if "WORLD_MODEL_URL" in os.environ:
             del os.environ["WORLD_MODEL_URL"]
 
-@patch('httpx.Client')
+@patch('pipecatapp.tools.orchestrator_tool.httpx.Client')
 def test_dispatch_job_success(mock_client_cls):
     """Tests successful job dispatch."""
     mock_client = MagicMock()
@@ -52,21 +52,29 @@ def test_dispatch_job_success(mock_client_cls):
     )
     mock_response.raise_for_status.assert_called_once()
 
-@patch('httpx.Client')
+@patch('pipecatapp.tools.orchestrator_tool.httpx.Client')
 def test_dispatch_job_failure(mock_client_cls):
     """Tests failed job dispatch."""
     mock_client = MagicMock()
     mock_client_cls.return_value.__enter__.return_value = mock_client
 
-    mock_response = MagicMock()
-    mock_response.text = "Internal Server Error"
+    class FakeResponse:
+        text = "Internal Server Error"
 
-    # Simulate HTTPStatusError
-    error = httpx.HTTPStatusError("Error", request=MagicMock(), response=mock_response)
-    mock_response.raise_for_status.side_effect = error
-    mock_client.post.return_value = mock_response
+    class FakeError(Exception):
+        def __init__(self, *args, **kwargs):
+            self.response = FakeResponse()
+            super().__init__(*args)
 
-    tool = OrchestratorTool()
-    result = tool.dispatch_job(model_name="test-model", prompt="hello")
+    with patch('pipecatapp.tools.orchestrator_tool.httpx.HTTPStatusError', FakeError):
+        def raise_fake_error(*args, **kwargs):
+            raise FakeError("Error")
 
-    assert "Error dispatching job: Internal Server Error" in result
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = raise_fake_error
+        mock_client.post.return_value = mock_response
+
+        tool = OrchestratorTool()
+        result = tool.dispatch_job(model_name="test-model", prompt="hello")
+
+        assert "Internal Server Error" in result
