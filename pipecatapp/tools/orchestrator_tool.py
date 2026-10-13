@@ -51,7 +51,7 @@ class OrchestratorTool:
                 # Check if we are running in an event loop
                 asyncio.get_running_loop()
                 # Run the coroutine in another thread to avoid blocking or 'Event loop is running' errors
-                with concurrent.futures.ThreadPoolExecutor() as pool:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
                     future = pool.submit(asyncio.run, self.world_model.dispatch_job(model_name, prompt, cpu, memory, gpu_count, context))
                     return future.result()
             except RuntimeError:
