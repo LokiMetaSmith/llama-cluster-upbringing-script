@@ -113,6 +113,7 @@
       ansible.builtin.include_role:
         name: "{{ role_name }}"
       loop:
+        - pxe_server
         - desktop_extras
         - power_manager
         - world_model_service
@@ -134,6 +135,7 @@
         loop_var: role_name
       tags:
         - provisioning_api
+        - pxe_server
         - desktop_extras
         - power_manager
         - world_model_service

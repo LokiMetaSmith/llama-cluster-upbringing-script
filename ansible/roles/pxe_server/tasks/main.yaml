@@ -91,7 +91,8 @@
   ansible.builtin.debug:
     msg: "PXE on '{{ pxe_interface }}' (IP: {{ pxe_server_ip }}) | Subnet: {{ pxe_subnet }}/{{ pxe_netmask }} | Router: {{ pxe_router }} | DNS: {{ pxe_dns }} | Range: {{ pxe_range_start }}-{{ pxe_range_end }}"
 
-- name: Install PXE boot dependencies
+- name: Install PXE boot dependencies (manual mode)
+  when: pxe_installation_mode | default('nomad') == 'manual'
   apt:
     name:
       - isc-dhcp-server
@@ -302,21 +303,24 @@
     recurse: yes
   become: yes
 
-- name: Ensure tftpd-hpa is enabled and running
+- name: Ensure tftpd-hpa is enabled and running (manual mode)
+  when: pxe_installation_mode | default('nomad') == 'manual'
   systemd:
     name: tftpd-hpa
     enabled: yes
     state: restarted
   become: yes
 
-- name: Ensure nginx is enabled and running
+- name: Ensure nginx is enabled and running (manual mode)
+  when: pxe_installation_mode | default('nomad') == 'manual'
   systemd:
     name: nginx
     enabled: yes
     state: started
   become: yes
 
-- name: Ensure isc-dhcp-server is enabled and running
+- name: Ensure isc-dhcp-server is enabled and running (manual mode)
+  when: pxe_installation_mode | default('nomad') == 'manual'
   systemd:
     name: isc-dhcp-server
     enabled: yes
@@ -343,3 +347,106 @@
   failed_when: false
   changed_when: false
   when: ansible_facts.pkg_mgr == 'apt'
+
+
+# =========================================================
+# Nomad Deployment Strategy
+# =========================================================
+
+- name: Clean up legacy PXE systemd services for Nomad deployment
+  when: pxe_installation_mode | default('nomad') == 'nomad'
+  block:
+    - name: Stop and disable legacy PXE services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+      loop:
+        - tftpd-hpa
+        - nginx
+        - isc-dhcp-server
+      become: yes
+      failed_when: false
+
+
+- name: Setup Nomad PXE Server Deployment
+  when: pxe_installation_mode | default('nomad') == 'nomad'
+  block:
+    - name: Ensure Buildah is installed
+      ansible.builtin.apt:
+        name: buildah
+        state: present
+      become: yes
+
+    - name: Create temporary directory for Buildah context
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: build_pxe
+      register: pxe_build_dir
+
+    - name: Copy Dockerfile and Supervisor config
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ pxe_build_dir.path }}/{{ item }}"
+      loop:
+        - Dockerfile.pxe
+        - supervisord.conf
+
+    - name: Build PXE Server Image using Buildah
+      ansible.builtin.command: buildah bud -t pipecat/pxe-server:latest -f Dockerfile.pxe .
+      args:
+        chdir: "{{ pxe_build_dir.path }}"
+      become: yes
+      register: buildah_result
+      changed_when: "'COMMIT' in buildah_result.stdout"
+
+    - name: Clean up temporary build directory
+      ansible.builtin.file:
+        path: "{{ pxe_build_dir.path }}"
+        state: absent
+
+    - name: Export Image and Pin to IPFS
+      ansible.builtin.shell: |
+        buildah push pipecat/pxe-server:latest docker-archive:/tmp/pxe-server.tar:pipecat/pxe-server:latest
+        ipfs add -Q /tmp/pxe-server.tar
+      become: yes
+      register: pxe_ipfs_add
+      changed_when: true
+      environment:
+        IPFS_PATH: "{{ ipfs_path | default('/opt/unified_fs_backend/ipfs/pipecat') }}"
+
+    - name: Set IPFS CID fact
+      ansible.builtin.set_fact:
+        pxe_image_cid: "{{ pxe_ipfs_add.stdout_lines[-1] }}"
+
+    - name: Check if nomad binary exists
+      ansible.builtin.stat:
+        path: /usr/local/bin/nomad
+      register: nomad_binary_stat
+
+    - name: Ensure Nomad jobs directory exists
+      ansible.builtin.file:
+        path: /etc/nomad.d/jobs
+        state: directory
+        mode: '0755'
+      become: yes
+      when: nomad_binary_stat.stat.exists
+
+    - name: Template PXE Server Nomad Job
+      ansible.builtin.template:
+        src: pxe_server.nomad.j2
+        dest: /etc/nomad.d/jobs/pxe_server.nomad
+      become: yes
+      when: nomad_binary_stat.stat.exists
+
+    - name: Deploy PXE Server Nomad Job
+      ansible.builtin.command: /usr/local/bin/nomad job run /etc/nomad.d/jobs/pxe_server.nomad
+      become: yes
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+        NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.key.pem"
+      register: pxe_nomad_deploy
+      changed_when: "'Successfully' in pxe_nomad_deploy.stdout"
+      when: nomad_binary_stat.stat.exists
