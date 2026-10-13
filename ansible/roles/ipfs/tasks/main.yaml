@@ -427,7 +427,7 @@
 
           echo "Pinning $filepath..."
           # Pin via --nocopy so IPFS doesn't duplicate the bytes
-          ipfs add --nocopy -Q "$filepath"
+          ipfs --api /ip4/127.0.0.1/tcp/5001 add --nocopy -Q "$filepath"
       done
 
       echo "Automated IPFS model pinning complete."

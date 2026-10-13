@@ -408,7 +408,7 @@
     - name: Export Image and Pin to IPFS
       ansible.builtin.shell: |
         buildah push pipecat/pxe-server:latest docker-archive:/tmp/pxe-server.tar:pipecat/pxe-server:latest
-        ipfs add -Q /tmp/pxe-server.tar
+        ipfs --api /ip4/127.0.0.1/tcp/5001 add -Q /tmp/pxe-server.tar
       become: yes
       register: pxe_ipfs_add
       changed_when: true

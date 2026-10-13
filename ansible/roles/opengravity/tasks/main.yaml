@@ -48,7 +48,7 @@
     file: "{{ project_root }}/ansible/tasks/build_cached_image.yaml"
 
 - name: Export opengravity image and pin to IPFS
-  ansible.builtin.shell: "set -o pipefail; docker save opengravity:local | ipfs add -Q -"
+  ansible.builtin.shell: "set -o pipefail; docker save opengravity:local | ipfs --api /ip4/127.0.0.1/tcp/5001 add -Q -"
   args:
     executable: /bin/bash
   become: yes
