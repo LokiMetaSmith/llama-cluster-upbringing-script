@@ -71,7 +71,7 @@
 
     - name: Build whisper.cpp
       ansible.builtin.command:
-        cmd: cmake --build build --config Release -j2
+        cmd: cmake --build build --config Release -j {{ [ansible_facts['processor_vcpus'], (ansible_facts['memtotal_mb'] // 2048) | int] | min | default('2') }}
       args:
         chdir: /opt/whisper.cpp-build
         creates: /opt/whisper.cpp-build/build/bin/stream

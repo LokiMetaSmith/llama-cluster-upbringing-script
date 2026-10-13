@@ -191,7 +191,7 @@ PROMPT_TEMPLATE=./prompts/chat-with-bob.txt PROMPT_CACHE_FILE=bob.prompt.bin \
   177  cp ./models/ggml-model-q4_0.bin .
   178  ls
   179  mpirun   ./main -m ./ggml-model-q4_0.bin -p "I believe the meaning of life is" -n 64
-  180  make -j2 && ./main -m ./ggml-model-q4_0.bin -p "Building a website can be done in 10 simple steps:" -n 512
+  180  make -j${MAX_JOBS:-2} && ./main -m ./ggml-model-q4_0.bin -p "Building a website can be done in 10 simple steps:" -n 512
   181  Invalid MIT-MAGIC-COOKIE-1 key
   182  cd ..
   183  ls
@@ -206,7 +206,7 @@ PROMPT_TEMPLATE=./prompts/chat-with-bob.txt PROMPT_CACHE_FILE=bob.prompt.bin \
   192  ls
   193  make clean
   194  git pull
-  195  make -j2
+  195  make -j${MAX_JOBS:-2}
   196  ls
   197  python3
   198  python3 -m pip install -r requirements.txt 
