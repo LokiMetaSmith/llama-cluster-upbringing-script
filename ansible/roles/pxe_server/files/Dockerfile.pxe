@@ -1,0 +1,18 @@
+FROM debian:12-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        isc-dhcp-server \
+        tftpd-hpa \
+        nginx \
+        supervisor \
+        && rm -rf /var/lib/apt/lists/*
+
+# Configure Supervisor to manage the services
+RUN mkdir -p /var/log/supervisor
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Setup Nginx
+RUN echo "daemon off;" >> /etc/nginx/nginx.conf
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
