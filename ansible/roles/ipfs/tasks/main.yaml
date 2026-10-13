@@ -115,15 +115,39 @@
   become: yes
 
 - name: Configure IPFS Addresses.API to listen on 0.0.0.0
-  ansible.builtin.command: /usr/local/bin/ipfs config Addresses.API "/ip4/0.0.0.0/tcp/{{ ipfs_api_port | default(5001) }}"
-  environment:
-    IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
+  block:
+    - name: Run IPFS API configuration
+      ansible.builtin.command: /usr/local/bin/ipfs config Addresses.API "/ip4/0.0.0.0/tcp/{{ ipfs_api_port | default(5001) }}"
+      environment:
+        IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
+      register: ipfs_api_config_result
+  rescue:
+    - name: Log config failure or lock contention
+      ansible.builtin.debug:
+        msg: "IPFS config Addresses.API returned code {{ ipfs_api_config_result.rc | default('unknown') }}: {{ ipfs_api_config_result.stderr | default(ipfs_api_config_result.msg | default('Unknown error')) }}"
+
+    - name: Fail task only if error is not lock contention
+      ansible.builtin.fail:
+        msg: "Failed to configure IPFS Addresses.API."
+      when: "'resource temporarily unavailable' not in ipfs_api_config_result.stderr | default('') and 'lock' not in ipfs_api_config_result.stderr | default('')"
   become: yes
 
 - name: Configure IPFS Addresses.Gateway to listen on 0.0.0.0
-  ansible.builtin.command: /usr/local/bin/ipfs config Addresses.Gateway "/ip4/0.0.0.0/tcp/{{ ipfs_gateway_port | default(8092) }}"
-  environment:
-    IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
+  block:
+    - name: Run IPFS Gateway configuration
+      ansible.builtin.command: /usr/local/bin/ipfs config Addresses.Gateway "/ip4/0.0.0.0/tcp/{{ ipfs_gateway_port | default(8092) }}"
+      environment:
+        IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
+      register: ipfs_gateway_config_result
+  rescue:
+    - name: Log config failure or lock contention
+      ansible.builtin.debug:
+        msg: "IPFS config Addresses.Gateway returned code {{ ipfs_gateway_config_result.rc | default('unknown') }}: {{ ipfs_gateway_config_result.stderr | default(ipfs_gateway_config_result.msg | default('Unknown error')) }}"
+
+    - name: Fail task only if error is not lock contention
+      ansible.builtin.fail:
+        msg: "Failed to configure IPFS Addresses.Gateway."
+      when: "'resource temporarily unavailable' not in ipfs_gateway_config_result.stderr | default('') and 'lock' not in ipfs_gateway_config_result.stderr | default('')"
   become: yes
 
 - name: Set IPFS directory ownership for Kubo container
