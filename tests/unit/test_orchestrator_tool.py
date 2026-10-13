@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 # Add the tools directory to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'ansible', 'roles', 'pipecatapp', 'files', 'tools')))
 
-from pipecatapp.tools.orchestrator_tool import OrchestratorTool
+from orchestrator_tool import OrchestratorTool
 
 def test_orchestrator_tool_instantiation():
     """Tests that the OrchestratorTool class can be instantiated."""
