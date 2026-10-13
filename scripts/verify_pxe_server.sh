@@ -27,6 +27,10 @@ echo -e "\n${BOLD}${CYAN}=======================================================
 echo -e "${BOLD}${CYAN} 🌐 Pipecat PXE Server Verification (Host: ${LAN_IP})${NC}"
 echo -e "${BOLD}${CYAN}============================================================${NC}"
 
+ALL_SERVICES_OK=true
+ALL_PORTS_OK=true
+ALL_HEALTH_OK=true
+
 # 1. Services
 echo -e "\n${BOLD}[1/5] Service Daemons Status:${NC}"
 for svc in isc-dhcp-server tftpd-hpa nginx; do
@@ -34,6 +38,7 @@ for svc in isc-dhcp-server tftpd-hpa nginx; do
         echo -e "  • ${svc}: ${GREEN}Active (Running)${NC}"
     else
         echo -e "  • ${svc}: ${RED}Inactive or Failed${NC} (Check: sudo systemctl status $svc)"
+        ALL_SERVICES_OK=false
     fi
 done
 
@@ -44,6 +49,7 @@ if (ss -uln 2>/dev/null || ss -ulpn 2>/dev/null || netstat -uln 2>/dev/null) | g
     echo -e "  • DHCP Server (UDP 67): ${GREEN}Listening${NC}"
 else
     echo -e "  • DHCP Server (UDP 67): ${RED}Not Listening${NC}"
+    ALL_PORTS_OK=false
 fi
 
 # TFTP: UDP 69
@@ -51,6 +57,7 @@ if (ss -uln 2>/dev/null || ss -ulpn 2>/dev/null || netstat -uln 2>/dev/null) | g
     echo -e "  • TFTP Server (UDP 69): ${GREEN}Listening${NC}"
 else
     echo -e "  • TFTP Server (UDP 69): ${RED}Not Listening${NC}"
+    ALL_PORTS_OK=false
 fi
 
 # HTTP: TCP 80
@@ -58,6 +65,7 @@ if (ss -tln 2>/dev/null || ss -tlpn 2>/dev/null || netstat -tln 2>/dev/null) | g
     echo -e "  • HTTP Server (TCP 80): ${GREEN}Listening${NC}"
 else
     echo -e "  • HTTP Server (TCP 80): ${RED}Not Listening${NC}"
+    ALL_PORTS_OK=false
 fi
 
 # 3. Active OS Image & ISO Targets
@@ -143,12 +151,14 @@ if curl -s -f "http://127.0.0.1/boot.ipxe" >/dev/null 2>&1; then
     echo -e "  • HTTP http://${LAN_IP}/boot.ipxe -> ${GREEN}HTTP 200 OK${NC}"
 else
     echo -e "  • HTTP http://${LAN_IP}/boot.ipxe -> ${RED}Failed to fetch${NC}"
+    ALL_HEALTH_OK=false
 fi
 
 if curl -s -f "http://127.0.0.1/preseed.cfg" >/dev/null 2>&1; then
     echo -e "  • HTTP http://${LAN_IP}/preseed.cfg -> ${GREEN}HTTP 200 OK${NC}"
 else
     echo -e "  • HTTP http://${LAN_IP}/preseed.cfg -> ${RED}Failed to fetch${NC}"
+    ALL_HEALTH_OK=false
 fi
 
 # TFTP Protocol Handshake Tests (pxelinux.0 & undionly.kpxe)
@@ -165,19 +175,34 @@ assert len(data) >= 4 and data[1] == 3
             echo -e "  • TFTP tftp://${LAN_IP}/${tftp_test_file} -> ${GREEN}Handshake 200 OK (Data Block Received)${NC}"
         else
             echo -e "  • TFTP tftp://${LAN_IP}/${tftp_test_file} -> ${RED}RRQ Handshake Failed${NC}"
+            ALL_HEALTH_OK=false
         fi
     fi
 done
 
 echo -e "\n${BOLD}${CYAN}============================================================${NC}"
-if [ "$ALL_FILES_OK" = true ]; then
+if [ "$ALL_FILES_OK" = true ] && [ "$ALL_SERVICES_OK" = true ] && [ "$ALL_PORTS_OK" = true ] && [ "$ALL_HEALTH_OK" = true ]; then
     echo -e "${GREEN}✅ PXE Server is ready to boot new client nodes!${NC}"
     echo -e "  • ${BOLD}Pure TFTP (PXELINUX):${NC}  Loads pxelinux.0 directly over TFTP (No HTTP required)"
     echo -e "  • ${BOLD}iPXE HTTP Chainloading:${NC} Loads undionly.kpxe/ipxe.efi -> http://${LAN_IP}/boot.ipxe"
     echo -e "\nWatching for client requests (e.g. MAC 00:25:ab:7a:0d:7e):"
     echo -e "Run: ${CYAN}./scripts/cluster_ctl.sh pxe logs follow${NC} to view live boot activity."
 else
-    echo -e "${YELLOW}⚠️  Some files are missing. Run:${NC}"
+    echo -e "${RED}❌ PXE Server is not fully ready!${NC}"
+    if [ "$ALL_SERVICES_OK" != true ]; then
+        echo -e "  • ${YELLOW}One or more service daemons are not running.${NC}"
+    fi
+    if [ "$ALL_PORTS_OK" != true ]; then
+        echo -e "  • ${YELLOW}One or more required network ports are not listening.${NC}"
+    fi
+    if [ "$ALL_FILES_OK" != true ]; then
+        echo -e "  • ${YELLOW}Some required boot files are missing.${NC}"
+    fi
+    if [ "$ALL_HEALTH_OK" != true ]; then
+        echo -e "  • ${YELLOW}One or more protocol health tests failed.${NC}"
+    fi
+    echo -e "\n  ${CYAN}To fix this, you may need to run:${NC}"
     echo -e "  ${CYAN}sudo ./scripts/setup_pxe_server.sh debian${NC}"
+    echo -e "  ${CYAN}Check systemctl status for any failed services.${NC}"
 fi
 echo -e "${BOLD}${CYAN}============================================================${NC}\n"
