@@ -127,11 +127,11 @@ echo -e "${GREEN}✅ Hostname and underlay IP ${UNDERLAY_IP} set.${NC}"
 echo -e "\n${BOLD}[3/8] Synchronizing Hardware Clock (Chrony / NTP)...${NC}"
 remote_sudo "apt-get update -qq 2>/dev/null || true; apt-get install -y -qq chrony"
 remote_sudo "chronyc makestep || true; systemctl restart chrony"
-echo -e "${GREEN}✅ Clock synchronized to UTC.$(NC)"
+echo -e "${GREEN}✅ Clock synchronized to UTC.${NC}"
 
 # 4. Clean Package Repositories
 echo -e "\n${BOLD}[4/8] Updating Debian Package Repositories...${NC}"
-remote_sudo "sed -i '/deb cdrom:/d' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null || true"
+remote_sudo 'sed -i "/deb cdrom:/d" /etc/apt/sources.list 2>/dev/null || true'
 remote_sudo "cat > /etc/apt/sources.list << 'EOF'
 deb http://deb.debian.org/debian/ trixie main non-free-firmware non-free contrib
 deb http://security.debian.org/debian-security trixie-security main non-free-firmware non-free contrib
@@ -145,7 +145,7 @@ echo -e "\n${BOLD}[5/8] Enrolling in Tailscale / Headscale Mesh...${NC}"
 # Generate a pre-auth key from Headscale on the controller
 PREAUTH_KEY=""
 if command -v headscale &>/dev/null; then
-    PREAUTH_KEY=$(headscale --user default preauthkeys create --expiration 24h 2>/dev/null | tail -n 1 || true)
+    PREAUTH_KEY=$(sudo headscale --user default preauthkeys create --expiration 24h 2>/dev/null | tail -n 1 || headscale --user default preauthkeys create --expiration 24h 2>/dev/null | tail -n 1 || true)
 fi
 
 if [ -z "$PREAUTH_KEY" ]; then
