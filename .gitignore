@@ -1,5 +1,6 @@
 # Ignore all log files
 *.log
+logs/
 troubleshoot_report_*.txt
 node_modules/
 __pycache__/
