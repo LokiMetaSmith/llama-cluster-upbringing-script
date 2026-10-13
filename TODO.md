@@ -18,6 +18,9 @@
 ---
 
 ## 🎯 Phase 0: Core Infrastructure & Bootstrap Verification (P0 - Immediate Focus)
+- [ ] **Fix Tests:**
+  - [ ] Fix `test_dispatch_job_failure` in `tests/unit/test_orchestrator_tool.py` as it fails due to incorrect mocking.
+
 
 - [ ] **Automated Bootstrap Script (`bootstrap.sh`) Verification:**
   - [x] Integrated automated troubleshooting report generation on bootstrap failures in `bootstrap.sh`.
@@ -56,7 +59,7 @@
   - [ ] Ensure `pipecatapp` core process only communicates with heavy tools via HTTP/Consul service mesh.
 - [ ] **Memory & Resource Profiling:**
   - [ ] Benchmark memory consumption of `pipecatapp` under multi-turn conversations.
-  - [ ] Guarantee background processes remain capped at `-j2` / `-j4` to honor 7.8 GiB hardware limits.
+  - [x] Guarantee background processes remain capped at `-j2` / `-j4` to honor 7.8 GiB hardware limits.
 
 ---
 

@@ -76,25 +76,25 @@ PROMPT_TEMPLATE=./prompts/chat-with-bob.txt PROMPT_CACHE_FILE=bob.prompt.bin \
    62  sudo apt install libclblast-dev 
    63  make WHISPER_CLBLAST=1
    64  ./main -f samples/jfk.wav
-   65  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j
+   65  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j2
    66  make clean
-   67  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j
+   67  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j2
    68  sudo apt install libblas-dev
-   69  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j
+   69  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j2
    70  sudo apt install libblas3
    71  sudo apt install libopenblas-serial-dev
-   72  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j
+   72  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j2
    73  ./main -f samples/jfk.wav
    74  sudo apt install libopenblas-dev
    75  make clean
-   76  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j
+   76  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j2
    77  ./main -f samples/jfk.wav
    78  sudo apt install ocl-icd-opencl-dev
    79  sudo apt install intel-opencl-icd 
    80  ./main -f samples/jfk.wav
-   81  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j
+   81  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j2
    82  make clean
-   83  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j
+   83  make WHISPER_CLBLAST=1 WHISPER_OPENBLAS=1 -j2
    84  ./main -f samples/jfk.wav
    85  gcc -version
    86  gcc --version
@@ -191,7 +191,7 @@ PROMPT_TEMPLATE=./prompts/chat-with-bob.txt PROMPT_CACHE_FILE=bob.prompt.bin \
   177  cp ./models/ggml-model-q4_0.bin .
   178  ls
   179  mpirun   ./main -m ./ggml-model-q4_0.bin -p "I believe the meaning of life is" -n 64
-  180  make -j && ./main -m ./ggml-model-q4_0.bin -p "Building a website can be done in 10 simple steps:" -n 512
+  180  make -j${MAX_JOBS:-2} && ./main -m ./ggml-model-q4_0.bin -p "Building a website can be done in 10 simple steps:" -n 512
   181  Invalid MIT-MAGIC-COOKIE-1 key
   182  cd ..
   183  ls
@@ -206,7 +206,7 @@ PROMPT_TEMPLATE=./prompts/chat-with-bob.txt PROMPT_CACHE_FILE=bob.prompt.bin \
   192  ls
   193  make clean
   194  git pull
-  195  make -j
+  195  make -j${MAX_JOBS:-2}
   196  ls
   197  python3
   198  python3 -m pip install -r requirements.txt 
@@ -260,7 +260,7 @@ PROMPT_TEMPLATE=./prompts/chat-with-bob.txt PROMPT_CACHE_FILE=bob.prompt.bin \
   246  time ./main -m ./models/llama-2-13b-chat.ggmlv3.q4_0.bin -p "I believe the meaning of life is" -n 32 -t 3
   247  time ./main -m ./models/llama-2-13b-chat.ggmlv3.q4_0.bin -p "I believe the meaning of life is" -n 32 -t 1
   248  time ./main -m ./models/llama-2-13b-chat.ggmlv3.q4_0.bin -p "I believe the meaning of life is" -n 32 -t 2
-  249  make CC=mpicc CXX=mpicxx LLAMA_MPI=1 -j
+  249  make CC=mpicc CXX=mpicxx LLAMA_MPI=1 -j2
   250  time ./main -m ./models/llama-2-13b-chat.ggmlv3.q4_0.bin -p "I believe the meaning of life is" -n 32 -t 2
   251  mpirun  ./main -m ./models/llama-2-13b-chat.ggmlv3.q4_0.bin -p "I believe the meaning of life is" -n 32 -t 2
   252  mpirun  ./main -m ./models/llama-2-13b-chat.ggmlv3.q4_0.bin -p "I believe the meaning of life is"  -t 2
