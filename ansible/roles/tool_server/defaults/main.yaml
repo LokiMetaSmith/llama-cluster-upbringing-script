@@ -12,3 +12,7 @@ tool_server_components:
     image_name: "tool-server-vision"
     dockerfile: "Dockerfile.vision"
     cid_fact: "tool_server_vision_ipfs_cid"
+  - name: rea
+    image_name: "tool-server-rea"
+    dockerfile: "Dockerfile.rea"
+    cid_fact: "tool_server_rea_ipfs_cid"

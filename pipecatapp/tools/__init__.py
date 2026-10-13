@@ -81,6 +81,7 @@ __all__ = [
     "HolographicMemoryTool",
     "WorkspaceTool",
     "SubstrateVisualizerTool",
+    "ReverseEngineerTool",
 ]
 
 _module_lookup = {
@@ -164,6 +165,7 @@ _module_lookup = {
     "HolographicMemoryTool": "holographic_memory_tool",
     "WorkspaceTool": "workspace_tool",
     "SubstrateVisualizerTool": "substrate_visualizer_tool",
+    "ReverseEngineerTool": "reverse_engineer_tool",
 }
 
 
