@@ -11,7 +11,7 @@
 - name: Export mcp-server image and add to IPFS
   ansible.builtin.shell: |
     set -o pipefail
-    docker save {{ mcp_server_image | default('tool-server:local') }} | ipfs add -Q -
+    docker save {{ mcp_server_image | default('tool-server:local') }} | ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add -Q -
   args:
     executable: /bin/bash
   register: ipfs_add_result

@@ -24,7 +24,7 @@
 - name: Export moshi-rust image and add to IPFS
   ansible.builtin.shell: |
     set -o pipefail
-    docker save moshi-rust:latest | ipfs add -Q -
+    docker save moshi-rust:latest | ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add -Q -
   args:
     executable: /bin/bash
   register: ipfs_add_result
