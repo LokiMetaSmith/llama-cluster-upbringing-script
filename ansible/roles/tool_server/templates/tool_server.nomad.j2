@@ -101,6 +101,10 @@ job "tool-server" {
         address = "${attr.unique.network.ip-address}"
         tags    = ["tool-server-core", "http"]
 
+        connect {
+          sidecar_service {}
+        }
+
         check {
           type     = "http"
           path     = "/health"
