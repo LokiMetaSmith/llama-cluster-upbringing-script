@@ -93,7 +93,7 @@
 
 - name: Pin LLM models to IPFS
   ansible.builtin.command:
-    cmd: ipfs --api /ip4/127.0.0.1/tcp/5001 add --nocopy -Q "{{ nomad_models_dir }}/llm/{{ item.filename }}"
+    cmd: ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add --nocopy -Q "{{ nomad_models_dir }}/llm/{{ item.filename }}"
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   register: llm_ipfs_cids
@@ -151,7 +151,7 @@
 
 - name: Pin vLLM models to IPFS
   ansible.builtin.command:
-    cmd: ipfs --api /ip4/127.0.0.1/tcp/5001 add --nocopy -Q -r "{{ nomad_models_dir }}/vllm/{{ item.repo_id.split('/')[-1] }}"
+    cmd: ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add --nocopy -Q -r "{{ nomad_models_dir }}/vllm/{{ item.repo_id.split('/')[-1] }}"
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   register: vllm_ipfs_cids
@@ -233,7 +233,7 @@
 
 - name: Pin STT models (URL-based) to IPFS
   ansible.builtin.command:
-    cmd: ipfs --api /ip4/127.0.0.1/tcp/5001 add --nocopy -Q "{{ nomad_models_dir }}/stt/{{ item[0].key }}/{{ item[1].filename }}"
+    cmd: ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add --nocopy -Q "{{ nomad_models_dir }}/stt/{{ item[0].key }}/{{ item[1].filename }}"
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   register: stt_url_ipfs_cids
@@ -259,7 +259,7 @@
 
 - name: Pin STT models (Hub-based) to IPFS
   ansible.builtin.command:
-    cmd: ipfs --api /ip4/127.0.0.1/tcp/5001 add --nocopy -Q -r "{{ nomad_models_dir }}/stt/{{ item[0].key }}/{{ item[1].name }}"
+    cmd: ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add --nocopy -Q -r "{{ nomad_models_dir }}/stt/{{ item[0].key }}/{{ item[1].name }}"
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   register: stt_hub_ipfs_cids
@@ -316,7 +316,7 @@
 
 - name: Pin TTS models to IPFS
   ansible.builtin.command:
-    cmd: ipfs --api /ip4/127.0.0.1/tcp/5001 add --nocopy -Q "{{ nomad_models_dir }}/tts/{{ item.filename }}"
+    cmd: ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add --nocopy -Q "{{ nomad_models_dir }}/tts/{{ item.filename }}"
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   register: tts_ipfs_cids
@@ -397,7 +397,7 @@
 
 - name: Pin Vision models (URL) to IPFS
   ansible.builtin.command:
-    cmd: ipfs --api /ip4/127.0.0.1/tcp/5001 add --nocopy -Q "{{ nomad_models_dir }}/vision/{{ item.filename }}"
+    cmd: ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add --nocopy -Q "{{ nomad_models_dir }}/vision/{{ item.filename }}"
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   register: vision_url_ipfs_cids
@@ -423,7 +423,7 @@
 
 - name: Pin Vision models (Hub) to IPFS
   ansible.builtin.command:
-    cmd: ipfs --api /ip4/127.0.0.1/tcp/5001 add --nocopy -Q -r "{{ nomad_models_dir }}/vision/{{ item.name }}"
+    cmd: ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add --nocopy -Q -r "{{ nomad_models_dir }}/vision/{{ item.name }}"
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   register: vision_hub_ipfs_cids
@@ -481,7 +481,7 @@
 
 - name: Pin Embedding models to IPFS
   ansible.builtin.command:
-    cmd: ipfs --api /ip4/127.0.0.1/tcp/5001 add --nocopy -Q -r "{{ nomad_models_dir }}/embedding/{{ item.name }}"
+    cmd: ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add --nocopy -Q -r "{{ nomad_models_dir }}/embedding/{{ item.name }}"
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   register: embedding_ipfs_cids
@@ -508,7 +508,7 @@
 # --- Reference Data ---
 - name: Pin reference data directory to IPFS
   ansible.builtin.command:
-    cmd: ipfs --api /ip4/127.0.0.1/tcp/5001 add -Q -r "{{ role_path }}/files/reference_data"
+    cmd: ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add -Q -r "{{ role_path }}/files/reference_data"
   environment:
     IPFS_PATH: "{{ ipfs_path }}"
   register: reference_data_ipfs_cid

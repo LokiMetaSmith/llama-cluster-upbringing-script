@@ -24,7 +24,7 @@
   become: yes
 
 - name: Export last30days_service image and pin to IPFS
-  ansible.builtin.shell: "set -o pipefail; docker save last30days-service:local | ipfs --api /ip4/127.0.0.1/tcp/5001 add -Q -"
+  ansible.builtin.shell: "set -o pipefail; docker save last30days-service:local | ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add -Q -"
   args:
     executable: /bin/bash
   become: yes
