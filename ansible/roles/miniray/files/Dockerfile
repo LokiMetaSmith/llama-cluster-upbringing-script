@@ -2,6 +2,7 @@ FROM python:3.10-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN echo "Acquire::ForceIPv4 \"true\";" > /etc/apt/apt.conf.d/99force-ipv4
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \

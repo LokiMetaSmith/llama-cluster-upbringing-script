@@ -6,6 +6,7 @@ FROM node:24-bookworm-slim
 RUN echo "Acquire::Check-Valid-Until \"false\";\nAcquire::AllowInsecureRepositories \"true\";\nAcquire::AllowDowngradeToInsecureRepositories \"true\";" > /etc/apt/apt.conf.d/99insecure && \
     sed -i 's/^Types: deb/Types: deb\nTrusted: yes/' /etc/apt/sources.list.d/debian.sources || true
 
+RUN echo "Acquire::ForceIPv4 \"true\";" > /etc/apt/apt.conf.d/99force-ipv4
 RUN apt-get update && apt-get install -y --allow-unauthenticated curl && rm -rf /var/lib/apt/lists/*
 
 # Install openclaw global cli

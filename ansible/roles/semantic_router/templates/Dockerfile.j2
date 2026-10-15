@@ -3,6 +3,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies if needed (e.g. for building wheels)
+RUN echo "Acquire::ForceIPv4 \"true\";" > /etc/apt/apt.conf.d/99force-ipv4
 # RUN apt-get update && apt-get install -y build-essential
 
 # Install semantic router

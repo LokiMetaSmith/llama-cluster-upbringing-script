@@ -5,6 +5,7 @@ FROM python:3.12-slim-bookworm
 # curl: for generic fetching
 # nodejs, npm: for dashboard build
 # build-essential: for compiling python extensions if needed
+RUN echo "Acquire::ForceIPv4 \"true\";" > /etc/apt/apt.conf.d/99force-ipv4
 RUN apt-get update && apt-get install -y \
     git \
     curl \
