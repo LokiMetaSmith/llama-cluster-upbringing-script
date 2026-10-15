@@ -6,6 +6,7 @@ RUN useradd -m -s /bin/bash pipecatapp || true
 WORKDIR /app
 
 # Install Java 17+ (required for Ghidra) and other dependencies
+RUN echo "Acquire::ForceIPv4 \"true\";" > /etc/apt/apt.conf.d/99force-ipv4
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \

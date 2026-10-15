@@ -39,7 +39,7 @@
 
 - name: "Build Cached Image : Build the container image"
   ansible.builtin.command:
-    cmd: "buildah bud -f {{ dockerfile_path | default('Dockerfile') }} -t {{ image_name }}:{{ _versioned_tag }} ."
+    cmd: "buildah bud --net=host -f {{ dockerfile_path | default('Dockerfile') }} -t {{ image_name }}:{{ _versioned_tag }} ."
     chdir: "{{ build_dir }}"
   register: _build_result
   changed_when: "_build_result.stdout is defined and ('COMMIT' in _build_result.stdout or 'Successfully tagged' in _build_result.stdout or 'writing image' in _build_result.stdout)"

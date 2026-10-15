@@ -393,7 +393,7 @@
         - supervisord.conf
 
     - name: Build PXE Server Image using Buildah
-      ansible.builtin.command: buildah bud -t pipecat/pxe-server:latest -f Dockerfile.pxe .
+      ansible.builtin.command: buildah bud --net=host -t pipecat/pxe-server:latest -f Dockerfile.pxe .
       args:
         chdir: "{{ pxe_build_dir.path }}"
       become: yes
