@@ -111,11 +111,22 @@
   become: yes
   check_mode: no
 
+- name: Remove stale pxelinux.cfg if present to allow netboot symlink extraction
+  ansible.builtin.file:
+    path: /srv/tftp/pxelinux.cfg
+    state: absent
+  become: yes
+  when: not (pxe_netboot_extracted | default(false))
+
 - name: Download and extract Debian netboot files
-  unarchive:
+  ansible.builtin.unarchive:
     src: "https://ftp.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/netboot.tar.gz"
     dest: /srv/tftp
     remote_src: yes
+    extra_opts:
+      - "--overwrite"
+      - "--warning=no-timestamp"
+    creates: /srv/tftp/debian-installer/amd64/linux
   become: yes
   check_mode: no
 
