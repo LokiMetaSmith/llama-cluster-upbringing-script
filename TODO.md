@@ -89,7 +89,7 @@
 - [ ] **Strata Feature Replication (Tiered MoE Expert Caching):**
   - **Goal:** Replicate Strata's hybrid GPU/RAM MoE offloading features directly into existing inference engines (vLLM/llama.cpp) instead of deploying the standalone Strata app.
   - **Tasks:**
-    1. [ ] Document Strata's speculative decoding and expert caching heuristics from `docs/analysis/STRATA_EVALUATION.md` as reference architecture.
+    1. [x] Document Strata's speculative decoding and expert caching heuristics from `docs/analysis/STRATA_EVALUATION.md` as reference architecture.
     2. [ ] Explore adding expert-aware LRU eviction policies or tiered offloading to our existing `llama.cpp` / `vLLM` implementations.
     3. [ ] Research network-distributed MoE expert routing using `llama.cpp` RPC or tensor parallelism over local disk swapping to utilize horizontally scaled cluster RAM.
 
