@@ -47,13 +47,47 @@ _safe_import_and_init("power", "pipecatapp.tools.power_tool", "Power_Tool")
 _safe_import_and_init("summarizer", "pipecatapp.tools.summarizer_tool", "SummarizerTool", lambda cls: cls(twin_service=None))
 _safe_import_and_init("term_everything", "pipecatapp.tools.term_everything_tool", "TermEverythingTool",
                       lambda cls: cls(app_image_path=os.getenv("TERM_EVERYTHING_PATH", "/opt/mcp/tools/termeverything.AppImage")))
-_safe_import_and_init("rag", "pipecatapp.tools.rag_tool", "RAG_Tool",
-                      lambda cls: cls(pmm_memory=None, base_dir=os.getenv("RAG_BASE_DIR", "/mnt/host_repo" if os.path.exists("/mnt/host_repo") else os.getcwd())))
+def _init_rag_server(cls):
+    import os
+    rag_base_dir = os.getenv("RAG_BASE_DIR", "/mnt/host_repo" if os.path.exists("/mnt/host_repo") else os.getcwd())
+    rag_allowed_root = os.getenv("RAG_ALLOWED_ROOT", rag_base_dir)
+    pruner = None
+    pruner_model = os.getenv("RAG_PRUNER_MODEL")
+    if pruner_model:
+        pruner_base_url = os.getenv("RAG_PRUNER_BASE_URL") or os.getenv("LLAMA_API_BASE_URL")
+        pruner_api_key = os.getenv("RAG_PRUNER_API_KEY") or os.getenv("GROQ_API_KEY") or os.getenv("OPENAI_API_KEY") or "dummy"
+        if pruner_base_url and pruner_model:
+            try:
+                import importlib
+                mod = importlib.import_module("pipecatapp.llm_clients")
+                ExternalLLMClient = getattr(mod, "ExternalLLMClient")
+                mod_pruner = importlib.import_module("pipecatapp.utils.rag_pruner")
+                RAGPruner = getattr(mod_pruner, "RAGPruner")
+
+                llm_client = ExternalLLMClient(
+                    base_url=pruner_base_url,
+                    api_key=pruner_api_key,
+                    model=pruner_model
+                )
+                pruner = RAGPruner(llm_client=llm_client)
+            except Exception as e:
+                logger.warning(f"ToolServer: Failed to initialize RAG Pruner: {e}")
+
+    return cls(
+        pmm_memory=None,
+        base_dir=rag_base_dir,
+        allowed_root=rag_allowed_root,
+        pruner=pruner,
+        pruning_threshold=int(os.getenv("RAG_PRUNING_THRESHOLD", "4")),
+        keep_top_k=int(os.getenv("RAG_KEEP_TOP_K", "3"))
+    )
+
+_safe_import_and_init("rag", "pipecatapp.tools.rag_tool", "RAG_Tool", _init_rag_server)
 _safe_import_and_init("git", "pipecatapp.tools.git_tool", "Git_Tool")
 _safe_import_and_init("orchestrator", "pipecatapp.tools.orchestrator_tool", "OrchestratorTool")
 _safe_import_and_init("ocr", "pipecatapp.tools.ocr_tool", "OCRTool")
-_safe_import_and_init("wasm", "pipecatapp.tools.wasm_tool", "WasmTool")
-_safe_import_and_init("heretic", "pipecatapp.tools.heretic_tool", "HereticTool")
+_safe_import_and_init("wasm", "pipecatapp.tools.wasm_tool", "WasmTool", lambda cls: cls(wasm_path=os.getenv("WASM_PATH")))
+_safe_import_and_init("heretic", "pipecatapp.tools.heretic_tool", "HereticTool", lambda cls: cls(root_dir=os.getenv("HERETIC_ROOT_DIR")))
 
 if os.getenv("HA_URL") and os.getenv("HA_TOKEN"):
     _safe_import_and_init("ha", "pipecatapp.tools.ha_tool", "HA_Tool",
