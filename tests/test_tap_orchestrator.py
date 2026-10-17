@@ -7,10 +7,10 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../services/tap_orchestrator')))
 
-from main import app, process_tap_event
-from models import DesfireEvent, AuthentikUser
-from config import settings
-from deduplicator import deduplicator
+from services.tap_orchestrator.main import app, process_tap_event
+from services.tap_orchestrator.models import DesfireEvent, AuthentikUser
+from services.tap_orchestrator.config import settings
+from services.tap_orchestrator.deduplicator import deduplicator
 
 client = TestClient(app)
 
@@ -65,8 +65,9 @@ def test_deduplicator():
     assert deduplicator.is_allowed("user2") == True
 
 @pytest.mark.asyncio
-@patch("main.authentik_client.get_user")
-@patch("main.cluster_orchestrator.execute_hot_load")
+@pytest.mark.usefixtures('reset_deduplicator')
+@patch("services.tap_orchestrator.main.authentik_client.get_user")
+@patch("services.tap_orchestrator.main.cluster_orchestrator.execute_hot_load")
 async def test_process_tap_event_success(mock_execute, mock_get_user, sample_event):
     mock_user = AuthentikUser(username="lawrence", is_active=True, groups=["admin"])
     mock_get_user.return_value = mock_user
@@ -77,8 +78,9 @@ async def test_process_tap_event_success(mock_execute, mock_get_user, sample_eve
     mock_execute.assert_called_once_with(mock_user)
 
 @pytest.mark.asyncio
-@patch("main.authentik_client.get_user")
-@patch("main.publish_mqtt_status")
+@pytest.mark.usefixtures('reset_deduplicator')
+@patch("services.tap_orchestrator.main.authentik_client.get_user")
+@patch("services.tap_orchestrator.main.publish_mqtt_status")
 async def test_process_tap_event_user_not_found(mock_publish, mock_get_user, sample_event):
     mock_get_user.return_value = None
     mock_mqtt_client = MagicMock()
@@ -89,8 +91,9 @@ async def test_process_tap_event_user_not_found(mock_publish, mock_get_user, sam
     mock_publish.assert_called_once_with(mock_mqtt_client, settings.mqtt_topic_failure, "error", "User not found", "lawrence")
 
 @pytest.mark.asyncio
-@patch("main.authentik_client.get_user")
-@patch("main.publish_mqtt_status")
+@pytest.mark.usefixtures('reset_deduplicator')
+@patch("services.tap_orchestrator.main.authentik_client.get_user")
+@patch("services.tap_orchestrator.main.publish_mqtt_status")
 async def test_process_tap_event_user_inactive(mock_publish, mock_get_user, sample_event):
     mock_user = AuthentikUser(username="lawrence", is_active=False)
     mock_get_user.return_value = mock_user
