@@ -83,11 +83,15 @@ def _init_rag_server(cls):
     )
 
 _safe_import_and_init("rag", "pipecatapp.tools.rag_tool", "RAG_Tool", _init_rag_server)
+_safe_import_and_init("rag_mcp", "pipecatapp.tools.mcp_client_adapter", "MCPClientAdapter",
+                      lambda cls: cls(name="rag_mcp", server_command="python3", server_args=["-m", "pipecatapp.servers.rag_server"], description="Retrieves information from a project-specific knowledge base using MCP.", twin_service=None))
 _safe_import_and_init("git", "pipecatapp.tools.git_tool", "Git_Tool")
 _safe_import_and_init("orchestrator", "pipecatapp.tools.orchestrator_tool", "OrchestratorTool")
 _safe_import_and_init("ocr", "pipecatapp.tools.ocr_tool", "OCRTool")
 _safe_import_and_init("wasm", "pipecatapp.tools.wasm_tool", "WasmTool", lambda cls: cls(wasm_path=os.getenv("WASM_PATH")))
 _safe_import_and_init("heretic", "pipecatapp.tools.heretic_tool", "HereticTool", lambda cls: cls(root_dir=os.getenv("HERETIC_ROOT_DIR")))
+_safe_import_and_init("code_runner_mcp", "pipecatapp.tools.mcp_client_adapter", "MCPClientAdapter",
+                      lambda cls: cls(name="code_runner_mcp", server_command="python3", server_args=["-m", "pipecatapp.servers.code_runner_server"], description="Execute Python code in a sandboxed Docker/Nomad container using MCP.", twin_service=None))
 
 if os.getenv("HA_URL") and os.getenv("HA_TOKEN"):
     _safe_import_and_init("ha", "pipecatapp.tools.ha_tool", "HA_Tool",

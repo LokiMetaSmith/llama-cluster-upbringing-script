@@ -331,82 +331,37 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
             tools[name] = remote_proxy_cls(name, tool_server_url)
         else:
             # Instantiate local versions of supported tools
-                if name == "ssh":
-                    tools["ssh"] = _safe_create("ssh", lambda: _get_cls("SSH_Tool")())
-                elif name == "desktop_control":
-                    tools["desktop_control"] = _safe_create("desktop_control", lambda: _get_cls("DesktopControlTool")())
-                elif name == "code_runner":
-                    tools["code_runner"] = _safe_create("code_runner", lambda: _get_cls("CodeRunnerTool")())
-                    tools["code_runner_mcp"] = _safe_create("code_runner_mcp", lambda: _get_cls("MCPClientAdapter")(
-                        name="code_runner_mcp",
-                        server_command="python3",
-                        server_args=["-m", "pipecatapp.servers.code_runner_server"],
-                        description="Execute Python code in a sandboxed Docker/Nomad container using MCP.",
-                        twin_service=twin_service
-                    ))
-                elif name == "web_browser":
-                    tools["web_browser"] = _safe_create("web_browser", lambda: _get_cls("WebBrowserTool")())
-                elif name == "ansible":
-                    tools["ansible"] = _safe_create("ansible", lambda: _get_cls("Ansible_Tool")())
-                elif name == "power":
-                    tools["power"] = _safe_create("power", lambda: _get_cls("Power_Tool")())
-                elif name == "term_everything":
-                    tools["term_everything"] = _safe_create("term_everything", lambda: _get_cls("TermEverythingTool")(app_image_path="/opt/mcp/termeverything.AppImage"))
-                elif name == "rag":
-                    def _init_rag():
-                        rag_base_dir = config.get("rag_base_dir", "/opt/pipecatapp")
-                        rag_allowed_root = config.get("rag_allowed_root", rag_base_dir)
-                        pruner = None
-                        pruner_model = config.get("rag_pruner_model")
-                        if pruner_model:
-                            pruner_base_url = config.get("rag_pruner_base_url")
-                            if not pruner_base_url:
-                                pruner_base_url = os.getenv("LLAMA_API_BASE_URL") or config.get("llama_api_url")
-                            pruner_api_key = config.get("rag_pruner_api_key") or os.getenv("GROQ_API_KEY") or os.getenv("OPENAI_API_KEY") or "dummy"
-                            if pruner_base_url and pruner_model:
-                                llm_client = _get_cls("ExternalLLMClient")(
-                                    base_url=pruner_base_url,
-                                    api_key=pruner_api_key,
-                                    model=pruner_model
-                                )
-                                pruner = _get_cls("RAGPruner")(llm_client=llm_client)
-
-                        rag_tool = _get_cls("RAG_Tool")(
-                            pmm_memory=twin_service.long_term_memory if twin_service else None,
-                            base_dir=rag_base_dir,
-                            allowed_root=rag_allowed_root,
-                            pruner=pruner,
-                            pruning_threshold=config.get("rag_pruning_threshold", 4),
-                            keep_top_k=config.get("rag_keep_top_k", 3)
-                        )
-                        return rag_tool
-                    tools["rag"] = _safe_create("rag", _init_rag)
-                    tools["rag_mcp"] = _safe_create("rag_mcp", lambda: _get_cls("MCPClientAdapter")(
-                        name="rag_mcp",
-                        server_command="python3",
-                        server_args=["-m", "pipecatapp.servers.rag_server"],
-                        description="Retrieves information from a project-specific knowledge base using MCP.",
-                        twin_service=twin_service
-                    ))
-                elif name == "ha":
-                    tools["ha"] = _safe_create("ha", lambda: _get_cls("HA_Tool")(
-                        ha_url=config.get("ha_url"),
-                        ha_token=config.get("ha_token")
-                    ))
-                elif name == "git":
-                    tools["git"] = _safe_create("git", lambda: _get_cls("Git_Tool")(root_dir="/opt/pipecatapp"))
-                elif name == "orchestrator":
-                    def _init_orchestrator():
-                        world_model = None
-                        try:
-                            from pipecatapp.app import app as main_app
-                            world_model = getattr(main_app.state, 'world_model', None)
-                        except ImportError:
-                            pass
-                        return _get_cls("OrchestratorTool")(world_model=world_model)
-                    tools["orchestrator"] = _safe_create("orchestrator", _init_orchestrator)
-                elif name == "opencode_provider":
-                    tools["opencode_provider"] = _safe_create("opencode_provider", lambda: _get_cls("OpenCodeProviderTool")())
+            if name == "ssh":
+                tools["ssh"] = _safe_create("ssh", lambda: _get_cls("SSH_Tool")())
+            elif name == "desktop_control":
+                tools["desktop_control"] = _safe_create("desktop_control", lambda: _get_cls("DesktopControlTool")())
+            elif name == "web_browser":
+                tools["web_browser"] = _safe_create("web_browser", lambda: _get_cls("WebBrowserTool")())
+            elif name == "ansible":
+                tools["ansible"] = _safe_create("ansible", lambda: _get_cls("Ansible_Tool")())
+            elif name == "power":
+                tools["power"] = _safe_create("power", lambda: _get_cls("Power_Tool")())
+            elif name == "term_everything":
+                tools["term_everything"] = _safe_create("term_everything", lambda: _get_cls("TermEverythingTool")(app_image_path="/opt/mcp/termeverything.AppImage"))
+            elif name == "ha":
+                tools["ha"] = _safe_create("ha", lambda: _get_cls("HA_Tool")(
+                    ha_url=config.get("ha_url"),
+                    ha_token=config.get("ha_token")
+                ))
+            elif name == "git":
+                tools["git"] = _safe_create("git", lambda: _get_cls("Git_Tool")(root_dir="/opt/pipecatapp"))
+            elif name == "orchestrator":
+                def _init_orchestrator():
+                    world_model = None
+                    try:
+                        from pipecatapp.app import app as main_app
+                        world_model = getattr(main_app.state, 'world_model', None)
+                    except ImportError:
+                        pass
+                    return _get_cls("OrchestratorTool")(world_model=world_model)
+                tools["orchestrator"] = _safe_create("orchestrator", _init_orchestrator)
+            elif name == "opencode_provider":
+                tools["opencode_provider"] = _safe_create("opencode_provider", lambda: _get_cls("OpenCodeProviderTool")())
 
     # Load dynamic skills from memory store
     if twin_service and hasattr(twin_service, "long_term_memory"):

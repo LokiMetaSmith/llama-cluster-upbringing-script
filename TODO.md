@@ -58,7 +58,7 @@
   - [x] Migrate heavy tool workloads (RAG document parsing, Docker sandbox code execution, WASM plugins) out-of-process in production deployment.
   - [x] Ensure `pipecatapp` core process only communicates with heavy tools via HTTP/Consul service mesh.
 - [ ] **Memory & Resource Profiling:**
-  - [ ] Benchmark memory consumption of `pipecatapp` under multi-turn conversations.
+  - [x] Benchmark memory consumption of `pipecatapp` under multi-turn conversations.
   - [x] Guarantee background processes remain capped at `-j2` / `-j4` to honor 7.8 GiB hardware limits.
 
 ---
