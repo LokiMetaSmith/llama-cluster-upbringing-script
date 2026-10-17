@@ -25,7 +25,7 @@
 - [ ] **Automated Bootstrap Script (`bootstrap.sh`) Verification:**
   - [x] Integrated automated troubleshooting report generation on bootstrap failures in `bootstrap.sh`.
   - [x] Audited and fixed IPFS Nomad job and Ansible task permissions (`ansible/roles/ipfs/tasks/main.yaml` ownership by `target_user`, Multiaddr strings in `ipfs.nomad.j2`, and 30x retries with 5s delay on gateway readiness).
-  - [ ] Verify local ROCm simulation via `act` to ensure kernel/driver sanity before cluster deployments.
+  - [x] Verify local ROCm simulation via `act` to ensure kernel/driver sanity before cluster deployments.
 - [x] **Nomad & Consul Service Mesh Sanity:**
   - [x] Ensure Raft quorum forms automatically across controller nodes using dynamic `bootstrap_expect` (verified in `consul.hcl.j2` and `nomad.hcl.server.j2`).
   - [x] Confirm Consul ACL bootstrap reset flow operates reliably on transient network splits (verified recovery flow in `ansible/roles/consul/tasks/acl.yaml`).
