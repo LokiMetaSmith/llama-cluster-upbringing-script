@@ -9,11 +9,26 @@ import ssl
 import aiomqtt
 from pydantic import ValidationError
 
-from config import settings
-from models import DesfireEvent, TapResponse
-from deduplicator import deduplicator
-from authentik import authentik_client
-from orchestrator import cluster_orchestrator
+from services.tap_orchestrator.config import settings
+
+import time
+import secrets
+from services.tap_orchestrator.models import DesfireEvent, TapResponse, ChallengeResponse, VerifyRequest, VerifyResponse
+from pipecatapp.atproto_crypto import verify_payload
+from pipecatapp.datalog_memory import DatalogMemory
+from pipecatapp.memory_backends_impl.consul_kv_backend import ConsulKVBackend
+
+# Datalog & Consul initialization for REA Accounting
+datalog = DatalogMemory()
+consul_backend = ConsulKVBackend(prefix="swarm/")
+
+# Temporary store for nonces (nonce -> expiration_time)
+challenge_store = {}
+NONCE_TTL = 10  # seconds
+
+from services.tap_orchestrator.deduplicator import deduplicator
+from services.tap_orchestrator.authentik import authentik_client
+from services.tap_orchestrator.orchestrator import cluster_orchestrator
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("tap_orchestrator")
@@ -140,6 +155,83 @@ async def handle_tap_webhook(event: DesfireEvent, secret: str = Depends(verify_s
     asyncio.create_task(process_tap_event(event))
 
     return TapResponse(status="success", message="Tap event queued for processing")
+
+
+@app.get("/api/v1/challenge", response_model=ChallengeResponse)
+async def get_challenge(room_id: str):
+    """
+    Generates an ephemeral, randomized cryptographic challenge for presence verification.
+    """
+    nonce = secrets.token_hex(16)
+    expires_at = time.time() + NONCE_TTL
+    challenge_store[nonce] = {
+        "room_id": room_id,
+        "expires_at": expires_at
+    }
+
+    # Cleanup expired nonces (lazy approach for prototype)
+    expired = [k for k, v in challenge_store.items() if v["expires_at"] < time.time()]
+    for k in expired:
+        del challenge_store[k]
+
+    return ChallengeResponse(
+        nonce=nonce,
+        room_id=room_id,
+        expires_in=NONCE_TTL
+    )
+
+@app.post("/api/v1/verify", response_model=VerifyResponse)
+async def verify_presence(request: VerifyRequest):
+    """
+    Verifies the device's signature of the challenge nonce and updates mutual credit.
+    """
+    now = time.time()
+
+    # 1. Check if nonce is valid and unexpired
+    if request.challenge_nonce not in challenge_store:
+        raise HTTPException(status_code=400, detail="Invalid or expired challenge nonce")
+
+    stored_challenge = challenge_store.pop(request.challenge_nonce)
+
+    if stored_challenge["expires_at"] < now:
+        raise HTTPException(status_code=400, detail="Challenge nonce expired")
+
+    if stored_challenge["room_id"] != request.room_id:
+        raise HTTPException(status_code=400, detail="Room ID mismatch")
+
+    # 2. Verify Cryptographic Signature
+    payload_to_verify = {
+        "challenge_nonce": request.challenge_nonce,
+        "room_id": request.room_id
+    }
+    if request.metadata:
+        payload_to_verify["metadata"] = request.metadata
+
+    is_valid = verify_payload(payload_to_verify, request.signature, request.public_key_hex)
+    if not is_valid:
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    # 3. Account: Log event to REA / Datalog
+    datalog.assert_fact("presence", request.did, request.room_id, now)
+
+    # 4. Allocate: Calculate compute weight and write to Consul
+    # The default get_available_credit uses `agent_id`, which we map to `did`
+    try:
+        weight = datalog.engine.get_available_credit(request.did)
+    except Exception as e:
+        logger.error(f"Failed to calculate credit for {request.did}: {e}")
+        weight = 0.0
+
+    try:
+        consul_backend.put_kv(f"compute_rights/{request.did}", {"weight": weight, "room_id": request.room_id, "last_verified": now})
+    except Exception as e:
+        logger.error(f"Failed to write compute weight to Consul: {e}")
+
+    return VerifyResponse(
+        status="success",
+        message="Presence verified and compute weight allocated.",
+        weight=weight
+    )
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=settings.tap_orchestrator_port)

@@ -2,8 +2,8 @@ import asyncio
 import logging
 import httpx
 from typing import Optional, Dict, Any
-from config import settings
-from models import AuthentikUser
+from services.tap_orchestrator.config import settings
+from services.tap_orchestrator.models import AuthentikUser
 
 logger = logging.getLogger(__name__)
 

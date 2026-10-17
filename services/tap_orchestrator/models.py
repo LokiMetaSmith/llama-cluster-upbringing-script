@@ -18,3 +18,21 @@ class AuthentikUser(BaseModel):
     is_active: bool
     groups: List[str] = []
     attributes: Dict[str, Any] = {}
+
+class ChallengeResponse(BaseModel):
+    nonce: str
+    room_id: str
+    expires_in: int
+
+class VerifyRequest(BaseModel):
+    did: str
+    challenge_nonce: str
+    signature: str
+    room_id: str
+    public_key_hex: str
+    metadata: Optional[Dict[str, Any]] = None
+
+class VerifyResponse(BaseModel):
+    status: str
+    message: str
+    weight: Optional[float] = None
