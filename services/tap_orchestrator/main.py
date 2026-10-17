@@ -15,11 +15,11 @@ import time
 import secrets
 from services.tap_orchestrator.models import DesfireEvent, TapResponse, ChallengeResponse, VerifyRequest, VerifyResponse
 from pipecatapp.atproto_crypto import verify_payload
-from pipecatapp.datalog_engine import DatalogEngine
+from pipecatapp.datalog_memory import DatalogMemory
 from pipecatapp.memory_backends_impl.consul_kv_backend import ConsulKVBackend
 
 # Datalog & Consul initialization for REA Accounting
-datalog = DatalogEngine()
+datalog = DatalogMemory()
 consul_backend = ConsulKVBackend(prefix="swarm/")
 
 # Temporary store for nonces (nonce -> expiration_time)
@@ -217,7 +217,7 @@ async def verify_presence(request: VerifyRequest):
     # 4. Allocate: Calculate compute weight and write to Consul
     # The default get_available_credit uses `agent_id`, which we map to `did`
     try:
-        weight = datalog.get_available_credit(request.did)
+        weight = datalog.engine.get_available_credit(request.did)
     except Exception as e:
         logger.error(f"Failed to calculate credit for {request.did}: {e}")
         weight = 0.0
