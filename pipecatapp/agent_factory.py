@@ -271,7 +271,6 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
         nomad_url=config.get('nomad_url')
     ))
     tools["jacobian_lens"] = _safe_create("jacobian_lens", lambda: _get_cls("JacobianLensTool")())
-    tools["wasm"] = _safe_create("wasm", lambda: _get_cls("WasmTool")(wasm_path=config.get("wasm_path")))
     tools["autoloop"] = _safe_create("autoloop", lambda: _get_cls("AutoloopTool")())
     tools["cq"] = _safe_create("cq", lambda: _get_cls("CQ_Tool")())
     tools["document"] = _safe_create("document", lambda: _get_cls("DocumentTool")(
@@ -284,10 +283,8 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
         description="Searches and reads internal documents or code files using MCP.",
         twin_service=twin_service
     ))
-    tools["heretic"] = _safe_create("heretic", lambda: _get_cls("HereticTool")(root_dir=config.get("heretic_root_dir")))
     tools["jules"] = _safe_create("jules", lambda: _get_cls("JulesTool")(api_key=config.get("jules_api_key")))
     tools["ansible_exception_handler"] = _safe_create("ansible_exception_handler", lambda: _get_cls("AnsibleExceptionHandlerTool")())
-    tools["ocr"] = _safe_create("ocr", lambda: _get_cls("OCRTool")())
     tools["openworkers"] = _safe_create("openworkers", lambda: _get_cls("OpenWorkersTool")(
         api_url=config.get("openworkers_api_url"),
         token=config.get("openworkers_token")
@@ -362,6 +359,12 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
                 tools["orchestrator"] = _safe_create("orchestrator", _init_orchestrator)
             elif name == "opencode_provider":
                 tools["opencode_provider"] = _safe_create("opencode_provider", lambda: _get_cls("OpenCodeProviderTool")())
+            elif name == "wasm":
+                tools["wasm"] = _safe_create("wasm", lambda: _get_cls("WasmTool")(wasm_path=config.get("wasm_path")))
+            elif name == "heretic":
+                tools["heretic"] = _safe_create("heretic", lambda: _get_cls("HereticTool")(root_dir=config.get("heretic_root_dir")))
+            elif name == "ocr":
+                tools["ocr"] = _safe_create("ocr", lambda: _get_cls("OCRTool")())
 
     # Load dynamic skills from memory store
     if twin_service and hasattr(twin_service, "long_term_memory"):
