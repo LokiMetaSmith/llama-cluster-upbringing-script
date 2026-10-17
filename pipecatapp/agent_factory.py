@@ -312,18 +312,25 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
         tools["summarizer"] = _safe_create("summarizer", lambda: _get_cls("SummarizerTool")(twin_service))
 
     # Handle "Remote Supported" tools
-    if mode == "remote" and tool_server_url:
-        for name in REMOTE_SUPPORTED_TOOLS:
+    # Enforce heavy tools to always communicate via HTTP/Consul service mesh
+    _tool_server_url = tool_server_url or os.getenv("TOOL_SERVER_URL", "http://127.0.0.1:8082")
+
+    for name in REMOTE_SUPPORTED_TOOLS:
+        if name in HEAVY_TOOLS:
+            remote_proxy_cls = _get_cls("RemoteToolProxy")
+            tools[name] = remote_proxy_cls(name, _tool_server_url)
+
+            # The tool server now exposes MCP adapter tools directly via HTTP proxy,
+            # so we just point the MCP versions to the remote proxy as well.
+            if name == "code_runner":
+                tools["code_runner_mcp"] = remote_proxy_cls("code_runner_mcp", _tool_server_url)
+            elif name == "rag":
+                tools["rag_mcp"] = remote_proxy_cls("rag_mcp", _tool_server_url)
+        elif mode == "remote" and tool_server_url:
             remote_proxy_cls = _get_cls("RemoteToolProxy")
             tools[name] = remote_proxy_cls(name, tool_server_url)
-    else:
-        # We are in local or mixed mode. Offload HEAVY_TOOLS if a tool_server_url is available.
-        for name in REMOTE_SUPPORTED_TOOLS:
-            if name in HEAVY_TOOLS and tool_server_url:
-                remote_proxy_cls = _get_cls("RemoteToolProxy")
-                tools[name] = remote_proxy_cls(name, tool_server_url)
-            else:
-                # Instantiate local versions of supported tools
+        else:
+            # Instantiate local versions of supported tools
                 if name == "ssh":
                     tools["ssh"] = _safe_create("ssh", lambda: _get_cls("SSH_Tool")())
                 elif name == "desktop_control":

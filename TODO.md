@@ -56,7 +56,7 @@
   - [x] Eliminated background thread leakage and filesystem scan deadlocks in `RAG_Tool` (`auto_index=False` default, lazy model encoder initialization).
   - [x] Implemented strict request timeouts and circuit breakers for external tool RPCs (`TOOL_RPC_TIMEOUT` in `RemoteToolProxy`).
   - [x] Migrate heavy tool workloads (RAG document parsing, Docker sandbox code execution, WASM plugins) out-of-process in production deployment.
-  - [ ] Ensure `pipecatapp` core process only communicates with heavy tools via HTTP/Consul service mesh.
+  - [x] Ensure `pipecatapp` core process only communicates with heavy tools via HTTP/Consul service mesh.
 - [ ] **Memory & Resource Profiling:**
   - [ ] Benchmark memory consumption of `pipecatapp` under multi-turn conversations.
   - [x] Guarantee background processes remain capped at `-j2` / `-j4` to honor 7.8 GiB hardware limits.
