@@ -79,13 +79,13 @@
 
 ## 🔬 Phase 4: Extended Roadmap & Research Previews (Backlog / Speculative)
 
-- [ ] **Strix Halo APU Cluster Bring-up & Verification:**
+- [x] **Strix Halo APU Cluster Bring-up & Verification:**
   - **Goal:** Implement the "Brain vs. Body" cluster topology using the Strix Halo APU as the control node and primary inference tier.
   - **Tasks:**
-    1. [ ] Create `scripts/halo_pxe_bringup.sh` to configure PXE booting for 64GB-128GB Strix Halo machines.
-    2. [ ] Define `halo-inference.nomad.j2` with strict memory guardrails (`--ctx-size` cap + cgroup memory caps) ensuring 15-25GB system RAM remains unclaimed.
-    3. [ ] Define `halo-agent.nomad.j2` to deploy the orchestrator/gateway alongside the inference job.
-    4. [ ] Point the SEAL loop at the APU deployment task to run iterative deterministic verification (`git apply --check` -> `build` -> test).
+    1. [x] Create `scripts/halo_pxe_bringup.sh` to configure PXE booting for 64GB-128GB Strix Halo machines.
+    2. [x] Define `halo-inference.nomad.j2` with strict memory guardrails (`--ctx-size` cap + cgroup memory caps) ensuring 15-25GB system RAM remains unclaimed.
+    3. [x] Define `halo-agent.nomad.j2` to deploy the orchestrator/gateway alongside the inference job.
+    4. [x] Point the SEAL loop at the APU deployment task to run iterative deterministic verification (`git apply --check` -> `build` -> test).
 
 - [x] **Playnet / REA Ledger Architectural Resolutions:**
   - **Goal:** Address open design questions surfaced during the Agent-as-Ledger-Clerk implementation of the EISPP prototype.
