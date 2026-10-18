@@ -51,7 +51,7 @@
 
 ## ⚙️ Phase 2: Hybrid Distributed Tool Architecture (P2 - Medium Priority)
 
-- [ ] **Offload Heavy Tools to `tool_server`:**
+- [x] **Offload Heavy Tools to `tool_server`:**
   - [x] Hardened `tool_server.py` with dynamic `_safe_import_and_init` fallbacks, unauthenticated `/health` check, and full `/run_tool/` test verification.
   - [x] Eliminated background thread leakage and filesystem scan deadlocks in `RAG_Tool` (`auto_index=False` default, lazy model encoder initialization).
   - [x] Implemented strict request timeouts and circuit breakers for external tool RPCs (`TOOL_RPC_TIMEOUT` in `RemoteToolProxy`).
