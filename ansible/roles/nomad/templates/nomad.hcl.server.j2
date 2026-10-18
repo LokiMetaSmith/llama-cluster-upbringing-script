@@ -178,6 +178,16 @@ client {
     path      = "{{ nomad_volumes_dir }}/radicle_data"
     read_only = false
   }
+
+  host_volume "openclaw_workspace" {
+    path      = "/var/lib/openclaw/workspace"
+    read_only = false
+  }
+
+  host_volume "google_takeout_dump" {
+    path      = "/mnt/takeout-hoard"
+    read_only = true
+  }
 }
 
 

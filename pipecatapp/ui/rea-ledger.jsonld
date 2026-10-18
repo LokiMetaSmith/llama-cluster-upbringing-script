@@ -1,0 +1,108 @@
+{
+  "@context": {
+    "vf": "https://w3id.org/valueflows#",
+    "prov": "http://www.w3.org/ns/prov#",
+    "playnet": "https://playnet.earth/ns/v0.5#",
+    "eispp": "https://github.com/brent/eispp/ns#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "urn:uuid:9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "@type": "vf:Bundle",
+  "playnet:scope": "eispp:scope/quantum-lab-ui-preferences",
+  "prov:generatedAtTime": "2026-10-17T22:30:00Z",
+
+  "vf:Agents": [
+    {
+      "@id": "eispp:agent/lawrence-kincheloe",
+      "@type": "vf:Person",
+      "vf:name": "Lawrence",
+      "eispp:soulboundVoiceWeight": 1.42
+    },
+    {
+      "@id": "eispp:agent/lumina-nao",
+      "@type": "vf:EcologicalAgent",
+      "vf:name": "Lumina (OpenClaw Ledger Clerk)",
+      "eispp:role": "ledger-clerk"
+    }
+  ],
+
+  "vf:ResourceSpecifications": [
+    {
+      "@id": "eispp:spec/global-policy-toggle",
+      "@type": "vf:ResourceSpecification",
+      "vf:name": "Preferences Tree Global Override Policy"
+    },
+    {
+      "@id": "eispp:spec/preference-row-node",
+      "@type": "vf:ResourceSpecification",
+      "vf:name": "Draggable Modal & Button8 Preference Node",
+      "eispp:schema": {
+        "boundaryConstraint": "viewport-clamped",
+        "allowCoExist": true
+      }
+    }
+  ],
+
+  "vf:EconomicResources": [
+    {
+      "@id": "eispp:resource/global-toggle-master",
+      "@type": "vf:EconomicResource",
+      "vf:conformsTo": "eispp:spec/global-policy-toggle",
+      "eispp:state": {
+        "enabled": true,
+        "lockChildren": false
+      }
+    },
+    {
+      "@id": "eispp:resource/pref-row-button8",
+      "@type": "vf:EconomicResource",
+      "vf:conformsTo": "eispp:spec/preference-row-node",
+      "vf:containedIn": "eispp:resource/global-toggle-master",
+      "eispp:previousStateHash": "sha256:4a8b9c1d2e3f...",
+      "eispp:state": {
+        "id": "button8-pref-node",
+        "toggleState": "active",
+        "modalBounds": { "x": 240, "y": 115, "clamped": true }
+      }
+    }
+  ],
+
+  "vf:Process": {
+    "@id": "eispp:process/submit-button-commit-001",
+    "@type": "vf:Process",
+    "vf:name": "Commit Staged UI Intents to EISPP Write-Ahead Ledger",
+    "playnet:activityColumn": "T_col_ui_state_reconciliation",
+    "eispp:discardedScratchpadIntents": 148,
+    "vf:hasInput": [
+      {
+        "@id": "eispp:event/cite-global-policy-001",
+        "@type": "vf:EconomicEvent",
+        "vf:action": "cite",
+        "vf:provider": "eispp:agent/lawrence-kincheloe",
+        "vf:receiver": "eispp:agent/lumina-nao",
+        "vf:resourceInventoriedAs": "eispp:resource/global-toggle-master",
+        "vf:note": "Verifies Global Toggle permits child preference mutation"
+      }
+    ],
+    "vf:hasOutput": [
+      {
+        "@id": "eispp:event/modify-pref-row-001",
+        "@type": "vf:EconomicEvent",
+        "vf:action": "modify",
+        "vf:provider": "eispp:agent/lawrence-kincheloe",
+        "vf:receiver": "eispp:agent/lumina-nao",
+        "vf:resourceInventoriedAs": "eispp:resource/pref-row-button8",
+        "vf:created": "2026-10-17T22:30:00Z",
+        "eispp:stateDiff": {
+          "toggleState": { "from": "inactive", "to": "active" },
+          "modalBounds": { "from": { "x": 100, "y": 100 }, "to": { "x": 240, "y": 115 } }
+        },
+        "eispp:clerkSignature": {
+          "clerk": "eispp:agent/lumina-nao",
+          "alg": "Ed25519",
+          "sig": "base64:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069"
+        }
+      }
+    ]
+  }
+}

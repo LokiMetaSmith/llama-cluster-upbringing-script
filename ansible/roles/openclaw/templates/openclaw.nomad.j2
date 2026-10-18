@@ -37,6 +37,18 @@ job "openclaw" {
       read_only = false
     }
 
+    volume "agent_workspace" {
+      type      = "host"
+      read_only = false
+      source    = "openclaw_workspace"
+    }
+
+    volume "takeout_hoard" {
+      type      = "host"
+      read_only = true
+      source    = "google_takeout_dump"
+    }
+
     {% set image_cid = openclaw_ipfs_cid %}
 
     {% set image_tar_name = 'openclaw' %}
@@ -63,6 +75,18 @@ job "openclaw" {
         volume      = "openclaw-data"
         destination = "/root/.openclaw/workspace"
         read_only   = false
+      }
+
+      volume_mount {
+        volume      = "agent_workspace"
+        destination = "/home/node/.openclaw/workspace"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "takeout_hoard"
+        destination = "/mnt/hoard"
+        read_only   = true
       }
 
       env {

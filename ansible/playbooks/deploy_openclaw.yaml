@@ -1,0 +1,13 @@
+---
+- name: Deploy OpenClaw Agent Harness and Verify Cluster Integration
+  hosts: cluster_nodes
+  become: true
+  roles:
+    - openclaw
+  handlers:
+    - name: Restart Nomad OpenClaw Job
+      command: "nomad job stop openclaw-agent"
+      ignore_errors: true
+
+    - name: Run Nomad Job Deployment
+      command: "nomad job run /etc/nomad.d/jobs/openclaw.hcl"
