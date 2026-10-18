@@ -620,14 +620,19 @@ This project is licensed under the [GNU General Public License v3.0](LICENSE).
 
 ## 18. Deployment Options
 
-The project supports a **Hybrid / Cluster-Native architecture**, which means it can be deployed in different configurations depending on the hardware available.
+The project supports a **Hybrid / Cluster-Native architecture**, which means it can be deployed in different configurations depending on the hardware available. It employs a **"Brain vs. Body" topology inversion** to maximize resource utilization:
 
 1. **Monolith Mode** (Tier: `mid`):
    Runs all tools, inference (LLM), and core logic on a single node. Ideal for a standalone server with adequate resources.
 2. **Distributed Mode** (Tier: `edge`, `core`):
    Distributes the workload across a cluster using Consul for service discovery.
-   - **Edge Nodes**: Run lightweight clients/tools.
-   - **Core Nodes**: Handle heavy computation like LLM inference.
+   - **Core Nodes (The Brain)**: High-memory machines (like Strix Halo APUs) act as control nodes and primary inference tiers. Inference is memory-bound, so compute must be concentrated where memory exists.
+   - **Edge Nodes (The Body/Fleet)**: Legacy, low-resource machines (e.g., Core 2 Duo / 8GB RAM) run parallel and low-memory tasks. They act as sensors, storage (IPFS), build/CI compilers, and control plane daemons (Nomad, Consul). They do *not* run heavy inference.
+
+### APU Memory Guardrails
+When deploying to unified memory APUs (such as the 64GB Strix Halo):
+- **Always leave a ~15-25GB buffer unclaimed.** The APU's "VRAM" is system DDR5. If torch/ROCm or `llama.cpp` are allowed to fill the entire pool, it will starve the OS and agent into `zram` thrash, leading to OOM-kills.
+- Cap memory usage via `--ctx-size` in inference engines and use `cgroup` memory caps in Nomad job specs.
 
 ### How to set `node_tier` in Ansible inventory
 
