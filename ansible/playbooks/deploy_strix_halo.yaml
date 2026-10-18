@@ -1,0 +1,6 @@
+---
+- name: Deploy Strix Halo Control Node and Inference Tier
+  hosts: cluster_nodes
+  become: true
+  roles:
+    - strix_halo

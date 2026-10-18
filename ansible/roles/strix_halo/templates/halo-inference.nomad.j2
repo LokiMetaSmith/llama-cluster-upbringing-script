@@ -1,0 +1,25 @@
+job "halo-inference" {
+  datacenters = ["halo"]
+  group "inference" {
+    count = 1
+    network { port "rpc" { to = 8080 } }
+    task "llamacpp" {
+      driver = "docker"
+      config {
+        image     = "ghcr.io/ggml-org/llama.cpp:latest"   # build w/ Vulkan or ROCm backend
+        ports     = { rpc = "rpc" }
+        args      = [
+          "-m", "/models/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf",
+          "--n-gpu-layers", "99",          # offload all layers to the iGPU pool
+          "--ctx-size", "32768",           # CAP THE KV — this is the APU memory guard
+          "--threads", "12",               # 12 of 16c/32t; leave 4c for agent+OS
+          "--host", "0.0.0.0", "--port", "8080",
+        ]
+        resources {
+          cpus    = 4000            # MHz, 4000 = 4 cores (Nomad is in MHz)
+          memory  = 28000           # MB hard cap — the APU guard. Do not raise past ~30 GB.
+        }
+      }
+    }
+  }
+}
