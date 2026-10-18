@@ -78,10 +78,17 @@ class PMMMemory:
                 content TEXT,
                 meta TEXT,
                 prev_hash TEXT,
-                hash TEXT UNIQUE
+                hash TEXT UNIQUE,
+                ipfs_cid TEXT
             )
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);")
+
+        # Migration for existing databases
+        cursor.execute("PRAGMA table_info(events)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if "ipfs_cid" not in columns:
+            cursor.execute("ALTER TABLE events ADD COLUMN ipfs_cid TEXT")
 
         # Gas Town Work Ledger (Beads) Table
         cursor.execute("""
@@ -211,6 +218,70 @@ class PMMMemory:
         """, (timestamp, kind, content, json.dumps(meta), prev_hash, event_hash))
         self.conn.commit()
 
+        # Trigger notarization in the background or implicitly
+        # We catch exceptions to prevent failing the primary SQLite insert if IPFS is down
+        try:
+            self.notarize_unpinned_events_sync(batch_size=10)
+        except Exception:
+            pass
+
+
+    def notarize_unpinned_events_sync(self, batch_size: int = 50) -> int:
+        """Finds events without an ipfs_cid and pins them to IPFS."""
+        import urllib.request
+        import urllib.error
+
+        ipfs_api_url = os.environ.get("IPFS_API_URL", "http://127.0.0.1:5001")
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id, timestamp, kind, content, meta, prev_hash, hash FROM events WHERE ipfs_cid IS NULL ORDER BY id ASC LIMIT ?", (batch_size,))
+        rows = cursor.fetchall()
+        notarized_count = 0
+        for row in rows:
+            event_id, timestamp, kind, content, meta_str, prev_hash, ev_hash = row
+            payload = {
+                "id": event_id,
+                "timestamp": timestamp,
+                "kind": kind,
+                "content": content,
+                "meta": json.loads(meta_str) if meta_str else {},
+                "prev_hash": prev_hash,
+                "hash": ev_hash
+            }
+            try:
+                boundary = uuid.uuid4().hex
+                body_parts = [
+                    f"--{boundary}",
+                    'Content-Disposition: form-data; name="file"; filename="event.json"',
+                    'Content-Type: application/json',
+                    '',
+                    json.dumps(payload, sort_keys=True),
+                    f"--{boundary}--",
+                    ''
+                ]
+                body = "\r\n".join(body_parts).encode('utf-8')
+
+                req = urllib.request.Request(
+                    f"{ipfs_api_url}/api/v0/add",
+                    data=body,
+                    headers={'Content-Type': f'multipart/form-data; boundary={boundary}'}
+                )
+
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    resp_data = json.loads(response.read().decode('utf-8'))
+                    cid = resp_data["Hash"]
+                    cursor.execute("UPDATE events SET ipfs_cid = ? WHERE id = ?", (cid, event_id))
+                    self.conn.commit()
+                    notarized_count += 1
+            except Exception as e:
+                # Log error or silently fail (we will retry next time)
+                pass
+        return notarized_count
+
+    async def notarize_unpinned_events(self, batch_size: int = 50) -> int:
+        """Finds events without an ipfs_cid and pins them to IPFS asynchronously."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.notarize_unpinned_events_sync, batch_size)
+
     async def add_event(self, kind: str, content: str, meta: Optional[Dict[str, Any]] = None, provenance: Optional[Dict[str, Any]] = None) -> None:
         """Adds a new event to the memory ledger asynchronously.
 
@@ -335,7 +406,7 @@ class PMMMemory:
 
         # Retrieve events
         cursor.execute("""
-            SELECT id, timestamp, kind, content, meta FROM events
+            SELECT id, timestamp, kind, content, meta, ipfs_cid FROM events
             WHERE json_extract(meta, '$.user_id') = ?
                OR json_extract(meta, '$.session_id') = ?
                OR json_extract(meta, '$.created_by') = ?
@@ -351,7 +422,8 @@ class PMMMemory:
                 "timestamp": row[1],
                 "kind": row[2],
                 "content": row[3],
-                "meta": meta
+                "meta": meta,
+                "ipfs_cid": row[5]
             })
 
         # Retrieve work items
@@ -407,9 +479,9 @@ class PMMMemory:
         """
         cursor = self.conn.cursor()
         if kind:
-            cursor.execute("SELECT id, timestamp, kind, content, meta FROM events WHERE kind = ? ORDER BY id DESC LIMIT ?", (kind, limit))
+            cursor.execute("SELECT id, timestamp, kind, content, meta, ipfs_cid FROM events WHERE kind = ? ORDER BY id DESC LIMIT ?", (kind, limit))
         else:
-            cursor.execute("SELECT id, timestamp, kind, content, meta FROM events ORDER BY id DESC LIMIT ?", (limit,))
+            cursor.execute("SELECT id, timestamp, kind, content, meta, ipfs_cid FROM events ORDER BY id DESC LIMIT ?", (limit,))
         rows = cursor.fetchall()
         events = []
         for row in rows:
@@ -419,7 +491,8 @@ class PMMMemory:
                 "timestamp": row[1],
                 "kind": row[2],
                 "content": row[3],
-                "meta": meta
+                "meta": meta,
+                "ipfs_cid": row[5]
             })
         return list(reversed(events))
 
