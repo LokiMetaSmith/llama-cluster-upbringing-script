@@ -79,6 +79,22 @@
 
 ## 🔬 Phase 4: Extended Roadmap & Research Previews (Backlog / Speculative)
 
+- [ ] **Strix Halo APU Cluster Bring-up & Verification:**
+  - **Goal:** Implement the "Brain vs. Body" cluster topology using the Strix Halo APU as the control node and primary inference tier.
+  - **Tasks:**
+    1. [ ] Create `scripts/halo_pxe_bringup.sh` to configure PXE booting for 64GB-128GB Strix Halo machines.
+    2. [ ] Define `halo-inference.nomad.j2` with strict memory guardrails (`--ctx-size` cap + cgroup memory caps) ensuring 15-25GB system RAM remains unclaimed.
+    3. [ ] Define `halo-agent.nomad.j2` to deploy the orchestrator/gateway alongside the inference job.
+    4. [ ] Point the SEAL loop at the APU deployment task to run iterative deterministic verification (`git apply --check` -> `build` -> test).
+
+- [x] **Playnet / REA Ledger Architectural Resolutions:**
+  - **Goal:** Address open design questions surfaced during the Agent-as-Ledger-Clerk implementation of the EISPP prototype.
+  - **Tasks:**
+    1. [x] **Ledger Reconciliation:** Define a conflict resolution/reconciliation rule for a multi-writer append-only ledger across the federation.
+    2. [x] **Non-Transferable Clerk Identity:** Implement sybil-resistant, non-transferable identity (e.g. soulbound keys) for agents signing REA events.
+    3. [x] **Multi-Agent Commit Concurrency:** Solve simultaneous commit conflicts (where two agents append modify events to the same resource).
+    4. [x] **Value Flows / Price Oracles:** Bridge pure UI preference commits to the Playnet REA value ledger with explicit resource costs.
+
 - [x] **Reverse Engineer Anything (REA) Integration:**
   - **Goal:** Integrate `morluto/rea` (Node.js MCP server with headless Ghidra) into the cluster via `tool-server` and wrap it as a Pipecat tool to enable AI agents to perform deep application reverse engineering.
   - **Tasks:**
