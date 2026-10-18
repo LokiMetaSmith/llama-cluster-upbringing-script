@@ -88,3 +88,10 @@ You can manually trigger tests and verification to ensure integration remains he
 ```bash
 uv run --no-sync python -m pytest tests/test_tap_orchestrator_challenge.py
 ```
+
+## Reference Implementations
+
+We provide two reference implementations demonstrating how to interact with this daemon using different hardware profiles. These can be found in `examples/proximity_hardware_reference/`:
+
+1. **Python Client (`python_token.py`)**: Demonstrates the full flow (generating a SECP256R1 keypair, requesting a challenge, deterministically signing the JSON payload, and submitting verification) using standard `cryptography` and `httpx` libraries. Ideal for Raspberry Pi or capable smart badges.
+2. **ESP32 Arduino (`esp32_reader.ino`)**: A low-level C++ implementation for ESP32 microcontrollers. It uses `mbedtls` for hardware-accelerated ECDSA cryptography and deterministic DER signature formatting. Ideal for embedding into wall-plates or ultra-low-power BLE/UWB tags.

@@ -1,0 +1,30 @@
+---
+- name: Ensure Nomad jobs directory exists
+  ansible.builtin.file:
+    path: /etc/nomad.d/jobs
+    state: directory
+    mode: '0755'
+
+- name: Template halo-inference Nomad job
+  ansible.builtin.template:
+    src: halo-inference.nomad.j2
+    dest: /etc/nomad.d/jobs/halo-inference.nomad
+    mode: '0644'
+
+- name: Template halo-agent Nomad job
+  ansible.builtin.template:
+    src: halo-agent.nomad.j2
+    dest: /etc/nomad.d/jobs/halo-agent.nomad
+    mode: '0644'
+
+- name: Deploy halo-inference job
+  ansible.builtin.command:
+    cmd: "nomad job run /etc/nomad.d/jobs/halo-inference.nomad"
+  environment:
+    NOMAD_ADDR: "http://127.0.0.1:4646"
+
+- name: Deploy halo-agent job
+  ansible.builtin.command:
+    cmd: "nomad job run /etc/nomad.d/jobs/halo-agent.nomad"
+  environment:
+    NOMAD_ADDR: "http://127.0.0.1:4646"

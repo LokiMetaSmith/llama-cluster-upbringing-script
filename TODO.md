@@ -51,7 +51,7 @@
 
 ## ⚙️ Phase 2: Hybrid Distributed Tool Architecture (P2 - Medium Priority)
 
-- [ ] **Offload Heavy Tools to `tool_server`:**
+- [x] **Offload Heavy Tools to `tool_server`:**
   - [x] Hardened `tool_server.py` with dynamic `_safe_import_and_init` fallbacks, unauthenticated `/health` check, and full `/run_tool/` test verification.
   - [x] Eliminated background thread leakage and filesystem scan deadlocks in `RAG_Tool` (`auto_index=False` default, lazy model encoder initialization).
   - [x] Implemented strict request timeouts and circuit breakers for external tool RPCs (`TOOL_RPC_TIMEOUT` in `RemoteToolProxy`).
@@ -87,13 +87,13 @@
     3. [ ] Define `halo-agent.nomad.j2` to deploy the orchestrator/gateway alongside the inference job.
     4. [ ] Point the SEAL loop at the APU deployment task to run iterative deterministic verification (`git apply --check` -> `build` -> test).
 
-- [ ] **Playnet / REA Ledger Architectural Resolutions:**
+- [x] **Playnet / REA Ledger Architectural Resolutions:**
   - **Goal:** Address open design questions surfaced during the Agent-as-Ledger-Clerk implementation of the EISPP prototype.
   - **Tasks:**
-    1. [ ] **Ledger Reconciliation:** Define a conflict resolution/reconciliation rule for a multi-writer append-only ledger across the federation.
-    2. [ ] **Non-Transferable Clerk Identity:** Implement sybil-resistant, non-transferable identity (e.g. soulbound keys) for agents signing REA events.
-    3. [ ] **Multi-Agent Commit Concurrency:** Solve simultaneous commit conflicts (where two agents append modify events to the same resource).
-    4. [ ] **Value Flows / Price Oracles:** Bridge pure UI preference commits to the Playnet REA value ledger with explicit resource costs.
+    1. [x] **Ledger Reconciliation:** Define a conflict resolution/reconciliation rule for a multi-writer append-only ledger across the federation.
+    2. [x] **Non-Transferable Clerk Identity:** Implement sybil-resistant, non-transferable identity (e.g. soulbound keys) for agents signing REA events.
+    3. [x] **Multi-Agent Commit Concurrency:** Solve simultaneous commit conflicts (where two agents append modify events to the same resource).
+    4. [x] **Value Flows / Price Oracles:** Bridge pure UI preference commits to the Playnet REA value ledger with explicit resource costs.
 
 - [x] **Reverse Engineer Anything (REA) Integration:**
   - **Goal:** Integrate `morluto/rea` (Node.js MCP server with headless Ghidra) into the cluster via `tool-server` and wrap it as a Pipecat tool to enable AI agents to perform deep application reverse engineering.

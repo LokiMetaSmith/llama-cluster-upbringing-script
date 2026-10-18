@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONSUL_HTTP_ADDR="${CONSUL_HTTP_ADDR:-http://127.0.0.1:8500}"
+OPENCLAW_PORT="18789"
+TARGET_SERVICE="llamacpp-http"
+
+echo "=== [1/3] Querying Consul for service: ${TARGET_SERVICE} ==="
+if command -v curl &>/dev/null; then
+    RESOLVED_ENDPOINTS=$(curl -s "${CONSUL_HTTP_ADDR}/v1/catalog/service/${TARGET_SERVICE}" | grep -o '"ServiceAddress":"[^"]*"' | cut -d'"' -f4 || true)
+    SERVICE_JSON=$(curl -s "${CONSUL_HTTP_ADDR}/v1/health/service/${TARGET_SERVICE}?passing=true")
+else
+    echo "Error: curl is required but not installed." >&2
+    exit 1
+fi
+
+if [ -z "${RESOLVED_ENDPOINTS}" ]; then
+    echo "WARNING: No healthy instances of '${TARGET_SERVICE}' found registered in Consul at ${CONSUL_HTTP_ADDR}."
+else
+    echo "SUCCESS: Discovered endpoints for ${TARGET_SERVICE}:"
+    echo "${SERVICE_JSON}" | grep -E '"Address"|"ServicePort"'
+fi
+
+echo -e "\n=== [2/3] Checking OpenClaw Gateway health on port ${OPENCLAW_PORT} ==="
+if nc -z 127.0.0.1 "${OPENCLAW_PORT}" 2>/dev/null || timeout 2 bash -c "true &>/dev/null < /dev/tcp/127.0.0.1/${OPENCLAW_PORT}"; then
+    echo "SUCCESS: OpenClaw gateway port ${OPENCLAW_PORT} is open and accepting TCP connections."
+else
+    echo "ERROR: OpenClaw gateway on port ${OPENCLAW_PORT} is unreachable." >&2
+    exit 1
+fi
+
+echo -e "\n=== [3/3] Verifying OpenClaw API Endpoint Response ==="
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${OPENCLAW_PORT}/" || echo "000")
+if [ "${HTTP_CODE}" -ge 200 ] && [ "${HTTP_CODE}" -lt 500 ]; then
+    echo "SUCCESS: OpenClaw HTTP response status code: ${HTTP_CODE}"
+else
+    echo "WARNING: OpenClaw returned HTTP status code: ${HTTP_CODE}"
+fi
+
+echo "Verification check complete."

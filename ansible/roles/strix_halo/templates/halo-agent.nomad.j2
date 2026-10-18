@@ -1,0 +1,27 @@
+job "halo-agent" {
+  datacenters = ["halo"]
+  group "agent" {
+    count = 1
+    network { ports = { gw = { to = 18789 }, tts = { to = 40700 } } }
+    task "openclaw" {
+      driver = "docker"
+      config {
+        image   = "openclaw:latest"
+        ports   = { gw = "gw" }
+        volumes = [
+          { type = "bind",  source = "/srv/openclaw/workspace",  destination = "/root/.openclaw/workspace" },
+          { type = "bind",  source = "/srv/openclaw/openclaw.json", destination = "/root/.openclaw/openclaw.json" }
+        ]
+        # the agent talks to the inference tier over the local waterfall endpoint,
+        # NOT a cloud API:
+        env {
+          LLM_BASE_URL = "http://127.0.0.1:8080/v1"   # the halo-inference job
+        }
+        resources {
+          cpus    = 2000
+          memory  = 10000            # MB — agent + gateway + tooling
+        }
+      }
+    }
+  }
+}
