@@ -1,0 +1,4 @@
+openclaw_workspace_dir: "/var/lib/openclaw/workspace"
+openclaw_takeout_source_zip: "/tmp/takeout-archive.zip"
+openclaw_takeout_mount_dir: "/mnt/takeout-hoard"
+openclaw_nomad_job_path: "/etc/nomad.d/jobs/openclaw.hcl"

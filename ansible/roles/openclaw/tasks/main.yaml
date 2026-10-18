@@ -1,3 +1,4 @@
+---
 - name: Check if Nomad CLI cert exists
   ansible.builtin.stat:
     path: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.cert.pem' }}"
@@ -20,6 +21,23 @@
     - /opt/openclaw/data
     - /opt/openclaw/skills/pipecat
     - /opt/openclaw/docker
+    - "{{ openclaw_workspace_dir | default('/var/lib/openclaw/workspace') }}"
+    - "{{ openclaw_takeout_mount_dir | default('/mnt/takeout-hoard') }}"
+
+- name: Check if Google Takeout archive exists on controller/target
+  stat:
+    path: "{{ openclaw_takeout_source_zip | default('/tmp/takeout-archive.zip') }}"
+  register: takeout_archive_stat
+
+- name: Unpack Google Takeout archive into host mount volume
+  unarchive:
+    src: "{{ openclaw_takeout_source_zip | default('/tmp/takeout-archive.zip') }}"
+    dest: "{{ openclaw_takeout_mount_dir | default('/mnt/takeout-hoard') }}"
+    remote_src: true
+    owner: "{{ target_user | default('root') }}"
+    group: "{{ target_user | default('root') }}"
+    mode: '0644'
+  when: takeout_archive_stat.stat.exists
 
 - name: Copy OpenClaw Dockerfile
   ansible.builtin.copy:
@@ -75,6 +93,22 @@
     dest: "{{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/openclaw.nomad"
     mode: '0644'
 
+- name: Ensure Nomad scripts directory exists
+  ansible.builtin.file:
+    path: /etc/nomad.d/scripts
+    state: directory
+    mode: '0755'
+    owner: "{{ target_user | default('root') }}"
+    group: "{{ target_user | default('root') }}"
+
+- name: Template post-deployment verification script
+  template:
+    src: "verify_openclaw.sh.j2"
+    dest: "/etc/nomad.d/scripts/verify_openclaw.sh"
+    owner: "root"
+    group: "root"
+    mode: '0755'
+
 - name: Run OpenClaw Nomad job
   ansible.builtin.command:
     cmd: "/usr/local/bin/nomad job run -detach {{ nomad_jobs_dir | default('/opt/nomad/jobs') }}/openclaw.nomad"
@@ -85,3 +119,14 @@
     NOMAD_CLIENT_KEY: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/cli.key.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
   register: openclaw_job_run
   changed_when: true
+
+- name: Execute post-deployment verification script across cluster nodes
+  shell: |
+    bash /etc/nomad.d/scripts/verify_openclaw.sh
+  register: verification_result
+  changed_when: false
+  ignore_errors: true
+
+- name: Display verification output
+  debug:
+    msg: "{{ verification_result.stdout_lines }}"
