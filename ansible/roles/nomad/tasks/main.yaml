@@ -179,6 +179,18 @@
     recurse: no
   become: yes
 
+- name: Ensure Nomad host volume directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - "{{ openclaw_takeout_mount_dir | default('/mnt/takeout-hoard') }}"
+    - "{{ openclaw_workspace_dir | default('/var/lib/openclaw/workspace') }}"
+  become: yes
+
 - name: Create subdirectories for Nomad volumes
   ansible.builtin.file:
     path: "{{ nomad_volumes_dir }}/{{ item }}"
