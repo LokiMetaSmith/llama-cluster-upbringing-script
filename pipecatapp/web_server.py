@@ -970,10 +970,18 @@ async def list_cluster_nodes(rate_limit: None = Depends(standard_limiter)):
     }
 
 
+def _is_loopback_request(request: Request) -> bool:
+    """Verifies that a request originated from or was targeted to the local loopback interface or local Consul scraper."""
+    client_host = request.client.host if request.client else ""
+    host_header = (request.headers.get("host") or "").split(":")[0]
+    allowed = ("127.0.0.1", "::1", "localhost", "testclient")
+    return client_host in allowed or host_header in allowed
+
+
 @app.get(
     "/api/status",
     summary="Get Agent Status",
-    description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks.",
+    description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks. Restricted to local loopback interface.",
     tags=["Agent"],
 )
 async def get_status(
@@ -981,6 +989,12 @@ async def get_status(
     rate_limit: None = Depends(standard_limiter),
 ):
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
+    if not _is_loopback_request(request):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Status endpoint is restricted to local loopback interface (127.0.0.1)."
+        )
+
     twin_service = getattr(request.app.state, "twin_service_instance", None)
     if twin_service and hasattr(twin_service, "tools"):
         mcp = twin_service.tools.get("mcp")
@@ -1002,11 +1016,17 @@ async def get_status(
 @app.get(
     "/health",
     summary="Health Check",
-    description="Provides a health check endpoint. It returns a 200 OK if the agent is initialized and ready, otherwise a 503 Service Unavailable. This is used by Nomad for service health checks.",
+    description="Provides a health check endpoint. Returns 200 OK if initialized. Restricted exclusively to local loopback interface (127.0.0.1).",
     tags=["System"],
 )
 async def get_health(request: Request):
     """A health check endpoint that verifies the agent is fully initialized."""
+    if not _is_loopback_request(request):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Health check targets are restricted to local loopback interface (127.0.0.1)."
+        )
+
     if getattr(request.app.state, "is_ready", False):
         return JSONResponse(content={"status": "ok"})
     else:

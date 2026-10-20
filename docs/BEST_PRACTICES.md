@@ -42,7 +42,7 @@ To eliminate the recurring cycle where agents repeatedly break cluster infrastru
 *   **Level 0: Substrate & Mesh Core (Consul, Nomad, Tailscale, IPFS Gateway/Daemon, TLS/Certs)**
     *   *Inviolable Guarantee:* Application-level or tool-level fixes MUST NEVER modify cluster substrate ports, bypass TLS certificates, or reconfigure Nomad/Consul service blocks.
     *   *Fixed Infrastructure Ports:* Consul (`8500`), Nomad (`4646`), IPFS Gateway (`8092`), IPFS API (`5001`), Pipecat App (`8007`).
-    *   *Health Check Rule:* All infrastructure health check targets (e.g., `/health`, `/api/status`) must be publicly accessible without authentication.
+    *   *Health Check Rule:* Infrastructure health check targets (e.g., `/health`, `/api/status`) must NEVER be exposed to the wider mesh network. They must either utilize Consul's native authenticated mTLS checks or bind strictly to the local loopback interface (`127.0.0.1`) where the local Consul agent can scrape them securely without exposing topology or status to the Tailscale/Headscale network.
 *   **Level 1: Core Runtime (`pipecatapp` Service Layer)**
     *   *Startup Budget:* Must initialize and pass Nomad health checks in under 3 seconds using < 300MB RAM.
     *   *Lazy Tool Loading:* Eager static imports of tools or heavy libraries (PyTorch, Playwright, OpenCV, Faiss) in `agent_factory.py` or `web_server.py` are strictly prohibited. All tools must be registered in `TOOL_CLASS_MAP` and imported on-demand.
@@ -57,10 +57,11 @@ To eliminate the recurring cycle where agents repeatedly break cluster infrastru
 ## 4. Security Guidelines
 
 *   **Zero-Tolerance for TLS/SSL Bypasses:** Agents must never use arguments like `validate_certs: no` (Ansible), `--insecure` / `-k` (cURL), `verify=False` (Python/Requests), or `NODE_TLS_REJECT_UNAUTHORIZED=0` (Node.js). Fix the root cause (trust infrastructure, SANs).
-*   **Defense in Depth:** Web applications (e.g., Uvicorn) must natively serve HTTPS at the application layer using internal CA certificates (injected via Nomad `template` blocks), rather than relying solely on network-level encryption like WireGuard. Python scripts must explicitly trust the internal CA.
+*   **Defense in Depth:** Web applications (e.g., Uvicorn) must natively serve HTTPS at the application layer using internal CA certificates (injected via Nomad `template` blocks utilizing Consul/Vault PKI with short TTLs, e.g., 24 hours, with automatic rotation and service reloading). Python scripts must explicitly trust the internal CA.
 *   **Tailscale / Headscale Mesh Security:** All automated (Ansible) and day-to-day Headscale pre-auth keys must be **ephemeral (single-use)** and dynamically generated. Static, cluster-wide reusable keys are strictly forbidden to prevent lateral movement.
-*   **USB Break-Glass Key:** Maintained via `scripts/imprint_usb_keychain.sh`, generated with `tag:usb-bootstrap`, monitored via `scripts/alert_usb_bootstrap_usage.sh`, and revocable.
-*   **Secrets Evaluation:** The `PostProcessorNode` securely evaluates Python expressions (including f-strings).
+*   **Consul KV Privilege Escalation Prevention:** Agents and applications interacting with Consul KV must be assigned strictly scoped Consul ACL tokens. Write operations are restricted strictly to the service's own namespace/prefix (e.g., `pipecatapp/*`). Reading global configurations is permitted, but global write operations are strictly forbidden.
+*   **USB Break-Glass Key:** Maintained via `scripts/imprint_usb_keychain.sh`, generated with `tag:usb-bootstrap`, monitored via `scripts/alert_usb_bootstrap_usage.sh`, and revocable. Break-glass mechanisms must rely on hardware tokens requiring physical user presence (e.g., YubiKey touch policies or FIDO2 hardware challenge encryption) rather than static unencrypted keys on a FAT32 drive, preventing compromised hosts from silently harvesting bootstrap credentials.
+*   **Ban Dynamic Python Evaluation:** The `PostProcessorNode` must NEVER use `eval()`, `exec()`, or dynamic expression evaluation on LLM-generated output. String formatting and interpolation must use strict sandboxed templating (e.g., `jinja2.sandbox.SandboxedEnvironment` or `string.Template` without access to Python built-ins). Any complex dynamic Python execution must be fully delegated to the Level 2 isolated `tool_server` container/WASM runtime.
 
 ---
 
