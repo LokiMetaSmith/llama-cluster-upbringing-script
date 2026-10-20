@@ -426,7 +426,7 @@
 
 - name: Validate Consul configuration
   become: true
-  ansible.builtin.command: consul validate {{ consul_config_dir }}
+  ansible.builtin.command: consul validate {{ consul_config_dir }}/consul.hcl
   tags:
     - consul_configure
 
