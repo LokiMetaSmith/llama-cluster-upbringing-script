@@ -74,6 +74,7 @@
     state: started
     enabled: yes
     daemon_reload: yes
+  when: not ansible_check_mode
   become: yes
 
 - name: Prevent system sleep but allow screen blanking

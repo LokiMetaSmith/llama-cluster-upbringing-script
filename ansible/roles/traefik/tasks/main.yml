@@ -43,6 +43,7 @@
   delegate_to: localhost
   run_once: true
   become: false
+  when: not ansible_check_mode
 
 - name: Generate CSR for mesh domain
   community.crypto.openssl_csr:
@@ -53,6 +54,7 @@
   delegate_to: localhost
   run_once: true
   become: false
+  when: not ansible_check_mode
 
 - name: Generate self-signed certificate for mesh domain
   community.crypto.x509_certificate:
@@ -63,6 +65,7 @@
   delegate_to: localhost
   run_once: true
   become: false
+  when: not ansible_check_mode
 
 - name: Read generated cert
   ansible.builtin.slurp:
@@ -71,6 +74,7 @@
   delegate_to: localhost
   run_once: true
   become: false
+  when: not ansible_check_mode
 
 - name: Read generated key
   ansible.builtin.slurp:
@@ -79,6 +83,7 @@
   delegate_to: localhost
   run_once: true
   become: false
+  when: not ansible_check_mode
 
 - name: Read Consul management token
   ansible.builtin.slurp:
@@ -86,7 +91,7 @@
   register: consul_token_file
   become: yes
   ignore_errors: yes
-  when: consul_bootstrap_token is not defined or consul_bootstrap_token == ''
+  when: (consul_bootstrap_token is not defined or consul_bootstrap_token == '') and not ansible_check_mode
 
 - name: Set consul_bootstrap_token fact
   ansible.builtin.set_fact:
@@ -105,6 +110,7 @@
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
   run_once: true
+  when: not ansible_check_mode
 
 - name: Push TLS key to Consul KV
   ansible.builtin.uri:
@@ -118,6 +124,7 @@
     headers:
       X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
   run_once: true
+  when: not ansible_check_mode
 
 - name: Clean up temporary Traefik certs directory
   ansible.builtin.file:

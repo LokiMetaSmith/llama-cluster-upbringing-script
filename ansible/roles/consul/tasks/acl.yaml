@@ -116,3 +116,50 @@
           become: yes
       delegate_to: "{{ groups['controller_nodes'][0] }}"
       run_once: true
+
+- name: Provision scoped pipecatapp ACL policy
+  block:
+    - name: Remove legacy pipecatapp policy file from config root if present
+      file:
+        path: "{{ consul_config_dir }}/pipecatapp-policy.hcl"
+        state: absent
+      become: yes
+
+    - name: Ensure Consul policy directory exists
+      file:
+        path: "{{ consul_config_dir }}/policies"
+        state: directory
+        owner: consul
+        group: consul
+        mode: '0755'
+      become: yes
+
+    - name: Create pipecatapp ACL policy file
+      copy:
+        content: |
+          key_prefix "" {
+            policy = "read"
+          }
+          key_prefix "pipecatapp/" {
+            policy = "write"
+          }
+          service_prefix "" {
+            policy = "read"
+          }
+          service "pipecat-app" {
+            policy = "write"
+          }
+        dest: "{{ consul_config_dir }}/policies/pipecatapp-policy.hcl"
+        mode: '0600'
+      become: yes
+
+    - name: Apply pipecatapp Consul ACL policy
+      command: "consul acl policy create -name pipecatapp-policy -rules @{{ consul_config_dir }}/policies/pipecatapp-policy.hcl -token-file {{ consul_config_dir }}/management_token"
+      register: pipecat_policy_result
+      failed_when: pipecat_policy_result.rc != 0 and 'already exists' not in pipecat_policy_result.stderr
+      changed_when: pipecat_policy_result.rc == 0
+      become: yes
+      ignore_errors: yes
+  when: "'controller_nodes' in groups and groups['controller_nodes'] | length > 0"
+  run_once: true
+  delegate_to: "{{ groups['controller_nodes'][0] }}"

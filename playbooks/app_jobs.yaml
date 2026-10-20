@@ -21,6 +21,7 @@
           - "'tailscale0' in ansible_facts['interfaces']"
           - "ansible_facts['tailscale0'].ipv4.address.startswith('100.')"
         fail_msg: "CRITICAL: tailscale0 interface is missing or has no 100.x.x.x IP. Cluster communication requires the mesh network."
+      when: not ansible_check_mode
 
     - name: Wait for Nomad to be ready
       ansible.builtin.wait_for:

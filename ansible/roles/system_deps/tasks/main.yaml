@@ -104,7 +104,7 @@
 - name: Install Rust and Cargo via rustup
   ansible.builtin.shell: |
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-  when: not cargo_stat.stat.exists
+  when: not cargo_stat.stat.exists and not ansible_check_mode
   become: yes
 
 - name: Add cargo to PATH for all users
@@ -114,6 +114,7 @@
       export PATH="/root/.cargo/bin:$PATH"
     mode: '0644'
   become: yes
+  when: not ansible_check_mode
 
 - name: Create symlinks for cargo and rustc
   ansible.builtin.file:
@@ -124,3 +125,4 @@
     - cargo
     - rustc
   become: yes
+  when: not ansible_check_mode

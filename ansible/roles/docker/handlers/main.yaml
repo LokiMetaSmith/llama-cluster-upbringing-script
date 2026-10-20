@@ -11,4 +11,5 @@
     name: docker-prune.timer
     state: restarted
     daemon_reload: yes
+  when: not ansible_check_mode
   become: true

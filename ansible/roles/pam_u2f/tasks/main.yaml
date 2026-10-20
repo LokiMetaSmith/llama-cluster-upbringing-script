@@ -1,0 +1,34 @@
+---
+- name: "PAM U2F : Install libpam-u2f packages"
+  ansible.builtin.apt:
+    name:
+      - libpam-u2f
+      - pamu2fcfg
+    state: present
+  when: enable_pam_u2f | default(false) | bool
+  ignore_errors: yes
+
+- name: "PAM U2F : Ensure u2f mapping file exists"
+  ansible.builtin.file:
+    path: "{{ pam_u2f_auth_file | default('/etc/u2f_mappings') }}"
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+  when: enable_pam_u2f | default(false) | bool
+
+- name: "PAM U2F : Configure sudo PAM module for hardware User Presence requirement"
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sudo
+    line: "auth required pam_u2f.so authfile={{ pam_u2f_auth_file | default('/etc/u2f_mappings') }} origin={{ pam_u2f_origin | default('pam://llama-cluster') }} appid={{ pam_u2f_appid | default('pam://llama-cluster') }} {{ 'cue' if (pam_u2f_cue | default(true) | bool) else '' }} nouserok"
+    insertbefore: BOF
+    state: present
+  when: enable_pam_u2f | default(false) | bool
+
+- name: "PAM U2F : Configure SSHD PAM module for hardware User Presence requirement"
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sshd
+    line: "auth required pam_u2f.so authfile={{ pam_u2f_auth_file | default('/etc/u2f_mappings') }} origin={{ pam_u2f_origin | default('pam://llama-cluster') }} appid={{ pam_u2f_appid | default('pam://llama-cluster') }} {{ 'cue' if (pam_u2f_cue | default(true) | bool) else '' }} nouserok"
+    insertbefore: BOF
+    state: present
+  when: enable_pam_u2f | default(false) | bool

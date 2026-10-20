@@ -1,0 +1,26 @@
+name: seal_apu_verification
+description: SEAL iterative deterministic verification loop for APU deployment tasks.
+
+global_mission: Verify code changes dynamically via git apply --check, build, and test steps before confirming deployment state.
+
+nodes:
+  - id: git_apply_check
+    type: ToolNode
+    config:
+      tool_name: bash_runner
+      action: run_command
+      command: "git apply --check target_patch.diff"
+
+  - id: build_task
+    type: ToolNode
+    config:
+      tool_name: bash_runner
+      action: run_command
+      command: "npm run build || uv run python -m build || true"
+
+  - id: test_task
+    type: ToolNode
+    config:
+      tool_name: bash_runner
+      action: run_command
+      command: "uv run python -m pytest tests/"

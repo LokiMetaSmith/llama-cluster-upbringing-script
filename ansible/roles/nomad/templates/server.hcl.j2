@@ -238,12 +238,12 @@ client {
   }
 
   host_volume "openclaw_workspace" {
-    path      = "/var/lib/openclaw/workspace"
+    path      = "{{ openclaw_workspace_dir | default('/var/lib/openclaw/workspace') }}"
     read_only = false
   }
 
   host_volume "google_takeout_dump" {
-    path      = "/mnt/takeout-hoard"
+    path      = "{{ openclaw_takeout_mount_dir | default('/mnt/takeout-hoard') }}"
     read_only = true
   }
 

@@ -15,18 +15,19 @@
 - name: Copy APT Proxy source files to target
   ansible.builtin.copy:
     src: "{{ project_root }}/pipecatapp/services/ipfs_apt_proxy/"
-    dest: "{{ apt_proxy_src_dir.path }}/"
+    dest: "{{ apt_proxy_src_dir.path | default('/tmp') }}/"
     mode: '0644'
+  when: not ansible_check_mode
 
 - name: Build APT Proxy Docker image locally
   ansible.builtin.command:
     cmd: docker build -t apt_proxy:latest .
-    chdir: "{{ apt_proxy_src_dir.path }}"
+    chdir: "{{ apt_proxy_src_dir.path | default('/tmp') }}"
   changed_when: true
 
 - name: Remove temporary source directory
   ansible.builtin.file:
-    path: "{{ apt_proxy_src_dir.path }}"
+    path: "{{ apt_proxy_src_dir.path | default('/tmp') }}"
     state: absent
 
 - name: Template APT Proxy Nomad job

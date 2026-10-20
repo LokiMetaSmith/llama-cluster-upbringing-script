@@ -13,14 +13,24 @@ from services.tap_orchestrator.config import settings
 
 import time
 import secrets
-from services.tap_orchestrator.models import DesfireEvent, TapResponse, ChallengeResponse, VerifyRequest, VerifyResponse
+from services.tap_orchestrator.models import (
+    DesfireEvent,
+    TapResponse,
+    ChallengeResponse,
+    VerifyRequest,
+    VerifyResponse,
+    RFTelemetryFrame,
+    RFPresenceResponse,
+)
 from pipecatapp.atproto_crypto import verify_payload
 from pipecatapp.datalog_memory import DatalogMemory
 from pipecatapp.memory_backends_impl.consul_kv_backend import ConsulKVBackend
+from services.tap_orchestrator.rf_sniffer import RFSnifferEngine
 
 # Datalog & Consul initialization for REA Accounting
 datalog = DatalogMemory()
 consul_backend = ConsulKVBackend(prefix="swarm/")
+rf_sniffer_engine = RFSnifferEngine(datalog=datalog, consul_backend=consul_backend)
 
 # Temporary store for nonces (nonce -> expiration_time)
 challenge_store = {}
@@ -232,6 +242,17 @@ async def verify_presence(request: VerifyRequest):
         message="Presence verified and compute weight allocated.",
         weight=weight
     )
+
+@app.post("/api/v1/telemetry/rf", response_model=RFPresenceResponse)
+async def process_rf_telemetry(frame: RFTelemetryFrame):
+    """
+    Processes RF/Wi-Fi promiscuous/SDR signal telemetry for passive presence detection.
+    """
+    try:
+        return rf_sniffer_engine.process_telemetry_frame(frame)
+    except Exception as e:
+        logger.error(f"Error processing RF telemetry frame: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process RF telemetry: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=settings.tap_orchestrator_port)

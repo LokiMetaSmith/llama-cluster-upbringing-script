@@ -19,6 +19,20 @@
   become: yes
   ignore_errors: yes
 
+- name: Get path to uv
+  ansible.builtin.command: which uv
+  register: uv_path
+  changed_when: false
+  failed_when: false
+  become: yes
+
+- name: Ensure temporary build directory exists with correct permissions
+  ansible.builtin.file:
+    path: /var/tmp/pipecat_build
+    state: directory
+    mode: '1777'
+  become: yes
+
 - name: Create heretic tool directory
   ansible.builtin.file:
     path: "{{ heretic_tool_dir }}"
@@ -30,7 +44,7 @@
 
 - name: Create heretic tool virtual environment
   ansible.builtin.command:
-    cmd: uv venv --seed {{ heretic_tool_venv_dir }}
+    cmd: "{{ uv_path.stdout | default('uv', true) }} venv --seed {{ heretic_tool_venv_dir }}"
     creates: "{{ heretic_tool_venv_dir }}/bin/activate"
   environment:
     UV_LINK_MODE: "hardlink"
@@ -39,7 +53,7 @@
 
 - name: Install heretic-llm
   ansible.builtin.command:
-    cmd: uv pip install heretic-llm
+    cmd: "{{ uv_path.stdout | default('uv', true) }} pip install heretic-llm"
   environment:
     UV_LINK_MODE: "hardlink"
     VIRTUAL_ENV: "{{ heretic_tool_venv_dir }}"

@@ -1020,6 +1020,14 @@ python3 scripts/provisioning.py "${PROCESSED_ARGS[@]}"
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
+    # Pre-deployment verification for pipecatapp Nomad job
+    if [ "$DO_DRY_RUN" != true ] && [ -x "scripts/test_nomad_deploy.sh" ]; then
+        echo -e "\n${BOLD}${CYAN}🩺 Running pre-deployment verification for Nomad job...${NC}"
+        ./scripts/test_nomad_deploy.sh || {
+            echo -e "\n${RED}❌ Pre-deployment verification failed. Aborting bootstrap.${NC}"
+            exit 1
+        }
+    fi
     echo -e "\n${GREEN}✨ Bootstrap complete.${NC}"
 
     # Automated post-provisioning cluster health probe and self-healing

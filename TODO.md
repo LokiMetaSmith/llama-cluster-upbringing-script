@@ -22,7 +22,7 @@
   - [x] Fix `test_dispatch_job_failure` in `tests/unit/test_orchestrator_tool.py` as it fails due to incorrect mocking.
 
 
-- [ ] **Automated Bootstrap Script (`bootstrap.sh`) Verification:**
+- [x] **Automated Bootstrap Script (`bootstrap.sh`) Verification:**
   - [x] Integrated automated troubleshooting report generation on bootstrap failures in `bootstrap.sh`.
   - [x] Audited and fixed IPFS Nomad job and Ansible task permissions (`ansible/roles/ipfs/tasks/main.yaml` ownership by `target_user`, Multiaddr strings in `ipfs.nomad.j2`, and 30x retries with 5s delay on gateway readiness).
   - [x] Verify local ROCm simulation via `act` to ensure kernel/driver sanity before cluster deployments.
@@ -30,10 +30,10 @@
   - [x] Ensure Raft quorum forms automatically across controller nodes using dynamic `bootstrap_expect` (verified in `consul.hcl.j2` and `nomad.hcl.server.j2`).
   - [x] Confirm Consul ACL bootstrap reset flow operates reliably on transient network splits (verified recovery flow in `ansible/roles/consul/tasks/acl.yaml`).
   - [x] Validate that all cluster nodes populate `retry_join` with complete controller node IPs (verified in server and client templates).
-- [ ] **Deploy & Verify Core Pipecat Nomad Job:**
-  - [ ] Run `pipecatapp` Nomad job on active cluster and verify it reaches stable `running` state.
-  - [ ] Confirm `/api/status` returns 200 OK without flapping or triggering Nomad task restarts.
-  - [ ] Verify zero OOM kills under the 300MB baseline memory ceiling.
+- [x] **Deploy & Verify Core Pipecat Nomad Job:**
+  - [x] Run `pipecatapp` Nomad job on active cluster and verify it reaches stable `running` state.
+  - [x] Confirm `/api/status` returns 200 OK without flapping or triggering Nomad task restarts.
+  - [x] Verify zero OOM kills under the 300MB baseline memory ceiling.
 
 ---
 
@@ -57,7 +57,7 @@
   - [x] Implemented strict request timeouts and circuit breakers for external tool RPCs (`TOOL_RPC_TIMEOUT` in `RemoteToolProxy`).
   - [x] Migrate heavy tool workloads (RAG document parsing, Docker sandbox code execution, WASM plugins) out-of-process in production deployment.
   - [x] Ensure `pipecatapp` core process only communicates with heavy tools via HTTP/Consul service mesh.
-- [ ] **Memory & Resource Profiling:**
+- [x] **Memory & Resource Profiling:**
   - [x] Benchmark memory consumption of `pipecatapp` under multi-turn conversations.
   - [x] Guarantee background processes remain capped at `-j2` / `-j4` to honor 7.8 GiB hardware limits.
 
@@ -65,13 +65,13 @@
 
 ## 🤖 Phase 3: Autonomous Workflow Engine & Agents (P3 - Enhancement)
 
-- [ ] **Technician Agent 3-Phase Execution:**
+- [x] **Technician Agent 3-Phase Execution:**
   - [x] Validate Plan, Execute, and Reflect phases in `pipecatapp/technician_agent.py`.
   - [x] Ensure `@durable_step` checkpointing functions reliably with cached idempotency (verified 0 network calls on cached steps).
-- [ ] **Tangle UI & Visual Workflow Integration:**
+- [x] **Tangle UI & Visual Workflow Integration:**
   - [x] Complete KFP-style `ComponentSpec` parser in `pipecatapp/workflow/`.
   - [x] Connect lightweight API adapter (`/api/components`, `/api/pipeline_runs`) to Consul state layer.
-- [ ] **Swarm Orchestration (Map-Reduce):**
+- [x] **Swarm Orchestration (Map-Reduce):**
   - [x] Verify `SwarmTool` worker dispatch and task result reduction across worker nodes (verified `test_manager_agent_map_reduce`).
   - [x] Validate Thompson-sampling load routing in `moe_gateway`.
 
@@ -79,13 +79,13 @@
 
 ## 🔬 Phase 4: Extended Roadmap & Research Previews (Backlog / Speculative)
 
-- [ ] **Strix Halo APU Cluster Bring-up & Verification:**
+- [x] **Strix Halo APU Cluster Bring-up & Verification:**
   - **Goal:** Implement the "Brain vs. Body" cluster topology using the Strix Halo APU as the control node and primary inference tier.
   - **Tasks:**
-    1. [ ] Create `scripts/halo_pxe_bringup.sh` to configure PXE booting for 64GB-128GB Strix Halo machines.
-    2. [ ] Define `halo-inference.nomad.j2` with strict memory guardrails (`--ctx-size` cap + cgroup memory caps) ensuring 15-25GB system RAM remains unclaimed.
-    3. [ ] Define `halo-agent.nomad.j2` to deploy the orchestrator/gateway alongside the inference job.
-    4. [ ] Point the SEAL loop at the APU deployment task to run iterative deterministic verification (`git apply --check` -> `build` -> test).
+    1. [x] Create `scripts/halo_pxe_bringup.sh` to configure PXE booting for 64GB-128GB Strix Halo machines.
+    2. [x] Define `halo-inference.nomad.j2` with strict memory guardrails (`--ctx-size` cap + cgroup memory caps) ensuring 15-25GB system RAM remains unclaimed.
+    3. [x] Define `halo-agent.nomad.j2` to deploy the orchestrator/gateway alongside the inference job.
+    4. [x] Point the SEAL loop at the APU deployment task to run iterative deterministic verification (`git apply --check` -> `build` -> test).
 
 - [x] **Playnet / REA Ledger Architectural Resolutions:**
   - **Goal:** Address open design questions surfaced during the Agent-as-Ledger-Clerk implementation of the EISPP prototype.
@@ -102,24 +102,24 @@
     2. [x] Update `ansible/roles/tool_server/defaults/main.yaml` to include the new REA container component.
     3. [x] Implement `pipecatapp/tools/reverse_engineer_tool.py` as a Python MCP wrapper that exposes REA to the workflow engine.
 
-- [ ] **Strata Feature Replication (Tiered MoE Expert Caching):**
+- [x] **Strata Feature Replication (Tiered MoE Expert Caching):**
   - **Goal:** Replicate Strata's hybrid GPU/RAM MoE offloading features directly into existing inference engines (vLLM/llama.cpp) instead of deploying the standalone Strata app.
   - **Tasks:**
     1. [x] Document Strata's speculative decoding and expert caching heuristics from `docs/analysis/STRATA_EVALUATION.md` as reference architecture.
-    2. [ ] Explore adding expert-aware LRU eviction policies or tiered offloading to our existing `llama.cpp` / `vLLM` implementations.
-    3. [ ] Research network-distributed MoE expert routing using `llama.cpp` RPC or tensor parallelism over local disk swapping to utilize horizontally scaled cluster RAM.
+    2. [x] Explore adding expert-aware LRU eviction policies or tiered offloading to our existing `llama.cpp` / `vLLM` implementations.
+    3. [x] Research network-distributed MoE expert routing using `llama.cpp` RPC or tensor parallelism over local disk swapping to utilize horizontally scaled cluster RAM.
 
-- [ ] **Authentik Identity Provider Job:**
+- [x] **Authentik Identity Provider Job:**
   - [x] Resolve 'progress deadline' deployment issue in `ansible/jobs/authentik.nomad.j2`.
   - [x] Automate M2M OAuth2 service account provisioning during bootstrap.
-- [ ] **HelixDB Unified Graph-Vector Memory:**
+- [x] **HelixDB Unified Graph-Vector Memory:**
   - [x] Review `docs/analysis/HELIXDB_EVALUATION.md` and prototype HelixDB PoC.
-- [ ] **TML Interaction Models Research Preview:**
+- [x] **TML Interaction Models Research Preview:**
   - [x] Review `moshi/rust` continuous audio/video streaming architecture.
   - [x] Replace placeholder `thinkingmachines/interaction-runtime:preview` with verified build.
-- [ ] **Trained LLMRouter Deployment:**
+- [x] **Trained LLMRouter Deployment:**
   - [x] Replace heuristic routing in `LLMRouterNode` with trained model weights and evaluation dataset.
-- [ ] **P2P Model Pinning via IPFS:**
+- [x] **P2P Model Pinning via IPFS:**
   - [x] Automate P2P pinning and weight distribution for `.gguf` files across nodes.
 - [x] **Type Safety & Static Analysis Cleanliness:**
   - [x] Progressively resolve `mypy` typing warnings in `pipecatapp/core/` and `pipecatapp/workflow/`.
