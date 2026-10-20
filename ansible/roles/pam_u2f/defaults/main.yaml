@@ -1,0 +1,5 @@
+enable_pam_u2f: false
+pam_u2f_auth_file: /etc/u2f_mappings
+pam_u2f_cue: true
+pam_u2f_origin: "pam://llama-cluster"
+pam_u2f_appid: "pam://llama-cluster"

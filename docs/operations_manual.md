@@ -53,7 +53,16 @@ Bootstrapping a bare-metal server or VM into the cluster involves setting up the
    ./bootstrap_cluster.sh
    ```
 2. **Network & OS:** This configures the bridge networking, TLS certificates, and essential host packages.
-3. **Cluster Joining:** The node will automatically join the Consul and Nomad clusters using the configurations provisioned by Ansible under `ansible/roles/nomad` and `ansible/roles/consul`.
+3. **FIDO2 LUKS & Break-Glass Security:**
+   - To bind root LUKS partition decryption to a physical FIDO2 hardware token (YubiKey/Nitrokey):
+     ```bash
+     sudo systemd-cryptenroll --fido2-device=auto /dev/sdXn
+     ```
+   - To imprint and stage an encrypted break-glass bundle protected by hardware presence:
+     ```bash
+     ./scripts/imprint_usb_keychain.sh
+     ```
+4. **Cluster Joining:** The node will automatically join the Consul and Nomad clusters using the configurations provisioned by Ansible under `ansible/roles/nomad` and `ansible/roles/consul`.
 
 ## Edge Device Onboarding
 
@@ -62,7 +71,10 @@ Enrolling edge nodes or clients to interact with Nomad and services securely.
 ### Steps:
 1. **Device Registration:** Provision TLS certificates for the edge device to communicate securely.
 2. **Agent Configuration:** If running lightweight edge jobs, install a Nomad client pointing to the control plane.
-3. **Networking:** Ensure Headscale/Wireguard networking allows the edge node to route to the cluster IPs.
+3. **Sovereign Mesh Attestation (Headscale):**
+   - Headscale operates as the self-hosted attestation authority for Tailnet WireGuard mesh networking.
+   - Pre-authenticated keys issued by Headscale allow unconstrained custom Linux nodes to join without being subject to external third-party vendor attestation compliance checks.
+4. **Networking:** Ensure Headscale/Wireguard networking allows the edge node to route to the cluster IPs.
 
 ## Model & Workload Deployment
 

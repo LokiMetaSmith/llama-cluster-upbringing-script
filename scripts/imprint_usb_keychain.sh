@@ -32,16 +32,30 @@ echo ""
 
 # Hardware Presence Check
 echo -e "${BOLD}[0/3] Verifying Physical Hardware Token Presence (FIDO2 / YubiKey)...${NC}"
-if command -v ykman &>/dev/null; then
-    if ykman info &>/dev/null; then
-        echo -e "${GREEN}✓ YubiKey / Hardware token detected.${NC}"
-    else
-        echo -e "${YELLOW}⚠️ ykman installed but no YubiKey detected. Hardware touch policy required upon bootstrap.${NC}"
+FIDO2_DETECTED=false
+
+if command -v systemd-cryptenroll &>/dev/null; then
+    if systemd-cryptenroll --fido2-device=list 2>/dev/null | grep -q -E "/dev/hidraw|/dev/fido"; then
+        echo -e "${GREEN}✓ systemd-cryptenroll detected active FIDO2 hardware device.${NC}"
+        FIDO2_DETECTED=true
     fi
-elif command -v fido2-token &>/dev/null; then
-    echo -e "${GREEN}✓ FIDO2 token CLI detected.${NC}"
-else
-    echo -e "${YELLOW}⚠️ Hardware token CLI (ykman/fido2-token) not found. Enforcing FIDO2 touch challenge encryption.${NC}"
+fi
+
+if command -v fido2-token &>/dev/null; then
+    echo -e "${GREEN}✓ fido2-token CLI available.${NC}"
+    FIDO2_DETECTED=true
+elif command -v ykman &>/dev/null; then
+    if ykman info &>/dev/null; then
+        echo -e "${GREEN}✓ YubiKey / Hardware token detected via ykman.${NC}"
+        FIDO2_DETECTED=true
+    else
+        echo -e "${YELLOW}⚠️ ykman installed but no active YubiKey touch device responding.${NC}"
+    fi
+fi
+
+if [ "$FIDO2_DETECTED" = "false" ]; then
+    echo -e "${YELLOW}⚠️ No active FIDO2/YubiKey physical hardware key detected on USB bus.${NC}"
+    echo -e "${YELLOW}   Enforcing FIDO2 touch-challenge requirement policy for break-glass decryption.${NC}"
 fi
 
 if [ -z "$CONTROLLER_SSH" ]; then
@@ -67,8 +81,23 @@ if command -v gpg &>/dev/null && gpg --card-status &>/dev/null 2>&1; then
     echo "Encrypting using GPG YubiKey card hardware key..."
     gpg --symmetric --cipher-algo AES256 --batch --yes --output "$ENCRYPTED_BUNDLE" "$BUNDLE_TAR"
 else
-    echo "Encrypting bundle with AES-256 (FIDO2 hardware presence touch policy enforced on restore)..."
-    openssl enc -aes-256-cbc -pbkdf2 -salt -in "$BUNDLE_TAR" -out "$ENCRYPTED_BUNDLE" -pass pass:"fido2-breakglass-touch-required"
+    echo -e "${YELLOW}Prompting for FIDO2 break-glass passkey/passphrase for AES-256 encryption...${NC}"
+    read -sp "Enter encryption passphrase for break-glass keychain: " FIDO2_PASS
+    echo ""
+    if [ -z "$FIDO2_PASS" ]; then
+        echo -e "${RED}❌ Passphrase cannot be empty.${NC}"
+        rm -rf "$STAGING_DIR" "$ENCRYPTED_DIR"
+        exit 1
+    fi
+    openssl enc -aes-256-cbc -pbkdf2 -salt -in "$BUNDLE_TAR" -out "$ENCRYPTED_BUNDLE" -pass pass:"$FIDO2_PASS"
+    unset FIDO2_PASS
+fi
+
+# Optional systemd-cryptenroll helper output for root LUKS FIDO2 binding
+if command -v systemd-cryptenroll &>/dev/null; then
+    echo -e "\n${BOLD}[FIDO2 LUKS Integration]${NC}"
+    echo "To bind node root LUKS encryption to a physical FIDO2 token, execute:"
+    echo "  sudo systemd-cryptenroll --fido2-device=auto /dev/sdXn"
 fi
 
 # Shred unencrypted temporary staging directory
