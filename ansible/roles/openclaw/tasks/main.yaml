@@ -39,6 +39,14 @@
     mode: '0644'
   when: takeout_archive_stat.stat.exists
 
+- name: Deploy Takeout import helper script
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../scripts/import_takeout.sh"
+    dest: /usr/local/bin/import_takeout.sh
+    mode: '0755'
+    owner: root
+    group: root
+
 - name: Copy OpenClaw Dockerfile
   ansible.builtin.copy:
     src: Dockerfile
