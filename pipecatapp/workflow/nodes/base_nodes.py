@@ -115,78 +115,51 @@ class GateNode(Node):
 
 @registry.register
 class PostProcessorNode(Node):
-    """A node that evaluates a Python expression on its input data securely.
-    Input: 'data' (the data to process), 'expression' (a Python expression string, where 'data' is the input variable)
+    """A node that processes input data securely using Jinja2 SandboxedEnvironment or remote execution.
+    Input: 'data' (the data to process), 'expression' (Jinja2 template or formatting string)
     Output: 'processed_data'
     """
     async def execute(self, context: WorkflowContext):
+        import os
+        import json
+        from jinja2.sandbox import SandboxedEnvironment
+
         data = self.get_input(context, "data")
         try:
             expression = self.get_input(context, "expression")
         except ValueError:
             expression = self.config.get("config", {}).get("expression", "data")
 
-        if not expression or expression.strip() == "data":
+        if not expression or expression.strip() in ("", "data", "{{ data }}"):
             self.set_output(context, "processed_data", data)
             return
 
+        execution_mode = self.config.get("config", {}).get("mode", "sandboxed_template")
+        if execution_mode == "remote":
+            tool_server_url = self.config.get("config", {}).get("tool_server_url") or os.getenv("TOOL_SERVER_URL")
+            if tool_server_url:
+                from pipecatapp.tools.remote_tool_proxy import RemoteToolProxy
+                proxy = RemoteToolProxy("code_runner", tool_server_url)
+                result = proxy.execute(code=expression, data=data)
+                self.set_output(context, "processed_data", result)
+                return
+            else:
+                raise ValueError("Remote execution requested but TOOL_SERVER_URL is not configured.")
+
         try:
-            import ast
+            env = SandboxedEnvironment()
+            render_context = {"data": data}
+            if isinstance(data, dict):
+                render_context.update(data)
 
-            def evaluate_ast(node, local_vars):
-                """A strict, recursive AST evaluator for simple data transformations."""
-                if isinstance(node, ast.Expression):
-                    return evaluate_ast(node.body, local_vars)
-                elif isinstance(node, ast.Constant):
-                    return node.value
-                elif isinstance(node, ast.Name):
-                    if node.id in local_vars:
-                        return local_vars[node.id]
-                    raise ValueError(f"Variable '{node.id}' is not defined.")
-                elif isinstance(node, ast.Dict):
-                    return {evaluate_ast(k, local_vars): evaluate_ast(v, local_vars) for k, v in zip(node.keys, node.values)}
-                elif isinstance(node, ast.List):
-                    return [evaluate_ast(x, local_vars) for x in node.elts]
-                elif isinstance(node, ast.Subscript):
-                    obj = evaluate_ast(node.value, local_vars)
-                    key = evaluate_ast(node.slice, local_vars)
-                    return obj[key]
-                elif isinstance(node, ast.BinOp):
-                    left = evaluate_ast(node.left, local_vars)
-                    right = evaluate_ast(node.right, local_vars)
-                    if isinstance(node.op, ast.Add): return left + right
-                    if isinstance(node.op, ast.Sub): return left - right
-                    if isinstance(node.op, ast.Mult): return left * right
-                    if isinstance(node.op, ast.Div): return left / right
-                    raise ValueError(f"Unsupported binary operator: {type(node.op)}")
-                elif isinstance(node, ast.JoinedStr):
-                    return "".join(str(evaluate_ast(val, local_vars)) for val in node.values)
-                elif isinstance(node, ast.FormattedValue):
-                    return evaluate_ast(node.value, local_vars)
-                elif isinstance(node, ast.ListComp):
-                    # Only support single comprehension with single target
-                    if len(node.generators) != 1:
-                        raise ValueError("Only single list comprehensions are supported.")
-                    gen = node.generators[0]
-                    if not isinstance(gen.target, ast.Name):
-                        raise ValueError("List comprehension target must be a simple variable name.")
+            template = env.from_string(expression)
+            rendered = template.render(**render_context)
 
-                    target_name = gen.target.id
-                    iterable = evaluate_ast(gen.iter, local_vars)
-
-                    result_list = []
-                    for item in iterable:
-                        # Create a new scope for the list comp
-                        loop_vars = local_vars.copy()
-                        loop_vars[target_name] = item
-                        result_list.append(evaluate_ast(node.elt, loop_vars))
-                    return result_list
-                else:
-                    raise ValueError(f"Unsupported expression type: {type(node)}")
-
-            # Parse to AST and evaluate strictly
-            tree = ast.parse(expression, mode='eval')
-            result = evaluate_ast(tree, {"data": data})
+            # Attempt parsing rendered output if it forms valid JSON (e.g. lists, dicts, numbers)
+            try:
+                result = json.loads(rendered)
+            except (json.JSONDecodeError, TypeError):
+                result = rendered
 
             self.set_output(context, "processed_data", result)
 
