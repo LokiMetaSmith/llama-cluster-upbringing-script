@@ -49,7 +49,7 @@
         - "/tmp/kubo.tar.gz"
         - "/tmp/kubo"
   become: yes
-  when: not ipfs_binary.stat.exists or (ipfs_version is defined and ipfs_version.stdout is defined and '0.41.0' not in ipfs_version.stdout)
+  when: (not ipfs_binary.stat.exists or (ipfs_version is defined and ipfs_version.stdout is defined and '0.41.0' not in ipfs_version.stdout)) and not ansible_check_mode
 
 
 - name: Determine node hostname for IPFS directory
@@ -335,7 +335,7 @@
     - name: Check Gateway Status Success
       ansible.builtin.fail:
         msg: "Gateway failed to start properly. Status: {{ ipfs_gateway_status.status | default('unknown') }}"
-      when: "not (ipfs_gateway_status.status is defined and ipfs_gateway_status.status in [200, 400, 403, 404])"
+      when: "not (ipfs_gateway_status.status is defined and ipfs_gateway_status.status in [200, 400, 403, 404]) and not ansible_check_mode"
   rescue:
     - name: Diagnose IPFS Nomad job status
       ansible.builtin.command: /usr/local/bin/nomad job status ipfs
@@ -399,6 +399,7 @@
     - name: Fail task due to IPFS Gateway timeout
       ansible.builtin.fail:
         msg: "Timeout waiting for IPFS Gateway to be fully ready"
+      when: not ansible_check_mode
 
 
 - name: Deploy automated IPFS P2P model pinning script

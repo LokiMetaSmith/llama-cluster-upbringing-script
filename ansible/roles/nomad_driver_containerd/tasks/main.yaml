@@ -15,5 +15,6 @@
     owner: root
     group: root
   become: yes
+  when: not ansible_check_mode
   notify:
     - Restart nomad

@@ -10,24 +10,28 @@
   ansible.builtin.tempfile:
     state: directory
     suffix: _pypi_proxy
+  when: not ansible_check_mode
   register: pypi_proxy_src_dir
 
 - name: Copy PyPI Proxy source files to target
   ansible.builtin.copy:
     src: "{{ project_root }}/pipecatapp/services/ipfs_pypi_proxy/"
-    dest: "{{ pypi_proxy_src_dir.path }}/"
+    dest: "{{ pypi_proxy_src_dir.path | default('/tmp') }}/"
     mode: '0644'
+  when: not ansible_check_mode
 
 - name: Build PyPI Proxy Docker image locally
   ansible.builtin.command:
     cmd: docker build -t pypi_proxy:latest .
-    chdir: "{{ pypi_proxy_src_dir.path }}"
+    chdir: "{{ pypi_proxy_src_dir.path | default('/tmp') }}"
   changed_when: true
+  when: not ansible_check_mode
 
 - name: Remove temporary source directory
   ansible.builtin.file:
-    path: "{{ pypi_proxy_src_dir.path }}"
+    path: "{{ pypi_proxy_src_dir.path | default('/tmp') }}"
     state: absent
+  when: not ansible_check_mode
 
 - name: Template PyPI Proxy Nomad job
   ansible.builtin.template:

@@ -16,6 +16,7 @@
     name: tailscaled
     state: started
     enabled: yes
+  when: not ansible_check_mode
 
 - name: Check Tailscale status
   command: tailscale status

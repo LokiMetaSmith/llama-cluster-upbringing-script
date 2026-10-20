@@ -8,6 +8,7 @@
 
   tasks:
     - block:
+      - block:
         - name: "Check 1: Verify tailscale0 interface exists"
           fail:
             msg: "Interface tailscale0 not found! The mesh is not active."
@@ -64,3 +65,4 @@
         - name: "Fail Playbook after Debugging"
           fail:
             msg: "Mesh network verification failed. See debug output above."
+      when: not ansible_check_mode

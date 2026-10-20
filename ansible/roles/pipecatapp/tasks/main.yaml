@@ -237,7 +237,7 @@
   become: yes
   ignore_errors: false
   no_log: true
-  when: groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0
+  when: groups['controller_nodes'] is defined and groups['controller_nodes'] | length > 0 and not ansible_check_mode
 
 - name: Set Consul token fact from file
   ansible.builtin.set_fact:

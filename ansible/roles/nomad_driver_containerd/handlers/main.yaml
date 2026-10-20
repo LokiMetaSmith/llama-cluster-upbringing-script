@@ -2,4 +2,5 @@
   ansible.builtin.systemd:
     name: nomad
     state: restarted
+  when: not ansible_check_mode
   become: yes

@@ -242,6 +242,7 @@
   until: consul_token_file is success
   retries: 12
   delay: 5
+  when: (consul_bootstrap_token is undefined or consul_bootstrap_token == 'ci-dry-run-token') and not ansible_check_mode
   tags:
     - nomad
 
@@ -390,6 +391,7 @@
     name: br_netfilter
     state: present
   become: yes
+  when: not ansible_check_mode
   check_mode: no
   ignore_errors: "{{ ansible_virtualization_type | default('') in ['docker', 'containerd'] }}"
 
@@ -442,6 +444,7 @@
     dest: /tmp/cni-plugins.tgz
     mode: '0644'
     timeout: 30
+  when: not ansible_check_mode
   register: download_cni
   until: download_cni is success
   retries: 5

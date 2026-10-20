@@ -47,7 +47,7 @@
   until: consul_token_file_authentik is success
   retries: 5
   delay: 2
-  when: consul_bootstrap_token is undefined
+  when: (consul_bootstrap_token is undefined or consul_bootstrap_token == 'ci-dry-run-token') and not ansible_check_mode
   ignore_errors: yes
 
 - name: Set Consul token fact (if undefined)
@@ -67,12 +67,14 @@
     status_code: [200, 404]
   register: authentik_consul_key
   ignore_errors: yes
+  when: not ansible_check_mode
 
 - name: Generate Authentik secret key
   ansible.builtin.command: openssl rand -hex 50
   register: authentik_generated_key
   when: >
-    authentik_consul_key is not failed and
+    not ansible_check_mode and
+    authentik_consul_key is not skipped and authentik_consul_key is not failed and
     (authentik_consul_key.status == 404 or
     (authentik_consul_key.status == 200 and authentik_consul_key.json[0].Value | default('') | b64decode | length < 50))
 
@@ -88,7 +90,8 @@
     body: "{{ authentik_generated_key.stdout }}"
     status_code: [200, 201]
   when: >
-    authentik_consul_key is not failed and
+    not ansible_check_mode and
+    authentik_consul_key is not skipped and authentik_consul_key is not failed and
     (authentik_consul_key.status == 404 or
     (authentik_consul_key.status == 200 and authentik_consul_key.json[0].Value | default('') | b64decode | length < 50))
 
@@ -104,12 +107,14 @@
     status_code: [200, 404]
   register: authentik_db_password_key
   ignore_errors: yes
+  when: not ansible_check_mode
 
 - name: Generate Authentik DB password
   ansible.builtin.command: openssl rand -base64 32
   register: authentik_generated_db_password
   when: >
-    authentik_db_password_key is not failed and
+    not ansible_check_mode and
+    authentik_db_password_key is not skipped and authentik_db_password_key is not failed and
     (authentik_db_password_key.status == 404 or
     (authentik_db_password_key.status == 200 and authentik_db_password_key.json[0].Value | default('') | b64decode | length < 10))
 
@@ -125,7 +130,8 @@
     body: "{{ authentik_generated_db_password.stdout }}"
     status_code: [200, 201]
   when: >
-    authentik_db_password_key is not failed and
+    not ansible_check_mode and
+    authentik_db_password_key is not skipped and authentik_db_password_key is not failed and
     (authentik_db_password_key.status == 404 or
     (authentik_db_password_key.status == 200 and authentik_db_password_key.json[0].Value | default('') | b64decode | length < 10))
 

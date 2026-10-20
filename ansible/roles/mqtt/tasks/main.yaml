@@ -40,7 +40,7 @@
   until: consul_token_file_mqtt is success
   retries: 5
   delay: 2
-  when: consul_bootstrap_token is undefined
+  when: (consul_bootstrap_token is undefined or consul_bootstrap_token == 'ci-dry-run-token') and not ansible_check_mode
   ignore_errors: yes
 
 - name: Set Consul token fact (if undefined)

@@ -93,10 +93,10 @@
     client_key: "/etc/consul.d/key.pem"
     ca_path: "/etc/consul.d/ca.pem"
     headers:
-      X-Consul-Token: "{{ consul_bootstrap_token }}"
-    body: "{{ authentik_m2m_client_id.stdout }}"
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
+    body: "{{ authentik_m2m_client_id.stdout | default('ci-dry-run-client-id') }}"
     status_code: 200
-  when: authentik_ready is success and bootstrap_exec.rc == 0
+  when: authentik_ready is success and bootstrap_exec.rc == 0 and not ansible_check_mode
 
 - name: Publish Authentik Client Secret to Consul for Tap Orchestrator
   ansible.builtin.uri:
@@ -106,7 +106,7 @@
     client_key: "/etc/consul.d/key.pem"
     ca_path: "/etc/consul.d/ca.pem"
     headers:
-      X-Consul-Token: "{{ consul_bootstrap_token }}"
-    body: "{{ authentik_m2m_client_secret.stdout }}"
+      X-Consul-Token: "{{ consul_bootstrap_token | default(omit) }}"
+    body: "{{ authentik_m2m_client_secret.stdout | default('ci-dry-run-client-secret') }}"
     status_code: 200
-  when: authentik_ready is success and bootstrap_exec.rc == 0
+  when: authentik_ready is success and bootstrap_exec.rc == 0 and not ansible_check_mode
