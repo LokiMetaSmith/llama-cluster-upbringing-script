@@ -3,6 +3,7 @@
   become: yes
   roles:
     - vector
+    - pam_u2f
 
 - hosts: controller_nodes
   gather_facts: yes
