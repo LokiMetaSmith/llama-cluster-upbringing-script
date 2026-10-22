@@ -45,31 +45,31 @@ Go through every file touched during the forward pass. For each one, apply the c
 
 ### Elimination — does removing this break anything?
 
-- [ ] Dead code: written but never called
-- [ ] Scaffolding that stayed: temporary structure that hardened in place
-- [ ] One-call helpers: functions extracted once, never reused — inline them
-- [ ] Speculative parameters: args that are always the same value at every call site
-- [ ] Unused imports, variables, type aliases, constants
+- [x] Dead code: written but never called
+- [x] Scaffolding that stayed: temporary structure that hardened in place
+- [x] One-call helpers: functions extracted once, never reused — inline them
+- [x] Speculative parameters: args that are always the same value at every call site
+- [x] Unused imports, variables, type aliases, constants
 
 ### Simplification — can the same behavior be expressed more simply?
 
-- [ ] Verbose control flow → early returns or guard clauses
-- [ ] Nested conditionals → flattened or inverted logic
-- [ ] Hand-rolled logic → stdlib or an existing dependency
-- [ ] Multi-step transforms → a single pipeline, map, or comprehension
-- [ ] Intermediate variables that exist only to be immediately passed elsewhere
+- [x] Verbose control flow → early returns or guard clauses
+- [x] Nested conditionals → flattened or inverted logic
+- [x] Hand-rolled logic → stdlib or an existing dependency
+- [x] Multi-step transforms → a single pipeline, map, or comprehension
+- [x] Intermediate variables that exist only to be immediately passed elsewhere
 
 ### Interface — is the public surface right-sized?
 
-- [ ] Public methods or functions that should be private
-- [ ] Parameters that always travel together (candidates for a struct/dataclass)
-- [ ] Return values carrying more than callers use
+- [x] Public methods or functions that should be private
+- [x] Parameters that always travel together (candidates for a struct/dataclass)
+- [x] Return values carrying more than callers use
 
 ### Naming — does every name earn its length?
 
-- [ ] Long names encoding what the type system already says
-- [ ] Abbreviated names requiring the reader to decode
-- [ ] Comments explaining what the code already shows clearly
+- [x] Long names encoding what the type system already says
+- [x] Abbreviated names requiring the reader to decode
+- [x] Comments explaining what the code already shows clearly
 
 ---
 

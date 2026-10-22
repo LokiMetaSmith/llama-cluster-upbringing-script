@@ -31,7 +31,7 @@ const ROOM_ID_HEADER: &str = "room_id";
 pub const TTS_PY: &[u8] = include_bytes!("../tts.py");
 pub const ASR_PY: &[u8] = include_bytes!("../batched_asr.py");
 pub const VOICE_PY: &[u8] = include_bytes!("../voice.py");
-pub const UV_LOCK: &[u8] = include_bytes!("../uv.lock");
+pub const UV_LOCK: &[u8] = include_bytes!("../../../../uv.lock");
 
 #[derive(clap::Parser, Debug)]
 struct WorkerArgs {

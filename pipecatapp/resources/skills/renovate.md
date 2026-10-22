@@ -30,10 +30,10 @@ No phase can be skipped. Phases 3 and 4 may be short if coverage is already good
 
 Assess:
 
-- [ ] Languages, file count, approximate LOC (`find . -name "*.py" | wc -l`, etc.)
-- [ ] Git status: is there a clean commit to baseline against? (`git log --oneline -5`)
-- [ ] Test framework in use (`pytest`, `jest`, `go test`, `cargo test`, etc.)
-- [ ] Existing coverage tooling or reports
+- [x] Languages, file count, approximate LOC (`find . -name "*.py" | wc -l`, etc.)
+- [x] Git status: is there a clean commit to baseline against? (`git log --oneline -5`)
+- [x] Test framework in use (`pytest`, `jest`, `go test`, `cargo test`, etc.)
+- [x] Existing coverage tooling or reports
 
 **Depth decision** — escalate to deep map if **any** of:
 
@@ -65,10 +65,10 @@ Navigate the map per `/repo-map` skill rules — **never load the full file**. R
 
 From the catalog, identify:
 
-- [ ] Entry points (main, CLI handlers, API routes)
-- [ ] Core logic modules (highest cleanup value, clean these first)
-- [ ] Utility/helper modules
-- [ ] Orphan or obviously dead files
+- [x] Entry points (main, CLI handlers, API routes)
+- [x] Core logic modules (highest cleanup value, clean these first)
+- [x] Utility/helper modules
+- [x] Orphan or obviously dead files
 
 Build a **cleanup priority list**: core logic first, utilities last, config last. Announce the list before proceeding.
 

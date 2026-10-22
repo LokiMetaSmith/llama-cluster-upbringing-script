@@ -91,3 +91,4 @@ pipecatapp/static/ascii-rest/
 *.diff
 *.orig
 *.rej
+/moshi/rust/target/
