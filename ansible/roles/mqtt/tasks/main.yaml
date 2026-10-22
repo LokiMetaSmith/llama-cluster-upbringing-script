@@ -16,17 +16,17 @@
 
 - name: Ensure Mosquitto directories exist
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     state: directory
-    mode: '0755'
+    mode: "{{ item.mode }}"
     owner: "1883"
     group: "1883"
   become: yes
   loop:
-    - "{{ nomad_volumes_dir }}/mqtt-data"
-    - "{{ nomad_volumes_dir }}/mqtt-data/data"
-    - "{{ nomad_volumes_dir }}/mqtt-data/log"
-    - "{{ nomad_volumes_dir }}/mqtt-data/config"
+    - { path: "{{ nomad_volumes_dir }}/mqtt-data", mode: '0755' }
+    - { path: "{{ nomad_volumes_dir }}/mqtt-data/data", mode: '0700' }
+    - { path: "{{ nomad_volumes_dir }}/mqtt-data/log", mode: '0755' }
+    - { path: "{{ nomad_volumes_dir }}/mqtt-data/config", mode: '0755' }
 
 - name: Flush handlers to ensure nomad is restarted and ready
   ansible.builtin.meta: flush_handlers
@@ -388,8 +388,8 @@
         status_code: 200
       register: consul_check
       until: consul_check.json is defined and consul_check.json | length > 0
-      retries: 30
-      delay: 2
+      retries: 60
+      delay: 3
   rescue:
     - name: Get MQTT job status
       ansible.builtin.command:
