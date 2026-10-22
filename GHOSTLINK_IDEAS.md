@@ -90,9 +90,9 @@ Based on the deep dive and architecture comparison, here are the recommendations
 To act on these recommendations, the following steps should be taken:
 
 ### 1. Optimize Moshi Streaming Pipelines
-- [ ] **Research:** Review the Moshi Rust backend (`moshi/rust`) in `pipecatapp` to identify the most heavily trafficked inter-thread channels (e.g., audio capture to inference engine).
-- [ ] **Implement:** Port the SPSC Ring Buffer logic from Ghostlink (`ring.rs`), specifically the index caching and `copy_nonoverlapping` batching, into the identified Moshi channels.
-- [ ] **Benchmark:** Measure the reduction in CPU cache misses and latency improvements.
+- [x] **Research:** Review the Moshi Rust backend (`moshi/rust`) in `pipecatapp` to identify the most heavily trafficked inter-thread channels (e.g., audio capture to inference engine).
+- [x] **Implement:** Port the SPSC Ring Buffer logic from Ghostlink (`ring.rs`), specifically the index caching and `copy_nonoverlapping` batching, into the identified Moshi channels.
+- [x] **Benchmark:** Measure the reduction in CPU cache misses and latency improvements.
 
 ### 2. Generalize the HMAC Proxy
 - [x] **Extract:** Lift the core logic from Ghostlink's `rpc_cluster.rs` (nonce generation, HMAC calculation, and the L4 TCP splicing proxy).

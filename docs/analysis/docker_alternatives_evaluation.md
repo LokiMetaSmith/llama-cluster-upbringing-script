@@ -78,9 +78,9 @@ If maintaining standard OCI images (from Dockerfiles or registries) is necessary
 * [x] **Evaluate Buildah for sandbox building**
 * Create a test Ansible task verifying `buildah` installation and functionality in the cluster environment.
 * Convert `ansible/tasks/build_cached_image.yaml` to use `buildah bud` instead of `docker build`.
-* [ ] **Refactor `tool-server` build pipeline**
+* [x] **Refactor `tool-server` build pipeline**
 * If Buildah is unviable, refactor `ansible/roles/tool_server` to run the tools in native virtual environments directly supervised by Nomad `exec` tasks, skipping containerization entirely.
-* [ ] **Purge local Docker build cache**
+* [x] **Purge local Docker build cache**
 * Ensure automated cluster scripts wipe orphaned `vfs` build layers (`/var/lib/docker/vfs`) post-migration to reclaim gigabytes of disk and inodes.
 
 ### Phase 3: Runtime Transition & Driver Evaluation

@@ -94,28 +94,28 @@ To safely test and integrate these mechanisms, we will follow a phased approach:
 
 ### Phase 1: Storage and I/O Benchmarking
 
-* [ ] **Create I/O Benchmark Script:** Write a Python script to synthesize random read/writes of 3MB chunk files (simulating the `.npz` expert loads).
-* [ ] **Provision Test Host Volume:** Update the Ansible `nomad` role to provision a dedicated `/opt/nomad/data/nvme_test` host volume mounted directly on an NVMe block device.
-* [ ] **Deploy Benchmark Job:** Create a temporary Nomad `raw_exec` job to run the benchmark script against the NVMe mount and against a standard OverlayFS mount to quantify the speed delta.
+* [x] **Create I/O Benchmark Script:** Write a Python script to synthesize random read/writes of 3MB chunk files (simulating the `.npz` expert loads).
+* [x] **Provision Test Host Volume:** Update the Ansible `nomad` role to provision a dedicated `/opt/nomad/data/nvme_test` host volume mounted directly on an NVMe block device.
+* [x] **Deploy Benchmark Job:** Create a temporary Nomad `raw_exec` job to run the benchmark script against the NVMe mount and against a standard OverlayFS mount to quantify the speed delta.
 
 ### Phase 2: Rust & Candle Paging Prototype
 
-* [ ] **Initialize Rust Crate:** Create a new, isolated workspace crate (`services/mini-agi-worker`) to prevent any interference with latency-critical `moshi` voice threads.
-* [ ] **Implement `MmapedSafetensors` Loader:** Write a Rust module utilizing `candle` to memory-map uncompressed expert weights directly from the NVMe volume.
-* [ ] **Implement Static VRAM Slot Allocator:** Prototype a fixed-memory buffer in Rust/`candle` to eliminate runtime CUDA memory allocation calls during swaps.
-* [ ] **Simulate Working Set Demand:** Write a script that mocks random text chunk demands and forces the cache to swap 32 experts into the pre-allocated VRAM slots using custom CUDA streams.
-* [ ] **Measure Latency:** Run this Rust prototype on the dedicated NVMe volume and verify if the zero-copy paging latency meets the minimum requirement for continuous learning without stalling.
+* [x] **Initialize Rust Crate:** Create a new, isolated workspace crate (`services/mini-agi-worker`) to prevent any interference with latency-critical `moshi` voice threads.
+* [x] **Implement `MmapedSafetensors` Loader:** Write a Rust module utilizing `candle` to memory-map uncompressed expert weights directly from the NVMe volume.
+* [x] **Implement Static VRAM Slot Allocator:** Prototype a fixed-memory buffer in Rust/`candle` to eliminate runtime CUDA memory allocation calls during swaps.
+* [x] **Simulate Working Set Demand:** Write a script that mocks random text chunk demands and forces the cache to swap 32 experts into the pre-allocated VRAM slots using custom CUDA streams.
+* [x] **Measure Latency:** Run this Rust prototype on the dedicated NVMe volume and verify if the zero-copy paging latency meets the minimum requirement for continuous learning without stalling.
 
 ### Phase 3: Background Learner Scaffolding
 
-* [ ] **Draft Nomad Job Specification:** Create `playbooks/templates/nomad/mini_agi_worker.nomad.j2` with explicit GPU placement constraints (`accel-npu`, >8GB VRAM) and the NVMe `volume_mount`.
-* [ ] **Build Environment Image:** Write a Dockerfile/build script to compile the Rust binary (using a multi-stage `rustlang/rust:nightly-slim` builder similar to `moshi-rust`) and package it for the background worker.
-* [ ] **Deploy Dry-Run:** Deploy the service to the cluster in a dry-run state (not reading real data) to verify scheduling and volume attachment success.
+* [x] **Draft Nomad Job Specification:** Create `playbooks/templates/nomad/mini_agi_worker.nomad.j2` with explicit GPU placement constraints (`accel-npu`, >8GB VRAM) and the NVMe `volume_mount`.
+* [x] **Build Environment Image:** Write a Dockerfile/build script to compile the Rust binary (using a multi-stage `rustlang/rust:nightly-slim` builder similar to `moshi-rust`) and package it for the background worker.
+* [x] **Deploy Dry-Run:** Deploy the service to the cluster in a dry-run state (not reading real data) to verify scheduling and volume attachment success.
 
 ### Phase 4: MoE Gateway & Resilience
 
-* [ ] **DatalogEngine Hook:** Create an API client in the Rust worker that reads the output/knowledge state from the background learner and writes generic `credit` or semantic facts to the `DatalogEngine` ledger.
-* [ ] **Experimental Route:** Add a feature flag in the `MoE Gateway` to optionally route a small percentage of asynchronous, latency-insensitive queries (e.g., long-form document summaries) to the new worker for testing.
-* [ ] **Add Prometheus Metrics Exporter:** Instrument the worker with `/metrics` endpoints tracking paging latency, cache hits, and expert growth.
-* [ ] **Automated Snapshot/Restore Hook:** Write an export script to sync modified expert weights from the local NVMe volume to IPFS at regular checkpoint intervals.
-* [ ] **Frozen Validation Test Harness:** Implement the sleep-cycle validation routine to detect model drift before saving persistent weight updates to disk.
+* [x] **DatalogEngine Hook:** Create an API client in the Rust worker that reads the output/knowledge state from the background learner and writes generic `credit` or semantic facts to the `DatalogEngine` ledger.
+* [x] **Experimental Route:** Add a feature flag in the `MoE Gateway` to optionally route a small percentage of asynchronous, latency-insensitive queries (e.g., long-form document summaries) to the new worker for testing.
+* [x] **Add Prometheus Metrics Exporter:** Instrument the worker with `/metrics` endpoints tracking paging latency, cache hits, and expert growth.
+* [x] **Automated Snapshot/Restore Hook:** Write an export script to sync modified expert weights from the local NVMe volume to IPFS at regular checkpoint intervals.
+* [x] **Frozen Validation Test Harness:** Implement the sleep-cycle validation routine to detect model drift before saving persistent weight updates to disk.

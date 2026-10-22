@@ -9,23 +9,23 @@
 ## Actionable Integration TO-DO List
 
 ### Tier 1: Immediate Integration Tasks (Sprint 1–2)
-- [ ] **Adopt Governed Skill Specification Format** (`skills`, `simiancraft-skills`):
+- [x] **Adopt Governed Skill Specification Format** (`skills`, `simiancraft-skills`):
   - Standardize all MCP tools and `pipecat-agent-extension` skills into the open-format structure: `SKILL.md` (instructions), `SPEC.md` (scope & intent), and `EVAL.md` (quality assertion tests).
   - Implement skill-level security scanning and tool permission declarations.
-- [ ] **Implement Git-Native Durable Multi-Agent Coordination Protocol** (`multi-agent-planning`):
+- [x] **Implement Git-Native Durable Multi-Agent Coordination Protocol** (`multi-agent-planning`):
   - Update `pipecatapp` multi-agent loops to persist agent state and handoffs into versioned git files (`PLAN.md`, `STATE.md`, `DECISIONS.md`, `EVIDENCE.md`) within task feature branches.
   - Enforce canonical coordination guardrails (`hard_evidence.md`, `state_preconditions.md`, `documentation_first.md`) in agent pre-commit checks and prompt templates.
-- [ ] **Expand Model Context Protocol (MCP) Productivity Connectors** (`google-mcp-suite`):
+- [x] **Expand Model Context Protocol (MCP) Productivity Connectors** (`google-mcp-suite`):
   - Ingest standardized Google Workspace MCP connectors (Gmail, Drive, Sheets, Docs) into `tools/mcp-*` for seamless workflow node integration.
 
 ### Tier 2: Next Phase Architectural Enhancements (Sprint 3–4)
-- [ ] **Integrate Codebase Intelligence & Deduplication Node** (`es6-plato`, `quandarypeak/simian`):
+- [x] **Integrate Codebase Intelligence & Deduplication Node** (`es6-plato`, `quandarypeak/simian`):
   - Create a Python/YAML workflow node in `pipecatapp/workflow/nodes/` that calculates AST cyclomatic complexity, Halstead metrics, and multi-language structural duplication scores to automatically target refactoring agents.
-- [ ] **Enhance 3D WebGL Worker Placement Grid** (`dedungeon`, `desteer.js`):
+- [x] **Enhance 3D WebGL Worker Placement Grid** (`dedungeon`, `desteer.js`):
   - Incorporate graph-based room partitioning (`dedungeon`) and autonomous steering math (`desteer.js`) into `VRTool.compute_spatial_grid` (`pipecatapp/tools/vr_tool.py`) for organic 3D agent placement in `pipecatapp/static/cluster_viz.html`.
-- [ ] **Establish UI Component Vocabulary & Visual AI Bridges** (`structor`, `react-native-reusables`, `Simian-ComfyUI-WebApps`, `chromonym`):
+- [x] **Establish UI Component Vocabulary & Visual AI Bridges** (`structor`, `react-native-reusables`, `Simian-ComfyUI-WebApps`, `chromonym`):
   - Create a component registry of verified HTML/CSS/WebGL primitives for frontend builder agents and connect ComfyUI visual workflows to visualizer image nodes.
-- [ ] **Incorporate Typed Infrastructure Primitives & Unit Reasoning** (`sst`, `drizzle-orm`, `unitforge`):
+- [x] **Incorporate Typed Infrastructure Primitives & Unit Reasoning** (`sst`, `drizzle-orm`, `unitforge`):
   - Expose Nomad/Consul service provisioning and database schemas as typed application primitives (`Service()`, `Database()`, `Queue()`) and utilize `unitforge` for unit conversion reasoning in calculation nodes.
 
 ---

@@ -948,11 +948,20 @@ impl StreamingModule for StreamingTransformer {
         self.layers.iter_mut().for_each(|v| v.reset_kv_cache())
     }
 
-    fn step(&mut self, xs: &StreamTensor, _: &StreamMask) -> Result<StreamTensor> {
-        // TODO: Use the StreamMask
+    fn step(&mut self, xs: &StreamTensor, mask: &StreamMask) -> Result<StreamTensor> {
         match xs.as_option() {
             None => Ok(StreamTensor::empty()),
-            Some(xs) => Ok(StreamTensor::from_tensor(self.forward(xs)?)),
+            Some(xs) => {
+                let ys = self.forward(xs)?;
+                match mask.as_option() {
+                    None => Ok(StreamTensor::from_tensor(ys)),
+                    Some(m) => {
+                        let m = m.reshape(((), 1, 1))?.broadcast_as(ys.shape())?;
+                        let ys = m.where_cond(&ys, &ys.zeros_like()?)?;
+                        Ok(StreamTensor::from_tensor(ys))
+                    }
+                }
+            }
         }
     }
 }
