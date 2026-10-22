@@ -128,6 +128,7 @@
 
 ## 📜 Completed History (Reference Archive)
 
+- [x] Refactor unblocked-issues workflow to use configurable trusted users list (`vars.TRUSTED_USERS`).
 - [x] Read and evaluate VLLM project findings.
 - [x] Fix Memory Service networking (Port 8000 conflict).
 - [x] Implement real LLM calls in `worker_agent.py` (replace mock).
