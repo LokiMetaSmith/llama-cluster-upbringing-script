@@ -21,10 +21,11 @@
     mode: "{{ item.mode }}"
     owner: "1883"
     group: "1883"
+    recurse: "{{ item.recurse | default(omit) }}"
   become: yes
   loop:
     - { path: "{{ nomad_volumes_dir }}/mqtt-data", mode: '0755' }
-    - { path: "{{ nomad_volumes_dir }}/mqtt-data/data", mode: '0700' }
+    - { path: "{{ nomad_volumes_dir }}/mqtt-data/data", mode: '0700', recurse: yes }
     - { path: "{{ nomad_volumes_dir }}/mqtt-data/log", mode: '0755' }
     - { path: "{{ nomad_volumes_dir }}/mqtt-data/config", mode: '0755' }
 
@@ -278,12 +279,6 @@
   changed_when: false
   ignore_errors: yes
 
-- name: Allow MQTTS port in UFW
-  ansible.builtin.command: ufw allow {{ mqtts_port | default(8883) }}/tcp
-  become: yes
-  changed_when: false
-  ignore_errors: yes
-  
 - name: Allow MQTTS port in UFW
   ansible.builtin.command: ufw allow {{ mqtts_port | default(8883) }}/tcp
   become: yes
