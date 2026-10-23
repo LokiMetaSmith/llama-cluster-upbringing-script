@@ -53,3 +53,8 @@
 - name: "Build Cached Image : Export image to Docker daemon"
   ansible.builtin.command: "buildah push {{ image_name }}:{{ image_tag | default('latest') }} docker-daemon:{{ image_name }}:{{ image_tag | default('latest') }}"
   become: yes
+
+- name: "Build Cached Image : Import image to containerd nomad.slice"
+  ansible.builtin.shell: "docker save {{ image_name }}:{{ image_tag | default('latest') }} | ctr -n nomad.slice images import - && ctr -n nomad.slice images tag docker.io/library/{{ image_name }}:{{ image_tag | default('latest') }} {{ image_name }}:{{ image_tag | default('latest') }} || true"
+  become: yes
+  ignore_errors: yes

@@ -13,16 +13,18 @@
           set -e
           TAR_PATH="/opt/{{ image_tar_name }}.tar"
 
-          # Check if already loaded in docker
-          if docker images --format "{% raw %}{{{% endraw %}.Repository{% raw %}}}{% endraw %}:{% raw %}{{{% endraw %}.Tag{% raw %}}}{% endraw %}" | grep -q "{{ image_tar_name }}"; then
-            echo "Image already present in Docker daemon."
+          # Check if already loaded in containerd
+          if ctr -n nomad.slice images list -q | grep -q "{{ image_tar_name | replace('_', '-') }}:local" 2>/dev/null; then
+            echo "Image already present in containerd nomad.slice."
             exit 0
           fi
 
           # Try loading from local disk cache first if available
           if [ -f "$TAR_PATH" ]; then
             echo "Loading image from local path $TAR_PATH..."
-            docker load -i "$TAR_PATH"
+            docker load -i "$TAR_PATH" || true
+            ctr -n nomad.slice images import "$TAR_PATH" 2>/dev/null || true
+            ctr -n nomad.slice images tag "docker.io/library/{{ image_tar_name | replace('_', '-') }}:local" "{{ image_tar_name | replace('_', '-') }}:local" 2>/dev/null || true
             exit 0
           fi
 
@@ -31,7 +33,9 @@
           for i in 1 2 3 4 5; do
             if curl -sSf --retry 3 --retry-delay 5 --max-time 120 "http://{{ cluster_ip | default('100.64.0.1') }}:{{ ipfs_gateway_port | default(8092) }}/ipfs/{{ image_cid }}" -o "$TAR_PATH"; then
               echo "Successfully downloaded tarball."
-              docker load -i "$TAR_PATH"
+              docker load -i "$TAR_PATH" || true
+              ctr -n nomad.slice images import "$TAR_PATH" 2>/dev/null || true
+              ctr -n nomad.slice images tag "docker.io/library/{{ image_tar_name | replace('_', '-') }}:local" "{{ image_tar_name | replace('_', '-') }}:local" 2>/dev/null || true
               exit 0
             fi
             echo "Attempt $i failed. Retrying IPFS fetch in 10 seconds..."

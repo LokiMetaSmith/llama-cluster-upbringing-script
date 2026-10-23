@@ -43,6 +43,8 @@
     - "Dockerfile.core"
     - "Dockerfile.browser"
     - "Dockerfile.vision"
+    - "Dockerfile.rea"
+    - "app_rea.py"
   become: true
 
 - name: "Tool Server : Copy start_pipecat.sh"
