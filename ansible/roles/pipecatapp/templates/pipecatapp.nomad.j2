@@ -45,7 +45,7 @@ job "{{ job_name | default('pipecat-app') }}" {
       OPENAI_API_KEY         = "{{ openai_api_key }}"
       OPENROUTER_API_KEY     = "{{ openrouter_api_key }}"
       MEMORY_SERVICE_URL     = "http://{{ cluster_ip }}:{{ memory_service_port | default(8000) }}"
-      TOOL_SERVER_URL        = "http://127.0.0.1:{{ tool_server_upstream_port | default(8082) }}"
+      TOOL_SERVER_URL        = "http://{{ cluster_ip }}:{{ tool_server_port | default(8006) }}"
       TOOL_SERVER_API_KEY    = "{{ tool_server_api_key | default('internal-dev-key') }}"
       CONSUL_HOST            = "{{ cluster_ip }}"
       CONSUL_PORT            = "{{ consul_http_port | default(8500) }}"
@@ -96,7 +96,7 @@ job "{{ job_name | default('pipecat-app') }}" {
     {% endif %}
     {% else %}
     network {
-      mode = "bridge"
+      mode = "host"
       port "http" {
         static = {{ pipecat_port }}
       }
@@ -121,17 +121,6 @@ job "{{ job_name | default('pipecat-app') }}" {
         "traefik.http.routers.pipecatapp.tls=true",
         "traefik.http.routers.pipecatapp.middlewares=authentik@file"
       ]
-
-      connect {
-        sidecar_service {
-          proxy {
-            upstreams {
-              destination_name = "tool-server-core"
-              local_bind_port  = {{ tool_server_upstream_port | default(8082) }}
-            }
-          }
-        }
-      }
 
       check {
         name         = "alive"

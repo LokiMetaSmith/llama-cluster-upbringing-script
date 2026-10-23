@@ -79,8 +79,13 @@ COPY app.py .
 COPY pmm_memory.py .
 COPY secret_manager.py .
 COPY net_utils.py .
+COPY rate_limiter.py .
 COPY tools ./tools
+COPY utils ./utils
 COPY entrypoint.sh /entrypoint.sh
+
+RUN ln -s /app /app/pipecatapp
+ENV PYTHONPATH=/app
 
 RUN chmod +x /entrypoint.sh
 

@@ -92,9 +92,27 @@
     mode: "0644"
   become: true
 
+- name: "Tool Server : Copy rate_limiter.py"
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../pipecatapp/rate_limiter.py"
+    dest: "/opt/tool_server/rate_limiter.py"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0644"
+  become: true
+
 - name: "Tool Server : Copy tools directory"
   ansible.builtin.copy:
     src: "{{ role_path }}/../../../pipecatapp/tools"
+    dest: "/opt/tool_server/"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: "0755"
+  become: true
+
+- name: "Tool Server : Copy utils directory"
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../pipecatapp/utils"
     dest: "/opt/tool_server/"
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
@@ -199,7 +217,7 @@
 
     - name: "Tool Server : Fetch Tool Server logs (stdout)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs -task tool-server-task {{ ts_alloc_id.stdout }}"
+        cmd: "/usr/local/bin/nomad alloc logs -task tool-server-core-task {{ ts_alloc_id.stdout }}"
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
@@ -217,7 +235,7 @@
 
     - name: "Tool Server : Fetch Tool Server logs (stderr)"
       ansible.builtin.command:
-        cmd: "/usr/local/bin/nomad alloc logs -stderr -task tool-server-task {{ ts_alloc_id.stdout }}"
+        cmd: "/usr/local/bin/nomad alloc logs -stderr -task tool-server-core-task {{ ts_alloc_id.stdout }}"
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
         NOMAD_CACERT: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"

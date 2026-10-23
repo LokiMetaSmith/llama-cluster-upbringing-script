@@ -10,7 +10,9 @@ job "tool-server" {
     count = 1
 
     network {
-      port "http" {}
+      port "http" {
+        static = {{ tool_server_port | default(8006) }}
+      }
     }
 
     {% set image_cid = tool_server_core_ipfs_cid %}
@@ -37,10 +39,12 @@ job "tool-server" {
     }
 
     task "tool-server-core-task" {
-      driver = "containerd-driver"
+      driver = "docker"
 
       config {
-        image = "tool-server-core:local"
+        image      = "tool-server-core:local"
+        force_pull = false
+        ports      = ["http"]
 
         # Volatile RAM disk for workspace and Docker socket bind
         mounts = [
@@ -96,10 +100,6 @@ job "tool-server" {
         address = "${attr.unique.network.ip-address}"
         tags    = ["tool-server-core", "http"]
 
-        connect {
-          sidecar_service {}
-        }
-
         check {
           type     = "http"
           path     = "/health"
@@ -144,11 +144,13 @@ job "tool-server" {
     }
 
     task "tool-server-browser-task" {
-      driver = "containerd-driver"
+      driver = "docker"
 
       config {
-        image    = "tool-server-browser:local"
-        shm_size = 1073741824 # 1 GB
+        image      = "tool-server-browser:local"
+        force_pull = false
+        ports      = ["http"]
+        shm_size   = 1073741824 # 1 GB
 
         command = "uvicorn"
         args = ["app:app", "--host", "0.0.0.0", "--port", "${NOMAD_PORT_http}"]
@@ -207,10 +209,12 @@ job "tool-server" {
     }
 
     task "tool-server-rea-task" {
-      driver = "containerd-driver"
+      driver = "docker"
 
       config {
-        image = "tool-server-rea:local"
+        image      = "tool-server-rea:local"
+        force_pull = false
+        ports      = ["http"]
 
         command = "uvicorn"
         args = ["app_rea:app", "--host", "0.0.0.0", "--port", "${NOMAD_PORT_http}"]
@@ -275,10 +279,12 @@ job "tool-server" {
     }
 
     task "tool-server-vision-task" {
-      driver = "containerd-driver"
+      driver = "docker"
 
       config {
-        image = "tool-server-vision:local"
+        image      = "tool-server-vision:local"
+        force_pull = false
+        ports      = ["http"]
 
         command = "uvicorn"
         args = ["app:app", "--host", "0.0.0.0", "--port", "${NOMAD_PORT_http}"]
