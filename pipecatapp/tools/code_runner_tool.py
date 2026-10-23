@@ -7,6 +7,8 @@ except ImportError:
 
 import logging
 import os
+import shutil
+import subprocess
 import asyncio
 import tempfile
 import time
@@ -530,6 +532,109 @@ class NomadSandboxExecutor(SandboxExecutor):
             except:
                 pass
 
+
+class ApptainerSandboxExecutor(SandboxExecutor):
+    """Executes code using Apptainer / Singularity unprivileged HPC containers."""
+
+    def __init__(
+        self,
+        sif_image: Optional[str] = None,
+        workspace_dir: Optional[str] = None,
+        bind_paths: Optional[List[str]] = None,
+        allow_privileged: bool = False,
+        drop_caps: bool = True,
+    ):
+        self.sif_image = sif_image or os.environ.get(
+            "APPTAINER_IMAGE",
+            os.environ.get("SINGULARITY_IMAGE", "/opt/apptainer/images/hermes_sandbox.sif")
+        )
+        self.workspace_dir = workspace_dir or os.environ.get(
+            "APPTAINER_WORKDIR", "/var/lib/openclaw/workspace"
+        )
+        default_binds = [
+            "/opt/nomad/volumes:/opt/nomad/volumes",
+            "/opt/unified_fs_backend:/opt/unified_fs_backend",
+        ]
+        env_binds = os.environ.get("APPTAINER_BIND_PATHS")
+        if env_binds:
+            self.bind_paths = [b.strip() for b in env_binds.split(",") if b.strip()]
+        else:
+            self.bind_paths = bind_paths if bind_paths is not None else default_binds
+
+        self.allow_privileged = allow_privileged
+        self.drop_caps = drop_caps
+        self.executable = shutil.which("apptainer") or shutil.which("singularity") or "apptainer"
+
+    def run_command(self, command: str, timeout: int = 60) -> dict:
+        """Runs a shell command inside the Apptainer/Singularity container sandbox."""
+        cmd = [self.executable, "exec"]
+        if self.drop_caps:
+            cmd.append("--drop-caps")
+        if not self.allow_privileged:
+            cmd.append("--no-privs")
+
+        if os.path.exists(self.workspace_dir):
+            cmd.extend(["--bind", f"{self.workspace_dir}:/workspace", "--pwd", "/workspace"])
+
+        for b in self.bind_paths:
+            src = b.split(":")[0] if ":" in b else b
+            if os.path.exists(src):
+                cmd.extend(["--bind", b])
+
+        cmd.extend([self.sif_image, "bash", "-c", command])
+
+        try:
+            res = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False
+            )
+            return {
+                "exit_code": res.returncode,
+                "stdout": res.stdout,
+                "stderr": res.stderr
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                "exit_code": -1,
+                "stdout": "",
+                "stderr": f"Execution timed out inside Apptainer sandbox after {timeout} seconds."
+            }
+        except Exception as e:
+            return {
+                "exit_code": -1,
+                "stdout": "",
+                "stderr": f"Apptainer execution error: {e}"
+            }
+
+    def execute(
+        self,
+        code: str,
+        language: str = "python",
+        libraries: Optional[List[str]] = None,
+        timeout: Optional[int] = None
+    ) -> str:
+        job_timeout = timeout if timeout is not None else 60
+        if language == "python":
+            install_prefix = f"pip install {' '.join(libraries)} >/dev/null 2>&1 && " if libraries else ""
+            code_b64 = base64.b64encode(code.encode("utf-8")).decode("utf-8")
+            py_cmd = f"{install_prefix}python3 -c 'import base64; exec(base64.b64decode(\"{code_b64}\").decode(\"utf-8\"))'"
+            result = self.run_command(py_cmd, timeout=job_timeout)
+        else:
+            result = self.run_command(code, timeout=job_timeout)
+
+        if result["exit_code"] == 0:
+            return result["stdout"]
+        else:
+            err = result["stderr"] or result["stdout"]
+            return f"Exit Code: {result['exit_code']}\n---STDERR---\n{err}"
+
+
+SingularitySandboxExecutor = ApptainerSandboxExecutor
+
+
 class CodeRunnerTool:
     """A tool for executing Python code in a sandboxed environment (Docker or Nomad).
 
@@ -557,6 +662,9 @@ class CodeRunnerTool:
         if self.mode == "nomad":
             self.executor = NomadSandboxExecutor()
             logging.info("CodeRunnerTool initialized in NOMAD mode.")
+        elif self.mode in ("singularity", "apptainer"):
+            self.executor = ApptainerSandboxExecutor()
+            logging.info("CodeRunnerTool initialized in APPTAINER/SINGULARITY mode.")
         elif self.mode == "hybrid":
             self.executor = NomadSandboxExecutor()
             self.fast_executor = DockerSandboxExecutor()

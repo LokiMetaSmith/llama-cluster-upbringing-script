@@ -1,0 +1,4 @@
+hermes_terminal_backend: "singularity"
+hermes_apptainer_image_path: "/opt/apptainer/images/hermes_sandbox.sif"
+hermes_workspace_dir: "/var/lib/openclaw/workspace"
+nomad_volumes_dir: "/opt/nomad/volumes"

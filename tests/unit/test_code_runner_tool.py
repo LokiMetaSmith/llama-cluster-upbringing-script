@@ -6,7 +6,12 @@ import sys
 import json
 import base64
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from pipecatapp.tools.code_runner_tool import CodeRunnerTool, DockerSandboxExecutor
+from pipecatapp.tools.code_runner_tool import (
+    CodeRunnerTool,
+    DockerSandboxExecutor,
+    ApptainerSandboxExecutor,
+    SingularitySandboxExecutor,
+)
 
 import tempfile
 
@@ -166,3 +171,71 @@ async def test_interactive_python_timeout(mock_jupyter_client):
         result = await runner.run_interactive_python(code="while True: pass", timeout=1)
 
     assert "Execution timed out" in result
+
+
+@patch('subprocess.run')
+def test_apptainer_executor_run_command_success(mock_subprocess_run):
+    executor = ApptainerSandboxExecutor(
+        sif_image="/opt/apptainer/images/test.sif",
+        workspace_dir="/tmp/fake_workspace",
+        bind_paths=["/opt/nomad/volumes:/opt/nomad/volumes"]
+    )
+    mock_subprocess_run.return_value = MagicMock(
+        returncode=0,
+        stdout="success output\n",
+        stderr=""
+    )
+
+    res = executor.run_command("echo hello", timeout=30)
+    assert res["exit_code"] == 0
+    assert res["stdout"] == "success output\n"
+    mock_subprocess_run.assert_called_once()
+    args, kwargs = mock_subprocess_run.call_args
+    cmd = args[0]
+    assert cmd[0] in ("apptainer", "singularity")
+    assert "exec" in cmd
+    assert "--drop-caps" in cmd
+    assert "--no-privs" in cmd
+    assert "/opt/apptainer/images/test.sif" in cmd
+
+
+@patch('subprocess.run')
+def test_apptainer_executor_run_command_timeout(mock_subprocess_run):
+    import subprocess
+    mock_subprocess_run.side_effect = subprocess.TimeoutExpired(cmd="apptainer exec", timeout=10)
+    executor = ApptainerSandboxExecutor(sif_image="/opt/apptainer/images/test.sif")
+
+    res = executor.run_command("sleep 100", timeout=10)
+    assert res["exit_code"] == -1
+    assert "Execution timed out inside Apptainer sandbox" in res["stderr"]
+
+
+@patch('subprocess.run')
+def test_apptainer_executor_execute_python(mock_subprocess_run):
+    executor = ApptainerSandboxExecutor(sif_image="/opt/apptainer/images/test.sif")
+    mock_subprocess_run.return_value = MagicMock(
+        returncode=0,
+        stdout="42\n",
+        stderr=""
+    )
+
+    output = executor.execute("print(42)", language="python")
+    assert output == "42\n"
+
+
+@pytest.mark.asyncio
+async def test_coderunnertool_singularity_mode(monkeypatch):
+    monkeypatch.setenv("SANDBOX_EXECUTOR", "singularity")
+    with patch('subprocess.run') as mock_subprocess_run:
+        mock_subprocess_run.return_value = MagicMock(
+            returncode=0,
+            stdout="apptainer output\n",
+            stderr=""
+        )
+        runner = CodeRunnerTool()
+        runner.history.db_path = ':memory:'
+        runner.history._init_db()
+
+        assert isinstance(runner.executor, ApptainerSandboxExecutor)
+        res = await runner.run_python_code("print('apptainer')")
+        assert res == "apptainer output\n"

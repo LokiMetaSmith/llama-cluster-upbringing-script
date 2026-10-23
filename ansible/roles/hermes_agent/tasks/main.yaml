@@ -30,3 +30,23 @@
     state: present
   become: yes
   become_user: "{{ target_user | default('pipecatapp') }}"
+
+- name: Ensure Apptainer and workspace directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ target_user | default('pipecatapp') }}"
+  with_items:
+    - "/opt/apptainer/images"
+    - "{{ hermes_workspace_dir | default('/var/lib/openclaw/workspace') }}"
+    - "/home/{{ target_user | default('pipecatapp') }}/.hermes"
+  become: yes
+
+- name: Deploy Hermes Agent configuration with Apptainer backend
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "/home/{{ target_user | default('pipecatapp') }}/.hermes/config.yaml"
+    mode: "0644"
+    owner: "{{ target_user | default('pipecatapp') }}"
+  become: yes
