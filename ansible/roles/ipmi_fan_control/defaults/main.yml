@@ -1,0 +1,16 @@
+---
+ipmi_fan_control_enabled: true
+ipmi_fan_control_interface: "open"
+ipmi_fan_control_interval: 10
+ipmi_fan_control_critical_temp: 85.0
+ipmi_fan_control_target_temp: 60.0
+ipmi_fan_control_min_fan_speed: 30
+ipmi_fan_control_max_fan_speed: 100
+ipmi_fan_control_fan_channels:
+  - fan1
+  - fan2
+  - fan3
+  - fan4
+  - fan5
+  - fan6
+ipmi_fan_control_metrics_file: "/var/lib/telegraf/ipmi_fan_metrics.prom"
