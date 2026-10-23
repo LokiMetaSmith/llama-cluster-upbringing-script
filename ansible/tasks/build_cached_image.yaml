@@ -49,3 +49,7 @@
 - name: "Build Cached Image : Tag image with target tag"
   ansible.builtin.command: "buildah tag {{ image_name }}:{{ _versioned_tag }} {{ image_name }}:{{ image_tag | default('latest') }}"
   become: yes
+
+- name: "Build Cached Image : Export image to Docker daemon"
+  ansible.builtin.command: "buildah push {{ image_name }}:{{ image_tag | default('latest') }} docker-daemon:{{ image_name }}:{{ image_tag | default('latest') }}"
+  become: yes
