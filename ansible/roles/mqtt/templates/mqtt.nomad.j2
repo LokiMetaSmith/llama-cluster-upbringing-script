@@ -6,10 +6,6 @@ job "mqtt" {
   group "mqtt-group" {
     count = 1
 
-    consul {
-      token = "{{ consul_bootstrap_token | default('') }}"
-    }
-
     network {
       mode = "host"
       port "mqtt" {
