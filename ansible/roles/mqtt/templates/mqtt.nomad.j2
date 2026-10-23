@@ -65,6 +65,7 @@ job "mqtt" {
         name     = "mqtt"
         port     = "mqtt"
         provider = "consul"
+        address  = "${attr.unique.network.ip-address}"
         check {
           name     = "mqtt_health"
           type     = "tcp"
@@ -77,6 +78,7 @@ job "mqtt" {
         name     = "mqtts"
         port     = "mqtts"
         provider = "consul"
+        address  = "${attr.unique.network.ip-address}"
         check {
           name     = "mqtts_health"
           type     = "tcp"
