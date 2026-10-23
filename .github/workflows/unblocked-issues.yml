@@ -55,3 +55,4 @@ jobs:
 
             Please implement this feature following the project's coding standards.
           jules_api_key: ${{ secrets.JULES_API_KEY }}
+          base_branch: ${{ vars.TARGET_BRANCH || 'main' }}
