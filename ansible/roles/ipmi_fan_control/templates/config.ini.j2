@@ -1,4 +1,5 @@
 [Settings]
+driver = {{ ipmi_fan_control_driver | default('auto') }}
 interface = {{ ipmi_fan_control_interface | default('open') }}
 {% if ipmi_fan_control_host is defined %}
 host = {{ ipmi_fan_control_host }}
