@@ -70,12 +70,14 @@ job "zigbee2mqtt" {
         image = "koenkk/zigbee2mqtt:latest"
         ports = ["http"]
 
+        {% if zigbee_device_exists | default(false) %}
         devices = [
           {
             host_path = "{{ zigbee_serial_port | default('/dev/ttyACM0') }}"
             container_path = "{{ zigbee_serial_port | default('/dev/ttyACM0') }}"
           }
         ]
+        {% endif %}
       }
 
       env {

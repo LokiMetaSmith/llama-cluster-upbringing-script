@@ -31,9 +31,26 @@
   changed_when: false
   become: no
 
+- name: Check if Zigbee serial device exists
+  ansible.builtin.stat:
+    path: "{{ zigbee_serial_port | default('/dev/ttyACM0') }}"
+  register: zigbee_device_stat
+
+- name: Set zigbee_device_exists fact
+  ansible.builtin.set_fact:
+    zigbee_device_exists: "{{ zigbee_device_stat.stat.exists | default(false) }}"
+
 - name: Extract job status
   ansible.builtin.set_fact:
-    zigbee2mqtt_job_state: "{{ (zigbee2mqtt_job_status.stdout | default('{\"Status\": \"missing\"}', true) | from_json).get('Status', 'missing') }}"
+    zigbee2mqtt_job_state: >-
+      {%- set raw = zigbee2mqtt_job_status.stdout | default('{"Status": "missing"}', true) | from_json -%}
+      {%- if raw is mapping -%}
+        {{ raw.get('Status', 'missing') }}
+      {%- elif raw is sequence and raw | length > 0 and raw[0] is mapping -%}
+        {{ raw[0].get('Status', (raw[0].get('LatestDeployment') or {}).get('Status', 'missing')) }}
+      {%- else -%}
+        missing
+      {%- endif -%}
 
 - name: Purge zigbee2mqtt job if in failed state
   ansible.builtin.command:

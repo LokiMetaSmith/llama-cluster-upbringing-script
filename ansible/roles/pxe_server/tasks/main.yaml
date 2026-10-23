@@ -404,7 +404,7 @@
         - supervisord.conf
 
     - name: Build PXE Server Image using Buildah
-      ansible.builtin.command: buildah bud --net=host -t pipecat/pxe-server:latest -f Dockerfile.pxe .
+      ansible.builtin.command: buildah bud --net=host -t pipecat/pxe-server:local -t pipecat/pxe-server:latest -f Dockerfile.pxe .
       args:
         chdir: "{{ pxe_build_dir.path }}"
       become: yes
@@ -418,7 +418,8 @@
 
     - name: Export Image and Pin to IPFS
       ansible.builtin.shell: |
-        buildah push pipecat/pxe-server:latest docker-archive:/tmp/pxe-server.tar:pipecat/pxe-server:latest
+        rm -f /tmp/pxe-server.tar
+        buildah push pipecat/pxe-server:local docker-archive:/tmp/pxe-server.tar:pipecat/pxe-server:local
         ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add -Q /tmp/pxe-server.tar
       become: yes
       register: pxe_ipfs_add

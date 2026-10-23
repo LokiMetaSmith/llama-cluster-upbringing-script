@@ -40,7 +40,15 @@
 
 - name: Extract job status
   ansible.builtin.set_fact:
-    telegraf_job_state: "{{ (telegraf_job_status.stdout | default('{\"Status\": \"missing\"}', true) | from_json).get('Status', 'missing') }}"
+    telegraf_job_state: >-
+      {%- set raw = telegraf_job_status.stdout | default('{"Status": "missing"}', true) | from_json -%}
+      {%- if raw is mapping -%}
+        {{ raw.get('Status', 'missing') }}
+      {%- elif raw is sequence and raw | length > 0 and raw[0] is mapping -%}
+        {{ raw[0].get('Status', (raw[0].get('LatestDeployment') or {}).get('Status', 'missing')) }}
+      {%- else -%}
+        missing
+      {%- endif -%}
 
 - name: Purge telegraf job if in failed state
   ansible.builtin.command:

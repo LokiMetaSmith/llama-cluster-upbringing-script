@@ -33,7 +33,15 @@
 
 - name: Extract job status
   ansible.builtin.set_fact:
-    influxdb_job_state: "{{ (influxdb_job_status.stdout | default('{\"Status\": \"missing\"}', true) | from_json).get('Status', 'missing') }}"
+    influxdb_job_state: >-
+      {%- set raw = influxdb_job_status.stdout | default('{"Status": "missing"}', true) | from_json -%}
+      {%- if raw is mapping -%}
+        {{ raw.get('Status', 'missing') }}
+      {%- elif raw is sequence and raw | length > 0 and raw[0] is mapping -%}
+        {{ raw[0].get('Status', (raw[0].get('LatestDeployment') or {}).get('Status', 'missing')) }}
+      {%- else -%}
+        missing
+      {%- endif -%}
 
 - name: Purge influxdb job if in failed state
   ansible.builtin.command:

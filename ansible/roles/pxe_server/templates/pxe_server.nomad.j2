@@ -18,30 +18,16 @@ job "pxe-server" {
       }
     }
 
-    task "load_image" {
-      driver = "raw_exec"
-
-      lifecycle {
-        hook    = "prestart"
-        sidecar = false
-      }
-
-      config {
-        command = "/bin/bash"
-        args    = ["-c", "export IPFS_PATH=/opt/unified_fs_backend/ipfs/pipecat && ipfs cat {{ pxe_image_cid }} | docker load"]
-      }
-
-      resources {
-        cpu    = 100
-        memory = 128
-      }
-    }
+    {% set image_cid = pxe_image_cid %}
+    {% set image_tar_name = 'pxe-server' %}
+    {% include 'load_image_task.nomad.j2' %}
 
     task "pxe-server" {
       driver = "docker"
 
       config {
-        image = "pipecat/pxe-server:latest"
+        image        = "pipecat/pxe-server:local"
+        force_pull   = false
         network_mode = "host"
 
         volumes = [

@@ -40,7 +40,8 @@ job "mqtt" {
       driver = "containerd-driver"
 
       config {
-        image = "eclipse-mosquitto:2"
+        image        = "eclipse-mosquitto:2"
+        host_network = true
         mounts = [
           {
             type    = "bind"
