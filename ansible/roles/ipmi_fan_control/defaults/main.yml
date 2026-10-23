@@ -1,5 +1,6 @@
 ---
 ipmi_fan_control_enabled: true
+ipmi_fan_control_driver: "auto"
 ipmi_fan_control_interface: "open"
 ipmi_fan_control_interval: 10
 ipmi_fan_control_critical_temp: 85.0

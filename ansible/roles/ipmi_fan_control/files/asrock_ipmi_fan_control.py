@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-ASRock Rack IPMI Fan Control & Monitoring Daemon
+System Fan Control & Telemetry Daemon
 
-Provides dynamic temperature tracking (CPU + GPU), raw IPMI fan speed control
-for ASRock Rack motherboards using NetFn 0x3a, Prometheus metric export for Telegraf,
-and automatic BMC fallback on exit/crash or critical thermal events.
+Provides dynamic temperature tracking (CPU + GPU), multi-backend fan speed control
+(ASRock Rack IPMI, Supermicro IPMI, Dell iDRAC IPMI, sysfs PWM), Prometheus metric export
+for Telegraf, and conservative automatic fallback on exit, crash, or critical thermal events.
 """
 
 import argparse
@@ -24,9 +24,215 @@ logging.basicConfig(
 )
 
 
-class ASRockIPMIFanController:
+class BaseFanDriver:
+    """Base interface for fan control drivers."""
+
+    def __init__(self, interface: str = "open", host: Optional[str] = None,
+                 user: Optional[str] = None, password: Optional[str] = None):
+        self.interface = interface
+        self.host = host
+        self.user = user
+        self.password = password
+
+    def set_fan_speed(self, channel: int, percentage: int) -> bool:
+        raise NotImplementedError
+
+    def restore_auto(self) -> bool:
+        raise NotImplementedError
+
+    def is_available(self) -> bool:
+        return True
+
+
+class IPMIHelper:
+    @staticmethod
+    def build_cmd(interface: str, raw_bytes: List[str], host: Optional[str] = None,
+                  user: Optional[str] = None, password: Optional[str] = None) -> List[str]:
+        cmd = ["ipmitool", "-I", interface]
+        if interface == "lanplus" and host:
+            cmd.extend(["-H", host])
+            if user:
+                cmd.extend(["-U", user])
+            if password:
+                cmd.extend(["-P", password])
+        cmd.append("raw")
+        cmd.extend(raw_bytes)
+        return cmd
+
+    @staticmethod
+    def run_cmd(interface: str, raw_bytes: List[str], host: Optional[str] = None,
+                user: Optional[str] = None, password: Optional[str] = None) -> Tuple[bool, str]:
+        cmd = IPMIHelper.build_cmd(interface, raw_bytes, host, user, password)
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return True, res.stdout.strip()
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            err_msg = getattr(e, "stderr", str(e))
+            return False, str(err_msg)
+
+
+class ASRockIPMIDriver(BaseFanDriver):
+    """ASRock Rack IPMI Driver (NetFn 0x3a)."""
+
+    def set_fan_speed(self, channel: int, percentage: int) -> bool:
+        percentage = max(0, min(100, percentage))
+        speed_hex = f"0x{percentage:02x}"
+        channel_hex = f"0x{channel:02x}"
+        success, _ = IPMIHelper.run_cmd(
+            self.interface, ["0x3a", "0x01", channel_hex, speed_hex],
+            self.host, self.user, self.password
+        )
+        return success
+
+    def restore_auto(self) -> bool:
+        success, _ = IPMIHelper.run_cmd(
+            self.interface, ["0x3a", "0x02", "0x00"],
+            self.host, self.user, self.password
+        )
+        return success
+
+
+class SupermicroIPMIDriver(BaseFanDriver):
+    """Supermicro IPMI Driver (NetFn 0x30 0x70)."""
+
+    def set_fan_speed(self, channel: int, percentage: int) -> bool:
+        percentage = max(0, min(100, percentage))
+        speed_hex = f"0x{percentage:02x}"
+        # Zone 0x00 = CPU/System, Zone 0x01 = Peripheral
+        zone = "0x00" if channel <= 2 else "0x01"
+        success, _ = IPMIHelper.run_cmd(
+            self.interface, ["0x30", "0x70", "0x66", "0x01", zone, speed_hex],
+            self.host, self.user, self.password
+        )
+        return success
+
+    def restore_auto(self) -> bool:
+        success, _ = IPMIHelper.run_cmd(
+            self.interface, ["0x30", "0x70", "0x66", "0x01", "0x00", "0x00"],
+            self.host, self.user, self.password
+        )
+        return success
+
+
+class DellIPMIDriver(BaseFanDriver):
+    """Dell iDRAC IPMI Driver (NetFn 0x30 0x30)."""
+
+    def set_fan_speed(self, channel: int, percentage: int) -> bool:
+        percentage = max(0, min(100, percentage))
+        speed_hex = f"0x{percentage:02x}"
+        # First enable manual fan control mode
+        IPMIHelper.run_cmd(
+            self.interface, ["0x30", "0x30", "0x01", "0x00"],
+            self.host, self.user, self.password
+        )
+        # Set fan speed across all fans (0x18 = 24 / all)
+        success, _ = IPMIHelper.run_cmd(
+            self.interface, ["0x30", "0x30", "0x02", "0xff", speed_hex],
+            self.host, self.user, self.password
+        )
+        return success
+
+    def restore_auto(self) -> bool:
+        # Restore iDRAC dynamic fan control mode
+        success, _ = IPMIHelper.run_cmd(
+            self.interface, ["0x30", "0x30", "0x01", "0x01"],
+            self.host, self.user, self.password
+        )
+        return success
+
+
+class SysfsPWMDriver(BaseFanDriver):
+    """Linux sysfs PWM Driver (/sys/class/hwmon/hwmon*/pwm*)."""
+
+    def is_available(self) -> bool:
+        return len(glob.glob("/sys/class/hwmon/hwmon*/pwm*")) > 0
+
+    def set_fan_speed(self, channel: int, percentage: int) -> bool:
+        percentage = max(0, min(100, percentage))
+        pwm_val = int((percentage / 100.0) * 255)
+        pwms = sorted(glob.glob("/sys/class/hwmon/hwmon*/pwm[1-8]"))
+        if not pwms:
+            return False
+
+        target_pwm = pwms[(channel - 1) % len(pwms)]
+        enable_path = f"{target_pwm}_enable"
+
+        try:
+            if os.path.exists(enable_path):
+                # Mode 1 = manual control
+                with open(enable_path, "w") as f:
+                    f.write("1")
+            with open(target_pwm, "w") as f:
+                f.write(str(pwm_val))
+            return True
+        except Exception as e:
+            logging.error(f"Failed to set sysfs PWM {target_pwm}: {e}")
+            return False
+
+    def restore_auto(self) -> bool:
+        all_restored = True
+        for pwm in glob.glob("/sys/class/hwmon/hwmon*/pwm[1-8]"):
+            enable_path = f"{pwm}_enable"
+            try:
+                if os.path.exists(enable_path):
+                    # Mode 2 = automatic control
+                    with open(enable_path, "w") as f:
+                        f.write("2")
+                else:
+                    # Conservative fallback: set PWM to full speed (255)
+                    with open(pwm, "w") as f:
+                        f.write("255")
+            except Exception as e:
+                logging.warning(f"Could not restore auto mode for sysfs PWM {pwm}: {e}")
+                all_restored = False
+        return all_restored
+
+
+class AutoDriver(BaseFanDriver):
+    """Auto-detecting Fan Driver."""
+
+    def __init__(self, interface: str = "open", host: Optional[str] = None,
+                 user: Optional[str] = None, password: Optional[str] = None):
+        super().__init__(interface, host, user, password)
+        self.active_driver = self._detect_driver()
+
+    def _detect_driver(self) -> BaseFanDriver:
+        # Check ASRock IPMI
+        success, _ = IPMIHelper.run_cmd(self.interface, ["0x3a", "0x02", "0x00"], self.host, self.user, self.password)
+        if success:
+            logging.info("Auto-detected fan driver: ASRock IPMI")
+            return ASRockIPMIDriver(self.interface, self.host, self.user, self.password)
+
+        # Check Sysfs PWM
+        sysfs_drv = SysfsPWMDriver(self.interface, self.host, self.user, self.password)
+        if sysfs_drv.is_available():
+            logging.info("Auto-detected fan driver: Sysfs PWM")
+            return sysfs_drv
+
+        # Fallback to ASRock IPMI
+        logging.info("Defaulting to ASRock IPMI driver")
+        return ASRockIPMIDriver(self.interface, self.host, self.user, self.password)
+
+    def set_fan_speed(self, channel: int, percentage: int) -> bool:
+        return self.active_driver.set_fan_speed(channel, percentage)
+
+    def restore_auto(self) -> bool:
+        return self.active_driver.restore_auto()
+
+
+DRIVER_MAP = {
+    "asrock_ipmi": ASRockIPMIDriver,
+    "supermicro_ipmi": SupermicroIPMIDriver,
+    "dell_ipmi": DellIPMIDriver,
+    "sysfs_pwm": SysfsPWMDriver,
+    "auto": AutoDriver,
+}
+
+
+class SystemFanController:
     def __init__(
         self,
+        driver_type: str = "auto",
         interface: str = "open",
         host: Optional[str] = None,
         user: Optional[str] = None,
@@ -39,10 +245,8 @@ class ASRockIPMIFanController:
         fan_channels: Optional[List[int]] = None,
         metrics_file: str = "/var/lib/telegraf/ipmi_fan_metrics.prom",
     ):
-        self.interface = interface
-        self.host = host
-        self.user = user
-        self.password = password
+        self.driver_class = DRIVER_MAP.get(driver_type.lower(), AutoDriver)
+        self.driver = self.driver_class(interface=interface, host=host, user=user, password=password)
         self.min_temp = min_temp
         self.target_temp = target_temp
         self.critical_temp = critical_temp
@@ -53,36 +257,8 @@ class ASRockIPMIFanController:
         self.auto_mode = False
         self._running = True
 
-    def _build_ipmi_cmd(self, raw_bytes: List[str]) -> List[str]:
-        cmd = ["ipmitool", "-I", self.interface]
-        if self.interface == "lanplus" and self.host:
-            cmd.extend(["-H", self.host])
-            if self.user:
-                cmd.extend(["-U", self.user])
-            if self.password:
-                cmd.extend(["-P", self.password])
-        cmd.append("raw")
-        cmd.extend(raw_bytes)
-        return cmd
-
-    def run_ipmi_cmd(self, raw_bytes: List[str]) -> Tuple[bool, str]:
-        cmd = self._build_ipmi_cmd(raw_bytes)
-        try:
-            res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return True, res.stdout.strip()
-        except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            err_msg = getattr(e, "stderr", str(e))
-            logging.error(f"IPMI command failed ({' '.join(cmd)}): {err_msg}")
-            return False, str(err_msg)
-
     def set_fan_speed(self, channel: int, percentage: int) -> bool:
-        """Sets fan speed for specified channel (1-8) to a given percentage (0-100)."""
-        percentage = max(0, min(100, percentage))
-        speed_hex = f"0x{percentage:02x}"
-        channel_hex = f"0x{channel:02x}"
-        # ASRock Rack NetFn 0x3a, Cmd 0x01: Set Fan Speed
-        success, _ = self.run_ipmi_cmd(["0x3a", "0x01", channel_hex, speed_hex])
-        return success
+        return self.driver.set_fan_speed(channel, percentage)
 
     def set_all_fans(self, percentage: int) -> bool:
         all_success = True
@@ -91,19 +267,16 @@ class ASRockIPMIFanController:
                 all_success = False
         return all_success
 
-    def restore_bmc_auto(self) -> bool:
-        """Restores BMC automatic fan control mode (NetFn 0x3a, Cmd 0x02 or set 100%)."""
-        logging.info("Restoring BMC automatic fan control mode...")
+    def restore_auto(self) -> bool:
+        logging.info("Restoring automatic fan control mode...")
         self.auto_mode = True
-        # NetFn 0x3a 0x02 sets BMC auto mode on ASRock Rack
-        success, _ = self.run_ipmi_cmd(["0x3a", "0x02", "0x00"])
+        success = self.driver.restore_auto()
         if not success:
-            logging.warning("Failed to issue BMC auto command. Setting fans to 100% safety default.")
+            logging.warning("Failed to restore driver auto mode. Setting fans to 100% safety default.")
             self.set_all_fans(100)
         return success
 
     def get_cpu_temp(self) -> Optional[float]:
-        """Reads CPU temperature from sysfs /sys/class/hwmon."""
         temps = []
         for path in glob.glob("/sys/class/hwmon/hwmon*/temp*_input"):
             try:
@@ -116,9 +289,7 @@ class ASRockIPMIFanController:
         return max(temps) if temps else None
 
     def get_gpu_temp(self) -> Optional[float]:
-        """Reads GPU temperature from nvidia-smi, rocm-smi, or sysfs."""
         temps = []
-        # Try nvidia-smi
         try:
             res = subprocess.run(
                 ["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"],
@@ -130,7 +301,6 @@ class ASRockIPMIFanController:
         except Exception:
             pass
 
-        # Try rocm-smi
         if not temps:
             try:
                 res = subprocess.run(
@@ -149,7 +319,6 @@ class ASRockIPMIFanController:
             except Exception:
                 pass
 
-        # Try sysfs drm hwmon
         if not temps:
             for path in glob.glob("/sys/class/drm/card*/device/hwmon/hwmon*/temp1_input"):
                 try:
@@ -163,13 +332,11 @@ class ASRockIPMIFanController:
         return max(temps) if temps else None
 
     def calculate_fan_speed(self, max_temp: float) -> int:
-        """Calculates fan speed percentage based on max temperature."""
         if max_temp >= self.critical_temp:
             return 100
         if max_temp <= self.min_temp:
             return self.min_fan_speed
 
-        # Linear interpolation between min_temp and critical_temp
         temp_range = self.critical_temp - self.min_temp
         speed_range = self.max_fan_speed - self.min_fan_speed
         slope = speed_range / temp_range
@@ -183,9 +350,8 @@ class ASRockIPMIFanController:
         current_speed: int,
         is_auto: bool
     ) -> None:
-        """Exports metrics in Prometheus format for Telegraf monitoring."""
         lines = [
-            "# HELP ipmi_fan_speed_percent Current IPMI fan speed percentage",
+            "# HELP ipmi_fan_speed_percent Current IPMI/System fan speed percentage",
             "# TYPE ipmi_fan_speed_percent gauge",
         ]
         for ch in self.fan_channels:
@@ -196,7 +362,7 @@ class ASRockIPMIFanController:
             "# TYPE ipmi_fan_sensor_temperature_celsius gauge",
             f'ipmi_fan_sensor_temperature_celsius{{sensor="cpu_max"}} {cpu_temp if cpu_temp is not None else -1.0}',
             f'ipmi_fan_sensor_temperature_celsius{{sensor="gpu_max"}} {gpu_temp if gpu_temp is not None else -1.0}',
-            "# HELP ipmi_fan_control_auto_mode Indicates if fan control is currently in BMC auto/fallback mode",
+            "# HELP ipmi_fan_control_auto_mode Indicates if fan control is currently in auto/fallback mode",
             "# TYPE ipmi_fan_control_auto_mode gauge",
             f'ipmi_fan_control_auto_mode {1 if is_auto else 0}',
         ])
@@ -227,9 +393,9 @@ class ASRockIPMIFanController:
         if max_temp >= self.critical_temp:
             logging.critical(
                 f"Critical temperature reached ({max_temp:.1f}°C >= {self.critical_temp}°C)! "
-                "Triggering emergency 100% fans and BMC auto mode fallback."
+                "Triggering emergency 100% fans and auto mode fallback."
             )
-            self.restore_bmc_auto()
+            self.restore_auto()
             self.export_metrics(cpu_temp, gpu_temp, 100, is_auto=True)
             return cpu_temp, gpu_temp, 100
 
@@ -241,15 +407,20 @@ class ASRockIPMIFanController:
 
     def stop(self) -> None:
         self._running = False
-        self.restore_bmc_auto()
+        self.restore_auto()
+
+
+# Backwards compatibility alias
+ASRockIPMIFanController = SystemFanController
 
 
 def main():
-    parser = argparse.ArgumentParser(description="ASRock IPMI Fan Controller Daemon")
+    parser = argparse.ArgumentParser(description="System IPMI & Sysfs Fan Controller Daemon")
     parser.add_argument("--config", default="/etc/ipmi-fan-control/config.ini", help="Path to config file")
-    parser.add_argument("--stop", action="store_true", help="Restore BMC auto mode and exit")
+    parser.add_argument("--stop", action="store_true", help="Restore auto mode and exit")
     args = parser.parse_args()
 
+    driver_type = "auto"
     interface = "open"
     host = None
     user = None
@@ -267,6 +438,7 @@ def main():
         cfg = configparser.ConfigParser()
         cfg.read(args.config)
         if "Settings" in cfg:
+            driver_type = cfg["Settings"].get("driver", driver_type)
             interface = cfg["Settings"].get("interface", interface)
             host = cfg["Settings"].get("host", host)
             user = cfg["Settings"].get("user", user)
@@ -291,7 +463,8 @@ def main():
             if parsed_channels:
                 fan_channels = parsed_channels
 
-    controller = ASRockIPMIFanController(
+    controller = SystemFanController(
+        driver_type=driver_type,
         interface=interface,
         host=host,
         user=user,
@@ -306,19 +479,19 @@ def main():
     )
 
     if args.stop:
-        logging.info("Stop flag received. Restoring BMC auto fan control mode...")
-        controller.restore_bmc_auto()
+        logging.info("Stop flag received. Restoring automatic fan control mode...")
+        controller.restore_auto()
         sys.exit(0)
 
     def handle_signal(sig, frame):
-        logging.info(f"Received signal {sig}. Stopping fan controller and reverting to BMC auto...")
+        logging.info(f"Received signal {sig}. Stopping fan controller and reverting to auto mode...")
         controller.stop()
         sys.exit(0)
 
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
-    logging.info("Starting ASRock IPMI Fan Controller Daemon loop...")
+    logging.info("Starting System Fan Controller Daemon loop...")
     try:
         while controller._running:
             cpu, gpu, speed = controller.update_control_loop()
@@ -328,7 +501,7 @@ def main():
             time.sleep(interval)
     except Exception as e:
         logging.error(f"Unhandled exception in controller loop: {e}")
-        controller.restore_bmc_auto()
+        controller.restore_auto()
         raise
 
 
