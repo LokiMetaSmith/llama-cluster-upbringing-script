@@ -9,15 +9,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from pipecatapp.tools.code_runner_tool import CodeRunnerTool
 
-@patch('docker.from_env')
+@pytest.mark.asyncio
 @patch('pipecatapp.tools.code_runner_tool.time.sleep') # Mock sleep to speed up
-def test_execution_timeout_logic(mock_sleep, mock_docker_from_env):
+async def test_execution_timeout_logic(mock_sleep):
     """
     Test that CodeRunnerTool runs containers in detached mode and implements timeout logic.
     """
     # Setup mock client and container
     mock_client = MagicMock()
-    mock_docker_from_env.return_value = mock_client
 
     mock_container = MagicMock()
     mock_client.containers.run.return_value = mock_container
@@ -57,7 +56,7 @@ def test_execution_timeout_logic(mock_sleep, mock_docker_from_env):
 
         mock_time.side_effect = [0, 0, 0, 31, 31, 31, 31, 31]
 
-        tool.run_python_code("import time; time.sleep(10)")
+        await tool.run_python_code("import time; time.sleep(10)")
 
     # 1. Assert run was called with detach=True
     call_args = mock_client.containers.run.call_args

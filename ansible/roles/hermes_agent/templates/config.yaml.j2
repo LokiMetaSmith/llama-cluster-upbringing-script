@@ -1,0 +1,11 @@
+terminal:
+  backend: "{{ hermes_terminal_backend | default('singularity') }}"
+  singularity:
+    image_path: "{{ hermes_apptainer_image_path | default('/opt/apptainer/images/hermes_sandbox.sif') }}"
+    workdir: "{{ hermes_workspace_dir | default('/var/lib/openclaw/workspace') }}"
+    bind_paths:
+      - "{{ nomad_volumes_dir | default('/opt/nomad/volumes') }}:/opt/nomad/volumes"
+      - "/opt/unified_fs_backend:/opt/unified_fs_backend"
+    security:
+      allow_privileged: false
+      drop_caps: true

@@ -1,0 +1,50 @@
+job "hermes-singularity-worker" {
+  datacenters = ["{{ datacenter | default('dc1') }}"]
+  type        = "service"
+
+  group "worker-group" {
+    count = 1
+
+    network {
+      mode = "bridge"
+    }
+
+    service {
+      name = "hermes-singularity-worker"
+
+      connect {
+        sidecar_service {}
+      }
+
+      check {
+        name     = "Hermes Singularity Worker Status"
+        type     = "script"
+        command  = "/usr/bin/apptainer"
+        args     = ["version"]
+        interval = "30s"
+        timeout  = "5s"
+      }
+    }
+
+    task "run-task" {
+      driver = "raw_exec"
+
+      config {
+        command = "/usr/bin/apptainer"
+        args = [
+          "run",
+          "--drop-caps",
+          "--no-privs",
+          "--bind", "{{ nomad_volumes_dir | default('/opt/nomad/volumes') }}/mqtt-data:/mosquitto/data",
+          "--bind", "{{ workspace_dir | default('/var/lib/openclaw/workspace') }}:/workspace",
+          "{{ apptainer_image_path | default('/opt/apptainer/images/hermes_sandbox.sif') }}"
+        ]
+      }
+
+      resources {
+        cpu    = {{ singularity_task_cpu | default(1000) }}
+        memory = {{ singularity_task_memory | default(2048) }}
+      }
+    }
+  }
+}
