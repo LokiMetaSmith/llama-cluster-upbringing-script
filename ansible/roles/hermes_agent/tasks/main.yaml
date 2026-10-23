@@ -50,3 +50,17 @@
     mode: "0644"
     owner: "{{ target_user | default('pipecatapp') }}"
   become: yes
+
+- name: Check if Hermes Apptainer SIF image exists
+  ansible.builtin.stat:
+    path: "{{ hermes_apptainer_image_path | default('/opt/apptainer/images/hermes_sandbox.sif') }}"
+  register: hermes_sif_stat
+
+- name: Build/Pull default Hermes Apptainer SIF image if missing
+  ansible.builtin.shell:
+    cmd: "apptainer build {{ hermes_apptainer_image_path | default('/opt/apptainer/images/hermes_sandbox.sif') }} docker://python:3.11-slim"
+  when:
+    - not hermes_sif_stat.stat.exists
+    - hermes_pull_sif | default(true) | bool
+  ignore_errors: yes
+  become: yes
