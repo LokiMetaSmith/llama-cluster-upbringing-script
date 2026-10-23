@@ -128,6 +128,7 @@
 
 ## 📜 Completed History (Reference Archive)
 
+- [x] Consider refactoring `.github/workflows/unblocked-issues.yml` to support different target branches or configurable settings.
 - [x] Refactor unblocked-issues workflow to use configurable trusted users list (`vars.TRUSTED_USERS`).
 - [x] Read and evaluate VLLM project findings.
 - [x] Fix Memory Service networking (Port 8000 conflict).
