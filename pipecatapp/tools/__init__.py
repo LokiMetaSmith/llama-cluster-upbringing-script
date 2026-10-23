@@ -82,6 +82,7 @@ __all__ = [
     "WorkspaceTool",
     "SubstrateVisualizerTool",
     "ReverseEngineerTool",
+    "OpenShellTool",
 ]
 
 _module_lookup = {
@@ -166,6 +167,7 @@ _module_lookup = {
     "WorkspaceTool": "workspace_tool",
     "SubstrateVisualizerTool": "substrate_visualizer_tool",
     "ReverseEngineerTool": "reverse_engineer_tool",
+    "OpenShellTool": "openshell_tool",
 }
 
 
