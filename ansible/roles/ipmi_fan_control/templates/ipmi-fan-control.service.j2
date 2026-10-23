@@ -1,0 +1,15 @@
+[Unit]
+Description=ASRock Rack IPMI Swarm Fan Controller and Telemetry Daemon
+After=network.target ipmi.service
+Wants=ipmi.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/asrock_ipmi_fan_control.py --config /etc/ipmi-fan-control/config.ini
+ExecStop=/usr/local/bin/asrock_ipmi_fan_control.py --config /etc/ipmi-fan-control/config.ini --stop
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

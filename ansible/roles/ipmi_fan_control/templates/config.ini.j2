@@ -1,0 +1,23 @@
+[Settings]
+interface = {{ ipmi_fan_control_interface | default('open') }}
+{% if ipmi_fan_control_host is defined %}
+host = {{ ipmi_fan_control_host }}
+{% endif %}
+{% if ipmi_fan_control_user is defined %}
+user = {{ ipmi_fan_control_user }}
+{% endif %}
+{% if ipmi_fan_control_password is defined %}
+password = {{ ipmi_fan_control_password }}
+{% endif %}
+interval = {{ ipmi_fan_control_interval | default(10) }}
+metrics_file = {{ ipmi_fan_control_metrics_file | default('/var/lib/telegraf/ipmi_fan_metrics.prom') }}
+
+[Temperatures]
+min_temp = {{ ipmi_fan_control_min_temp | default(40.0) }}
+target_temp = {{ ipmi_fan_control_target_temp | default(60.0) }}
+critical_temp = {{ ipmi_fan_control_critical_temp | default(85.0) }}
+
+[FanSpeeds]
+min_fan_speed = {{ ipmi_fan_control_min_fan_speed | default(30) }}
+max_fan_speed = {{ ipmi_fan_control_max_fan_speed | default(100) }}
+channels = {{ ipmi_fan_control_fan_channels | default(['1','2','3','4','5','6']) | join(',') }}

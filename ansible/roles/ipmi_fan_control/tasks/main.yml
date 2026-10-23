@@ -1,0 +1,48 @@
+---
+- name: Ensure ipmitool is installed
+  ansible.builtin.apt:
+    name:
+      - ipmitool
+      - lm-sensors
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Create configuration directory
+  ansible.builtin.file:
+    path: /etc/ipmi-fan-control
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Install IPMI fan control daemon script
+  ansible.builtin.copy:
+    src: asrock_ipmi_fan_control.py
+    dest: /usr/local/bin/asrock_ipmi_fan_control.py
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Template IPMI fan control configuration
+  ansible.builtin.template:
+    src: config.ini.j2
+    dest: /etc/ipmi-fan-control/config.ini
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Template ipmi-fan-control systemd service unit
+  ansible.builtin.template:
+    src: ipmi-fan-control.service.j2
+    dest: /etc/systemd/system/ipmi-fan-control.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Ensure ipmi-fan-control service is enabled and started
+  ansible.builtin.systemd:
+    name: ipmi-fan-control
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: not ansible_check_mode

@@ -56,6 +56,10 @@
 
 [[inputs.netstat]]
 
+[[inputs.file]]
+  files = ["/var/lib/telegraf/ipmi_fan_metrics.prom"]
+  data_format = "prometheus"
+
 {% if is_swarm_router | default(false) | bool %}
 # Use iptables plugin since nftables requires complex sudo rules to allow telegraf access
 # Telegraf doesn't have a native nftables plugin without extra scripting yet.
