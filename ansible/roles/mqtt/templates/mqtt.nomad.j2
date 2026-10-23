@@ -25,25 +25,6 @@ job "mqtt" {
       read_only = false
     }
 
-    # Service Block at Group Level (Correct Placement)
-    service {
-      name     = "mqtts"
-      port     = "mqtts"
-      provider = "consul"
-      check {
-        type     = "tcp"
-        name     = "mqtts_health"
-        port     = "mqtts"
-        check_restart {
-          limit = 3
-          grace = "90s"
-          ignore_warnings = false
-        }
-        interval = "10s"
-        timeout  = "5s"
-      }
-    }
-
     restart {
       attempts = 10
       interval = "5m"
@@ -78,6 +59,30 @@ job "mqtt" {
         volume      = "mqtt-data"
         destination = "/mosquitto"
         read_only   = false
+      }
+
+      service {
+        name     = "mqtt"
+        port     = "mqtt"
+        provider = "consul"
+        check {
+          name     = "mqtt_health"
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+
+      service {
+        name     = "mqtts"
+        port     = "mqtts"
+        provider = "consul"
+        check {
+          name     = "mqtts_health"
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
       }
 
       resources {
