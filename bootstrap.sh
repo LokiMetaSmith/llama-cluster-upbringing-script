@@ -193,6 +193,17 @@ find_controller() {
         SCAN_RESULTS=$(awk '/4646\/open/ {print $2}' "$tmp_file" 2>/dev/null)
         rm -f "$tmp_file"
 
+        # Exclude local interface IPs so the host does not discover itself as a remote controller
+        local LOCAL_IPS
+        LOCAL_IPS=$(hostname -I 2>/dev/null || echo "")
+        local FILTERED_RESULTS=""
+        for candidate_ip in $SCAN_RESULTS; do
+            if [[ ! " $LOCAL_IPS 127.0.0.1 ::1 " =~ " $candidate_ip " ]]; then
+                FILTERED_RESULTS="$FILTERED_RESULTS $candidate_ip"
+            fi
+        done
+        SCAN_RESULTS=$(echo "$FILTERED_RESULTS" | xargs)
+
         if [ -n "$SCAN_RESULTS" ]; then
             echo -e "\r  - ${CYAN}${subnet}${NC}... Done.          "
             CONTROLLER_IP=$(echo "$SCAN_RESULTS" | head -n 1)
