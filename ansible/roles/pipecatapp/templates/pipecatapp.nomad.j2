@@ -164,11 +164,11 @@ job "{{ job_name | default('pipecat-app') }}" {
 
       template {
         data        = <<EOT
-{{ with secret "pki/issue/internal" "common_name=pipecatapp.local.mesh" "ttl=24h" }}
+{% raw %}{{ with secret "pki/issue/internal" "common_name=pipecatapp.local.mesh" "ttl=24h" }}
 {{ .Data.certificate }}
-{{ else }}
+{{ else }}{% endraw %}
 {{ lookup('file', internal_cert_path | default('/etc/ssl/certs/internal-cert.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
-{{ end }}
+{% raw %}{{ end }}{% endraw %}
 EOT
         destination = "secrets/internal-cert.pem"
         change_mode = "restart"
@@ -177,11 +177,11 @@ EOT
 
       template {
         data        = <<EOT
-{{ with secret "pki/issue/internal" "common_name=pipecatapp.local.mesh" "ttl=24h" }}
+{% raw %}{{ with secret "pki/issue/internal" "common_name=pipecatapp.local.mesh" "ttl=24h" }}
 {{ .Data.private_key }}
-{{ else }}
+{{ else }}{% endraw %}
 {{ lookup('file', internal_key_path | default('/etc/ssl/private/internal-key.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
-{{ end }}
+{% raw %}{{ end }}{% endraw %}
 EOT
         destination = "secrets/internal-key.pem"
         change_mode = "restart"
@@ -239,11 +239,11 @@ EOT
 
       template {
         data        = <<EOT
-{{ with secret "pki/issue/internal" "common_name=pipecatapp.local.mesh" "ttl=24h" }}
+{% raw %}{{ with secret "pki/issue/internal" "common_name=pipecatapp.local.mesh" "ttl=24h" }}
 {{ .Data.certificate }}
-{{ else }}
+{{ else }}{% endraw %}
 {{ lookup('file', internal_cert_path | default('/etc/ssl/certs/internal-cert.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
-{{ end }}
+{% raw %}{{ end }}{% endraw %}
 EOT
         destination = "secrets/internal-cert.pem"
         change_mode = "restart"
@@ -252,11 +252,11 @@ EOT
 
       template {
         data        = <<EOT
-{{ with secret "pki/issue/internal" "common_name=pipecatapp.local.mesh" "ttl=24h" }}
+{% raw %}{{ with secret "pki/issue/internal" "common_name=pipecatapp.local.mesh" "ttl=24h" }}
 {{ .Data.private_key }}
-{{ else }}
+{{ else }}{% endraw %}
 {{ lookup('file', internal_key_path | default('/etc/ssl/private/internal-key.pem'), errors='ignore') | default('ERROR_MISSING_CERTIFICATES: Node has not yet provisioned TLS keys.', true) }}
-{{ end }}
+{% raw %}{{ end }}{% endraw %}
 EOT
         destination = "secrets/internal-key.pem"
         change_mode = "restart"
