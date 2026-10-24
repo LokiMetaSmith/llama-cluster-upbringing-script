@@ -203,7 +203,7 @@ class TwinService(FrameProcessor):
         logging.info(f"Starting workflow for user query: {frame.text}")
 
         active_workflows = ActiveWorkflows()
-        request_id = self.current_request_meta.get("request_id", str(time.time()))
+        request_id = self.current_request_meta.get("request_id", str(time.time())) if self.current_request_meta else str(time.time())
 
         # Detect the requested workflow
         workflow_file = "workflows/default_agent_loop.yaml"

@@ -213,11 +213,13 @@ class TextMessageInjector(FrameProcessor):
                             text = f"{prefix}{text}"
 
                         logging.info(f"Injecting text message from gateway: {text}")
-                        await self.push_frame(TranscriptionFrame(text, meta=message))
+                        t_frame = TranscriptionFrame(text, "user", str(time.time()))
+                        t_frame.meta = message
+                        await self.push_frame(t_frame)
                 elif isinstance(message, str):
                      # Legacy support for simple text messages
                     logging.info(f"Injecting text message from UI: {message}")
-                    await self.push_frame(TranscriptionFrame(message))
+                    await self.push_frame(TranscriptionFrame(message, "user", str(time.time())))
             except Exception as e:
                 logging.error(f"Error in TextMessageInjector: {e}")
 

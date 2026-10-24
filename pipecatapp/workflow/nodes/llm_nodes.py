@@ -153,35 +153,47 @@ class SimpleLLMNode(Node):
         tier = self.config.get("model_tier", "balanced")
         consul_http_addr = context.global_inputs.get("consul_http_addr")
 
-        # Mapping logic (simplified for now, ideally strictly matches Consul service names)
-        if tier == "fast":
-            # Phi-3 is usually the 'fast' or 'router' expert
-            target_service = "rpc-router"
-        elif tier == "capable":
-            # CodeLlama or similar high-end
-            target_service = "rpc-coding"
-        else: # balanced / default
-            # Llama-3-8B is the main expert
-            target_service = "rpc-main"
-
+        tier_candidates = {
+            "fast": ["smol-agent-server", "expert-api-main", "rpc-router"],
+            "capable": ["expert-api-coding", "smol-agent-server", "rpc-coding"],
+            "balanced": ["smol-agent-server", "expert-api-main", "rpc-main"]
+        }
+        candidates = tier_candidates.get(tier, ["smol-agent-server", "expert-api-main"])
+        target_service = candidates[0]
+        chat_url = None
         response_text = f"Error: Could not reach {tier} service."
 
-        # 3. Call Service
+        # 3. Discovery
         if consul_http_addr:
             try:
                 token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
                 headers = {"X-Consul-Token": token} if token else {}
                 async with httpx.AsyncClient(headers=headers) as client:
-                    # Discovery
-                    response = await client.get(f"{consul_http_addr}/v1/health/service/{target_service}?passing")
-                    response.raise_for_status()
-                    services = response.json()
+                    for srv in candidates:
+                        try:
+                            response = await client.get(f"{consul_http_addr}/v1/health/service/{srv}?passing", timeout=2.0)
+                            if response.status_code == 200:
+                                services = response.json()
+                                if services:
+                                    address = services[0]['Service']['Address']
+                                    port = services[0]['Service']['Port']
+                                    chat_url = f"http://{address}:{port}/v1/chat/completions"
+                                    target_service = srv
+                                    break
+                        except Exception:
+                            continue
+            except Exception as e:
+                logging.warning(f"Consul discovery error in SimpleLLMNode: {e}")
 
-                    if services:
-                        address = services[0]['Service']['Address']
-                        port = services[0]['Service']['Port']
-                        base_url = f"http://{address}:{port}/v1"
-                        chat_url = f"{base_url}/chat/completions"
+        if not chat_url:
+            base_url = await discover_main_llm_service(consul_http_addr)
+            chat_url = f"{base_url}/chat/completions"
+            target_service = "smol-agent-server"
+
+        # 4. Call Service
+        if chat_url:
+            try:
+                async with httpx.AsyncClient() as client:
 
                         # CHECK FOR ENSEMBLING
                         ensemble_size = self.config.get("ensemble_size", 1)
@@ -270,8 +282,6 @@ class SimpleLLMNode(Node):
                                 else:
                                     response_text = candidates[0]
 
-                    else:
-                         response_text = f"Error: Service {target_service} not found in Consul."
 
             except Exception as e:
                 print(f"Error in SimpleLLMNode ({tier}): {e}")

@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import struct
+import time
 
 import httpx
 import numpy as np
@@ -78,7 +79,7 @@ class WyomingSTTService(FrameProcessor):
                     if event.type == "transcript":
                         text = event.data.get("text", "").strip()
                         if text:
-                            await self.push_frame(TranscriptionFrame(text))
+                            await self.push_frame(TranscriptionFrame(text, "user", str(time.time())))
                         break
 
                 await client.disconnect()
@@ -181,14 +182,16 @@ class FasterWhisperSTTService(FrameProcessor):
             full_text = await loop.run_in_executor(None, self._transcribe_sync, audio_bytes)
 
             if full_text:
-                await self.push_frame(TranscriptionFrame(full_text))
+                await self.push_frame(TranscriptionFrame(full_text, "user", str(time.time())))
         elif isinstance(frame, AudioFileFrame):
             logging.info(f"Processing AudioFileFrame: {frame.file_path}")
             loop = asyncio.get_running_loop()
             try:
                 full_text = await loop.run_in_executor(None, self._transcribe_file_sync, frame.file_path)
                 if full_text:
-                    await self.push_frame(TranscriptionFrame(full_text, meta=frame.meta))
+                    t_frame = TranscriptionFrame(full_text, "user", str(time.time()))
+                    t_frame.meta = frame.meta
+                    await self.push_frame(t_frame)
             except Exception as e:
                 logging.error(f"Error transcribing audio file: {e}")
             finally:
@@ -283,12 +286,14 @@ class GroqSTTService(FrameProcessor):
 
             text = await self._transcribe(audio_bytes)
             if text:
-                await self.push_frame(TranscriptionFrame(text))
+                await self.push_frame(TranscriptionFrame(text, "user", str(time.time())))
         elif isinstance(frame, AudioFileFrame):
             logging.info(f"GroqSTT processing file: {frame.file_path}")
             text = await self._transcribe_file(frame.file_path)
             if text:
-                await self.push_frame(TranscriptionFrame(text, meta=frame.meta))
+                t_frame = TranscriptionFrame(text, "user", str(time.time()))
+                t_frame.meta = frame.meta
+                await self.push_frame(t_frame)
             if os.path.exists(frame.file_path):
                 os.remove(frame.file_path)
         else:
