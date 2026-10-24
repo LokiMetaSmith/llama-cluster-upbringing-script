@@ -314,10 +314,11 @@ async def run_agent():
     )
     text_injector.start_listening()
 
+    vision_runner = PipelineRunner()
     try:
         await asyncio.gather(
             runner.run(main_task),
-            runner.run(vision_task)
+            vision_runner.run(vision_task)
         )
     except asyncio.CancelledError:
         logging.info("Pipeline runner was cancelled.")
