@@ -974,7 +974,10 @@ def _is_loopback_request(request: Request) -> bool:
     """Verifies that a request originated from or was targeted to the local loopback interface or local Consul scraper."""
     client_host = request.client.host if request.client else ""
     host_header = (request.headers.get("host") or "").split(":")[0]
-    allowed = ("127.0.0.1", "::1", "localhost", "testclient")
+    allowed = {"127.0.0.1", "::1", "localhost", "testclient"}
+    cluster_ip = os.getenv("CLUSTER_IP") or os.getenv("CONSUL_HOST")
+    if cluster_ip:
+        allowed.add(cluster_ip)
     return client_host in allowed or host_header in allowed
 
 

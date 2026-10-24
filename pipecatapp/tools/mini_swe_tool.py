@@ -21,15 +21,21 @@ class MiniSWEAgentTool:
             "Executes software engineering, debugging, and bash code tasks using mini-swe-agent. "
             "Requires a 'task' string argument. Accepts 'environment_type' ('docker' or 'local') and 'cwd'."
         )
-        if service is not None:
-            self.service = service
-        elif MiniSWEService is not None:
+        self._service = service
+
+    @property
+    def service(self):
+        if self._service is None:
             try:
-                self.service = MiniSWEService()
+                from pipecatapp.services.mini_swe_service import MiniSWEService
+                self._service = MiniSWEService()
             except Exception:
-                self.service = None
-        else:
-            self.service = None
+                self._service = None
+        return self._service
+
+    @service.setter
+    def service(self, value):
+        self._service = value
 
     def get_schema(self) -> dict:
         return {

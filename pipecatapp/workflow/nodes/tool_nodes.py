@@ -413,9 +413,11 @@ class HereticNode(Node):
             else:
                 output_msg = f"Heretic command completed.\nCommand: {result.get('command')}\nReturn Code: {result.get('returncode')}\n"
                 if result.get('stdout'):
-                    output_msg += f"Stdout: {(result.get('stdout') or "")[:500]}...\n"
+                    stdout_preview = (result.get('stdout') or '')[:500]
+                    output_msg += f"Stdout: {stdout_preview}...\n"
                 if result.get('stderr'):
-                    output_msg += f"Stderr: {(result.get('stderr') or "")[:500]}...\n"
+                    stderr_preview = (result.get('stderr') or '')[:500]
+                    output_msg += f"Stderr: {stderr_preview}...\n"
                 self.set_output(context, "result", output_msg)
 
         except Exception as e:

@@ -12,8 +12,6 @@ os.environ["YOLO_CONFIG_DIR"] = "/tmp/Ultralytics"
 from pipecat.frames.frames import UserImageRawFrame as VisionImageRawFrame
 from pipecat.processors.frame_processor import FrameProcessor
 
-from pipecatapp.moondream_detector import MoondreamDetector
-
 try:
     from ultralytics import YOLO
 except ImportError:
@@ -184,22 +182,32 @@ def initialize_vision_detector(app_config: dict) -> FrameProcessor:
         or a dummy FrameProcessor if initialization fails.
     """
     vision_model_name = app_config.get("vision_model", "yolov8")
-    primary_model, fallback_model = (YOLOv8Detector, MoondreamDetector) if vision_model_name == "yolov8" else (MoondreamDetector, YOLOv8Detector)
+
+    def _get_moondream_cls():
+        from pipecatapp.moondream_detector import MoondreamDetector
+        return MoondreamDetector
+
+    if vision_model_name == "moondream":
+        primary_fn, fallback_fn = (_get_moondream_cls, lambda: YOLOv8Detector)
+    else:
+        primary_fn, fallback_fn = (lambda: YOLOv8Detector, _get_moondream_cls)
 
     try:
-        logging.info(f"Attempting to initialize primary vision model: {primary_model.__name__}")
-        detector = primary_model()
-        logging.info(f"Successfully initialized {primary_model.__name__}")
+        primary_cls = primary_fn()
+        logging.info(f"Attempting to initialize primary vision model: {primary_cls.__name__}")
+        detector = primary_cls()
+        logging.info(f"Successfully initialized {primary_cls.__name__}")
         return detector
     except Exception as e:
-        logging.warning(f"Failed to initialize {primary_model.__name__}: {e}. Attempting fallback.")
+        logging.warning(f"Failed to initialize primary vision model: {e}. Attempting fallback.")
         try:
-            logging.info(f"Attempting to initialize fallback vision model: {fallback_model.__name__}")
-            detector = fallback_model()
-            logging.info(f"Successfully initialized {fallback_model.__name__}")
+            fallback_cls = fallback_fn()
+            logging.info(f"Attempting to initialize fallback vision model: {fallback_cls.__name__}")
+            detector = fallback_cls()
+            logging.info(f"Successfully initialized {fallback_cls.__name__}")
             return detector
         except Exception as e_fallback:
-            logging.error(f"Failed to initialize fallback vision model {fallback_model.__name__}: {e_fallback}")
+            logging.error(f"Failed to initialize fallback vision model: {e_fallback}")
             class VisionUnavailable(FrameProcessor):
                 def get_observation(self) -> str:
                     return "Vision system is completely unavailable."

@@ -9,11 +9,6 @@ import os
 import logging
 from typing import Dict, Any, Optional
 
-from minisweagent.agents.default import DefaultAgent
-from minisweagent.environments.local import LocalEnvironment
-from minisweagent.environments.docker import DockerEnvironment
-from minisweagent.models.litellm_model import LitellmModel
-
 logger = logging.getLogger(__name__)
 
 DEFAULT_MOE_GATEWAY_URL = os.getenv("MOE_GATEWAY_URL") or os.getenv("LLM_BASE_URL") or f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8081/v1"
@@ -39,8 +34,9 @@ class MiniSWEService:
         self.container_image = container_image
         self.cwd = cwd or os.getcwd()
 
-    def _get_model(self) -> LitellmModel:
+    def _get_model(self) -> Any:
         """Initialize LiteLLM model pointing to MoE Gateway or configured endpoint."""
+        from minisweagent.models.litellm_model import LitellmModel
         model_kwargs = {
             "model_name": self.model_name,
         }
@@ -56,9 +52,11 @@ class MiniSWEService:
         """
         work_dir = cwd or self.cwd
         if self.environment_type == "local":
+            from minisweagent.environments.local import LocalEnvironment
             logger.info("Using LocalEnvironment for mini-swe-agent (trusted execution)")
             return LocalEnvironment(cwd=work_dir)
         else:
+            from minisweagent.environments.docker import DockerEnvironment
             logger.info("Using DockerEnvironment for mini-swe-agent (sandboxed execution)")
             return DockerEnvironment(image=self.container_image, cwd=work_dir)
 
@@ -77,6 +75,7 @@ class MiniSWEService:
         self.environment_type = env_type.lower()
 
         try:
+            from minisweagent.agents.default import DefaultAgent
             model = self._get_model()
             environment = self._get_environment(cwd=cwd)
             agent = DefaultAgent(model=model, env=environment)
