@@ -158,6 +158,16 @@
     recurse: yes
   become: yes
 
+- name: Clean up orphaned IPFS daemon processes with PPID 1
+  ansible.builtin.shell: |
+    pids=$(pgrep -P 1 -f '^/usr/local/bin/ipfs daemon' || true)
+    if [ -n "$pids" ]; then
+      echo "Killing orphaned IPFS daemons: $pids"
+      kill -9 $pids
+    fi
+  become: yes
+  changed_when: false
+
 - name: Remove stale IPFS lock files before starting daemon
   ansible.builtin.file:
     path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}/{{ item }}"

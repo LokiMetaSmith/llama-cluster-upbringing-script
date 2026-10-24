@@ -49,15 +49,21 @@
 - name: "Build Cached Image : Tag image with target tag"
   ansible.builtin.command: "buildah tag {{ image_name }}:{{ _versioned_tag }} {{ image_name }}:{{ image_tag | default('latest') }}"
   become: yes
-  when: _versioned_image_check.rc != 0 or (force_rebuild | default(false) | bool)
+
+- name: "Build Cached Image : Check if image exists in Docker daemon"
+  ansible.builtin.command: "docker image inspect {{ image_name }}:{{ image_tag | default('latest') }}"
+  become: yes
+  register: _docker_image_check
+  failed_when: false
+  changed_when: false
 
 - name: "Build Cached Image : Export image to Docker daemon"
   ansible.builtin.command: "buildah push {{ image_name }}:{{ image_tag | default('latest') }} docker-daemon:{{ image_name }}:{{ image_tag | default('latest') }}"
   become: yes
-  when: _versioned_image_check.rc != 0 or (force_rebuild | default(false) | bool)
+  when: _docker_image_check.rc != 0 or (force_rebuild | default(false) | bool)
 
 - name: "Build Cached Image : Import image to containerd nomad.slice"
   ansible.builtin.shell: "docker save {{ image_name }}:{{ image_tag | default('latest') }} | ctr -n nomad.slice images import - && ctr -n nomad.slice images tag docker.io/library/{{ image_name }}:{{ image_tag | default('latest') }} {{ image_name }}:{{ image_tag | default('latest') }} || true"
   become: yes
-  when: (import_to_containerd | default(false) | bool) and (_versioned_image_check.rc != 0 or (force_rebuild | default(false) | bool))
+  when: (import_to_containerd | default(false) | bool) and (_docker_image_check.rc != 0 or (force_rebuild | default(false) | bool))
   ignore_errors: yes
