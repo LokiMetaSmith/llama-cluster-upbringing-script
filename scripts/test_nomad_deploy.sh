@@ -10,6 +10,17 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 JOB_FILE="ansible/jobs/pipecatapp.nomad"
+if [ -f "/opt/nomad/jobs/pipecatapp.nomad" ]; then
+    JOB_FILE="/opt/nomad/jobs/pipecatapp.nomad"
+fi
+
+if [ -f "/etc/nomad.d/tls/ca.pem" ]; then
+    export NOMAD_ADDR="${NOMAD_ADDR:-https://100.64.0.1:4646}"
+    export NOMAD_CACERT="${NOMAD_CACERT:-/etc/nomad.d/tls/ca.pem}"
+    export NOMAD_CLIENT_CERT="${NOMAD_CLIENT_CERT:-/etc/nomad.d/tls/cli.cert.pem}"
+    export NOMAD_CLIENT_KEY="${NOMAD_CLIENT_KEY:-/etc/nomad.d/tls/cli.key.pem}"
+fi
+
 JOB_NAME="pipecat-app"
 API_URL="http://localhost:8007/api/status"
 
@@ -22,7 +33,7 @@ if [ ! -f "$JOB_FILE" ]; then
 fi
 
 echo "Deploying $JOB_FILE..."
-nomad job run "$JOB_FILE"
+nomad job run -detach "$JOB_FILE"
 
 # 2. Wait for stable running state
 echo "Waiting for job to reach running state..."

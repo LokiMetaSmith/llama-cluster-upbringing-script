@@ -29,7 +29,7 @@ job "pipecat-app" {
     network {
       mode = "host"
       port "http" {
-        to = {{ pipecat_port | default(8007) }}
+        static = 8007
       }
     }
 

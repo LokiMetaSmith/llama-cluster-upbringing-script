@@ -270,6 +270,11 @@ if ! python -c "import sys; sys.path.append('$(dirname "$APP_DIR")'); import pip
     log_msg "CRITICAL: Pre-flight import check failed. This usually indicates missing dependencies or syntax errors."
 fi
 
+# Ensure port is not held by a previous stale process
+if command -v fuser &>/dev/null; then
+    fuser -k {{ pipecat_port | default(8007) }}/tcp 2>/dev/null || true
+fi
+
 # Launch application with output mirrored to both stdout/stderr (for Nomad/Docker logs) and LOG_FILE
 PYTHON_EXEC="$(dirname "$ACTIVATE")/python"
 if [ ! -x "$PYTHON_EXEC" ]; then
