@@ -3,6 +3,10 @@
   remote_user: "{{ target_user }}"
   become: yes
 
+  vars_files:
+    - "{{ ansible_config_file | dirname }}/group_vars/models.yaml"
+    - "{{ ansible_config_file | dirname }}/group_vars/external_experts.yaml"
+
   tags:
     - app-services
 

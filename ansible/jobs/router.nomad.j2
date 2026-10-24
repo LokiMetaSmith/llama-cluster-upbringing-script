@@ -73,7 +73,7 @@ job "router" {
         ports = ["ollama"]
         args = [
           "--port", "${NOMAD_PORT_ollama}",
-          "--model", "openai/{{ expert_models.router[0].filename }}",
+          "--model", "openai/{{ (expert_models.router[0].filename) if (expert_models is defined and expert_models.router is defined and expert_models.router | length > 0) else 'default' }}",
           "--api_base", "http://localhost:${NOMAD_PORT_http}/v1",
           "--drop_params"
         ]
@@ -99,7 +99,7 @@ set -e
 echo "--- Starting Router ---"
 
 exec /usr/local/bin/llama-server \
-  --model /opt/nomad/models/llm/{{ expert_models.router[0].filename }} \
+  --model /opt/nomad/models/llm/{{ (expert_models.router[0].filename) if (expert_models is defined and expert_models.router is defined and expert_models.router | length > 0) else 'default' }} \
   --host 0.0.0.0 \
   --port ${NOMAD_PORT_http} \
   --n-gpu-layers 99 \

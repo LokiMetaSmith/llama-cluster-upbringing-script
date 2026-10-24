@@ -130,7 +130,7 @@
   ansible.builtin.set_fact:
     verified_experts: "{{ verified_experts | default([]) + [item] }}"
   loop: "{{ experts }}"
-  when: (expert_models[item] | default([]) | map(attribute='filename') | list) | intersect(successful_models) | length > 0
+  when: expert_models is defined and (expert_models[item] | default([]) | map(attribute='filename') | list) | intersect(successful_models) | length > 0
 
 - name: Fallback and warn if no verified experts found
   ansible.builtin.debug:
@@ -492,15 +492,17 @@
     src: "{{ ansible_jobs_dir }}/router.nomad.j2"
     dest: "{{ nomad_jobs_dir }}/router.nomad"
   become: yes
+  when: expert_models is defined and expert_models.router is defined and expert_models.router | length > 0
 
 - name: Create ds4 expert job files from template
   ansible.builtin.template:
     mode: '0644'
     src: "{{ ansible_jobs_dir }}/ds4-server.nomad.j2"
     dest: "{{ nomad_jobs_dir }}/ds4-server-{{ item.name | lower | replace(' ', '-') }}.nomad"
-  loop: "{{ expert_models.ds4 | default([]) }}"
+  loop: "{{ (expert_models.ds4 if expert_models is defined else []) | default([]) }}"
   when: >
     deploy_topology != 'monolith' and
+    expert_models is defined and
     expert_models.ds4 is defined
   vars:
     model: "{{ item }}"
