@@ -322,7 +322,7 @@
                             p.targetRadius = (existing.size || 8) + activity;
 
                             // Color update based on status
-                            if (existing.status !== 'running' && existing.status !== 'healthy') {
+                            if (existing.status && existing.status !== 'running' && existing.status !== 'healthy') {
                                 p.color = '#ff0000'; // Red for error
                             } else {
                                 p.color = COLORS[existing.type] || '#888';
@@ -785,7 +785,7 @@
 
         // Check Health on Load
         fetch('/health').then(res => res.json()).then(data => {
-            if (data.status === 'ok') {
+            if (data.status === 'ok' || data.status === 'initializing') {
                 // Skip intro
                 time = 500; // Past timeline
                 // Spawn base nodes immediately

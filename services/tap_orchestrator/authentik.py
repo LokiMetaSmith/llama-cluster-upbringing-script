@@ -13,7 +13,7 @@ class AuthentikClient:
         self.client_secret = settings.authentik_client_secret
         self.static_token = settings.authentik_token
         self._access_token: Optional[str] = None
-        self._http_client = httpx.AsyncClient(verify=False) # Internal cluster traffic might be self-signed
+        self._http_client = httpx.AsyncClient()
 
     async def _get_token(self) -> str:
         """

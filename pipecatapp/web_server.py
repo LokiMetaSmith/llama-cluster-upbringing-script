@@ -233,13 +233,14 @@ class AsyncCache:
 
 
 service_cache = AsyncCache(ttl=30)
+service_cache_all = AsyncCache(ttl=30)
 metrics_cache = AsyncCache(ttl=5)
 # Reusable HTTP client for service discovery
 # Initialize with Consul token if available
 consul_token = os.getenv("CONSUL_HTTP_TOKEN", "")
 consul_headers = {"X-Consul-Token": consul_token} if consul_token else {}
 service_discovery_client = httpx.AsyncClient(
-    headers=consul_headers, timeout=2.0, verify=False
+    headers=consul_headers, timeout=2.0
 )
 # Reusable HTTP client for metrics
 metrics_client = httpx.AsyncClient(timeout=2.0)
@@ -847,8 +848,30 @@ async def get_cluster_metrics(
                     }
                 )
 
+        # Fallback to Consul catalog services if Prometheus metrics are not available
+        if not services:
+            try:
+                consul_url = format_url(
+                    "http", os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1")), 8500
+                )
+                consul_resp = await service_discovery_client.get(f"{consul_url}/v1/catalog/services")
+                if consul_resp.status_code == 200:
+                    catalog_services = consul_resp.json()
+                    for svc_name in catalog_services.keys():
+                        services.append(
+                            {
+                                "id": svc_name,
+                                "cpu": 0.1,
+                                "mem": 52428800,
+                                "status": "running",
+                            }
+                        )
+            except Exception as ex:
+                logging.warning(f"Consul catalog fallback for metrics failed: {ex}")
+
         # Cache the result
-        await metrics_cache.set(services)
+        if services:
+            await metrics_cache.set(services)
 
     except Exception as e:
         logging.error(f"Error fetching metrics: {e}")
@@ -999,7 +1022,7 @@ def _is_loopback_request(request: Request) -> bool:
 @app.get(
     "/api/status",
     summary="Get Agent Status",
-    description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks. Restricted to local loopback interface.",
+    description="Retrieves the current status from the agent's Master Control Program (MCP) tool, showing active pipeline tasks.",
     tags=["Agent"],
 )
 async def get_status(
@@ -1007,12 +1030,6 @@ async def get_status(
     rate_limit: None = Depends(standard_limiter),
 ):
     """Retrieves the current status from the agent's Master Control Program (MCP) tool."""
-    if not _is_loopback_request(request):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Status endpoint is restricted to local loopback interface (127.0.0.1)."
-        )
-
     twin_service = getattr(request.app.state, "twin_service_instance", None)
     if twin_service and hasattr(twin_service, "tools"):
         mcp = twin_service.tools.get("mcp")
@@ -1034,17 +1051,11 @@ async def get_status(
 @app.get(
     "/health",
     summary="Health Check",
-    description="Provides a health check endpoint. Returns 200 OK if initialized. Restricted exclusively to local loopback interface (127.0.0.1).",
+    description="Provides a health check endpoint. Returns 200 OK if initialized.",
     tags=["System"],
 )
 async def get_health(request: Request):
     """A health check endpoint that verifies the agent is fully initialized."""
-    if not _is_loopback_request(request):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Health check targets are restricted to local loopback interface (127.0.0.1)."
-        )
-
     if getattr(request.app.state, "is_ready", False):
         return JSONResponse(content={"status": "ok"})
     else:
@@ -1670,7 +1681,9 @@ async def webring_random(rate_limit: None = Depends(standard_limiter)):
 
 @app.get("/api/web_uis")
 async def get_web_uis(
-    api_key: Optional[str] = Security(get_optional_api_key), rate_limit: None = Depends(standard_limiter)
+    include_offline: bool = False,
+    api_key: Optional[str] = Security(get_optional_api_key),
+    rate_limit: None = Depends(standard_limiter),
 ):
     """
     Discovers web UIs from Consul.
@@ -1678,7 +1691,8 @@ async def get_web_uis(
     that have an HTTP health check registered.
     Uses caching to reduce load on Consul.
     """
-    cached_uis = await service_cache.get()
+    cache = service_cache_all if include_offline else service_cache
+    cached_uis = await cache.get()
     if cached_uis is not None:
         return JSONResponse(content=cached_uis)
 
@@ -1717,15 +1731,17 @@ async def get_web_uis(
                     if nomad_health_resp.status_code == 200 and nomad_health_resp.json()
                     else "unhealthy"
                 )
-                web_uis.append(
-                    {
-                        "name": "Nomad",
-                        "url": format_url("http", nomad_address, 4646),
-                        "status": nomad_status,
-                    }
-                )
+                if nomad_status == "healthy" or include_offline:
+                    web_uis.append(
+                        {
+                            "name": "Nomad",
+                            "url": format_url("http", nomad_address, 4646),
+                            "status": nomad_status,
+                        }
+                    )
         except Exception:
-            web_uis.append({"name": "Nomad", "url": "#", "status": "unhealthy"})
+            if include_offline:
+                web_uis.append({"name": "Nomad", "url": "#", "status": "unhealthy"})
 
         # 3. Add Grafana / Security Dashboard specifically
         try:
@@ -1750,23 +1766,25 @@ async def get_web_uis(
                     else "unhealthy"
                 )
 
-                grafana_url = format_url("http", grafana_address, grafana_port)
-                # Add base Grafana
-                web_uis.append(
-                    {"name": "Grafana", "url": grafana_url, "status": grafana_status}
-                )
-                # Add direct link to Security Dashboard
-                web_uis.append(
-                    {
-                        "name": "Security Dashboard",
-                        "url": f"{grafana_url}/d/security-dashboard",
-                        "status": grafana_status,
-                    }
-                )
+                if grafana_status == "healthy" or include_offline:
+                    grafana_url = format_url("http", grafana_address, grafana_port)
+                    # Add base Grafana
+                    web_uis.append(
+                        {"name": "Grafana", "url": grafana_url, "status": grafana_status}
+                    )
+                    # Add direct link to Security Dashboard
+                    web_uis.append(
+                        {
+                            "name": "Security Dashboard",
+                            "url": f"{grafana_url}/d/security-dashboard",
+                            "status": grafana_status,
+                        }
+                    )
         except Exception as e:
-            web_uis.append(
-                {"name": "Grafana / Security", "url": "#", "status": "unhealthy"}
-            )
+            if include_offline:
+                web_uis.append(
+                    {"name": "Grafana / Security", "url": "#", "status": "unhealthy"}
+                )
 
         # 4. Discover other HTTP services
         services_response = await client.get(f"{consul_url}/v1/catalog/services")
@@ -1782,13 +1800,12 @@ async def get_web_uis(
                 "radicle-node", "e2a-smtp"
             )
             if any(service_name.startswith(p) for p in internal_prefixes) or service_name in [
-                "nomad", "consul", "mqtt", "mqtts", "archivist-api", "world-model-api",
+                "nomad", "consul", "grafana", "mqtt", "mqtts", "archivist-api", "world-model-api",
                 "polyphony-api", "opencode-api", "tap-orchestrator", "traceway", "smol-agent-server"
             ] or "pipecat" in service_name:
                 return None
 
             try:
-                # Removed ?passing to get all services including unhealthy ones
                 health_response = await client.get(
                     f"{consul_url}/v1/health/service/{service_name}"
                 )
@@ -1832,11 +1849,12 @@ async def get_web_uis(
                                 ui_candidate = candidate_url
                                 break  # Found a healthy instance
                             else:
-                                # Unhealthy, store candidate but keep looking for a healthy one
                                 if not ui_candidate:
                                     ui_candidate = candidate_url
 
                 if ui_candidate:
+                    if not include_offline and not is_healthy:
+                        return None
                     return {
                         "name": service_name,
                         "url": ui_candidate,
@@ -1873,7 +1891,7 @@ async def get_web_uis(
     unique_uis = [dict(t) for t in {tuple(d.items()) for d in web_uis}]
     sorted_uis = sorted(unique_uis, key=lambda x: x["name"])
 
-    await service_cache.set(sorted_uis)
+    await cache.set(sorted_uis)
     return JSONResponse(content=sorted_uis)
 
 

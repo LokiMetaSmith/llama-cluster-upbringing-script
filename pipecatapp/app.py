@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -46,16 +47,40 @@ from pipecatapp.workflow.runner import WorkflowRunner
 # -----------------------
 # Logging -> web UI bridge
 # -----------------------
+# Suppress noisy HTTP poll log lines in terminal
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 class WebSocketLogHandler(logging.Handler):
     """A logging handler that forwards records to a WebSocket connection.
 
     This class allows the application's logs to be streamed in real-time
     to a web-based user interface.
     """
+    def __init__(self):
+        super().__init__()
+        self._last_msg = None
+        self._last_time = 0.0
+
     def emit(self, record):
         """Formats the log record and broadcasts it to WebSocket clients."""
+        # Filter out noisy internal health checks / polling logs from web terminal
+        if record.name in ("httpx", "httpcore"):
+            return
+        msg = record.getMessage()
+        if "/health" in msg or "/api/status" in msg or "/api/workflows/active" in msg:
+            return
+
         log_entry = self.format(record)
         log_entry = redact_sensitive_data(log_entry)
+
+        # Debounce identical duplicate log emissions within 0.1s
+        now = time.time()
+        if log_entry == self._last_msg and (now - self._last_time) < 0.1:
+            return
+        self._last_msg = log_entry
+        self._last_time = now
+
         try:
             loop = asyncio.get_running_loop()
             loop.create_task(pipecatapp.web_server.manager.broadcast(json.dumps({"type": "log", "data": log_entry})))
@@ -63,7 +88,8 @@ class WebSocketLogHandler(logging.Handler):
             pass
 
 logger = logging.getLogger()
-logger.addHandler(WebSocketLogHandler())
+if not any(isinstance(h, WebSocketLogHandler) for h in logger.handlers):
+    logger.addHandler(WebSocketLogHandler())
 
 # Global variable to hold the background task
 agent_task = None
