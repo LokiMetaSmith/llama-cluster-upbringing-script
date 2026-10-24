@@ -48,30 +48,26 @@ if [ "$TOOL_SERVER_ROLE" = "core" ] || [ -z "$TOOL_SERVER_ROLE" ] || mount | gre
 
         # Safe directory configuration
         git config --global --add safe.directory "$WORKSPACE_DIR"
-        cd /app
-    fi
-fi
 
-    # Mark the workspace as safe (since ownership might differ in container)
-    git config --global --add safe.directory "$WORKSPACE_DIR"
-
-    # Configure Auth for Push (if token provided)
-    if [ -n "$GITHUB_TOKEN" ]; then
-        echo "🔐 Configuring git credentials using GITHUB_TOKEN..."
-        # Use a simple credential helper or replace origin URL
-        # Replacing URL is robust for specific remote
-        ORIGIN_URL=$(git remote get-url origin)
-        if [[ "$ORIGIN_URL" == https://* ]]; then
-            # Strip existing auth info if any
-            CLEAN_URL=$(echo "$ORIGIN_URL" | sed 's|https://[^@]*@|https://|')
-            # Inject token
-            NEW_URL=$(echo "$CLEAN_URL" | sed "s|https://|https://$GITHUB_TOKEN@|")
-            git remote set-url origin "$NEW_URL"
-            echo "✅ Git remote 'origin' updated with token authentication."
-        else
-            echo "⚠️  Origin URL is not HTTPS or complex. Skipping auto-auth configuration."
-            echo "    Current Origin: $ORIGIN_URL"
+        # Configure Auth for Push (if token provided)
+        if [ -n "$GITHUB_TOKEN" ]; then
+            echo "🔐 Configuring git credentials using GITHUB_TOKEN..."
+            # Use a simple credential helper or replace origin URL
+            # Replacing URL is robust for specific remote
+            ORIGIN_URL=$(git remote get-url origin)
+            if [[ "$ORIGIN_URL" == https://* ]]; then
+                # Strip existing auth info if any
+                CLEAN_URL=$(echo "$ORIGIN_URL" | sed 's|https://[^@]*@|https://|')
+                # Inject token
+                NEW_URL=$(echo "$CLEAN_URL" | sed "s|https://|https://$GITHUB_TOKEN@|")
+                git remote set-url origin "$NEW_URL"
+                echo "✅ Git remote 'origin' updated with token authentication."
+            else
+                echo "⚠️  Origin URL is not HTTPS or complex. Skipping auto-auth configuration."
+                echo "    Current Origin: $ORIGIN_URL"
+            fi
         fi
+        cd /app
     fi
 fi
 
