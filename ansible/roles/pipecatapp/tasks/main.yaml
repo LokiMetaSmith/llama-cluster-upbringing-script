@@ -207,6 +207,13 @@
   become: yes
   when: venv_uv.stat.exists
 
+- name: Ensure system_tmpdir has correct permissions for unprivileged user
+  ansible.builtin.file:
+    path: /var/tmp/pipecat_build
+    state: directory
+    mode: '1777'
+  become: yes
+
 - name: Ensure setuptools, wheel, and Cython are pre-installed
   ansible.builtin.command:
     cmd: "uv pip install setuptools wheel \"Cython>=3.0.0\""

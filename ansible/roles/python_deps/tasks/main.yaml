@@ -56,9 +56,7 @@
   ansible.builtin.file:
     path: /var/tmp/pipecat_build
     state: directory
-    mode: '0777'
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
+    mode: '1777'
   become: yes
   tags:
     - deploy_app
@@ -153,7 +151,7 @@
     path: "{{ item }}"
     state: absent
   loop:
-    - "/var/tmp/pipecat_build"
+    - "/var/tmp/pipecat_build/uv_cache"
     - "/home/{{ target_user }}/.ansible_async"
   become: yes
   tags:
