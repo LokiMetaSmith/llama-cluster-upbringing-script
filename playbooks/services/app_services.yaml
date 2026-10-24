@@ -151,6 +151,7 @@
         - e2a
         - traceway
         - celld
+        - pipecatapp
 
     - name: Run Paddler Stack
       when: enable_paddler | default(false)
