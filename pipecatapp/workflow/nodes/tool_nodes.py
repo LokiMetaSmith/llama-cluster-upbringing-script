@@ -50,14 +50,21 @@ class SystemPromptNode(Node):
                 base_prompt = "You are a helpful AI assistant."
 
         tools_prompt = "You have access to the following tools:\\n"
+        tool_count = 0
         for tool_name, tool in tools.items():
             if tool_name == "vision":
                 tools_prompt += '- {"tool": "vision.get_observation"}: Get a real-time description of what is visible in the webcam.\\n'
+                tool_count += 1
             else:
                 for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
                     if not method_name.startswith('_'):
-                        doc = ((method.__doc__ or "").strip().split("\n")[0]).strip()[:100]
+                        doc = ((method.__doc__ or "").strip().split("\n")[0]).strip()[:60]
                         tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {doc}\\n'
+                        tool_count += 1
+                        if tool_count >= 15:
+                            break
+            if tool_count >= 15:
+                break
 
         # Dynamically add available expert services to the prompt
         for service_name in available_services:

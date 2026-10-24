@@ -144,6 +144,9 @@ class SimpleLLMNode(Node):
                 if input_system_prompt:
                     system_prompt = input_system_prompt
 
+            if len(system_prompt) > 4000:
+                system_prompt = system_prompt[:4000] + "\n[System prompt truncated for context limit]"
+
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_text}
