@@ -44,6 +44,7 @@ class WyomingSTTService(FrameProcessor):
         self.audio_buffer = bytearray()
 
     async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
         if isinstance(frame, UserStartedSpeakingFrame):
             self.audio_buffer.clear()
         elif isinstance(frame, AudioRawFrame):
@@ -165,6 +166,7 @@ class FasterWhisperSTTService(FrameProcessor):
             frame: The frame to process.
             direction: The direction of the frame in the pipeline.
         """
+        await super().process_frame(frame, direction)
         if isinstance(frame, UserStartedSpeakingFrame):
             self.audio_buffer.clear()
         elif isinstance(frame, AudioRawFrame):
@@ -273,6 +275,7 @@ class GroqSTTService(FrameProcessor):
             return ""
 
     async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
         if isinstance(frame, UserStartedSpeakingFrame):
             self.audio_buffer.clear()
         elif isinstance(frame, AudioRawFrame):

@@ -187,6 +187,7 @@ class TwinService(FrameProcessor):
             frame: The incoming frame from the pipeline.
             direction: The direction of the frame in the pipeline.
         """
+        await super().process_frame(frame, direction)
         span = trace.get_current_span()
         logging.info(f"TwinService.process_frame received frame {type(frame).__name__}")
         if not isinstance(frame, TranscriptionFrame):

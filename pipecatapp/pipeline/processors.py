@@ -54,7 +54,8 @@ class UILogger(FrameProcessor):
             frame: The frame to process.
             direction: The direction of the frame in the pipeline.
         """
-        logging.info(f"UILogger({self.sender}) received frame {type(frame).__name__}")
+        await super().process_frame(frame, direction)
+        logging.info(f"UILogger({self.sender}) received frame {type(frame).__name__}: {frame}")
         if isinstance(frame, (TranscriptionFrame, TextFrame)):
             # Security Fix: Sentinel - Redact sensitive information
             redacted_text = redact_sensitive_data(frame.text)
@@ -233,6 +234,7 @@ class TextMessageInjector(FrameProcessor):
             frame: The frame to process.
             direction: The direction of the frame in the pipeline.
         """
+        await super().process_frame(frame, direction)
         await self.push_frame(frame, direction)
 
     def stop_listening(self):
@@ -251,6 +253,7 @@ class WebsocketAudioStreamer(FrameProcessor):
         self.sample_rate = sample_rate
 
     async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
         if not isinstance(frame, AudioRawFrame):
             await self.push_frame(frame, direction)
             return

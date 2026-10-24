@@ -63,6 +63,7 @@ class KokoroTTSService(FrameProcessor):
             return wf.readframes(wf.getnframes())
 
     async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
         if not isinstance(frame, TextFrame):
             await self.push_frame(frame, direction)
             return
@@ -122,6 +123,7 @@ class PiperTTSService(FrameProcessor):
             frame: The frame to process.
             direction: The direction of the frame in the pipeline.
         """
+        await super().process_frame(frame, direction)
         if not isinstance(frame, TextFrame):
             await self.push_frame(frame, direction)
             return
@@ -143,6 +145,7 @@ class DummyTTSService(FrameProcessor):
 
     async def process_frame(self, frame, direction):
         """Passes text frames through, generating an empty audio frame."""
+        await super().process_frame(frame, direction)
         if not isinstance(frame, TextFrame):
             await self.push_frame(frame, direction)
             return
