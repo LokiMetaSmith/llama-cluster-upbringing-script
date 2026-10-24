@@ -182,10 +182,19 @@
     - name: Run IPFS repo verify
       ansible.builtin.command:
         cmd: "/usr/local/bin/ipfs repo verify"
+        creates: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}/.repo_verified"
       environment:
         IPFS_PATH: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
       register: ipfs_verify_result
       changed_when: false
+
+    - name: Mark IPFS repo as verified
+      ansible.builtin.file:
+        path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}/.repo_verified"
+        state: touch
+        owner: "{{ target_user | default('pipecatapp') }}"
+        group: "{{ target_user | default('pipecatapp') }}"
+        mode: "0644"
   rescue:
     - name: Log verify failure or lock contention
       ansible.builtin.debug:
@@ -195,14 +204,6 @@
       ansible.builtin.fail:
         msg: "Failed to validate IPFS repo. Migration cannot safely proceed."
       when: "'resource temporarily unavailable' not in ipfs_verify_result.stderr | default('') and 'lock' not in ipfs_verify_result.stderr | default('')"
-  become: yes
-
-- name: Set IPFS directory ownership for native execution
-  ansible.builtin.file:
-    path: "/opt/unified_fs_backend/ipfs/{{ ipfs_node_name }}"
-    owner: "{{ target_user | default('pipecatapp') }}"
-    group: "{{ target_user | default('pipecatapp') }}"
-    recurse: yes
   become: yes
 
 - name: Template ipfs job
