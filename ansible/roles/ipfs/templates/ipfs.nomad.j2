@@ -22,10 +22,10 @@ job "ipfs" {
     }
 
     restart {
-      attempts = 3
-      interval = "2m"
-      delay    = "10s"
-      mode     = "fail"
+      attempts = 10
+      interval = "5m"
+      delay    = "5s"
+      mode     = "delay"
     }
 
     task "ipfs" {
@@ -38,11 +38,10 @@ job "ipfs" {
       }
 
       config {
-        command = "/usr/local/bin/ipfs"
+        command = "/bin/bash"
         args = [
-          "daemon",
-          "--enable-gc",
-          "--migrate"
+          "-c",
+          "pkill -9 -u {{ target_user | default('pipecatapp') }} -f '^/usr/local/bin/ipfs daemon' || true; rm -f /opt/unified_fs_backend/ipfs/{{ ipfs_node_name | default('pipecat') }}/repo.lock /opt/unified_fs_backend/ipfs/{{ ipfs_node_name | default('pipecat') }}/api; exec /usr/local/bin/ipfs daemon --enable-gc --migrate"
         ]
       }
 

@@ -423,6 +423,9 @@
         ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add -Q /tmp/pxe-server.tar
       become: yes
       register: pxe_ipfs_add
+      until: pxe_ipfs_add is success
+      retries: 5
+      delay: 5
       changed_when: true
       environment:
         IPFS_PATH: "{{ ipfs_path | default('/opt/unified_fs_backend/ipfs/pipecat') }}"
