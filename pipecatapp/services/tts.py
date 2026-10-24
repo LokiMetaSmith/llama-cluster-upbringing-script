@@ -26,9 +26,16 @@ class KokoroTTSService(FrameProcessor):
         super().__init__()
         if KPipeline is None:
             raise ImportError("kokoro is not installed.")
-        self.pipeline = KPipeline(lang_code=lang_code)
+        self._pipeline = None
+        self.lang_code = lang_code
         self.voice_name = voice_name
         self.sample_rate = 24000
+
+    @property
+    def pipeline(self):
+        if self._pipeline is None:
+            self._pipeline = KPipeline(lang_code=self.lang_code)
+        return self._pipeline
 
     def _synthesize_sync(self, text: str) -> bytes:
         """Helper to run synthesis in a separate thread."""
@@ -83,8 +90,22 @@ class PiperTTSService(FrameProcessor):
         super().__init__()
         if PiperVoice is None:
             raise ImportError("piper is not installed.")
-        self.voice = PiperVoice.load(model_path)
-        self.sample_rate = self.voice.config.sample_rate
+        self.model_path = model_path
+        self._voice = None
+        self._sample_rate = 22050
+
+    @property
+    def voice(self):
+        if self._voice is None:
+            self._voice = PiperVoice.load(self.model_path)
+            self._sample_rate = self._voice.config.sample_rate
+        return self._voice
+
+    @property
+    def sample_rate(self) -> int:
+        if self._voice is not None:
+            return self._voice.config.sample_rate
+        return self._sample_rate
 
     def _synthesize_sync(self, text: str) -> bytes:
         """Helper to run synthesis in a separate thread."""

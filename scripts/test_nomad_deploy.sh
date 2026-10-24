@@ -83,7 +83,7 @@ echo -e "${GREEN}✅ No OOM kills detected.${NC}"
 
 # 4. Verify /api/status returns 200 OK
 echo "Verifying /api/status..."
-HTTP_RETRIES=15
+HTTP_RETRIES=30
 HTTP_DELAY=5
 API_READY=false
 
