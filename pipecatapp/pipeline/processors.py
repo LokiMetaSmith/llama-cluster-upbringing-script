@@ -54,12 +54,14 @@ class UILogger(FrameProcessor):
             frame: The frame to process.
             direction: The direction of the frame in the pipeline.
         """
+        logging.info(f"UILogger({self.sender}) received frame {type(frame).__name__}")
         if isinstance(frame, (TranscriptionFrame, TextFrame)):
             # Security Fix: Sentinel - Redact sensitive information
             redacted_text = redact_sensitive_data(frame.text)
 
             # Import dynamically to avoid circular dependencies
             import pipecatapp.web_server as web_server
+            logging.info(f"UILogger({self.sender}) broadcasting: {redacted_text}")
             await web_server.manager.broadcast(json.dumps({"type": self.sender, "data": redacted_text}))
         await self.push_frame(frame, direction)
 
@@ -212,10 +214,11 @@ class TextMessageInjector(FrameProcessor):
                             # Prepend alert tag to text to ensure the agent takes it seriously
                             text = f"{prefix}{text}"
 
-                        logging.info(f"Injecting text message from gateway: {text}")
+                        logging.info(f"Injecting text message from gateway: {text}. self._next={self._next}")
                         t_frame = TranscriptionFrame(text, "user", str(time.time()))
                         t_frame.meta = message
                         await self.push_frame(t_frame)
+                        logging.info("push_frame completed successfully.")
                 elif isinstance(message, str):
                      # Legacy support for simple text messages
                     logging.info(f"Injecting text message from UI: {message}")
