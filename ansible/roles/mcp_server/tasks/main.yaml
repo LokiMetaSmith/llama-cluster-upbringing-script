@@ -8,10 +8,17 @@
   ansible.builtin.set_fact:
     nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
 
+- name: Set tool_server_ipfs_cid from tool_server_core_ipfs_cid if available
+  ansible.builtin.set_fact:
+    tool_server_ipfs_cid: "{{ tool_server_core_ipfs_cid }}"
+  when:
+    - (tool_server_ipfs_cid is not defined or not tool_server_ipfs_cid)
+    - (tool_server_core_ipfs_cid is defined and tool_server_core_ipfs_cid)
+
 - name: Export mcp-server image and add to IPFS
   ansible.builtin.shell: |
     set -o pipefail
-    docker save {{ mcp_server_image | default('tool-server:local') }} | ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add -Q -
+    docker save {{ mcp_server_image | default('tool-server-core:local') }} | ipfs --api /ip4/{{ cluster_ip | default('127.0.0.1') }}/tcp/{{ ipfs_api_port | default(5001) }} add -Q -
   args:
     executable: /bin/bash
   register: ipfs_add_result
