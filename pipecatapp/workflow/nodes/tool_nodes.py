@@ -20,8 +20,18 @@ logger = logging.getLogger(__name__)
 class SystemPromptNode(Node):
     """A node that constructs the system prompt with tool definitions."""
     async def execute(self, context: WorkflowContext):
-        tools = context.global_inputs.get("tools", {})
-        available_services = self.get_input(context, "available_services") or []
+        tools = None
+        try:
+            tools = self.get_input(context, "tools")
+        except ValueError:
+            pass
+        if not tools:
+            tools = context.global_inputs.get("tools_dict") or context.global_inputs.get("tools", {})
+
+        try:
+            available_services = self.get_input(context, "available_services") or []
+        except ValueError:
+            available_services = []
 
         # Allow custom prompt override
         try:
