@@ -51,7 +51,7 @@ echo "Attempting to start llama-server with hardcoded model: Llama-3-8B-Instruct
   --n-gpu-layers 999 \
   --flash-attn auto \
   --cache-prompt \
-  --mlock \
+  --load-mode mlock \
   2>&1
 
 echo "--- llama-server exited ---"

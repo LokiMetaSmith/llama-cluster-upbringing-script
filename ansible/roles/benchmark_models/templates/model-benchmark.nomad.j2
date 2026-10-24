@@ -19,7 +19,7 @@ job "model-benchmark-{{ model_filename | regex_replace('[^a-zA-Z0-9-]', '-') }}"
           "--host", "127.0.0.1",
           "--port", "{{ router_port }}",
           "--n-gpu-layers", "99",
-          "--mlock",
+          "--load-mode", "mlock",
           "--benchmark"
         ]
       }

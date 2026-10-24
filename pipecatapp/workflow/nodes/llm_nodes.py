@@ -31,11 +31,36 @@ def build_extensible_payload(base_payload: dict, context: WorkflowContext, node_
     payload["pipecat_extensions"] = extensions
     return payload
 
-# This is a simplified version for now. We will need to make this more robust.
-async def discover_main_llm_service():
-    # In a real scenario, this would involve Consul discovery.
-    # For now, we'll hardcode a default.
-    return os.getenv("LLM_BASE_URL", f"http://{os.getenv('CLUSTER_IP', '127.0.0.1')}:8081/v1")
+# Discovers the main LLM service for agent inference
+async def discover_main_llm_service(consul_http_addr=None):
+    env_override = os.getenv("LLM_BASE_URL")
+    if env_override:
+        return env_override.rstrip("/")
+
+    consul_host = os.getenv("CONSUL_HOST", os.getenv("CLUSTER_IP", "127.0.0.1"))
+    consul_port = os.getenv("CONSUL_PORT", "8500")
+    consul_url = consul_http_addr or f"http://{consul_host}:{consul_port}"
+    token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
+    headers = {"X-Consul-Token": token} if token else {}
+
+    candidates = ["smol-agent-server", "expert-api-main", "llama-api-main", "llamacpp-rpc-api", "router-api"]
+    try:
+        async with httpx.AsyncClient() as client:
+            for service in candidates:
+                try:
+                    resp = await client.get(f"{consul_url}/v1/health/service/{service}?passing", headers=headers, timeout=2.0)
+                    if resp.status_code == 200:
+                        instances = resp.json()
+                        if instances:
+                            addr = instances[0]["Service"]["Address"]
+                            port = instances[0]["Service"]["Port"]
+                            return f"http://{addr}:{port}/v1"
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    return f"http://{consul_host}:8091/v1"
 
 @registry.register
 class VisionLLMNode(Node):

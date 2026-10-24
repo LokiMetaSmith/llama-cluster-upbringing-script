@@ -272,7 +272,7 @@ async def run_agent():
                      pipeline_steps.append(websocket_streamer)
             pipeline_steps.append(transport.output())
         else:
-            pipeline_steps.extend([twin, UILogger(sender="agent")])
+            pipeline_steps.extend([UILogger(sender="user"), twin, UILogger(sender="agent")])
             if tts:
                  pipeline_steps.append(tts)
                  if websocket_streamer:
@@ -282,7 +282,7 @@ async def run_agent():
             logging.warning("Audio device found, but local audio transport (pyaudio) is not available. Starting in headless mode.")
         else:
             logging.warning("No audio device found. Starting in headless mode.")
-        pipeline_steps.extend([twin, UILogger(sender="agent")])
+        pipeline_steps.extend([UILogger(sender="user"), twin, UILogger(sender="agent")])
         if tts:
              pipeline_steps.append(tts)
              if websocket_streamer:

@@ -103,7 +103,7 @@ exec /usr/local/bin/llama-server \
   --host 0.0.0.0 \
   --port ${NOMAD_PORT_http} \
   --n-gpu-layers 99 \
-  --mlock \
+  --load-mode mlock \
   --verbose
 EOH
         destination = "local/run_router.sh"

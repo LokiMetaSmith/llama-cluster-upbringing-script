@@ -149,7 +149,7 @@ class TextMessageInjector(FrameProcessor):
                 if isinstance(message, dict):
                     audio_url = message.get("audio_url")
                     audio_base64 = message.get("audio_base64")
-                    text = message.get("text")
+                    text = message.get("text") or message.get("data")
                     is_system_alert = message.get("is_system_alert", False)
 
                     if audio_url:

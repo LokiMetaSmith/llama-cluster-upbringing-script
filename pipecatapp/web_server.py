@@ -522,6 +522,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 if "response_url" in message:
                     del message["response_url"]
 
+                if "text" not in message and "data" in message:
+                    message["text"] = message["data"]
+
                 # Security Fix: Sentinel - Validate 'audio_url' to prevent SSRF
                 if "audio_url" in message:
                     try:
@@ -1759,7 +1762,17 @@ async def get_web_uis(
         all_services = services_response.json()
 
         async def check_service(service_name):
-            if service_name in ["nomad", "consul"] or "pipecat" in service_name:
+            # Exclude internal backend microservices, DBs, and RPC workers from Admin UIs
+            internal_prefixes = (
+                "expert-api-", "rpc-", "tml-", "tool-server-",
+                "vector-", "mqtt-exporter", "node-exporter",
+                "nomad-client", "paperless-db", "paperless-redis",
+                "radicle-node", "e2a-smtp"
+            )
+            if any(service_name.startswith(p) for p in internal_prefixes) or service_name in [
+                "nomad", "consul", "mqtt", "mqtts", "archivist-api", "world-model-api",
+                "polyphony-api", "opencode-api", "tap-orchestrator", "traceway", "smol-agent-server"
+            ] or "pipecat" in service_name:
                 return None
 
             try:

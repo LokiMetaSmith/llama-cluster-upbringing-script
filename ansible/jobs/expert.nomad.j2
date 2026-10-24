@@ -173,7 +173,7 @@ exec /usr/local/bin/llama-server \
     --port ${NOMAD_PORT_api} \
     $RPC_ARG \
     --n-gpu-layers 99 \
-    --mlock \
+    --load-mode mlock \
     --verbose
 EOH
         destination = "local/run_server.sh"

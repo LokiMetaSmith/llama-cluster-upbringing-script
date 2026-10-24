@@ -46,6 +46,7 @@ nomad_jobs_dir: "/opt/nomad/jobs"
 nomad_volumes_dir: "/opt/nomad/volumes"
 nomad_tls_dir: "/etc/nomad.d/tls"
 nomad_models_dir: "/opt/unified_fs_backend/models"
+ssrf_allowlist: "100.64.0.0/10,127.0.0.1,localhost,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12"
 ipfs_path: "/opt/unified_fs_backend/ipfs/{{ ansible_nodename | default(ansible_hostname | default(inventory_hostname)) }}"
 
 # Standard Ports
