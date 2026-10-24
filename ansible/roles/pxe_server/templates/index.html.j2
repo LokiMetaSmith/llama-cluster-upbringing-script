@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Pipecat Mission Control</title>
+    <script>
+        window.location.href = window.location.protocol + "//" + window.location.hostname + ":{{ pipecat_port | default(8007) }}/";
+    </script>
+</head>
+<body style="font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #1a1a1a; color: #f0f0f0;">
+    <h2>Pipecat Swarm Cluster</h2>
+    <p>Redirecting to <a id="link" style="color: #00ff00;" href=":{{ pipecat_port | default(8007) }}/">Pipecat Mission Control (Port {{ pipecat_port | default(8007) }})</a>...</p>
+    <script>
+        document.getElementById("link").href = window.location.protocol + "//" + window.location.hostname + ":{{ pipecat_port | default(8007) }}/";
+    </script>
+</body>
+</html>

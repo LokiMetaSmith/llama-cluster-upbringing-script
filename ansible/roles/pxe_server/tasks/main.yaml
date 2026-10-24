@@ -269,6 +269,13 @@
     mode: '0644'
   become: yes
 
+- name: Deploy Mission Control redirect page to web root
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: /var/www/html/index.html
+    mode: '0644'
+  become: yes
+
 - name: Ensure recovery and maintenance directories exist
   file:
     path: "{{ item }}"
