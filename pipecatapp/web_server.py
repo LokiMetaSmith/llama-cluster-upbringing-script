@@ -275,15 +275,20 @@ class WebSocketManager:
         Args:
             websocket (WebSocket): The WebSocket connection to remove.
         """
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
-        """Sends a message to all active WebSocket connections.
+        """Sends a message to a specific active WebSocket connection.
 
         Args:
             message (str): The message to broadcast.
+            websocket (WebSocket): The target WebSocket.
         """
-        await websocket.send_text(message)
+        try:
+            await websocket.send_text(message)
+        except Exception:
+            self.disconnect(websocket)
 
     async def broadcast(self, message: str):
         """Sends a message to all active WebSocket connections.
@@ -291,8 +296,15 @@ class WebSocketManager:
         Args:
             message (str): The message to broadcast.
         """
-        for connection in self.active_connections:
-            await connection.send_text(message)
+        dead_connections = []
+        for connection in list(self.active_connections):
+            try:
+                await connection.send_text(message)
+            except Exception:
+                dead_connections.append(connection)
+
+        for dc in dead_connections:
+            self.disconnect(dc)
 
 
 manager = WebSocketManager()

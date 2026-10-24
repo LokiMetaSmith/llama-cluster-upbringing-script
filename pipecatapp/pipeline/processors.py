@@ -60,8 +60,11 @@ class UILogger(FrameProcessor):
             redacted_text = redact_sensitive_data(frame.text)
 
             # Import dynamically to avoid circular dependencies
-            import pipecatapp.web_server as web_server
-            await web_server.manager.broadcast(json.dumps({"type": self.sender, "data": redacted_text}))
+            try:
+                import pipecatapp.web_server as web_server
+                await web_server.manager.broadcast(json.dumps({"type": self.sender, "data": redacted_text}))
+            except Exception as e:
+                logging.warning(f"UILogger failed to broadcast message: {e}")
         await self.push_frame(frame, direction)
 
 class BenchmarkCollector(FrameProcessor):

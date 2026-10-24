@@ -246,6 +246,8 @@ async def run_agent():
                     stt_model_name = app_config.get("active_stt_model_name", "tiny.en")
                     if stt_model_name.startswith(f"{stt_provider}-"):
                         stt_model_name = stt_model_name[len(stt_provider) + 1:]
+                    if stt_provider == "faster-whisper" and "-en" in stt_model_name:
+                        stt_model_name = stt_model_name.replace("-en", ".en")
                     model_path = f"/opt/nomad/models/stt/{stt_provider}/{stt_model_name}"
                     stt = FasterWhisperSTTService(model_path=model_path, sample_rate=16000)
             elif stt_service_name == "groq":
@@ -293,14 +295,46 @@ async def run_agent():
         pipeline_steps.insert(1, BenchmarkCollector())
 
     main_pipeline = Pipeline(pipeline_steps)
-    main_task = PipelineTask(main_pipeline)
+    main_task = PipelineTask(
+        main_pipeline,
+        cancel_on_idle_timeout=False,
+        cancel_runner_on_idle_timeout=False,
+        idle_timeout_secs=None,
+    )
     vision_pipeline = Pipeline([vision_detector])
+    vision_task = PipelineTask(
+        vision_pipeline,
+        cancel_on_idle_timeout=False,
+        cancel_runner_on_idle_timeout=False,
+        idle_timeout_secs=None,
+    )
     text_injector.start_listening()
 
-    await asyncio.gather(
-        runner.run(main_task),
-        runner.run(PipelineTask(vision_pipeline))
-    )
+    try:
+        await asyncio.gather(
+            runner.run(main_task),
+            runner.run(vision_task)
+        )
+    except asyncio.CancelledError:
+        logging.info("Pipeline runner was cancelled.")
+        raise
+    except Exception as e:
+        logging.error(f"Pipeline runner encountered unexpected error: {e}", exc_info=True)
+        raise
+
+async def supervised_agent_loop():
+    """Supervisor loop that keeps the conversational pipeline permanently active."""
+    while True:
+        try:
+            logging.info("Starting conversational pipeline runner...")
+            await run_agent()
+            logging.warning("Pipeline runner finished unexpectedly. Restarting in 3 seconds...")
+        except asyncio.CancelledError:
+            logging.info("Supervised agent loop received cancellation.")
+            break
+        except Exception as e:
+            logging.error(f"Agent loop crashed with error: {e}. Restarting in 3 seconds...", exc_info=True)
+        await asyncio.sleep(3)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -314,7 +348,7 @@ async def lifespan(app: FastAPI):
         gardener = ObsidianGardener(vault_path=vault_path, workflow_runner_class=WorkflowRunner)
         gardener.start()
 
-    agent_task = asyncio.create_task(run_agent(), name="pipecat_agent_loop")
+    agent_task = asyncio.create_task(supervised_agent_loop(), name="pipecat_agent_loop")
     asyncio.create_task(pipecatapp.web_server.discover_ouroboros_members(), name="ouroboros_discovery")
 
     yield

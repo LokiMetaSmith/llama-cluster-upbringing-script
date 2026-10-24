@@ -70,7 +70,7 @@ class KokoroTTSService(FrameProcessor):
 
         loop = asyncio.get_running_loop()
         audio_bytes = await loop.run_in_executor(None, self._synthesize_sync, frame.text)
-        await self.push_frame(AudioRawFrame(audio_bytes))
+        await self.push_frame(AudioRawFrame(audio=audio_bytes, sample_rate=self.sample_rate, num_channels=1))
 
 class PiperTTSService(FrameProcessor):
     """A Pipecat processor for Text-to-Speech using Piper.
@@ -131,7 +131,7 @@ class PiperTTSService(FrameProcessor):
         loop = asyncio.get_running_loop()
         # Bolt ⚡ Optimization: Run blocking synthesis in a thread
         audio_bytes = await loop.run_in_executor(None, self._synthesize_sync, frame.text)
-        await self.push_frame(AudioRawFrame(audio_bytes))
+        await self.push_frame(AudioRawFrame(audio=audio_bytes, sample_rate=self.sample_rate, num_channels=1))
 
 class DummyTTSService(FrameProcessor):
     """A placeholder TTS service that generates no audio but fulfills the pipeline requirement."""
@@ -150,4 +150,4 @@ class DummyTTSService(FrameProcessor):
             await self.push_frame(frame, direction)
             return
 
-        await self.push_frame(AudioRawFrame(b""))
+        await self.push_frame(AudioRawFrame(audio=b"", sample_rate=self.sample_rate, num_channels=1))
