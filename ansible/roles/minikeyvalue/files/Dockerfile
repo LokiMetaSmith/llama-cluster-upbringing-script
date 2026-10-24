@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine AS builder
+FROM docker.io/library/golang:1.20-alpine AS builder
 
 WORKDIR /build
 COPY src/ .
@@ -6,7 +6,7 @@ RUN go mod init github.com/geohot/minikeyvalue || true
 RUN go mod tidy
 RUN go build -o mkv main.go
 
-FROM nginx:alpine
+FROM docker.io/library/nginx:alpine
 
 # Install Python3 and requests for the start script
 RUN apk add --no-cache python3 py3-pip bash curl && \

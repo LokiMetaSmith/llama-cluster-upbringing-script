@@ -1,4 +1,4 @@
-FROM debian:12-slim
+FROM docker.io/library/debian:12-slim
 
 # Force apt to use IPv4 only to avoid unreachable IPv6 DNS routing issues during build
 RUN echo "Acquire::ForceIPv4 \"true\";" > /etc/apt/apt.conf.d/99force-ipv4

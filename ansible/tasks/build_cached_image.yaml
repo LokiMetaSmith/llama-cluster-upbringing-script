@@ -31,6 +31,15 @@
   changed_when: false
   become: yes
 
+- name: "Build Cached Image : Ensure container registries configuration"
+  ansible.builtin.copy:
+    content: |
+      unqualified-search-registries = ["docker.io"]
+    dest: /etc/containers/registries.conf.d/00-default-registries.conf
+    mode: '0644'
+  become: yes
+  when: _versioned_image_check.rc != 0 or (force_rebuild | default(false) | bool)
+
 - name: "Build Cached Image : Prune dangling images before build"
   ansible.builtin.command: buildah rmi --prune
   become: yes
