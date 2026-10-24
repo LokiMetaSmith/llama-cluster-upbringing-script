@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
+from pipecat.pipeline.worker import ProcessorUnusablePolicy
 from pipecat.services.openai.llm import OpenAILLMService
 try:
     from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
@@ -220,7 +221,8 @@ async def run_agent():
     text_injector = TextMessageInjector(text_message_queue)
     pipeline_steps = []
 
-    if audio_device_index is not None and HAS_LOCAL_AUDIO:
+    enable_local_audio = os.getenv("ENABLE_LOCAL_AUDIO", "false").lower() == "true"
+    if enable_local_audio and audio_device_index is not None and HAS_LOCAL_AUDIO:
         logging.info("Audio device detected. Starting audio pipeline.")
         transport_params = LocalAudioTransportParams(
             audio_in_enabled=True,
@@ -300,6 +302,7 @@ async def run_agent():
         cancel_on_idle_timeout=False,
         cancel_runner_on_idle_timeout=False,
         idle_timeout_secs=None,
+        processor_unusable_policy=ProcessorUnusablePolicy.CONTINUE,
     )
     vision_pipeline = Pipeline([vision_detector])
     vision_task = PipelineTask(
@@ -307,6 +310,7 @@ async def run_agent():
         cancel_on_idle_timeout=False,
         cancel_runner_on_idle_timeout=False,
         idle_timeout_secs=None,
+        processor_unusable_policy=ProcessorUnusablePolicy.CONTINUE,
     )
     text_injector.start_listening()
 
