@@ -56,7 +56,8 @@ class SystemPromptNode(Node):
             else:
                 for method_name, method in inspect.getmembers(tool, predicate=inspect.ismethod):
                     if not method_name.startswith('_'):
-                        tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {method.__doc__}\\n'
+                        doc = ((method.__doc__ or "").strip().split("\n")[0]).strip()[:100]
+                        tools_prompt += f'- {{"tool": "{tool_name}.{method_name}", "args": {{...}}}}: {doc}\\n'
 
         # Dynamically add available expert services to the prompt
         for service_name in available_services:
