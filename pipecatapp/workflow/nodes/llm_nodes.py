@@ -28,6 +28,20 @@ def build_extensible_payload(base_payload: dict, context: WorkflowContext, node_
 
     # Only add to a copy to prevent mutating the original reference
     payload = base_payload.copy()
+
+    if node_config:
+        if "effort_level" in node_config:
+            extensions["effort_level"] = node_config["effort_level"]
+            payload["reasoning_effort"] = node_config["effort_level"]
+        if "model_alias" in node_config:
+            extensions["model_alias"] = node_config["model_alias"]
+        if "fallback_models" in node_config:
+            extensions["fallback_models"] = node_config["fallback_models"]
+        if "auto_compact_window" in node_config:
+            extensions["auto_compact_window"] = node_config["auto_compact_window"]
+        if "prompt_caching" in node_config:
+            extensions["prompt_caching"] = node_config["prompt_caching"]
+
     payload["pipecat_extensions"] = extensions
     return payload
 
