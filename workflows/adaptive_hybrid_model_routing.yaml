@@ -1,0 +1,59 @@
+name: Adaptive Hybrid Model Routing Workflow
+description: >
+  Demonstrates generalized model configuration principles: planner-executor split,
+  semantic model aliasing, adaptive effort levels, fallback model services, and
+  auto-compaction context boundaries.
+
+global_mission: >
+  Process complex multi-step user tasks by using a high-reasoning model for task planning
+  and a fast execution model for step implementation, supported by resilient fallbacks.
+
+nodes:
+  - id: user_input
+    type: InputNode
+    config:
+      outputs:
+        - name: user_prompt
+
+  - id: task_planner
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: user_input.user_prompt
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: >
+        You are a high-level technical planner (Opus/Reasoning tier). Analyze the user request,
+        break it down into actionable subtasks, identify potential edge cases, and output a structured
+        execution plan.
+      model_alias: "planner"
+      model_service: "rpc-main"
+      fallback_models: ["rpc-fallback-1", "rpc-fallback-2"]
+      effort_level: "high"
+      adaptive_thinking: true
+      auto_compact_window: 967000
+
+  - id: step_executor
+    type: SimpleLLMNode
+    inputs:
+      - name: user_text
+        source: task_planner.response
+      - name: system_prompt
+        source: null
+    config:
+      system_prompt: >
+        You are an efficient task executor (Sonnet/Execution tier). Take the structured plan provided,
+        implement each step concisely, run necessary verifications, and output the completed result.
+      model_alias: "executor"
+      model_service: "rpc-main"
+      fallback_models: ["rpc-fallback-1"]
+      effort_level: "medium"
+      prompt_caching: true
+      auto_compact_window: 200000
+
+  - id: workflow_output
+    type: OutputNode
+    inputs:
+      - name: final_result
+        source: step_executor.response

@@ -33,6 +33,8 @@ These guides describe the cognitive models, Mixture of Experts (MoE) routing bac
   * *Description:* A living directory compiling critical operational best practices, lessons, and troubleshooting experiences across Ansible, Nomad, Consul, and development workflows.
 * **[Frontier Agent Roadmap](FRONTIER_AGENT_ROADMAP.md)**
   * *Description:* A strategic gap analysis and multi-phase implementation roadmap for moving from simple chat loops to advanced reasoning and self-evolving autonomy.
+* **[Generalized Model Configuration & Workflow Patterns](GENERALIZED_MODEL_WORKFLOW_PATTERNS.md)**
+  * *Description:* An architectural reference for model aliasing, hybrid planner-executor routing, adaptive effort levels, fallback chains, auto-compaction, and governance controls.
 
 ---
 
