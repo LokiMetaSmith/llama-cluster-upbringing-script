@@ -45,3 +45,15 @@ external_experts_config:
     base_url: "https://api.together.xyz/v1"
     api_key_env: "TOGETHER_API_KEY"
     model: "prism-ml/1bit-bonsai-27b"
+  external_llama_cpp:
+    base_url: "http://192.168.1.214:8080/v1"
+    model: "/home/loki/.cache/llama.cpp/unsloth_Qwen3-30B-A3B-Instruct-2507-GGUF_Qwen3-30B-A3B-Instruct-2507-UD-Q4_K_XL.gguf"
+    alias: "Qwen3-30B-A3B-Instruct"
+    api_key_env: ""
+    tier: "complex"
+  llama_cpp_214:
+    base_url: "http://192.168.1.214:8080/v1"
+    model: "/home/loki/.cache/llama.cpp/unsloth_Qwen3-30B-A3B-Instruct-2507-GGUF_Qwen3-30B-A3B-Instruct-2507-UD-Q4_K_XL.gguf"
+    alias: "Qwen3-30B-A3B-Instruct"
+    api_key_env: ""
+    tier: "complex"

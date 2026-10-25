@@ -191,6 +191,14 @@ if not EXTERNAL_EXPERTS:
         "together_1bit_bonsai_27b": {"model": "prism-ml/1bit-bonsai-27b", "tier": "trivial"}
     }
 
+# Ensure external llama.cpp provider is always registered as an available route
+if "external_llama_cpp" not in EXTERNAL_EXPERTS:
+    EXTERNAL_EXPERTS["external_llama_cpp"] = {
+        "model": "Qwen3-30B-A3B-Instruct",
+        "base_url": "http://192.168.1.214:8080/v1",
+        "tier": "complex"
+    }
+
 DYNAMIC_EXPERTS = {}
 
 def get_all_experts() -> dict:
@@ -264,6 +272,8 @@ def get_expert_scores(db_path: str, external_experts: dict) -> dict:
             intel = 0.95
         elif "qwen_72b" in name:
             intel = 0.8
+        elif "qwen" in name or "llama_cpp" in name or "external" in name:
+            intel = 0.85
         elif "ternary_bonsai_27b" in name:
             intel = 0.8
         elif "1bit_bonsai_27b" in name:
@@ -419,18 +429,22 @@ async def poll_consul_catalog():
 
                             model_alias = svc_name
                             for tag in tags:
-                                if tag.startswith("model-"):
-                                    model_alias = tag[len("model-"):]
+                                if tag.startswith("model-") or tag.startswith("model="):
+                                    model_alias = tag.split("=")[-1] if "=" in tag else tag[len("model-"):]
                                     break
 
                             # Attach the Node's VRAM directly to the expert routing profile
                             vram_free = node_vram_map.get(node_name, 0) # default 0 if no telemetry
 
+                            service_address = h_data[0]["Service"].get("Address") or h_data[0]["Node"].get("Address")
+                            service_port = h_data[0]["Service"].get("Port")
+
                             new_dynamic_experts[svc_name] = {
                                 "model": model_alias,
                                 "tier": tier,
                                 "vram_free": vram_free,
-                                "node_name": node_name
+                                "node_name": node_name,
+                                "base_url": f"http://{service_address}:{service_port}/v1" if service_address and service_port else None
                             }
 
             if new_dynamic_experts:
@@ -628,8 +642,25 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
     selected_expert = None
     all_experts = get_all_experts()
 
+    # Model aliases for external llama.cpp on 192.168.1.214
+    llama_cpp_aliases = [
+        "external_llama_cpp",
+        "llama_cpp_214",
+        "qwen3",
+        "qwen3-30b",
+        "192.168.1.214",
+        "llama.cpp",
+        "expert-api-external",
+        "llama-api-external",
+    ]
+    if any(alias in requested_model.lower() for alias in llama_cpp_aliases):
+        if "external_llama_cpp" in all_experts:
+            selected_expert = "external_llama_cpp"
+        elif "expert-api-external" in all_experts:
+            selected_expert = "expert-api-external"
+
     # 1. Exact alias match (if they requested 'expert-coding', route to it directly)
-    if requested_model in all_experts:
+    if not selected_expert and requested_model in all_experts:
         selected_expert = requested_model
 
     # 2. General model translation mapping (e.g. gpt-4o-mini -> local fast model)
@@ -641,6 +672,8 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
             "gpt-4o": "complex",
             "claude-3-haiku": "trivial",
             "claude-3-opus": "complex",
+            "qwen": "complex",
+            "llama": "complex",
         }
 
         # If they requested a generalized model, override the tier classification
@@ -672,6 +705,52 @@ async def chat_completions(request: Request, payload: Dict = Body(...)):
     try:
         if not last_user_message:
             return JSONResponse(status_code=400, content={"error": "No user message found"})
+
+        # Direct routing to external model provider if base_url is specified
+        expert_info = all_experts.get(selected_expert, {})
+        base_url = expert_info.get("base_url")
+
+        if base_url:
+            target_model = expert_info.get("model", requested_model or "default")
+            ext_payload = dict(payload)
+            ext_payload["model"] = target_model
+
+            ext_headers = {"Content-Type": "application/json"}
+            api_key_env = expert_info.get("api_key_env")
+            if api_key_env:
+                ext_key = os.getenv(api_key_env, "")
+                if ext_key:
+                    ext_headers["Authorization"] = f"Bearer {ext_key}"
+
+            try:
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    ext_res = await client.post(
+                        f"{base_url}/chat/completions",
+                        headers=ext_headers,
+                        json=ext_payload,
+                    )
+                    ext_res.raise_for_status()
+                    response_json = ext_res.json()
+                    latency = time.time() - start_time
+                    content = (
+                        response_json.get("choices", [{}])[0]
+                        .get("message", {})
+                        .get("content", "")
+                    )
+                    await log_request(
+                        request_id,
+                        start_time,
+                        last_user_message,
+                        content,
+                        200,
+                        latency,
+                        selected_expert,
+                    )
+                    return JSONResponse(content=response_json)
+            except Exception as e:
+                logger.error(
+                    f"Direct routing to model provider at {base_url} failed: {e}. Falling back to pipecat-app."
+                )
 
         forward_payload = {
             "type": "user_message",

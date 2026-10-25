@@ -32,6 +32,8 @@ async def discover_services(service_names: list, consul_http_addr: str, delay=10
         "tool-server-browser": os.getenv("TOOL_SERVER_URL_OVERRIDE"),
         "tool-server-vision": os.getenv("TOOL_SERVER_URL_OVERRIDE"),
         "memory-service": os.getenv("MEMORY_SERVICE_URL_OVERRIDE"),
+        "llama-api-external": os.getenv("LLAMA_API_EXTERNAL_URL", "http://192.168.1.214:8080/v1"),
+        "expert-api-external": os.getenv("EXPERT_API_EXTERNAL_URL", "http://192.168.1.214:8080/v1"),
     }
 
     for service_name in service_names:

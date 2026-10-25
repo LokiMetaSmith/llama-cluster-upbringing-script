@@ -236,7 +236,8 @@ class TwinService(FrameProcessor):
                 "tool_result": None, # Start with no tool result
                 "consul_http_addr": self.consul_http_addr,
                 "twin_service": self,
-                "external_experts_config": self.external_experts_config
+                "external_experts_config": self.external_experts_config,
+                "expert_name": self.current_request_meta.get("expert_name") if self.current_request_meta else None
             }
 
             previous_tool_calls = []

@@ -172,8 +172,8 @@ class SimpleLLMNode(Node):
 
         tier_candidates = {
             "fast": ["smol-agent-server", "expert-api-main", "rpc-router"],
-            "capable": ["expert-api-coding", "smol-agent-server", "rpc-coding"],
-            "balanced": ["smol-agent-server", "expert-api-main", "rpc-main"]
+            "capable": ["expert-api-external", "expert-api-coding", "smol-agent-server", "rpc-coding"],
+            "balanced": ["expert-api-external", "smol-agent-server", "expert-api-main", "rpc-main"]
         }
         candidates = tier_candidates.get(tier, ["smol-agent-server", "expert-api-main"])
         target_service = candidates[0]
@@ -572,8 +572,8 @@ class ExternalLLMNode(Node):
         api_key_env = expert_config.get("api_key_env")
         model = expert_config.get("model")
 
-        api_key = secret_manager.get_secret(api_key_env)
-        if not api_key:
+        api_key = secret_manager.get_secret(api_key_env) if api_key_env else None
+        if api_key_env and not api_key:
              self.set_output(context, "response", f"Error: API key environment variable '{api_key_env}' not found in SecretManager.")
              return
 
@@ -591,9 +591,10 @@ class ExternalLLMNode(Node):
 
         chat_url = f"{base_url}/chat/completions"
         headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
+            "Content-Type": "application/json"
         }
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
 
         # OpenRouter specific headers
         if "openrouter.ai" in base_url:

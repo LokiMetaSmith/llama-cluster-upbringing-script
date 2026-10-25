@@ -79,9 +79,14 @@ async def scan_network_for_llms(timeout: float = 0.5) -> str | None:
     local_ip = get_local_ip()
     ports = [11434, 8080] # Ollama, Llama.cpp/OpenAI
 
-    # 1. Check localhost and local IP first (fast path)
+    # 1. Check localhost, local IP, and configured external host first (fast path)
+    candidate_ips = ['127.0.0.1', local_ip]
+    for ext_ip in [os.getenv("EXTERNAL_LLM_HOST", "192.168.1.214"), "192.168.1.214"]:
+        if ext_ip and ext_ip not in candidate_ips:
+            candidate_ips.append(ext_ip)
+
     priority_tasks = []
-    for ip in ['127.0.0.1', local_ip]:
+    for ip in candidate_ips:
         for port in ports:
             priority_tasks.append(check_llm_service(ip, port, timeout))
 
