@@ -72,3 +72,11 @@ async def test_web_uis_endpoint_accessible_unauthenticated():
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
+
+@pytest.mark.asyncio
+async def test_api_ping():
+    # Test that /api/ping returns 200 OK and {"ping": "pong"}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/api/ping")
+        assert response.status_code == 200
+        assert response.json() == {"ping": "pong"}
