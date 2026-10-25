@@ -113,17 +113,24 @@ def __getattr__(name: str):
     if name in TOOL_CLASS_MAP:
         mod_name, cls_name = TOOL_CLASS_MAP[name]
         try:
-            mod = importlib.import_module(mod_name)
+            try:
+                mod = importlib.import_module(mod_name)
+            except ModuleNotFoundError:
+                if mod_name.startswith("pipecatapp."):
+                    mod = importlib.import_module(mod_name[len("pipecatapp."):])
+                else:
+                    raise
             cls = getattr(mod, cls_name)
             _loaded_classes[name] = cls
             return cls
         except Exception as e:
-            logging.warning(f"Could not load tool class {name} from {mod_name}: {e}")
+            load_err = str(e)
+            logging.warning(f"Could not load tool class {name} from {mod_name}: {load_err}")
             class _UnavailableTool:
                 def __init__(self, *args, **kwargs):
                     self.name = name.lower()
                     self.available = False
-                    self.load_error = str(e)
+                    self.load_error = load_err
                 def __call__(self, *args, **kwargs):
                     return self
             _UnavailableTool.__name__ = cls_name

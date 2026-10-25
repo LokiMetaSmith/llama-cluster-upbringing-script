@@ -232,6 +232,7 @@ class TwinService(FrameProcessor):
 
             global_inputs = {
                 "user_text": frame.text,
+                "tools": self.tools,
                 "tools_dict": self.tools,
                 "tool_result": None, # Start with no tool result
                 "consul_http_addr": self.consul_http_addr,

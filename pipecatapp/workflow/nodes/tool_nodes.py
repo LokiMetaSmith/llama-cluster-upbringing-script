@@ -77,7 +77,10 @@ class SystemPromptNode(Node):
 class ScreenshotNode(Node):
     """A node that captures a desktop screenshot."""
     async def execute(self, context: WorkflowContext):
-        desktop_control_tool = context.global_inputs.get("tools", {}).get("desktop_control")
+        desktop_control_tool = (
+            context.global_inputs.get("tools", {}).get("desktop_control")
+            or context.global_inputs.get("tools_dict", {}).get("desktop_control")
+        )
         if not desktop_control_tool:
             raise ValueError("DesktopControlTool not found in context.")
         screenshot = desktop_control_tool.get_desktop_screenshot()
@@ -130,7 +133,13 @@ class ToolExecutorNode(Node):
     """Executes a tool call and returns the result."""
     async def execute(self, context: WorkflowContext):
         tool_call_data = self.get_input(context, "tool_call_data")
-        tools = context.global_inputs.get("tools", {})
+        tools = None
+        try:
+            tools = self.get_input(context, "tools") or self.get_input(context, "tools_dict")
+        except (ValueError, KeyError):
+            pass
+        if not tools:
+            tools = context.global_inputs.get("tools") or context.global_inputs.get("tools_dict") or {}
 
         if not tool_call_data:
             self.set_output(context, "tool_result", None)
@@ -139,22 +148,48 @@ class ToolExecutorNode(Node):
         tool_string = tool_call_data.get("tool", "")
         args = tool_call_data.get("args", {})
 
-        try:
-            tool_name, method_name = tool_string.split('.')
-        except ValueError:
-            raise ValueError(f"Invalid tool format: '{tool_string}'. Expected 'tool_name.method_name'.")
+        if "." in tool_string:
+            tool_name, method_name = tool_string.split(".", 1)
+        else:
+            tool_name = tool_string.strip()
+            method_name = ""
 
         tool = tools.get(tool_name)
         if not tool:
-            raise ValueError(f"Tool '{tool_name}' not found.")
+            # Fallback to create_tools or lazy loader
+            try:
+                from pipecatapp.agent_factory import create_tools
+                fallback_tools = create_tools(agent_name="tool_executor_fallback")
+                tool = fallback_tools.get(tool_name)
+                if tool:
+                    tools[tool_name] = tool
+            except Exception as e:
+                logger.warning(f"Fallback instantiation for tool '{tool_name}' failed: {e}")
 
-        method = getattr(tool, method_name)
+        if not tool:
+            error_result = f"Error: Tool '{tool_name}' not found. Available tools: {list(tools.keys())}."
+            self.set_output(context, "tool_result", error_result)
+            return
+
+        if method_name and hasattr(tool, method_name):
+            method = getattr(tool, method_name)
+        elif hasattr(tool, "run") and callable(getattr(tool, "run")):
+            method = getattr(tool, "run")
+        elif hasattr(tool, "execute") and callable(getattr(tool, "execute")):
+            method = getattr(tool, "execute")
+        elif callable(tool):
+            method = tool
+        else:
+            error_result = f"Error: Method '{method_name}' not found on tool '{tool_name}'."
+            self.set_output(context, "tool_result", error_result)
+            return
 
         # Validate arguments using Pydantic
         sig = inspect.signature(method)
+        has_varkw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
         fields = {}
         for param_name, param in sig.parameters.items():
-            if param_name == 'self':
+            if param_name == 'self' or param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
                 continue
             annotation = param.annotation if param.annotation is not inspect.Parameter.empty else str
             default = param.default if param.default is not inspect.Parameter.empty else ...
@@ -163,7 +198,12 @@ class ToolExecutorNode(Node):
         try:
             DynamicModel = create_model("DynamicModel", **fields) # type: ignore # type: ignore
             validated_args = DynamicModel(**args)
-            args = validated_args.model_dump()
+            if has_varkw:
+                call_args = dict(args)
+                call_args.update(validated_args.model_dump())
+                args = call_args
+            else:
+                args = validated_args.model_dump()
         except ValidationError as e:
             errors = e.errors()
             formatted_messages = []

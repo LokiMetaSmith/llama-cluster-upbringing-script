@@ -79,11 +79,12 @@ class FrugalSandboxTool:
 
     async def run(
         self,
-        task_query: str,
-        proposed_code: str,
+        task_query: str = "",
+        proposed_code: str = "",
         max_memory_mb: int = 64,
         timeout_seconds: int = 10,
-        expected_output_pattern: Optional[str] = None
+        expected_output_pattern: Optional[str] = None,
+        **kwargs
     ) -> Dict[str, Any]:
         """Executes the proposed Python code inside a secure resource-limited subprocess,
 
@@ -100,6 +101,11 @@ class FrugalSandboxTool:
         Returns:
             Dict[str, Any]: Structured execution report with scores, metrics, and escalation decision.
         """
+        if not task_query:
+            task_query = kwargs.get("query") or kwargs.get("task") or kwargs.get("prompt") or ""
+        if not proposed_code:
+            proposed_code = kwargs.get("code") or kwargs.get("script") or kwargs.get("python_code") or ""
+
         # Ensure values are within logical bounds
         max_memory_mb = max(16, min(512, max_memory_mb))
         timeout_seconds = max(1, min(60, timeout_seconds))
@@ -257,3 +263,6 @@ class FrugalSandboxTool:
 
         logging.info(f"FrugalSandbox: Finished. Escalation Recommended: {escalation_recommended}. VDR: {value_density_ratio}")
         return report
+
+    execute = run
+    __call__ = run
