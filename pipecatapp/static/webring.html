@@ -78,6 +78,7 @@
         <a href="#" id="prev-btn" class="nav-btn" title="Previous member (Left Arrow)">« Prev</a>
         <a href="#" id="random-btn" class="nav-btn" title="Random member (R)">Random</a>
         <a href="#" id="next-btn" class="nav-btn" title="Next member (Right Arrow)">Next »</a>
+        <a href="#" id="open-btn" class="nav-btn" target="_blank" rel="noopener noreferrer" title="Open in new tab (bypasses iframe restrictions)">Open ↗</a>
         <a href="/" class="nav-btn" title="Return to Mission Control (Esc)">Home</a>
     </div>
 
@@ -106,6 +107,13 @@
         document.getElementById('next-btn').href = `/webring/next${navBaseQuery}`;
         document.getElementById('random-btn').href = `/webring/random`;
 
+        const openBtn = document.getElementById('open-btn');
+        if (targetUrl) {
+            openBtn.href = targetUrl;
+        } else {
+            openBtn.style.display = 'none';
+        }
+
         // Add keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             // Ignore if user is typing in an input inside the iframe (though cross-origin might block this anyway)
@@ -128,16 +136,16 @@
         };
 
         if (targetUrl) {
-            if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+            if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://') || targetUrl.startsWith('/')) {
                 frame.src = targetUrl;
                 setTimeout(() => {
                     const toast = document.createElement('div');
-                    toast.innerHTML = `<div style="background: rgba(255, 0, 0, 0.8); color: white; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1001; font-family: monospace; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.5);">If this screen remains blank, the member site may be offline or blocking embed requests (X-Frame-Options: DENY).<br><br>Press Left/Right arrows or click navigation above to continue traversing.</div>`;
+                    toast.innerHTML = `<div style="background: rgba(30, 30, 30, 0.9); color: #ddd; padding: 12px 18px; border-radius: 8px; border: 1px solid #555; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1001; font-family: monospace; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.5);">If this screen remains blank, the member site may be blocking embed requests (X-Frame-Options: DENY).<br><br><a href="${targetUrl}" target="_blank" style="color: #58a6ff; font-weight: bold; text-decoration: underline;">Click here to open directly in a new tab ↗</a></div>`;
                     document.body.appendChild(toast);
-                }, 5000);
+                }, 4000);
             } else {
                 errorOverlay.style.display = 'flex';
-                errorOverlay.innerHTML = `<h2>Invalid URL</h2><p>The destination URL is not a valid HTTP/HTTPS scheme.</p><p>Use the navigation bar above or press Left/Right arrow keys to continue traversing the webring.</p>`;
+                errorOverlay.innerHTML = `<h2>Invalid URL</h2><p>The destination URL is not a valid HTTP/HTTPS or local path scheme.</p><p>Use the navigation bar above or press Left/Right arrow keys to continue traversing the webring.</p>`;
             }
         } else {
             errorOverlay.style.display = 'flex';

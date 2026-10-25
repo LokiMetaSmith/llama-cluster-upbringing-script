@@ -87,12 +87,16 @@ if HAS_OTEL:
     HTTPXClientInstrumentor().instrument()
 
 # Security Enhancement: Add CORS Middleware
-# Default to strict security (Same-Origin only), but support configuration via env var
+# Default to permissive origins in development/cluster mode so Mission Control & Webring connect seamlessly
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
 if allowed_origins_env:
     allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
 else:
-    allowed_origins = []  # Secure default: Block all Cross-Origin requests
+    env_mode = os.getenv("ENV", "development").lower()
+    if env_mode != "production":
+        allowed_origins = ["*"]
+    else:
+        allowed_origins = []
 
 if "*" in allowed_origins:
     env_mode = os.getenv("ENV", "development").lower()
@@ -769,6 +773,24 @@ async def get_apps_ui(rate_limit: None = Depends(standard_limiter)):
 
 
 @app.get(
+    "/command_deck",
+    summary="Serve CommandDeck UI",
+    description="Serves the Tactical NERV CommandDeck UI.",
+    tags=["UI"],
+)
+async def get_command_deck_ui(rate_limit: None = Depends(standard_limiter)):
+    """Serves the Tactical Command Deck UI."""
+    cd_index = os.path.join(static_dir, "command_deck", "index.html")
+    if os.path.exists(cd_index):
+        with open(cd_index, "r") as f:
+            return HTMLResponse(f.read())
+    return HTMLResponse(
+        "<html><body><h1>Command Deck</h1><p>CommandDeck UI is loading...</p></body></html>",
+        status_code=200,
+    )
+
+
+@app.get(
     "/api/cluster/metrics",
     summary="Get Cluster Metrics",
     description="Retrieves CPU and Memory metrics for services from Prometheus.",
@@ -1414,8 +1436,17 @@ def rewrite_webring_redirect_url(target_url: str, request: Request) -> str:
         parsed_request = urlparse(str(request.url))
 
         target_host = parsed_target.hostname or ""
-        # Only rewrite if target host is loopback/localhost (representing our local services like CommandDeck)
-        if target_host in ["127.0.0.1", "localhost"]:
+        cluster_ips = {
+            "127.0.0.1",
+            "localhost",
+            "100.64.0.1",
+            os.getenv("CONSUL_HOST", ""),
+            os.getenv("CLUSTER_IP", ""),
+        }
+        cluster_ips.discard("")
+
+        # Rewrite local/cluster IPs to request host so browser on LAN can reach the services
+        if target_host in cluster_ips:
             target_port = parsed_target.port
             request_host = parsed_request.hostname or "127.0.0.1"
 
@@ -1458,7 +1489,8 @@ async def get_ouroboros_members():
             {"name": "Cluster VR", "url": "/cluster_viz"},
             {"name": "3D Workflow", "url": "/workflow_3d"},
             {"name": "VR Index", "url": "/vr_index"},
-            {"name": "CommandDeck", "url": "http://127.0.0.1:8085/"},
+            {"name": "CommandDeck", "url": "/command_deck"},
+            {"name": "Community Apps", "url": "/apps"},
         ]
     return members
 
@@ -1492,13 +1524,22 @@ async def discover_ouroboros_members():
                 await asyncio.sleep(60)
                 continue
 
-            # 2. Get current curated members
+            # 2. Get current curated members and prune obsolete/stale URLs
             current_members = await get_ouroboros_members()
-            curated_urls = {m["url"] for m in current_members if m.get("url")}
+            stale_indicators = [":8085", ":4646", ":80/", ":80"]
+            cleaned_members = []
+            curated_urls = set()
+            for m in current_members:
+                url = m.get("url", "")
+                if not url or any(ind in url for ind in stale_indicators):
+                    continue
+                if url not in curated_urls:
+                    cleaned_members.append(m)
+                    curated_urls.add(url)
 
             # 3. Add discovered UIs and static local defaults that aren't already there
-            new_members = list(current_members)
-            added = False
+            new_members = list(cleaned_members)
+            added = len(new_members) != len(current_members)
 
             default_members = [
                 {"name": "Mission Control", "url": "/"},
@@ -1508,7 +1549,8 @@ async def discover_ouroboros_members():
                 {"name": "Cluster VR", "url": "/cluster_viz"},
                 {"name": "3D Workflow", "url": "/workflow_3d"},
                 {"name": "VR Index", "url": "/vr_index"},
-                {"name": "CommandDeck", "url": "http://127.0.0.1:8085/"},
+                {"name": "CommandDeck", "url": "/command_deck"},
+                {"name": "Community Apps", "url": "/apps"},
                 {
                     "name": "Security Dashboard",
                     "url": "http://127.0.0.1:3000/d/security-dashboard",
@@ -1522,15 +1564,21 @@ async def discover_ouroboros_members():
                     added = True
 
             for ui in web_uis:
-                if ui.get("url") and ui["url"] != "#" and ui["url"] not in curated_urls:
+                ui_url = ui.get("url", "")
+                if (
+                    ui_url
+                    and ui_url != "#"
+                    and not any(ind in ui_url for ind in stale_indicators)
+                    and ui_url not in curated_urls
+                ):
                     new_members.append(
                         {
                             "name": ui["name"],
-                            "url": ui["url"],
+                            "url": ui_url,
                             "source": "auto-discovery",
                         }
                     )
-                    curated_urls.add(ui["url"])
+                    curated_urls.add(ui_url)
                     added = True
 
             if added:
@@ -1661,7 +1709,9 @@ async def webring_prev(request: Request, rate_limit: None = Depends(standard_lim
     description="Redirects to a random member in the webring.",
     tags=["Webring"],
 )
-async def webring_random(rate_limit: None = Depends(standard_limiter)):
+async def webring_random(
+    request: Request, rate_limit: None = Depends(standard_limiter)
+):
     members = await get_ouroboros_members()
     if not members:
         return HTMLResponse(
@@ -1672,10 +1722,11 @@ async def webring_random(rate_limit: None = Depends(standard_limiter)):
     import random
 
     random_member = random.choice(members)
+    redirect_url = rewrite_webring_redirect_url(random_member["url"], request)
     import urllib.parse
 
     return RedirectResponse(
-        url=f"/static/webring.html?target={urllib.parse.quote(random_member['url'])}"
+        url=f"/static/webring.html?target={urllib.parse.quote(redirect_url)}"
     )
 
 
