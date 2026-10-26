@@ -5,3 +5,4 @@ pydantic-settings
 aiomqtt
 httpx
 pyyaml
+cryptography

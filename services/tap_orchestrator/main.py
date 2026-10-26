@@ -1,3 +1,21 @@
+import sys
+import os
+import types
+
+# Ensure /opt and repo paths are discoverable across standalone and repository runs
+for p in ["/opt", os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))]:
+    if p and os.path.exists(p) and p not in sys.path:
+        sys.path.insert(0, p)
+
+if "services" not in sys.modules:
+    sys.modules["services"] = types.ModuleType("services")
+if "services.tap_orchestrator" not in sys.modules:
+    try:
+        import tap_orchestrator
+        sys.modules["services.tap_orchestrator"] = tap_orchestrator
+    except ImportError:
+        pass
+
 import asyncio
 import json
 import logging
@@ -21,6 +39,10 @@ from services.tap_orchestrator.models import (
     VerifyResponse,
     RFTelemetryFrame,
     RFPresenceResponse,
+    ClusterSession,
+    SessionCreateRequest,
+    SessionStatusResponse,
+    SessionRevokeRequest,
 )
 from pipecatapp.atproto_crypto import verify_payload
 from pipecatapp.datalog_memory import DatalogMemory
@@ -35,6 +57,64 @@ rf_sniffer_engine = RFSnifferEngine(datalog=datalog, consul_backend=consul_backe
 # Temporary store for nonces (nonce -> expiration_time)
 challenge_store = {}
 NONCE_TTL = 10  # seconds
+
+# Active session storage (user_id/did -> ClusterSession, token -> ClusterSession)
+active_sessions: dict[str, ClusterSession] = {}
+token_sessions: dict[str, ClusterSession] = {}
+
+def create_or_update_session(
+    user_id: str,
+    did: str = None,
+    auth_method: str = "fido2",
+    ttl_seconds: int = 3600,
+    roles: list = None,
+    allowed_targets: list = None,
+    public_key: str = None,
+    public_keys: list = None,
+    metadata: dict = None
+) -> ClusterSession:
+    now = time.time()
+    session_id = f"sess_{secrets.token_hex(12)}"
+    session_token = f"swarm_st_{secrets.token_urlsafe(24)}"
+
+    if roles is None:
+        roles = ["operator", "admin"] if user_id in ("admin", "operator", "loki") or "admin" in (did or "") else ["operator"]
+    if allowed_targets is None:
+        allowed_targets = ["terminal", "grafana", "nomad", "consul", "compute"]
+
+    session = ClusterSession(
+        session_id=session_id,
+        session_token=session_token,
+        user_id=user_id,
+        did=did or user_id,
+        auth_method=auth_method,
+        roles=roles,
+        allowed_targets=allowed_targets,
+        created_at=now,
+        expires_at=now + ttl_seconds,
+        is_active=True,
+        public_key=public_key,
+        public_keys=public_keys,
+        metadata=metadata or {}
+    )
+
+    active_sessions[user_id] = session
+    token_sessions[session_token] = session
+    if did:
+        active_sessions[did] = session
+
+    # Synchronize to Consul KV fast state
+    try:
+        session_dict = session.model_dump()
+        consul_backend.put_kv(f"sessions/{user_id}", session_dict)
+        consul_backend.put_kv(f"tokens/{session_token}", session_dict)
+        if did and did != user_id:
+            consul_backend.put_kv(f"sessions/{did}", session_dict)
+    except Exception as e:
+        logger.warning(f"Could not write session to Consul KV: {e}")
+
+    logger.info(f"ClusterSession created for user {user_id} (method: {auth_method}, ttl: {ttl_seconds}s)")
+    return session
 
 from services.tap_orchestrator.deduplicator import deduplicator
 from services.tap_orchestrator.authentik import authentik_client
@@ -83,7 +163,15 @@ async def process_tap_event(event: DesfireEvent, mqtt_client=None):
         # 2. Cluster Resource Hot-Loading
         await cluster_orchestrator.execute_hot_load(user)
 
-        logger.info(f"Successfully processed tap event for {event.user_id}")
+        # 3. Create active ClusterSession in Consul KV
+        session = create_or_update_session(
+            user_id=user.username,
+            auth_method="desfire_nfc",
+            roles=user.groups or ["operator"],
+            metadata={"reader_id": event.reader_id, "auth_type": event.auth_type}
+        )
+
+        logger.info(f"Successfully processed tap event and established session for {event.user_id}")
 
     except Exception as e:
         logger.error(f"Error in processing pipeline for {event.user_id}: {e}")
@@ -237,11 +325,120 @@ async def verify_presence(request: VerifyRequest):
     except Exception as e:
         logger.error(f"Failed to write compute weight to Consul: {e}")
 
+    # 5. Issue Active ClusterSession and publish to Consul KV
+    session = create_or_update_session(
+        user_id=request.did,
+        did=request.did,
+        auth_method="challenge_attestation",
+        ttl_seconds=3600,
+        public_key=request.public_key_hex,
+        metadata={"room_id": request.room_id, **(request.metadata or {})}
+    )
+
     return VerifyResponse(
         status="success",
-        message="Presence verified and compute weight allocated.",
-        weight=weight
+        message="Presence verified and cluster session activated.",
+        weight=weight,
+        session=session,
+        session_token=session.session_token
     )
+
+@app.post("/api/v1/session/create", response_model=SessionStatusResponse)
+async def create_session(request: SessionCreateRequest, x_tap_secret: str = Header(None)):
+    """
+    Explicitly creates an active cluster session for a validated user/DID.
+    Protected by tap secret header or local trusted loopback.
+    """
+    if x_tap_secret and x_tap_secret != settings.tap_orchestrator_secret:
+        raise HTTPException(status_code=403, detail="Invalid tap secret")
+
+    session = create_or_update_session(
+        user_id=request.user_id,
+        did=request.did,
+        auth_method=request.auth_method,
+        ttl_seconds=request.ttl_seconds or 3600,
+        roles=request.roles,
+        allowed_targets=request.allowed_targets,
+        public_key=request.public_key,
+        public_keys=request.public_keys,
+        metadata=request.metadata
+    )
+
+    remaining = max(0, int(session.expires_at - time.time()))
+    return SessionStatusResponse(
+        status="success",
+        valid=True,
+        remaining_seconds=remaining,
+        session=session
+    )
+
+@app.get("/api/v1/session/status", response_model=SessionStatusResponse)
+async def get_session_status(
+    token: str = None,
+    user_id: str = None,
+    authorization: str = Header(None)
+):
+    """
+    Verifies if an active, unexpired session exists for a user, DID, or session token.
+    Used by terminals, PAM modules, SSH hooks, and reverse proxies.
+    """
+    now = time.time()
+    search_token = token
+    if not search_token and authorization and authorization.startswith("Bearer "):
+        search_token = authorization[len("Bearer "):].strip()
+
+    session = None
+    if search_token:
+        session = token_sessions.get(search_token)
+        if not session:
+            # Check Consul KV fallback
+            data = consul_backend.get_kv(f"tokens/{search_token}")
+            if data and isinstance(data, dict):
+                session = ClusterSession(**data)
+                token_sessions[search_token] = session
+
+    if not session and user_id:
+        session = active_sessions.get(user_id)
+        if not session:
+            # Check Consul KV fallback
+            data = consul_backend.get_kv(f"sessions/{user_id}")
+            if data and isinstance(data, dict):
+                session = ClusterSession(**data)
+                active_sessions[user_id] = session
+
+    if not session:
+        return SessionStatusResponse(status="not_found", valid=False, remaining_seconds=0, session=None)
+
+    if not session.is_active or session.expires_at < now:
+        return SessionStatusResponse(status="expired", valid=False, remaining_seconds=0, session=session)
+
+    remaining = int(session.expires_at - now)
+    return SessionStatusResponse(status="active", valid=True, remaining_seconds=remaining, session=session)
+
+@app.post("/api/v1/session/revoke", response_model=SessionStatusResponse)
+async def revoke_session(request: SessionRevokeRequest):
+    """
+    Immediately revokes an active session.
+    """
+    target_session = None
+    if request.session_token and request.session_token in token_sessions:
+        target_session = token_sessions.pop(request.session_token)
+    elif request.user_id and request.user_id in active_sessions:
+        target_session = active_sessions.pop(request.user_id)
+
+    if target_session:
+        target_session.is_active = False
+        try:
+            consul_backend.delete_kv(f"sessions/{target_session.user_id}")
+            consul_backend.delete_kv(f"tokens/{target_session.session_token}")
+            if target_session.did:
+                consul_backend.delete_kv(f"sessions/{target_session.did}")
+        except Exception as e:
+            logger.warning(f"Could not purge session from Consul KV: {e}")
+
+        return SessionStatusResponse(status="revoked", valid=False, remaining_seconds=0, session=target_session)
+
+    return SessionStatusResponse(status="not_found", valid=False, remaining_seconds=0, session=None)
 
 @app.post("/api/v1/telemetry/rf", response_model=RFPresenceResponse)
 async def process_rf_telemetry(frame: RFTelemetryFrame):

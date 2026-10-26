@@ -32,10 +32,48 @@ class VerifyRequest(BaseModel):
     public_key_hex: str
     metadata: Optional[Dict[str, Any]] = None
 
+class ClusterSession(BaseModel):
+    session_id: str
+    session_token: str
+    user_id: str
+    did: Optional[str] = None
+    auth_method: str = "fido2"  # fido2, presence_token, challenge_attestation, desfire_nfc
+    roles: List[str] = ["operator"]
+    allowed_targets: List[str] = ["terminal", "grafana", "nomad", "consul", "compute"]
+    created_at: float
+    expires_at: float
+    is_active: bool = True
+    public_key: Optional[str] = None
+    public_keys: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+class SessionCreateRequest(BaseModel):
+    user_id: str
+    did: Optional[str] = None
+    auth_method: str = "fido2"
+    ttl_seconds: Optional[int] = 3600
+    roles: Optional[List[str]] = None
+    allowed_targets: Optional[List[str]] = None
+    public_key: Optional[str] = None
+    public_keys: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+class SessionStatusResponse(BaseModel):
+    status: str
+    valid: bool
+    remaining_seconds: Optional[int] = 0
+    session: Optional[ClusterSession] = None
+
+class SessionRevokeRequest(BaseModel):
+    session_token: Optional[str] = None
+    user_id: Optional[str] = None
+
 class VerifyResponse(BaseModel):
     status: str
     message: str
     weight: Optional[float] = None
+    session: Optional[ClusterSession] = None
+    session_token: Optional[str] = None
 
 class RFSignalSample(BaseModel):
     device_id: str  # MAC address or hashed MAC identifier

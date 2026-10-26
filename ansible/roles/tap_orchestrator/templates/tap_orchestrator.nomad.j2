@@ -30,6 +30,8 @@ job "tap-orchestrator" {
         AUTHENTIK_CLIENT_SECRET = "{{ tap_client_secret }}"
         NOMAD_API_URL           = "http://{{ cluster_ip }}:{{ nomad_http_port }}"
         VAULT_API_URL           = "http://{{ cluster_ip }}:8200"
+        CONSUL_HTTP_ADDR        = "http://{{ cluster_ip }}:8500"
+        CONSUL_HTTP_TOKEN       = "{{ consul_master_token | default('') }}"
         CLUSTER_RESOURCE_MAP_FILE = "/opt/tap_orchestrator/config.yaml"
       }
 

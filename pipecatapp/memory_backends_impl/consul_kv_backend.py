@@ -17,7 +17,26 @@ class ConsulKVBackend:
         if not self.consul_url.startswith("http"):
             self.consul_url = "http://" + self.consul_url
         self.prefix = prefix
-        self.client = httpx.Client(base_url=self.consul_url)
+        self.token = os.getenv("CONSUL_HTTP_TOKEN", "")
+        if not self.token:
+            for env_path in ["/opt/pipecatapp/pipecat.env", "/etc/environment"]:
+                if os.path.exists(env_path):
+                    try:
+                        with open(env_path, "r") as f:
+                            for line in f:
+                                if "CONSUL_HTTP_TOKEN" in line:
+                                    parts = line.strip().split("=", 1)
+                                    if len(parts) == 2:
+                                        self.token = parts[1].strip(" \"'")
+                                        break
+                    except Exception:
+                        pass
+                if self.token:
+                    break
+        headers = {}
+        if self.token:
+            headers["X-Consul-Token"] = self.token
+        self.client = httpx.Client(base_url=self.consul_url, headers=headers)
 
     def put_kv(self, key: str, value: Any):
         try:
