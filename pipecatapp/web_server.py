@@ -1071,6 +1071,16 @@ async def get_status(
 
 
 @app.get(
+    "/api/ping",
+    summary="Basic Liveness Ping",
+    description="Provides a simple, fast health check endpoint. Returns 200 OK with 'pong'.",
+    tags=["System"],
+)
+async def get_ping():
+    """A fast ping endpoint for lightweight liveness checks."""
+    return JSONResponse(content={"ping": "pong"})
+
+@app.get(
     "/health",
     summary="Health Check",
     description="Provides a health check endpoint. Returns 200 OK if initialized.",
