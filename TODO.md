@@ -84,10 +84,10 @@
   - [x] Expose `blast_radius` tool: calculate direct and transitive caller/dependent call-sites and risk score.
   - [x] Expose `preflight` tool: return pre-edit summary including caller lists, unit test mappings, documentation references, and HTTP routes.
   - [x] Expose `repository_trace` tool: trace symbol call hierarchies outward to a configurable depth.
-- [ ] **Memory Candidate Promotion Pipeline:**
-  - [ ] Implement intermediate staging zone / candidate lifecycle for `pmm_datalog_memory.db`.
-  - [ ] Create `memory_candidate_emit` tool for subagents to propose durable memory entries during execution.
-  - [ ] Add session completion / orchestrator evaluation hooks to promote high-value candidates to main persistent memory storage.
+- [x] **Memory Candidate Promotion Pipeline:**
+  - [x] Implement intermediate staging zone / candidate lifecycle for `pmm_datalog_memory.db`.
+  - [x] Create `memory_candidate_emit` tool for subagents to propose durable memory entries during execution.
+  - [x] Add session completion / orchestrator evaluation hooks to promote high-value candidates to main persistent memory storage.
 - [ ] **Preflight Edit Verification in Code Runners:**
   - [ ] Hook `FileEditorTool` and code modification nodes into `code_graph_tool` preflight checks.
   - [ ] Require verification of connected test suites (`repository_tests`) before executing diffs.
