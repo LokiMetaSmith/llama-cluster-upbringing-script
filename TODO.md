@@ -79,11 +79,11 @@
 
 ## 🌳 Phase 4: BanyanCode Features Integration (P3 - Feature Roadmap)
 
-- [ ] **Tree-Sitter / Symbol Graph Tooling (`code_graph_tool.py`):**
-  - [ ] Implement Tree-sitter / AST indexing service for Python, JS, and TS workspaces in `pipecatapp/tools/code_graph_tool.py` and `tool_server.py`.
-  - [ ] Expose `blast_radius` tool: calculate direct and transitive caller/dependent call-sites and risk score.
-  - [ ] Expose `preflight` tool: return pre-edit summary including caller lists, unit test mappings, documentation references, and HTTP routes.
-  - [ ] Expose `repository_trace` tool: trace symbol call hierarchies outward to a configurable depth.
+- [x] **Tree-Sitter / Symbol Graph Tooling (`code_graph_tool.py`):**
+  - [x] Implement Tree-sitter / AST indexing service for Python, JS, and TS workspaces in `pipecatapp/tools/code_graph_tool.py` and `tool_server.py`.
+  - [x] Expose `blast_radius` tool: calculate direct and transitive caller/dependent call-sites and risk score.
+  - [x] Expose `preflight` tool: return pre-edit summary including caller lists, unit test mappings, documentation references, and HTTP routes.
+  - [x] Expose `repository_trace` tool: trace symbol call hierarchies outward to a configurable depth.
 - [ ] **Memory Candidate Promotion Pipeline:**
   - [ ] Implement intermediate staging zone / candidate lifecycle for `pmm_datalog_memory.db`.
   - [ ] Create `memory_candidate_emit` tool for subagents to propose durable memory entries during execution.

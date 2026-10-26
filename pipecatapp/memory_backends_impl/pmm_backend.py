@@ -13,15 +13,15 @@ class PMMMemoryBackend(BaseMemoryBackend):
     """
     Persistent Mind Model (PMM) Memory Backend.
     Uses SQLite event-sourcing via PMMMemory for deterministic, immutable memory
-    storage with skill and consolidation management.
+    storage with skill, consolidation, and memory candidate promotion lifecycle management.
     """
     def __init__(self, db_path: str = "pmm_memory.db"):
         self.pmm = PMMMemory(db_path=db_path)
         self.db_path = self.pmm.db_path
-        self._init_skills_table()
+        self._init_tables()
 
-    def _init_skills_table(self):
-        """Initializes auxiliary tables on the PMM SQLite connection for skills and consolidations."""
+    def _init_tables(self):
+        """Initializes auxiliary tables on the PMM SQLite connection for skills, consolidations, and candidates."""
         with self.pmm.conn:
             self.pmm.conn.execute("""
                 CREATE TABLE IF NOT EXISTS dynamic_skills (
@@ -39,6 +39,18 @@ class PMMMemoryBackend(BaseMemoryBackend):
                     source_ids TEXT NOT NULL,
                     summary TEXT,
                     insight TEXT,
+                    created_at REAL DEFAULT (strftime('%s', 'now'))
+                );
+            """)
+            self.pmm.conn.execute("""
+                CREATE TABLE IF NOT EXISTS memory_candidates (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT DEFAULT 'global',
+                    source TEXT NOT NULL,
+                    candidate_text TEXT NOT NULL,
+                    category TEXT DEFAULT 'convention',
+                    importance INTEGER DEFAULT 3,
+                    status TEXT DEFAULT 'pending',
                     created_at REAL DEFAULT (strftime('%s', 'now'))
                 );
             """)
@@ -107,6 +119,72 @@ class PMMMemoryBackend(BaseMemoryBackend):
             "metadata": meta.get("metadata"),
             "doc_id": meta.get("doc_id")
         }
+
+    # --- Candidate Staging & Promotion Methods ---
+
+    def emit_candidate(self, source: str, candidate_text: str, session_id: str = "global",
+                       category: str = "convention", importance: int = 3) -> int:
+        """Emits a new memory candidate to the staging table."""
+        cursor = self.pmm.conn.cursor()
+        with self.pmm.conn:
+            cursor.execute("""
+                INSERT INTO memory_candidates (session_id, source, candidate_text, category, importance, status)
+                VALUES (?, ?, ?, ?, ?, 'pending')
+            """, (session_id, source, candidate_text, category, importance))
+            return cursor.lastrowid
+
+    def list_pending_candidates(self, session_id: Optional[str] = None, limit: int = 50) -> List[dict]:
+        """Lists pending memory candidates."""
+        cursor = self.pmm.conn.cursor()
+        if session_id:
+            cursor.execute("""
+                SELECT id, session_id, source, candidate_text, category, importance, status, created_at
+                FROM memory_candidates WHERE status = 'pending' AND session_id = ?
+                ORDER BY importance DESC, id DESC LIMIT ?
+            """, (session_id, limit))
+        else:
+            cursor.execute("""
+                SELECT id, session_id, source, candidate_text, category, importance, status, created_at
+                FROM memory_candidates WHERE status = 'pending'
+                ORDER BY importance DESC, id DESC LIMIT ?
+            """, (limit,))
+
+        rows = cursor.fetchall()
+        return [{
+            "id": r[0], "session_id": r[1], "source": r[2], "candidate_text": r[3],
+            "category": r[4], "importance": r[5], "status": r[6], "created_at": r[7]
+        } for r in rows]
+
+    def promote_candidate(self, candidate_id: int) -> Optional[int]:
+        """Promotes a pending memory candidate to permanent PMM memory storage."""
+        cursor = self.pmm.conn.cursor()
+        cursor.execute("SELECT candidate_text, source, category, importance FROM memory_candidates WHERE id = ? AND status = 'pending'", (candidate_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        candidate_text, source, category, importance = row
+
+        # Store permanently in PMM ledger
+        memory_id = self.add_memory(
+            source=source,
+            raw_text=candidate_text,
+            summary=f"Promoted candidate ({category})",
+            importance=importance,
+            metadata={"category": category, "promoted_from_candidate_id": candidate_id}
+        )
+
+        # Mark candidate as promoted
+        with self.pmm.conn:
+            cursor.execute("UPDATE memory_candidates SET status = 'promoted' WHERE id = ?", (candidate_id,))
+
+        return memory_id
+
+    def reject_candidate(self, candidate_id: int) -> bool:
+        """Rejects a pending memory candidate."""
+        with self.pmm.conn:
+            cursor = self.pmm.conn.execute("UPDATE memory_candidates SET status = 'rejected' WHERE id = ? AND status = 'pending'", (candidate_id,))
+            return cursor.rowcount > 0
 
     def get_unconsolidated_memories(self, limit: int = 50) -> List[dict]:
         """Fetches unconsolidated memories from the ledger."""
