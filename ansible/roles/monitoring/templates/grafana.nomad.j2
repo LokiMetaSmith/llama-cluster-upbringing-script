@@ -43,7 +43,7 @@ job "grafana" {
         mounts = [
           {
             type    = "bind"
-            target  = "/local/dashboards"
+            target  = "/dashboards"
             source  = "{{ nomad_volumes_dir }}/grafana/dashboards"
             options = ["rbind", "ro"]
           }
@@ -53,6 +53,8 @@ job "grafana" {
       env {
         GF_SECURITY_ADMIN_PASSWORD = "{{ grafana_admin_password | default('admin') }}"
         GF_USERS_ALLOW_SIGN_UP = "false"
+        GF_AUTH_ANONYMOUS_ENABLED = "true"
+        GF_AUTH_ANONYMOUS_ORG_ROLE = "Viewer"
         # Provisioning paths
         GF_PATHS_PROVISIONING = "/local/provisioning"
       }
