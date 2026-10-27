@@ -8,7 +8,7 @@ REMOTE_SUPPORTED_TOOLS = [
     "ssh", "desktop_control", "code_runner", "web_browser",
     "ansible", "power", "term_everything", "rag", "ha",
     "git", "orchestrator", "opencode_provider",
-    "ocr", "wasm", "heretic"
+    "ocr", "wasm", "heretic", "hello_world_agent"
 ]
 
 # Heavy tools that should ideally be offloaded to the Tool Server for microservice de-monolithization
@@ -105,6 +105,7 @@ TOOL_CLASS_MAP = {
     "GitCoordinationTool": ("pipecatapp.tools.git_coordination_tool", "GitCoordinationTool"),
     "UnitReasoningTool": ("pipecatapp.tools.unit_reasoning_tool", "UnitReasoningTool"),
     "SSDStreamingTool": ("pipecatapp.tools.ssd_streaming_tool", "SSDStreamingTool"),
+    "HelloWorldAgentTool": ("pipecatapp.tools.hello_world_agent_tool", "HelloWorldAgentTool"),
 }
 
 _loaded_classes = {}
@@ -214,6 +215,7 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
     tools["git_coordination"] = _safe_create("git_coordination", lambda: _get_cls("GitCoordinationTool")())
     tools["unit_reasoning"] = _safe_create("unit_reasoning", lambda: _get_cls("UnitReasoningTool")())
     tools["ssd_streaming"] = _safe_create("ssd_streaming", lambda: _get_cls("SSDStreamingTool")())
+    tools["hello_world_agent"] = _safe_create("hello_world_agent", lambda: _get_cls("HelloWorldAgentTool")())
     tools["schema_mapper"] = _safe_create("schema_mapper", lambda: _get_cls("SchemaMapperTool")())
     tools["file_editor"] = _safe_create("file_editor", lambda: _get_cls("FileEditorTool")(root_dir="/opt/pipecatapp"))
     tools["shunt"] = _safe_create("shunt", lambda: _get_cls("ShuntTool")())

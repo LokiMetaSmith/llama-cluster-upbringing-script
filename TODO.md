@@ -161,5 +161,5 @@
 - [x] Fast path security redaction LRU caching in `security.py`.
 - [x] Subprocess injection audit and `shlex.quote` escaping across critical tools.
 - [x] Zero-tolerance TLS/SSL bypass enforcement across playbooks and services.
-- [ ] Create a hello world agent and ensure it can be invoked via the tool server
+- [x] Create a hello world agent and ensure it can be invoked via the tool server
 - [x] Implement a basic health ping endpoint to check if the web server is online
