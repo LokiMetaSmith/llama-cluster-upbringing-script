@@ -74,6 +74,8 @@ TOOL_CLASS_MAP = {
     "SkillBuilderTool": ("pipecatapp.tools.skill_builder_tool", "SkillBuilderTool"),
     "DynamicSkillTool": ("pipecatapp.tools.dynamic_skill_tool", "DynamicSkillTool"),
     "ASTEditorTool": ("pipecatapp.tools.ast_editor_tool", "ASTEditorTool"),
+    "CodeGraphTool": ("pipecatapp.tools.code_graph_tool", "CodeGraphTool"),
+    "MemoryCandidateTool": ("pipecatapp.tools.memory_candidate_tool", "MemoryCandidateTool"),
     "ShuntTool": ("pipecatapp.tools.shunt_tool", "ShuntTool"),
     "LightweightProjectMapperTool": ("pipecatapp.tools.lightweight_project_mapper_tool", "LightweightProjectMapperTool"),
     "SchemaHarnessTool": ("pipecatapp.tools.schema_harness_tool", "SchemaHarnessTool"),
@@ -265,6 +267,8 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
     tools["polyphony"] = _safe_create("polyphony", lambda: _get_cls("PolyphonyTool")())
     tools["skill_builder"] = _safe_create("skill_builder", lambda: _get_cls("SkillBuilderTool")())
     tools["ast_editor"] = _safe_create("ast_editor", lambda: _get_cls("ASTEditorTool")(root_dir="/opt/pipecatapp"))
+    tools["code_graph"] = _safe_create("code_graph", lambda: _get_cls("CodeGraphTool")(root_dir="/opt/pipecatapp"))
+    tools["memory_candidate"] = _safe_create("memory_candidate", lambda: _get_cls("MemoryCandidateTool")())
     tools["set_operational_mode"] = _safe_create("set_operational_mode", lambda: _get_cls("SetOperationalModeTool")())
     tools["ouroboros"] = _safe_create("ouroboros", lambda: _get_cls("OuroborosTool")(
         consul_host=config.get('consul_host'),

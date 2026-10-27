@@ -18,9 +18,9 @@
 ---
 
 ## 🎯 Phase 0: Core Infrastructure & Bootstrap Verification (P0 - Immediate Focus)
+
 - [x] **Fix Tests:**
   - [x] Fix `test_dispatch_job_failure` in `tests/unit/test_orchestrator_tool.py` as it fails due to incorrect mocking.
-
 
 - [x] **Automated Bootstrap Script (`bootstrap.sh`) Verification:**
   - [x] Integrated automated troubleshooting report generation on bootstrap failures in `bootstrap.sh`.
@@ -77,7 +77,26 @@
 
 ---
 
-## 🔬 Phase 4: Extended Roadmap & Research Previews (Backlog / Speculative)
+## 🌳 Phase 4: BanyanCode Features Integration (P3 - Feature Roadmap)
+
+- [x] **Tree-Sitter / Symbol Graph Tooling (`code_graph_tool.py`):**
+  - [x] Implement Tree-sitter / AST indexing service for Python, JS, and TS workspaces in `pipecatapp/tools/code_graph_tool.py` and `tool_server.py`.
+  - [x] Expose `blast_radius` tool: calculate direct and transitive caller/dependent call-sites and risk score.
+  - [x] Expose `preflight` tool: return pre-edit summary including caller lists, unit test mappings, documentation references, and HTTP routes.
+  - [x] Expose `repository_trace` tool: trace symbol call hierarchies outward to a configurable depth.
+- [x] **Memory Candidate Promotion Pipeline:**
+  - [x] Implement intermediate staging zone / candidate lifecycle for `pmm_datalog_memory.db`.
+  - [x] Create `memory_candidate_emit` tool for subagents to propose durable memory entries during execution.
+  - [x] Add session completion / orchestrator evaluation hooks to promote high-value candidates to main persistent memory storage.
+- [ ] **Preflight Edit Verification in Code Runners:**
+  - [ ] Hook `FileEditorTool` and code modification nodes into `code_graph_tool` preflight checks.
+  - [ ] Require verification of connected test suites (`repository_tests`) before executing diffs.
+- [ ] **Keyless Web Researcher Fallback:**
+  - [ ] Implement keyless DuckDuckGo HTML web search subagent tool as fallback when primary web search APIs are unavailable or rate-limited.
+
+---
+
+## 🔬 Phase 5: Extended Roadmap & Research Previews (Backlog / Speculative)
 
 - [x] **Strix Halo APU Cluster Bring-up & Verification:**
   - **Goal:** Implement the "Brain vs. Body" cluster topology using the Strix Halo APU as the control node and primary inference tier.
