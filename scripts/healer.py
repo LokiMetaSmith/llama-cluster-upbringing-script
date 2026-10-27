@@ -209,7 +209,7 @@ class HealerAgent:
 
         base_url = await self._resolve_service(model_service)
         if not base_url:
-            for fallback_name in ["llama-api-main", "vllm", "opencode"]:
+            for fallback_name in ["vllm-main", "vllm-server", "vllm", "llama-api-main", "opencode"]:
                 base_url = await self._resolve_service(fallback_name)
                 if base_url:
                     break

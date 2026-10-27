@@ -32,7 +32,7 @@ job "{{ job_name }}" {
     {% endif %}
 
     task "vllm-server" {
-      driver = "containerd-driver"
+      driver = "{{ nomad_container_driver | default('docker') }}"
 
       config {
         image = "{{ vllm_docker_image }}"
@@ -66,7 +66,9 @@ job "{{ job_name }}" {
           "--model", "/model",
           "--served-model-name", "{{ job_name }}",
           "--port", "${NOMAD_PORT_http}",
-          "--enable-prefix-caching"
+          "--enable-prefix-caching"{% if model_item.extra_args is defined %}{% for extra_arg in model_item.extra_args %},
+          "{{ extra_arg }}"{% endfor %}{% endif %}
+
         ]
 
         volume_mount {

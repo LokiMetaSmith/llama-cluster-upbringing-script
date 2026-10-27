@@ -57,7 +57,7 @@ async def discover_main_llm_service(consul_http_addr=None):
     token = secret_manager.get_secret("CONSUL_HTTP_TOKEN")
     headers = {"X-Consul-Token": token} if token else {}
 
-    candidates = ["smol-agent-server", "expert-api-main", "llama-api-main", "llamacpp-rpc-api", "router-api"]
+    candidates = ["vllm-main", "vllm-server", "vllm", "smol-agent-server", "expert-api-main", "llama-api-main", "llamacpp-rpc-api", "router-api"]
     try:
         async with httpx.AsyncClient() as client:
             for service in candidates:
@@ -171,9 +171,9 @@ class SimpleLLMNode(Node):
         consul_http_addr = context.global_inputs.get("consul_http_addr")
 
         tier_candidates = {
-            "fast": ["smol-agent-server", "expert-api-main", "rpc-router"],
-            "capable": ["expert-api-external", "expert-api-coding", "smol-agent-server", "rpc-coding"],
-            "balanced": ["expert-api-external", "smol-agent-server", "expert-api-main", "rpc-main"]
+            "fast": ["vllm-main", "smol-agent-server", "expert-api-main", "rpc-router"],
+            "capable": ["vllm-main", "expert-api-external", "expert-api-coding", "smol-agent-server", "rpc-coding"],
+            "balanced": ["vllm-main", "expert-api-external", "smol-agent-server", "expert-api-main", "rpc-main"]
         }
         candidates = tier_candidates.get(tier, ["smol-agent-server", "expert-api-main"])
         target_service = candidates[0]
