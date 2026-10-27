@@ -30,6 +30,7 @@ class TestSimpleLLMNode(unittest.IsolatedAsyncioTestCase):
 
             # Mock Consul Discovery Response
             mock_consul_resp = MagicMock()
+            mock_consul_resp.status_code = 200
             mock_consul_resp.json.return_value = [{
                 "Service": {"Address": "10.0.0.5", "Port": 8080}
             }]
@@ -51,8 +52,8 @@ class TestSimpleLLMNode(unittest.IsolatedAsyncioTestCase):
             await node.execute(context)
 
             # Verification
-            # Check if Consul was queried for the correct service
-            mock_client_instance.get.assert_called_with("http://localhost:8500/v1/health/service/rpc-router?passing")
+            # Check if Consul was queried for the primary service in tier
+            mock_client_instance.get.assert_called_with("http://localhost:8500/v1/health/service/vllm-main?passing", timeout=2.0)
 
             # Check Output
             self.assertEqual(context.node_outputs["test_node"]["response"], "Fast Response")
@@ -70,6 +71,7 @@ class TestSimpleLLMNode(unittest.IsolatedAsyncioTestCase):
             MockClient.return_value.__aenter__.return_value = mock_client_instance
 
             mock_consul_resp = MagicMock()
+            mock_consul_resp.status_code = 200
             port = int(os.getenv("ROUTER_PORT", 8081))
             mock_consul_resp.json.return_value = [{"Service": {"Address": "10.0.0.5", "Port": port}}]
             mock_client_instance.get.return_value = mock_consul_resp
@@ -82,8 +84,8 @@ class TestSimpleLLMNode(unittest.IsolatedAsyncioTestCase):
 
             await node.execute(context)
 
-            # Check if Consul was queried for the MAIN service
-            mock_client_instance.get.assert_called_with("http://localhost:8500/v1/health/service/rpc-main?passing")
+            # Check if Consul was queried for the primary service in tier
+            mock_client_instance.get.assert_called_with("http://localhost:8500/v1/health/service/vllm-main?passing", timeout=2.0)
 
 if __name__ == '__main__':
     unittest.main()
