@@ -87,6 +87,7 @@ __all__ = [
     "ReverseEngineerTool",
     "OpenShellTool",
     "HelloWorldAgentTool",
+    "KeylessWebResearcherTool",
 ]
 
 _module_lookup = {
@@ -176,6 +177,7 @@ _module_lookup = {
     "ReverseEngineerTool": "reverse_engineer_tool",
     "OpenShellTool": "openshell_tool",
     "HelloWorldAgentTool": "hello_world_agent_tool",
+    "KeylessWebResearcherTool": "keyless_web_researcher_tool",
 }
 
 

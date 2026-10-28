@@ -91,8 +91,8 @@
 - [ ] **Preflight Edit Verification in Code Runners:**
   - [ ] Hook `FileEditorTool` and code modification nodes into `code_graph_tool` preflight checks.
   - [ ] Require verification of connected test suites (`repository_tests`) before executing diffs.
-- [ ] **Keyless Web Researcher Fallback:**
-  - [ ] Implement keyless DuckDuckGo HTML web search subagent tool as fallback when primary web search APIs are unavailable or rate-limited.
+- [x] **Keyless Web Researcher Fallback:**
+  - [x] Implement keyless DuckDuckGo HTML web search subagent tool as fallback when primary web search APIs are unavailable or rate-limited.
 
 ---
 
