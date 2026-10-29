@@ -12,3 +12,4 @@ from . import research_nodes
 from . import reservoir_nodes
 from . import pi_node
 from . import datalog_nodes
+from . import routing_and_worktree_nodes
