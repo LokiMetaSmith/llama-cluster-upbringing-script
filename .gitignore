@@ -11,6 +11,8 @@ playbook_output.log.before_changes
 .venv/
 *.bak
 .bootstrap_state
+.npm_checksum
+.pip_checksum
 report_unit.xml
 llama_benchmarks.jsonl
 
