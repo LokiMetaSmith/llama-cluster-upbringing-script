@@ -1,0 +1,73 @@
+# pipecatapp/config/adaptive_hybrid_model_routing.yaml
+version: "2.0"
+
+defaults:
+  max_spawn_depth: 1
+  max_concurrent_children: 10
+  global_blocked_child_tools:
+    - "delegate_task"
+    - "clarify"
+    - "persistent_memory_write"
+    - "send_user_message"
+
+endpoints:
+  local_vllm_cluster:
+    base_url: "http://10.0.10.50:8000/v1" # Consul/Nomad vLLM ingress
+    timeout_sec: 120
+  local_llamacpp_fast:
+    base_url: "http://127.0.0.1:8080/v1"
+    timeout_sec: 30
+  cloud_openrouter:
+    base_url: "https://openrouter.ai/api/v1"
+    env_key: "OPENROUTER_API_KEY"
+    timeout_sec: 90
+
+routes:
+  fast_router:
+    primary:
+      endpoint: local_llamacpp_fast
+      model: "Qwen2.5-7B-Instruct-Q6_K"
+      temperature: 0.1
+      max_tokens: 1024
+    fallback:
+      endpoint: cloud_openrouter
+      model: "meta-llama/llama-3.3-70b-instruct"
+
+  deep_architect:
+    primary:
+      endpoint: local_vllm_cluster
+      model: "DeepSeek-R1-Distill-Qwen-32B"
+      temperature: 0.6
+      max_tokens: 8192
+    fallback:
+      endpoint: cloud_openrouter
+      model: "anthropic/claude-3.7-sonnet:thinking"
+
+  code_specialist:
+    primary:
+      endpoint: local_vllm_cluster
+      model: "Qwen2.5-Coder-32B-Instruct"
+      temperature: 0.2
+      max_tokens: 4096
+    fallback:
+      endpoint: cloud_openrouter
+      model: "anthropic/claude-3.7-sonnet"
+
+profiles:
+  orchestrator:
+    soul_path: "pipecatapp/profiles/orchestrator_soul.md"
+    default_route: "deep_architect"
+    allowed_tools: ["delegate_task", "read_file", "git_status", "clarify", "persistent_memory_write"]
+    can_delegate: true
+
+  worktree_coder:
+    soul_path: "pipecatapp/profiles/coder_soul.md"
+    default_route: "code_specialist"
+    allowed_tools: ["execute_code", "read_file", "write_file", "git_diff", "pytest_runner"]
+    can_delegate: false
+
+  security_auditor:
+    soul_path: "pipecatapp/profiles/auditor_soul.md"
+    default_route: "deep_architect"
+    allowed_tools: ["read_file", "ast_grep", "bandit_scan"]
+    can_delegate: false
