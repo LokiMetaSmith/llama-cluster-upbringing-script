@@ -1,8 +1,15 @@
+- name: Check if opencode binary exists
+  ansible.builtin.command: which opencode
+  register: opencode_which
+  changed_when: false
+  failed_when: false
+
 - name: Install opencode-ai via npm
   community.general.npm:
     name: opencode-ai
     global: yes
-    state: latest
+    state: present
+  when: opencode_which.rc != 0 or (opencode_force_reinstall | default(false) | bool)
   become: yes
 
 - name: Find opencode binary path

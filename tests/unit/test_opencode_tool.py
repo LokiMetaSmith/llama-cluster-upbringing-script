@@ -16,7 +16,7 @@ class TestOpencodeTool(unittest.IsolatedAsyncioTestCase):
     def test_default_initialization(self):
         default_tool = OpencodeTool()
         self.assertEqual(default_tool.base_url, "http://localhost:8081/v1")
-        self.assertEqual(default_tool.model_id, "local/router")
+        self.assertEqual(default_tool.model_id, "local/moe")
         self.assertEqual(default_tool.provider_id, "openai")
 
     @patch('opencode_ai.AsyncOpencode')

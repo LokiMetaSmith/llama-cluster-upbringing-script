@@ -15,6 +15,12 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
+# --- Root Guard ---
+if [ "$EUID" -eq 0 ]; then
+    echo "❌ Do not run bootstrap.sh directly as root. Run as pipecatapp or let script elevate specific commands." >&2
+    exit 1
+fi
+
 # --- Help Menu ---
 show_help() {
     echo "Usage: $0 [options]"
@@ -46,6 +52,8 @@ show_help() {
     echo "  --deploy-docker              Deploy the pipecat application using Docker (Default)."
     echo "  --dry-run                    Perform a dry run to validate playbooks without applying changes."
     echo "  --skip-setup                 Skip running the initial machine setup script (initial-setup/setup.sh)."
+    echo "  --reinstall-deps             Force re-installation of Python and Node/npm dependencies."
+    echo "  --force                      Alias for --reinstall-deps."
     echo "  --run-local                  Deploy the pipecat application using local raw_exec (for debugging)."
     echo "  --home-assistant-debug       Enable debug mode for Home Assistant."
     echo "  --container                  Run the entire infrastructure inside a single large container."
@@ -87,6 +95,7 @@ DO_PURGE_JOBS=false
 DO_STATUS=false
 DO_DRY_RUN=false
 DO_SKIP_SETUP=false
+DO_REINSTALL_DEPS=false
 DO_HEAL_CLUSTER=false
 DO_RECOVER_NODE=false
 VERBOSE_LEVEL=0
@@ -392,6 +401,9 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
             DO_SKIP_SETUP=true
             PROCESSED_ARGS+=("--skip-setup")
             ;;
+        --reinstall-deps|--force)
+            DO_REINSTALL_DEPS=true
+            ;;
         --tags)
             NEXT_ARG="${ARGS[$((i+1))]}"
             if [[ -n "$NEXT_ARG" && ! "$NEXT_ARG" =~ ^- ]]; then
@@ -576,7 +588,10 @@ profile_system
 
 LOG_FILE="bootstrap_debug.log"
 AGENT_LOG="agent_recovery.log"
-true > "$LOG_FILE"
+if ! true > "$LOG_FILE" 2>/dev/null; then
+    LOG_FILE="/tmp/bootstrap_debug.log"
+    true > "$LOG_FILE" 2>/dev/null || true
+fi
 
 # --- Error Handling & Auto-Recovery ---
 # shellcheck disable=SC2317
@@ -723,9 +738,61 @@ setup_venv() {
     fi
 }
 
+install_opencode_if_needed() {
+    local npm_hash=""
+    if command -v md5sum >/dev/null 2>&1; then
+        npm_hash=$(md5sum package.json package-lock.json 2>/dev/null | md5sum | awk '{print $1}')
+    elif command -v shasum >/dev/null 2>&1; then
+        npm_hash=$(shasum package.json package-lock.json 2>/dev/null | shasum | awk '{print $1}')
+    fi
+
+    local cached_hash=""
+    if [ -f ".npm_checksum" ]; then
+        cached_hash=$(cat .npm_checksum 2>/dev/null || echo "")
+    fi
+
+    if [ "$DO_REINSTALL_DEPS" != true ] && [ -d "node_modules" ] && ( command -v opencode >/dev/null 2>&1 || [ -x "node_modules/.bin/opencode" ] ) && [ -n "$npm_hash" ] && [ "$npm_hash" = "$cached_hash" ]; then
+        echo -e "${GREEN}✅ OpenCode AI Agent already installed and dependencies up to date, skipping.${NC}"
+        return 0
+    fi
+
+    run_step "Installing OpenCode AI Agent" "npm install"
+    local status=$?
+    if [ $status -eq 0 ] && [ -n "$npm_hash" ]; then
+        echo "$npm_hash" > .npm_checksum 2>/dev/null || true
+    fi
+    return $status
+}
+
+install_pip_reqs_if_needed() {
+    local req_hash=""
+    if command -v md5sum >/dev/null 2>&1; then
+        req_hash=$(md5sum requirements-dev.txt 2>/dev/null | awk '{print $1}')
+    elif command -v shasum >/dev/null 2>&1; then
+        req_hash=$(shasum requirements-dev.txt 2>/dev/null | awk '{print $1}')
+    fi
+
+    local cached_hash=""
+    if [ -f ".pip_checksum" ]; then
+        cached_hash=$(cat .pip_checksum 2>/dev/null || echo "")
+    fi
+
+    if [ "$DO_REINSTALL_DEPS" != true ] && [ -f "$VENV_DIR/bin/pip" ] && [ -n "$req_hash" ] && [ "$req_hash" = "$cached_hash" ]; then
+        echo -e "${GREEN}✅ Python dependencies already up to date, skipping.${NC}"
+        return 0
+    fi
+
+    run_step "Installing Python dependencies" "pip install -r requirements-dev.txt --verbose"
+    local status=$?
+    if [ $status -eq 0 ] && [ -n "$req_hash" ]; then
+        echo "$req_hash" > .pip_checksum 2>/dev/null || true
+    fi
+    return $status
+}
+
 ensure_python_environment() {
     echo -e "\n${BOLD}=== Environment Setup ===${NC}"
-    chmod o-w . ansible.cfg
+    chmod o-w . ansible.cfg 2>/dev/null || true
 
     run_step "Setting up Git Hooks" "setup_git_hooks"
     run_step "Creating Python virtual environment" "setup_venv"
@@ -734,17 +801,19 @@ ensure_python_environment() {
     # shellcheck disable=SC1091
     source "$VENV_DIR/bin/activate"
 
-    run_step "Upgrading pip" "pip install --upgrade pip"
+    if [ "$DO_REINSTALL_DEPS" = true ]; then
+        run_step "Upgrading pip" "pip install --upgrade pip"
+    fi
 
     if [ -f "requirements-dev.txt" ]; then
-        run_step "Installing Python dependencies" "pip install -r requirements-dev.txt --verbose"
+        install_pip_reqs_if_needed
     else
         echo "⚠️  Warning: requirements-dev.txt not found. Skipping dependency installation."
     fi
 
     if [ "$DO_DRY_RUN" != true ]; then
         run_step "Installing Node.js Environment" "pip install nodeenv && (command -v node >/dev/null 2>&1 || nodeenv -p)"
-        run_step "Installing OpenCode AI Agent" "npm install"
+        install_opencode_if_needed
     fi
 
     run_step "Installing Ansible Core" "pip install ansible-core pyyaml resolvelib"
@@ -823,10 +892,19 @@ perform_git_clean() {
     fi
 }
 
+ensure_status_environment() {
+    setup_venv
+    # shellcheck disable=SC1091
+    source "$VENV_DIR/bin/activate" 2>/dev/null || true
+    if ! python3 -c "import yaml" 2>/dev/null; then
+        run_step "Installing pyyaml for status checks" "pip install pyyaml"
+    fi
+}
+
 # --- Status Action ---
 if [ "$DO_STATUS" = true ]; then
     echo -e "${BOLD}=== Cluster Status ===${NC}"
-    ensure_python_environment
+    ensure_status_environment
     python3 scripts/provisioning.py --only-status "${PROCESSED_ARGS[@]}"
 
     echo -e "\n${BOLD}=== Opencode Status ===${NC}"
