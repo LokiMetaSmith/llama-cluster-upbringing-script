@@ -1,0 +1,97 @@
+name: "Adaptive Hybrid Routing & Self-Improvement DAG"
+version: "2.1"
+description: "Visualizes and executes multi-tier model routing, isolated worktree delegation, and self-modification verification gates."
+
+nodes:
+  - id: "intake_classifier"
+    type: "DynamicRouterNode"
+    config:
+      default_profile: "orchestrator"
+      profiles:
+        orchestrator:
+          tier: "deep_reasoning"
+          soul_path: "pipecatapp/profiles/orchestrator_soul.md"
+          can_delegate: true
+          allowed_tools: ["read_file", "git_status", "delegate_task", "workflow_inspect"]
+      routes:
+        deep_reasoning:
+          consul_service: "vllm-deepseek-r1"
+          local_model: "DeepSeek-R1-Distill-Qwen-32B"
+          fallback_model: "anthropic/claude-3.7-sonnet:thinking"
+    inputs:
+      - name: "prompt"
+        source: "user_input.user_prompt"
+      - name: "profile"
+        source: null
+
+  - id: "task_decomposer"
+    type: "SimpleLLMNode"
+    config:
+      model_tier: "balanced"
+      system_prompt: "You are a lead technical decomposer. Analyze the goal and output subtask specifications for coding and auditing."
+    inputs:
+      - name: "user_text"
+        source: "intake_classifier.routed_prompt"
+
+  - id: "code_lane_router"
+    type: "DynamicRouterNode"
+    config:
+      default_profile: "worktree_coder"
+      profiles:
+        worktree_coder:
+          tier: "code_specialist"
+          soul_path: "pipecatapp/profiles/coder_soul.md"
+          can_delegate: false
+          allowed_tools: ["read_file", "write_file", "ast_grep", "pytest_runner"]
+      routes:
+        code_specialist:
+          consul_service: "vllm-qwen-coder"
+          local_model: "Qwen2.5-Coder-32B-Instruct"
+          fallback_model: "anthropic/claude-3.7-sonnet"
+    inputs:
+      - name: "prompt"
+        source: "task_decomposer.response"
+      - name: "profile"
+        source: null
+
+  - id: "isolated_worktree_coder"
+    type: "WorktreeSubagentNode"
+    config:
+      verify_cmd: "pytest -q"
+    inputs:
+      - name: "route_config"
+        source: "code_lane_router.route_config"
+      - name: "task_prompt"
+        source: "code_lane_router.routed_prompt"
+
+  - id: "workflow_self_auditor_router"
+    type: "DynamicRouterNode"
+    config:
+      default_profile: "auditor"
+      profiles:
+        auditor:
+          tier: "fast_local"
+          soul_path: "pipecatapp/profiles/auditor_soul.md"
+          can_delegate: false
+          allowed_tools: ["read_file", "yaml_schema_validator"]
+      routes:
+        fast_local:
+          consul_service: "llamacpp-fast"
+          local_model: "Qwen2.5-7B-Instruct-Q6_K"
+          fallback_model: "meta-llama/llama-3.3-70b-instruct"
+    inputs:
+      - name: "prompt"
+        source: "task_decomposer.response"
+      - name: "profile"
+        source: null
+
+  - id: "self_improvement_gate"
+    type: "BarrierMergeNode"
+    config:
+      require_verification_pass: true
+      allow_workflow_self_patch: true
+    inputs:
+      - name: "worktree_envelope"
+        source: "isolated_worktree_coder.artifact_envelope"
+      - name: "auditor_route"
+        source: "workflow_self_auditor_router.route_config"
