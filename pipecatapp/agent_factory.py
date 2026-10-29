@@ -106,6 +106,7 @@ TOOL_CLASS_MAP = {
     "UnitReasoningTool": ("pipecatapp.tools.unit_reasoning_tool", "UnitReasoningTool"),
     "SSDStreamingTool": ("pipecatapp.tools.ssd_streaming_tool", "SSDStreamingTool"),
     "HelloWorldAgentTool": ("pipecatapp.tools.hello_world_agent_tool", "HelloWorldAgentTool"),
+    "KeylessWebResearcherTool": ("pipecatapp.tools.keyless_web_researcher_tool", "KeylessWebResearcherTool"),
 }
 
 _loaded_classes = {}
