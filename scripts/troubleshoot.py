@@ -28,6 +28,16 @@ try:
 except ImportError:
     pass
 
+# Dynamically import ProcessInvestigatorTool
+try:
+    from pipecatapp.tools.process_investigator_tool import ProcessInvestigatorTool
+except ImportError:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    try:
+        from pipecatapp.tools.process_investigator_tool import ProcessInvestigatorTool
+    except ImportError:
+        ProcessInvestigatorTool = None
+
 
 def get_primary_ip():
     import subprocess
@@ -1125,6 +1135,46 @@ def cmd_opencode_status(args):
         print("No opencode processes found running on this host.")
 
 
+def cmd_process(args):
+    """Inspects running processes or investigates a specific PID via ProcessInvestigatorTool."""
+    if ProcessInvestigatorTool is None:
+        print("Error: ProcessInvestigatorTool could not be imported.")
+        sys.exit(1)
+
+    tool = ProcessInvestigatorTool()
+    action = args.action
+
+    if action == "list":
+        res = tool.list_processes(sort_by=args.sort_by, limit=args.limit)
+    elif action == "py-spy":
+        if not args.pid:
+            print("Error: --pid argument is required for py-spy action.")
+            sys.exit(1)
+        res = tool.py_spy(pid=args.pid, subaction=args.subaction, duration=args.duration, output_file=args.output)
+    elif action == "gdb":
+        if not args.pid:
+            print("Error: --pid argument is required for gdb action.")
+            sys.exit(1)
+        res = tool.gdb_py_bt(pid=args.pid)
+    elif action == "strace":
+        if not args.pid:
+            print("Error: --pid argument is required for strace action.")
+            sys.exit(1)
+        res = tool.strace(pid=args.pid, duration=args.duration, summary_only=not args.full)
+    elif action == "perf":
+        if not args.pid:
+            print("Error: --pid argument is required for perf action.")
+            sys.exit(1)
+        res = tool.perf(pid=args.pid, duration=args.duration, mode=args.mode)
+    else:
+        res = f"Unknown process action: {action}"
+
+    if args.json:
+        print(json.dumps({"action": action, "output": res}, indent=2))
+    else:
+        print(res)
+
+
 def main():
     """Main CLI execution entry point."""
     parser = argparse.ArgumentParser(description="Troubleshoot Nomad & Systemd services.")
@@ -1169,6 +1219,19 @@ def main():
     daemon_parser.add_argument("--interval", type=int, default=60, help="Check interval in seconds (default: 60)")
     daemon_parser.add_argument("--json", action="store_true", help="Output daemon stats in JSON format")
     daemon_parser.set_defaults(func=cmd_daemon)
+
+    proc_parser = subparsers.add_parser("process", help="Inspect process CPU/MEM, py-spy, GDB, strace, or perf")
+    proc_parser.add_argument("action", choices=["list", "py-spy", "gdb", "strace", "perf"], help="Process inspection action")
+    proc_parser.add_argument("--pid", type=str, help="Process ID to inspect")
+    proc_parser.add_argument("--sort-by", choices=["cpu", "mem"], default="cpu", help="Sort order for list action (cpu or mem)")
+    proc_parser.add_argument("--limit", type=int, default=20, help="Limit output for process list")
+    proc_parser.add_argument("--subaction", choices=["dump", "top", "record"], default="dump", help="py-spy subaction")
+    proc_parser.add_argument("--duration", type=int, default=5, help="Duration in seconds for py-spy, strace, or perf")
+    proc_parser.add_argument("--output", type=str, help="Output file path for py-spy flamegraph")
+    proc_parser.add_argument("--full", action="store_true", help="Include full syscall logs for strace instead of summary")
+    proc_parser.add_argument("--mode", choices=["stat", "top"], default="stat", help="Perf profiling mode")
+    proc_parser.add_argument("--json", action="store_true", help="Output in JSON format")
+    proc_parser.set_defaults(func=cmd_process)
 
     args = parser.parse_args()
     if args.command is None:

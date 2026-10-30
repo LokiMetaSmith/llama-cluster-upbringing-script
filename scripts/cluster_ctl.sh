@@ -11,6 +11,7 @@
 # Commands:
 #   status        - Complete cluster audit (Mesh, Consul, Nomad, Frontends)
 #   test-job      - Dispatch a distributed verification job across worker nodes
+#   process       - Inspect processes on node (list|py-spy|gdb|strace|perf)
 #   sync          - Synchronize code & configuration to all cluster nodes
 #   help          - Show this guide
 # ==============================================================================
@@ -48,6 +49,7 @@ show_help() {
     echo ""
     echo "Commands:"
     echo -e "  ${CYAN}status${NC}        Check health of mesh, Consul, Nomad, and frontends across all nodes"
+    echo -e "  ${CYAN}process${NC}       Investigate processes on host (list|py-spy|gdb|strace|perf)"
     echo -e "  ${CYAN}test-job${NC}      Submit a verification batch job to prove cluster task sharing"
     echo -e "  ${CYAN}healer [cmd]${NC}  Manage 24/7 self-healing daemon (start|stop|status|logs|once)"
     echo -e "  ${CYAN}pxe [cmd]${NC}     Audit, provision, or view logs for PXE boot server (status|setup|logs)"
@@ -135,6 +137,20 @@ cmd_status() {
     done
 
     echo -e "\n${BOLD}${GREEN}✅ Audit Complete.${NC}\n"
+}
+
+cmd_process() {
+    shift 1
+    local PY_BIN="python3"
+    if [ -x "${REPO_ROOT}/.venv/bin/python" ]; then
+        PY_BIN="${REPO_ROOT}/.venv/bin/python"
+    elif [ -x "${REPO_ROOT}/.venv/bin/python3" ]; then
+        PY_BIN="${REPO_ROOT}/.venv/bin/python3"
+    elif [ -x "/opt/pipecatapp/venv/bin/python" ]; then
+        PY_BIN="/opt/pipecatapp/venv/bin/python"
+    fi
+
+    "$PY_BIN" "${REPO_ROOT}/scripts/troubleshoot.py" process "$@"
 }
 
 cmd_test_job() {
@@ -334,6 +350,7 @@ cmd_pxe() {
 COMMAND="${1:-help}"
 case "$COMMAND" in
     status) cmd_status ;;
+    process) cmd_process "$@" ;;
     test-job) cmd_test_job ;;
     healer) cmd_healer "$@" ;;
     pxe) cmd_pxe "$@" ;;
