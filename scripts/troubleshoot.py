@@ -1221,7 +1221,7 @@ def main():
     daemon_parser.set_defaults(func=cmd_daemon)
 
     proc_parser = subparsers.add_parser("process", help="Inspect process CPU/MEM, py-spy, GDB, strace, or perf")
-    proc_parser.add_argument("action", choices=["list", "py-spy", "gdb", "strace", "perf"], help="Process inspection action")
+    proc_parser.add_argument("action", nargs="?", default="list", choices=["list", "py-spy", "gdb", "strace", "perf"], help="Process inspection action (default: list)")
     proc_parser.add_argument("--pid", type=str, help="Process ID to inspect")
     proc_parser.add_argument("--sort-by", choices=["cpu", "mem"], default="cpu", help="Sort order for list action (cpu or mem)")
     proc_parser.add_argument("--limit", type=int, default=20, help="Limit output for process list")

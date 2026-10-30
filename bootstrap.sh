@@ -592,6 +592,10 @@ if ! true > "$LOG_FILE" 2>/dev/null; then
     LOG_FILE="/tmp/bootstrap_debug.log"
     true > "$LOG_FILE" 2>/dev/null || true
 fi
+if ! true > "$AGENT_LOG" 2>/dev/null; then
+    AGENT_LOG="/tmp/agent_recovery.log"
+    true > "$AGENT_LOG" 2>/dev/null || true
+fi
 
 # --- Error Handling & Auto-Recovery ---
 # shellcheck disable=SC2317
