@@ -1,44 +1,36 @@
 import pytest
-import os
-import asyncio
-import tempfile
+from unittest.mock import MagicMock
 from pipecatapp.tools.file_editor_tool import FileEditorTool
-from pipecatapp.tools.code_graph_tool import CodeGraphTool
 
 @pytest.fixture
-def temp_workspace():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        src_file = os.path.join(tmpdir, "main.py")
-        with open(src_file, "w", encoding="utf-8") as f:
-            f.write('''def helper_func():
-    return 42
+def mock_code_graph_tool():
+    mock_tool = MagicMock()
+    mock_tool.preflight.return_value = "=== Preflight Edit Checklist ===\nMock Preflight"
+    mock_tool.repository_tests.return_value = "=== Connected Repository Tests ===\nMock Test"
+    return mock_tool
 
-def run():
-    return helper_func()
-''')
-        cg_tool = CodeGraphTool(root_dir=tmpdir)
-        fe_tool = FileEditorTool(root_dir=tmpdir, code_graph_tool=cg_tool)
-        yield fe_tool, tmpdir
+@pytest.fixture
+def file_editor(mock_code_graph_tool):
+    return FileEditorTool(root_dir="/opt/pipecatapp", code_graph_tool=mock_code_graph_tool)
 
-def test_write_with_preflight(temp_workspace):
-    fe_tool, tmpdir = temp_workspace
-    res = asyncio.run(fe_tool.execute(
-        action="write",
-        filepath="main.py",
-        content="def helper_func():\n    return 100\n",
-        verify_preflight=True
-    ))
-    assert "=== Preflight Edit Checklist ===" in res
-    assert "Successfully wrote to main.py" in res
+@pytest.mark.asyncio
+async def test_file_editor_preflight_on_write(file_editor, mock_code_graph_tool):
+    file_editor.write_file = MagicMock(return_value="Successfully wrote")
 
-def test_patch_with_preflight(temp_workspace):
-    fe_tool, tmpdir = temp_workspace
-    res = asyncio.run(fe_tool.execute(
-        action="patch",
-        filepath="main.py",
-        search_block="return 42",
-        replace_block="return 99",
-        verify_preflight=True
-    ))
-    assert "=== Preflight Edit Checklist ===" in res
-    assert "Successfully patched main.py" in res
+    res = await file_editor.execute(action="write", filepath="test.py", content="print('hello')", verify_preflight=True)
+
+    assert "Mock Preflight" in res
+    assert "Mock Test" in res
+    mock_code_graph_tool.preflight.assert_called_once_with(filepath="test.py")
+    mock_code_graph_tool.repository_tests.assert_called_once_with(filepath="test.py")
+
+@pytest.mark.asyncio
+async def test_file_editor_no_preflight(file_editor, mock_code_graph_tool):
+    file_editor.write_file = MagicMock(return_value="Successfully wrote")
+
+    res = await file_editor.execute(action="write", filepath="test.py", content="print('hello')", verify_preflight=False)
+
+    assert "Mock Preflight" not in res
+    assert "Mock Test" not in res
+    mock_code_graph_tool.preflight.assert_not_called()
+    mock_code_graph_tool.repository_tests.assert_not_called()

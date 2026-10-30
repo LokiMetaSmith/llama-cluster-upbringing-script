@@ -13,10 +13,12 @@ class ASTEditorTool:
 
     Ensures the resulting file is syntactically valid before writing.
     """
-    def __init__(self, root_dir="/opt/pipecatapp"):
+    def __init__(self, root_dir="/opt/pipecatapp", code_graph_tool=None):
         self.name = "ast_editor"
         self.root_dir = os.path.realpath(root_dir)
         self.logger = logging.getLogger(__name__)
+        from pipecatapp.tools.code_graph_tool import CodeGraphTool
+        self.code_graph_tool = code_graph_tool or CodeGraphTool(root_dir=self.root_dir)
 
     def get_schema(self) -> dict:
         """Returns the schema for the AST editor tool."""
@@ -28,6 +30,10 @@ class ASTEditorTool:
                 "parameters": {
                     "type": "object",
                     "properties": {
+                        "verify_preflight": {
+                            "type": "boolean",
+                            "description": "Whether to perform code graph preflight checks prior to writing edits (default: False)."
+                        },
                         "action": {
                             "type": "string",
                             "enum": ["extract_function", "rename_symbol", "add_import", "batch_edit"],
@@ -87,28 +93,38 @@ class ASTEditorTool:
             }
         }
 
-    async def execute(self, action: str, filepath: str = "", **kwargs) -> str:
+    async def execute(self, action: str, filepath: str = "", verify_preflight: bool = False, **kwargs) -> str:
         """Executes the AST editor action."""
+        preflight_summary = ""
+        if verify_preflight and filepath:
+            try:
+                preflight_summary = self.code_graph_tool.preflight(filepath=filepath) + "\n\n"
+                tests_summary = self.code_graph_tool.repository_tests(filepath=filepath)
+                if tests_summary and "No unit tests found" not in tests_summary:
+                    preflight_summary += tests_summary + "\n\n"
+            except Exception as e:
+                self.logger.warning(f"Failed to run preflight check for {filepath}: {e}")
+
         if action == "extract_function":
             if not filepath: return "Error: filepath is required for extract_function action."
             func_name = kwargs.get("func_name")
             target_filepath = kwargs.get("target_filepath")
             if not func_name or not target_filepath:
                 return "Error: extract_function requires func_name and target_filepath."
-            return self.extract_function(filepath, func_name, target_filepath)
+            return preflight_summary + self.extract_function(filepath, func_name, target_filepath)
         elif action == "rename_symbol":
             if not filepath: return "Error: filepath is required for rename_symbol action."
             old_name = kwargs.get("old_name")
             new_name = kwargs.get("new_name")
             if not old_name or not new_name:
                 return "Error: rename_symbol requires old_name and new_name."
-            return self.rename_symbol(filepath, old_name, new_name)
+            return preflight_summary + self.rename_symbol(filepath, old_name, new_name)
         elif action == "add_import":
             if not filepath: return "Error: filepath is required for add_import action."
             import_statement = kwargs.get("import_statement")
             if not import_statement:
                 return "Error: add_import requires import_statement."
-            return self.add_import(filepath, import_statement)
+            return preflight_summary + self.add_import(filepath, import_statement)
         elif action == "batch_edit":
             batch_operations = kwargs.get("batch_operations", [])
             if not batch_operations:

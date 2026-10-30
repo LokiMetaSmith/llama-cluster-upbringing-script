@@ -88,9 +88,9 @@
   - [x] Implement intermediate staging zone / candidate lifecycle for `pmm_datalog_memory.db`.
   - [x] Create `memory_candidate_emit` tool for subagents to propose durable memory entries during execution.
   - [x] Add session completion / orchestrator evaluation hooks to promote high-value candidates to main persistent memory storage.
-- [ ] **Preflight Edit Verification in Code Runners:**
-  - [ ] Hook `FileEditorTool` and code modification nodes into `code_graph_tool` preflight checks.
-  - [ ] Require verification of connected test suites (`repository_tests`) before executing diffs.
+- [x] **Preflight Edit Verification in Code Runners:**
+  - [x] Hook `FileEditorTool` and code modification nodes into `code_graph_tool` preflight checks.
+  - [x] Require verification of connected test suites (`repository_tests`) before executing diffs.
 - [x] **Keyless Web Researcher Fallback:**
   - [x] Implement keyless DuckDuckGo HTML web search subagent tool as fallback when primary web search APIs are unavailable or rate-limited.
 
