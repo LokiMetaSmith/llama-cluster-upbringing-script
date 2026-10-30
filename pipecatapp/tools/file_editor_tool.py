@@ -122,6 +122,9 @@ class FileEditorTool:
         if verify_preflight and filepath and action in ["write", "patch", "hash_replace"]:
             try:
                 preflight_summary = self.code_graph_tool.preflight(filepath=filepath) + "\n\n"
+                tests_summary = self.code_graph_tool.repository_tests(filepath=filepath)
+                if tests_summary and "No unit tests found" not in tests_summary:
+                    preflight_summary += tests_summary + "\n\n"
             except Exception as e:
                 self.logger.warning(f"Failed to run preflight check for {filepath}: {e}")
 
