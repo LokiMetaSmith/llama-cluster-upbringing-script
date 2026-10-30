@@ -30,6 +30,15 @@ class DummyArgs:
         self.json = False
         self.job_id = None
         self.interval = 1
+        self.action = "list"
+        self.pid = None
+        self.sort_by = "cpu"
+        self.limit = 20
+        self.subaction = "dump"
+        self.duration = 5
+        self.output = None
+        self.full = False
+        self.mode = "stat"
         for k, v in kwargs.items():
             setattr(self, k, v)
 
@@ -385,6 +394,21 @@ def test_cmd_deps(mock_api_get, mock_run_command, capsys):
     captured_txt = capsys.readouterr()
     assert "Service Dependency Diagnostics" in captured_txt.out
     assert "Target: pipecat-app" in captured_txt.out
+
+
+def test_cmd_process(capsys):
+    """Verifies that cmd_process invokes ProcessInvestigatorTool actions."""
+    args = DummyArgs(action="list", sort_by="cpu", limit=5, json=False)
+    with patch("troubleshoot.ProcessInvestigatorTool") as mock_tool_cls:
+        mock_instance = MagicMock()
+        mock_instance.list_processes.return_value = "Top processes mock"
+        mock_tool_cls.return_value = mock_instance
+
+        troubleshoot.cmd_process(args)
+
+        captured = capsys.readouterr()
+        assert "Top processes mock" in captured.out
+        mock_instance.list_processes.assert_called_once_with(sort_by="cpu", limit=5)
 
 
 @patch('troubleshoot.cmd_report')
