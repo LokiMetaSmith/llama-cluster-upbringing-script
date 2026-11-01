@@ -716,6 +716,9 @@ class ModelCapabilitiesRegistry:
     A registry mapping model families to specific capabilities and features.
     """
     _registry = {
+        "planner": {"supports_reasoning_effort": True},
+        "executor": {"supports_reasoning_effort": True},
+        "opusplan": {"supports_reasoning_effort": True},
         "claude-3-7-sonnet": {"supports_reasoning_effort": True},
         "o1": {"supports_reasoning_effort": True},
         "o3": {"supports_reasoning_effort": True},
