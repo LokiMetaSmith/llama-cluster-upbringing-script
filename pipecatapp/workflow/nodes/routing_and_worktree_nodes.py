@@ -9,6 +9,7 @@ import httpx
 from .registry import registry
 from ..node import Node
 from ..context import WorkflowContext
+from pipecatapp.llm_clients import MODEL_TIERS
 
 
 @registry.register
@@ -90,7 +91,7 @@ class DynamicRouterNode(Node):
 
         return {
             "base_url": os.getenv("FALLBACK_LLM_BASE_URL", route_spec.get("fallback_url", "https://openrouter.ai/api/v1")),
-            "model": route_spec.get("fallback_model", "anthropic/claude-3.7-sonnet"),
+            "model": MODEL_TIERS.get(route_spec.get("fallback_model", "executor"), route_spec.get("fallback_model", "executor")),
             "source": "cloud_fallback",
         }
 

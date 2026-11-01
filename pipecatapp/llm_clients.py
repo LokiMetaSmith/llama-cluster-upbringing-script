@@ -7,6 +7,19 @@ OUTPUT_RESERVE_CAP = 2000
 
 # Global configuration for Model Tiers (Meta-Harness Pattern - Cost Lever #1)
 MODEL_TIERS = {
+    "planner": "anthropic/claude-3.7-sonnet:thinking",
+    "executor": "anthropic/claude-3.7-sonnet",
+    "fast": "meta-llama/llama-3.3-70b-instruct",
+    "opusplan": "anthropic/claude-3.7-sonnet:thinking",
+    "best": "anthropic/claude-3.7-sonnet:thinking",
+    "fable": "anthropic/claude-3.7-sonnet:thinking",
+    "opus": "anthropic/claude-3.7-sonnet:thinking",
+    "reasoning": "anthropic/claude-3.7-sonnet:thinking",
+    "sonnet": "anthropic/claude-3.7-sonnet",
+    "standard": "anthropic/claude-3.7-sonnet",
+    "haiku": "meta-llama/llama-3.3-70b-instruct",
+    "default": "anthropic/claude-3.7-sonnet",
+    # Legacy fallbacks
     "high-reasoning": "gpt-4",
     "fast-worker": "gpt-3.5-turbo",
     "cheap-fallback": "claude-3-haiku"

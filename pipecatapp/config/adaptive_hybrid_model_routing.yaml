@@ -23,7 +23,7 @@ endpoints:
     timeout_sec: 90
 
 routes:
-  fast_router:
+  fast:
     primary:
       endpoint: local_llamacpp_fast
       model: "Qwen2.5-7B-Instruct-Q6_K"
@@ -33,7 +33,7 @@ routes:
       endpoint: cloud_openrouter
       model: "meta-llama/llama-3.3-70b-instruct"
 
-  deep_architect:
+  planner:
     primary:
       endpoint: local_vllm_cluster
       model: "DeepSeek-R1-Distill-Qwen-32B"
@@ -43,7 +43,7 @@ routes:
       endpoint: cloud_openrouter
       model: "anthropic/claude-3.7-sonnet:thinking"
 
-  code_specialist:
+  executor:
     primary:
       endpoint: local_vllm_cluster
       model: "Qwen2.5-Coder-32B-Instruct"
@@ -56,18 +56,18 @@ routes:
 profiles:
   orchestrator:
     soul_path: "pipecatapp/profiles/orchestrator_soul.md"
-    default_route: "deep_architect"
+    default_route: "planner"
     allowed_tools: ["delegate_task", "read_file", "git_status", "clarify", "persistent_memory_write"]
     can_delegate: true
 
   worktree_coder:
     soul_path: "pipecatapp/profiles/coder_soul.md"
-    default_route: "code_specialist"
+    default_route: "executor"
     allowed_tools: ["execute_code", "read_file", "write_file", "git_diff", "pytest_runner"]
     can_delegate: false
 
   security_auditor:
     soul_path: "pipecatapp/profiles/auditor_soul.md"
-    default_route: "deep_architect"
+    default_route: "planner"
     allowed_tools: ["read_file", "ast_grep", "bandit_scan"]
     can_delegate: false
