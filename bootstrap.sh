@@ -760,8 +760,43 @@ install_opencode_if_needed() {
         return 0
     fi
 
+    # Pre-check permissions of node_modules if present
+    if [ -d "node_modules" ] && [ ! -w "node_modules" ]; then
+        echo -e "${YELLOW}⚠️  Detected permission restrictions on node_modules. Attempting to fix ownership...${NC}"
+        if sudo -n true 2>/dev/null; then
+            sudo chown -R "$(id -un):$(id -gn)" node_modules 2>/dev/null || true
+        fi
+    fi
+
     run_step "Installing OpenCode AI Agent" "npm install"
     local status=$?
+    if [ $status -ne 0 ]; then
+        # Check if error could be due to EACCES or stale root-owned node_modules
+        echo -e "${YELLOW}⚠️  npm install failed. Checking for permission errors or corrupt node_modules...${NC}"
+        local remediated=false
+        if sudo -n true 2>/dev/null; then
+            echo -e "${CYAN}🔧 Restoring repository and node_modules ownership with sudo...${NC}"
+            sudo chown -R "$(id -un):$(id -gn)" . 2>/dev/null || true
+            remediated=true
+        elif [ -d "node_modules" ] && [ -w "node_modules" ]; then
+            chmod -R u+rwX node_modules 2>/dev/null || true
+            remediated=true
+        fi
+
+        if [ "$remediated" = true ]; then
+            echo -e "${CYAN}🔄 Retrying npm install after adjusting permissions...${NC}"
+            run_step "Retrying OpenCode AI Agent Installation" "npm install"
+            status=$?
+        fi
+
+        if [ $status -ne 0 ] && sudo -n true 2>/dev/null; then
+            echo -e "${YELLOW}⚠️  Retrying with fresh node_modules cleanup...${NC}"
+            sudo rm -rf node_modules package-lock.json.stale 2>/dev/null || true
+            run_step "Installing OpenCode AI Agent (fresh clean)" "npm install"
+            status=$?
+        fi
+    fi
+
     if [ $status -eq 0 ] && [ -n "$npm_hash" ]; then
         echo "$npm_hash" > .npm_checksum 2>/dev/null || true
     fi

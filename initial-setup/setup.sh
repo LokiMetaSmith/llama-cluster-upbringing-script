@@ -46,5 +46,13 @@ done
 log "Generating dynamic inventory..."
 bash "$SCRIPT_DIR/update_inventory.sh"
 
+# Ensure repository ownership is restored to the non-root user
+TARGET_REPO_USER="${SUDO_USER:-${USERNAME:-}}"
+if [ -n "$TARGET_REPO_USER" ] && id "$TARGET_REPO_USER" &>/dev/null; then
+    REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+    log "Restoring repository ownership in $REPO_ROOT for $TARGET_REPO_USER..."
+    chown -R "$TARGET_REPO_USER":"$TARGET_REPO_USER" "$REPO_ROOT" 2>/dev/null || true
+fi
+
 log "Initial machine setup complete."
 log "Please reboot the machine for all changes to take effect."
