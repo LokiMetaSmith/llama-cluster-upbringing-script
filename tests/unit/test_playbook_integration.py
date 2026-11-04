@@ -53,3 +53,46 @@ def test_playbook_integration_syntax_check():
             f"STDOUT:\n{e.stdout}\n"
             f"STDERR:\n{e.stderr}"
         )
+
+
+def test_cluster_ip_and_nomad_url_resolution():
+    """
+    Tests that cluster_ip resolves properly with and without tailscale0 facts,
+    and never produces an empty host for Nomad API URLs (https://:4646).
+    """
+    import yaml
+    from jinja2 import Environment
+
+    with open("group_vars/all.yaml", "r") as f:
+        all_vars = yaml.safe_load(f)
+
+    cluster_ip_expr = all_vars.get("cluster_ip")
+    assert cluster_ip_expr is not None
+
+    env = Environment()
+    cluster_ip_template = env.from_string(cluster_ip_expr)
+
+    # 1. When tailscale0 is present
+    facts_with_tailscale = {"tailscale0": {"ipv4": {"address": "100.64.0.42"}}}
+    res_with_ts = cluster_ip_template.render(ansible_facts=facts_with_tailscale, node_id="11")
+    assert res_with_ts == "100.64.0.42"
+
+    # 2. When tailscale0 is absent
+    facts_without_tailscale = {}
+    res_without_ts = cluster_ip_template.render(ansible_facts=facts_without_tailscale, node_id="11")
+    assert res_without_ts == "10.0.0.11"
+
+    # 3. Verify Nomad readiness URL formation never has an empty host
+    nomad_url_template = env.from_string(
+        "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('10.0.0.' + (node_id | default('10', true) | string), true) }}:{{ nomad_http_port | default(4646, true) }}/v1/agent/self"
+    )
+
+    url_with_ts = nomad_url_template.render(cluster_ip=res_with_ts, nomad_protocol="https", nomad_http_port=4646)
+    assert url_with_ts == "https://100.64.0.42:4646/v1/agent/self"
+
+    url_without_ts = nomad_url_template.render(cluster_ip=res_without_ts, nomad_protocol="https", nomad_http_port=4646)
+    assert url_without_ts == "https://10.0.0.11:4646/v1/agent/self"
+
+    # Even if cluster_ip is explicitly passed as empty string or None
+    url_empty_ip = nomad_url_template.render(cluster_ip="", node_id="15", nomad_protocol="https")
+    assert url_empty_ip == "https://10.0.0.15:4646/v1/agent/self"
