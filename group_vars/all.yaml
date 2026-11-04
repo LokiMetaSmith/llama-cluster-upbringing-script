@@ -28,8 +28,9 @@ node_id: >-
 cluster_subnet_prefix: "10.0.0"
 # Determine the cluster IP dynamically:
 # 1. Try to get the IP of the 'tailscale0' interface (mesh network).
-# 2. Under no circumstances should you fall back to 127.0.0.1 or eth0.
-cluster_ip: "{{ ansible_facts.get('tailscale0', {}).get('ipv4', {}).get('address') }}"
+# 2. If tailscale0 is missing/not yet up, fall back to deterministic underlay IP (10.0.0.x).
+# Under no circumstances should you fall back to 127.0.0.1 or eth0.
+cluster_ip: "{{ ansible_facts.get('tailscale0', {}).get('ipv4', {}).get('address', '10.0.0.' + (node_id | string)) }}"
 
 
 ansible_python_interpreter: /usr/bin/python3

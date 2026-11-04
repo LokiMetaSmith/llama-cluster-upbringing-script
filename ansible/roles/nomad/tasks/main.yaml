@@ -514,12 +514,31 @@
   ansible.builtin.set_fact:
     nomad_protocol: "{{ \"https\" if nomad_cli_cert_stat.stat.exists else \"http\" }}"
 
+- name: Check if tailscaled service exists
+  ansible.builtin.stat:
+    path: /lib/systemd/system/tailscaled.service
+  register: tailscaled_service_file
+
+- name: Ensure tailscaled is active before Nomad API check if installed
+  ansible.builtin.systemd:
+    name: tailscaled
+    state: started
+  become: yes
+  when: not ansible_check_mode and tailscaled_service_file.stat.exists
+  ignore_errors: true
+
+- name: Refresh network facts before Nomad API check
+  ansible.builtin.setup:
+    gather_subset:
+      - network
+  when: not ansible_check_mode
+
 - name: Ensure handlers are flushed before API check
   meta: flush_handlers
 
 - name: Wait for Nomad API to be ready
   ansible.builtin.uri:
-    url: "{{ nomad_protocol | default('https') }}://{{ cluster_ip }}:{{ nomad_http_port }}/v1/agent/self"
+    url: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('10.0.0.' + (node_id | default('10', true) | string), true) }}:{{ nomad_http_port | default(4646, true) }}/v1/agent/self"
     validate_certs: yes
     ca_path: "{{ (nomad_tls_dir | default('/etc/nomad.d/tls') ~ '/ca.pem') if nomad_cli_cert_stat.stat.exists else omit }}"
     status_code: 200
