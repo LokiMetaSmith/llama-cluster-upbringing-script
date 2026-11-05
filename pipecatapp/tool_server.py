@@ -92,6 +92,9 @@ _safe_import_and_init("wasm", "pipecatapp.tools.wasm_tool", "WasmTool", lambda c
 _safe_import_and_init("heretic", "pipecatapp.tools.heretic_tool", "HereticTool", lambda cls: cls(root_dir=os.getenv("HERETIC_ROOT_DIR")))
 _safe_import_and_init("totp", "pipecatapp.tools.totp_tool", "TOTPTool")
 _safe_import_and_init("hello_world_agent", "pipecatapp.tools.hello_world_agent_tool", "HelloWorldAgentTool")
+_safe_import_and_init("keyless_web_researcher", "pipecatapp.tools.keyless_web_researcher_tool", "KeylessWebResearcherTool")
+_safe_import_and_init("code_graph", "pipecatapp.tools.code_graph_tool", "CodeGraphTool", lambda cls: cls(root_dir=os.getenv("RAG_ALLOWED_ROOT", "/opt/pipecatapp")))
+_safe_import_and_init("memory_candidate", "pipecatapp.tools.memory_candidate_tool", "MemoryCandidateTool")
 _safe_import_and_init("code_runner_mcp", "pipecatapp.tools.mcp_client_adapter", "MCPClientAdapter",
                       lambda cls: cls(name="code_runner_mcp", server_command="python3", server_args=["-m", "pipecatapp.servers.code_runner_server"], description="Execute Python code in a sandboxed Docker/Nomad container using MCP.", twin_service=None))
 

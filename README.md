@@ -32,7 +32,6 @@ voice agent. For a detailed technical description of the system's layers, see
 the [Holistic Project Architecture](docs/manual/ARCHITECTURE.md) document or explore
 the comprehensive [Thematic Manuals Index](docs/manual/README.md).
 
-
 ## 1. System Requirements
 
 - **Cluster Nodes:** 3 to 20 legacy desktop computers (Intel Core 2 Duo or similar, 8GB RAM, SSD recommended).
@@ -183,6 +182,7 @@ To onboard any worker or edge node running on the local network (e.g. at `192.16
 ```
 
 This automated script:
+
 - Calibrates system time using Chrony/NTP to prevent GPG signature verification errors.
 - Assigns non-conflicting hostnames (`pipecat-1-worker`) and underlay IP aliases (`10.0.0.51`).
 - Enrolls the worker into the encrypted Tailscale/Headscale mesh (`100.64.0.2`).
@@ -192,26 +192,32 @@ This automated script:
 ### 4.3. Automated Zero-Touch ISO Installation
 
 For bare-metal deployments without manual post-install steps:
+
 1. Extract the cluster credentials bundle from the controller:
+
    ```bash
    ./scripts/extract_cluster_keys.sh --output /tmp/cluster_keys_bundle
    ```
+
 2. Burn a bootable USB drive with auto-enrollment credentials:
+
    ```bash
    cd os-image && sudo ./build_iso.sh --flash --inject /tmp/cluster_keys_bundle
    ```
+
    *(Or pre-bake directly into an unattended ISO: `sudo ./build_iso.sh --keys-bundle /tmp/cluster_keys_bundle`)*
 3. Boot the target machine. On first boot, the system automatically steps the clock, enrolls into the mesh, imports mTLS certificates, registers with Nomad/Consul, and launches the local frontend. See [`os-image/README.md`](os-image/README.md) and [`docs/manual/SECURITY_KEY_BOOTSTRAPPING.md`](docs/manual/SECURITY_KEY_BOOTSTRAPPING.md) for full details.
 
 ### 4.4. Manual Playbook Provisioning (`inventory.yaml`)
+
    Run the following command from the root of this repository. This will configure the initial control node(s) and prepare the cluster for auto-expansion.
 
    ```bash
    ansible-playbook -i inventory.yaml playbook.yaml --ask-become-pass
    ```
 
-   - **`--ask-become-pass`**: This flag is important. It will prompt you for your `sudo` password, which Ansible needs to perform administrative tasks.
-   - **What this does:** This playbook not only aconfigures the cluster services (Consul, Nomad, etc.) but also automatically bootstraps the primary control node into a fully autonomous AI agent by deploying the necessary AI services.
+- **`--ask-become-pass`**: This flag is important. It will prompt you for your `sudo` password, which Ansible needs to perform administrative tasks.
+- **What this does:** This playbook not only aconfigures the cluster services (Consul, Nomad, etc.) but also automatically bootstraps the primary control node into a fully autonomous AI agent by deploying the necessary AI services.
 
 ## 5. Expanding the Control Plane (Adding Controllers)
 
@@ -630,7 +636,9 @@ The project supports a **Hybrid / Cluster-Native architecture**, which means it 
    - **Edge Nodes (The Body/Fleet)**: Legacy, low-resource machines (e.g., Core 2 Duo / 8GB RAM) run parallel and low-memory tasks. They act as sensors, storage (IPFS), build/CI compilers, and control plane daemons (Nomad, Consul). They do *not* run heavy inference.
 
 ### APU Memory Guardrails
+
 When deploying to unified memory APUs (such as the 64GB Strix Halo):
+
 - **Always leave a ~15-25GB buffer unclaimed.** The APU's "VRAM" is system DDR5. If torch/ROCm or `llama.cpp` are allowed to fill the entire pool, it will starve the OS and agent into `zram` thrash, leading to OOM-kills.
 - Cap memory usage via `--ctx-size` in inference engines and use `cgroup` memory caps in Nomad job specs.
 
@@ -665,11 +673,14 @@ Alternatively, if you're using `bootstrap.sh`, you can specify the tier via the 
 ```
 
 ## Storage Architecture & Hardware Agnosticism
+
 The cluster maintains hardware agnosticism by utilizing a distributed file system (`unified_fs_mount_point`) as the primary shared volume across all nodes, rather than relying on host-specific local storage configurations like RAID-5.
 This guarantees seamless high availability (HA) for persistent state.
 
 ### IPFS and the Filestore Optimization
+
 To optimize SSD usage and prevent unnecessary duplication of multi-gigabyte machine learning models, the IPFS daemon (`kubo`) is configured with the experimental `FilestoreEnabled` setting.
+
 - Large static assets (LLMs, TTS/STT models, etc.) are seeded into the cluster using the `ipfs add --nocopy` flag.
 - This instructs IPFS to store only the cryptographic hashes and metadata, while referencing the raw byte data directly from the distributed mount.
 - **Note on Ephemeral Files:** Ephemeral items, such as temporary Docker `.tar` images that are immediately deleted post-load, **must not** use `--nocopy`. Using `--nocopy` on files that will be deleted corrupts the IPFS datastore by breaking the underlying file references.

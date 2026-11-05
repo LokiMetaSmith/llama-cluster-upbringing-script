@@ -88,7 +88,7 @@ find . \( -name "test_*.py" -o -name "*_test.py" -o -name "*.test.ts" -o -name "
 Measure coverage if tooling exists:
 
 | Language | Command |
-|----------|---------|
+| ---------- | --------- |
 | Python | `pytest --cov=src --cov-report=term-missing` |
 | Go | `go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out` |
 | JS/TS | `npx jest --coverage` |
@@ -105,6 +105,7 @@ For each module in the priority list, record: **covered** or **uncovered**.
 Characterization tests capture **current behavior**, not intended behavior. They are regression guards, not correctness validators. Write them for buggy behavior too — bugs are a separate concern.
 
 Rules:
+
 - Test observable outputs (return values, side effects, emitted events) — not internals
 - If you find a bug while writing tests: add a `# BUG: description` comment and move on. Do not fix it.
 - All characterization tests must pass (green) before Phase 4 begins
@@ -118,11 +119,13 @@ See [REFERENCE.md](REFERENCE.md) for characterization test patterns by language 
 Apply `/backpass` to each module in the priority list, one module at a time.
 
 After each module:
+
 1. Run the full test suite
 2. Tests must be green before moving to the next module
 3. If tests break: revert that module's changes, record the failure in the report, continue with the next module
 
 Constraints from `/backpass` apply in full:
+
 - Equivalence-preserving: change form, not behavior
 - No new features during this pass
 - No bug fixes during this pass (note them for a follow-up forward pass)

@@ -8,11 +8,12 @@ REMOTE_SUPPORTED_TOOLS = [
     "ssh", "desktop_control", "code_runner", "web_browser",
     "ansible", "power", "term_everything", "rag", "ha",
     "git", "orchestrator", "opencode_provider",
-    "ocr", "wasm", "heretic", "hello_world_agent"
+    "ocr", "wasm", "heretic", "hello_world_agent",
+    "code_graph", "keyless_web_researcher"
 ]
 
 # Heavy tools that should ideally be offloaded to the Tool Server for microservice de-monolithization
-HEAVY_TOOLS = ["rag", "code_runner", "ansible", "ocr", "wasm", "heretic"]
+HEAVY_TOOLS = ["rag", "code_runner", "ansible", "ocr", "wasm", "heretic", "code_graph", "keyless_web_researcher"]
 
 TOOL_CLASS_MAP = {
     "SSH_Tool": ("pipecatapp.tools.ssh_tool", "SSH_Tool"),
@@ -272,6 +273,7 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
     tools["ast_editor"] = _safe_create("ast_editor", lambda: _get_cls("ASTEditorTool")(root_dir="/opt/pipecatapp"))
     tools["code_graph"] = _safe_create("code_graph", lambda: _get_cls("CodeGraphTool")(root_dir="/opt/pipecatapp"))
     tools["memory_candidate"] = _safe_create("memory_candidate", lambda: _get_cls("MemoryCandidateTool")())
+    tools["keyless_web_researcher"] = _safe_create("keyless_web_researcher", lambda: _get_cls("KeylessWebResearcherTool")())
     tools["set_operational_mode"] = _safe_create("set_operational_mode", lambda: _get_cls("SetOperationalModeTool")())
     tools["ouroboros"] = _safe_create("ouroboros", lambda: _get_cls("OuroborosTool")(
         consul_host=config.get('consul_host'),
