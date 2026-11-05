@@ -1,9 +1,32 @@
 job "pxe-server" {
-  datacenters = ["dc1"]
-  type = "service"
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "service"
+  priority    = 70
 
   group "pxe-group" {
     count = 1
+
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    reschedule {
+      delay          = "30s"
+      delay_function = "exponential"
+      max_delay      = "10m"
+      unlimited      = true
+    }
+
+    update {
+      max_parallel     = 1
+      min_healthy_time = "10s"
+      healthy_deadline = "10m"
+      progress_deadline = "15m"
+      auto_revert      = false
+    }
 
     network {
       mode = "host"
@@ -14,7 +37,36 @@ job "pxe-server" {
         static = 69
       }
       port "http" {
-        static = 80
+        static = {{ pxe_http_port | default(8093) }}
+      }
+    }
+
+    service {
+      name     = "pxe-http"
+      port     = "http"
+      provider = "consul"
+      address  = "${attr.unique.network.ip-address}"
+
+      tags = [
+        "pxe",
+        "traefik.enable=true",
+        "traefik.http.routers.pxe.rule=Host(`pxe.{{ cluster_domain | default('local.mesh') }}`)",
+        "traefik.http.routers.pxe.entrypoints=websecure",
+        "traefik.http.routers.pxe.tls=true"
+      ]
+
+      check {
+        name     = "alive"
+        type     = "http"
+        path     = "/boot.ipxe"
+        interval = "10s"
+        timeout  = "2s"
+
+        check_restart {
+          limit           = 3
+          grace           = "60s"
+          ignore_warnings = false
+        }
       }
     }
 
@@ -40,18 +92,6 @@ job "pxe-server" {
       resources {
         cpu    = 500
         memory = 256
-      }
-
-      service {
-        name = "pxe-http"
-        port = "http"
-        check {
-          name     = "alive"
-          type     = "http"
-          path     = "/boot.ipxe"
-          interval = "10s"
-          timeout  = "2s"
-        }
       }
     }
   }

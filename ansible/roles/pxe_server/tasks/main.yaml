@@ -359,8 +359,8 @@
   changed_when: false
   when: ansible_facts.pkg_mgr == 'apt'
 
-- name: Allow HTTP (TCP 80) in firewall
-  ansible.builtin.command: ufw allow 80/tcp comment 'Allow HTTP for PXE clients'
+- name: Allow HTTP in firewall
+  ansible.builtin.command: ufw allow {{ pxe_http_port | default(8093) }}/tcp comment 'Allow HTTP for PXE clients'
   become: yes
   failed_when: false
   changed_when: false
@@ -461,8 +461,38 @@
       become: yes
       when: nomad_binary_stat.stat.exists
 
+    - name: Check PXE Server Nomad job status before deployment
+      ansible.builtin.command: /usr/local/bin/nomad job status pxe-server
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+        NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.key.pem"
+      register: pxe_job_status
+      failed_when: false
+      changed_when: false
+      become: yes
+      when: nomad_binary_stat.stat.exists
+
+    - name: Purge failing or stuck PXE Server job
+      ansible.builtin.command: /usr/local/bin/nomad job stop -purge pxe-server
+      environment:
+        NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
+        NOMAD_CACERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/ca.pem"
+        NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
+        NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.key.pem"
+      when: >
+        nomad_binary_stat.stat.exists and
+        pxe_job_status is defined and
+        pxe_job_status.rc == 0 and
+        ('Status = dead' in pxe_job_status.stdout or
+         'Status = failed' in pxe_job_status.stdout or
+         'Failed due to progress deadline' in pxe_job_status.stdout)
+      changed_when: true
+      become: yes
+
     - name: Deploy PXE Server Nomad Job
-      ansible.builtin.command: /usr/local/bin/nomad job run /etc/nomad.d/jobs/pxe_server.nomad
+      ansible.builtin.command: /usr/local/bin/nomad job run -detach /etc/nomad.d/jobs/pxe_server.nomad
       become: yes
       environment:
         NOMAD_ADDR: "{{ nomad_protocol | default('https') }}://{{ cluster_ip | default('127.0.0.1') }}:{{ nomad_http_port | default(4646) }}"
@@ -470,5 +500,5 @@
         NOMAD_CLIENT_CERT: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.cert.pem"
         NOMAD_CLIENT_KEY: "{{ nomad_tls_dir | default('/etc/nomad.d/tls') }}/cli.key.pem"
       register: pxe_nomad_deploy
-      changed_when: "'Successfully' in pxe_nomad_deploy.stdout"
+      changed_when: "'Successfully' in pxe_nomad_deploy.stdout or 'Job registration successful' in pxe_nomad_deploy.stdout or 'Evaluation' in pxe_nomad_deploy.stdout"
       when: nomad_binary_stat.stat.exists

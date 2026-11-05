@@ -20,7 +20,11 @@ RUN mkdir -p /var/log/supervisor /var/log/nginx /var/lib/dhcp && \
 
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Setup Nginx
-RUN echo "daemon off;" >> /etc/nginx/nginx.conf
+# Setup Nginx to listen on custom PXE HTTP port (default 8093) and run in foreground
+ARG PXE_HTTP_PORT=8093
+ENV PXE_HTTP_PORT=${PXE_HTTP_PORT}
+RUN sed -i 's/listen 80 default_server;/listen 8093 default_server;/g' /etc/nginx/sites-available/default 2>/dev/null || true && \
+    sed -i 's/listen \[::\]:80 default_server;/listen [::]:8093 default_server;/g' /etc/nginx/sites-available/default 2>/dev/null || true && \
+    echo "daemon off;" >> /etc/nginx/nginx.conf
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

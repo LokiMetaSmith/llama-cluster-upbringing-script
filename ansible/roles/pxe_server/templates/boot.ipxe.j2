@@ -5,6 +5,7 @@ echo  Pipecat Swarm Autonomous Network Boot & Recovery (Station: ${mac})
 echo ==============================================================================
 
 set server_ip {{ pxe_server_ip | default(ansible_facts.default_ipv4.address | default(ansible_default_ipv4.address | default('192.168.1.148'))) }}
+set http_port {{ pxe_http_port | default(8093) }}
 
 # First attempt: Query dynamic cluster controller for node state (Healthy -> Local Boot, Quarantined -> Halt, Unknown -> RAMOS Audit)
 echo Querying cluster controller for boot decision...
@@ -21,14 +22,14 @@ choose --timeout 5000 --default local target && goto ${target}
 
 :live-audit
 echo Booting Autonomous Health Audit & Maintenance RAMOS...
-kernel http://${server_ip}/live/vmlinuz boot=live components fetch=http://${server_ip}/live/filesystem.squashfs quiet net.ifnames=0
-initrd http://${server_ip}/live/initrd.img
+kernel http://${server_ip}:${http_port}/live/vmlinuz boot=live components fetch=http://${server_ip}:${http_port}/live/filesystem.squashfs quiet net.ifnames=0
+initrd http://${server_ip}:${http_port}/live/initrd.img
 boot
 
 :debian-auto
-echo Booting Automated Debian 12 Installer from http://${server_ip}/debian...
-kernel http://${server_ip}/debian/linux initrd=initrd.gz auto=true priority=critical url=http://${server_ip}/preseed.cfg preseed/url=http://${server_ip}/preseed.cfg netcfg/choose_interface=auto net.ifnames=0 biosdevname=0 --
-initrd http://${server_ip}/debian/initrd.gz
+echo Booting Automated Debian 12 Installer from http://${server_ip}:${http_port}/debian...
+kernel http://${server_ip}:${http_port}/debian/linux initrd=initrd.gz auto=true priority=critical url=http://${server_ip}:${http_port}/preseed.cfg preseed/url=http://${server_ip}:${http_port}/preseed.cfg netcfg/choose_interface=auto net.ifnames=0 biosdevname=0 --
+initrd http://${server_ip}:${http_port}/debian/initrd.gz
 boot
 
 :local

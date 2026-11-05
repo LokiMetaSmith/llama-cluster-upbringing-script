@@ -18,4 +18,5 @@ pxe_range_end: ""
 pxe_router: ""
 pxe_dns: ""
 pxe_server_ip: ""
+pxe_http_port: 8093
 debian_suite: "bookworm"
