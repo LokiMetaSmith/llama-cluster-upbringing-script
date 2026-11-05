@@ -38,11 +38,15 @@ python server.py
 The server exposes the following tools to the agent:
 
 #### 1. `ingest_log_file(filepath: str)`
+
 Reads a large log file and parses it line-by-line. It groups lines into chunks based on common timestamp patterns (ISO8601, Apache, Syslog, etc.), ensuring that multi-line entries (like Python stack traces) remain together. It then generates an embedding for each chunk and appends it to the `.jsonl` database.
+
 - **Agents should use this:** When new logs are generated or when investigating a pipeline failure.
 
 #### 2. `search_logs(query: str, top_k: int = 3)`
+
 Performs a semantic similarity search (using cosine similarity) over the vectorized log chunks in the database. Returns the most relevant log entries matching the query.
+
 - **Agents should use this:** To find historical errors, specific stack traces, or context without needing to read the entire multi-megabyte log file.
 
 ## Agent Configuration (MCP Clients)

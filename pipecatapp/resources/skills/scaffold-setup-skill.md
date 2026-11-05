@@ -33,7 +33,7 @@ Read `references/discovery-patterns.md` before scanning.
 Scan the target repo and produce a categorized file inventory:
 
 | Category | Patterns to find |
-|---|---|
+| --- | --- |
 | Config params | `.env.example`, `.env.sample`, `config/*.{yaml,yml,toml,json}`, `settings.py`, `*.config.{js,ts}` |
 | Dependencies | `package.json`, `requirements.txt`, `pyproject.toml`, `Pipfile`, `go.mod`, `Cargo.toml`, `composer.json` |
 | Infrastructure | `docker-compose.yml`, `Dockerfile*`, `terraform/`, `k8s/`, `helm/` |
@@ -66,6 +66,7 @@ is_secret:    true if the value must not be echoed or stored in plaintext
 ```
 
 **B. Setup steps** — an ordered list of commands/actions across these stages:
+
 1. Dependency install (with exact command)
 2. Config generation (write .env / config files)
 3. Infrastructure startup (docker, db, etc.)
@@ -74,6 +75,7 @@ is_secret:    true if the value must not be echoed or stored in plaintext
 6. Verification
 
 **C. MkDocs index** — if `mkdocs.yml` exists:
+
 - Parse the `nav:` key for section titles and file paths
 - For each entry, read the first non-empty paragraph of the target `.md` file
 - Output a table: `section title | file path | one-line summary`
@@ -104,6 +106,7 @@ Fill in the template using the parameter schema, setup steps, and MkDocs index f
 ```
 
 Also update `<repo-root>/CLAUDE.md`:
+
 - If no CLAUDE.md exists: create a minimal one that notes the setup skill
 - If CLAUDE.md exists: append a `## Skills` section with one line referencing `.claude/skills/setup/SKILL.md`
 - Never overwrite existing CLAUDE.md content — only append if the reference isn't already present
@@ -115,16 +118,19 @@ Also update `<repo-root>/CLAUDE.md`:
 Run three checks against the generated skill. Report results as a pass/fail table.
 
 **1. Coverage check** — run `scripts/coverage_check.py <repo-root> <generated-skill-path>`:
+
 - Ground truth: all params from `.env.example` and analyzed config files
 - Checked: all params documented in the generated skill
 - Pass: 100% of required params covered, ≥80% of optional params covered
 
 **2. Flow validation** — inspect the generated question flow:
+
 - Every branch leads to another question or a terminal step (no dead ends)
 - No param is asked more than once
 - All `depends_on` references resolve to real param names in the schema
 
 **3. Docs index validation** — if MkDocs integration is present:
+
 - Every file path in the index exists in the repo
 - No `nav:` entry from `mkdocs.yml` is missing from the index
 
@@ -137,7 +143,7 @@ Report a table: check name | result | details.
 Walk through the generated skill section by section as a simulated new user. For each section, show what the skill would do, then ask for approval or edits.
 
 | Section | What to show | Question to ask |
-|---|---|---|
+| --- | --- | --- |
 | Detection | What the skill would detect in the current repo state | "Does this detection logic look right?" |
 | Questions | All questions in order with answer format | "Right order? Anything missing or redundant?" |
 | Config output | Example `.env` for a dev setup | "Does this look complete and correct?" |

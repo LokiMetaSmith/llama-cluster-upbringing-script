@@ -109,7 +109,7 @@ async def test_monolith_mode_answers_hello(mocker):
 
     with patch('pipecatapp.core.twin.WorkflowRunner', return_value=mock_workflow_runner), patch('pipecatapp.web_server.manager.broadcast', new_callable=AsyncMock):
         with patch.object(service, '_send_response', new_callable=AsyncMock) as mock_send_response:
-            service.long_term_memory = MagicMock()
+            service.long_term_memory = AsyncMock()
             service.long_term_memory.add_event = AsyncMock()
             service.short_term_memory = []
 
