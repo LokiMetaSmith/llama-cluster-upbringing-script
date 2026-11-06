@@ -118,7 +118,7 @@ Organizations require fine-grained control over model usage across developers an
 ## 7. Summary Architectural Checklist for Workflow Designers
 
 * [x] Use semantic aliases (`planner`, `executor`, `fast`) rather than hardcoded endpoints.
-* [ ] Implement dual-model hybrid execution (`opusplan`) for heavy multi-step workflows.
+* [x] Implement dual-model hybrid execution (`opusplan`) for heavy multi-step workflows.
 * [ ] Calibrate reasoning effort levels (`low` through `max`) to match task complexity.
 * [ ] Configure non-degrading fallback model chains for high availability.
 * [ ] Define proactive auto-compaction boundaries at ~90-95% context capacity.

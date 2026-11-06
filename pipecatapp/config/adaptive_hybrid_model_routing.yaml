@@ -33,6 +33,16 @@ routes:
       endpoint: cloud_openrouter
       model: "meta-llama/llama-3.3-70b-instruct"
 
+  opusplan:
+    primary:
+      endpoint: cloud_openrouter
+      model: "anthropic/claude-3.7-sonnet:thinking"
+      temperature: 0.6
+      max_tokens: 8192
+    fallback:
+      endpoint: cloud_openrouter
+      model: "anthropic/claude-3.7-sonnet"
+
   planner:
     primary:
       endpoint: local_vllm_cluster
