@@ -1,0 +1,5 @@
+---
+homebox_enabled: true
+homebox_port: 7745
+homebox_image: "ghcr.io/sysadminsmedia/homebox:latest"
+homebox_log_level: "info"

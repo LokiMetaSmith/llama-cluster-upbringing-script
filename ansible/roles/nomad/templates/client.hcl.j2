@@ -238,6 +238,11 @@ client {
     read_only = true
   }
 
+  host_volume "homebox_data" {
+    path      = "{{ nomad_volumes_dir }}/homebox_data"
+    read_only = false
+  }
+
 }
 
 tls {

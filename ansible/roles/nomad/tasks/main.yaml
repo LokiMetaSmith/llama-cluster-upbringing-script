@@ -217,6 +217,7 @@
     - paperless_media
     - paperless_export
     - paperless_consume
+    - homebox_data
     - authentik/postgres
     - authentik/media
     - authentik/templates
