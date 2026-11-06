@@ -177,12 +177,14 @@ enable_frigate: false
 enable_paperless: true
 enable_opengist: true
 enable_traceway: true
+enable_homebox: true
 
 # Service Ports
 minio_api_port: 9000
 minio_console_port: 9091
 celld_port: 8084
 paperless_port: 8010
+homebox_port: 7745
 opengist_http_port: 6157
 opengist_ssh_port: 2222
 

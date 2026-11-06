@@ -95,3 +95,5 @@ pipecatapp/static/ascii-rest/
 *.orig
 *.rej
 /moshi/rust/target/
+*.db-shm
+*.db-wal

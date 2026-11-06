@@ -9,7 +9,7 @@ REMOTE_SUPPORTED_TOOLS = [
     "ansible", "power", "term_everything", "rag", "ha",
     "git", "orchestrator", "opencode_provider",
     "ocr", "wasm", "heretic", "hello_world_agent",
-    "code_graph", "keyless_web_researcher"
+    "code_graph", "keyless_web_researcher", "homebox"
 ]
 
 # Heavy tools that should ideally be offloaded to the Tool Server for microservice de-monolithization
@@ -108,6 +108,7 @@ TOOL_CLASS_MAP = {
     "SSDStreamingTool": ("pipecatapp.tools.ssd_streaming_tool", "SSDStreamingTool"),
     "HelloWorldAgentTool": ("pipecatapp.tools.hello_world_agent_tool", "HelloWorldAgentTool"),
     "KeylessWebResearcherTool": ("pipecatapp.tools.keyless_web_researcher_tool", "KeylessWebResearcherTool"),
+    "HomeboxTool": ("pipecatapp.tools.homebox_tool", "HomeboxTool"),
 }
 
 _loaded_classes = {}
@@ -274,6 +275,24 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
     tools["code_graph"] = _safe_create("code_graph", lambda: _get_cls("CodeGraphTool")(root_dir="/opt/pipecatapp"))
     tools["memory_candidate"] = _safe_create("memory_candidate", lambda: _get_cls("MemoryCandidateTool")())
     tools["keyless_web_researcher"] = _safe_create("keyless_web_researcher", lambda: _get_cls("KeylessWebResearcherTool")())
+    tools["homebox"] = _safe_create("homebox", lambda: _get_cls("HomeboxTool")(
+        base_url=config.get("homebox_url"),
+        api_token=config.get("homebox_token"),
+        mcp_client=_safe_create("homebox_mcp", lambda: _get_cls("MCPClientAdapter")(
+            name="homebox_mcp",
+            server_command="python3",
+            server_args=["-m", "pipecatapp.servers.homebox_server"],
+            description="Manages physical inventory, containers, items, and labels via Homebox MCP.",
+            twin_service=twin_service
+        ))
+    ))
+    tools["homebox_mcp"] = _safe_create("homebox_mcp", lambda: _get_cls("MCPClientAdapter")(
+        name="homebox_mcp",
+        server_command="python3",
+        server_args=["-m", "pipecatapp.servers.homebox_server"],
+        description="Manages physical inventory, containers, items, and labels via Homebox MCP.",
+        twin_service=twin_service
+    ))
     tools["set_operational_mode"] = _safe_create("set_operational_mode", lambda: _get_cls("SetOperationalModeTool")())
     tools["ouroboros"] = _safe_create("ouroboros", lambda: _get_cls("OuroborosTool")(
         consul_host=config.get('consul_host'),

@@ -1,0 +1,10 @@
+---
+- name: Create Homebox Nomad job specification
+  ansible.builtin.template:
+    src: homebox.nomad.j2
+    dest: /opt/nomad/jobs/homebox.nomad
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Run Homebox Job

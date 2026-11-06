@@ -1,0 +1,86 @@
+job "homebox" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "service"
+
+  group "homebox-group" {
+    count = 1
+
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    reschedule {
+      delay          = "30s"
+      delay_function = "exponential"
+      max_delay      = "10m"
+      unlimited      = true
+    }
+
+    network {
+      mode = "host"
+      port "http" {
+        static = {{ homebox_port | default(7745) }}
+      }
+    }
+
+    volume "homebox_data" {
+      type      = "host"
+      read_only = false
+      source    = "homebox_data"
+    }
+
+    service {
+      name     = "homebox"
+      port     = "http"
+      provider = "consul"
+      address  = "${attr.unique.network.ip-address}"
+      tags     = [
+        "homebox",
+        "inventory",
+        "traefik.enable=true",
+        "traefik.http.routers.homebox.rule=Host(`homebox.{{ cluster_domain | default('local.mesh') }}`)",
+        "traefik.http.routers.homebox.entrypoints=websecure",
+        "traefik.http.routers.homebox.tls=true",
+        "traefik.http.routers.homebox.middlewares=authentik@file"
+      ]
+
+      check {
+        name     = "Homebox Web UI"
+        type     = "http"
+        path     = "/api/v1/status"
+        interval = "20s"
+        timeout  = "5s"
+      }
+    }
+
+    task "homebox" {
+      driver = "containerd-driver"
+
+      volume_mount {
+        volume      = "homebox_data"
+        destination = "/data"
+        read_only   = false
+      }
+
+      config {
+        image = "{{ homebox_image | default('ghcr.io/sysadminsmedia/homebox:latest') }}"
+        ports = ["http"]
+      }
+
+      env {
+        HBOX_MODE               = "production"
+        HBOX_STORAGE_SQLITE_URL = "/data/homebox.db?_pragma=busy_timeout(10000)&_pragma=journal_mode(WAL)"
+        HBOX_WEB_PORT           = "{{ homebox_port | default(7745) }}"
+        HBOX_LOG_LEVEL          = "{{ homebox_log_level | default('info') }}"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+  }
+}
