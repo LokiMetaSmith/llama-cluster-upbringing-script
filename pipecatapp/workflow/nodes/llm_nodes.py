@@ -31,8 +31,9 @@ def build_extensible_payload(base_payload: dict, context: WorkflowContext, node_
 
     if node_config:
         if "effort_level" in node_config:
-            extensions["effort_level"] = node_config["effort_level"]
-            payload["reasoning_effort"] = node_config["effort_level"]
+            effort_level = context.global_inputs.get("reasoning_effort", node_config["effort_level"])
+            extensions["effort_level"] = effort_level
+            payload["reasoning_effort"] = effort_level
         if "model_alias" in node_config:
             extensions["model_alias"] = node_config["model_alias"]
         if "fallback_models" in node_config:
@@ -803,7 +804,7 @@ class LLMRouterNode(Node):
                         # Dynamically inject feature flags like reasoning effort
                         caps = ModelCapabilitiesRegistry.get_capabilities(selected_model)
                         if caps.get("supports_reasoning_effort"):
-                            payload["reasoning_effort"] = "medium"
+                            payload["reasoning_effort"] = context.global_inputs.get("reasoning_effort", "medium")
 
                         payload = build_extensible_payload(payload, context, self.config)
 
