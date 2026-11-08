@@ -599,7 +599,7 @@ For advanced users, this project includes a workflow for automatically improving
 
 This section outlines the major feature enhancements and maintenance tasks planned for the future.
 
-- **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model to ensure the expert service always starts with a basic capability.
+- [x] **Implement Graceful LLM Failover:** Enhance the `llama-expert.nomad` job to include a final, lightweight fallback model to ensure the expert service always starts with a basic capability.
 - **Re-evaluate Consul Connect Service Mesh:** Once the core system is stable, create a new feature branch to attempt to re-enable `sidecar_service` in the Nomad job files and document the process and performance overhead.
 - **Add Pre-flight System Health Checks:** Create a new Ansible role to perform non-destructive checks (filesystem writability, disk space, network connection) at the beginning of the main playbook.
 - **Investigate Advanced Power Management:** Research and prototype a more advanced power management system using Wake-on-LAN, triggered by the `power_agent.py`.

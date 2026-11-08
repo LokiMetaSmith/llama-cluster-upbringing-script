@@ -120,7 +120,7 @@ Organizations require fine-grained control over model usage across developers an
 * [x] Use semantic aliases (`planner`, `executor`, `fast`) rather than hardcoded endpoints.
 * [x] Implement dual-model hybrid execution (`opusplan`) for heavy multi-step workflows.
 * [x] Calibrate reasoning effort levels (`low` through `max`) to match task complexity.
-* [ ] Configure non-degrading fallback model chains for high availability.
+* [x] Configure non-degrading fallback model chains for high availability.
 * [ ] Define proactive auto-compaction boundaries at ~90-95% context capacity.
 * [ ] Enforce model allowlists/deny-lists for enterprise security and cost control.
 * [ ] Optimize system prompt prefixes to maximize prompt cache hits.

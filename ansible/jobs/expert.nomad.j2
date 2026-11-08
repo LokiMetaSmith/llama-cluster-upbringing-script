@@ -23,10 +23,13 @@ variable "rpc_pool_job_name" {
 {% set suitable_models = suitable_models_unsorted | sort(attribute='memory_mb', reverse=true) | list %}
 {% if suitable_models | length > 0 %}
 {% set best_model = suitable_models[0] %}
+{% set fallback_model = suitable_models[-1] %}
 {% else %}
 {% set best_model = (models_with_memory | sort(attribute='memory_mb') | list)[0] %}
+{% set fallback_model = best_model %}
 {% endif %}
 {% set best_model_sanitized = ((best_model.filename | regex_replace('[^a-zA-Z0-9-]', '-'))[:40]) | regex_replace('-$', '') %}
+{% set fallback_model_sanitized = ((fallback_model.filename | regex_replace('[^a-zA-Z0-9-]', '-'))[:40]) | regex_replace('-$', '') %}
 
 job "{{ job_name }}" {
   datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
@@ -140,7 +143,7 @@ job "{{ job_name }}" {
         data = <<EOH
 #!/bin/bash
 set -e
-echo "Starting llama-server for {{ best_model.filename }}..."
+echo "Attempting to start llama-server for {{ best_model.filename }}..."
 
 # Wait for RPC servers if available
 RPC_SERVERS=""
@@ -167,14 +170,59 @@ else
   RPC_ARG=""
 fi
 
-exec /usr/local/bin/llama-server \
+# Try to start best model
+/usr/local/bin/llama-server \
     --model /opt/nomad/models/llm/{{ best_model.filename }} \
     --host 0.0.0.0 \
     --port ${NOMAD_PORT_api} \
     $RPC_ARG \
     --n-gpu-layers 99 \
     --load-mode mlock \
-    --verbose
+    --verbose &
+SERVER_PID=$!
+
+# Wait for a bit to see if it crashes immediately (e.g. OOM or no GPU support for large model)
+sleep 10
+if ! kill -0 $SERVER_PID 2>/dev/null; then
+    echo "Primary model {{ best_model.filename }} crashed or failed to start. Falling back to lightweight model {{ fallback_model.filename }}..."
+
+    # Wait for RPC servers for fallback model if available
+    RPC_SERVERS=""
+    for i in $(seq 1 6); do
+      RPC_SERVERS=""
+      {% raw %}
+      {{ range service "rpc-{% endraw %}{{ fallback_model_sanitized }}{% raw %}-provider" }}
+      RPC_SERVERS="$RPC_SERVERS,{{ .Address }}:{{ .Port }}"
+      {{ end }}
+      {% endraw %}
+      RPC_SERVERS="$${RPC_SERVERS#,}"
+      if [ -n "$RPC_SERVERS" ]; then
+        break
+      fi
+      echo "Waiting for RPC servers for fallback (attempt $i/6)..."
+      sleep 5
+    done
+
+    if [ -n "$RPC_SERVERS" ]; then
+      echo "Found RPC servers for fallback: $RPC_SERVERS"
+      RPC_ARG="--rpc $RPC_SERVERS"
+    else
+      echo "No remote RPC servers found for fallback. Starting standalone instance."
+      RPC_ARG=""
+    fi
+
+    exec /usr/local/bin/llama-server \
+        --model /opt/nomad/models/llm/{{ fallback_model.filename }} \
+        --host 0.0.0.0 \
+        --port ${NOMAD_PORT_api} \
+        $RPC_ARG \
+        --n-gpu-layers 99 \
+        --load-mode mlock \
+        --verbose
+else
+    # It stayed alive, just wait for it
+    wait $SERVER_PID
+fi
 EOH
         destination = "local/run_server.sh"
         perms = "0755"
