@@ -220,6 +220,11 @@ class WorktreeSubagentNode(Node):
                 capture_output=True,
             )
             subprocess.run(
+                ["git", "worktree", "prune"],
+                cwd=repo_root,
+                capture_output=True,
+            )
+            subprocess.run(
                 ["git", "branch", "-D", branch_name],
                 cwd=repo_root,
                 capture_output=True,

@@ -449,3 +449,9 @@ def test_cmd_probe_includes_consul(mock_api_get, mock_run_command, capsys):
         assert len(report["consul_checks"]) == 2
         assert report["summary"]["status"] == "degraded"
         assert any(not c["healthy"] for c in report["consul_checks"])
+def test_main_nomad_addr_flag():
+    """Verifies that passing --nomad-addr overrides troubleshoot.NOMAD_URL."""
+    with patch('sys.argv', ['troubleshoot.py', '--nomad-addr', 'http://10.99.0.1:4646', 'list']), \
+         patch('troubleshoot.api_get', return_value=[]):
+        troubleshoot.main()
+        assert troubleshoot.NOMAD_URL == "http://10.99.0.1:4646"
