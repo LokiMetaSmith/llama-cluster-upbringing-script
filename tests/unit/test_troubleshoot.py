@@ -420,3 +420,11 @@ def test_main_default_command(mock_cmd_report):
         args_passed = mock_cmd_report.call_args[0][0]
         assert args_passed.command is None
         assert args_passed.json is False
+
+
+def test_main_nomad_addr_flag():
+    """Verifies that passing --nomad-addr overrides troubleshoot.NOMAD_URL."""
+    with patch('sys.argv', ['troubleshoot.py', '--nomad-addr', 'http://10.99.0.1:4646', 'list']), \
+         patch('troubleshoot.api_get', return_value=[]):
+        troubleshoot.main()
+        assert troubleshoot.NOMAD_URL == "http://10.99.0.1:4646"

@@ -140,6 +140,18 @@ class WorktreeDelegationManager:
         self.semaphore = asyncio.Semaphore(max_concurrency)
         self.max_depth = max_depth
 
+    def prune_stale_worktrees(self) -> None:
+        """Prunes stale worktree administrative files and metadata."""
+        try:
+            subprocess.run(
+                ["git", "worktree", "prune"],
+                cwd=self.repo_root,
+                capture_output=True,
+                check=False,
+            )
+        except Exception:
+            pass
+
     async def execute_in_worktree(
         self,
         parent_node: str,
@@ -208,6 +220,13 @@ class WorktreeDelegationManager:
             finally:
                 subprocess.run(
                     ["git", "worktree", "remove", "--force", str(wt_path)],
+                    cwd=self.repo_root,
+                    capture_output=True,
+                )
+                self.prune_stale_worktrees()
+                # Clean up temporary subagent branch if not preserving
+                subprocess.run(
+                    ["git", "branch", "-D", branch_name],
                     cwd=self.repo_root,
                     capture_output=True,
                 )

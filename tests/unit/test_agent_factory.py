@@ -82,3 +82,18 @@ def test_create_tools_instantiates_last30days(
         service_url="http://last30days-service.service.consul:8008",
         api_key="some-key"
     )
+
+
+def test_lazy_loading_and_totp_process_investigator():
+    import pipecatapp.tools as tools_mod
+    from pipecatapp.tools import ProcessInvestigatorTool, TOTPTool
+    assert ProcessInvestigatorTool is not None
+    assert TOTPTool is not None
+    assert "ProcessInvestigatorTool" in tools_mod.__all__
+    assert "TOTPTool" in tools_mod.__all__
+
+    from pipecatapp.agent_factory import TOOL_CLASS_MAP, REMOTE_SUPPORTED_TOOLS
+    assert "ProcessInvestigatorTool" in TOOL_CLASS_MAP
+    assert "TOTPTool" in TOOL_CLASS_MAP
+    assert "process_investigator" in REMOTE_SUPPORTED_TOOLS
+    assert "totp" in REMOTE_SUPPORTED_TOOLS

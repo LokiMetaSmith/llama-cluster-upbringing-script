@@ -9,7 +9,8 @@ REMOTE_SUPPORTED_TOOLS = [
     "ansible", "power", "term_everything", "rag", "ha",
     "git", "orchestrator", "opencode_provider",
     "ocr", "wasm", "heretic", "hello_world_agent",
-    "code_graph", "keyless_web_researcher", "homebox"
+    "code_graph", "keyless_web_researcher", "homebox",
+    "totp", "process_investigator"
 ]
 
 # Heavy tools that should ideally be offloaded to the Tool Server for microservice de-monolithization
@@ -109,6 +110,7 @@ TOOL_CLASS_MAP = {
     "HelloWorldAgentTool": ("pipecatapp.tools.hello_world_agent_tool", "HelloWorldAgentTool"),
     "KeylessWebResearcherTool": ("pipecatapp.tools.keyless_web_researcher_tool", "KeylessWebResearcherTool"),
     "HomeboxTool": ("pipecatapp.tools.homebox_tool", "HomeboxTool"),
+    "TOTPTool": ("pipecatapp.tools.totp_tool", "TOTPTool"),
 }
 
 _loaded_classes = {}
@@ -275,6 +277,7 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
     tools["code_graph"] = _safe_create("code_graph", lambda: _get_cls("CodeGraphTool")(root_dir="/opt/pipecatapp"))
     tools["memory_candidate"] = _safe_create("memory_candidate", lambda: _get_cls("MemoryCandidateTool")())
     tools["keyless_web_researcher"] = _safe_create("keyless_web_researcher", lambda: _get_cls("KeylessWebResearcherTool")())
+    tools["totp"] = _safe_create("totp", lambda: _get_cls("TOTPTool")())
     tools["homebox"] = _safe_create("homebox", lambda: _get_cls("HomeboxTool")(
         base_url=config.get("homebox_url"),
         api_token=config.get("homebox_token"),
