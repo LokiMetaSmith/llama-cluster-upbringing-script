@@ -126,6 +126,9 @@ class WorktreeSubagentNode(Node):
             "route_config": route_cfg,
         })
 
+        timeout_seconds = float(self.config.get("timeout_seconds", 300.0))
+        verify_timeout = float(self.config.get("verify_timeout", 60.0))
+
         subprocess.run(
             ["git", "worktree", "add", "-b", branch_name, str(wt_path), "HEAD"],
             cwd=repo_root,
@@ -133,26 +136,61 @@ class WorktreeSubagentNode(Node):
             capture_output=True,
         )
 
+        subagent_response = ""
+        patch_diff = ""
+        verification_passed = False
+        verify_output = ""
+        error_msg: Optional[str] = None
+
         try:
-            subagent_response = await self._invoke_routed_model(
-                route_cfg=route_cfg,
-                wt_path=wt_path,
-                task_prompt=task_prompt,
-            )
+            try:
+                subagent_response = await asyncio.wait_for(
+                    self._invoke_routed_model(
+                        route_cfg=route_cfg,
+                        wt_path=wt_path,
+                        task_prompt=task_prompt,
+                    ),
+                    timeout=timeout_seconds,
+                )
+            except asyncio.TimeoutError:
+                error_msg = f"Subagent execution timed out after {timeout_seconds}s"
+                subagent_response = f"[TIMEOUT] {error_msg}"
+            except Exception as e:
+                error_msg = str(e)
+                subagent_response = f"[ERROR] Subagent execution failed: {error_msg}"
 
             diff_proc = subprocess.run(
                 ["git", "diff", "HEAD"], cwd=wt_path, capture_output=True, text=True
             )
             patch_diff = diff_proc.stdout.strip()
 
-            verification_passed = True
-            verify_output = ""
-            if patch_diff and verify_cmd:
-                v_proc = subprocess.run(
-                    verify_cmd.split(), cwd=wt_path, capture_output=True, text=True
-                )
-                verification_passed = (v_proc.returncode == 0)
-                verify_output = v_proc.stdout + "\n" + v_proc.stderr
+            if error_msg:
+                verification_passed = False
+                verify_output = error_msg
+            elif not patch_diff:
+                verification_passed = True
+                verify_output = "No changes generated."
+            elif verify_cmd:
+                cmd_parts = self._sanitize_verify_cmd(verify_cmd)
+                try:
+                    v_proc = subprocess.run(
+                        cmd_parts,
+                        cwd=wt_path,
+                        capture_output=True,
+                        text=True,
+                        timeout=verify_timeout,
+                    )
+                    verification_passed = (v_proc.returncode == 0)
+                    verify_output = v_proc.stdout + "\n" + v_proc.stderr
+                except subprocess.TimeoutExpired:
+                    verification_passed = False
+                    verify_output = f"Verification timed out after {verify_timeout}s"
+                except Exception as ve:
+                    verification_passed = False
+                    verify_output = f"Verification execution failed: {ve}"
+            else:
+                verification_passed = True
+                verify_output = "No verify command specified; auto-passed."
 
             envelope = {
                 "source_node": self.id,
@@ -163,6 +201,7 @@ class WorktreeSubagentNode(Node):
                 "patch_diff": patch_diff,
                 "verification_passed": verification_passed,
                 "verify_log": verify_output[:2000],
+                "error": error_msg,
             }
 
             emitter({
@@ -180,6 +219,22 @@ class WorktreeSubagentNode(Node):
                 cwd=repo_root,
                 capture_output=True,
             )
+            subprocess.run(
+                ["git", "branch", "-D", branch_name],
+                cwd=repo_root,
+                capture_output=True,
+            )
+
+    def _sanitize_verify_cmd(self, verify_cmd: str) -> List[str]:
+        import shlex
+        parts = shlex.split(verify_cmd)
+        if not parts:
+            return ["pytest", "-q"]
+        forbidden_tokens = {";", "&&", "||", "|", "`", "$"}
+        for part in parts:
+            if any(tok in part for tok in forbidden_tokens):
+                raise ValueError(f"Hazardous shell token detected in verify_cmd: {part}")
+        return parts
 
     async def _invoke_routed_model(self, route_cfg: Dict[str, Any], wt_path: Path, task_prompt: str) -> str:
         headers = {"Content-Type": "application/json"}
@@ -222,12 +277,17 @@ class BarrierMergeNode(Node):
         require_verification = self.config.get("require_verification_pass", True)
 
         verification_passed = envelope.get("verification_passed", True)
+        error_info = envelope.get("error")
+        verify_log = envelope.get("verify_log", "")
+
         if require_verification and not verification_passed:
             merged_status = "REJECTED_VERIFICATION_FAILED"
             final_patch = ""
+            rejection_reason = error_info or "Verification command failed"
         else:
             merged_status = "ACCEPTED"
             final_patch = envelope.get("patch_diff", "")
+            rejection_reason = None
 
         summary_report = (
             f"--- Barrier Merge Synthesis ---\n"
@@ -238,7 +298,18 @@ class BarrierMergeNode(Node):
             f"Auditor Profile: {auditor_route.get('profile', 'none')}\n"
             f"Summary: {envelope.get('summary', 'No summary')}\n"
         )
+        if rejection_reason:
+            summary_report += f"Rejection Reason: {rejection_reason}\n"
+        if verify_log:
+            summary_report += f"Verification Log:\n{verify_log}\n"
 
         self.set_output(context, "merged_status", merged_status)
         self.set_output(context, "final_patch", final_patch)
         self.set_output(context, "summary_report", summary_report)
+        self.set_output(context, "rejection_reason", rejection_reason)
+        self.set_output(context, "diagnostics", {
+            "status": merged_status,
+            "verification_passed": verification_passed,
+            "error": error_info,
+            "verify_log": verify_log,
+        })

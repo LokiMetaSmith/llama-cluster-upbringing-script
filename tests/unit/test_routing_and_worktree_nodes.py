@@ -158,7 +158,7 @@ async def test_barrier_merge_node():
     assert context.node_outputs["merge_1"]["merged_status"] == "ACCEPTED"
     assert context.node_outputs["merge_1"]["final_patch"] == "diff --git a/test.py b/test.py"
 
-    fail_envelope = dict(pass_envelope, verification_passed=False)
+    fail_envelope = dict(pass_envelope, verification_passed=False, error="Syntax error in test.py")
     config_fail = {
         "id": "merge_1",
         "require_verification_pass": True,
@@ -174,3 +174,64 @@ async def test_barrier_merge_node():
 
     assert context_fail.node_outputs["merge_1"]["merged_status"] == "REJECTED_VERIFICATION_FAILED"
     assert context_fail.node_outputs["merge_1"]["final_patch"] == ""
+    assert context_fail.node_outputs["merge_1"]["rejection_reason"] == "Syntax error in test.py"
+    assert context_fail.node_outputs["merge_1"]["diagnostics"]["verification_passed"] is False
+
+
+@pytest.mark.asyncio
+async def test_worktree_subagent_node_timeout_and_cleanup(tmp_path):
+    repo_dir = tmp_path / "repo_timeout"
+    repo_dir.mkdir()
+    subprocess.run(["git", "init"], cwd=repo_dir, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=repo_dir, check=True)
+    subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=repo_dir, check=True)
+
+    dummy_file = repo_dir / "README.md"
+    dummy_file.write_text("# Timeout Test Repo")
+    subprocess.run(["git", "add", "."], cwd=repo_dir, check=True)
+    subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo_dir, check=True)
+
+    route_cfg = {
+        "model": "test-model",
+        "tier_source": "cluster_local",
+        "base_url": "http://127.0.0.1:8080/v1",
+        "soul_prompt": "System Prompt",
+        "allowed_tools": ["read_file"],
+    }
+
+    config = {
+        "id": "wt_timeout",
+        "timeout_seconds": 0.05,
+        "inputs": [
+            {"name": "route_config", "value": route_cfg},
+            {"name": "task_prompt", "value": "Slow task"},
+        ],
+    }
+
+    node = WorktreeSubagentNode(config)
+    context = create_mock_context([config])
+    context.global_inputs["repo_root"] = str(repo_dir)
+
+    async def slow_model(*args, **kwargs):
+        import asyncio
+        await asyncio.sleep(0.5)
+        return "Done"
+
+    with patch.object(node, "_invoke_routed_model", side_effect=slow_model):
+        await node.execute(context)
+
+        env = context.node_outputs["wt_timeout"]["artifact_envelope"]
+        assert env["verification_passed"] is False
+        assert "timed out" in env["error"].lower()
+        # Ensure worktrees and temporary branches are cleaned up
+        assert list((repo_dir / ".worktrees").glob("wt_timeout_*")) == []
+
+
+@pytest.mark.asyncio
+async def test_worktree_subagent_node_verify_cmd_sanitization():
+    node = WorktreeSubagentNode({"id": "wt_node"})
+    assert node._sanitize_verify_cmd("pytest -q") == ["pytest", "-q"]
+    with pytest.raises(ValueError, match="Hazardous shell token detected"):
+        node._sanitize_verify_cmd("pytest; rm -rf /")
+    with pytest.raises(ValueError, match="Hazardous shell token detected"):
+        node._sanitize_verify_cmd("pytest && ls")

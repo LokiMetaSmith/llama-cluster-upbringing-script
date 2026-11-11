@@ -59,7 +59,13 @@ def get_default_nomad_url():
         return f"https://{primary_ip}:4646"
     return f"http://{primary_ip}:4646"
 
+def get_default_consul_url():
+    if os.environ.get("CONSUL_HTTP_ADDR"):
+        return os.environ["CONSUL_HTTP_ADDR"]
+    return "http://127.0.0.1:8500"
+
 NOMAD_URL = get_default_nomad_url()
+CONSUL_URL = get_default_consul_url()
 
 # Determine Repo Root
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -245,6 +251,57 @@ def get_systemd_logs(service_name, lines=50):
     if res["exit_code"] != 0 and "permission" in res["stderr"].lower():
         res = run_command(["sudo", "-n", "journalctl", "-u", service_name, "-n", str(lines), "--no-pager"])
     return res["stdout"] if res["exit_code"] == 0 else ""
+
+
+def get_consul_service_checks(service_name=None):
+    """Queries Consul health checks for services."""
+    if service_name:
+        endpoint = f"/v1/health/service/{service_name}"
+    else:
+        endpoint = "/v1/health/state/any"
+
+    url = f"{CONSUL_URL.rstrip('/')}{endpoint}"
+    checks_list = []
+    try:
+        req = urllib.request.Request(url)
+        consul_token = get_consul_token()
+        if consul_token:
+            req.add_header("X-Consul-Token", consul_token)
+        with urllib.request.urlopen(req, timeout=3) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode('utf-8'))
+                if service_name:
+                    for node_svc in data:
+                        node_name = node_svc.get("Node", {}).get("Node", "N/A")
+                        address = node_svc.get("Service", {}).get("Address", "N/A")
+                        port = node_svc.get("Service", {}).get("Port", "N/A")
+                        checks = node_svc.get("Checks", [])
+                        status = "passing"
+                        for chk in checks:
+                            if chk.get("ServiceName") == service_name and chk.get("Status") != "passing":
+                                status = chk.get("Status")
+                        checks_list.append({
+                            "node": node_name,
+                            "service": service_name,
+                            "address": address,
+                            "port": port,
+                            "status": status,
+                            "healthy": status == "passing"
+                        })
+                else:
+                    for chk in data:
+                        status = chk.get("Status", "unknown")
+                        checks_list.append({
+                            "check_id": chk.get("CheckID"),
+                            "name": chk.get("Name"),
+                            "node": chk.get("Node"),
+                            "service": chk.get("ServiceName", "system"),
+                            "status": status,
+                            "healthy": status == "passing"
+                        })
+    except Exception:
+        pass
+    return checks_list
 
 
 def get_docker_containers():
@@ -758,6 +815,7 @@ def cmd_probe(args):
         "nomad_jobs": [],
         "systemd_services": [],
         "docker_containers": [],
+        "consul_checks": [],
         "summary": {
             "unhealthy_count": 0,
             "total_count": 0,
@@ -809,6 +867,14 @@ def cmd_probe(args):
         if not container["healthy"]:
             report["summary"]["unhealthy_count"] += 1
 
+    # 4. Probe Consul Health Checks
+    consul_checks = get_consul_service_checks()
+    for chk in consul_checks:
+        report["consul_checks"].append(chk)
+        report["summary"]["total_count"] += 1
+        if not chk["healthy"]:
+            report["summary"]["unhealthy_count"] += 1
+
     if report["summary"]["unhealthy_count"] > 0:
         report["summary"]["status"] = "degraded"
 
@@ -840,6 +906,15 @@ def cmd_probe(args):
             print(f" {status_char} {container['name']:<30} | State: {container['state']:<12} | Status: {container['status']}")
     else:
         print(" No Docker containers detected.")
+
+    print("\n--- Consul Service Checks ---")
+    if report["consul_checks"]:
+        for chk in report["consul_checks"]:
+            status_char = "✅" if chk["healthy"] else "❌"
+            chk_name = chk.get("name") or chk.get("service") or chk.get("check_id") or "check"
+            print(f" {status_char} {chk_name:<30} | Service: {chk.get('service', 'N/A'):<15} | Status: {chk.get('status')}")
+    else:
+        print(" No Consul service checks detected.")
 
     print("-" * 60)
     print(f"Summary: {report['summary']['unhealthy_count']} / {report['summary']['total_count']} units unhealthy.")
@@ -1051,33 +1126,7 @@ def cmd_opencode_status(args):
                 })
 
     # 2. Query Consul Health Checks
-    consul_url = "http://127.0.0.1:8500/v1/health/service/opencode-api"
-    consul_checks = []
-    try:
-        req = urllib.request.Request(consul_url)
-        consul_token = get_consul_token()
-        if consul_token:
-            req.add_header("X-Consul-Token", consul_token)
-        with urllib.request.urlopen(req, timeout=3) as response:
-            if response.status == 200:
-                data = json.loads(response.read().decode('utf-8'))
-                for node_svc in data:
-                    node_name = node_svc.get("Node", {}).get("Node", "N/A")
-                    address = node_svc.get("Service", {}).get("Address", "N/A")
-                    port = node_svc.get("Service", {}).get("Port", "N/A")
-                    checks = node_svc.get("Checks", [])
-                    status = "passing"
-                    for chk in checks:
-                        if chk.get("ServiceName") == "opencode-api" and chk.get("Status") != "passing":
-                            status = chk.get("Status")
-                    consul_checks.append({
-                        "node": node_name,
-                        "address": address,
-                        "port": port,
-                        "status": status
-                    })
-    except Exception:
-        pass
+    consul_checks = get_consul_service_checks(service_name="opencode-api")
 
     # 3. Query System-level Processes
     system_processes = []
@@ -1177,7 +1226,11 @@ def cmd_process(args):
 
 def main():
     """Main CLI execution entry point."""
+    global NOMAD_URL, CONSUL_URL
+
     parser = argparse.ArgumentParser(description="Troubleshoot Nomad & Systemd services.")
+    parser.add_argument("--nomad-addr", dest="nomad_addr", help="Override Nomad API address (e.g. http://127.0.0.1:4646)")
+    parser.add_argument("--consul-addr", dest="consul_addr", help="Override Consul API address (e.g. http://127.0.0.1:8500)")
     subparsers = parser.add_subparsers(dest="command")
 
     deps_parser = subparsers.add_parser("deps", help="Analyze service dependencies and root cause blockages")
@@ -1234,6 +1287,11 @@ def main():
     proc_parser.set_defaults(func=cmd_process)
 
     args = parser.parse_args()
+    if getattr(args, "nomad_addr", None):
+        NOMAD_URL = args.nomad_addr
+    if getattr(args, "consul_addr", None):
+        CONSUL_URL = args.consul_addr
+
     if args.command is None:
         # Default to comprehensive troubleshooting report
         args.json = False
