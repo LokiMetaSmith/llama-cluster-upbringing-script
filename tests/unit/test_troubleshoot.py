@@ -422,6 +422,33 @@ def test_main_default_command(mock_cmd_report):
         assert args_passed.json is False
 
 
+@patch('troubleshoot.cmd_report')
+def test_main_addr_overrides(mock_cmd_report):
+    """Verifies that main overrides NOMAD_URL and CONSUL_URL via CLI flags."""
+    test_nomad = "http://10.0.0.99:4646"
+    test_consul = "http://10.0.0.99:8500"
+    with patch('sys.argv', ['troubleshoot.py', '--nomad-addr', test_nomad, '--consul-addr', test_consul]):
+        troubleshoot.main()
+        assert troubleshoot.NOMAD_URL == test_nomad
+        assert troubleshoot.CONSUL_URL == test_consul
+
+
+def test_cmd_probe_includes_consul(mock_api_get, mock_run_command, capsys):
+    """Verifies that cmd_probe checks Consul service health alongside Nomad and Systemd."""
+    mock_run_command.return_value = {"exit_code": 0, "stdout": "", "stderr": ""}
+    mock_api_get.return_value = []
+
+    mock_checks = [
+        {"check_id": "service:vllm", "name": "Service 'vllm' check", "node": "node1", "service": "vllm", "status": "passing", "healthy": True},
+        {"check_id": "service:bad", "name": "Service 'bad' check", "node": "node1", "service": "bad", "status": "critical", "healthy": False},
+    ]
+
+    with patch('troubleshoot.get_consul_service_checks', return_value=mock_checks):
+        args = DummyArgs(json=True)
+        report = troubleshoot.cmd_probe(args)
+        assert len(report["consul_checks"]) == 2
+        assert report["summary"]["status"] == "degraded"
+        assert any(not c["healthy"] for c in report["consul_checks"])
 def test_main_nomad_addr_flag():
     """Verifies that passing --nomad-addr overrides troubleshoot.NOMAD_URL."""
     with patch('sys.argv', ['troubleshoot.py', '--nomad-addr', 'http://10.99.0.1:4646', 'list']), \
