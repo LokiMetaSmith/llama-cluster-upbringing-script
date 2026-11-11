@@ -128,6 +128,10 @@ async def test_worktree_subagent_node_execution(tmp_path):
         assert env["summary"] == "Subagent code changes complete"
         assert env["verification_passed"] is True
 
+    # Verify worktree branch was cleaned up
+    branch_check = subprocess.run(["git", "branch"], cwd=repo_dir, capture_output=True, text=True)
+    assert "selfmod/wt_node" not in branch_check.stdout
+
 
 @pytest.mark.asyncio
 async def test_barrier_merge_node():

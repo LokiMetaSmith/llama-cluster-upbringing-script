@@ -180,6 +180,16 @@ class WorktreeSubagentNode(Node):
                 cwd=repo_root,
                 capture_output=True,
             )
+            subprocess.run(
+                ["git", "worktree", "prune"],
+                cwd=repo_root,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "branch", "-D", branch_name],
+                cwd=repo_root,
+                capture_output=True,
+            )
 
     async def _invoke_routed_model(self, route_cfg: Dict[str, Any], wt_path: Path, task_prompt: str) -> str:
         headers = {"Content-Type": "application/json"}

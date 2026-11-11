@@ -1177,7 +1177,9 @@ def cmd_process(args):
 
 def main():
     """Main CLI execution entry point."""
+    global NOMAD_URL
     parser = argparse.ArgumentParser(description="Troubleshoot Nomad & Systemd services.")
+    parser.add_argument("--nomad-addr", type=str, help="Override Nomad API address (e.g. http://127.0.0.1:4646)")
     subparsers = parser.add_subparsers(dest="command")
 
     deps_parser = subparsers.add_parser("deps", help="Analyze service dependencies and root cause blockages")
@@ -1234,6 +1236,9 @@ def main():
     proc_parser.set_defaults(func=cmd_process)
 
     args = parser.parse_args()
+    if getattr(args, "nomad_addr", None):
+        NOMAD_URL = args.nomad_addr
+
     if args.command is None:
         # Default to comprehensive troubleshooting report
         args.json = False
